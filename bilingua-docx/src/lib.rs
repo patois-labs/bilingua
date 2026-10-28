@@ -259,7 +259,9 @@ fn extract_doc(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
     })
 }
 
-fn split_meta(doc: &Document) -> Result<(&[ZipEntry], Option<Meta>, Vec<&ZipEntry>), Error> {
+type Split<'a> = (Option<Meta>, Vec<&'a ZipEntry>);
+
+fn split_meta(doc: &Document) -> Result<Split<'_>, Error> {
     let Skeleton::Zip { entries } = &doc.skeleton else {
         return Err(Error::Write("docx needs a zip skeleton".into()));
     };
@@ -274,12 +276,12 @@ fn split_meta(doc: &Document) -> Result<(&[ZipEntry], Option<Meta>, Vec<&ZipEntr
             real.push(e);
         }
     }
-    Ok((entries, meta, real))
+    Ok((meta, real))
 }
 
 /// Writes the document and reports what the caller should know (tracked changes accepted, and so on).
 pub fn merge_with_report(doc: &Document) -> Result<(Vec<u8>, MergeReport), Error> {
-    let (_, meta, real) = split_meta(doc)?;
+    let (meta, real) = split_meta(doc)?;
     let wp = meta.as_ref().map(|m| m.wp.clone()).unwrap_or_else(|| "w:".into());
     let mut r = render::Renderer::new(doc, wp);
     let mut out: Vec<(EntryMeta, Vec<u8>)> = Vec::with_capacity(real.len());
@@ -290,7 +292,7 @@ pub fn merge_with_report(doc: &Document) -> Result<(Vec<u8>, MergeReport), Error
                 let mut s = String::new();
                 for p in parts {
                     match p {
-                        SkelPart::Raw(t) => s.push_str(t),
+                        SkelPart::Raw(t) => s.push_str(&r.resolve(t, 0)?),
                         SkelPart::Unit(i) => s.push_str(&r.unit(*i)?),
                     }
                 }
@@ -325,7 +327,7 @@ impl Filter for Docx {
         merge_with_report(doc).map(|(b, _)| b)
     }
     fn preview(&self, doc: &Document) -> Option<String> {
-        let (_, meta, _) = split_meta(doc).ok()?;
+        let (meta, _) = split_meta(doc).ok()?;
         let meta = meta?;
         preview::preview(doc, &meta.main, &meta.wp)
     }
@@ -336,3 +338,5 @@ impl Filter for Docx {
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod tests_features;

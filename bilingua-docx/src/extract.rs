@@ -624,7 +624,7 @@ impl Extractor {
         let ns = self.ns.clone();
         let rpr_el = e.elements().find(|c| ns.is_w(&c.name, "rPr"));
         let rpr = rpr_el.map(|r| r.raw()).unwrap_or_default();
-        let key = rpr_el.map(|r| canon_rpr(r)).unwrap_or_default();
+        let key = rpr_el.map(canon_rpr).unwrap_or_default();
         let wrap = |inner: &str| format!("<{}r>{rpr}{inner}</{}r>", ns.w, ns.w);
         for c in e.elements() {
             let local = c.name.strip_prefix(ns.w.as_str()).unwrap_or("");
