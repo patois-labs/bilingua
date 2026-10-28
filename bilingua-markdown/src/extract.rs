@@ -292,7 +292,7 @@ impl<'a> Ex<'a> {
                 use pulldown_cmark::LinkType;
                 if matches!(link_type, LinkType::Autolink | LinkType::Email) {
                     let end = matching_end(evs, i);
-                    leaf_tag(b, src, r, &src.get(r.clone()).unwrap_or("<link>").to_string(), "link");
+                    leaf_tag(b, src, r, src.get(r.clone()).unwrap_or("<link>"), "link");
                     return end + 1;
                 }
                 open_container(b, src, evs, i, "<a>", "link")
