@@ -60,7 +60,10 @@ pub fn inline_html(unit: &Unit, inlines: &[Inline]) -> String {
                     TagKind::Open => {
                         let wrapper = code.is_some_and(|c| c.standalone.is_some());
                         let (o, c) = if wrapper {
-                            ("<span class=\"bl-link\">".to_string(), "</span>".to_string())
+                            (
+                                "<span class=\"bl-link\">".to_string(),
+                                "</span>".to_string(),
+                            )
                         } else {
                             let tags = fmt_tags(&label);
                             let o: String = tags.iter().map(|t| format!("<{t}>")).collect();
@@ -81,13 +84,16 @@ pub fn inline_html(unit: &Unit, inlines: &[Inline]) -> String {
                     TagKind::Standalone => match label.as_str() {
                         "tab" => out.push_str("&emsp;"),
                         "break" => out.push_str("<br>"),
-                        "image" | "textbox" => out.push_str("<span class=\"bl-img\">[image]</span>"),
+                        "image" | "textbox" => {
+                            out.push_str("<span class=\"bl-img\">[image]</span>")
+                        }
                         "field" => {
                             let r = code.and_then(|c| c.open.clone()).unwrap_or_default();
                             out.push_str(&esc(&r));
                         }
                         "footnote-ref" => out.push_str(&format!("<sup>{}</sup>", esc(display))),
-                        _ => out.push_str(&format!("<span class=\"bl-code\">{}</span>", esc(display))),
+                        _ => out
+                            .push_str(&format!("<span class=\"bl-code\">{}</span>", esc(display))),
                     },
                 }
             }
@@ -120,7 +126,11 @@ fn unit_html(u: &Unit) -> String {
                 out.push_str(&esc(sep));
             }
         }
-        out.push_str(&format!("<span data-bl-seg=\"{}\">{}</span>", esc(&s.id), inline_html(u, seg_inlines(s))));
+        out.push_str(&format!(
+            "<span data-bl-seg=\"{}\">{}</span>",
+            esc(&s.id),
+            inline_html(u, seg_inlines(s))
+        ));
     }
     out
 }
@@ -152,7 +162,9 @@ impl Pv<'_> {
         let ppr = e.elements().find(|c| self.ns.is_w(&c.name, "pPr"));
         let rtl = ppr
             .and_then(|p| p.elements().find(|c| self.ns.is_w(&c.name, "bidi")))
-            .is_some_and(|b| !matches!(self.ns.attr(b, "val").as_deref(), Some("0") | Some("false")));
+            .is_some_and(|b| {
+                !matches!(self.ns.attr(b, "val").as_deref(), Some("0") | Some("false"))
+            });
         let dir = if rtl { " dir=\"rtl\"" } else { "" };
         let kind = u.context.kind.as_deref().unwrap_or("paragraph");
         let inner = unit_html(u);
@@ -213,7 +225,11 @@ impl Pv<'_> {
                 out.push_str("<td>");
                 self.block(&e.children, out);
                 out.push_str("</td>");
-            } else if self.ns.is_w(&e.name, "pPr") || self.ns.is_w(&e.name, "tblPr") || self.ns.is_w(&e.name, "trPr") || self.ns.is_w(&e.name, "tcPr") {
+            } else if self.ns.is_w(&e.name, "pPr")
+                || self.ns.is_w(&e.name, "tblPr")
+                || self.ns.is_w(&e.name, "trPr")
+                || self.ns.is_w(&e.name, "tcPr")
+            {
             } else {
                 self.block(&e.children, out);
             }
@@ -225,9 +241,13 @@ impl Pv<'_> {
 }
 
 pub fn preview(doc: &Document, main: &str, w: &str) -> Option<String> {
-    let Skeleton::Zip { entries } = &doc.skeleton else { return None };
+    let Skeleton::Zip { entries } = &doc.skeleton else {
+        return None;
+    };
     let entry = entries.iter().find(|e| e.name == main)?;
-    let ZipData::Parts(parts) = &entry.data else { return None };
+    let ZipData::Parts(parts) = &entry.data else {
+        return None;
+    };
     let mut tpl = String::new();
     for p in parts {
         match p {
@@ -236,7 +256,14 @@ pub fn preview(doc: &Document, main: &str, w: &str) -> Option<String> {
         }
     }
     let nodes = parse(&tpl).ok()?;
-    let mut pv = Pv { doc, ns: Ns { w: w.to_string(), mc: "mc:".into() }, shown: HashSet::new() };
+    let mut pv = Pv {
+        doc,
+        ns: Ns {
+            w: w.to_string(),
+            mc: "mc:".into(),
+        },
+        shown: HashSet::new(),
+    };
     let mut body = String::new();
     pv.block(&nodes, &mut body);
 
@@ -261,7 +288,9 @@ pub fn preview(doc: &Document, main: &str, w: &str) -> Option<String> {
             pv.shown.insert(i);
         }
         if !items.is_empty() {
-            extra.push_str(&format!("<section class=\"bl-part\"><h6>{title}</h6>{items}</section>"));
+            extra.push_str(&format!(
+                "<section class=\"bl-part\"><h6>{title}</h6>{items}</section>"
+            ));
         }
     }
     // Anything else (a paragraph the walk did not reach) still gets its spans.
@@ -272,7 +301,9 @@ pub fn preview(doc: &Document, main: &str, w: &str) -> Option<String> {
         }
     }
     if !rest.is_empty() {
-        extra.push_str(&format!("<section class=\"bl-part\"><h6>Other</h6>{rest}</section>"));
+        extra.push_str(&format!(
+            "<section class=\"bl-part\"><h6>Other</h6>{rest}</section>"
+        ));
     }
     Some(format!(
         "<!doctype html><html><head><meta charset=\"utf-8\"><title>Preview</title><style>\

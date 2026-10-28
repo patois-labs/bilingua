@@ -9,7 +9,13 @@ fn seg_of<'a>(doc: &'a Document, id: &str) -> &'a Segment {
 fn tag_displays(s: &Segment) -> Vec<String> {
     s.source
         .iter()
-        .filter_map(|i| if let Inline::Tag { display, .. } = i { Some(display.clone()) } else { None })
+        .filter_map(|i| {
+            if let Inline::Tag { display, .. } = i {
+                Some(display.clone())
+            } else {
+                None
+            }
+        })
         .collect()
 }
 
@@ -23,7 +29,8 @@ fn split_runs_are_merged() {
     let s = seg_of(&doc, "p1");
     assert_eq!(s.source, vec![Inline::text("Hello world")]);
     doc.target_lang = Some("es-ES".into());
-    doc.set_target("p1", vec![Inline::text("Hola mundo")]).unwrap();
+    doc.set_target("p1", vec![Inline::text("Hola mundo")])
+        .unwrap();
     let x = xml_of(&Docx.merge(&doc).unwrap(), "word/document.xml");
     assert!(x.contains("<w:t>Hola mundo</w:t>"));
     assert!(!x.contains("proofErr"));
@@ -52,11 +59,15 @@ fn bold_and_italic_become_paired_tags() {
     ];
     doc.set_target("p1", t).unwrap();
     let x = xml_of(&Docx.merge(&doc).unwrap(), "word/document.xml");
-    assert!(x.contains("<w:r><w:rPr><w:i/><w:color w:val=\"FF0000\"/></w:rPr><w:t>conservar</w:t></w:r>"));
+    assert!(x.contains(
+        "<w:r><w:rPr><w:i/><w:color w:val=\"FF0000\"/></w:rPr><w:t>conservar</w:t></w:r>"
+    ));
     assert!(x.contains("<w:r><w:rPr><w:b/></w:rPr><w:t>Guardar</w:t></w:r>"));
     assert!(x.contains("<w:r><w:t xml:space=\"preserve\"> con </w:t></w:r>"));
     // Tags the source lacks are refused by the model.
-    assert!(doc.set_target("p1", vec![Inline::tag("9", TagKind::Open, "<b>")]).is_err());
+    assert!(doc
+        .set_target("p1", vec![Inline::tag("9", TagKind::Open, "<b>")])
+        .is_err());
 }
 
 #[test]
@@ -64,7 +75,8 @@ fn whole_paragraph_in_one_format_has_no_tags() {
     let inner = "<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>All bold </w:t></w:r><w:r><w:rPr><w:b/></w:rPr><w:t>text</w:t></w:r></w:p>";
     let mut doc = round_trip(&doc_of(inner));
     assert!(tag_displays(seg_of(&doc, "p1")).is_empty());
-    doc.set_target("p1", vec![Inline::text("Todo en negrita")]).unwrap();
+    doc.set_target("p1", vec![Inline::text("Todo en negrita")])
+        .unwrap();
     let x = xml_of(&Docx.merge(&doc).unwrap(), "word/document.xml");
     assert!(x.contains("<w:r><w:rPr><w:b/></w:rPr><w:t>Todo en negrita</w:t></w:r>"));
 }
@@ -84,10 +96,20 @@ fn headings_lists_tables_have_context() {
 <w:p><w:pPr><w:numPr><w:ilvl w:val=\"0\"/><w:numId w:val=\"1\"/></w:numPr></w:pPr><w:r><w:t>First point</w:t></w:r></w:p>\
 <w:p><w:pPr><w:pStyle w:val=\"Bullets\"/></w:pPr><w:r><w:t>Styled bullet</w:t></w:r></w:p>\
 <w:tbl><w:tr><w:tc><w:p><w:r><w:t>Cell A</w:t></w:r></w:p></w:tc><w:tc><w:p><w:r><w:t>Cell B</w:t></w:r></w:p></w:tc></w:tr></w:tbl>";
-    let bytes = make(&[("word/document.xml", &body(inner)), ("word/styles.xml", STYLES)]);
+    let bytes = make(&[
+        ("word/document.xml", &body(inner)),
+        ("word/styles.xml", STYLES),
+    ]);
     let doc = round_trip(&bytes);
     assert_eq!(doc.source_lang.as_deref(), Some("en-GB"));
-    let ctx = |id: &str| doc.units.iter().find(|u| u.id == id).unwrap().context.clone();
+    let ctx = |id: &str| {
+        doc.units
+            .iter()
+            .find(|u| u.id == id)
+            .unwrap()
+            .context
+            .clone()
+    };
     assert_eq!(ctx("p1").kind.as_deref(), Some("heading"));
     assert_eq!(ctx("p1").style.as_deref(), Some("Titel"));
     assert_eq!(ctx("p2").kind.as_deref(), Some("heading"));
@@ -98,7 +120,10 @@ fn headings_lists_tables_have_context() {
     assert_eq!(ctx("p5").kind.as_deref(), Some("list-item"));
     assert_eq!(ctx("p6").kind.as_deref(), Some("cell"));
     assert_eq!(ctx("p7").kind.as_deref(), Some("cell"));
-    assert_eq!(ctx("p7").location.as_deref(), Some("word/document.xml paragraph 7"));
+    assert_eq!(
+        ctx("p7").location.as_deref(),
+        Some("word/document.xml paragraph 7")
+    );
 }
 
 #[test]
@@ -121,8 +146,29 @@ fn other_parts_headers_footnotes_comments_properties() {
     ]);
     let mut doc = round_trip(&bytes);
     let ids: Vec<&str> = doc.units.iter().map(|u| u.id.as_str()).collect();
-    assert_eq!(ids, vec!["p1", "p2", "header1-p1", "footer1-p1", "footnotes-p2", "comments-p1", "meta-title", "meta-subject"]);
-    let kind = |id: &str| doc.units.iter().find(|u| u.id == id).unwrap().context.kind.clone().unwrap();
+    assert_eq!(
+        ids,
+        vec![
+            "p1",
+            "p2",
+            "header1-p1",
+            "footer1-p1",
+            "footnotes-p2",
+            "comments-p1",
+            "meta-title",
+            "meta-subject"
+        ]
+    );
+    let kind = |id: &str| {
+        doc.units
+            .iter()
+            .find(|u| u.id == id)
+            .unwrap()
+            .context
+            .kind
+            .clone()
+            .unwrap()
+    };
     assert_eq!(kind("header1-p1"), "header");
     assert_eq!(kind("footer1-p1"), "footer");
     assert_eq!(kind("footnotes-p2"), "footnote");
@@ -135,25 +181,42 @@ fn other_parts_headers_footnotes_comments_properties() {
     assert_eq!(src(&doc, "meta-title"), "Quarterly & yearly plan");
     // The comment is a note of the paragraph it anchors to.
     let u = doc.units.iter().find(|u| u.id == "p2").unwrap();
-    assert_eq!(u.context.notes, vec!["Comment (Dana): Keep the brand name".to_string()]);
+    assert_eq!(
+        u.context.notes,
+        vec!["Comment (Dana): Keep the brand name".to_string()]
+    );
 
-    doc.set_target("meta-title", vec![Inline::text("Plan <trimestral> & anual")]).unwrap();
-    doc.set_target("header1-p1", vec![Inline::text("Acme Corp confidencial")]).unwrap();
-    doc.set_target("footnotes-p2", vec![Inline::text(" Véase el apéndice.")]).unwrap();
-    doc.set_target("comments-p1", vec![Inline::text("Mantener la marca")]).unwrap();
+    doc.set_target(
+        "meta-title",
+        vec![Inline::text("Plan <trimestral> & anual")],
+    )
+    .unwrap();
+    doc.set_target("header1-p1", vec![Inline::text("Acme Corp confidencial")])
+        .unwrap();
+    doc.set_target("footnotes-p2", vec![Inline::text(" Véase el apéndice.")])
+        .unwrap();
+    doc.set_target("comments-p1", vec![Inline::text("Mantener la marca")])
+        .unwrap();
     let out = Docx.merge(&doc).unwrap();
-    assert!(xml_of(&out, "docProps/core.xml").contains("<dc:title>Plan &lt;trimestral&gt; &amp; anual</dc:title>"));
+    assert!(xml_of(&out, "docProps/core.xml")
+        .contains("<dc:title>Plan &lt;trimestral&gt; &amp; anual</dc:title>"));
     assert!(xml_of(&out, "word/header1.xml").contains("Acme Corp confidencial"));
-    assert!(xml_of(&out, "word/footnotes.xml").contains("<w:t xml:space=\"preserve\"> Véase el apéndice.</w:t>"));
+    assert!(xml_of(&out, "word/footnotes.xml")
+        .contains("<w:t xml:space=\"preserve\"> Véase el apéndice.</w:t>"));
     assert!(xml_of(&out, "word/footnotes.xml").contains("<w:footnoteRef/>"));
     assert!(xml_of(&out, "word/footnotes.xml").contains("w:type=\"separator\""));
     // The footer is untouched, so it is byte for byte the same.
     assert_eq!(xml_of(&out, "word/footer1.xml"), footer);
     // Comment anchors survive in the rebuilt paragraph.
-    doc.set_target("p2", vec![Inline::text("Palabras comentadas")]).unwrap();
+    doc.set_target("p2", vec![Inline::text("Palabras comentadas")])
+        .unwrap();
     let x = xml_of(&Docx.merge(&doc).unwrap(), "word/document.xml");
-    assert!(x.contains("<w:commentRangeStart w:id=\"0\"/><w:r><w:t>Palabras comentadas</w:t></w:r>"));
-    assert!(x.contains("<w:commentRangeEnd w:id=\"0\"/><w:r><w:commentReference w:id=\"0\"/></w:r></w:p>"));
+    assert!(
+        x.contains("<w:commentRangeStart w:id=\"0\"/><w:r><w:t>Palabras comentadas</w:t></w:r>")
+    );
+    assert!(x.contains(
+        "<w:commentRangeEnd w:id=\"0\"/><w:r><w:commentReference w:id=\"0\"/></w:r></w:p>"
+    ));
 }
 
 #[test]
@@ -234,7 +297,8 @@ fn tabs_breaks_and_images_are_standalone_tags() {
 
 #[test]
 fn text_box_with_fallback_is_translated_in_both_copies() {
-    let tb = |t: &str| format!("<w:txbxContent><w:p><w:r><w:t>{t}</w:t></w:r></w:p></w:txbxContent>");
+    let tb =
+        |t: &str| format!("<w:txbxContent><w:p><w:r><w:t>{t}</w:t></w:r></w:p></w:txbxContent>");
     let inner = format!(
         "<w:p><w:r><w:t>Before</w:t></w:r><w:r><mc:AlternateContent><mc:Choice Requires=\"wps\"><w:drawing><wps:wsp><wps:txbx>{}</wps:txbx></wps:wsp></w:drawing></mc:Choice>\
 <mc:Fallback><w:pict><v:shape><v:textbox>{}</v:textbox></v:shape></w:pict></mc:Fallback></mc:AlternateContent></w:r></w:p>",
@@ -246,10 +310,22 @@ fn text_box_with_fallback_is_translated_in_both_copies() {
     assert_eq!(ids, vec!["p1", "p2"]);
     assert_eq!(doc.units[1].context.kind.as_deref(), Some("textbox"));
     assert_eq!(doc.units[0].segments[0].source.len(), 2); // "Before" and the textbox tag
-    doc.set_target("p2", vec![Inline::text("Oferta hasta el viernes")]).unwrap();
-    doc.set_target("p1", vec![Inline::text("Antes"), Inline::tag("1", TagKind::Standalone, "<textbox>")]).unwrap();
+    doc.set_target("p2", vec![Inline::text("Oferta hasta el viernes")])
+        .unwrap();
+    doc.set_target(
+        "p1",
+        vec![
+            Inline::text("Antes"),
+            Inline::tag("1", TagKind::Standalone, "<textbox>"),
+        ],
+    )
+    .unwrap();
     let x = xml_of(&Docx.merge(&doc).unwrap(), "word/document.xml");
-    assert_eq!(x.matches("Oferta hasta el viernes").count(), 2, "choice and fallback must both change");
+    assert_eq!(
+        x.matches("Oferta hasta el viernes").count(),
+        2,
+        "choice and fallback must both change"
+    );
     assert!(!x.contains("Sale ends"));
     assert!(x.contains("Antes"));
 }
@@ -260,7 +336,8 @@ fn unmatched_fallback_is_left_alone() {
 <mc:Fallback><w:pict><v:textbox><w:txbxContent><w:p><w:r><w:t>Old text</w:t></w:r></w:p></w:txbxContent></v:textbox></w:pict></mc:Fallback></mc:AlternateContent></w:r></w:p>";
     let mut doc = round_trip(&doc_of(inner));
     assert_eq!(doc.units.len(), 1);
-    doc.set_target("p2", vec![Inline::text("Texto nuevo")]).unwrap();
+    doc.set_target("p2", vec![Inline::text("Texto nuevo")])
+        .unwrap();
     let x = xml_of(&Docx.merge(&doc).unwrap(), "word/document.xml");
     assert!(x.contains("Texto nuevo") && x.contains("Old text"));
 }
@@ -270,7 +347,8 @@ fn vml_text_box_without_alternate_content() {
     let inner = "<w:p><w:r><w:pict><v:shape><v:textbox><w:txbxContent><w:p><w:r><w:t>Boxed</w:t></w:r></w:p></w:txbxContent></v:textbox></v:shape></w:pict></w:r></w:p>";
     let mut doc = round_trip(&doc_of(inner));
     assert_eq!(doc.units.len(), 1);
-    doc.set_target("p2", vec![Inline::text("Encuadrado")]).unwrap();
+    doc.set_target("p2", vec![Inline::text("Encuadrado")])
+        .unwrap();
     let x = xml_of(&Docx.merge(&doc).unwrap(), "word/document.xml");
     assert!(x.contains("<w:t>Encuadrado</w:t>"));
 }
@@ -283,8 +361,12 @@ fn tracked_changes_are_accepted_for_text_and_kept_when_unchanged() {
     let bytes = doc_of(inner);
     let mut doc = round_trip(&bytes); // unchanged: identical, tracked markup kept
     assert_eq!(src(&doc, "p1"), "The price is twelve dollars.");
-    assert_eq!(doc.units[0].context.notes, vec!["This paragraph has tracked changes".to_string()]);
-    doc.set_target("p1", vec![Inline::text("El precio es doce dólares.")]).unwrap();
+    assert_eq!(
+        doc.units[0].context.notes,
+        vec!["This paragraph has tracked changes".to_string()]
+    );
+    doc.set_target("p1", vec![Inline::text("El precio es doce dólares.")])
+        .unwrap();
     let (out, rep) = merge_with_report(&doc).unwrap();
     let x = xml_of(&out, "word/document.xml");
     assert!(!x.contains("w:del") && !x.contains("w:ins"));
@@ -304,7 +386,8 @@ fn arabic_rtl_document() {
     assert_eq!(src(&doc, "p1"), ar);
     assert_eq!(tag_displays(seg_of(&doc, "p2")), vec!["<b>", "</b>"]);
     doc.target_lang = Some("ar-EG".into());
-    doc.set_target("p1", vec![Inline::text("أهلا وسهلا")]).unwrap();
+    doc.set_target("p1", vec![Inline::text("أهلا وسهلا")])
+        .unwrap();
     let x = xml_of(&Docx.merge(&doc).unwrap(), "word/document.xml");
     assert!(x.contains("<w:pPr><w:bidi/></w:pPr><w:r><w:rPr><w:rtl/><w:lang w:bidi=\"ar-EG\"/></w:rPr><w:t>أهلا وسهلا</w:t></w:r>"));
     let html = Docx.preview(&doc).unwrap();
@@ -318,13 +401,15 @@ fn japanese_document_language_marks() {
     let mut doc = round_trip(&doc_of(&inner));
     assert_eq!(src(&doc, "p1"), ja);
     doc.target_lang = Some("es-ES".into());
-    doc.set_target("p1", vec![Inline::text("Gracias por su pedido.")]).unwrap();
+    doc.set_target("p1", vec![Inline::text("Gracias por su pedido.")])
+        .unwrap();
     let x = xml_of(&Docx.merge(&doc).unwrap(), "word/document.xml");
     // The Latin language follows the target, the East Asian mark stays (it describes other text).
     assert!(x.contains("<w:lang w:val=\"es-ES\" w:eastAsia=\"ja-JP\"/>"));
     // Translating into Japanese sets the East Asian mark too.
     doc.target_lang = Some("ja-JP".into());
-    doc.set_target("p1", vec![Inline::text("ありがとう。")]).unwrap();
+    doc.set_target("p1", vec![Inline::text("ありがとう。")])
+        .unwrap();
     let x = xml_of(&Docx.merge(&doc).unwrap(), "word/document.xml");
     assert!(x.contains("<w:lang w:val=\"ja-JP\" w:eastAsia=\"ja-JP\"/>"));
 }
@@ -333,7 +418,11 @@ fn japanese_document_language_marks() {
 fn writing_escapes_and_preserves_space() {
     let bytes = doc_of(&p("x"));
     let mut doc = extract(&bytes);
-    doc.set_target("p1", vec![Inline::text("  a < b && c > d\tend\nnext \u{1} ")]).unwrap();
+    doc.set_target(
+        "p1",
+        vec![Inline::text("  a < b && c > d\tend\nnext \u{1} ")],
+    )
+    .unwrap();
     let x = xml_of(&Docx.merge(&doc).unwrap(), "word/document.xml");
     assert!(x.contains("<w:t xml:space=\"preserve\">  a &lt; b &amp;&amp; c &gt; d</w:t></w:r><w:r><w:tab/></w:r><w:r><w:t>end</w:t></w:r><w:r><w:br/></w:r><w:r><w:t xml:space=\"preserve\">next  </w:t></w:r>"), "{x}");
     assert!(crate::xml::parse(&x).is_ok());
@@ -343,30 +432,61 @@ fn writing_escapes_and_preserves_space() {
 fn zip_container_details_survive() {
     let mut w = zip::ZipWriter::new(std::io::Cursor::new(Vec::new()));
     let opt = zip::write::SimpleFileOptions::default();
-    w.start_file("[Content_Types].xml", opt.compression_method(zip::CompressionMethod::Deflated)).unwrap();
+    w.start_file(
+        "[Content_Types].xml",
+        opt.compression_method(zip::CompressionMethod::Deflated),
+    )
+    .unwrap();
     w.write_all(CT.as_bytes()).unwrap();
-    w.start_file("word/media/data.bin", opt.compression_method(zip::CompressionMethod::Stored)).unwrap();
+    w.start_file(
+        "word/media/data.bin",
+        opt.compression_method(zip::CompressionMethod::Stored),
+    )
+    .unwrap();
     w.write_all(&[0, 1, 2, 3, 255]).unwrap();
-    w.start_file("word/document.xml", opt.compression_method(zip::CompressionMethod::Deflated)).unwrap();
+    w.start_file(
+        "word/document.xml",
+        opt.compression_method(zip::CompressionMethod::Deflated),
+    )
+    .unwrap();
     w.write_all(body(&p("Hi")).as_bytes()).unwrap();
-    w.start_file("customXml/z.xml", opt.compression_method(zip::CompressionMethod::Deflated)).unwrap();
+    w.start_file(
+        "customXml/z.xml",
+        opt.compression_method(zip::CompressionMethod::Deflated),
+    )
+    .unwrap();
     w.write_all(b"<z/>").unwrap();
     let bytes = w.finish().unwrap().into_inner();
     let mut doc = extract(&bytes);
     doc.set_target("p1", vec![Inline::text("Hola")]).unwrap();
     let out = Docx.merge(&doc).unwrap();
     let names: Vec<String> = entries_of(&out).into_iter().map(|e| e.0).collect();
-    assert_eq!(names, vec!["[Content_Types].xml", "word/media/data.bin", "word/document.xml", "customXml/z.xml"]);
+    assert_eq!(
+        names,
+        vec![
+            "[Content_Types].xml",
+            "word/media/data.bin",
+            "word/document.xml",
+            "customXml/z.xml"
+        ]
+    );
     let mut z = zip::ZipArchive::new(std::io::Cursor::new(&out)).unwrap();
-    assert_eq!(z.by_name("word/media/data.bin").unwrap().compression(), zip::CompressionMethod::Stored);
-    assert_eq!(z.by_name("word/document.xml").unwrap().compression(), zip::CompressionMethod::Deflated);
+    assert_eq!(
+        z.by_name("word/media/data.bin").unwrap().compression(),
+        zip::CompressionMethod::Stored
+    );
+    assert_eq!(
+        z.by_name("word/document.xml").unwrap().compression(),
+        zip::CompressionMethod::Deflated
+    );
     assert!(!names.iter().any(|n| n.contains("bilingua")));
 }
 
 fn raw_zip(entries: &[(&str, &[u8])]) -> Vec<u8> {
     let mut w = zip::ZipWriter::new(std::io::Cursor::new(Vec::new()));
     for (n, d) in entries {
-        w.start_file(*n, zip::write::SimpleFileOptions::default()).unwrap();
+        w.start_file(*n, zip::write::SimpleFileOptions::default())
+            .unwrap();
         w.write_all(d).unwrap();
     }
     w.finish().unwrap().into_inner()
@@ -377,19 +497,30 @@ fn hostile_input_is_refused() {
     let ok = body(&p("x"));
     let f = Docx;
     let o = ExtractOptions::default();
-    assert!(f.extract(b"not a zip at all, just some text bytes", &o).is_err());
+    assert!(f
+        .extract(b"not a zip at all, just some text bytes", &o)
+        .is_err());
     assert!(f.extract(&raw_zip(&[("a.txt", b"x")]), &o).is_err()); // no content types
     let bad_names = ["../evil.xml", "/abs.xml", "word/../../x.xml", "C:evil.xml"];
     for n in bad_names {
-        let z = raw_zip(&[("[Content_Types].xml", CT.as_bytes()), ("word/document.xml", ok.as_bytes()), (n, b"x")]);
+        let z = raw_zip(&[
+            ("[Content_Types].xml", CT.as_bytes()),
+            ("word/document.xml", ok.as_bytes()),
+            (n, b"x"),
+        ]);
         assert!(f.extract(&z, &o).is_err(), "{n} must be refused");
     }
-    let dup = raw_zip(&[("[Content_Types].xml", CT.as_bytes()), ("word/document.xml", ok.as_bytes()), ("WORD/document.xml", b"x")]);
+    let dup = raw_zip(&[
+        ("[Content_Types].xml", CT.as_bytes()),
+        ("word/document.xml", ok.as_bytes()),
+        ("WORD/document.xml", b"x"),
+    ]);
     assert!(f.extract(&dup, &o).is_err());
     // Expansion ratio: 8 MB of zeros packs to a few KB.
     let zeros = vec![0u8; 8 * 1024 * 1024];
     let mut w = zip::ZipWriter::new(std::io::Cursor::new(Vec::new()));
-    let d = zip::write::SimpleFileOptions::default().compression_method(zip::CompressionMethod::Deflated);
+    let d = zip::write::SimpleFileOptions::default()
+        .compression_method(zip::CompressionMethod::Deflated);
     w.start_file("[Content_Types].xml", d).unwrap();
     w.write_all(CT.as_bytes()).unwrap();
     w.start_file("word/document.xml", d).unwrap();
@@ -401,15 +532,25 @@ fn hostile_input_is_refused() {
     assert!(err.contains("expands"), "{err}");
     // DOCTYPE with an entity is refused, not expanded.
     let evil = format!("<?xml version=\"1.0\"?><!DOCTYPE d [<!ENTITY x \"boom\">]><w:document {NS}><w:body><w:p><w:r><w:t>&x;</w:t></w:r></w:p></w:body></w:document>");
-    assert!(f.extract(&make(&[("word/document.xml", &evil)]), &o).is_err());
+    assert!(f
+        .extract(&make(&[("word/document.xml", &evil)]), &o)
+        .is_err());
     // Broken XML in the main part.
-    assert!(f.extract(&make(&[("word/document.xml", "<w:document><w:body></w:document>")]), &o).is_err());
+    assert!(f
+        .extract(
+            &make(&[("word/document.xml", "<w:document><w:body></w:document>")]),
+            &o
+        )
+        .is_err());
 }
 
 #[test]
 fn broken_side_parts_are_left_untouched() {
     let hdr = "<w:hdr><w:p>"; // not well formed
-    let bytes = make(&[("word/document.xml", &body(&p("Hi"))), ("word/header1.xml", hdr)]);
+    let bytes = make(&[
+        ("word/document.xml", &body(&p("Hi"))),
+        ("word/header1.xml", hdr),
+    ]);
     let doc = round_trip(&bytes);
     assert_eq!(doc.units.len(), 1);
 }
@@ -430,7 +571,12 @@ fn other_prefixes_and_default_namespace() {
     assert_eq!(tag_displays(seg_of(&doc, "p1")), vec!["<b>", "</b>"]);
     doc.set_target(
         "p1",
-        vec![Inline::tag("1", TagKind::Open, ""), Inline::text("Prue"), Inline::tag("1", TagKind::Close, ""), Inline::text("ba de prefijo")],
+        vec![
+            Inline::tag("1", TagKind::Open, ""),
+            Inline::text("Prue"),
+            Inline::tag("1", TagKind::Close, ""),
+            Inline::text("ba de prefijo"),
+        ],
     )
     .unwrap();
     let x = xml_of(&Docx.merge(&doc).unwrap(), "word/document.xml");
@@ -448,7 +594,12 @@ fn content_control_wraps_runs() {
     assert_eq!(tag_displays(seg_of(&doc, "p1")), vec!["<x>", "</x>"]);
     doc.set_target(
         "p1",
-        vec![Inline::tag("1", TagKind::Open, ""), Inline::text("Nombre del cliente"), Inline::tag("1", TagKind::Close, ""), Inline::text(" aquí")],
+        vec![
+            Inline::tag("1", TagKind::Open, ""),
+            Inline::text("Nombre del cliente"),
+            Inline::tag("1", TagKind::Close, ""),
+            Inline::text(" aquí"),
+        ],
     )
     .unwrap();
     let x = xml_of(&Docx.merge(&doc).unwrap(), "word/document.xml");
@@ -471,14 +622,23 @@ fn preview_has_structure_and_segment_spans() {
 <w:p><w:pPr><w:numPr><w:numId w:val=\"1\"/></w:numPr></w:pPr><w:r><w:t>Item two</w:t></w:r></w:p>\
 <w:tbl><w:tr><w:tc><w:p><w:r><w:t>Cell</w:t></w:r></w:p></w:tc></w:tr></w:tbl>";
     let hdr = part("hdr", &p("Top of page"));
-    let bytes = make(&[("word/document.xml", &body(inner)), ("word/styles.xml", STYLES), ("word/header1.xml", &hdr)]);
+    let bytes = make(&[
+        ("word/document.xml", &body(inner)),
+        ("word/styles.xml", STYLES),
+        ("word/header1.xml", &hdr),
+    ]);
     let mut doc = extract(&bytes);
-    doc.set_target("p2", vec![Inline::text("Un texto <i>")]).unwrap();
+    doc.set_target("p2", vec![Inline::text("Un texto <i>")])
+        .unwrap();
     let html = Docx.preview(&doc).unwrap();
-    assert!(html.contains("<h1><span data-bl-seg=\"p1\">Welcome</span></h1>"), "{html}");
+    assert!(
+        html.contains("<h1><span data-bl-seg=\"p1\">Welcome</span></h1>"),
+        "{html}"
+    );
     assert!(html.contains("<span data-bl-seg=\"p2\">Un texto &lt;i&gt;</span>"));
     assert!(html.contains("<ul><li><span data-bl-seg=\"p3\">Item one</span></li><li><span data-bl-seg=\"p4\">Item two</span></li></ul>"));
-    assert!(html.contains("<table><tr><td><p><span data-bl-seg=\"p5\">Cell</span></p></td></tr></table>"));
+    assert!(html
+        .contains("<table><tr><td><p><span data-bl-seg=\"p5\">Cell</span></p></td></tr></table>"));
     assert!(html.contains("data-bl-seg=\"header1-p1\""));
     assert!(!html.contains("<script"));
     doc.set_target(
@@ -510,8 +670,18 @@ fn units_survive_segment_splitting_by_the_model() {
     let mut doc = extract(&bytes);
     let u = &mut doc.units[0];
     u.segments = vec![
-        Segment { id: "p1#1".into(), source: vec![Inline::text("One.")], target: vec![Inline::text("Uno.")], state: SegState::Draft },
-        Segment { id: "p1#2".into(), source: vec![Inline::text("Two.")], target: vec![Inline::text("Dos.")], state: SegState::Draft },
+        Segment {
+            id: "p1#1".into(),
+            source: vec![Inline::text("One.")],
+            target: vec![Inline::text("Uno.")],
+            state: SegState::Draft,
+        },
+        Segment {
+            id: "p1#2".into(),
+            source: vec![Inline::text("Two.")],
+            target: vec![Inline::text("Dos.")],
+            state: SegState::Draft,
+        },
     ];
     u.separators = vec![" ".into()];
     assert_eq!(plain_text(&u.source()), "One. Two.");
@@ -543,7 +713,14 @@ fn libreoffice_opens_the_merged_file_when_installed() {
     let mut doc = extract(&doc_of(&inner));
     doc.set_target("p1", vec![Inline::text("Hola.")]).unwrap();
     for (i, u) in doc.units.clone().iter().enumerate().skip(11) {
-        let t: Vec<Inline> = u.source().iter().map(|x| match x { Inline::Text(t) => Inline::text(format!("[{i}] {t}")), o => o.clone() }).collect();
+        let t: Vec<Inline> = u
+            .source()
+            .iter()
+            .map(|x| match x {
+                Inline::Text(t) => Inline::text(format!("[{i}] {t}")),
+                o => o.clone(),
+            })
+            .collect();
         doc.set_target(&u.id, t).unwrap();
     }
     let out = Docx.merge(&doc).unwrap();
@@ -557,13 +734,23 @@ fn libreoffice_opens_the_merged_file_when_installed() {
         .arg(&file)
         .output()
         .unwrap();
-    assert!(status.status.success(), "{}", String::from_utf8_lossy(&status.stderr));
-    assert!(dir.join("merged.pdf").exists(), "{}{}", String::from_utf8_lossy(&status.stdout), String::from_utf8_lossy(&status.stderr));
+    assert!(
+        status.status.success(),
+        "{}",
+        String::from_utf8_lossy(&status.stderr)
+    );
+    assert!(
+        dir.join("merged.pdf").exists(),
+        "{}{}",
+        String::from_utf8_lossy(&status.stdout),
+        String::from_utf8_lossy(&status.stderr)
+    );
     let _ = std::fs::remove_dir_all(&dir);
 }
 
 fn rich() -> String {
-    let tb = |t: &str| format!("<w:txbxContent><w:p><w:r><w:t>{t}</w:t></w:r></w:p></w:txbxContent>");
+    let tb =
+        |t: &str| format!("<w:txbxContent><w:p><w:r><w:t>{t}</w:t></w:r></w:p></w:txbxContent>");
     format!(
         "<w:p><w:r><w:t xml:space=\"preserve\">Some </w:t></w:r><w:r><w:rPr><w:b/></w:rPr><w:t>bold</w:t></w:r><w:r><w:tab/></w:r><w:r><w:t xml:space=\"preserve\"> and more text here</w:t></w:r></w:p><w:tbl><w:tblPr/><w:tblGrid><w:gridCol w:w=\"2000\"/></w:tblGrid><w:tr><w:tc><w:tcPr><w:tcW w:w=\"2000\" w:type=\"dxa\"/></w:tcPr><w:p><w:r><w:t>Cell text</w:t></w:r></w:p></w:tc></w:tr></w:tbl><w:p><w:r><mc:AlternateContent><mc:Choice Requires=\"wps\"><w:drawing><wp:inline><wp:extent cx=\"1000000\" cy=\"500000\"/><a:graphic><a:graphicData uri=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:wsp><wps:txbx>{}</wps:txbx></wps:wsp></a:graphicData></a:graphic></wp:inline></w:drawing></mc:Choice><mc:Fallback><w:pict><v:shape style=\"width:100pt;height:40pt\"><v:textbox>{}</v:textbox></v:shape></w:pict></mc:Fallback></mc:AlternateContent></w:r></w:p>",
         tb("Boxed words"),
@@ -606,14 +793,29 @@ fn rich_document_round_trips_and_extracts_the_textbox_once() {
     inner.push_str(&rich());
     let doc = round_trip(&doc_of(&inner));
     let texts: Vec<String> = doc.units.iter().map(|u| plain_text(&u.source())).collect();
-    assert_eq!(texts, ["Intro", "Some bold and more text here", "Cell text", "Boxed words"]);
+    assert_eq!(
+        texts,
+        [
+            "Intro",
+            "Some bold and more text here",
+            "Cell text",
+            "Boxed words"
+        ]
+    );
 }
 
 #[test]
 fn text_box_in_a_paragraph_without_text_changes_in_both_copies() {
     let mut doc = extract(&doc_of(&rich()));
-    let id = doc.units.iter().find(|u| plain_text(&u.source()) == "Boxed words").unwrap().id.clone();
-    doc.set_target(&id, vec![Inline::text("Palabras en caja")]).unwrap();
+    let id = doc
+        .units
+        .iter()
+        .find(|u| plain_text(&u.source()) == "Boxed words")
+        .unwrap()
+        .id
+        .clone();
+    doc.set_target(&id, vec![Inline::text("Palabras en caja")])
+        .unwrap();
     let x = xml_of(&Docx.merge(&doc).unwrap(), "word/document.xml");
     assert_eq!(x.matches("Palabras en caja").count(), 2);
     assert!(!x.contains("Boxed words"));

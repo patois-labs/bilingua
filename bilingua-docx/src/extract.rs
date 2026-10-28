@@ -41,11 +41,26 @@ struct Flags {
 }
 
 enum Atom {
-    Text { rpr: String, key: String, text: String },
-    Code { xml: String, display: String, label: &'static str, open: Option<String> },
+    Text {
+        rpr: String,
+        key: String,
+        text: String,
+    },
+    Code {
+        xml: String,
+        display: String,
+        label: &'static str,
+        open: Option<String>,
+    },
     Keep(String),
     Drop,
-    Open { open: String, close: String, display: String, close_display: String, label: &'static str },
+    Open {
+        open: String,
+        close: String,
+        display: String,
+        close_display: String,
+        label: &'static str,
+    },
     Close,
 }
 
@@ -85,7 +100,9 @@ impl Styles {
                                         s.names.insert(id.clone(), v);
                                     }
                                 }
-                                if ns.is_w(&c.name, "pPr") && c.elements().any(|x| ns.is_w(&x.name, "numPr")) {
+                                if ns.is_w(&c.name, "pPr")
+                                    && c.elements().any(|x| ns.is_w(&x.name, "numPr"))
+                                {
                                     s.numbered.insert(id.clone());
                                 }
                             }
@@ -192,7 +209,6 @@ impl Extractor {
         }
     }
 
-
     fn emit_el_nested(&mut self, e: &El, fl: Flags) -> String {
         self.nesting += 1;
         let r = self.emit_el(e, fl);
@@ -248,7 +264,13 @@ impl Extractor {
         let mut u = Unit::new(id.clone(), vec![Inline::text(text)]);
         u.context.kind = Some(local);
         u.context.location = Some(format!("{} {}", self.part_name, e.name));
-        u.codes.insert(C_ORIG.into(), CodeData { standalone: Some(inner), ..Default::default() });
+        u.codes.insert(
+            C_ORIG.into(),
+            CodeData {
+                standalone: Some(inner),
+                ..Default::default()
+            },
+        );
         u.codes.insert(C_SIMPLE.into(), CodeData::default());
         self.add_unit(u, self.core_ord);
         format!("{}{M_UNIT}{id}{M_END}{}", e.start, e.end)
@@ -259,7 +281,11 @@ impl Extractor {
             return;
         }
         self.index.insert(unit.id.clone(), self.pending.len());
-        self.pending.push(Pending { part: self.part_seq, ord, unit });
+        self.pending.push(Pending {
+            part: self.part_seq,
+            ord,
+            unit,
+        });
     }
 
     // ---------------------------------------------------------------- AlternateContent
@@ -325,7 +351,12 @@ impl Extractor {
         self.collect_paras(choice, &mut cp);
         self.collect_paras(fb, &mut fp);
         let mut map: HashMap<usize, String> = HashMap::new();
-        if cp.len() == fp.len() && cp.iter().zip(&fp).all(|(a, b)| self.para_text(a) == self.para_text(b)) {
+        if cp.len() == fp.len()
+            && cp
+                .iter()
+                .zip(&fp)
+                .all(|(a, b)| self.para_text(a) == self.para_text(b))
+        {
             for (a, b) in cp.iter().zip(&fp) {
                 let id = format!("{}p{}", self.prefix, a.ord);
                 if self.index.contains_key(&id) {
@@ -340,7 +371,10 @@ impl Extractor {
         let ns = self.ns.clone();
         if ns.is_w(&e.name, "p") {
             if let Some(uid) = map.get(&e.ord) {
-                let ppr_pos = e.children.iter().position(|n| matches!(n, Node::El(x) if ns.is_w(&x.name, "pPr")));
+                let ppr_pos = e
+                    .children
+                    .iter()
+                    .position(|n| matches!(n, Node::El(x) if ns.is_w(&x.name, "pPr")));
                 let mut shell = e.start.clone();
                 let from = match ppr_pos {
                     Some(k) => {
@@ -358,7 +392,13 @@ impl Extractor {
                 if let Some(&pi) = self.index.get(uid) {
                     let unit = &mut self.pending[pi].unit;
                     let k = unit.codes.keys().filter(|k| k.starts_with("_m")).count();
-                    unit.codes.insert(format!("_m{k}"), CodeData { standalone: Some(inner), ..Default::default() });
+                    unit.codes.insert(
+                        format!("_m{k}"),
+                        CodeData {
+                            standalone: Some(inner),
+                            ..Default::default()
+                        },
+                    );
                     return format!("{shell}{M_MIRROR}{uid}:{k}{M_END}{}", e.end);
                 }
             }
@@ -382,7 +422,11 @@ impl Extractor {
                 return s.clone();
             }
         }
-        let saved = if self.nesting > 0 { Some(std::mem::take(&mut self.field)) } else { None };
+        let saved = if self.nesting > 0 {
+            Some(std::mem::take(&mut self.field))
+        } else {
+            None
+        };
         let r = self.paragraph_inner(p, fl);
         if let Some(f) = saved {
             self.field = f;
@@ -399,7 +443,10 @@ impl Extractor {
         }
         self.nesting += 1;
         let ns = self.ns.clone();
-        let ppr_pos = p.children.iter().position(|n| matches!(n, Node::El(e) if ns.is_w(&e.name, "pPr")));
+        let ppr_pos = p
+            .children
+            .iter()
+            .position(|n| matches!(n, Node::El(e) if ns.is_w(&e.name, "pPr")));
         let mut shell = p.start.clone();
         let from = match ppr_pos {
             Some(k) => {
@@ -411,7 +458,13 @@ impl Extractor {
             None => 0,
         };
         let content = &p.children[from..];
-        let ppr = ppr_pos.and_then(|k| if let Node::El(e) = &p.children[k] { Some(e) } else { None });
+        let ppr = ppr_pos.and_then(|k| {
+            if let Node::El(e) = &p.children[k] {
+                Some(e)
+            } else {
+                None
+            }
+        });
 
         let mut st = ParaState::default();
         let mut atoms = Vec::new();
@@ -440,7 +493,11 @@ impl Extractor {
         if ns.is_w(&e.name, "fldChar") {
             return true;
         }
-        if ["drawing", "pict", "object", "txbxContent"].iter().any(|l| ns.is_w(&e.name, l)) || ns.is_mc(&e.name, "AlternateContent") {
+        if ["drawing", "pict", "object", "txbxContent"]
+            .iter()
+            .any(|l| ns.is_w(&e.name, l))
+            || ns.is_mc(&e.name, "AlternateContent")
+        {
             return false;
         }
         e.elements().any(|c| self.has_fldchar(c))
@@ -484,7 +541,11 @@ impl Extractor {
             }
             return;
         }
-        if ["drawing", "pict", "object"].iter().any(|l| ns.is_w(&e.name, l)) || ns.is_mc(&e.name, "AlternateContent") {
+        if ["drawing", "pict", "object"]
+            .iter()
+            .any(|l| ns.is_w(&e.name, l))
+            || ns.is_mc(&e.name, "AlternateContent")
+        {
             return;
         }
         for c in e.elements() {
@@ -494,17 +555,31 @@ impl Extractor {
 
     fn flush_field(&mut self, out: &mut Vec<Atom>) {
         let f = &mut self.field;
-        let name = f.instr.split_whitespace().next().unwrap_or("field").to_uppercase();
+        let name = f
+            .instr
+            .split_whitespace()
+            .next()
+            .unwrap_or("field")
+            .to_uppercase();
         let result = f.result.trim().to_string();
         let shown: String = result.chars().take(24).collect();
-        let display = if shown.is_empty() { format!("{{{name}}}") } else { format!("{{{name} {shown}}}") };
+        let display = if shown.is_empty() {
+            format!("{{{name}}}")
+        } else {
+            format!("{{{name} {shown}}}")
+        };
         let xml = std::mem::take(&mut f.buf);
         if f.depth == 0 {
             f.instr.clear();
             f.result.clear();
             f.in_result = false;
         }
-        out.push(Atom::Code { xml, display, label: "field", open: Some(result) });
+        out.push(Atom::Code {
+            xml,
+            display,
+            label: "field",
+            open: Some(result),
+        });
     }
 
     fn atoms(&mut self, children: &[Node], out: &mut Vec<Atom>, st: &mut ParaState, fl: Flags) {
@@ -533,7 +608,12 @@ impl Extractor {
 
     fn code(&mut self, e: &El, display: &str, label: &'static str, fl: Flags, out: &mut Vec<Atom>) {
         let xml = self.emit_el_nested(e, fl);
-        out.push(Atom::Code { xml, display: display.into(), label, open: None });
+        out.push(Atom::Code {
+            xml,
+            display: display.into(),
+            label,
+            open: None,
+        });
     }
 
     fn atom_el(&mut self, e: &El, out: &mut Vec<Atom>, st: &mut ParaState, fl: Flags) {
@@ -564,7 +644,13 @@ impl Extractor {
                     }
                     open.push_str(&c.start);
                     let close = format!("{}{}", c.end, e.end);
-                    out.push(Atom::Open { open, close, display: "<x>".into(), close_display: "</x>".into(), label: "content control" });
+                    out.push(Atom::Open {
+                        open,
+                        close,
+                        display: "<x>".into(),
+                        close_display: "</x>".into(),
+                        label: "content control",
+                    });
                     self.atoms(&c.children, out, st, fl);
                     out.push(Atom::Close);
                 }
@@ -578,7 +664,11 @@ impl Extractor {
             out.push(Atom::Drop);
         } else if local == "fldSimple" {
             let instr = ns.attr(e, "instr").unwrap_or_default();
-            let name = instr.split_whitespace().next().unwrap_or("field").to_uppercase();
+            let name = instr
+                .split_whitespace()
+                .next()
+                .unwrap_or("field")
+                .to_uppercase();
             let mut result = String::new();
             fn texts(ns: &Ns, e: &El, s: &mut String) {
                 for c in e.elements() {
@@ -592,9 +682,18 @@ impl Extractor {
             texts(&ns, e, &mut result);
             let result = result.trim().to_string();
             let shown: String = result.chars().take(24).collect();
-            let display = if shown.is_empty() { format!("{{{name}}}") } else { format!("{{{name} {shown}}}") };
+            let display = if shown.is_empty() {
+                format!("{{{name}}}")
+            } else {
+                format!("{{{name} {shown}}}")
+            };
             let xml = self.emit_el_nested(e, fl);
-            out.push(Atom::Code { xml, display, label: "field", open: Some(result) });
+            out.push(Atom::Code {
+                xml,
+                display,
+                label: "field",
+                open: Some(result),
+            });
         } else if local == "commentRangeStart" {
             if let Some(id) = ns.attr(e, "id") {
                 if !st.comment_ids.contains(&id) {
@@ -633,21 +732,47 @@ impl Extractor {
                 "t" => {
                     let text = c.text();
                     if !text.is_empty() {
-                        out.push(Atom::Text { rpr: rpr.clone(), key: key.clone(), text });
+                        out.push(Atom::Text {
+                            rpr: rpr.clone(),
+                            key: key.clone(),
+                            text,
+                        });
                     }
                 }
-                "noBreakHyphen" => out.push(Atom::Text { rpr: rpr.clone(), key: key.clone(), text: "\u{2011}".into() }),
-                "softHyphen" => out.push(Atom::Text { rpr: rpr.clone(), key: key.clone(), text: "\u{AD}".into() }),
-                "tab" => out.push(Atom::Code { xml: wrap(&c.raw()), display: "<tab>".into(), label: "tab", open: None }),
+                "noBreakHyphen" => out.push(Atom::Text {
+                    rpr: rpr.clone(),
+                    key: key.clone(),
+                    text: "\u{2011}".into(),
+                }),
+                "softHyphen" => out.push(Atom::Text {
+                    rpr: rpr.clone(),
+                    key: key.clone(),
+                    text: "\u{AD}".into(),
+                }),
+                "tab" => out.push(Atom::Code {
+                    xml: wrap(&c.raw()),
+                    display: "<tab>".into(),
+                    label: "tab",
+                    open: None,
+                }),
                 "br" | "cr" => {
                     let page = ns.attr(c, "type").as_deref() == Some("page");
                     let display = if page { "<page-break>" } else { "<br>" };
-                    out.push(Atom::Code { xml: wrap(&c.raw()), display: display.into(), label: "break", open: None });
+                    out.push(Atom::Code {
+                        xml: wrap(&c.raw()),
+                        display: display.into(),
+                        label: "break",
+                        open: None,
+                    });
                 }
                 "lastRenderedPageBreak" => out.push(Atom::Drop),
                 "footnoteReference" | "endnoteReference" => {
                     let id = ns.attr(c, "id").unwrap_or_default();
-                    let short = if local == "footnoteReference" { "fn" } else { "en" };
+                    let short = if local == "footnoteReference" {
+                        "fn"
+                    } else {
+                        "en"
+                    };
                     out.push(Atom::Code {
                         xml: wrap(&c.raw()),
                         display: format!("[{short} {id}]"),
@@ -663,23 +788,53 @@ impl Extractor {
                     }
                     out.push(Atom::Keep(wrap(&c.raw())));
                 }
-                "footnoteRef" | "endnoteRef" | "annotationRef" | "separator" | "continuationSeparator" => {
-                    out.push(Atom::Keep(wrap(&c.raw())))
-                }
+                "footnoteRef"
+                | "endnoteRef"
+                | "annotationRef"
+                | "separator"
+                | "continuationSeparator" => out.push(Atom::Keep(wrap(&c.raw()))),
                 "drawing" | "pict" | "object" => {
                     let inner = self.emit_el_nested(c, fl);
-                    let (display, label) = if inner.contains(M_UNIT) { ("<textbox>", "textbox") } else { ("<img>", "image") };
-                    out.push(Atom::Code { xml: wrap(&inner), display: display.into(), label, open: None });
+                    let (display, label) = if inner.contains(M_UNIT) {
+                        ("<textbox>", "textbox")
+                    } else {
+                        ("<img>", "image")
+                    };
+                    out.push(Atom::Code {
+                        xml: wrap(&inner),
+                        display: display.into(),
+                        label,
+                        open: None,
+                    });
                 }
-                "sym" => out.push(Atom::Code { xml: wrap(&c.raw()), display: "<sym>".into(), label: "symbol", open: None }),
+                "sym" => out.push(Atom::Code {
+                    xml: wrap(&c.raw()),
+                    display: "<sym>".into(),
+                    label: "symbol",
+                    open: None,
+                }),
                 _ if ns.is_mc(&c.name, "AlternateContent") => {
                     let inner = self.emit_el_nested(c, fl);
-                    let (display, label) = if inner.contains(M_UNIT) { ("<textbox>", "textbox") } else { ("<img>", "image") };
-                    out.push(Atom::Code { xml: wrap(&inner), display: display.into(), label, open: None });
+                    let (display, label) = if inner.contains(M_UNIT) {
+                        ("<textbox>", "textbox")
+                    } else {
+                        ("<img>", "image")
+                    };
+                    out.push(Atom::Code {
+                        xml: wrap(&inner),
+                        display: display.into(),
+                        label,
+                        open: None,
+                    });
                 }
                 _ => {
                     let inner = self.emit_el_nested(c, fl);
-                    out.push(Atom::Code { xml: wrap(&inner), display: "<code>".into(), label: "code", open: None });
+                    out.push(Atom::Code {
+                        xml: wrap(&inner),
+                        display: "<code>".into(),
+                        label: "code",
+                        open: None,
+                    });
                 }
             }
         }
@@ -688,8 +843,18 @@ impl Extractor {
     // ---------------------------------------------------------------- units
 
     /// Builds the unit for a paragraph. False when the paragraph has no text to translate.
-    fn build_unit(&mut self, p: &El, ppr: Option<&El>, atoms: Vec<Atom>, st: ParaState, fl: Flags, content: &[Node]) -> bool {
-        let has_text = atoms.iter().any(|a| matches!(a, Atom::Text { text, .. } if text.chars().any(|c| !c.is_whitespace())));
+    fn build_unit(
+        &mut self,
+        p: &El,
+        ppr: Option<&El>,
+        atoms: Vec<Atom>,
+        st: ParaState,
+        fl: Flags,
+        content: &[Node],
+    ) -> bool {
+        let has_text = atoms.iter().any(
+            |a| matches!(a, Atom::Text { text, .. } if text.chars().any(|c| !c.is_whitespace())),
+        );
         if !has_text {
             return false;
         }
@@ -714,7 +879,12 @@ impl Extractor {
         let mut merged: Vec<Atom> = Vec::new();
         for a in vis {
             match (merged.last_mut(), a) {
-                (Some(Atom::Text { key: k0, text: t0, .. }), Atom::Text { key, text, .. }) if *k0 == key => t0.push_str(&text),
+                (
+                    Some(Atom::Text {
+                        key: k0, text: t0, ..
+                    }),
+                    Atom::Text { key, text, .. },
+                ) if *k0 == key => t0.push_str(&text),
                 (_, a) => merged.push(a),
             }
         }
@@ -784,33 +954,77 @@ impl Extractor {
                         n += 1;
                         let id = n.to_string();
                         let (d, cd, label) = fmt_names(rpr);
-                        codes.insert(id.clone(), CodeData { open: Some(rpr.clone()), close: Some(String::new()), standalone: None, label: Some(label) });
+                        codes.insert(
+                            id.clone(),
+                            CodeData {
+                                open: Some(rpr.clone()),
+                                close: Some(String::new()),
+                                standalone: None,
+                                label: Some(label),
+                            },
+                        );
                         inl.push(Inline::tag(id.clone(), TagKind::Open, d));
                         cur = Some((key.clone(), id, cd));
                     }
                     inl.push(Inline::text(text.clone()));
                 }
-                Atom::Code { xml, display, label, open } => {
+                Atom::Code {
+                    xml,
+                    display,
+                    label,
+                    open,
+                } => {
                     if let Some((k, _, _)) = &cur {
                         let next_key = vis[i + 1..]
                             .iter()
                             .take_while(|x| !matches!(x, Atom::Open { .. } | Atom::Close))
-                            .find_map(|x| if let Atom::Text { key, .. } = x { Some(key) } else { None });
+                            .find_map(|x| {
+                                if let Atom::Text { key, .. } = x {
+                                    Some(key)
+                                } else {
+                                    None
+                                }
+                            });
                         if next_key != Some(k) {
                             close_cur!();
                         }
                     }
                     n += 1;
                     let id = n.to_string();
-                    codes.insert(id.clone(), CodeData { open: open.clone(), close: None, standalone: Some(xml.clone()), label: Some((*label).into()) });
+                    codes.insert(
+                        id.clone(),
+                        CodeData {
+                            open: open.clone(),
+                            close: None,
+                            standalone: Some(xml.clone()),
+                            label: Some((*label).into()),
+                        },
+                    );
                     inl.push(Inline::tag(id, TagKind::Standalone, display.clone()));
                 }
-                Atom::Open { open, close, display, close_display, label } => {
+                Atom::Open {
+                    open,
+                    close,
+                    display,
+                    close_display,
+                    label,
+                } => {
                     close_cur!();
                     n += 1;
                     let id = n.to_string();
-                    let base = bases.get(next_scope).map(|b| b.1.clone()).unwrap_or_default();
-                    codes.insert(id.clone(), CodeData { open: Some(open.clone()), close: Some(close.clone()), standalone: Some(base), label: Some((*label).into()) });
+                    let base = bases
+                        .get(next_scope)
+                        .map(|b| b.1.clone())
+                        .unwrap_or_default();
+                    codes.insert(
+                        id.clone(),
+                        CodeData {
+                            open: Some(open.clone()),
+                            close: Some(close.clone()),
+                            standalone: Some(base),
+                            label: Some((*label).into()),
+                        },
+                    );
                     scope.push(next_scope);
                     next_scope += 1;
                     inl.push(Inline::tag(id.clone(), TagKind::Open, display.clone()));
@@ -829,18 +1043,42 @@ impl Extractor {
         close_cur!();
         let source = merge_text(inl);
 
-        codes.insert(C_BASE.into(), CodeData { standalone: Some(bases[0].1.clone()), ..Default::default() });
+        codes.insert(
+            C_BASE.into(),
+            CodeData {
+                standalone: Some(bases[0].1.clone()),
+                ..Default::default()
+            },
+        );
         if !lead.is_empty() {
-            codes.insert(C_LEAD.into(), CodeData { standalone: Some(lead), ..Default::default() });
+            codes.insert(
+                C_LEAD.into(),
+                CodeData {
+                    standalone: Some(lead),
+                    ..Default::default()
+                },
+            );
         }
         if !tail.is_empty() {
-            codes.insert(C_TAIL.into(), CodeData { standalone: Some(tail), ..Default::default() });
+            codes.insert(
+                C_TAIL.into(),
+                CodeData {
+                    standalone: Some(tail),
+                    ..Default::default()
+                },
+            );
         }
         let mut orig = String::new();
         for c in content {
             orig.push_str(&self.emit(c, fl));
         }
-        codes.insert(C_ORIG.into(), CodeData { standalone: Some(orig), ..Default::default() });
+        codes.insert(
+            C_ORIG.into(),
+            CodeData {
+                standalone: Some(orig),
+                ..Default::default()
+            },
+        );
         if st.tracked {
             codes.insert(C_TRACKED.into(), CodeData::default());
         }
@@ -848,9 +1086,15 @@ impl Extractor {
         // Context.
         let ns = self.ns.clone();
         let (style, has_num, outline) = para_info(ppr, &ns);
-        let style_name = style.as_ref().and_then(|s| self.styles.names.get(s)).cloned();
+        let style_name = style
+            .as_ref()
+            .and_then(|s| self.styles.names.get(s))
+            .cloned();
         let heading_level = heading_level(style.as_deref(), style_name.as_deref(), outline);
-        let list = has_num || style.as_ref().is_some_and(|s| self.styles.numbered.contains(s));
+        let list = has_num
+            || style
+                .as_ref()
+                .is_some_and(|s| self.styles.numbered.contains(s));
         let kind = match self.part_kind {
             PartKind::Header => "header",
             PartKind::Footer => "footer",
@@ -876,7 +1120,9 @@ impl Extractor {
             }
         }
         if st.tracked {
-            unit.context.notes.push("This paragraph has tracked changes".into());
+            unit.context
+                .notes
+                .push("This paragraph has tracked changes".into());
         }
         if heading_level.is_some() && self.part_kind == PartKind::Main {
             let text = plain_text(&unit.segments[0].source).trim().to_string();
@@ -896,25 +1142,40 @@ fn para_info(ppr: Option<&El>, ns: &Ns) -> (Option<String>, bool, Option<u8>) {
             if ns.is_w(&c.name, "pStyle") {
                 style = ns.attr(c, "val");
             } else if ns.is_w(&c.name, "numPr") {
-                let numid = c.elements().find(|x| ns.is_w(&x.name, "numId")).and_then(|x| ns.attr(x, "val"));
+                let numid = c
+                    .elements()
+                    .find(|x| ns.is_w(&x.name, "numId"))
+                    .and_then(|x| ns.attr(x, "val"));
                 num = numid.as_deref() != Some("0");
             } else if ns.is_w(&c.name, "outlineLvl") {
-                outline = ns.attr(c, "val").and_then(|v| v.parse::<u8>().ok()).filter(|v| *v < 9);
+                outline = ns
+                    .attr(c, "val")
+                    .and_then(|v| v.parse::<u8>().ok())
+                    .filter(|v| *v < 9);
             }
         }
     }
     (style, num, outline)
 }
 
-fn heading_level(style_id: Option<&str>, style_name: Option<&str>, outline: Option<u8>) -> Option<u8> {
+fn heading_level(
+    style_id: Option<&str>,
+    style_name: Option<&str>,
+    outline: Option<u8>,
+) -> Option<u8> {
     fn from(s: &str) -> Option<u8> {
         let l = s.to_lowercase().replace(' ', "");
         if l == "title" {
             return Some(1);
         }
-        l.strip_prefix("heading").and_then(|d| d.parse::<u8>().ok()).filter(|d| (1..=9).contains(d))
+        l.strip_prefix("heading")
+            .and_then(|d| d.parse::<u8>().ok())
+            .filter(|d| (1..=9).contains(d))
     }
-    style_name.and_then(from).or_else(|| style_id.and_then(from)).or(outline.map(|o| o + 1))
+    style_name
+        .and_then(from)
+        .or_else(|| style_id.and_then(from))
+        .or(outline.map(|o| o + 1))
 }
 
 /// Formatting key for comparing runs: language marks, spell-check marks and revision ids do not count.
@@ -948,7 +1209,11 @@ fn fmt_names(rpr: &str) -> (String, String, String) {
         for n in &nodes {
             if let Node::El(r) = n {
                 for c in r.elements() {
-                    let val = c.attrs().into_iter().find(|(k, _)| local_name(k) == "val").map(|(_, v)| v);
+                    let val = c
+                        .attrs()
+                        .into_iter()
+                        .find(|(k, _)| local_name(k) == "val")
+                        .map(|(_, v)| v);
                     let off = matches!(val.as_deref(), Some("0") | Some("false") | Some("none"));
                     match local_name(&c.name) {
                         "b" if !off => features.push("bold".into()),

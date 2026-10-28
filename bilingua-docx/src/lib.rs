@@ -38,7 +38,10 @@ struct Meta {
 pub struct Docx;
 
 fn perr(msg: impl Into<String>) -> Error {
-    Error::Parse { format: "docx".into(), msg: msg.into() }
+    Error::Parse {
+        format: "docx".into(),
+        msg: msg.into(),
+    }
 }
 
 fn main_part(content_types: &[u8]) -> Option<String> {
@@ -49,8 +52,12 @@ fn main_part(content_types: &[u8]) -> Option<String> {
             if let xml::Node::El(e) = n {
                 if xml::local_name(&e.name) == "Override" {
                     let ct = e.attr("ContentType").unwrap_or_default();
-                    if ct.contains("wordprocessingml.document.main") || ct.contains("wordprocessingml.template.main") {
-                        return e.attr("PartName").map(|p| p.trim_start_matches('/').to_string());
+                    if ct.contains("wordprocessingml.document.main")
+                        || ct.contains("wordprocessingml.template.main")
+                    {
+                        return e
+                            .attr("PartName")
+                            .map(|p| p.trim_start_matches('/').to_string());
                     }
                 }
                 if let Some(x) = walk(&e.children) {
@@ -75,7 +82,10 @@ fn classify(name: &str, main: &str, dir: &str) -> Option<PartKind> {
         return None;
     }
     let stem = rest.strip_suffix(".xml")?;
-    let numbered = |p: &str| stem.strip_prefix(p).is_some_and(|d| d.chars().all(|c| c.is_ascii_digit()));
+    let numbered = |p: &str| {
+        stem.strip_prefix(p)
+            .is_some_and(|d| d.chars().all(|c| c.is_ascii_digit()))
+    };
     if numbered("header") {
         Some(PartKind::Header)
     } else if numbered("footer") {
@@ -107,7 +117,9 @@ fn texts_of(ns: &xml::Ns, e: &xml::El, out: &mut String) {
 
 fn read_comments(text: &str) -> HashMap<String, String> {
     let mut map = HashMap::new();
-    let Ok(nodes) = xml::parse(text) else { return map };
+    let Ok(nodes) = xml::parse(text) else {
+        return map;
+    };
     let ns = xml::Ns::detect(&nodes);
     fn walk(ns: &xml::Ns, nodes: &[xml::Node], map: &mut HashMap<String, String>) {
         for n in nodes {
@@ -124,7 +136,11 @@ fn read_comments(text: &str) -> HashMap<String, String> {
                         }
                     }
                     let body = paras.join(" ");
-                    let note = if author.is_empty() { format!("Comment: {body}") } else { format!("Comment ({author}): {body}") };
+                    let note = if author.is_empty() {
+                        format!("Comment: {body}")
+                    } else {
+                        format!("Comment ({author}): {body}")
+                    };
                     map.insert(id, note);
                 } else {
                     walk(ns, &e.children, map);
@@ -144,9 +160,13 @@ fn split_template(t: &str, idx: &HashMap<&str, usize>) -> Result<Vec<SkelPart>, 
             parts.push(SkelPart::Raw(rest[..p].to_string()));
         }
         let after = &rest[p + M_UNIT.len_utf8()..];
-        let end = after.find(M_END).ok_or_else(|| perr("internal: unterminated unit marker"))?;
+        let end = after
+            .find(M_END)
+            .ok_or_else(|| perr("internal: unterminated unit marker"))?;
         let id = &after[..end];
-        let i = *idx.get(id).ok_or_else(|| perr(format!("internal: unknown unit {id}")))?;
+        let i = *idx
+            .get(id)
+            .ok_or_else(|| perr(format!("internal: unknown unit {id}")))?;
         parts.push(SkelPart::Unit(i));
         rest = &after[end + M_END.len_utf8()..];
     }
@@ -166,18 +186,30 @@ fn extract_doc(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
     if !entries.iter().any(|e| e.name == main) {
         return Err(perr("not a Word document: no main document part"));
     }
-    let dir = main.rsplit_once('/').map(|(d, _)| format!("{d}/")).unwrap_or_default();
+    let dir = main
+        .rsplit_once('/')
+        .map(|(d, _)| format!("{d}/"))
+        .unwrap_or_default();
 
     // Styles and comments first: paragraphs need them for their context.
     let mut styles = Styles::default();
-    if let Some(e) = entries.iter().find(|e| e.name == format!("{dir}styles.xml")) {
-        if let Some(nodes) = std::str::from_utf8(&e.data).ok().and_then(|t| xml::parse(t).ok()) {
+    if let Some(e) = entries
+        .iter()
+        .find(|e| e.name == format!("{dir}styles.xml"))
+    {
+        if let Some(nodes) = std::str::from_utf8(&e.data)
+            .ok()
+            .and_then(|t| xml::parse(t).ok())
+        {
             let ns = xml::Ns::detect(&nodes);
             styles = Styles::parse(&nodes, &ns);
         }
     }
     let mut comments = HashMap::new();
-    if let Some(e) = entries.iter().find(|e| e.name == format!("{dir}comments.xml")) {
+    if let Some(e) = entries
+        .iter()
+        .find(|e| e.name == format!("{dir}comments.xml"))
+    {
         if let Ok(t) = std::str::from_utf8(&e.data) {
             comments = read_comments(t);
         }
@@ -209,7 +241,9 @@ fn extract_doc(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
         };
         if has_marker_chars(text) {
             if is_main {
-                return Err(Error::Unsupported("the document uses private-use characters U+E000 to U+E003".into()));
+                return Err(Error::Unsupported(
+                    "the document uses private-use characters U+E000 to U+E003".into(),
+                ));
             }
             continue;
         }
@@ -227,14 +261,24 @@ fn extract_doc(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
         let prefix = if is_main {
             String::new()
         } else {
-            let stem = e.name.rsplit('/').next().unwrap_or("part").trim_end_matches(".xml").to_string();
+            let stem = e
+                .name
+                .rsplit('/')
+                .next()
+                .unwrap_or("part")
+                .trim_end_matches(".xml")
+                .to_string();
             format!("{stem}-")
         };
         ex.begin_part(kind, &e.name, prefix, ns);
         templates.insert(i, ex.run_part(&nodes));
     }
     let units = ex.finish();
-    let idx: HashMap<&str, usize> = units.iter().enumerate().map(|(i, u)| (u.id.as_str(), i)).collect();
+    let idx: HashMap<&str, usize> = units
+        .iter()
+        .enumerate()
+        .map(|(i, u)| (u.id.as_str(), i))
+        .collect();
 
     let mut zentries = Vec::with_capacity(entries.len() + 1);
     for (i, e) in entries.iter().enumerate() {
@@ -242,11 +286,21 @@ fn extract_doc(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
             Some(t) if t.contains(M_UNIT) => ZipData::Parts(split_template(t, &idx)?),
             _ => ZipData::Raw(e.data.clone()),
         };
-        zentries.push(ZipEntry { name: e.name.clone(), data });
+        zentries.push(ZipEntry {
+            name: e.name.clone(),
+            data,
+        });
     }
-    let meta = Meta { wp, main: main.clone(), entries: entries.iter().map(|e| e.meta.clone()).collect() };
+    let meta = Meta {
+        wp,
+        main: main.clone(),
+        entries: entries.iter().map(|e| e.meta.clone()).collect(),
+    };
     let meta_json = serde_json::to_vec(&meta).map_err(|e| perr(e.to_string()))?;
-    zentries.push(ZipEntry { name: META_NAME.into(), data: ZipData::Raw(meta_json) });
+    zentries.push(ZipEntry {
+        name: META_NAME.into(),
+        data: ZipData::Raw(meta_json),
+    });
 
     Ok(Document {
         format: "docx".into(),
@@ -282,7 +336,10 @@ fn split_meta(doc: &Document) -> Result<Split<'_>, Error> {
 /// Writes the document and reports what the caller should know (tracked changes accepted, and so on).
 pub fn merge_with_report(doc: &Document) -> Result<(Vec<u8>, MergeReport), Error> {
     let (meta, real) = split_meta(doc)?;
-    let wp = meta.as_ref().map(|m| m.wp.clone()).unwrap_or_else(|| "w:".into());
+    let wp = meta
+        .as_ref()
+        .map(|m| m.wp.clone())
+        .unwrap_or_else(|| "w:".into());
     let mut r = render::Renderer::new(doc, wp);
     let mut out: Vec<(EntryMeta, Vec<u8>)> = Vec::with_capacity(real.len());
     for e in real {
@@ -302,11 +359,21 @@ pub fn merge_with_report(doc: &Document) -> Result<(Vec<u8>, MergeReport), Error
         let em = meta
             .as_ref()
             .and_then(|m| m.entries.iter().find(|x| x.name == e.name).cloned())
-            .unwrap_or(EntryMeta { name: e.name.clone(), stored: false, dir: e.name.ends_with('/'), modified: None });
+            .unwrap_or(EntryMeta {
+                name: e.name.clone(),
+                stored: false,
+                dir: e.name.ends_with('/'),
+                modified: None,
+            });
         out.push((em, data));
     }
     let bytes = zipio::write_zip(&out)?;
-    Ok((bytes, MergeReport { warnings: r.warnings }))
+    Ok((
+        bytes,
+        MergeReport {
+            warnings: r.warnings,
+        },
+    ))
 }
 
 impl Filter for Docx {

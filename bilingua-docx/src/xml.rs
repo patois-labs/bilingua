@@ -50,10 +50,15 @@ impl El {
         parse_attrs(&self.start)
     }
     pub fn attr(&self, name: &str) -> Option<String> {
-        self.attrs().into_iter().find(|(k, _)| k == name).map(|(_, v)| v)
+        self.attrs()
+            .into_iter()
+            .find(|(k, _)| k == name)
+            .map(|(_, v)| v)
     }
     pub fn elements(&self) -> impl Iterator<Item = &El> {
-        self.children.iter().filter_map(|n| if let Node::El(e) = n { Some(e) } else { None })
+        self.children
+            .iter()
+            .filter_map(|n| if let Node::El(e) = n { Some(e) } else { None })
     }
     /// Concatenated character data of the direct text children, unescaped.
     pub fn text(&self) -> String {
@@ -80,13 +85,18 @@ pub struct Ns {
 
 impl Ns {
     pub fn default_ns() -> Ns {
-        Ns { w: "w:".into(), mc: "mc:".into() }
+        Ns {
+            w: "w:".into(),
+            mc: "mc:".into(),
+        }
     }
     pub fn is_w(&self, name: &str, local: &str) -> bool {
-        name.strip_prefix(self.w.as_str()).is_some_and(|r| r == local)
+        name.strip_prefix(self.w.as_str())
+            .is_some_and(|r| r == local)
     }
     pub fn is_mc(&self, name: &str, local: &str) -> bool {
-        name.strip_prefix(self.mc.as_str()).is_some_and(|r| r == local)
+        name.strip_prefix(self.mc.as_str())
+            .is_some_and(|r| r == local)
     }
     pub fn attr(&self, e: &El, local: &str) -> Option<String> {
         let full = format!("{}{}", self.w, local);
@@ -149,7 +159,10 @@ pub fn parse(s: &str) -> Result<Vec<Node>, String> {
             push(&mut stack, &mut top, Node::Text(rest[..e].to_string()));
             i += e;
         } else if rest.starts_with("<?") {
-            let e = rest.find("?>").ok_or("unterminated processing instruction")? + 2;
+            let e = rest
+                .find("?>")
+                .ok_or("unterminated processing instruction")?
+                + 2;
             push(&mut stack, &mut top, Node::Raw(rest[..e].to_string()));
             i += e;
         } else if rest.starts_with("<!") {
@@ -157,7 +170,9 @@ pub fn parse(s: &str) -> Result<Vec<Node>, String> {
         } else if rest.starts_with("</") {
             let e = rest.find('>').ok_or("unterminated end tag")?;
             let name = rest[2..e].trim();
-            let mut el = stack.pop().ok_or_else(|| format!("unexpected end tag </{name}>"))?;
+            let mut el = stack
+                .pop()
+                .ok_or_else(|| format!("unexpected end tag </{name}>"))?;
             if el.name != name {
                 return Err(format!("end tag </{name}> does not match <{}>", el.name));
             }
@@ -174,7 +189,11 @@ pub fn parse(s: &str) -> Result<Vec<Node>, String> {
             if name.is_empty() {
                 return Err("an element has no name".into());
             }
-            let el = El { name, start: raw.to_string(), ..Default::default() };
+            let el = El {
+                name,
+                start: raw.to_string(),
+                ..Default::default()
+            };
             if raw.ends_with("/>") {
                 push(&mut stack, &mut top, Node::El(el));
             } else {
@@ -266,7 +285,10 @@ pub fn parse_attrs(start: &str) -> Vec<(String, String)> {
 }
 
 pub fn unescape(s: &str) -> String {
-    if let Some(inner) = s.strip_prefix("<![CDATA[").and_then(|r| r.strip_suffix("]]>")) {
+    if let Some(inner) = s
+        .strip_prefix("<![CDATA[")
+        .and_then(|r| r.strip_suffix("]]>"))
+    {
         return inner.to_string();
     }
     if !s.contains('&') {
@@ -353,7 +375,10 @@ mod tests {
 
     #[test]
     fn entities() {
-        assert_eq!(unescape("a &amp; b &#x65E5; &#26412; &foo; &"), "a & b 日 本 &foo; &");
+        assert_eq!(
+            unescape("a &amp; b &#x65E5; &#26412; &foo; &"),
+            "a & b 日 本 &foo; &"
+        );
         assert_eq!(unescape("<![CDATA[x < y]]>"), "x < y");
         assert_eq!(escape_text("a<b&c\u{1}"), "a&lt;b&amp;c");
     }
@@ -361,6 +386,12 @@ mod tests {
     #[test]
     fn attributes() {
         let a = parse_attrs("<w:lang w:val=\"es-ES\" w:eastAsia='ja-JP'/>");
-        assert_eq!(a, vec![("w:val".into(), "es-ES".into()), ("w:eastAsia".into(), "ja-JP".into())]);
+        assert_eq!(
+            a,
+            vec![
+                ("w:val".into(), "es-ES".into()),
+                ("w:eastAsia".into(), "ja-JP".into())
+            ]
+        );
     }
 }

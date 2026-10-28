@@ -36,8 +36,20 @@ struct Scope {
 
 impl<'a> Renderer<'a> {
     pub fn new(doc: &'a Document, w: String) -> Renderer<'a> {
-        let ids = doc.units.iter().enumerate().map(|(i, u)| (u.id.as_str(), i)).collect();
-        Renderer { doc, ids, w, target_lang: doc.target_lang.clone(), warnings: vec![], warned: HashSet::new() }
+        let ids = doc
+            .units
+            .iter()
+            .enumerate()
+            .map(|(i, u)| (u.id.as_str(), i))
+            .collect();
+        Renderer {
+            doc,
+            ids,
+            w,
+            target_lang: doc.target_lang.clone(),
+            warnings: vec![],
+            warned: HashSet::new(),
+        }
     }
 
     pub fn unit(&mut self, idx: usize) -> Result<String, Error> {
@@ -49,7 +61,10 @@ impl<'a> Renderer<'a> {
             return Err(Error::Write("text boxes are nested too deeply".into()));
         }
         let doc = self.doc;
-        let u = doc.units.get(idx).ok_or_else(|| Error::Write(format!("unit {idx} does not exist")))?;
+        let u = doc
+            .units
+            .get(idx)
+            .ok_or_else(|| Error::Write(format!("unit {idx} does not exist")))?;
         let out = u.output();
         let changed = out != u.source();
         if !changed {
@@ -61,7 +76,10 @@ impl<'a> Renderer<'a> {
             return self.resolve(orig, depth);
         }
         if u.codes.contains_key(C_TRACKED) && self.warned.insert(idx) {
-            self.warnings.push(format!("{}: tracked changes were accepted because the text was translated", u.id));
+            self.warnings.push(format!(
+                "{}: tracked changes were accepted because the text was translated",
+                u.id
+            ));
         }
         if u.codes.contains_key(C_SIMPLE) {
             return Ok(escape_text(&plain_text(&out)));
@@ -70,13 +88,20 @@ impl<'a> Renderer<'a> {
     }
 
     fn code_str(u: &Unit, key: &str) -> String {
-        u.codes.get(key).and_then(|c| c.standalone.clone()).unwrap_or_default()
+        u.codes
+            .get(key)
+            .and_then(|c| c.standalone.clone())
+            .unwrap_or_default()
     }
 
     fn rebuild(&mut self, u: &Unit, out: &[Inline], depth: usize) -> Result<String, Error> {
         let mut s = String::new();
         s.push_str(&self.resolve(&Self::code_str(u, C_LEAD), depth)?);
-        let mut scopes = vec![Scope { base: Self::code_str(u, C_BASE), fmts: vec![], close: String::new() }];
+        let mut scopes = vec![Scope {
+            base: Self::code_str(u, C_BASE),
+            fmts: vec![],
+            close: String::new(),
+        }];
         for i in out {
             match i {
                 Inline::Text(t) => {
@@ -85,7 +110,9 @@ impl<'a> Renderer<'a> {
                     self.push_text(&mut s, t, &rpr);
                 }
                 Inline::Tag { id, kind, .. } => {
-                    let Some(code) = u.codes.get(id) else { continue };
+                    let Some(code) = u.codes.get(id) else {
+                        continue;
+                    };
                     let wrapper = code.standalone.is_some() && *kind != TagKind::Standalone;
                     match kind {
                         TagKind::Open if wrapper => {
@@ -97,7 +124,11 @@ impl<'a> Renderer<'a> {
                             });
                         }
                         TagKind::Open => {
-                            scopes.last_mut().expect("scope stack is never empty").fmts.push(code.open.clone().unwrap_or_default());
+                            scopes
+                                .last_mut()
+                                .expect("scope stack is never empty")
+                                .fmts
+                                .push(code.open.clone().unwrap_or_default());
                         }
                         TagKind::Close if wrapper => {
                             if scopes.len() > 1 {
@@ -106,7 +137,11 @@ impl<'a> Renderer<'a> {
                             }
                         }
                         TagKind::Close => {
-                            scopes.last_mut().expect("scope stack is never empty").fmts.pop();
+                            scopes
+                                .last_mut()
+                                .expect("scope stack is never empty")
+                                .fmts
+                                .pop();
                         }
                         TagKind::Standalone => {
                             if let Some(x) = &code.standalone {
@@ -136,9 +171,18 @@ impl<'a> Renderer<'a> {
             if piece.is_empty() {
                 return;
             }
-            let preserve = piece.starts_with(char::is_whitespace) || piece.ends_with(char::is_whitespace) || piece.contains("  ");
-            let attr = if preserve { " xml:space=\"preserve\"" } else { "" };
-            s.push_str(&format!("<{w}r>{rpr}<{w}t{attr}>{}</{w}t></{w}r>", escape_text(piece)));
+            let preserve = piece.starts_with(char::is_whitespace)
+                || piece.ends_with(char::is_whitespace)
+                || piece.contains("  ");
+            let attr = if preserve {
+                " xml:space=\"preserve\""
+            } else {
+                ""
+            };
+            s.push_str(&format!(
+                "<{w}r>{rpr}<{w}t{attr}>{}</{w}t></{w}r>",
+                escape_text(piece)
+            ));
             piece.clear();
         };
         for c in t.chars() {
@@ -175,11 +219,19 @@ impl<'a> Renderer<'a> {
                 .ok_or_else(|| Error::Write("a unit marker is not closed".into()))?;
             let body = &after[body_start..body_start + end];
             let piece = if kind == M_UNIT {
-                let idx = *self.ids.get(body).ok_or_else(|| Error::Write(format!("unknown unit {body}")))?;
+                let idx = *self
+                    .ids
+                    .get(body)
+                    .ok_or_else(|| Error::Write(format!("unknown unit {body}")))?;
                 self.unit_body(idx, C_ORIG, depth + 1)?
             } else {
-                let (id, k) = body.rsplit_once(':').ok_or_else(|| Error::Write("a mirror marker is malformed".into()))?;
-                let idx = *self.ids.get(id).ok_or_else(|| Error::Write(format!("unknown unit {id}")))?;
+                let (id, k) = body
+                    .rsplit_once(':')
+                    .ok_or_else(|| Error::Write("a mirror marker is malformed".into()))?;
+                let idx = *self
+                    .ids
+                    .get(id)
+                    .ok_or_else(|| Error::Write(format!("unknown unit {id}")))?;
                 self.unit_body(idx, &format!("_m{k}"), depth + 1)?
             };
             out.push_str(&piece);
@@ -191,14 +243,21 @@ impl<'a> Renderer<'a> {
 }
 
 fn primary(lang: &str) -> String {
-    lang.split(['-', '_']).next().unwrap_or("").to_ascii_lowercase()
+    lang.split(['-', '_'])
+        .next()
+        .unwrap_or("")
+        .to_ascii_lowercase()
 }
 
 /// Sets the language of a run's `w:lang` to the target language, when the run has one.
 pub fn set_lang(rpr: &str, w: &str, lang: &str) -> String {
     let pat = format!("<{w}lang");
-    let Some(p) = rpr.find(&pat) else { return rpr.to_string() };
-    let Some(len) = rpr[p..].find('>') else { return rpr.to_string() };
+    let Some(p) = rpr.find(&pat) else {
+        return rpr.to_string();
+    };
+    let Some(len) = rpr[p..].find('>') else {
+        return rpr.to_string();
+    };
     let tag = &rpr[p..p + len + 1];
     let prim = primary(lang);
     let mut new_tag = replace_attr(tag, &format!("{w}val"), lang);
@@ -217,7 +276,12 @@ fn replace_attr(tag: &str, name: &str, value: &str) -> String {
         if let Some(p) = tag.find(&pat) {
             let vs = p + pat.len();
             if let Some(e) = tag[vs..].find(q) {
-                return format!("{}{}{}", &tag[..vs], crate::xml::escape_text(value).replace('"', "&quot;"), &tag[vs + e..]);
+                return format!(
+                    "{}{}{}",
+                    &tag[..vs],
+                    crate::xml::escape_text(value).replace('"', "&quot;"),
+                    &tag[vs + e..]
+                );
             }
         }
     }
@@ -231,8 +295,14 @@ mod tests {
     #[test]
     fn lang_is_replaced_where_it_exists() {
         let r = "<w:rPr><w:lang w:val=\"en-US\" w:eastAsia=\"ja-JP\"/></w:rPr>";
-        assert_eq!(set_lang(r, "w:", "es-ES"), "<w:rPr><w:lang w:val=\"es-ES\" w:eastAsia=\"ja-JP\"/></w:rPr>");
+        assert_eq!(
+            set_lang(r, "w:", "es-ES"),
+            "<w:rPr><w:lang w:val=\"es-ES\" w:eastAsia=\"ja-JP\"/></w:rPr>"
+        );
         assert_eq!(set_lang(r, "w:", "ja-JP"), r.replace("en-US", "ja-JP"));
-        assert_eq!(set_lang("<w:rPr><w:b/></w:rPr>", "w:", "es"), "<w:rPr><w:b/></w:rPr>");
+        assert_eq!(
+            set_lang("<w:rPr><w:b/></w:rPr>", "w:", "es"),
+            "<w:rPr><w:b/></w:rPr>"
+        );
     }
 }

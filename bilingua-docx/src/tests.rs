@@ -1,7 +1,8 @@
 use super::*;
 use std::io::{Read, Write};
 
-pub(crate) const NS: &str = "xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" \
+pub(crate) const NS: &str =
+    "xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" \
 xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" \
 xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" \
 xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" \
@@ -28,14 +29,23 @@ pub(crate) fn p(text: &str) -> String {
 
 pub(crate) fn make(parts: &[(&str, &str)]) -> Vec<u8> {
     let mut w = zip::ZipWriter::new(std::io::Cursor::new(Vec::new()));
-    let deflate = zip::write::SimpleFileOptions::default().compression_method(zip::CompressionMethod::Deflated);
+    let deflate = zip::write::SimpleFileOptions::default()
+        .compression_method(zip::CompressionMethod::Deflated);
     w.start_file("[Content_Types].xml", deflate).unwrap();
     w.write_all(CT.as_bytes()).unwrap();
     w.start_file("_rels/.rels", deflate).unwrap();
     w.write_all(RELS.as_bytes()).unwrap();
     for (name, data) in parts {
-        let m = if name.ends_with(".bin") { zip::CompressionMethod::Stored } else { zip::CompressionMethod::Deflated };
-        w.start_file(*name, zip::write::SimpleFileOptions::default().compression_method(m)).unwrap();
+        let m = if name.ends_with(".bin") {
+            zip::CompressionMethod::Stored
+        } else {
+            zip::CompressionMethod::Deflated
+        };
+        w.start_file(
+            *name,
+            zip::write::SimpleFileOptions::default().compression_method(m),
+        )
+        .unwrap();
         w.write_all(data.as_bytes()).unwrap();
     }
     w.finish().unwrap().into_inner()
@@ -58,7 +68,10 @@ pub(crate) fn entries_of(bytes: &[u8]) -> Vec<(String, Vec<u8>)> {
 }
 
 pub(crate) fn xml_of(bytes: &[u8], name: &str) -> String {
-    let e = entries_of(bytes).into_iter().find(|(n, _)| n == name).unwrap_or_else(|| panic!("no {name}"));
+    let e = entries_of(bytes)
+        .into_iter()
+        .find(|(n, _)| n == name)
+        .unwrap_or_else(|| panic!("no {name}"));
     String::from_utf8(e.1).unwrap()
 }
 
@@ -76,9 +89,15 @@ pub(crate) fn same_entries(a: &[u8], b: &[u8]) {
     assert_eq!(ea.len(), eb.len());
     for (x, y) in ea.iter().zip(&eb) {
         assert_eq!(x.0, y.0);
-        assert!(x.1 == y.1, "entry {} differs:
+        assert!(
+            x.1 == y.1,
+            "entry {} differs:
 {}
-{}", x.0, String::from_utf8_lossy(&x.1), String::from_utf8_lossy(&y.1));
+{}",
+            x.0,
+            String::from_utf8_lossy(&x.1),
+            String::from_utf8_lossy(&y.1)
+        );
     }
 }
 
@@ -118,7 +137,8 @@ pub(crate) fn eleven_languages_round_trip_and_translate() {
     // Translate every paragraph with text from the next language (a rotation).
     for i in 0..11 {
         let t = LANGS[(i + 1) % 11].1;
-        doc.set_target(&format!("p{}", i + 1), vec![Inline::text(t)]).unwrap();
+        doc.set_target(&format!("p{}", i + 1), vec![Inline::text(t)])
+            .unwrap();
     }
     let out = Docx.merge(&doc).unwrap();
     let again = extract(&out);
