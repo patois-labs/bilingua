@@ -296,11 +296,8 @@ fn comments_are_notes_by_default_and_units_on_request() {
     assert_same_parts(&bytes, &Xlsx::default().merge(&doc).unwrap());
     let u = c.clone();
     let tags: Vec<Inline> = u.source().into_iter().filter(|i| matches!(i, Inline::Tag { .. })).collect();
-    let mut t = vec![];
-    t.push(tags[0].clone());
-    t.push(Inline::text("Ana:"));
-    t.push(tags[1].clone());
-    t.push(Inline::text("\nRevisa el saludo."));
+    let t = vec![tags[0].clone(), Inline::text("Ana:"), tags[1].clone(), Inline::text("
+Revisa el saludo.")];
     doc.set_target(&u.segments[0].id, t).unwrap();
     let (out, _) = merge_with_report(&doc).unwrap();
     let cm = part(&out, "xl/comments1.xml");

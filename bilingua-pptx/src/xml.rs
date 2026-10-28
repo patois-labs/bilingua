@@ -20,8 +20,6 @@ pub struct El {
     /// The end tag as written; empty for a self-closing element.
     pub end: String,
     pub children: Vec<Node>,
-    /// Paragraph number within the part (1-based), set by [`number`].
-    pub ord: usize,
 }
 
 impl Node {
@@ -85,9 +83,6 @@ pub struct Ns {
 impl Ns {
     pub fn is(&self, name: &str, local: &str) -> bool {
         name.strip_prefix(self.pfx.as_str()).is_some_and(|r| r == local)
-    }
-    pub fn name(&self, local: &str) -> String {
-        format!("{}{}", self.pfx, local)
     }
     /// Finds the prefix bound to one of `uris` on the root element; `fallback` (with colon) otherwise.
     pub fn detect(nodes: &[Node], uris: &[&str], fallback: &str) -> Ns {
@@ -205,19 +200,6 @@ fn tag_end(rest: &str) -> Result<usize, String> {
         }
     }
     Err("unterminated start tag".into())
-}
-
-/// Numbers every element whose name is `para` (1-based, document order).
-pub fn number(nodes: &mut [Node], para: &str, counter: &mut usize) {
-    for n in nodes {
-        if let Node::El(e) = n {
-            if e.name == para {
-                *counter += 1;
-                e.ord = *counter;
-            }
-            number(&mut e.children, para, counter);
-        }
-    }
 }
 
 pub fn parse_attrs(start: &str) -> Vec<(String, String)> {

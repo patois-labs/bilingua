@@ -10,6 +10,7 @@ pub const C_ORIG: &str = "_o";
 pub const C_BASE: &str = "_base";
 pub const C_MODE: &str = "_mode";
 
+#[derive(Clone)]
 pub enum Atom {
     Text { fmt: String, key: String, text: String },
     Code { xml: String, display: String, label: String },
@@ -102,7 +103,8 @@ pub fn build(mut atoms: Vec<Atom>, props: Props) -> Built {
             inl.push(Inline::tag(id, TagKind::Close, cd));
         }
     };
-    for a in merged {
+    let n_merged = merged.len();
+    for (ai, a) in merged.iter().cloned().enumerate().take(n_merged) {
         match a {
             Atom::Text { fmt, key, text } => {
                 if key == base.0 {
@@ -130,6 +132,14 @@ pub fn build(mut atoms: Vec<Atom>, props: Props) -> Built {
                 inlines.push(Inline::Text(text));
             }
             Atom::Code { xml, display, label } => {
+                // The tag pair stays open across the code only when the next text has the same formatting.
+                let next_key = merged[ai + 1..].iter().find_map(|x| match x {
+                    Atom::Text { key, .. } => Some(key.clone()),
+                    _ => None,
+                });
+                if open.as_ref().map(|(k, _)| Some(k) != next_key.as_ref()).unwrap_or(false) {
+                    close_open(&mut inlines, &mut open, &close_display);
+                }
                 counter += 1;
                 let id = counter.to_string();
                 codes.insert(
