@@ -1,5 +1,5 @@
 [workspace]
-members = ["bilingua-model", "bilingua", "bilingua-seg", "bilingua-text", "bilingua-json", "bilingua-markdown", "bilingua-cli", "bilingua-docx", "bilingua-html", "bilingua-po", "bilingua-subtitle"]
+members = ["bilingua-model", "bilingua", "bilingua-seg", "bilingua-text", "bilingua-json", "bilingua-markdown", "bilingua-cli", "bilingua-docx", "bilingua-html", "bilingua-po", "bilingua-subtitle", "bilingua-xlsx", "bilingua-pptx"]
 resolver = "2"
 
 [workspace.package]
@@ -18,6 +18,8 @@ bilingua-docx = { path = "bilingua-docx" }
 bilingua-html = { path = "bilingua-html" }
 bilingua-po = { path = "bilingua-po" }
 bilingua-subtitle = { path = "bilingua-subtitle" }
+bilingua-xlsx = { path = "bilingua-xlsx" }
+bilingua-pptx = { path = "bilingua-pptx" }
 bilingua = { path = "bilingua" }
 regex = "1"
 icu_segmenter = "2"

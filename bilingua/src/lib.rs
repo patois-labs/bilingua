@@ -7,7 +7,7 @@
 //! let out: Vec<u8> = bilingua::merge(&doc)?;
 //! ```
 //!
-//! Formats register in [`filters`]: DOCX, HTML, Markdown, JSON, PO, SRT, WebVTT and plain text. `extract` also applies sentence
+//! Formats register in [`filters`]: DOCX, XLSX, PPTX, HTML, Markdown, JSON, PO, SRT, WebVTT and plain text. `extract` also applies sentence
 //! segmentation (`bilingua-seg`) for the granularity in the options.
 
 pub use bilingua_model::*;
@@ -17,6 +17,8 @@ pub use bilingua_seg::{join, split, Rules};
 pub fn filters() -> Vec<Box<dyn Filter>> {
     vec![
         Box::new(bilingua_docx::Docx),
+        Box::new(bilingua_xlsx::Xlsx::default()),
+        Box::new(bilingua_pptx::Pptx),
         Box::new(bilingua_subtitle::Vtt),
         Box::new(bilingua_subtitle::Srt),
         Box::new(bilingua_po::Po),

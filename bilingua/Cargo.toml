@@ -16,6 +16,8 @@ bilingua-docx = { workspace = true }
 bilingua-html = { workspace = true }
 bilingua-po = { workspace = true }
 bilingua-subtitle = { workspace = true }
+bilingua-xlsx = { workspace = true }
+bilingua-pptx = { workspace = true }
 
 [dev-dependencies]
 zip = { workspace = true }

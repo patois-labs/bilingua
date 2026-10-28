@@ -21,9 +21,11 @@ dependencies = [
  "bilingua-markdown",
  "bilingua-model",
  "bilingua-po",
+ "bilingua-pptx",
  "bilingua-seg",
  "bilingua-subtitle",
  "bilingua-text",
+ "bilingua-xlsx",
  "zip",
 ]
 
@@ -88,6 +90,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "bilingua-pptx"
+version = "0.1.0"
+dependencies = [
+ "bilingua-model",
+ "serde",
+ "serde_json",
+ "zip",
+]
+
+[[package]]
 name = "bilingua-seg"
 version = "0.1.0"
 dependencies = [
@@ -109,6 +121,16 @@ name = "bilingua-text"
 version = "0.1.0"
 dependencies = [
  "bilingua-model",
+]
+
+[[package]]
+name = "bilingua-xlsx"
+version = "0.1.0"
+dependencies = [
+ "bilingua-model",
+ "serde",
+ "serde_json",
+ "zip",
 ]
 
 [[package]]
