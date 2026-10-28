@@ -1,0 +1,11 @@
+[package]
+name = "bilingua-markdown"
+description = "Bilingua: Markdown filter (CommonMark and GitHub tables, rewrites only text ranges)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+bilingua-model = { workspace = true }
+pulldown-cmark = { workspace = true, features = ["html"] }

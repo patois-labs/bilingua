@@ -1,0 +1,13 @@
+[package]
+name = "bilingua-seg"
+description = "Bilingua: SRX 2.0 sentence segmentation with inline-tag awareness"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+bilingua-model = { workspace = true }
+regex = { workspace = true }
+quick-xml = { workspace = true }
+icu_segmenter = { workspace = true }
