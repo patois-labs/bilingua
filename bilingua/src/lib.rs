@@ -7,16 +7,25 @@
 //! let out: Vec<u8> = bilingua::merge(&doc)?;
 //! ```
 //!
-//! Formats register in [`filters`]. Night build 10-28: the format crates are wired in by Opus at merge time;
-//! until then a small built-in plain-text filter keeps the API usable.
+//! Formats register in [`filters`]: DOCX, HTML, Markdown, JSON, PO, SRT, WebVTT and plain text. `extract` also applies sentence
+//! segmentation (`bilingua-seg`) for the granularity in the options.
 
 pub use bilingua_model::*;
+pub use bilingua_seg::{join, split, Rules};
 
-mod plain;
-
-/// All available filters, most specific first.
+/// All available filters, most specific first. Plain text goes last because it accepts any UTF-8 file.
 pub fn filters() -> Vec<Box<dyn Filter>> {
-    vec![Box::new(plain::PlainText)]
+    vec![
+        Box::new(bilingua_docx::Docx),
+        Box::new(bilingua_subtitle::Vtt),
+        Box::new(bilingua_subtitle::Srt),
+        Box::new(bilingua_po::Po),
+        Box::new(bilingua_json::JsonFilter),
+        Box::new(bilingua_markdown::MarkdownFilter),
+        // HTML sniffs loosely and plain text accepts any UTF-8, so they go last.
+        Box::new(bilingua_html::Html),
+        Box::new(bilingua_text::TextFilter),
+    ]
 }
 
 /// The filter for a file: by extension first, then by sniffing the bytes.
@@ -36,13 +45,20 @@ pub fn detect(name: &str, bytes: &[u8]) -> Option<Box<dyn Filter>> {
 }
 
 /// Extracts and segments a file. The returned document's `format` names the filter that `merge` will use.
+/// The source language comes from `opts.source_lang` (default "en"); it picks the sentence rules.
 pub fn extract(name: &str, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
     let f = detect(name, bytes).ok_or_else(|| Error::Unsupported(format!("no parser for {name}")))?;
     let mut doc = f.extract(bytes, opts)?;
     doc.name = Some(name.to_string());
-    doc.granularity = opts.granularity;
-    // Sentence segmentation (bilingua-seg) is applied here once that crate is merged.
+    let lang = opts.source_lang.as_deref().unwrap_or("en");
+    bilingua_seg::segment(&mut doc, lang, opts.granularity, Rules::bundled());
     Ok(doc)
+}
+
+/// Changes the granularity of an extracted document (sentence, paragraph or document). Targets already set
+/// survive only for units whose segments all had one.
+pub fn resegment(doc: &mut Document, source_lang: &str, mode: Granularity) {
+    bilingua_seg::segment(doc, source_lang, mode, Rules::bundled());
 }
 
 fn filter_for(doc: &Document) -> Result<Box<dyn Filter>, Error> {

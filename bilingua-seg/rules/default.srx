@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Bilingua default segmentation rules, SRX 2.0 (https://www.gala-global.org/srx-20-april-7-2008).
+
+  Licence: Apache-2.0, same as Bilingua.
+
+  Provenance: these rules were written for Bilingua. The structure (language rules, then language maps with
+  cascade) follows the SRX layout that Okapi Framework's defaultSegmentation.srx (Apache-2.0) also uses, and
+  the abbreviation lists reflect common practice in CAT tools. No text was copied from the Okapi file. If you
+  merge rules from Okapi later, keep its Apache-2.0 notice and attribution in this file.
+
+  Regex flavour: the Rust `regex` crate (no look-behind). Each rule is "text before the break" plus "text after the
+  break". The first rule that matches at a position decides whether there is a break there. Language maps are
+  cascaded in the order they appear, so specific languages come first and the generic Latin rules last.
+
+  Covered: English, Spanish, French, Italian, German, Dutch, Portuguese, Japanese, Chinese, Korean, Arabic.
+  Any other language has no map and falls back to Unicode (ICU) sentence breaking.
+
+  Notes:
+  - Arabic question mark U+061F is a sentence end. The Arabic comma U+060C and semicolon U+061B are not, and are
+    listed as explicit no-break rules.
+  - Japanese and Chinese full stops (U+3002, U+FF01, U+FF1F, U+FF61) break with no space after them. Closing
+    quotes and brackets that follow the stop stay with the sentence.
+  - A full stop followed by a lower case letter does not break (approx. five, e.g. apples).
+-->
+<srx version="2.0" xmlns="http://www.lisa.org/srx20">
+  <header segmentsubflows="yes" cascade="yes">
+    <formathandle type="start" include="no"/>
+    <formathandle type="end" include="yes"/>
+    <formathandle type="isolated" include="yes"/>
+  </header>
+  <body>
+    <languagerules>
+
+      <languagerule languagerulename="English">
+        <rule break="no"><beforebreak>\b(?:Mr|Mrs|Ms|Mx|Dr|Prof|Sr|Jr|St|Mt|vs|Fig|Figs|Inc|Ltd|Co|Corp|approx|Gen|Col|Capt|Lt|Sgt|Rev|Hon|Jan|Feb|Mar|Apr|Aug|Sept|Oct|Nov|Dec)\.</beforebreak><afterbreak>\s</afterbreak></rule>
+        <rule break="no"><beforebreak>\b(?:No|Nos)\.</beforebreak><afterbreak>\s+\d</afterbreak></rule>
+        <rule break="no"><beforebreak>\b(?:e\.g|i\.e|cf|viz|a\.k\.a)\.</beforebreak><afterbreak>\s</afterbreak></rule>
+      </languagerule>
+
+      <languagerule languagerulename="Spanish">
+        <rule break="no"><beforebreak>\b(?:Sr|Sra|Srta|Sres|Dr|Dra|Prof|Profa|Ud|Uds|Vd|Vds|Lic|Ing|Arq|Cía|Ltda|Av|Avda|Dpto|Gral|Sta|Sto)\.</beforebreak><afterbreak>\s</afterbreak></rule>
+        <rule break="no"><beforebreak>\b(?:pág|págs|núm|tel|p\.\s?ej|ej)\.</beforebreak><afterbreak>\s</afterbreak></rule>
+      </languagerule>
+
+      <languagerule languagerulename="French">
+        <rule break="no"><beforebreak>\b(?:M|MM|Mme|Mmes|Mlle|Mlles|Dr|Pr|Prof|St|Ste|Cie|Me)\.</beforebreak><afterbreak>\s+\p{Lu}</afterbreak></rule>
+        <rule break="no"><beforebreak>\b(?:p\.\s?ex|c\.-à-d|cf|env|av|apr|N\.B|n°|etc)\.</beforebreak><afterbreak>\s+\p{Ll}</afterbreak></rule>
+        <rule break="no"><beforebreak>\b(?:p\.\s?ex|c\.-à-d|cf|av|apr|J\.-C)\.</beforebreak><afterbreak>\s</afterbreak></rule>
+      </languagerule>
+
+      <languagerule languagerulename="Italian">
+        <rule break="no"><beforebreak>\b(?:Sig|Sigg|Sig\.ra|Dott|Dott\.ssa|Prof|Profa|Ing|Avv|Arch|Geom|Rag|On|Sen|Gen|Col|Cap)\.</beforebreak><afterbreak>\s</afterbreak></rule>
+        <rule break="no"><beforebreak>\b(?:ecc|es|pag|pagg|tel|cfr|ca|ad es|p\.\s?es)\.</beforebreak><afterbreak>\s</afterbreak></rule>
+      </languagerule>
+
+      <languagerule languagerulename="German">
+        <rule break="no"><beforebreak>\b(?:z\.\s?B|d\.\s?h|u\.\s?a|u\.\s?A|i\.\s?d\.\s?R|o\.\s?ä|s\.\s?o|s\.\s?u|v\.\s?a|e\.\s?V|m\.\s?E|u\.\s?U|i\.\s?A|i\.\s?V|z\.\s?T|u\.\s?v\.\s?m)\.</beforebreak><afterbreak>\s</afterbreak></rule>
+        <rule break="no"><beforebreak>\b[zdu]\.</beforebreak><afterbreak>\s?[BhaA]\.</afterbreak></rule>
+        <rule break="no"><beforebreak>\b(?:Hr|Fr|Dr|Prof|Nr|Str|Tel|Mio|Mrd|bzw|ca|ggf|vgl|evtl|inkl|zzgl|bspw|sog|Abs|Art|Bd|Kap|Anm|Hrsg|zB|dh|ua|uA)\.</beforebreak><afterbreak>\s</afterbreak></rule>
+        <rule break="no"><beforebreak>\b\d{1,2}\.</beforebreak><afterbreak>\s*(?:Januar|Februar|März|April|Mai|Juni|Juli|August|September|Oktober|November|Dezember|Jan|Feb|Mär|Apr|Jun|Jul|Aug|Sep|Okt|Nov|Dez)\b</afterbreak></rule>
+      </languagerule>
+
+      <languagerule languagerulename="Dutch">
+        <rule break="no"><beforebreak>\b(?i:dhr|mevr|mw|mr|drs|dr|ir|prof|bijv|blz|ca|resp|zgn|vgl|nr|bv|enz)\.</beforebreak><afterbreak>\s</afterbreak></rule>
+        <rule break="no"><beforebreak>\b(?:o\.a|d\.w\.z|m\.b\.t|t\.o\.v|i\.p\.v|n\.a\.v|a\.u\.b|b\.v|n\.v|t\.a\.v|m\.i|o\.i)\.</beforebreak><afterbreak>\s</afterbreak></rule>
+      </languagerule>
+
+      <languagerule languagerulename="Portuguese">
+        <rule break="no"><beforebreak>\b(?:Sr|Sra|Srta|Dr|Dra|Prof|Profa|Eng|Exmo|Exma|Av|Ltda|Cia|Ilmo|Pe)\.</beforebreak><afterbreak>\s</afterbreak></rule>
+        <rule break="no"><beforebreak>\b(?:pág|págs|tel|cf|ex|obs)\.</beforebreak><afterbreak>\s</afterbreak></rule>
+      </languagerule>
+
+      <languagerule languagerulename="Dotted company forms">
+        <rule break="no"><beforebreak>\b(?:S\.A|S\.L|S\.p\.A|S\.r\.l|N\.V|B\.V|G\.m\.b\.H|S\.A\.R\.L|S\.A\.S|S\.A\.U|Ltda|S\.L\.U)\.</beforebreak><afterbreak>\s</afterbreak></rule>
+      </languagerule>
+
+      <languagerule languagerulename="Arabic">
+        <rule break="no"><beforebreak>[،؛]</beforebreak><afterbreak>\s+</afterbreak></rule>
+      </languagerule>
+
+      <languagerule languagerulename="CJK">
+        <rule break="yes"><beforebreak>[。！？｡]+[」』）”’〉》】〕]*</beforebreak><afterbreak></afterbreak></rule>
+      </languagerule>
+
+      <languagerule languagerulename="Latin and Korean generic">
+        <rule break="no"><beforebreak>[.?!…]+</beforebreak><afterbreak>\s+[»›]</afterbreak></rule>
+        <rule break="no"><beforebreak>[.?!…]+\s+[»›]["'”’)\]]*</beforebreak><afterbreak>\s+\p{Ll}</afterbreak></rule>
+        <rule break="yes"><beforebreak>[.?!…]+\s+[»›]["'”’)\]]*</beforebreak><afterbreak>\s+</afterbreak></rule>
+        <rule break="no"><beforebreak>\A\s*\d{1,3}[.)]</beforebreak><afterbreak>\s+</afterbreak></rule>
+        <rule break="no"><beforebreak>[.…]+["'”’»)\]]*</beforebreak><afterbreak>\s+\p{Ll}</afterbreak></rule>
+        <rule break="no"><beforebreak>[?!؟]+["”’»)\]]+</beforebreak><afterbreak>\s+\p{Ll}</afterbreak></rule>
+        <rule break="yes"><beforebreak>[.?!…؟‼⁇⁈⁉]+["'”’»)\]]*</beforebreak><afterbreak>\s+</afterbreak></rule>
+      </languagerule>
+
+    </languagerules>
+    <maprules>
+      <languagemap languagepattern="en(?:[-_].*)?" languagerulename="English"/>
+      <languagemap languagepattern="es(?:[-_].*)?" languagerulename="Spanish"/>
+      <languagemap languagepattern="fr(?:[-_].*)?" languagerulename="French"/>
+      <languagemap languagepattern="it(?:[-_].*)?" languagerulename="Italian"/>
+      <languagemap languagepattern="de(?:[-_].*)?" languagerulename="German"/>
+      <languagemap languagepattern="nl(?:[-_].*)?" languagerulename="Dutch"/>
+      <languagemap languagepattern="pt(?:[-_].*)?" languagerulename="Portuguese"/>
+      <languagemap languagepattern="(?:en|es|fr|it|de|nl|pt)(?:[-_].*)?" languagerulename="Dotted company forms"/>
+      <languagemap languagepattern="ar(?:[-_].*)?" languagerulename="Arabic"/>
+      <languagemap languagepattern="(?:ja|zh)(?:[-_].*)?" languagerulename="CJK"/>
+      <languagemap languagepattern="(?:en|es|fr|it|de|nl|pt|ko|ar|ja|zh)(?:[-_].*)?" languagerulename="Latin and Korean generic"/>
+    </maprules>
+  </body>
+</srx>

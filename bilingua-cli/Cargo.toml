@@ -1,0 +1,17 @@
+[package]
+name = "bilingua-cli"
+description = "Bilingua command line: extract, merge, segment, wordcount and pseudo-translate source files"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "bilingua"
+path = "src/main.rs"
+
+[dependencies]
+bilingua = { workspace = true }
+bilingua-seg = { workspace = true }
+quick-xml = { workspace = true }
+serde_json = { workspace = true }

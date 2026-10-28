@@ -1,5 +1,5 @@
 [workspace]
-members = ["bilingua-model", "bilingua", "bilingua-docx", "bilingua-html", "bilingua-po", "bilingua-subtitle"]
+members = ["bilingua-model", "bilingua", "bilingua-seg", "bilingua-text", "bilingua-json", "bilingua-markdown", "bilingua-cli", "bilingua-docx", "bilingua-html", "bilingua-po", "bilingua-subtitle"]
 resolver = "2"
 
 [workspace.package]
@@ -10,6 +10,18 @@ repository = "https://github.com/patois-labs/bilingua"
 
 [workspace.dependencies]
 bilingua-model = { path = "bilingua-model" }
+bilingua-seg = { path = "bilingua-seg" }
+bilingua-text = { path = "bilingua-text" }
+bilingua-json = { path = "bilingua-json" }
+bilingua-markdown = { path = "bilingua-markdown" }
+bilingua-docx = { path = "bilingua-docx" }
+bilingua-html = { path = "bilingua-html" }
+bilingua-po = { path = "bilingua-po" }
+bilingua-subtitle = { path = "bilingua-subtitle" }
+bilingua = { path = "bilingua" }
+regex = "1"
+icu_segmenter = "2"
+pulldown-cmark = { version = "0.13", default-features = false }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 thiserror = "2"

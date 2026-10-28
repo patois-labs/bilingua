@@ -8,3 +8,14 @@ repository.workspace = true
 
 [dependencies]
 bilingua-model = { workspace = true }
+bilingua-seg = { workspace = true }
+bilingua-text = { workspace = true }
+bilingua-json = { workspace = true }
+bilingua-markdown = { workspace = true }
+bilingua-docx = { workspace = true }
+bilingua-html = { workspace = true }
+bilingua-po = { workspace = true }
+bilingua-subtitle = { workspace = true }
+
+[dev-dependencies]
+zip = { workspace = true }
