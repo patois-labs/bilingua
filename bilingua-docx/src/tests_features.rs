@@ -833,3 +833,16 @@ fn a_long_document_is_fast_enough() {
     assert_eq!(doc.units.len(), 5000);
     assert!(t.elapsed().as_secs() < 20, "took {:?}", t.elapsed());
 }
+
+#[test]
+fn empty_run_properties_are_not_written() {
+    let inner = "<w:p><w:r><w:rPr></w:rPr><w:t>Plain text</w:t></w:r><w:r><w:rPr/><w:t xml:space=\"preserve\"> and more</w:t></w:r></w:p>";
+    let mut doc = round_trip(&doc_of(inner));
+    doc.target_lang = Some("es-ES".into());
+    doc.set_target("p1", vec![Inline::text("Texto simple y mas")])
+        .unwrap();
+    let x = xml_of(&Docx.merge(&doc).unwrap(), "word/document.xml");
+    assert!(x.contains("<w:t>Texto simple y mas</w:t>"));
+    assert!(!x.contains("<w:rPr></w:rPr>"), "{x}");
+    assert!(!x.contains("<w:rPr/>"), "{x}");
+}

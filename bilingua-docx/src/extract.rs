@@ -721,7 +721,11 @@ impl Extractor {
 
     fn run(&mut self, e: &El, out: &mut Vec<Atom>, st: &mut ParaState, fl: Flags) {
         let ns = self.ns.clone();
-        let rpr_el = e.elements().find(|c| ns.is_w(&c.name, "rPr"));
+        // An empty `<w:rPr/>` carries nothing: drop it so plain runs are written without one.
+        let rpr_el = e
+            .elements()
+            .find(|c| ns.is_w(&c.name, "rPr"))
+            .filter(|r| r.elements().next().is_some());
         let rpr = rpr_el.map(|r| r.raw()).unwrap_or_default();
         let key = rpr_el.map(canon_rpr).unwrap_or_default();
         let wrap = |inner: &str| format!("<{}r>{rpr}{inner}</{}r>", ns.w, ns.w);
