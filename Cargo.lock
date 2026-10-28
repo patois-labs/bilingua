@@ -10,12 +10,33 @@ dependencies = [
 ]
 
 [[package]]
+name = "bilingua-html"
+version = "0.1.0"
+dependencies = [
+ "bilingua-model",
+]
+
+[[package]]
 name = "bilingua-model"
 version = "0.1.0"
 dependencies = [
  "serde",
  "serde_json",
  "thiserror",
+]
+
+[[package]]
+name = "bilingua-po"
+version = "0.1.0"
+dependencies = [
+ "bilingua-model",
+]
+
+[[package]]
+name = "bilingua-subtitle"
+version = "0.1.0"
+dependencies = [
+ "bilingua-model",
 ]
 
 [[package]]
