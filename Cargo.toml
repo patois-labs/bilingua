@@ -1,5 +1,5 @@
 [workspace]
-members = ["bilingua-model", "bilingua", "bilingua-docx"]
+members = ["bilingua-model", "bilingua", "bilingua-docx", "bilingua-html", "bilingua-po", "bilingua-subtitle"]
 resolver = "2"
 
 [workspace.package]
