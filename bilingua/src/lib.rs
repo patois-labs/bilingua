@@ -41,6 +41,12 @@ pub fn detect(name: &str, bytes: &[u8]) -> Option<Box<dyn Filter>> {
             sniffed = Some(f);
         }
     }
+    // A file with an extension no parser claims is refused rather than guessed: plain text and HTML sniff
+    // loosely, and opening a YAML or config file as plain text would let translators change its keys.
+    // Sniffing only decides for files with no extension.
+    if by_ext.is_none() && !ext.is_empty() {
+        return None;
+    }
     by_ext.or(sniffed)
 }
 
