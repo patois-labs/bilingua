@@ -1,0 +1,10 @@
+[package]
+name = "bilingua"
+description = "Bilingua: open, segment and rebuild source files for translation (facade over the format crates)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+bilingua-model = { workspace = true }
