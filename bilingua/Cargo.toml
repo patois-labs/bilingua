@@ -8,3 +8,7 @@ repository.workspace = true
 
 [dependencies]
 bilingua-model = { workspace = true }
+bilingua-seg = { workspace = true }
+bilingua-text = { workspace = true }
+bilingua-json = { workspace = true }
+bilingua-markdown = { workspace = true }

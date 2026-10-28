@@ -15,7 +15,11 @@ dependencies = [
 name = "bilingua"
 version = "0.1.0"
 dependencies = [
+ "bilingua-json",
+ "bilingua-markdown",
  "bilingua-model",
+ "bilingua-seg",
+ "bilingua-text",
 ]
 
 [[package]]
