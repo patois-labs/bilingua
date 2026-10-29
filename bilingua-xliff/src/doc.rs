@@ -245,24 +245,34 @@ impl Doc {
         )
     }
 
+    /// Parse one byte span of the body as inline content (MXLIFF brace codes split out).
+    fn parse_span(&self, range: &Range<usize>, data: Option<&HashMap<String, String>>) -> Parsed {
+        let body = self.body();
+        let p = parse_inlines(&body[range.clone()], self.flavor(), self.tag_defs.as_ref(), data).unwrap_or_else(|_| {
+            // Malformed inline markup: show it as text rather than hide the segment.
+            Parsed { inlines: vec![Inline::Text(String::from_utf8_lossy(&body[range.clone()]).into_owned())], raws: Vec::new() }
+        });
+        if self.format == Format::Mxliff {
+            split_brace_codes(p)
+        } else {
+            p
+        }
+    }
+
+    /// The target of segment `i` as the file has it (not as edited here).
+    fn original_target(&self, i: usize) -> Vec<Inline> {
+        let r = &self.recs[i];
+        let data = self.data_table(r.unit_ix);
+        r.tgt.as_ref().map(|t| self.parse_span(t, data.as_ref()).inlines).unwrap_or_default()
+    }
+
     /// Parse the inline content of segment `i` if that has not happened yet.
     fn content(&self, i: usize) -> &Content {
         let r = &self.recs[i];
         r.content.get_or_init(|| {
-            let body = self.body();
             let data = self.data_table(r.unit_ix);
-            let load = |range: &Range<usize>| {
-                parse_inlines(&body[range.clone()], self.flavor(), self.tag_defs.as_ref(), data.as_ref()).unwrap_or_else(|_| {
-                    // Malformed inline markup: show it as text rather than hide the segment.
-                    Parsed { inlines: vec![Inline::Text(String::from_utf8_lossy(&body[range.clone()]).into_owned())], raws: Vec::new() }
-                })
-            };
-            let mut src = load(&r.src);
-            let mut tgt = r.tgt.as_ref().map(load).unwrap_or_default();
-            if self.format == Format::Mxliff {
-                src = split_brace_codes(src);
-                tgt = split_brace_codes(tgt);
-            }
+            let src = self.parse_span(&r.src, data.as_ref());
+            let tgt = r.tgt.as_ref().map(|t| self.parse_span(t, data.as_ref())).unwrap_or_default();
             Content { source: src.inlines, target: tgt.inlines, raws: merge_raws(src.raws, tgt.raws) }
         })
     }
@@ -328,12 +338,15 @@ impl Doc {
             return false;
         }
         self.content(i);
+        let original = self.original_target(i);
         let r = &mut self.recs[i];
         let Some(c) = r.content.get_mut() else { return false };
         let target = normalize(target, &c.source);
         if target == c.target {
             return true;
         }
+        // Back to what the file holds (an undo): the target bytes need no rewrite.
+        let back_to_file = target == original;
         // A rejected segment stays rejected while its target is edited (the file keeps its `RejectedTranslation`
         // until someone sets a new state).
         if target.is_empty() {
@@ -342,8 +355,18 @@ impl Doc {
             r.seg.state = SegState::Draft;
         }
         c.target = target;
-        r.target_dirty = true;
+        r.target_dirty = !back_to_file;
         true
+    }
+
+    /// The state segment `i` had when the file was opened.
+    pub fn orig_state(&self, i: usize) -> SegState {
+        self.recs[i].orig_state
+    }
+
+    /// True when the target of segment `i` differs from the file's.
+    pub fn target_changed(&self, i: usize) -> bool {
+        self.recs[i].target_dirty
     }
 
     /// Like [`Doc::put_target`] but leaves the state alone (for writing a whole document back, where the state is
