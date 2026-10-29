@@ -7,7 +7,8 @@
 //! let out: Vec<u8> = bilingua::merge(&doc)?;
 //! ```
 //!
-//! Formats register in [`filters`]: DOCX, XLSX, PPTX, HTML, Markdown, JSON, PO, SRT, WebVTT and plain text. `extract` also applies sentence
+//! Formats register in [`filters`]: DOCX, XLSX, PPTX, HTML, Markdown, JSON, PO, SRT, WebVTT, plain text, XLIFF 1.2 and 2
+//! (with SDLXLIFF, MQXLIFF and MXLIFF) and the Trados and memoQ packages. `extract` also applies sentence
 //! segmentation (`bilingua-seg`) for the granularity in the options.
 
 pub use bilingua_model::*;
@@ -15,8 +16,12 @@ pub use bilingua_seg::{join, split, Rules};
 
 /// All available filters, most specific first. Plain text goes last because it accepts any UTF-8 file.
 pub fn filters() -> Vec<Box<dyn Filter>> {
-    vec![
-        Box::new(bilingua_docx::Docx),
+    // The packages (zip) and the XLIFF family are recognised by extension or header; they go before the loose
+    // sniffers.
+    let mut all: Vec<Box<dyn Filter>> = bilingua_sdl::filters();
+    all.extend(bilingua_xliff::filters());
+    all.extend(vec![
+        Box::new(bilingua_docx::Docx) as Box<dyn Filter>,
         Box::new(bilingua_xlsx::Xlsx::default()),
         Box::new(bilingua_pptx::Pptx),
         Box::new(bilingua_subtitle::Vtt),
@@ -27,7 +32,14 @@ pub fn filters() -> Vec<Box<dyn Filter>> {
         // HTML sniffs loosely and plain text accepts any UTF-8, so they go last.
         Box::new(bilingua_html::Html),
         Box::new(bilingua_text::TextFilter),
-    ]
+    ]);
+    all
+}
+
+/// Formats whose files carry their own segmentation (XLIFF and its dialects, translation packages): sentence
+/// splitting would break the link between a segment and the file's own segment.
+fn own_segmentation(id: &str) -> bool {
+    matches!(id, "xliff" | "sdlxliff" | "mqxliff" | "mxliff" | "sdlppx" | "mqxlz")
 }
 
 /// The filter for a file: by extension first, then by sniffing the bytes.
@@ -58,6 +70,9 @@ pub fn extract(name: &str, bytes: &[u8], opts: &ExtractOptions) -> Result<Docume
     let f = detect(name, bytes).ok_or_else(|| Error::Unsupported(format!("no parser for {name}")))?;
     let mut doc = f.extract(bytes, opts)?;
     doc.name = Some(name.to_string());
+    if own_segmentation(f.id()) {
+        return Ok(doc);
+    }
     let lang = opts.source_lang.as_deref().unwrap_or("en");
     bilingua_seg::segment(&mut doc, lang, opts.granularity, Rules::bundled());
     Ok(doc)

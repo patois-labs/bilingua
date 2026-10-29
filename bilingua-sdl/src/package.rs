@@ -1,7 +1,8 @@
 //! Translation packages: Trados `.sdlppx` / `.sdlrpx` and memoQ `.mqxlz`.
 //!
 //! All three are zip files. Opening reads every entry into memory under the limits in
-//! [`ZipLimits`] (see `zipio.rs`), opens the bilingual files inside as [`Doc`]s, and keeps all
+//! [`ZipLimits`] (see `zipio.rs`), opens the bilingual files inside as documents (any type that implements
+//! [`PackageDoc`]; `bilingua_xliff::Doc` does), and keeps all
 //! other entries as they were. Saving a Trados return package or a memoQ file writes a new zip;
 //! nothing is ever extracted to disk.
 //!
@@ -15,15 +16,44 @@
 //! * `.mqxlz` is handled as a zip of `.mqxliff` files with any other entries kept verbatim. No real
 //!   `.mqxlz` is in the fixtures; the container is inferred from memoQ documentation.
 
-use crate::doc::Doc;
-use crate::error::Error;
-use crate::zipio::{read_zip, safe_name, write_zip, Entry, ZipLimits};
+use bilingua_xliff::Error;
+pub use crate::zipio::{Entry, ZipLimits};
+use crate::zipio::{read_zip, safe_name, write_zip};
 use quick_xml::events::Event;
 use quick_xml::Reader;
 use serde::Serialize;
 use std::collections::HashMap;
 use std::hash::{BuildHasher, Hasher};
 use std::path::Path;
+
+/// A bilingual file inside a package, as the package needs it: open from bytes, count, tell whether it was
+/// edited, write back. `bilingua_xliff::Doc` is one; an editor can wrap it in its own type.
+pub trait PackageDoc: Sized {
+    fn open(bytes: Vec<u8>) -> Result<Self, Error>;
+    fn segment_count(&self) -> usize;
+    fn is_dirty(&self) -> bool;
+    fn to_bytes(&self) -> Vec<u8>;
+    /// Target language from the file header, when it has one.
+    fn target_language(&self) -> Option<String>;
+}
+
+impl PackageDoc for bilingua_xliff::Doc {
+    fn open(bytes: Vec<u8>) -> Result<Self, Error> {
+        bilingua_xliff::Doc::from_bytes(bytes)
+    }
+    fn segment_count(&self) -> usize {
+        self.len()
+    }
+    fn is_dirty(&self) -> bool {
+        bilingua_xliff::Doc::is_dirty(self)
+    }
+    fn to_bytes(&self) -> Vec<u8> {
+        bilingua_xliff::Doc::to_bytes(self)
+    }
+    fn target_language(&self) -> Option<String> {
+        Some(self.target_lang().to_string()).filter(|s| !s.trim().is_empty())
+    }
+}
 
 /// What a file inside a package is.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -207,24 +237,24 @@ fn parse_project(xml: &[u8]) -> Result<ProjectInfo, Error> {
 }
 
 /// An open Trados package (`.sdlppx` project package or `.sdlrpx` return package).
-pub struct SdlPackage {
+pub struct SdlPackage<D: PackageDoc> {
     entries: Vec<Entry>,
     project: usize,
     info: ProjectInfo,
     /// Entry index -> opened bilingual file (target languages only).
-    docs: HashMap<usize, Doc>,
+    docs: HashMap<usize, D>,
 }
 
-impl SdlPackage {
-    pub fn open(path: impl AsRef<Path>) -> Result<SdlPackage, Error> {
-        SdlPackage::from_bytes(&std::fs::read(path)?)
+impl<D: PackageDoc> SdlPackage<D> {
+    pub fn open(path: impl AsRef<Path>) -> Result<Self, Error> {
+        Self::from_bytes(&std::fs::read(path)?)
     }
 
-    pub fn from_bytes(bytes: &[u8]) -> Result<SdlPackage, Error> {
-        SdlPackage::from_bytes_with_limits(bytes, &ZipLimits::default())
+    pub fn from_bytes(bytes: &[u8]) -> Result<Self, Error> {
+        Self::from_bytes_with_limits(bytes, &ZipLimits::default())
     }
 
-    pub fn from_bytes_with_limits(bytes: &[u8], limits: &ZipLimits) -> Result<SdlPackage, Error> {
+    pub fn from_bytes_with_limits(bytes: &[u8], limits: &ZipLimits) -> Result<Self, Error> {
         let entries = read_zip(bytes, limits)?;
         let projects: Vec<usize> = entries
             .iter()
@@ -243,11 +273,36 @@ impl SdlPackage {
         let mut docs = HashMap::new();
         for (i, e) in entries.iter().enumerate() {
             if role_of(&info, e) == FileRole::Target && e.name.to_ascii_lowercase().ends_with(".sdlxliff") {
-                let doc = Doc::from_bytes(e.data.clone()).map_err(|err| Error::Package(format!("{}: {err}", e.name)))?;
+                let doc = D::open(e.data.clone()).map_err(|err| Error::Package(format!("{}: {err}", e.name)))?;
                 docs.insert(i, doc);
             }
         }
         Ok(SdlPackage { entries, project, info, docs })
+    }
+
+    /// Every file of the package as read (no folders), in order.
+    pub fn entries(&self) -> &[Entry] {
+        &self.entries
+    }
+
+    /// The package as a zip again: edited bilingual files replaced, every other entry as it was, same order.
+    /// (A return package for Trados is built by [`SdlPackage::to_return_package`].)
+    pub fn to_bytes(&self) -> Result<Vec<u8>, Error> {
+        let out: Vec<Entry> = self
+            .entries
+            .iter()
+            .enumerate()
+            .map(|(i, e)| {
+                let mut e2 = e.clone();
+                if let Some(d) = self.docs.get(&i) {
+                    if d.is_dirty() {
+                        e2.data = d.to_bytes();
+                    }
+                }
+                e2
+            })
+            .collect();
+        write_zip(&out, (1980, 1, 1, 0, 0, 0))
     }
 
     pub fn kind(&self) -> SdlPackageKind {
@@ -280,7 +335,7 @@ impl SdlPackage {
                 role: if i == self.project { FileRole::Project } else { role_of(&self.info, e) },
                 language: language_of(&self.info, e),
                 size: e.data.len(),
-                segments: self.docs.get(&i).map(Doc::len),
+                segments: self.docs.get(&i).map(D::segment_count),
             })
             .collect()
     }
@@ -292,17 +347,17 @@ impl SdlPackage {
         idx.into_iter().map(|i| self.entries[i].name.clone()).collect()
     }
 
-    pub fn doc(&self, path: &str) -> Option<&Doc> {
+    pub fn doc(&self, path: &str) -> Option<&D> {
         self.entries.iter().position(|e| e.name == path).and_then(|i| self.docs.get(&i))
     }
 
-    pub fn doc_mut(&mut self, path: &str) -> Option<&mut Doc> {
+    pub fn doc_mut(&mut self, path: &str) -> Option<&mut D> {
         let i = self.entries.iter().position(|e| e.name == path)?;
         self.docs.get_mut(&i)
     }
 
     pub fn is_dirty(&self) -> bool {
-        self.docs.values().any(Doc::is_dirty)
+        self.docs.values().any(D::is_dirty)
     }
 
     /// Build the return package (`.sdlrpx`) with the current state of every target file.
@@ -516,26 +571,26 @@ fn remove_attr(tag: &str, name: &str) -> String {
 // ---------------------------------------------------------------------------------------------
 
 /// An open memoQ package (`.mqxlz`: a zip holding one or more `.mqxliff` files).
-pub struct MqPackage {
+pub struct MqPackage<D: PackageDoc> {
     entries: Vec<Entry>,
-    docs: HashMap<usize, Doc>,
+    docs: HashMap<usize, D>,
 }
 
-impl MqPackage {
-    pub fn open(path: impl AsRef<Path>) -> Result<MqPackage, Error> {
-        MqPackage::from_bytes(&std::fs::read(path)?)
+impl<D: PackageDoc> MqPackage<D> {
+    pub fn open(path: impl AsRef<Path>) -> Result<Self, Error> {
+        Self::from_bytes(&std::fs::read(path)?)
     }
 
-    pub fn from_bytes(bytes: &[u8]) -> Result<MqPackage, Error> {
-        MqPackage::from_bytes_with_limits(bytes, &ZipLimits::default())
+    pub fn from_bytes(bytes: &[u8]) -> Result<Self, Error> {
+        Self::from_bytes_with_limits(bytes, &ZipLimits::default())
     }
 
-    pub fn from_bytes_with_limits(bytes: &[u8], limits: &ZipLimits) -> Result<MqPackage, Error> {
+    pub fn from_bytes_with_limits(bytes: &[u8], limits: &ZipLimits) -> Result<Self, Error> {
         let entries = read_zip(bytes, limits)?;
         let mut docs = HashMap::new();
         for (i, e) in entries.iter().enumerate() {
             if e.name.to_ascii_lowercase().ends_with(".mqxliff") {
-                let doc = Doc::from_bytes(e.data.clone()).map_err(|err| Error::Package(format!("{}: {err}", e.name)))?;
+                let doc = D::open(e.data.clone()).map_err(|err| Error::Package(format!("{}: {err}", e.name)))?;
                 docs.insert(i, doc);
             }
         }
@@ -545,6 +600,11 @@ impl MqPackage {
         Ok(MqPackage { entries, docs })
     }
 
+    /// Every file of the package as read (no folders), in order.
+    pub fn entries(&self) -> &[Entry] {
+        &self.entries
+    }
+
     pub fn files(&self) -> Vec<PackageFile> {
         self.entries
             .iter()
@@ -552,9 +612,9 @@ impl MqPackage {
             .map(|(i, e)| PackageFile {
                 path: e.name.clone(),
                 role: if self.docs.contains_key(&i) { FileRole::Target } else { FileRole::Other },
-                language: self.docs.get(&i).and_then(|d| d.languages().1),
+                language: self.docs.get(&i).and_then(D::target_language),
                 size: e.data.len(),
-                segments: self.docs.get(&i).map(Doc::len),
+                segments: self.docs.get(&i).map(D::segment_count),
             })
             .collect()
     }
@@ -565,17 +625,17 @@ impl MqPackage {
         idx.into_iter().map(|i| self.entries[i].name.clone()).collect()
     }
 
-    pub fn doc(&self, path: &str) -> Option<&Doc> {
+    pub fn doc(&self, path: &str) -> Option<&D> {
         self.entries.iter().position(|e| e.name == path).and_then(|i| self.docs.get(&i))
     }
 
-    pub fn doc_mut(&mut self, path: &str) -> Option<&mut Doc> {
+    pub fn doc_mut(&mut self, path: &str) -> Option<&mut D> {
         let i = self.entries.iter().position(|e| e.name == path)?;
         self.docs.get_mut(&i)
     }
 
     pub fn is_dirty(&self) -> bool {
-        self.docs.values().any(Doc::is_dirty)
+        self.docs.values().any(D::is_dirty)
     }
 
     /// The package as a zip: edited `.mqxliff` files replaced, every other entry as it was, same order.

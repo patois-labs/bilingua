@@ -11,7 +11,7 @@
 //! Nothing here touches the disk besides the caller's own `read`/`write`: entries stay in memory
 //! as `(name, bytes)`, so a bad name cannot write outside anywhere.
 
-use crate::error::Error;
+use bilingua_xliff::Error;
 use std::collections::HashSet;
 use std::io::{Cursor, Read, Write};
 

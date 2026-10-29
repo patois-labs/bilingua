@@ -158,9 +158,16 @@ pub fn to_document(doc: &Doc, id: &str, opts: &ExtractOptions) -> Result<Documen
 /// Writes the targets and states of `document` into an open file (matching segments by id). Locked segments
 /// and units with `translate == false` are left as they are.
 pub fn apply_document(doc: &mut Doc, document: &Document) {
+    apply_document_prefixed(doc, document, "");
+}
+
+/// Like [`apply_document`] for a document that holds the segments of several files: only segments whose id
+/// starts with `prefix` are used, and the id is matched without it.
+pub fn apply_document_prefixed(doc: &mut Doc, document: &Document, prefix: &str) {
     for u in document.units.iter().filter(|u| u.translate) {
         for s in &u.segments {
-            let Some(i) = doc.index_of(&s.id) else { continue };
+            let Some(id) = s.id.strip_prefix(prefix) else { continue };
+            let Some(i) = doc.index_of(id) else { continue };
             if doc.seg(i).locked {
                 continue;
             }

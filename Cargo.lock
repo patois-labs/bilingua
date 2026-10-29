@@ -28,9 +28,11 @@ dependencies = [
  "bilingua-model",
  "bilingua-po",
  "bilingua-pptx",
+ "bilingua-sdl",
  "bilingua-seg",
  "bilingua-subtitle",
  "bilingua-text",
+ "bilingua-xliff",
  "bilingua-xlsx",
  "serde_json",
  "zip",
@@ -131,6 +133,7 @@ dependencies = [
  "bilingua-model",
  "bilingua-xliff",
  "quick-xml",
+ "serde",
  "zip",
 ]
 
