@@ -51,6 +51,7 @@ name = "bilingua-docx"
 version = "0.1.0"
 dependencies = [
  "bilingua-model",
+ "bilingua-zip",
  "serde",
  "serde_json",
  "zip",
@@ -110,6 +111,7 @@ name = "bilingua-pptx"
 version = "0.1.0"
 dependencies = [
  "bilingua-model",
+ "bilingua-zip",
  "serde",
  "serde_json",
  "zip",
@@ -153,8 +155,18 @@ name = "bilingua-xlsx"
 version = "0.1.0"
 dependencies = [
  "bilingua-model",
+ "bilingua-zip",
  "serde",
  "serde_json",
+ "zip",
+]
+
+[[package]]
+name = "bilingua-zip"
+version = "0.1.0"
+dependencies = [
+ "bilingua-model",
+ "serde",
  "zip",
 ]
 

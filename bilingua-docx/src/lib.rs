@@ -353,10 +353,7 @@ pub fn merge_with_report(doc: &Document) -> Result<(Vec<u8>, MergeReport), Error
     let mut out: Vec<(EntryMeta, zipio::Body)> = Vec::with_capacity(real.len());
     for e in real {
         let data = match &e.data {
-            ZipData::Raw(b) => match meta.as_ref().and_then(|m| m.packed.get(&e.name)) {
-                Some(p) => zipio::Body::Packed(p, b),
-                None => zipio::Body::Plain(b),
-            },
+            ZipData::Raw(b) => zipio::raw_body(meta.as_ref().map(|m| &m.packed), &e.name, b),
             ZipData::Parts(parts) => {
                 let mut s = String::new();
                 for p in parts {

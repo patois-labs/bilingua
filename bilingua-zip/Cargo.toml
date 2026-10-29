@@ -1,0 +1,12 @@
+[package]
+name = "bilingua-zip"
+description = "Bilingua: the safe zip reader and writer shared by the Office parsers (DOCX, XLSX, PPTX)."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+bilingua-model = { workspace = true }
+serde = { workspace = true }
+zip = { workspace = true }
