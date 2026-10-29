@@ -91,6 +91,12 @@ fn pseudo(v: &[Inline]) -> Vec<Inline> {
 
 fn main() {
     let path = std::env::args().nth(1).unwrap_or_default();
+    if path == "--formats" {
+        // The parsers this build has and the extensions each claims (used by the scoreboard).
+        let list: Vec<Value> = bilingua::filters().iter().map(|f| json!({"id": f.id(), "extensions": f.extensions()})).collect();
+        println!("{}", Value::Array(list));
+        return;
+    }
     let name = path.rsplit(['/', '\\']).next().unwrap_or("").to_string();
     let bytes = match std::fs::read(&path) {
         Ok(b) => b,

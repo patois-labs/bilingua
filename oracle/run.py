@@ -26,7 +26,19 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
 # The Localization OS checkout (the oracle). Default: a `local-tms` folder next to the repository.
-LOCOS = Path(os.environ.get("LOCOS_DIR", Path(__file__).resolve().parents[3] / "local-tms"))
+def _find_locos() -> Path:
+    """LOCOS_DIR, else the first `local-tms` folder found next to this repository or any folder above it (a git
+    worktree lives several levels down, so a fixed number of parents is not enough)."""
+    if os.environ.get("LOCOS_DIR"):
+        return Path(os.environ["LOCOS_DIR"])
+    for up in Path(__file__).resolve().parents:
+        if (up / "local-tms" / "app" / "filters").is_dir():
+            return up / "local-tms"
+    return Path(__file__).resolve().parents[3] / "local-tms"
+
+
+LOCOS = _find_locos()
+os.environ["LOCOS_DIR"] = str(LOCOS)  # locos_dump.py reads the same variable
 LOCOS_PY = LOCOS / ".venv" / "Scripts" / "python.exe"
 BL = ROOT / "target" / "debug" / ("bl-dump.exe" if os.name == "nt" else "bl-dump")
 if not BL.exists():
@@ -185,6 +197,7 @@ def compare(path: Path, bl: dict, lo: dict) -> dict:
         b = words_of(" ".join(x[0] for x in lu), md)
         r["pairs"] = "words"
         sm = difflib.SequenceMatcher(None, a, b, autojunk=False)
+        r["match_n"], r["match_d"] = sum(m.size for m in sm.get_matching_blocks()), max(len(a), len(b))
         for op, i1, i2, j1, j2 in sm.get_opcodes():
             if op == "equal":
                 continue
@@ -200,6 +213,17 @@ def compare(path: Path, bl: dict, lo: dict) -> dict:
                 missing.remove(m)
                 extra.remove(e)
                 pairs.append((e, m))
+                break
+    # The greedy pairing above can pair a unit with a similar one although its exact twin is left over (it then
+    # shows as one wrong pair plus one missing unit). Swap such pairs back.
+    for i, (x, y) in enumerate(pairs):
+        if strip_codes(x[0]) == strip_codes(y[0]) or loose_bl(x[0]) == loose_lo(y[0]):
+            continue
+        for m in list(missing):
+            if strip_codes(x[0]) == strip_codes(m[0]) or loose_bl(x[0]) == loose_lo(m[0]):
+                missing.remove(m)
+                missing.append(y)
+                pairs[i] = (x, m)
                 break
     # LocOS lists one unit per cell; Bilingua lists a shared string once. A repeat of a matched text is not missing.
     seen = {strip_codes(y[0]) for _, y in pairs}
@@ -219,6 +243,9 @@ def compare(path: Path, bl: dict, lo: dict) -> dict:
             r["notes"].append(("markup shown differently", f"B: {short(x[0], 50)} / L: {short(y[0], 50)}", f"{x[1]} / #{y[1]}"))
         else:
             r["issues"].append(("different text", f"B: {short(x[0], 50)} / L: {short(y[0], 50)}", f"{x[1]} / #{y[1]}"))
+    # Text match: paired units whose words agree, over every unit either side has (repeats already dropped).
+    diff = sum(1 for k, _, _ in r["issues"] if k == "different text")
+    r["match_n"], r["match_d"] = len(pairs) - diff, len(pairs) + len(missing) + len(extra)
     return r
 
 
@@ -326,7 +353,8 @@ def main():
     external = "--external" in args
     if "--out" in args:
         out = Path(args[args.index("--out") + 1])
-    extra = [a for a in args if not a.startswith("--") and Path(a).is_file() and a != str(out)]
+    skip = {args[args.index("--out") + 1]} if "--out" in args else set()
+    extra = [a for a in args if not a.startswith("--") and Path(a).is_file() and a not in skip]
     if "--build" in args:
         subprocess.run(["cargo", "build", "-p", "bilingua-oracle"], cwd=ROOT, check=True)
     files = collect(extra, external)
@@ -364,4 +392,10 @@ def main():
     print(f"wrote {out}: {len(results)} files")
 
 
-main()
+if __name__ == "__main__":
+    if "--scoreboard" in sys.argv[1:]:
+        import scoreboard
+
+        scoreboard.main()
+    else:
+        main()

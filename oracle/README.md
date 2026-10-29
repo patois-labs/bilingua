@@ -9,12 +9,14 @@ dependency) and against Bilingua's own round trip.
 | `locos_dump.py` | Run with the LocOS venv Python. Imports `app.filters` read-only and prints its units; also opens DOCX and XLSX with python-docx and openpyxl |
 | `run.py` | Runs both sides over `corpus/`, normalises, compares, and writes `REPORT.md` |
 | `gen_corpus.py`, `gen_office.py` | Build the made-up corpus (see `corpus/SOURCES.md`) |
+| `scoreboard.py`, `scoreboard_text.py` | `python run.py --scoreboard` writes `SCOREBOARD.md`: every LocOS format against Bilingua, one row each (files, units on both sides, text match, round trip, status), LocOS fixtures read in place |
 | `findings_text.py` | The hand-written conclusions copied into `REPORT.md` |
 | `tests/corpus.rs` | `cargo test -p bilingua-oracle`: round trip on every corpus file, no LocOS needed |
 
 ```
 cargo build -p bilingua-oracle
 python run.py                 # corpus only
+python run.py --scoreboard    # regenerate SCOREBOARD.md (needs core/target/debug/catcore-cli built for the bilingual formats)
 python run.py --external      # also files that live only in the LocOS tree (read in place, counts only in the report)
 ```
 

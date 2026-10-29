@@ -12,7 +12,10 @@ import sys
 import tempfile
 
 # The Localization OS checkout (the oracle). Default: a `local-tms` folder next to the repository.
-LOCOS = os.environ.get("LOCOS_DIR", os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", "local-tms"))
+LOCOS = os.environ.get("LOCOS_DIR") or next(
+    (os.path.join(up, "local-tms") for up in [os.path.dirname(os.path.abspath(__file__))] + [
+        os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), *[".."] * n)) for n in range(1, 8)]
+     if os.path.isdir(os.path.join(up, "local-tms", "app", "filters"))), "local-tms")
 os.environ["LOC_TMS_DATA_DIR"] = tempfile.mkdtemp(prefix="locos-oracle-")
 sys.dont_write_bytecode = True
 sys.path.insert(0, LOCOS)
@@ -23,7 +26,24 @@ from app.filters.base import get_filter  # noqa: E402
 EXT = {"docm": "docx", "dotx": "docx", "dotm": "docx", "htm": "html", "markdown": "md", "text": "txt"}
 
 
+def inventory(out_path: str) -> None:
+    """Every format the registry knows: canonical name, filter class and the extensions that resolve to it."""
+    from app.filters import base
+
+    rows = []
+    for fmt in base.supported_formats():
+        flt = base.get_filter(fmt)
+        exts = {k for k, v in base._ALIASES.items() if v == fmt} | {k for k, v in base._LAZY.items() if v[1] == fmt}
+        exts.add(fmt)
+        rows.append({"fmt": fmt, "cls": type(flt).__name__ if flt else None, "exts": sorted(exts)})
+    with open(out_path, "w", encoding="utf-8") as fh:
+        json.dump(rows, fh)
+
+
 def main() -> None:
+    if sys.argv[1] == "--inventory":
+        inventory(sys.argv[2])
+        return
     out_path, files = sys.argv[1], sys.argv[2:]
     res = {}
     for f in files:
