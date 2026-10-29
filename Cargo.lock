@@ -125,6 +125,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "bilingua-sdl"
+version = "0.1.0"
+dependencies = [
+ "bilingua-model",
+ "bilingua-xliff",
+ "quick-xml",
+ "zip",
+]
+
+[[package]]
 name = "bilingua-seg"
 version = "0.1.0"
 dependencies = [
@@ -146,6 +156,15 @@ name = "bilingua-text"
 version = "0.1.0"
 dependencies = [
  "bilingua-model",
+]
+
+[[package]]
+name = "bilingua-xliff"
+version = "0.1.0"
+dependencies = [
+ "bilingua-model",
+ "quick-xml",
+ "thiserror",
 ]
 
 [[package]]

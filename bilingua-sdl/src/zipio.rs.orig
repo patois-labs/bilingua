@@ -1,0 +1,190 @@
+//! Safe zip reading and plain zip writing for the package formats.
+//!
+//! A package comes from a customer or a vendor, so it is untrusted input. Reading refuses:
+//! junk that is not a zip, encrypted entries, symbolic links, entry names that could escape a
+//! folder (`..`, absolute paths, drive letters, NUL and other control characters, Windows
+//! alternate-stream colons), duplicate names (compared without case), too many entries, entries
+//! or totals that are too big, and entries whose real size is far larger than their compressed
+//! size (zip bombs). The size checks use the bytes actually produced by the decompressor, not
+//! the sizes the zip header claims.
+//!
+//! Nothing here touches the disk besides the caller's own `read`/`write`: entries stay in memory
+//! as `(name, bytes)`, so a bad name cannot write outside anywhere.
+
+use crate::error::Error;
+use std::collections::HashSet;
+use std::io::{Cursor, Read, Write};
+
+/// Limits applied when reading a package.
+#[derive(Debug, Clone, Copy)]
+pub struct ZipLimits {
+    /// Most entries (folders included) a package may hold.
+    pub max_entries: usize,
+    /// Most bytes one entry may expand to.
+    pub max_entry_bytes: u64,
+    /// Most bytes all entries together may expand to.
+    pub max_total_bytes: u64,
+    /// Largest accepted `expanded size / compressed size` for an entry bigger than
+    /// `ratio_floor_bytes`. XML compresses 5 to 30 times; 200 leaves room for repetitive files.
+    pub max_ratio: u64,
+    /// Entries at or under this size are not ratio-checked (tiny files can compress absurdly well).
+    pub ratio_floor_bytes: u64,
+}
+
+impl Default for ZipLimits {
+    fn default() -> Self {
+        ZipLimits {
+            max_entries: 20_000,
+            max_entry_bytes: 512 * 1024 * 1024,
+            max_total_bytes: 2 * 1024 * 1024 * 1024,
+            max_ratio: 200,
+            ratio_floor_bytes: 1024 * 1024,
+        }
+    }
+}
+
+/// One file of a package, in memory.
+#[derive(Debug, Clone)]
+pub struct Entry {
+    /// Forward-slash path inside the zip, checked by [`safe_name`].
+    pub name: String,
+    pub data: Vec<u8>,
+    /// Modification time as stored: (year, month, day, hour, minute, second).
+    pub modified: Option<(u16, u8, u8, u8, u8, u8)>,
+}
+
+fn bad(msg: impl Into<String>) -> Error {
+    Error::Package(msg.into())
+}
+
+/// Check and normalise an entry name. Backslashes become `/`. Folder names (trailing `/`) keep it.
+pub fn safe_name(raw: &str) -> Result<String, Error> {
+    if raw.is_empty() {
+        return Err(bad("an entry has an empty name"));
+    }
+    if raw.chars().any(|c| c == '\0' || c.is_control()) {
+        return Err(bad(format!("entry name {raw:?} holds a control character")));
+    }
+    let name = raw.replace('\\', "/");
+    if name.starts_with('/') {
+        return Err(bad(format!("entry name {raw:?} is an absolute path")));
+    }
+    if name.contains(':') {
+        // Drive letters (C:), alternate data streams (file:stream) and URL-like names.
+        return Err(bad(format!("entry name {raw:?} contains a colon")));
+    }
+    let mut parts: Vec<&str> = Vec::new();
+    for part in name.split('/') {
+        match part {
+            ".." => return Err(bad(format!("entry name {raw:?} climbs out of the package (..)"))),
+            "." | "" => {}
+            p => {
+                // Windows trims trailing dots and spaces, which can turn "x.." into "x" or ".. " into "..".
+                if p.trim_end_matches(['.', ' ']).is_empty() {
+                    return Err(bad(format!("entry name {raw:?} has a component made of dots or spaces")));
+                }
+                parts.push(p);
+            }
+        }
+    }
+    if parts.is_empty() {
+        return Err(bad(format!("entry name {raw:?} names no file")));
+    }
+    let mut out = parts.join("/");
+    if name.ends_with('/') {
+        out.push('/');
+    }
+    Ok(out)
+}
+
+/// Read every file of a zip held in memory, applying `limits`. Folder entries are dropped.
+pub fn read_zip(bytes: &[u8], limits: &ZipLimits) -> Result<Vec<Entry>, Error> {
+    if bytes.len() < 22 || !(bytes.starts_with(b"PK\x03\x04") || bytes.starts_with(b"PK\x05\x06")) {
+        return Err(bad("not a zip file (no PK signature)"));
+    }
+    let mut zip = zip::ZipArchive::new(Cursor::new(bytes)).map_err(|e| bad(format!("unreadable zip: {e}")))?;
+    if zip.len() > limits.max_entries {
+        return Err(bad(format!("{} entries, the limit is {}", zip.len(), limits.max_entries)));
+    }
+    let mut seen: HashSet<String> = HashSet::new();
+    let mut out = Vec::new();
+    let mut total: u64 = 0;
+    for i in 0..zip.len() {
+        // Metadata first, without decrypting or decompressing anything.
+        let (name, is_dir, claimed, packed, modified) = {
+            let f = zip.by_index_raw(i).map_err(|e| bad(format!("unreadable entry {i}: {e}")))?;
+            if f.encrypted() {
+                return Err(bad(format!("entry {:?} is encrypted", f.name().map(|n| n.into_owned()).unwrap_or_default())));
+            }
+            if f.is_symlink() {
+                return Err(bad("the package holds a symbolic link"));
+            }
+            let raw = f.name().map_err(|e| bad(format!("entry {i} has an unreadable name: {e}")))?.into_owned();
+            let name = safe_name(&raw)?;
+            let modified = f.last_modified().map(|d| (d.year(), d.month(), d.day(), d.hour(), d.minute(), d.second()));
+            (name, f.is_dir() || raw.ends_with('/') || raw.ends_with('\\'), f.size(), f.compressed_size(), modified)
+        };
+        if !seen.insert(name.to_ascii_lowercase()) {
+            return Err(bad(format!("entry {name:?} appears twice")));
+        }
+        if is_dir {
+            continue;
+        }
+        if claimed > limits.max_entry_bytes {
+            return Err(bad(format!("entry {name:?} claims {claimed} bytes, the limit is {}", limits.max_entry_bytes)));
+        }
+        if claimed > limits.ratio_floor_bytes && claimed / packed.max(1) > limits.max_ratio {
+            return Err(bad(format!("entry {name:?} expands {}x, the limit is {}x", claimed / packed.max(1), limits.max_ratio)));
+        }
+        let mut f = zip.by_index(i).map_err(|e| bad(format!("cannot read entry {name:?}: {e}")))?;
+        let mut data = Vec::with_capacity(claimed.min(64 * 1024 * 1024) as usize);
+        // The header can lie about the size: stop one byte past the limit.
+        let got = (&mut f)
+            .take(limits.max_entry_bytes + 1)
+            .read_to_end(&mut data)
+            .map_err(|e| bad(format!("cannot decompress entry {name:?}: {e}")))? as u64;
+        if got > limits.max_entry_bytes {
+            return Err(bad(format!("entry {name:?} expands past {} bytes", limits.max_entry_bytes)));
+        }
+        if got > limits.ratio_floor_bytes && got / packed.max(1) > limits.max_ratio {
+            return Err(bad(format!("entry {name:?} expands {}x, the limit is {}x", got / packed.max(1), limits.max_ratio)));
+        }
+        total += got;
+        if total > limits.max_total_bytes {
+            return Err(bad(format!("the package expands past {} bytes", limits.max_total_bytes)));
+        }
+        out.push(Entry { name, data, modified });
+    }
+    Ok(out)
+}
+
+/// Write entries as a zip (deflate), in the given order.
+pub fn write_zip(entries: &[Entry], default_time: (u16, u8, u8, u8, u8, u8)) -> Result<Vec<u8>, Error> {
+    let mut w = zip::ZipWriter::new(Cursor::new(Vec::new()));
+    for e in entries {
+        let t = e.modified.unwrap_or(default_time);
+        let dt = zip::DateTime::from_date_and_time(t.0, t.1, t.2, t.3, t.4, t.5)
+            .unwrap_or_else(|_| zip::DateTime::default());
+        let opts = zip::write::SimpleFileOptions::default()
+            .compression_method(zip::CompressionMethod::Deflated)
+            .last_modified_time(dt);
+        w.start_file(&e.name, opts).map_err(|err| bad(format!("cannot write {:?}: {err}", e.name)))?;
+        w.write_all(&e.data).map_err(|err| bad(format!("cannot write {:?}: {err}", e.name)))?;
+    }
+    let cursor = w.finish().map_err(|e| bad(format!("cannot finish the zip: {e}")))?;
+    Ok(cursor.into_inner())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn names() {
+        assert_eq!(safe_name("en-US/dir1/a.sdlxliff").unwrap(), "en-US/dir1/a.sdlxliff");
+        assert_eq!(safe_name("en-US\\dir1\\a.sdlxliff").unwrap(), "en-US/dir1/a.sdlxliff");
+        for bad in ["../x", "a/../../x", "/etc/passwd", "\\x", "C:\\x", "a/b:stream", "a\0b", "", "..", "a/ ../b", "a/..\\b"] {
+            assert!(safe_name(bad).is_err(), "{bad:?} must be refused");
+        }
+    }
+}
