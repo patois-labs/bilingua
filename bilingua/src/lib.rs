@@ -79,8 +79,12 @@ pub fn extract(name: &str, bytes: &[u8], opts: &ExtractOptions) -> Result<Docume
 }
 
 /// Changes the granularity of an extracted document (sentence, paragraph or document). Targets already set
-/// survive only for units whose segments all had one.
+/// survive only for units whose segments all had one. A bilingual file (XLIFF family, packages) keeps the file's
+/// own segments: merge finds them by id, so joining or splitting them would lose the translations.
 pub fn resegment(doc: &mut Document, source_lang: &str, mode: Granularity) {
+    if own_segmentation(&doc.format) {
+        return;
+    }
     bilingua_seg::segment(doc, source_lang, mode, Rules::bundled());
 }
 

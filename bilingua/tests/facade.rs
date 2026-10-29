@@ -116,3 +116,16 @@ fn bad_files_are_errors_not_panics() {
     assert!(extract("a.txt", &[0xFF, 0xFE, 0x41, 0x00], &ExtractOptions::default()).is_err());
     assert!(extract("a.md", &[0x23, 0x20, 0xFF], &ExtractOptions::default()).is_err());
 }
+
+#[test]
+fn xliff_keeps_its_own_segments_in_sentence_mode_and_on_resegment() {
+    // Two sentences in one trans-unit, with a translation: splitting would orphan the target.
+    let x = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<xliff version=\"1.2\" xmlns=\"urn:oasis:names:tc:xliff:document:1.2\"><file original=\"a\" source-language=\"en\" target-language=\"ar\" datatype=\"plaintext\"><body><trans-unit id=\"u1\"><source>Open the file. Save it.</source><target state=\"translated\">\u{627}\u{641}\u{62A}\u{62D} \u{627}\u{644}\u{645}\u{644}\u{641}. \u{627}\u{62D}\u{641}\u{638}\u{647}.</target></trans-unit></body></file></xliff>\n";
+    let mut d = extract("a.xlf", x.as_bytes(), &opts("en", Granularity::Sentence)).unwrap();
+    assert_eq!(d.segment_count(), 1);
+    assert_eq!(d.units[0].segments[0].id, "u1");
+    resegment(&mut d, "en", Granularity::Sentence);
+    assert_eq!(d.segment_count(), 1);
+    assert_eq!(d.units[0].segments[0].state, SegState::Translated);
+    assert_eq!(merge(&d).unwrap(), x.as_bytes());
+}
