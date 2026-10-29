@@ -25,8 +25,22 @@ pub fn decode(s: &str) -> Result<Vec<u8>, String> {
     if !b.len().is_multiple_of(4) {
         return Err("base64 length is not a multiple of 4".into());
     }
+    // A lookup table: a linear search of the alphabet made a 20 MB skeleton take seconds to read.
+    const BAD: u8 = 0xFF;
+    const TABLE: [u8; 256] = {
+        let mut t = [BAD; 256];
+        let mut i = 0;
+        while i < 64 {
+            t[ALPHABET[i] as usize] = i as u8;
+            i += 1;
+        }
+        t
+    };
     let val = |c: u8| -> Result<u32, String> {
-        ALPHABET.iter().position(|&a| a == c).map(|p| p as u32).ok_or_else(|| format!("bad base64 character {:?}", c as char))
+        match TABLE[c as usize] {
+            BAD => Err(format!("bad base64 byte 0x{c:02x}")),
+            v => Ok(v as u32),
+        }
     };
     let mut out = Vec::with_capacity(b.len() / 4 * 3);
     for (i, q) in b.chunks(4).enumerate() {
@@ -101,5 +115,19 @@ mod tests {
         for bad in ["abc", "ab!d", "=abc", "a===", "Zg==Zg=="] {
             assert!(decode(bad).is_err(), "{bad}");
         }
+        // Non-ASCII and control bytes are errors, not panics.
+        for bad in ["\u{e9}abc", "ab\u{645}", "ab\n=", "\0\0\0\0"] {
+            assert!(decode(bad).is_err(), "{bad:?}");
+        }
+    }
+
+    #[test]
+    fn large_input_round_trips_quickly() {
+        let data: Vec<u8> = (0..8_000_000u32).map(|i| (i.wrapping_mul(2_654_435_761) >> 13) as u8).collect();
+        let enc = encode(&data);
+        let t = std::time::Instant::now();
+        let back = decode(&enc).unwrap();
+        eprintln!("decode of {} base64 chars: {:?}", enc.len(), t.elapsed());
+        assert_eq!(back, data);
     }
 }
