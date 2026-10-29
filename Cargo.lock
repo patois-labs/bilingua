@@ -28,9 +28,11 @@ dependencies = [
  "bilingua-model",
  "bilingua-po",
  "bilingua-pptx",
+ "bilingua-sdl",
  "bilingua-seg",
  "bilingua-subtitle",
  "bilingua-text",
+ "bilingua-xliff",
  "bilingua-xlsx",
  "serde_json",
  "zip",
@@ -127,6 +129,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "bilingua-sdl"
+version = "0.1.0"
+dependencies = [
+ "bilingua-model",
+ "bilingua-xliff",
+ "quick-xml",
+ "serde",
+ "zip",
+]
+
+[[package]]
 name = "bilingua-seg"
 version = "0.1.0"
 dependencies = [
@@ -148,6 +161,16 @@ name = "bilingua-text"
 version = "0.1.0"
 dependencies = [
  "bilingua-model",
+]
+
+[[package]]
+name = "bilingua-xliff"
+version = "0.1.0"
+dependencies = [
+ "bilingua-model",
+ "quick-xml",
+ "serde",
+ "thiserror",
 ]
 
 [[package]]

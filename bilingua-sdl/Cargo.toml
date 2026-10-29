@@ -1,0 +1,17 @@
+[package]
+name = "bilingua-sdl"
+description = "Bilingua: Trados project and return packages (SDLPPX, SDLRPX) and memoQ packages (MQXLZ)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+bilingua-model = { workspace = true }
+bilingua-xliff = { workspace = true }
+quick-xml = { workspace = true }
+serde = { workspace = true }
+zip = { workspace = true }
+
+[dev-dependencies]
+zip = { workspace = true }

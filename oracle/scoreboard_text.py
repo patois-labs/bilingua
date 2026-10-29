@@ -5,7 +5,7 @@ TEXT = """## What this means
 Written by hand after reading the tables above; `python run.py --scoreboard` copies it in unchanged.
 
 - **Coverage is the real gap, not quality.** Of 87 LocOS formats Bilingua opens 15 (10 source parsers plus the
-  XLIFF family, SDLXLIFF, MQXLIFF, MXLIFF and the three package types in `core/catcore`). 73 have no parser. On the
+  XLIFF family, SDLXLIFF, MQXLIFF, MXLIFF and the three package types, all now Bilingua crates). 73 have no parser. On the
   formats Bilingua does read, nothing fails: every file opens, an unchanged merge gives the same file, and a
   pseudo-translated merge reads back.
 - **No format can switch yet**, but the switch list is short for the formats LocOS fixtures already cover: TXT, SDLXLIFF,
@@ -15,11 +15,11 @@ Written by hand after reading the tables above; `python run.py --scoreboard` cop
   those choices from real gaps.
 - **Known gaps seen again here** (features, not crashes): PPTX picture alt text, chart text and SmartArt-style shape text
   (the generated and Strict PPTX packages); XLSX text boxes in drawings and `t="str"` cells without a formula; the
-  XLIFF 1.2 vendor extension of GlobalLink (`iws:status` finished or locked) that LocOS reads and catcore ignores,
-  so such a segment is listed as open work.
+  XLIFF 1.2 vendor extension of GlobalLink (`iws:status` finished or locked) that LocOS reads and Bilingua now reads too:
+  a finished segment is translated, a locked one is locked.
 - **Bilingual formats compare differently.** LocOS leaves finished segments (translated, confirmed) out of its unit
-  list; catcore lists every segment with a state. The scoreboard marks finished segments as locked on the
-  catcore side so the two lists line up. catcore has no pseudo-translate command, so only the unchanged merge is checked.
+  list; Bilingua lists every segment with a state. The scoreboard marks finished segments as locked on the
+  Bilingua side so the two lists line up. The pseudo-translated merge is checked on the target.
 - **Unit size.** TXT and Markdown are paragraphs in Bilingua and lines in LocOS: the match column compares words and
   the unit counts are not compared.
 - **Nothing here is a verdict on LocOS being right.** Where the two disagree the row says so; the notes in

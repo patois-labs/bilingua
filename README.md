@@ -20,6 +20,8 @@ Status: early (0.1). Private until the name is cleared and the API settles. Lice
 | `bilingua-docx` | Word DOCX |
 | `bilingua-xlsx` | Excel XLSX (shared strings, inline strings, headers and footers) |
 | `bilingua-pptx` | PowerPoint PPTX (slides and notes; not layout or master prompt text) |
+| `bilingua-xliff` | XLIFF 1.2 and 2, SDLXLIFF, MQXLIFF, MXLIFF (with GlobalLink status); byte-faithful writing |
+| `bilingua-sdl` | Trados project and return packages (SDLPPX, SDLRPX), memoQ packages (MQXLZ) |
 
 Shared crates: `bilingua-model` (the document model every parser fills), `bilingua-seg` (SRX 2.0 sentence
 segmentation, tag-aware), `bilingua` (one API over all of them), `bilingua-cli` (the `bilingua` command).
@@ -49,7 +51,7 @@ From the command line: `bilingua extract page.docx --target es-ES -o page.xlf`, 
 
 ## Not done yet
 - WebAssembly build for the browser.
-- More formats (IDML, DITA, XLIFF as a source format, and others as users ask).
+- More formats (IDML, DITA, and others as users ask).
 - A published crate on crates.io.
 
 ## Where it is developed
