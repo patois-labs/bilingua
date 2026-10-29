@@ -33,6 +33,7 @@ impl From<engine::Error> for Fail {
             E::Locked(_) => "locked",
             E::InventedTag(_) => "invented_tag",
             E::DuplicatedTag(_) => "duplicated_tag",
+            E::ParserVersion { .. } => "parser_version",
             E::Write(_) => "write",
             E::Io(_) => "io",
         };
@@ -130,16 +131,11 @@ fn from_py(obj: &Bound<'_, PyAny>, depth: usize) -> Result<Value, Fail> {
         return Ok(Value::Array(out));
     }
     if let Ok(b) = obj.downcast::<PyBytes>() {
-        // Raw zip entries may be passed as bytes; the model wants a list of numbers.
-        return Ok(Value::Array(b.as_bytes().iter().map(|x| Value::Number((*x).into())).collect()));
+        // Raw zip entries may be passed as bytes; the model reads them as a base64 string.
+        return Ok(Value::String(engine::b64::encode(b.as_bytes())));
     }
     let tn = obj.get_type().name().map(|n| n.to_string()).unwrap_or_default();
     Err(bad(format!("cannot use a {tn} in a document")))
-}
-
-/// True for formats that carry both source and target (the others are monolingual source files).
-fn is_bilingual(id: &str) -> bool {
-    matches!(id, "po")
 }
 
 /// All formats: a list of `{"id", "extensions", "bilingual"}`.
@@ -151,7 +147,7 @@ fn formats(py: Python<'_>) -> PyResult<Py<PyAny>> {
             serde_json::json!({
                 "id": f.id(),
                 "extensions": f.extensions(),
-                "bilingual": is_bilingual(f.id()),
+                "bilingual": f.bilingual(),
             })
         })
         .collect();

@@ -40,7 +40,7 @@ also cover this crate (they need a Python install to link against).
 - `version() -> str`.
 
 Every failure raises `bilingua.BilinguaError` with a `code` attribute: `parse`, `unsupported`, `unknown_segment`,
-`locked`, `invented_tag`, `duplicated_tag`, `write`, `io`, `invalid_argument`, `invalid_document`, `internal`.
+`locked`, `invented_tag`, `duplicated_tag`, `parser_version`, `write`, `io`, `invalid_argument`, `invalid_document`, `internal`.
 Panics inside the engine become `internal`. The GIL is released while parsing and merging, so threads run in
 parallel. The Document is converted through its serde JSON form, so new model fields appear in Python with no change
 here.
@@ -65,5 +65,4 @@ entries and their contents are identical but the compressed bytes may differ.
 
 ## Not done
 
-Preview (`preview`, `render_segment`) and `resegment` are not exposed. The `bilingual` flag is a fixed list in this
-crate until the model reports it. Linux and macOS wheels are untested here (built on Windows only).
+Preview (`preview`, `render_segment`) and `resegment` are not exposed. `bilingual` comes from each format's `Filter::bilingual()`. Linux and macOS wheels are untested here (built on Windows only).

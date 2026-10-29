@@ -136,6 +136,10 @@ impl Filter for Po {
         "po"
     }
 
+    fn bilingual(&self) -> bool {
+        true
+    }
+
     fn extensions(&self) -> &'static [&'static str] {
         &["po", "pot"]
     }

@@ -585,6 +585,11 @@ pub trait Filter: Send + Sync {
     fn extensions(&self) -> &'static [&'static str];
     /// True when the bytes look like this format (used when the extension is missing or ambiguous).
     fn sniff(&self, bytes: &[u8]) -> bool;
+    /// True when the format carries source and target (PO, XLIFF and the like): its extract may fill segment
+    /// targets and states. False for source files.
+    fn bilingual(&self) -> bool {
+        false
+    }
     /// Source file to document. One segment per unit; no sentence splitting here.
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error>;
     /// Document back to a file in the original format, targets in place of sources.

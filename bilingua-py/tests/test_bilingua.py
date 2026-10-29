@@ -263,3 +263,54 @@ def test_timing_largest_docx(capsys):
     assert same_file(out, data)
     with capsys.disabled():
         print(f"\n[timing] {path.name} {len(data)} bytes: extract {(t1 - t0) * 1000:.1f} ms, merge {(t2 - t1) * 1000:.1f} ms")
+
+
+def zip_doc():
+    path = next(p for p in FILES if p.name == "manual.docx")
+    data = path.read_bytes()
+    return bilingua.extract(path.name, data), data
+
+
+def test_skeleton_carries_parser_and_base64_zip_bytes():
+    doc, _ = zip_doc()
+    skel = doc["skeleton"]["zip"]
+    assert skel["parser"]["name"] == "bilingua-docx"
+    raws = [e["data"]["raw"] for e in skel["entries"] if "raw" in e["data"]]
+    assert raws and all(isinstance(r, str) for r in raws)
+
+
+def test_old_skeleton_forms_still_merge():
+    doc, data = zip_doc()
+    import base64
+
+    old = copy.deepcopy(doc)
+    del old["skeleton"]["zip"]["parser"]
+    for e in old["skeleton"]["zip"]["entries"]:
+        if "raw" in e["data"]:
+            e["data"]["raw"] = list(base64.b64decode(e["data"]["raw"]))
+    assert bilingua.merge(old) == bilingua.merge(doc)
+    as_bytes = copy.deepcopy(doc)
+    for e in as_bytes["skeleton"]["zip"]["entries"]:
+        if "raw" in e["data"]:
+            e["data"]["raw"] = base64.b64decode(e["data"]["raw"])
+    assert bilingua.merge(as_bytes) == bilingua.merge(doc)
+    assert same_file(bilingua.merge(doc), data)
+
+
+def test_skeleton_from_another_parser_line_is_refused():
+    doc, _ = zip_doc()
+    doc["skeleton"]["zip"]["parser"]["version"] = "9.0.0"
+    assert error_code(bilingua.merge, doc) == "parser_version"
+    doc["skeleton"]["zip"]["parser"] = {"name": "bilingua-xlsx", "version": bilingua.version()}
+    assert error_code(bilingua.merge, doc) == "parser_version"
+
+
+def test_bad_base64_is_an_invalid_document():
+    doc, _ = zip_doc()
+    e = next(e for e in doc["skeleton"]["zip"]["entries"] if "raw" in e["data"])
+    e["data"]["raw"] = "not base64!"
+    assert error_code(bilingua.merge, doc) == "invalid_document"
+
+
+def test_bilingual_flag_comes_from_the_formats():
+    assert {f["id"] for f in bilingua.formats() if f["bilingual"]} == {"po"}
