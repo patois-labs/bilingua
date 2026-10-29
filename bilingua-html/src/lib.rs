@@ -1,5 +1,8 @@
 //! Bilingua HTML filter. See the README for what is extracted and how the preview works.
 
+/// Skeleton schema number: bump only when this crate's skeleton layout changes (see `bilingua_model::check_parser`).
+pub const SKELETON_SCHEMA: u32 = 1;
+
 mod ent;
 mod extract;
 mod merge;

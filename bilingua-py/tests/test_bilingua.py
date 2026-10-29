@@ -297,12 +297,23 @@ def test_old_skeleton_forms_still_merge():
     assert same_file(bilingua.merge(doc), data)
 
 
-def test_skeleton_from_another_parser_line_is_refused():
+def test_skeleton_from_another_parser_or_a_newer_schema_is_refused():
     doc, _ = zip_doc()
-    doc["skeleton"]["zip"]["parser"]["version"] = "9.0.0"
-    assert error_code(bilingua.merge, doc) == "parser_version"
+    parser = doc["skeleton"]["zip"]["parser"]
+    assert isinstance(parser["schema"], int) and parser["schema"] >= 1
+    newer = copy.deepcopy(doc)
+    newer["skeleton"]["zip"]["parser"]["schema"] = parser["schema"] + 1
+    assert error_code(bilingua.merge, newer) == "parser_version"
     doc["skeleton"]["zip"]["parser"] = {"name": "bilingua-xlsx", "version": bilingua.version()}
     assert error_code(bilingua.merge, doc) == "parser_version"
+
+
+def test_a_crate_version_bump_without_a_schema_change_still_merges():
+    doc, data = zip_doc()
+    for version in ("0.2.0", "1.0.0", "9.9.9"):
+        bumped = copy.deepcopy(doc)
+        bumped["skeleton"]["zip"]["parser"]["version"] = version
+        assert bilingua.merge(bumped) == bilingua.merge(doc)
 
 
 def test_bad_base64_is_an_invalid_document():

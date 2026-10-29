@@ -6,6 +6,9 @@
 //! `\/` and `é` spellings survive. Placeholders (`{name}`, `{{count}}`, `%s`, `%1$d`, `${x}`) and HTML tags
 //! inside a string become inline tags. Values that are not prose (URLs, ids, numbers, ...) stay in the skeleton.
 
+/// Skeleton schema number: bump only when this crate's skeleton layout changes (see `bilingua_model::check_parser`).
+pub const SKELETON_SCHEMA: u32 = 1;
+
 mod inline;
 mod scan;
 

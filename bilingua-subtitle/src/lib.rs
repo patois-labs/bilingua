@@ -1,5 +1,8 @@
 //! Bilingua subtitle filters: SRT and WebVTT. See the README.
 
+/// Skeleton schema number: bump only when this crate's skeleton layout changes (see `bilingua_model::check_parser`).
+pub const SKELETON_SCHEMA: u32 = 1;
+
 use bilingua_model::*;
 use std::collections::BTreeMap;
 

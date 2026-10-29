@@ -979,6 +979,7 @@ pub fn extract_doc(bytes: &[u8], opts: &ExtractOptions, xo: &XlsxOptions) -> Res
     let idx: HashMap<&str, usize> = units.iter().enumerate().map(|(i, u)| (u.id.as_str(), i)).collect();
 
     let mut zentries = Vec::with_capacity(entries.len() + 1);
+    let mut packed = std::collections::BTreeMap::new();
     for (i, e) in entries.iter().enumerate() {
         let data = match trees.get(&i) {
             Some(nodes) => {
@@ -989,14 +990,14 @@ pub fn extract_doc(bytes: &[u8], opts: &ExtractOptions, xo: &XlsxOptions) -> Res
                 if has_marker_chars(&t) {
                     ZipData::Parts(split_template(&t, &idx)?)
                 } else {
-                    ZipData::Raw(e.data.clone())
+                    ZipData::Raw(e.keep(&mut packed))
                 }
             }
-            None => ZipData::Raw(e.data.clone()),
+            None => ZipData::Raw(e.keep(&mut packed)),
         };
         zentries.push(ZipEntry { name: e.name.clone(), data });
     }
-    let meta = Meta { entries: entries.iter().map(|e| e.meta.clone()).collect() };
+    let meta = Meta { entries: entries.iter().map(|e| e.meta.clone()).collect(), packed };
     let meta_json = serde_json::to_vec(&meta).map_err(|e| perr(e.to_string()))?;
     zentries.push(ZipEntry { name: META_NAME.into(), data: ZipData::Raw(meta_json) });
 

@@ -7,6 +7,9 @@
 //! let (out, report) = bilingua_xlsx::merge_with_report(&doc)?;
 //! ```
 
+/// Skeleton schema number: bump only when this crate's skeleton layout changes (see `bilingua_model::check_parser`).
+pub const SKELETON_SCHEMA: u32 = 2;
+
 mod extract;
 mod refs;
 mod render;
@@ -54,6 +57,9 @@ pub struct XlsxOptions {
 #[derive(Serialize, Deserialize)]
 pub(crate) struct Meta {
     pub entries: Vec<EntryMeta>,
+    /// Entries whose skeleton bytes are the original deflated bytes (merge copies them without recompressing).
+    #[serde(default, skip_serializing_if = "std::collections::BTreeMap::is_empty")]
+    pub packed: std::collections::BTreeMap<String, zipio::Packed>,
 }
 
 #[derive(Default)]
@@ -101,10 +107,13 @@ pub fn merge_with_report(doc: &Document) -> Result<(Vec<u8>, MergeReport), Error
     bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
     let (meta, real) = split_meta(doc)?;
     let mut r = render::Renderer::new(doc);
-    let mut out: Vec<(EntryMeta, Vec<u8>)> = Vec::with_capacity(real.len());
+    let mut out: Vec<(EntryMeta, zipio::Body)> = Vec::with_capacity(real.len());
     for e in real {
         let data = match &e.data {
-            ZipData::Raw(b) => b.clone(),
+            ZipData::Raw(b) => match meta.as_ref().and_then(|m| m.packed.get(&e.name)) {
+                Some(p) => zipio::Body::Packed(p, b),
+                None => zipio::Body::Plain(b),
+            },
             ZipData::Parts(parts) => {
                 let mut s = String::new();
                 for p in parts {
@@ -113,7 +122,7 @@ pub fn merge_with_report(doc: &Document) -> Result<(Vec<u8>, MergeReport), Error
                         SkelPart::Unit(i) => s.push_str(&r.unit(*i)?),
                     }
                 }
-                s.into_bytes()
+                zipio::Body::Owned(s.into_bytes())
             }
         };
         let em = meta
@@ -127,7 +136,7 @@ pub fn merge_with_report(doc: &Document) -> Result<(Vec<u8>, MergeReport), Error
             });
         out.push((em, data));
     }
-    let bytes = zipio::write_zip(&out)?;
+    let bytes = zipio::write_zip_parts(&out)?;
     Ok((bytes, MergeReport { warnings: r.warnings }))
 }
 

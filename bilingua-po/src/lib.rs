@@ -1,5 +1,8 @@
 //! Bilingua PO filter (gettext PO and POT). See the README.
 
+/// Skeleton schema number: bump only when this crate's skeleton layout changes (see `bilingua_model::check_parser`).
+pub const SKELETON_SCHEMA: u32 = 1;
+
 mod parse;
 mod ph;
 

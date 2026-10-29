@@ -165,13 +165,6 @@ fn crate_of(format: &str) -> &'static str {
     }
 }
 
-fn line_of(v: &str) -> (u64, u64) {
-    let mut it = v.split('.');
-    let a: u64 = it.next().unwrap().parse().unwrap();
-    let b: u64 = it.next().unwrap().parse().unwrap();
-    (a, b)
-}
-
 fn with_parser(d: &mut Document, f: impl FnOnce(&mut Option<ParserInfo>)) {
     match &mut d.skeleton {
         Skeleton::Text { parser, .. } | Skeleton::Zip { parser, .. } => f(parser),
@@ -186,26 +179,35 @@ fn every_skeleton_records_its_parser_and_merge_checks_it() {
         let p = doc.skeleton.parser().unwrap_or_else(|| panic!("{name}: skeleton has no parser record")).clone();
         assert_eq!(p.name, crate_of(&doc.format), "{name}");
         assert_eq!(p.version, env!("CARGO_PKG_VERSION"), "{name}");
+        assert!(p.schema >= 1, "{name}: schema must be a positive number");
         formats.insert(doc.format.clone());
 
-        // A different major version (for 0.x, a different minor) is refused with a clear error.
-        let mut other = doc.clone();
-        with_parser(&mut other, |q| q.as_mut().unwrap().version = "9.0.0".into());
-        let err = merge(&other).expect_err(&format!("{name}: merge accepted a v9 skeleton"));
+        // A newer schema than this crate knows is refused with a clear error.
+        let mut newer = doc.clone();
+        with_parser(&mut newer, |q| q.as_mut().unwrap().schema = p.schema + 1);
+        let err = merge(&newer).expect_err(&format!("{name}: merge accepted a newer schema"));
         assert!(matches!(err, Error::ParserVersion { .. }), "{name}: {err:?}");
         let msg = err.to_string();
-        assert!(msg.contains("9.0.0") && msg.contains(p.name.as_str()), "{msg}");
+        assert!(msg.contains(&format!("schema {}", p.schema + 1)) && msg.contains(p.name.as_str()), "{msg}");
 
         // Another parser's skeleton is refused too.
         let mut foreign = doc.clone();
         with_parser(&mut foreign, |q| q.as_mut().unwrap().name = "bilingua-other".into());
         assert!(matches!(merge(&foreign), Err(Error::ParserVersion { .. })), "{name}");
 
-        // A patch release of the same line, and a skeleton from before stamps existed, both merge.
-        let (maj, min) = line_of(&p.version);
-        let mut patch = doc.clone();
-        with_parser(&mut patch, |q| q.as_mut().unwrap().version = format!("{maj}.{min}.77"));
-        assert!(merge(&patch).is_ok(), "{name}: patch version refused");
+        // A new crate release with the same schema merges, whatever its version number says.
+        for version in ["0.2.0", "0.1.77", "1.0.0", "9.9.9"] {
+            let mut bumped = doc.clone();
+            with_parser(&mut bumped, |q| q.as_mut().unwrap().version = version.into());
+            assert!(merge(&bumped).is_ok(), "{name}: version {version} with the same schema refused");
+        }
+        // An older schema merges (the crate still reads it); schema 1 is what every stamp without a schema means.
+        let mut older = doc.clone();
+        with_parser(&mut older, |q| q.as_mut().unwrap().schema = 1);
+        if p.schema > 1 {
+            assert!(merge(&older).is_ok(), "{name}: older schema refused");
+        }
+        // A skeleton from before stamps existed merges.
         let mut legacy = doc.clone();
         with_parser(&mut legacy, |q| *q = None);
         assert!(merge(&legacy).is_ok(), "{name}: unstamped skeleton refused");
@@ -214,12 +216,35 @@ fn every_skeleton_records_its_parser_and_merge_checks_it() {
         let json = serde_json::to_value(&doc).unwrap();
         let skel = json["skeleton"].as_object().unwrap().values().next().unwrap();
         assert_eq!(skel["parser"]["name"], p.name.as_str(), "{name}");
+        assert_eq!(skel["parser"]["schema"], p.schema, "{name}");
         let back: Document = serde_json::from_value(json).unwrap();
         assert_eq!(back, doc, "{name}: JSON round trip");
     }
     for f in ["docx", "xlsx", "pptx", "html", "json", "po", "srt", "vtt"] {
         assert!(formats.contains(f), "no corpus file for {f}: {formats:?}");
     }
+}
+
+#[test]
+fn stamps_written_before_schemas_still_read_as_schema_1() {
+    // The stamp as released: crate name and version only.
+    let old = r#"{"name":"bilingua-text","version":"0.1.0"}"#;
+    let p: ParserInfo = serde_json::from_str(old).unwrap();
+    assert_eq!(p.schema, 1);
+    let mut d = open("a.txt", b"One. Two.
+", Granularity::Sentence);
+    with_parser(&mut d, |q| *q = Some(p));
+    assert_eq!(merge(&d).unwrap(), b"One. Two.
+");
+    // A whole old document, skeleton included, reads and merges.
+    let mut v = serde_json::to_value(open("a.txt", b"Hi.
+", Granularity::Sentence)).unwrap();
+    let parser = v["skeleton"].as_object_mut().unwrap().values_mut().next().unwrap()["parser"].as_object_mut().unwrap();
+    parser.remove("schema");
+    parser.insert("version".into(), "0.1.0".into());
+    let back: Document = serde_json::from_value(v).unwrap();
+    assert_eq!(merge(&back).unwrap(), b"Hi.
+");
 }
 
 #[test]

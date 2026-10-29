@@ -6,6 +6,9 @@
 //! original line ending (`\n` or `\r\n`), so mixed endings survive and translators cannot damage them.
 //! A UTF-8 byte order mark is kept.
 
+/// Skeleton schema number: bump only when this crate's skeleton layout changes (see `bilingua_model::check_parser`).
+pub const SKELETON_SCHEMA: u32 = 1;
+
 use bilingua_model::*;
 use std::collections::BTreeMap;
 

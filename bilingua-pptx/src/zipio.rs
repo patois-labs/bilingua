@@ -5,7 +5,7 @@
 
 use bilingua_model::Error;
 use serde::{Deserialize, Serialize};
-use std::collections::HashSet;
+use std::collections::{BTreeMap, HashSet};
 use std::io::{Cursor, Read, Write};
 
 #[derive(Debug, Clone, Copy)]
@@ -38,11 +38,46 @@ pub struct EntryMeta {
     pub modified: Option<[u16; 6]>,
 }
 
+/// An entry's original deflated bytes with the checksum and size of its unpacked data. Entries nobody changes
+/// are kept (and written back) in this form, so a merge never recompresses them.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct Packed {
+    pub crc32: u32,
+    pub size: u64,
+}
+
 #[derive(Debug, Clone)]
 pub struct RawEntry {
     pub name: String,
+    /// The unpacked bytes.
     pub data: Vec<u8>,
     pub meta: EntryMeta,
+    /// The original deflated bytes and their description, for entries that were deflated.
+    pub packed: Option<(Packed, Vec<u8>)>,
+}
+
+impl RawEntry {
+    /// The bytes to keep in the skeleton for an entry that is not rewritten: the original deflated bytes when
+    /// there are any (recorded in `packed` under the entry's name), else the plain bytes.
+    pub fn keep(&self, packed: &mut BTreeMap<String, Packed>) -> Vec<u8> {
+        match &self.packed {
+            Some((p, bytes)) => {
+                packed.insert(self.name.clone(), p.clone());
+                bytes.clone()
+            }
+            None => self.data.clone(),
+        }
+    }
+}
+
+/// What `write_zip_parts` writes for one entry.
+pub enum Body<'a> {
+    /// Unpacked bytes, compressed on the way out as the entry's metadata says.
+    Plain(&'a [u8]),
+    /// Bytes built by the merge itself.
+    Owned(Vec<u8>),
+    /// The original deflated bytes, copied without recompression.
+    Packed(&'a Packed, &'a [u8]),
 }
 
 fn bad(msg: impl Into<String>) -> Error {
@@ -161,6 +196,7 @@ pub fn read_zip(bytes: &[u8], limits: &ZipLimits) -> Result<Vec<RawEntry>, Error
                 name,
                 data: vec![],
                 meta,
+                packed: None,
             });
             continue;
         }
@@ -177,6 +213,20 @@ pub fn read_zip(bytes: &[u8], limits: &ZipLimits) -> Result<Vec<RawEntry>, Error
                 limits.max_ratio
             )));
         }
+        let mut pk = if stored {
+            None
+        } else {
+            let mut raw = zip
+                .by_index_raw(i)
+                .map_err(|e| bad(format!("cannot read entry {name:?}: {e}")))?;
+            let crc32 = raw.crc32();
+            let mut bytes = Vec::with_capacity(raw.compressed_size().min(64 * 1024 * 1024) as usize);
+            (&mut raw)
+                .take(limits.max_entry_bytes + 1)
+                .read_to_end(&mut bytes)
+                .map_err(|e| bad(format!("cannot read entry {name:?}: {e}")))?;
+            Some((Packed { crc32, size: claimed }, bytes))
+        };
         let mut f = zip
             .by_index(i)
             .map_err(|e| bad(format!("cannot read entry {name:?}: {e}")))?;
@@ -206,16 +256,82 @@ pub fn read_zip(bytes: &[u8], limits: &ZipLimits) -> Result<Vec<RawEntry>, Error
                 limits.max_total_bytes
             )));
         }
-        out.push(RawEntry { name, data, meta });
+        if let Some((p, _)) = pk.as_mut() {
+            p.size = got;
+        }
+        out.push(RawEntry { name, data, meta, packed: pk });
     }
     Ok(out)
 }
 
+#[cfg(test)]
 pub fn write_zip(entries: &[(EntryMeta, Vec<u8>)]) -> Result<Vec<u8>, Error> {
+    let parts: Vec<(EntryMeta, Body)> = entries
+        .iter()
+        .map(|(m, d)| (m.clone(), Body::Plain(d)))
+        .collect();
+    write_zip_parts(&parts)
+}
+
+/// A one-entry zip holding already deflated bytes, so the zip writer can copy them as they are.
+fn single_entry_zip(name: &str, p: &Packed, bytes: &[u8]) -> Vec<u8> {
+    let nb = name.as_bytes();
+    let (csize, usize_) = (bytes.len() as u32, p.size as u32);
+    let mut z = Vec::with_capacity(bytes.len() + 2 * nb.len() + 128);
+    let w16 = |z: &mut Vec<u8>, v: u16| z.extend_from_slice(&v.to_le_bytes());
+    let w32 = |z: &mut Vec<u8>, v: u32| z.extend_from_slice(&v.to_le_bytes());
+    // local file header
+    w32(&mut z, 0x0403_4b50);
+    w16(&mut z, 20);
+    w16(&mut z, 0x0800); // names are UTF-8
+    w16(&mut z, 8); // deflate
+    w16(&mut z, 0);
+    w16(&mut z, 0x21); // 1980-01-01; the caller sets the real time
+    w32(&mut z, p.crc32);
+    w32(&mut z, csize);
+    w32(&mut z, usize_);
+    w16(&mut z, nb.len() as u16);
+    w16(&mut z, 0);
+    z.extend_from_slice(nb);
+    z.extend_from_slice(bytes);
+    let cd_start = z.len() as u32;
+    // central directory header
+    w32(&mut z, 0x0201_4b50);
+    w16(&mut z, 20);
+    w16(&mut z, 20);
+    w16(&mut z, 0x0800);
+    w16(&mut z, 8);
+    w16(&mut z, 0);
+    w16(&mut z, 0x21);
+    w32(&mut z, p.crc32);
+    w32(&mut z, csize);
+    w32(&mut z, usize_);
+    w16(&mut z, nb.len() as u16);
+    w16(&mut z, 0);
+    w16(&mut z, 0);
+    w16(&mut z, 0);
+    w16(&mut z, 0);
+    w32(&mut z, 0);
+    w32(&mut z, 0);
+    z.extend_from_slice(nb);
+    let cd_len = z.len() as u32 - cd_start;
+    // end of central directory
+    w32(&mut z, 0x0605_4b50);
+    w16(&mut z, 0);
+    w16(&mut z, 0);
+    w16(&mut z, 1);
+    w16(&mut z, 1);
+    w32(&mut z, cd_len);
+    w32(&mut z, cd_start);
+    w16(&mut z, 0);
+    z
+}
+
+pub fn write_zip_parts(entries: &[(EntryMeta, Body<'_>)]) -> Result<Vec<u8>, Error> {
     let werr =
         |name: &str, e: &dyn std::fmt::Display| Error::Write(format!("cannot write {name:?}: {e}"));
     let mut w = zip::ZipWriter::new(Cursor::new(Vec::new()));
-    for (m, data) in entries {
+    for (m, body) in entries {
         let dt = m
             .modified
             .and_then(|t| {
@@ -225,6 +341,26 @@ pub fn write_zip(entries: &[(EntryMeta, Vec<u8>)]) -> Result<Vec<u8>, Error> {
                 .ok()
             })
             .unwrap_or_default();
+        let data: &[u8] = match body {
+            Body::Packed(p, bytes) if !m.dir && !m.stored => {
+                // Untouched entry: copy its deflated bytes, header values and time stamp as they were.
+                let one = single_entry_zip(&m.name, p, bytes);
+                let mut src =
+                    zip::ZipArchive::new(Cursor::new(one)).map_err(|e| werr(&m.name, &e))?;
+                let f = src.by_index_raw(0).map_err(|e| werr(&m.name, &e))?;
+                w.raw_copy_file_touch(f, dt, None)
+                    .map_err(|e| werr(&m.name, &e))?;
+                continue;
+            }
+            Body::Plain(d) => d,
+            Body::Owned(d) => d,
+            Body::Packed(..) => {
+                return Err(Error::Write(format!(
+                    "{:?} is marked packed but stored without compression",
+                    m.name
+                )))
+            }
+        };
         let method = if m.stored {
             zip::CompressionMethod::Stored
         } else {

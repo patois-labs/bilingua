@@ -9,6 +9,9 @@
 //! The file is never re-rendered: only the byte ranges of unit text are rewritten, so an untouched file comes
 //! back byte for byte. YAML front matter keys `title` and `description` (one-line values) are units too.
 
+/// Skeleton schema number: bump only when this crate's skeleton layout changes (see `bilingua_model::check_parser`).
+pub const SKELETON_SCHEMA: u32 = 1;
+
 mod extract;
 mod frontmatter;
 mod render;

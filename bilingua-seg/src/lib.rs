@@ -240,11 +240,14 @@ fn locate<'a>(doc: &'a mut Document, seg_id: &str) -> Result<(&'a mut Unit, usiz
 /// renumbered. Returns the id of the merged segment.
 pub fn join(doc: &mut Document, seg_a: &str, seg_b: &str) -> Result<String, Error> {
     let (unit, i) = locate(doc, seg_a)?;
-    if !unit.translate {
+    if !unit.translate || unit.lock_reason.is_some() || unit.segments[i].state == SegState::Locked {
         return Err(Error::Locked(seg_a.to_string()));
     }
     if unit.segments.get(i + 1).map(|s| s.id.as_str()) != Some(seg_b) {
         return Err(Error::Unsupported(format!("{seg_a} and {seg_b} are not neighbours in one unit")));
+    }
+    if unit.segments[i + 1].state == SegState::Locked {
+        return Err(Error::Locked(seg_b.to_string()));
     }
     let sep = unit.separators.get(i).cloned().unwrap_or_default();
     let b = unit.segments.remove(i + 1);
@@ -275,7 +278,7 @@ pub fn join(doc: &mut Document, seg_a: &str, seg_b: &str) -> Result<String, Erro
 /// Both new segments start untranslated. Returns the two new segment ids.
 pub fn split(doc: &mut Document, seg_id: &str, at_char: usize) -> Result<(String, String), Error> {
     let (unit, i) = locate(doc, seg_id)?;
-    if !unit.translate {
+    if !unit.translate || unit.lock_reason.is_some() || unit.segments[i].state == SegState::Locked {
         return Err(Error::Locked(seg_id.to_string()));
     }
     let a = atoms(&unit.segments[i].source);
@@ -550,6 +553,28 @@ mod tests {
         assert!(matches!(join(&mut d, "nope", "u1#2"), Err(Error::UnknownSegment(_))));
         assert!(matches!(split(&mut d, "u2", 0), Err(Error::Unsupported(_))));
         assert!(matches!(split(&mut d, "u2", 99), Err(Error::Unsupported(_))));
+    }
+
+    #[test]
+    fn join_and_split_refuse_locked_segments_and_units() {
+        let mut d = doc_of(vec![vec![Inline::text("One. Two. Three.")]]);
+        segment(&mut d, "en", Granularity::Sentence, Rules::bundled());
+        d.units[0].segments[1].state = SegState::Locked;
+        // Locked second, locked first, and a locked middle segment all refuse; nothing changes.
+        assert!(matches!(join(&mut d, "u1#1", "u1#2"), Err(Error::Locked(id)) if id == "u1#2"));
+        assert!(matches!(join(&mut d, "u1#2", "u1#3"), Err(Error::Locked(id)) if id == "u1#2"));
+        assert!(matches!(split(&mut d, "u1#2", 2), Err(Error::Locked(_))));
+        assert_eq!(d.units[0].segments.len(), 3);
+        assert_eq!(d.units[0].segments[1].state, SegState::Locked);
+        // A unit with a lock reason refuses both operations too.
+        d.units[0].segments[1].state = SegState::New;
+        d.units[0].lock_reason = Some("context match".into());
+        assert!(matches!(join(&mut d, "u1#1", "u1#2"), Err(Error::Locked(_))));
+        assert!(matches!(split(&mut d, "u1#1", 2), Err(Error::Locked(_))));
+        assert_eq!(d.units[0].segments.len(), 3);
+        // Unlocked again, it works.
+        d.units[0].lock_reason = None;
+        assert!(join(&mut d, "u1#1", "u1#2").is_ok());
     }
 
     #[test]

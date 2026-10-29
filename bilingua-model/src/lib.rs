@@ -362,54 +362,71 @@ pub struct ZipEntry {
     pub data: ZipData,
 }
 
-/// Which parser made a skeleton: the crate name and its version. A skeleton only fits the parser line that made
-/// it, so `merge` refuses one from an incompatible version (see [`check_parser`]).
+/// Which parser made a skeleton: the crate name, its version (for information) and the skeleton schema number.
+/// The schema is an integer each format crate bumps only when its skeleton layout changes, so a new crate release
+/// that did not touch the layout still merges old skeletons (see [`check_parser`]).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ParserInfo {
     /// The producing crate, e.g. "bilingua-docx".
     pub name: String,
-    /// Its semver version, e.g. "0.1.0".
+    /// Its semver version, e.g. "0.1.0". Informational only; never compared.
     pub version: String,
+    /// The skeleton schema number. Absent in stamps written before schemas existed, which read as schema 1.
+    #[serde(default = "legacy_schema")]
+    pub schema: u32,
+}
+
+fn legacy_schema() -> u32 {
+    1
 }
 
 impl ParserInfo {
-    pub fn new(name: impl Into<String>, version: impl Into<String>) -> ParserInfo {
-        ParserInfo { name: name.into(), version: version.into() }
+    pub fn new(name: impl Into<String>, version: impl Into<String>, schema: u32) -> ParserInfo {
+        ParserInfo { name: name.into(), version: version.into(), schema }
     }
 
-    /// True when a skeleton made by `self` can be written by `current`: same crate and the same compatibility
-    /// line. The line is the major version, or the minor version while the major is 0 (semver for 0.x).
+    /// True when a skeleton made by `self` can be read by `current`: same crate and a schema no newer than the
+    /// current one.
     pub fn compatible_with(&self, current: &ParserInfo) -> bool {
-        self.name == current.name && line(&self.version).is_some() && line(&self.version) == line(&current.version)
+        self.name == current.name && self.schema <= current.schema
     }
-}
-
-fn line(v: &str) -> Option<(u64, u64)> {
-    let mut it = v.split(['.', '-', '+']);
-    let major: u64 = it.next()?.parse().ok()?;
-    if major > 0 {
-        return Some((major, 0));
-    }
-    let minor: u64 = it.next()?.parse().ok()?;
-    Some((0, minor))
 }
 
 /// The producing parser of the running crate: `parser_info!()` expands to a [`ParserInfo`] with the calling
-/// crate's name and version.
+/// crate's name, version and `crate::SKELETON_SCHEMA`. Every format crate defines that constant
+/// (`pub const SKELETON_SCHEMA: u32 = 1;`) and bumps it only when its skeleton changes.
+/// `parser_info!(n)` stamps an explicit schema instead.
+// `crate::SKELETON_SCHEMA` must resolve in the calling crate: that is the point.
+#[allow(clippy::crate_in_macro_def)]
 #[macro_export]
 macro_rules! parser_info {
     () => {
-        $crate::ParserInfo::new(env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION"))
+        $crate::parser_info!(crate::SKELETON_SCHEMA)
+    };
+    ($schema:expr) => {
+        $crate::ParserInfo::new(env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION"), $schema)
     };
 }
 
-/// Refuses a document whose skeleton came from an incompatible parser. A skeleton with no record (written
-/// before parser versions existed) is accepted.
+/// Refuses a document whose skeleton came from another crate or from a newer schema than `current`. Older
+/// schemas and skeletons with no record (written before stamps existed) are accepted; a crate that stops
+/// reading some old schema uses [`check_parser_min`].
 pub fn check_parser(doc: &Document, current: &ParserInfo) -> Result<(), Error> {
+    check_parser_min(doc, current, 1)
+}
+
+/// Like [`check_parser`], but also refuses schemas older than `oldest`, the oldest one the crate still reads.
+pub fn check_parser_min(doc: &Document, current: &ParserInfo, oldest: u32) -> Result<(), Error> {
     match doc.skeleton.parser() {
-        Some(found) if !found.compatible_with(current) => Err(Error::ParserVersion {
-            found: format!("{} {}", found.name, found.version),
-            expected: format!("{} {}", current.name, current.version),
+        Some(found) if !found.compatible_with(current) || found.schema < oldest => Err(Error::ParserVersion {
+            found: format!("{} {} (skeleton schema {})", found.name, found.version, found.schema),
+            expected: if found.name != current.name {
+                current.name.clone()
+            } else if found.schema > current.schema {
+                format!("{} {} (reads skeleton schema {} and older)", current.name, current.version, current.schema)
+            } else {
+                format!("{} {} (reads skeleton schema {} to {})", current.name, current.version, oldest, current.schema)
+            },
         }),
         _ => Ok(()),
     }
