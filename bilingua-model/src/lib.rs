@@ -504,7 +504,21 @@ impl Document {
         }
         let seg = unit.segments.iter_mut().find(|s| s.id == seg_id).expect("found above");
         check_tags(&seg.source, &target)?;
-        let target = merge_text(target);
+        // The free flag belongs to the source code: a target tag takes it from the source tag with its id, so a
+        // caller (an editor, a LocOS adapter) that does not know the flag cannot drop or invent it.
+        let target = merge_text(
+            target
+                .into_iter()
+                .map(|i| match i {
+                    Inline::Tag { id, kind, display, .. } => {
+                        let free = kind == TagKind::Standalone
+                            && seg.source.iter().any(|s| matches!(s, Inline::Tag { id: sid, kind: TagKind::Standalone, free: true, .. } if *sid == id));
+                        Inline::Tag { id, kind, display, free }
+                    }
+                    t => t,
+                })
+                .collect(),
+        );
         let empty = plain_text(&target).trim().is_empty() && !target.iter().any(|i| matches!(i, Inline::Tag { .. }));
         seg.target = if empty { vec![] } else { target };
         seg.state = if seg.target.is_empty() { SegState::New } else { SegState::Draft };
@@ -628,6 +642,28 @@ mod tests {
         u.separators = vec![" ".into()];
         assert_eq!(u.output(), vec![Inline::text("Uno. Two.")]);
         assert_eq!(plain_text(&u.source()), "One. Two.");
+    }
+
+    #[test]
+    fn set_target_takes_the_free_flag_from_the_source() {
+        let mut d = Document {
+            format: "test".into(),
+            name: None,
+            source_lang: None,
+            target_lang: None,
+            granularity: Granularity::Paragraph,
+            units: vec![Unit::new("u1", vec![Inline::text("Hi "), Inline::free_tag("1", "{name}"), Inline::tag("2", TagKind::Standalone, "%s")])],
+            skeleton: Skeleton::Text { parts: vec![SkelPart::Unit(0)], encoding: "utf-8".into(), parser: None },
+        };
+        // An editor that does not know the flag sends both codes as not free, and claims the %s is free.
+        let t = vec![
+            Inline::Tag { id: "2".into(), kind: TagKind::Standalone, display: "%s".into(), free: true },
+            Inline::text(" hola "),
+            Inline::tag("1", TagKind::Standalone, "{name}"),
+        ];
+        d.set_target("u1", t).unwrap();
+        let got: Vec<bool> = d.units[0].segments[0].target.iter().filter(|i| matches!(i, Inline::Tag { .. })).map(Inline::is_free).collect();
+        assert_eq!(got, vec![false, true]);
     }
 
     #[test]
