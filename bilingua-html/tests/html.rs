@@ -496,8 +496,8 @@ fn preview_with_segmented_units() {
     let mut d = extract("<p>One. Two.</p>");
     let u = &mut d.units[0];
     u.segments = vec![
-        Segment { id: "u1#1".into(), source: vec![Inline::text("One.")], target: vec![], state: SegState::New },
-        Segment { id: "u1#2".into(), source: vec![Inline::text("Two.")], target: vec![Inline::text("Dos.")], state: SegState::Draft },
+        Segment { id: "u1#1".into(), source: vec![Inline::text("One.")], target: vec![], state: SegState::New, origin: None },
+        Segment { id: "u1#2".into(), source: vec![Inline::text("Two.")], target: vec![Inline::text("Dos.")], state: SegState::Draft, origin: None },
     ];
     u.separators = vec![" ".into()];
     let pv = Html.preview(&d).unwrap();

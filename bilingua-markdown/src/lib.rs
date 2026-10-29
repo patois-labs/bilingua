@@ -51,7 +51,7 @@ impl Filter for MarkdownFilter {
             target_lang: opts.target_lang.clone(),
             granularity: opts.granularity,
             units: ex.units,
-            skeleton: Skeleton::Text { parts: ex.parts, encoding: encoding.into() },
+            skeleton: Skeleton::text(ex.parts, encoding, bilingua_model::parser_info!()),
         };
         // Safety net: nothing translated must mean nothing changed.
         if self.merge(&doc)? != bytes {
@@ -61,7 +61,8 @@ impl Filter for MarkdownFilter {
     }
 
     fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
-        let Skeleton::Text { parts, encoding } = &doc.skeleton else {
+        bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
+        let Skeleton::Text { parts, encoding, .. } = &doc.skeleton else {
             return Err(Error::Write("markdown needs a text skeleton".into()));
         };
         let mut out = String::new();

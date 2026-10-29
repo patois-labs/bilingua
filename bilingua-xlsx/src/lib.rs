@@ -74,7 +74,7 @@ pub(crate) fn perr(msg: impl Into<String>) -> Error {
 type Split<'a> = (Option<Meta>, Vec<&'a ZipEntry>);
 
 fn split_meta(doc: &Document) -> Result<Split<'_>, Error> {
-    let Skeleton::Zip { entries } = &doc.skeleton else {
+    let Skeleton::Zip { entries, .. } = &doc.skeleton else {
         return Err(Error::Write("xlsx needs a zip skeleton".into()));
     };
     let mut meta = None;
@@ -98,6 +98,7 @@ pub fn extract_with(bytes: &[u8], opts: &ExtractOptions, xo: &XlsxOptions) -> Re
 
 /// Writes the document and reports what the caller should know.
 pub fn merge_with_report(doc: &Document) -> Result<(Vec<u8>, MergeReport), Error> {
+    bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
     let (meta, real) = split_meta(doc)?;
     let mut r = render::Renderer::new(doc);
     let mut out: Vec<(EntryMeta, Vec<u8>)> = Vec::with_capacity(real.len());

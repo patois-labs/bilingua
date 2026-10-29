@@ -80,12 +80,13 @@ impl Filter for JsonFilter {
             target_lang: opts.target_lang.clone(),
             granularity: opts.granularity,
             units,
-            skeleton: Skeleton::Text { parts, encoding: encoding.into() },
+            skeleton: Skeleton::text(parts, encoding, bilingua_model::parser_info!()),
         })
     }
 
     fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
-        let Skeleton::Text { parts, encoding } = &doc.skeleton else {
+        bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
+        let Skeleton::Text { parts, encoding, .. } = &doc.skeleton else {
             return Err(Error::Write("json needs a text skeleton".into()));
         };
         let mut out = String::new();

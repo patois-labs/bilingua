@@ -53,7 +53,7 @@ pub fn inline_html(unit: &Unit, inlines: &[Inline]) -> String {
     for i in inlines {
         match i {
             Inline::Text(t) => out.push_str(&esc(t)),
-            Inline::Tag { id, kind, display } => {
+            Inline::Tag { id, kind, display, .. } => {
                 let code = unit.codes.get(id);
                 let label = code.and_then(|c| c.label.clone()).unwrap_or_default();
                 match kind {
@@ -241,7 +241,7 @@ impl Pv<'_> {
 }
 
 pub fn preview(doc: &Document, main: &str, w: &str) -> Option<String> {
-    let Skeleton::Zip { entries } = &doc.skeleton else {
+    let Skeleton::Zip { entries, .. } = &doc.skeleton else {
         return None;
     };
     let entry = entries.iter().find(|e| e.name == main)?;

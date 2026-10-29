@@ -26,6 +26,7 @@ dependencies = [
  "bilingua-subtitle",
  "bilingua-text",
  "bilingua-xlsx",
+ "serde_json",
  "zip",
 ]
 

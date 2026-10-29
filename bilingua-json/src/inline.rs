@@ -2,6 +2,7 @@
 //! string values are left alone.
 
 use bilingua_model::*;
+use bilingua_model::locos;
 use regex::Regex;
 use std::collections::BTreeMap;
 use std::sync::OnceLock;
@@ -98,7 +99,11 @@ pub fn tag_placeholders(s: &str) -> (Vec<Inline>, BTreeMap<String, CodeData>) {
                 (TagKind::Standalone, id)
             }
         };
-        inl.push(Inline::tag(id, kind, markup));
+        if kind == TagKind::Standalone && !markup.starts_with('<') && locos::is_named_placeholder(markup) {
+            inl.push(Inline::free_tag(id, markup));
+        } else {
+            inl.push(Inline::tag(id, kind, markup));
+        }
     }
     if pos < s.len() {
         inl.push(Inline::Text(s[pos..].to_string()));

@@ -1007,6 +1007,6 @@ pub fn extract_doc(bytes: &[u8], opts: &ExtractOptions, xo: &XlsxOptions) -> Res
         target_lang: opts.target_lang.clone(),
         granularity: Granularity::Paragraph,
         units,
-        skeleton: Skeleton::Zip { entries: zentries },
+        skeleton: Skeleton::zip(zentries, bilingua_model::parser_info!()),
     })
 }

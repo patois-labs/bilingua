@@ -278,8 +278,8 @@ fn output_stays_valid_json_for_awkward_translations() {
 fn works_with_segmentation_separators() {
     let mut d = extract(r#"{"a": "One. Two."}"#);
     d.units[0].segments = vec![
-        Segment { id: "u1#1".into(), source: vec![Inline::text("One.")], target: vec![Inline::text("Uno.")], state: SegState::Draft },
-        Segment { id: "u1#2".into(), source: vec![Inline::text("Two.")], target: vec![], state: SegState::New },
+        Segment { id: "u1#1".into(), source: vec![Inline::text("One.")], target: vec![Inline::text("Uno.")], state: SegState::Draft, origin: None },
+        Segment { id: "u1#2".into(), source: vec![Inline::text("Two.")], target: vec![], state: SegState::New, origin: None },
     ];
     d.units[0].separators = vec![" ".into()];
     assert_eq!(merged(&d), r#"{"a": "Uno. Two."}"#);

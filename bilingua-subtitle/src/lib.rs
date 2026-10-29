@@ -186,7 +186,7 @@ fn extract(k: Kind, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Err
         target_lang: opts.target_lang.clone(),
         granularity: opts.granularity,
         units,
-        skeleton: Skeleton::Text { parts, encoding: if bom { "utf-8-bom".into() } else { "utf-8".into() } },
+        skeleton: Skeleton::text(parts, if bom { "utf-8-bom" } else { "utf-8" }, bilingua_model::parser_info!()),
     })
 }
 
@@ -417,7 +417,8 @@ fn cue_inlines(k: Kind, raw: &str) -> (Vec<Inline>, BTreeMap<String, CodeData>) 
 }
 
 fn merge(k: Kind, doc: &Document) -> Result<Vec<u8>, Error> {
-    let Skeleton::Text { parts, encoding } = &doc.skeleton else {
+    bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
+    let Skeleton::Text { parts, encoding, .. } = &doc.skeleton else {
         return Err(Error::Write(format!("{} needs a text skeleton", fmt_name(k))));
     };
     let eol = if parts.iter().any(|p| matches!(p, SkelPart::Raw(s) if s.contains("\r\n"))) { "\r\n" } else { "\n" };

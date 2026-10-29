@@ -48,7 +48,7 @@ pub fn inline_xml(inl: &[Inline]) -> String {
     for i in inl {
         match i {
             Inline::Text(t) => out.push_str(&esc(t)),
-            Inline::Tag { id, kind, display } => match (kind, pc_mode) {
+            Inline::Tag { id, kind, display, .. } => match (kind, pc_mode) {
                 (TagKind::Standalone, _) => out.push_str(&format!("<ph id=\"{}\" disp=\"{}\"/>", esc(id), esc(display))),
                 (TagKind::Open, true) => {
                     out.push_str(&format!("<pc id=\"{}\" dispStart=\"{}\"", esc(id), esc(display)));
@@ -72,9 +72,10 @@ pub fn inline_xml(inl: &[Inline]) -> String {
 
 fn state_name(s: SegState) -> &'static str {
     match s {
-        SegState::New | SegState::Draft => "initial",
+        SegState::New | SegState::Draft | SegState::Rejected => "initial",
         SegState::Translated => "translated",
-        SegState::Confirmed => "final",
+        SegState::Reviewed => "reviewed",
+        SegState::Confirmed | SegState::SignedOff | SegState::Locked => "final",
     }
 }
 
@@ -139,11 +140,14 @@ pub fn read(xml: &str, doc: &Document) -> Result<Read, String> {
         doc.find(seg_id)
             .and_then(|(_, s)| {
                 s.source.iter().find_map(|i| match i {
-                    Inline::Tag { id: tid, kind: k, display } if tid == id && *k == kind => Some(display.clone()),
+                    Inline::Tag { id: tid, kind: k, display, .. } if tid == id && *k == kind => Some(display.clone()),
                     _ => None,
                 })
             })
             .unwrap_or_default()
+    };
+    let is_free = |seg_id: &str, id: &str| -> bool {
+        doc.find(seg_id).is_some_and(|(_, s)| s.source.iter().any(|i| matches!(i, Inline::Tag { id: tid, free: true, .. } if tid == id)))
     };
     loop {
         let ev = reader.read_event().map_err(|e| format!("invalid XLIFF: {e}"))?;
@@ -156,7 +160,8 @@ pub fn read(xml: &str, doc: &Document) -> Result<Read, String> {
                     "segment" => {
                         let id = attr(e, "id").ok_or("a <segment> has no id")?;
                         let st = match attr(e, "state").as_deref() {
-                            Some("translated") | Some("reviewed") => SegState::Translated,
+                            Some("translated") => SegState::Translated,
+                            Some("reviewed") => SegState::Reviewed,
                             Some("final") => SegState::Confirmed,
                             _ => SegState::Draft,
                         };
@@ -197,7 +202,8 @@ pub fn read(xml: &str, doc: &Document) -> Result<Read, String> {
                             _ => {
                                 let id = attr(e, "id").ok_or("a code has no id")?;
                                 let display = lookup(&sid, &id, TagKind::Standalone);
-                                cur.push(Inline::tag(id, TagKind::Standalone, display));
+                                let free = is_free(&sid, &id);
+                                cur.push(Inline::Tag { id, kind: TagKind::Standalone, display, free });
                             }
                         }
                     }
