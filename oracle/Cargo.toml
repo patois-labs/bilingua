@@ -1,0 +1,16 @@
+[package]
+name = "bilingua-oracle"
+description = "Test harness: dumps Bilingua units as JSON and checks round trips, to compare against other filters"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[[bin]]
+name = "bl-dump"
+path = "src/main.rs"
+
+[dependencies]
+bilingua = { workspace = true }
+serde_json = { workspace = true }
+zip = { workspace = true }

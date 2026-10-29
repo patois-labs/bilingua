@@ -83,6 +83,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "bilingua-oracle"
+version = "0.1.0"
+dependencies = [
+ "bilingua",
+ "serde_json",
+ "zip",
+]
+
+[[package]]
 name = "bilingua-po"
 version = "0.1.0"
 dependencies = [

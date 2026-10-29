@@ -20,6 +20,19 @@ pub fn parse_ref(s: &str) -> Option<(u32, u32)> {
     Some((col, row))
 }
 
+/// (column, row) to "AB12", both 1-based.
+pub fn cell_name(col: u32, row: u32) -> String {
+    let mut letters = Vec::new();
+    let mut c = col.max(1);
+    while c > 0 {
+        let rem = ((c - 1) % 26) as u8;
+        letters.push((b'A' + rem) as char);
+        c = (c - 1) / 26;
+    }
+    letters.reverse();
+    format!("{}{}", letters.into_iter().collect::<String>(), row)
+}
+
 /// A range such as "A1:C5" or a single cell, as (c1, r1, c2, r2).
 pub fn parse_range(s: &str) -> Option<(u32, u32, u32, u32)> {
     match s.split_once(':') {

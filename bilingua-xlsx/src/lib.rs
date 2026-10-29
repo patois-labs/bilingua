@@ -153,3 +153,5 @@ impl Filter for Xlsx {
 mod fixtures;
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod tests_oracle;

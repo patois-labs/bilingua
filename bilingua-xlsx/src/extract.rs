@@ -366,6 +366,7 @@ impl Extractor<'_> {
         let nodes_for_ns = [Node::El(El { name: root.name.clone(), start: root.start.clone(), ..Default::default() })];
         let ns = Ns::detect(&nodes_for_ns, SS_URIS, "");
         let ctx = self.sheet_ctx(&ns, root);
+        let mut row_no = 0u32;
         for child in root.children.iter_mut() {
             let Node::El(e) = child else { continue };
             if ns.is(&e.name, "sheetData") {
@@ -375,10 +376,22 @@ impl Extractor<'_> {
                         continue;
                     }
                     let row_hidden = is_true(row.attr("hidden"));
+                    // `r` is optional in the file format: a row without it follows the previous row, a cell
+                    // without it follows the previous cell.
+                    row_no = row.attr("r").and_then(|v| v.trim().parse::<u32>().ok()).unwrap_or(row_no + 1);
+                    let mut col_no = 0u32;
                     for cell in row.children.iter_mut() {
                         if let Node::El(c) = cell {
                             if ns.is(&c.name, "c") {
-                                self.cell(&ns, sh, row_hidden, c, &ctx);
+                                col_no = match c.attr("r").and_then(|r| parse_ref(&r)) {
+                                    Some((col, _)) => col,
+                                    None => col_no + 1,
+                                };
+                                let name = match c.attr("r") {
+                                    Some(r) if parse_ref(&r).is_some() => r,
+                                    _ => cell_name(col_no, row_no),
+                                };
+                                self.cell(&ns, sh, row_hidden, c, &ctx, &name);
                             }
                         }
                     }
@@ -392,8 +405,8 @@ impl Extractor<'_> {
         }
     }
 
-    fn cell(&mut self, ns: &Ns, sh: &SheetInfo, row_hidden: bool, c: &mut El, ctx: &SheetCtx) {
-        let Some(r) = c.attr("r") else { return };
+    fn cell(&mut self, ns: &Ns, sh: &SheetInfo, row_hidden: bool, c: &mut El, ctx: &SheetCtx, r: &str) {
+        let r = r.to_string();
         let Some((col, row)) = parse_ref(&r) else { return };
         if c.elements().any(|e| ns.is(&e.name, "f")) {
             return;
