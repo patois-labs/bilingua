@@ -1,0 +1,68 @@
+WEBVTT - Lumen captions
+
+NOTE a comment block
+
+cue1
+00:00:00.000 --> 00:00:03.000 line:90% align:center
+Welcome to Lumen Bakery.
+We open at six.
+
+cue2
+00:00:03.500 --> 00:00:06.500 line:90% align:center
+<i>Fresh bread</i> every morning.
+
+cue3
+00:00:07.000 --> 00:00:10.000 line:90% align:center
+Two lines here,
+kept apart.
+
+cue4
+00:00:10.500 --> 00:00:13.500 line:90% align:center
+<b>Bold</b> and <c.red>colour</c>.
+
+cue5
+00:00:14.000 --> 00:00:17.000 line:90% align:center
+Welcome to Lumen Bakery. Fresh bread is ready at six every morning.
+
+cue6
+00:00:17.500 --> 00:00:20.500 line:90% align:center
+Bienvenido a Panadería Lumen. El pan fresco está listo a las seis de cada mañana.
+
+cue7
+00:00:21.000 --> 00:00:24.000 line:90% align:center
+Bienvenue à la Boulangerie Lumen. Le pain frais est prêt à six heures chaque matin.
+
+cue8
+00:00:24.500 --> 00:00:27.500 line:90% align:center
+Benvenuto al Forno Lumen. Il pane fresco è pronto ogni mattina alle sei.
+
+cue9
+00:00:28.000 --> 00:00:31.000 line:90% align:center
+Willkommen in der Bäckerei Lumen. Frisches Brot ist jeden Morgen um sechs Uhr fertig.
+
+cue10
+00:00:31.500 --> 00:00:34.500 line:90% align:center
+Welkom bij Bakkerij Lumen. Vers brood staat elke ochtend om zes uur klaar.
+
+cue11
+00:00:35.000 --> 00:00:38.000 line:90% align:center
+Bem-vindo à Padaria Lumen. O pão fresco fica pronto às seis horas todas as manhãs.
+
+cue12
+00:00:38.500 --> 00:00:41.500 line:90% align:center
+ルーメン・ベーカリーへようこそ。焼きたてのパンは毎朝六時にご用意しています。
+
+cue13
+00:00:42.000 --> 00:00:45.000 line:90% align:center
+欢迎光临流明面包店。新鲜面包每天早上六点出炉。
+
+cue14
+00:00:45.500 --> 00:00:48.500 line:90% align:center
+루멘 베이커리에 오신 것을 환영합니다. 갓 구운 빵은 매일 아침 여섯 시에 준비됩니다.
+
+cue15
+00:00:49.000 --> 00:00:52.000 line:90% align:center
+مرحبا بكم في مخبز لومن. الخبز الطازج جاهز كل صباح في السادسة.
+
+00:01:00.000 --> 00:01:02.000
+<v Baker>Voice tag speaker line.

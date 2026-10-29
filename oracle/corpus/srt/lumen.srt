@@ -1,0 +1,61 @@
+1
+00:00:00,000 --> 00:00:03,000
+Welcome to Lumen Bakery.
+We open at six.
+
+2
+00:00:03,500 --> 00:00:06,500
+<i>Fresh bread</i> every morning.
+
+3
+00:00:07,000 --> 00:00:10,000
+Two lines here,
+kept apart.
+
+4
+00:00:10,500 --> 00:00:13,500
+<b>Bold</b> and <font color="#ff0000">colour</font>.
+
+5
+00:00:14,000 --> 00:00:17,000
+Welcome to Lumen Bakery. Fresh bread is ready at six every morning.
+
+6
+00:00:17,500 --> 00:00:20,500
+Bienvenido a Panadería Lumen. El pan fresco está listo a las seis de cada mañana.
+
+7
+00:00:21,000 --> 00:00:24,000
+Bienvenue à la Boulangerie Lumen. Le pain frais est prêt à six heures chaque matin.
+
+8
+00:00:24,500 --> 00:00:27,500
+Benvenuto al Forno Lumen. Il pane fresco è pronto ogni mattina alle sei.
+
+9
+00:00:28,000 --> 00:00:31,000
+Willkommen in der Bäckerei Lumen. Frisches Brot ist jeden Morgen um sechs Uhr fertig.
+
+10
+00:00:31,500 --> 00:00:34,500
+Welkom bij Bakkerij Lumen. Vers brood staat elke ochtend om zes uur klaar.
+
+11
+00:00:35,000 --> 00:00:38,000
+Bem-vindo à Padaria Lumen. O pão fresco fica pronto às seis horas todas as manhãs.
+
+12
+00:00:38,500 --> 00:00:41,500
+ルーメン・ベーカリーへようこそ。焼きたてのパンは毎朝六時にご用意しています。
+
+13
+00:00:42,000 --> 00:00:45,000
+欢迎光临流明面包店。新鲜面包每天早上六点出炉。
+
+14
+00:00:45,500 --> 00:00:48,500
+루멘 베이커리에 오신 것을 환영합니다. 갓 구운 빵은 매일 아침 여섯 시에 준비됩니다.
+
+15
+00:00:49,000 --> 00:00:52,000
+مرحبا بكم في مخبز لومن. الخبز الطازج جاهز كل صباح في السادسة.

@@ -36,7 +36,23 @@ def main() -> None:
             with open(f, "rb") as fh:
                 data = fh.read()
             pr = filt.parse(data)
-            res[f] = {"filter": filt.fmt, "units": [
+            opened = None
+            try:
+                if ext == "docx":
+                    import docx
+
+                    docx.Document(f)
+                elif ext in ("xlsx", "xlsm"):
+                    import warnings
+
+                    import openpyxl
+
+                    with warnings.catch_warnings():
+                        warnings.simplefilter("ignore")
+                        openpyxl.load_workbook(f).close()
+            except Exception as e:  # noqa: BLE001
+                opened = f"{type(e).__name__}: {str(e)[:150]}"
+            res[f] = {"filter": filt.fmt, "open_error": opened, "units": [
                 {"i": u.p_index, "text": u.text, "style": u.style} for u in pr.units]}
         except Exception as e:  # noqa: BLE001
             res[f] = {"error": f"{type(e).__name__}: {str(e)[:200]}"}

@@ -138,19 +138,52 @@ fn main() {
     }
     let pseudo_res = match bilingua::merge(&p) {
         Err(e) => json!({"status": format!("merge failed: {e}")}),
-        Ok(b) => match bilingua::extract(&name, &b, &opts) {
+        Ok(b) => match {
+            if let Some(dest) = std::env::args().nth(2) {
+                let _ = std::fs::write(dest, &b);
+            }
+            bilingua::extract(&name, &b, &opts)
+        } {
             Err(e) => json!({"status": format!("reopen failed: {e}")}),
+            Ok(d2) if doc.format == "po" => {
+                // A bilingual file keeps its source; the translation comes back as the target.
+                let srcs = |d: &bilingua::Document| d.units.iter().filter(|u| u.translate).map(|u| render(u).0).collect::<Vec<_>>();
+                let (a, b2) = (srcs(&doc), srcs(&d2));
+                let want: Vec<String> = doc
+                    .units
+                    .iter()
+                    .filter(|u| u.translate)
+                    .map(|u| format!("[{}]", bilingua::plain_text(&u.source())))
+                    .collect();
+                let got: Vec<String> = d2
+                    .units
+                    .iter()
+                    .filter(|u| u.translate)
+                    .map(|u| bilingua::plain_text(&u.segments.iter().flat_map(|s| s.target.clone()).collect::<Vec<_>>()))
+                    .collect();
+                if a != b2 {
+                    json!({"status": "sources changed after merge"})
+                } else if want != got {
+                    let first = want.iter().zip(&got).find(|(x, y)| x != y).map(|(x, y)| format!("{x:?} -> {y:?}"));
+                    json!({"status": "targets not read back", "first": first})
+                } else {
+                    json!({"status": "ok"})
+                }
+            }
             Ok(d2) => {
                 let a: Vec<String> = doc.units.iter().filter(|u| u.translate).map(|u| render(u).0).collect();
                 let b2: Vec<String> = d2.units.iter().filter(|u| u.translate).map(|u| render(u).0).collect();
                 if a.len() != b2.len() {
                     json!({"status": format!("reopened with {} units, expected {}", b2.len(), a.len())})
                 } else {
-                    let bad = a.iter().zip(&b2).filter(|(x, y)| format!("[{x}]") != **y).count();
+                    // Markdown writes a typed bracket as `\[`; the text reads back as the raw source slice.
+                    let md = doc.format == "markdown";
+                    let same = |x: &String, y: &String| if md { format!("[{x}]").replace('\\', "") == y.replace('\\', "") } else { format!("[{x}]") == *y };
+                    let bad = a.iter().zip(&b2).filter(|(x, y)| !same(x, y)).count();
                     if bad == 0 && set_errors == 0 {
                         json!({"status": "ok"})
                     } else {
-                        let first = a.iter().zip(&b2).find(|(x, y)| format!("[{x}]") != **y).map(|(x, y)| format!("{x:?} -> {y:?}"));
+                        let first = a.iter().zip(&b2).find(|(x, y)| !same(x, y)).map(|(x, y)| format!("{x:?} -> {y:?}"));
                         json!({"status": format!("{bad} units differ, {set_errors} set_target errors"), "first": first})
                     }
                 }

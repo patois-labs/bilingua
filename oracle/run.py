@@ -12,6 +12,7 @@ Decision D16: LocOS is an oracle, not a dependency. Python 3.9+, stdlib only.
 """
 
 import difflib
+import html
 import json
 import os
 import re
@@ -80,9 +81,9 @@ def squash(s: str) -> str:
     return re.sub(r"\s+", "", s.replace(CODE, ""))
 
 
-def run_bl(path: Path) -> dict:
+def run_bl(path: Path, merged: Path) -> dict:
     try:
-        p = subprocess.run([str(BL), str(path)], capture_output=True, timeout=300)
+        p = subprocess.run([str(BL), str(path), str(merged)], capture_output=True, timeout=300)
         return json.loads(p.stdout.decode("utf-8") or "{}") or {"error": p.stderr.decode("utf-8", "replace")[:300]}
     except Exception as e:  # noqa: BLE001
         return {"error": f"harness: {e}"}
@@ -134,18 +135,48 @@ def short(s: str, n=70) -> str:
     return s if len(s) <= n else s[: n - 1] + "..."
 
 
+HTML_TAG = re.compile(r"<[^>]*>")
+BRACES = re.compile(r"\{[^{}]*\}")
+PRINTF = re.compile(r"%\([^)]*\)[sdif]|%[sdif]|\$\{[^}]*\}|\{\{[^}]*\}\}")
+
+
+def alnum(s: str) -> str:
+    return "".join(c for c in unicodedata.normalize("NFC", s) if c.isalnum()).lower()
+
+
+def loose_lo(s: str) -> str:
+    """LocOS text reduced to its words: entities decoded, raw tags and placeholders removed."""
+    s = html.unescape(s)
+    s = HTML_TAG.sub(" ", s)
+    s = PRINTF.sub(" ", s)
+    for _ in range(4):
+        s = BRACES.sub(" ", s)
+    return alnum(s.replace(CODE, " "))
+
+
+def loose_bl(s: str) -> str:
+    return alnum(s.replace(CODE, " "))
+
+
+def has_letters(s: str) -> bool:
+    return any(c.isalpha() for c in s)
+
+
 def compare(path: Path, bl: dict, lo: dict) -> dict:
-    r = {"file": path.name, "bl_error": bl.get("error"), "lo_error": lo.get("error"), "issues": []}
+    r = {"file": path.name, "bl_error": bl.get("error"), "lo_error": lo.get("error"), "issues": [], "notes": []}
     r["unchanged"] = bl.get("unchanged", "n/a")
-    r["pseudo"] = (bl.get("pseudo") or {}).get("status", "n/a")
-    r["pseudo_first"] = (bl.get("pseudo") or {}).get("first")
+    pseudo = bl.get("pseudo") or {}
+    r["pseudo"] = pseudo.get("status", "n/a")
+    r["pseudo_first"] = pseudo.get("first")
     if bl.get("error") or lo.get("error"):
         return r
+    is_html = path.suffix.lower() in (".html", ".htm")
     bu = [(norm_bl(u["text"]), u["id"]) for u in bl["units"] if not u["locked"]]
-    bu = [x for x in bu if strip_codes(x[0])]
-    lu = [(norm_lo(u["text"]), u["i"]) for u in lo["units"]]
-    lu = [x for x in lu if strip_codes(x[0])]
+    bu = [x for x in bu if has_letters(strip_codes(x[0]))]
+    lu = [(norm(html.unescape(norm_lo(u["text"]))) if is_html else norm_lo(u["text"]), u["i"]) for u in lo["units"]]
+    lu = [x for x in lu if has_letters(strip_codes(x[0]))]
     r["bl_n"], r["lo_n"] = len(bu), len(lu)
+    r["codes"] = (sum(x[0].count(CODE) for x in bu), sum(x[0].count(CODE) for x in lu))
     if LINE_BASED.get(path.suffix[1:].lower()):
         # Unit boundaries are a design choice here (Bilingua: paragraphs, LocOS: lines). Compare the words.
         md = path.suffix[1:].lower() in ("md", "markdown")
@@ -160,18 +191,33 @@ def compare(path: Path, bl: dict, lo: dict) -> dict:
             r["issues"].append((kind, f"B: {short(' '.join(a[i1:i2]), 45)} / L: {short(' '.join(b[j1:j2]), 45)}", f"word {i1}"))
         return r
     pairs, missing, extra = align(bu, lu)
+    # Order differs between filters (LocOS walks cells and slides, Bilingua lists strings first), so leftovers
+    # are matched by text before they are reported.
+    for m in list(missing):
+        for e in list(extra):
+            if strip_codes(e[0]) == strip_codes(m[0]) or loose_bl(e[0]) == loose_lo(m[0]):
+                missing.remove(m)
+                extra.remove(e)
+                pairs.append((e, m))
+                break
+    # LocOS lists one unit per cell; Bilingua lists a shared string once. A repeat of a matched text is not missing.
+    seen = {strip_codes(y[0]) for _, y in pairs}
+    missing = [m for m in missing if strip_codes(m[0]) not in seen]
     r["pairs"] = len(pairs)
     for m in missing:
         r["issues"].append(("missing in Bilingua", short(m[0]), f"LocOS #{m[1]}"))
     for e in extra:
         r["issues"].append(("extra in Bilingua", short(e[0]), f"Bilingua {e[1]}"))
     for x, y in pairs:
-        if strip_codes(x[0]) != strip_codes(y[0]) and squash(x[0]) == squash(y[0]):
-            r["issues"].append(("spacing only", f"B: {short(x[0], 50)} / L: {short(y[0], 50)}", f"{x[1]} / #{y[1]}"))
-        elif strip_codes(x[0]) != strip_codes(y[0]):
+        if strip_codes(x[0]) == strip_codes(y[0]):
+            if x[0].count(CODE) != y[0].count(CODE):
+                r["notes"].append(("code count", f"B {x[0].count(CODE)} / L {y[0].count(CODE)}: {short(x[0], 50)}", f"{x[1]} / #{y[1]}"))
+        elif squash(x[0]) == squash(y[0]):
+            r["notes"].append(("spacing only", f"B: {short(x[0], 50)} / L: {short(y[0], 50)}", f"{x[1]} / #{y[1]}"))
+        elif loose_bl(x[0]) == loose_lo(y[0]):
+            r["notes"].append(("markup shown differently", f"B: {short(x[0], 50)} / L: {short(y[0], 50)}", f"{x[1]} / #{y[1]}"))
+        else:
             r["issues"].append(("different text", f"B: {short(x[0], 50)} / L: {short(y[0], 50)}", f"{x[1]} / #{y[1]}"))
-        elif x[0].count(CODE) != y[0].count(CODE):
-            r["issues"].append(("code count", f"B {x[0].count(CODE)} / L {y[0].count(CODE)}: {short(x[0], 50)}", f"{x[1]} / #{y[1]}"))
     return r
 
 
@@ -233,17 +279,17 @@ def report(results, locos_ok) -> str:
         rs = by.get(fmt)
         if not rs:
             continue
-        L += [f"## {fmt}", "", "| File | Bilingua units | LocOS units | Matched | Differences | Unchanged merge | Pseudo round trip |",
-              "|---|---|---|---|---|---|---|"]
+        L += [f"## {fmt}", "", "| File | Bilingua units | LocOS units | Matched | Differences | Notes | Codes B/L | Unchanged merge | Pseudo round trip | Re-read by LocOS |",
+              "|---|---|---|---|---|---|---|---|---|---|"]
         for r in rs:
             err = r["bl_error"] or r["lo_error"]
             if err:
-                L.append(f"| {r['file']} | - | - | - | {'Bilingua: ' + short(r['bl_error']) if r['bl_error'] else 'LocOS: ' + short(r['lo_error'])} | {r['unchanged']} | {short(r['pseudo'])} |")
+                L.append(f"| {r['file']} | - | - | - | {'Bilingua: ' + short(r['bl_error']) if r['bl_error'] else 'LocOS: ' + short(r['lo_error'])} | - | - | {r['unchanged']} | {short(r['pseudo'])} | {r.get('reread', '-')} |")
             else:
-                L.append(f"| {r['file']} | {r['bl_n']} | {r['lo_n']} | {r['pairs']} | {len(r['issues'])} | {short(r['unchanged'], 60)} | {short(r['pseudo'], 60)} |")
+                L.append(f"| {r['file']} | {r['bl_n']} | {r['lo_n']} | {r['pairs']} | {len(r['issues'])} | {len(r['notes'])} | {r['codes'][0]}/{r['codes'][1]} | {short(r['unchanged'], 60)} | {short(r['pseudo'], 60)} | {short(r.get('reread', '-'), 60)} |")
             tot["files"] += 1
             tot["issues"] += len(r["issues"])
-            tot["rt_bad"] += (r["unchanged"] not in ("identical", "identical-parts")) + (r["pseudo"] != "ok")
+            tot["rt_bad"] += (r["unchanged"] not in ("identical", "identical-parts")) + (r["pseudo"] != "ok") + (r.get("reread", "ok") != "ok")
         L.append("")
         for r in rs:
             if r["issues"] or r.get("pseudo_first"):
@@ -255,6 +301,10 @@ def report(results, locos_ok) -> str:
                 if r.get("pseudo_first"):
                     L.append(f"| pseudo round trip | {short(r['pseudo_first'], 100)} | |")
                 L.append("")
+        for r in rs:
+            if r.get("notes"):
+                L += [f"Notes for {r['file']} (the same text shown differently; not bugs): " +
+                      ", ".join(f"{k} x{sum(1 for n in r['notes'] if n[0] == k)}" for k in sorted({n[0] for n in r["notes"]})) + ".", ""]
     L.insert(7, f"Files: {tot['files']}. Comparison differences listed: {tot['issues']}. Round-trip failures: {tot['rt_bad']}.\n")
     return "\n".join(L) + "\n"
 
@@ -271,9 +321,28 @@ def main():
     files = collect(extra, external)
     lo = run_locos(files) if LOCOS_PY.exists() else {}
     results = []
-    for f in files:
+    scratch = Path(tempfile.mkdtemp(prefix="oracle-merged-"))
+    merged = {}
+    for n, f in enumerate(files):
         key = str(f)
-        results.append(compare(f, run_bl(f), lo.get(key) or {"error": "LocOS not available"}))
+        m = scratch / f"{n}-{f.name}"
+        r = compare(f, run_bl(f, m), lo.get(key) or {"error": "LocOS not available"})
+        r["merged"] = m
+        results.append(r)
+        if m.exists():
+            merged[str(m)] = r
+    # Second opinion: LocOS's filters (and python-docx / openpyxl) must be able to read what Bilingua wrote.
+    if merged and lo:
+        back = run_locos(list(merged))
+        for k, r in merged.items():
+            b = back.get(k, {})
+            if b.get("error"):
+                r["reread"] = "LocOS cannot read it: " + short(b["error"], 80)
+            elif b.get("open_error"):
+                r["reread"] = "library cannot open it: " + short(b["open_error"], 80)
+            else:
+                r["reread"] = "ok" if len(b.get("units", [])) >= 0 else "?"
+                r["reread_units"] = len(b.get("units", []))
     out.write_text(report(results, bool(lo)), encoding="utf-8", newline="\n")
     print(f"wrote {out}: {len(results)} files")
 

@@ -1,0 +1,71 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: lumen 1.0\n"
+"Language: es\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#. Translator comment for the greeting
+#: src/main.c:12
+msgid "Welcome to Lumen Bakery"
+msgstr ""
+
+#: src/main.c:20
+msgctxt "menu"
+msgid "Open"
+msgstr "Abrir"
+
+#, fuzzy
+msgid "Old fuzzy text"
+msgstr "Texto antiguo"
+
+msgid "One loaf"
+msgid_plural "%d loaves"
+msgstr[0] ""
+msgstr[1] ""
+
+msgid ""
+"A long message that "
+"continues on a second line.\n"
+"And a third line."
+msgstr ""
+
+msgid "Press <b>%s</b> to continue, %(name)s."
+msgstr ""
+
+#~ msgid "Obsolete"
+#~ msgstr "Obsoleto"
+
+msgid "lang-en"
+msgstr "Welcome to Lumen Bakery. Fresh bread is ready at six every morning."
+
+msgid "lang-es"
+msgstr "Bienvenido a Panadería Lumen. El pan fresco está listo a las seis de cada mañana."
+
+msgid "lang-fr"
+msgstr "Bienvenue à la Boulangerie Lumen. Le pain frais est prêt à six heures chaque matin."
+
+msgid "lang-it"
+msgstr "Benvenuto al Forno Lumen. Il pane fresco è pronto ogni mattina alle sei."
+
+msgid "lang-de"
+msgstr "Willkommen in der Bäckerei Lumen. Frisches Brot ist jeden Morgen um sechs Uhr fertig."
+
+msgid "lang-nl"
+msgstr "Welkom bij Bakkerij Lumen. Vers brood staat elke ochtend om zes uur klaar."
+
+msgid "lang-pt"
+msgstr "Bem-vindo à Padaria Lumen. O pão fresco fica pronto às seis horas todas as manhãs."
+
+msgid "lang-ja"
+msgstr "ルーメン・ベーカリーへようこそ。焼きたてのパンは毎朝六時にご用意しています。"
+
+msgid "lang-zh"
+msgstr "欢迎光临流明面包店。新鲜面包每天早上六点出炉。"
+
+msgid "lang-ko"
+msgstr "루멘 베이커리에 오신 것을 환영합니다. 갓 구운 빵은 매일 아침 여섯 시에 준비됩니다."
+
+msgid "lang-ar"
+msgstr "مرحبا بكم في مخبز لومن. الخبز الطازج جاهز كل صباح في السادسة."
