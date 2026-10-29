@@ -1,0 +1,20 @@
+[build-system]
+requires = ["maturin>=1.7,<2"]
+build-backend = "maturin"
+
+[project]
+name = "bilingua"
+requires-python = ">=3.11"
+description = "Open, segment and rebuild source files for translation (Bilingua engine)"
+license = { text = "Apache-2.0" }
+dynamic = ["version"]
+
+[project.optional-dependencies]
+test = ["pytest"]
+
+[tool.maturin]
+module-name = "bilingua"
+features = ["extension-module"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

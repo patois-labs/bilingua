@@ -1,0 +1,21 @@
+[package]
+name = "bilingua-py"
+description = "Python wheel for Bilingua (PyO3, abi3, Python 3.11 and up)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[lib]
+name = "bilingua_py"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+engine = { package = "bilingua", path = "../bilingua" }
+serde_json = { workspace = true }
+pyo3 = { version = "0.26", features = ["abi3-py311"] }
+
+[features]
+# maturin turns this on for wheels; plain cargo test and cargo clippy leave it off so they link.
+extension-module = ["pyo3/extension-module"]
