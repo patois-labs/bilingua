@@ -188,7 +188,7 @@ fn skeleton_is_stamped_and_a_foreign_one_is_refused() {
     let mut d = f.extract(AR_12.as_bytes(), &OPTS).unwrap();
     assert_eq!(d.skeleton.parser().unwrap().name, "bilingua-xliff");
     if let bilingua_model::Skeleton::Text { parser, .. } = &mut d.skeleton {
-        *parser = Some(bilingua_model::ParserInfo::new("bilingua-po", "0.1.0"));
+        *parser = Some(bilingua_model::ParserInfo::new("bilingua-po", "0.1.0", 1));
     }
     assert!(f.merge(&d).is_err());
 }
