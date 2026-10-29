@@ -136,14 +136,13 @@ fn main() {
             set_errors += 1;
         }
     }
-    let pseudo_res = match bilingua::merge(&p) {
+    let merged = bilingua::merge(&p);
+    if let (Ok(b), Some(dest)) = (&merged, std::env::args().nth(2)) {
+        let _ = std::fs::write(dest, b);
+    }
+    let pseudo_res = match merged {
         Err(e) => json!({"status": format!("merge failed: {e}")}),
-        Ok(b) => match {
-            if let Some(dest) = std::env::args().nth(2) {
-                let _ = std::fs::write(dest, &b);
-            }
-            bilingua::extract(&name, &b, &opts)
-        } {
+        Ok(b) => match bilingua::extract(&name, &b, &opts) {
             Err(e) => json!({"status": format!("reopen failed: {e}")}),
             Ok(d2) if doc.format == "po" => {
                 // A bilingual file keeps its source; the translation comes back as the target.

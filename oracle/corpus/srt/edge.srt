@@ -1,0 +1,29 @@
+﻿1
+00:00:01,000 --> 00:00:03,000
+CRLF and BOM cue.
+
+7
+00:00:04,000 --> 00:00:06,000
+Non sequential number, dots 3.5 and ellipsis...
+
+8
+00:00:07.000 --> 00:00:09.000
+{\an8}Top aligned with ass tag
+
+9
+00:00:10,000 --> 00:00:12,000 X1:100 X2:200
+- Dialogue one
+- Dialogue two
+
+10
+00:00:13,000 --> 00:00:15,000
+<font face="Arial" size="20">Font <b>nested <i>tags</i></b></font>
+
+
+11
+00:00:16,000 --> 00:00:18,000
+♪ Music ♪
+
+12
+00:00:19,000 --> 00:00:20,000
+Last cue no trailing newline

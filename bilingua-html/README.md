@@ -27,7 +27,7 @@ let inner = Html.render_segment(&doc, "u3"); // inner HTML for one span (live pa
   summary, meta), `style` (element name), `key` (attribute name, for attributes), `location` (CSS-like path),
   `heading` (nearest heading above).
 - Inline tags (`b`, `strong`, `i`, `em`, `a`, `span`, `sup`, `sub`, `small`, `br`, `img`, `abbr`, `mark`, `u`,
-  `s` and more) become paired or standalone tags. The full original markup is kept in `Unit::codes`.
+  `s`, `ruby`, `rt` and more) become paired or standalone tags. The full original markup is kept in `Unit::codes`.
   Unpaired or crossed tags become standalone tags so tag ids stay unique.
 - Not translated: `script`, `style`, `template`, `pre`, `svg`, `math`, `textarea` content, `code`/`kbd`/`samp`
   (kept as a standalone tag), `translate="no"` and `class="notranslate"` subtrees. With

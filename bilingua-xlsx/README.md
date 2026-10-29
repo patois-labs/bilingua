@@ -43,6 +43,7 @@ For the facade (`bilingua/src/lib.rs`, `filters()`): `Box::new(bilingua_xlsx::Xl
 |---|---|
 | Shared strings used by cells | One unit per string. A string used by several cells is still one unit: `context.location` is the first cell (`Sheet1!B4`) and `context.extra["cells"]` says how many cells use it. `context.kind` is `cell` |
 | Inline strings (`<is>`) | One unit per cell |
+| Cells and rows without `r` | The attribute is optional in the file format. A row without it follows the previous row, a cell without it follows the previous cell |
 | Rich text runs | The most common formatting of a string needs no tag. Other runs become paired tags: `<b>`, `<i>`, `<u>`, `<sup>`, `<sub>`, or `<fmt>`. The raw run properties are kept in the tag's code |
 | Phonetic guides (`rPh`) | Kept as they are while the string is unchanged. A translated string loses its guides (their positions refer to the old text) and `merge_with_report` returns a warning |
 | Numbers, dates, formulas, formula results | Never extracted. A cell with a formula is skipped even if its cached result is text. Strings with no letters at all ("2024") are not units |

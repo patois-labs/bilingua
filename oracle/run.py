@@ -221,10 +221,15 @@ def compare(path: Path, bl: dict, lo: dict) -> dict:
     return r
 
 
+EXTERNAL = set()
+
+
 def collect(extra_files, external):
     files = [p for p in sorted((HERE / "corpus").rglob("*")) if p.is_file() and p.suffix[1:].lower() in FORMATS]
     if external:
-        files += external_files()
+        ext = external_files()
+        EXTERNAL.update(str(p) for p in ext)
+        files += ext
     files += [Path(f) for f in extra_files]
     return files
 
@@ -305,6 +310,10 @@ def report(results, locos_ok) -> str:
             if r.get("notes"):
                 L += [f"Notes for {r['file']} (the same text shown differently; not bugs): " +
                       ", ".join(f"{k} x{sum(1 for n in r['notes'] if n[0] == k)}" for k in sorted({n[0] for n in r["notes"]})) + ".", ""]
+    sys.path.insert(0, str(HERE))
+    from findings_text import FINDINGS
+
+    L.insert(7, FINDINGS)
     L.insert(7, f"Files: {tot['files']}. Comparison differences listed: {tot['issues']}. Round-trip failures: {tot['rt_bad']}.\n")
     return "\n".join(L) + "\n"
 
@@ -328,6 +337,12 @@ def main():
         m = scratch / f"{n}-{f.name}"
         r = compare(f, run_bl(f, m), lo.get(key) or {"error": "LocOS not available"})
         r["merged"] = m
+        if key in EXTERNAL:
+            # Files that live only in other trees are never quoted: only counts and kinds are kept.
+            r["file"] = f"external-{len(EXTERNAL & {str(x) for x in files[:n + 1]})}.{f.suffix[1:].lower()}"
+            for lst in ("issues", "notes"):
+                r[lst] = [(k, "(text not shown, file is not in this repository)", "-") for k, _, _ in r[lst]]
+            r["pseudo_first"] = None
         results.append(r)
         if m.exists():
             merged[str(m)] = r

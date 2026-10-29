@@ -44,7 +44,7 @@ For the facade (`bilingua/src/lib.rs`, `filters()`): `Box::new(bilingua_pptx::Pp
 | Feature | What happens |
 |---|---|
 | Paragraphs in slides | One unit each, including grouped shapes and text boxes. Paragraphs with no letters (empty, only a slide number field, "2026") are not units |
-| Tables (`a:tbl`) | Each cell paragraph is a unit with kind `cell` |
+| Tables (`a:tbl`) | Each cell paragraph is a unit with kind `cell`. The covered cells of a merged range (`hMerge`, `vMerge`) are not shown by PowerPoint and are skipped; paragraph numbers still count them |
 | Notes slides | Own units, kind `notes` |
 | Layouts and masters | Only shapes that are not placeholders (a brand line, a confidentiality note). Placeholder prompt text ("Click to edit Master title style") is left out |
 | SmartArt | Text in `ppt/diagrams/data*.xml` is extracted. The cached drawing (`drawing*.xml`) that PowerPoint shows is updated to match: a drawing paragraph is matched to the data paragraph with the same text and rewritten as one run with the first run's properties |

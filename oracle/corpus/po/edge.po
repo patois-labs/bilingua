@@ -1,0 +1,41 @@
+﻿# Translation file
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: fr\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+
+#: a.c:1
+#, c-format
+msgid "%d file deleted"
+msgid_plural "%d files deleted"
+msgstr[0] "%d fichier supprimé"
+msgstr[1] ""
+
+msgctxt "button"
+msgid "Save"
+msgstr "Enregistrer"
+
+msgctxt "menu"
+msgid "Save"
+msgstr ""
+
+#| msgid "Previous text"
+#, fuzzy
+msgid "Current text"
+msgstr "Texte courant"
+
+msgid "Tab\there and quote \" and backslash \\ end"
+msgstr ""
+
+msgid ""
+"Line one\n"
+"Line two\n"
+"Line three"
+msgstr ""
+
+msgid "Named %(count)d items in {name} and %s and %1$s"
+msgstr ""
+
+msgid "No trailing newline at end"
+msgstr ""

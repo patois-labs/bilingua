@@ -315,6 +315,18 @@ impl Extractor {
                     continue;
                 }
                 col += 1;
+                // The covered cells of a merged range are not shown; their text is leftover. Paragraph numbers
+                // still count them, so the ids of the other units do not depend on this rule.
+                let covered = ["hMerge", "vMerge"].iter().any(|a| matches!(tc.attr(a).as_deref(), Some("1") | Some("true")));
+                if covered {
+                    let n: usize = tc
+                        .elements()
+                        .filter(|b| ns.a.is(&b.name, "txBody"))
+                        .map(|b| b.elements().filter(|p| ns.a.is(&p.name, "p")).count())
+                        .sum();
+                    self.para_no += n;
+                    continue;
+                }
                 let cell = Cell { row, col, table: shape.name.clone() };
                 self.walk(pi, ns, &mut tc.children, shape, Some(&cell));
             }

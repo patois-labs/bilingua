@@ -167,6 +167,33 @@ def make_docx():
         lang_parts = text.split(". ") if code not in ("ja", "zh", "ko", "ar") else [text]
         body += para(run(lang_parts[0]), run(" "), run(lang_parts[-1], "<w:b/>"))
     w("docx/languages.docx", docx(body, core_title="Lumen in eleven languages"))
+    # edge cases seen in real documents
+    eb = ""
+    eb += para(run("Contents"), style="Heading1")
+    eb += ('<w:p><w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText xml:space="preserve"> TOC \\o "1-3" </w:instrText></w:r>'
+           '<w:r><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:t>Toc entry text</w:t></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r></w:p>')
+    eb += para('<w:hyperlink w:anchor="top"><w:r><w:t>Jump to the top</w:t></w:r></w:hyperlink>')
+    eb += para(run("Hyphen"), '<w:r><w:noBreakHyphen/></w:r>', run("ated and soft"), '<w:r><w:softHyphen/></w:r>', run("hyphen."))
+    eb += para(run("Symbol: "), '<w:r><w:sym w:font="Wingdings" w:char="F0FC"/></w:r>', run(" done."))
+    eb += para(run("Hidden text follows: "), '<w:r><w:rPr><w:vanish/></w:rPr><w:t>secret hidden words</w:t></w:r>', run("visible end."))
+    eb += para('<w:del w:id="9" w:author="Sam" w:date="2026-10-01T00:00:00Z"><w:r><w:delText>Entirely deleted paragraph</w:delText></w:r></w:del>')
+    eb += para('<w:moveTo w:id="10" w:author="Sam" w:date="2026-10-01T00:00:00Z"><w:r><w:t>Moved here text</w:t></w:r></w:moveTo>')
+    eb += ('<w:tbl><w:tblPr/><w:tblGrid><w:gridCol w:w="4000"/></w:tblGrid><w:tr><w:tc><w:tcPr/>'
+           + para(run("Outer cell"))
+           + '<w:tbl><w:tblPr/><w:tblGrid><w:gridCol w:w="2000"/></w:tblGrid><w:tr><w:tc><w:tcPr/>' + para(run("Inner cell")) + '</w:tc></w:tr></w:tbl>'
+           + para() + '</w:tc></w:tr></w:tbl>')
+    eb += ('<w:sdt><w:sdtPr/><w:sdtContent>' + para(run("Block content control first")) + para(run("Block content control second")) + '</w:sdtContent></w:sdt>')
+    eb += para('<w:r><w:pict><v:shape xmlns:v="urn:schemas-microsoft-com:vml"><v:textbox><w:txbxContent>'
+               + para(run("VML text box line")) + '</w:txbxContent></v:textbox></v:shape></w:pict></w:r>')
+    eb += para(run("Arabic run in English: "), run("مرحبا", "<w:rtl/>"), run(" end."))
+    eb += para(run("日本語の", '<w:rFonts w:eastAsia="MS Mincho" w:hint="eastAsia"/>'), run("段落です。"))
+    eb += para(run("Page break after this."), '<w:r><w:br w:type="page"/></w:r>')
+    eb += para(run("A very long paragraph. " * 30))
+    eb += para(run("  "), style="Normal")
+    eb += para(run(" "), style="Normal")
+    eb += para(run("Ends with a field "), '<w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText> DATE </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:t>28/10/2026</w:t></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r>')
+    w("docx/edge.docx", docx(eb, footnotes=('<w:footnote w:id="0"><w:p><w:r><w:t>sep</w:t></w:r></w:p></w:footnote>'),
+                              core_title="Edge cases"))
     # split runs and odd formatting
     body = para(run("Fresh "), run("bread ", "<w:lang w:val=\"en-US\"/>"), run("daily", "<w:noProof/>"), run(" at six."))
     body += para(run("Bold start", "<w:b/>"), run(" then plain, then "), run("italic end", "<w:i/>"))
@@ -579,6 +606,21 @@ msgstr ""
     w("po/lumen.po", "".join(parts))
 
 
+def make_po_edge():
+    w("po/edge.po", "﻿# Translation file\r\nmsgid \"\"\r\nmsgstr \"\"\r\n\"Content-Type: text/plain; charset=UTF-8\\n\"\r\n\"Language: fr\\n\"\r\n"
+      "\"Plural-Forms: nplurals=2; plural=(n > 1);\\n\"\r\n\r\n"
+      "#: a.c:1\r\n#, c-format\r\nmsgid \"%d file deleted\"\r\nmsgid_plural \"%d files deleted\"\r\nmsgstr[0] \"%d fichier supprimé\"\r\nmsgstr[1] \"\"\r\n\r\n"
+      "msgctxt \"button\"\r\nmsgid \"Save\"\r\nmsgstr \"Enregistrer\"\r\n\r\n"
+      "msgctxt \"menu\"\r\nmsgid \"Save\"\r\nmsgstr \"\"\r\n\r\n"
+      "#| msgid \"Previous text\"\r\n#, fuzzy\r\nmsgid \"Current text\"\r\nmsgstr \"Texte courant\"\r\n\r\n"
+      "msgid \"Tab\\there and quote \\\" and backslash \\\\ end\"\r\nmsgstr \"\"\r\n\r\n"
+      "msgid \"\"\r\n\"Line one\\n\"\r\n\"Line two\\n\"\r\n\"Line three\"\r\nmsgstr \"\"\r\n\r\n"
+      "msgid \"Named %(count)d items in {name} and %s and %1$s\"\r\nmsgstr \"\"\r\n\r\n"
+      "msgid \"No trailing newline at end\"\r\nmsgstr \"\"")
+    w("po/cjk_ar.po", "msgid \"\"\nmsgstr \"\"\n\"Content-Type: text/plain; charset=UTF-8\\n\"\n\n" + "".join(
+        f'msgid "greet-{c}"\nmsgstr "{t}"\n\n' for c, t in LANGS))
+
+
 def make_subs():
     srt = []
     cues = [("Welcome to Lumen Bakery.", "We open at six."), ("<i>Fresh bread</i> every morning.",), ("Two lines here,", "kept apart."),
@@ -603,6 +645,18 @@ def make_subs():
         vtt.append("")
     vtt.append("00:01:00.000 --> 00:01:02.000\n<v Baker>Voice tag speaker line.\n")
     w("vtt/lumen.vtt", "\n".join(vtt))
+    w("vtt/edge.vtt", "﻿WEBVTT\r\n\r\nSTYLE\r\n::cue { color: red }\r\n\r\nREGION\r\nid:r1\r\nwidth:40%\r\n\r\n"
+      "00:05.000 --> 00:07.500\r\nShort timestamp without hours.\r\n\r\n"
+      "intro\r\n00:00:08.000 --> 00:00:10.000 region:r1\r\nLine one\r\nLine two\r\n\r\n"
+      "00:00:11.000 --> 00:00:13.000\r\n<c.loud>Loud</c> and <00:00:12.000>timestamp tag and <ruby>漢<rt>kan</rt></ruby>.\r\n\r\n"
+      "NOTE\r\nMultiple line note\r\nstill a note\r\n\r\n"
+      "00:00:14.000 --> 00:00:16.000\r\n&lt;escaped&gt; &amp; entity &nbsp;text\r\n")
+    w("srt/edge.srt", "﻿1\r\n00:00:01,000 --> 00:00:03,000\r\nCRLF and BOM cue.\r\n\r\n"
+      "7\r\n00:00:04,000 --> 00:00:06,000\r\nNon sequential number, dots 3.5 and ellipsis...\r\n\r\n"
+      "8\r\n00:00:07.000 --> 00:00:09.000\r\n{\\an8}Top aligned with ass tag\r\n\r\n"
+      "9\r\n00:00:10,000 --> 00:00:12,000 X1:100 X2:200\r\n- Dialogue one\r\n- Dialogue two\r\n\r\n"
+      "10\r\n00:00:13,000 --> 00:00:15,000\r\n<font face=\"Arial\" size=\"20\">Font <b>nested <i>tags</i></b></font>\r\n\r\n\r\n"
+      "11\r\n00:00:16,000 --> 00:00:18,000\r\n♪ Music ♪\r\n\r\n12\r\n00:00:19,000 --> 00:00:20,000\r\nLast cue no trailing newline")
 
 
 def make_txt():
@@ -613,5 +667,5 @@ def make_txt():
 
 
 if __name__ == "__main__":
-    make_docx(); make_xlsx(); make_pptx(); make_html(); make_md(); make_md_edge(); make_json(); make_po(); make_subs(); make_txt()
+    make_docx(); make_xlsx(); make_pptx(); make_html(); make_md(); make_md_edge(); make_json(); make_po(); make_po_edge(); make_subs(); make_txt()
     print("corpus written to", OUT)

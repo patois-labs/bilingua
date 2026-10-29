@@ -1,0 +1,37 @@
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+
+msgid "greet-en"
+msgstr "Welcome to Lumen Bakery. Fresh bread is ready at six every morning."
+
+msgid "greet-es"
+msgstr "Bienvenido a Panadería Lumen. El pan fresco está listo a las seis de cada mañana."
+
+msgid "greet-fr"
+msgstr "Bienvenue à la Boulangerie Lumen. Le pain frais est prêt à six heures chaque matin."
+
+msgid "greet-it"
+msgstr "Benvenuto al Forno Lumen. Il pane fresco è pronto ogni mattina alle sei."
+
+msgid "greet-de"
+msgstr "Willkommen in der Bäckerei Lumen. Frisches Brot ist jeden Morgen um sechs Uhr fertig."
+
+msgid "greet-nl"
+msgstr "Welkom bij Bakkerij Lumen. Vers brood staat elke ochtend om zes uur klaar."
+
+msgid "greet-pt"
+msgstr "Bem-vindo à Padaria Lumen. O pão fresco fica pronto às seis horas todas as manhãs."
+
+msgid "greet-ja"
+msgstr "ルーメン・ベーカリーへようこそ。焼きたてのパンは毎朝六時にご用意しています。"
+
+msgid "greet-zh"
+msgstr "欢迎光临流明面包店。新鲜面包每天早上六点出炉。"
+
+msgid "greet-ko"
+msgstr "루멘 베이커리에 오신 것을 환영합니다. 갓 구운 빵은 매일 아침 여섯 시에 준비됩니다."
+
+msgid "greet-ar"
+msgstr "مرحبا بكم في مخبز لومن. الخبز الطازج جاهز كل صباح في السادسة."
+

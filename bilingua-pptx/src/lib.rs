@@ -130,3 +130,5 @@ impl Filter for Pptx {
 mod fixtures;
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod tests_oracle;

@@ -1,0 +1,26 @@
+﻿WEBVTT
+
+STYLE
+::cue { color: red }
+
+REGION
+id:r1
+width:40%
+
+00:05.000 --> 00:07.500
+Short timestamp without hours.
+
+intro
+00:00:08.000 --> 00:00:10.000 region:r1
+Line one
+Line two
+
+00:00:11.000 --> 00:00:13.000
+<c.loud>Loud</c> and <00:00:12.000>timestamp tag and <ruby>漢<rt>kan</rt></ruby>.
+
+NOTE
+Multiple line note
+still a note
+
+00:00:14.000 --> 00:00:16.000
+&lt;escaped&gt; &amp; entity &nbsp;text
