@@ -72,3 +72,23 @@ fn mq_package_round_trips_and_refuses_a_zip_without_mqxliff() {
     assert_eq!(read(&out, "note.txt"), "n");
     assert!(f.extract(&zip_of(&[("a.txt", "x")]), &ExtractOptions::default()).is_err());
 }
+
+#[test]
+fn a_bar_in_a_package_path_does_not_send_one_file_s_segments_into_another() {
+    // `a.mqxliff|b.mqxliff` is a legal zip name. Written plainly, its segment `1` and the segment `b.mqxliff|1` of
+    // `a.mqxliff` would both get the id `a.mqxliff|b.mqxliff|1`; the bar in the path is escaped instead.
+    let mq = |id: &str| format!("<?xml version=\"1.0\"?>\n<xliff version=\"1.2\" xmlns=\"urn:oasis:names:tc:xliff:document:1.2\" xmlns:mq=\"MQXliff\"><file source-language=\"en\" target-language=\"ja\" datatype=\"x\"><body><trans-unit id=\"{id}\" mq:status=\"NotStarted\"><source>Hello</source></trans-unit></body></file></xliff>");
+    let a = mq("b.mqxliff|1");
+    let b = mq("1");
+    let pkg = zip_of(&[("a.mqxliff", &a), ("a.mqxliff|b.mqxliff", &b)]);
+    let f = filter("mqxlz");
+    let mut d = f.extract(&pkg, &ExtractOptions::default()).unwrap();
+    assert_eq!(d.units.len(), 2);
+    assert!(d.find("a.mqxliff|b.mqxliff|1").is_some_and(|(u, _)| u.context.location.as_deref() == Some("a.mqxliff")));
+    let id = "a.mqxliff%7Cb.mqxliff|1";
+    assert_eq!(d.find(id).unwrap().0.context.location.as_deref(), Some("a.mqxliff|b.mqxliff"));
+    d.set_target(id, vec![Inline::text("\u{3053}\u{3093}\u{306B}\u{3061}\u{306F}")]).unwrap();
+    let out = f.merge(&d).unwrap();
+    assert_eq!(read(&out, "a.mqxliff"), a, "the first file must stay untouched");
+    assert!(read(&out, "a.mqxliff|b.mqxliff").contains("\u{3053}\u{3093}\u{306B}\u{3061}\u{306F}"));
+}

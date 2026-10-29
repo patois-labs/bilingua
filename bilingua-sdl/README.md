@@ -10,6 +10,6 @@ Translation packages for Bilingua: Trados project and return packages (`.sdlppx`
   test project). Nothing is written to disk by the library.
 - `D` is any type that implements `PackageDoc`; `bilingua_xliff::Doc` does, and CAT OS uses its editor type.
 - `filters()`: Bilingua `Filter`s `sdlppx` (`sdlppx`, `sdlrpx`) and `mqxlz`. One document holds the segments of
-  every target-language file; segment ids are `<path in the package>|<segment id>`. Source-language copies and
+  every target-language file; segment ids are `<path in the package>|<segment id>` (a `%` or `|` in the path is written `%25` or `%7C`). Source-language copies and
   reports are kept untouched. `merge` writes a zip of the same entries; use `to_return_package` for Trados.
 - Not verified: no package written here was opened in Trados Studio or memoQ.

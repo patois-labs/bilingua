@@ -167,7 +167,12 @@ pub fn apply_document(doc: &mut Doc, document: &Document) {
 /// Like [`apply_document`] for a document that holds the segments of several files: only segments whose id
 /// starts with `prefix` are used, and the id is matched without it.
 pub fn apply_document_prefixed(doc: &mut Doc, document: &Document, prefix: &str) {
-    for u in document.units.iter().filter(|u| u.translate) {
+    apply_units_prefixed(doc, document.units.iter(), prefix);
+}
+
+/// Like [`apply_document_prefixed`] for a chosen set of units (a package passes the units of one of its files).
+pub fn apply_units_prefixed<'a>(doc: &mut Doc, units: impl Iterator<Item = &'a Unit>, prefix: &str) {
+    for u in units.filter(|u| u.translate) {
         for s in &u.segments {
             let Some(id) = s.id.strip_prefix(prefix) else { continue };
             let Some(i) = doc.index_of(id) else { continue };

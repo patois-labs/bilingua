@@ -7,7 +7,7 @@
 //!
 //! The package types are generic over the open-file type ([`PackageDoc`]); `bilingua_xliff::Doc` is the one this
 //! workspace uses. [`filters`] gives the Bilingua [`Filter`]s: one document holds the segments of every target
-//! file, with segment ids `<path in the package>|<segment id>`.
+//! file, with segment ids `<path in the package>|<segment id>` (`%` and `|` in the path escaped as `%25`, `%7C`).
 
 /// Version of the skeleton layout this crate writes (bumped when an old skeleton can no longer be merged).
 pub const SKELETON_SCHEMA: u32 = 1;
@@ -50,6 +50,19 @@ fn perr(id: &str, e: Error) -> bilingua_model::Error {
 
 fn werr(e: Error) -> bilingua_model::Error {
     bilingua_model::Error::Write(e.to_string())
+}
+
+/// `<path>|`, the start of the ids of one package file's segments. A `%` or `|` in the path is written `%25` or
+/// `%7C`, so the first `|` of an id always ends the path and two files can never give the same id.
+fn id_prefix(path: &str) -> String {
+    format!("{}|", path.replace('%', "%25").replace('|', "%7C"))
+}
+
+/// Writes the segments of one package file back into it: only the units extracted from that file (a `|` in a
+/// path cannot make one file's ids match another's). A unit that lost its location is matched by id prefix alone.
+fn apply_file(doc: &mut Doc, document: &Document, path: &str) {
+    let units = document.units.iter().filter(|u| u.context.location.as_deref().is_none_or(|l| l == path));
+    bilingua_xliff::apply_units_prefixed(doc, units, &id_prefix(path));
 }
 
 /// The bilingual files of a package as (path, bytes), plus the whole entry list.
@@ -98,9 +111,10 @@ impl Filter for PackageFilter {
             source_lang = source_lang.or(one.source_lang.clone());
             target_lang = target_lang.or(one.target_lang.clone());
             for mut u in one.units {
-                u.id = format!("{path}|{}", u.id);
+                let prefix = id_prefix(path);
+                u.id = format!("{prefix}{}", u.id);
                 for s in &mut u.segments {
-                    s.id = format!("{path}|{}", s.id);
+                    s.id = format!("{prefix}{}", s.id);
                 }
                 u.context.location = Some(path.clone());
                 units.push(u);
@@ -141,7 +155,7 @@ impl Filter for PackageFilter {
                 let paths = p.document_paths();
                 for path in paths {
                     if let Some(doc) = p.doc_mut(&path) {
-                        bilingua_xliff::apply_document_prefixed(doc, document, &format!("{path}|"));
+                        apply_file(doc, document, &path);
                     }
                 }
                 p.to_bytes().map_err(werr)
@@ -151,7 +165,7 @@ impl Filter for PackageFilter {
                 let paths = p.document_paths();
                 for path in paths {
                     if let Some(doc) = p.doc_mut(&path) {
-                        bilingua_xliff::apply_document_prefixed(doc, document, &format!("{path}|"));
+                        apply_file(doc, document, &path);
                     }
                 }
                 p.to_bytes().map_err(werr)
