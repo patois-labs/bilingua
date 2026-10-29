@@ -1,6 +1,6 @@
 """Builds extra DOCX and XLSX files with python-docx (MIT) and openpyxl (MIT). Run with a Python that has both:
 
-    C:\\Users\\brent\\code\\local-tms\\.venv\\Scripts\\python.exe gen_office.py
+    <local-tms>\\.venv\\Scripts\\python.exe gen_office.py
 
 Unlike gen_corpus.py (hand-written XML), these come from real Office-style templates, so they carry the odd parts
 a hand-written file does not: theme, settings, fonts table, document defaults, many styles. All text is invented.

@@ -18,7 +18,7 @@ python run.py                 # corpus only
 python run.py --external      # also files that live only in the LocOS tree (read in place, counts only in the report)
 ```
 
-`run.py` needs Python 3.9+ and the LocOS checkout at `C:\Users\brent\code\local-tms` (set `LOCOS_DIR` to change it).
+`run.py` needs Python 3.9+ and a Localization OS checkout, by default a `local-tms` folder next to this repository (set `LOCOS_DIR` to change it).
 LocOS is never edited, started or written to; its data directory is a throwaway.
 
 Not done: the comparison does not judge segmentation (LocOS splits sentences in another layer), and it cannot tell

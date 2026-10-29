@@ -11,7 +11,8 @@ import os
 import sys
 import tempfile
 
-LOCOS = os.environ.get("LOCOS_DIR", r"C:\Users\brent\code\local-tms")
+# The Localization OS checkout (the oracle). Default: a `local-tms` folder next to the repository.
+LOCOS = os.environ.get("LOCOS_DIR", os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", "local-tms"))
 os.environ["LOC_TMS_DATA_DIR"] = tempfile.mkdtemp(prefix="locos-oracle-")
 sys.dont_write_bytecode = True
 sys.path.insert(0, LOCOS)

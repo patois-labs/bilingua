@@ -13,12 +13,9 @@ let out = merge(&doc)?;                                // original format, targe
 let html = preview(&doc);                              // Markdown only: spans with data-bl-seg
 ```
 
-- `filters()`: JSON (`bilingua-json`), Markdown (`bilingua-markdown`), plain text (`bilingua-text`).
+- `filters()`: text, JSON, Markdown, HTML, PO, SRT and VTT, DOCX, XLSX, PPTX (one crate each).
 - `detect(name, bytes)`: by extension, then by sniffing the bytes.
 - `extract` applies sentence segmentation (`bilingua-seg`) for `opts.granularity`, using the source language
   (default `en`). `resegment`, `join` and `split` change segmentation later.
 - `merge` is byte-identical to the input when nothing is translated.
 - `preview` and `render_segment` exist for Markdown; other formats return `None`.
-
-Not done: the HTML, DOCX, XLSX, PPTX and subtitle filters come from other builders and are registered in
-`filters()` at merge time.

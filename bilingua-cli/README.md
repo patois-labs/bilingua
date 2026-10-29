@@ -18,7 +18,7 @@ bilingua pseudo page.md -o page.pseudo.md
 | `wordcount <file>` | Words per unit and a total (locked units are listed but not totalled) |
 | `pseudo <file> [-o out]` | Pseudo-translation: accented letters, 30 percent longer, in `[ ]`, tags and placeholders kept |
 
-Formats today: `.txt`, `.json`, `.md`. The source language (default `en`) picks the sentence rules.
+Formats: every format the `bilingua` facade registers (see the workspace README). The source language (default `en`) picks the sentence rules.
 
 ## XLIFF
 

@@ -25,7 +25,8 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
-LOCOS = Path(os.environ.get("LOCOS_DIR", r"C:\Users\brent\code\local-tms"))
+# The Localization OS checkout (the oracle). Default: a `local-tms` folder next to the repository.
+LOCOS = Path(os.environ.get("LOCOS_DIR", Path(__file__).resolve().parents[3] / "local-tms"))
 LOCOS_PY = LOCOS / ".venv" / "Scripts" / "python.exe"
 BL = ROOT / "target" / "debug" / ("bl-dump.exe" if os.name == "nt" else "bl-dump")
 if not BL.exists():
@@ -245,8 +246,9 @@ def external_files():
         out += generated(fx / sub, sub)
     for f in ((fx / "mdx" / "guide.mdx"),):
         pass
-    cd = Path(r"C:\Users\brent\code\corpus-data\demodoc")
-    if cd.is_dir():
+    # Extra Markdown files from a local corpus folder, when CORPUS_DEMODOC points at one.
+    cd = Path(os.environ.get("CORPUS_DEMODOC", ""))
+    if os.environ.get("CORPUS_DEMODOC") and cd.is_dir():
         out += [p for p in sorted(cd.glob("*.md"))][:6]
     return out
 
