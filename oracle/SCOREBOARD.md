@@ -8,12 +8,12 @@ the LocOS tree).
 
 ## Summary
 
-LocOS formats: 87. Bilingua parses 15 of them (source formats and the bilingual formats still in `core/catcore`).
+LocOS formats: 87. Bilingua parses 15 of them (source formats and the bilingual and the bilingual formats).
 
 | Status | Formats |
 |---|---|
-| same | 4 |
-| differs | 9 |
+| same | 5 |
+| differs | 8 |
 | bilingua-only | 0 |
 | untested | 2 |
 | missing | 73 |
@@ -24,10 +24,11 @@ Status rules. `same`: every fixture file gives the same units (normalised) on bo
 
 | LocOS format | Also reads as | Bilingua | Files | Units LocOS | Units Bilingua | Text match | Round trip | Status | Top reasons |
 |---|---|---|---|---|---|---|---|---|---|
-| mqxliff |  | bilingual (catcore) | 0+1 | 2 | 2 | 100.0% | ok | same |  |
-| mxliff |  | bilingual (catcore) | 0+1 | 2 | 2 | 100.0% | ok | same |  |
-| sdlxliff | sdlxlf | bilingual (catcore) | 0+1 | 4 | 4 | 100.0% | ok | same |  |
+| mqxliff |  | bilingual | 0+1 | 2 | 2 | 100.0% | ok | same |  |
+| mxliff |  | bilingual | 0+1 | 2 | 2 | 100.0% | ok | same |  |
+| sdlxliff | sdlxlf | bilingual | 0+1 | 4 | 4 | 100.0% | ok | same |  |
 | txt | text | source | 3+1 | 49 | 29 | 100.0% | ok | same |  |
+| xliff | xlf | bilingual | 0+4 | 14 | 14 | 100.0% | ok | same |  |
 | docx | docm, dotm, dotx | source | 5+2 | 132 | 137 | 94.2% | ok | differs | extra in Bilingua x6; missing in Bilingua x1; different text x1 |
 | html | htm, xhtml | source | 6+1 | 121 | 126 | 88.5% | ok | differs | extra in Bilingua x9; missing in Bilingua x4; different text x2 |
 | json |  | source | 5+1 | 65 | 64 | 96.9% | ok | differs | missing in Bilingua x1; different text x1 |
@@ -35,10 +36,9 @@ Status rules. `same`: every fixture file gives the same units (normalised) on bo
 | po | pot | source | 3+0 | 38 | 38 | 94.7% | ok | differs | different text x2 |
 | pptx | potm, potx, ppsm, ppsx, pptm | source | 1+2 | 37 | 35 | 80.0% | ok | differs | missing in Bilingua x5; extra in Bilingua x3 |
 | srt | vtt | source | 4+1 | 52 | 52 | 94.3% | ok | differs | missing in Bilingua x1; extra in Bilingua x1; different text x1 |
-| xliff | xlf | bilingual (catcore) | 0+4 | 14 | 16 | 87.5% | ok | differs | extra in Bilingua x2 |
 | xlsx | xlsm, xltm, xltx | source | 2+2 | 74 | 71 | 93.2% | ok | differs | missing in Bilingua x3; extra in Bilingua x2 |
-| mqxlz |  | bilingual (catcore) | 0 | - | - | - | - | untested | no fixture file in the LocOS tree |
-| sdlrpx | sdlppx | bilingual (catcore) | 0 | - | - | - | - | untested | no fixture file in the LocOS tree |
+| mqxlz |  | bilingual | 0 | - | - | - | - | untested | no fixture file in the LocOS tree |
+| sdlrpx | sdlppx | bilingual | 0 | - | - | - | - | untested | no fixture file in the LocOS tree |
 
 ## Formats Bilingua does not parse yet
 
@@ -122,7 +122,7 @@ Ordered by a usage guess: software resource formats first, then Office, DTP, doc
 
 ## Bilingua errors and round-trip failures on these files
 
-None: every file Bilingua claims opened, merged unchanged to the same file and read back after a pseudo-translated merge (bilingual formats from `core/catcore`: unchanged merge only, there is no pseudo command).
+None: every file Bilingua claims opened, merged unchanged to the same file and read back after a pseudo-translated merge (bilingual formats: the target is checked, not the source).
 
 ## Files read
 
@@ -167,7 +167,7 @@ None: every file Bilingua claims opened, merged unchanged to the same file and r
 Written by hand after reading the tables above; `python run.py --scoreboard` copies it in unchanged.
 
 - **Coverage is the real gap, not quality.** Of 87 LocOS formats Bilingua opens 15 (10 source parsers plus the
-  XLIFF family, SDLXLIFF, MQXLIFF, MXLIFF and the three package types in `core/catcore`). 73 have no parser. On the
+  XLIFF family, SDLXLIFF, MQXLIFF, MXLIFF and the three package types, all now Bilingua crates). 73 have no parser. On the
   formats Bilingua does read, nothing fails: every file opens, an unchanged merge gives the same file, and a
   pseudo-translated merge reads back.
 - **No format can switch yet**, but the switch list is short for the formats LocOS fixtures already cover: TXT, SDLXLIFF,
@@ -177,11 +177,11 @@ Written by hand after reading the tables above; `python run.py --scoreboard` cop
   those choices from real gaps.
 - **Known gaps seen again here** (features, not crashes): PPTX picture alt text, chart text and SmartArt-style shape text
   (the generated and Strict PPTX packages); XLSX text boxes in drawings and `t="str"` cells without a formula; the
-  XLIFF 1.2 vendor extension of GlobalLink (`iws:status` finished or locked) that LocOS reads and catcore ignores,
-  so such a segment is listed as open work.
+  XLIFF 1.2 vendor extension of GlobalLink (`iws:status` finished or locked) that LocOS reads and Bilingua now reads too:
+  a finished segment is translated, a locked one is locked.
 - **Bilingual formats compare differently.** LocOS leaves finished segments (translated, confirmed) out of its unit
-  list; catcore lists every segment with a state. The scoreboard marks finished segments as locked on the
-  catcore side so the two lists line up. catcore has no pseudo-translate command, so only the unchanged merge is checked.
+  list; Bilingua lists every segment with a state. The scoreboard marks finished segments as locked on the
+  Bilingua side so the two lists line up. The pseudo-translated merge is checked on the target.
 - **Unit size.** TXT and Markdown are paragraphs in Bilingua and lines in LocOS: the match column compares words and
   the unit counts are not compared.
 - **Nothing here is a verdict on LocOS being right.** Where the two disagree the row says so; the notes in

@@ -3,7 +3,7 @@
     python run.py --scoreboard [--build] [--out SCOREBOARD.md]
 
 * Inventory: every format the LocOS registry knows (`locos_dump.py --inventory`) against what Bilingua parses
-  (`bl-dump --formats` for the source formats, a fixed list for the bilingual formats that live in core/catcore).
+  (`bl-dump --formats`; the bilingual formats, XLIFF family and packages, are Bilingua filters too).
 * Files: the made-up `corpus/`, plus the LocOS fixtures read in place (`tests/fixtures/formats/**`, `sample-docs/`,
   and the packages its plain-script generators write). Nothing is copied into this repository; the generated
   table lists file names and counts only, never text from a LocOS file.
@@ -13,7 +13,6 @@ Comparison rules are `run.py`'s (`compare`). LocOS is only imported or read, nev
 """
 
 import json
-import os
 import subprocess
 import sys
 import tempfile
@@ -24,11 +23,10 @@ import run as R
 
 HERE = R.HERE
 REPO = HERE.parents[1]
-CATCORE = REPO / "core" / "target" / "debug" / ("catcore-cli.exe" if os.name == "nt" else "catcore-cli")
 
-# Bilingual formats that live in core/catcore for now (they will move into Bilingua). Extension -> label.
-CATCORE_EXTS = {"xlf": "XLIFF 1.2/2", "xliff": "XLIFF 1.2/2", "sdlxliff": "SDLXLIFF", "mqxliff": "MQXLIFF", "mxliff": "MXLIFF"}
-CATCORE_PACKAGES = {"sdlppx": "SDL project package", "sdlrpx": "SDL return package", "mqxlz": "memoQ package"}
+# Bilingual formats (XLIFF family, packages): Bilingua parses them like any other format. LocOS leaves finished
+# segments out of its unit list, so on the Bilingua side those are marked locked to line the lists up.
+BILINGUAL_EXTS = {"xlf", "xliff", "sdlxliff", "mqxliff", "mxliff", "sdlppx", "sdlrpx", "mqxlz"}
 
 # Plain-script generators in the LocOS fixture tree: (folder/script, function, file name written).
 GENERATORS = [
@@ -100,35 +98,12 @@ def collect_files():
     return files
 
 
-def run_catcore(path: Path):
-    """Bilingual files through core/catcore: units from `dump`, round trip from `roundtrip`."""
-    exe = str(CATCORE)
-    try:
-        d = subprocess.run([exe, "dump", str(path), "--range", "0.."], capture_output=True, timeout=300)
-        if d.returncode != 0:
-            return {"error": d.stderr.decode("utf-8", "replace").strip()[:200] or "catcore dump failed"}
-        segs = json.loads(d.stdout.decode("utf-8"))
-        mark = {"open": "", "close": ""}
-        units = []
-        for s in segs:
-            text = "".join(x["text"] if "text" in x else mark.get(x["tag"]["kind"], "") for x in s["source"])
-            # LocOS leaves finished segments (translated, confirmed) out of its units; catcore lists every
-            # segment with its state. Finished ones are marked locked here so that the lists are comparable.
-            done = s.get("state") in ("translated", "confirmed")
-            units.append({"id": s["id"], "text": text, "locked": bool(s.get("locked")) or done})
-        rt = subprocess.run([exe, "roundtrip", str(path)], capture_output=True, timeout=300).stdout.decode("utf-8", "replace")
-        unchanged = "identical" if rt.startswith("OK") else "differs: " + rt.strip()[:120]
-        # catcore has no pseudo-translate command, so only the unchanged round trip is checked.
-        return {"units": units, "unchanged": unchanged, "pseudo": {"status": "n/a"}}
-    except Exception as e:  # noqa: BLE001
-        return {"error": f"harness: {e}"}
-
-
-def run_catcore_package(path: Path):
-    p = subprocess.run([str(CATCORE), "package", str(path)], capture_output=True, timeout=300)
-    if p.returncode != 0:
-        return {"error": p.stderr.decode("utf-8", "replace").strip()[:200]}
-    return {"units": [], "unchanged": "n/a", "pseudo": {"status": "n/a"}}
+def mark_finished(bres):
+    """Bilingual files: segments that are finished (translated or further) count as locked, as LocOS lists them."""
+    for u in bres.get("units", []):
+        if u.get("state") in ("translated", "confirmed", "reviewed", "signed-off", "locked"):
+            u["locked"] = True
+    return bres
 
 
 def main():
@@ -138,16 +113,13 @@ def main():
         out = Path(args[args.index("--out") + 1])
     if "--build" in args:
         subprocess.run(["cargo", "build", "-p", "bilingua-oracle"], cwd=R.ROOT, check=True)
-        subprocess.run(["cargo", "build", "-p", "catcore-cli"], cwd=REPO / "core", check=True)
     if not R.LOCOS_PY.exists():
         sys.exit("LocOS venv python not found; set LOCOS_DIR")
-    if not CATCORE.exists():
-        print("note: catcore-cli is not built (cargo build -p catcore-cli in core/); bilingual formats will be reported as missing")
 
     inv = locos_inventory()
     bl_filters = bilingua_formats()
     bl_exts = {e for f in bl_filters for e in f["extensions"]}
-    bi_exts = set(CATCORE_EXTS) | set(CATCORE_PACKAGES) if CATCORE.exists() else set()
+    bi_exts = set()
     ext_fmt = {e: row["fmt"] for row in inv for e in row["exts"]}
 
     files = collect_files()
@@ -161,12 +133,9 @@ def main():
         fmt = lres.get("filter") or ext_fmt.get(ext) or ext
         row = rows[fmt]
         row["files"].append((p.name, origin))
-        if ext in CATCORE_PACKAGES:
-            bres = run_catcore_package(p) if CATCORE.exists() else {"error": "no parser (catcore-cli not built)"}
-        elif ext in CATCORE_EXTS and CATCORE.exists():
-            bres = run_catcore(p)
-        else:
-            bres = R.run_bl(p, scratch / f"{n}-{p.name}")
+        bres = R.run_bl(p, scratch / f"{n}-{p.name}")
+        if ext in BILINGUAL_EXTS:
+            bres = mark_finished(bres)
         if "no parser" in (bres.get("error") or "") or "not built" in (bres.get("error") or ""):
             # Bilingua has no filter for this file: only the LocOS side is counted.
             if not lres.get("error"):
@@ -206,7 +175,7 @@ def support(row_inv, bl_exts, bi_exts):
     """('source' | 'bilingual' | '-', note) for a LocOS format, from the extensions each side claims."""
     exts = set(row_inv["exts"])
     src, bi = exts & bl_exts, exts & bi_exts
-    kind = "source" if src else "bilingual (catcore)" if bi else "-"
+    kind = "bilingual" if src & BILINGUAL_EXTS else "source" if src else "-"
     part = ""
     got = src or bi
     if got and got != exts and row_inv["fmt"] not in got:
@@ -271,7 +240,7 @@ def render(inv, rows, bl_exts, bi_exts, files):
          "the LocOS tree).", "",
          "## Summary", "",
          f"LocOS formats: {len(inv)}. Bilingua parses {sum(1 for t in table if t['claims'])} of them (source formats and the bilingual "
-         f"formats still in `core/catcore`).", "",
+         "and the bilingual formats).", "",
          "| Status | Formats |", "|---|---|"]
     for s in ("same", "differs", "bilingua-only", "untested", "missing"):
         L.append(f"| {s} | {cnt.get(s, 0)} |")
@@ -312,7 +281,7 @@ def render(inv, rows, bl_exts, bi_exts, files):
         L += ["| Format | File and problem |", "|---|---|"] + [f"| {f} | {x} |" for f, x in bad]
     else:
         L.append("None: every file Bilingua claims opened, merged unchanged to the same file and read back after a pseudo-translated merge "
-                 "(bilingual formats from `core/catcore`: unchanged merge only, there is no pseudo command).")
+                 "(bilingual formats: the target is checked, not the source).")
     L.append("")
 
     L += ["## Files read", ""]

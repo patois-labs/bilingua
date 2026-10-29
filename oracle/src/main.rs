@@ -31,13 +31,24 @@ fn render(u: &bilingua::Unit) -> (String, usize) {
 }
 
 fn units(doc: &bilingua::Document) -> Vec<Value> {
-    doc.units
-        .iter()
-        .map(|u| {
+    // A bilingual file has its own segments (LocOS lists one unit per segment), so those are listed one by one.
+    let own_segments = matches!(doc.format.as_str(), "xliff" | "sdlxliff" | "mqxliff" | "mxliff" | "sdlppx" | "mqxlz");
+    let mut out = Vec::new();
+    for u in &doc.units {
+        if own_segments {
+            for s in &u.segments {
+                let mut one = u.clone();
+                one.segments = vec![s.clone()];
+                one.separators.clear();
+                let (text, tags) = render(&one);
+                out.push(json!({"id": s.id, "text": text, "tags": tags, "locked": !u.translate, "kind": u.context.kind, "state": s.state}));
+            }
+        } else {
             let (text, tags) = render(u);
-            json!({"id": u.id, "text": text, "tags": tags, "locked": !u.translate, "kind": u.context.kind})
-        })
-        .collect()
+            out.push(json!({"id": u.id, "text": text, "tags": tags, "locked": !u.translate, "kind": u.context.kind, "state": u.segments.first().map(|s| s.state)}));
+        }
+    }
+    out
 }
 
 fn zip_parts(bytes: &[u8]) -> Option<BTreeMap<String, Vec<u8>>> {
@@ -150,7 +161,7 @@ fn main() {
         Err(e) => json!({"status": format!("merge failed: {e}")}),
         Ok(b) => match bilingua::extract(&name, &b, &opts) {
             Err(e) => json!({"status": format!("reopen failed: {e}")}),
-            Ok(d2) if doc.format == "po" => {
+            Ok(d2) if matches!(doc.format.as_str(), "po" | "xliff" | "sdlxliff" | "mqxliff" | "mxliff" | "sdlppx" | "mqxlz") => {
                 // A bilingual file keeps its source; the translation comes back as the target.
                 let srcs = |d: &bilingua::Document| d.units.iter().filter(|u| u.translate).map(|u| render(u).0).collect::<Vec<_>>();
                 let (a, b2) = (srcs(&doc), srcs(&d2));
@@ -158,13 +169,13 @@ fn main() {
                     .units
                     .iter()
                     .filter(|u| u.translate)
-                    .map(|u| format!("[{}]", bilingua::plain_text(&u.source())))
+                    .flat_map(|u| u.segments.iter().map(|s| format!("[{}]", bilingua::plain_text(&s.source))))
                     .collect();
                 let got: Vec<String> = d2
                     .units
                     .iter()
                     .filter(|u| u.translate)
-                    .map(|u| bilingua::plain_text(&u.segments.iter().flat_map(|s| s.target.clone()).collect::<Vec<_>>()))
+                    .flat_map(|u| u.segments.iter().map(|s| bilingua::plain_text(&s.target)))
                     .collect();
                 if a != b2 {
                     json!({"status": "sources changed after merge"})

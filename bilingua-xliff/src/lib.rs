@@ -11,6 +11,9 @@
 //! Inline codes keep their original markup in `Unit::codes`; an `x` or `ph` placeholder is marked `free` by the
 //! Localization OS rule (see `inline.rs`).
 
+/// Version of the skeleton layout this crate writes (bumped when an old skeleton can no longer be merged).
+pub const SKELETON_SCHEMA: u32 = 1;
+
 mod attrs;
 mod doc;
 mod error;
@@ -23,7 +26,7 @@ pub use doc::{detect, Doc, SegView};
 pub use error::Error;
 pub use inline::{RawTag, TagDef, TagDefs};
 
-use bilingua_model::{CodeData, Document, ExtractOptions, Filter, Granularity, Inline, Segment, SkelPart, Skeleton, TagKind, Unit};
+use bilingua_model::{Document, ExtractOptions, Filter, Granularity, Inline, Segment, SkelPart, Skeleton, TagKind, Unit};
 use std::collections::HashSet;
 
 /// Which bilingual dialect a file was read as.
@@ -54,7 +57,7 @@ impl Format {
 }
 
 /// Phrase (MXLIFF) metadata of one trans-unit, as the file had it when opened.
-#[derive(Debug, Clone, Default, PartialEq)]
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct MxMeta {
     /// `m:confirmed` is `1` / `true`.
     pub confirmed: bool,
@@ -120,7 +123,7 @@ pub fn to_document(doc: &Doc, id: &str, opts: &ExtractOptions) -> Result<Documen
             u.context.extra.insert(format!("xliff.state.{}", v.id), n.to_string());
         }
         for r in v.raws {
-            let c = u.codes.entry(r.id.clone()).or_insert_with(CodeData::default);
+            let c = u.codes.entry(r.id.clone()).or_default();
             match r.kind {
                 TagKind::Open => c.open = Some(r.raw.clone()),
                 TagKind::Close => c.close = Some(r.raw.clone()),

@@ -12,3 +12,6 @@ bilingua-xliff = { workspace = true }
 quick-xml = { workspace = true }
 serde = { workspace = true }
 zip = { workspace = true }
+
+[dev-dependencies]
+zip = { workspace = true }

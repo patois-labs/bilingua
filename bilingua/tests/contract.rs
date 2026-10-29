@@ -161,6 +161,8 @@ fn crate_of(format: &str) -> &'static str {
         "po" => "bilingua-po",
         "srt" | "vtt" => "bilingua-subtitle",
         "txt" | "text" => "bilingua-text",
+        "xliff" | "sdlxliff" | "mqxliff" | "mxliff" => "bilingua-xliff",
+        "sdlppx" | "mqxlz" => "bilingua-sdl",
         other => panic!("unknown format id {other}"),
     }
 }

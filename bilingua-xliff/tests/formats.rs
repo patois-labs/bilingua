@@ -69,7 +69,7 @@ const JA_SDL: &str = "\u{FEFF}<?xml version=\"1.0\" encoding=\"utf-8\"?>\r\n<xli
 #[test]
 fn japanese_sdlxliff_with_bom_reads_conf_origin_and_lock_and_writes_back() {
     let f = filter("sdlxliff");
-    let mut d = f.extract(JA_SDL.as_bytes(), &OPTS).unwrap();
+    let d = f.extract(JA_SDL.as_bytes(), &OPTS).unwrap();
     assert_eq!(d.units.len(), 1);
     assert_eq!(d.units[0].segments.len(), 2);
     let (_, s1) = d.find("1").unwrap();
@@ -92,7 +92,6 @@ fn japanese_sdlxliff_with_bom_reads_conf_origin_and_lock_and_writes_back() {
     assert!(out.contains("origin=\"interactive\""));
     assert!(out.contains("<sdl:prev-origin"), "a human edit of a TM match records the old origin: {out}");
     assert!(out.contains("\u{958B}\u{3044}\u{3066}\u{304F}\u{3060}\u{3055}\u{3044}\u{3002}"));
-    d.units.clear();
 }
 
 const JA_X2: &str = "<?xml version=\"1.0\"?>\n<xliff xmlns=\"urn:oasis:names:tc:xliff:document:2.0\" version=\"2.1\" srcLang=\"en\" trgLang=\"ja\">\n<file id=\"f1\">\n<unit id=\"a\">\n<notes><note category=\"developer\">Shown on the dashboard</note></notes>\n<originalData><data id=\"d1\">%s</data><data id=\"d2\">{count}</data><data id=\"d3\">&lt;b&gt;</data></originalData>\n<segment state=\"reviewed\"><source>Hi <ph id=\"1\" dataRef=\"d1\"/> and <ph id=\"2\" dataRef=\"d2\"/> <ph id=\"3\" dataRef=\"d3\"/>x</source><target>\u{3053}\u{3093}\u{306B}\u{3061}\u{306F}</target></segment>\n</unit>\n<unit id=\"b\"><segment><source>One.</source></segment><segment><source>Two.</source></segment></unit>\n</file>\n</xliff>\n";

@@ -321,7 +321,7 @@ impl Doc {
 
     /// Replaces the target of segment `i` without checking tags (the caller's contract decides what is allowed).
     /// Locked segments are refused (`false`). An unchanged target changes nothing. Otherwise the segment becomes
-    /// `Draft` (`New` for an empty target); tags take their display text and `free` flag from the source tag with
+    /// `Draft` (`New` for an empty target; a `Rejected` one stays so); tags take their display text and `free` flag from the source tag with
     /// the same id and kind.
     pub fn put_target(&mut self, i: usize, target: Vec<Inline>) -> bool {
         if self.recs[i].locked {
@@ -334,7 +334,13 @@ impl Doc {
         if target == c.target {
             return true;
         }
-        r.seg.state = if target.is_empty() { SegState::New } else { SegState::Draft };
+        // A rejected segment stays rejected while its target is edited (the file keeps its `RejectedTranslation`
+        // until someone sets a new state).
+        if target.is_empty() {
+            r.seg.state = SegState::New;
+        } else if r.seg.state != SegState::Rejected {
+            r.seg.state = SegState::Draft;
+        }
         c.target = target;
         r.target_dirty = true;
         true

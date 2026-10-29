@@ -9,6 +9,9 @@
 //! workspace uses. [`filters`] gives the Bilingua [`Filter`]s: one document holds the segments of every target
 //! file, with segment ids `<path in the package>|<segment id>`.
 
+/// Version of the skeleton layout this crate writes (bumped when an old skeleton can no longer be merged).
+pub const SKELETON_SCHEMA: u32 = 1;
+
 mod package;
 mod zipio;
 
