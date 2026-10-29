@@ -88,7 +88,11 @@ fn split_meta(doc: &Document) -> Result<Split<'_>, Error> {
     for e in entries {
         if e.name == META_NAME {
             if let ZipData::Raw(b) = &e.data {
-                meta = serde_json::from_slice::<Meta>(b).ok();
+                // An unreadable record must not be skipped: without its list of packed entries, their deflated
+                // bytes would be written as if they were plain, and the file would be broken.
+                meta = Some(serde_json::from_slice::<Meta>(b).map_err(|e| {
+                    Error::Write(format!("the xlsx skeleton's zip record is unreadable: {e}"))
+                })?);
             }
         } else {
             real.push(e);

@@ -90,7 +90,10 @@ fn bad(msg: impl Into<String>) -> Error {
 /// Gives a reader error the caller's format name ("docx", "xlsx", ...).
 fn as_format(e: Error, format: &str) -> Error {
     match e {
-        Error::Parse { msg, .. } => Error::Parse { format: format.into(), msg },
+        Error::Parse { msg, .. } => Error::Parse {
+            format: format.into(),
+            msg,
+        },
         e => e,
     }
 }
@@ -160,7 +163,7 @@ fn read_entries(bytes: &[u8], limits: &ZipLimits) -> Result<Vec<RawEntry>, Error
     let mut out = Vec::new();
     let mut total: u64 = 0;
     for i in 0..zip.len() {
-        let (name, is_dir, claimed, packed, modified, stored) = {
+        let (name, is_dir, claimed, packed, modified, stored, deflated) = {
             let f = zip
                 .by_index_raw(i)
                 .map_err(|e| bad(format!("unreadable entry {i}: {e}")))?;
@@ -186,6 +189,7 @@ fn read_entries(bytes: &[u8], limits: &ZipLimits) -> Result<Vec<RawEntry>, Error
                 ]
             });
             let stored = f.compression() == zip::CompressionMethod::Stored;
+            let deflated = f.compression() == zip::CompressionMethod::Deflated;
             (
                 name,
                 f.is_dir() || raw.ends_with('/') || raw.ends_with('\\'),
@@ -193,6 +197,7 @@ fn read_entries(bytes: &[u8], limits: &ZipLimits) -> Result<Vec<RawEntry>, Error
                 f.compressed_size(),
                 modified,
                 stored,
+                deflated,
             )
         };
         if !seen.insert(name.to_ascii_lowercase()) {
@@ -226,19 +231,28 @@ fn read_entries(bytes: &[u8], limits: &ZipLimits) -> Result<Vec<RawEntry>, Error
                 limits.max_ratio
             )));
         }
-        let mut pk = if stored {
+        // Only plain deflate data is kept packed, and only when every compressed byte was read; anything else
+        // (another method the reader would refuse below anyway, a short read) falls back to plain bytes.
+        let mut pk = if !deflated {
             None
         } else {
             let mut raw = zip
                 .by_index_raw(i)
                 .map_err(|e| bad(format!("cannot read entry {name:?}: {e}")))?;
             let crc32 = raw.crc32();
-            let mut bytes = Vec::with_capacity(raw.compressed_size().min(64 * 1024 * 1024) as usize);
+            let want = raw.compressed_size();
+            let mut bytes = Vec::with_capacity(want.min(64 * 1024 * 1024) as usize);
             (&mut raw)
                 .take(limits.max_entry_bytes + 1)
                 .read_to_end(&mut bytes)
                 .map_err(|e| bad(format!("cannot read entry {name:?}: {e}")))?;
-            Some((Packed { crc32, size: claimed }, bytes))
+            (bytes.len() as u64 == want).then_some((
+                Packed {
+                    crc32,
+                    size: claimed,
+                },
+                bytes,
+            ))
         };
         let mut f = zip
             .by_index(i)
@@ -272,7 +286,12 @@ fn read_entries(bytes: &[u8], limits: &ZipLimits) -> Result<Vec<RawEntry>, Error
         if let Some((p, _)) = pk.as_mut() {
             p.size = got;
         }
-        out.push(RawEntry { name, data, meta, packed: pk });
+        out.push(RawEntry {
+            name,
+            data,
+            meta,
+            packed: pk,
+        });
     }
     Ok(out)
 }
@@ -333,17 +352,44 @@ fn single_entry_zip(name: &str, p: &Packed, bytes: &[u8]) -> Vec<u8> {
 
 /// Writes plain entries (each compressed as its metadata says).
 pub fn write_zip(entries: &[(EntryMeta, Vec<u8>)]) -> Result<Vec<u8>, Error> {
-    let parts: Vec<(EntryMeta, Body)> = entries.iter().map(|(m, d)| (m.clone(), Body::Plain(d))).collect();
+    let parts: Vec<(EntryMeta, Body)> = entries
+        .iter()
+        .map(|(m, d)| (m.clone(), Body::Plain(d)))
+        .collect();
     write_zip_parts(&parts)
 }
 
 /// The body to write for a skeleton entry kept as raw bytes: the original deflated bytes when `packed` (the
 /// format's record of packed entries) names the entry, else plain bytes.
-pub fn raw_body<'a>(packed: Option<&'a BTreeMap<String, Packed>>, name: &str, bytes: &'a [u8]) -> Body<'a> {
+pub fn raw_body<'a>(
+    packed: Option<&'a BTreeMap<String, Packed>>,
+    name: &str,
+    bytes: &'a [u8],
+) -> Body<'a> {
     match packed.and_then(|m| m.get(name)) {
         Some(p) => Body::Packed(p, bytes),
         None => Body::Plain(bytes),
     }
+}
+
+/// Proves that packed bytes are what the skeleton says they are before they are copied: they must inflate to
+/// exactly the recorded size and checksum. Bytes that were edited, cut short or replaced with plain bytes are
+/// refused here, so a broken entry never reaches the output file.
+fn check_packed(src: &mut zip::ZipArchive<Cursor<Vec<u8>>>, p: &Packed) -> Result<(), String> {
+    if p.size > u32::MAX as u64 {
+        return Err("a packed entry is too large to copy".into());
+    }
+    let f = src.by_index(0).map_err(|e| e.to_string())?;
+    // `take` stops a forged record from inflating without end; the reader checks the CRC at the end.
+    let got = std::io::copy(&mut f.take(p.size + 1), &mut std::io::sink())
+        .map_err(|e| format!("the kept compressed bytes do not match their record ({e})"))?;
+    if got != p.size {
+        return Err(format!(
+            "the kept compressed bytes inflate to {got} bytes, the record says {}",
+            p.size
+        ));
+    }
+    Ok(())
 }
 
 pub fn write_zip_parts(entries: &[(EntryMeta, Body<'_>)]) -> Result<Vec<u8>, Error> {
@@ -366,6 +412,7 @@ pub fn write_zip_parts(entries: &[(EntryMeta, Body<'_>)]) -> Result<Vec<u8>, Err
                 let one = single_entry_zip(&m.name, p, bytes);
                 let mut src =
                     zip::ZipArchive::new(Cursor::new(one)).map_err(|e| werr(&m.name, &e))?;
+                check_packed(&mut src, p).map_err(|e| werr(&m.name, &e))?;
                 let f = src.by_index_raw(0).map_err(|e| werr(&m.name, &e))?;
                 w.raw_copy_file_touch(f, dt, None)
                     .map_err(|e| werr(&m.name, &e))?;

@@ -168,6 +168,139 @@ fn schema_1_zip_skeletons_with_plain_bytes_still_merge() {
     assert!(text.contains("Old one."));
 }
 
+fn sentence_opts() -> ExtractOptions {
+    ExtractOptions {
+        source_lang: Some("en".into()),
+        target_lang: Some("es".into()),
+        granularity: Granularity::Sentence,
+        include_locked: false,
+    }
+}
+
+fn raw_entry<'a>(doc: &'a mut Document, name: &str) -> &'a mut Vec<u8> {
+    let Skeleton::Zip { entries, .. } = &mut doc.skeleton else { panic!("not a zip skeleton") };
+    match &mut entries.iter_mut().find(|e| e.name == name).unwrap().data {
+        ZipData::Raw(b) => b,
+        ZipData::Parts(_) => panic!("{name} is not raw"),
+    }
+}
+
+/// Every entry's name and unpacked bytes, in order.
+fn contents(bytes: &[u8]) -> Vec<(String, Vec<u8>)> {
+    let mut z = zip::ZipArchive::new(std::io::Cursor::new(bytes)).unwrap();
+    (0..z.len())
+        .map(|i| {
+            let mut f = z.by_index(i).unwrap();
+            let mut d = Vec::new();
+            f.read_to_end(&mut d).unwrap();
+            (f.name().unwrap().into_owned(), d)
+        })
+        .collect()
+}
+
+/// A small docx whose picture is deflated, so its skeleton keeps it packed.
+fn small_docx() -> (Vec<u8>, Vec<u8>) {
+    let mut w = zip::ZipWriter::new(std::io::Cursor::new(Vec::new()));
+    let deflate = zip::write::SimpleFileOptions::default().compression_method(zip::CompressionMethod::Deflated);
+    let doc = format!(
+        "<?xml version=\"1.0\" encoding=\"UTF-8\"?><w:document {NS}><w:body><w:p><w:r><w:t>Small one.</w:t></w:r></w:p><w:sectPr/></w:body></w:document>"
+    );
+    let pic: Vec<u8> = noise(50_000).iter().map(|b| b % 5).collect();
+    for (name, data) in [("[Content_Types].xml", CT.as_bytes()), ("_rels/.rels", RELS.as_bytes()), ("word/document.xml", doc.as_bytes()), ("word/media/p.bin", &pic[..])] {
+        w.start_file(name, deflate).unwrap();
+        w.write_all(data).unwrap();
+    }
+    (w.finish().unwrap().into_inner(), pic)
+}
+
+/// Kept compressed bytes that no longer match their record (edited, cut short, or swapped for plain bytes by
+/// some other tool) are refused at merge time instead of being copied into a broken file.
+#[test]
+fn packed_bytes_that_do_not_match_their_record_are_refused() {
+    let (bytes, pic) = small_docx();
+    let doc = extract("s.docx", &bytes, &sentence_opts()).unwrap();
+    assert_eq!(contents(&merge(&doc).unwrap()), contents(&bytes));
+
+    let mut flipped = doc.clone();
+    let b = raw_entry(&mut flipped, "word/media/p.bin");
+    let mid = b.len() / 2;
+    b[mid] ^= 0x55;
+    assert!(matches!(merge(&flipped), Err(Error::Write(m)) if m.contains("p.bin")));
+
+    let mut short = doc.clone();
+    raw_entry(&mut short, "word/media/p.bin").truncate(10);
+    assert!(matches!(merge(&short), Err(Error::Write(_))));
+
+    let mut plain = doc.clone();
+    *raw_entry(&mut plain, "word/media/p.bin") = pic;
+    assert!(matches!(merge(&plain), Err(Error::Write(_))));
+}
+
+/// The zip record names the packed entries; if it cannot be read, guessing would write deflated bytes as plain
+/// ones, so merge refuses.
+#[test]
+fn an_unreadable_zip_record_is_an_error_not_a_guess() {
+    let corpus = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../oracle/corpus");
+    let mut files = vec![("s.docx".to_string(), small_docx().0)];
+    for f in ["docx/manual.docx", "xlsx/menu.xlsx", "pptx/launch.pptx"] {
+        files.push((f.rsplit('/').next().unwrap().to_string(), std::fs::read(corpus.join(f)).unwrap()));
+    }
+    for (name, bytes) in files {
+        let mut doc = extract(&name, &bytes, &sentence_opts()).unwrap();
+        let meta_name = {
+            let Skeleton::Zip { entries, .. } = &doc.skeleton else { panic!() };
+            entries.iter().find(|e| e.name.starts_with(' ')).unwrap().name.clone()
+        };
+        *raw_entry(&mut doc, &meta_name) = b"{not json".to_vec();
+        assert!(matches!(merge(&doc), Err(Error::Write(m)) if m.contains("unreadable")), "{name}");
+    }
+}
+
+/// Stamps from before schemas (none at all, or a version only) merge to exactly the same bytes as the current
+/// stamp, and an older schema number does too.
+#[test]
+fn legacy_stamps_merge_byte_identical() {
+    let (bytes, _) = small_docx();
+    let doc = extract("s.docx", &bytes, &sentence_opts()).unwrap();
+    let want = merge(&doc).unwrap();
+    let mut v = serde_json::to_value(&doc).unwrap();
+    let parser = v["skeleton"]["zip"]["parser"].as_object_mut().unwrap();
+    parser.remove("schema");
+    parser.insert("version".into(), "0.1.0".into());
+    let version_only: Document = serde_json::from_value(v.clone()).unwrap();
+    assert_eq!(merge(&version_only).unwrap(), want);
+    v["skeleton"]["zip"].as_object_mut().unwrap().remove("parser");
+    let unstamped: Document = serde_json::from_value(v).unwrap();
+    assert_eq!(merge(&unstamped).unwrap(), want);
+}
+
+/// Entries written by a streaming zip writer carry data descriptors (sizes after the data); their compressed
+/// bytes are copied all the same and the file reads back whole.
+#[test]
+fn entries_with_data_descriptors_copy_cleanly() {
+    let mut w = zip::ZipWriter::new_stream(Vec::new());
+    let deflate = zip::write::SimpleFileOptions::default().compression_method(zip::CompressionMethod::Deflated);
+    let doc = format!(
+        "<?xml version=\"1.0\" encoding=\"UTF-8\"?><w:document {NS}><w:body><w:p><w:r><w:t>Streamed. Mañana 你好 مرحبا.</w:t></w:r></w:p><w:sectPr/></w:body></w:document>"
+    );
+    let pic: Vec<u8> = noise(30_000).iter().map(|b| b % 3).collect();
+    for (name, data) in [("[Content_Types].xml", CT.as_bytes()), ("_rels/.rels", RELS.as_bytes()), ("word/document.xml", doc.as_bytes()), ("word/media/日本.bin", &pic[..])] {
+        w.start_file(name, deflate).unwrap();
+        w.write_all(data).unwrap();
+    }
+    let bytes = w.finish().unwrap().into_inner();
+    let mut d = extract("s.docx", &bytes, &sentence_opts()).unwrap();
+    assert_eq!(contents(&merge(&d).unwrap()), contents(&bytes));
+    let first = d.units[0].segments[0].id.clone();
+    d.set_target(&first, vec![Inline::text("Transmitido.")]).unwrap();
+    let out = merge(&d).unwrap();
+    let back = contents(&out);
+    assert_eq!(back[3], ("word/media/日本.bin".to_string(), pic));
+    // The output extracts again.
+    let again = extract("s.docx", &out, &sentence_opts()).unwrap();
+    assert!(again.units[0].segments[0].source.iter().any(|i| matches!(i, Inline::Text(t) if t.contains("Transmitido"))));
+}
+
 /// Standard base64, enough for the test (the model crate's codec is private).
 mod base64_free {
     const A: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
