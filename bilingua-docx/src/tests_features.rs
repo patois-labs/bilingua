@@ -675,12 +675,14 @@ fn units_survive_segment_splitting_by_the_model() {
             source: vec![Inline::text("One.")],
             target: vec![Inline::text("Uno.")],
             state: SegState::Draft,
+            origin: None,
         },
         Segment {
             id: "p1#2".into(),
             source: vec![Inline::text("Two.")],
             target: vec![Inline::text("Dos.")],
             state: SegState::Draft,
+            origin: None,
         },
     ];
     u.separators = vec![" ".into()];

@@ -8,7 +8,7 @@
 //!     format: "txt".into(), name: None, source_lang: None, target_lang: None,
 //!     granularity: Granularity::Sentence,
 //!     units: vec![Unit::new("p1", vec![Inline::text("Hello there. How are you?")])],
-//!     skeleton: Skeleton::Text { parts: vec![SkelPart::Unit(0)], encoding: "utf-8".into() },
+//!     skeleton: Skeleton::Text { parts: vec![SkelPart::Unit(0)], encoding: "utf-8".into(), parser: None },
 //! };
 //! segment(&mut doc, "en", Granularity::Sentence, Rules::bundled());
 //! assert_eq!(doc.units[0].segments.len(), 2);
@@ -111,15 +111,6 @@ fn settle_cut(a: &[Atom], prev_char: usize) -> usize {
     p
 }
 
-fn rank(s: SegState) -> u8 {
-    match s {
-        SegState::New => 0,
-        SegState::Draft => 1,
-        SegState::Translated => 2,
-        SegState::Confirmed => 3,
-    }
-}
-
 fn renumber(unit: &mut Unit) {
     if unit.segments.len() == 1 {
         unit.segments[0].id = unit.id.clone();
@@ -138,27 +129,20 @@ fn collapse(unit: &mut Unit) {
     let all_translated = unit.segments.iter().all(|s| !s.target.is_empty());
     let source = unit.source();
     let target = if all_translated { unit.output() } else { vec![] };
-    let state = unit.segments.iter().map(|s| rank_state(s.state)).min().map(state_of).unwrap_or(SegState::New);
+    let state = unit.segments.iter().map(|s| s.state.rank()).min().map(SegState::from_rank).unwrap_or(SegState::New);
+    // The origin survives only when every part has the same one.
+    let origin = match unit.segments.first().map(|s| &s.origin) {
+        Some(first) if all_translated && unit.segments.iter().all(|s| &s.origin == first) => first.clone(),
+        _ => None,
+    };
     unit.segments = vec![Segment {
         id: unit.id.clone(),
         source,
         target,
         state: if all_translated { state } else { SegState::New },
+        origin,
     }];
     unit.separators.clear();
-}
-
-fn rank_state(s: SegState) -> u8 {
-    rank(s)
-}
-
-fn state_of(r: u8) -> SegState {
-    match r {
-        0 => SegState::New,
-        1 => SegState::Draft,
-        2 => SegState::Translated,
-        _ => SegState::Confirmed,
-    }
 }
 
 /// Splits a unit's single segment at the given atom cuts. Each cut is an index into the atoms: the new segment
@@ -196,7 +180,7 @@ fn split_at_cuts(unit: &mut Unit, a: &[Atom], cuts: &[usize]) {
     segs.push(a[start..].to_vec());
     unit.segments = segs
         .into_iter()
-        .map(|s| Segment { id: String::new(), source: inlines(&s), target: vec![], state: SegState::New })
+        .map(|s| Segment { id: String::new(), source: inlines(&s), target: vec![], state: SegState::New, origin: None })
         .collect();
     unit.separators = seps;
     renumber(unit);
@@ -267,7 +251,7 @@ pub fn join(doc: &mut Document, seg_a: &str, seg_b: &str) -> Result<String, Erro
     unit.separators.remove(i);
     let a = &mut unit.segments[i];
     let both = !a.target.is_empty() && !b.target.is_empty();
-    let state = if both { state_of(rank(a.state).min(rank(b.state))) } else { SegState::New };
+    let state = if both { SegState::from_rank(a.state.rank().min(b.state.rank())) } else { SegState::New };
     let join_with_sep = |x: &[Inline], y: &[Inline]| -> Vec<Inline> {
         let mut v = x.to_vec();
         if !sep.is_empty() {
@@ -279,6 +263,9 @@ pub fn join(doc: &mut Document, seg_a: &str, seg_b: &str) -> Result<String, Erro
     a.source = join_with_sep(&a.source, &b.source);
     a.target = if both { join_with_sep(&a.target, &b.target) } else { vec![] };
     a.state = state;
+    if !both || a.origin != b.origin {
+        a.origin = None;
+    }
     renumber(unit);
     Ok(unit.segments[i].id.clone())
 }
@@ -326,8 +313,8 @@ pub fn split(doc: &mut Document, seg_id: &str, at_char: usize) -> Result<(String
     if inside_pair(&pr, left) || inside_pair(&pr, right) {
         return Err(Error::Unsupported("cannot split inside a tag pair".into()));
     }
-    let first = Segment { id: String::new(), source: inlines(&a[..left]), target: vec![], state: SegState::New };
-    let second = Segment { id: String::new(), source: inlines(&a[right..]), target: vec![], state: SegState::New };
+    let first = Segment { id: String::new(), source: inlines(&a[..left]), target: vec![], state: SegState::New, origin: None };
+    let second = Segment { id: String::new(), source: inlines(&a[right..]), target: vec![], state: SegState::New, origin: None };
     unit.segments.splice(i..=i, [first, second]);
     unit.separators.insert(i, text_of(&a[left..right]));
     renumber(unit);
@@ -347,7 +334,7 @@ mod tests {
             target_lang: None,
             granularity: Granularity::Sentence,
             units: units.into_iter().enumerate().map(|(i, s)| Unit::new(format!("u{}", i + 1), s)).collect(),
-            skeleton: Skeleton::Text { parts: (0..n).map(SkelPart::Unit).collect(), encoding: "utf-8".into() },
+            skeleton: Skeleton::Text { parts: (0..n).map(SkelPart::Unit).collect(), encoding: "utf-8".into(), parser: None },
         }
     }
 

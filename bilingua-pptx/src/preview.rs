@@ -27,7 +27,7 @@ fn seg_inner(u: &Unit, seg: &Segment) -> String {
     for i in inl {
         match i {
             Inline::Text(t) => s.push_str(&esc(t).replace('\n', "<br>")),
-            Inline::Tag { id, kind, display } => {
+            Inline::Tag { id, kind, display, .. } => {
                 let label = u.codes.get(id).and_then(|c| c.label.as_deref()).unwrap_or("");
                 match kind {
                     TagKind::Open => {

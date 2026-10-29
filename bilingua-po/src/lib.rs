@@ -51,12 +51,22 @@ fn source_inlines(text: &str) -> Source {
             ph::Piece::Ph(p) => {
                 let id = (tags.len() + 1).to_string();
                 codes.insert(id.clone(), CodeData { standalone: Some(p.to_string()), label: Some("placeholder".into()), ..Default::default() });
-                inl.push(Inline::tag(id.clone(), TagKind::Standalone, p));
+                inl.push(placeholder_tag(&id, p));
                 tags.push((id, p.to_string()));
             }
         }
     }
     (merge_text(inl), codes, tags)
+}
+
+/// A placeholder code. One that names its argument (`%1$s`, `%(name)s`, `{name}`, `{0}`) may move in the target;
+/// `%s` and `{}` may not, their order is the argument order.
+fn placeholder_tag(id: &str, p: &str) -> Inline {
+    if bilingua_model::locos::is_named_placeholder(p) {
+        Inline::free_tag(id, p)
+    } else {
+        Inline::tag(id, TagKind::Standalone, p)
+    }
 }
 
 fn target_inlines(text: &str, tags: &[(String, String)]) -> Vec<Inline> {
@@ -71,7 +81,7 @@ fn target_inlines(text: &str, tags: &[(String, String)]) -> Vec<Inline> {
             ph::Piece::Ph(p) => match tags.iter().find(|(id, t)| t == p && !used.contains(id)) {
                 Some((id, _)) => {
                     used.insert(id.clone());
-                    out.push(Inline::tag(id.clone(), TagKind::Standalone, p));
+                    out.push(placeholder_tag(id, p));
                 }
                 None => out.push(Inline::text(p)),
             },
@@ -223,12 +233,13 @@ impl Filter for Po {
             target_lang,
             granularity: opts.granularity,
             units,
-            skeleton: Skeleton::Text { parts, encoding: if bom { "utf-8-bom".into() } else { "utf-8".into() } },
+            skeleton: Skeleton::text(parts, if bom { "utf-8-bom" } else { "utf-8" }, bilingua_model::parser_info!()),
         })
     }
 
     fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
-        let Skeleton::Text { parts, encoding } = &doc.skeleton else {
+        bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
+        let Skeleton::Text { parts, encoding, .. } = &doc.skeleton else {
             return Err(Error::Write("po needs a text skeleton".into()));
         };
         let eol = if parts.iter().any(|p| matches!(p, SkelPart::Raw(s) if s.contains("\r\n"))) { "\r\n" } else { "\n" };

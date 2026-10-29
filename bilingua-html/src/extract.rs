@@ -104,7 +104,7 @@ pub fn extract_html(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Err
         target_lang: opts.target_lang.clone(),
         granularity: opts.granularity,
         units,
-        skeleton: Skeleton::Text { parts: skeleton_parts, encoding: enc.name().into() },
+        skeleton: Skeleton::text(skeleton_parts, enc.name(), bilingua_model::parser_info!()),
     })
 }
 

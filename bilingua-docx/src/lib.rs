@@ -309,14 +309,14 @@ fn extract_doc(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
         target_lang: opts.target_lang.clone(),
         granularity: Granularity::Paragraph,
         units,
-        skeleton: Skeleton::Zip { entries: zentries },
+        skeleton: Skeleton::zip(zentries, bilingua_model::parser_info!()),
     })
 }
 
 type Split<'a> = (Option<Meta>, Vec<&'a ZipEntry>);
 
 fn split_meta(doc: &Document) -> Result<Split<'_>, Error> {
-    let Skeleton::Zip { entries } = &doc.skeleton else {
+    let Skeleton::Zip { entries, .. } = &doc.skeleton else {
         return Err(Error::Write("docx needs a zip skeleton".into()));
     };
     let mut meta = None;
@@ -335,6 +335,7 @@ fn split_meta(doc: &Document) -> Result<Split<'_>, Error> {
 
 /// Writes the document and reports what the caller should know (tracked changes accepted, and so on).
 pub fn merge_with_report(doc: &Document) -> Result<(Vec<u8>, MergeReport), Error> {
+    bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
     let (meta, real) = split_meta(doc)?;
     let wp = meta
         .as_ref()

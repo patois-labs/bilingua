@@ -8,17 +8,41 @@
 //!
 //! JSON shape: `Inline` and `TagKind` serialise exactly like `catcore::Inline` and `catcore::TagKind`
 //! (`{"text": ".."}` / `{"tag": {"id", "kind": "open|close|standalone", "display"}}`), so one editor UI shows
-//! bilingual files (catcore) and source files (Bilingua) the same way.
+//! bilingual files (catcore) and source files (Bilingua) the same way. Every field added since is optional and
+//! left out of the JSON when empty: a tag's `free` flag, a segment's `origin`, a unit's `notes` and `lock_reason`,
+//! a skeleton's `parser`.
+//!
+//! Bilingual files (XLIFF and the like) use the same model: a segment may carry a target, a state and an origin
+//! (with a match percentage), and a unit may carry notes and a lock reason. Monolingual formats leave them empty.
+//!
+//! [`locos`] converts inline codes to and from the text tokens Localization OS uses, one token per tag.
 
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
+
+pub mod b64;
+pub mod locos;
 
 /// One piece of segment content, in logical order.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Inline {
     Text(String),
-    Tag { id: String, kind: TagKind, display: String },
+    /// An inline code. `free` is true for a standalone code that names its argument (`%1$s`, `{name}`, `{0}`, an
+    /// XLIFF `<x id>` or `<ph id>`): a translation may move it, because the writer finds it again by `id`. It is
+    /// false for markup and for unnumbered placeholders (`%s`), whose order is the argument order. Only a
+    /// standalone code can be free.
+    Tag {
+        id: String,
+        kind: TagKind,
+        display: String,
+        #[serde(default, skip_serializing_if = "is_false")]
+        free: bool,
+    },
+}
+
+fn is_false(b: &bool) -> bool {
+    !*b
 }
 
 impl Inline {
@@ -26,7 +50,15 @@ impl Inline {
         Inline::Text(s.into())
     }
     pub fn tag(id: impl Into<String>, kind: TagKind, display: impl Into<String>) -> Inline {
-        Inline::Tag { id: id.into(), kind, display: display.into() }
+        Inline::Tag { id: id.into(), kind, display: display.into(), free: false }
+    }
+    /// A standalone code that may move freely in the target (see [`Inline::Tag`]).
+    pub fn free_tag(id: impl Into<String>, display: impl Into<String>) -> Inline {
+        Inline::Tag { id: id.into(), kind: TagKind::Standalone, display: display.into(), free: true }
+    }
+    /// True for a free-order standalone code.
+    pub fn is_free(&self) -> bool {
+        matches!(self, Inline::Tag { free: true, .. })
     }
 }
 
@@ -49,14 +81,115 @@ pub struct CodeData {
     pub label: Option<String>,
 }
 
+/// Where a segment is in its life, from untouched to signed off. Monolingual files only use `New`, `Draft`,
+/// `Translated` and `Confirmed`; bilingual files and review workflows use the rest.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub enum SegState {
+    /// No target yet.
+    #[default]
+    #[serde(rename = "new")]
+    New,
+    /// A target exists but nobody accepted it (machine output, TM match, work in progress).
+    #[serde(rename = "draft")]
+    Draft,
+    /// The translator accepted the target.
+    #[serde(rename = "translated")]
+    Translated,
+    /// Confirmed or approved by the translator (XLIFF 2 `final`, Trados `ApprovedTranslation`).
+    #[serde(rename = "confirmed")]
+    Confirmed,
+    /// A reviewer checked it.
+    #[serde(rename = "reviewed")]
+    Reviewed,
+    /// Final approval (XLIFF 1.2 `signed-off`).
+    #[serde(rename = "signed-off")]
+    SignedOff,
+    /// A reviewer sent it back; it needs work again.
+    #[serde(rename = "rejected")]
+    Rejected,
+    /// Frozen: nobody edits it (context match, project lock).
+    #[serde(rename = "locked")]
+    Locked,
+}
+
+impl SegState {
+    /// Position in the life cycle, used when segments are joined (the joined segment is as far along as its
+    /// least advanced part). `Rejected` ranks just above `New`: it has a target but needs work.
+    pub fn rank(self) -> u8 {
+        match self {
+            SegState::New => 0,
+            SegState::Rejected => 1,
+            SegState::Draft => 2,
+            SegState::Translated => 3,
+            SegState::Confirmed => 4,
+            SegState::Reviewed => 5,
+            SegState::SignedOff => 6,
+            SegState::Locked => 7,
+        }
+    }
+
+    /// Inverse of [`SegState::rank`]; anything above the top rank is `Locked`.
+    pub fn from_rank(r: u8) -> SegState {
+        match r {
+            0 => SegState::New,
+            1 => SegState::Rejected,
+            2 => SegState::Draft,
+            3 => SegState::Translated,
+            4 => SegState::Confirmed,
+            5 => SegState::Reviewed,
+            6 => SegState::SignedOff,
+            _ => SegState::Locked,
+        }
+    }
+
+    /// True when a person accepted the target (translated or further along).
+    pub fn is_accepted(self) -> bool {
+        self.rank() >= SegState::Translated.rank()
+    }
+}
+
+/// Where a segment's target came from.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
-pub enum SegState {
+pub enum OriginKind {
+    /// Translation memory.
+    Tm,
+    /// Machine translation engine.
+    Mt,
+    /// Language model translation or post-edit.
+    Ai,
+    /// Typed by a person.
+    Human,
+    /// Anything else; `Origin::name` says more. An unknown kind in a JSON file also reads as `Other`.
     #[default]
-    New,
-    Draft,
-    Translated,
-    Confirmed,
+    #[serde(other)]
+    Other,
+}
+
+/// How a target came to be, with the match percentage when it came from memory.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Origin {
+    pub kind: OriginKind,
+    /// Engine, memory or person: "Acme TM", "engine-2", "ana". Free text.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    /// Match percentage as the file states it (0 to 100; some tools write 101 for a context match).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub match_pct: Option<u8>,
+}
+
+impl Origin {
+    pub fn new(kind: OriginKind) -> Origin {
+        Origin { kind, name: None, match_pct: None }
+    }
+    pub fn with_match(mut self, pct: u8) -> Origin {
+        self.match_pct = Some(pct);
+        self
+    }
+    pub fn with_name(mut self, name: impl Into<String>) -> Origin {
+        self.name = Some(name.into());
+        self
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -69,6 +202,20 @@ pub struct Segment {
     pub target: Vec<Inline>,
     #[serde(default)]
     pub state: SegState,
+    /// Where the target came from. `None` for monolingual files and for targets nobody labelled.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub origin: Option<Origin>,
+}
+
+/// A comment on a unit: a translator query, a developer instruction, a reviewer remark.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Note {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub author: Option<String>,
+    pub text: String,
+    /// Kind as the file has it: "comment", "instruction", "developer", "reviewer", ... Free text.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub kind: Option<String>,
 }
 
 /// What helps a translator, an AI lane or a preview understand a unit.
@@ -112,6 +259,13 @@ pub struct Unit {
     /// False for content shown for context only (locked).
     #[serde(default = "yes")]
     pub translate: bool,
+    /// Comments attached to the unit in a bilingual file. (Source files keep theirs in `context.notes`.)
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub notes: Vec<Note>,
+    /// Why the unit is locked ("context match", "locked by the project"). Free text, usually with
+    /// `translate == false`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lock_reason: Option<String>,
 }
 
 fn yes() -> bool {
@@ -123,12 +277,14 @@ impl Unit {
     pub fn new(id: impl Into<String>, source: Vec<Inline>) -> Unit {
         let id = id.into();
         Unit {
-            segments: vec![Segment { id: id.clone(), source, target: vec![], state: SegState::New }],
+            segments: vec![Segment { id: id.clone(), source, target: vec![], state: SegState::New, origin: None }],
             id,
             separators: vec![],
             codes: BTreeMap::new(),
             context: UnitContext::default(),
             translate: true,
+            notes: vec![],
+            lock_reason: None,
         }
     }
 
@@ -194,8 +350,8 @@ pub enum SkelPart {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum ZipData {
-    /// Copied unchanged.
-    Raw(Vec<u8>),
+    /// Copied unchanged. In JSON this is a base64 string; the old array-of-integers form still reads.
+    Raw(#[serde(with = "b64")] Vec<u8>),
     /// A text entry rebuilt from parts.
     Parts(Vec<SkelPart>),
 }
@@ -206,14 +362,93 @@ pub struct ZipEntry {
     pub data: ZipData,
 }
 
+/// Which parser made a skeleton: the crate name and its version. A skeleton only fits the parser line that made
+/// it, so `merge` refuses one from an incompatible version (see [`check_parser`]).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ParserInfo {
+    /// The producing crate, e.g. "bilingua-docx".
+    pub name: String,
+    /// Its semver version, e.g. "0.1.0".
+    pub version: String,
+}
+
+impl ParserInfo {
+    pub fn new(name: impl Into<String>, version: impl Into<String>) -> ParserInfo {
+        ParserInfo { name: name.into(), version: version.into() }
+    }
+
+    /// True when a skeleton made by `self` can be written by `current`: same crate and the same compatibility
+    /// line. The line is the major version, or the minor version while the major is 0 (semver for 0.x).
+    pub fn compatible_with(&self, current: &ParserInfo) -> bool {
+        self.name == current.name && line(&self.version).is_some() && line(&self.version) == line(&current.version)
+    }
+}
+
+fn line(v: &str) -> Option<(u64, u64)> {
+    let mut it = v.split(['.', '-', '+']);
+    let major: u64 = it.next()?.parse().ok()?;
+    if major > 0 {
+        return Some((major, 0));
+    }
+    let minor: u64 = it.next()?.parse().ok()?;
+    Some((0, minor))
+}
+
+/// The producing parser of the running crate: `parser_info!()` expands to a [`ParserInfo`] with the calling
+/// crate's name and version.
+#[macro_export]
+macro_rules! parser_info {
+    () => {
+        $crate::ParserInfo::new(env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION"))
+    };
+}
+
+/// Refuses a document whose skeleton came from an incompatible parser. A skeleton with no record (written
+/// before parser versions existed) is accepted.
+pub fn check_parser(doc: &Document, current: &ParserInfo) -> Result<(), Error> {
+    match doc.skeleton.parser() {
+        Some(found) if !found.compatible_with(current) => Err(Error::ParserVersion {
+            found: format!("{} {}", found.name, found.version),
+            expected: format!("{} {}", current.name, current.version),
+        }),
+        _ => Ok(()),
+    }
+}
+
 /// Everything in the file that is not translatable text.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Skeleton {
     /// A text file: parts in order. `encoding` is what the writer must produce ("utf-8", "utf-8-bom", ...).
-    Text { parts: Vec<SkelPart>, encoding: String },
+    Text {
+        parts: Vec<SkelPart>,
+        encoding: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        parser: Option<ParserInfo>,
+    },
     /// A zip container (DOCX, XLSX, PPTX, ODF, IDML): entries in their original order.
-    Zip { entries: Vec<ZipEntry> },
+    Zip {
+        entries: Vec<ZipEntry>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        parser: Option<ParserInfo>,
+    },
+}
+
+impl Skeleton {
+    /// A text skeleton stamped with the producing parser.
+    pub fn text(parts: Vec<SkelPart>, encoding: impl Into<String>, parser: ParserInfo) -> Skeleton {
+        Skeleton::Text { parts, encoding: encoding.into(), parser: Some(parser) }
+    }
+    /// A zip skeleton stamped with the producing parser.
+    pub fn zip(entries: Vec<ZipEntry>, parser: ParserInfo) -> Skeleton {
+        Skeleton::Zip { entries, parser: Some(parser) }
+    }
+    /// The parser that made this skeleton, if recorded.
+    pub fn parser(&self) -> Option<&ParserInfo> {
+        match self {
+            Skeleton::Text { parser, .. } | Skeleton::Zip { parser, .. } => parser.as_ref(),
+        }
+    }
 }
 
 /// How finely units are split into segments.
@@ -334,6 +569,8 @@ pub enum Error {
     InventedTag(String),
     #[error("tag {0} appears more often than in the source")]
     DuplicatedTag(String),
+    #[error("this skeleton was made by {found}, but this is {expected}; open the file again with the current parser")]
+    ParserVersion { found: String, expected: String },
     #[error("cannot write: {0}")]
     Write(String),
     #[error(transparent)]
@@ -380,8 +617,8 @@ mod tests {
     fn output_joins_segments_and_falls_back_to_source() {
         let mut u = Unit::new("p1", vec![]);
         u.segments = vec![
-            Segment { id: "p1#1".into(), source: vec![Inline::text("One.")], target: vec![Inline::text("Uno.")], state: SegState::Draft },
-            Segment { id: "p1#2".into(), source: vec![Inline::text("Two.")], target: vec![], state: SegState::New },
+            Segment { id: "p1#1".into(), source: vec![Inline::text("One.")], target: vec![Inline::text("Uno.")], state: SegState::Draft, origin: None },
+            Segment { id: "p1#2".into(), source: vec![Inline::text("Two.")], target: vec![], state: SegState::New, origin: None },
         ];
         u.separators = vec![" ".into()];
         assert_eq!(u.output(), vec![Inline::text("Uno. Two.")]);
@@ -397,7 +634,7 @@ mod tests {
             target_lang: None,
             granularity: Granularity::Paragraph,
             units: vec![Unit::new("u1", vec![Inline::tag("1", TagKind::Open, "<b>"), Inline::text("x"), Inline::tag("1", TagKind::Close, "</b>")])],
-            skeleton: Skeleton::Text { parts: vec![SkelPart::Unit(0)], encoding: "utf-8".into() },
+            skeleton: Skeleton::Text { parts: vec![SkelPart::Unit(0)], encoding: "utf-8".into(), parser: None },
         };
         assert!(d.set_target("u1", vec![Inline::text("y")]).is_ok());
         assert!(matches!(d.set_target("u1", vec![Inline::tag("2", TagKind::Open, "<i>")]), Err(Error::InventedTag(_))));

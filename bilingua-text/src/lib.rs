@@ -81,12 +81,13 @@ impl Filter for TextFilter {
             target_lang: opts.target_lang.clone(),
             granularity: opts.granularity,
             units,
-            skeleton: Skeleton::Text { parts, encoding: encoding.into() },
+            skeleton: Skeleton::text(parts, encoding, bilingua_model::parser_info!()),
         })
     }
 
     fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
-        let Skeleton::Text { parts, encoding } = &doc.skeleton else {
+        bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
+        let Skeleton::Text { parts, encoding, .. } = &doc.skeleton else {
             return Err(Error::Write("txt needs a text skeleton".into()));
         };
         let mut out: Vec<u8> = Vec::new();
@@ -236,7 +237,7 @@ mod tests {
         let mut b = vec![0xEF, 0xBB, 0xBF];
         b.extend_from_slice("Hola.\n".as_bytes());
         let d = extract(&b);
-        assert_eq!(d.skeleton, Skeleton::Text { parts: d_parts(&d), encoding: "utf-8-bom".into() });
+        assert_eq!(d.skeleton, Skeleton::text(d_parts(&d), "utf-8-bom", parser_info!()));
         assert_eq!(TextFilter.merge(&d).unwrap(), b);
         // without a BOM none is added
         let d = extract(b"Hola.\n");
@@ -254,10 +255,10 @@ mod tests {
     fn translation_replaces_the_unit_and_keeps_line_breaks() {
         let mut d = extract("Hello\nworld\n\nBye.\n".as_bytes());
         let src = d.units[0].source();
-        let Inline::Tag { id, kind, display } = src[1].clone() else { panic!() };
+        let Inline::Tag { id, kind, display, free } = src[1].clone() else { panic!() };
         d.set_target(
             "p1",
-            vec![Inline::text("Hola"), Inline::Tag { id, kind, display }, Inline::text("mundo")],
+            vec![Inline::text("Hola"), Inline::Tag { id, kind, display, free }, Inline::text("mundo")],
         )
         .unwrap();
         d.set_target("p2", vec![Inline::text("Adi\u{f3}s.")]).unwrap();
@@ -297,7 +298,7 @@ mod tests {
     #[test]
     fn wrong_skeleton_cannot_be_written() {
         let mut d = extract(b"a");
-        d.skeleton = Skeleton::Zip { entries: vec![] };
+        d.skeleton = Skeleton::Zip { entries: vec![], parser: None };
         assert!(matches!(TextFilter.merge(&d), Err(Error::Write(_))));
     }
 }
