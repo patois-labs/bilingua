@@ -88,6 +88,7 @@ fn every_tag_maps_to_exactly_one_locos_token_and_back() {
                         assert_eq!(text.matches('\u{27E6}').count(), n_tags, "{name} {}: {text:?}", s.id);
                         assert_eq!(text.matches('\u{27E7}').count(), n_tags, "{name} {}", s.id);
                         assert_eq!(from_locos_text(&text, &map), want, "{name} {} did not round trip", s.id);
+                        assert!(locos_well_formed(&text), "{name} {}: LocOS would call {text:?} malformed", s.id);
                         // The map survives JSON, as LocOS stores it.
                         let json = serde_json::to_string(&map).unwrap();
                         let back: bilingua_model::locos::LocosMap = serde_json::from_str(&json).unwrap();
@@ -105,6 +106,22 @@ fn every_tag_maps_to_exactly_one_locos_token_and_back() {
     }
     assert!(tags_seen > 100, "the corpus should exercise many tags, saw {tags_seen}");
     assert!(free_seen > 0, "no free placeholder in the corpus");
+}
+
+/// LocOS `placeholders_well_formed`: paired tokens nest by number; `x` and `p` tokens never pair.
+fn locos_well_formed(t: &str) -> bool {
+    let mut stack = Vec::new();
+    for tok in t.split('\u{27E6}').skip(1) {
+        let tok = tok.split('\u{27E7}').next().unwrap_or_default();
+        if let Some(rest) = tok.strip_prefix('/') {
+            if stack.pop().as_deref() != Some(rest.trim_start_matches(|c: char| c.is_ascii_lowercase())) {
+                return false;
+            }
+        } else if !tok.starts_with(['x', 'p']) {
+            stack.push(tok.trim_start_matches(|c: char| c.is_ascii_lowercase()).to_string());
+        }
+    }
+    stack.is_empty()
 }
 
 fn tags_of(d: &Document) -> Vec<(String, bool)> {

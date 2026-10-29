@@ -9,6 +9,11 @@
 //! | `Close` (matches an `Open`)   | `\u{27E6}/g1\u{27E7}`  | same number and letter as its `Open` |
 //! | `Standalone`                  | `\u{27E6}x1\u{27E7}`   | `x`, its order matters |
 //! | `Standalone` with `free`      | `\u{27E6}p1\u{27E7}`   | `p`, may move in the target |
+//! | `Open` or `Close` with no partner, or crossing another pair | `\u{27E6}x1\u{27E7}` | `x`, like LocOS's own begin and end codes (`<bpt>`, `<ept>`, `<it>`) |
+//!
+//! Pairs are matched by id with proper nesting, so the text is always well formed for LocOS's tag checks
+//! (`placeholders_well_formed`): an unclosed open, a close with no open and the inner side of crossed pairs are
+//! point codes whose order matters. One counter numbers every token, so numbers never repeat in a unit.
 //!
 //! The map ([`LocosMap`]) is keyed by the token number as text, like `inline_map`, and holds what is needed to
 //! rebuild the exact tag: its id, its displays and its free flag. The conversion back reads the kind from the
@@ -47,6 +52,9 @@ pub struct LocosCode {
     /// Standalone code that may move freely.
     #[serde(default)]
     pub free: bool,
+    /// For an `x` token that stands for an `Open` or `Close` with no partner: which side it is.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub unpaired: Option<TagKind>,
 }
 
 /// Token number (as text, from "1") to the tag it stands for.
@@ -65,54 +73,84 @@ pub fn to_locos_text_as(inl: &[Inline], pair_letter: char) -> (String, LocosMap)
     } else {
         PAIR_LETTER
     };
+    let partner = pairs(inl);
     let mut text = String::new();
     let mut map = LocosMap::new();
-    // (tag id, token number, letter) of the pairs still open
-    let mut open: Vec<(String, usize, char)> = Vec::new();
+    // token number of each paired Open, by its position in `inl`
+    let mut open_num: BTreeMap<usize, usize> = BTreeMap::new();
     let mut n = 0usize;
-    for i in inl {
-        match i {
-            Inline::Text(t) => text.push_str(t),
-            Inline::Tag { id, kind, display, free } => match kind {
-                TagKind::Open => {
-                    n += 1;
-                    open.push((id.clone(), n, pair));
-                    map.insert(
-                        n.to_string(),
-                        LocosCode { id: id.clone(), letter: pair, open: Some(display.clone()), close: None, free: false },
-                    );
-                    text.push_str(&format!("{OPEN}{pair}{n}{CLOSE}"));
+    for (pos, i) in inl.iter().enumerate() {
+        let (id, kind, display, free) = match i {
+            Inline::Text(t) => {
+                text.push_str(t);
+                continue;
+            }
+            Inline::Tag { id, kind, display, free } => (id, kind, display, free),
+        };
+        let code = |letter, open: Option<&String>, close: Option<&String>, free, unpaired| LocosCode {
+            id: id.clone(),
+            letter,
+            open: open.cloned(),
+            close: close.cloned(),
+            free,
+            unpaired,
+        };
+        match (kind, partner[pos]) {
+            (TagKind::Open, Some(_)) => {
+                n += 1;
+                open_num.insert(pos, n);
+                map.insert(n.to_string(), code(pair, Some(display), None, false, None));
+                text.push_str(&format!("{OPEN}{pair}{n}{CLOSE}"));
+            }
+            (TagKind::Close, Some(o)) => {
+                let num = open_num.get(&o).copied().unwrap_or_default();
+                if let Some(c) = map.get_mut(&num.to_string()) {
+                    c.close = Some(display.clone());
                 }
-                TagKind::Close => {
-                    if let Some(pos) = open.iter().rposition(|(oid, _, _)| oid == id) {
-                        let (_, num, letter) = open.remove(pos);
-                        if let Some(c) = map.get_mut(&num.to_string()) {
-                            c.close = Some(display.clone());
-                        }
-                        text.push_str(&format!("{OPEN}/{letter}{num}{CLOSE}"));
-                    } else {
-                        // A close with no open before it gets a number of its own.
-                        n += 1;
-                        map.insert(
-                            n.to_string(),
-                            LocosCode { id: id.clone(), letter: pair, open: None, close: Some(display.clone()), free: false },
-                        );
-                        text.push_str(&format!("{OPEN}/{pair}{n}{CLOSE}"));
-                    }
-                }
-                TagKind::Standalone => {
-                    n += 1;
-                    let letter = if *free { FREE_LETTER } else { POINT_LETTER };
-                    map.insert(
-                        n.to_string(),
-                        LocosCode { id: id.clone(), letter, open: Some(display.clone()), close: None, free: *free },
-                    );
-                    text.push_str(&format!("{OPEN}{letter}{n}{CLOSE}"));
-                }
-            },
+                text.push_str(&format!("{OPEN}/{pair}{num}{CLOSE}"));
+            }
+            (TagKind::Open, None) => {
+                n += 1;
+                map.insert(n.to_string(), code(POINT_LETTER, Some(display), None, false, Some(TagKind::Open)));
+                text.push_str(&format!("{OPEN}{POINT_LETTER}{n}{CLOSE}"));
+            }
+            (TagKind::Close, None) => {
+                n += 1;
+                map.insert(n.to_string(), code(POINT_LETTER, None, Some(display), false, Some(TagKind::Close)));
+                text.push_str(&format!("{OPEN}{POINT_LETTER}{n}{CLOSE}"));
+            }
+            (TagKind::Standalone, _) => {
+                n += 1;
+                let letter = if *free { FREE_LETTER } else { POINT_LETTER };
+                map.insert(n.to_string(), code(letter, Some(display), None, *free, None));
+                text.push_str(&format!("{OPEN}{letter}{n}{CLOSE}"));
+            }
         }
     }
     (text, map)
+}
+
+/// For each position in `inl`, the position of its partner when it is an `Open` or `Close` in a properly nested
+/// pair with the same id. A close whose open is not on top of the stack closes it and leaves the opens above it
+/// unpaired; a close whose id is not open at all is unpaired.
+fn pairs(inl: &[Inline]) -> Vec<Option<usize>> {
+    let mut partner = vec![None; inl.len()];
+    let mut stack: Vec<(&str, usize)> = Vec::new();
+    for (pos, i) in inl.iter().enumerate() {
+        match i {
+            Inline::Tag { id, kind: TagKind::Open, .. } => stack.push((id.as_str(), pos)),
+            Inline::Tag { id, kind: TagKind::Close, .. } => {
+                if let Some(at) = stack.iter().rposition(|(oid, _)| oid == id) {
+                    let (_, o) = stack[at];
+                    stack.truncate(at);
+                    partner[o] = Some(pos);
+                    partner[pos] = Some(o);
+                }
+            }
+            _ => {}
+        }
+    }
+    partner
 }
 
 /// What was wrong with a token in LocOS text.
@@ -216,11 +254,25 @@ fn resolve(map: &LocosMap, closing: bool, letter: Option<char>, num: &str) -> Re
         if closing || letter.is_some_and(|l| l != POINT_LETTER && l != FREE_LETTER) {
             return Resolved::Mismatch;
         }
-        return Resolved::Tag(Inline::Tag {
-            id: code.id.clone(),
-            kind: TagKind::Standalone,
-            display: code.open.clone().unwrap_or_default(),
-            free: code.free,
+        return Resolved::Tag(match code.unpaired {
+            Some(TagKind::Close) => Inline::Tag {
+                id: code.id.clone(),
+                kind: TagKind::Close,
+                display: code.close.clone().unwrap_or_default(),
+                free: false,
+            },
+            Some(TagKind::Open) => Inline::Tag {
+                id: code.id.clone(),
+                kind: TagKind::Open,
+                display: code.open.clone().unwrap_or_default(),
+                free: false,
+            },
+            _ => Inline::Tag {
+                id: code.id.clone(),
+                kind: TagKind::Standalone,
+                display: code.open.clone().unwrap_or_default(),
+                free: code.free,
+            },
         });
     }
     if letter.is_some_and(|l| l == POINT_LETTER || l == FREE_LETTER) {
@@ -327,6 +379,46 @@ mod tests {
             Inline::text("y"),
         ];
         let (t, map) = to_locos_text(&s);
+        assert_eq!(t, "\u{27E6}x1\u{27E7}x\u{27E6}x2\u{27E7}y");
+        assert!(well_formed(&t));
+        assert_eq!(map["1"].unpaired, Some(TagKind::Close));
+        assert_eq!(from_locos_text(&t, &map), s);
+        // The map keeps the side through JSON.
+        let back: LocosMap = serde_json::from_str(&serde_json::to_string(&map).unwrap()).unwrap();
+        assert_eq!(from_locos_text(&t, &back), s);
+    }
+
+    /// LocOS `placeholders_well_formed`: pairs nest by number, point letters (x, p) never pair.
+    fn well_formed(t: &str) -> bool {
+        let mut stack = Vec::new();
+        for tok in t.split('\u{27E6}').skip(1) {
+            let tok = tok.split('\u{27E7}').next().unwrap_or_default();
+            if let Some(rest) = tok.strip_prefix('/') {
+                let key = rest.trim_start_matches(|c: char| c.is_ascii_lowercase());
+                if stack.pop() != Some(key.to_string()) {
+                    return false;
+                }
+            } else if !tok.starts_with(['x', 'p']) {
+                stack.push(tok.trim_start_matches(|c: char| c.is_ascii_lowercase()).to_string());
+            }
+        }
+        stack.is_empty()
+    }
+
+    #[test]
+    fn crossed_pairs_become_well_formed() {
+        let s = vec![
+            Inline::tag("a", TagKind::Open, "<b>"),
+            Inline::text("1"),
+            Inline::tag("b", TagKind::Open, "<i>"),
+            Inline::text("2"),
+            Inline::tag("a", TagKind::Close, "</b>"),
+            Inline::text("3"),
+            Inline::tag("b", TagKind::Close, "</i>"),
+        ];
+        let (t, map) = to_locos_text(&s);
+        assert_eq!(t, "\u{27E6}g1\u{27E7}1\u{27E6}x2\u{27E7}2\u{27E6}/g1\u{27E7}3\u{27E6}x3\u{27E7}");
+        assert!(well_formed(&t));
         assert_eq!(from_locos_text(&t, &map), s);
     }
 
@@ -344,6 +436,7 @@ mod tests {
         ];
         let (t, map) = to_locos_text(&s);
         assert_eq!(map.len(), 3);
+        assert!(well_formed(&t));
         assert_eq!(from_locos_text(&t, &map), s);
     }
 
