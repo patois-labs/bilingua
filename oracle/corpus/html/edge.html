@@ -1,0 +1,37 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN">
+<HTML lang=en>
+<HEAD><TITLE>Edge cases &amp; more</TITLE>
+<meta property="og:title" content="Open graph title">
+<meta name="keywords" content="bread, bakery">
+<base href="/">
+<!--[if IE]><p>Old browser text</p><![endif]-->
+</HEAD>
+<BODY>
+<P CLASS=intro>Uppercase tags and <A HREF=/x.html TITLE=unquoted>unquoted attributes</A>.
+<P>Second paragraph closed by the next one.
+<noscript>Please enable scripts.</noscript>
+<textarea name=t>Default text in a textarea</textarea>
+<button type=button aria-label="Close the dialog">X</button>
+<input type=submit value="Send order">
+<svg width="10" height="10"><title>Loaf icon</title><text x="0" y="5">SVG text</text></svg>
+<iframe src="x.html" title="Embedded menu"></iframe>
+<p>Ruby: <ruby>漢<rt>kan</rt></ruby> and a <abbr title="Kilogram">kg</abbr> value.</p>
+<p>XHTML break<br/>second line<br />third line.</p>
+<p dir="rtl" lang="ar">مرحبا بكم في مخبز لومن.</p>
+<p>日本語の段落です。パンは毎朝焼きます。</p>
+<p>한국어 문단입니다. 빵은 매일 아침 구워집니다.</p>
+<p class="notranslate">Marked notranslate by class</p>
+<p>Text with <span translate="no">DoNotTranslate</span> inside.</p>
+<table><thead><tr><th scope="col">Name</th></tr></thead><tbody><tr><td>Rye</td></tr></tbody><tfoot><tr><td>Total</td></tr></tfoot></table>
+<dl><dt>Term</dt><dd>Definition text</dd></dl>
+<blockquote>Quoted text<cite>Someone</cite></blockquote>
+<p>A very long line of text that goes on and on, with several sentences. Here is the second one. And a third, with a question? Yes! Done.</p>
+<p>&lt;script&gt; as text, 5 &gt; 3, &quot;quotes&quot;, caf&eacute;, &#169; sign.</p>
+<script type="text/template"><p>Template text inside script</p></script>
+<style>p::before { content: "css text"; }</style>
+<a href="x"><img src="a.png" alt="Linked image alt"></a>
+<label>Name <input name=n placeholder="Your name"></label>
+<details><summary>More info</summary>Hidden details text.</details>
+<span>Bare span text</span> trailing text after span.
+</BODY>
+</HTML>

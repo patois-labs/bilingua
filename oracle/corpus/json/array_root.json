@@ -1,0 +1,9 @@
+[
+    "First",
+    "Second",
+    {
+        "k": "Nested value"
+    },
+    7,
+    "Third"
+]

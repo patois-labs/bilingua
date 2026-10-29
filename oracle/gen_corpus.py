@@ -342,7 +342,77 @@ def make_html():
 </body>
 </html>
 """)
-    w("html/fragment.html", "<h2>Quick note</h2>\n<p>Unclosed paragraph with <b>bold\n<p>Second paragraph &#8212; numeric entity &#x263A; here.\n<ul><li>One<li>Two</ul>\n")
+    w("html/edge.html", """<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN">
+<HTML lang=en>
+<HEAD><TITLE>Edge cases &amp; more</TITLE>
+<meta property="og:title" content="Open graph title">
+<meta name="keywords" content="bread, bakery">
+<base href="/">
+<!--[if IE]><p>Old browser text</p><![endif]-->
+</HEAD>
+<BODY>
+<P CLASS=intro>Uppercase tags and <A HREF=/x.html TITLE=unquoted>unquoted attributes</A>.
+<P>Second paragraph closed by the next one.
+<noscript>Please enable scripts.</noscript>
+<textarea name=t>Default text in a textarea</textarea>
+<button type=button aria-label="Close the dialog">X</button>
+<input type=submit value="Send order">
+<svg width="10" height="10"><title>Loaf icon</title><text x="0" y="5">SVG text</text></svg>
+<iframe src="x.html" title="Embedded menu"></iframe>
+<p>Ruby: <ruby>漢<rt>kan</rt></ruby> and a <abbr title="Kilogram">kg</abbr> value.</p>
+<p>XHTML break<br/>second line<br />third line.</p>
+<p dir="rtl" lang="ar">مرحبا بكم في مخبز لومن.</p>
+<p>日本語の段落です。パンは毎朝焼きます。</p>
+<p>한국어 문단입니다. 빵은 매일 아침 구워집니다.</p>
+<p class="notranslate">Marked notranslate by class</p>
+<p>Text with <span translate="no">DoNotTranslate</span> inside.</p>
+<table><thead><tr><th scope="col">Name</th></tr></thead><tbody><tr><td>Rye</td></tr></tbody><tfoot><tr><td>Total</td></tr></tfoot></table>
+<dl><dt>Term</dt><dd>Definition text</dd></dl>
+<blockquote>Quoted text<cite>Someone</cite></blockquote>
+<p>A very long line of text that goes on and on, with several sentences. Here is the second one. And a third, with a question? Yes! Done.</p>
+<p>&lt;script&gt; as text, 5 &gt; 3, &quot;quotes&quot;, caf&eacute;, &#169; sign.</p>
+<script type="text/template"><p>Template text inside script</p></script>
+<style>p::before { content: "css text"; }</style>
+<a href="x"><img src="a.png" alt="Linked image alt"></a>
+<label>Name <input name=n placeholder="Your name"></label>
+<details><summary>More info</summary>Hidden details text.</details>
+<span>Bare span text</span> trailing text after span.
+</BODY>
+</HTML>
+""")
+    w("html/structure.html", """<html><body>
+<ul>
+  <li>Parent item text
+    <ul><li>Child one</li><li>Child two with <b>bold</b></li></ul>
+    trailing parent text
+  </li>
+  <li><p>Paragraph inside a list item</p><p>Second paragraph in the item</p></li>
+</ul>
+<div>First line<br>Second line<br>Third line</div>
+<div>Intro text <div>nested block text</div> outro text</div>
+<td>Orphan cell text</td>
+<p>Button inline: <button>Click me</button> and a <label>label text</label> and <select><option>Opt one</option></select> end.</p>
+<a href="/card"><h3>Heading inside a link</h3><p>Paragraph inside a link</p></a>
+<p>
+   Multi-line
+   paragraph   with
+   irregular    spacing.
+</p>
+<h1>Heading with <span class="x">span</span> and <img src="i.png" alt="inline image alt"> image</h1>
+<figure><img src="f.png" alt="Figure alt"><figcaption>Figure caption text</figcaption></figure>
+<p>Sentence one. Sentence two! Sentence three? "Quoted sentence." Last one.</p>
+<p>Emoji and symbols: ☕ © ™ and a non-breaking space.</p>
+<address>Street 1, Town</address>
+<center>Legacy centered text</center>
+<font color="red">Legacy font text</font>
+<p>Unclosed <b>bold and <i>italic</b> mismatch</i> tags.</p>
+</body></html>
+""")
+    # Windows-1252 file with an accent and a euro sign, and a UTF-8 file with a BOM and CRLF line ends.
+    w("html/cp1252.html", ("<html><head><meta http-equiv=\"Content-Type\" content=\"text/html; charset=windows-1252\"><title>Café menú</title></head>"
+                           "<body><p>Café con leche cuesta 2,50 € hoy.</p></body></html>\r\n").encode("cp1252"))
+    w("html/bom_crlf.html", b"\xef\xbb\xbf" + "<html>\r\n<body>\r\n<p>First line\r\nsecond line of the same paragraph.</p>\r\n<p>Another one.</p>\r\n</body>\r\n</html>\r\n".encode("utf-8"))
+    w("html/fragment.html","<h2>Quick note</h2>\n<p>Unclosed paragraph with <b>bold\n<p>Second paragraph &#8212; numeric entity &#x263A; here.\n<ul><li>One<li>Two</ul>\n")
 
 
 def make_md():
@@ -390,6 +460,62 @@ Term[^1] with a footnote.
 """)
 
 
+def make_md_edge():
+    w("md/edge.md", """Setext heading
+==============
+
+Second level
+------------
+
+A line ending with a backslash\\
+next line. Escaped \\* star and \\_ underscore, and a literal &copy; entity.
+
+* [ ] open task
+* [x] done task
+* Item with trailing text <span class="x">inline html</span> here
+
+> Quote with a list:
+>
+> - inner one
+> - inner two
+
+| Left | Center | Right |
+|:-----|:------:|------:|
+| a | b | c |
+| long text cell | **bold cell** | `code cell` |
+
+Reference link [to the guide][guide] and shortcut [guide].
+
+[guide]: https://example.com/guide "Guide title"
+
+Intraword*emphasis*here and snake_case_name and 2 * 3 = 6.
+
+~~~python
+print("fence with tildes")
+~~~
+
+Term
+: Definition style line
+
+<details>
+<summary>HTML summary</summary>
+
+Markdown inside details.
+
+</details>
+
+1) Parenthesis list item
+2) Another one
+
+***Bold italic*** and __bold__ and _italic_.
+
+日本語の段落です。**太字**も含みます。
+
+العربية: مرحبا بكم في *المخبز*.
+
+Final paragraph without newline""")
+
+
 def make_json():
     d = {
         "app": {"title": "Lumen Bakery", "tagline": "Fresh bread every morning"},
@@ -401,7 +527,11 @@ def make_json():
         "unicode": {c: t for c, t in LANGS},
     }
     w("json/strings.json", json.dumps(d, ensure_ascii=False, indent=2) + "\n")
-    w("json/compact.json", json.dumps({"a": "One", "b": ["Two", "Three"], "c": {"d": "Four"}}, ensure_ascii=False))
+    w("json/array_root.json", json.dumps(["First", "Second", {"k": "Nested value"}, 7, "Third"], ensure_ascii=False, indent=4) + "\n")
+    w("json/escapes.json", '{\n  "quote": "He said \\"hi\\"",\n  "newline": "Line one\\nLine two",\n  "tab": "A\\tB",\n  "uni": "caf\\u00e9 \\u65e5\\u672c",\n'
+      '  "slash": "a\\/b",\n  "emoji": "Bread \\ud83c\\udf5e",\n  "key with space": "Spaced key value",\n  "": "Empty key value"\n}\n')
+    w("json/bom_crlf.json", b"\xef\xbb\xbf" + b'{\r\n  "a": "Windows line ends",\r\n  "b": "Second"\r\n}\r\n')
+    w("json/compact.json",json.dumps({"a": "One", "b": ["Two", "Three"], "c": {"d": "Four"}}, ensure_ascii=False))
 
 
 def make_po():
@@ -478,9 +608,10 @@ def make_subs():
 def make_txt():
     w("txt/notes.txt", "Lumen Bakery notes\n\nWe open at six. We close at eight.\nThis line wraps onto\nthe next line in the same paragraph.\n\n"
       + "\n\n".join(t for _, t in LANGS) + "\n\n   indented paragraph   \n\nLast line without newline")
-    w("txt/lines.txt", "One line\nAnother line\n\nAfter a blank line\n")
+    w("txt/crlf_bom.txt", b"\xef\xbb\xbf" + "Line one\r\nLine two\r\n\r\nParagraph two — with a dash.\r\n".encode("utf-8"))
+    w("txt/lines.txt","One line\nAnother line\n\nAfter a blank line\n")
 
 
 if __name__ == "__main__":
-    make_docx(); make_xlsx(); make_pptx(); make_html(); make_md(); make_json(); make_po(); make_subs(); make_txt()
+    make_docx(); make_xlsx(); make_pptx(); make_html(); make_md(); make_md_edge(); make_json(); make_po(); make_subs(); make_txt()
     print("corpus written to", OUT)

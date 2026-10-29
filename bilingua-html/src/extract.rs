@@ -10,7 +10,7 @@ use std::collections::{BTreeMap, HashMap};
 pub const INLINE: &[&str] = &[
     "b", "strong", "i", "em", "a", "span", "code", "sup", "sub", "small", "br", "img", "abbr", "mark", "u", "s",
     "cite", "q", "del", "ins", "time", "wbr", "font", "big", "bdi", "bdo", "dfn", "strike", "var", "kbd", "samp",
-    "input", "tt", "data",
+    "input", "tt", "data", "ruby", "rt", "rp", "rb",
 ];
 const PROTECTED: &[&str] = &["code", "kbd", "samp"];
 const SKIP_SUBTREE: &[&str] = &["pre", "template", "svg", "math", "textarea", "script", "style"];

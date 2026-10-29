@@ -1,0 +1,10 @@
+{
+  "quote": "He said \"hi\"",
+  "newline": "Line one\nLine two",
+  "tab": "A\tB",
+  "uni": "caf\u00e9 \u65e5\u672c",
+  "slash": "a\/b",
+  "emoji": "Bread \ud83c\udf5e",
+  "key with space": "Spaced key value",
+  "": "Empty key value"
+}
