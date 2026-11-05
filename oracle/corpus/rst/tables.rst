@@ -1,0 +1,26 @@
+Price list
+==========
+
++--------------+--------------+-----------+
+| Product      | Description  | Price     |
++==============+==============+===========+
+| Sourdough    | Slow ferment | 6.50      |
++--------------+--------------+-----------+
+| Rye loaf     | Dense, dark  | 7.20      |
++--------------+--------------+-----------+
+
+=======  ============================
+Day      Opening hours
+=======  ============================
+Mon      7 AM to 6 PM
+Sat      8 AM to noon, closed after
+         the lunch rush
+=======  ============================
+
+.. list-table:: Delivery zones
+   :header-rows: 1
+
+   * - Zone
+     - Time
+   * - North
+     - 30 minutes

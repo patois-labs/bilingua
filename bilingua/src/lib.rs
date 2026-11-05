@@ -97,6 +97,8 @@ pub fn filters() -> Vec<Box<dyn Filter>> {
         // key-value formats, before the loose sniffers.
         Box::new(bilingua_csv::CsvFilter::default()),
         Box::new(bilingua_csv::TsvFilter::default()),
+        // reStructuredText sniffs loosely (a directive, a role, or an underlined title), so it goes after the strict ones.
+        Box::new(bilingua_rst::Rst),
         // HTML sniffs loosely and plain text accepts any UTF-8, so they go last.
         Box::new(bilingua_html::Html),
         Box::new(bilingua_text::TextFilter),
