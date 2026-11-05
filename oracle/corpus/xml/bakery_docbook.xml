@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<article xmlns="http://docbook.org/ns/docbook" version="5.0" xml:lang="en">
+  <info><title>Bakery guide</title></info>
+  <section>
+    <title>Starter</title>
+    <para>Feed the <emphasis>starter</emphasis> twice a day.<footnote><para>Use rye flour.</para></footnote></para>
+    <programlisting>make starter</programlisting>
+  </section>
+</article>

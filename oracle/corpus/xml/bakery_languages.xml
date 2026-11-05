@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<welcome>
+  <section code="en">
+    <p>Welcome to Lumen Bakery. Fresh bread is ready at six every morning.</p>
+  </section>
+  <section code="es">
+    <p>Bienvenido a Panadería Lumen. El pan fresco está listo a las seis de cada mañana.</p>
+  </section>
+  <section code="fr">
+    <p>Bienvenue à la Boulangerie Lumen. Le pain frais est prêt à six heures chaque matin.</p>
+  </section>
+  <section code="it">
+    <p>Benvenuto al Forno Lumen. Il pane fresco è pronto ogni mattina alle sei.</p>
+  </section>
+  <section code="de">
+    <p>Willkommen in der Bäckerei Lumen. Frisches Brot ist jeden Morgen um sechs Uhr fertig.</p>
+  </section>
+  <section code="nl">
+    <p>Welkom bij Bakkerij Lumen. Vers brood staat elke ochtend om zes uur klaar.</p>
+  </section>
+  <section code="pt">
+    <p>Bem-vindo à Padaria Lumen. O pão fresco fica pronto às seis horas todas as manhãs.</p>
+  </section>
+  <section code="ja">
+    <p>ルーメン・ベーカリーへようこそ。焼きたてのパンは毎朝六時にご用意しています。</p>
+  </section>
+  <section code="zh">
+    <p>欢迎光临流明面包店。新鲜面包每天早上六点出炉。</p>
+  </section>
+  <section code="ko">
+    <p>루멘 베이커리에 오신 것을 환영합니다. 갓 구운 빵은 매일 아침 여섯 시에 준비됩니다.</p>
+  </section>
+  <section code="ar">
+    <p>مرحبا بكم في مخبز لومن. الخبز الطازج جاهز كل صباح في السادسة.</p>
+  </section>
+</welcome>

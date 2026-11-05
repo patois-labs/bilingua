@@ -1,5 +1,5 @@
 [workspace]
-members = ["bilingua-model", "bilingua-zip", "bilingua", "bilingua-seg", "bilingua-text", "bilingua-json", "bilingua-markdown", "bilingua-cli", "bilingua-docx", "bilingua-html", "bilingua-po", "bilingua-subtitle", "bilingua-xlsx", "bilingua-pptx", "bilingua-py", "bilingua-xliff", "bilingua-sdl", "bilingua-strings", "bilingua-toml", "bilingua-properties", "bilingua-resjson", "bilingua-json5", "bilingua-jsmodule", "bilingua-yaml", "bilingua-arb", "bilingua-resx", "bilingua-xaml", "bilingua-dtd", "bilingua-wxl", "bilingua-ftl", "bilingua-xcstrings", "oracle", "bilingua-ini"]
+members = ["bilingua-model", "bilingua-zip", "bilingua", "bilingua-seg", "bilingua-text", "bilingua-json", "bilingua-markdown", "bilingua-cli", "bilingua-docx", "bilingua-html", "bilingua-po", "bilingua-subtitle", "bilingua-xlsx", "bilingua-pptx", "bilingua-py", "bilingua-xliff", "bilingua-sdl", "bilingua-strings", "bilingua-toml", "bilingua-properties", "bilingua-resjson", "bilingua-json5", "bilingua-jsmodule", "bilingua-yaml", "bilingua-arb", "bilingua-resx", "bilingua-xaml", "bilingua-dtd", "bilingua-wxl", "bilingua-ftl", "bilingua-xcstrings", "bilingua-xml", "oracle", "bilingua-ini"]
 resolver = "2"
 
 [workspace.package]
@@ -36,6 +36,7 @@ bilingua-resx = { path = "bilingua-resx" }
 bilingua-wxl = { path = "bilingua-wxl" }
 bilingua-jsmodule = { path = "bilingua-jsmodule" }
 bilingua-xcstrings = { path = "bilingua-xcstrings" }
+bilingua-xml = { path = "bilingua-xml" }
 bilingua-yaml = { path = "bilingua-yaml" }
 bilingua-arb = { path = "bilingua-arb" }
 bilingua-dtd = { path = "bilingua-dtd" }

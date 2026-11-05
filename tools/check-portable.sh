@@ -5,7 +5,7 @@
 # Run from anywhere. Exit 0 = portable.
 set -u
 cd "$(dirname "$0")/.."
-CRATES="model zip seg text json markdown html po subtitle docx xlsx pptx xliff sdl ini strings toml properties resjson json5 jsmodule yaml arb resx xaml dtd wxl ftl xcstrings"
+CRATES="model zip seg text json markdown html po subtitle docx xlsx pptx xliff sdl ini strings toml properties resjson json5 jsmodule yaml arb resx xaml dtd wxl ftl xcstrings xml"
 PKGS=""
 for c in $CRATES; do PKGS="$PKGS -p bilingua-$c"; done
 fail=0
