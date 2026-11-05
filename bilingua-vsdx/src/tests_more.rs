@@ -317,7 +317,8 @@ proptest! {
 
     #[test]
     fn random_text_round_trips(t in "[^\u{0}-\u{8}\u{b}\u{c}\u{e}-\u{1f}\u{fffe}\u{ffff}]{1,60}") {
-        prop_assume!(t.chars().any(char::is_alphanumeric));
+        // Python's letter test, as the extractor uses (Rust's is_alphanumeric also takes some combining marks)
+        prop_assume!(bilingua_model::py_has_alnum(&t));
         let src = package();
         let mut doc = extract(&src);
         doc.set_target("page2-1", vec![Inline::text(t.clone())]).unwrap();
