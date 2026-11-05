@@ -162,6 +162,7 @@ fn crate_of(format: &str) -> &'static str {
         "ini" => "bilingua-ini",
         "strings" => "bilingua-strings",
         "toml" => "bilingua-toml",
+        "properties" => "bilingua-properties",
         "srt" | "vtt" => "bilingua-subtitle",
         "txt" | "text" => "bilingua-text",
         "xliff" | "sdlxliff" | "mqxliff" | "mxliff" => "bilingua-xliff",
