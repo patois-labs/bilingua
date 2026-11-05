@@ -1,32 +1,27 @@
-# bilingua-py
+# bilingua (Python)
 
-Python wheel for the Bilingua engine (PyO3, abi3, Python 3.11 and up). Module name: `bilingua`. Bytes in, bytes out:
-it never touches the file system.
+Python bindings for [Bilingua](https://github.com/patois-labs/bilingua), the file parsers for translation: open a
+source file in any of 85 formats (Word, Excel, PowerPoint, PO, XLIFF, subtitles, software strings and more), get its
+translatable text as segments with the formatting kept as inline tags, set the translations, and get the file back
+in its original format. Bytes in, bytes out: it never touches the file system.
 
-## Build
+    pip install bilingua
 
-Use a venv of your own, never a shared one.
+One wheel (`cp311-abi3`) works for every Python from 3.11 on. Type stubs are included.
 
-Windows (PowerShell):
+```python
+import bilingua
 
-    cd bilingua\bilingua-py
-    py -3.11 -m venv .venv
-    .venv\Scripts\python -m pip install maturin pytest
-    .venv\Scripts\maturin develop --release     # installs into the venv
-    .venv\Scripts\maturin build --release -o dist   # builds dist\bilingua-*.whl
-    .venv\Scripts\python -m pytest
-
-Linux:
-
-    cd bilingua/bilingua-py
-    python3 -m venv .venv
-    .venv/bin/python -m pip install maturin pytest
-    .venv/bin/maturin develop --release
-    .venv/bin/maturin build --release -o dist
-    .venv/bin/python -m pytest
-
-One wheel (`cp311-abi3`) works for every Python from 3.11 on. Plain `cargo test` and `cargo clippy` in `bilingua/`
-also cover this crate (they need a Python install to link against).
+data = open("messages.po", "rb").read()
+doc = bilingua.extract("messages.po", data, source_lang="en", target_lang="es", granularity="sentence")
+for unit in doc["units"]:
+    if not unit["translate"]:
+        continue
+    for seg in unit["segments"]:
+        print(seg["id"], seg["source"])
+        seg["target"] = [{"text": "..."}]      # a list of inlines: {"text": ...} or {"tag": {...}}
+open("messages.es.po", "wb").write(bilingua.merge(doc))
+```
 
 ## API
 
@@ -58,7 +53,7 @@ here.
 Notes: with no targets set, `merge` returns the same bytes for text formats. For zip formats (DOCX, XLSX, PPTX) the
 entries and their contents are identical but the compressed bytes may differ.
 
-## Example: a LocOS-style filter (example only, not the real adapter)
+## Example: a filter adapter in the Localization OS style (an example, not the real adapter)
 
     import bilingua
 
@@ -75,4 +70,30 @@ entries and their contents are identical but the compressed bytes may differ.
 
 ## Not done
 
-Preview (`preview`, `render_segment`) and `resegment` are not exposed. `bilingual` comes from each format's `Filter::bilingual()`. Linux and macOS wheels are untested here (built on Windows only).
+Preview (`preview`, `render_segment`) and `resegment` are not exposed. `bilingual` comes from each format's `Filter::bilingual()`. Wheels are built for Windows x64 and Linux x86_64 (manylinux); on other platforms pip builds from the source
+distribution, which needs a Rust toolchain (1.88 or later).
+
+## Building from source
+
+Use a venv of your own, never a shared one.
+
+Windows (PowerShell):
+
+    cd bilingua\bilingua-py
+    py -3.11 -m venv .venv
+    .venv\Scripts\python -m pip install maturin pytest
+    .venv\Scripts\maturin develop --release     # installs into the venv
+    .venv\Scripts\maturin build --release -o dist   # builds dist\bilingua-*.whl
+    .venv\Scripts\python -m pytest
+
+Linux:
+
+    cd bilingua/bilingua-py
+    python3 -m venv .venv
+    .venv/bin/python -m pip install maturin pytest
+    .venv/bin/maturin develop --release
+    .venv/bin/maturin build --release -o dist
+    .venv/bin/python -m pytest
+
+One wheel (`cp311-abi3`) works for every Python from 3.11 on. Plain `cargo test` and `cargo clippy` in `bilingua/`
+also cover this crate (they need a Python install to link against).

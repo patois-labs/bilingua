@@ -5,9 +5,37 @@ build-backend = "maturin"
 [project]
 name = "bilingua"
 requires-python = ">=3.11"
-description = "Open, segment and rebuild source files for translation (Bilingua engine)"
-license = { text = "Apache-2.0" }
+description = "Open, segment and rebuild source files for translation: 85 file formats, bytes in and bytes out"
+readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
+authors = [{ name = "Patois Labs, LLC" }]
+keywords = ["localization", "translation", "i18n", "l10n", "xliff", "parser"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Rust",
+    "Topic :: Software Development :: Internationalization",
+    "Topic :: Software Development :: Localization",
+    "Topic :: Text Processing",
+    "Typing :: Typed",
+]
 dynamic = ["version"]
+
+[project.urls]
+Homepage = "https://github.com/patois-labs/bilingua"
+Repository = "https://github.com/patois-labs/bilingua"
+Documentation = "https://github.com/patois-labs/bilingua/tree/main/bilingua-py#readme"
+Changelog = "https://github.com/patois-labs/bilingua/blob/main/CHANGELOG.md"
+Issues = "https://github.com/patois-labs/bilingua/issues"
 
 [project.optional-dependencies]
 test = ["pytest"]
