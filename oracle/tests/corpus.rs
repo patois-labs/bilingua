@@ -32,12 +32,18 @@ fn parts(bytes: &[u8]) -> Option<BTreeMap<String, Vec<u8>>> {
 }
 
 /// The plural form a unit stands for: (key, label), or `None` for a unit that is not a plural form. Formats keep it
-/// in `context.extra["plural"]` (PO index, YAML and Rails category) or as `[label]` after the key (Fluent variants).
+/// in `context.extra["plural"]` (PO index, YAML and Rails category), as `[label]` after the key (Fluent variants) or
+/// as the last `/` step of a stringsdict key path (`files_count/count/many`).
 fn plural_label(u: &bilingua::Unit) -> Option<(Option<String>, String)> {
     if let Some(p) = u.context.extra.get("plural") {
         return Some((u.context.key.clone(), p.clone()));
     }
     let key = u.context.key.as_deref()?;
+    if let Some((base, last)) = key.rsplit_once('/') {
+        if matches!(last, "zero" | "one" | "two" | "few" | "many" | "other") {
+            return Some((Some(base.to_string()), last.to_string()));
+        }
+    }
     let (base, rest) = key.rsplit_once('[')?;
     let label = rest.strip_suffix(']')?;
     Some((Some(base.to_string()), label.to_string()))
