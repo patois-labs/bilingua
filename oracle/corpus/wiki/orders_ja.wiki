@@ -1,0 +1,21 @@
+{{Infobox bakery
+| name = Lumen
+}}
+== ルーメンベーカリー ==
+当店の '''天然酵母パン''' は毎朝、 [[Bakery|老舗のパン屋]]. See https://example.com/menu for more.<ref>祝日は営業時間が変わる場合があります。</ref>
+
+* 正午までにご注文ください
+* カウンターでお受け取り ''コーヒー無料''
+# カードまたは現金でお支払い
+
+{| class="wikitable"
+|+ 今週のメニュー
+! 曜日 !! パン
+|-
+| 月曜日 || ライ麦パン
+|}
+
+[[File:Loaf.jpg|thumb|200px|カウンターの焼きたてパン]]
+
+<!-- editor note: keep -->
+[[Category:Bakery]]

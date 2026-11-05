@@ -1,0 +1,21 @@
+{{Infobox bakery
+| name = Lumen
+}}
+== 루멘 베이커리 ==
+저희 '''사워도우 빵''' 은 매일 아침 [[Bakery|오래된 빵집]]. See https://example.com/menu for more.<ref>공휴일에는 영업시간이 변경될 수 있습니다.</ref>
+
+* 정오 전에 주문하세요
+* 카운터에서 수령 ''커피 무료''
+# 카드 또는 현금 결제
+
+{| class="wikitable"
+|+ 주간 메뉴
+! 요일 !! 빵
+|-
+| 월요일 || 호밀 빵
+|}
+
+[[File:Loaf.jpg|thumb|200px|카운터위의 갓 구운 빵]]
+
+<!-- editor note: keep -->
+[[Category:Bakery]]
