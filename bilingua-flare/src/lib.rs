@@ -355,10 +355,12 @@ impl Filter for Flare {
     }
 
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         extract_flare(bytes, opts)
     }
 
     fn merge_with(&self, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         merge_flare(doc, opts)
     }
 }

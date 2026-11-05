@@ -161,6 +161,7 @@ impl Filter for Dxf {
     }
 
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         let limits = opts.limits();
         guard::check_input(bytes, &limits)?;
         let w = walk::walk(bytes, &limits)?;
@@ -237,7 +238,8 @@ impl Filter for Dxf {
     /// DXF has no language stamp, and the drawing's code page is part of its header (`$ACADVER`, `$DWGCODEPAGE`):
     /// a pre-2007 drawing written as UTF-8 would read back as mojibake in AutoCAD. So both merge options change
     /// nothing; LocOS keeps the code page on build too (the LocOS profile should list dxf as keeping its encoding).
-    fn merge_with(&self, doc: &Document, _opts: &MergeOptions) -> Result<Vec<u8>, Error> {
+    fn merge_with(&self, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
         let Skeleton::Text { parts, encoding, .. } = &doc.skeleton else {
             return Err(Error::Write("dxf needs a text skeleton".into()));
