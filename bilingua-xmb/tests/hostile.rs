@@ -223,3 +223,11 @@ proptest! {
         prop_assert_eq!(merged(&back), out);
     }
 }
+
+#[test]
+fn undeclared_non_utf8_is_refused_not_guessed() {
+    let e = Xmb.extract(b"<messagebundle><msg id='1'>caf\xe9</msg></messagebundle>", &opts()).unwrap_err();
+    assert!(matches!(e, Error::Encoding(_)), "{e:?}");
+    let ok = b"<?xml version='1.0' encoding='windows-1252'?><messagebundle><msg id='1'>caf\xe9</msg></messagebundle>";
+    assert!(Xmb.extract(ok, &opts()).is_ok());
+}
