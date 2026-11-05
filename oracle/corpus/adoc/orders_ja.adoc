@@ -1,0 +1,44 @@
+= 注文ガイド
+Jane Doe <jane@example.com>
+v1.2, 2026-10-01
+:product: Lumen Bakery
+:toc:
+:description: パンをオンラインで注文する方法。
+:keywords: パン, 注文
+
+// A comment that stays.
+
+ようこそ *ベーカリー* へ {product} `code` 詳しくは https://example.com[サイト].
+新鮮なパンは _毎日焼きたて_ です kbd:[Ctrl+S].
+
+== はじめに ==
+
+NOTE: ご注文の前にガイドをお読みください。
+
+.受け取り方法
+* 店頭で受け取り
+* 配達、参照 <<anchor,地図>>
+** 20ドル以上で無料
+* [x] アカウント作成済み
+. パンを選ぶ
+. オンラインで支払う +
+その後メッセージをお待ちください。
+
+サワードウ:: ゆっくり発酵させたパン。
+
+[source,python]
+----
+print("not translated")  # コメント
+----
+
+[cols="1,2"]
+|===
+|品名 |説明
+
+|ライ麦
+|黒パン \| 重い
+|===
+
+include::partials/legal.adoc[]
+
+ご注文ありがとうございます。 footnote:[価格は税込です。]

@@ -1,0 +1,44 @@
+= 주문 안내
+Jane Doe <jane@example.com>
+v1.2, 2026-10-01
+:product: Lumen Bakery
+:toc:
+:description: 온라인으로 빵을 주문하는 방법.
+:keywords: 빵, 주문
+
+// A comment that stays.
+
+저희 *베이커리* 에 {product} `code` 오신 것을 환영합니다 https://example.com[사이트].
+신선한 빵은 _매일 구워집니다_ 그리고 kbd:[Ctrl+S].
+
+== 시작하기 ==
+
+NOTE: 주문 전에 안내를 읽어 주세요.
+
+.수령 방법
+* 매장 수령
+* 배달, 참조 <<anchor,지도>>
+** 20달러 이상 무료
+* [x] 계정 생성됨
+. 빵 고르기
+. 온라인 결제 +
+그런 다음 메시지를 기다리세요.
+
+사워도우:: 천천히 발효한 빵.
+
+[source,python]
+----
+print("not translated")  # 주석
+----
+
+[cols="1,2"]
+|===
+|품목 |설명
+
+|호밀
+|검은 빵 \| 묵직함
+|===
+
+include::partials/legal.adoc[]
+
+주문해 주셔서 감사합니다. footnote:[가격에는 세금이 포함됩니다.]

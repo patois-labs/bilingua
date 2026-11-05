@@ -1,0 +1,44 @@
+﻿= Guide de commande
+Jane Doe <jane@example.com>
+v1.2, 2026-10-01
+:product: Lumen Bakery
+:toc:
+:description: Comment commander du pain en ligne.
+:keywords: pain, commande
+
+// A comment that stays.
+
+Bienvenue dans notre *boulangerie* avec {product} `code` et voir https://example.com[notre site].
+Le pain frais est _cuit chaque jour_ et kbd:[Ctrl+S].
+
+== Pour commencer ==
+
+NOTE: Lisez le guide avant de commander.
+
+.Options de retrait
+* Retrait en magasin
+* Livraison, voir <<anchor,la carte>>
+** Gratuite dès 20 euros
+* [x] Compte créé
+. Choisissez un pain
+. Payez en ligne +
+Puis attendez le message.
+
+Levain:: Un pain à fermentation lente.
+
+[source,python]
+----
+print("not translated")  # un commentaire
+----
+
+[cols="1,2"]
+|===
+|Article |Description
+
+|Seigle
+|Pain foncé \| lourd
+|===
+
+include::partials/legal.adoc[]
+
+Merci de votre commande. footnote:[Les prix incluent la taxe.]

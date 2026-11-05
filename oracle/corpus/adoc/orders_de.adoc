@@ -1,0 +1,44 @@
+= Bestellanleitung
+Jane Doe <jane@example.com>
+v1.2, 2026-10-01
+:product: Lumen Bakery
+:toc:
+:description: So bestellen Sie Brot online.
+:keywords: Brot, Bestellung
+
+// A comment that stays.
+
+Willkommen in unserer *Bäckerei* mit {product} `code` und siehe https://example.com[unsere Seite].
+Frisches Brot wird _täglich gebacken_ und kbd:[Ctrl+S].
+
+== Erste Schritte ==
+
+NOTE: Lesen Sie die Anleitung vor der Bestellung.
+
+.Abholoptionen
+* Abholung im Laden
+* Lieferung, siehe <<anchor,die Karte>>
+** Kostenlos ab 20 Euro
+* [x] Konto erstellt
+. Brot wählen
+. Online bezahlen +
+Dann auf die Nachricht warten.
+
+Sauerteig:: Ein langsam gegorenes Brot.
+
+[source,python]
+----
+print("not translated")  # ein Kommentar
+----
+
+[cols="1,2"]
+|===
+|Artikel |Beschreibung
+
+|Roggen
+|Dunkles Brot \| schwer
+|===
+
+include::partials/legal.adoc[]
+
+Danke für Ihre Bestellung. footnote:[Preise inklusive Steuer.]

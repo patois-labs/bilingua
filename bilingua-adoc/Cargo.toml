@@ -1,0 +1,15 @@
+[package]
+name = "bilingua-adoc"
+description = "Bilingua: AsciiDoc filter (adoc, asciidoc, asc)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+bilingua-model = { workspace = true }
+regex = { workspace = true }
+
+[dev-dependencies]
+proptest = { version = "1", default-features = false, features = ["std"] }
+serde_json = { workspace = true }

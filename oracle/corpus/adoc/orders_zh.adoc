@@ -1,0 +1,44 @@
+= 订购指南
+Jane Doe <jane@example.com>
+v1.2, 2026-10-01
+:product: Lumen Bakery
+:toc:
+:description: 如何在线订购面包。
+:keywords: 面包, 订购
+
+// A comment that stays.
+
+欢迎来到我们的 *面包店* 使用 {product} `code` 并查看 https://example.com[我们的网站].
+新鲜面包 _每天烘焙_ 并且 kbd:[Ctrl+S].
+
+== 开始 ==
+
+NOTE: 订购前请阅读指南。
+
+.取货方式
+* 到店取货
+* 送货，见 <<anchor,地图>>
+** 满20美元免费
+* [x] 账户已创建
+. 选择面包
+. 在线支付 +
+然后等待消息。
+
+酸面团:: 慢发酵的面包。
+
+[source,python]
+----
+print("not translated")  # 注释
+----
+
+[cols="1,2"]
+|===
+|品名 |说明
+
+|黑麦
+|黑面包 \| 厚重
+|===
+
+include::partials/legal.adoc[]
+
+感谢您的订购。 footnote:[价格含税。]
