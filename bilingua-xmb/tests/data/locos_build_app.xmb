@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE translationbundle>
+<translationbundle lang="fr">
+  <translation id="introductionHeader">FR Hello i18n!</translation>
+  <translation id="2367646551098052009">FR Hello, <ph name="INTERPOLATION"/>! You have <ph name="INTERPOLATION_1"/> new messages.</translation>
+  <translation id="5811701742971715242">FR The <ph name="START_BOLD_TEXT"/>sky<ph name="CLOSE_BOLD_TEXT"/> is blue &amp; <ph name="START_LINK"/>clear<ph name="CLOSE_LINK"/><ph name="LINE_BREAK"/>today.</translation>
+  <translation id="4606963464835766483">FR Updated <ph name="ICU"/></translation>
+  <translation id="2002272803511843863">FR {VAR_PLURAL, plural, =0 {just now} =1 {one minute ago} other {<ph name="INTERPOLATION"/> minutes ago}}</translation>
+  <translation id="3967965900462880190"><ph name="PH"/></translation>
+  <translation id="custom.save">
+      FR Save changes
+    </translation>
+</translationbundle>

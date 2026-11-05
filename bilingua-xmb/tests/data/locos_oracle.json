@@ -1,0 +1,148 @@
+{
+ "app.fr.xtb": [
+  [
+   0,
+   "Hello i18n!"
+  ],
+  [
+   1,
+   "Hello, ⟦x1⟧! You have ⟦x2⟧ new messages."
+  ],
+  [
+   2,
+   "The ⟦g1⟧sky⟦/g1⟧ is blue & clear."
+  ],
+  [
+   5,
+   "Save changes"
+  ]
+ ],
+ "app.xmb": [
+  [
+   0,
+   "Hello i18n!"
+  ],
+  [
+   1,
+   "Hello, ⟦x1⟧! You have ⟦x2⟧ new messages."
+  ],
+  [
+   2,
+   "The ⟦g1⟧sky⟦/g1⟧ is blue & ⟦g2⟧clear⟦/g2⟧⟦x3⟧today."
+  ],
+  [
+   3,
+   "Updated ⟦x1⟧"
+  ],
+  [
+   4,
+   "{VAR_PLURAL, plural, =0 {just now} =1 {one minute ago} other {⟦x1⟧ minutes ago}}"
+  ],
+  [
+   6,
+   "Save changes"
+  ]
+ ],
+ "cart.xmb": [
+  [
+   0,
+   "You have ⟦x1⟧ items in ⟦g2⟧your cart⟦/g2⟧."
+  ],
+  [
+   1,
+   "Checkout"
+  ]
+ ],
+ "languages.xmb": [
+  [
+   0,
+   "Welcome back, ⟦x1⟧! You have ⟦g2⟧3 new messages⟦/g2⟧."
+  ],
+  [
+   1,
+   "Bon retour, ⟦x1⟧ ! Vous avez ⟦g2⟧3 nouveaux messages⟦/g2⟧."
+  ],
+  [
+   2,
+   "Willkommen zurück, ⟦x1⟧! Grüße aus München & Zürich."
+  ],
+  [
+   3,
+   "¿Cómo estás, ⟦x1⟧? ¡Mañana habrá niños!"
+  ],
+  [
+   4,
+   "Добро пожаловать, ⟦x1⟧! У вас 3 новых сообщения."
+  ],
+  [
+   5,
+   "مرحباً بعودتك، ⟦x1⟧! لديك 3 رسائل جديدة."
+  ],
+  [
+   6,
+   "お帰りなさい、⟦x1⟧さん！新しいメッセージが3件あります。"
+  ],
+  [
+   7,
+   "欢迎回来，⟦x1⟧！您有 3 条新消息。"
+  ],
+  [
+   8,
+   "다시 오신 것을 환영합니다, ⟦x1⟧님! 새 메시지가 3개 있습니다."
+  ],
+  [
+   9,
+   "Tekrar hoş geldiniz, ⟦x1⟧! Üç yeni iletiniz var."
+  ],
+  [
+   10,
+   "वापस स्वागत है, ⟦x1⟧! आपके 3 नए संदेश हैं।"
+  ]
+ ],
+ "languages.xtb": [
+  [
+   0,
+   "Welcome back, ⟦x1⟧! You have ⟦g2⟧3 new messages⟦/g2⟧."
+  ],
+  [
+   1,
+   "Bon retour, ⟦x1⟧ ! Vous avez ⟦g2⟧3 nouveaux messages⟦/g2⟧."
+  ],
+  [
+   2,
+   "Willkommen zurück, ⟦x1⟧! Grüße aus München & Zürich."
+  ],
+  [
+   3,
+   "¿Cómo estás, ⟦x1⟧? ¡Mañana habrá niños!"
+  ],
+  [
+   4,
+   "Добро пожаловать, ⟦x1⟧! У вас 3 новых сообщения."
+  ],
+  [
+   5,
+   "مرحباً بعودتك، ⟦x1⟧! لديك 3 رسائل جديدة."
+  ],
+  [
+   6,
+   "お帰りなさい、⟦x1⟧さん！新しいメッセージが3件あります。"
+  ],
+  [
+   7,
+   "欢迎回来，⟦x1⟧！您有 3 条新消息。"
+  ],
+  [
+   8,
+   "다시 오신 것을 환영합니다, ⟦x1⟧님! 새 메시지가 3개 있습니다."
+  ],
+  [
+   9,
+   "Tekrar hoş geldiniz, ⟦x1⟧! Üç yeni iletiniz var."
+  ],
+  [
+   10,
+   "वापस स्वागत है, ⟦x1⟧! आपके 3 नए संदेश हैं।"
+  ]
+ ]
+}

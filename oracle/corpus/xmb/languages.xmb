@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<messagebundle handler="angular">
+  <msg id="greet.en" desc="Greeting in en" meaning="home"><source>src/home.html:1</source>Welcome back, <ph name="USER"><ex>Ana</ex>{{ name }}</ph>! You have <ph name="START_BOLD"><ex>&lt;b&gt;</ex>&lt;b&gt;</ph>3 new messages<ph name="CLOSE_BOLD"><ex>&lt;/b&gt;</ex>&lt;/b&gt;</ph>.</msg>
+  <msg id="greet.fr" desc="Greeting in fr" meaning="home"><source>src/home.html:2</source>Bon retour, <ph name="USER"><ex>Ana</ex>{{ name }}</ph> ! Vous avez <ph name="START_BOLD"><ex>&lt;b&gt;</ex>&lt;b&gt;</ph>3 nouveaux messages<ph name="CLOSE_BOLD"><ex>&lt;/b&gt;</ex>&lt;/b&gt;</ph>.</msg>
+  <msg id="greet.de" desc="Greeting in de" meaning="home"><source>src/home.html:3</source>Willkommen zurück, <ph name="USER"/>! Grüße aus München &amp; Zürich.</msg>
+  <msg id="greet.es" desc="Greeting in es" meaning="home"><source>src/home.html:4</source>¿Cómo estás, <ph name="USER"/>? ¡Mañana habrá niños!</msg>
+  <msg id="greet.ru" desc="Greeting in ru" meaning="home"><source>src/home.html:5</source>Добро пожаловать, <ph name="USER"/>! У вас 3 новых сообщения.</msg>
+  <msg id="greet.ar" desc="Greeting in ar" meaning="home"><source>src/home.html:6</source>مرحباً بعودتك، <ph name="USER"/>! لديك 3 رسائل جديدة.</msg>
+  <msg id="greet.ja" desc="Greeting in ja" meaning="home"><source>src/home.html:7</source>お帰りなさい、<ph name="USER"/>さん！新しいメッセージが3件あります。</msg>
+  <msg id="greet.zh" desc="Greeting in zh" meaning="home"><source>src/home.html:8</source>欢迎回来，<ph name="USER"/>！您有 3 条新消息。</msg>
+  <msg id="greet.ko" desc="Greeting in ko" meaning="home"><source>src/home.html:9</source>다시 오신 것을 환영합니다, <ph name="USER"/>님! 새 메시지가 3개 있습니다.</msg>
+  <msg id="greet.tr" desc="Greeting in tr" meaning="home"><source>src/home.html:10</source>Tekrar hoş geldiniz, <ph name="USER"/>! Üç yeni iletiniz var.</msg>
+  <msg id="greet.hi" desc="Greeting in hi" meaning="home"><source>src/home.html:11</source>वापस स्वागत है, <ph name="USER"/>! आपके 3 नए संदेश हैं।</msg>
+</messagebundle>
