@@ -23,8 +23,8 @@ for c in $CRATES facade; do
   d="bilingua-$c"; [ "$c" = facade ] && d="bilingua"
   while IFS= read -r f; do
     case "$f" in */tests/*|*/tests.rs|*/tests_*.rs|*/benches/*) continue ;; esac
-    # drop everything from the first #[cfg(test)] line on, then search
-    hits=$(awk '/#\[cfg\(test\)\]/{exit} {print FILENAME":"FNR": "$0}' "$f" | grep -E "$PATTERN" | grep -vE '^[^:]+:[0-9]+: *//')
+    # drop #[cfg(test)] items (inline test modules, `mod tests;`, test-only uses), then search
+    hits=$(awk -f tools/non-test-lines.awk "$f" | grep -E "$PATTERN" | grep -vE '^[^:]+:[0-9]+: *//')
     if [ -n "$hits" ]; then echo "$hits"; fail=1; fi
   done < <(find "$d/src" -name '*.rs')
 done
