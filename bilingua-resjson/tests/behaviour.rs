@@ -267,3 +267,13 @@ fn skeleton_is_stamped_and_foreign_skeletons_are_refused() {
     }
     assert!(matches!(Resjson.merge(&odd), Err(Error::Write(_))));
 }
+
+#[test]
+fn metadata_cannot_overwrite_the_locos_context() {
+    // `_id.path` and `_id.name` are metadata like any other; they must not replace the LocOS context and key.
+    let d = ex(br#"{"m": {"t": "Title text", "_t.path": "spoof", "_t.name": "x", "_t.source": "A.resx"}}"#);
+    let u = &d.units[0];
+    assert_eq!(u.context.extra.get("path").map(String::as_str), Some("m"));
+    assert_eq!(u.context.extra.get("name").map(String::as_str), Some("t"));
+    assert_eq!(u.context.extra.get("source").map(String::as_str), Some("A.resx"));
+}

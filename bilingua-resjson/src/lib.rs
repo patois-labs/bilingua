@@ -289,8 +289,9 @@ impl Resjson {
                 for (attr, v) in attrs.get(&(e.context.as_str(), e.key.as_str())).into_iter().flatten() {
                     match (*attr, v.parse::<usize>()) {
                         ("maxLength", Ok(n)) => unit.context.max_len = Some(n),
+                        // `path`, `name` and `duplicate` are ours: an `_id.path` member must not overwrite them.
                         _ => {
-                            unit.context.extra.insert((*attr).to_string(), (*v).to_string());
+                            unit.context.extra.entry((*attr).to_string()).or_insert_with(|| (*v).to_string());
                         }
                     }
                 }
