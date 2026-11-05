@@ -46,7 +46,8 @@ is translated.
 Encodings: UTF-8 (BOM kept), UTF-16 with a BOM, and a legacy charset the XML declaration names are read and written
 back in the same encoding. Anything else is refused, as the XML specification and LocOS do.
 
-Safety: the shared zip guard, the XML guard (entity declarations, depth, element count) over every XML part, a
+Safety: the shared zip guard, a central-directory scan that refuses a member listed twice (`zipdir.rs`, until
+`bilingua-zip` checks this itself), the XML guard (entity declarations, depth, element count) over every XML part, a
 DOCTYPE in a part the filter reads is refused (LocOS), a strict well-formedness check (lxml's: undefined entities,
 duplicate attributes, `<` in attributes, illegal characters), a markup budget of 40 `<` per allowed unit over the page
 parts, and the model's unit and length limits.
