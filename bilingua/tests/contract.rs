@@ -184,6 +184,7 @@ fn crate_of(format: &str) -> &'static str {
         "odt" | "ods" | "odp" | "odg" => "bilingua-odf",
         "js" => "bilingua-jsmodule",
         "php" => "bilingua-php",
+        "mif" => "bilingua-mif",
         "arb" => "bilingua-arb",
         "xaml" => "bilingua-xaml",
         "xmb" | "xtb" => "bilingua-xmb",
