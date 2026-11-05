@@ -277,7 +277,7 @@ fn damaged_tokens_fuzz() {
         assert_eq!(count(&out, "Br"), 1, "{text}");
         assert!(!visible_text(&out).contains('\u{27E6}'), "{text}");
         assert_eq!(count(&out, "RootCharacterStyleGroup"), 1);
-        assert_eq!(extract(&out).units.len() >= 1, true);
+        assert!(!extract(&out).units.is_empty());
     }
 }
 

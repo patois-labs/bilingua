@@ -1,8 +1,7 @@
 # Wiring for the lead
 
 - Workspace: `"bilingua-icml"` in `members`, `bilingua-icml = { path = "bilingua-icml" }` in
-  `[workspace.dependencies]` (done in the wire commit). The crate uses `bilingua_model::{guard, enc?}` only for
-  `guard` and the model types.
+  `[workspace.dependencies]` (done in the wire commit). The crate uses `bilingua_model::guard` and the model types only.
 - Facade filter list: `Box::new(bilingua_icml::Icml)`. Format id `icml`, extensions `icml`, `wcml` (both map to the
   one filter, as in LocOS where `wcml` is an alias).
 - `sniff`: tight. Text starting with `<` whose first 8 KB contains `InCopyInterchange` (the `<?aid SnippetType?>`

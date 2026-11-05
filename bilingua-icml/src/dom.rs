@@ -180,16 +180,6 @@ impl Dom {
         self.touch(parent);
     }
 
-    /// Inserts `child` right after `anchor` in the anchor's parent.
-    pub fn insert_after(&mut self, anchor: Id, child: Id) {
-        let p = self.n(anchor).parent;
-        if p == NIL {
-            return;
-        }
-        let at = self.index_of(p, anchor).map_or(self.n(p).children.len(), |i| i + 1);
-        self.insert(p, at, child);
-    }
-
     /// Inserts `child` right before `anchor`.
     pub fn insert_before(&mut self, anchor: Id, child: Id) {
         let p = self.n(anchor).parent;
