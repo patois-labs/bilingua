@@ -27,6 +27,7 @@ bilingua-xlsx = { workspace = true }
 bilingua-pptx = { workspace = true }
 bilingua-xliff = { workspace = true }
 bilingua-sdl = { workspace = true }
+bilingua-xliffpkg = { workspace = true }
 bilingua-ini = { workspace = true }
 bilingua-mo = { workspace = true }
 bilingua-ftl = { workspace = true }

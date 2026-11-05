@@ -64,6 +64,7 @@ dependencies = [
  "bilingua-xaml",
  "bilingua-xcstrings",
  "bilingua-xliff",
+ "bilingua-xliffpkg",
  "bilingua-xlsx",
  "bilingua-xmb",
  "bilingua-xml",
@@ -529,6 +530,19 @@ dependencies = [
  "quick-xml",
  "serde",
  "thiserror",
+]
+
+[[package]]
+name = "bilingua-xliffpkg"
+version = "0.1.0"
+dependencies = [
+ "bilingua-model",
+ "bilingua-xliff",
+ "bilingua-zip",
+ "proptest",
+ "quick-xml",
+ "serde_json",
+ "zip",
 ]
 
 [[package]]

@@ -15,6 +15,9 @@ Every file here is made up for Bilingua (Lumen Bakery is a fictional company; no
 | `mdx/handbook.mdx`, `mdx/edge.mdx` | Written by hand for `bilingua-mdx` (invented text, YAML and TOML front matter, JSX, expressions, ES modules) | Apache-2.0, same as Bilingua |
 | `latex/*.tex` (21 files: `features*`, `lumen_*` in 11 languages plus Latin-1 and UTF-16, `chapter_fragment`, `deep_braces`, `unclosed_*`) | `bilingua-latex/tests/tools/gen_corpus.py` writes the LaTeX by hand (stdlib only) | Apache-2.0, same as Bilingua |
 | `bilingua-latex/tests/data/okapi/Test01.tex`, `Test02.tex`, `Test03.tex` (test fixtures, not corpus) | Okapi Framework test resources, copied unmodified (repository line endings, LF) from https://gitlab.com/okapiframework/Okapi.git (`okapi/filters/tex/src/test/resources`, tag `v1.48.0`, commit `ce9f9edc2956da5868fcb71ae10426c7c6ae4e0b`) | Apache-2.0 (Okapi Framework) |
+| `xliffpkg/lumen_languages.wsxz`, `xliffpkg/lumen_utf16.xlz`, `xliffpkg/lumen_bom.xlz` | Written by hand for `bilingua-xliffpkg` (invented XLIFF 1.2 text in ar, ja, zh, ko; a UTF-16 and a UTF-8 BOM member), zipped in Rust | Apache-2.0, same as Bilingua |
+| `xliffpkg/locos_content.xlz` | Zip made for `bilingua-xliffpkg`; the XLIFF member inside is ported from the Localization OS test fixtures of its xliff package filter | Apache-2.0 (Localization OS, ours) |
+| `bilingua-xliffpkg/tests/data/okapi_test1.wsxz` (test fixture, not corpus) | Okapi Framework test resource `test1.wsxz`, copied unmodified from https://gitlab.com/okapiframework/Okapi.git (`okapi/filters/wsxzpackage/src/test/resources`, tag `v1.48.0`, commit `ce9f9edc2956da5868fcb71ae10426c7c6ae4e0b`) | Apache-2.0 (Okapi Framework) |
 
 Files from the Localization OS tree (its `sample-docs` folder and the hand-written PPTX and XLSX generators in its
 test fixtures) are used by `python run.py --external` and read in place. Localization OS is open source under
