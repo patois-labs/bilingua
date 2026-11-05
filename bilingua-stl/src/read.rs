@@ -43,7 +43,7 @@ pub fn parse(raw: &[u8], limits: Option<&Limits>) -> Result<Parsed, Error> {
             "Not an EBU STL subtitle file (the GSI block must start with a code page and STL25.01 or STL30.01). 3D-model .stl files are not translatable.",
         ));
     }
-    if (raw.len() - GSI_SIZE) % TTI_SIZE != 0 {
+    if !(raw.len() - GSI_SIZE).is_multiple_of(TTI_SIZE) {
         return Err(perr("EBU STL file is truncated: the TTI blocks are not a whole number of 128 bytes."));
     }
     let n = (raw.len() - GSI_SIZE) / TTI_SIZE;

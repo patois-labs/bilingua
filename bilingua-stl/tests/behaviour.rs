@@ -37,8 +37,8 @@ fn round_trips_in_eleven_languages() {
     let data = ascii_file();
     for (locale, tr, ok) in languages() {
         let mut d = Stl.extract(&data, &opts(Some(locale))).unwrap();
-        for k in 0..3 {
-            set(&mut d, k, tr[k]);
+        for (k, s) in tr.iter().enumerate() {
+            set(&mut d, k, s);
         }
         let r = Stl.merge(&d);
         if !ok {
@@ -52,8 +52,8 @@ fn round_trips_in_eleven_languages() {
         let back = Stl.extract(&out, &opts(None)).unwrap();
         assert_eq!(back.units.len(), 3, "{locale}");
         // same text back (« » fold nowhere here; the 00 table has them)
-        for k in 0..3 {
-            assert_eq!(locos_text(&back.units[k]), tr[k].replace("\n", "\n"), "{locale} unit {k}");
+        for (k, s) in tr.iter().enumerate() {
+            assert_eq!(locos_text(&back.units[k]), *s, "{locale} unit {k}");
         }
         // the tags are the same as the source's
         let tags = |d: &Document, k: usize| d.units[k].source().iter().filter(|i| matches!(i, Inline::Tag { .. })).count();

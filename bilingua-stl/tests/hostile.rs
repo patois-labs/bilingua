@@ -78,7 +78,7 @@ fn fixtures_and_edges() {
     let f = fixture();
     check_file(&f);
     for n in 0..f.len().min(1024 + 128 * 3) {
-        if n % 7 == 0 || n < 40 || n > 1000 {
+        if n % 7 == 0 || !(40..=1000).contains(&n) {
             check_file(&f[..n]);
         }
     }
