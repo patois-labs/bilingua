@@ -111,13 +111,14 @@ fn untouched_text_keeps_its_escapes_and_a_changed_message_is_requoted() {
 }
 
 #[test]
-fn metadata_becomes_notes_and_placeholder_labels() {
+fn metadata_becomes_notes_and_placeholders_stay_flattenable() {
     let d = extract(LANGS);
     let u = &d.units[0];
     assert_eq!(u.context.key.as_deref(), Some("welcome"));
-    assert_eq!(u.context.notes, ["Home page greeting"]);
+    assert_eq!(u.context.notes, ["Home page greeting", "{name}: String, e.g. Ana"]);
+    // the tag keeps the label `placeholder` (the LocOS adapter flattens it to its display, the source text)
     let tag = u.codes.get("1").unwrap();
-    assert_eq!(tag.label.as_deref(), Some("name (String), e.g. Ana"));
+    assert_eq!(tag.label.as_deref(), Some("placeholder"));
     assert!(matches!(&u.source()[1], Inline::Tag { free: true, display, .. } if display == "{name}"));
     // plural branch units carry the argument and selector
     let loaves: Vec<&Unit> = d.units.iter().filter(|u| u.context.key.as_deref() == Some("loaves")).collect();

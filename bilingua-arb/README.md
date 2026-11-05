@@ -15,8 +15,9 @@ before them, `@@` keys are file-wide (`@@locale`). This crate follows Localizati
 - `{name}` and typed arguments (`{n, number}`, `{when, date, yMMMd}`) are **free** standalone tags (they name
   their argument, a translation may move them). `#` in a plural branch and a complex argument in the outer text are
   standalone tags that do not move (LocOS tokens `x`). Quoted text (`'{'`, `''`) stays raw text, as in LocOS.
-- `@key.description` and `@key.context` become `context.notes`. `@key.placeholders.name` labels the `{name}` tag
-  (`name (String), e.g. Bob`).
+- `@key.description` and `@key.context` become `context.notes`, followed by one note per described placeholder
+  (`{name}: String, e.g. Bob`). Every `{name}` tag has the label `placeholder` and its exact source text as display,
+  so the LocOS adapter can flatten it back to the text LocOS keeps.
 - A message the ICU parser rejects (unbalanced braces, nesting over 40) is one opaque unit; `{name}` in it is still a tag.
 - A message with no letter or digit is left alone. Duplicate keys give a unit each, like LocOS. A string with a lone
   surrogate escape (`\ud800`) cannot be held in Rust and is left in the skeleton.
@@ -31,8 +32,8 @@ before them, `@@` keys are file-wide (`@@locale`). This crate follows Localizati
   `pt_BR`; added as the first entry, indented like the first key, when the source has none), every plural and
   selectordinal follows the target language's CLDR categories (a missing category copies the `other` text, an unused
   one is dropped, `=N` branches stay), and suffix-style plurals (`itemCountOne`, `itemCountOther`) gain the target's
-  missing categories before `...Other`. The category table is generated from Babel 2.18 (what LocOS uses);
-  an unknown language leaves plurals as they are.
+  missing categories before `...Other`. The category table is generated from Babel 2.18 (what LocOS uses),
+  with Babel's aliases (`deu`, `iw`, `tl`, `und`); an unknown language leaves plurals as they are.
 
 ## Limits
 

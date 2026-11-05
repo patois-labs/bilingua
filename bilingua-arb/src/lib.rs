@@ -83,7 +83,6 @@ impl Arb {
                 let mut unit = Unit::new(format!("u{}", units.len() + 1), up.inlines);
                 unit.codes = up.codes;
                 if let Some(meta) = &meta {
-                    meta.label_codes(&mut unit.codes);
                     unit.context.notes = meta.notes.clone();
                 }
                 if k == 0 {
@@ -144,7 +143,8 @@ impl Filter for Arb {
             return false;
         }
         let Ok(Node::Obj { pairs, .. }) = scan::scan(text, 200) else { return false };
-        pairs.iter().any(|p| p.key == "@@locale" && matches!(p.value, Node::Str { .. }))
+        // the last `@@locale` counts, as in `json.loads` (LocOS's sniff)
+        pairs.iter().rev().find(|p| p.key == "@@locale").is_some_and(|p| matches!(p.value, Node::Str { .. }))
     }
 
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
@@ -355,19 +355,21 @@ fn fallback_unit(value: &str) -> UnitPlan {
 }
 
 // ---------------------------------------------------------------------------------------------------------
-// @key metadata: notes and placeholder labels
+// @key metadata: notes
 // ---------------------------------------------------------------------------------------------------------
 
+/// `description`, `context` and the placeholders' `type` and `example` as notes. Placeholder tags keep the label
+/// `placeholder` and their exact source text as display: LocOS keeps `{name}` as plain text in the unit, so the
+/// LocOS adapter flattens a `placeholder` tag back to its display.
 struct Meta {
     notes: Vec<String>,
-    /// placeholder name to chip label
-    placeholders: HashMap<String, String>,
 }
 
 impl Meta {
     fn read(text: &str, node: &Node) -> Meta {
-        let mut m = Meta { notes: vec![], placeholders: HashMap::new() };
+        let mut m = Meta { notes: vec![] };
         let Node::Obj { pairs, .. } = node else { return m };
+        let mut ph_notes = Vec::new();
         for p in pairs {
             match (p.key.as_str(), &p.value) {
                 ("description" | "context", Node::Str { start, end }) => {
@@ -379,44 +381,28 @@ impl Meta {
                 }
                 ("placeholders", Node::Obj { pairs: phs, .. }) => {
                     for ph in phs {
-                        let mut label = ph.key.clone();
-                        if let Node::Obj { pairs: attrs, .. } = &ph.value {
-                            let get = |name: &str| {
-                                attrs.iter().rev().find(|a| a.key == name).and_then(|a| match a.value {
-                                    Node::Str { start, end } => scan::unescape(&text[start + 1..end - 1]),
-                                    _ => None,
-                                })
-                            };
-                            if let Some(t) = get("type") {
-                                label = format!("{label} ({t})");
-                            }
-                            if let Some(e) = get("example") {
-                                label = format!("{label}, e.g. {e}");
-                            }
-                        }
-                        m.placeholders.insert(ph.key.clone(), label);
+                        let Node::Obj { pairs: attrs, .. } = &ph.value else { continue };
+                        let get = |name: &str| {
+                            attrs.iter().rev().find(|a| a.key == name).and_then(|a| match a.value {
+                                Node::Str { start, end } => scan::unescape(&text[start + 1..end - 1]),
+                                _ => None,
+                            })
+                        };
+                        let (ty, ex) = (get("type"), get("example"));
+                        let detail = match (ty, ex) {
+                            (Some(t), Some(e)) => format!("{t}, e.g. {e}"),
+                            (Some(t), None) => t,
+                            (None, Some(e)) => format!("e.g. {e}"),
+                            (None, None) => continue,
+                        };
+                        ph_notes.push(format!("{{{}}}: {detail}", ph.key));
                     }
                 }
                 _ => {}
             }
         }
+        m.notes.extend(ph_notes);
         m
-    }
-
-    fn label_codes(&self, codes: &mut BTreeMap<String, CodeData>) {
-        if self.placeholders.is_empty() {
-            return;
-        }
-        for c in codes.values_mut() {
-            let Some(raw) = c.standalone.as_deref() else { continue };
-            if !raw.starts_with('{') {
-                continue;
-            }
-            let name = arg_name(raw);
-            if let Some(l) = self.placeholders.get(&name) {
-                c.label = Some(l.clone());
-            }
-        }
     }
 }
 

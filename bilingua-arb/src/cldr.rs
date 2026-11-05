@@ -39,12 +39,15 @@ fn lookup(locale: &str, ordinal: bool) -> Option<u8> {
     if let Some(s) = &script {
         cands.push(format!("{lang}_{s}"));
     }
-    cands.push(lang);
+    cands.push(lang.clone());
     for c in cands {
         if let Ok(i) = TABLE.binary_search_by(|(k, _, _)| (*k).cmp(c.as_str())) {
             let (_, card, ord) = TABLE[i];
             return Some(if ordinal { ord } else { card });
         }
     }
-    None
+    // Babel also resolves aliases (`deu`, `iw`, `tl`, `und`): LocOS fills plurals for them, so this crate does too.
+    let i = ALIASES.binary_search_by(|(k, _, _)| (*k).cmp(lang.as_str())).ok()?;
+    let (_, card, ord) = ALIASES[i];
+    Some(if ordinal { ord } else { card })
 }

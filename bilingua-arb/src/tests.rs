@@ -62,6 +62,42 @@ fn cldr_lookup_reduces_like_babel() {
     assert_eq!(plural_categories("en", true).unwrap(), ["one", "two", "few", "other"]);
     assert!(plural_categories("1x", false).is_none());
     assert!(BABEL_VERSION.starts_with("2."));
+    // Babel aliases, which LocOS resolves (ISO 639-2, legacy codes, und = English, root = other only)
+    assert_eq!(plural_categories("iw", false).unwrap(), ["one", "two", "other"]);
+    assert_eq!(plural_categories("deu-AT", false).unwrap(), ["one", "other"]);
+    assert_eq!(plural_categories("tl", true).unwrap(), ["one", "other"]);
+    assert_eq!(plural_categories("und", false).unwrap(), ["one", "other"]);
+    assert_eq!(plural_categories("root", false).unwrap(), ["other"]);
+    assert!(plural_categories("zz", false).is_none());
+    // both tables must stay sorted for the binary search
+    for t in [cldr::TABLE, cldr::ALIASES] {
+        assert!(t.windows(2).all(|w| w[0].0 < w[1].0));
+    }
+}
+
+#[test]
+fn placeholder_tags_flatten_to_the_source_text() {
+    let src = br#"{"@@locale": "en", "hi": "Hi {name}, {n, number} {g, select, a{A {who}} other{B}}", "@hi": {"placeholders": {"name": {"type": "String", "example": "Bo"}}}, "bad": "x {y} {"}"#;
+    let d = Arb.extract(src, &ExtractOptions::default()).unwrap();
+    for u in &d.units {
+        for i in u.source() {
+            if let Inline::Tag { id, display, free: true, .. } = i {
+                let c = &u.codes[&id];
+                assert_eq!(c.label.as_deref(), Some("placeholder"), "{display}");
+                assert_eq!(c.standalone.as_deref(), Some(display.as_str()));
+                assert!(display.starts_with('{') && display.ends_with('}'));
+            }
+        }
+    }
+    assert_eq!(d.units[0].context.notes, ["{name}: String, e.g. Bo"]);
+}
+
+#[test]
+fn sniff_reads_the_last_locale_like_json_loads() {
+    assert!(Arb.sniff(br#"{"@@locale": "en", "a": "A"}"#));
+    assert!(!Arb.sniff(br#"{"@@locale": "en", "@@locale": 1}"#));
+    assert!(Arb.sniff(br#"{"@@locale": 1, "@@locale": "en"}"#));
+    assert!(!Arb.sniff(br#"{"a": "A"}"#));
 }
 
 #[test]
