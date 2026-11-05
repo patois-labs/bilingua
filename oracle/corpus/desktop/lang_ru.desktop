@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Заметки
+Comment=Быстрые заметки
+Keywords=заметки;текст;
+Exec=notes %F
+Actions=new;
+
+[Desktop Action new]
+Name=Новая заметка
+Exec=notes --new

@@ -1,0 +1,5 @@
+1	zh	x-vnd.Notes	4711
+打开	MainWindow		打开
+保存 %s？	MainWindow	file name	保存 %s？
+退出	MainWindow		退出
+笔记	About		笔记

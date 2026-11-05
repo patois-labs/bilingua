@@ -1,0 +1,5 @@
+1	es	x-vnd.Notes	4711
+Abrir	MainWindow		Abrir
+¿Guardar %s?	MainWindow	file name	¿Guardar %s?
+Salir	MainWindow		Salir
+Notas	About		Notas

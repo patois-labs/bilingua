@@ -1,0 +1,5 @@
+1	en	x-vnd.Notes	4711
+Open	MainWindow		Open
+Save %s?	MainWindow	file name	Save %s?
+Quit	MainWindow		Quit
+Notes	About		Notes

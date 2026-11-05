@@ -1,0 +1,21 @@
+﻿# Launcher for the example editor
+[Desktop Entry]
+Type=Application
+Version=1.5
+# Shown in menus
+Name=Text Editor
+Name[de]=Texteditor
+GenericName = Editor
+Comment=Edit\stext files;\nquickly\\safely
+Keywords=text;editor;plain\;simple;
+Exec=example-editor %F
+Icon=accessories-text-editor
+Categories=Utility;TextEditor;
+Actions=new-window;
+
+[Desktop Action new-window]
+Name=New Window
+Exec=example-editor --new-window
+
+[X-Vendor Settings]
+Name=Not a launcher string

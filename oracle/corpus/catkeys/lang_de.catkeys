@@ -1,0 +1,5 @@
+1	de	x-vnd.Notes	4711
+Öffnen	MainWindow		Öffnen
+%s speichern?	MainWindow	file name	%s speichern?
+Beenden	MainWindow		Beenden
+Notizen	About		Notizen

@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=메모
+Comment=빠르게 메모하기
+Keywords=메모;텍스트;
+Exec=notes %F
+Actions=new;
+
+[Desktop Action new]
+Name=새 메모
+Exec=notes --new
