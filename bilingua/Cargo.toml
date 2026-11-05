@@ -31,6 +31,7 @@ bilingua-resjson = { workspace = true }
 bilingua-jsmodule = { workspace = true }
 bilingua-yaml = { workspace = true }
 bilingua-arb = { workspace = true }
+bilingua-dtd = { workspace = true }
 
 [dev-dependencies]
 zip = { workspace = true }

@@ -23,6 +23,7 @@ version = "0.1.0"
 dependencies = [
  "bilingua-arb",
  "bilingua-docx",
+ "bilingua-dtd",
  "bilingua-html",
  "bilingua-ini",
  "bilingua-jsmodule",
@@ -78,6 +79,16 @@ dependencies = [
  "serde",
  "serde_json",
  "zip",
+]
+
+[[package]]
+name = "bilingua-dtd"
+version = "0.1.0"
+dependencies = [
+ "bilingua-model",
+ "proptest",
+ "regex",
+ "serde_json",
 ]
 
 [[package]]

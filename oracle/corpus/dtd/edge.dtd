@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!ELEMENT r (#PCDATA)>
+<!ATTLIST r a CDATA "x>y">
+<!ENTITY a "Alpha">
+<!ENTITY pub PUBLIC "-//X//EN" "x.dtd">
+<!ENTITY % pe "<!ENTITY inner 'Hidden'>">
+<!ENTITY lol "lol">
+<!ENTITY lol2 "&lol;&lol;&lol;&lol;&lol;">
+<!ENTITY num "42">
+<!ENTITY sym "---">
+<!ENTITY multi "line one
+line two">
+<!ENTITY empty "">
+<!ENTITY pad "  padded  ">

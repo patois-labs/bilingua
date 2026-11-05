@@ -1,0 +1,16 @@
+<!-- This Source Code Form is subject to the terms of the Mozilla Public
+   - License, v. 2.0. If a copy of the MPL was not distributed with this
+   - file, You can obtain one at http://mozilla.org/MPL/2.0/. -->
+
+<!ENTITY % brandDTD SYSTEM "chrome://branding/locale/brand.dtd">
+%brandDTD;
+
+<!-- LOCALIZATION NOTE (window.title): &brandShortName; is the product name (ru). -->
+<!ENTITY window.title "&brandShortName; - Пекарня Люмен">
+<!ENTITY login.label "Войти">
+<!ENTITY login.accesskey "В">
+<!ENTITY save.label 'Сохранить и закрыть'>
+<!ENTITY click.text "Нажмите «Сохранить»">
+<!ENTITY tagline.text "<html:b>Свежий хлеб каждое утро</html:b> &#169; 100&#037;">
+<!ENTITY ref.only "&brandShortName;">
+<!ENTITY escaped.markup "&lt;i>Свежий хлеб каждое утро&lt;/i> &lt;now&gt;">

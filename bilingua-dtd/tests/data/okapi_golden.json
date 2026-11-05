@@ -1,0 +1,937 @@
+{
+ "Test01.dtd": {
+  "units": [
+   {
+    "name": "test1",
+    "text": "Text of &test1;",
+    "codes": 0
+   },
+   {
+    "name": "test2",
+    "text": "Text of test 1 = ¤",
+    "codes": 1
+   },
+   {
+    "name": "test3",
+    "text": "Text with ¤HTML¤ ¤codes¤.",
+    "codes": 4
+   },
+   {
+    "name": "findWindow.title",
+    "text": "Find Files",
+    "codes": 0
+   },
+   {
+    "name": "fileMenu.label",
+    "text": "File",
+    "codes": 0
+   },
+   {
+    "name": "editMenu.label",
+    "text": "Edit",
+    "codes": 0
+   },
+   {
+    "name": "fileMenu.accesskey",
+    "text": "f",
+    "codes": 0
+   },
+   {
+    "name": "editMenu.accesskey",
+    "text": "e",
+    "codes": 0
+   },
+   {
+    "name": "openCmd.label",
+    "text": "Open Search...",
+    "codes": 0
+   },
+   {
+    "name": "saveCmd.label",
+    "text": "Save Search...",
+    "codes": 0
+   },
+   {
+    "name": "closeCmd.label",
+    "text": "Close",
+    "codes": 0
+   },
+   {
+    "name": "openCmd.accesskey",
+    "text": "o",
+    "codes": 0
+   },
+   {
+    "name": "saveCmd.accesskey",
+    "text": "s",
+    "codes": 0
+   },
+   {
+    "name": "closeCmd.accesskey",
+    "text": "c",
+    "codes": 0
+   },
+   {
+    "name": "cutCmd.label",
+    "text": "Cut",
+    "codes": 0
+   },
+   {
+    "name": "copyCmd.label",
+    "text": "Copy",
+    "codes": 0
+   },
+   {
+    "name": "pasteCmd.label",
+    "text": "Paste",
+    "codes": 0
+   },
+   {
+    "name": "cutCmd.accesskey",
+    "text": "t",
+    "codes": 0
+   },
+   {
+    "name": "copyCmd.accesskey",
+    "text": "c",
+    "codes": 0
+   },
+   {
+    "name": "pasteCmd.accesskey",
+    "text": "p",
+    "codes": 0
+   },
+   {
+    "name": "cutCmd.commandkey",
+    "text": "X",
+    "codes": 0
+   },
+   {
+    "name": "copyCmd.commandkey",
+    "text": "C",
+    "codes": 0
+   },
+   {
+    "name": "pasteCmd.commandkey",
+    "text": "V",
+    "codes": 0
+   },
+   {
+    "name": "openCmdToolbar.label",
+    "text": "Open",
+    "codes": 0
+   },
+   {
+    "name": "saveCmdToolbar.label",
+    "text": "Save",
+    "codes": 0
+   },
+   {
+    "name": "searchTab",
+    "text": "Search",
+    "codes": 0
+   },
+   {
+    "name": "optionsTab",
+    "text": "Options",
+    "codes": 0
+   },
+   {
+    "name": "findDescription",
+    "text": "Enter your search criteria below and select the Find button to begin the search.",
+    "codes": 0
+   },
+   {
+    "name": "findCriteria",
+    "text": "Search Criteria",
+    "codes": 0
+   },
+   {
+    "name": "type.name",
+    "text": "Name",
+    "codes": 0
+   },
+   {
+    "name": "test.withCodes",
+    "text": "This is a text ¤with codes¤ that should work.",
+    "codes": 2
+   },
+   {
+    "name": "type.size",
+    "text": "Size",
+    "codes": 0
+   },
+   {
+    "name": "type.date",
+    "text": "Date Modified",
+    "codes": 0
+   },
+   {
+    "name": "mode.is",
+    "text": "Is",
+    "codes": 0
+   },
+   {
+    "name": "mode.isnot",
+    "text": "Is Not",
+    "codes": 0
+   },
+   {
+    "name": "casesensitive",
+    "text": "Case Sensitive Search",
+    "codes": 0
+   },
+   {
+    "name": "matchfilename",
+    "text": "Match Entire Filename",
+    "codes": 0
+   },
+   {
+    "name": "results.filename",
+    "text": "Filename",
+    "codes": 0
+   },
+   {
+    "name": "results.location",
+    "text": "Location",
+    "codes": 0
+   },
+   {
+    "name": "results.size",
+    "text": "Size",
+    "codes": 0
+   },
+   {
+    "name": "bytes.before",
+    "text": "",
+    "codes": 0
+   },
+   {
+    "name": "bytes.after",
+    "text": "bytes",
+    "codes": 0
+   },
+   {
+    "name": "button.find",
+    "text": "Find",
+    "codes": 0
+   },
+   {
+    "name": "button.cancel",
+    "text": "Cancel",
+    "codes": 0
+   }
+  ]
+ },
+ "Test02.dtd": {
+  "units": []
+ },
+ "browser_ar.dtd": {
+  "units": [
+   {
+    "name": "window.title",
+    "text": "¤ - مخبز لومن",
+    "codes": 1
+   },
+   {
+    "name": "login.label",
+    "text": "تسجيل الدخول",
+    "codes": 0
+   },
+   {
+    "name": "login.accesskey",
+    "text": "ت",
+    "codes": 0
+   },
+   {
+    "name": "save.label",
+    "text": "حفظ وإغلاق",
+    "codes": 0
+   },
+   {
+    "name": "click.text",
+    "text": "انقر على \"حفظ\" للمتابعة",
+    "codes": 0
+   },
+   {
+    "name": "tagline.text",
+    "text": "¤خبز طازج كل صباح¤ © 100%",
+    "codes": 2
+   },
+   {
+    "name": "ref.only",
+    "text": "¤",
+    "codes": 1
+   },
+   {
+    "name": "escaped.markup",
+    "text": "¤خبز طازج كل صباح¤ ¤",
+    "codes": 3
+   }
+  ]
+ },
+ "browser_de.dtd": {
+  "units": [
+   {
+    "name": "window.title",
+    "text": "¤ - Lumen Bäckerei",
+    "codes": 1
+   },
+   {
+    "name": "login.label",
+    "text": "Anmelden",
+    "codes": 0
+   },
+   {
+    "name": "login.accesskey",
+    "text": "A",
+    "codes": 0
+   },
+   {
+    "name": "save.label",
+    "text": "Speichern & schließen",
+    "codes": 0
+   },
+   {
+    "name": "click.text",
+    "text": "Klicken Sie auf \"Speichern\"",
+    "codes": 0
+   },
+   {
+    "name": "tagline.text",
+    "text": "¤Jeden Morgen frisches Brot¤ © 100%",
+    "codes": 2
+   },
+   {
+    "name": "ref.only",
+    "text": "¤",
+    "codes": 1
+   },
+   {
+    "name": "escaped.markup",
+    "text": "¤Jeden Morgen frisches Brot¤ ¤",
+    "codes": 3
+   }
+  ]
+ },
+ "browser_en.dtd": {
+  "units": [
+   {
+    "name": "window.title",
+    "text": "¤ - Lumen Bakery",
+    "codes": 1
+   },
+   {
+    "name": "login.label",
+    "text": "Log in",
+    "codes": 0
+   },
+   {
+    "name": "login.accesskey",
+    "text": "L",
+    "codes": 0
+   },
+   {
+    "name": "save.label",
+    "text": "Save & close",
+    "codes": 0
+   },
+   {
+    "name": "click.text",
+    "text": "Click \"Save\" to continue",
+    "codes": 0
+   },
+   {
+    "name": "tagline.text",
+    "text": "¤Fresh bread every morning¤ © 100%",
+    "codes": 2
+   },
+   {
+    "name": "ref.only",
+    "text": "¤",
+    "codes": 1
+   },
+   {
+    "name": "escaped.markup",
+    "text": "¤Fresh bread every morning¤ ¤",
+    "codes": 3
+   }
+  ]
+ },
+ "browser_es.dtd": {
+  "units": [
+   {
+    "name": "window.title",
+    "text": "¤ - Panadería Lumen",
+    "codes": 1
+   },
+   {
+    "name": "login.label",
+    "text": "Iniciar sesión",
+    "codes": 0
+   },
+   {
+    "name": "login.accesskey",
+    "text": "I",
+    "codes": 0
+   },
+   {
+    "name": "save.label",
+    "text": "Guardar y cerrar",
+    "codes": 0
+   },
+   {
+    "name": "click.text",
+    "text": "Pulse \"Guardar\" para continuar",
+    "codes": 0
+   },
+   {
+    "name": "tagline.text",
+    "text": "¤Pan fresco cada mañana¤ © 100%",
+    "codes": 2
+   },
+   {
+    "name": "ref.only",
+    "text": "¤",
+    "codes": 1
+   },
+   {
+    "name": "escaped.markup",
+    "text": "¤Pan fresco cada mañana¤ ¤",
+    "codes": 3
+   }
+  ]
+ },
+ "browser_fr.dtd": {
+  "units": [
+   {
+    "name": "window.title",
+    "text": "¤ - Boulangerie Lumen",
+    "codes": 1
+   },
+   {
+    "name": "login.label",
+    "text": "Se connecter",
+    "codes": 0
+   },
+   {
+    "name": "login.accesskey",
+    "text": "S",
+    "codes": 0
+   },
+   {
+    "name": "save.label",
+    "text": "Enregistrer et fermer",
+    "codes": 0
+   },
+   {
+    "name": "click.text",
+    "text": "Cliquez sur « Enregistrer »",
+    "codes": 0
+   },
+   {
+    "name": "tagline.text",
+    "text": "¤Du pain frais chaque matin¤ © 100%",
+    "codes": 2
+   },
+   {
+    "name": "ref.only",
+    "text": "¤",
+    "codes": 1
+   },
+   {
+    "name": "escaped.markup",
+    "text": "¤Du pain frais chaque matin¤ ¤",
+    "codes": 3
+   }
+  ]
+ },
+ "browser_ja.dtd": {
+  "units": [
+   {
+    "name": "window.title",
+    "text": "¤ - ルーメン・ベーカリー",
+    "codes": 1
+   },
+   {
+    "name": "login.label",
+    "text": "ログイン",
+    "codes": 0
+   },
+   {
+    "name": "login.accesskey",
+    "text": "ロ",
+    "codes": 0
+   },
+   {
+    "name": "save.label",
+    "text": "保存して閉じる",
+    "codes": 0
+   },
+   {
+    "name": "click.text",
+    "text": "「保存」をクリックしてください",
+    "codes": 0
+   },
+   {
+    "name": "tagline.text",
+    "text": "¤毎朝焼きたてのパン¤ © 100%",
+    "codes": 2
+   },
+   {
+    "name": "ref.only",
+    "text": "¤",
+    "codes": 1
+   },
+   {
+    "name": "escaped.markup",
+    "text": "¤毎朝焼きたてのパン¤ ¤",
+    "codes": 3
+   }
+  ]
+ },
+ "browser_ko.dtd": {
+  "units": [
+   {
+    "name": "window.title",
+    "text": "¤ - 루멘 베이커리",
+    "codes": 1
+   },
+   {
+    "name": "login.label",
+    "text": "로그인",
+    "codes": 0
+   },
+   {
+    "name": "login.accesskey",
+    "text": "로",
+    "codes": 0
+   },
+   {
+    "name": "save.label",
+    "text": "저장 후 닫기",
+    "codes": 0
+   },
+   {
+    "name": "click.text",
+    "text": "'저장'을 눌러주세요",
+    "codes": 0
+   },
+   {
+    "name": "tagline.text",
+    "text": "¤매일 아침 신선한 빵¤ © 100%",
+    "codes": 2
+   },
+   {
+    "name": "ref.only",
+    "text": "¤",
+    "codes": 1
+   },
+   {
+    "name": "escaped.markup",
+    "text": "¤매일 아침 신선한 빵¤ ¤",
+    "codes": 3
+   }
+  ]
+ },
+ "browser_pt.dtd": {
+  "units": [
+   {
+    "name": "window.title",
+    "text": "¤ - Padaria Lumen",
+    "codes": 1
+   },
+   {
+    "name": "login.label",
+    "text": "Entrar",
+    "codes": 0
+   },
+   {
+    "name": "login.accesskey",
+    "text": "E",
+    "codes": 0
+   },
+   {
+    "name": "save.label",
+    "text": "Salvar e fechar",
+    "codes": 0
+   },
+   {
+    "name": "click.text",
+    "text": "Clique em \"Salvar\"",
+    "codes": 0
+   },
+   {
+    "name": "tagline.text",
+    "text": "¤Pão fresco toda manhã¤ © 100%",
+    "codes": 2
+   },
+   {
+    "name": "ref.only",
+    "text": "¤",
+    "codes": 1
+   },
+   {
+    "name": "escaped.markup",
+    "text": "¤Pão fresco toda manhã¤ ¤",
+    "codes": 3
+   }
+  ]
+ },
+ "browser_ru.dtd": {
+  "units": [
+   {
+    "name": "window.title",
+    "text": "¤ - Пекарня Люмен",
+    "codes": 1
+   },
+   {
+    "name": "login.label",
+    "text": "Войти",
+    "codes": 0
+   },
+   {
+    "name": "login.accesskey",
+    "text": "В",
+    "codes": 0
+   },
+   {
+    "name": "save.label",
+    "text": "Сохранить и закрыть",
+    "codes": 0
+   },
+   {
+    "name": "click.text",
+    "text": "Нажмите «Сохранить»",
+    "codes": 0
+   },
+   {
+    "name": "tagline.text",
+    "text": "¤Свежий хлеб каждое утро¤ © 100%",
+    "codes": 2
+   },
+   {
+    "name": "ref.only",
+    "text": "¤",
+    "codes": 1
+   },
+   {
+    "name": "escaped.markup",
+    "text": "¤Свежий хлеб каждое утро¤ ¤",
+    "codes": 3
+   }
+  ]
+ },
+ "browser_tr.dtd": {
+  "units": [
+   {
+    "name": "window.title",
+    "text": "¤ - Lumen Fırın",
+    "codes": 1
+   },
+   {
+    "name": "login.label",
+    "text": "Giriş yap",
+    "codes": 0
+   },
+   {
+    "name": "login.accesskey",
+    "text": "G",
+    "codes": 0
+   },
+   {
+    "name": "save.label",
+    "text": "Kaydet ve kapat",
+    "codes": 0
+   },
+   {
+    "name": "click.text",
+    "text": "\"Kaydet\"e tıklayın",
+    "codes": 0
+   },
+   {
+    "name": "tagline.text",
+    "text": "¤Her sabah taze ekmek¤ © 100%",
+    "codes": 2
+   },
+   {
+    "name": "ref.only",
+    "text": "¤",
+    "codes": 1
+   },
+   {
+    "name": "escaped.markup",
+    "text": "¤Her sabah taze ekmek¤ ¤",
+    "codes": 3
+   }
+  ]
+ },
+ "browser_zh.dtd": {
+  "units": [
+   {
+    "name": "window.title",
+    "text": "¤ - 流明面包店",
+    "codes": 1
+   },
+   {
+    "name": "login.label",
+    "text": "登录",
+    "codes": 0
+   },
+   {
+    "name": "login.accesskey",
+    "text": "登",
+    "codes": 0
+   },
+   {
+    "name": "save.label",
+    "text": "保存并关闭",
+    "codes": 0
+   },
+   {
+    "name": "click.text",
+    "text": "点击“保存”继续",
+    "codes": 0
+   },
+   {
+    "name": "tagline.text",
+    "text": "¤每天早晨新鲜面包¤ © 100%",
+    "codes": 2
+   },
+   {
+    "name": "ref.only",
+    "text": "¤",
+    "codes": 1
+   },
+   {
+    "name": "escaped.markup",
+    "text": "¤每天早晨新鲜面包¤ ¤",
+    "codes": 3
+   }
+  ]
+ },
+ "okapi_test01.dtd": {
+  "units": [
+   {
+    "name": "test1",
+    "text": "Text of &test1;",
+    "codes": 0
+   },
+   {
+    "name": "test2",
+    "text": "Text of test 1 = ¤",
+    "codes": 1
+   },
+   {
+    "name": "test3",
+    "text": "Text with ¤HTML¤ ¤codes¤.",
+    "codes": 4
+   },
+   {
+    "name": "findWindow.title",
+    "text": "Find Files",
+    "codes": 0
+   },
+   {
+    "name": "fileMenu.label",
+    "text": "File",
+    "codes": 0
+   },
+   {
+    "name": "editMenu.label",
+    "text": "Edit",
+    "codes": 0
+   },
+   {
+    "name": "fileMenu.accesskey",
+    "text": "f",
+    "codes": 0
+   },
+   {
+    "name": "editMenu.accesskey",
+    "text": "e",
+    "codes": 0
+   },
+   {
+    "name": "openCmd.label",
+    "text": "Open Search...",
+    "codes": 0
+   },
+   {
+    "name": "saveCmd.label",
+    "text": "Save Search...",
+    "codes": 0
+   },
+   {
+    "name": "closeCmd.label",
+    "text": "Close",
+    "codes": 0
+   },
+   {
+    "name": "openCmd.accesskey",
+    "text": "o",
+    "codes": 0
+   },
+   {
+    "name": "saveCmd.accesskey",
+    "text": "s",
+    "codes": 0
+   },
+   {
+    "name": "closeCmd.accesskey",
+    "text": "c",
+    "codes": 0
+   },
+   {
+    "name": "cutCmd.label",
+    "text": "Cut",
+    "codes": 0
+   },
+   {
+    "name": "copyCmd.label",
+    "text": "Copy",
+    "codes": 0
+   },
+   {
+    "name": "pasteCmd.label",
+    "text": "Paste",
+    "codes": 0
+   },
+   {
+    "name": "cutCmd.accesskey",
+    "text": "t",
+    "codes": 0
+   },
+   {
+    "name": "copyCmd.accesskey",
+    "text": "c",
+    "codes": 0
+   },
+   {
+    "name": "pasteCmd.accesskey",
+    "text": "p",
+    "codes": 0
+   },
+   {
+    "name": "cutCmd.commandkey",
+    "text": "X",
+    "codes": 0
+   },
+   {
+    "name": "copyCmd.commandkey",
+    "text": "C",
+    "codes": 0
+   },
+   {
+    "name": "pasteCmd.commandkey",
+    "text": "V",
+    "codes": 0
+   },
+   {
+    "name": "openCmdToolbar.label",
+    "text": "Open",
+    "codes": 0
+   },
+   {
+    "name": "saveCmdToolbar.label",
+    "text": "Save",
+    "codes": 0
+   },
+   {
+    "name": "searchTab",
+    "text": "Search",
+    "codes": 0
+   },
+   {
+    "name": "optionsTab",
+    "text": "Options",
+    "codes": 0
+   },
+   {
+    "name": "findDescription",
+    "text": "Enter your search criteria below and select the Find button to begin the search.",
+    "codes": 0
+   },
+   {
+    "name": "findCriteria",
+    "text": "Search Criteria",
+    "codes": 0
+   },
+   {
+    "name": "type.name",
+    "text": "Name",
+    "codes": 0
+   },
+   {
+    "name": "test.withCodes",
+    "text": "This is a text ¤with codes¤ that should work.",
+    "codes": 2
+   },
+   {
+    "name": "type.size",
+    "text": "Size",
+    "codes": 0
+   },
+   {
+    "name": "type.date",
+    "text": "Date Modified",
+    "codes": 0
+   },
+   {
+    "name": "mode.is",
+    "text": "Is",
+    "codes": 0
+   },
+   {
+    "name": "mode.isnot",
+    "text": "Is Not",
+    "codes": 0
+   },
+   {
+    "name": "casesensitive",
+    "text": "Case Sensitive Search",
+    "codes": 0
+   },
+   {
+    "name": "matchfilename",
+    "text": "Match Entire Filename",
+    "codes": 0
+   },
+   {
+    "name": "results.filename",
+    "text": "Filename",
+    "codes": 0
+   },
+   {
+    "name": "results.location",
+    "text": "Location",
+    "codes": 0
+   },
+   {
+    "name": "results.size",
+    "text": "Size",
+    "codes": 0
+   },
+   {
+    "name": "bytes.before",
+    "text": "",
+    "codes": 0
+   },
+   {
+    "name": "bytes.after",
+    "text": "bytes",
+    "codes": 0
+   },
+   {
+    "name": "button.find",
+    "text": "Find",
+    "codes": 0
+   },
+   {
+    "name": "button.cancel",
+    "text": "Cancel",
+    "codes": 0
+   }
+  ]
+ }
+}
