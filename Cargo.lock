@@ -24,6 +24,7 @@ dependencies = [
  "bilingua-arb",
  "bilingua-docx",
  "bilingua-dtd",
+ "bilingua-ftl",
  "bilingua-html",
  "bilingua-ini",
  "bilingua-jsmodule",
@@ -89,6 +90,15 @@ dependencies = [
  "bilingua-model",
  "proptest",
  "regex",
+ "serde_json",
+]
+
+[[package]]
+name = "bilingua-ftl"
+version = "0.1.0"
+dependencies = [
+ "bilingua-model",
+ "proptest",
  "serde_json",
 ]
 
