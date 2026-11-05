@@ -1,0 +1,6 @@
+<h1><%= t('.title') %></h1>
+<% @items.each do |item| -%>
+<p>Only <%= item.price %> today</p>
+<% end -%>
+<%# a comment %>
+<p>Literal <%% marker and <%== raw %> end</p>

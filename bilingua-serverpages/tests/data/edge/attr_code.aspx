@@ -1,0 +1,1 @@
+<img alt="<%= a %>" title="Plain title" src="<%= s %>"><a title="T <%: x %> U" href="#">go on</a><input value="Go" type=submit>

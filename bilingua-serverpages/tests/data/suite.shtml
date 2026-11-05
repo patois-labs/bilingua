@@ -1,0 +1,3 @@
+<!--#include virtual="/header.html" -->
+<!--#config timefmt="%Y" -->
+<p>Last updated <!--#echo var="LAST_MODIFIED" --> by the team.</p>
