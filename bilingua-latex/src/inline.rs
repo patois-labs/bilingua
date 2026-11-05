@@ -359,6 +359,20 @@ fn ends_in_control_word(s: &str) -> bool {
     slashes % 2 == 1
 }
 
+/// A point token that is `\\` or `\\*` with no `[..]` of its own.
+fn is_bare_newline(raw: &str) -> bool {
+    matches!(raw.trim_end_matches([' ', '\t']), "\\\\" | "\\\\*")
+}
+
+/// In the source, the text right after standalone tag `id` starts (after blanks) with `[`.
+fn bracket_after_in_source(u: &Unit, id: &str) -> bool {
+    let src = u.source();
+    let Some(k) = src.iter().position(|i| matches!(i, Inline::Tag { id: t, kind: TagKind::Standalone, .. } if t == id)) else {
+        return false;
+    };
+    matches!(src.get(k + 1), Some(Inline::Text(t)) if t.trim_start_matches([' ', '\t']).starts_with('['))
+}
+
 /// Strips the translation like Python `strip()` and merges neighbouring text.
 pub fn normalize(inl: &[Inline]) -> Vec<Inline> {
     let mut v: Vec<Inline> = Vec::with_capacity(inl.len());
@@ -389,6 +403,7 @@ pub fn render(u: &Unit, target: &[Inline]) -> String {
     let mut out: Vec<String> = Vec::new();
     let mut opened: Vec<&str> = Vec::new();
     let mut words: Vec<usize> = Vec::new();
+    let mut breaks: Vec<usize> = Vec::new(); // a bare `\\` (it looks for `[` after blanks)
     for i in &t {
         match i {
             Inline::Text(x) => {
@@ -430,6 +445,9 @@ pub fn render(u: &Unit, target: &[Inline]) -> String {
                             if ends_in_control_word(r) {
                                 words.push(out.len());
                             }
+                            if is_bare_newline(r) && !bracket_after_in_source(u, id) {
+                                breaks.push(out.len());
+                            }
                             out.push(r.clone());
                         }
                     }
@@ -449,6 +467,16 @@ pub fn render(u: &Unit, target: &[Inline]) -> String {
         if let Some(first) = out.first_mut() {
             if let Some(rest) = first.strip_prefix('[') {
                 *first = format!("{{[}}{rest}");
+            }
+        }
+    }
+    // a bare `\\` reads a following `[` (after blanks) as its optional length: a translation that puts text starting
+    // with `[` after it gets `{[}`, unless the source had a `[` there too
+    for &w in &breaks {
+        if let Some(next) = out.get_mut(w + 1) {
+            let lead = next.len() - next.trim_start_matches([' ', '\t']).len();
+            if next[lead..].starts_with('[') {
+                next.replace_range(lead..lead + 1, "{[}");
             }
         }
     }

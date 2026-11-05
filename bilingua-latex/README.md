@@ -23,8 +23,9 @@ every `\verb` is one standalone tag. Never translated, kept byte for byte: the p
 `& % $ # _ { } ~ ^ \` in a translation is escaped again and a no-break space is written as `~`. A line break in a
 translation becomes a space. A point tag that ends in a control word (`\TeX`) gets `{}` when letters or a blank follow
 it in the translation. A `]` in an item label or short title is written `{]}`, and a paragraph or cell whose
-translation starts with `[` gets `{[}` so LaTeX does not read it as the optional argument of the command before it
-(LocOS does neither; both only change a translation that contains those brackets). Braces always stay balanced: a close without its open is dropped, an open that is never closed
+translation starts with `[` gets `{[}` so LaTeX does not read it as the optional argument of the command before it;
+the same holds for text starting with `[` right after a bare `\\` (unless the source had a `[` there too)
+(LocOS does none of these; they only change a translation that contains those brackets). Braces always stay balanced: a close without its open is dropped, an open that is never closed
 is closed.
 
 An untouched merge is the original bytes (encoding, BOM and newlines kept). Only the slot of a changed unit is
@@ -57,7 +58,8 @@ rewritten.
 * Encoding on merge. LocOS exports a Windows-1252 file as UTF-8 and rewrites `\usepackage[latin1]{inputenc}` to `utf8`
   (and does so even when nothing changed). Bilingua keeps the file's encoding while every character fits and leaves
   `inputenc` alone; if a translation does not fit, the file becomes UTF-8 and a legacy `inputenc` option (`latin1`,
-  `latin9`, `cp1252`, `ansinew`, and the other legacy names) is rewritten to `utf8`. The model's "always write UTF-8"
+  `latin9`, `cp1252`, `ansinew`, and the other legacy names) is rewritten to `utf8`, in the preamble only (LocOS also
+rewrites the same line inside a `verbatim` example in the body). The model's "always write UTF-8"
   option, when it exists, will need the same rewrite (see WIRING.md).
 * `LATEX_TEXT_COMMANDS` (an environment variable in LocOS) is `Latex::with_inline_commands` here: the crate reads no
   environment.

@@ -400,6 +400,18 @@ fn doc_re(begin: bool) -> &'static Regex {
     }
 }
 
+/// The start of the first `\begin{document}` that is not in a comment.
+pub fn document_start(t: &str) -> Option<usize> {
+    let mut doc = doc_re(true).find(t);
+    while let Some(d) = doc {
+        if !in_comment(t, d.start()) {
+            return Some(d.start());
+        }
+        doc = doc_re(true).find_at(t, d.end());
+    }
+    None
+}
+
 // ---------------------------------------------------------------------------------------------- block scan
 
 /// One paragraph-level slot of text in the source.

@@ -232,3 +232,32 @@ Body text.
     assert!(s.contains(r"\item[[Label{]}] {[}Item text.]"), "{s}");
     assert_eq!(extract(&out).unwrap().units.len(), doc.units.len());
 }
+
+#[test]
+fn a_bracket_after_a_line_break_is_protected() {
+    // `\\` reads a `[` after it (blanks skipped) as its optional length
+    let data = br"\begin{document}
+First line\\ second line.
+
+Kept\\ [2pt] as it was.
+\end{document}
+";
+    let mut doc = extract(data).unwrap();
+    let t0 = vec![Inline::text("Erste"), doc.units[0].source()[1].clone(), Inline::text(" [Notiz] zweite.")];
+    let t1 = vec![Inline::text("Behalten"), doc.units[1].source()[1].clone(), Inline::text(" [3pt] wie es war.")];
+    doc.units[0].segments[0].target = t0;
+    doc.units[1].segments[0].target = t1;
+    let s = String::from_utf8(Latex::default().merge(&doc).unwrap()).unwrap();
+    assert!(s.contains(r"Erste\\ {[}Notiz] zweite."), "{s}");
+    assert!(s.contains(r"Behalten\\ [3pt] wie es war."), "{s}");
+}
+
+#[test]
+fn inputenc_rewrite_touches_only_the_preamble() {
+    let data = b"\\usepackage[latin1]{inputenc}\n\\begin{document}\nCaf\xe9.\n\\begin{verbatim}\n\\usepackage[latin1]{inputenc}\n\\end{verbatim}\n\\end{document}\n";
+    let mut doc = extract(data).unwrap();
+    doc.units[0].segments[0].target = vec![Inline::text("\u{65e5}\u{672c}.")];
+    let s = String::from_utf8(Latex::default().merge(&doc).unwrap()).unwrap();
+    assert!(s.starts_with("\\usepackage[utf8]{inputenc}\n"), "{s}");
+    assert!(s.contains("\\begin{verbatim}\n\\usepackage[latin1]{inputenc}\n\\end{verbatim}"), "{s}");
+}

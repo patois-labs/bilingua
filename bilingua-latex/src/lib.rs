@@ -168,8 +168,11 @@ impl Filter for Latex {
         let bytes = enc::encode_text(&out, encoding)?;
         if changed && enc::is_legacy(encoding) && fell_back_to_utf8(&bytes, &out, encoding) {
             // The translation did not fit the file's code page and went out as UTF-8: an `inputenc` option that
-            // names the old code page would now be false.
-            let fixed = inputenc_re().replace_all(&out, |c: &regex::Captures| format!("{}utf8{}", &c[1], &c[3]));
+            // names the old code page would now be false. Only the preamble is rewritten: the same line in the body
+            // (a verbatim example, a comment) is text and stays as written.
+            let cut = scan::document_start(&out).unwrap_or(out.len());
+            let head = inputenc_re().replace_all(&out[..cut], |c: &regex::Captures| format!("{}utf8{}", &c[1], &c[3]));
+            let fixed = format!("{head}{}", &out[cut..]);
             return enc::encode_text(&fixed, "utf-8");
         }
         Ok(bytes)
