@@ -544,7 +544,8 @@ pub(crate) fn raw_quotes_safe(text: &str) -> bool {
             continue;
         }
         if s.starts_with("<!") || s.starts_with("<?") {
-            if s[..s.len() - 1].contains('>') {
+            // char-aware: a truncated token may end inside a multi-byte character
+            if s[..s.len() - s.chars().next_back().map_or(0, char::len_utf8)].contains('>') {
                 return false;
             }
             continue;
