@@ -261,7 +261,7 @@ impl Tree {
             }
             let rest = &src[i..];
             if rest.starts_with("<!--") {
-                let e = rest[4..].find("-->").ok_or("unterminated comment")? + 4 + 3;
+                let e = rest.strip_prefix("<!--").and_then(|r| r.find("-->")).ok_or("unterminated comment")? + 4 + 3;
                 if let Some(top) = stack.last().copied() {
                     let id = push_node(&mut nodes, Kind::Comment, String::new(), rest[..e].to_string(), Some(top));
                     nodes[top].children.push(id);
@@ -274,7 +274,7 @@ impl Tree {
                 push_text(&mut nodes, top, &rest[..e]);
                 i += e;
             } else if rest.starts_with("<?") {
-                let e = rest[2..].find("?>").ok_or("unterminated processing instruction")? + 2 + 2;
+                let e = rest.strip_prefix("<?").and_then(|r| r.find("?>")).ok_or("unterminated processing instruction")? + 2 + 2;
                 let inner = &rest[2..e - 2];
                 let target: String = inner.chars().take_while(|c| is_name_char(*c) && *c != '?').collect();
                 if target.is_empty() {
@@ -575,16 +575,10 @@ impl Tree {
         }
         let body = self.open_body(id);
         if n.children.is_empty() && n.text.is_empty() && (n.empty_src || !n.raw_ok) {
-            if n.empty_src && n.raw_ok {
-                out.push('<');
-                out.push_str(&body);
-                out.push_str("/>");
-            } else {
-                // built by the story code with no content: still an empty element
-                out.push('<');
-                out.push_str(&body);
-                out.push_str("/>");
-            }
+            // written `<a/>` in the file, or built by the story code with no content
+            out.push('<');
+            out.push_str(&body);
+            out.push_str("/>");
             return;
         }
         out.push('<');
@@ -643,7 +637,7 @@ fn push_text(nodes: &mut [Node], parent: Id, t: &str) {
 fn check_misc(s: &str) -> Result<(), String> {
     let mut rest = s;
     loop {
-        rest = rest.trim_start_matches(|c: char| matches!(c, ' ' | '\t' | '\n' | '\r' | '\u{feff}'));
+        rest = rest.trim_start_matches([' ', '\t', '\n', '\r', '\u{feff}']);
         if rest.is_empty() {
             return Ok(());
         }

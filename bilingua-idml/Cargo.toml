@@ -9,8 +9,7 @@ repository.workspace = true
 [dependencies]
 bilingua-model = { workspace = true }
 bilingua-zip = { workspace = true }
-serde = { workspace = true }
-serde_json = { workspace = true }
 
 [dev-dependencies]
 proptest = "1"
+serde_json = { workspace = true }

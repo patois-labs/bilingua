@@ -414,6 +414,8 @@ fn raw_zip(members: &[(&str, &[u8])]) -> Vec<u8> {
     out
 }
 
+type Member = (String, Vec<u8>);
+
 fn refused(data: &[u8], why: &str) -> Error {
     match Idml.extract(data, &ExtractOptions::default()) {
         Err(e) => e,
@@ -425,7 +427,7 @@ fn refused(data: &[u8], why: &str) -> Error {
 fn malformed_and_hostile() {
     refused(b"not a zip at all", "not a zip");
     let good = Pkg::one(psr(&csr("<Content>x</Content>")));
-    let rezip = |f: &dyn Fn(&str, Vec<u8>) -> Option<(String, Vec<u8>)>| -> Vec<u8> {
+    let rezip = |f: &dyn Fn(&str, Vec<u8>) -> Option<Member>| -> Vec<u8> {
         let m: Vec<(String, Vec<u8>)> = good.members().into_iter().filter_map(|(n, d)| f(&n, d)).collect();
         zip_of(&m)
     };
