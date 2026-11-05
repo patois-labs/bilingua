@@ -3,11 +3,12 @@
 
 use std::collections::HashSet;
 
+// Offsets come from the file, so every sum is checked (usize is 32 bits on wasm32).
 fn u16at(b: &[u8], i: usize) -> Option<usize> {
-    Some(u16::from_le_bytes(b.get(i..i + 2)?.try_into().ok()?) as usize)
+    Some(u16::from_le_bytes(b.get(i..i.checked_add(2)?)?.try_into().ok()?) as usize)
 }
 fn u32at(b: &[u8], i: usize) -> Option<usize> {
-    Some(u32::from_le_bytes(b.get(i..i + 4)?.try_into().ok()?) as usize)
+    Some(u32::from_le_bytes(b.get(i..i.checked_add(4)?)?.try_into().ok()?) as usize)
 }
 
 /// The first member name (as written) that appears twice in the central directory, comparing names the way the
@@ -24,12 +25,13 @@ pub fn duplicate_name(b: &[u8]) -> Option<String> {
             return None;
         }
         let (n, x, c) = (u16at(b, at + 28)?, u16at(b, at + 30)?, u16at(b, at + 32)?);
-        let raw = String::from_utf8_lossy(b.get(at + 46..at + 46 + n)?).into_owned();
+        let name0 = at.checked_add(46)?;
+        let raw = String::from_utf8_lossy(b.get(name0..name0.checked_add(n)?)?).into_owned();
         let key = raw.replace('\\', "/").trim_start_matches("./").to_ascii_lowercase();
         if !seen.insert(key) {
             return Some(raw);
         }
-        at += 46 + n + x + c;
+        at = name0.checked_add(n + x + c)?;
     }
     None
 }

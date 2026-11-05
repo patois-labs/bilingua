@@ -343,6 +343,10 @@ fn merge_doc(doc: &Document) -> Result<Vec<u8>, Error> {
     let mut out: Vec<(EntryMeta, Body)> = Vec::with_capacity(order.len());
     for e in order {
         let mut meta = e.meta.clone();
+        if e.name == "mimetype" {
+            // a deflated mimetype is written stored from its plain bytes, never as a packed copy
+            meta.stored = true;
+        }
         let body = if let Some(b) = replaced.remove(&e.name) {
             Body::Owned(b)
         } else {
@@ -351,9 +355,6 @@ fn merge_doc(doc: &Document) -> Result<Vec<u8>, Error> {
                 _ => Body::Plain(&e.data),
             }
         };
-        if e.name == "mimetype" {
-            meta.stored = true;
-        }
         out.push((meta, body));
     }
     bilingua_zip::write_zip_parts(&out)

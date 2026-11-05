@@ -316,3 +316,25 @@ fn sniff_tells_the_four_families_apart() {
     // a template and a document extract the same way
     assert_eq!(units("ott", &tpl), units("odt", &Pkg::new(odt_content()).build()));
 }
+
+#[test]
+fn a_deflated_mimetype_is_written_first_and_stored() {
+    // not what the spec asks for, but such files exist; the merge used to refuse them
+    let data = odt();
+    let mut es: Vec<(bilingua_zip::EntryMeta, Vec<u8>)> = entries(&data).into_iter().map(|e| (e.meta, e.data)).collect();
+    es.rotate_left(1); // mimetype last
+    for (m, _) in es.iter_mut() {
+        if m.name == "mimetype" {
+            m.stored = false;
+        }
+    }
+    let deflated = bilingua_zip::write_zip(&es).unwrap();
+    assert!(!entries(&deflated).iter().find(|e| e.name == "mimetype").unwrap().meta.stored);
+    let out = build("odt", &deflated, &[(0, "Erste Schritte")], Some("de-DE"));
+    assert_eq!(&out[..4], b"PK\x03\x04");
+    assert_eq!(u16::from_le_bytes([out[8], out[9]]), 0, "stored");
+    assert_eq!(u16::from_le_bytes([out[28], out[29]]), 0, "no extra field");
+    assert_eq!(&out[30..38], b"mimetype");
+    assert_eq!(member(&out, "mimetype"), MIME_TEXT.as_bytes());
+    assert_eq!(units("odt", &out)[0].1, "Erste Schritte");
+}
