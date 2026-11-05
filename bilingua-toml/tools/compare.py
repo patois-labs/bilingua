@@ -8,11 +8,12 @@ per file: unit counts and whether every unit text is identical.
 import json, os, subprocess, sys, tempfile
 from pathlib import Path
 
+CORPUS = Path(__file__).resolve().parents[2] / "oracle" / "corpus" / "toml"
 HERE = Path(__file__).resolve().parent
-WS = HERE.parents[2]  # the bilingua workspace
+WS = HERE.parents[1]  # the bilingua workspace
 LOCOS = Path(os.environ.get("LOCOS_DIR", r"C:\Users\brent\code\local-tms"))
 PY = LOCOS / ".venv" / "Scripts" / "python.exe"
-files = sorted(str(p) for p in HERE.glob("*.toml")) + sys.argv[1:]
+files = sorted(str(p) for p in CORPUS.glob("*.toml")) + sys.argv[1:]
 tmp = tempfile.mkdtemp()
 a, b = os.path.join(tmp, "bl.json"), os.path.join(tmp, "lo.json")
 subprocess.run(["cargo", "run", "-q", "-p", "bilingua-toml", "--example", "dump", "--", a, *files], cwd=WS, check=True)
@@ -36,4 +37,20 @@ for f in files:
         same = ("error" in x) == ("error" in y)
         print(f"{'same' if same else 'DIFF'}  {Path(f).name}: bilingua {x.get('error', 'ok')[:60]!r} locos {str(y.get('error', 'ok'))[:60]!r}")
         bad += not same
+
+# Translated builds: the same "DE " + text translation through the LocOS filter must give the same bytes.
+os.environ["LOC_TMS_DATA_DIR"] = tempfile.mkdtemp(prefix="locos-compare-")
+sys.dont_write_bytecode = True
+sys.path.insert(0, str(LOCOS))
+from app.filters import get_filter  # noqa: E402
+flt = get_filter("toml")
+for f in files:
+    if "merged" not in bl[f]:
+        continue
+    data = open(f, "rb").read()
+    r = flt.parse(data)
+    out = flt.build(data, {str(u.p_index): "DE " + u.text for u in r.units}).decode("utf-8")
+    ok = out == bl[f]["merged"]
+    print(f"{'same' if ok else 'DIFF'}  {Path(f).name}: translated build bytes")
+    bad += not ok
 sys.exit(1 if bad else 0)

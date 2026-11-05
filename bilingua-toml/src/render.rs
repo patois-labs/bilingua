@@ -89,10 +89,8 @@ pub fn render(kind: Kind, lead: &str, value: &str, file_nl: &str) -> String {
         return format!("\"{}\"", escape_basic(&value));
     }
     if kind == Kind::MlLiteral {
-        let ok = !value.contains("'''")
-            && !value.ends_with('\'')
-            && !bad_control(&value, "\t\n")
-            && !(value.starts_with('\n') && lead.is_empty());
+        let leading_nl = value.starts_with('\n') && lead.is_empty();
+        let ok = !value.contains("'''") && !value.ends_with('\'') && !bad_control(&value, "\t\n") && !leading_nl;
         if ok {
             return format!("'''{lead}{}'''", value.replace('\n', nl));
         }
