@@ -58,6 +58,7 @@ dependencies = [
  "bilingua-seg",
  "bilingua-serverpages",
  "bilingua-strings",
+ "bilingua-subtext",
  "bilingua-subtitle",
  "bilingua-text",
  "bilingua-toml",
@@ -472,6 +473,15 @@ version = "0.1.0"
 dependencies = [
  "bilingua-model",
  "bilingua-seg",
+ "proptest",
+ "serde_json",
+]
+
+[[package]]
+name = "bilingua-subtext"
+version = "0.1.0"
+dependencies = [
+ "bilingua-model",
  "proptest",
  "serde_json",
 ]

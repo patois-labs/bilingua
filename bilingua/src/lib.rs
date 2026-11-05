@@ -108,6 +108,10 @@ pub fn filters() -> Vec<Box<dyn Filter>> {
         Box::new(bilingua_ftl::FtlFilter),
         // generic XML sniffs any well-formed document, so it goes after every filter that owns an XML vocabulary.
         Box::new(bilingua_xml::XmlFilter::new()),
+        // SubViewer 2.0 / MicroDVD (.sub) and YouTube SBV sniff tightly (MicroDVD cues, a SubViewer header, or a first
+        // line that is a timecode pair), so they sit before the CSV sniffers and the loose ones.
+        Box::new(bilingua_subtext::Sub),
+        Box::new(bilingua_subtext::Sbv),
         // CSV and TSV sniff strictly (three aligned lines) but a delimited table looks like nothing else: after the
         // key-value formats, before the loose sniffers.
         Box::new(bilingua_csv::CsvFilter::default()),
