@@ -52,6 +52,7 @@ dependencies = [
  "bilingua-rc",
  "bilingua-resjson",
  "bilingua-resx",
+ "bilingua-rst",
  "bilingua-sdl",
  "bilingua-seg",
  "bilingua-strings",
@@ -408,6 +409,15 @@ dependencies = [
  "bilingua-model",
  "proptest",
  "quick-xml",
+ "serde_json",
+]
+
+[[package]]
+name = "bilingua-rst"
+version = "0.1.0"
+dependencies = [
+ "bilingua-model",
+ "proptest",
  "serde_json",
 ]
 
