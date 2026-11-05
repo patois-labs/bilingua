@@ -250,3 +250,12 @@ fn hostile_xpath_rules_are_bounded() {
     let parens = format!("{}1{}", "(".repeat(5000), ")".repeat(5000));
     let _ = f.extract(doc(&parens).as_bytes(), &opts(None));
 }
+
+#[test]
+fn undeclared_legacy_bytes_are_refused() {
+    let f = XmlFilter::new();
+    // 0xE9 alone is not UTF-8 and nothing says what it is: refused, not guessed
+    assert!(matches!(f.extract(b"<r><p>caf\xe9</p></r>", &opts(None)), Err(Error::Encoding(_))));
+    assert!(matches!(f.extract(b"<?xml version=\"1.0\"?><r>caf\xe9</r>", &opts(None)), Err(Error::Encoding(_))));
+    assert!(f.extract(b"<?xml version=\"1.0\" encoding=\"ISO-8859-1\"?><r>caf\xe9</r>", &opts(None)).is_ok());
+}

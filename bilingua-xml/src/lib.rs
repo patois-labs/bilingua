@@ -169,7 +169,7 @@ impl XmlFilter {
         let limits = opts.limits();
         guard::check_input(bytes, &limits)?;
         guard::check_xml(bytes, &limits)?;
-        let dec = enc::decode_text(bytes, &DecodeOptions::new(&opts).declared())?;
+        let dec = read_xml(bytes, &opts)?;
         let t = Tree::parse(&dec.text)?;
         if !matches!(self.ml, MlPolicy::Off) {
             if let Some(mp) = ml::plan(&t, self.ml_config().as_ref(), &limits, true, true)? {
@@ -186,7 +186,7 @@ impl XmlFilter {
         let limits = opts.limits();
         guard::check_input(bytes, &limits)?;
         guard::check_xml(bytes, &limits)?;
-        let dec = enc::decode_text(bytes, &DecodeOptions::new(opts).declared())?;
+        let dec = read_xml(bytes, opts)?;
         let t = Tree::parse(&dec.text)?;
         if !matches!(self.ml, MlPolicy::Off) {
             if let Some(mp) = ml::plan(&t, self.ml_config().as_ref(), &limits, true, true)? {
@@ -209,6 +209,16 @@ impl XmlFilter {
         let doc = skel::build_document(&t, &planned, &props.notes, alt, opts, dec.encoding.clone(), lang, self.id);
         guard::finish(doc, dec.warnings, &limits)
     }
+}
+
+/// Decodes an XML file. Like the XML specification and LocOS, a file that is not UTF-8 or UTF-16 must say which
+/// encoding it is in: an undeclared legacy byte stream is refused, never guessed.
+fn read_xml(bytes: &[u8], opts: &ExtractOptions) -> Result<enc::Decoded, Error> {
+    let dec = enc::decode_text(bytes, &DecodeOptions::new(opts).declared())?;
+    if enc::is_legacy(&dec.encoding) && enc::declared_encoding(bytes).is_none() {
+        return Err(Error::Encoding("This XML file is not UTF-8 and does not declare its encoding (<?xml version=\"1.0\" encoding=\"...\"?>). Re-save it as UTF-8, or add the declaration.".into()));
+    }
+    Ok(dec)
 }
 
 /// Hidden code on the first unit of a multilingual document: the layout to replay on merge.
@@ -234,7 +244,7 @@ impl Filter for XmlFilter {
         if guard::check_xml(bytes, &opts.limits()).is_err() {
             return false;
         }
-        match enc::decode_text(bytes, &DecodeOptions::new(&opts).declared()) {
+        match read_xml(bytes, &opts) {
             Ok(d) => Tree::parse(&d.text).is_ok(),
             Err(_) => false,
         }
