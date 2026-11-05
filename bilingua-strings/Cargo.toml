@@ -1,0 +1,15 @@
+[package]
+name = "bilingua-strings"
+description = "Bilingua: Apple .strings parser (UTF-8 and UTF-16)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+bilingua-model = { workspace = true }
+
+[dev-dependencies]
+proptest = "1"
+serde_json = { workspace = true }
+bilingua-seg = { workspace = true }
