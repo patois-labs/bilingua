@@ -1,0 +1,18 @@
+[OPTIONS]
+Compatibility=1.1 or later
+Compiled file=manual.chm
+Contents file=toc.hhc
+Default topic=html/ru/start.htm
+Display compile progress=No
+Index file=index.hhk
+Language=0x419 Russian (Russia)
+Title=Справочник пекарни
+
+[WINDOWS]
+main="Справка пекарни","toc.hhc","index.hhk","html/ru/start.htm","html/ru/start.htm",,,,,0x23520,,0x387e,,,,,,,,0
+
+[FILES]
+html/ru/start.htm
+; Title=not an option here
+
+[INFOTYPES]
