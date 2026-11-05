@@ -27,6 +27,7 @@ pub fn filters() -> Vec<Box<dyn Filter>> {
         Box::new(bilingua_subtitle::Vtt),
         Box::new(bilingua_subtitle::Srt),
         Box::new(bilingua_po::Po),
+        Box::new(bilingua_resjson::Resjson),
         Box::new(bilingua_json::JsonFilter),
         Box::new(bilingua_markdown::MarkdownFilter),
         Box::new(bilingua_ini::IniFilter),

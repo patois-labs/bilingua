@@ -24,6 +24,7 @@ bilingua-xliff = { workspace = true }
 bilingua-sdl = { workspace = true }
 bilingua-ini = { workspace = true }
 bilingua-strings = { workspace = true }
+bilingua-resjson = { workspace = true }
 
 [dev-dependencies]
 zip = { workspace = true }

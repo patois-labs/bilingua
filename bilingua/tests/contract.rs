@@ -15,6 +15,9 @@ fn corpus() -> Vec<(String, Vec<u8>)> {
         }
         for f in std::fs::read_dir(dir.path()).unwrap().flatten() {
             let name = f.file_name().to_string_lossy().to_string();
+            if name.starts_with('.') {
+                continue; // dot files (.gitattributes and the like) are never fixtures
+            }
             out.push((name, std::fs::read(f.path()).unwrap()));
         }
     }
@@ -157,6 +160,7 @@ fn crate_of(format: &str) -> &'static str {
         "pptx" => "bilingua-pptx",
         "html" => "bilingua-html",
         "json" => "bilingua-json",
+        "resjson" => "bilingua-resjson",
         "markdown" | "md" => "bilingua-markdown",
         "po" => "bilingua-po",
         "ini" => "bilingua-ini",
