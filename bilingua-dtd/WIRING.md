@@ -15,5 +15,5 @@
   text, because LocOS keeps references and markup as plain text. Entity references (`&brandShortName;`, `&lt;`) are
   standalone free tags; markup (`<html:b>`, `&lt;i>`) is an open/close pair when it has its partner, else standalone.
 - Notes: the comments directly above an entity (no blank line between) are `context.notes`; key = entity name.
-- Oracle corpus: `oracle/corpus/dtd/` (17 files, made by `tests/tools/gen_corpus.py`; includes two Okapi test files).
+- Oracle corpus: `oracle/corpus/dtd/` (15 files, made by `tests/tools/gen_corpus.py`; includes an Okapi test file).
 - Python wheel: nothing format-specific; it goes through the facade.

@@ -2,7 +2,7 @@
 
     python gen_corpus.py ../../../oracle/corpus/dtd [OKAPI_DTD_DIR]
 
-OKAPI_DTD_DIR (optional) is the folder with Okapi's Test01.dtd and Test02.dtd (Apache 2.0); they are copied in.
+OKAPI_DTD_DIR (optional) is the folder with Okapi's Test01.dtd (Apache 2.0); it is copied in.
 """
 
 import os
@@ -84,9 +84,8 @@ def main():
         b'<!ENTITY lol "lol">\n<!ENTITY lol2 "&lol;&lol;&lol;&lol;&lol;">\n<!ENTITY num "42">\n<!ENTITY sym "---">\n'
         b'<!ENTITY multi "line one\nline two">\n<!ENTITY empty "">\n<!ENTITY pad "  padded  ">\n',
     )
-    put("empty.dtd", b"")
     if len(sys.argv) > 2:
-        for n in ("Test01.dtd", "Test02.dtd"):
+        for n in ("Test01.dtd",):  # Test02.dtd has no entity value; it lives in tests/data
             shutil.copyfile(os.path.join(sys.argv[2], n), os.path.join(out, "okapi_" + n.lower()))
 
 
