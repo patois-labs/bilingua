@@ -11,6 +11,9 @@ homepage = "https://github.com/patois-labs/bilingua"
 rust-version = "1.88"
 keywords = ["localization", "translation", "i18n", "l10n", "parser"]
 categories = ["internationalization", "localization", "parser-implementations", "text-processing"]
+# What a published .crate holds: the library source and its generated tables, the README, LICENSE and NOTICE.
+# Tests, corpora, oracle data, WIRING.md notes, examples and the Python generator scripts stay in the repository.
+include = ["/src/**", "/README.md", "/LICENSE", "/NOTICE"]
 
 [workspace.dependencies]
 bilingua-model = { path = "bilingua-model", version = "=0.1.0" }
