@@ -4,7 +4,7 @@
 
 use bilingua::{Granularity, Inline};
 
-const SETTINGS: &[u8] = include_bytes!("data/settings.jsonc");
+const SETTINGS: &[u8] = include_bytes!("fixtures/settings.jsonc");
 
 fn opts(g: Granularity) -> bilingua::ExtractOptions {
     bilingua::ExtractOptions::new().with_source_lang("en").with_target_lang("de-DE").with_granularity(g)
