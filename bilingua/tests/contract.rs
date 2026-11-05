@@ -156,6 +156,7 @@ fn free_flag_marks_named_placeholders_only() {
 fn crate_of(format: &str) -> &'static str {
     match format {
         "docx" => "bilingua-docx",
+        "epub" => "bilingua-epub",
         "xlsx" => "bilingua-xlsx",
         "pptx" => "bilingua-pptx",
         "html" => "bilingua-html",

@@ -1,0 +1,466 @@
+{
+ "guide.epub": [
+  [
+   "The Little Guide",
+   "epub:title"
+  ],
+  [
+   "A short book about & for testing.",
+   "epub:description"
+  ],
+  [
+   "Chapter One",
+   ""
+  ],
+  [
+   "Chapter One",
+   ""
+  ],
+  [
+   "Hello ⟦g1⟧bold⟦/g1⟧ world, you have {count} items and %1$s left.",
+   ""
+  ],
+  [
+   "A red cover",
+   "a11y:img-alt"
+  ],
+  [
+   "Chapter Two",
+   ""
+  ],
+  [
+   "Second chapter text.",
+   ""
+  ],
+  [
+   "Contents",
+   ""
+  ],
+  [
+   "Contents",
+   ""
+  ],
+  [
+   "⟦g1⟧Start here⟦/g1⟧",
+   ""
+  ],
+  [
+   "⟦g1⟧Next steps⟦/g1⟧",
+   ""
+  ],
+  [
+   "The Little Guide",
+   "epub:toc-label"
+  ],
+  [
+   "Start here",
+   "epub:toc-label"
+  ],
+  [
+   "Next steps",
+   "epub:toc-label"
+  ]
+ ],
+ "languages.epub": [
+  [
+   "Eleven languages",
+   "epub:title"
+  ],
+  [
+   "One fox, eleven ways.",
+   "epub:description"
+  ],
+  [
+   "The quick brown fox.",
+   ""
+  ],
+  [
+   "The quick brown fox.",
+   ""
+  ],
+  [
+   "The quick brown fox. ⟦g1⟧The quick brown fox.⟦/g1⟧",
+   ""
+  ],
+  [
+   "El veloz zorro marrón.",
+   ""
+  ],
+  [
+   "El veloz zorro marrón.",
+   ""
+  ],
+  [
+   "El veloz zorro marrón. ⟦g1⟧El veloz zorro marrón.⟦/g1⟧",
+   ""
+  ],
+  [
+   "Le renard brun rapide.",
+   ""
+  ],
+  [
+   "Le renard brun rapide.",
+   ""
+  ],
+  [
+   "Le renard brun rapide. ⟦g1⟧Le renard brun rapide.⟦/g1⟧",
+   ""
+  ],
+  [
+   "La rapida volpe marrone.",
+   ""
+  ],
+  [
+   "La rapida volpe marrone.",
+   ""
+  ],
+  [
+   "La rapida volpe marrone. ⟦g1⟧La rapida volpe marrone.⟦/g1⟧",
+   ""
+  ],
+  [
+   "Der schnelle braune Fuchs.",
+   ""
+  ],
+  [
+   "Der schnelle braune Fuchs.",
+   ""
+  ],
+  [
+   "Der schnelle braune Fuchs. ⟦g1⟧Der schnelle braune Fuchs.⟦/g1⟧",
+   ""
+  ],
+  [
+   "De snelle bruine vos.",
+   ""
+  ],
+  [
+   "De snelle bruine vos.",
+   ""
+  ],
+  [
+   "De snelle bruine vos. ⟦g1⟧De snelle bruine vos.⟦/g1⟧",
+   ""
+  ],
+  [
+   "A rápida raposa marrom.",
+   ""
+  ],
+  [
+   "A rápida raposa marrom.",
+   ""
+  ],
+  [
+   "A rápida raposa marrom. ⟦g1⟧A rápida raposa marrom.⟦/g1⟧",
+   ""
+  ],
+  [
+   "素早い茶色の狐。",
+   ""
+  ],
+  [
+   "素早い茶色の狐。",
+   ""
+  ],
+  [
+   "素早い茶色の狐。 ⟦g1⟧素早い茶色の狐。⟦/g1⟧",
+   ""
+  ],
+  [
+   "敏捷的棕色狐狸。",
+   ""
+  ],
+  [
+   "敏捷的棕色狐狸。",
+   ""
+  ],
+  [
+   "敏捷的棕色狐狸。 ⟦g1⟧敏捷的棕色狐狸。⟦/g1⟧",
+   ""
+  ],
+  [
+   "빠른 갈색 여우.",
+   ""
+  ],
+  [
+   "빠른 갈색 여우.",
+   ""
+  ],
+  [
+   "빠른 갈색 여우. ⟦g1⟧빠른 갈색 여우.⟦/g1⟧",
+   ""
+  ],
+  [
+   "الثعلب البني السريع.",
+   ""
+  ],
+  [
+   "الثعلب البني السريع.",
+   ""
+  ],
+  [
+   "الثعلب البني السريع. ⟦g1⟧الثعلب البني السريع.⟦/g1⟧",
+   ""
+  ],
+  [
+   "Contents",
+   ""
+  ],
+  [
+   "Contents",
+   ""
+  ],
+  [
+   "⟦g1⟧The quick brown fox.⟦/g1⟧",
+   ""
+  ],
+  [
+   "⟦g1⟧El veloz zorro marrón.⟦/g1⟧",
+   ""
+  ],
+  [
+   "⟦g1⟧Le renard brun rapide.⟦/g1⟧",
+   ""
+  ],
+  [
+   "⟦g1⟧La rapida volpe marrone.⟦/g1⟧",
+   ""
+  ],
+  [
+   "⟦g1⟧Der schnelle braune Fuchs.⟦/g1⟧",
+   ""
+  ],
+  [
+   "⟦g1⟧De snelle bruine vos.⟦/g1⟧",
+   ""
+  ],
+  [
+   "⟦g1⟧A rápida raposa marrom.⟦/g1⟧",
+   ""
+  ],
+  [
+   "⟦g1⟧素早い茶色の狐。⟦/g1⟧",
+   ""
+  ],
+  [
+   "⟦g1⟧敏捷的棕色狐狸。⟦/g1⟧",
+   ""
+  ],
+  [
+   "⟦g1⟧빠른 갈색 여우.⟦/g1⟧",
+   ""
+  ],
+  [
+   "⟦g1⟧الثعلب البني السريع.⟦/g1⟧",
+   ""
+  ],
+  [
+   "Eleven languages",
+   "epub:toc-label"
+  ],
+  [
+   "The quick brown fox.",
+   "epub:toc-label"
+  ],
+  [
+   "El veloz zorro marrón.",
+   "epub:toc-label"
+  ],
+  [
+   "Le renard brun rapide.",
+   "epub:toc-label"
+  ],
+  [
+   "La rapida volpe marrone.",
+   "epub:toc-label"
+  ],
+  [
+   "Der schnelle braune Fuchs.",
+   "epub:toc-label"
+  ],
+  [
+   "De snelle bruine vos.",
+   "epub:toc-label"
+  ],
+  [
+   "A rápida raposa marrom.",
+   "epub:toc-label"
+  ],
+  [
+   "素早い茶色の狐。",
+   "epub:toc-label"
+  ],
+  [
+   "敏捷的棕色狐狸。",
+   "epub:toc-label"
+  ],
+  [
+   "빠른 갈색 여우.",
+   "epub:toc-label"
+  ],
+  [
+   "الثعلب البني السريع.",
+   "epub:toc-label"
+  ]
+ ],
+ "legacy2.epub": [
+  [
+   "Bakery Notes",
+   "epub:title"
+  ],
+  [
+   "Notes from the ovens.",
+   "epub:description"
+  ],
+  [
+   "Welcome",
+   ""
+  ],
+  [
+   "Welcome to the bakery",
+   ""
+  ],
+  [
+   "We open at six.",
+   ""
+  ],
+  [
+   "Quinze minutes",
+   ""
+  ],
+  [
+   "Preheat the oven to 220 degrees.",
+   ""
+  ],
+  [
+   "Fold the dough twice.",
+   ""
+  ],
+  [
+   "Café notes",
+   ""
+  ],
+  [
+   "The café serves crème brûlée daily.",
+   ""
+  ],
+  [
+   "Bakery Notes",
+   "epub:toc-label"
+  ],
+  [
+   "Welcome",
+   "epub:toc-label"
+  ],
+  [
+   "Quinze minutes",
+   "epub:toc-label"
+  ],
+  [
+   "Café notes",
+   "epub:toc-label"
+  ]
+ ],
+ "rich.epub": [
+  [
+   "Rich Book",
+   "epub:title"
+  ],
+  [
+   "Markup of every kind.",
+   "epub:description"
+  ],
+  [
+   "Rich markup",
+   ""
+  ],
+  [
+   "Rich ⟦g1⟧markup⟦/g1⟧",
+   ""
+  ],
+  [
+   "Fish &amp; chips, caf&#233; &#x2014; &lt;tags&gt; and ⟦g1⟧do_not_translate()⟦/g1⟧ inline.",
+   ""
+  ],
+  [
+   "First item",
+   ""
+  ],
+  [
+   "Second ⟦g1⟧bold⟦/g1⟧ item",
+   ""
+  ],
+  [
+   "⟦g1⟧Linked item⟦/g1⟧",
+   ""
+  ],
+  [
+   "Loaf",
+   ""
+  ],
+  [
+   "Price",
+   ""
+  ],
+  [
+   "Rye",
+   ""
+  ],
+  [
+   "4.50",
+   ""
+  ],
+  [
+   "Line one⟦x1⟧line two with ⟦g2⟧a span⟦/g2⟧ and ⟦g3⟧a note⟦/g3⟧.",
+   ""
+  ],
+  [
+   "keep   this\nas is",
+   ""
+  ],
+  [
+   "Quoted text in a block.",
+   ""
+  ],
+  [
+   "Footnote text.",
+   ""
+  ],
+  [
+   "Visit the site",
+   "a11y:link-title"
+  ],
+  [
+   "Go to the note",
+   "a11y:link-aria-label"
+  ],
+  [
+   "A loaf of rye bread",
+   "a11y:img-alt"
+  ],
+  [
+   "Fresh rye",
+   "a11y:img-title"
+  ],
+  [
+   "Contents",
+   ""
+  ],
+  [
+   "Contents",
+   ""
+  ],
+  [
+   "⟦g1⟧Rich markup⟦/g1⟧",
+   ""
+  ],
+  [
+   "Rich Book",
+   "epub:toc-label"
+  ],
+  [
+   "Rich markup",
+   "epub:toc-label"
+  ]
+ ]
+}
