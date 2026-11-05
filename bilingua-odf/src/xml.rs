@@ -354,8 +354,8 @@ impl Tree {
                     }
                     self.push(Kind::Cdata, &stack, &mut lastc, pos, pos + e + 3, 0, 0, 0, NS_NONE);
                     pos += e + 3;
-                } else if rest.starts_with("<?") {
-                    let e = rest[2..].find("?>").ok_or_else(|| invalid("unterminated processing instruction"))? + 2;
+                } else if let Some(after) = rest.strip_prefix("<?") {
+                    let e = after.find("?>").ok_or_else(|| invalid("unterminated processing instruction"))? + 2;
                     let target: &str = rest[2..e].split(|c: char| c.is_whitespace()).next().unwrap_or("");
                     if !valid_qname(target.as_bytes()) {
                         return Err(invalid("a processing instruction has no valid target"));

@@ -78,7 +78,7 @@ protected packages (`manifest:encryption-data`) are refused.
 ## Against Okapi (`okf_openoffice`, Okapi 1.48.0, its own 15 test packages)
 
 Bilingua equals LocOS on all 15 files. Against Okapi, 81.7 percent of Bilingua's units are found unchanged in Okapi's
-output (230 units; Okapi lists 331). The differences are all Okapi extracting more or coding differently, and LocOS wins:
+output (230 units; Okapi lists 325). The differences are all Okapi extracting more or coding differently, and LocOS wins:
 
 - Okapi extracts meta.xml (title, description, keywords, user-defined values), sheet names, cell comments, numeric
   and formula cells' text, and text inside a text field (a date's rendered text). LocOS and Bilingua do not.
