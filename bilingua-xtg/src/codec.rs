@@ -120,7 +120,8 @@ fn validate(t: &Mb, data: &[u8]) -> Result<(), usize> {
         let b = data[i];
         if has(&t.lead, b) {
             let ok = data.get(i + 1).is_some_and(|&tr| {
-                tr >= 0x40 && {
+                // the pair table has 191 trail columns (0x40..=0xFE); 0xFF would read the next lead's 0x40 bit
+                (0x40..=0xFE).contains(&tr) && {
                     let k = (b as usize - 0x81) * 191 + (tr as usize - 0x40);
                     t.pairs[k >> 5] >> (k & 31) & 1 == 1
                 }
@@ -262,12 +263,23 @@ fn encode_big5(text: &str) -> Option<Vec<u8>> {
     Some(out)
 }
 
+/// Characters Python's `cp932` writes but never reads back (it reads these bytes as the fullwidth forms).
+const CP932_ENCODE_ONLY: &[(u32, u16)] = &[(0x00A2, 0x8191), (0x00A3, 0x8192), (0x00AC, 0x81CA), (0x2016, 0x8161), (0x301C, 0x8160)];
+
 /// Writes `text` in a multi-byte code page the way Python does: characters with several spellings get the one
 /// Python writes, and (cp932) the single bytes 0xA0 and 0xFD..=0xFF (U+F8F0..=U+F8F3) and the user-defined area
 /// 0xF040..=0xF9FC (U+E000..=U+E757), which the WHATWG encoders lack.
 fn encode_mb(e: &'static Encoding, text: &str, dups: &[(u32, u16)], cp932: bool) -> Option<Vec<u8>> {
+    // Python's cp932 refuses U+00A5 and U+203E (the WHATWG encoder writes them as 0x5C and 0x7E, which read back
+    // as `\` and `~`), and writes five characters it never decodes to (checked over every BMP character).
+    if cp932 && text.contains(['\u{A5}', '\u{203E}']) {
+        return None;
+    }
+    let extra = |c: char| if cp932 { CP932_ENCODE_ONLY.iter().find(|x| x.0 == c as u32).map(|x| x.1) } else { None };
     let dup = |c: char| dups.binary_search_by_key(&(c as u32), |d| d.0).ok();
-    let special = |c: char| dup(c).is_some() || (cp932 && (('\u{F8F0}'..='\u{F8F3}').contains(&c) || ('\u{E000}'..='\u{E757}').contains(&c)));
+    let special = |c: char| {
+        dup(c).is_some() || extra(c).is_some() || (cp932 && (('\u{F8F0}'..='\u{F8F3}').contains(&c) || ('\u{E000}'..='\u{E757}').contains(&c)))
+    };
     let mut out = Vec::with_capacity(text.len());
     let mut rest = text;
     loop {
@@ -285,6 +297,8 @@ fn encode_mb(e: &'static Encoding, text: &str, dups: &[(u32, u16)], cp932: bool)
         let u = c as u32;
         if let Some(i) = dup(c) {
             out.extend_from_slice(&dups[i].1.to_be_bytes());
+        } else if let Some(code) = extra(c) {
+            out.extend_from_slice(&code.to_be_bytes());
         } else if u >= 0xF8F0 {
             out.push(if u == 0xF8F0 { 0xA0 } else { 0xFC + (u - 0xF8F0) as u8 });
         } else {
@@ -549,6 +563,28 @@ mod tests {
             }
         }
         out
+    }
+
+    /// Python refuses the trail byte 0xFF after every lead byte of these code pages (the pair table must not wrap
+    /// into the next lead's row: Big5 0xA3 0xFF once read as U+4E00).
+    #[test]
+    fn trail_byte_ff_is_refused() {
+        for l in [Legacy::Cp932, Legacy::Big5, Legacy::Gbk, Legacy::Cp949] {
+            for lead in 0x81..=0xFEu8 {
+                if l.decode(&[lead]).is_ok() {
+                    continue;
+                }
+                assert_eq!(l.decode(&[lead, 0xFF]), Err(0), "{l:?} {lead:#x} 0xff");
+            }
+        }
+    }
+
+    /// The seven BMP characters where the WHATWG Shift_JIS encoder and Python's cp932 disagree.
+    #[test]
+    fn cp932_encodes_like_python() {
+        assert_eq!(Legacy::Cp932.encode("\u{A5}"), None);
+        assert_eq!(Legacy::Cp932.encode("a\u{203E}"), None);
+        assert_eq!(Legacy::Cp932.encode("\u{A2}\u{A3}\u{AC}\u{2016}\u{301C}"), Some(vec![0x81, 0x91, 0x81, 0x92, 0x81, 0xCA, 0x81, 0x61, 0x81, 0x60]));
     }
 
     #[test]
