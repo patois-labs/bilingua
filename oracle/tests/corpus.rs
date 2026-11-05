@@ -2,7 +2,7 @@
 //! and a pseudo-translated merge opens again with the same units. The comparison with the Localization OS
 //! filters needs that project and is run by hand (`python run.py`); this part needs nothing.
 
-use bilingua::{Granularity, Inline};
+use bilingua::{Error, Granularity, Inline};
 use std::collections::{BTreeMap, BTreeSet};
 use std::io::Read;
 use std::path::{Path, PathBuf};
@@ -55,6 +55,11 @@ fn plural_label(u: &bilingua::Unit) -> Option<(Option<String>, String)> {
 /// GUID, type and name (`app/filters/sdl_package.py`) and never extracts text from it.
 const NO_TEXT_FORMATS: &[&str] = &["sdlproj"];
 
+/// Formats whose translated merge is refused by design with `Error::Unsupported` (the file is read for its text
+/// but cannot be rebuilt): the round trip checks that refusal instead of a reopen. The untouched merge is still
+/// checked. Keep this list narrow. `pdf`: Bilingua extracts PDF text; writing a translated PDF is out of scope.
+const MERGE_UNSUPPORTED_FORMATS: &[&str] = &["pdf"];
+
 fn pseudo(v: &[Inline]) -> Vec<Inline> {
     let mut out = vec![Inline::text("[")];
     out.extend(v.iter().cloned());
@@ -98,6 +103,16 @@ fn every_corpus_file_round_trips() {
             if let Err(e) = t.set_target(&id, pseudo(&src)) {
                 failures.push(format!("{name}: set_target {id}: {e}"));
             }
+        }
+        if MERGE_UNSUPPORTED_FORMATS.contains(&doc.format.as_str()) {
+            let translated = t.units.iter().any(|u| u.is_translated());
+            match bilingua::merge(&t) {
+                Err(Error::Unsupported(_)) if translated => {}
+                Ok(_) if !translated => {}
+                Ok(_) => failures.push(format!("{name}: a translated merge should be refused as unsupported")),
+                Err(e) => failures.push(format!("{name}: merge failed: {e}")),
+            }
+            continue;
         }
         match bilingua::merge(&t).and_then(|b| bilingua::extract(&name, &b, &opts)) {
             Ok(again) => {
