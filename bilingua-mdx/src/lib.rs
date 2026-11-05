@@ -87,7 +87,7 @@ struct Loaded {
 
 fn load(bytes: &[u8], opts: &ExtractOptions, limits: &Limits) -> Result<Loaded, Error> {
     guard::check_input(bytes, limits)?;
-    let dec = enc::decode_text(bytes, &enc::DecodeOptions { declared: false, source_lang: opts.source_lang.as_deref(), limits: *limits })?;
+    let dec = enc::decode_text(bytes, &enc::DecodeOptions::with_limits(*limits).with_source_lang(opts.source_lang.as_deref()))?;
     if !matches!(enc::base(&dec.encoding), "utf-8" | "utf-8-bom" | "utf-16le" | "utf-16be") && enc::encode_text(&dec.text, &dec.encoding)? != bytes {
         // double-mapped bytes of the CJK code pages read to the same character and write back as the other
         // spelling; an untouched merge must be the original bytes, so the file is refused, never altered

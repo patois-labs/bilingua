@@ -163,7 +163,7 @@ fn read_any(fmt: Fmt, bytes: &[u8], opts: &ExtractOptions, limits: &Limits) -> R
         return Ok((tree, Origin::Binary { raw: bytes.to_vec() }));
     }
     guard::check_xml(bytes, limits)?;
-    let dec = enc::decode_text(bytes, &enc::DecodeOptions { declared: false, source_lang: opts.source_lang.as_deref(), limits: *limits })?;
+    let dec = enc::decode_text(bytes, &enc::DecodeOptions::with_limits(*limits).with_source_lang(opts.source_lang.as_deref()))?;
     if enc::is_legacy(&dec.encoding) {
         return Err(Error::Encoding("This property list is not valid UTF-8 or UTF-16 text. Re-save it as UTF-8 XML.".into()));
     }

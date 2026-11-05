@@ -309,7 +309,7 @@ fn unit_indices(msgs: &[Msg]) -> Vec<usize> {
 pub fn extract(bytes: &[u8], opts: &ExtractOptions, limits: &Limits) -> Result<Document, Error> {
     guard::check_input(bytes, limits)?;
     guard::check_xml(bytes, limits)?;
-    let dec = enc::decode_text(bytes, &enc::DecodeOptions { declared: true, source_lang: opts.source_lang.as_deref(), limits: *limits })?;
+    let dec = enc::decode_text(bytes, &enc::DecodeOptions::with_limits(*limits).with_source_lang(opts.source_lang.as_deref()).declared())?;
     if enc::is_legacy(&dec.encoding) && enc::declared_encoding(bytes).is_none() {
         // XML without an encoding declaration is UTF-8 (or UTF-16 with a BOM): never guess a code page
         return Err(Error::Encoding("This file is not valid UTF-8 and declares no other encoding. Re-save it as UTF-8 and upload it again.".into()));

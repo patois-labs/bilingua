@@ -93,7 +93,7 @@ fn lines(s: &str) -> Vec<Line<'_>> {
 }
 
 fn extract(k: Kind, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
-    let mut dec = bilingua_model::enc::decode_text(bytes, &bilingua_model::enc::DecodeOptions::new(opts))?;
+    let mut dec = bilingua_model::enc::decode_text(bytes, &bilingua_model::enc::DecodeOptions::new(opts).lossy_after_utf8_bom())?;
     let text_owned = std::mem::take(&mut dec.text);
     let text = text_owned.as_str();
     let ls = lines(text);

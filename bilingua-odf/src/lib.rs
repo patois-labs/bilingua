@@ -86,7 +86,7 @@ struct Loaded {
 fn decode_part(bytes: &[u8], l: &Limits) -> Result<(String, String, Vec<Warning>), Error> {
     // no line budget: an OpenDocument part is one long line or pretty printed, either way the tree limits apply
     let lim = l.with_max_lines(usize::MAX);
-    let d = enc::decode_text(bytes, &enc::DecodeOptions { declared: true, source_lang: None, limits: lim })?;
+    let d = enc::decode_text(bytes, &enc::DecodeOptions::with_limits(lim).declared())?;
     let tag: Vec<&str> = d.encoding.split(';').filter(|p| !p.starts_with("nl=")).collect();
     let tag = tag.join(";");
     if enc::is_legacy(&tag) && !tag.contains(";label=") {

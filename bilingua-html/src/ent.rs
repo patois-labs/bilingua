@@ -337,6 +337,12 @@ pub fn decode_input(bytes: &[u8], opts: &bilingua_model::ExtractOptions) -> Resu
     match enc {
         None => match std::str::from_utf8(bytes) {
             Ok(s) => Ok((s.to_string(), Enc::Utf8, vec![])),
+            // the file declares UTF-8 (or ASCII) but is not: refused, never read with a fallback code page
+            Err(e) if declared.is_some() => Err(Error::Encoding(format!(
+                "This file declares the encoding {} but is not valid UTF-8 (byte at position {}). Re-save the file as UTF-8.",
+                declared.as_deref().unwrap_or(""),
+                e.valid_up_to()
+            ))),
             Err(_) => {
                 // undeclared and not UTF-8: the source language's code page (or Windows-1252), with a warning when it looks wrong
                 let d = bilingua_model::enc::decode_text(bytes, &bilingua_model::enc::DecodeOptions::new(opts))?;

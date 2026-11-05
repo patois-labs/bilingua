@@ -4,7 +4,7 @@ use bilingua_model::enc::{decode_text, encode_text, encode_text_with, DecodeOpti
 use bilingua_model::{Limits, MergeOptions, OutputEncoding};
 
 fn dec(bytes: &[u8]) -> bilingua_model::enc::Decoded {
-    decode_text(bytes, &DecodeOptions { declared: true, source_lang: None, limits: Limits::default() }).unwrap()
+    decode_text(bytes, &DecodeOptions::with_limits(Limits::default()).declared()).unwrap()
 }
 
 fn utf8() -> MergeOptions {

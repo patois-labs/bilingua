@@ -5,7 +5,7 @@ use bilingua_model::enc::{decode_text, encode_gbk, encode_text, DecodeOptions};
 use bilingua_model::Limits;
 
 fn opts(lang: Option<&'static str>) -> DecodeOptions<'static> {
-    DecodeOptions { declared: true, source_lang: lang, limits: Limits::default() }
+    DecodeOptions::with_limits(Limits::default()).with_source_lang(lang).declared()
 }
 
 #[test]

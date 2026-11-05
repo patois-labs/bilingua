@@ -43,11 +43,7 @@ fn load(bytes: &[u8], opts: &ExtractOptions, limits: &Limits) -> Result<Loaded, 
     guard::check_input(bytes, limits)?;
     let dec = enc::decode_text(
         bytes,
-        &enc::DecodeOptions {
-            declared: false,
-            source_lang: opts.source_lang.as_deref(),
-            limits: *limits,
-        },
+        &enc::DecodeOptions::with_limits(*limits).with_source_lang(opts.source_lang.as_deref()),
     )?;
     if !matches!(
         enc::base(&dec.encoding),

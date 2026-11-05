@@ -215,7 +215,7 @@ impl Xslt {
         guard::check_input(bytes, limits)?;
         count_budget(bytes, limits)?;
         let declared = declared_encoding(bytes)?;
-        let dec = enc::decode_text(bytes, &enc::DecodeOptions { declared: true, source_lang: opts.source_lang.as_deref(), limits: *limits })?;
+        let dec = enc::decode_text(bytes, &enc::DecodeOptions::with_limits(*limits).with_source_lang(opts.source_lang.as_deref()).declared())?;
         if enc::is_legacy(&dec.encoding) {
             if declared.is_none() || declared == Some(UTF_8) {
                 return Err(unreadable("This XSLT file is not valid UTF-8 and declares no other encoding; re-save the file as UTF-8."));

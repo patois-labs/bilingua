@@ -27,8 +27,10 @@ use std::sync::OnceLock;
 const BOM8: &[u8] = &[0xEF, 0xBB, 0xBF];
 const RESAVE: &str = "Check the source text; if it is garbled, re-save the file as UTF-8 and upload it again.";
 
-/// How one text file is read.
+/// How one text file is read. Build it with [`DecodeOptions::new`] (from the extraction options) or
+/// [`DecodeOptions::with_limits`], then [`DecodeOptions::declared`] for a format that declares its charset.
 #[derive(Debug, Clone, Copy)]
+#[non_exhaustive]
 pub struct DecodeOptions<'a> {
     /// The format declares its charset in the file (HTML `meta`, XML declaration, PO `Content-Type`): honour a
     /// declared legacy charset, and write the declaration back when the file is merged.
@@ -36,12 +38,29 @@ pub struct DecodeOptions<'a> {
     /// The project's source language, which picks the legacy code page of an undeclared non-UTF-8 file.
     pub source_lang: Option<&'a str>,
     pub limits: Limits,
+    /// A UTF-8 byte order mark followed by bytes that are not UTF-8 is read as UTF-8 with replacement characters
+    /// (U+FFFD), as Localization OS does for plain text and subtitles. Off: such a file is refused.
+    pub lossy_after_utf8_bom: bool,
 }
 
 impl<'a> DecodeOptions<'a> {
     /// The options of one extraction: its source language and its limits.
     pub fn new(opts: &'a ExtractOptions) -> DecodeOptions<'a> {
-        DecodeOptions { declared: false, source_lang: opts.source_lang.as_deref(), limits: opts.limits() }
+        DecodeOptions { declared: false, source_lang: opts.source_lang.as_deref(), limits: opts.limits(), lossy_after_utf8_bom: false }
+    }
+    /// No source language, not declared, these limits.
+    pub fn with_limits(limits: Limits) -> DecodeOptions<'static> {
+        DecodeOptions { declared: false, source_lang: None, limits, lossy_after_utf8_bom: false }
+    }
+    /// The source language that picks the code page of an undeclared legacy file.
+    pub fn with_source_lang(mut self, lang: Option<&'a str>) -> Self {
+        self.source_lang = lang;
+        self
+    }
+    /// See [`DecodeOptions::lossy_after_utf8_bom`].
+    pub fn lossy_after_utf8_bom(mut self) -> Self {
+        self.lossy_after_utf8_bom = true;
+        self
     }
     /// The same, for a format that declares its charset in the file.
     pub fn declared(mut self) -> Self {
@@ -306,9 +325,26 @@ fn decode_text_inner(data: &[u8], o: &DecodeOptions) -> Result<Decoded, Error> {
         };
         return done(s.to_string(), if bom { "utf-8-bom" } else { "utf-8" }, label.as_deref(), w, &o.limits);
     }
+    // A byte order mark declares the encoding: bytes that are not valid in it are refused, never read with a
+    // fallback code page (an XML parser and LocOS do the same). LocOS's plain text and subtitle readers are the
+    // exception: UTF-8 with replacement characters.
+    if bom {
+        let bad = std::str::from_utf8(body).err().map_or(0, |e| e.valid_up_to());
+        if o.lossy_after_utf8_bom {
+            return done(String::from_utf8_lossy(body).into_owned(), "utf-8-bom", None, Vec::new(), &o.limits);
+        }
+        return Err(enc_err(format!(
+            "This file starts with a UTF-8 byte order mark but is not valid UTF-8 (byte 0x{:02x} at position {}). Re-save the file as UTF-8.",
+            body.get(bad).copied().unwrap_or(0),
+            bad + 3
+        )));
+    }
     if data.starts_with(&[0xFF, 0xFE]) || data.starts_with(&[0xFE, 0xFF]) {
         let (e, name) = if data[0] == 0xFF { (encoding_rs::UTF_16LE, "utf-16le") } else { (encoding_rs::UTF_16BE, "utf-16be") };
-        if let Some(s) = e.decode_without_bom_handling_and_without_replacement(&data[2..]) {
+        let Some(s) = e.decode_without_bom_handling_and_without_replacement(&data[2..]) else {
+            return Err(enc_err(format!("This file starts with a {} byte order mark but is not valid {}. Re-save the file as UTF-8.", name.to_ascii_uppercase(), name.to_ascii_uppercase())));
+        };
+        {
             let (text, label) = if o.declared {
                 let head = e.decode_without_bom_handling(&data[2..data.len().min(8194)]).0.into_owned();
                 let l = decl_re().captures(&head).and_then(|c| c.get(2)).map(|m| m.as_str().to_string());
@@ -320,10 +356,19 @@ fn decode_text_inner(data: &[u8], o: &DecodeOptions) -> Result<Decoded, Error> {
         }
     }
     if o.declared {
-        if let Some(e) = declared_encoding(data).filter(|e| declared_ok(e)) {
-            if let Ok(s) = strict(e, data) {
-                let label = declared_label(data);
-                return done(rewrite_declared(&s), &e.name().to_ascii_lowercase(), label.as_deref(), Vec::new(), &o.limits);
+        if let Some(e) = declared_encoding(data) {
+            let label = declared_label(data);
+            let name = label.clone().unwrap_or_else(|| e.name().to_string());
+            // the file says UTF-8 (or a code page it does not fit): refused, as an XML parser and LocOS do
+            if e == encoding_rs::UTF_8 {
+                let bad = std::str::from_utf8(data).err().map_or(0, |e| e.valid_up_to());
+                return Err(bad_declared(&name, data, bad));
+            }
+            if declared_ok(e) {
+                return match strict(e, data) {
+                    Ok(s) => done(rewrite_declared(&s), &e.name().to_ascii_lowercase(), label.as_deref(), Vec::new(), &o.limits),
+                    Err(pos) => Err(bad_declared(&name, data, pos)),
+                };
             }
         }
     }
@@ -346,6 +391,13 @@ fn where_(hint: Option<&'static Encoding>, locale: &str) -> String {
     } else {
         String::new()
     }
+}
+
+fn bad_declared(name: &str, data: &[u8], pos: usize) -> Error {
+    enc_err(format!(
+        "This file declares the encoding {name} but its bytes are not valid in it (byte 0x{:02x} at position {pos}). Re-save the file as UTF-8.",
+        data.get(pos).copied().unwrap_or(0)
+    ))
 }
 
 fn bad_byte(label: &str, data: &[u8], pos: usize, also: &str) -> Error {
@@ -691,7 +743,7 @@ mod tests {
     use super::*;
 
     fn dec(bytes: &[u8], lang: Option<&str>, declared: bool) -> Result<Decoded, Error> {
-        let o = DecodeOptions { declared, source_lang: lang, limits: Limits::default() };
+        let o = DecodeOptions { declared, source_lang: lang, limits: Limits::default(), lossy_after_utf8_bom: false };
         decode_text(bytes, &o)
     }
 
@@ -860,7 +912,7 @@ mod tests {
 
     #[test]
     fn line_budget_applies_to_decoded_text() {
-        let mut o = DecodeOptions { declared: false, source_lang: None, limits: Limits::default() };
+        let mut o = DecodeOptions { declared: false, source_lang: None, limits: Limits::default(), lossy_after_utf8_bom: false };
         o.limits.max_lines = 3;
         assert!(decode_text(b"a\nb\n", &o).is_ok());
         let e = decode_text(b"\n\n\n\n\n", &o).unwrap_err();

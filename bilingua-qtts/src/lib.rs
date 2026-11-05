@@ -94,7 +94,7 @@ impl QtTs {
         if !bytes.starts_with(&[0xFF, 0xFE]) && !bytes.starts_with(&[0xFE, 0xFF]) && !has_declared_encoding(bytes) && std::str::from_utf8(bytes).is_err() {
             return Err(Error::Encoding("This Qt Linguist .ts file is not UTF-8 and does not declare its encoding (encoding=\"..\" in the XML declaration). Declare it or re-save the file as UTF-8.".into()));
         }
-        let dec = enc::decode_text(bytes, &enc::DecodeOptions { declared: true, source_lang: opts.source_lang.as_deref(), limits: *limits })?;
+        let dec = enc::decode_text(bytes, &enc::DecodeOptions::with_limits(*limits).with_source_lang(opts.source_lang.as_deref()).declared())?;
         let text = dec.text.as_str();
         if !matches!(enc::base(&dec.encoding), "utf-8" | "utf-8-bom" | "utf-16le" | "utf-16be") && textenc::encode(text, &dec.encoding, &bilingua_model::MergeOptions::default())? != bytes {
             // bytes of a legacy code page that read to the same character as another spelling cannot be written

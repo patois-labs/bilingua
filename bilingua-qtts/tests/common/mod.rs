@@ -108,7 +108,7 @@ pub fn s(b: &[u8]) -> String {
 
 /// The merged bytes read back as text through the engine's own decoder.
 pub fn decoded(b: &[u8]) -> String {
-    enc::decode_text(b, &enc::DecodeOptions { declared: true, source_lang: Some("en"), limits: Limits::default() }).unwrap().text
+    enc::decode_text(b, &enc::DecodeOptions::with_limits(Limits::default()).with_source_lang(Some("en")).declared()).unwrap().text
 }
 
 pub fn parse_msg(r: Result<Document, Error>) -> String {
