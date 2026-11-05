@@ -137,3 +137,34 @@ fn deep_and_huge_inputs_give_typed_errors() {
     let long_spec = format!("source={}", "x".repeat(2_001));
     assert!(matches!(Call::csv().cols(&long_spec).extract(b"a,b\n"), Err(Error::Unsupported(_))));
 }
+
+#[test]
+fn edited_record_codes_are_refused_not_dropped() {
+    let c = Call::csv();
+    let data = b"source,target\nHello,\nWorld,\n";
+    let fresh = || {
+        let mut d = c.extract(data).unwrap();
+        for i in 0..d.units.len() {
+            let id = d.units[i].segments[0].id.clone();
+            d.set_target(&id, vec![Inline::text("Hallo")]).unwrap();
+        }
+        d
+    };
+    assert!(c.merge(&fresh()).is_ok());
+    // the record text gone: an error, never a file with the row missing
+    let mut d = fresh();
+    d.units[0].codes.get_mut("$csv").unwrap().standalone = None;
+    assert!(c.merge(&d).is_err());
+    // the whole code gone
+    let mut d = fresh();
+    d.units[1].codes.clear();
+    assert!(c.merge(&d).is_err());
+    // a delimiter that is not one of the four (a multi-byte one would split a character)
+    let mut d = fresh();
+    d.units[0].codes.get_mut("$csv").unwrap().open = Some("\u{e9}".into());
+    assert!(c.merge(&d).is_err());
+    // a write column far past the limit would pad the row without bound
+    let mut d = fresh();
+    d.units[0].codes.get_mut("$csv").unwrap().label = Some("0:999999999999:0".into());
+    assert!(c.merge(&d).is_err());
+}

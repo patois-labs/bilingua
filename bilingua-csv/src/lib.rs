@@ -244,7 +244,9 @@ fn merge_impl(doc: &Document) -> Result<Vec<u8>, Error> {
             SkelPart::Raw(s) => out.push_str(s),
             SkelPart::Unit(i) => {
                 let unit = doc.units.get(*i).ok_or_else(|| Error::Write(format!("no unit {i}")))?;
-                if meta(unit).is_some_and(|m| m.first == *i) {
+                // a unit without its record code would drop the record silently: refuse instead
+                let m = meta(unit).ok_or_else(|| Error::Write(format!("unit {i} has lost its {HIDDEN} code")))?;
+                if m.first == *i {
                     out.push_str(&render_record(doc, *i, groups.get(i).map(Vec::as_slice).unwrap_or(&[]))?);
                 }
             }
@@ -255,8 +257,17 @@ fn merge_impl(doc: &Document) -> Result<Vec<u8>, Error> {
 
 fn render_record(doc: &Document, first: usize, group: &[usize]) -> Result<String, Error> {
     let code = doc.units[first].codes.get(HIDDEN);
-    let raw = code.and_then(|c| c.standalone.as_deref()).unwrap_or("");
-    let delim = code.and_then(|c| c.open.as_deref()).and_then(|d| d.bytes().next()).unwrap_or(b',');
+    let raw = code
+        .and_then(|c| c.standalone.as_deref())
+        .ok_or_else(|| Error::Write(format!("unit {first} has lost its record text")))?;
+    // only the four delimiters this filter reads (a multi-byte one would split a character)
+    let delim = match code.and_then(|c| c.open.as_deref()) {
+        Some(",") => b',',
+        Some(";") => b';',
+        Some("\t") => b'\t',
+        Some("|") => b'|',
+        other => return Err(Error::Write(format!("unit {first} has an unknown delimiter {other:?}"))),
+    };
     let changed = |u: &Unit| u.translate && u.segments.iter().any(|s| !s.target.is_empty());
     if !group.iter().any(|&ui| changed(&doc.units[ui])) {
         return Ok(raw.to_string());
@@ -266,6 +277,10 @@ fn render_record(doc: &Document, first: usize, group: &[usize]) -> Result<String
     for &ui in group {
         let u = &doc.units[ui];
         let Some(m) = meta(u) else { continue };
+        // a column past the limit can only come from an edited document (and would pad the row without bound)
+        if m.write >= rec::MAX_COLUMNS || m.source >= rec::MAX_COLUMNS {
+            return Err(Error::Write(format!("unit {ui} names a column past {}", rec::MAX_COLUMNS)));
+        }
         if !changed(u) {
             continue;
         }
