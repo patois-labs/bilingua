@@ -264,3 +264,11 @@ fn ansi_pages_that_python_and_the_web_disagree_on() {
     assert!(units(&l1)[0].starts_with("caf\u{e9} \u{93}x"));
     assert_identity(&l1);
 }
+
+#[test]
+fn pragma_number_is_trimmed_like_python_bytes_strip() {
+    // LocOS strips the number with bytes.strip(), which also drops VT and FF
+    let data = b"#pragma code_page(\x0b 1251\x0c)\nSTRINGTABLE\nBEGIN\n 1 \"\xcf\xf0\xe8\"\nEND\n".to_vec();
+    assert_eq!(units(&data), vec!["\u{41f}\u{440}\u{438}".to_string()]);
+    assert_identity(&data);
+}

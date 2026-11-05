@@ -200,7 +200,11 @@ pub fn decode(data: &[u8]) -> Result<Decoded, Error> {
     }
     let mut pages: Vec<Vec<u8>> = Vec::new();
     for c in pragma_re().captures_iter(data) {
-        let v = c[1].trim_ascii().to_ascii_uppercase();
+        // Python's bytes.strip(): ASCII white space including VT (0x0B), which `trim_ascii` keeps
+        let ws = |b: &u8| matches!(b, b' ' | b'\t' | b'\n' | b'\r' | 0x0B | 0x0C);
+        let raw = &c[1];
+        let (a, z) = (raw.iter().position(|b| !ws(b)).unwrap_or(raw.len()), raw.iter().rposition(|b| !ws(b)).map_or(0, |p| p + 1));
+        let v = raw[a..z.max(a)].to_ascii_uppercase();
         if v != b"DEFAULT" && !pages.contains(&v) {
             pages.push(v);
         }
