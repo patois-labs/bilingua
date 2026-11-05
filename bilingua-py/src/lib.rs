@@ -242,26 +242,38 @@ fn extract(
 
 /// Writes a Document (as returned by `extract`, with targets filled in) back to file bytes.
 ///
-/// `options` is an optional dict of merge options: `output_encoding` ("keep", the default, or "utf-8", which
+/// Merge options are keyword-only, like extract's: `output_encoding` ("keep", the default, or "utf-8", which
 /// writes UTF-8 and makes charset declarations say so) and `stamp_target_always` (bool: stamp the target language
-/// and fill plurals even when nothing is translated, as Localization OS does). Unknown names are an error.
+/// and fill plurals even when nothing is translated, as Localization OS does).
 #[pyfunction]
-#[pyo3(signature = (document, options=None))]
-fn merge<'py>(py: Python<'py>, document: &Bound<'py, PyAny>, options: Option<&Bound<'py, PyAny>>) -> PyResult<Bound<'py, PyBytes>> {
+#[pyo3(signature = (document, *, output_encoding=None, stamp_target_always=None))]
+fn merge<'py>(
+    py: Python<'py>,
+    document: &Bound<'py, PyAny>,
+    output_encoding: Option<&str>,
+    stamp_target_always: Option<bool>,
+) -> PyResult<Bound<'py, PyBytes>> {
     let value = from_py(document, 0).map_err(|f| to_py_err(py, f))?;
-    let opts: engine::MergeOptions = match options {
-        None => Default::default(),
-        Some(o) if o.is_none() => Default::default(),
-        Some(o) => {
-            let v = from_py(o, 0).map_err(|f| to_py_err(py, f))?;
-            serde_json::from_value(v).map_err(|e| to_py_err(py, Fail::new("invalid_argument", format!("options: {e}"))))?
-        }
-    };
+    let mut opts = engine::MergeOptions::new();
+    if let Some(e) = output_encoding {
+        opts = opts.with_output_encoding(parse_output_encoding(e).map_err(|f| to_py_err(py, f))?);
+    }
+    if let Some(b) = stamp_target_always {
+        opts = opts.with_stamp_target_always(b);
+    }
     let bytes = guarded(py, move || {
         let doc: Document = serde_json::from_value(value).map_err(|e| Fail::new("invalid_document", e.to_string()))?;
         Ok(engine::merge_with(&doc, &opts)?)
     })?;
     Ok(PyBytes::new(py, &bytes))
+}
+
+fn parse_output_encoding(s: &str) -> Result<engine::OutputEncoding, Fail> {
+    match s.to_ascii_lowercase().as_str() {
+        "keep" => Ok(engine::OutputEncoding::Keep),
+        "utf-8" | "utf8" => Ok(engine::OutputEncoding::Utf8),
+        other => Err(Fail::new("invalid_argument", format!("output_encoding must be \"keep\" or \"utf-8\", not {other:?}"))),
+    }
 }
 
 /// The Bilingua version.

@@ -35,19 +35,22 @@ also cover this crate (they need a Python install to link against).
 - `detect(name: str, data: bytes) -> str | None`: the format id, or `None` when no parser accepts the file.
 - `extract(name, data, *, source_lang=None, target_lang=None, granularity="paragraph") -> dict`: the Document as
   dicts and lists, the same shape as its JSON. `granularity` is `sentence`, `paragraph` or `document`.
-- `merge(document: dict) -> bytes`: writes the (possibly translated) Document back in its original format. Set a
-  segment's `target` to a list of inlines (`{"text": ".."}` or `{"tag": {...}}`); an empty target keeps the source.
-- `merge(document, options=None)`: `options` is an optional dict of merge options (`bilingua-model/README.md`):
-  `output_encoding` (`"keep"`, the default, or `"utf-8"` to write UTF-8 and make charset declarations say so) and
-  `stamp_target_always` (`True` stamps the target language and fills plurals even when nothing is translated, as
-  Localization OS does). Unknown names raise `invalid_argument`.
-- `extract(..., format_options=None)`: a dict of options only one format knows, e.g. `{"ftl.translate_terms": "true"}`.
+- `merge(document: dict, *, output_encoding="keep", stamp_target_always=False) -> bytes`: writes the (possibly
+  translated) Document back in its original format. Set a segment's `target` to a list of inlines (`{"text": ".."}`
+  or `{"tag": {...}}`); an empty target keeps the source, unless the segment has `"empty_target": true` (translated
+  to nothing on purpose: written empty). Merge options are keyword-only: `output_encoding` (`"keep"` or `"utf-8"`,
+  which writes UTF-8 and makes charset declarations say so) and `stamp_target_always` (stamp the target language and
+  fill plurals even when nothing is translated, as Localization OS does).
+- `extract(..., format_options=None)`: a dict of `"<format>.<name>"` options to str, bool or int values, e.g.
+  `{"ftl.translate_terms": True, "csv.columns": "source=1, target.de=2"}`. A key no format declares, or a value of the
+  wrong kind, raises `invalid_argument`.
 - `extract(..., limits=None)`: a dict of limit names to override (see `bilingua-model/README.md`); the rest keep the
   defaults. The Document has a `warnings` list (e.g. `text_encoding`) when a file was read but looks garbled.
+- Type stubs: `bilingua.pyi` ships in the wheel (with `py.typed`), so editors and type checkers see the API.
 - `version() -> str`.
 
 Every failure raises `bilingua.BilinguaError` with a `code` attribute: `parse`, `unsupported`, `unknown_segment`,
-`locked`, `invented_tag`, `duplicated_tag`, `parser_version`, `write`, `limit` (over a safety limit or unsafe XML/zip), `encoding` (unreadable text), `io`, `invalid_argument`, `invalid_document`, `internal`.
+`locked`, `invented_tag`, `duplicated_tag`, `parser_version`, `write`, `unwritable` (the translation cannot be written in this format), `limit` (over a safety limit or unsafe XML/zip), `encoding` (unreadable text), `io`, `invalid_argument`, `invalid_document`, `internal`.
 Panics inside the engine become `internal`. The GIL is released while parsing and merging, so threads run in
 parallel. The Document is converted through its serde JSON form, so new model fields appear in Python with no change
 here.

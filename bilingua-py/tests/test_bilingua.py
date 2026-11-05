@@ -361,8 +361,8 @@ def test_merge_options_output_encoding_and_stamp_target_always():
     src = '<html><head><meta charset="windows-1252"></head><body><p>café</p></body></html>'.encode("latin-1")
     doc = bilingua.extract("a.html", src, target_lang="es")
     assert bilingua.merge(doc) == src
-    assert bilingua.merge(doc, None) == src
-    out = bilingua.merge(doc, {"output_encoding": "utf-8"})
+    assert bilingua.merge(doc, output_encoding=None) == src
+    out = bilingua.merge(doc, output_encoding="utf-8")
     assert "café".encode("utf-8") in out and b'charset="UTF-8"' in out
     xliff = (
         b'<?xml version="1.0"?><xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2"><file original="a" '
@@ -370,9 +370,13 @@ def test_merge_options_output_encoding_and_stamp_target_always():
     )
     doc = bilingua.extract("a.xlf", xliff, target_lang="fr-FR")
     assert bilingua.merge(doc) == xliff
-    assert b'target-language="fr-FR"' in bilingua.merge(doc, {"stamp_target_always": True})
-    assert error_code(bilingua.merge, doc, {"stamp_always": True}) == "invalid_argument"
-    assert error_code(bilingua.merge, doc, {"output_encoding": "latin-9"}) == "invalid_argument"
+    assert b'target-language="fr-FR"' in bilingua.merge(doc, stamp_target_always=True)
+    assert error_code(bilingua.merge, doc, output_encoding="latin-9") == "invalid_argument"
+    # keyword-only, like extract
+    with pytest.raises(TypeError):
+        bilingua.merge(doc, {"stamp_target_always": True})
+    with pytest.raises(TypeError):
+        bilingua.merge(doc, stamp_always=True)
 
 
 def test_format_options_reach_the_format():
