@@ -22,6 +22,7 @@ name = "bilingua"
 version = "0.1.0"
 dependencies = [
  "bilingua-arb",
+ "bilingua-desktop",
  "bilingua-docx",
  "bilingua-dtd",
  "bilingua-ftl",
@@ -74,6 +75,16 @@ dependencies = [
  "bilingua",
  "bilingua-seg",
  "quick-xml",
+ "serde_json",
+]
+
+[[package]]
+name = "bilingua-desktop"
+version = "0.1.0"
+dependencies = [
+ "bilingua-model",
+ "bilingua-seg",
+ "proptest",
  "serde_json",
 ]
 

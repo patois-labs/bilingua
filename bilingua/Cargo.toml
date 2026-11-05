@@ -32,6 +32,7 @@ bilingua-strings = { workspace = true }
 bilingua-plist = { workspace = true }
 bilingua-resjson = { workspace = true }
 bilingua-wxl = { workspace = true }
+bilingua-desktop = { workspace = true }
 bilingua-jsmodule = { workspace = true }
 bilingua-yaml = { workspace = true }
 bilingua-arb = { workspace = true }

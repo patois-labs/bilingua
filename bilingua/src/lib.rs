@@ -41,6 +41,9 @@ pub fn filters() -> Vec<Box<dyn Filter>> {
         Box::new(bilingua_json::JsonFilter),
         Box::new(bilingua_json5::Json5Filter::default()),
         Box::new(bilingua_markdown::MarkdownFilter),
+        // .desktop sniffs a [Desktop Entry] line; it must come before INI, which would also accept the file.
+        Box::new(bilingua_desktop::DesktopFilter),
+        Box::new(bilingua_desktop::CatkeysFilter),
         Box::new(bilingua_ini::IniFilter),
         Box::new(bilingua_strings::Strings),
         // DTD sniffs strictly (the first declaration must be an ENTITY, ELEMENT or ATTLIST), so it can sit early.

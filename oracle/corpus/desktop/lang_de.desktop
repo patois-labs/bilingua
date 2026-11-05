@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Notizen
+Comment=Schnell Notizen machen
+Keywords=Notizen;Memo;Text;
+Exec=notes %F
+Actions=new;
+
+[Desktop Action new]
+Name=Neue Notiz
+Exec=notes --new

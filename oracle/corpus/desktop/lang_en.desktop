@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Notes
+Comment=Take quick notes
+Keywords=notes;memo;text;
+Exec=notes %F
+Actions=new;
+
+[Desktop Action new]
+Name=New note
+Exec=notes --new

@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=नोट्स
+Comment=जल्दी नोट्स लिखें
+Keywords=नोट्स;पाठ;
+Exec=notes %F
+Actions=new;
+
+[Desktop Action new]
+Name=नया नोट
+Exec=notes --new
