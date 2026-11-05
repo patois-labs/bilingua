@@ -294,3 +294,29 @@ proptest! {
         }
     }
 }
+
+/// A byte flipped to a Shift_JIS lead byte (237 and others) in the declared legacy fixture: the file is either
+/// refused with a typed error or an untouched merge returns exactly the bytes that came in.
+#[test]
+fn legacy_byte_mutations_refuse_or_round_trip_exactly() {
+    let seed_pos = 2032160318471024793usize % LEGACY_SJIS.len();
+    let mut seeded = LEGACY_SJIS.to_vec();
+    seeded[seed_pos] = 237;
+    let mut refused = 0;
+    let mut check = |b: Vec<u8>| match Wxl.extract(&b, &opts(true)) {
+        Err(e) => {
+            assert!(is_typed(&e), "{e:?}");
+            refused += 1;
+        }
+        Ok(d) => assert_eq!(Wxl.merge(&d).unwrap(), b),
+    };
+    check(seeded);
+    for pos in 0..LEGACY_SJIS.len() {
+        for val in [0x81u8, 0x85, 0xed, 0xee, 0xfa, 0xfc, 0xa0, 0xff] {
+            let mut b = LEGACY_SJIS.to_vec();
+            b[pos] = val;
+            check(b);
+        }
+    }
+    assert!(refused > 0, "some mutation must be refused (double-mapped Shift_JIS sequences)");
+}

@@ -227,6 +227,15 @@ impl Filter for Wxl {
         guard::check_input(bytes, &limits)?;
         let dec = enc::decode_text(bytes, &DecodeOptions::new(opts).declared())?;
         let text = dec.text;
+        if !matches!(enc::base(&dec.encoding), "utf-8" | "utf-8-bom" | "utf-16le" | "utf-16be")
+            && enc::encode_text(&text, &dec.encoding)? != bytes
+        {
+            // double-mapped or lone bytes of a legacy code page read to a character that writes back as another
+            // spelling; an untouched merge must be the original bytes, so the file is refused, never altered
+            return Err(Error::Encoding(
+                "This WiX localization file uses byte sequences of its legacy encoding that cannot be written back unchanged. Re-save the file as UTF-8.".into(),
+            ));
+        }
         guard::check_xml(text.as_bytes(), &limits)?;
         let scanned = scan::scan(&text).map_err(|m| parse_err(format!("this file is not well-formed XML: {m}")))?;
 
