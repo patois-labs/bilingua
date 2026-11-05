@@ -252,6 +252,10 @@ fn attr_value(vraw: &str) -> String {
 /// Parses `text` completely. The tree is in document (start tag) order, so index order is `iter()` order.
 pub fn parse(fmt: &str, text: &str) -> Result<Tree, Error> {
     let b = text.as_bytes();
+    if text.starts_with('\u{feff}') {
+        // the byte order mark was already taken off: a second one is not XML
+        return Err(perr(fmt, "not well-formed XML: unexpected byte order mark"));
+    }
     // XML 1.0 characters only
     if b.iter().any(|c| *c < 0x20 && !matches!(c, 9 | 10 | 13)) || b.windows(3).any(|w| w[0] == 0xEF && w[1] == 0xBF && (w[2] == 0xBE || w[2] == 0xBF)) {
         let c = text.chars().find(|c| !xml_char(*c)).unwrap_or('\u{0}');

@@ -219,6 +219,9 @@ fn malformed_and_truncated_files_are_typed_errors() {
     }
     // a declared charset the filter does not support is refused, even on a plain ASCII file
     assert!(matches!(TXML.extract(b"<?xml version=\"1.0\" encoding=\"utf-32\"?><txml/>", &opts()), Err(Error::Encoding(_))));
+    // a doubled byte order mark
+    assert!(TXML.extract(b"\xef\xbb\xbf\xef\xbb\xbf<txml/>", &opts()).is_err());
+    assert!(TXLF.extract(b"\xef\xbb\xbf\xef\xbb\xbf<xliff version=\"1.2\"/>", &opts()).is_err());
     // XML 1.0 rules: no control characters, no U+FFFE
     assert!(TXML.extract("<txml>\u{fffe}</txml>".as_bytes(), &opts()).is_err());
     // a TXLF 2.0 file is not a TXLF 1.2 file
