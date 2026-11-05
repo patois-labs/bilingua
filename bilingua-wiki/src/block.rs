@@ -245,6 +245,9 @@ pub fn mw_slots(w: &mut Walk, holes: &[Region]) -> Result<(), Error> {
                     w.add(colon + 1, e, None, "definition", 0)?;
                     continue;
                 }
+                // a term without a definition: a colon in its translation would start one
+                w.add(s + p, e, None, "term", 0)?;
+                continue;
             }
             w.add(s + p, e, None, "list-item", 0)?;
             continue;

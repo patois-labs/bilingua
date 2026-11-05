@@ -268,7 +268,8 @@ fn gate_inert_markup() {
     let dout = build_str(&d, dsrc, &[(1, "> **x** {{a.png}} <html>h</html> ~~NOTOC~~ https://x.y")]);
     assert_eq!(
         dout,
-        "====== Head ======\n<nowiki>></nowiki> <nowiki>**</nowiki>x<nowiki>**</nowiki> <nowiki>{{</nowiki>a.png<nowiki>}}</nowiki> <nowiki><</nowiki>html>h<nowiki><</nowiki>/html> <nowiki>~~</nowiki>NOTOC<nowiki>~~</nowiki> https://x.y\n"
+        "====== Head ======\n<nowiki>></nowiki> <nowiki>**</nowiki>x<nowiki>**</nowiki> <nowiki>{{</nowiki>a.png<nowiki>}}</nowiki> <nowiki><</nowiki>html>h<nowiki><</nowiki>/html> <nowiki>~~</nowiki>NOTOC<nowiki>~~</nowiki> <nowiki>https://</nowiki>x.y\n",
+        "Bilingua (gate): a URL typed in the translation is written inert too, so it cannot add a link; LocOS leaves it live"
     );
     let q = MediaWiki::with_template_params("Quote:text");
     let tout = build_str(&q, b"{{Quote|author=A|text=To be}}\n", &[(0, "x=y|z")]);

@@ -29,6 +29,10 @@ pub struct MediaWiki {
     allow: HashSet<(String, String)>,
 }
 
+/// The `ExtractOptions::format_options` key that lists translatable template parameters for one call, in the
+/// [`MediaWiki::with_template_params`] spelling (`Quote:text,Note:1`); it adds to the filter's own list.
+pub const TEMPLATE_PARAMS_KEY: &str = "wiki.template_params";
+
 /// The DokuWiki filter.
 #[derive(Debug, Clone, Copy, Default)]
 pub struct DokuWiki;
@@ -174,7 +178,7 @@ fn extract_wiki(id: &'static str, dw: bool, allow: &HashSet<(String, String)>, b
     guard::finish(doc, std::mem::take(&mut dec.warnings), &limits)
 }
 
-fn merge_wiki(id: &str, dw: bool, doc: &Document) -> Result<Vec<u8>, Error> {
+fn merge_wiki(id: &str, dw: bool, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
     check_parser(doc, &bilingua_model::parser_info!())?;
     let Skeleton::Text { parts, encoding, .. } = &doc.skeleton else {
         return Err(Error::Write(format!("{id} needs a text skeleton")));
@@ -196,12 +200,14 @@ fn merge_wiki(id: &str, dw: bool, doc: &Document) -> Result<Vec<u8>, Error> {
                     out.push_str(&raw);
                 } else {
                     let cell = u.codes.get(CELL).and_then(|c| c.standalone.as_deref());
-                    out.push_str(&render::render(&new, &u.codes, cell, dw));
+                    out.push_str(&render::render(&new, &u.codes, cell, u.context.kind.as_deref(), dw));
                 }
             }
         }
     }
-    enc::encode_text(&out, encoding)
+    // Neither wiki declares a page language, so `stamp_target_always` has nothing to stamp; `output_encoding`
+    // UTF-8 writes UTF-8 whatever the file was (LocOS behaviour).
+    enc::encode_text_with(&out, encoding, opts)
 }
 
 impl Filter for MediaWiki {
@@ -215,10 +221,21 @@ impl Filter for MediaWiki {
         false // wikitext is plain text; only the extension says so
     }
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
-        extract_wiki("wiki", false, &self.allow, bytes, opts)
+        // The filter's allow-list plus `format_options["wiki.template_params"]` (same spelling) for this call.
+        match opts.format_option(TEMPLATE_PARAMS_KEY) {
+            Some(spec) if !lex::strip(spec).is_empty() => {
+                let mut allow = self.allow.clone();
+                allow.extend(MediaWiki::with_template_params(spec).allow);
+                extract_wiki("wiki", false, &allow, bytes, opts)
+            }
+            _ => extract_wiki("wiki", false, &self.allow, bytes, opts),
+        }
     }
     fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
-        merge_wiki("wiki", false, doc)
+        merge_wiki("wiki", false, doc, &MergeOptions::default())
+    }
+    fn merge_with(&self, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
+        merge_wiki("wiki", false, doc, opts)
     }
 }
 
@@ -236,6 +253,9 @@ impl Filter for DokuWiki {
         extract_wiki("dokuwiki", true, &HashSet::new(), bytes, opts)
     }
     fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
-        merge_wiki("dokuwiki", true, doc)
+        merge_wiki("dokuwiki", true, doc, &MergeOptions::default())
+    }
+    fn merge_with(&self, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
+        merge_wiki("dokuwiki", true, doc, opts)
     }
 }

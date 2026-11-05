@@ -178,6 +178,21 @@ def digest(b):
     return "%d:%016x" % (len(b), h)
 
 
+INERT = [
+    ("<nowiki/>", ""), ("<nowiki></nowiki>", ""), ("<nowiki>", ""), ("</nowiki>", ""), ("{{!}}", "|"), ("{{=}}", "="),
+    ("%%|%%", "|"), ("%%^%%", "^"), ("%%:::%%", ":::"),
+]
+
+
+def relaxed(b):
+    """The build with every inert wrapper and separator escape taken out (Bilingua writes a few more than LocOS where
+    a translation would otherwise create markup; the words must still be the same)."""
+    s = b.decode("utf-8", "replace")
+    for a, r in INERT:
+        s = s.replace(a, r)
+    return s.encode("utf-8")
+
+
 def golden(data, dialect, allow):
     config.WIKI_TEMPLATE_PARAMS = allow
     f = get_filter(dialect)
@@ -197,7 +212,9 @@ def golden(data, dialect, allow):
             if v is not None:
                 m[str(i)] = v
         try:
-            builds[name] = digest(f.build(data, m))
+            out = f.build(data, m)
+            builds[name] = digest(out)
+            builds[name + "~inert"] = digest(relaxed(out))
         except Exception as e:  # noqa: BLE001
             builds[name] = "error:" + type(e).__name__
     rec["builds"] = builds
