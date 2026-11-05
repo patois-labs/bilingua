@@ -1,5 +1,5 @@
 [workspace]
-members = ["bilingua-model", "bilingua-zip", "bilingua", "bilingua-seg", "bilingua-text", "bilingua-json", "bilingua-markdown", "bilingua-cli", "bilingua-docx", "bilingua-html", "bilingua-po", "bilingua-subtitle", "bilingua-xlsx", "bilingua-pptx", "bilingua-py", "bilingua-xliff", "bilingua-sdl", "bilingua-strings", "bilingua-toml", "bilingua-properties", "bilingua-resjson", "bilingua-json5", "bilingua-jsmodule", "bilingua-yaml", "oracle", "bilingua-ini"]
+members = ["bilingua-model", "bilingua-zip", "bilingua", "bilingua-seg", "bilingua-text", "bilingua-json", "bilingua-markdown", "bilingua-cli", "bilingua-docx", "bilingua-html", "bilingua-po", "bilingua-subtitle", "bilingua-xlsx", "bilingua-pptx", "bilingua-py", "bilingua-xliff", "bilingua-sdl", "bilingua-strings", "bilingua-toml", "bilingua-properties", "bilingua-resjson", "bilingua-json5", "bilingua-jsmodule", "bilingua-yaml", "bilingua-xaml", "oracle", "bilingua-ini"]
 resolver = "2"
 
 [workspace.package]
@@ -20,6 +20,7 @@ bilingua-docx = { path = "bilingua-docx" }
 bilingua-html = { path = "bilingua-html" }
 bilingua-po = { path = "bilingua-po" }
 bilingua-properties = { path = "bilingua-properties" }
+bilingua-xaml = { path = "bilingua-xaml" }
 bilingua-subtitle = { path = "bilingua-subtitle" }
 bilingua-xlsx = { path = "bilingua-xlsx" }
 bilingua-pptx = { path = "bilingua-pptx" }
