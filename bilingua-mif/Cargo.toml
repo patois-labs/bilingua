@@ -1,0 +1,14 @@
+[package]
+name = "bilingua-mif"
+description = "Bilingua: Adobe FrameMaker MIF filter (mif, version 8 and later)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+bilingua-model = { workspace = true }
+
+[dev-dependencies]
+proptest = "1"
+serde_json = { workspace = true }
