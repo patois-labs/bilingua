@@ -40,14 +40,14 @@ pub struct Opts {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Where {
+pub(crate) enum Where {
     Direct,
     Char,
     Content,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Point {
+pub(crate) enum Point {
     El(Id),
     Ch(char),
 }
@@ -305,7 +305,7 @@ fn content_items(t: &Tree, content: Id, items: &mut Vec<Item>) {
 
 /// One piece of a paragraph's text: characters, or a numbered inline code.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Part {
+pub(crate) enum Part {
     Text(String),
     Open(usize),
     Close(usize),

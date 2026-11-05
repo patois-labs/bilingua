@@ -58,6 +58,7 @@ impl Default for XmlFilter {
 
 /// What the filter found out about a file (see [`XmlFilter::inspect`]).
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct Inspection {
     /// The dialect that applies (`dita`, `docbook`, ...), if any.
     pub dialect: Option<String>,
@@ -65,7 +66,9 @@ pub struct Inspection {
     pub multilingual: Option<MlInfo>,
 }
 
+/// The multilingual layout of a file (see [`Inspection::multilingual`]).
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct MlInfo {
     pub mode: MlMode,
     pub source: String,

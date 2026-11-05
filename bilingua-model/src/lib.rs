@@ -15,7 +15,8 @@
 //! Bilingual files (XLIFF and the like) use the same model: a segment may carry a target, a state and an origin
 //! (with a match percentage), and a unit may carry notes and a lock reason. Monolingual formats leave them empty.
 //!
-//! [`locos`] converts inline codes to and from the text tokens Localization OS uses, one token per tag.
+//! [`profile`] holds what one consumer needs and no other (the Localization OS profile, and
+//! [`profile::tokens`], which converts inline codes to and from LocOS's text tokens, one token per tag).
 
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
@@ -25,7 +26,7 @@ pub mod codepage;
 pub mod enc;
 pub mod garble;
 pub mod guard;
-pub mod locos;
+pub mod profile;
 mod pytables;
 pub mod pytext;
 
@@ -730,6 +731,11 @@ pub struct Document {
     /// read with, ...). Left out of the JSON when empty.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub warnings: Vec<Warning>,
+    /// The encoding a text file was decoded from when it was not UTF-8 (`utf-16le`, `windows-1252`, `shift_jis`,
+    /// ...); `None` for UTF-8 (with or without BOM) and for zip and binary files. The `bilingua` facade fills it
+    /// from the skeleton; left out of the JSON when unset.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source_encoding: Option<String>,
 }
 
 /// A notice about a file that was read anyway: it never stops a merge. `kind` is a stable word for programs
@@ -753,7 +759,7 @@ impl Document {
     /// A document of `format` (the filter id) with its units and skeleton; no name, no languages, sentence
     /// granularity, no warnings.
     pub fn new(format: impl Into<String>, units: Vec<Unit>, skeleton: Skeleton) -> Document {
-        Document { format: format.into(), name: None, source_lang: None, target_lang: None, granularity: Granularity::default(), units, skeleton, warnings: vec![] }
+        Document { format: format.into(), name: None, source_lang: None, target_lang: None, granularity: Granularity::default(), units, skeleton, warnings: vec![], source_encoding: None }
     }
     /// Takes the languages and the granularity from the options the file was opened with (what every parser does).
     pub fn with_options(mut self, opts: &ExtractOptions) -> Document {
@@ -777,6 +783,14 @@ impl Document {
     pub fn with_granularity(mut self, granularity: Granularity) -> Document {
         self.granularity = granularity;
         self
+    }
+    /// The encoding of a text skeleton, when it is not UTF-8: the base of its tag (`utf-16le-bom` and `utf-16le`
+    /// both give `utf-16le`). `None` for UTF-8, binary plists, zip and binary skeletons.
+    pub fn detected_source_encoding(&self) -> Option<String> {
+        let Skeleton::Text { encoding, .. } = &self.skeleton else { return None };
+        let base = encoding.split(';').next().unwrap_or("").to_ascii_lowercase();
+        let base = base.strip_suffix("-bom").or_else(|| base.strip_suffix("-nobom")).unwrap_or(&base).to_string();
+        (!matches!(base.as_str(), "" | "utf-8" | "utf8" | "bplist")).then_some(base)
     }
     pub fn with_warnings(mut self, warnings: Vec<Warning>) -> Document {
         self.warnings = warnings;
@@ -956,9 +970,22 @@ pub struct ExtractOptions {
     /// Booleans are `true`/`false`/`1`/`0`/`yes`/`no`/`on`/`off`; integers are decimal.
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub format_options: BTreeMap<String, String>,
+    /// A behaviour profile ([`profile`]): `Some("locos")` for the Localization OS adapter. `None`: Bilingua's own
+    /// behaviour. The `bilingua` facade refuses a name it does not know.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub profile: Option<String>,
 }
 
 impl ExtractOptions {
+    /// Switches a profile on (`"locos"`), or off with `None`.
+    pub fn with_profile(mut self, profile: impl IntoOptionString) -> ExtractOptions {
+        self.profile = profile.into_option_string();
+        self
+    }
+    /// True when this profile is on.
+    pub fn is_profile(&self, name: &str) -> bool {
+        self.profile.as_deref() == Some(name)
+    }
     /// The defaults: no languages, sentence granularity, locked text skipped, Localization OS's limits.
     pub fn new() -> ExtractOptions {
         ExtractOptions::default()
@@ -1082,7 +1109,12 @@ impl FormatOptionKey {
 /// wrong kind is an [`Error::FormatOption`]. The `bilingua` facade calls this with every filter's keys, so an
 /// option meant for another format (the adapter sends `docx.translate_comments` with every file) is accepted.
 pub fn check_format_options(opts: &ExtractOptions, known: &[FormatOptionKey]) -> Result<(), Error> {
-    for (k, v) in &opts.format_options {
+    check_option_map(&opts.format_options, known)
+}
+
+/// [`check_format_options`] for any map of options (`MergeOptions::format_options` too).
+pub fn check_option_map(options: &BTreeMap<String, String>, known: &[FormatOptionKey]) -> Result<(), Error> {
+    for (k, v) in options {
         match known.iter().find(|f| f.key == k) {
             Some(f) => f.check(v)?,
             None => {
@@ -1125,6 +1157,12 @@ pub enum OutputEncoding {
 pub struct MergeOptions {
     pub output_encoding: OutputEncoding,
     pub stamp_target_always: bool,
+    /// The profile the document is written for (see [`ExtractOptions::profile`]); format crates may switch on it.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub profile: Option<String>,
+    /// Merge-time format options, as for [`ExtractOptions::format_options`] (checked against the same keys).
+    #[serde(skip_serializing_if = "BTreeMap::is_empty")]
+    pub format_options: BTreeMap<String, String>,
 }
 
 impl MergeOptions {
@@ -1140,9 +1178,21 @@ impl MergeOptions {
         self.stamp_target_always = stamp_target_always;
         self
     }
-    /// The Localization OS behaviour: UTF-8 out, stamp and fill always.
-    pub fn locos() -> MergeOptions {
-        MergeOptions { output_encoding: OutputEncoding::Utf8, stamp_target_always: true }
+    pub fn with_profile(mut self, profile: impl IntoOptionString) -> MergeOptions {
+        self.profile = profile.into_option_string();
+        self
+    }
+    /// True when this profile is on.
+    pub fn is_profile(&self, name: &str) -> bool {
+        self.profile.as_deref() == Some(name)
+    }
+    pub fn with_format_option(mut self, key: impl Into<String>, value: impl ToString) -> MergeOptions {
+        self.format_options.insert(key.into(), value.to_string());
+        self
+    }
+    pub fn with_format_options(mut self, options: BTreeMap<String, String>) -> MergeOptions {
+        self.format_options = options;
+        self
     }
 
     /// True when the document has at least one segment with a target.
@@ -1200,6 +1250,9 @@ pub enum Error {
     /// A `format_options` key no format declares, or a value of the wrong kind.
     #[error("format option {key}: {msg}")]
     FormatOption { key: String, msg: String },
+    /// A profile name Bilingua does not know (see [`profile::profiles`]).
+    #[error("unknown profile {0:?}")]
+    UnknownProfile(String),
     #[error(transparent)]
     Io(#[from] std::io::Error),
 }

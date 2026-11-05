@@ -156,14 +156,14 @@ pub fn ex_with(z: &[u8], target: Option<&str>) -> Document {
 
 /// Text of a unit the way LocOS shows it (tokens for inline codes).
 pub fn text(u: &Unit) -> String {
-    locos::to_locos_text(&u.source()).0
+    profile::tokens::to_locos_text(&u.source()).0
 }
 
 /// Sets the target of the unit at position `pos` from LocOS token text.
 pub fn put(d: &mut Document, pos: usize, t: &str) {
     let u = &mut d.units[pos];
-    let (_, map) = locos::to_locos_text(&u.source());
-    u.segments[0].target = locos::from_locos_text(t, &map);
+    let (_, map) = profile::tokens::to_locos_text(&u.source());
+    u.segments[0].target = profile::tokens::from_locos_text(t, &map);
     u.segments[0].state = SegState::Draft;
 }
 

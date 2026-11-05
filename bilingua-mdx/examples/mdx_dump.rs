@@ -2,7 +2,7 @@
 //!   cargo run -p bilingua-mdx --example mdx_dump -- FILE [MERGED_OUT]
 //! With MERGED_OUT, every unit is pseudo translated and the merged file written there.
 use bilingua_mdx::Mdx;
-use bilingua_model::locos::to_locos_text;
+use bilingua_model::profile::tokens::to_locos_text;
 use bilingua_model::*;
 
 fn main() {

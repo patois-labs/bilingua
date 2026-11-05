@@ -123,7 +123,7 @@ fn matches_locos_on_corpus_random_files_and_okapi_resources() {
         // the inline codes: LocOS inline_map, key by key
         if let Some(maps) = c.get("maps").and_then(|m| m.as_array()) {
             for (i, (u, m)) in doc.units.iter().zip(maps).enumerate() {
-                let (_, lmap) = bilingua_model::locos::to_locos_text(&u.source());
+                let (_, lmap) = bilingua_model::profile::tokens::to_locos_text(&u.source());
                 let mut mine: BTreeMap<String, String> = BTreeMap::new();
                 for (num, code) in &lmap {
                     if code.letter == 'x' {

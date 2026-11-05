@@ -41,8 +41,8 @@ fn eleven_languages_read_and_write() {
         let f = filter_for("odt");
         let mut d = f.extract(&data, &opts(Some(lang))).unwrap();
         for u in d.units.iter_mut() {
-            let (text, map) = locos::to_locos_text(&u.source());
-            u.segments[0].target = locos::from_locos_text(&format!("{target} / {text}"), &map);
+            let (text, map) = profile::tokens::to_locos_text(&u.source());
+            u.segments[0].target = profile::tokens::from_locos_text(&format!("{target} / {text}"), &map);
         }
         let out = f.merge(&d).unwrap();
         let back: Vec<String> = extract("odt", &out, None).units.iter().map(ltext).collect();

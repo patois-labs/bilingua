@@ -3,7 +3,7 @@
 //! flattens them).
 
 use bilingua_model::*;
-use bilingua_model::locos;
+use bilingua_model::profile::tokens as locos;
 use regex::Regex;
 use std::collections::BTreeMap;
 use std::sync::OnceLock;

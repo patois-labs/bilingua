@@ -1,7 +1,7 @@
 //! Differential test against the LocOS mdx filter: 260 random MDX files plus the LocOS fixture, with the units, the
 //! inline maps and the bytes LocOS builds recorded in `data/locos_golden.json` (made by `tools/gen_golden.py`).
 mod common;
-use bilingua_model::locos::to_locos_text;
+use bilingua_model::profile::tokens::to_locos_text;
 use common::*;
 
 fn mappings(texts: &[String]) -> Vec<(&'static str, Vec<(usize, String)>)> {

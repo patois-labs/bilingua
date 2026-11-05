@@ -22,7 +22,7 @@ pub const LANGS: [(&str, &str); 11] = [
 ];
 
 fn texts(doc: &Document) -> Vec<String> {
-    doc.units.iter().map(|u| locos::to_locos_text(&u.source()).0).collect()
+    doc.units.iter().map(|u| profile::tokens::to_locos_text(&u.source()).0).collect()
 }
 
 /// Every unit gets "[n] " in front of its first text; tags stay.

@@ -5,7 +5,7 @@
 //! registry side).
 mod common;
 use bilingua_mdx::{Mdx, MdxOptions};
-use bilingua_model::locos::to_locos_text;
+use bilingua_model::profile::tokens::to_locos_text;
 use bilingua_model::*;
 use common::*;
 

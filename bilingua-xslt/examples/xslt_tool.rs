@@ -36,7 +36,7 @@ fn main() {
             let bytes = std::fs::read(&args[2]).expect("read");
             match Xslt.extract_with(&bytes, &opts, &big()) {
                 Ok(d) => {
-                    let units: Vec<String> = d.units.iter().map(|u| locos::to_locos_text(&u.source()).0).collect();
+                    let units: Vec<String> = d.units.iter().map(|u| profile::tokens::to_locos_text(&u.source()).0).collect();
                     println!("{}", serde_json::json!({"units": units}));
                 }
                 Err(e) => println!("{}", serde_json::json!({"error": e.to_string()})),

@@ -246,9 +246,9 @@ proptest! {
             for i in 0..d.units.len() {
                 let t = format!("FR {}", loc_text(&d.units[i]));
                 let u = &d.units[i];
-                let (_, map) = bilingua_model::locos::to_locos_text(&u.source());
+                let (_, map) = bilingua_model::profile::tokens::to_locos_text(&u.source());
                 let id = u.segments[0].id.clone();
-                let _ = d.set_target(&id, bilingua_model::locos::from_locos_text(&t, &map));
+                let _ = d.set_target(&id, bilingua_model::profile::tokens::from_locos_text(&t, &map));
             }
             if let Ok(out) = Epub.merge(&d) {
                 // what we write we can read again

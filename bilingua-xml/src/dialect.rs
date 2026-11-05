@@ -23,14 +23,38 @@ pub struct AttrRule {
 /// added (empty = nothing is added, the generic XML behaviour), or `add_if_root_outside` when the root element is
 /// not in that namespace (DocBook 4.x writes `lang`, DocBook 5 and DITA write `xml:lang`).
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct LangStamp {
     pub update: Vec<String>,
     pub add: String,
     pub add_if_root_outside: Option<(String, String)>,
 }
 
+impl LangStamp {
+    /// Changes nothing and adds nothing (the generic XML behaviour).
+    pub fn new() -> LangStamp {
+        LangStamp::default()
+    }
+    /// The root attributes to change, first present wins.
+    pub fn with_update<I: IntoIterator<Item = S>, S: Into<String>>(mut self, attrs: I) -> LangStamp {
+        self.update = attrs.into_iter().map(Into::into).collect();
+        self
+    }
+    /// The attribute to add when none of `update` is present.
+    pub fn with_add(mut self, attr: impl Into<String>) -> LangStamp {
+        self.add = attr.into();
+        self
+    }
+    /// The attribute to add instead when the root element is not in namespace `ns`.
+    pub fn with_add_if_root_outside(mut self, ns: impl Into<String>, attr: impl Into<String>) -> LangStamp {
+        self.add_if_root_outside = Some((ns.into(), attr.into()));
+        self
+    }
+}
+
 /// How a document is recognised as this dialect (any one test is enough).
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct Detect {
     /// Substrings of the DOCTYPE declaration (case sensitive), looked for in the first 4096 characters.
     pub doctype_contains: Vec<String>,
@@ -40,6 +64,34 @@ pub struct Detect {
     pub root_attr: Vec<(String, String)>,
     /// Local names of a root element that has no namespace.
     pub root_names: Vec<String>,
+}
+
+fn strings<I: IntoIterator<Item = S>, S: Into<String>>(v: I) -> Vec<String> {
+    v.into_iter().map(Into::into).collect()
+}
+
+impl Detect {
+    /// Recognises nothing.
+    pub fn new() -> Detect {
+        Detect::default()
+    }
+    pub fn with_doctype_contains<I: IntoIterator<Item = S>, S: Into<String>>(mut self, v: I) -> Detect {
+        self.doctype_contains = strings(v);
+        self
+    }
+    pub fn with_root_ns<I: IntoIterator<Item = S>, S: Into<String>>(mut self, v: I) -> Detect {
+        self.root_ns = strings(v);
+        self
+    }
+    /// Adds an attribute (namespace, local name) on the root element.
+    pub fn with_root_attr(mut self, ns: impl Into<String>, local: impl Into<String>) -> Detect {
+        self.root_attr.push((ns.into(), local.into()));
+        self
+    }
+    pub fn with_root_names<I: IntoIterator<Item = S>, S: Into<String>>(mut self, v: I) -> Detect {
+        self.root_names = strings(v);
+        self
+    }
 }
 
 #[derive(Debug, Clone, Default)]

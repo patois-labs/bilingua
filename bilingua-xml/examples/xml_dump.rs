@@ -3,7 +3,7 @@
 //! * `dump FILE...`     one JSON line per file with the units (text with LocOS tokens, style, note)
 //! * `gen PATH MB`      writes a large generated XML file (same generator as `tests/speed.rs`)
 //! * `time FILE`        times extract, untouched merge and a pseudo-translated merge
-use bilingua_model::locos::to_locos_text;
+use bilingua_model::profile::tokens::to_locos_text;
 use bilingua_model::*;
 use bilingua_xml::XmlFilter;
 use std::time::Instant;

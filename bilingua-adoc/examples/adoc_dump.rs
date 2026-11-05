@@ -11,7 +11,7 @@ fn main() {
     let data = std::fs::read(&path).expect("read");
     let mut doc = Adoc.extract(&data, &ExtractOptions::default()).expect("extract");
     for (i, u) in doc.units.iter().enumerate() {
-        println!("{i}\t{}\t{:?}", locos::to_locos_text(&u.source()).0.replace('\n', "\\n"), u.context.style);
+        println!("{i}\t{}\t{:?}", profile::tokens::to_locos_text(&u.source()).0.replace('\n', "\\n"), u.context.style);
     }
     doc.target_lang = lang;
     let ids: Vec<(String, Vec<Inline>)> = doc.units.iter().filter(|u| u.translate).map(|u| (u.segments[0].id.clone(), u.source())).collect();

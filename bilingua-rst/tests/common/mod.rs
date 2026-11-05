@@ -1,6 +1,6 @@
 //! Shared helpers: units as LocOS writes them (inline codes as numbered tokens) and builds from LocOS-style text.
 #![allow(dead_code)]
-use bilingua_model::locos::{from_locos_text, to_locos_text};
+use bilingua_model::profile::tokens::{from_locos_text, to_locos_text};
 use bilingua_model::*;
 use bilingua_rst::Rst;
 

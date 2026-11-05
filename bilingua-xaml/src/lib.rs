@@ -58,7 +58,7 @@ fn tags_of(value: &str) -> (Vec<Inline>, std::collections::BTreeMap<String, Code
                 n += 1;
                 let id = n.to_string();
                 codes.insert(id.clone(), CodeData { standalone: Some(p.to_string()), label: Some("placeholder".into()), ..Default::default() });
-                inl.push(if locos::is_named_placeholder(p) { Inline::free_tag(id, p) } else { Inline::tag(id, TagKind::Standalone, p) });
+                inl.push(if profile::tokens::is_named_placeholder(p) { Inline::free_tag(id, p) } else { Inline::tag(id, TagKind::Standalone, p) });
             }
         }
     }

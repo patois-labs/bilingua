@@ -3,7 +3,7 @@
 //! bundles and the edge files. Round trips, the model contract (paragraph and sentence modes, stable ids, one LocOS
 //! token per tag) and the plural fill per target language.
 mod common;
-use bilingua_model::locos::{from_locos_text, to_locos_text};
+use bilingua_model::profile::tokens::{from_locos_text, to_locos_text};
 use bilingua_model::*;
 use bilingua_plist::stringsdict_records;
 use bilingua_seg::{segment, Rules};

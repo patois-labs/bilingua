@@ -1,6 +1,6 @@
 //! `cargo run -p bilingua-toml --example dump -- OUT.json FILE...` writes {file: {"units": [LocOS-token text]}}
 //! for the oracle comparison (`tools/compare.py`).
-use bilingua_model::locos::to_locos_text;
+use bilingua_model::profile::tokens::to_locos_text;
 use bilingua_model::{ExtractOptions, Filter};
 use bilingua_toml::TomlFilter;
 

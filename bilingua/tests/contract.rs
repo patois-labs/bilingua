@@ -3,7 +3,7 @@
 //! made-up corpus in `oracle/corpus`, one or more files per format.
 
 use bilingua::*;
-use bilingua_model::locos::{from_locos_text, to_locos_text, to_locos_text_as};
+use bilingua_model::profile::tokens::{from_locos_text, to_locos_text, to_locos_text_as};
 use std::path::PathBuf;
 
 fn corpus() -> Vec<(String, Vec<u8>)> {
@@ -94,7 +94,7 @@ fn every_tag_maps_to_exactly_one_locos_token_and_back() {
                         assert!(locos_well_formed(&text), "{name} {}: LocOS would call {text:?} malformed", s.id);
                         // The map survives JSON, as LocOS stores it.
                         let json = serde_json::to_string(&map).unwrap();
-                        let back: bilingua_model::locos::LocosMap = serde_json::from_str(&json).unwrap();
+                        let back: bilingua_model::profile::tokens::LocosMap = serde_json::from_str(&json).unwrap();
                         assert_eq!(back, map);
                     }
                     tags_seen += n_tags;

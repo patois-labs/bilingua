@@ -66,8 +66,8 @@ fn large_catalog_round_trips_and_is_timed() {
     let t_same = t.elapsed();
     assert_eq!(same, bytes);
     for u in d.units.iter_mut() {
-        let (text, map) = locos::to_locos_text(&u.source());
-        u.segments[0].target = locos::from_locos_text(&format!("\u{ab}{text}\u{bb}"), &map);
+        let (text, map) = profile::tokens::to_locos_text(&u.source());
+        u.segments[0].target = profile::tokens::from_locos_text(&format!("\u{ab}{text}\u{bb}"), &map);
     }
     let t = Instant::now();
     let out = Xcstrings.merge(&d).unwrap();
@@ -94,8 +94,8 @@ fn large_bundle_round_trips_and_is_timed() {
     let t_same = t.elapsed();
     assert_eq!(same, bundle);
     for u in d.units.iter_mut() {
-        let (text, map) = locos::to_locos_text(&u.source());
-        u.segments[0].target = locos::from_locos_text(&format!("\u{ab}{text}\u{bb}"), &map);
+        let (text, map) = profile::tokens::to_locos_text(&u.source());
+        u.segments[0].target = profile::tokens::from_locos_text(&format!("\u{ab}{text}\u{bb}"), &map);
     }
     let t = Instant::now();
     let out = Xcloc.merge(&d).unwrap();

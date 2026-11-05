@@ -77,7 +77,7 @@ fn plain_utf8_and_json_text_are_left_alone() {
 #[test]
 fn options_serde_and_helpers() {
     let o: MergeOptions = serde_json::from_str(r#"{"output_encoding":"utf-8","stamp_target_always":true}"#).unwrap();
-    assert_eq!(o, MergeOptions::locos());
+    assert_eq!(o, bilingua_model::profile::locos().merge_options("xliff").with_profile(None::<String>));
     assert_eq!(serde_json::from_str::<MergeOptions>("{}").unwrap(), MergeOptions::default());
     assert_eq!(serde_json::from_str::<MergeOptions>(r#"{"output_encoding":"keep"}"#).unwrap().output_encoding, OutputEncoding::Keep);
     assert!(serde_json::from_str::<MergeOptions>(r#"{"bogus":1}"#).is_err());

@@ -19,6 +19,7 @@ use std::collections::{HashMap, HashSet};
 pub(crate) const US: char = '\u{1F}';
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum MlMode {
     Attr,
     Element,
@@ -38,6 +39,7 @@ impl MlMode {
 /// How a multilingual file is read. `MlConfig::default()` detects the layout on its own (at least two groups, each
 /// holding two or more languages); anything set explicitly drops that threshold.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct MlConfig {
     /// `None` = detect.
     pub mode: Option<MlMode>,
@@ -95,6 +97,45 @@ fn flag(v: &V, key: &str) -> Result<bool, Error> {
 }
 
 impl MlConfig {
+    /// Detect the layout (the same as `MlConfig::default()`).
+    pub fn new() -> MlConfig {
+        MlConfig::default()
+    }
+    /// The layout; `None` detects it. Setting anything explicitly drops the detection threshold.
+    pub fn with_mode(mut self, mode: Option<MlMode>) -> MlConfig {
+        self.mode = mode;
+        self.explicit = true;
+        self
+    }
+    pub fn with_source(mut self, source: impl Into<String>) -> MlConfig {
+        self.source = source.into();
+        self.explicit = true;
+        self
+    }
+    pub fn with_lang_attr(mut self, attr: impl Into<String>) -> MlConfig {
+        self.lang_attr = attr.into();
+        self.explicit = true;
+        self
+    }
+    pub fn with_source_xpath(mut self, xpath: impl Into<String>) -> MlConfig {
+        self.source_xpath = xpath.into();
+        self.explicit = true;
+        self
+    }
+    pub fn with_target_xpath(mut self, xpath: impl Into<String>) -> MlConfig {
+        self.target_xpath = xpath.into();
+        self.explicit = true;
+        self
+    }
+    /// Create a missing target node (default yes).
+    pub fn with_create(mut self, create: bool) -> MlConfig {
+        self.create = create;
+        self
+    }
+    pub fn with_enabled(mut self, enabled: bool) -> MlConfig {
+        self.enabled = enabled;
+        self
+    }
     /// Reads a JSON object: `mode`, `source`, `lang_attr`, `source_xpath`, `target_xpath` (strings), `create`,
     /// `enabled` (true / false or "yes" / "no"). Hyphens in keys are read as underscores.
     pub fn from_json(json: &str) -> Result<MlConfig, Error> {

@@ -211,7 +211,8 @@ pub fn detect(name: &str, bytes: &[u8]) -> Option<Box<dyn Filter>> {
 /// Extracts and segments a file. The returned document's `format` names the filter that `merge` will use.
 /// The source language comes from `opts.source_lang` (default "en"); it picks the sentence rules.
 pub fn extract(name: &str, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
-    // a misspelt option would otherwise be ignored without a word
+    // a misspelt option or profile would otherwise be ignored without a word
+    profile::check(opts.profile.as_deref())?;
     check_format_options(opts, &format_option_keys())?;
     let f = detect(name, bytes).ok_or_else(|| Error::Unsupported(format!("no parser for {name}")))?;
     // the safety net for every format, also one that forgets to call the guards: input size first, the unit,
@@ -219,6 +220,8 @@ pub fn extract(name: &str, bytes: &[u8], opts: &ExtractOptions) -> Result<Docume
     bilingua_model::guard::check_input(bytes, &opts.limits())?;
     let mut doc = f.extract(bytes, opts)?;
     doc.name = Some(name.to_string());
+    doc.source_encoding = doc.detected_source_encoding();
+    profile::annotate(&mut doc, opts.profile.as_deref());
     if own_segmentation(f.id()) {
         bilingua_model::guard::check_document(&doc, &opts.limits())?;
         return Ok(doc);
@@ -255,7 +258,11 @@ pub fn merge(doc: &Document) -> Result<Vec<u8>, Error> {
 /// [`merge`] with [`MergeOptions`]: `output_encoding` (keep the file's encoding, or write UTF-8 and make the
 /// declarations say so) and `stamp_target_always` (stamp the target language and fill plurals even when nothing is
 /// translated, as Localization OS does). `merge(doc)` is `merge_with(doc, &MergeOptions::default())`.
+///
+/// For a profile, start from its options: `merge_with(&doc, &profile::locos().merge_options(&doc.format))`.
 pub fn merge_with(doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
+    profile::check(opts.profile.as_deref())?;
+    check_option_map(&opts.format_options, &format_option_keys())?;
     filter_for(doc)?.merge_with(doc, opts)
 }
 

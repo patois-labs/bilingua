@@ -197,7 +197,7 @@ fn point_tags_are_standalone_and_pairs_are_open_close() {
         ]
     );
     // ids are the LocOS token numbers, so the model's own conversion gives the LocOS text
-    let (text, map) = bilingua_model::locos::to_locos_text(&inl);
+    let (text, map) = bilingua_model::profile::tokens::to_locos_text(&inl);
     assert!(text.contains("\u{27e6}g2\u{27e7}Save\u{27e6}/g2\u{27e7}"));
     assert_eq!(map.len(), 3);
 }

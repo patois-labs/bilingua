@@ -40,7 +40,7 @@ impl From<engine::Error> for Fail {
             E::Encoding(_) => "encoding",
             E::Io(_) => "io",
             // the LocOS adapter maps this code to its own invalid_argument
-            E::FormatOption { .. } => "invalid_argument",
+            E::FormatOption { .. } | E::UnknownProfile(_) => "invalid_argument",
             _ => "error",
         };
         Fail::new(code, e.to_string())
@@ -200,7 +200,7 @@ fn format_option_map(v: Value) -> Result<std::collections::BTreeMap<String, Stri
 /// Opens a file and returns the Document as dicts and lists.
 #[pyfunction]
 #[allow(clippy::too_many_arguments)] // one keyword argument per option
-#[pyo3(signature = (name, data, *, source_lang=None, target_lang=None, granularity="paragraph", limits=None, format_options=None))]
+#[pyo3(signature = (name, data, *, source_lang=None, target_lang=None, granularity="paragraph", limits=None, format_options=None, profile=None))]
 fn extract(
     py: Python<'_>,
     name: &str,
@@ -210,6 +210,7 @@ fn extract(
     granularity: &str,
     limits: Option<&Bound<'_, PyAny>>,
     format_options: Option<&Bound<'_, PyAny>>,
+    profile: Option<String>,
 ) -> PyResult<Py<PyAny>> {
     let g = parse_granularity(granularity).map_err(|f| to_py_err(py, f))?;
     // A dict of limit names (see `Limits`); anything left out keeps Localization OS's default.
@@ -233,7 +234,13 @@ fn extract(
     };
     let (name, data) = (name.to_string(), data.to_vec());
     let value = guarded(py, move || {
-        let opts = ExtractOptions::new().with_source_lang(source_lang).with_target_lang(target_lang).with_granularity(g).with_limits(limits).with_format_options(format_options);
+        let opts = ExtractOptions::new()
+            .with_source_lang(source_lang)
+            .with_target_lang(target_lang)
+            .with_granularity(g)
+            .with_limits(limits)
+            .with_format_options(format_options)
+            .with_profile(profile);
         let doc = engine::extract(&name, &data, &opts)?;
         serde_json::to_value(&doc).map_err(|e| Fail::new("internal", e.to_string()))
     })?;
@@ -246,15 +253,29 @@ fn extract(
 /// writes UTF-8 and makes charset declarations say so) and `stamp_target_always` (bool: stamp the target language
 /// and fill plurals even when nothing is translated, as Localization OS does).
 #[pyfunction]
-#[pyo3(signature = (document, *, output_encoding=None, stamp_target_always=None))]
+#[pyo3(signature = (document, *, output_encoding=None, stamp_target_always=None, profile=None, format_options=None))]
 fn merge<'py>(
     py: Python<'py>,
     document: &Bound<'py, PyAny>,
     output_encoding: Option<&str>,
     stamp_target_always: Option<bool>,
+    profile: Option<String>,
+    format_options: Option<&Bound<'py, PyAny>>,
 ) -> PyResult<Bound<'py, PyBytes>> {
     let value = from_py(document, 0).map_err(|f| to_py_err(py, f))?;
-    let mut opts = engine::MergeOptions::new();
+    // a profile gives the defaults (LocOS: UTF-8 out except ini and strings, stamp always); keywords override them
+    let format = value.get("format").and_then(|f| f.as_str()).unwrap_or("").to_string();
+    let mut opts = match profile.as_deref() {
+        None => engine::MergeOptions::new(),
+        Some(p) => match engine::profile::find(p) {
+            Some(prof) => prof.merge_options(&format),
+            None => return Err(to_py_err(py, Fail::new("invalid_argument", format!("unknown profile {p:?}")))),
+        },
+    };
+    if let Some(o) = format_options.filter(|o| !o.is_none()) {
+        let v = from_py(o, 0).map_err(|f| to_py_err(py, f))?;
+        opts = opts.with_format_options(format_option_map(v).map_err(|f| to_py_err(py, f))?);
+    }
     if let Some(e) = output_encoding {
         opts = opts.with_output_encoding(parse_output_encoding(e).map_err(|f| to_py_err(py, f))?);
     }
@@ -276,6 +297,13 @@ fn parse_output_encoding(s: &str) -> Result<engine::OutputEncoding, Fail> {
     }
 }
 
+/// The profiles Bilingua knows, as `{name: version}` (`{"locos": 1}`).
+#[pyfunction]
+fn profiles(py: Python<'_>) -> PyResult<Py<PyAny>> {
+    let m: Map<String, Value> = engine::profile::profiles().iter().map(|p| (p.name.to_string(), Value::from(p.version))).collect();
+    to_py(py, &Value::Object(m))
+}
+
 /// The Bilingua version.
 #[pyfunction]
 fn version() -> &'static str {
@@ -289,6 +317,7 @@ fn init_module(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(extract, m)?)?;
     m.add_function(wrap_pyfunction!(merge, m)?)?;
     m.add_function(wrap_pyfunction!(version, m)?)?;
+    m.add_function(wrap_pyfunction!(profiles, m)?)?;
     m.add("BilinguaError", py.get_type::<BilinguaError>())?;
     m.add("__version__", env!("CARGO_PKG_VERSION"))?;
     Ok(())

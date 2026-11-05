@@ -201,8 +201,8 @@ fn moved_numbered_specifiers_come_back_in_place() {
     let mut d = ex(data, Some("de"));
     // a translation may reorder numbered specifiers
     let u = &mut d.units[0];
-    let (_, map) = locos::to_locos_text(&u.source());
-    u.segments[0].target = locos::from_locos_text("\u{27E6}p2\u{27E7} Dinge geh\u{f6}ren \u{27E6}p1\u{27E7}", &map);
+    let (_, map) = profile::tokens::to_locos_text(&u.source());
+    u.segments[0].target = profile::tokens::from_locos_text("\u{27E6}p2\u{27E7} Dinge geh\u{f6}ren \u{27E6}p1\u{27E7}", &map);
     let v = json(&merged(&d));
     assert_eq!(v["strings"]["k"]["localizations"]["de"]["stringUnit"]["value"], "%2$lld Dinge geh\u{f6}ren %1$@");
 }

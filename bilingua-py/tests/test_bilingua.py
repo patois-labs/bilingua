@@ -390,3 +390,24 @@ def test_format_options_reach_the_format():
     assert error_code(bilingua.extract, "a.ftl", ftl, format_options={"ftl.translate_terms": "maybe"}) == "invalid_argument"
     assert error_code(bilingua.extract, "a.ftl", ftl, format_options={"ftl.translate_terms": [1]}) == "invalid_argument"
     assert error_code(bilingua.extract, "a.ftl", ftl, format_options=["x"]) == "invalid_argument"
+
+
+def test_profiles_and_the_locos_profile():
+    assert bilingua.profiles() == {"locos": 1}
+    ini = "[a]\r\nk=Hello\r\n".encode("utf-16")
+    doc = bilingua.extract("a.ini", ini, target_lang="de", profile="locos")
+    assert doc["source_encoding"] == "utf-16le"
+    # LocOS keeps an ini file's own encoding: the profile's default is "keep"
+    assert bilingua.merge(doc, profile="locos") == ini
+    # a keyword still wins over the profile
+    assert bilingua.merge(doc, profile="locos", output_encoding="utf-8").decode("utf-8") == "[a]\r\nk=Hello\r\n"
+    assert error_code(bilingua.extract, "a.ini", ini, profile="nope") == "invalid_argument"
+    assert error_code(bilingua.merge, doc, profile="nope") == "invalid_argument"
+    assert error_code(bilingua.merge, doc, format_options={"nope.x": 1}) == "invalid_argument"
+
+
+def test_empty_target_writes_an_empty_value():
+    doc = bilingua.extract("a.json", b'{"a": "Hello", "b": "World"}')
+    doc["units"][0]["segments"][0]["empty_target"] = True
+    out = bilingua.merge(doc).decode("utf-8")
+    assert '"a": ""' in out and "World" in out

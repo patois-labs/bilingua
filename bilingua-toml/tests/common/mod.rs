@@ -1,5 +1,5 @@
 #![allow(dead_code)]
-use bilingua_model::locos::to_locos_text;
+use bilingua_model::profile::tokens::to_locos_text;
 use bilingua_model::*;
 use bilingua_toml::TomlFilter;
 

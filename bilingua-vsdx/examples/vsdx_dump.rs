@@ -29,7 +29,7 @@ fn main() {
             let units: Vec<_> = d
                 .units
                 .iter()
-                .map(|u| serde_json::json!({"id": u.id, "text": locos::to_locos_text(&u.source()).0, "style": u.context.style}))
+                .map(|u| serde_json::json!({"id": u.id, "text": profile::tokens::to_locos_text(&u.source()).0, "style": u.context.style}))
                 .collect();
             println!("{}", serde_json::json!({"units": units}));
         }

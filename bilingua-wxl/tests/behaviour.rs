@@ -2,7 +2,7 @@
 //! references as tags, Culture, round trips, the 11 languages and the legacy encodings.
 
 mod common;
-use bilingua_model::locos::{from_locos_text, to_locos_text};
+use bilingua_model::profile::tokens::{from_locos_text, to_locos_text};
 use bilingua_model::*;
 use bilingua_wxl::Wxl;
 use common::*;

@@ -12,7 +12,7 @@ pub fn extract(data: &[u8]) -> Result<Document, Error> {
 
 /// The unit text the way LocOS shows it: codes as `\u{27E6}x1\u{27E7}` tokens.
 pub fn token_text(u: &Unit) -> String {
-    locos::to_locos_text(&u.source()).0
+    profile::tokens::to_locos_text(&u.source()).0
 }
 
 pub fn units(data: &[u8]) -> Vec<(String, String)> {

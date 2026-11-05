@@ -263,12 +263,12 @@ proptest! {
         prop_assert_eq!(Xcstrings.merge(&d0).unwrap(), bytes.clone());
         let mut d = d0.clone();
         for u in d.units.iter_mut() {
-            let (t, map) = locos::to_locos_text(&u.source());
-            u.segments[0].target = locos::from_locos_text(&format!("\u{ab}{t}\u{bb}"), &map);
+            let (t, map) = profile::tokens::to_locos_text(&u.source());
+            u.segments[0].target = profile::tokens::from_locos_text(&format!("\u{ab}{t}\u{bb}"), &map);
         }
         let out = Xcstrings.merge(&d).unwrap();
         let back = Xcstrings.extract(&out, &ExtractOptions::default()).unwrap();
-        let src = |d: &Document| d.units.iter().map(|u| locos::to_locos_text(&u.source()).0).collect::<Vec<_>>();
+        let src = |d: &Document| d.units.iter().map(|u| profile::tokens::to_locos_text(&u.source()).0).collect::<Vec<_>>();
         prop_assert_eq!(src(&back), src(&d0));
         let v: serde_json::Value = serde_json::from_slice(&out).unwrap();
         prop_assert!(v["strings"].is_object());

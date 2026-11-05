@@ -18,7 +18,7 @@ pub fn extract(data: &[u8]) -> Result<Document, Error> {
 
 /// The unit text the way LocOS shows it: codes as `\u{27E6}x1\u{27E7}` tokens.
 pub fn token_text(u: &Unit) -> String {
-    locos::to_locos_text(&u.source()).0
+    profile::tokens::to_locos_text(&u.source()).0
 }
 
 pub fn units(data: &[u8]) -> Vec<String> {
@@ -31,8 +31,8 @@ pub fn styles(data: &[u8]) -> Vec<String> {
 
 /// A translation written in LocOS token text, turned back into inlines for unit `u`.
 pub fn target_of(u: &Unit, text: &str) -> Vec<Inline> {
-    let (_, map) = locos::to_locos_text(&u.source());
-    locos::from_locos_text(text, &map)
+    let (_, map) = profile::tokens::to_locos_text(&u.source());
+    profile::tokens::from_locos_text(text, &map)
 }
 
 /// Sets targets by unit index (LocOS mapping, token text) and merges, with an optional target language.

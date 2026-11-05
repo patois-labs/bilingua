@@ -23,7 +23,7 @@ fn main() {
                     .units
                     .iter()
                     .map(|u| {
-                        let (t, _) = locos::to_locos_text(&u.source());
+                        let (t, _) = profile::tokens::to_locos_text(&u.source());
                         serde_json::json!({"i": u.context.extra.get("p_index").and_then(|p| p.parse::<usize>().ok()), "text": t})
                     })
                     .collect();

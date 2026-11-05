@@ -22,14 +22,14 @@ pub fn part(bytes: &[u8], name: &str) -> String {
 
 pub fn text_of(doc: &Document, id: &str) -> String {
     let u = doc.units.iter().find(|u| u.id == id).unwrap_or_else(|| panic!("no unit {id}"));
-    locos::to_locos_text(&u.source()).0
+    profile::tokens::to_locos_text(&u.source()).0
 }
 
 /// Sets a target written with LocOS tokens (`⟦x1⟧`).
 pub fn set(doc: &mut Document, id: &str, text: &str) {
     let u = doc.units.iter().find(|u| u.id == id).unwrap_or_else(|| panic!("no unit {id}")).clone();
-    let (_, map) = locos::to_locos_text(&u.source());
-    let inl = locos::from_locos_text(text, &map);
+    let (_, map) = profile::tokens::to_locos_text(&u.source());
+    let inl = profile::tokens::from_locos_text(text, &map);
     doc.set_target(&u.segments[0].id, inl).unwrap();
 }
 
@@ -65,7 +65,7 @@ fn registration() {
 fn walk_and_tokens() {
     let doc = extract(&package());
     let got: Vec<(String, String, String)> =
-        doc.units.iter().map(|u| (u.id.clone(), locos::to_locos_text(&u.source()).0, u.context.style.clone().unwrap())).collect();
+        doc.units.iter().map(|u| (u.id.clone(), profile::tokens::to_locos_text(&u.source()).0, u.context.style.clone().unwrap())).collect();
     let want = [
         ("name-1", "Overview", "Visio page name"),
         ("name-2", "Process details", "Visio page name"),

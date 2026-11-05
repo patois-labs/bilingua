@@ -16,7 +16,7 @@ pub fn extract_str(src: &str) -> Result<Document, Error> {
 
 /// The unit text the way LocOS shows it: one token per inline code (`x` point, `p` free point).
 pub fn locos_text(u: &Unit) -> String {
-    bilingua_model::locos::to_locos_text(&u.source()).0
+    bilingua_model::profile::tokens::to_locos_text(&u.source()).0
 }
 
 /// The unit texts of a file (translatable units only, as LocOS lists them).

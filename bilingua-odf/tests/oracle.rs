@@ -112,8 +112,8 @@ fn pseudo_translated_merge_stamps_like_locos_in_12_languages() {
         for (lang, want) in g.as_object().unwrap() {
             let mut d = f.extract(&bytes, &opts(Some(lang))).unwrap();
             for u in d.units.iter_mut() {
-                let (text, map) = locos::to_locos_text(&u.source());
-                u.segments[0].target = locos::from_locos_text(&format!("\u{ab}{text}\u{bb}"), &map);
+                let (text, map) = profile::tokens::to_locos_text(&u.source());
+                u.segments[0].target = profile::tokens::from_locos_text(&format!("\u{ab}{text}\u{bb}"), &map);
             }
             let out = f.merge(&d).unwrap_or_else(|e| panic!("{name} {lang}: {e}"));
             // same units and tags after a re-read, texts wrapped

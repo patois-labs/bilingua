@@ -1,7 +1,7 @@
 //! Shared fixtures: the packages the Localization OS suite builds (`tests/verify_odf_filter.py`), and helpers.
 #![allow(dead_code)]
 
-use bilingua_model::locos::{from_locos_text, to_locos_text};
+use bilingua_model::profile::tokens::{from_locos_text, to_locos_text};
 use bilingua_model::*;
 use bilingua_odf::{Odg, Odp, Ods, Odt};
 use bilingua_zip::{write_zip, EntryMeta, RawEntry, ZipLimits};

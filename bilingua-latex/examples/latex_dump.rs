@@ -8,7 +8,7 @@ fn main() {
     match Latex::default().extract(&data, &ExtractOptions::default()) {
         Ok(doc) => {
             for u in &doc.units {
-                println!("{}\t{}", u.id, locos::to_locos_text(&u.source()).0.replace('\n', "\\n"));
+                println!("{}\t{}", u.id, profile::tokens::to_locos_text(&u.source()).0.replace('\n', "\\n"));
             }
         }
         Err(e) => println!("ERROR {e}"),

@@ -22,8 +22,8 @@ fn recipe() -> Dialect {
         .alt_attrs(["alt"])
         .translate_attr("tr")
         .no_translate_if_attr(["ref"])
-        .lang(LangStamp { update: vec!["locale".into()], add: "locale".into(), add_if_root_outside: None })
-        .detect(Detect { root_names: vec!["recipe".into()], ..Default::default() })
+        .lang(LangStamp::new().with_update(["locale"]).with_add("locale"))
+        .detect(Detect::new().with_root_names(["recipe"]))
         .its_rules(its)
 }
 

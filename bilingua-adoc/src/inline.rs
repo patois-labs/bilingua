@@ -571,7 +571,7 @@ pub fn unit_of(raw: &str) -> (Vec<Inline>, BTreeMap<String, CodeData>) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use bilingua_model::locos::to_locos_text;
+    use bilingua_model::profile::tokens::to_locos_text;
 
     fn t(raw: &str) -> String {
         to_locos_text(&unit_of(raw).0).0

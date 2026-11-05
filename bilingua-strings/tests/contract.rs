@@ -2,7 +2,7 @@
 //! formats once the lead wires the facade): paragraph vs sentence mode, stable ids, parser stamp, one LocOS
 //! token per tag.
 mod common;
-use bilingua_model::locos::{from_locos_text, to_locos_text};
+use bilingua_model::profile::tokens::{from_locos_text, to_locos_text};
 use bilingua_model::*;
 use bilingua_seg::{segment, Rules};
 use bilingua_strings::Strings;

@@ -15,7 +15,7 @@ pub fn ex(bytes: &[u8], target: Option<&str>) -> Document {
 
 /// A unit's text the way LocOS shows it: each placeholder as its LocOS token.
 pub fn locos_text(u: &Unit) -> String {
-    locos::to_locos_text(&u.source()).0
+    profile::tokens::to_locos_text(&u.source()).0
 }
 
 pub fn texts(d: &Document) -> Vec<String> {
@@ -33,8 +33,8 @@ pub fn build(bytes: &[u8], tr: &[(usize, &str)], locale: Option<&str>) -> Vec<u8
 pub fn set_all(d: &mut Document, tr: &[(usize, &str)]) {
     for (i, t) in tr {
         let u = d.units.iter_mut().find(|u| u.id == format!("u{}", i + 1)).expect("unit");
-        let (_, map) = locos::to_locos_text(&u.source());
-        u.segments[0].target = locos::from_locos_text(t, &map);
+        let (_, map) = profile::tokens::to_locos_text(&u.source());
+        u.segments[0].target = profile::tokens::from_locos_text(t, &map);
         u.segments[0].state = SegState::Draft;
     }
 }
@@ -42,8 +42,8 @@ pub fn set_all(d: &mut Document, tr: &[(usize, &str)]) {
 /// Every unit translated as `f(LocOS text)`.
 pub fn translate_all(d: &mut Document, f: impl Fn(&str) -> String) {
     for u in d.units.iter_mut().filter(|u| u.translate) {
-        let (text, map) = locos::to_locos_text(&u.source());
-        u.segments[0].target = locos::from_locos_text(&f(&text), &map);
+        let (text, map) = profile::tokens::to_locos_text(&u.source());
+        u.segments[0].target = profile::tokens::from_locos_text(&f(&text), &map);
         u.segments[0].state = SegState::Draft;
     }
 }

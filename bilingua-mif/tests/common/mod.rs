@@ -12,7 +12,7 @@ pub fn extract(data: &[u8]) -> Result<Document, Error> {
 
 /// The unit text the way LocOS shows it: one token per inline code (`g` pairs, `x` points).
 pub fn locos_text(u: &Unit) -> String {
-    bilingua_model::locos::to_locos_text(&u.source()).0
+    bilingua_model::profile::tokens::to_locos_text(&u.source()).0
 }
 
 /// `(style, LocOS text)` of every unit.

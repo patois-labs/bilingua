@@ -68,7 +68,7 @@ pub fn merged(d: &Document) -> Vec<u8> {
 
 /// A unit's source in the Localization OS token form (`⟦x1⟧` for a tag).
 pub fn token_text(u: &Unit) -> String {
-    locos::to_locos_text(&u.source()).0
+    profile::tokens::to_locos_text(&u.source()).0
 }
 
 pub fn texts(d: &Document) -> Vec<String> {

@@ -91,3 +91,38 @@ fn pptx_comments_option_warns_that_it_is_not_supported() {
     let doc = extract("deck.pptx", &bytes, &o).unwrap();
     assert!(doc.warnings.iter().any(|w| w.kind == "format_option"), "{:?}", doc.warnings);
 }
+
+#[test]
+fn the_locos_profile() {
+    assert_eq!(profile::profiles(), vec![profile::locos()]);
+    assert!(matches!(extract("a.txt", b"Hi.\n", &ExtractOptions::new().with_profile("nope")), Err(Error::UnknownProfile(_))));
+    // units carry LocOS's paragraph index where the format knows it, and only under the profile
+    let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../oracle/corpus/odf");
+    let file = std::fs::read_dir(dir).unwrap().flatten().map(|e| e.path()).find(|p| p.extension().is_some_and(|e| e == "odt")).unwrap();
+    let bytes = std::fs::read(&file).unwrap();
+    let on = extract("a.odt", &bytes, &profile::locos().extract_options()).unwrap();
+    assert!(!on.units.is_empty() && on.units.iter().all(|u| u.context.extra.contains_key(profile::P_INDEX)));
+    let off = extract("a.odt", &bytes, &ExtractOptions::new()).unwrap();
+    assert!(off.units.iter().all(|u| !u.context.extra.contains_key(profile::P_INDEX)));
+    // the profile's merge options: UTF-8 out, except where LocOS keeps the encoding
+    let m = profile::locos().merge_options("ini");
+    assert_eq!((m.output_encoding, m.stamp_target_always, m.profile.as_deref()), (OutputEncoding::Keep, true, Some("locos")));
+    assert_eq!(profile::locos().merge_options("html").output_encoding, OutputEncoding::Utf8);
+    let doc = extract("a.txt", b"Hi.\n", &ExtractOptions::new()).unwrap();
+    assert!(matches!(merge_with(&doc, &MergeOptions::new().with_profile("nope")), Err(Error::UnknownProfile(_))));
+    assert!(matches!(merge_with(&doc, &MergeOptions::new().with_format_option("nope.x", 1)), Err(Error::FormatOption { .. })));
+}
+
+#[test]
+fn the_source_encoding_is_reported() {
+    let utf8 = extract("a.txt", "caf\u{e9}\n".as_bytes(), &ExtractOptions::new()).unwrap();
+    assert_eq!(utf8.source_encoding, None);
+    let legacy = extract("a.txt", b"caf\xe9\n", &ExtractOptions::new()).unwrap();
+    assert_eq!(legacy.source_encoding.as_deref(), Some("windows-1252"));
+    let mut b = vec![0xFF, 0xFE];
+    for u in "[a]\r\nk=Hello\r\n".encode_utf16() {
+        b.extend_from_slice(&u.to_le_bytes());
+    }
+    let ini = extract("a.ini", &b, &ExtractOptions::new()).unwrap();
+    assert_eq!(ini.source_encoding.as_deref(), Some("utf-16le"));
+}

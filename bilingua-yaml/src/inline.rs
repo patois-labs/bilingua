@@ -1,6 +1,6 @@
 //! Placeholders and HTML tags inside a value become inline tags.
 
-use bilingua_model::locos;
+use bilingua_model::profile::tokens as locos;
 use bilingua_model::*;
 use regex::Regex;
 use std::collections::BTreeMap;

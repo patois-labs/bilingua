@@ -14,7 +14,7 @@ pub fn extract(data: &[u8]) -> Document {
 
 /// A unit's source as LocOS shows it: tags as `\u{27E6}g1\u{27E7}` tokens.
 pub fn locos(u: &Unit) -> String {
-    locos::to_locos_text(&u.source()).0
+    profile::tokens::to_locos_text(&u.source()).0
 }
 
 pub fn units(data: &[u8]) -> Vec<String> {
@@ -27,8 +27,8 @@ pub fn styles(data: &[u8]) -> Vec<String> {
 
 /// Sets the target of unit `i` from LocOS token text.
 pub fn set_locos(d: &mut Document, i: usize, text: &str) {
-    let (_, map) = locos::to_locos_text(&d.units[i].source());
-    let inl = locos::from_locos_text(text, &map);
+    let (_, map) = profile::tokens::to_locos_text(&d.units[i].source());
+    let inl = profile::tokens::from_locos_text(text, &map);
     d.units[i].segments[0].target = inl;
 }
 

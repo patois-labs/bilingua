@@ -53,7 +53,7 @@ fn units_and_identity() {
     assert_eq!(got, want);
     let doc = extract(b).unwrap();
     assert!(matches!(&doc.skeleton, Skeleton::Text { encoding, .. } if encoding == "utf-8"));
-    let map = |i: usize| locos::to_locos_text(&doc.units[i].source()).1;
+    let map = |i: usize| profile::tokens::to_locos_text(&doc.units[i].source()).1;
     let m1 = map(1);
     assert_eq!((m1["1"].open.as_deref(), m1["1"].close.as_deref(), m1["2"].open.as_deref()), (Some("<B>"), Some("<P>"), Some("<\\n>")));
     let m4 = map(4);
@@ -240,7 +240,7 @@ fn attribute_pairs_travel_with_words_680() {
     let src: &[u8] = b"<v13.00><e9>\n@Heading:Account <B>settings<B$>\n";
     let doc = extract(src).unwrap();
     assert_eq!(token_text(&doc.units[0]), t("Account <<g1>>settings<</g1>>"));
-    let m = locos::to_locos_text(&doc.units[0].source()).1;
+    let m = profile::tokens::to_locos_text(&doc.units[0].source()).1;
     assert_eq!((m["1"].open.as_deref(), m["1"].close.as_deref()), (Some("<B>"), Some("<B$>")));
     assert_identity(src);
     let out = build(src, &[(0, &t("<<g1>>Paramètres<</g1>> du compte"))]);

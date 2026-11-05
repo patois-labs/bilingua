@@ -63,8 +63,8 @@ fn run_with(name: &str, data: &[u8], exact: bool, lf: bool) {
             let mut d = ex(data, loc);
             for (n, u) in d.units.iter_mut().filter(|u| u.translate).enumerate() {
                 if mode == "full" || n.is_multiple_of(2) {
-                    let (text, map) = locos::to_locos_text(&u.source());
-                    u.segments[0].target = locos::from_locos_text(&format!("{prefix}{text}"), &map);
+                    let (text, map) = profile::tokens::to_locos_text(&u.source());
+                    u.segments[0].target = profile::tokens::from_locos_text(&format!("{prefix}{text}"), &map);
                     u.segments[0].state = SegState::Draft;
                 }
             }

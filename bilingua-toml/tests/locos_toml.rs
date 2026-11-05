@@ -2,7 +2,7 @@
 //! registry, API and upload-list cases are adapted to this crate's own surface). Fixture: `tests/data/hugo.toml`.
 
 mod common;
-use bilingua_model::locos::to_locos_text;
+use bilingua_model::profile::tokens::to_locos_text;
 use bilingua_model::*;
 use bilingua_toml::{keys, TomlFilter};
 use common::*;

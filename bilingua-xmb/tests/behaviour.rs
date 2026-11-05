@@ -229,9 +229,9 @@ fn markup_corners() {
     assert_eq!(locos(u), "A <b> & A\n\u{27E6}x1\u{27E7}\u{27E6}x2\u{27E7}tail\u{27E6}x3\u{27E7}");
     assert_eq!(Xtb.merge(&d).unwrap(), xtb.as_bytes());
     // translating keeps the comment and the unknown element as the codes they are
-    let (_, map) = bilingua_model::locos::to_locos_text(&d.units[0].source());
+    let (_, map) = bilingua_model::profile::tokens::to_locos_text(&d.units[0].source());
     d.units[0].segments[0].target =
-        bilingua_model::locos::from_locos_text("Z \u{27E6}x3\u{27E7} \u{27E6}x2\u{27E7} <&> \u{27E6}x1\u{27E7}", &map);
+        bilingua_model::profile::tokens::from_locos_text("Z \u{27E6}x3\u{27E7} \u{27E6}x2\u{27E7} <&> \u{27E6}x1\u{27E7}", &map);
     let out = s(&Xtb.merge(&d).unwrap());
     assert!(out.contains("<translation id='a&amp;b' note='x'>Z <foo bar='1'>in</foo> <ph name='P'/> &lt;&amp;&gt; <!-- keep --></translation>"), "{out}");
     // and an XMB conversion drops them (an XTB carries only text and ph)

@@ -65,7 +65,7 @@ fn source_inlines(text: &str) -> Source {
 /// A placeholder code. One that names its argument (`%1$s`, `%(name)s`, `{name}`, `{0}`) may move in the target;
 /// `%s` and `{}` may not, their order is the argument order.
 fn placeholder_tag(id: &str, p: &str) -> Inline {
-    if bilingua_model::locos::is_named_placeholder(p) {
+    if bilingua_model::profile::tokens::is_named_placeholder(p) {
         Inline::free_tag(id, p)
     } else {
         Inline::tag(id, TagKind::Standalone, p)
