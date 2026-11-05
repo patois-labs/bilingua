@@ -3,7 +3,7 @@
 //! only. Positions are byte offsets into the decoded text.
 
 use bilingua_model::{Error, LimitError, LimitKind, Limits};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 pub fn perr(msg: impl Into<String>) -> Error {
     Error::Parse { format: "ttx".into(), msg: msg.into() }
@@ -222,6 +222,18 @@ pub fn parse(text: &str, limits: &Limits) -> Result<Tree, Error> {
     let mut attrs: Vec<Attr> = Vec::new();
     let mut stack: Vec<(usize, usize, &str)> = Vec::new(); // (element, ns length at open, qname)
     let mut ns: Vec<&str> = Vec::new();
+    // how many open declarations each prefix has, so a lookup is not a scan of `ns` (many declarations on one
+    // element would make that quadratic)
+    let mut ns_count: HashMap<&str, usize> = HashMap::new();
+    let truncate = |ns: &mut Vec<&str>, ns_count: &mut HashMap<&str, usize>, len: usize| {
+        while ns.len() > len {
+            if let Some(p) = ns.pop() {
+                if let Some(c) = ns_count.get_mut(p) {
+                    *c -= 1;
+                }
+            }
+        }
+    };
     let mut i = 0usize;
     let mut root_seen = false;
     if b.starts_with(b"<?xml") && b.get(5).is_some_and(|c| is_ws(*c)) {
@@ -289,7 +301,7 @@ pub fn parse(text: &str, limits: &Limits) -> Result<Tree, Error> {
             }
             elems[idx].end_start = i;
             elems[idx].end = g + 1;
-            ns.truncate(ns_len);
+            truncate(&mut ns, &mut ns_count, ns_len);
             i = g + 1;
         } else {
             // start tag
@@ -381,13 +393,13 @@ pub fn parse(text: &str, limits: &Limits) -> Result<Tree, Error> {
             }
             for a in &attrs[attr_first..] {
                 let nm = &text[a.name.0..a.name.1];
-                if nm == "xmlns" {
-                    ns.push("");
-                } else if let Some(p) = nm.strip_prefix("xmlns:") {
+                let p = if nm == "xmlns" { Some("") } else { nm.strip_prefix("xmlns:") };
+                if let Some(p) = p {
                     ns.push(p);
+                    *ns_count.entry(p).or_default() += 1;
                 }
             }
-            let declared = |p: &str| p == "xml" || ns.contains(&p);
+            let declared = |p: &str| p == "xml" || ns_count.get(p).is_some_and(|c| *c > 0);
             if let Some((p, _)) = qname.split_once(':') {
                 if !declared(p) {
                     return Err(perr(format!("not well-formed XML: namespace prefix {p} is not defined")));
@@ -429,7 +441,7 @@ pub fn parse(text: &str, limits: &Limits) -> Result<Tree, Error> {
                 elems[p].kids.push(Kid::Elem(idx));
             }
             if empty {
-                ns.truncate(ns_len);
+                truncate(&mut ns, &mut ns_count, ns_len);
             } else {
                 stack.push((idx, ns_len, qname));
             }

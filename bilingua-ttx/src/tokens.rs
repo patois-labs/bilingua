@@ -262,6 +262,8 @@ pub fn render(inl: &[Inline], codes: &BTreeMap<String, CodeData>, crlf: bool) ->
             Inline::Text(t) => {
                 out.push_str(&nl(esc_text(t)));
             }
+            // hidden splice data (`~raw`, `~meta`) is never a code a translation can place
+            Inline::Tag { id, .. } if id.starts_with('~') => {}
             Inline::Tag { id, kind, .. } => {
                 let c = codes.get(id.as_str());
                 match kind {
