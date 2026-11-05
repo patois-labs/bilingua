@@ -1,5 +1,5 @@
 [workspace]
-members = ["bilingua-model", "bilingua-zip", "bilingua", "bilingua-seg", "bilingua-text", "bilingua-json", "bilingua-markdown", "bilingua-cli", "bilingua-docx", "bilingua-html", "bilingua-po", "bilingua-subtitle", "bilingua-xlsx", "bilingua-pptx", "bilingua-py", "bilingua-xliff", "bilingua-sdl", "bilingua-strings", "bilingua-toml", "bilingua-properties", "bilingua-resjson", "bilingua-json5", "bilingua-jsmodule", "bilingua-yaml", "bilingua-arb", "bilingua-resx", "bilingua-xaml", "bilingua-dtd", "bilingua-wxl", "bilingua-ftl", "bilingua-xcstrings", "bilingua-xmb", "bilingua-qtts", "bilingua-php", "bilingua-plist", "bilingua-xml", "bilingua-rc", "bilingua-mo", "bilingua-csv", "bilingua-xslt", "bilingua-desktop", "bilingua-epub", "bilingua-idml", "bilingua-odf", "bilingua-icml", "bilingua-mif", "bilingua-vsdx", "bilingua-xtg", "bilingua-adoc", "bilingua-mdx", "bilingua-latex", "bilingua-rst", "bilingua-email", "bilingua-ttx", "bilingua-serverpages", "bilingua-wordfast", "bilingua-xliffpkg", "bilingua-sdlproj", "bilingua-htmlhelp", "bilingua-stl", "bilingua-subtext", "bilingua-ass", "oracle", "bilingua-ini"]
+members = ["bilingua-model", "bilingua-zip", "bilingua", "bilingua-seg", "bilingua-text", "bilingua-json", "bilingua-markdown", "bilingua-cli", "bilingua-docx", "bilingua-html", "bilingua-po", "bilingua-subtitle", "bilingua-xlsx", "bilingua-pptx", "bilingua-py", "bilingua-xliff", "bilingua-sdl", "bilingua-strings", "bilingua-toml", "bilingua-properties", "bilingua-resjson", "bilingua-json5", "bilingua-jsmodule", "bilingua-yaml", "bilingua-arb", "bilingua-resx", "bilingua-xaml", "bilingua-dtd", "bilingua-wxl", "bilingua-ftl", "bilingua-xcstrings", "bilingua-xmb", "bilingua-qtts", "bilingua-php", "bilingua-plist", "bilingua-xml", "bilingua-rc", "bilingua-mo", "bilingua-csv", "bilingua-xslt", "bilingua-desktop", "bilingua-epub", "bilingua-idml", "bilingua-odf", "bilingua-icml", "bilingua-mif", "bilingua-vsdx", "bilingua-xtg", "bilingua-adoc", "bilingua-mdx", "bilingua-latex", "bilingua-rst", "bilingua-email", "bilingua-ttx", "bilingua-serverpages", "bilingua-wordfast", "bilingua-xliffpkg", "bilingua-sdlproj", "bilingua-htmlhelp", "bilingua-stl", "bilingua-subtext", "bilingua-ass", "bilingua-ttml", "oracle", "bilingua-ini"]
 resolver = "2"
 
 [workspace.package]
@@ -70,6 +70,7 @@ bilingua-xliffpkg = { path = "bilingua-xliffpkg" }
 bilingua-htmlhelp = { path = "bilingua-htmlhelp" }
 bilingua-stl = { path = "bilingua-stl" }
 bilingua-subtext = { path = "bilingua-subtext" }
+bilingua-ttml = { path = "bilingua-ttml" }
 regex = "1"
 unicode-normalization = { version = "0.1", default-features = false }
 encoding_rs = "0.8"

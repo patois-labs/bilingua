@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- produced by hand -->
+<tt xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling"
+    xmlns:ttm="http://www.w3.org/ns/ttml#metadata" xml:lang="en">
+  <head>
+    <styling><style xml:id="s1" tts:color="white"/></styling>
+    <metadata><ttm:title>Demo &amp; test</ttm:title></metadata>
+  </head>
+  <body><div xml:lang="en">
+    <p begin="00:00:01.000" end="00:00:04.000" style="s1">Hello &amp; welcome<br/>to the <span tts:fontStyle="italic">show</span>.</p>
+    <p begin="5s" end="7s">
+      Second line
+      continues here
+    </p>
+    <p begin="8s" end="9s"></p>
+    <p begin="10s" end="12s">Press {0} for <span xml:lang="en" tts:fontWeight="bold">%1$s</span><set begin="1s" tts:color="red"/> now</p>
+  </div></body>
+</tt>

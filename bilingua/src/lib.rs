@@ -115,6 +115,8 @@ pub fn filters() -> Vec<Box<dyn Filter>> {
         // sdlproj sniffs strictly (a PackageProject root, or a Project root with a Guid and Trados project elements); it is
         // an XML format, so it goes before generic XML.
         Box::new(bilingua_sdlproj::Sdlproj),
+        // TTML and DFXP sniff only XML that names a TTML or DFXP namespace in its first 4 KB; before generic XML.
+        Box::new(bilingua_ttml::Ttml),
         // XSLT sniffs only XML that names the XSLT namespace in its first 4 KB, so it sits with the other XML formats.
         Box::new(bilingua_xslt::Xslt),
         // Fluent sniffs only with a Fluent-only marker, but its text looks like key = value: after the others.

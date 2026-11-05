@@ -201,6 +201,7 @@ fn crate_of(format: &str) -> &'static str {
         "arb" => "bilingua-arb",
         "xaml" => "bilingua-xaml",
         "sdlproj" => "bilingua-sdlproj",
+        "ttml" => "bilingua-ttml",
         "xmb" | "xtb" => "bilingua-xmb",
         "icml" | "wcml" => "bilingua-icml",
         "ts" => "bilingua-qtts",
