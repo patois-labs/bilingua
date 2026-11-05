@@ -104,6 +104,7 @@ impl Filter for Json5Filter {
             granularity: opts.granularity,
             units,
             skeleton: Skeleton::text(parts, enc, bilingua_model::parser_info!()),
+            ..Default::default()
         })
     }
 

@@ -295,6 +295,7 @@ impl Properties {
             granularity: opts.granularity,
             units,
             skeleton: Skeleton::text(parts, p.mode.label(p.bom), bilingua_model::parser_info!()),
+            ..Default::default()
         })
     }
 

@@ -7,7 +7,7 @@ use bilingua::{Granularity, Inline};
 const SETTINGS: &[u8] = include_bytes!("data/settings.jsonc");
 
 fn opts(g: Granularity) -> bilingua::ExtractOptions {
-    bilingua::ExtractOptions { source_lang: Some("en".into()), target_lang: Some("de-DE".into()), granularity: g, include_locked: false }
+    bilingua::ExtractOptions { source_lang: Some("en".into()), target_lang: Some("de-DE".into()), granularity: g, include_locked: false, ..Default::default() }
 }
 
 #[test]

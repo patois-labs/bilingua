@@ -22,7 +22,7 @@ fn large_file_extract_and_merge_speed() {
     let src = generate();
     assert!(src.len() > 5_000_000, "{} bytes", src.len());
     let f = Json5Filter::with_limits(Limits { max_units: 1_000_000, ..Limits::default() });
-    let o = ExtractOptions { source_lang: Some("en".into()), target_lang: Some("de".into()), granularity: Granularity::Paragraph, include_locked: false };
+    let o = ExtractOptions { source_lang: Some("en".into()), target_lang: Some("de".into()), granularity: Granularity::Paragraph, include_locked: false, ..Default::default() };
 
     let t0 = Instant::now();
     let mut doc = f.extract(src.as_bytes(), &o).unwrap();

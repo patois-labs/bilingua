@@ -19,7 +19,7 @@ const LANGS: [(&str, &str); 11] = [
 ];
 
 fn opts(src: &str) -> ExtractOptions {
-    ExtractOptions { source_lang: Some(src.into()), target_lang: Some("es-ES".into()), granularity: Granularity::Paragraph, include_locked: false }
+    ExtractOptions { source_lang: Some(src.into()), target_lang: Some("es-ES".into()), granularity: Granularity::Paragraph, include_locked: false, ..Default::default() }
 }
 
 fn pseudo(v: &[Inline]) -> Vec<Inline> {

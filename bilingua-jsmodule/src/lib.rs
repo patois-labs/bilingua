@@ -309,6 +309,7 @@ impl JsModule {
             granularity: opts.granularity,
             units,
             skeleton: Skeleton::text(parts, l.encoding, bilingua_model::parser_info!()),
+            ..Default::default()
         })
     }
 }

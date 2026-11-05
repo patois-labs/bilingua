@@ -314,6 +314,7 @@ impl Resjson {
             granularity: opts.granularity,
             units,
             skeleton: Skeleton::text(parts, enc.label(), bilingua_model::parser_info!()),
+            ..Default::default()
         })
     }
 }

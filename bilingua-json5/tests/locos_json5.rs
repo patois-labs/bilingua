@@ -12,7 +12,7 @@ const APP: &[u8] = include_bytes!("data/app.json5");
 const SETTINGS: &[u8] = include_bytes!("data/settings.jsonc");
 
 fn opts() -> ExtractOptions {
-    ExtractOptions { source_lang: Some("en".into()), target_lang: Some("de-DE".into()), granularity: Granularity::Paragraph, include_locked: false }
+    ExtractOptions { source_lang: Some("en".into()), target_lang: Some("de-DE".into()), granularity: Granularity::Paragraph, include_locked: false, ..Default::default() }
 }
 
 fn open(data: &[u8]) -> Result<Document, Error> {

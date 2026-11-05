@@ -458,6 +458,13 @@ pub enum Skeleton {
     },
 }
 
+impl Default for Skeleton {
+    /// An empty UTF-8 text skeleton.
+    fn default() -> Self {
+        Skeleton::Text { parts: Vec::new(), encoding: "utf-8".into(), parser: None }
+    }
+}
+
 impl Skeleton {
     /// A text skeleton stamped with the producing parser.
     pub fn text(parts: Vec<SkelPart>, encoding: impl Into<String>, parser: ParserInfo) -> Skeleton {
@@ -489,7 +496,7 @@ pub enum Granularity {
     Document,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Document {
     /// Parser id, e.g. "html", "docx", "json".
     pub format: String,

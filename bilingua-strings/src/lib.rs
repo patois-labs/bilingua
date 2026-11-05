@@ -213,6 +213,7 @@ impl Strings {
             granularity: opts.granularity,
             units,
             skeleton: Skeleton::text(parts, enc.name(), bilingua_model::parser_info!()),
+            ..Default::default()
         })
     }
 }
