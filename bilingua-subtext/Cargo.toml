@@ -1,0 +1,14 @@
+[package]
+name = "bilingua-subtext"
+description = "Bilingua: YouTube SBV and SubViewer 2.0 / MicroDVD (.sub) subtitle filters"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+bilingua-model = { workspace = true }
+
+[dev-dependencies]
+proptest = { version = "1", default-features = false, features = ["std"] }
+serde_json = { workspace = true }
