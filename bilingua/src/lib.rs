@@ -62,6 +62,8 @@ pub fn filters() -> Vec<Box<dyn Filter>> {
         // properties sniffs any key=value or key: value text, so it goes after the stricter key-value formats.
         Box::new(bilingua_properties::Properties),
         Box::new(bilingua_xaml::Xaml::default()),
+        // XSLT sniffs only XML that names the XSLT namespace in its first 4 KB, so it sits with the other XML formats.
+        Box::new(bilingua_xslt::Xslt),
         // Fluent sniffs only with a Fluent-only marker, but its text looks like key = value: after the others.
         Box::new(bilingua_ftl::FtlFilter),
         // HTML sniffs loosely and plain text accepts any UTF-8, so they go last.
