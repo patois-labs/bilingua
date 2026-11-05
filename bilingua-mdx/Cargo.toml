@@ -1,0 +1,16 @@
+[package]
+name = "bilingua-mdx"
+description = "Bilingua: MDX filter (Markdown with JSX, expressions and ES modules, read as Localization OS reads it)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+bilingua-model = { workspace = true }
+regex = { workspace = true }
+toml = { version = "0.8", default-features = false, features = ["parse"] }
+
+[dev-dependencies]
+proptest = { version = "1", default-features = false, features = ["std"] }
+serde_json = { workspace = true }

@@ -1,0 +1,76 @@
+---
+title: "Lumen Bakery handbook"
+description: Everything a new baker needs: the oven, the rota and the till.
+sidebar_label: Handbook
+weight: 4
+draft: false
+---
+
+import { Callout, Kbd } from '@/components/ui'
+import Rota from './rota.mdx'
+
+export const meta = {
+  owner: 'Ada',
+  updated: 2026,
+}
+
+# Welcome to {meta.owner}'s bakery
+
+Before your first shift, read this page once and keep it open. It covers the **oven**, the _rota_ and the `till`.
+Questions? Ask in the staff channel or email <help@lumen.example>.
+
+## The oven
+
+Press <Kbd>Ctrl</Kbd> + <Kbd>Shift</Kbd> + <Kbd>P</Kbd> to open the oven panel, then pick a program.
+
+<Callout type="warning" title="Hot surfaces">
+Never open the door while the fan is running. Wait for the beep.
+</Callout>
+
+1. Preheat to 230 degrees.
+2. Load the trays (at most {meta.updated - 2020} per rack).
+3. Start the timer and note the batch number.
+
+- Sourdough: 35 minutes
+- Rye: 45 minutes, [see the recipe](https://example.org/recipes/rye_bread)
+- A literal \{ brace and a literal \< bracket stay escaped.
+
+## The rota
+
+| Day | Early | Late |
+|-----|-------|------|
+| Mon | Ana   | Ben  |
+| Tue | Ben \| Cy | Ana |
+
+<Rota
+  year={2026}
+  label="Staff rota"
+  compact
+/>
+
+{/* internal: check the rota against payroll before publishing */}
+
+> Swap shifts at least two days ahead. The manager must confirm by message.
+
+## The till
+
+![Till screen](/img/till.png)
+
+![](/img/empty-alt.png)
+
+<img src="/img/logo.png" />
+
+The <Abbr title="Point of sale">POS</Abbr> accepts cash and cards. For refunds see [the policy][refunds].[^1]
+
+[refunds]: https://example.org/refunds "Refund policy"
+[^1]: Refunds above 50 need a manager.
+
+<!-- last reviewed by Ben -->
+
+```bash
+$ ./close-till.sh --today
+```
+
+---
+
+Thank you for reading, and welcome to the team!
