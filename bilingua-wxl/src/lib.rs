@@ -29,7 +29,8 @@
 //! - a DOCTYPE without entity declarations is accepted and kept (LocOS refuses any internal subset); a file that
 //!   declares entities is refused by the model's XML guard.
 //!
-//! Unit ids are `u<n>` where `n` is the 1-based position among all entries (LocOS `p_index` + 1), so they do not
+//! Unit ids are `u<n>` where `n` is the 1-based position among the LocOS slots (every `<String>`, and each `<UI>`
+//! with a `Text` attribute; LocOS `p_index` + 1), so they do not
 //! change with `include_locked`. `context.key` is the `Id` (or `Dialog.Control` for `<UI>`).
 
 /// Skeleton schema number: bump only when this crate's skeleton layout changes (see `bilingua_model::check_parser`).
@@ -233,7 +234,10 @@ impl Filter for Wxl {
         let mut units: Vec<Unit> = Vec::new();
         let mut pos = 0usize;
         let mut counted = 0usize;
-        for (idx, e) in scanned.entries.iter().enumerate() {
+        // LocOS slots: every `<String>`, and a `<UI>` only when it has a `Text` attribute (a `<UI>` without one
+        // is not a slot and does not move the `p_index` of the entries after it).
+        let slots = scanned.entries.iter().filter(|e| e.kind == Kind::String || matches!(e.place, Place::Attr { .. }));
+        for (idx, e) in slots.enumerate() {
             // The LocOS slots: which entries are read, and which are skipped but counted. `Localizable="no"` is
             // kept as a locked unit when asked for; an entry with nothing to write into is left out.
             let no_place = match e.kind {

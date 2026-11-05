@@ -42,6 +42,18 @@ fn edge_units_match_locos() {
 }
 
 #[test]
+fn a_ui_without_text_is_not_a_locos_slot() {
+    // LocOS (checked with its filter): a `<UI>` without `Text`, empty or with content, is not a slot, so the
+    // p_index of the entries after it does not move.
+    let src = b"<WixLocalization Culture=\"en-us\">\n  <UI Dialog=\"D\" Control=\"C\" />\n  <UI Dialog=\"D2\" Control=\"C2\">Inner text</UI>\n  <String Id=\"A\" Value=\"First\" />\n  <UI Dialog=\"D3\" Control=\"C3\" Text=\"Shown\" />\n  <String Id=\"B\">Second</String>\n</WixLocalization>\n";
+    let d = ex(src);
+    let p: Vec<&str> = d.units.iter().map(|u| u.context.extra["p_index"].as_str()).collect();
+    assert_eq!(texts(&d), ["First", "Shown", "Second"]);
+    assert_eq!(p, ["0", "1", "2"]);
+    assert_eq!(merged(&d), src);
+}
+
+#[test]
 fn include_locked_adds_the_entries_locos_counts_but_skips() {
     let d = ex_locked(EDGE);
     let locked: Vec<(String, String)> = d.units.iter().filter(|u| !u.translate).map(|u| (u.context.key.clone().unwrap(), flat(&u.source()))).collect();
