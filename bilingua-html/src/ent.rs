@@ -188,6 +188,10 @@ pub enum Enc {
     Utf8Bom,
     Latin1,
     Win1252,
+    /// Any other legacy code page (Windows-125x, Shift_JIS, GBK, Big5, EUC-KR, KOI8, ...).
+    Legacy(&'static bilingua_model::encoding_rs::Encoding),
+    /// UTF-16 with a byte-order mark (`true`: big endian).
+    Utf16(bool),
 }
 
 const W1252: [char; 32] = [
@@ -204,16 +208,25 @@ impl Enc {
             Enc::Utf8Bom => "utf-8-bom",
             Enc::Latin1 => "iso-8859-1",
             Enc::Win1252 => "windows-1252",
+            Enc::Legacy(e) => e.name(),
+            Enc::Utf16(false) => "utf-16le",
+            Enc::Utf16(true) => "utf-16be",
         }
     }
 
+    /// The encoding of a skeleton tag (the part before any `;`).
     pub fn from_name(n: &str) -> Option<Enc> {
-        match n {
+        match bilingua_model::enc::base(n) {
+            "utf-16le" => return Some(Enc::Utf16(false)),
+            "utf-16be" => return Some(Enc::Utf16(true)),
+            _ => {}
+        }
+        match bilingua_model::enc::base(n) {
             "utf-8" => Some(Enc::Utf8),
             "utf-8-bom" => Some(Enc::Utf8Bom),
             "iso-8859-1" => Some(Enc::Latin1),
             "windows-1252" => Some(Enc::Win1252),
-            _ => None,
+            other => bilingua_model::encoding_rs::Encoding::for_label(other.as_bytes()).map(Enc::Legacy),
         }
     }
 
@@ -222,11 +235,21 @@ impl Enc {
             Enc::Utf8 | Enc::Utf8Bom => true,
             Enc::Latin1 => (c as u32) < 256,
             Enc::Win1252 => (c as u32) < 128 || (160..256).contains(&(c as u32)) || W1252.contains(&c),
+            Enc::Utf16(_) => true,
+            Enc::Legacy(e) => !writer(e).encode(c.encode_utf8(&mut [0; 4])).2,
         }
     }
 
     pub fn encode(self, s: &str) -> Vec<u8> {
         match self {
+            Enc::Legacy(e) => writer(e).encode(s).0.into_owned(),
+            Enc::Utf16(be) => {
+                let mut v: Vec<u8> = if be { vec![0xFE, 0xFF] } else { vec![0xFF, 0xFE] };
+                for u in s.encode_utf16() {
+                    v.extend_from_slice(&if be { u.to_be_bytes() } else { u.to_le_bytes() });
+                }
+                v
+            }
             Enc::Utf8 => s.as_bytes().to_vec(),
             Enc::Utf8Bom => {
                 let mut v = vec![0xEF, 0xBB, 0xBF];
@@ -251,6 +274,15 @@ impl Enc {
     }
 }
 
+/// GB18030 writes everything GBK does and more.
+fn writer(e: &'static bilingua_model::encoding_rs::Encoding) -> &'static bilingua_model::encoding_rs::Encoding {
+    if e == bilingua_model::encoding_rs::GBK {
+        bilingua_model::encoding_rs::GB18030
+    } else {
+        e
+    }
+}
+
 /// Finds the declared charset in the first 2 KB (`<meta charset=..>` or `content="...; charset=.."`).
 fn declared_charset(bytes: &[u8]) -> Option<String> {
     let head: String = bytes.iter().take(2048).map(|b| (*b as char).to_ascii_lowercase()).collect();
@@ -267,33 +299,54 @@ fn declared_charset(bytes: &[u8]) -> Option<String> {
     }
 }
 
-pub fn decode_input(bytes: &[u8]) -> Result<(String, Enc), Error> {
+/// Reads an HTML file: a UTF-8 or UTF-16 byte-order mark, then the charset the file declares (UTF-8, Latin-1,
+/// Windows-1252 and the legacy pages `bilingua_model::enc` reads), then UTF-8, and for an undeclared file that
+/// is not UTF-8 the code page of the project's source language. The declaration stays as written: characters
+/// the file's encoding cannot hold are written as numeric references on merge.
+pub fn decode_input(bytes: &[u8], opts: &bilingua_model::ExtractOptions) -> Result<(String, Enc, Vec<bilingua_model::Warning>), Error> {
+    bilingua_model::guard::check_input(bytes, &opts.limits())?;
     if let Some(rest) = bytes.strip_prefix(&[0xEF, 0xBB, 0xBF]) {
         let s = std::str::from_utf8(rest).map_err(|e| perr(e.to_string()))?;
-        return Ok((s.to_string(), Enc::Utf8Bom));
+        return Ok((s.to_string(), Enc::Utf8Bom, vec![]));
     }
     if bytes.starts_with(&[0xFF, 0xFE]) || bytes.starts_with(&[0xFE, 0xFF]) {
-        return Err(Error::Unsupported("UTF-16 HTML files".into()));
+        let d = bilingua_model::enc::decode_text(bytes, &bilingua_model::enc::DecodeOptions::new(opts))?;
+        let enc = Enc::from_name(&d.encoding).ok_or_else(|| perr("cannot read this UTF-16 file".into()))?;
+        return Ok((d.text, enc, d.warnings));
     }
     let declared = declared_charset(bytes);
     let enc = match declared.as_deref() {
         None | Some("utf-8") | Some("utf8") | Some("us-ascii") | Some("ascii") => None,
         Some("iso-8859-1") | Some("latin1") | Some("iso8859-1") | Some("l1") => Some(Enc::Latin1),
         Some("windows-1252") | Some("cp1252") | Some("x-cp1252") => Some(Enc::Win1252),
-        Some(other) => return Err(Error::Unsupported(format!("HTML charset {other}"))),
+        Some(other) => match bilingua_model::encoding_rs::Encoding::for_label(other.as_bytes()).filter(|e| bilingua_model::enc::is_declared_legacy(e)) {
+            Some(e) => {
+                let s = bilingua_model::enc::decode_strict(e, bytes).map_err(|p| {
+                    Error::Encoding(format!("This file declares {other} but is not valid in it (byte at position {p}). Re-save the file as UTF-8."))
+                })?;
+                return Ok((s, Enc::Legacy(e), vec![]));
+            }
+            None => return Err(Error::Unsupported(format!("HTML charset {other}"))),
+        },
     };
     match enc {
-        None => {
-            let s = std::str::from_utf8(bytes).map_err(|e| perr(format!("not valid UTF-8: {e}")))?;
-            Ok((s.to_string(), Enc::Utf8))
-        }
-        Some(Enc::Latin1) => Ok((bytes.iter().map(|b| *b as char).collect(), Enc::Latin1)),
+        None => match std::str::from_utf8(bytes) {
+            Ok(s) => Ok((s.to_string(), Enc::Utf8, vec![])),
+            Err(_) => {
+                // undeclared and not UTF-8: the source language's code page (or Windows-1252), with a warning when it looks wrong
+                let d = bilingua_model::enc::decode_text(bytes, &bilingua_model::enc::DecodeOptions::new(opts))?;
+                let enc = Enc::from_name(&d.encoding).ok_or_else(|| perr(format!("unknown encoding {}", d.encoding)))?;
+                Ok((d.text, enc, d.warnings))
+            }
+        },
+        Some(Enc::Latin1) => Ok((bytes.iter().map(|b| *b as char).collect(), Enc::Latin1, vec![])),
         Some(e) => Ok((
             bytes
                 .iter()
                 .map(|b| if (0x80..0xa0).contains(b) { W1252[(*b - 0x80) as usize] } else { *b as char })
                 .collect(),
             e,
+            vec![],
         )),
     }
 }

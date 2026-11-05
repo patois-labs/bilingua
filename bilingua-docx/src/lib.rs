@@ -183,7 +183,29 @@ fn split_template(t: &str, idx: &HashMap<&str, usize>) -> Result<Vec<SkelPart>, 
 }
 
 fn extract_doc(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
-    let entries = zipio::read_zip(bytes, &ZipLimits::default())?;
+    let l = opts.limits();
+    bilingua_model::guard::check_input(bytes, &l)?;
+    bilingua_model::guard::finish(extract_doc_inner(bytes, opts)?, vec![], &l)
+}
+
+fn extract_doc_inner(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
+    let entries = zipio::read_zip(bytes, &ZipLimits::from(&opts.limits()))?;
+    bilingua_zip::check_xml_parts(&entries, &opts.limits())?;
+    {
+        // empty paragraphs count too (LocOS DOCX_MAX_PARAGRAPHS), before any tree is built
+        let l = opts.limits();
+        let mut paragraphs = 0usize;
+        for e in entries.iter().filter(|e| e.name.starts_with("word/") && e.name.ends_with(".xml")) {
+            paragraphs += bilingua_model::guard::count_elements(&e.data, "p");
+            if paragraphs > l.max_paragraphs {
+                return Err(bilingua_model::LimitError::new(
+                    bilingua_model::LimitKind::Paragraphs,
+                    format!("This file has more than {} paragraphs. Split it into smaller files.", l.max_paragraphs),
+                )
+                .into());
+            }
+        }
+    }
     let ct = entries
         .iter()
         .find(|e| e.name == "[Content_Types].xml")
@@ -318,6 +340,7 @@ fn extract_doc(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
         granularity: Granularity::Paragraph,
         units,
         skeleton: Skeleton::zip(zentries, bilingua_model::parser_info!()),
+        warnings: vec![],
     })
 }
 

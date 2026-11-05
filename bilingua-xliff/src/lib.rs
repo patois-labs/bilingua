@@ -83,7 +83,22 @@ fn parse_err(id: &str, e: Error) -> bilingua_model::Error {
 
 /// Builds a Bilingua document from an open file. The file must be valid UTF-8 (the skeleton is text).
 pub fn to_document(doc: &Doc, id: &str, opts: &ExtractOptions) -> Result<Document, bilingua_model::Error> {
+    to_document_in(doc, id, opts, None, Vec::new())
+}
+
+/// [`to_document`] for a file that was transcoded to UTF-8 before it was opened: `encoding` is the envelope tag
+/// from [`bilingua_model::enc::decode_text`] that [`merge_document`] writes it back in, `warnings` go on the
+/// document. The XML guard runs over the file first.
+pub fn to_document_in(
+    doc: &Doc,
+    id: &str,
+    opts: &ExtractOptions,
+    encoding: Option<String>,
+    warnings: Vec<bilingua_model::Warning>,
+) -> Result<Document, bilingua_model::Error> {
     let original = doc.original_bytes();
+    let limits = opts.limits();
+    bilingua_model::guard::check_xml(original, &limits)?;
     let (bom, body) = match original.strip_prefix(&[0xEF, 0xBB, 0xBF][..]) {
         Some(r) => (true, r),
         None => (false, original),
@@ -143,7 +158,7 @@ pub fn to_document(doc: &Doc, id: &str, opts: &ExtractOptions) -> Result<Documen
         });
     }
     let lang = |s: &str, fallback: &Option<String>| (!s.trim().is_empty()).then(|| s.to_string()).or_else(|| fallback.clone());
-    Ok(Document {
+    bilingua_model::guard::finish(Document {
         format: id.to_string(),
         name: None,
         source_lang: lang(doc.source_lang(), &opts.source_lang),
@@ -152,10 +167,11 @@ pub fn to_document(doc: &Doc, id: &str, opts: &ExtractOptions) -> Result<Documen
         units,
         skeleton: Skeleton::text(
             vec![SkelPart::Raw(text.to_string())],
-            if bom { "utf-8-bom" } else { "utf-8" },
+            encoding.unwrap_or_else(|| if bom { "utf-8-bom" } else { "utf-8" }.to_string()),
             bilingua_model::parser_info!(),
         ),
-    })
+        warnings: vec![],
+    }, warnings, &limits)
 }
 
 /// Writes the targets and states of `document` into an open file (matching segments by id). Locked segments
@@ -191,6 +207,7 @@ pub fn merge_document(document: &Document, id: &str) -> Result<Vec<u8>, bilingua
     let Skeleton::Text { parts, encoding, .. } = &document.skeleton else {
         return Err(bilingua_model::Error::Write(format!("{id} needs a text skeleton")));
     };
+    let plain = matches!(encoding.as_str(), "utf-8" | "utf-8-bom");
     let mut bytes: Vec<u8> = if encoding == "utf-8-bom" { vec![0xEF, 0xBB, 0xBF] } else { Vec::new() };
     for p in parts {
         if let SkelPart::Raw(r) = p {
@@ -199,7 +216,13 @@ pub fn merge_document(document: &Document, id: &str) -> Result<Vec<u8>, bilingua
     }
     let mut doc = Doc::from_bytes_hint(bytes, id == "mxliff").map_err(|e| parse_err(id, e))?;
     apply_document(&mut doc, document);
-    Ok(doc.to_bytes())
+    if plain {
+        return Ok(doc.to_bytes());
+    }
+    // a file that was read in another encoding goes back out in it (UTF-8 when the new text does not fit)
+    let utf8 = String::from_utf8(doc.to_bytes())
+        .map_err(|e| bilingua_model::Error::Write(format!("{id}: the merged file is not valid UTF-8: {e}")))?;
+    bilingua_model::enc::encode_text(&utf8, encoding)
 }
 
 /// One of the XLIFF filters.
@@ -240,8 +263,19 @@ impl Filter for XliffFilter {
         true
     }
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, bilingua_model::Error> {
-        let doc = Doc::from_bytes_hint(bytes.to_vec(), self.id == "mxliff").map_err(|e| parse_err(self.id, e))?;
-        to_document(&doc, self.id, opts)
+        let limits = opts.limits();
+        bilingua_model::guard::check_input(bytes, &limits)?;
+        bilingua_model::guard::check_xml(bytes, &limits)?;
+        let body = bytes.strip_prefix(&[0xEF, 0xBB, 0xBF][..]).unwrap_or(bytes);
+        if std::str::from_utf8(body).is_ok() {
+            let doc = Doc::from_bytes_hint(bytes.to_vec(), self.id == "mxliff").map_err(|e| parse_err(self.id, e))?;
+            return to_document(&doc, self.id, opts);
+        }
+        // UTF-16 or a legacy code page: read it as text, hand the parser UTF-8
+        let dec = bilingua_model::enc::decode_text(bytes, &bilingua_model::enc::DecodeOptions::new(opts).declared())?;
+        bilingua_model::guard::check_xml(dec.text.as_bytes(), &limits)?;
+        let doc = Doc::from_bytes_hint(dec.text.into_bytes(), self.id == "mxliff").map_err(|e| parse_err(self.id, e))?;
+        to_document_in(&doc, self.id, opts, Some(dec.encoding), dec.warnings)
     }
     fn merge(&self, doc: &Document) -> Result<Vec<u8>, bilingua_model::Error> {
         merge_document(doc, self.id)

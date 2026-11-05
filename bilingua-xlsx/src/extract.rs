@@ -289,6 +289,39 @@ struct Extractor<'a> {
     u_inline: Vec<Unit>,
     u_hf: Vec<Unit>,
     u_comments: Vec<Unit>,
+    limits: Limits,
+    /// Cells seen so far, for the cell limit.
+    cells: usize,
+    /// Characters of cell text seen so far (inline strings; shared strings are added once, then by use count).
+    text_chars: usize,
+    /// The first limit a sheet went over; the walk stops and the extraction returns it.
+    refused: Option<Error>,
+}
+
+fn sheet_limit(msg: String) -> Error {
+    bilingua_model::LimitError::new(bilingua_model::LimitKind::Spreadsheet, msg).into()
+}
+
+impl Extractor<'_> {
+    fn refuse(&mut self, msg: String) {
+        if self.refused.is_none() {
+            self.refused = Some(sheet_limit(msg));
+        }
+    }
+
+    /// Charges `chars` of cell text against the per-cell and total limits.
+    fn charge_text(&mut self, chars: usize, total_times: usize) {
+        if chars > self.limits.xlsx_max_cell_chars {
+            self.refuse(format!("This file has a cell with more than {} characters. Split it into smaller files.", self.limits.xlsx_max_cell_chars));
+        }
+        self.text_chars = self.text_chars.saturating_add(chars.saturating_mul(total_times));
+        if self.text_chars > self.limits.xlsx_max_total_text_chars {
+            self.refuse(format!(
+                "This file has more than {} characters of cell text (repeated shared strings included). Split it into smaller files.",
+                self.limits.xlsx_max_total_text_chars
+            ));
+        }
+    }
 }
 
 fn make_unit(
@@ -379,10 +412,19 @@ impl Extractor<'_> {
                     // `r` is optional in the file format: a row without it follows the previous row, a cell
                     // without it follows the previous cell.
                     row_no = row.attr("r").and_then(|v| v.trim().parse::<u32>().ok()).unwrap_or(row_no + 1);
+                    if row_no > self.limits.xlsx_max_rows {
+                        self.refuse(format!("This file has a row past row {}. Split it into smaller files.", self.limits.xlsx_max_rows));
+                        return;
+                    }
                     let mut col_no = 0u32;
                     for cell in row.children.iter_mut() {
                         if let Node::El(c) = cell {
                             if ns.is(&c.name, "c") {
+                                self.cells += 1;
+                                if self.cells > self.limits.xlsx_max_cells {
+                                    self.refuse(format!("This file has more than {} cells. Split it into smaller files.", self.limits.xlsx_max_cells));
+                                    return;
+                                }
                                 col_no = match c.attr("r").and_then(|r| parse_ref(&r)) {
                                     Some((col, _)) => col,
                                     None => col_no + 1,
@@ -462,6 +504,8 @@ impl Extractor<'_> {
                         continue;
                     }
                     let (atoms, _) = si_atoms(ns, &is.children);
+                    let chars = plain_of(ns, &is.children).chars().count();
+                    self.charge_text(chars, 1);
                     if !has_text(&atoms) || (self.xo.skip_hidden && hidden.is_some()) {
                         return;
                     }
@@ -713,7 +757,14 @@ fn split_template(t: &str, idx: &HashMap<&str, usize>) -> Result<Vec<SkelPart>, 
 }
 
 pub fn extract_doc(bytes: &[u8], opts: &ExtractOptions, xo: &XlsxOptions) -> Result<Document, Error> {
-    let entries = zipio::read_zip(bytes, &ZipLimits::default())?;
+    let l = opts.limits();
+    bilingua_model::guard::check_input(bytes, &l)?;
+    bilingua_model::guard::finish(extract_doc_inner(bytes, opts, xo)?, vec![], &l)
+}
+
+fn extract_doc_inner(bytes: &[u8], opts: &ExtractOptions, xo: &XlsxOptions) -> Result<Document, Error> {
+    let entries = zipio::read_zip(bytes, &ZipLimits::from(&opts.limits()))?;
+    bilingua_zip::check_xml_parts(&entries, &opts.limits())?;
     let ct = find_entry(&entries, "[Content_Types].xml")
         .ok_or_else(|| perr("not an Excel workbook: no [Content_Types].xml"))?
         .1;
@@ -762,6 +813,10 @@ pub fn extract_doc(bytes: &[u8], opts: &ExtractOptions, xo: &XlsxOptions) -> Res
         u_inline: vec![],
         u_hf: vec![],
         u_comments: vec![],
+        limits: opts.limits(),
+        cells: 0,
+        text_chars: 0,
+        refused: None,
     };
 
     // Sheet name units.
@@ -837,6 +892,9 @@ pub fn extract_doc(bytes: &[u8], opts: &ExtractOptions, xo: &XlsxOptions) -> Res
         }
         let mut nodes = parse(text).map_err(|m| perr(format!("{file}: {m}")))?;
         ex.process_sheet(&sh, &mut nodes);
+        if let Some(e) = ex.refused.take() {
+            return Err(e);
+        }
         trees.insert(i, nodes);
     }
 
@@ -864,6 +922,12 @@ pub fn extract_doc(bytes: &[u8], opts: &ExtractOptions, xo: &XlsxOptions) -> Res
                 }
                 let idx = n;
                 n += 1;
+                let chars = plain_of(&ns, &si.children).chars().count();
+                let times = 1 + ex.uses.get(&idx).map_or(0, |u| u.count);
+                ex.charge_text(chars, times);
+                if let Some(e) = ex.refused.take() {
+                    return Err(e);
+                }
                 let Some(u) = ex.uses.get(&idx) else { continue };
                 if xo.skip_hidden && u.all_hidden {
                     continue;
@@ -1009,5 +1073,6 @@ pub fn extract_doc(bytes: &[u8], opts: &ExtractOptions, xo: &XlsxOptions) -> Res
         granularity: Granularity::Paragraph,
         units,
         skeleton: Skeleton::zip(zentries, bilingua_model::parser_info!()),
+        warnings: vec![],
     })
 }

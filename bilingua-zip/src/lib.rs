@@ -1,13 +1,15 @@
-//! Safe zip reading and writing for the Office parsers (DOCX, XLSX, PPTX). The same limits as `catcore` uses for packages: no names that can
-//! escape a folder, no encrypted entries or links, caps on entry count, size and expansion ratio. Nothing is
-//! extracted to disk. Compression method and time stamp of every entry are kept so a rebuilt file looks like
+//! Safe zip reading and writing for the Office parsers (DOCX, XLSX, PPTX). Localization OS's zip guard: no names
+//! that can escape a folder, no encrypted entries or links, caps on entry count, total unpacked size and
+//! expansion ratio (refused with a typed [`bilingua_model::LimitError`]), and the real size and checksum of every
+//! entry proven against what the directory claims. Nothing is extracted to disk. Compression method and time stamp of every entry are kept so a rebuilt file looks like
 //! the original.
 
-use bilingua_model::Error;
+use bilingua_model::{Error, LimitError, LimitKind, Limits};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashSet};
 use std::io::{Cursor, Read, Write};
 
+/// The zip part of [`Limits`]. `Default` is Localization OS's numbers (10 000 entries, 256 MB unpacked, 200 times).
 #[derive(Debug, Clone, Copy)]
 pub struct ZipLimits {
     pub max_entries: usize,
@@ -19,14 +21,45 @@ pub struct ZipLimits {
 
 impl Default for ZipLimits {
     fn default() -> Self {
+        ZipLimits::from(&Limits::default())
+    }
+}
+
+impl From<&Limits> for ZipLimits {
+    fn from(l: &Limits) -> ZipLimits {
         ZipLimits {
-            max_entries: 20_000,
-            max_entry_bytes: 512 * 1024 * 1024,
-            max_total_bytes: 2 * 1024 * 1024 * 1024,
-            max_ratio: 200,
-            ratio_floor_bytes: 1024 * 1024,
+            max_entries: l.max_zip_entries,
+            // LocOS has no per-entry cap beyond the total.
+            max_entry_bytes: l.max_zip_bytes,
+            max_total_bytes: l.max_zip_bytes,
+            max_ratio: l.max_zip_ratio,
+            ratio_floor_bytes: l.zip_ratio_floor_bytes,
         }
     }
+}
+
+fn limit(kind: LimitKind, msg: String) -> Error {
+    Error::Limit(LimitError::new(kind, msg))
+}
+
+fn mb(n: u64) -> String {
+    format!("{} MB", n.div_ceil(1024 * 1024))
+}
+
+fn invalid_sizes() -> Error {
+    limit(LimitKind::ZipMalformed, "This file has invalid ZIP sizes or data. It was not processed.".into())
+}
+
+/// Runs the XML guard ([`bilingua_model::guard::check_xml`]) over every XML part of an unpacked package
+/// (`.xml`, `.rels`, `.vml`, `.xlf`, `.xliff`, `.sdlxliff`), so a reader never parses a part with an entity bomb.
+pub fn check_xml_parts(entries: &[RawEntry], limits: &Limits) -> Result<(), Error> {
+    for e in entries {
+        let n = e.name.to_ascii_lowercase();
+        if !e.meta.dir && [".xml", ".rels", ".vml", ".xlf", ".xliff", ".sdlxliff"].iter().any(|x| n.ends_with(x)) {
+            bilingua_model::guard::check_xml(&e.data, limits)?;
+        }
+    }
+    Ok(())
 }
 
 /// How one entry was stored, kept so the writer can repeat it.
@@ -153,17 +186,44 @@ fn read_entries(bytes: &[u8], limits: &ZipLimits) -> Result<Vec<RawEntry>, Error
     let mut zip = zip::ZipArchive::new(Cursor::new(bytes))
         .map_err(|e| bad(format!("unreadable zip: {e}")))?;
     if zip.len() > limits.max_entries {
-        return Err(bad(format!(
-            "{} entries, the limit is {}",
-            zip.len(),
-            limits.max_entries
-        )));
+        return Err(limit(
+            LimitKind::ZipEntries,
+            format!("This file has {} internal parts; the limit is {}. It was not processed.", zip.len(), limits.max_entries),
+        ));
+    }
+    // Early rejection from the directory, before anything is inflated: the sum of the claimed sizes and the
+    // ratio of every large entry. The real sizes are proven below.
+    let mut claimed_total: u64 = 0;
+    for i in 0..zip.len() {
+        let f = zip.by_index_raw(i).map_err(|e| bad(format!("unreadable entry {i}: {e}")))?;
+        claimed_total = claimed_total.saturating_add(f.size());
+        // exact, like LocOS's float ratio: 200.5 times is over a limit of 200
+        if f.size() > limits.ratio_floor_bytes && f.size() > f.compressed_size().max(1).saturating_mul(limits.max_ratio) {
+            return Err(limit(
+                LimitKind::ZipRatio,
+                format!(
+                    "This file contains a part that expands {} times (limit {} times), which is typical of a compression bomb. It was not processed.",
+                    f.size() / f.compressed_size().max(1),
+                    limits.max_ratio
+                ),
+            ));
+        }
+    }
+    if claimed_total > limits.max_total_bytes {
+        return Err(limit(
+            LimitKind::ZipBytes,
+            format!(
+                "This file expands to {} when unpacked; the limit is {}. It was not processed.",
+                mb(claimed_total),
+                mb(limits.max_total_bytes)
+            ),
+        ));
     }
     let mut seen: HashSet<String> = HashSet::new();
     let mut out = Vec::new();
     let mut total: u64 = 0;
     for i in 0..zip.len() {
-        let (name, is_dir, claimed, packed, modified, stored, deflated) = {
+        let (name, is_dir, claimed, _packed, modified, stored, deflated) = {
             let f = zip
                 .by_index_raw(i)
                 .map_err(|e| bad(format!("unreadable entry {i}: {e}")))?;
@@ -219,17 +279,10 @@ fn read_entries(bytes: &[u8], limits: &ZipLimits) -> Result<Vec<RawEntry>, Error
             continue;
         }
         if claimed > limits.max_entry_bytes {
-            return Err(bad(format!(
-                "entry {name:?} claims {claimed} bytes, the limit is {}",
-                limits.max_entry_bytes
-            )));
-        }
-        if claimed > limits.ratio_floor_bytes && claimed / packed.max(1) > limits.max_ratio {
-            return Err(bad(format!(
-                "entry {name:?} expands {}x, the limit is {}x",
-                claimed / packed.max(1),
-                limits.max_ratio
-            )));
+            return Err(limit(
+                LimitKind::ZipBytes,
+                format!("This file has a part of {}; the limit is {}. It was not processed.", mb(claimed), mb(limits.max_entry_bytes)),
+            ));
         }
         // Only plain deflate data is kept packed, and only when every compressed byte was read; anything else
         // (another method the reader would refuse below anyway, a short read) falls back to plain bytes.
@@ -258,30 +311,29 @@ fn read_entries(bytes: &[u8], limits: &ZipLimits) -> Result<Vec<RawEntry>, Error
             .by_index(i)
             .map_err(|e| bad(format!("cannot read entry {name:?}: {e}")))?;
         let mut data = Vec::with_capacity(claimed.min(64 * 1024 * 1024) as usize);
+        // never inflate past the claimed size (+1 to see a forged one): a forged entry costs no more memory than an
+        // honest one, as LocOS's bounded verify
         let got = (&mut f)
-            .take(limits.max_entry_bytes + 1)
+            .take(claimed.min(limits.max_entry_bytes) + 1)
             .read_to_end(&mut data)
-            .map_err(|e| bad(format!("cannot decompress entry {name:?}: {e}")))?
+            .map_err(|_| invalid_sizes())?
             as u64;
         if got > limits.max_entry_bytes {
-            return Err(bad(format!(
-                "entry {name:?} expands past {} bytes",
-                limits.max_entry_bytes
-            )));
+            return Err(limit(
+                LimitKind::ZipBytes,
+                format!("This file has a part that expands past {}. It was not processed.", mb(limits.max_entry_bytes)),
+            ));
         }
-        if got > limits.ratio_floor_bytes && got / packed.max(1) > limits.max_ratio {
-            return Err(bad(format!(
-                "entry {name:?} expands {}x, the limit is {}x",
-                got / packed.max(1),
-                limits.max_ratio
-            )));
+        // A directory that understates the real size (a forged header) is a bomb in disguise.
+        if got != claimed {
+            return Err(invalid_sizes());
         }
         total += got;
         if total > limits.max_total_bytes {
-            return Err(bad(format!(
-                "the file expands past {} bytes",
-                limits.max_total_bytes
-            )));
+            return Err(limit(
+                LimitKind::ZipBytes,
+                format!("This file expands past {} when unpacked. It was not processed.", mb(limits.max_total_bytes)),
+            ));
         }
         if let Some((p, _)) = pk.as_mut() {
             p.size = got;

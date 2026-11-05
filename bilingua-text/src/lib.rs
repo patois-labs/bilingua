@@ -32,17 +32,10 @@ impl Filter for TextFilter {
     }
 
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
-        if bytes.starts_with(&[0xFF, 0xFE]) || bytes.starts_with(&[0xFE, 0xFF]) {
-            return Err(Error::Unsupported("UTF-16 text files; save the file as UTF-8".into()));
-        }
-        let (body, encoding) = match bytes.strip_prefix(BOM) {
-            Some(rest) => (rest, "utf-8-bom"),
-            None => (bytes, "utf-8"),
-        };
-        let text = std::str::from_utf8(body).map_err(|e| Error::Parse {
-            format: ID.into(),
-            msg: format!("the file is not valid UTF-8 (at byte {})", e.valid_up_to()),
-        })?;
+        let mut dec = bilingua_model::enc::decode_text(bytes, &bilingua_model::enc::DecodeOptions::new(opts))?;
+        let text_owned = std::mem::take(&mut dec.text);
+        let text = text_owned.as_str();
+        let encoding = dec.encoding.as_str();
 
         let mut parts: Vec<SkelPart> = Vec::new();
         let mut units: Vec<Unit> = Vec::new();
@@ -77,7 +70,7 @@ impl Filter for TextFilter {
             parts.push(SkelPart::Raw(raw));
         }
 
-        Ok(Document {
+        bilingua_model::guard::finish(Document {
             format: ID.into(),
             name: None,
             source_lang: opts.source_lang.clone(),
@@ -85,7 +78,8 @@ impl Filter for TextFilter {
             granularity: opts.granularity,
             units,
             skeleton: Skeleton::text(parts, encoding, bilingua_model::parser_info!()),
-        })
+            warnings: vec![],
+        }, std::mem::take(&mut dec.warnings), &opts.limits())
     }
 
     fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
@@ -93,20 +87,17 @@ impl Filter for TextFilter {
         let Skeleton::Text { parts, encoding, .. } = &doc.skeleton else {
             return Err(Error::Write("txt needs a text skeleton".into()));
         };
-        let mut out: Vec<u8> = Vec::new();
-        if encoding == "utf-8-bom" {
-            out.extend_from_slice(BOM);
-        }
+        let mut out = String::new();
         for p in parts {
             match p {
-                SkelPart::Raw(s) => out.extend_from_slice(s.as_bytes()),
+                SkelPart::Raw(s) => out.push_str(s),
                 SkelPart::Unit(i) => {
                     let unit = doc.units.get(*i).ok_or_else(|| Error::Write(format!("no unit {i}")))?;
-                    out.extend_from_slice(render(unit).as_bytes());
+                    out.push_str(&render(unit));
                 }
             }
         }
-        Ok(out)
+        bilingua_model::enc::encode_text(&out, encoding)
     }
 }
 
@@ -286,9 +277,12 @@ mod tests {
 
     #[test]
     fn bad_input_is_an_error() {
-        assert!(matches!(TextFilter.extract(&[0x48, 0xFF, 0xFE, 0x41], &Default::default()), Err(Error::Parse { .. })));
-        assert!(matches!(TextFilter.extract(&[0xFF, 0xFE, 0x41, 0x00], &Default::default()), Err(Error::Unsupported(_))));
-        assert!(matches!(TextFilter.extract(&[0xFE, 0xFF, 0x00, 0x41], &Default::default()), Err(Error::Unsupported(_))));
+        assert!(matches!(TextFilter.extract(&[0x48, 0, 0xFE, 0x41], &Default::default()), Err(Error::Encoding(_))));
+        // UTF-16 with a byte-order mark is text, and goes back out as UTF-16
+        let d = TextFilter.extract(&[0xFF, 0xFE, 0x41, 0x00], &Default::default()).unwrap();
+        assert_eq!(TextFilter.merge(&d).unwrap(), [0xFF, 0xFE, 0x41, 0x00]);
+        let d = TextFilter.extract(&[0xFE, 0xFF, 0x00, 0x41], &Default::default()).unwrap();
+        assert_eq!(TextFilter.merge(&d).unwrap(), [0xFE, 0xFF, 0x00, 0x41]);
     }
 
     #[test]

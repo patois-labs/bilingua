@@ -306,8 +306,8 @@ fn errors() {
     assert!(Po.extract(b"\"stray\"\n", &Default::default()).is_err());
     assert!(Po.extract(b"foo \"a\"\n", &Default::default()).is_err());
     assert!(Po.extract(b"msgid \"a\"\nmsgid_plural \"b\"\nmsgstr \"c\"\n", &Default::default()).is_err());
-    assert!(Po.extract(b"msgid \"\"\nmsgstr \"\"\n\"Content-Type: text/plain; charset=ISO-8859-2\\n\"\n", &Default::default()).is_err());
-    assert!(Po.extract(&[0xff, 0xfe], &Default::default()).is_err());
+    assert!(Po.extract(b"msgid \"\"\nmsgstr \"\"\n\"Content-Type: text/plain; charset=x-no-such-charset\\n\"\n", &Default::default()).is_err());
+    assert!(Po.extract(&[0x00, 0xFF], &Default::default()).is_err());
     assert!(Po.sniff(b"msgid \"a\"\nmsgstr \"b\"\n"));
     assert!(!Po.sniff(b"hello"));
     assert_eq!(Po.extensions(), ["po", "pot"]);

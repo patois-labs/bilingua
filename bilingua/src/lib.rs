@@ -77,13 +77,19 @@ pub fn detect(name: &str, bytes: &[u8]) -> Option<Box<dyn Filter>> {
 /// The source language comes from `opts.source_lang` (default "en"); it picks the sentence rules.
 pub fn extract(name: &str, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
     let f = detect(name, bytes).ok_or_else(|| Error::Unsupported(format!("no parser for {name}")))?;
+    // the safety net for every format, also one that forgets to call the guards: input size first, the unit,
+    // segment and unit-length caps at the end
+    bilingua_model::guard::check_input(bytes, &opts.limits())?;
     let mut doc = f.extract(bytes, opts)?;
     doc.name = Some(name.to_string());
     if own_segmentation(f.id()) {
+        bilingua_model::guard::check_document(&doc, &opts.limits())?;
         return Ok(doc);
     }
     let lang = opts.source_lang.as_deref().unwrap_or("en");
     bilingua_seg::segment(&mut doc, lang, opts.granularity, Rules::bundled());
+    // sentences count against the segment cap too (LocOS checks again after splitting)
+    bilingua_model::guard::check_document(&doc, &opts.limits())?;
     Ok(doc)
 }
 

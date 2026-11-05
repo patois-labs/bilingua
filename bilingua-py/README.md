@@ -37,10 +37,12 @@ also cover this crate (they need a Python install to link against).
   dicts and lists, the same shape as its JSON. `granularity` is `sentence`, `paragraph` or `document`.
 - `merge(document: dict) -> bytes`: writes the (possibly translated) Document back in its original format. Set a
   segment's `target` to a list of inlines (`{"text": ".."}` or `{"tag": {...}}`); an empty target keeps the source.
+- `extract(..., limits=None)`: a dict of limit names to override (see `bilingua-model/README.md`); the rest keep the
+  defaults. The Document has a `warnings` list (e.g. `text_encoding`) when a file was read but looks garbled.
 - `version() -> str`.
 
 Every failure raises `bilingua.BilinguaError` with a `code` attribute: `parse`, `unsupported`, `unknown_segment`,
-`locked`, `invented_tag`, `duplicated_tag`, `parser_version`, `write`, `io`, `invalid_argument`, `invalid_document`, `internal`.
+`locked`, `invented_tag`, `duplicated_tag`, `parser_version`, `write`, `limit` (over a safety limit or unsafe XML/zip), `encoding` (unreadable text), `io`, `invalid_argument`, `invalid_document`, `internal`.
 Panics inside the engine become `internal`. The GIL is released while parsing and merging, so threads run in
 parallel. The Document is converted through its serde JSON form, so new model fields appear in Python with no change
 here.
