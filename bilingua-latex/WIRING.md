@@ -21,9 +21,9 @@
   token numbers ("1", "2", ...). Labels are the command name (`emph`, `group`), `comment`, `math` or `markup`; none
   is `placeholder` because LocOS tokenises all of them.
 - Hidden code on a unit: `~raw`, the slot's source text as written (the merge writes it back for an unchanged unit).
-  The unit's `context.kind` is `paragraph`, `heading`, `title`, `caption`, `label` (an `\item[..]`) or `cell`;
+  The unit's `context.kind` is `paragraph`, `heading`, `title`, `caption`, `label` (an `\item[..]`), `short` (an optional short title) or `cell`;
   `context.style` is `tex`.
-- Oracle: `oracle/corpus/latex/` holds the made-up corpus (22 files; extension `tex`, so the oracle's `FORMATS`
+- Oracle: `oracle/corpus/latex/` holds the made-up corpus (21 files; extension `tex`, so the oracle's `FORMATS`
   already needs `tex` -> `tex` if it is not there).
 - Merge differences from LocOS (both deliberate, B6 and the lead decisions of 11-04):
   1. A Windows-1252 (or other legacy) file goes back in its own encoding when every character fits, and the

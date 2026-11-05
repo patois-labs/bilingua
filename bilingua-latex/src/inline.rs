@@ -383,6 +383,8 @@ pub fn normalize(inl: &[Inline]) -> Vec<Inline> {
 /// translation never closes (or closes out of order) is closed here. A point token that ends in a control word
 /// gets `{}` when letters or a blank follow it.
 pub fn render(u: &Unit, target: &[Inline]) -> String {
+    let kind = u.context.kind.as_deref().unwrap_or("");
+    // inside `[..]` (an item label, a short title) a `]` must sit in braces
     let t = normalize(target);
     let mut out: Vec<String> = Vec::new();
     let mut opened: Vec<&str> = Vec::new();
@@ -395,6 +397,9 @@ pub fn render(u: &Unit, target: &[Inline]) -> String {
                 // a token the translation invented (or a closing mark of a standalone code) is dropped, as LocOS does
                 let folded = if folded.contains('\u{27E6}') { placeholder_re().replace_all(&folded, "").into_owned() } else { folded };
                 escape_text(&folded, &mut s);
+                if matches!(kind, "label" | "short") {
+                    s = s.replace(']', "{]}");
+                }
                 out.push(s);
             }
             Inline::Tag { id, kind, .. } => {
@@ -435,6 +440,16 @@ pub fn render(u: &Unit, target: &[Inline]) -> String {
     while let Some(k) = opened.pop() {
         if let Some(c) = u.codes.get(k).and_then(|c| c.close.clone()) {
             out.push(c);
+        }
+    }
+    // a paragraph or cell that starts with `[` would read as the optional argument of the command before it
+    // (unless the source text started with one too: then it was already in a safe place)
+    let raw_starts = u.codes.get("~raw").and_then(|c| c.standalone.as_deref()).is_some_and(|r| r.starts_with('['));
+    if matches!(kind, "paragraph" | "cell") && !raw_starts {
+        if let Some(first) = out.first_mut() {
+            if let Some(rest) = first.strip_prefix('[') {
+                *first = format!("{{[}}{rest}");
+            }
         }
     }
     for &w in &words {

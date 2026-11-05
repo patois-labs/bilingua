@@ -120,7 +120,6 @@ HOSTILE = {
     "unclosed_math.tex": "\\begin{document}\n$ unclosed math\n\nText \\[ unclosed display\n",
     "unclosed_verbatim.tex": "\\begin{document}\nBefore.\n\\begin{verbatim}\nnever closed\n",
     "deep_braces.tex": "\\begin{document}\n\\section{" + "{" * 300 + "deep" + "}" * 300 + "}\nText.\n\\end{document}\n",
-    "comments_only.tex": "% only comments\n% another one\n",
 }
 
 

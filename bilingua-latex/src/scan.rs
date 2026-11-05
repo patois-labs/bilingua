@@ -479,8 +479,8 @@ impl<'a> Scan<'a> {
                 b'\\' => {
                     let (name, mut e) = cs(t, i);
                     if name == "title" || name == "subtitle" {
-                        for (_k, s, en) in args(self.tx, e, b, true, false) {
-                            self.unit(s + 1, en - 1, "title")?;
+                        for (k, s, en) in args(self.tx, e, b, true, false) {
+                            self.unit(s + 1, en - 1, if k == b'[' { "short" } else { "title" })?;
                             e = en;
                         }
                     }
@@ -669,8 +669,8 @@ impl<'a> Scan<'a> {
                 if name == "captionof" && !a2.is_empty() && a2[0].0 == b'{' {
                     a2.remove(0); // the float type
                 }
-                for &(_k, s, en) in &a2 {
-                    self.unit(s + 1, en - 1, block_kind(name))?;
+                for &(k, s, en) in &a2 {
+                    self.unit(s + 1, en - 1, if k == b'[' { "short" } else { block_kind(name) })?;
                 }
                 i = end_of_args(&a2, e);
                 continue;

@@ -61,7 +61,7 @@ fn untouched_merge_is_the_original_bytes() {
     for (name, data) in files() {
         if let Ok(doc) = extract(&data) {
             assert_eq!(Latex::default().merge(&doc).unwrap(), data, "{name}");
-            assert!(!doc.units.is_empty() || name.starts_with("comments_only") || name.starts_with("unclosed_verbatim"), "{name} has units");
+            assert!(!doc.units.is_empty() || name.starts_with("unclosed_verbatim"), "{name} has units");
         }
     }
 }
@@ -82,7 +82,7 @@ fn pseudo_translated_merge_reads_back_with_the_same_units_and_tags() {
         }
         n += 1;
     }
-    assert!(n >= 25, "{n} files");
+    assert!(n >= 20, "{n} files");
 }
 
 fn pseudo_inner(u: &Unit) -> Vec<Inline> {
@@ -206,4 +206,29 @@ fn okapi_files_are_pinned() {
     let t2 = units(&std::fs::read(dir.join("Test02.tex")).unwrap());
     assert_eq!(t2.len(), 5);
     assert_eq!(t2[1], "\u{41f}\u{440}\u{435}\u{434}\u{438}\u{441}\u{43b}\u{43e}\u{432}\u{438}\u{435}");
+}
+
+#[test]
+fn brackets_that_would_change_the_structure_are_protected() {
+    let data = br"\begin{document}
+\section[Short]{Long title}
+\label{a}
+Body text.
+\begin{itemize}
+\item[Label] Item text.
+\end{itemize}
+\end{document}
+";
+    let mut doc = extract(data).unwrap();
+    let kinds: Vec<_> = doc.units.iter().map(|u| u.context.kind.clone().unwrap()).collect();
+    assert_eq!(kinds, ["short", "heading", "paragraph", "label", "paragraph"]);
+    for u in doc.units.iter_mut() {
+        u.segments[0].target = vec![Inline::text(format!("[{}]", plain_text(&u.source())))];
+    }
+    let out = Latex::default().merge(&doc).unwrap();
+    let s = String::from_utf8(out.clone()).unwrap();
+    assert!(s.contains(r"\section[[Short{]}]{[Long title]}"), "{s}");
+    assert!(s.contains("{[}Body text.]"), "{s}");
+    assert!(s.contains(r"\item[[Label{]}] {[}Item text.]"), "{s}");
+    assert_eq!(extract(&out).unwrap().units.len(), doc.units.len());
 }

@@ -22,7 +22,9 @@ every `\verb` is one standalone tag. Never translated, kept byte for byte: the p
 `\& \% \$ \# \_ \{ \}` read as the plain character and `~` as a no-break space; on merge every one of
 `& % $ # _ { } ~ ^ \` in a translation is escaped again and a no-break space is written as `~`. A line break in a
 translation becomes a space. A point tag that ends in a control word (`\TeX`) gets `{}` when letters or a blank follow
-it in the translation. Braces always stay balanced: a close without its open is dropped, an open that is never closed
+it in the translation. A `]` in an item label or short title is written `{]}`, and a paragraph or cell whose
+translation starts with `[` gets `{[}` so LaTeX does not read it as the optional argument of the command before it
+(LocOS does neither; both only change a translation that contains those brackets). Braces always stay balanced: a close without its open is dropped, an open that is never closed
 is closed.
 
 An untouched merge is the original bytes (encoding, BOM and newlines kept). Only the slot of a changed unit is
@@ -33,7 +35,7 @@ rewritten.
 * The LocOS suite: its 7 test functions, ported (`tests/locos_suite.rs`, 8 Rust tests; the config/encoding function
   is two tests, the byte differences below are the only changed assertions).
 * The LocOS filter itself: `tests/locos_golden.rs`, 600 random and randomly broken documents in four encodings, the
-  22-file corpus and the Okapi files; units identical in all 628 accepted files, 3 refused by both, 2685 build digests
+  21-file corpus and the Okapi files; units identical in all 628 accepted files, 3 refused by both, 2685 build digests
   identical for UTF-8 inputs (`tests/tools/gen_golden.py` rebuilds the golden file with the LocOS venv).
 * Okapi `okf_tex` on its three test resources (`tests/data/okapi`, `tests/tools/compare_okapi.py`): `Test02` 5 of 5
   units equal (codes removed); `Test01`/`Test03` 3 of 5 each. Differences, all LocOS decisions that win over Okapi:
