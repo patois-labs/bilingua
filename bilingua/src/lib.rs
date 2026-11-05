@@ -34,6 +34,8 @@ pub fn filters() -> Vec<Box<dyn Filter>> {
         Box::new(bilingua_pptx::Pptx),
         // Visio sniffs a zip holding visio/ parts; docx, pptx and xlsx need word/, ppt/ and xl/, so it cannot clash.
         Box::new(bilingua_vsdx::Vsdx),
+        // TTX sniffs a <TRADOStag start tag in the first 4 KB (UTF-16 or UTF-8): strict, so its place does not matter.
+        Box::new(bilingua_ttx::Ttx::default()),
         Box::new(bilingua_subtitle::Vtt),
         Box::new(bilingua_subtitle::Srt),
         Box::new(bilingua_po::Po),
@@ -107,7 +109,7 @@ pub fn filters() -> Vec<Box<dyn Filter>> {
 /// Formats whose files carry their own segmentation (XLIFF and its dialects, translation packages): sentence
 /// splitting would break the link between a segment and the file's own segment.
 fn own_segmentation(id: &str) -> bool {
-    matches!(id, "xliff" | "sdlxliff" | "mqxliff" | "mxliff" | "sdlppx" | "mqxlz" | "xcloc")
+    matches!(id, "xliff" | "sdlxliff" | "mqxliff" | "mxliff" | "sdlppx" | "mqxlz" | "xcloc" | "ttx")
 }
 
 /// The filter for a file: by extension first, then by sniffing the bytes.

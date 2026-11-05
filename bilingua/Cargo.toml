@@ -44,6 +44,7 @@ bilingua-arb = { workspace = true }
 bilingua-dtd = { workspace = true }
 bilingua-xmb = { workspace = true }
 bilingua-vsdx = { workspace = true }
+bilingua-ttx = { workspace = true }
 bilingua-qtts = { workspace = true }
 bilingua-php = { workspace = true }
 bilingua-rc = { workspace = true }
