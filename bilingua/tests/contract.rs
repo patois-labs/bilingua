@@ -182,6 +182,7 @@ fn crate_of(format: &str) -> &'static str {
         "dtd" => "bilingua-dtd",
         "ftl" => "bilingua-ftl",
         "rc" => "bilingua-rc",
+        "dxf" => "bilingua-dxf",
         "xtg" | "tag" => "bilingua-xtg",
         "adoc" => "bilingua-adoc",
         "tex" => "bilingua-latex",
@@ -461,7 +462,12 @@ fn utf8_out_writes_utf8_for_every_text_format() {
         let doc = open(&name, &bytes, Granularity::Paragraph);
         // binary plists keep the file in a text skeleton (tag "bplist"): not text, nothing to re-encode. A Trados
         // project file is a manifest Trados reads back as it wrote it: kept byte for byte (sdlproj gate decision).
-        if !matches!(&doc.skeleton, Skeleton::Text { encoding, .. } if encoding != "bplist") || name.ends_with(".sdlproj") {
+        // A DXF drawing declares its code page in its header ($ACADVER, $DWGCODEPAGE) and AutoCAD before 2007 has
+        // no UTF-8: it keeps its code page, as LocOS does (dxf gate decision).
+        if !matches!(&doc.skeleton, Skeleton::Text { encoding, .. } if encoding != "bplist")
+            || name.ends_with(".sdlproj")
+            || name.ends_with(".dxf")
+        {
             continue;
         }
         let out = merge_with(&doc, &utf8).unwrap_or_else(|e| panic!("{name}: {e}"));

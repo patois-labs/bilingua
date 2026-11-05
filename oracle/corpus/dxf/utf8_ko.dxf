@@ -1,0 +1,192 @@
+  0
+SECTION
+  2
+HEADER
+  9
+$ACADVER
+  1
+AC1032
+  9
+$DWGCODEPAGE
+  3
+ANSI_1252
+  9
+$INSUNITS
+ 70
+4
+  0
+ENDSEC
+  0
+SECTION
+  2
+TABLES
+  0
+TABLE
+  2
+LAYER
+  0
+LAYER
+  5
+10
+  2
+Walls Text
+ 70
+0
+  0
+ENDTAB
+  0
+ENDSEC
+  0
+SECTION
+  2
+BLOCKS
+  0
+BLOCK
+  5
+20
+  8
+0
+  2
+TITLEBLOCK
+ 70
+2
+  0
+ATTDEF
+  5
+21
+  8
+0
+  1
+1층 평면도
+  3
+Drawing title
+  2
+TITLE
+  0
+TEXT
+  5
+22
+  8
+0
+  1
+Lumen Bakery
+  0
+ENDBLK
+  5
+23
+  0
+ENDSEC
+  0
+SECTION
+  2
+ENTITIES
+  0
+TEXT
+  5
+30
+  8
+Walls Text
+ 10
+1.0
+  1
+1층 평면도
+  7
+Standard
+  0
+TEXT
+  5
+31
+  8
+Walls Text
+  1
+1200
+  0
+TEXT
+  5
+32
+  8
+Walls Text
+  1
+%%c50 비상구, 45%%d
+  0
+MTEXT
+  5
+33
+  8
+Notes
+  3
+베이커리 카운터와 진열장. 베이커리 카운터와 진열장. 베이커리 카운터와 진열장. 베이커리 카운터와 진열장. 베이커리 카운터와 진열장. 베이커리 카운터와 진열장. 베이커리 카운터와 진열장. 베이커리 카운터와 진열장. 베이커리 카운터와 진열장. 베이커리 카운터와 진열장. 베이커리 카운터와 진열장. 베이커리 카운터와 진열장. 
+  1
+
+  7
+Standard
+1001
+ACAD
+1000
+do not translate me
+  0
+MTEXT
+  5
+34
+  8
+Notes
+  1
+{\fArial|b1|i0;베이커리 카운터와 진열장}\P\H2.5x;비상구\~ \S1/2;
+  0
+INSERT
+  5
+35
+  2
+TITLEBLOCK
+ 66
+1
+  0
+ATTRIB
+  5
+36
+  1
+1층 평면도
+  2
+TITLE
+  0
+SEQEND
+  5
+37
+  0
+DIMENSION
+  5
+38
+  2
+*D1
+  1
+<> 비상구
+  3
+Standard
+  0
+MULTILEADER
+  5
+3A
+300
+CONTEXT_DATA{
+304
+비상구\P베이커리 카운터와 진열장
+301
+}
+  0
+ENDSEC
+  0
+SECTION
+  2
+OBJECTS
+  0
+DICTIONARY
+  5
+C
+  3
+ACAD_GROUP
+350
+D
+  0
+ENDSEC
+  0
+EOF

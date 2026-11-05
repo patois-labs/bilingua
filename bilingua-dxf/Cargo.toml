@@ -1,0 +1,14 @@
+[package]
+name = "bilingua-dxf"
+description = "Bilingua: AutoCAD DXF (ASCII) filter"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+bilingua-model = { workspace = true }
+
+[dev-dependencies]
+proptest = { workspace = true }
+serde_json = { workspace = true }
