@@ -28,7 +28,7 @@ let out = Mo.merge(&doc)?;
 - Every count, offset and length is checked against the file size before use; a file whose strings overlap so that
   they decode to more than twice its size is refused. Typed errors: `Parse` (damaged), `Unsupported` (revision 2 or
   later, system-dependent strings), `Limit` (more strings than `max_units`, a string over 8 x `max_unit_chars`
-  bytes, overlap), `Encoding` is not used (undecodable strings are `Parse`).
+  bytes, overlap). Strings that are not valid in the declared charset are `Parse` errors too.
 
 ## Merge
 
