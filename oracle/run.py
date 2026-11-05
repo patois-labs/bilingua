@@ -40,7 +40,8 @@ def _find_locos() -> Path:
 LOCOS = _find_locos()
 os.environ["LOCOS_DIR"] = str(LOCOS)  # locos_dump.py reads the same variable
 LOCOS_PY = LOCOS / ".venv" / "Scripts" / "python.exe"
-BL = ROOT / "target" / "debug" / ("bl-dump.exe" if os.name == "nt" else "bl-dump")
+_TARGET = Path(os.environ["CARGO_TARGET_DIR"]) if os.environ.get("CARGO_TARGET_DIR") else ROOT / "target"
+BL = _TARGET / "debug" / ("bl-dump.exe" if os.name == "nt" else "bl-dump")
 if not BL.exists():
     BL = HERE.parent / "target" / "debug" / "bl-dump.exe"
 
