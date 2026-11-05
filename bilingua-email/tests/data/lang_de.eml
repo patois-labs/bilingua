@@ -1,0 +1,32 @@
+From: Ann <ann@example.com>
+To: Bob <bob@example.com>
+Subject: =?utf-8?b?R3LDvMOfZSBhdXMgS8O2bG4=?=
+MIME-Version: 1.0
+Content-Type: multipart/alternative; boundary="alt-de"
+
+Preamble text.
+--alt-de
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: quoted-printable
+
+Hallo Anna,
+
+Ihre Bestellung wird am Montag versandt. Bitte best=C3=A4tigen Sie Ihre Adr=
+esse bis zum Ende der Woche.
+
+Vielen Dank f=C3=BCr Ihre Geduld. Gr=C3=BC=C3=9Fe aus K=C3=B6ln.
+
+--=20
+Ann
+
+--alt-de
+Content-Type: text/html; charset=utf-8
+Content-Transfer-Encoding: base64
+
+PGh0bWw+PGhlYWQ+PG1ldGEgY2hhcnNldD0idXRmLTgiPjwvaGVhZD48Ym9keT48aDE+SGFsbG8g
+QW5uYSw8L2gxPjxwPklocmUgQmVzdGVsbHVuZyB3aXJkIGFtIE1vbnRhZyB2ZXJzYW5kdC4gQml0
+dGUgYmVzdMOkdGlnZW4gU2llIElocmUgQWRyZXNzZSBiaXMgenVtIEVuZGUgZGVyIFdvY2hlLjwv
+cD48cD5WaWVsZW4gRGFuayBmw7xyIElocmUgR2VkdWxkLiBHcsO8w59lIGF1cyBLw7Zsbi4gPGI+
+R3LDvMOfZSBhdXMgS8O2bG48L2I+PC9wPjwvYm9keT48L2h0bWw+Cg==
+
+--alt-de--

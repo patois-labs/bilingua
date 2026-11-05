@@ -84,6 +84,9 @@ pub fn filters() -> Vec<Box<dyn Filter>> {
         Box::new(bilingua_resx::Resx),
         // MO sniffs only its binary magic number, so its place does not matter.
         Box::new(bilingua_mo::Mo),
+        // An email sniffs a block of Capitalised header fields (From, Subject, MIME-Version, ...); it goes before
+        // YAML and properties, which would take `Subject: text` lines.
+        Box::new(bilingua_email::Email),
         // YAML sniffs any `word: text` line, so it goes after the stricter formats and before properties.
         Box::new(bilingua_yaml::Yaml),
         // properties sniffs any key=value or key: value text, so it goes after the stricter key-value formats.

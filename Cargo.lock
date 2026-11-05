@@ -27,6 +27,7 @@ dependencies = [
  "bilingua-desktop",
  "bilingua-docx",
  "bilingua-dtd",
+ "bilingua-email",
  "bilingua-epub",
  "bilingua-ftl",
  "bilingua-html",
@@ -140,6 +141,17 @@ dependencies = [
 name = "bilingua-dtd"
 version = "0.1.0"
 dependencies = [
+ "bilingua-model",
+ "proptest",
+ "regex",
+ "serde_json",
+]
+
+[[package]]
+name = "bilingua-email"
+version = "0.1.0"
+dependencies = [
+ "bilingua-html",
  "bilingua-model",
  "proptest",
  "regex",

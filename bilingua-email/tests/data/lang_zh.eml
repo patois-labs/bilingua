@@ -1,0 +1,34 @@
+From: Ann <ann@example.com>
+To: Bob <bob@example.com>
+Subject: =?utf-8?b?6K6i5Y2V56Gu6K6k?=
+MIME-Version: 1.0
+Content-Type: multipart/alternative; boundary="alt-zh"
+
+Preamble text.
+--alt-zh
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: quoted-printable
+
+=E5=AE=89=E5=A8=9C=E6=82=A8=E5=A5=BD=EF=BC=8C
+
+=E6=82=A8=E7=9A=84=E8=AE=A2=E5=8D=95=E5=B0=86=E4=BA=8E=E6=98=9F=E6=9C=9F=E4=
+=B8=80=E5=8F=91=E8=B4=A7=E3=80=82=E8=AF=B7=E5=9C=A8=E6=9C=AC=E5=91=A8=E6=9C=
+=AB=E4=B9=8B=E5=89=8D=E7=A1=AE=E8=AE=A4=E6=82=A8=E7=9A=84=E5=9C=B0=E5=9D=80=
+=E3=80=82
+
+=E6=84=9F=E8=B0=A2=E6=82=A8=E7=9A=84=E8=80=90=E5=BF=83=E7=AD=89=E5=BE=85=E3=
+=80=82
+
+--=20
+Ann
+
+--alt-zh
+Content-Type: text/html; charset=utf-8
+Content-Transfer-Encoding: base64
+
+PGh0bWw+PGhlYWQ+PG1ldGEgY2hhcnNldD0idXRmLTgiPjwvaGVhZD48Ym9keT48aDE+5a6J5aic
+5oKo5aW977yMPC9oMT48cD7mgqjnmoTorqLljZXlsIbkuo7mmJ/mnJ/kuIDlj5HotKfjgILor7fl
+nKjmnKzlkajmnKvkuYvliY3noa7orqTmgqjnmoTlnLDlnYDjgII8L3A+PHA+5oSf6LCi5oKo55qE
+6ICQ5b+D562J5b6F44CCIDxiPuiuouWNleehruiupDwvYj48L3A+PC9ib2R5PjwvaHRtbD4K
+
+--alt-zh--

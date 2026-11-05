@@ -1,0 +1,38 @@
+From: Ann <ann@example.com>
+To: Bob <bob@example.com>
+Subject: =?utf-8?b?0JLQsNGIINC30LDQutCw0Lc=?=
+MIME-Version: 1.0
+Content-Type: multipart/alternative; boundary="alt-ru"
+
+Preamble text.
+--alt-ru
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: quoted-printable
+
+=D0=97=D0=B4=D1=80=D0=B0=D0=B2=D1=81=D1=82=D0=B2=D1=83=D0=B9=D1=82=D0=B5, =
+=D0=90=D0=BD=D0=BD=D0=B0!
+
+=D0=92=D0=B0=D1=88 =D0=B7=D0=B0=D0=BA=D0=B0=D0=B7 =D0=B1=D1=83=D0=B4=D0=B5=
+=D1=82 =D0=BE=D1=82=D0=BF=D1=80=D0=B0=D0=B2=D0=BB=D0=B5=D0=BD =D0=B2 =D0=BF=
+=D0=BE=D0=BD=D0=B5=D0=B4=D0=B5=D0=BB=D1=8C=D0=BD=D0=B8=D0=BA. =D0=9F=D0=BE=
+=D0=B6=D0=B0=D0=BB=D1=83=D0=B9=D1=81=D1=82=D0=B0, =D0=BF=D0=BE=D0=B4=D1=82=
+=D0=B2=D0=B5=D1=80=D0=B4=D0=B8=D1=82=D0=B5 =D0=B0=D0=B4=D1=80=D0=B5=D1=81.
+
+=D0=A1=D0=BF=D0=B0=D1=81=D0=B8=D0=B1=D0=BE =D0=B7=D0=B0 =D1=82=D0=B5=D1=80=
+=D0=BF=D0=B5=D0=BD=D0=B8=D0=B5.
+
+--=20
+Ann
+
+--alt-ru
+Content-Type: text/html; charset=utf-8
+Content-Transfer-Encoding: base64
+
+PGh0bWw+PGhlYWQ+PG1ldGEgY2hhcnNldD0idXRmLTgiPjwvaGVhZD48Ym9keT48aDE+0JfQtNGA
+0LDQstGB0YLQstGD0LnRgtC1LCDQkNC90L3QsCE8L2gxPjxwPtCS0LDRiCDQt9Cw0LrQsNC3INCx
+0YPQtNC10YIg0L7RgtC/0YDQsNCy0LvQtdC9INCyINC/0L7QvdC10LTQtdC70YzQvdC40LouINCf
+0L7QttCw0LvRg9C50YHRgtCwLCDQv9C+0LTRgtCy0LXRgNC00LjRgtC1INCw0LTRgNC10YEuPC9w
+PjxwPtCh0L/QsNGB0LjQsdC+INC30LAg0YLQtdGA0L/QtdC90LjQtS4gPGI+0JLQsNGIINC30LDQ
+utCw0Lc8L2I+PC9wPjwvYm9keT48L2h0bWw+Cg==
+
+--alt-ru--

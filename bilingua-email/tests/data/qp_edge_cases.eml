@@ -1,0 +1,9 @@
+Subject: qp
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: quoted-printable
+
+Equals =3D sign and trailing space=20
+A very long line that the encoder had to cut at seventy six characters with a soft break =
+right here in the middle of the text.
+=C3=A9=C3=A8 accents
+

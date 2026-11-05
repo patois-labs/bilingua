@@ -1,0 +1,16 @@
+From: Ann <ann@example.com>
+Subject: Hard wrapped
+
+This paragraph was hard wrapped by an old mail client at sixty-eight
+columns, so its lines belong together as one sentence for translation.
+
+A short line.
+  An indented line.
+- a list item
+- another list item
+
+> quoted
+> text
+
+-- 
+Ann

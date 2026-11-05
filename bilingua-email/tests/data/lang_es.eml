@@ -1,0 +1,32 @@
+From: Ann <ann@example.com>
+To: Bob <bob@example.com>
+Subject: =?utf-8?b?TWHDsWFuYSBhYnJpbW9z?=
+MIME-Version: 1.0
+Content-Type: multipart/alternative; boundary="alt-es"
+
+Preamble text.
+--alt-es
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: quoted-printable
+
+Hola Ana,
+
+Su pedido se enviar=C3=A1 el lunes. Por favor, confirme su direcci=C3=B3n a=
+ntes del fin de semana.
+
+=C2=A1Gracias por su paciencia! Ma=C3=B1ana abrimos a las nueve.
+
+--=20
+Ann
+
+--alt-es
+Content-Type: text/html; charset=utf-8
+Content-Transfer-Encoding: base64
+
+PGh0bWw+PGhlYWQ+PG1ldGEgY2hhcnNldD0idXRmLTgiPjwvaGVhZD48Ym9keT48aDE+SG9sYSBB
+bmEsPC9oMT48cD5TdSBwZWRpZG8gc2UgZW52aWFyw6EgZWwgbHVuZXMuIFBvciBmYXZvciwgY29u
+ZmlybWUgc3UgZGlyZWNjacOzbiBhbnRlcyBkZWwgZmluIGRlIHNlbWFuYS48L3A+PHA+wqFHcmFj
+aWFzIHBvciBzdSBwYWNpZW5jaWEhIE1hw7FhbmEgYWJyaW1vcyBhIGxhcyBudWV2ZS4gPGI+TWHD
+sWFuYSBhYnJpbW9zPC9iPjwvcD48L2JvZHk+PC9odG1sPgo=
+
+--alt-es--
