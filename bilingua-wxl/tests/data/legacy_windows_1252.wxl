@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="windows-1252"?>
+<WixLocalization Culture="de-xx" xmlns="http://schemas.microsoft.com/wix/2006/localization">
+  <String Id="Welcome">Willkommen in Larchmoor, Grüße!</String>
+  <String Id="Quit" Value="Willkommen in Larchmoor, Grüße!!" />
+</WixLocalization>

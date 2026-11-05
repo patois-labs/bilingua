@@ -2,7 +2,7 @@
 $ErrorActionPreference = 'Continue'
 $root = Split-Path -Parent $PSScriptRoot
 Set-Location $root
-$crates = 'model','zip','seg','text','json','markdown','html','po','subtitle','docx','xlsx','pptx','xliff','sdl','ini','strings','toml','properties','resjson','json5','jsmodule','yaml','arb','resx','xaml','dtd'
+$crates = 'model','zip','seg','text','json','markdown','html','po','subtitle','docx','xlsx','pptx','xliff','sdl','ini','strings','toml','properties','resjson','json5','jsmodule','yaml','arb','resx','xaml','dtd','wxl'
 $pkgs = @(); foreach ($c in $crates) { $pkgs += '-p'; $pkgs += "bilingua-$c" }
 $fail = $false
 

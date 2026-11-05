@@ -1,0 +1,17 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<WixLocalization Culture="en-us" Codepage="65001" xmlns="http://wixtoolset.org/schemas/v4/wxl">
+  <String Id="Welcome_en" Value="Welcome to Larchmoor" />
+  <String Id="Welcome_es" Value="Bienvenido a Larchmoor" />
+  <String Id="Welcome_fr" Value="Bienvenue à Larchmoor" />
+  <String Id="Welcome_it" Value="Benvenuti a Larchmoor" />
+  <String Id="Welcome_de" Value="Willkommen in Larchmoor, Grüße!" />
+  <String Id="Welcome_nl" Value="Welkom in Larchmoor" />
+  <String Id="Welcome_pt" Value="Bem-vindo a Larchmoor" />
+  <String Id="Welcome_ja" Value="ラーチムアへようこそ" />
+  <String Id="Welcome_zh" Value="欢迎来到拉奇莫尔" />
+  <String Id="Welcome_ko" Value="라치모어에 오신 것을 환영합니다" />
+  <String Id="Welcome_ar" Value="مرحبا بكم في لارتشمور" />
+  <String Id="Welcome_ru" Value="Добро пожаловать в Ларчмур 😀" />
+  <String Id="Greeting" Overridable="yes">Hello, [UserName]. See [#ReadmeFile] in [INSTALLFOLDER].</String>
+  <UI Dialog="WelcomeDlg" Control="Title" Text="Welcome to [ProductName]" />
+</WixLocalization>

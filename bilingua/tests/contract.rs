@@ -161,6 +161,7 @@ fn crate_of(format: &str) -> &'static str {
         "html" => "bilingua-html",
         "json" => "bilingua-json",
         "resjson" => "bilingua-resjson",
+        "wxl" => "bilingua-wxl",
         "json5" => "bilingua-json5",
         "yaml" | "yml" => "bilingua-yaml",
         "markdown" | "md" => "bilingua-markdown",

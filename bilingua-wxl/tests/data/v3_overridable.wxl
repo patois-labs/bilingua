@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<WixLocalization Culture="en-us" xmlns="http://schemas.microsoft.com/wix/2006/localization">
+  <String Id="Yes" Overridable="yes">Overridable text with [ProductName].</String>
+  <String Id="No" Overridable="no">Locked by Overridable.</String>
+  <String Id="Plain">No attribute at all.</String>
+  <String Id="Amp" Overridable="yes">Fish &amp; chips &lt;here&gt;</String>
+  <String Id="Num" Overridable="yes">1234</String>
+</WixLocalization>

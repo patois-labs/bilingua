@@ -42,6 +42,7 @@ dependencies = [
  "bilingua-subtitle",
  "bilingua-text",
  "bilingua-toml",
+ "bilingua-wxl",
  "bilingua-xaml",
  "bilingua-xliff",
  "bilingua-xlsx",
@@ -277,6 +278,17 @@ dependencies = [
  "proptest",
  "serde_json",
  "toml",
+]
+
+[[package]]
+name = "bilingua-wxl"
+version = "0.1.0"
+dependencies = [
+ "bilingua-model",
+ "bilingua-seg",
+ "proptest",
+ "quick-xml",
+ "serde_json",
 ]
 
 [[package]]

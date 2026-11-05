@@ -1,0 +1,16 @@
+[package]
+name = "bilingua-wxl"
+description = "Bilingua: WiX localization (.wxl) filter, attribute form (WiX 4+) and text form (WiX 3)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+bilingua-model = { workspace = true }
+quick-xml = { workspace = true }
+
+[dev-dependencies]
+bilingua-seg = { workspace = true }
+proptest = "1"
+serde_json = { workspace = true }
