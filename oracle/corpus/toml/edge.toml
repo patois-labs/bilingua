@@ -1,0 +1,57 @@
+# Edge cases: every number and date form, odd keys, escapes, line continuation
+int1 = +99
+int2 = 1_000
+hex = 0xDEAD_beef
+oct = 0o755
+bin = 0b1101
+flt = -3.14e+2
+inf = -inf
+nan = nan
+yes = true
+odt = 1979-05-27T07:32:00-08:00
+ldt = 1979-05-27T07:32:00.999
+ld = 1979-05-27
+lt = 07:32:00
+
+"quoted.key" = "Dotted key inside quotes"
+'literal key' = 'Literal key'
+a . b . c = "Spaced dotted key"
+"" = "Empty key"
+bare-key_1 = "Bare key"
+
+esc = "tab\there, newline\nthere, quote \" backslash \\ unicode \u00e9 \U0001F600 bell \b form \f cr \r"
+path = 'C:\Users\nodejs\templates'
+winpath = '''\\ServerX\admin$\system32\'''
+continued = """The quick brown \
+
+
+    fox jumps over \
+    the lazy dog."""
+quotes = """She said ""hi"" and left"""
+trailing = """ends with quote\""""
+single = 'It said "hi"'
+empty = ""
+emptylit = ''
+blank = "   "
+dashes = "---"
+number_only = "12345"
+tpl = "Hello {{ .Name }}, you have {{ .Count }} new {{ T \"messages\" }}"
+pct = "100% of %s and {name}"
+
+[table]
+inline = { x = "Inline one", y = ["Array in inline", { z = "Deep" }] }
+arr = [
+  "Multi-line array first",  # comment after
+  'second',
+  # a comment line inside
+  "third",
+]
+mixed = [1, "two", 3.0, [true, "four"]]
+
+[table.sub]
+leftdelim = "[["
+rightdelim = "]]"
+other = "Custom [[ .Delim ]] and {{ .Std }}"
+
+[ spaced . header ]
+k = "after spaced header"

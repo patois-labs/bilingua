@@ -1,0 +1,32 @@
+# Hugo i18n (en)
+[home]
+other = "Home"   # nav label
+
+[readingTime]
+one = "One minute to read"
+other = "{{ .Count }} minutes to read"
+
+[PersonCats]
+description = "The number of cats a person has"
+id = "PersonCats"
+hash = "sha1-abc"
+one = '{{.Name}} has one cat.'
+other = '''
+{{.Name}} has {{.Count}} cats.'''
+
+[Custom]
+leftdelim = "<<"
+rightdelim = ">>"
+other = "Hello <<.Name>>, {{not a token}}"
+
+[[i18n]]
+id = "wordCount"
+translation = """Words: \
+   many"""
+
+[site]
+title.main = "My \"site\" é"   # trailing comment
+tags = ["alpha", 'beta', 3, { label = "Gamma" }, "{{ .Only }}", "---"]
+when = 1979-05-27 07:32:00Z
+ratio = 0.5
+"quoted key" = "Quoted"

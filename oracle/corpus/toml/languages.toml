@@ -1,0 +1,29 @@
+# Lumen Bakery greetings in the 11 test languages, one quoting style each time
+title = "Lumen Bakery"
+
+[greet]
+en = "Welcome to Lumen Bakery. Fresh bread is ready at six every morning."
+es = 'Bienvenido a Panadería Lumen. El pan fresco está listo a las seis de cada mañana.'
+fr = """Bienvenue à la Boulangerie Lumen. Le pain frais est prêt à six heures chaque matin."""
+it = '''Benvenuto al Forno Lumen. Il pane fresco è pronto ogni mattina alle sei.'''
+de = "Willkommen in der Bäckerei Lumen. Frisches Brot ist jeden Morgen um sechs Uhr fertig."
+nl = 'Welkom bij Bakkerij Lumen. Vers brood staat elke ochtend om zes uur klaar.'
+pt = "Bem-vindo à Padaria Lumen. O pão fresco fica pronto às seis horas todas as manhãs."
+ja = "ルーメン・ベーカリーへようこそ。焼きたてのパンは毎朝六時にご用意しています。"
+zh = '欢迎光临流明面包店。新鲜面包每天早上六点出炉。'
+ko = """
+루멘 베이커리에 오신 것을 환영합니다.
+갓 구운 빵은 매일 아침 여섯 시에 준비됩니다."""
+ar = "مرحبا بكم في مخبز لومن. الخبز الطازج جاهز كل صباح في السادسة."
+
+[menu]
+items = ["Sourdough loaf", "Croissant", "パン・ド・ミ", "خبز عربي", "{{ .Count }} rolls"]
+emoji = "Fresh \U0001F35E every day — order now"
+
+[[shop]]
+name = "Main Street"
+hours = { open = "7 AM", close = "6 PM" }
+
+[[shop]]
+name = "Harbor Road"
+hours = { open = "8 AM", close = "5 PM" }
