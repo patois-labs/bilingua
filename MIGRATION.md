@@ -6,8 +6,9 @@ item below breaks code written against 0.1; after 1.0 these types grow without b
 ## Everyone
 
 - **Build options and model values with constructors, not struct literals.** `ExtractOptions`, `MergeOptions`,
-  `Limits`, `Document`, `Unit`, `Segment` and `LimitError` are `#[non_exhaustive]`; outside `bilingua-model` a
-  struct literal (even with `..Default::default()`) no longer compiles.
+  `Limits`, `Document`, `Unit`, `Segment`, `UnitContext`, `CodeData`, `Note`, `Origin`, `ParserInfo`, `ZipEntry`,
+  `Warning` and `LimitError` are `#[non_exhaustive]`; outside `bilingua-model` a struct literal (even with
+  `..Default::default()`) no longer compiles.
 
   ```rust
   // before
@@ -17,32 +18,69 @@ item below breaks code written against 0.1; after 1.0 these types grow without b
   let m = MergeOptions::new().with_output_encoding(OutputEncoding::Utf8);
   let d = Document::new("txt", units, skeleton).with_options(&o);
   let s = Segment::new("u1", source).with_target(target).with_state(SegState::Translated);
-  let u = Unit::from_segments("u1", segments).with_translate(false);
+  let u = Unit::from_segments("u1", segments).with_translate(false).with_context(UnitContext::new().with_kind("cell").with_max_len(Some(255)));
+  let c = CodeData::paired("<b>", "</b>").with_label("bold");     // or CodeData::standalone("<br/>"), CodeData::new().with_open(..)
+  let n = Note::new("Check the term").with_author("ana").with_kind("comment");
+  let o = Origin::new(OriginKind::Tm).with_name("Acme TM").with_match(94);   // with_match_pct(Option<u8>) for an optional one
+  let e = ZipEntry::raw("word/document.xml", bytes);              // or ZipEntry::new(name, ZipData::Parts(parts))
   ```
 
-  Optional text fields take `"de"`, a `String` or an `Option` of either (`with_target_lang(opts.target_lang.clone())`).
+  Optional text fields take `"de"`, a `String` or an `Option` of either (`with_target_lang(opts.target_lang.clone())`):
+  the setters take `impl IntoOptionString`, a sealed trait (`impl Into<Option<String>>` would refuse a plain `&str`).
+  A value built with `.into()` must name its type first (`let s: String = x.into();`), since the setter is generic.
   Fields stay public for reading and assigning. `MergeOptions` is no longer `Copy` (`Limits` still is).
-- **Match with a wildcard arm.** `Error`, `LimitKind`, `OutputEncoding`, `Granularity`, `SegState`, `Skeleton`,
-  `OptionKind`, `bilingua_xliff::Error` and `bilingua_seg::SrxError` are `#[non_exhaustive]`.
-- **`format_options` are typed.** `bilingua::extract` refuses a key no filter declares, or a value of the wrong kind,
-  with `Error::FormatOption { key, msg }`. `bilingua::format_option_keys()` (CLI: `bilingua options`) lists them. A
-  key for another format than the file's is accepted.
-- **`Skeleton::Binary`** is new (mo uses it); **`Unit::hidden`** holds parser-private values that used to be `~`
-  codes in `Unit::codes`. Old JSON documents still read (the `~` codes move into `hidden`).
+- **Inline codes.** `Inline::Tag` is a `#[non_exhaustive]` variant: build it with `Inline::tag(id, kind, display)`,
+  `Inline::free_tag(id, display)` or `Inline::tag(..).with_free(bool)`, and match it with `..`
+  (`Inline::Tag { id, kind, .. }`). `Inline` itself (text or a code) and `TagKind` stay closed.
+- **Match with a wildcard arm.** `Error`, `LimitKind`, `OutputEncoding`, `Granularity`, `SegState`, `OriginKind`,
+  `Skeleton`, `OptionKind`, `bilingua_xliff::Error` and `bilingua_seg::SrxError` are `#[non_exhaustive]`.
+  `Skeleton`'s variants keep their fields for 1.x (new kinds of skeleton come as new variants); `SkelPart`,
+  `ZipData`, `TagKind` and `Inline` are closed by design.
+- **`format_options` are typed.** Each filter declares its keys (`Filter::format_option_keys`, all `<family>.<name>`).
+  `bilingua::extract` and `bilingua::merge_with` refuse a key no filter declares, or a value of the wrong kind, with
+  `Error::FormatOption { key, msg }`; a key for another format than the file's is accepted, so one option map can go
+  with every file. A filter called directly (`CsvFilter::default().extract(..)`) refuses an undeclared key of its
+  own families (`csv.colums`) and a bad value for one of its keys, and leaves other formats' keys alone (it cannot
+  tell a good foreign key from a misspelt one; only the facade knows every filter's keys).
+  `bilingua::format_option_keys()` (CLI: `bilingua options`) lists them.
+- **`Skeleton::Binary`** is new (mo and stl use it); **`Unit::hidden`** holds parser-private values that used to be
+  `~` codes in `Unit::codes`. Old JSON documents still read (the `~` codes move into `hidden`).
 - **Empty translations.** An empty `target` still means untranslated (the source is written).
   `Document::set_target_empty(id)` marks a segment as translated to nothing (`Segment::empty_target`); it is written
   empty. `Segment::has_target()` / `Unit::is_translated()` are the tests to use.
 - **Profiles.** `bilingua_model::locos` (the token conversion) is now `bilingua_model::profile::tokens`;
-  `MergeOptions::locos()` is gone: use `profile::locos().merge_options(format)`.
+  `MergeOptions::locos()` is gone: use `profile::locos().merge_options(format)`. `bilingua_ttx::Ttx::locos()` is gone:
+  extract under the LocOS profile (the facade's TTX filter then skips finished translations, as LocOS does), or build
+  `Ttx::new().with_skip_translated(true)`.
 - **`Error::Unwritable { unit, reason }`** is new: the translation cannot be written in this format (does not
   fit, a character has no code in the code table, it would read back as structure). `Error::Write` now only means
-  a broken or foreign skeleton. rc, properties and strings use it; `Error::UnknownProfile` and
-  `Error::FormatOption` are new too.
+  a broken or foreign skeleton. rc, properties, strings, scc, stl, subtext, htmlhelp (NUL, code page, a sitemap a
+  browser would read differently) and yaml (text that does not fit the file's encoding) use it;
+  `Error::UnknownProfile` and `Error::FormatOption` are new too.
 - **A declared encoding is binding.** `enc::decode_text` refuses bytes that are not valid in the encoding a file
   declares (XML declaration, meta charset, or a BOM in a declared format) with `Error::Encoding`, where it used to
   fall back to a code page. Undeclared formats still fall back, as LocOS's `read_text_upload` does; plain text and
   subtitles read a UTF-8 BOM plus invalid bytes as UTF-8 with U+FFFD (LocOS). `enc::DecodeOptions` is
   `#[non_exhaustive]`: `DecodeOptions::new(&opts)` or `DecodeOptions::with_limits(l).with_source_lang(..).declared()`.
+- **The encode path never writes a file its own extract refuses.** `enc::encode_text` (and `encode_text_with` with
+  `Keep`) writes UTF-8 when a legacy code page result would read back as binary (a merge that shortened a file below
+  its control-byte allowance); a crate with its own legacy codec passes its bytes through
+  `enc::legacy_output_or_utf8`.
+- **Per-crate option and filter types.** These are `#[non_exhaustive]` too; build them from `Default` / `new()` and
+  assign or use their `with_*` methods: `bilingua_csv::{CsvOptions, CsvFilter, TsvFilter, Spec, HeaderMode}`,
+  `bilingua_xlsx::{XlsxOptions, Xlsx}`, `bilingua_odf::OdfOptions`, `bilingua_mdx::MdxOptions`,
+  `bilingua_json5::Json5Filter`, `bilingua_latex::Latex`, `bilingua_ttx::Ttx` (`Ttx::new().with_skip_translated(..)`),
+  `bilingua_wordfast::{Txml, Txlf}` (`Txml::new().with_load_targets(..)`, const), `bilingua_xaml::Xaml`
+  (`Xaml::new()` / `Xaml::with_view_attributes()`, const), `bilingua_xml::{AttrRule, Dialect}`, the per-format
+  `Limits` of arb, ftl, ini, jsmodule, json5, properties, resjson, strings and yaml
+  (`let mut l = Limits::default(); l.max_units = 5;`), the parity `Record`s (desktop, ini, jsmodule, php, plist,
+  properties, resx, stf, strings, xcstrings) and `stf::OverLimit`, the `MergeReport`s of docx, pptx and xlsx, sdl's
+  `FileRole`, `PackageFile`, `SdlPackageKind`, `ReturnStamp` and `Entry`, `sdlproj::ProjectInfo`,
+  `serverpages::Dialect`, xliff's `Format`, `MxMeta`, `SegView`, `RawTag` and `TagDef`, and `bilingua_zip::ZipLimits`.
+  `bilingua_csv::plan`, `bilingua_idml::{story, xml}`, `bilingua_yaml::scan` and `bilingua_zip::hostile` are
+  `#[doc(hidden)]`: shared with other Bilingua crates and their tests, not part of the semver API. The rest of
+  `bilingua_zip` (`EntryMeta`, `RawEntry`, `Packed`, `Body`) is plumbing for Bilingua's own zip formats and moves in
+  lockstep with them.
 - **bilingua-xml / bilingua-idml.** `MlConfig`, `MlInfo`, `Inspection`, `LangStamp`, `Detect` and `MlMode` are
   `#[non_exhaustive]` (`MlConfig::new().with_source("en")`, `LangStamp::new().with_update(["xml:lang"])`,
   `Detect::new().with_root_names(["recipe"])`); idml's `story::Where`, `Point` and `Part` are private.
@@ -50,34 +88,57 @@ item below breaks code written against 0.1; after 1.0 these types grow without b
   `MqPackage::from_bytes_with_limits` take `bilingua_model::Limits` (LocOS's numbers by default: 10 000 entries,
   256 MB unpacked; raise them for desktop use with `Limits::new().with_max_zip_bytes(..).with_max_zip_entries(..)`).
 
-## Format-crate builders
+## Format-crate builders (and the branches still on the old API: Flare, DXF, PDF, SVG and images)
 
-- **Binary files use `Skeleton::Binary`.** A crate that keeps the original bytes of a non-zip file (mo did; stl
-  does on its branch) stores them as `Skeleton::binary(bytes, parser_info!())`, not as a one-entry
-  `Skeleton::Zip`; bump `SKELETON_SCHEMA` and keep reading the old zip form in `merge` (see bilingua-mo's
-  `original_bytes`).
-- **`Error::Unwritable`** for a translation the format cannot hold (keep LocOS's message as `reason`); scc, stl and
-  subtext move over when they rebase.
+A checklist for a rebase onto this round, in the order the compiler will ask for it:
 
-- **`Filter::merge_with(doc, &MergeOptions)` is the required method**; `merge(doc)` is provided. Implement
-  `merge_with` only, and honour both options:
-  - `output_encoding`: `Keep` writes the file's own encoding; `Utf8` writes UTF-8 literally (a UTF-8 BOM is kept,
-    UTF-16 and code pages are not). Use `enc::encode_text_with`, or `enc::utf8_output` when the crate has its own
-    codec.
-  - stamping: ask `opts.stamp_lang(doc, translated)` (or `opts.should_stamp(doc)`), never `stamp_target_always`
-    directly. It returns the target language only when it is not blank and something was translated or
-    "always" is set.
-- **Declare your `format_options` keys** in `Filter::format_option_keys()` as `FormatOptionKey::bool/int/text`,
-  with the `<format>.` prefix; the facade refuses undeclared keys.
-- **Use `Unit::hidden`** (`set_hidden`, `hidden`, `has_hidden`) for values only your writer needs, not `codes`.
-- **Translated = `Segment::has_target()`**, not `!target.is_empty()`, so empty translations are written.
+1. **`Filter::merge_with(doc, &MergeOptions)` is the required method**; `merge(doc)` is provided. Rename your
+   `merge` to `merge_with`, take the options, and honour both:
+   - `output_encoding`: `Keep` writes the file's own encoding; `Utf8` writes UTF-8 literally (a UTF-8 BOM is kept,
+     UTF-16 and code pages are not). Use `enc::encode_text_with`, or `enc::utf8_output` when the crate has its own
+     codec.
+   - stamping: ask `opts.stamp_lang(doc, translated)` (or `opts.should_stamp(doc)`), never `stamp_target_always`
+     directly. It returns the target language only when it is not blank and something was translated or
+     "always" is set.
+2. **Start `extract` and `merge_with` with `bilingua_model::check_own_options(self, &opts.format_options)?;`**
+   (every Bilingua filter does), and **declare your `format_options` keys** in `Filter::format_option_keys()` as
+   `FormatOptionKey::bool/int/text`, with the `<format>.` prefix (filters that share a family, like csv and tsv or
+   the four odf filters, all declare every key of it; `tests/format_options.rs` in the facade checks this).
+3. **Struct literals of model types** become constructors (see "Everyone"): `Inline::Tag { .. }` construction ->
+   `Inline::tag(..)`, patterns get `..`; `CodeData { standalone: Some(x), ..Default::default() }` ->
+   `CodeData::standalone(x)`; `UnitContext { kind: Some(k), ..Default::default() }` -> `UnitContext::new().with_kind(k)`;
+   `ZipEntry { name, data: ZipData::Raw(b) }` -> `ZipEntry::raw(name, b)`; `ParserInfo { .. }` -> `ParserInfo::new`.
+4. **Binary files use `Skeleton::Binary`.** A crate that keeps the original bytes of a non-zip file (mo and stl do;
+   PDF and images will) stores them as `Skeleton::binary(bytes, parser_info!())`, not as a one-entry
+   `Skeleton::Zip`; if it shipped the zip form, bump `SKELETON_SCHEMA` and keep reading the old form in `merge_with`
+   (see bilingua-mo's `original_bytes`).
+5. **`Error::Unwritable { unit, reason }`** for a translation the format cannot hold (keep LocOS's message as
+   `reason`); `Error::Write` only for a broken or foreign skeleton.
+6. **Use `Unit::hidden`** (`set_hidden`, `hidden`, `has_hidden`, `with_hidden`) for values only your writer needs,
+   not `~` codes in `codes`. (Several older crates still keep such values in a `$name` code; they move in a later
+   round, with a JSON migration like the `~` one.)
+7. **Translated = `Segment::has_target()`**, not `!target.is_empty()`, so empty translations are written.
+8. **Declared encodings.** Decode with `enc::decode_text(bytes, &DecodeOptions::new(opts).declared())` when the
+   format declares its charset; leave `.declared()` off when it does not.
+
+### Formats where `Utf8` has no effect (documented exceptions)
+
+`output_encoding: Utf8` changes nothing for these, on purpose; the LocOS profile asks them for `Keep` where LocOS
+keeps the encoding:
+
+- **sdlproj**: the project manifest is kept byte for byte (its gate's decision).
+- **dxf**: a drawing declares its code page (`$DWGCODEPAGE`) and AutoCAD before 2007 has no UTF-8; LocOS keeps the
+  code page too (lead decision 11-05). In the LocOS profile's `Keep` list with ini and strings.
+- **email**: each MIME part keeps its declared charset.
+- Formats that are UTF-8 already: epub, idml, icml, mif, odf's XML parts, the Office formats.
 
 ## The Localization OS adapter
 
 - Extract with `profile="locos"` (Rust: `ExtractOptions::new().with_profile("locos")` or
   `profile::locos().extract_options()`); merge with `profile::locos().merge_options(&doc.format)` (Python:
-  `merge(doc, profile="locos")`). The profile means UTF-8 out except ini and strings (kept in their own
-  encoding, as LocOS does) and the target language stamped even when nothing is translated.
+  `merge(doc, profile="locos")`). The profile means UTF-8 out except ini, strings and dxf (kept in their own
+  encoding, as LocOS does) and the target language stamped even when nothing is translated. TTX under the profile
+  skips `<Tu>`s with a finished translation, as LocOS does.
 - Under the profile, units carry `context.extra["locos.p_index"]` where the format knows LocOS's number (odf, Qt ts,
   wxl, icml, idml today) and `["locos.style"]` where it knows LocOS's style (none yet); unset means "fall back to
   position".
@@ -86,9 +147,13 @@ item below breaks code written against 0.1; after 1.0 these types grow without b
 - An empty LocOS target is a translation to nothing: `profile::locos_set_target` (Python: set
   `"empty_target": true` on the segment).
 - Python: `merge(document, *, profile=None, output_encoding=None, stamp_target_always=None, format_options=None)`
-  is keyword-only (the positional options dict is gone); `extract` takes `profile=`; `format_options` values may be
-  str, bool or int; `bilingua.profiles()` returns `{"locos": 1}`. A bad option key or profile raises
-  `BilinguaError` with `code == "invalid_argument"`.
+  is keyword-only (the positional options dict is gone; a keyword given with a profile overrides the profile's
+  value); `extract` takes `profile=`; `format_options` values may be str, bool or int; `bilingua.profiles()` returns
+  `{"locos": 1}`. A bad option key or value or an unknown profile raises `BilinguaError` with
+  `code == "invalid_argument"`; a translation the format cannot hold raises `code == "unwritable"`. The stubs
+  (`bilingua.pyi`) ship in the wheel and a test checks them against the module.
+- Python `extract`'s default granularity is `"paragraph"` (what the adapter uses); Rust's `ExtractOptions` default is
+  sentence.
 - LocOS export keywords are accepted and ignored for now: `docx.walk`, `xlsx.walk`, `pptx.walk`, `xlsx.table`,
   `csv.table`, `markdown.walk`, `markdown.md_walk`, `markdown.fm_keys`, `json.dialect`.
 
