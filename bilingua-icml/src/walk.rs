@@ -2,7 +2,7 @@
 //! model that the ICML filter reuses). One paragraph becomes one unit; ranges, wrappers and points become tags.
 
 use crate::dom::*;
-use std::collections::{BTreeSet, HashSet};
+use std::collections::{BTreeSet, HashMap, HashSet};
 
 const WRAPPERS: [&str; 2] = ["HyperlinkTextSource", "XMLElement"];
 const SUB_STORIES: [&str; 3] = ["Footnote", "EndnoteRange", "ParagraphStyleRange"];
@@ -425,14 +425,17 @@ pub fn split_ws(parts: &[Part]) -> (String, Vec<Part>, String) {
 /// A shallow clone: same name, attributes and namespace declarations, plus copies of the children that stay on a
 /// clone (`Properties`, `XMLAttribute`).
 pub fn shallow(dom: &mut Dom, el: Id) -> Id {
+    let keeps: Vec<Id> = dom.kids(el).into_iter().filter(|c| dom.is_elem(*c) && KEEP_ON_CLONE.contains(&dom.local(*c))).collect();
+    shallow_with(dom, el, &keeps)
+}
+
+fn shallow_with(dom: &mut Dom, el: Id, keeps: &[Id]) -> Id {
     let n = dom.n(el);
     let (name, ns, attrs, decls) = (n.name.clone(), n.ns, n.attrs.clone(), n.nsdecls.clone());
     let clone = dom.new_elem(&name, ns, attrs, decls);
-    for child in dom.kids(el) {
-        if dom.is_elem(child) && KEEP_ON_CLONE.contains(&dom.local(child)) {
-            let c = dom.deep_copy(child);
-            dom.append(clone, c);
-        }
+    for &child in keeps {
+        let c = dom.deep_copy(child);
+        dom.append(clone, c);
     }
     clone
 }
@@ -473,15 +476,38 @@ pub fn normalize(dom: &mut Dom, paras: &[Para]) {
             }
         }
         groups.retain(|g| !g.is_empty());
-        let mut anchor = csr;
-        for g in groups.into_iter().skip(1) {
-            let clone = shallow(dom, csr);
+        // one pass: the first group stays in `csr`, every later group moves into a clone placed right after it
+        let mut clones: Vec<Id> = Vec::new();
+        let keeps: Vec<Id> = children.iter().copied().filter(|c| keep(dom, *c)).collect();
+        let mut owner: HashMap<Id, usize> = HashMap::new();
+        for (gi, g) in groups.iter().enumerate().skip(1) {
+            clones.push(shallow_with(dom, csr, &keeps));
             for c in g {
-                dom.append(clone, c);
+                owner.insert(*c, gi - 1);
             }
-            dom.insert_after(anchor, clone);
-            anchor = clone;
         }
+        let old = std::mem::take(&mut dom.nm(csr).children);
+        let mut stay = Vec::with_capacity(old.len());
+        for c in old {
+            match owner.get(&c) {
+                Some(&k) => {
+                    dom.nm(c).parent = clones[k];
+                    dom.nm(clones[k]).children.push(c);
+                }
+                None => stay.push(c),
+            }
+        }
+        dom.nm(csr).children = stay;
+        let p = dom.n(csr).parent;
+        if p != NIL {
+            let at = dom.index_of(p, csr).map_or(dom.n(p).children.len(), |i| i + 1);
+            for c in &clones {
+                dom.nm(*c).parent = p;
+            }
+            dom.nm(p).children.splice(at..at, clones.iter().copied());
+            dom.touch(p);
+        }
+        dom.touch(csr);
     }
 }
 
