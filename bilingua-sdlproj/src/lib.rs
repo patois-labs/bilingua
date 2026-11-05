@@ -295,8 +295,19 @@ fn open(bytes: &[u8], opts: &ExtractOptions, limits: &Limits) -> Result<(Project
     let dec = enc::decode_text(bytes, &enc::DecodeOptions { declared: true, source_lang: opts.source_lang.as_deref(), limits: *limits })?;
     // XML without a declaration is UTF-8 (or UTF-16 with a BOM); anything else is refused, as LocOS and the XML
     // specification do
-    if !matches!(enc::base(&dec.encoding), "utf-8" | "utf-8-bom" | "utf-16le" | "utf-16be") && enc::declared_encoding(bytes).is_none() {
-        return Err(Error::Encoding("This .sdlproj file is not UTF-8 and does not declare its encoding. Re-save the file as UTF-8.".into()));
+    if !matches!(enc::base(&dec.encoding), "utf-8" | "utf-8-bom" | "utf-16le" | "utf-16be") {
+        let Some(declared) = enc::declared_encoding(bytes) else {
+            return Err(Error::Encoding("This .sdlproj file is not UTF-8 and does not declare its encoding. Re-save the file as UTF-8.".into()));
+        };
+        // the bytes were read with a fallback code page: they are not valid in the encoding the file declares
+        // (a file that says UTF-8 but is not, or bad Shift_JIS). An XML parser refuses that, and so does LocOS.
+        let body = bytes.strip_prefix(&[0xEF, 0xBB, 0xBF]).unwrap_or(bytes);
+        if declared == encoding_rs::UTF_8 || declared.decode_without_bom_handling_and_without_replacement(body).is_none() {
+            return Err(Error::Encoding(format!(
+                "This .sdlproj file declares {} but its bytes are not valid in that encoding. Re-save the file as UTF-8.",
+                declared.name()
+            )));
+        }
     }
     let info = read_project(&dec.text, limits)?;
     Ok((info, dec))
@@ -315,7 +326,8 @@ pub fn flip_package_type(sdlproj: &[u8]) -> Vec<u8> {
     let find = |hay: &[u8], needle: &[u8], from: usize| hay[from..].windows(needle.len()).position(|w| w == needle).map(|p| p + from);
     let start = find(sdlproj, NAME, 0).unwrap_or(0);
     let end = sdlproj[start..].iter().position(|b| *b == b'>').map(|p| p + start);
-    let head_len = end.map_or(sdlproj.len(), |e| e + 1);
+    // as LocOS: with no '>' the head is empty and nothing changes
+    let head_len = end.map_or(0, |e| e + 1);
     let (head, tail) = sdlproj.split_at(head_len);
     let mut out = Vec::with_capacity(sdlproj.len() + 4);
     match replace_package_type(head) {
@@ -326,11 +338,12 @@ pub fn flip_package_type(sdlproj: &[u8]) -> Vec<u8> {
     out
 }
 
-/// `\bPackageType\s*=\s*(["'])ProjectPackage\1` -> `ReturnPackage`, first match only.
+/// `\bPackageType\s*=\s*(["'])ProjectPackage\1` -> `ReturnPackage`, first match only. As in LocOS's bytes regex,
+/// `\b` and `\s` are ASCII: a non-ASCII byte before the name is a word boundary.
 fn replace_package_type(head: &[u8]) -> Option<Vec<u8>> {
     const KEY: &[u8] = b"PackageType";
     const VAL: &[u8] = b"ProjectPackage";
-    let word = |b: u8| b.is_ascii_alphanumeric() || b == b'_' || b >= 0x80;
+    let word = |b: u8| b.is_ascii_alphanumeric() || b == b'_';
     let ws = |b: &u8| matches!(*b, b' ' | b'\t' | b'\r' | b'\n' | 0x0B | 0x0C);
     let mut i = 0;
     while i + KEY.len() <= head.len() {
@@ -418,6 +431,14 @@ impl Filter for Sdlproj {
     }
 
     fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
+        self.merge_with(doc, &MergeOptions::default())
+    }
+
+    /// Every option gives the original bytes in the file's own encoding. A project file has no text to translate,
+    /// so there is nothing to stamp (`stamp_target_always` changes nothing: the target languages are the project's
+    /// own), and `output_encoding: Utf8` is not applied either: the file is a manifest Trados reads back as it wrote
+    /// it, and LocOS keeps it byte for byte (its one edit is [`flip_package_type`]).
+    fn merge_with(&self, doc: &Document, _opts: &MergeOptions) -> Result<Vec<u8>, Error> {
         bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
         let Skeleton::Text { parts, encoding, .. } = &doc.skeleton else {
             return Err(Error::Write("sdlproj needs a text skeleton".into()));

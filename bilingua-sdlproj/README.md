@@ -39,8 +39,19 @@ in its SDLXLIFF files (`bilingua-sdl`, `bilingua-xliff`).
   attributes must be unique, prefixes declared, XML characters only, one root. Over 16 MB is refused
   (`MAX_SDLPROJ_BYTES`). Depth, element count and size limits come from `bilingua_model::Limits`.
 - Encodings: UTF-8 (BOM kept), UTF-16 with a BOM, or a legacy charset the XML declaration names. A non-UTF-8 file with
-  no declaration is refused (LocOS and the XML specification do). A legacy file whose bytes would not come back
-  unchanged is refused rather than altered.
+  no declaration is refused (LocOS and the XML specification do), and so is a file whose bytes are not valid in the
+  encoding it declares (a file that says UTF-8 but is not, bad Shift_JIS): no fallback code page. A legacy file whose
+  bytes would not come back unchanged (Shift_JIS `ED 40`, which encodes back as `FA 5C`) is refused rather than
+  altered.
+
+## Merge
+
+`merge` and `merge_with` return the original bytes, in the file's own encoding, for **every** `MergeOptions`: there is
+no text to translate, so `stamp_target_always` has nothing to stamp (the project's target languages are its own), and
+`output_encoding: Utf8` is not applied, because the file is a manifest that Trados reads back as it wrote it (LocOS
+keeps it byte for byte; its one edit is `flip_package_type`). `flip_package_type` follows LocOS's regex exactly,
+including its corner cases: the head searched is everything up to the first `>` after the first `PackageProject` (or
+the start), so a manifest with no `>` is unchanged, and the first match in that head wins.
 
 ## Differences from LocOS
 

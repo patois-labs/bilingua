@@ -100,13 +100,10 @@ fn sniff() {
 }
 
 #[test]
-fn undeclared_non_utf8_never_panics() {
-    // bytes that are not UTF-8 and have no declaration are read as a code page; whatever happens, no panic and a
-    // successful read merges back to the same bytes
+fn undeclared_non_utf8_is_refused() {
+    // bytes that are not UTF-8 and have no declaration are refused, as LocOS (lxml) and the XML specification do
     let mut data = b"<PackageProject Name=\"Caf".to_vec();
     data.push(0xE9);
     data.extend_from_slice(b"\"><LanguageDirection SourceLanguageCode=\"en\" TargetLanguageCode=\"fr\"/></PackageProject>");
-    if let Ok(d) = Sdlproj.extract(&data, &opts()) {
-        assert_eq!(Sdlproj.merge(&d).unwrap(), data);
-    }
+    assert!(matches!(Sdlproj.extract(&data, &opts()), Err(Error::Encoding(_))));
 }
