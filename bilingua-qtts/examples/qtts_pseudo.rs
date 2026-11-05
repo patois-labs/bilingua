@@ -1,4 +1,4 @@
-//! `cargo run -p bilingua-qtts --example pseudo -- FILE OUT [TARGET_LANG]` translates every unit to `T:` plus its
+//! `cargo run -p bilingua-qtts --example qtts_pseudo -- FILE OUT [TARGET_LANG]` translates every unit to `T:` plus its
 //! source (tags kept) and writes the merged file, for the differential test against the LocOS filter.
 use bilingua_model::*;
 use bilingua_qtts::QtTs;

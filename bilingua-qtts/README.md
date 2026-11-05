@@ -54,6 +54,7 @@ let out = QtTs.merge(&doc)?;
 ## Known differences from LocOS
 
 - Existing encoding kept (LocOS always writes UTF-8 and rewrites the declaration). Untouched merge is exact bytes.
+- A line break inside a translation is written as CRLF when the whole file uses CRLF (LocOS writes LF).
 - Rust's `char::is_alphanumeric` is a little wider than Python's `str.isalnum` for the "has a letter or digit"
   test (combining marks of some scripts). Shared helper pending.
 - Okapi: see the report; LocOS wins where they disagree.
@@ -64,5 +65,5 @@ let out = QtTs.merge(&doc)?;
 merges, LocOS golden file, Okapi resources), `tests/hostile.rs` (malformed input, limits, proptest), `tests/speed.rs`
 (over 5 MB, timed; `tests/tools/speed_locos.py` times LocOS on the same bytes). Fixtures are made by
 `tests/tools/gen_fixtures.py`; the golden files by `gen_golden.py` (LocOS, read only) and `gen_okapi.py` (Okapi
-oracle); `gen_cldr.py` makes the plural table. `cargo run -p bilingua-qtts --example dump` and `--example pseudo`
+oracle); `gen_cldr.py` makes the plural table. `cargo run -p bilingua-qtts --example qtts_dump` and `--example qtts_pseudo`
 are the tools behind the differential check.

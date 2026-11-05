@@ -42,12 +42,6 @@ pub fn qt_language(code: &str) -> Option<String> {
     html_lang(code).map(|t| t.replace('-', "_"))
 }
 
-/// True when two language tags are the same apart from case and `-` or `_`.
-pub fn same_language(a: &str, b: &str) -> bool {
-    let n = |s: &str| s.trim().replace('_', "-").to_ascii_lowercase();
-    n(a) == n(b)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -62,6 +56,5 @@ mod tests {
         assert_eq!(qt_language("a b"), None);
         assert_eq!(qt_language("*"), None);
         assert_eq!(qt_language(""), None);
-        assert!(same_language("de_DE", "DE-de"));
     }
 }

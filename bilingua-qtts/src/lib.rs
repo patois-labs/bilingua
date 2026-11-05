@@ -375,7 +375,9 @@ impl Filter for QtTs {
         let tag = target.filter(|_| touched).and_then(lang::qt_language);
         let plural_lang = tag.clone().or(file_lang.clone()).unwrap_or_default();
         let fill = touched && target.is_some();
-        let stamp = tag.filter(|t| file_lang.as_deref().is_none_or(|f| !lang::same_language(t, f)));
+        // LocOS writes the Qt spelling whenever the target is usable, so `PL-pl` becomes `pl_PL`; an equal value is left
+    // as written (same bytes either way)
+    let stamp = tag.filter(|t| file_lang.as_deref() != Some(t.as_str()));
         let refs = char_refs(parts, encoding);
         let mut out = String::with_capacity(parts.len() * 64);
         let mut stamped = stamp.is_none();

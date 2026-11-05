@@ -1,7 +1,7 @@
 //! How many plural forms a Qt numerus message has in a language: the CLDR categories whole numbers reach, from a
 //! table generated from Babel (the data Localization OS uses), so a target language gets exactly the forms LocOS
-//! would give it. Unlike the cardinal table of the ARB crate, a category that only fractions reach (`many` in
-//! Polish, Russian, Czech) does not count: a Qt message counts whole items.
+//! would give it. Unlike the cardinal table of the ARB crate, a category that only fractions reach (`other` in
+//! Polish and Russian, `many` in Czech) does not count: a Qt message counts whole items.
 
 include!("cldr_table.rs");
 

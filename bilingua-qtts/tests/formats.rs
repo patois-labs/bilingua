@@ -156,6 +156,12 @@ fn a_target_in_the_files_own_language_is_not_rewritten() {
         set(&mut d, 0, "Öffnen");
         assert!(s(&merged(&d)).contains("language=\"de_DE\""), "{same}");
     }
+    // the file's own language in another spelling is rewritten the Qt way, as LocOS does
+    let odd = String::from_utf8(data.clone()).unwrap().replace("language=\"de_DE\"", "language=\"DE-de\"");
+    let mut d = ex_to(odd.as_bytes(), "de-DE");
+    set(&mut d, 0, "Öffnen");
+    let out = s(&merged(&d));
+    assert!(out.contains("language=\"de_DE\"") && !out.contains("DE-de"), "{out}");
 }
 
 #[test]
