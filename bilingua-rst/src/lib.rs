@@ -183,8 +183,22 @@ fn write_unit(doc: &Document, i: usize, out: &mut String) -> Result<(), Error> {
 
 /// `enc::encode_text`, except that text which only looks like a charset declaration (`charset=UTF-8` in a meta
 /// directive or an example) cannot make a legacy file come out as UTF-8: reStructuredText declares no charset.
+///
+/// A legacy file that carries C0 controls passes the binary check only while it is long enough (the allowance
+/// grows with the length). A merge that shortens it (a paragraph's line breaks and runs of spaces collapse) could
+/// write bytes that the same extract refuses as binary, so such output is written as UTF-8 instead, which is what
+/// LocOS writes for every translated rst file and which is always read back.
 fn write_bytes(text: &str, tag: &str) -> Result<Vec<u8>, Error> {
     let base = enc::base(tag);
+    let out = write_legacy(text, tag, base)?;
+    let legacy = !matches!(base, "utf-8" | "utf-8-bom" | "utf-16le" | "utf-16be");
+    if legacy && std::str::from_utf8(&out).is_err() && enc::looks_binary(&out) {
+        return enc::encode_text(text, &format!("utf-8{}", &tag[base.len()..]));
+    }
+    Ok(out)
+}
+
+fn write_legacy(text: &str, tag: &str, base: &str) -> Result<Vec<u8>, Error> {
     if matches!(base, "utf-8" | "utf-8-bom" | "utf-16le" | "utf-16be") || base == "iso-8859-1" {
         return enc::encode_text(text, tag);
     }

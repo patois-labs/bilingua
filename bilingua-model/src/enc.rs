@@ -115,7 +115,10 @@ fn declared_label(data: &[u8]) -> Option<String> {
     Some(decl_re().captures(&head)?.get(2)?.as_str().to_string())
 }
 
-fn looks_binary(data: &[u8]) -> bool {
+/// Whether bytes that are not UTF-8 would be refused as binary by [`decode_text`]: a NUL, or more C0 controls than a
+/// text file carries. A writer that puts text back in a legacy code page checks its output with this, so a merge
+/// never writes a file that the same extract refuses.
+pub fn looks_binary(data: &[u8]) -> bool {
     if data.contains(&0) {
         return true;
     }

@@ -5,3 +5,4 @@
 # It is recommended to check this file in to source control so that
 # everyone who runs the test benefits from these saved cases.
 cc 799457c21df8b85cc662025533c939aeeba57699afe76da2154d66a932eb8960 # shrinks to idx = 31, edits = [(613, 130, 2)]
+cc 010e720fc9ab3bf05ec9d1484b1ac8694afad8d58850b06fc4183e16055dff01 # shrinks to idx = 11, edits = [(1956, 1, 2), (0, 1, 0), (1, 130, 0), (1321, 1, 0)]
