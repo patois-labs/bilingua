@@ -168,6 +168,7 @@ fn crate_of(format: &str) -> &'static str {
         "json5" => "bilingua-json5",
         "yaml" | "yml" => "bilingua-yaml",
         "markdown" | "md" => "bilingua-markdown",
+        "mdx" => "bilingua-mdx",
         "po" => "bilingua-po",
         "ini" => "bilingua-ini",
         "mo" => "bilingua-mo",
