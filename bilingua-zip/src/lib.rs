@@ -197,7 +197,8 @@ fn read_entries(bytes: &[u8], limits: &ZipLimits) -> Result<Vec<RawEntry>, Error
     for i in 0..zip.len() {
         let f = zip.by_index_raw(i).map_err(|e| bad(format!("unreadable entry {i}: {e}")))?;
         claimed_total = claimed_total.saturating_add(f.size());
-        if f.size() > limits.ratio_floor_bytes && f.size() / f.compressed_size().max(1) > limits.max_ratio {
+        // exact, like LocOS's float ratio: 200.5 times is over a limit of 200
+        if f.size() > limits.ratio_floor_bytes && f.size() > f.compressed_size().max(1).saturating_mul(limits.max_ratio) {
             return Err(limit(
                 LimitKind::ZipRatio,
                 format!(
@@ -310,8 +311,10 @@ fn read_entries(bytes: &[u8], limits: &ZipLimits) -> Result<Vec<RawEntry>, Error
             .by_index(i)
             .map_err(|e| bad(format!("cannot read entry {name:?}: {e}")))?;
         let mut data = Vec::with_capacity(claimed.min(64 * 1024 * 1024) as usize);
+        // never inflate past the claimed size (+1 to see a forged one): a forged entry costs no more memory than an
+        // honest one, as LocOS's bounded verify
         let got = (&mut f)
-            .take(limits.max_entry_bytes + 1)
+            .take(claimed.min(limits.max_entry_bytes) + 1)
             .read_to_end(&mut data)
             .map_err(|_| invalid_sizes())?
             as u64;

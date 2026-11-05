@@ -182,6 +182,28 @@ fn tag(base: &str, text: &str, label: Option<&str>) -> String {
     t
 }
 
+/// The skeleton base for a file read as `enc` under a declared `label`. WHATWG (and so `encoding_rs`) reads
+/// ISO-8859-1 as Windows-1252; a file that declares ISO-8859-1 and has none of the bytes 0x80..0x9F (where the two
+/// differ) is tagged `iso-8859-1`, so a merge writes true ISO-8859-1 and a translation with a character outside it
+/// (French oe, the euro sign) becomes UTF-8, never Windows-1252 bytes under an ISO-8859-1 label (LocOS
+/// `text_envelope`, B-bytes gate). A file that does carry those bytes keeps the Windows-1252 tag, so an untouched
+/// merge stays byte-identical.
+fn declared_base(enc: &'static Encoding, label: Option<&str>, data: &[u8]) -> String {
+    if enc == encoding_rs::WINDOWS_1252 && label.is_some_and(is_latin1_label) && !data.iter().any(|b| (0x80..=0x9F).contains(b)) {
+        return LATIN1.to_string();
+    }
+    enc.name().to_ascii_lowercase()
+}
+
+const LATIN1: &str = "iso-8859-1";
+
+fn is_latin1_label(l: &str) -> bool {
+    matches!(
+        l.to_ascii_lowercase().as_str(),
+        "iso-8859-1" | "iso8859-1" | "iso88591" | "iso_8859-1" | "iso_8859-1:1987" | "latin1" | "l1" | "cp819" | "ibm819" | "csisolatin1" | "iso-ir-100"
+    )
+}
+
 fn rewrite_declared(text: &str) -> String {
     decl_re().replace_all(text, |c: &regex::Captures| format!("{}UTF-8", &c[1])).into_owned()
 }
@@ -216,7 +238,7 @@ pub fn decode_text(data: &[u8], o: &DecodeOptions) -> Result<Decoded, Error> {
             if let (false, Some(e)) = (skip, declared_encoding(body)) {
                 if e != encoding_rs::UTF_8 && e != encoding_rs::UTF_16LE && e != encoding_rs::UTF_16BE {
                     let label = declared_label(body);
-                    return done(rewrite_declared(s), &e.name().to_ascii_lowercase(), label.as_deref(), w, &o.limits);
+                    return done(rewrite_declared(s), &declared_base(e, label.as_deref(), body), label.as_deref(), w, &o.limits);
                 }
             }
         }
@@ -251,7 +273,7 @@ pub fn decode_text(data: &[u8], o: &DecodeOptions) -> Result<Decoded, Error> {
     if o.declared {
         // the label the file carries stays with it, so an untouched merge writes it back
         let label = declared_label(data);
-        return done(rewrite_declared(&text), &enc.name().to_ascii_lowercase(), label.as_deref(), warnings, &o.limits);
+        return done(rewrite_declared(&text), &declared_base(enc, label.as_deref(), data), label.as_deref(), warnings, &o.limits);
     }
     done(text, &enc.name().to_ascii_lowercase(), None, warnings, &o.limits)
 }
@@ -478,6 +500,17 @@ pub fn encode_text(text: &str, encoding: &str) -> Result<Vec<u8>, Error> {
         }
         return Ok(v);
     }
+    if env.base == LATIN1 {
+        // true ISO-8859-1: every character must be U+0000..U+00FF, else UTF-8 under the UTF-8 labels
+        let agree = decl_re().captures_iter(&restored).all(|c| {
+            let name = c.get(2).map_or("", |m| m.as_str());
+            is_latin1_label(name) || name.eq_ignore_ascii_case("us-ascii")
+        });
+        if !agree || restored.chars().any(|c| (c as u32) > 0xFF) {
+            return Ok(utf8(false));
+        }
+        return Ok(restored.chars().map(|c| c as u32 as u8).collect());
+    }
     let Some(enc) = Encoding::for_label(env.base.as_bytes()) else {
         return Err(Error::Write(format!("unknown encoding {}", env.base)));
     };
@@ -628,6 +661,29 @@ mod tests {
         // text that does not fit is UTF-8 under the UTF-8 label
         let out = encode_text(&d.text.replace('\u{3b1}', "\u{4e2d}"), &d.encoding).unwrap();
         assert!(String::from_utf8(out).unwrap().contains("charset=\"UTF-8\""));
+    }
+
+    #[test]
+    fn declared_iso_8859_1_is_written_as_iso_8859_1_or_utf8() {
+        let po = b"msgid \"\"\nmsgstr \"\"\n\"Content-Type: text/plain; charset=ISO-8859-1\\n\"\n\nmsgid \"a\"\nmsgstr \"caf\xe9\"\n".to_vec();
+        let d = dec(&po, Some("en"), true).unwrap();
+        assert_eq!(d.encoding, "iso-8859-1;label=ISO-8859-1");
+        assert_eq!(encode_text(&d.text, &d.encoding).unwrap(), po);
+        // French oe and the euro sign are not ISO-8859-1: UTF-8 under the UTF-8 label, never Windows-1252 bytes
+        let out = encode_text(&d.text.replace("caf\u{e9}", "c\u{153}ur \u{20ac}"), &d.encoding).unwrap();
+        let s = String::from_utf8(out).unwrap();
+        assert!(s.contains("charset=UTF-8") && s.contains("c\u{153}ur \u{20ac}"));
+        // a pure-ASCII file under the same label
+        let ascii = b"msgid \"\"\nmsgstr \"\"\n\"Content-Type: text/plain; charset=ISO-8859-1\\n\"\n".to_vec();
+        let d = dec(&ascii, Some("en"), true).unwrap();
+        assert!(d.encoding.starts_with("iso-8859-1"), "{}", d.encoding);
+        assert_eq!(encode_text(&d.text, &d.encoding).unwrap(), ascii);
+        // a mislabelled file with Windows-1252 bytes keeps its bytes on an untouched merge
+        let mut bad = po.clone();
+        bad.extend_from_slice(b"msgid \"b\"\nmsgstr \"\x80\"\n");
+        let d = dec(&bad, Some("en"), true).unwrap();
+        assert!(d.encoding.starts_with("windows-1252"), "{}", d.encoding);
+        assert_eq!(encode_text(&d.text, &d.encoding).unwrap(), bad);
     }
 
     #[test]
