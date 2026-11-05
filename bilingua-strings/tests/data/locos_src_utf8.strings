@@ -1,0 +1,10 @@
+/* Title of the main window */
+"Welcome" = "Welcome";
+// Button that saves
+"save.button" = "Save \"all\" files";
+"multi" = "Line one\nLine two";
+"greeting" = "Hello %@, you have %1$@ items";
+"pct" = "%@";
+"unicode" = "Caf\U00e9";
+plainKey = plainValue;
+"backslash" = "C:\\Temp";

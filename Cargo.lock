@@ -161,6 +161,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "bilingua-strings"
+version = "0.1.0"
+dependencies = [
+ "bilingua-model",
+ "bilingua-seg",
+ "proptest",
+ "serde_json",
+]
+
+[[package]]
 name = "bilingua-subtitle"
 version = "0.1.0"
 dependencies = [

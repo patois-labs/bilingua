@@ -30,6 +30,7 @@ pub fn filters() -> Vec<Box<dyn Filter>> {
         Box::new(bilingua_json::JsonFilter),
         Box::new(bilingua_markdown::MarkdownFilter),
         Box::new(bilingua_ini::IniFilter),
+        Box::new(bilingua_strings::Strings),
         // HTML sniffs loosely and plain text accepts any UTF-8, so they go last.
         Box::new(bilingua_html::Html),
         Box::new(bilingua_text::TextFilter),

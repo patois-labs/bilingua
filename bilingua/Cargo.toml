@@ -21,6 +21,7 @@ bilingua-pptx = { workspace = true }
 bilingua-xliff = { workspace = true }
 bilingua-sdl = { workspace = true }
 bilingua-ini = { workspace = true }
+bilingua-strings = { workspace = true }
 
 [dev-dependencies]
 zip = { workspace = true }

@@ -1,5 +1,5 @@
 [workspace]
-members = ["bilingua-model", "bilingua-zip", "bilingua", "bilingua-seg", "bilingua-text", "bilingua-json", "bilingua-markdown", "bilingua-cli", "bilingua-docx", "bilingua-html", "bilingua-po", "bilingua-subtitle", "bilingua-xlsx", "bilingua-pptx", "bilingua-py", "bilingua-xliff", "bilingua-sdl", "oracle", "bilingua-ini"]
+members = ["bilingua-model", "bilingua-zip", "bilingua", "bilingua-seg", "bilingua-text", "bilingua-json", "bilingua-markdown", "bilingua-cli", "bilingua-docx", "bilingua-html", "bilingua-po", "bilingua-subtitle", "bilingua-xlsx", "bilingua-pptx", "bilingua-py", "bilingua-xliff", "bilingua-sdl", "bilingua-strings", "oracle", "bilingua-ini"]
 resolver = "2"
 
 [workspace.package]
@@ -25,6 +25,7 @@ bilingua = { path = "bilingua" }
 bilingua-xliff = { path = "bilingua-xliff" }
 bilingua-sdl = { path = "bilingua-sdl" }
 bilingua-ini = { path = "bilingua-ini" }
+bilingua-strings = { path = "bilingua-strings" }
 regex = "1"
 icu_segmenter = "2"
 pulldown-cmark = { version = "0.13", default-features = false }

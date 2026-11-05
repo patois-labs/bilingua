@@ -160,6 +160,7 @@ fn crate_of(format: &str) -> &'static str {
         "markdown" | "md" => "bilingua-markdown",
         "po" => "bilingua-po",
         "ini" => "bilingua-ini",
+        "strings" => "bilingua-strings",
         "srt" | "vtt" => "bilingua-subtitle",
         "txt" | "text" => "bilingua-text",
         "xliff" | "sdlxliff" | "mqxliff" | "mxliff" => "bilingua-xliff",

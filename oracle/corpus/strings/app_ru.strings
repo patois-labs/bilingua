@@ -1,0 +1,15 @@
+/* Shown on launch */
+"welcome" = "Добро пожаловать";
+
+/* Menu item */
+"save_all" = "Сохранить все файлы";
+
+/* Greeting with a name and a count */
+"greeting" = "Привет, %@, у вас %1$@ элементов";
+
+/* Confirmation; %d is a count */
+"delete_files" = "Удалить %d файлов?";
+
+/* Title of the settings screen */
+"settings" = "Настройки";
+
