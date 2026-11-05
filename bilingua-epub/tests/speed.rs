@@ -54,6 +54,7 @@ pub fn big() -> Vec<u8> {
 }
 
 #[test]
+#[cfg_attr(debug_assertions, ignore = "timed in release: cargo test --release -p bilingua-epub --test speed")]
 fn large_book_round_trips_and_is_timed() {
     let bytes = big();
     let (m, _) = members(&bytes);
