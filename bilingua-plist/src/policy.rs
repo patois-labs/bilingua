@@ -192,8 +192,8 @@ pub(crate) fn not_prose(s: &str) -> bool {
         let b = s.as_bytes();
         let mut chunks = Vec::new();
         let mut start = 0;
-        for i in 1..b.len() {
-            if b[i].is_ascii_uppercase() {
+        for (i, c) in b.iter().enumerate().skip(1) {
+            if c.is_ascii_uppercase() {
                 chunks.push(i - start);
                 start = i;
             }

@@ -249,7 +249,7 @@ fn days_in_month(y: u32, m: u32) -> u32 {
         1 | 3 | 5 | 7 | 8 | 10 | 12 => 31,
         4 | 6 | 9 | 11 => 30,
         _ => {
-            if (y % 4 == 0 && y % 100 != 0) || y % 400 == 0 {
+            if (y.is_multiple_of(4) && !y.is_multiple_of(100)) || y.is_multiple_of(400) {
                 29
             } else {
                 28
@@ -441,7 +441,7 @@ pub(crate) fn scan(text: &str, fmt: &'static str, lim: &Limits) -> Result<Tree, 
             if frame.el.name() != name {
                 return Err(perr(fmt, format!("mismatched </{name}> at offset {lt}")));
             }
-            close(&mut tree, &mut stack, frame, &mut content, lt, end, false, fmt)?;
+            close(&mut tree, &mut stack, frame, &mut content, Ended { content_end: lt, end, empty: false }, fmt)?;
             pos = end;
         } else {
             // a start tag
@@ -527,7 +527,7 @@ pub(crate) fn scan(text: &str, fmt: &'static str, lim: &Limits) -> Result<Tree, 
             tree.nodes.push(node);
             let frame = Frame { el, node: idx, cstart: end, start: lt, pending: None, seen: HashSet::new() };
             if empty {
-                close(&mut tree, &mut stack, frame, &mut content, lt, end, true, fmt)?;
+                close(&mut tree, &mut stack, frame, &mut content, Ended { content_end: lt, end, empty: true }, fmt)?;
             } else {
                 if el.is_text() || el.is_scalar() {
                     content.clear();
@@ -548,7 +548,16 @@ pub(crate) fn scan(text: &str, fmt: &'static str, lim: &Limits) -> Result<Tree, 
 
 /// An element has ended at `end`; `content_end` is where its content stopped (the `<` of the end tag, or the
 /// start of an empty tag).
-fn close(tree: &mut Tree, stack: &mut [Frame], frame: Frame, content: &mut String, content_end: usize, end: usize, empty: bool, fmt: &str) -> Result<(), Error> {
+/// Where an element ended: the content stops at `content_end`, the element at `end`; `empty` for a `<x/>` tag.
+#[derive(Clone, Copy)]
+struct Ended {
+    content_end: usize,
+    end: usize,
+    empty: bool,
+}
+
+fn close(tree: &mut Tree, stack: &mut [Frame], frame: Frame, content: &mut String, ended: Ended, fmt: &str) -> Result<(), Error> {
+    let Ended { content_end, end, empty } = ended;
     match frame.el {
         El::Plist => {}
         El::Dict => {
