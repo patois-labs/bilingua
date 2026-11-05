@@ -22,7 +22,7 @@ fn corpus() -> Vec<(String, Vec<u8>)> {
 }
 
 fn open(bytes: &[u8], mode: Granularity) -> Document {
-    let mut d = Strings.extract(bytes, &ExtractOptions { source_lang: Some("en".into()), target_lang: Some("es-ES".into()), granularity: mode, include_locked: true }).unwrap();
+    let mut d = Strings.extract(bytes, &ExtractOptions { source_lang: Some("en".into()), target_lang: Some("es-ES".into()), granularity: mode, include_locked: true, ..Default::default() }).unwrap();
     segment(&mut d, "en", mode, Rules::bundled());
     d
 }

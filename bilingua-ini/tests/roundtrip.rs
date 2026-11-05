@@ -123,8 +123,7 @@ fn target_locale_and_paragraph_mode() {
         source_lang: Some("en".into()),
         target_lang: Some("ar".into()),
         granularity: Granularity::Paragraph,
-        include_locked: false,
-    };
+        include_locked: false, ..Default::default() };
     let mut doc = IniFilter.extract(&data, &opts).unwrap();
     assert_eq!(doc.granularity, Granularity::Paragraph);
     assert_eq!(doc.target_lang.as_deref(), Some("ar"));

@@ -239,8 +239,9 @@ fn invalid_json_is_an_error_with_a_position() {
             other => panic!("{b:?} should be a parse error, got {other:?}"),
         }
     }
-    assert!(matches!(JsonFilter.extract(&[b'[', b'"', 0xFF, b'"', b']'], &Default::default()), Err(Error::Parse { .. })));
-    assert!(matches!(JsonFilter.extract(&[0xFF, 0xFE, b'[', 0], &Default::default()), Err(Error::Unsupported(_))));
+    assert!(matches!(JsonFilter.extract(&[b'[', b'"', 0xFF, 0, b'"', b']'], &Default::default()), Err(Error::Encoding(_))));
+    // an odd-length UTF-16 body is not UTF-16; read as Windows-1252 it is not JSON
+    assert!(matches!(JsonFilter.extract(&[0xFF, 0xFE, b'[', 0, b'x'], &Default::default()), Err(Error::Encoding(_))));
 }
 
 #[test]

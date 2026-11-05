@@ -288,8 +288,8 @@ fn render_segment_gives_inner_html() {
 
 #[test]
 fn bad_input() {
-    assert!(matches!(MarkdownFilter.extract(&[0x23, 0x20, 0xFF], &Default::default()), Err(Error::Parse { .. })));
-    assert!(matches!(MarkdownFilter.extract(&[0xFF, 0xFE, 0x23, 0], &Default::default()), Err(Error::Unsupported(_))));
+    assert!(matches!(MarkdownFilter.extract(&[0x23, 0x20, 0xFF, 0], &Default::default()), Err(Error::Encoding(_))));
+    assert!(MarkdownFilter.extract(&[0xFF, 0xFE, 0x23, 0], &Default::default()).is_ok());
     let d = extract("");
     assert_eq!(d.units.len(), 0);
     assert_eq!(merged(&d), "");

@@ -1,0 +1,15 @@
+[package]
+name = "bilingua-resjson"
+description = "Bilingua: Windows .resjson filter (JSON resources with _key.comment notes and JavaScript comments)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+bilingua-model = { workspace = true }
+regex = { workspace = true }
+
+[dev-dependencies]
+serde_json = { workspace = true }
+proptest = "1"

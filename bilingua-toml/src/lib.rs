@@ -299,6 +299,7 @@ impl Filter for TomlFilter {
             granularity: opts.granularity,
             units,
             skeleton: Skeleton::text(parts, if bom { "utf-8-bom" } else { "utf-8" }, bilingua_model::parser_info!()),
+            ..Default::default()
         })
     }
 

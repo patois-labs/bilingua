@@ -156,6 +156,7 @@ impl IniFilter {
             granularity: opts.granularity,
             units,
             skeleton: Skeleton::text(parts, encoding, bilingua_model::parser_info!()),
+            ..Default::default()
         })
     }
 }

@@ -12,6 +12,7 @@ bilingua-seg = { workspace = true }
 bilingua-text = { workspace = true }
 bilingua-json = { workspace = true }
 bilingua-toml = { workspace = true }
+bilingua-json5 = { workspace = true }
 bilingua-markdown = { workspace = true }
 bilingua-docx = { workspace = true }
 bilingua-html = { workspace = true }
@@ -24,6 +25,8 @@ bilingua-xliff = { workspace = true }
 bilingua-sdl = { workspace = true }
 bilingua-ini = { workspace = true }
 bilingua-strings = { workspace = true }
+bilingua-resjson = { workspace = true }
+bilingua-jsmodule = { workspace = true }
 bilingua-dtd = { workspace = true }
 
 [dev-dependencies]

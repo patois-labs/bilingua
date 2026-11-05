@@ -344,8 +344,10 @@ fn bom_and_latin1() {
     assert!(String::from_utf8_lossy(&out).contains("&#20013;&#25991; na"));
     assert!(out.contains(&0xEF));
 
-    assert!(Html.extract(b"<meta charset=\"shift_jis\"><p>x</p>", &Default::default()).is_err());
-    assert!(Html.extract(b"<p>\xff\xfe</p>", &Default::default()).is_err());
+    assert!(Html.extract(b"<meta charset=\"x-no-such-charset\"><p>x</p>", &Default::default()).is_err());
+    // a binary file is refused; an undeclared non-UTF-8 file is read as Windows-1252 (or the source language's page)
+    assert!(Html.extract(b"<p>\x00\xff\x02\x03</p>", &Default::default()).is_err());
+    assert!(Html.extract(b"<p>\xff\xfe</p>", &Default::default()).is_ok());
 }
 
 #[test]

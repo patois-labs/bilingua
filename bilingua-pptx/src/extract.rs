@@ -541,7 +541,14 @@ fn numbered<'a>(name: &'a str, dir: &str, prefix: &str) -> Option<(&'a str, u32)
 }
 
 pub fn extract_doc(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
-    let entries = zipio::read_zip(bytes, &ZipLimits::default())?;
+    let l = opts.limits();
+    bilingua_model::guard::check_input(bytes, &l)?;
+    bilingua_model::guard::finish(extract_doc_inner(bytes, opts)?, vec![], &l)
+}
+
+fn extract_doc_inner(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
+    let entries = zipio::read_zip(bytes, &ZipLimits::from(&opts.limits()))?;
+    bilingua_zip::check_xml_parts(&entries, &opts.limits())?;
     let ct = find_entry(&entries, "[Content_Types].xml")
         .ok_or_else(|| perr("not a PowerPoint file: no [Content_Types].xml"))?
         .1;
@@ -705,5 +712,6 @@ pub fn extract_doc(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Erro
         granularity: Granularity::Paragraph,
         units,
         skeleton: Skeleton::zip(zentries, bilingua_model::parser_info!()),
+        warnings: vec![],
     })
 }

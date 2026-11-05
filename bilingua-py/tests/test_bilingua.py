@@ -324,4 +324,34 @@ def test_bad_base64_is_an_invalid_document():
 
 
 def test_bilingual_flag_comes_from_the_formats():
-    assert {f["id"] for f in bilingua.formats() if f["bilingual"]} == {"po"}
+    assert {f["id"] for f in bilingua.formats() if f["bilingual"]} == {"po", "xliff", "sdlxliff", "mqxliff", "mxliff", "sdlppx", "mqxlz"}
+
+
+def test_limits_are_refused_with_the_limit_code():
+    e = error_code(bilingua.extract, "a.txt", b"x" * 60, limits={"max_input_bytes": 50})
+    assert e == "limit"
+    assert bilingua.extract("a.txt", b"x" * 50, limits={"max_input_bytes": 50})["units"]
+    # an unknown limit name is an invalid argument, not silently ignored
+    assert error_code(bilingua.extract, "a.txt", b"x", limits={"max_inputs": 1}) == "invalid_argument"
+
+
+def test_entity_bomb_in_xliff_is_a_limit_error():
+    bomb = (
+        b'<?xml version="1.0"?><!DOCTYPE x [<!ENTITY a "lol"><!ENTITY b "&a;&a;&a;">]>'
+        b'<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2"><file original="a" source-language="en" '
+        b'target-language="es" datatype="plaintext"><body><trans-unit id="1"><source>&b;</source></trans-unit></body></file></xliff>'
+    )
+    assert error_code(bilingua.extract, "a.xlf", bomb) == "limit"
+
+
+def test_legacy_encoding_round_trips_and_garbled_text_warns():
+    text = "Αυτό είναι ένα δοκιμαστικό κείμενο.\n"
+    raw = (text * 2).encode("cp1253")
+    doc = bilingua.extract("a.txt", raw, source_lang="el")
+    assert "warnings" not in doc
+    assert bilingua.merge(doc) == raw
+    # no source language: read as Windows-1252, it looks wrong, so the Document carries a warning, not an error
+    doc = bilingua.extract("a.txt", raw)
+    assert doc["warnings"][0]["kind"] == "text_encoding"
+    assert bilingua.merge(doc) == raw
+    assert error_code(bilingua.extract, "a.txt", b"a\xff\x00\x01b") == "encoding"

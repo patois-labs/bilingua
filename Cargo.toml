@@ -1,5 +1,5 @@
 [workspace]
-members = ["bilingua-model", "bilingua-zip", "bilingua", "bilingua-seg", "bilingua-text", "bilingua-json", "bilingua-markdown", "bilingua-cli", "bilingua-docx", "bilingua-html", "bilingua-po", "bilingua-subtitle", "bilingua-xlsx", "bilingua-pptx", "bilingua-py", "bilingua-xliff", "bilingua-sdl", "bilingua-strings", "bilingua-toml", "bilingua-properties", "oracle", "bilingua-ini", "bilingua-dtd"]
+members = ["bilingua-model", "bilingua-zip", "bilingua", "bilingua-seg", "bilingua-text", "bilingua-json", "bilingua-markdown", "bilingua-cli", "bilingua-docx", "bilingua-html", "bilingua-po", "bilingua-subtitle", "bilingua-xlsx", "bilingua-pptx", "bilingua-py", "bilingua-xliff", "bilingua-sdl", "bilingua-strings", "bilingua-toml", "bilingua-properties", "bilingua-resjson", "bilingua-json5", "bilingua-jsmodule", "oracle", "bilingua-ini", "bilingua-dtd"]
 resolver = "2"
 
 [workspace.package]
@@ -14,6 +14,7 @@ bilingua-zip = { path = "bilingua-zip" }
 bilingua-seg = { path = "bilingua-seg" }
 bilingua-text = { path = "bilingua-text" }
 bilingua-json = { path = "bilingua-json" }
+bilingua-json5 = { path = "bilingua-json5" }
 bilingua-markdown = { path = "bilingua-markdown" }
 bilingua-docx = { path = "bilingua-docx" }
 bilingua-html = { path = "bilingua-html" }
@@ -26,10 +27,13 @@ bilingua = { path = "bilingua" }
 bilingua-xliff = { path = "bilingua-xliff" }
 bilingua-sdl = { path = "bilingua-sdl" }
 bilingua-ini = { path = "bilingua-ini" }
-bilingua-dtd = { path = "bilingua-dtd" }
 bilingua-strings = { path = "bilingua-strings" }
 bilingua-toml = { path = "bilingua-toml" }
+bilingua-resjson = { path = "bilingua-resjson" }
+bilingua-jsmodule = { path = "bilingua-jsmodule" }
+bilingua-dtd = { path = "bilingua-dtd" }
 regex = "1"
+encoding_rs = "0.8"
 icu_segmenter = "2"
 pulldown-cmark = { version = "0.13", default-features = false }
 serde = { version = "1", features = ["derive"] }

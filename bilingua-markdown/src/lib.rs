@@ -21,7 +21,6 @@ use bilingua_model::*;
 pub struct MarkdownFilter;
 
 const ID: &str = "markdown";
-const BOM: &[u8] = &[0xEF, 0xBB, 0xBF];
 
 impl Filter for MarkdownFilter {
     fn id(&self) -> &'static str {
@@ -37,15 +36,10 @@ impl Filter for MarkdownFilter {
     }
 
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
-        if bytes.starts_with(&[0xFF, 0xFE]) || bytes.starts_with(&[0xFE, 0xFF]) {
-            return Err(Error::Unsupported("UTF-16 Markdown files; save the file as UTF-8".into()));
-        }
-        let (body, encoding) = match bytes.strip_prefix(BOM) {
-            Some(rest) => (rest, "utf-8-bom"),
-            None => (bytes, "utf-8"),
-        };
-        let text = std::str::from_utf8(body)
-            .map_err(|e| Error::Parse { format: ID.into(), msg: format!("the file is not valid UTF-8 (at byte {})", e.valid_up_to()) })?;
+        let mut dec = bilingua_model::enc::decode_text(bytes, &bilingua_model::enc::DecodeOptions::new(opts))?;
+        let text_owned = std::mem::take(&mut dec.text);
+        let text = text_owned.as_str();
+        let encoding = dec.encoding.as_str();
         let ex = extract::extract(text, opts.include_locked);
         let doc = Document {
             format: ID.into(),
@@ -55,12 +49,13 @@ impl Filter for MarkdownFilter {
             granularity: opts.granularity,
             units: ex.units,
             skeleton: Skeleton::text(ex.parts, encoding, bilingua_model::parser_info!()),
+            warnings: vec![],
         };
         // Safety net: nothing translated must mean nothing changed.
         if self.merge(&doc)? != bytes {
             return Err(Error::Parse { format: ID.into(), msg: "internal error: the file does not round-trip".into() });
         }
-        Ok(doc)
+        bilingua_model::guard::finish(doc, std::mem::take(&mut dec.warnings), &opts.limits())
     }
 
     fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
@@ -78,12 +73,7 @@ impl Filter for MarkdownFilter {
                 }
             }
         }
-        let mut bytes = Vec::with_capacity(out.len() + 3);
-        if encoding == "utf-8-bom" {
-            bytes.extend_from_slice(BOM);
-        }
-        bytes.extend_from_slice(out.as_bytes());
-        Ok(bytes)
+        bilingua_model::enc::encode_text(&out, encoding)
     }
 
     fn preview(&self, doc: &Document) -> Option<String> {

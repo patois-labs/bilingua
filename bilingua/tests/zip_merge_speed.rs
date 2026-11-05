@@ -79,6 +79,7 @@ fn untouched_entries_keep_their_compressed_bytes_and_merge_is_fast() {
         target_lang: Some("es".into()),
         granularity: Granularity::Sentence,
         include_locked: false,
+        limits: None,
     };
     let mut doc = extract("big.docx", &bytes, &opts).unwrap();
     let before = raw_entries(&bytes);
@@ -136,7 +137,7 @@ fn schema_1_zip_skeletons_with_plain_bytes_still_merge() {
         w.write_all(data).unwrap();
     }
     let bytes = w.finish().unwrap().into_inner();
-    let opts = ExtractOptions { source_lang: Some("en".into()), target_lang: None, granularity: Granularity::Sentence, include_locked: false };
+    let opts = ExtractOptions { source_lang: Some("en".into()), target_lang: None, granularity: Granularity::Sentence, include_locked: false, limits: None };
     let new = extract("a.docx", &bytes, &opts).unwrap();
     let mut json = serde_json::to_value(&new).unwrap();
     let zip_obj = json["skeleton"]["zip"].as_object_mut().unwrap();
@@ -174,6 +175,7 @@ fn sentence_opts() -> ExtractOptions {
         target_lang: Some("es".into()),
         granularity: Granularity::Sentence,
         include_locked: false,
+        limits: None,
     }
 }
 

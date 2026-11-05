@@ -15,6 +15,9 @@ fn corpus() -> Vec<(String, Vec<u8>)> {
         }
         for f in std::fs::read_dir(dir.path()).unwrap().flatten() {
             let name = f.file_name().to_string_lossy().to_string();
+            if name.starts_with('.') {
+                continue; // dot files (.gitattributes and the like) are never fixtures
+            }
             out.push((name, std::fs::read(f.path()).unwrap()));
         }
     }
@@ -24,7 +27,7 @@ fn corpus() -> Vec<(String, Vec<u8>)> {
 }
 
 fn opts(mode: Granularity) -> ExtractOptions {
-    ExtractOptions { source_lang: Some("en".into()), target_lang: Some("es-ES".into()), granularity: mode, include_locked: true }
+    ExtractOptions { source_lang: Some("en".into()), target_lang: Some("es-ES".into()), granularity: mode, include_locked: true, limits: None }
 }
 
 fn open(name: &str, bytes: &[u8], mode: Granularity) -> Document {
@@ -157,6 +160,8 @@ fn crate_of(format: &str) -> &'static str {
         "pptx" => "bilingua-pptx",
         "html" => "bilingua-html",
         "json" => "bilingua-json",
+        "resjson" => "bilingua-resjson",
+        "json5" => "bilingua-json5",
         "markdown" | "md" => "bilingua-markdown",
         "po" => "bilingua-po",
         "ini" => "bilingua-ini",
@@ -164,6 +169,7 @@ fn crate_of(format: &str) -> &'static str {
         "strings" => "bilingua-strings",
         "toml" => "bilingua-toml",
         "properties" => "bilingua-properties",
+        "js" => "bilingua-jsmodule",
         "srt" | "vtt" => "bilingua-subtitle",
         "txt" | "text" => "bilingua-text",
         "xliff" | "sdlxliff" | "mqxliff" | "mxliff" => "bilingua-xliff",
@@ -227,7 +233,7 @@ fn every_skeleton_records_its_parser_and_merge_checks_it() {
         let back: Document = serde_json::from_value(json).unwrap();
         assert_eq!(back, doc, "{name}: JSON round trip");
     }
-    for f in ["docx", "xlsx", "pptx", "html", "json", "po", "srt", "vtt"] {
+    for f in ["docx", "xlsx", "pptx", "html", "json", "json5", "po", "srt", "vtt"] {
         assert!(formats.contains(f), "no corpus file for {f}: {formats:?}");
     }
 }

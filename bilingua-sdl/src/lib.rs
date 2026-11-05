@@ -133,6 +133,7 @@ impl Filter for PackageFilter {
             granularity: bilingua_model::Granularity::Paragraph,
             units,
             skeleton: Skeleton::zip(zentries, bilingua_model::parser_info!()),
+            warnings: vec![],
         })
     }
 

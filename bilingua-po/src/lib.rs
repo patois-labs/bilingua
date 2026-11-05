@@ -154,11 +154,9 @@ impl Filter for Po {
     }
 
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
-        let (body, bom) = match bytes.strip_prefix(&[0xEF, 0xBB, 0xBF]) {
-            Some(r) => (r, true),
-            None => (bytes, false),
-        };
-        let text = std::str::from_utf8(body).map_err(|e| Error::Parse { format: "po".into(), msg: format!("not valid UTF-8: {e}") })?;
+        let mut dec = bilingua_model::enc::decode_text(bytes, &bilingua_model::enc::DecodeOptions::new(opts).declared())?;
+        let text_owned = std::mem::take(&mut dec.text);
+        let text = text_owned.as_str();
         let parsed = parse(text)?;
 
         // Header: the first entry with an empty msgid.
@@ -233,15 +231,16 @@ impl Filter for Po {
         if cursor < text.len() {
             parts.push(SkelPart::Raw(text[cursor..].to_string()));
         }
-        Ok(Document {
+        bilingua_model::guard::finish(Document {
             format: "po".into(),
             name: None,
             source_lang: opts.source_lang.clone(),
             target_lang,
             granularity: opts.granularity,
             units,
-            skeleton: Skeleton::text(parts, if bom { "utf-8-bom" } else { "utf-8" }, bilingua_model::parser_info!()),
-        })
+            skeleton: Skeleton::text(parts, dec.encoding.as_str(), bilingua_model::parser_info!()),
+            warnings: vec![],
+        }, std::mem::take(&mut dec.warnings), &opts.limits())
     }
 
     fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
@@ -284,12 +283,7 @@ impl Filter for Po {
                 }
             }
         }
-        let mut bytes = Vec::new();
-        if encoding == "utf-8-bom" {
-            bytes.extend_from_slice(&[0xEF, 0xBB, 0xBF]);
-        }
-        bytes.extend_from_slice(out.as_bytes());
-        Ok(bytes)
+        bilingua_model::enc::encode_text(&out, encoding)
     }
 }
 

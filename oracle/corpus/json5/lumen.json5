@@ -1,0 +1,23 @@
+// Lumen Bakery storefront strings (made-up JSON5)
+{
+  /* Shown on the home page */
+  title: 'Lumen Bakery',
+  tagline: "Fresh bread, every morning",
+  'order.button': 'Order {count} loaves for %s',
+  greeting: "Hello, {{user}}! Your basket has ${total} in it.",
+  hours: {
+    open: '6:00',       // not text
+    close: "14:30",
+    note: 'Closed on public holidays \
+and on Mondays',
+  },
+  ratio: .5, big: +Infinity, none: NaN, hex: 0xFF, flag: true, empty: null,
+  menu: [
+    'Sourdough',
+    "Rye <b>with seeds</b>",
+    'Croissant',
+    42,
+    '---',
+  ],
+  "quoted key": 'It\'s fine',
+}

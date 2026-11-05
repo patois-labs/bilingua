@@ -35,6 +35,8 @@ impl From<engine::Error> for Fail {
             E::DuplicatedTag(_) => "duplicated_tag",
             E::ParserVersion { .. } => "parser_version",
             E::Write(_) => "write",
+            E::Limit(_) => "limit",
+            E::Encoding(_) => "encoding",
             E::Io(_) => "io",
         };
         Fail::new(code, e.to_string())
@@ -175,7 +177,7 @@ fn parse_granularity(s: &str) -> Result<Granularity, Fail> {
 
 /// Opens a file and returns the Document as dicts and lists.
 #[pyfunction]
-#[pyo3(signature = (name, data, *, source_lang=None, target_lang=None, granularity="paragraph"))]
+#[pyo3(signature = (name, data, *, source_lang=None, target_lang=None, granularity="paragraph", limits=None))]
 fn extract(
     py: Python<'_>,
     name: &str,
@@ -183,11 +185,21 @@ fn extract(
     source_lang: Option<String>,
     target_lang: Option<String>,
     granularity: &str,
+    limits: Option<&Bound<'_, PyAny>>,
 ) -> PyResult<Py<PyAny>> {
     let g = parse_granularity(granularity).map_err(|f| to_py_err(py, f))?;
+    // A dict of limit names (see `Limits`); anything left out keeps Localization OS's default.
+    let limits: Option<engine::Limits> = match limits {
+        None => None,
+        Some(l) if l.is_none() => None,
+        Some(l) => {
+            let v = from_py(l, 0).map_err(|f| to_py_err(py, f))?;
+            Some(serde_json::from_value(v).map_err(|e| to_py_err(py, Fail::new("invalid_argument", format!("limits: {e}"))))?)
+        }
+    };
     let (name, data) = (name.to_string(), data.to_vec());
     let value = guarded(py, move || {
-        let opts = ExtractOptions { source_lang, target_lang, granularity: g, include_locked: false };
+        let opts = ExtractOptions { source_lang, target_lang, granularity: g, include_locked: false, limits };
         let doc = engine::extract(&name, &data, &opts)?;
         serde_json::to_value(&doc).map_err(|e| Fail::new("internal", e.to_string()))
     })?;
