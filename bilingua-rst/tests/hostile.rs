@@ -86,6 +86,30 @@ proptest! {
     }
 }
 
+/// Shrunk from `mutated_fixtures_never_panic` (idx 11, edits [(1956, 1, 2), (0, 1, 0), (1, 130, 0), (1321, 1, 0)]):
+/// a 109-byte Windows-1252 file with three C0 controls passes the binary check (the allowance is 2 + len / 100 = 3).
+/// The broken grid becomes one paragraph whose line breaks and space runs collapse in the merge, so the translated
+/// file is 91 bytes, its allowance drops to 2, and written back as Windows-1252 it read as binary. It is written as
+/// UTF-8 instead (as LocOS writes it) and reads back.
+#[test]
+fn a_shortened_legacy_merge_with_control_bytes_reads_back() {
+    let data: &[u8] = b"\x01\x82------+---\x01\x01---+\n| A     | B     |\n|       +-------+\n+-------+ C     |\n| D     |       |\n+-------+-------+\n";
+    let mut doc = extract(data).unwrap();
+    assert!(matches!(&doc.skeleton, Skeleton::Text { encoding, .. } if encoding == "windows-1252"));
+    assert_eq!(Rst.merge(&doc).unwrap(), data, "untouched merge keeps the original bytes");
+    for u in &mut doc.units {
+        let mut t = vec![Inline::text("Zq ")];
+        t.extend(u.source());
+        u.segments[0].target = merge_text(t);
+    }
+    let out = Rst.merge(&doc).unwrap();
+    let text = std::str::from_utf8(&out).expect("written as UTF-8");
+    assert!(text.starts_with("Zq \u{1}\u{201a}------"), "{text:?}");
+    let back = extract(&out).expect("merged output reads back");
+    assert_eq!(back.units.len(), doc.units.len());
+    check(data);
+}
+
 #[test]
 fn every_truncation_of_every_fixture() {
     for d in fixtures() {
