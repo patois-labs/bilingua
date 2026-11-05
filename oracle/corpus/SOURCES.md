@@ -20,6 +20,7 @@ Every file here is made up for Bilingua (Lumen Bakery is a fictional company; no
 | `wordfast/lang_*`, `wordfast/edge_*` | hand-written TXML and TXLF in the 11 test languages and the four encodings (UTF-8, UTF-8 BOM with CRLF, UTF-16 LE, UTF-16 BE), plus edge cases (`seg-source`, nested inline codes, unpaired `ut`) | Apache-2.0, same as Bilingua |
 | `wordfast/locos_sample.txml`, `wordfast/locos_sample.txlf` | The Localization OS Wordfast suite fixtures (`tests/fixtures/formats/wordfast`) | Apache-2.0 (Localization OS) |
 | `wordfast/Test01.docx.txml`, `wordfast/Test02.html.txml`, `wordfast/Test03.mif.txml` | Okapi Framework test resources, copied unmodified from https://gitlab.com/okapiframework/Okapi.git (`okapi/filters/txml/src/test/resources`, tag `v1.48.0`, commit `ce9f9edc2956da5868fcb71ae10426c7c6ae4e0b`) | Apache-2.0 (Okapi Framework) |
+| `scc/*.scc` (12 files: `lumen*.scc` = the Localization OS SCC suite captions in CRLF, LF, UTF-8 BOM and UTF-16 LE; `random1..8.scc` = generated pop-on, roll-up, paint-on, channel 2, backspace and junk-word captions) | `bilingua-scc/tests/tools/gen_corpus.py` writes them (stdlib plus read-only use of the LocOS SCC filter to keep files with three or more captions; invented text) | Apache-2.0, same as Bilingua |
 
 Files from the Localization OS tree (its `sample-docs` folder and the hand-written PPTX and XLSX generators in its
 test fixtures) are used by `python run.py --external` and read in place. Localization OS is open source under

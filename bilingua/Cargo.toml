@@ -29,6 +29,7 @@ bilingua-xliff = { workspace = true }
 bilingua-wordfast = { workspace = true }
 bilingua-sdl = { workspace = true }
 bilingua-ini = { workspace = true }
+bilingua-scc = { workspace = true }
 bilingua-mo = { workspace = true }
 bilingua-ftl = { workspace = true }
 bilingua-csv = { workspace = true }

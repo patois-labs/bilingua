@@ -40,6 +40,7 @@ pub fn filters() -> Vec<Box<dyn Filter>> {
         Box::new(bilingua_ttx::Ttx::default()),
         Box::new(bilingua_subtitle::Vtt),
         Box::new(bilingua_subtitle::Srt),
+        Box::new(bilingua_scc::SccFilter),
         Box::new(bilingua_po::Po),
         Box::new(bilingua_wxl::Wxl),
         Box::new(bilingua_resjson::Resjson),
