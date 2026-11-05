@@ -1,7 +1,7 @@
 //! The dialect lexers: where the code islands of a server page are. Port of the LocOS `server_page_filter`
 //! lexers. Each returns `(start, end, inline)` in document order, or a refusal naming the line.
 
-use crate::pyx::*;
+use bilingua_htmlcore::pyx::*;
 
 /// A refusal: what is wrong and where (byte offset in the text the lexer read).
 #[derive(Debug)]

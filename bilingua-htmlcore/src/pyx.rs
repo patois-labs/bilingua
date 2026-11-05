@@ -4,34 +4,34 @@
 use crate::entities::{HTML5, INVALID_CHARREFS, INVALID_CODEPOINTS};
 
 /// Python `str.isspace` for one character.
-pub(crate) fn is_space(c: char) -> bool {
+pub fn is_space(c: char) -> bool {
     bilingua_model::py_isspace_char(c)
 }
 
-pub(crate) fn trim_start(s: &str) -> &str {
+pub fn trim_start(s: &str) -> &str {
     s.trim_start_matches(is_space)
 }
 
-pub(crate) fn trim_end(s: &str) -> &str {
+pub fn trim_end(s: &str) -> &str {
     s.trim_end_matches(is_space)
 }
 
-pub(crate) fn trim(s: &str) -> &str {
+pub fn trim(s: &str) -> &str {
     trim_end(trim_start(s))
 }
 
 /// Python `str.isalnum` for one character.
-pub(crate) fn is_alnum(c: char) -> bool {
+pub fn is_alnum(c: char) -> bool {
     bilingua_model::py_isalnum_char(c)
 }
 
 /// Python `str.isalpha` for one character.
-pub(crate) fn is_alpha(c: char) -> bool {
+pub fn is_alpha(c: char) -> bool {
     bilingua_model::py_isalpha_char(c)
 }
 
 /// LocOS `_PLACEHOLDER_RE`: `\u{27E6}/?[a-z]?\d+\u{27E7}`. Length in bytes of the token at the start of `s`.
-pub(crate) fn placeholder_len(s: &str) -> Option<usize> {
+pub fn placeholder_len(s: &str) -> Option<usize> {
     let rest = s.strip_prefix('\u{27E6}')?;
     let b = rest.as_bytes();
     let mut i = 0;
@@ -53,7 +53,7 @@ pub(crate) fn placeholder_len(s: &str) -> Option<usize> {
 }
 
 /// True when `s`, with placeholder tokens removed, has a letter or digit (LocOS `_is_translatable`).
-pub(crate) fn translatable_text(s: &str) -> bool {
+pub fn translatable_text(s: &str) -> bool {
     let mut i = 0;
     while i < s.len() {
         let rest = &s[i..];
@@ -71,7 +71,7 @@ pub(crate) fn translatable_text(s: &str) -> bool {
 }
 
 /// Python `html.unescape`.
-pub(crate) fn unescape(s: &str) -> String {
+pub fn unescape(s: &str) -> String {
     if !s.contains('&') {
         return s.to_string();
     }
@@ -174,7 +174,7 @@ fn numeric(num: u32) -> String {
 }
 
 /// Python `html.escape(s, quote=True)`.
-pub(crate) fn html_escape(s: &str) -> String {
+pub fn html_escape(s: &str) -> String {
     let mut out = String::with_capacity(s.len() + 8);
     for c in s.chars() {
         match c {
@@ -191,7 +191,7 @@ pub(crate) fn html_escape(s: &str) -> String {
 
 /// LocOS `_escape_text(text, quotes=True)`: a bare `&` (one that does not start a character reference) and every
 /// `<`, `>`, `"` and `'`.
-pub(crate) fn escape_text(s: &str, out: &mut String) {
+pub fn escape_text(s: &str, out: &mut String) {
     let b = s.as_bytes();
     let mut last = 0;
     for (i, &c) in b.iter().enumerate() {
@@ -233,7 +233,7 @@ fn entity_follows(b: &[u8]) -> bool {
 }
 
 /// LocOS `strict_escape`: every character an HTML5 tag state reacts to becomes a character reference.
-pub(crate) fn strict_escape(s: &str) -> String {
+pub fn strict_escape(s: &str) -> String {
     let mut out = String::with_capacity(s.len());
     for c in s.chars() {
         if matches!(c, '\t' | '\n' | '\x0c' | '\r' | ' ' | '/' | '=' | '`') {
@@ -246,18 +246,18 @@ pub(crate) fn strict_escape(s: &str) -> String {
 }
 
 /// ASCII case-insensitive substring search.
-pub(crate) fn contains_ci(hay: &[u8], needle: &[u8]) -> bool {
+pub fn contains_ci(hay: &[u8], needle: &[u8]) -> bool {
     find_ci(hay, 0, needle).is_some()
 }
 
-pub(crate) fn find_ci(hay: &[u8], from: usize, needle: &[u8]) -> Option<usize> {
+pub fn find_ci(hay: &[u8], from: usize, needle: &[u8]) -> Option<usize> {
     if needle.is_empty() || hay.len() < needle.len() || from > hay.len() - needle.len() {
         return None;
     }
     (from..=hay.len() - needle.len()).find(|&i| hay[i..i + needle.len()].eq_ignore_ascii_case(needle))
 }
 
-pub(crate) fn find_bytes(hay: &[u8], from: usize, needle: &[u8]) -> Option<usize> {
+pub fn find_bytes(hay: &[u8], from: usize, needle: &[u8]) -> Option<usize> {
     if from > hay.len() || hay.len() - from < needle.len() {
         return None;
     }

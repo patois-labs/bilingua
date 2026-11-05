@@ -1,0 +1,10 @@
+[package]
+name = "bilingua-htmlcore"
+description = "Bilingua: the HTML scanner shared by the HTML and server-page filters (a port of the Localization OS HTML filter and its browser guard)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+bilingua-model = { workspace = true }

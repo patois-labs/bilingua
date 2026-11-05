@@ -254,6 +254,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "bilingua-htmlcore"
+version = "0.1.0"
+dependencies = [
+ "bilingua-model",
+]
+
+[[package]]
 name = "bilingua-htmlhelp"
 version = "0.9.0"
 dependencies = [
@@ -574,6 +581,7 @@ dependencies = [
 name = "bilingua-serverpages"
 version = "0.9.0"
 dependencies = [
+ "bilingua-htmlcore",
  "bilingua-model",
  "proptest",
  "serde_json",

@@ -11,11 +11,9 @@
 /// Skeleton schema number: bump only when this crate's skeleton layout changes (see `bilingua_model::check_parser`).
 pub const SKELETON_SCHEMA: u32 = 1;
 
-mod entities;
-mod browser;
-mod html;
 mod lex;
-mod pyx;
+
+use bilingua_htmlcore::{browser, html, pyx};
 
 use bilingua_model::*;
 use html::{Entry, Piece, Tok, K};

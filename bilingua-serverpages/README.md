@@ -4,7 +4,8 @@ Server pages for Bilingua: ASP.NET Web Forms (`.aspx`, `.ascx`), JSP (`.jsp`, `.
 and a `.php` page that is not a language array), server-side includes (`.shtml`, `.shtm`, `.stm`) and ERB
 (`.erb`). Five filters (`Phtml`, `Jsp`, `Aspx`, `Erb`, `Shtml`), one engine. The spec is the Localization OS filter
 `app/filters/server_page_filter.py` and its suite `tests/verify_server_page_filter.py`; the HTML scanner under it is
-a port of LocOS `html_filter.py` and `html_guard.py`, so units and inline codes are LocOS's, token for token.
+a port of LocOS `html_filter.py` and `html_guard.py` that lives in `bilingua-htmlcore` (shared with
+`bilingua-html`), so units and inline codes are LocOS's, token for token.
 
 ## What is a unit
 

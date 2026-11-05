@@ -6,11 +6,11 @@ use crate::pyx::*;
 use std::borrow::Cow;
 use std::collections::HashMap;
 
-pub(crate) const SKIP_CONTAINERS: [&str; 2] = ["script", "style"];
+pub const SKIP_CONTAINERS: [&str; 2] = ["script", "style"];
 
 /// What a token is. `Island` and `InlineIsland` are masked server code (markup tokens that are not tags).
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub(crate) enum K {
+pub enum K {
     Text,
     Markup,
     Island,
@@ -18,7 +18,7 @@ pub(crate) enum K {
 }
 
 #[derive(Clone, Debug)]
-pub(crate) struct Tok<'a> {
+pub struct Tok<'a> {
     pub k: K,
     pub s: Cow<'a, str>,
 }
@@ -32,9 +32,9 @@ impl Tok<'_> {
 
 /// The scan budget ran out: far more markup than the segment limit allows.
 #[derive(Debug)]
-pub(crate) struct BudgetExceeded;
+pub struct BudgetExceeded;
 
-pub(crate) fn is_inline_tag(n: &str) -> bool {
+pub fn is_inline_tag(n: &str) -> bool {
     matches!(
         n,
         "a" | "abbr"
@@ -160,7 +160,7 @@ fn is_tag_ws(c: u8) -> bool {
 }
 
 /// LocOS `_parse_tag`: (closing, lower-case name, self closing) of a tag-shaped token; no name for anything else.
-pub(crate) fn parse_tag_str(s: &str) -> (bool, String, bool) {
+pub fn parse_tag_str(s: &str) -> (bool, String, bool) {
     let b = s.as_bytes();
     if b.first() != Some(&b'<') {
         return (false, String::new(), false);
@@ -179,7 +179,7 @@ pub(crate) fn parse_tag_str(s: &str) -> (bool, String, bool) {
     (closing, name, sc)
 }
 
-pub(crate) fn parse_tag(t: &Tok) -> (bool, String, bool) {
+pub fn parse_tag(t: &Tok) -> (bool, String, bool) {
     match t.k {
         K::Markup => parse_tag_str(&t.s),
         _ => (false, String::new(), false),
@@ -243,7 +243,7 @@ fn tag_end(b: &[u8], pos: usize, budget: &mut Option<i64>) -> Result<Option<usiz
 }
 
 /// LocOS `_raw_end`: where the raw-text body of a script or style element ends (the index of its end tag).
-pub(crate) fn raw_end(b: &[u8], pos: usize, name: &str) -> usize {
+pub fn raw_end(b: &[u8], pos: usize, name: &str) -> usize {
     #[derive(PartialEq, Clone, Copy)]
     enum St {
         Data,
@@ -312,7 +312,7 @@ pub(crate) fn raw_end(b: &[u8], pos: usize, name: &str) -> usize {
 
 /// LocOS `_tokenize` (no template pattern): tags own their quoted attributes, comments and CDATA own their whole
 /// contents, script and style bodies are opaque text. Tokens alternate text, markup, text, markup, ...
-pub(crate) fn tokenize<'a>(text: &'a str, budget: &mut Option<i64>) -> Result<Vec<Tok<'a>>, BudgetExceeded> {
+pub fn tokenize<'a>(text: &'a str, budget: &mut Option<i64>) -> Result<Vec<Tok<'a>>, BudgetExceeded> {
     let b = text.as_bytes();
     let size = b.len();
     let mut tokens: Vec<Tok<'a>> = Vec::new();
@@ -358,7 +358,7 @@ pub(crate) fn tokenize<'a>(text: &'a str, budget: &mut Option<i64>) -> Result<Ve
 
 /// LocOS `_ANY_ATTR_RE` over a start tag: every attribute, quoted or not, as (lower-case name, raw value) with the
 /// first occurrence winning; a bare attribute has the empty string.
-pub(crate) fn tag_attr_values(tok: &str) -> Vec<(String, String)> {
+pub fn tag_attr_values(tok: &str) -> Vec<(String, String)> {
     let (closing, name, _) = parse_tag_str(tok);
     let _ = closing;
     if name.is_empty() {
@@ -415,7 +415,7 @@ pub(crate) fn tag_attr_values(tok: &str) -> Vec<(String, String)> {
 }
 
 /// One quoted attribute of a start tag: (lower-case name, value start, value end, raw value), LocOS `_tag_attrs`.
-pub(crate) fn tag_attrs(tok: &str) -> Vec<(String, usize, usize, String)> {
+pub fn tag_attrs(tok: &str) -> Vec<(String, usize, usize, String)> {
     let b = tok.as_bytes();
     let mut out = Vec::new();
     let mut i = 0;
@@ -486,9 +486,15 @@ fn own_translate(tok: &str) -> Option<bool> {
 }
 
 /// LocOS `_TranslateScope`: the inherited translate mode across a token stream.
-pub(crate) struct TranslateScope {
+pub struct TranslateScope {
     stack: Vec<(String, bool)>,
     open: HashMap<String, i64>,
+}
+
+impl Default for TranslateScope {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl TranslateScope {
@@ -577,7 +583,7 @@ fn mentions_translate(tokens: &[Tok]) -> bool {
 
 /// One piece of a unit's text, in order.
 #[derive(Clone, Debug)]
-pub(crate) enum Piece<'t> {
+pub enum Piece<'t> {
     Text(&'t str),
     Open(u32),
     Close(u32),
@@ -586,7 +592,7 @@ pub(crate) enum Piece<'t> {
 
 /// The original markup behind one inline token (LocOS `inline_map` entry).
 #[derive(Clone, Debug, Default)]
-pub(crate) struct Entry {
+pub struct Entry {
     pub open: Option<String>,
     pub close: Option<String>,
     pub point: Option<String>,
@@ -597,7 +603,7 @@ pub(crate) struct Entry {
 }
 
 #[derive(Clone, Debug)]
-pub(crate) struct BodyUnit<'t> {
+pub struct BodyUnit<'t> {
     /// Inclusive token span.
     pub start: usize,
     pub end: usize,
@@ -609,7 +615,7 @@ pub(crate) struct BodyUnit<'t> {
 }
 
 /// LocOS `_iter_units`. `cap`: refuse as soon as the unit count passes it.
-pub(crate) fn iter_units<'t>(tokens: &'t [Tok<'_>], cap: Option<usize>) -> Result<Vec<BodyUnit<'t>>, usize> {
+pub fn iter_units<'t>(tokens: &'t [Tok<'_>], cap: Option<usize>) -> Result<Vec<BodyUnit<'t>>, usize> {
     struct St<'t> {
         parts: Vec<Piece<'t>>,
         indices: Vec<usize>,
@@ -784,7 +790,7 @@ pub(crate) fn iter_units<'t>(tokens: &'t [Tok<'_>], cap: Option<usize>) -> Resul
 
 /// Every start tag outside script and style, as (token index, name). `translatable_only`: leave out elements whose
 /// translate mode is no.
-pub(crate) fn iter_start_tags(tokens: &[Tok], translatable_only: bool) -> Vec<(usize, String)> {
+pub fn iter_start_tags(tokens: &[Tok], translatable_only: bool) -> Vec<(usize, String)> {
     let mut scope = if translatable_only && mentions_translate(tokens) { Some(TranslateScope::new()) } else { None };
     let mut skip_name = String::new();
     let mut out = Vec::new();
@@ -820,7 +826,7 @@ pub(crate) fn iter_start_tags(tokens: &[Tok], translatable_only: bool) -> Vec<(u
 
 /// A translatable attribute: token index, value span inside the token, unescaped text, unit style.
 #[derive(Clone, Debug)]
-pub(crate) struct AttrUnit {
+pub struct AttrUnit {
     pub ti: usize,
     pub start: usize,
     pub end: usize,
@@ -848,7 +854,7 @@ const META_SOCIAL_STYLES: [(&str, &str); 4] = [
 ];
 
 /// LocOS `meta_text_style`: the unit style of a `<meta>` whose `content` is page text.
-pub(crate) fn meta_text_style(attrs: &[(String, Option<String>)]) -> Option<&'static str> {
+pub fn meta_text_style(attrs: &[(String, Option<String>)]) -> Option<&'static str> {
     let first = |n: &str| attrs.iter().find(|(k, _)| k == n).map(|(_, v)| v);
     if first("http-equiv").is_some() {
         return None;
@@ -860,7 +866,7 @@ pub(crate) fn meta_text_style(attrs: &[(String, Option<String>)]) -> Option<&'st
 }
 
 /// LocOS `_iter_page_attr_units`: the accessibility attributes, then the page metadata.
-pub(crate) fn iter_page_attr_units(tokens: &[Tok]) -> Vec<AttrUnit> {
+pub fn iter_page_attr_units(tokens: &[Tok]) -> Vec<AttrUnit> {
     let mut out = Vec::new();
     let tags = iter_start_tags(tokens, true);
     for (ti, name) in &tags {
@@ -906,7 +912,7 @@ fn name_end(tag: &str) -> usize {
 }
 
 /// LocOS `_set_attr`.
-pub(crate) fn set_attr(tag: &str, attr: &str, value: &str, add_if_missing: bool) -> String {
+pub fn set_attr(tag: &str, attr: &str, value: &str, add_if_missing: bool) -> String {
     // `(\sATTR\s*=\s*)("[^"]*"|'[^']*'|[^\s>"']+)`, case-insensitive, first match
     let ab = attr.as_bytes();
     let tb = tag.as_bytes();
@@ -945,7 +951,7 @@ pub(crate) fn set_attr(tag: &str, attr: &str, value: &str, add_if_missing: bool)
 }
 
 /// LocOS `_declare_language`, in place over the token strings.
-pub(crate) fn declare_language(tokens: &mut [Tok], tag: &str, direction: &str) {
+pub fn declare_language(tokens: &mut [Tok], tag: &str, direction: &str) {
     for (ti, name) in iter_start_tags(tokens, false) {
         let tok = tokens[ti].s.to_string();
         if name == "html" {
@@ -984,7 +990,7 @@ fn has_attr_assign(tok: &str, name: &str) -> bool {
 }
 
 /// The BCP 47 form of a locale (language lower case, script title case, region upper case), or `None`.
-pub(crate) fn html_lang(code: &str) -> Option<String> {
+pub fn html_lang(code: &str) -> Option<String> {
     let tag = trim(code).replace('_', "-");
     if tag.is_empty() || tag.len() > 64 {
         return None;
@@ -1019,7 +1025,7 @@ pub(crate) fn html_lang(code: &str) -> Option<String> {
 }
 
 /// "rtl" or "ltr" for a canonical tag (LocOS `text_direction`).
-pub(crate) fn text_direction(tag: &str) -> &'static str {
+pub fn text_direction(tag: &str) -> &'static str {
     const RTL_SCRIPTS: [&str; 11] = ["arab", "hebr", "syrc", "thaa", "nkoo", "adlm", "rohg", "samr", "mand", "mend", "yezi"];
     const RTL_LANGS: [&str; 22] = [
         "ar", "arc", "azb", "ckb", "dv", "fa", "glk", "he", "iw", "ji", "ks", "lrc", "mzn", "nqo", "pnb", "prs", "ps", "sd", "syr", "ug", "ur", "yi",

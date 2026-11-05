@@ -37,9 +37,9 @@ const IP_HTML: u8 = 1;
 const IP_MATH_TEXT: u8 = 2;
 const IP_ANNOTATION: u8 = 3;
 
-pub(crate) type Attrs = Vec<(String, Option<String>)>;
+pub type Attrs = Vec<(String, Option<String>)>;
 
-pub(crate) struct StartTag {
+pub struct StartTag {
     pub name: String,
     pub ns: &'static str,
     pub start: usize,
@@ -47,7 +47,7 @@ pub(crate) struct StartTag {
 }
 
 #[derive(Default)]
-pub(crate) struct View {
+pub struct View {
     pub starts: Vec<StartTag>,
     /// (value start, value end, quote byte or 0) of every attribute value.
     pub spans: HashSet<(usize, usize, u8)>,
@@ -179,7 +179,7 @@ struct Entry {
 }
 
 /// Parse `text` as an HTML5 browser does, as far as tokenizer states go.
-pub(crate) fn browser_view(text: &str, scripting: bool, legacy_select: bool) -> View {
+pub fn browser_view(text: &str, scripting: bool, legacy_select: bool) -> View {
     let b = text.as_bytes();
     let n = b.len();
     let mut view = View::default();
@@ -392,14 +392,14 @@ pub(crate) fn browser_view(text: &str, scripting: bool, legacy_select: bool) -> 
 /// cover both values of each flag, and a page with both needs all four.
 const MODES: [(bool, bool); 4] = [(true, false), (false, true), (false, false), (true, true)];
 
-pub(crate) fn browser_views(text: &str) -> Vec<View> {
+pub fn browser_views(text: &str) -> Vec<View> {
     let n_modes = usize::from(contains_ci(text.as_bytes(), b"<noscript")) + usize::from(contains_ci(text.as_bytes(), b"<select"));
     let count = [1, 2, 4][n_modes];
     MODES[..count].iter().map(|&(sc, sel)| browser_view(text, sc, sel)).collect()
 }
 
 /// Value spans every browser mode reads as an attribute value; empty when the parse depends on the browser.
-pub(crate) fn agreed_value_spans(text: &str) -> HashSet<(usize, usize, u8)> {
+pub fn agreed_value_spans(text: &str) -> HashSet<(usize, usize, u8)> {
     let views = browser_views(text);
     if views.iter().any(|v| v.uncertain) {
         return HashSet::new();
@@ -513,7 +513,7 @@ fn has_bogus_end_tag(s: &str) -> bool {
 }
 
 /// True when every markup boundary of this page is where an HTML5 browser puts it.
-pub(crate) fn raw_quotes_safe(text: &str) -> bool {
+pub fn raw_quotes_safe(text: &str) -> bool {
     let Ok(tokens) = html::tokenize(text, &mut None) else { return false };
     let mut starts: HashSet<usize> = HashSet::new();
     let mut pos = 0;
@@ -618,14 +618,14 @@ fn line_of(text: &str, pos: usize) -> usize {
 }
 
 /// The message of the refusal and its line.
-pub(crate) struct Unsafe {
+pub struct Unsafe {
     pub what: String,
     pub line: usize,
 }
 
 /// Refuse unless `after`, the built page, gives a browser only elements and script/style bodies `before` gives it
 /// too; translated values (alt, title, aria-label, page metadata, the language declaration) may differ.
-pub(crate) fn check_build(before: &str, after: &str, sources: &[View]) -> Result<(), Unsafe> {
+pub fn check_build(before: &str, after: &str, sources: &[View]) -> Result<(), Unsafe> {
     if before == after {
         return Ok(());
     }
