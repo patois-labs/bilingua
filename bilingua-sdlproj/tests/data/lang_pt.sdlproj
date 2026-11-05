@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PackageProject xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" Guid="7d1c2a40-5b6e-4f70-8a91-0b2c3d4e5f60" PackageGuid="c0ffee00-1234-4abc-9def-001122334455" PackageName="Cardápio da padaria Lumen" PackageType="ProjectPackage" Comment="Cardápio de primavera para as vitrines, ação rápida" Version="4.0.0.0" Name="Cardápio da padaria Lumen">
+  <LanguageDirections>
+    <LanguageDirection Guid="11111111-2222-4333-8444-555555555555" TargetLanguageCode="es-ES" SourceLanguageCode="pt-BR" />
+  </LanguageDirections>
+</PackageProject>

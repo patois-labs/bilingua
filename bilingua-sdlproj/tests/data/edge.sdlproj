@@ -1,0 +1,13 @@
+<?xml version='1.0' encoding='utf-8' standalone="yes"?>
+<!-- made up -->
+<?pi data?>
+<p:PackageProject xmlns:p="urn:x-demo" PackageGuid="  g-1  " Guid="ignored" Name="A &amp; B &#233; &lt;c&gt;" PackageType = 'ProjectPackage' >
+  <![CDATA[ <not> markup ]]>
+  <LanguageDirections>
+    <LanguageDirection SourceLanguageCode=" en-US " TargetLanguageCode="de-DE"/>
+    <LanguageDirection SourceLanguageCode="en-us" TargetLanguageCode="DE-de"/>
+    <LanguageDirection SourceLanguageCode="en-US" TargetLanguageCode=""/>
+    <LanguageDirection SourceLanguageCode="en-US" TargetLanguageCode="fr-FR"/>
+  </LanguageDirections>
+</p:PackageProject>
+<!-- tail -->
