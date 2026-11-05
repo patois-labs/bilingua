@@ -18,6 +18,7 @@ mod attrs;
 mod doc;
 mod error;
 mod inline;
+mod lang;
 mod patch;
 mod x12;
 mod x2;
@@ -26,7 +27,7 @@ pub use doc::{detect, Doc, SegView};
 pub use error::Error;
 pub use inline::{RawTag, TagDef, TagDefs};
 
-use bilingua_model::{Document, ExtractOptions, Filter, Granularity, Inline, Segment, SkelPart, Skeleton, TagKind, Unit};
+use bilingua_model::{Document, ExtractOptions, Filter, Granularity, Inline, MergeOptions, Segment, SkelPart, Skeleton, TagKind, Unit};
 use std::collections::HashSet;
 
 /// Which bilingual dialect a file was read as.
@@ -203,6 +204,14 @@ pub fn apply_units_prefixed<'a>(doc: &mut Doc, units: impl Iterator<Item = &'a U
 
 /// Writes a document back: the original bytes with the document's targets and states patched in.
 pub fn merge_document(document: &Document, id: &str) -> Result<Vec<u8>, bilingua_model::Error> {
+    merge_document_with(document, id, &MergeOptions::default())
+}
+
+/// [`merge_document`] with [`MergeOptions`]. When the document has a `target_lang` and a target was written (or
+/// `stamp_target_always` is set), the language is declared in the file as Localization OS does: `target-language`
+/// on every `<file>` of an XLIFF 1.2 family file, `trgLang` on the root of XLIFF 2. A file nothing was written to
+/// comes back byte for byte.
+pub fn merge_document_with(document: &Document, id: &str, opts: &MergeOptions) -> Result<Vec<u8>, bilingua_model::Error> {
     bilingua_model::check_parser(document, &bilingua_model::parser_info!())?;
     let Skeleton::Text { parts, encoding, .. } = &document.skeleton else {
         return Err(bilingua_model::Error::Write(format!("{id} needs a text skeleton")));
@@ -216,13 +225,19 @@ pub fn merge_document(document: &Document, id: &str) -> Result<Vec<u8>, bilingua
     }
     let mut doc = Doc::from_bytes_hint(bytes, id == "mxliff").map_err(|e| parse_err(id, e))?;
     apply_document(&mut doc, document);
-    if plain {
-        return Ok(doc.to_bytes());
+    let mut out = doc.to_bytes();
+    let stamp = document.target_lang.as_deref().filter(|t| !t.trim().is_empty()).filter(|_| doc.is_dirty() || opts.stamp_target_always);
+    if let Some(t) = stamp {
+        out = lang::stamp_target_language(&out, doc.format(), t);
     }
-    // a file that was read in another encoding goes back out in it (UTF-8 when the new text does not fit)
-    let utf8 = String::from_utf8(doc.to_bytes())
+    if plain {
+        return Ok(out);
+    }
+    // a file that was read in another encoding goes back out in it (UTF-8 when the new text does not fit, or when
+    // the options ask for UTF-8)
+    let utf8 = String::from_utf8(out)
         .map_err(|e| bilingua_model::Error::Write(format!("{id}: the merged file is not valid UTF-8: {e}")))?;
-    bilingua_model::enc::encode_text(&utf8, encoding)
+    bilingua_model::enc::encode_text_with(&utf8, encoding, opts)
 }
 
 /// One of the XLIFF filters.
@@ -279,6 +294,9 @@ impl Filter for XliffFilter {
     }
     fn merge(&self, doc: &Document) -> Result<Vec<u8>, bilingua_model::Error> {
         merge_document(doc, self.id)
+    }
+    fn merge_with(&self, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, bilingua_model::Error> {
+        merge_document_with(doc, self.id, opts)
     }
 }
 
