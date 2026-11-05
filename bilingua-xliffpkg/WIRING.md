@@ -14,6 +14,10 @@ redo them by hand.
 - `bilingua/tools/check-portable.sh` and `.ps1`: `xliffpkg` added to `CRATES`.
 - Options: none of its own. `target_lang` stamps `target-language` on any inner `<file>` that has none, only when at
   least one XLIFF member was changed by the merge (nothing translated: original bytes back, no stamp).
+  `merge_with` honours the model's `MergeOptions`: `stamp_target_always` stamps every member even when nothing was
+  translated (LocOS `build_localized`); `output_encoding: utf-8` writes a rewritten UTF-16 member as UTF-8 with its
+  declaration saying UTF-8, as `bilingua-xliff` does (LocOS keeps UTF-16 here; members that are not rewritten stay
+  raw-copied).
 - `bilingua_xliffpkg::mqxlz()` is the LocOS `mqxlz` filter built on the same code (for tests and comparison). It is
   **not** in `filters()`: the facade keeps `bilingua-sdl`'s `mqxlz`. Difference: this one keeps member dates,
   compression, order and the archive comment, and returns the original bytes when nothing is translated; the sdl one
@@ -33,7 +37,9 @@ redo them by hand.
   adapter selects `translate && state in {New, Draft}` to get the LocOS unit list (tested in `locos_oracle_golden`).
 - Tokens: same as `bilingua-xliff`. `<bpt>`/`<ept>` pairs are `g` pairs here, `x` `x` in LocOS (see report).
 - LocOS `build()` maps to `merge` with `target_lang: None`; `build_localized()` to `merge` with `target_lang`.
-  "Stamp even when nothing is translated" (LocOS) is the coming model option; not implemented here.
+  "Stamp even when nothing is translated" (LocOS) is `MergeOptions::stamp_target_always`.
+- The adapter must filter on merge as well as on extract: a stale mapping that names a finished or confirmed
+  segment is written here (only real locks refuse), where LocOS never writes a protected row.
 - `tests/data/okapi_test1.wsxz` is Okapi's own WorldServer package test resource (Okapi Framework 1.48.0,
   `okapi/filters/wsxzpackage/src/test/resources/test1.wsxz`, commit `ce9f9edc2956da5868fcb71ae10426c7c6ae4e0b`,
   Apache-2.0, unmodified). It is a test fixture, not in the corpus folder.

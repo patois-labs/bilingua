@@ -11,7 +11,9 @@
 //! * `merge` copies the original package and replaces only the XLIFF members that changed, with the member's
 //!   compression, date and name, the member order and the archive comment kept. Nothing translated: the original
 //!   bytes come back. When at least one member changed and the document has a `target_lang`, a `<file>` with no
-//!   `target-language` gets one (a file's own language is never changed).
+//!   `target-language` gets one (a file's own language is never changed). `merge_with` honours
+//!   `stamp_target_always` (stamp even when nothing was translated) and `output_encoding` (a rewritten UTF-16
+//!   member goes out as UTF-8).
 //! * Safety: the central directory is scanned for duplicate names, the zip is read under the `Limits` of
 //!   `bilingua-model` (bombs, forged sizes, encrypted entries, links, path escapes), each XLIFF member passes the XML
 //!   guard (no entity declarations), at most 200 XLIFF members of at most 64 MB each.
@@ -142,7 +144,7 @@ impl XliffPackage {
         guard::finish(doc, vec![], &l)
     }
 
-    fn merge_doc(&self, document: &Document) -> Result<Vec<u8>, Error> {
+    fn merge_doc(&self, document: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
         check_parser(document, &parser_info!())?;
         let Skeleton::Zip { entries: skel, .. } = &document.skeleton else {
             return Err(Error::Write(format!("{} needs a zip skeleton", self.id)));
@@ -171,10 +173,12 @@ impl XliffPackage {
             work.push(Work { idx: i, doc, enc, input: utf8 });
         }
         let changed = work.iter().any(|w| w.doc.is_dirty());
-        if !changed {
+        let tag = document.target_lang.as_deref().and_then(html_lang);
+        // nothing translated: the original bytes, unless the caller wants the language stamped anyway (LocOS)
+        let stamp_anyway = opts.stamp_target_always && tag.is_some();
+        if !changed && !stamp_anyway {
             return Ok(original.clone());
         }
-        let tag = document.target_lang.as_deref().and_then(html_lang);
         let mut replaced: HashMap<usize, Vec<u8>> = HashMap::new();
         for w in &work {
             let mut out = w.doc.to_bytes();
@@ -185,7 +189,9 @@ impl XliffPackage {
                 }
             }
             if out != w.input {
-                replaced.insert(w.idx, encode(&out, &w.enc)?);
+                // UTF-8 out (the reader's text already declares UTF-8; a UTF-8 BOM stays), or the member's own encoding
+                let bytes = if opts.output_encoding == OutputEncoding::Utf8 { out } else { encode(&out, &w.enc)? };
+                replaced.insert(w.idx, bytes);
             }
         }
         if replaced.is_empty() {
@@ -195,8 +201,11 @@ impl XliffPackage {
     }
 }
 
-/// The package again: untouched members are raw-copied (their compressed bytes, dates, flags and names as they
-/// were), replaced members are written with the same name, date and compression method, and the archive comment is kept.
+/// The package again: untouched members are raw-copied (their compressed bytes, CRC, sizes, dates, attributes, extra
+/// fields, comments and names as they were; the writer sets its own version fields and drops the data-descriptor
+/// flag, since the local header then carries the sizes), replaced members are written with the same name, date,
+/// compression method, attributes and member comment (not their extra fields, as LocOS), and the archive comment
+/// is kept.
 fn rebuild(original: &[u8], entries: &[RawEntry], replaced: &HashMap<usize, Vec<u8>>) -> Result<Vec<u8>, Error> {
     let werr = |what: &str, e: &dyn std::fmt::Display| Error::Write(format!("cannot write {what}: {e}"));
     let mut src = zip::ZipArchive::new(Cursor::new(original)).map_err(|e| werr("the package", &e))?;
@@ -211,12 +220,15 @@ fn rebuild(original: &[u8], entries: &[RawEntry], replaced: &HashMap<usize, Vec<
             None => w.raw_copy_file(f).map_err(|e| werr(&entry.name, &e))?,
             Some(data) => {
                 let name = f.name().map_err(|e| werr(&entry.name, &e))?.into_owned();
-                let mut opts = zip::write::SimpleFileOptions::default().compression_method(f.compression());
+                // name, date, method, attributes and member comment kept, as LocOS's `_copy_info`
+                let mut opts = zip::write::FullFileOptions::default()
+                    .compression_method(f.compression())
+                    .external_attributes(f.external_attributes());
+                if !f.comment().is_empty() {
+                    opts = opts.with_file_comment(f.comment());
+                }
                 if let Some(t) = f.last_modified() {
                     opts = opts.last_modified_time(t);
-                }
-                if let Some(m) = f.unix_mode() {
-                    opts = opts.unix_permissions(m);
                 }
                 drop(f);
                 w.start_file(&name, opts).map_err(|e| werr(&name, &e))?;
@@ -248,6 +260,13 @@ impl Filter for XliffPackage {
         self.extract_doc(bytes, opts)
     }
     fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
-        self.merge_doc(doc)
+        self.merge_doc(doc, &MergeOptions::default())
+    }
+    /// `stamp_target_always`: with a `target_lang`, every XLIFF member's `<file>` without a language is stamped even
+    /// when nothing was translated (LocOS `build_localized`). `output_encoding: utf-8`: a rewritten UTF-16 member is
+    /// written as UTF-8 with its declaration saying so, as `bilingua-xliff` does; members that are not rewritten stay
+    /// raw-copied in their own encoding (the package itself is a zip, not text).
+    fn merge_with(&self, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
+        self.merge_doc(doc, opts)
     }
 }
