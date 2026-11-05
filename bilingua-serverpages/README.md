@@ -58,6 +58,9 @@ with the LocOS message and line.
 * A unit whose target equals its source is left as the original bytes (LocOS would re-escape its quotes).
 * A JSP translation that ends in a backslash right before a `${` island writes the backslash as `&#92;`, so it cannot
   turn the expression into literal text.
+* The text of a translated unit is escaped as one run up to the next code that writes something, so a dropped tag,
+  an empty close or a repeated island cannot join `$` and `{` into a JSP expression (LocOS escapes each piece
+  between tokens). A tag whose markup holds code (`<a href="<?php track(); ?>">`) is written at most once.
 * The XML cross-check LocOS runs with lxml on well-formed pages (`html_guard._check_xml`) is not ported; the browser
   check is.
 * `skeleton["a11y_images"]` (missing-alt findings) is not produced.
@@ -67,7 +70,7 @@ with the LocOS message and line.
 
 ## Tests
 
-`tests/locos_suite.rs` (the 13 LocOS test functions), `tests/locos_golden.rs` (808 pages: the suite fixtures, edge pages,
+`tests/locos_suite.rs` (the 13 LocOS test functions), `tests/locos_golden.rs` (806 pages: the suite fixtures, edge pages,
 the oracle corpus and 750 random pages, compared with what LocOS makes of them, unit by unit and byte by byte, made by
 `tests/tools/gen_golden.py`), `roundtrip.rs` (11 languages, legacy encodings, UTF-16, BOM, line ends),
 `hostile.rs` and `gate_adversarial.rs` (random bytes, mutated and truncated fixtures, hostile translations, proptest),

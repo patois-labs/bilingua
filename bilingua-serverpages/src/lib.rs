@@ -549,36 +549,50 @@ fn materialize(d: Dialect, target: &[Inline], map: &[Entry], m: &Masked, orig: &
     let mut out = String::new();
     let mut seen: std::collections::HashSet<u32> = std::collections::HashSet::new();
     let entry = |id: &str| id.parse::<u32>().ok().filter(|n| *n >= 1).and_then(|n| map.get(n as usize - 1).map(|e| (n, e)));
+    // Text runs are escaped as one string up to the next code that writes something: a dropped tag, an empty close
+    // or two adjacent text pieces must not join "$" and "{" (or "#" and "{") into a JSP expression after escaping.
+    let mut pending = String::new();
+    let mut seen_code: std::collections::HashSet<(u32, TagKind)> = std::collections::HashSet::new();
+    let flush = |pending: &mut String, out: &mut String| {
+        if pending.is_empty() {
+            return;
+        }
+        if d == Dialect::Jsp {
+            let mut el = String::with_capacity(pending.len());
+            escape_el(pending, &mut el);
+            escape_text(&el, out);
+        } else {
+            escape_text(pending, out);
+        }
+        pending.clear();
+    };
     for i in target {
         match i {
-            Inline::Text(t) => {
-                let t = strip_sentinels(t);
-                if d == Dialect::Jsp {
-                    let mut el = String::with_capacity(t.len());
-                    escape_el(&t, &mut el);
-                    escape_text(&el, &mut out);
-                } else {
-                    escape_text(&t, &mut out);
-                }
-            }
+            Inline::Text(t) => pending.push_str(&strip_sentinels(t)),
             Inline::Tag { id, kind, .. } => {
                 let Some((n, e)) = entry(id) else { continue };
-                match kind {
-                    TagKind::Standalone => {
-                        if e.island {
-                            if seen.insert(n) {
-                                push_island(d, &mut out, e.point.as_deref().unwrap_or(""), m, orig);
-                            }
-                        } else {
-                            out.push_str(e.point.as_deref().unwrap_or(""));
-                        }
+                let code = match kind {
+                    TagKind::Standalone => e.point.as_deref().unwrap_or(""),
+                    TagKind::Open => e.open.as_deref().unwrap_or(""),
+                    TagKind::Close => e.close.as_deref().unwrap_or(""),
+                };
+                if *kind == TagKind::Standalone && e.island {
+                    if seen.insert(n) {
+                        flush(&mut pending, &mut out);
+                        push_island(d, &mut out, code, m, orig);
                     }
-                    TagKind::Open => out.push_str(e.open.as_deref().unwrap_or("")),
-                    TagKind::Close => out.push_str(e.close.as_deref().unwrap_or("")),
+                } else if !code.is_empty() {
+                    // a tag that carries code (`<a href="<?php track(); ?>">`) is written once, so the code never runs twice
+                    if has_sentinel(code) && !seen_code.insert((n, *kind)) {
+                        continue;
+                    }
+                    flush(&mut pending, &mut out);
+                    out.push_str(code);
                 }
             }
         }
     }
+    flush(&mut pending, &mut out);
     for (k, e) in map.iter().enumerate() {
         if e.island && !seen.contains(&(k as u32 + 1)) {
             push_island(d, &mut out, e.point.as_deref().unwrap_or(""), m, orig);
@@ -863,18 +877,27 @@ pub fn server_page_for_html(text: &str) -> Result<Option<Dialect>, Error> {
                     hint = true;
                     break;
                 }
-                if rest.starts_with("page") {
+                // `<%@\s*page\b[^%]*?\blanguage\s*=\s*["']?java\b`
+                let word = |c: char| c.is_alphanumeric() || c == '_';
+                if rest.starts_with("page") && !rest[4..].starts_with(word) {
                     let end = rest.find('%').unwrap_or(rest.len());
                     let seg = &rest[..end];
-                    if let Some(q) = seg.find("language") {
+                    for (q, _) in seg.match_indices("language") {
+                        if seg[..q].chars().next_back().is_some_and(word) {
+                            continue;
+                        }
                         let after = trim_start(&seg[q + 8..]);
                         if let Some(v) = after.strip_prefix('=') {
-                            let v = trim_start(v).trim_start_matches(['"', '\'']);
-                            if v.starts_with("java") && !v[4..].starts_with(|c: char| c.is_alphanumeric() || c == '_') {
+                            let v = trim_start(v);
+                            let v = v.strip_prefix(['"', '\'']).unwrap_or(v);
+                            if v.starts_with("java") && !v[4..].starts_with(word) {
                                 hint = true;
                                 break;
                             }
                         }
+                    }
+                    if hint {
+                        break;
                     }
                 }
                 from = p + 3;
