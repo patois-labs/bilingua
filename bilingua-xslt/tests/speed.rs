@@ -1,5 +1,5 @@
 //! A generated file of more than 5 MB. The real timing (release build, against the LocOS filter) is
-//! `examples/tool.rs`; this test keeps the size and the round trip honest in every build.
+//! `examples/xslt_tool.rs`; this test keeps the size and the round trip honest in every build.
 
 mod common;
 

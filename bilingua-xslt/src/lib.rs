@@ -492,7 +492,8 @@ fn meta_of(u: &Unit) -> (bool, u8, bool, bool) {
     (get(0) == b'a', if get(1) == b'"' || get(1) == b'\'' { get(1) } else { b'"' }, get(2) == b'1', get(3) == b'1')
 }
 
-/// `raw` with the attribute units that sit inside it written in.
+/// `raw` with the attribute units that sit inside it written in. Only attribute units are written in, and an
+/// attribute unit never writes nests of its own, so a tampered nest list cannot recurse.
 fn apply_nests(doc: &Document, raw: &str, nests: &str, refs: CharRefs) -> String {
     let mut list = parse_nests(nests);
     if list.is_empty() {
@@ -505,7 +506,7 @@ fn apply_nests(doc: &Document, raw: &str, nests: &str, refs: CharRefs) -> String
         if s < last || e > raw.len() || !raw.is_char_boundary(s) || !raw.is_char_boundary(e) {
             continue;
         }
-        let Some(u) = doc.units.get(idx) else { continue };
+        let Some(u) = doc.units.get(idx).filter(|u| meta_of(u).0) else { continue };
         out.push_str(&raw[last..s]);
         out.push_str(&write_unit(doc, u, refs));
         last = e;
@@ -545,6 +546,9 @@ fn rebuild(doc: &Document, u: &Unit, target: &[Inline], refs: CharRefs) -> Strin
             return c.close.clone();
         }
         let raw = c.open.clone().or_else(|| c.standalone.clone())?;
+        if attr {
+            return Some(raw);
+        }
         let nests = code(u, &format!("{TNEST}{id}")).unwrap_or_default();
         Some(apply_nests(doc, &raw, &nests, refs))
     };

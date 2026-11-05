@@ -86,6 +86,6 @@ fn main() {
                 out.len()
             );
         }
-        _ => eprintln!("usage: tool dump FILE | gen PATH MB | time FILE | pseudo FILE OUT [LANG]"),
+        _ => eprintln!("usage: xslt_tool dump FILE | gen PATH MB | time FILE | pseudo FILE OUT [LANG]"),
     }
 }

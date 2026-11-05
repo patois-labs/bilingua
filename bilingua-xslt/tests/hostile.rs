@@ -276,6 +276,24 @@ fn a_skeleton_from_another_crate_or_a_tampered_one_is_refused_not_panicked() {
         u.segments[0].target = vec![Inline::text("changed")];
     }
     let _ = Xslt.merge(&d);
+    // nest lists that point back at their own unit (or at a text unit) never recurse, translated or not
+    for translated in [false, true] {
+        let mut d = extract(include_bytes!("data/edge.xsl"));
+        let n = d.units.len();
+        for (i, u) in d.units.iter_mut().enumerate() {
+            let all: Vec<String> = (0..n).map(|j| format!("0-1-{j}")).collect();
+            u.codes.insert("~nest".into(), CodeData { standalone: Some(format!("0-1-{i};{}", all.join(";"))), ..Default::default() });
+            for id in 1..4 {
+                u.codes.insert(format!("~n{id}"), CodeData { standalone: Some(all.join(";")), ..Default::default() });
+            }
+            if translated {
+                let mut t = u.source();
+                t.push(Inline::text(" x"));
+                u.segments[0].target = t;
+            }
+        }
+        let _ = Xslt.merge(&d);
+    }
 }
 
 /// A balanced random stylesheet body: the interesting walks (inline runs, nested attribute units, value
