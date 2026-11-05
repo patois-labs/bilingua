@@ -11,6 +11,7 @@ bilingua-model = { workspace = true }
 bilingua-seg = { workspace = true }
 bilingua-text = { workspace = true }
 bilingua-json = { workspace = true }
+bilingua-json5 = { workspace = true }
 bilingua-markdown = { workspace = true }
 bilingua-docx = { workspace = true }
 bilingua-html = { workspace = true }
