@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>CFBundleDisplayName</key>
+	<string>Carnet de sentiers</string>
+	<key>CFBundleIdentifier</key>
+	<string>com.example.trailnotes</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.4</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Carnet de sentiers utilise l’appareil photo pour joindre des photos à une note.</string>
+	<key>NSHumanReadableCopyright</key>
+	<string>Copyright 2026 Exemple SA. Tous droits réservés.</string>
+	<key>NSLocationTemporaryUsageDescriptionDictionary</key>
+	<dict>
+		<key>TrailMap</key>
+		<string>La position précise affiche votre position sur la carte.</string>
+	</dict>
+	<key>LSRequiresIPhoneOS</key>
+	<true/>
+</dict>
+</plist>

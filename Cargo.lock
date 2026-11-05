@@ -32,6 +32,7 @@ dependencies = [
  "bilingua-json5",
  "bilingua-markdown",
  "bilingua-model",
+ "bilingua-plist",
  "bilingua-po",
  "bilingua-pptx",
  "bilingua-properties",
@@ -176,6 +177,16 @@ dependencies = [
  "bilingua",
  "serde_json",
  "zip",
+]
+
+[[package]]
+name = "bilingua-plist"
+version = "0.1.0"
+dependencies = [
+ "bilingua-model",
+ "bilingua-seg",
+ "proptest",
+ "serde_json",
 ]
 
 [[package]]

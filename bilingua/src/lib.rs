@@ -38,6 +38,9 @@ pub fn filters() -> Vec<Box<dyn Filter>> {
         Box::new(bilingua_strings::Strings),
         // DTD sniffs strictly (the first declaration must be an ENTITY, ELEMENT or ATTLIST), so it can sit early.
         Box::new(bilingua_dtd::DtdFilter),
+        // a stringsdict is a plist: it sniffs first; both are claimed by extension, and sniff only an XML or binary plist
+        Box::new(bilingua_plist::Stringsdict),
+        Box::new(bilingua_plist::Plist),
         // TOML after INI: a valid-TOML INI file without an extension should stay INI.
         Box::new(bilingua_toml::TomlFilter),
         Box::new(bilingua_jsmodule::JsModule),

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>CFBundleDisplayName</key>
+	<string>步道笔记</string>
+	<key>CFBundleIdentifier</key>
+	<string>com.example.trailnotes</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.4</string>
+	<key>NSCameraUsageDescription</key>
+	<string>步道笔记使用相机将照片附加到笔记。</string>
+	<key>NSHumanReadableCopyright</key>
+	<string>版权所有 2026 示例公司。保留所有权利。</string>
+	<key>NSLocationTemporaryUsageDescriptionDictionary</key>
+	<dict>
+		<key>TrailMap</key>
+		<string>精确位置会在步道地图上显示您的位置。</string>
+	</dict>
+	<key>LSRequiresIPhoneOS</key>
+	<true/>
+</dict>
+</plist>
