@@ -170,6 +170,9 @@ fn build_unit(text: &str, idx: usize, p: &PUnit) -> Built {
     Built { unit, tokens }
 }
 
+/// Attribute units inside a span: (from, to, unit index).
+type Nests = Vec<(usize, usize, usize)>;
+
 fn nest_list(items: &[(usize, usize, usize)], base: usize) -> String {
     items.iter().map(|(s, e, i)| format!("{}-{}-{}", s - base, e - base, i)).collect::<Vec<_>>().join(";")
 }
@@ -248,8 +251,8 @@ impl Xslt {
             (k > 0).then(|| text_spans[k - 1]).filter(|t| pos < t.1).map(|t| t.2)
         };
         let mut nested = vec![false; plans.len()];
-        let mut unit_nests: BTreeMap<usize, Vec<(usize, usize, usize)>> = BTreeMap::new();
-        let mut tok_nests: BTreeMap<(usize, String), Vec<(usize, usize, usize)>> = BTreeMap::new();
+        let mut unit_nests: BTreeMap<usize, Nests> = BTreeMap::new();
+        let mut tok_nests: BTreeMap<(usize, String), Nests> = BTreeMap::new();
         for (j, p) in plans.iter().enumerate() {
             if p.attr.is_none() {
                 continue;

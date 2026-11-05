@@ -136,8 +136,8 @@ fn valid_qname(s: &str) -> bool {
 
 /// Entity references of a span: `Some(name)` for a named reference that is not one of the five predefined ones.
 /// Validates every `&`; a numeric reference must name an XML character, a named one a predefined or declared entity.
-pub fn scan_refs<'a>(
-    region: &'a str,
+pub fn scan_refs(
+    region: &str,
     base: usize,
     ents: &HashSet<&str>,
     mut named: impl FnMut(usize, usize),
@@ -233,8 +233,8 @@ fn prolog_end(text: &str) -> usize {
                 Some(e) => i += e + 2,
                 None => return i,
             }
-        } else if rest.starts_with("<!--") {
-            match rest[4..].find("-->") {
+        } else if let Some(after) = rest.strip_prefix("<!--") {
+            match after.find("-->") {
                 Some(e) => i += 4 + e + 3,
                 None => return i,
             }
@@ -300,13 +300,11 @@ fn simple_entity(text: &str, pos: usize) -> Option<(usize, &str)> {
         e
     } else {
         let mut k = i;
-        let mut n = 0;
-        for c in text[i..].chars() {
+        for (n, c) in text[i..].chars().enumerate() {
             if c as u32 == q as u32 || matches!(c, '&' | '%' | '<') || n == 16 {
                 break;
             }
             k += c.len_utf8();
-            n += 1;
         }
         if b.get(k) != Some(&q) {
             return None;
@@ -324,7 +322,9 @@ fn bad_doctype() -> Error {
 
 /// Locates a DOCTYPE in the prolog and vets its internal subset: only simple character entities (and comments)
 /// are allowed. Returns the span and the declared entity names.
-fn doctype(text: &str) -> Result<Option<(usize, usize, Vec<&str>)>, Error> {
+type Doctype<'a> = (usize, usize, Vec<&'a str>);
+
+fn doctype(text: &str) -> Result<Option<Doctype<'_>>, Error> {
     let i = prolog_end(text);
     let rest = &text[i..];
     if !rest.starts_with("<!DOCTYPE") {
@@ -466,7 +466,9 @@ fn parse_start<'a>(text: &'a str, lt: usize, ents: &HashSet<&str>) -> Result<Sta
 }
 
 /// The start tag at `pos` of a text that is exactly one start tag (used to stamp `<html lang>`).
-pub fn single_start_tag(tag: &str) -> Option<(String, Vec<(String, usize, usize, u8)>)> {
+pub type TagAttrs = Vec<(String, usize, usize, u8)>;
+
+pub fn single_start_tag(tag: &str) -> Option<(String, TagAttrs)> {
     if !tag.starts_with('<') {
         return None;
     }
@@ -686,22 +688,22 @@ pub fn lex<'a>(text: &'a str, l: &Limits) -> Result<Lexed<'a>, Error> {
             }
         }
         let rest = &text[lt..];
-        let (end, kind) = if rest.starts_with("<!--") {
-            let Some(e) = rest[4..].find("-->") else { return Err(wf("unterminated comment")) };
-            let body = &rest[4..4 + e];
+        let (end, kind) = if let Some(after) = rest.strip_prefix("<!--") {
+            let Some(e) = after.find("-->") else { return Err(wf("unterminated comment")) };
+            let body = &after[..e];
             if body.contains("--") || body.ends_with('-') {
                 return Err(wf("'--' inside a comment"));
             }
             (lt + 4 + e + 3, LeafKind::Comment)
-        } else if rest.starts_with("<![CDATA[") {
+        } else if let Some(after) = rest.strip_prefix("<![CDATA[") {
             if stack.is_empty() {
                 return Err(wf("CDATA outside the root element"));
             }
-            let Some(e) = rest[9..].find("]]>") else { return Err(wf("unterminated CDATA section")) };
+            let Some(e) = after.find("]]>") else { return Err(wf("unterminated CDATA section")) };
             (lt + 9 + e + 3, LeafKind::Cdata)
-        } else if rest.starts_with("<?") {
-            let Some(e) = rest[2..].find("?>") else { return Err(wf("unterminated processing instruction")) };
-            let body = &rest[2..2 + e];
+        } else if let Some(after) = rest.strip_prefix("<?") {
+            let Some(e) = after.find("?>") else { return Err(wf("unterminated processing instruction")) };
+            let body = &after[..e];
             let target = body.split(|c: char| c.is_ascii_whitespace()).next().unwrap_or("");
             if !ncname(target) {
                 return Err(wf("bad processing instruction"));
