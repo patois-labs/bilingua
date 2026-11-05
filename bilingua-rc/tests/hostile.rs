@@ -25,7 +25,12 @@ fn check(data: &[u8]) {
             for (id, t) in ids {
                 doc.set_target(&id, vec![Inline::text(format!("~{t}~"))]).unwrap();
             }
-            let out = Rc.merge(&doc).unwrap();
+            let out = match Rc.merge(&doc) {
+                Ok(out) => out,
+                // a translation that would not read back as the same unit is refused, never written
+                Err(Error::Write(m)) if m.contains("format placeholder") => return,
+                Err(e) => panic!("translated merge failed: {e}"),
+            };
             // a BOM-less UTF-16 file is found by its zero bytes; a translation may change that, so only
             // the other envelopes promise the same unit count
             if !matches!(&doc.skeleton, Skeleton::Text { encoding, .. } if encoding == "utf-16le-nobom") {
@@ -157,4 +162,34 @@ fn encoding_errors_are_typed_and_say_where() {
             other => panic!("{other:?}"),
         }
     }
+}
+
+
+/// Proptest seed 5c14c7cb: `STRINGTABLE { "%\aE"\`. The source is `%`, the `\a` escape, `E`; a translation of
+/// `~%E~` (the escape dropped) writes `"~%E~"`, whose only letter joins the `%` into the printf placeholder `%E`,
+/// so the string read back as codes only and the unit vanished. Such a merge is refused with a typed error; a
+/// placeholder formed next to other letters is still written byte for byte, as LocOS does.
+#[test]
+fn translation_whose_letters_become_a_placeholder_is_refused() {
+    for (src, target) in [
+        (&br#"STRINGTABLE { "%\aE"\"#[..], "~%E~"),
+        (&br#"STRINGTABLE { "%\aE" }"#[..], "~%E~"),
+        (&br#"STRINGTABLE { L"%\aE" }"#[..], "%d"),
+    ] {
+        let mut doc = extract(src).unwrap();
+        assert_eq!(doc.units.len(), 1);
+        doc.target_lang = Some("de-DE".into());
+        doc.set_target("u1", vec![Inline::text(target)]).unwrap();
+        match Rc.merge(&doc) {
+            Err(Error::Write(m)) => assert!(m.contains("format placeholder") && m.contains("u1"), "{m}"),
+            other => panic!("expected a refusal, got {other:?}"),
+        }
+        check(src);
+    }
+    let src = br#"STRINGTABLE { 1 "%\aE" }"#;
+    let mut doc = extract(src).unwrap();
+    doc.set_target("u1", vec![Inline::text("50%d Rabatt")]).unwrap();
+    let out = Rc.merge(&doc).unwrap();
+    assert_eq!(out, br#"STRINGTABLE { 1 "50%d Rabatt" }"#);
+    assert_eq!(extract(&out).unwrap().units.len(), 1);
 }
