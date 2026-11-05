@@ -47,6 +47,8 @@ pub fn filters() -> Vec<Box<dyn Filter>> {
         Box::new(bilingua_dtd::DtdFilter),
         // TOML after INI: a valid-TOML INI file without an extension should stay INI.
         Box::new(bilingua_toml::TomlFilter),
+        // Qt Linguist .ts sniffs strictly (XML with a <TS> root); `detect` decides the shared .ts extension.
+        Box::new(bilingua_qtts::QtTs),
         Box::new(bilingua_jsmodule::JsModule),
         // resx sniffs XML with <root> and resource headers; it goes before the loose key-value sniffers.
         Box::new(bilingua_resx::Resx),
@@ -73,6 +75,10 @@ fn own_segmentation(id: &str) -> bool {
 /// The filter for a file: by extension first, then by sniffing the bytes.
 pub fn detect(name: &str, bytes: &[u8]) -> Option<Box<dyn Filter>> {
     let ext = name.rsplit_once('.').map(|(_, e)| e.to_ascii_lowercase()).unwrap_or_default();
+    // `.ts` is shared by Qt Linguist (XML) and TypeScript: the bytes decide, as in LocOS.
+    if ext == "ts" {
+        return Some(if bilingua_qtts::QtTs.sniff(bytes) { Box::new(bilingua_qtts::QtTs) } else { Box::new(bilingua_jsmodule::JsModule) });
+    }
     // LocOS sends a .json file in ARB shape (a string @@locale) to its ARB dialect; so do we.
     if ext == "json" && bilingua_arb::Arb.sniff(bytes) {
         return Some(Box::new(bilingua_arb::Arb));

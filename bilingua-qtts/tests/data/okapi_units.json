@@ -1,0 +1,90 @@
+{
+ "Complete_valid_utf8_bom_crlf.ts": {
+  "units": [
+   "hello ¤world",
+   "hello ¤world",
+   "hello ¤world",
+   "hello ¤world",
+   "hello ¤world",
+   "hello ¤world"
+  ],
+  "differs": "the file nests a context inside a context (not valid Qt); LocOS reads only top-level contexts, Okapi reads both"
+ },
+ "TSTest01.ts": {
+  "units": [
+   "Text number 1",
+   "Text number 2",
+   "Text number 3",
+   "Text number four",
+   "Text number four"
+  ],
+  "differs": ""
+ },
+ "TestInQT.ts": {
+  "units": [
+   "Test two",
+   "Test three",
+   "Test four",
+   "Test five",
+   "Test six"
+  ],
+  "differs": "Okapi also lists the message that has no translation element; LocOS skips it"
+ },
+ "TestInQT_Saved.ts": {
+  "units": [
+   "Test two",
+   "Test three",
+   "Test four",
+   "Test five",
+   "Test six",
+   "Test seven"
+  ],
+  "differs": "Okapi also lists the message that has no translation element; LocOS skips it"
+ },
+ "alarm_ro.ts": {
+  "units": [
+   "Add Entry To System Log 2",
+   "What:",
+   "Where:",
+   "When:",
+   "Severity:",
+   "&Log",
+   "Alt+L",
+   "&Cancel",
+   "Alt+C",
+   "Alarm Notification",
+   "<b><font size=\"+3\">Alarm Received</font></b>",
+   "What",
+   "Where",
+   "When",
+   "State",
+   "Severity",
+   "Send E-mail...",
+   "Add To Log...",
+   "Comments...",
+   "Snooze",
+   "Clear",
+   "Acknowledge",
+   "Alarm Notification",
+   "Alarm Received",
+   "What",
+   "Where",
+   "When",
+   "Severity",
+   "Comment",
+   "Select All",
+   "Ack",
+   "Snooze"
+  ],
+  "differs": ""
+ },
+ "autoSample.ts": {
+  "units": [
+   "Text",
+   "Text",
+   "Text",
+   "Text"
+  ],
+  "differs": ""
+ }
+}
