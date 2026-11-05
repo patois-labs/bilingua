@@ -10,6 +10,14 @@ const SAMPLES: &[(&str, &str)] = &[
     ("a.wxl", r#"<WixLocalization xmlns="http://wixtoolset.org/schemas/v4/wxl" Culture="en-US"><String Id="a" Value="Hello"/></WixLocalization>"#),
     ("a.xlf", r#"<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2"><file original="a" source-language="en" datatype="plaintext"><body><trans-unit id="1"><source>Hello</source></trans-unit></body></file></xliff>"#),
     ("a.html", "<p>Hello</p>"),
+    ("a.xmb", "<messagebundle><msg id=\"1\">Hello</msg></messagebundle>"),
+    ("a.xtb", "<translationbundle lang=\"es\"><translation id=\"1\">Hola</translation></translationbundle>"),
+    ("a.ts", "<!DOCTYPE TS><TS version=\"2.1\" language=\"en_US\"><context><name>C</name><message><source>Hello</source><translation type=\"unfinished\"></translation></message></context></TS>"),
+    ("a.php", "<?php
+return ['a' => 'Hello'];
+"),
+    ("a.xcstrings", "{\"sourceLanguage\":\"en\",\"strings\":{\"a\":{\"localizations\":{\"en\":{\"stringUnit\":{\"state\":\"new\",\"value\":\"Hello\"}}}}},\"version\":\"1.0\"}"),
+    ("a.arb", "{\"@@locale\":\"en\",\"a\":\"Hello\"}"),
     ("a.dtd", "<!ENTITY a \"Hello\">\n"),
     ("a.json", "{\"a\": \"Hello\"}"),
     ("a.po", "msgid \"Hello\"\nmsgstr \"\"\n"),

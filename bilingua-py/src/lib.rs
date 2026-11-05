@@ -177,6 +177,7 @@ fn parse_granularity(s: &str) -> Result<Granularity, Fail> {
 
 /// Opens a file and returns the Document as dicts and lists.
 #[pyfunction]
+#[allow(clippy::too_many_arguments)] // one keyword argument per option
 #[pyo3(signature = (name, data, *, source_lang=None, target_lang=None, granularity="paragraph", limits=None, format_options=None))]
 fn extract(
     py: Python<'_>,
