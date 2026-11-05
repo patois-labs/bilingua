@@ -1,0 +1,656 @@
+//! Bilingua Fluent filter: Mozilla Project Fluent `.ftl` files (syntax 1.0).
+//!
+//! Units: a message value and each message attribute are translatable patterns, cut into runs of text and simple
+//! placeables. A select expression ends a run and each of its variants is walked on its own (`ftl:emails[one]`,
+//! `ftl:shared[male][other]`), so plural variants are separate units. Terms (`-brand`) are not translated unless
+//! [`Limits::translate_terms`] is set; term attributes never are. Comments, identifiers, selectors, variant keys,
+//! Junk, indentation of untouched text, line endings and the BOM stay in the skeleton byte for byte.
+//!
+//! Placeables (`{ $name }`, `{ -brand }`, `{ NUMBER($n) }`) are inline tags (free standalone codes, label
+//! `placeholder`, display = the source text), because Localization OS keeps them as plain text in the unit.
+//! `{ "{" }` style brace literals are shown as the plain character. On merge a literal brace in a translation is
+//! written as `{"{"}` and a continuation line starting with `[`, `*` or `.` is escaped the same way, so a
+//! translation can never change the structure of the file.
+//!
+//! A merge of translated units with `Document::target_lang` set also adds, to every plural select, a variant for each CLDR category the
+//! target language uses that the file lacks, holding the translated `[other]` variant (Localization OS decision 13).
+
+/// Skeleton schema number: bump only when this crate's skeleton layout changes (see `bilingua_model::check_parser`).
+pub const SKELETON_SCHEMA: u32 = 1;
+
+mod parser;
+mod plural_data;
+
+use bilingua_model::*;
+use parser::{El, Item, PKind};
+
+/// The Fluent filter.
+pub struct FtlFilter;
+
+const ID: &str = "ftl";
+/// The one hidden code of a unit: `standalone` = the original source text of the run, `open` = white space before
+/// the text, `close` = white space after it, `label` = `l` or `c` (line ends: LF or CRLF), `z`, `b` or `i` (the text starts at column 0, after spaces at the line start, or follows something on its
+/// line), then the indent.
+const HIDDEN: &str = "$ftl";
+const BOM: &[u8] = &[0xEF, 0xBB, 0xBF];
+const UTF8: &str = "utf-8";
+const UTF8_BOM: &str = "utf-8-bom";
+const MAX_NESTING: usize = 40;
+
+/// Size limits (the Localization OS defaults) and the one option.
+#[derive(Debug, Clone, Copy)]
+pub struct Limits {
+    /// Units in one file.
+    pub max_units: usize,
+    /// Characters in one unit.
+    pub max_value_chars: usize,
+    /// Bytes in one file.
+    pub max_input_bytes: usize,
+    /// Translate terms (`-brand-name = Firefox`) too. Localization OS: the `FTL_TRANSLATE_TERMS` environment variable.
+    pub translate_terms: bool,
+}
+
+impl Default for Limits {
+    fn default() -> Limits {
+        Limits { max_units: 50_000, max_value_chars: 100_000, max_input_bytes: 256 << 20, translate_terms: false }
+    }
+}
+
+fn limit_err(msg: String) -> Error {
+    Error::Unsupported(msg)
+}
+
+/// Python `str.isspace` (Rust's `White_Space` plus the four separators U+001C to U+001F).
+fn py_space(c: char) -> bool {
+    c.is_whitespace() || ('\u{1c}'..='\u{1f}').contains(&c)
+}
+
+fn py_strip(s: &str) -> &str {
+    s.trim_matches(py_space)
+}
+
+fn decode(bytes: &[u8]) -> Result<(&str, bool), Error> {
+    let (body, bom) = match bytes.strip_prefix(BOM) {
+        Some(b) => (b, true),
+        None => (bytes, false),
+    };
+    let text = std::str::from_utf8(body).map_err(|e| {
+        if body.contains(&0) {
+            limit_err("this file is not valid UTF-8 and looks like a binary file, not text; re-save it as UTF-8".into())
+        } else {
+            limit_err(format!(
+                "Fluent .ftl files are UTF-8; byte 0x{:02x} at position {} is not. Re-save the file as UTF-8.",
+                body[e.valid_up_to()],
+                e.valid_up_to() + if bom { 3 } else { 0 }
+            ))
+        }
+    })?;
+    if text.contains('\0') {
+        return Err(limit_err("this file is not valid UTF-8 text (it holds NUL bytes); re-save it as UTF-8".into()));
+    }
+    Ok((text, bom))
+}
+
+/// Line count, placeable count and nesting depth, before the parser builds anything.
+fn check_budget(text: &str, l: &Limits) -> Result<(), Error> {
+    let budget = l.max_units.saturating_mul(20);
+    let (mut lines, mut opens, mut depth) = (0usize, 0usize, 0usize);
+    for &b in text.as_bytes() {
+        match b {
+            b'\n' | b'\r' => lines += 1,
+            b'{' => {
+                opens += 1;
+                depth += 1;
+                if depth > MAX_NESTING {
+                    return Err(limit_err(format!("this Fluent file nests placeables more than {MAX_NESTING} deep")));
+                }
+            }
+            b'}' => depth = depth.saturating_sub(1),
+            _ => {}
+        }
+    }
+    if lines > budget {
+        return Err(limit_err(format!("this file has more than {budget} lines; split it into smaller files")));
+    }
+    if opens > budget {
+        return Err(limit_err(format!("this Fluent file has more than {budget} placeables; split it into smaller files")));
+    }
+    Ok(())
+}
+
+enum Piece {
+    Text(String),
+    Ph(String),
+}
+
+struct Run {
+    start: usize,
+    end: usize,
+    pieces: Vec<Piece>,
+    label: String,
+    indent: String,
+}
+
+fn push_text(pieces: &mut Vec<Piece>, s: &str) {
+    if let Some(Piece::Text(t)) = pieces.last_mut() {
+        t.push_str(s);
+    } else {
+        pieces.push(Piece::Text(s.to_string()));
+    }
+}
+
+/// Indentation for continuation lines: the run's own, else its line's plus four spaces.
+fn indent_of(src: &str, start: usize, end: usize) -> String {
+    let seg = &src[start..end];
+    let b = seg.as_bytes();
+    for (i, &c) in b.iter().enumerate() {
+        if c != b'\n' {
+            continue;
+        }
+        let mut j = i + 1;
+        while j < b.len() && b[j] == b' ' {
+            j += 1;
+        }
+        if j > i + 1 && j < b.len() {
+            if let Some(ch) = seg[j..].chars().next() {
+                if !py_space(ch) {
+                    return seg[i + 1..j].to_string();
+                }
+            }
+        }
+    }
+    let bol = src.as_bytes()[..start].iter().rposition(|&c| c == b'\n' || c == b'\r').map_or(0, |p| p + 1);
+    let line = &src[bol..start];
+    let lead = line.len() - line.trim_start_matches(' ').len();
+    format!("{}    ", &line[..lead])
+}
+
+fn walk(els: &[El], label: &str, src: &str, out: &mut Vec<Run>) {
+    let mut run: Vec<&El> = Vec::new();
+    fn flush(run: &mut Vec<&El>, label: &str, src: &str, out: &mut Vec<Run>) {
+        if run.is_empty() {
+            return;
+        }
+        let bounds = |e: &El| match e {
+            El::Text { start, end, .. } | El::Place { start, end, .. } => (*start, *end),
+        };
+        let (start, end) = (bounds(run[0]).0, bounds(run[run.len() - 1]).1);
+        let mut pieces: Vec<Piece> = Vec::new();
+        for e in run.iter() {
+            match e {
+                El::Text { value, .. } => push_text(&mut pieces, value),
+                El::Place { kind: PKind::Str(v), .. } if matches!(v.as_str(), "{" | "}" | "[" | "*" | ".") => push_text(&mut pieces, v),
+                El::Place { start, end, .. } => pieces.push(Piece::Ph(src[*start..*end].to_string())),
+            }
+        }
+        out.push(Run { start, end, pieces, label: label.to_string(), indent: indent_of(src, start, end) });
+        run.clear();
+    }
+    for el in els {
+        if let El::Place { kind: PKind::Select(sel), .. } = el {
+            flush(&mut run, label, src, out);
+            for v in &sel.variants {
+                walk(&v.value, &format!("{label}[{}]", v.key), src, out);
+            }
+            continue;
+        }
+        run.push(el);
+    }
+    flush(&mut run, label, src, out);
+}
+
+fn runs(src: &str, items: &[Item], terms: bool) -> Vec<(Run, Option<String>)> {
+    let mut out: Vec<Run> = Vec::new();
+    let mut comments: Vec<Option<String>> = Vec::new();
+    for it in items {
+        let before = out.len();
+        if !it.is_term {
+            if let Some(v) = &it.value {
+                walk(v, &it.id, src, &mut out);
+            }
+            for a in &it.attrs {
+                walk(&a.value, &format!("{}.{}", it.id, a.name), src, &mut out);
+            }
+        } else if terms {
+            if let Some(v) = &it.value {
+                walk(v, &format!("-{}", it.id), src, &mut out);
+            }
+        }
+        for _ in before..out.len() {
+            comments.push(it.comment.clone());
+        }
+    }
+    out.into_iter().zip(comments).collect()
+}
+
+/// A letter or digit outside the placeables (Python `str.isalnum`; Rust's is slightly wider for combining marks).
+fn translatable(pieces: &[Piece]) -> bool {
+    let mut phs: Vec<&str> = pieces.iter().filter_map(|p| if let Piece::Ph(s) = p { Some(s.as_str()) } else { None }).collect();
+    if phs.is_empty() {
+        return pieces.iter().any(|p| matches!(p, Piece::Text(t) if t.chars().any(char::is_alphanumeric)));
+    }
+    phs.sort_by_key(|s| std::cmp::Reverse(s.len()));
+    phs.dedup();
+    let mut s: String = pieces.iter().map(|p| match p { Piece::Text(t) | Piece::Ph(t) => t.as_str() }).collect();
+    for p in phs {
+        s = s.replace(p, "");
+    }
+    s.chars().any(char::is_alphanumeric)
+}
+
+/// What a Fluent file holds, for tools and tests: messages, terms and Junk entries (text the Fluent grammar
+/// rejects, kept as is).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Structure {
+    pub messages: usize,
+    pub terms: usize,
+    pub junk: usize,
+    /// Attributes of messages and terms.
+    pub attributes: usize,
+}
+
+/// Counts the entries of a Fluent file (UTF-8, optional BOM).
+pub fn structure(bytes: &[u8]) -> Result<Structure, Error> {
+    let (text, _) = decode(bytes)?;
+    check_budget(text, &Limits::default())?;
+    let (items, junk) = parser::parse_counted(text);
+    Ok(Structure {
+        messages: items.iter().filter(|i| !i.is_term).count(),
+        terms: items.iter().filter(|i| i.is_term).count(),
+        junk,
+        attributes: items.iter().map(|i| i.attrs.len()).sum(),
+    })
+}
+
+impl FtlFilter {
+    /// `extract` with explicit limits and options.
+    pub fn extract_with(&self, bytes: &[u8], opts: &ExtractOptions, limits: &Limits) -> Result<Document, Error> {
+        if bytes.len() > limits.max_input_bytes {
+            return Err(limit_err(format!("the file is larger than {} bytes", limits.max_input_bytes)));
+        }
+        let (text, bom) = decode(bytes)?;
+        check_budget(text, limits)?;
+        let items = parser::parse(text);
+        let crlf = text.contains("\r\n");
+        let mut parts: Vec<SkelPart> = Vec::new();
+        let mut units: Vec<Unit> = Vec::new();
+        let mut pos = 0usize;
+        for (run, comment) in runs(text, &items, limits.translate_terms) {
+            if !translatable(&run.pieces) {
+                continue;
+            }
+            let mut pieces = run.pieces;
+            let (mut lead, mut trail) = (String::new(), String::new());
+            if let Some(Piece::Text(t)) = pieces.first_mut() {
+                let s = py_strip_start(t);
+                lead = t[..t.len() - s.len()].to_string();
+                *t = s.to_string();
+            }
+            if let Some(Piece::Text(t)) = pieces.last_mut() {
+                let s = py_strip_end(t);
+                trail = t[s.len()..].to_string();
+                t.truncate(s.len());
+            }
+            let mut chars = 0usize;
+            let mut inl: Vec<Inline> = Vec::new();
+            let mut codes = std::collections::BTreeMap::new();
+            let mut n = 0usize;
+            for p in pieces {
+                match p {
+                    Piece::Text(t) => {
+                        chars += t.chars().count();
+                        if !t.is_empty() {
+                            inl.push(Inline::text(t));
+                        }
+                    }
+                    Piece::Ph(raw) => {
+                        chars += raw.chars().count();
+                        n += 1;
+                        let id = n.to_string();
+                        codes.insert(id.clone(), CodeData { standalone: Some(raw.clone()), label: Some("placeholder".into()), ..Default::default() });
+                        inl.push(Inline::free_tag(id, raw));
+                    }
+                }
+            }
+            if chars > limits.max_value_chars {
+                return Err(limit_err(format!("this file has a message longer than {} characters; break it into shorter messages", limits.max_value_chars)));
+            }
+            if units.len() >= limits.max_units {
+                return Err(limit_err(format!("this file has more than {} segments; split it into smaller files", limits.max_units)));
+            }
+            if run.start > pos {
+                parts.push(SkelPart::Raw(text[pos..run.start].to_string()));
+            }
+            pos = run.end;
+            let mut unit = Unit::new(format!("u{}", units.len() + 1), inl);
+            unit.codes = codes;
+            unit.codes.insert(
+                HIDDEN.into(),
+                CodeData {
+                    standalone: Some(text[run.start..run.end].to_string()),
+                    open: (!lead.is_empty()).then_some(lead),
+                    close: (!trail.is_empty()).then_some(trail),
+                    label: Some(format!(
+                        "{}{}{}",
+                        if crlf { 'c' } else { 'l' },
+                        match &text[line_start(text, run.start)..run.start] {
+                            "" => 'z',
+                            p if p.bytes().all(|b| b == b' ') => 'b',
+                            _ => 'i',
+                        },
+                        run.indent
+                    )),
+                },
+            );
+            unit.context.kind = Some("key".into());
+            unit.context.style = Some(format!("ftl:{}", run.label));
+            unit.context.key = Some(run.label);
+            if let Some(c) = comment {
+                unit.context.notes.push(c);
+            }
+            parts.push(SkelPart::Unit(units.len()));
+            units.push(unit);
+        }
+        if pos < text.len() {
+            parts.push(SkelPart::Raw(text[pos..].to_string()));
+        }
+        Ok(Document {
+            format: ID.into(),
+            name: None,
+            source_lang: opts.source_lang.clone(),
+            target_lang: opts.target_lang.clone(),
+            granularity: opts.granularity,
+            units,
+            skeleton: Skeleton::text(parts, if bom { UTF8_BOM } else { UTF8 }, bilingua_model::parser_info!()),
+        })
+    }
+}
+
+fn py_strip_start(s: &str) -> &str {
+    s.trim_start_matches(py_space)
+}
+
+fn py_strip_end(s: &str) -> &str {
+    s.trim_end_matches(py_space)
+}
+
+impl Filter for FtlFilter {
+    fn id(&self) -> &'static str {
+        ID
+    }
+
+    fn extensions(&self) -> &'static [&'static str] {
+        &["ftl"]
+    }
+
+    /// Loose: Fluent looks like `key = value`. Needs a Fluent-only marker (`{ $var }`, `{ -term }`, a select
+    /// variant `*[other]`, a `-term =` entry, an indented `.attribute =`, a `##` group comment) and at least one
+    /// parsed entry. Put it late in the facade list.
+    fn sniff(&self, bytes: &[u8]) -> bool {
+        let head = &bytes[..bytes.len().min(4096)];
+        let body = head.strip_prefix(BOM).unwrap_or(head);
+        let text = match std::str::from_utf8(body) {
+            Ok(t) => t,
+            Err(e) if e.error_len().is_none() => std::str::from_utf8(&body[..e.valid_up_to()]).unwrap_or(""),
+            Err(_) => return false,
+        };
+        if text.contains('\0') || check_budget(text, &Limits::default()).is_err() {
+            return false;
+        }
+        let marker = text.contains("{ $")
+            || text.contains("{ -")
+            || text.contains("*[")
+            || text.lines().any(|l| {
+                l.starts_with("## ")
+                    || l.starts_with("### ")
+                    || (l.starts_with(' ') && l.trim_start().starts_with('.') && l.contains(" = "))
+                    || (l.starts_with('-') && l[1..].split(" =").next().is_some_and(|id| !id.is_empty() && id.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_')) && l.contains(" ="))
+            });
+        marker && !parser::parse(text).is_empty()
+    }
+
+    fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
+        self.extract_with(bytes, opts, &Limits::default())
+    }
+
+    fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
+        bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
+        let Skeleton::Text { parts, encoding, .. } = &doc.skeleton else {
+            return Err(Error::Write("ftl needs a text skeleton".into()));
+        };
+        let mut out = String::new();
+        for p in parts {
+            match p {
+                SkelPart::Raw(s) => out.push_str(s),
+                SkelPart::Unit(i) => {
+                    let unit = doc.units.get(*i).ok_or_else(|| Error::Write(format!("no unit {i}")))?;
+                    out.push_str(&render(unit));
+                }
+            }
+        }
+        let translated = doc.units.iter().any(|u| u.segments.iter().any(|s| !s.target.is_empty()));
+        if let (Some(loc), true) = (doc.target_lang.as_deref(), translated) {
+            check_budget(&out, &Limits::default()).map_err(|e| Error::Write(e.to_string()))?;
+            out = fill_plurals(&out, loc);
+        }
+        let mut bytes = Vec::with_capacity(out.len() + 3);
+        if encoding == UTF8_BOM {
+            bytes.extend_from_slice(BOM);
+        }
+        bytes.extend_from_slice(out.as_bytes());
+        Ok(bytes)
+    }
+}
+
+/// Source form of an inline sequence: text as is, a tag as its original placeable.
+fn flat(unit: &Unit, v: &[Inline]) -> String {
+    let mut s = String::new();
+    for i in v {
+        match i {
+            Inline::Text(t) => s.push_str(t),
+            Inline::Tag { id, display, .. } => s.push_str(unit.codes.get(id).and_then(|c| c.standalone.as_deref()).unwrap_or(display)),
+        }
+    }
+    s
+}
+
+/// The source text to write for a unit: the original when nothing changed, else the encoded translation.
+fn render(unit: &Unit) -> String {
+    let Some(h) = unit.codes.get(HIDDEN) else { return String::new() };
+    let raw = h.standalone.as_deref().unwrap_or("");
+    if !unit.translate || unit.segments.iter().all(|s| s.target.is_empty()) {
+        return raw.to_string();
+    }
+    let out = unit.output();
+    if flat(unit, &out) == flat(unit, &unit.source()) {
+        return raw.to_string();
+    }
+    let layout = h.label.as_deref().unwrap_or("li    ");
+    let (newline, rest) = if let Some(rest) = layout.strip_prefix('c') { ("\r\n", rest) } else { ("\n", layout.strip_prefix('l').unwrap_or(layout)) };
+    let block_start = rest.starts_with(['b', 'z']);
+    let col0 = rest.starts_with('z');
+    let indent = rest.get(1..).unwrap_or("    ");
+    let mut seq: Vec<Inline> = Vec::with_capacity(out.len() + 2);
+    seq.push(Inline::text(h.open.clone().unwrap_or_default()));
+    seq.extend(out);
+    seq.push(Inline::text(h.close.clone().unwrap_or_default()));
+    let seq = merge_text(seq);
+    // Continuation lines get the unit's indent, blank lines none. Only line breaks in the translator's text count:
+    // a placeable is written as it was, even when it spans lines.
+    let mut rebuilt = String::new();
+    let (mut line, mut nonblank, mut first_line, mut after_nl) = (String::new(), false, true, false);
+    let end_line = |rebuilt: &mut String, line: &mut String, nonblank: bool, first_line: &mut bool| {
+        if *first_line {
+            rebuilt.push_str(line);
+            *first_line = false;
+        } else {
+            rebuilt.push_str(newline);
+            if nonblank {
+                rebuilt.push_str(indent);
+                rebuilt.push_str(line);
+            }
+        }
+        line.clear();
+    };
+    for (k, i) in seq.iter().enumerate() {
+        match i {
+            Inline::Text(t) => {
+                let t = t.replace("\r\n", "\n").replace('\r', "\n");
+                let mut esc = String::with_capacity(t.len());
+                escape_text(&mut esc, &t, (k == 0 && block_start) || after_nl);
+                for ch in esc.chars() {
+                    if ch == '\n' {
+                        end_line(&mut rebuilt, &mut line, nonblank, &mut first_line);
+                        nonblank = false;
+                    } else {
+                        line.push(ch);
+                        nonblank |= !py_space(ch);
+                    }
+                }
+                after_nl = t.ends_with('\n');
+            }
+            Inline::Tag { id, display, .. } => {
+                line.push_str(unit.codes.get(id).and_then(|c| c.standalone.as_deref()).unwrap_or(display));
+                nonblank = true;
+                after_nl = false;
+            }
+        }
+    }
+    end_line(&mut rebuilt, &mut line, nonblank, &mut first_line);
+    if col0 && !rebuilt.starts_with(['{', ' ']) && !py_strip(&rebuilt).is_empty() {
+        rebuilt.insert_str(0, indent);
+    }
+    rebuilt
+}
+
+/// Braces become `{"{"}`; a `[`, `*` or `.` at the start of a continuation line becomes `{"["}` and so on.
+fn escape_text(out: &mut String, seg: &str, at_line_start: bool) {
+    let mut line_start = at_line_start || out.ends_with('\n');
+    for ch in seg.chars() {
+        if ch == '{' || ch == '}' {
+            out.push_str(&format!("{{\"{ch}\"}}"));
+            line_start = false;
+            continue;
+        }
+        if line_start && matches!(ch, '[' | '*' | '.') {
+            out.push_str(&format!("{{\"{ch}\"}}"));
+            line_start = false;
+            continue;
+        }
+        out.push(ch);
+        if ch == '\n' {
+            line_start = true;
+        } else if ch != ' ' {
+            line_start = false;
+        }
+    }
+}
+
+// ---- plural fill ---------------------------------------------------------------------------------------------
+
+const PLURAL_ORDER: [&str; 6] = ["zero", "one", "two", "few", "many", "other"];
+const PLURAL_LETTERS: &str = "zotfmx";
+
+/// The CLDR plural (or ordinal) categories a locale uses, in CLDR order, always with `other`; `None` for no locale.
+fn target_categories(locale: &str, ordinal: bool) -> Option<Vec<&'static str>> {
+    let norm = locale.trim().replace('-', "_");
+    let mut parts: Vec<String> = norm.split('_').map(str::to_string).collect();
+    if parts[0].is_empty() || !parts[0].bytes().all(|b| b.is_ascii_alphabetic()) {
+        return None;
+    }
+    parts[0] = parts[0].to_ascii_lowercase();
+    for p in parts.iter_mut().skip(1) {
+        if p.len() == 4 {
+            *p = format!("{}{}", p[..1].to_ascii_uppercase(), p[1..].to_ascii_lowercase());
+        } else {
+            *p = p.to_ascii_uppercase();
+        }
+    }
+    let mut letters = "x";
+    'search: for n in (1..=parts.len()).rev() {
+        let id = parts[..n].join("_");
+        if let Ok(i) = plural_data::TABLE.binary_search_by(|r| r.0.cmp(id.as_str())) {
+            letters = if ordinal { plural_data::TABLE[i].2 } else { plural_data::TABLE[i].1 };
+            break 'search;
+        }
+    }
+    Some(PLURAL_LETTERS.char_indices().filter(|(_, c)| letters.contains(*c)).map(|(i, _)| PLURAL_ORDER[i]).collect())
+}
+
+fn select_list<'a>(els: &'a [El], out: &mut Vec<&'a parser::Select>) {
+    for el in els {
+        if let El::Place { kind: PKind::Select(s), .. } = el {
+            out.push(s);
+            for v in &s.variants {
+                select_list(&v.value, out);
+            }
+        }
+    }
+}
+
+fn line_start(text: &str, pos: usize) -> usize {
+    text.as_bytes()[..pos].iter().rposition(|&c| c == b'\n' || c == b'\r').map_or(0, |p| p + 1)
+}
+
+/// Adds the target language's missing plural variants (see the crate docs). Returns `text` as is when there is
+/// nothing to add.
+fn fill_plurals(text: &str, locale: &str) -> String {
+    let items = parser::parse(text);
+    let mut selects: Vec<&parser::Select> = Vec::new();
+    for it in &items {
+        if let Some(v) = &it.value {
+            select_list(v, &mut selects);
+        }
+        for a in &it.attrs {
+            select_list(&a.value, &mut selects);
+        }
+    }
+    let newline = if text.contains("\r\n") { "\r\n" } else { "\n" };
+    let mut inserts: Vec<(usize, String)> = Vec::new();
+    for sel in selects {
+        let named: Vec<&parser::Variant> = sel.variants.iter().filter(|v| v.ident).collect();
+        if named.len() < 2 || named.iter().any(|v| !PLURAL_ORDER.contains(&v.key.as_str())) {
+            continue;
+        }
+        let other = named.iter().rev().find(|v| v.key == "other");
+        let default = sel.variants.iter().find(|v| v.default);
+        let (Some(other), Some(default)) = (other, default) else { continue };
+        let Some(cats) = target_categories(locale, sel.ordinal) else { continue };
+        let missing: Vec<&str> = cats.into_iter().filter(|c| !named.iter().any(|v| v.key == *c)).collect();
+        if missing.is_empty() {
+            continue;
+        }
+        let Some(rel) = text[other.key_end..].find(']') else { continue };
+        let close = other.key_end + rel;
+        if close >= other.end {
+            continue;
+        }
+        let body = &text[close + 1..other.end];
+        let bol = line_start(text, default.start);
+        let indent = &text[bol..default.start];
+        if !py_strip(indent).is_empty() {
+            continue;
+        }
+        let first = &sel.variants[0];
+        let lead0 = &text[line_start(text, first.start)..first.start];
+        let lead = if !first.default && py_strip(lead0).is_empty() { lead0.to_string() } else { format!("{indent} ") };
+        let mut s = String::new();
+        for c in missing {
+            s.push_str(&format!("{lead}[{c}]{body}{newline}"));
+        }
+        inserts.push((bol, s));
+    }
+    if inserts.is_empty() {
+        return text.to_string();
+    }
+    inserts.sort_by_key(|i| i.0);
+    let mut out = String::with_capacity(text.len() + inserts.iter().map(|i| i.1.len()).sum::<usize>());
+    let mut pos = 0;
+    for (at, s) in inserts {
+        out.push_str(&text[pos..at]);
+        out.push_str(&s);
+        pos = at;
+    }
+    out.push_str(&text[pos..]);
+    out
+}
