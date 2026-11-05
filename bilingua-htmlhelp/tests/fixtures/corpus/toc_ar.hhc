@@ -1,0 +1,34 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<HTML>
+<HEAD>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1256">
+<meta name="GENERATOR" content="Microsoft&reg; HTML Help Workshop 4.1">
+<!-- Sitemap 1.0 -->
+</HEAD><BODY>
+<OBJECT type="text/site properties">
+	<param name="ImageType" value="Folder">
+	<param name="Font" value="Tahoma,8,178">
+</OBJECT>
+<UL>
+	<LI> <OBJECT type="text/sitemap">
+		<param name="Name" value="البدء">
+		<param name="Local" value="html/ar/start.htm">
+		<param name="ImageNumber" value="1">
+		</OBJECT>
+	<LI> <OBJECT type="text/sitemap">
+		<param name="Name" value="طلب الخبز عبر الإنترنت">
+		<param name="Local" value="html/ar/order.htm">
+		</OBJECT>
+	<UL>
+		<LI> <OBJECT type="text/sitemap">
+			<param name="Name" value="التوصيل والاستلام">
+			<param name="Local" value="html/ar/delivery.htm#top">
+			</OBJECT>
+	</UL>
+	<LI> <OBJECT type="text/sitemap">
+		<PARAM NAME=Name VALUE='الأسئلة الشائعة'>
+		<param name="Local" value="html/ar/faq.htm">
+		<param name="Comment" value="not translated">
+		</OBJECT>
+</UL>
+</BODY></HTML>

@@ -64,6 +64,10 @@ pub fn filters() -> Vec<Box<dyn Filter>> {
         Box::new(bilingua_adoc::Adoc),
         // MDX is plain text claimed by extension only (its sniff is always false).
         Box::new(bilingua_mdx::Mdx),
+        // HTML Help: sitemaps sniff `text/sitemap`, projects an [OPTIONS] line with a project key; before INI and HTML.
+        Box::new(bilingua_htmlhelp::HhcFilter),
+        Box::new(bilingua_htmlhelp::HhkFilter),
+        Box::new(bilingua_htmlhelp::HhpFilter),
         Box::new(bilingua_ini::IniFilter),
         Box::new(bilingua_strings::Strings),
         // DTD sniffs strictly (the first declaration must be an ENTITY, ELEMENT or ATTLIST), so it can sit early.

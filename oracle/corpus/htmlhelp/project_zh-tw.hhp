@@ -1,0 +1,18 @@
+[OPTIONS]
+Compatibility=1.1 or later
+Compiled file=manual.chm
+Contents file=toc.hhc
+Default topic=html/zh-tw/start.htm
+Display compile progress=No
+Index file=index.hhk
+Language=0x404 Chinese (Traditional, Taiwan)
+Title=麵包店手冊
+
+[WINDOWS]
+main="麵包店說明","toc.hhc","index.hhk","html/zh-tw/start.htm","html/zh-tw/start.htm",,,,,0x23520,,0x387e,,,,,,,,0
+
+[FILES]
+html/zh-tw/start.htm
+; Title=not an option here
+
+[INFOTYPES]
