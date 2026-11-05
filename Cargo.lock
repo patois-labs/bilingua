@@ -23,6 +23,7 @@ version = "0.1.0"
 dependencies = [
  "bilingua-arb",
  "bilingua-docx",
+ "bilingua-ftl",
  "bilingua-html",
  "bilingua-ini",
  "bilingua-jsmodule",
@@ -76,6 +77,15 @@ dependencies = [
  "serde",
  "serde_json",
  "zip",
+]
+
+[[package]]
+name = "bilingua-ftl"
+version = "0.1.0"
+dependencies = [
+ "bilingua-model",
+ "proptest",
+ "serde_json",
 ]
 
 [[package]]

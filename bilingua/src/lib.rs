@@ -42,6 +42,8 @@ pub fn filters() -> Vec<Box<dyn Filter>> {
         Box::new(bilingua_yaml::Yaml),
         // properties sniffs any key=value or key: value text, so it goes after the stricter key-value formats.
         Box::new(bilingua_properties::Properties),
+        // Fluent sniffs only with a Fluent-only marker, but its text looks like key = value: after the others.
+        Box::new(bilingua_ftl::FtlFilter),
         // HTML sniffs loosely and plain text accepts any UTF-8, so they go last.
         Box::new(bilingua_html::Html),
         Box::new(bilingua_text::TextFilter),

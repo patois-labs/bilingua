@@ -166,6 +166,7 @@ fn crate_of(format: &str) -> &'static str {
         "markdown" | "md" => "bilingua-markdown",
         "po" => "bilingua-po",
         "ini" => "bilingua-ini",
+        "ftl" => "bilingua-ftl",
         "strings" => "bilingua-strings",
         "toml" => "bilingua-toml",
         "properties" => "bilingua-properties",
