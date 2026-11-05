@@ -8,11 +8,17 @@
 //! the Workbench import expects. A unit whose text did not change is not touched (an existing reviewed translation
 //! stays). Every byte outside a changed cell is identical, and an unchanged file comes back byte for byte.
 //!
+//! Existing translations (the TRANSLATION cell of a Bilingual file's TRANSLATED section) are loaded as segment
+//! targets by default, as Okapi does: `Translated`, or `Draft` when the OUT OF DATE cell is `*`. The format option
+//! `stf.load_targets` = `false` turns this off and gives exactly the Localization OS unit list with no targets (the
+//! LocOS adapter sets it). A loaded target that is merged back unchanged writes the original cell bytes.
+//!
 //! Placeholders are inline tags (standalone codes, label `placeholder`, display = the source text), the LocOS `x` token, because
 //! Localization OS keeps them as point tokens: the escapes `\t \n \r \\`, `{0}` style arguments and `{!merge.fields}`.
 //! A raw tab, line feed or carriage return in a translation is written back escaped, so a row can never split.
 //!
-//! With a target language and at least one translation (or `MergeOptions::stamp_target_always`) the `Language code:`
+//! With a target language and at least one new translation (a loaded target merged back unchanged does not count;
+//! or with `MergeOptions::stamp_target_always`) the `Language code:`
 //! header is set to the target in Salesforce's code form (`de`, `es_MX`, `zh_CN`, `iw`, ...).
 //!
 //! Salesforce's own label limits for the common key types are reported as `context.max_len` and by [`over_limit`];
@@ -37,8 +43,13 @@ pub struct StfFilter;
 
 const ID: &str = "stf";
 /// The one hidden code of a unit: `standalone` = the raw cell the unit's translation replaces, `open` = tabs that
-/// must be added first when the row has no TRANSLATION cell yet.
+/// must be added first when the row has no TRANSLATION cell yet, `label` = [`BILINGUAL`] when that cell is a
+/// TRANSLATION cell (so its text is the loaded target), else [`MONOLINGUAL`].
 const HIDDEN: &str = "$stf";
+const BILINGUAL: &str = "translation";
+const MONOLINGUAL: &str = "label";
+/// The format option that turns target loading off.
+pub const LOAD_TARGETS: &str = "stf.load_targets";
 
 /// Salesforce label limits by key type, never enforced by truncation.
 pub fn max_length_for_key(key: &str) -> Option<usize> {
@@ -221,6 +232,54 @@ fn canon(inl: &[Inline]) -> String {
     s
 }
 
+/// A TRANSLATION cell as target inlines: each placeholder that matches an unused source placeholder (same text, in
+/// order) becomes that tag; any other placeholder stays text, so the cell renders back to the same bytes and the
+/// target never holds a tag its source lacks. Empty for a blank cell.
+fn target_of(cell: &str, unit_codes: &std::collections::BTreeMap<String, CodeData>, source: &[Inline]) -> Vec<Inline> {
+    if !scan::has_text(cell) && scan::token_spans(cell).is_empty() {
+        return vec![];
+    }
+    // unused source tag ids by placeholder text, in source order (a map of queues, so a label of 100 000 escapes stays linear)
+    let mut free: std::collections::BTreeMap<&str, std::collections::VecDeque<&str>> = std::collections::BTreeMap::new();
+    for i in source {
+        if let Inline::Tag { id, .. } = i {
+            if let Some(raw) = unit_codes.get(id).and_then(|c| c.standalone.as_deref()) {
+                free.entry(raw).or_default().push_back(id.as_str());
+            }
+        }
+    }
+    let mut out = Vec::new();
+    let mut at = 0usize;
+    for (s, e) in scan::token_spans(cell) {
+        let raw = &cell[s..e];
+        if let Some(id) = free.get_mut(raw).and_then(|q| q.pop_front()) {
+            if s > at {
+                out.push(Inline::text(&cell[at..s]));
+            }
+            out.push(Inline::tag(id, TagKind::Standalone, raw));
+            at = e;
+        }
+    }
+    if at < cell.len() {
+        out.push(Inline::text(&cell[at..]));
+    }
+    merge_text(out)
+}
+
+/// The target loaded from the file for this unit, if its cell is a TRANSLATION cell.
+fn loaded_target(unit: &Unit) -> Option<Vec<Inline>> {
+    let h = unit.codes.get(HIDDEN)?;
+    if h.label.as_deref() != Some(BILINGUAL) {
+        return None;
+    }
+    Some(target_of(h.standalone.as_deref().unwrap_or(""), &unit.codes, &unit.source()))
+}
+
+/// The unit has a target that is not just the translation the file already holds.
+fn has_new_target(u: &Unit) -> bool {
+    has_target(u) && loaded_target(u).is_none_or(|t| canon(&t) != canon(&u.output()))
+}
+
 fn has_target(u: &Unit) -> bool {
     u.translate && u.segments.iter().any(|s| !s.target.is_empty())
 }
@@ -233,7 +292,9 @@ fn render(unit: &Unit) -> String {
         return raw.to_string();
     }
     let out = unit.output();
-    if canon(&out) == canon(&unit.source()) {
+    let out_c = canon(&out);
+    // as Localization OS: a target equal to the source leaves the cell alone (an existing translation stays)
+    if out_c == canon(&unit.source()) || loaded_target(unit).is_some_and(|t| canon(&t) == out_c) {
         return raw.to_string();
     }
     format!("{}{}", h.open.as_deref().unwrap_or(""), render_inlines(unit, &out))
@@ -259,6 +320,7 @@ impl StfFilter {
     /// `extract` with explicit size limits.
     pub fn extract_with(&self, bytes: &[u8], opts: &ExtractOptions, limits: &Limits) -> Result<Document, Error> {
         let dec = decode(bytes, opts, limits)?;
+        let load = opts.format_flag(LOAD_TARGETS).unwrap_or(true);
         let text = dec.text.as_str();
         let mut w = Walker::new(text, lead(text, &dec.encoding));
         let mut parts: Vec<SkelPart> = Vec::new();
@@ -300,8 +362,26 @@ impl StfFilter {
             pos = b;
             let mut unit = Unit::new(format!("u{}", units.len() + 1), inl);
             let pad = if r.dst >= r.cells.len() { "\t".repeat(r.dst - r.cells.len() + 1) } else { String::new() };
-            codes.insert(HIDDEN.into(), CodeData { standalone: Some(text[a..b].to_string()), open: (!pad.is_empty()).then_some(pad), ..Default::default() });
+            let bilingual = r.dst != r.src;
+            codes.insert(
+                HIDDEN.into(),
+                CodeData {
+                    standalone: Some(text[a..b].to_string()),
+                    open: (!pad.is_empty()).then_some(pad),
+                    label: Some(if bilingual { BILINGUAL } else { MONOLINGUAL }.into()),
+                    ..Default::default()
+                },
+            );
             unit.codes = codes;
+            if load && bilingual {
+                let target = target_of(&text[a..b], &unit.codes, &unit.segments[0].source);
+                if !target.is_empty() {
+                    let ood = r.cells.get(r.dst + 1).is_some_and(|c| py_strip(c) == "*");
+                    let seg = &mut unit.segments[0];
+                    seg.target = target;
+                    seg.state = if ood { SegState::Draft } else { SegState::Translated };
+                }
+            }
             unit.context.kind = Some("key".into());
             unit.context.key = Some(r.key.to_string());
             unit.context.style = Some(format!("stf:{}", r.section));
@@ -349,7 +429,8 @@ fn merge(doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
             }
         }
     }
-    if opts.should_stamp(doc) {
+    // a target the file already held does not count as translated: an untouched merge stays byte for byte
+    if doc.target_lang.is_some() && (opts.stamp_target_always || doc.units.iter().any(has_new_target)) {
         let code = doc.target_lang.as_deref().map(salesforce_language_code).unwrap_or_default();
         if !code.is_empty() {
             if let Some(h) = scan::find_header(&out, lead(&out, encoding), "language code") {

@@ -25,7 +25,17 @@ pub fn units(data: &[u8]) -> Vec<String> {
 /// LocOS `build` / `build_localized` through Bilingua: `mapping` holds LocOS-token texts by unit index (as the
 /// adapter maps them), `target` the target locale (None = `build`), `merge` the options.
 pub fn build_with(data: &[u8], mapping: &[(usize, String)], target: Option<&str>, merge: &MergeOptions) -> Vec<u8> {
-    let mut doc = extract_for(data, target).expect("extract");
+    build_opts(data, mapping, &ExtractOptions { target_lang: target.map(String::from), ..opts() }, merge)
+}
+
+/// The options the LocOS adapter extracts with: no targets loaded.
+pub fn locos_opts() -> ExtractOptions {
+    ExtractOptions { format_options: [(bilingua_stf::LOAD_TARGETS.to_string(), "false".to_string())].into(), ..opts() }
+}
+
+/// `build_with` with explicit extract options.
+pub fn build_opts(data: &[u8], mapping: &[(usize, String)], eo: &ExtractOptions, merge: &MergeOptions) -> Vec<u8> {
+    let mut doc = StfFilter.extract(data, eo).expect("extract");
     for (i, text) in mapping {
         let (_, map) = to_locos_text(&doc.units[*i].source());
         let id = doc.units[*i].segments[0].id.clone();

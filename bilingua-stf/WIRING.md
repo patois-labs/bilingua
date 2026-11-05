@@ -6,7 +6,9 @@
   position is not critical; it must not come after a loose key=value sniffer.
 - Facade `Cargo.toml`: `bilingua-stf = { workspace = true }`. Workspace: member and `[workspace.dependencies]` path entry.
 - `bilingua/tests/contract.rs` `crate_of`: `"stf" => "bilingua-stf"`. `tools/check-portable.sh` and `.ps1` CRATES lists: `stf`.
-- Options: none. `MergeOptions::locos()` gives the LocOS behaviour (UTF-8 out, `Language code:` stamped even when nothing is translated).
+- Options: `stf.load_targets` in `ExtractOptions::format_options` (default `true`: existing Bilingual translations
+  become targets, `Translated` or `Draft` when out of date). The LocOS adapter sets `false` (exact LocOS unit list,
+  no targets). Constant: `bilingua_stf::LOAD_TARGETS`. `MergeOptions::locos()` gives the LocOS behaviour (UTF-8 out, `Language code:` stamped even when nothing is translated).
 - Extra public API: `bilingua_stf::records(bytes)` (LocOS `records()` for key projects), `over_limit(&doc)` (Salesforce label
   limits; also `context.max_len` on each unit), `max_length_for_key`, `salesforce_language_code`.
 - Oracle corpus: `oracle/corpus/stf/` (22 files, made by `tests/tools/gen_corpus.py`).

@@ -110,5 +110,9 @@ fn units_carry_context_and_the_existing_translation() {
     assert_eq!(u.context.key.as_deref(), Some("CustomField.Account.Region.HelpText"));
     assert_eq!(u.context.extra.get("out_of_date").map(String::as_str), Some("true"));
     assert!(u.context.extra.contains_key("translation"));
-    assert!(doc.units.iter().all(|u| u.segments[0].target.is_empty()));
+    // existing translations load as targets by default (out of date = Draft); stf.load_targets=false loads none
+    assert_eq!(u.segments[0].state, SegState::Draft);
+    assert!(!u.segments[0].target.is_empty());
+    let off = StfFilter.extract(data, &locos_opts()).unwrap();
+    assert!(off.units.iter().all(|u| u.segments[0].target.is_empty()));
 }

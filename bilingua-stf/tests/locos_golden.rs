@@ -36,6 +36,10 @@ fn matches_locos_on_random_files_and_corpus() {
         }
         let want: Vec<String> = c["units"].as_array().unwrap().iter().map(|u| u.as_str().unwrap().to_string()).collect();
         assert_eq!(units(&data), want, "{name}: units");
+        let off = bilingua_stf::StfFilter.extract(&data, &locos_opts()).unwrap();
+        let off_units: Vec<String> = off.units.iter().map(|u| bilingua_model::locos::to_locos_text(&u.source()).0).collect();
+        assert_eq!(off_units, want, "{name}: units without targets");
+        assert!(off.units.iter().all(|u| u.segments[0].target.is_empty()), "{name}: stf.load_targets=false loads nothing");
         let styles: Vec<String> = extract(&data).unwrap().units.iter().map(|u| u.context.style.clone().unwrap()).collect();
         let want_styles: Vec<&str> = c["styles"].as_array().unwrap().iter().map(|u| u.as_str().unwrap()).collect();
         assert_eq!(styles, want_styles, "{name}: styles");
@@ -59,11 +63,15 @@ fn matches_locos_on_random_files_and_corpus() {
             let m = mapping(kind, &want);
             let (target, opts) = if loc.is_some() || label == "none@loc" { (Some(loc.unwrap_or("pt-BR")), MergeOptions::locos()) } else { (None, utf8) };
             let opts = if target.is_none() && m.is_empty() { MergeOptions::default() } else { opts };
-            let got = build_with(&data, &m, target, &opts);
             // LocOS B-bytes: a plain build() with nothing written returns the upload as it came
             let want_bytes = if target.is_none() && m.is_empty() { data.clone() } else { hex(want_hex.as_str().unwrap()) };
-            assert_eq!(got, want_bytes, "{name}: build {label}");
-            builds += 1;
+            // both modes: the adapter's (no targets loaded) and the default (existing translations loaded as targets)
+            for (mode, eo) in [("locos", locos_opts()), ("default", common::opts())] {
+                let eo = ExtractOptions { target_lang: target.map(String::from), ..eo };
+                let got = build_opts(&data, &m, &eo, &opts);
+                assert_eq!(got, want_bytes, "{name}: build {label} ({mode})");
+                builds += 1;
+            }
         }
         ok += 1;
     }

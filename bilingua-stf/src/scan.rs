@@ -150,7 +150,9 @@ pub struct Walker<'t> {
     text: &'t str,
     pos: usize,
     section: Rc<str>,
-    columns: Option<Vec<String>>,
+    /// LABEL and TRANSLATION cell indexes of the current column header, when it names TRANSLATION. Worked out once
+    /// per column line, not per row: a column line of 200 000 names over a million rows must stay linear.
+    columns: Option<(usize, usize)>,
     pub seen_data: bool,
     pub type_: String,
     /// First span of each header, by lowercased name.
@@ -191,7 +193,7 @@ impl<'t> Walker<'t> {
         }
         if line.starts_with('#') {
             if let Some(c) = parse_columns(line) {
-                self.columns = Some(c);
+                self.columns = c.iter().position(|n| n == "TRANSLATION").map(|t| (c.iter().position(|n| n == "LABEL").unwrap_or(1), t));
             }
             return Some(None);
         }
@@ -219,10 +221,8 @@ impl<'t> Walker<'t> {
         self.seen_data = true;
         let cells: Vec<&str> = line.split('\t').collect();
         let (mut src, mut dst) = (1usize, 1usize);
-        let translated_cols = self.columns.as_ref().filter(|c| c.iter().any(|n| n == "TRANSLATION") && &*self.section != "untranslated");
-        if let Some(cols) = translated_cols {
-            src = cols.iter().position(|n| n == "LABEL").unwrap_or(1);
-            dst = cols.iter().position(|n| n == "TRANSLATION").unwrap_or(1);
+        if let Some((s, d)) = self.columns.filter(|_| &*self.section != "untranslated") {
+            (src, dst) = (s, d);
         } else if &*self.section == "translated" && cells.len() >= 3 {
             src = 1;
             dst = 2;

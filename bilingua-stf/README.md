@@ -6,6 +6,10 @@ Port of the Localization OS STF filter (the baseline; Okapi has none).
 - Every data row whose LABEL has text outside its placeholders is a unit; KEY, comments, headers, section markers and
   layout are skeleton, byte for byte. A translation goes into the TRANSLATION column when the section has one, else
   in place of the LABEL. An unchanged unit is not touched.
+- Existing translations (the TRANSLATION cell of the Bilingual TRANSLATED section) load as segment targets by
+  default: `Translated`, or `Draft` when OUT OF DATE is `*`. `stf.load_targets` = `false` gives the LocOS unit list
+  with no targets. A loaded target merged back unchanged writes the original cell, and does not count as
+  translated for the `Language code:` stamp, so an untouched merge stays byte for byte in both modes.
 - Placeholders (`\n \t \r \`, `{0}`, `{!merge.field}`) are standalone inline tags (the LocOS `x` token).
 - `Language code:` is stamped in Salesforce form when a target language is set and something is translated.
 - Tests: `tests/locos_suite.rs` (10 of the 12 LocOS cases), `tests/locos_golden.rs` (352 files, 2000+ builds against
