@@ -23,6 +23,8 @@ pub fn filters() -> Vec<Box<dyn Filter>> {
     all.extend(vec![
         // Xcode localization bundle (a zip): by extension or by its contents.json and Localized Contents folder.
         Box::new(bilingua_xcstrings::Xcloc) as Box<dyn Filter>,
+        // EPUB (a zip): by extension or by its stored mimetype; a strict sniff, so it cannot take a Word file.
+        Box::new(bilingua_epub::Epub),
         Box::new(bilingua_docx::Docx),
         Box::new(bilingua_xlsx::Xlsx::default()),
         Box::new(bilingua_pptx::Pptx),
