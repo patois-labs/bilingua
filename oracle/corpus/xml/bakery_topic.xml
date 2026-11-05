@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE task PUBLIC "-//OASIS//DTD DITA Task//EN" "task.dtd">
+<task id="bake" xml:lang="en-US">
+  <title>Baking a <ph>sourdough</ph> loaf</title>
+  <shortdesc>Bake the loaf at the right heat.</shortdesc>
+  <taskbody>
+    <steps>
+      <step><cmd>Heat the oven to <codeph>230 C</codeph>.</cmd></step>
+      <step><cmd>Press <uicontrol>Start</uicontrol> and wait.</cmd><info>Do not open the door.<indexterm>baking</indexterm></info></step>
+    </steps>
+    <example><codeblock xml:space="preserve">oven --temp 230
+  --steam on</codeblock><image href="oven.png" alt="The oven dial"/></example>
+  </taskbody>
+</task>

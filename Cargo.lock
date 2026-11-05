@@ -52,6 +52,7 @@ dependencies = [
  "bilingua-xliff",
  "bilingua-xlsx",
  "bilingua-xmb",
+ "bilingua-xml",
  "bilingua-yaml",
  "serde_json",
  "zip",
@@ -385,6 +386,16 @@ dependencies = [
  "bilingua-model",
  "bilingua-xliff",
  "proptest",
+ "serde_json",
+]
+
+[[package]]
+name = "bilingua-xml"
+version = "0.1.0"
+dependencies = [
+ "bilingua-model",
+ "proptest",
+ "quick-xml",
  "serde_json",
 ]
 

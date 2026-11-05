@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?loc-multilingual mode="xpath" source="en_US" lang-attr="loc" source-xpath="//msg/v[@loc='{lang}']" target-xpath="../v[@loc='{lang}']"?>
+<messages>
+  <msg name="open"><v loc="en_US">Open the door</v><v loc="de_DE">Tür öffnen</v></msg>
+  <msg name="close"><v loc="en_US">Close the <b>door</b></v></msg>
+</messages>

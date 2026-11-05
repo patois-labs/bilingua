@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<strings>
+  <string key="k1">
+    <en>Open</en>
+    <fr>Ouvrir</fr>
+    <ja>開く</ja>
+    <ar>فتح</ar>
+  </string>
+  <string key="k2">
+    <en>Save <b>all</b></en>
+    <fr>Tout enregistrer</fr>
+    <ja></ja>
+    <ar></ar>
+  </string>
+  <string key="k3">
+    <en>Close</en>
+    <fr>Fermer</fr>
+    <ja></ja>
+    <ar></ar>
+  </string>
+</strings>
