@@ -275,7 +275,7 @@ fn render(u: &Unit, enc: Enc, out: &mut String) -> Result<(), Error> {
     }
     // A NUL would make a UTF-8 file (or a BOM-less UTF-16 one) unreadable by Xcode and by this parser.
     if new.contains('\0') && !matches!(enc, Enc::Utf16LeBom | Enc::Utf16BeBom) {
-        return Err(Error::Write(format!("the translation of unit {} contains a NUL character", u.id)));
+        return Err(Error::Unwritable { unit: Some(u.id.clone()), reason: "the translation contains a NUL character".into() });
     }
     let value = format!("{}{}{}", code(u, LEAD).unwrap_or_default(), new, code(u, TRAIL).unwrap_or_default());
     let body = escape(&value);

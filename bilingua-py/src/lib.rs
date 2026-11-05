@@ -35,6 +35,7 @@ impl From<engine::Error> for Fail {
             E::DuplicatedTag(_) => "duplicated_tag",
             E::ParserVersion { .. } => "parser_version",
             E::Write(_) => "write",
+            E::Unwritable { .. } => "unwritable",
             E::Limit(_) => "limit",
             E::Encoding(_) => "encoding",
             E::Io(_) => "io",

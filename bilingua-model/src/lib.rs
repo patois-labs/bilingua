@@ -1183,6 +1183,13 @@ pub enum Error {
     ParserVersion { found: String, expected: String },
     #[error("cannot write: {0}")]
     Write(String),
+    /// The translation cannot be written in this format: it does not fit (a caption too long), a character has no
+    /// code in the file's code table, or the text would read back as structure (every letter swallowed by a
+    /// placeholder). The document itself is fine; the translator has to change the text. `unit` names the unit when
+    /// one is to blame; `reason` is plain text (LocOS's message where LocOS has one), safe to show the translator.
+    /// `Write` stays for a broken or foreign skeleton.
+    #[error("the translation cannot be written{}: {reason}", unit.as_ref().map(|u| format!(" (unit {u})")).unwrap_or_default())]
+    Unwritable { unit: Option<String>, reason: String },
     /// The file is over a safety limit or holds something unsafe (a zip bomb, an XML entity bomb, too many
     /// units). The message is short, names the limit and is safe to show the person who uploaded the file.
     #[error("{0}")]

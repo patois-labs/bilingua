@@ -72,17 +72,18 @@ fn check_rendered(u: &Unit, target: &[Item], s: &str) -> Result<(), Error> {
     let toks = lex::lex(s);
     let one_literal = matches!(toks.as_slice(), [t] if t.kind == lex::Kind::Str && t.start == 0 && t.end == s.len());
     if !one_literal {
-        return Err(Error::Write(format!("unit {}: the translation does not form one string literal", u.id)));
+        return Err(Error::Unwritable { unit: Some(u.id.clone()), reason: "the translation does not form one string literal".into() });
     }
     let has_text = target.iter().any(|it| matches!(it, Item::Ch(c) if c.is_alphanumeric()));
     let (pieces, _) = lit::pieces(s);
     let keeps_text = pieces.iter().any(|p| matches!(p, lit::Piece::Text(t) if t.chars().any(char::is_alphanumeric)));
     if has_text && !keeps_text {
-        return Err(Error::Write(format!(
-            "unit {}: every letter of the translation would be read as a format placeholder (a % right before a \
-             letter, such as %E or %d), so the string would be lost; put a space after the % or rephrase",
-            u.id
-        )));
+        return Err(Error::Unwritable {
+            unit: Some(u.id.clone()),
+            reason: "every letter of the translation would be read as a format placeholder (a % right before a \
+                     letter, such as %E or %d), so the string would be lost; put a space after the % or rephrase"
+                .into(),
+        });
     }
     Ok(())
 }

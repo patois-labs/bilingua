@@ -36,8 +36,8 @@ fn check(b: &[u8]) {
         let out = match Strings.merge(&p) {
             Ok(o) => o,
             // A NUL character in a text that is not BOM-marked UTF-16 is the only reason a merge may refuse.
-            Err(Error::Write(m)) => {
-                assert!(m.contains("NUL"), "{m}");
+            Err(e @ Error::Unwritable { .. }) => {
+                assert!(e.to_string().contains("NUL"), "{e}");
                 return;
             }
             Err(e) => panic!("{e}"),

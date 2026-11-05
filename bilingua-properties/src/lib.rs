@@ -383,7 +383,7 @@ impl Filter for Properties {
             for c in out.chars() {
                 let v = c as u32;
                 if v > 0xFF {
-                    return Err(Error::Write(format!("U+{v:04X} does not fit ISO-8859-1")));
+                    return Err(Error::Unwritable { unit: None, reason: format!("U+{v:04X} does not fit ISO-8859-1") });
                 }
                 bytes.push(v as u8);
             }
