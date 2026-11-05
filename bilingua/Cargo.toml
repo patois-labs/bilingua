@@ -64,6 +64,7 @@ bilingua-latex = { workspace = true }
 bilingua-rst = { workspace = true }
 bilingua-email = { workspace = true }
 bilingua-serverpages = { workspace = true }
+bilingua-subtext = { workspace = true }
 
 [dev-dependencies]
 bilingua-zip = { workspace = true }
