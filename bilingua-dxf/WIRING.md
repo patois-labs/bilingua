@@ -13,7 +13,11 @@
   `oracle/corpus/SOURCES.md`.
 - Options: none beyond `source_lang` (unused), `limits`. `include_locked` has no effect (LocOS has no locked DXF text).
 - Merge options (`Filter::merge_with`): **no effect**. DXF has no language stamp, and LocOS keeps the drawing's code page
-  on build, so the LocOS adapter must not turn `output_encoding: Utf8` on for dxf; the filter ignores it either way.
+  on build. `output_encoding: Utf8` is ignored on purpose: the code page is part of the header (`$ACADVER`,
+  `$DWGCODEPAGE`), so a pre-2007 drawing written as UTF-8 would read as mojibake. **Model need:** add `dxf` to
+  `LOCOS_KEEPS_ENCODING` in `bilingua-model/src/profile/mod.rs` so the LocOS profile says what the filter does.
+- Writer records live in `Unit::hidden` (`kind`, `raw`, `raw.N`, `code`, `nl`, `nl2`), not in `codes`. A translation
+  the code page cannot hold, or a value that would hold a line break, is `Error::Unwritable`.
 - Skeleton: `Text` with `encoding` = `dxf-bytes;codec=<Python codec>` (for example `dxf-bytes;codec=cp1252`); raw parts
   hold one character per file byte (U+0000..U+00FF). A consumer that reads the parts as text would see mojibake for
   non-ASCII bytes: only this crate's `merge` should read them.

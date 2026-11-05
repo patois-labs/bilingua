@@ -116,16 +116,16 @@ fn limits_are_typed_errors() {
         many.push_str(&format!("  0\nTEXT\n  1\nText {i}\n"));
     }
     let data = frame(&many);
-    let o = ExtractOptions { limits: Some(Limits { max_units: 100, ..Limits::default() }), ..Default::default() };
+    let o = ExtractOptions::new().with_limits(Limits::new().with_max_units(100));
     assert!(matches!(Dxf.extract(&data, &o), Err(Error::Limit(e)) if e.kind == LimitKind::Units));
-    let o = ExtractOptions { limits: Some(Limits { max_input_bytes: 50, ..Limits::default() }), ..Default::default() };
+    let o = ExtractOptions::new().with_limits(Limits::new().with_max_input_bytes(50));
     assert!(matches!(Dxf.extract(&data, &o), Err(Error::Limit(e)) if e.kind == LimitKind::InputBytes));
-    let o = ExtractOptions { limits: Some(Limits { max_unit_chars: 10, ..Limits::default() }), ..Default::default() };
+    let o = ExtractOptions::new().with_limits(Limits::new().with_max_unit_chars(10));
     assert!(matches!(
         Dxf.extract(&frame("  0\nTEXT\n  1\na very long string indeed\n"), &o),
         Err(Error::Limit(e)) if e.kind == LimitKind::UnitChars
     ));
-    let o = ExtractOptions { limits: Some(Limits { max_units: 2, ..Limits::default() }), ..Default::default() };
+    let o = ExtractOptions::new().with_limits(Limits::new().with_max_units(2));
     let flood = format!("  0\n{}", "999\nx\n".repeat(1000));
     assert!(matches!(Dxf.extract(flood.as_bytes(), &o), Err(Error::Limit(e)) if e.kind == LimitKind::Lines));
 }

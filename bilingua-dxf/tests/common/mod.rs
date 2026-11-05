@@ -3,7 +3,7 @@ use bilingua_dxf::Dxf;
 use bilingua_model::*;
 
 pub fn opts() -> ExtractOptions {
-    ExtractOptions::default()
+    ExtractOptions::new()
 }
 
 pub fn extract(data: &[u8]) -> Result<Document, Error> {
@@ -12,7 +12,7 @@ pub fn extract(data: &[u8]) -> Result<Document, Error> {
 
 /// The unit text the way LocOS shows it: codes as tokens.
 pub fn token_text(u: &Unit) -> String {
-    locos::to_locos_text(&u.source()).0
+    profile::tokens::to_locos_text(&u.source()).0
 }
 
 pub fn units(data: &[u8]) -> Vec<String> {
@@ -25,8 +25,8 @@ pub fn styles(data: &[u8]) -> Vec<String> {
 
 /// A translation written in LocOS token text, turned back into inlines for unit `u`.
 pub fn target_of(u: &Unit, text: &str) -> Vec<Inline> {
-    let (_, map) = locos::to_locos_text(&u.source());
-    let (inl, _problems) = locos::parse_locos_text(text, &map);
+    let (_, map) = profile::tokens::to_locos_text(&u.source());
+    let (inl, _problems) = profile::tokens::parse_locos_text(text, &map);
     // LocOS drops a token whose number it does not know, and so does its adapter: every token still in the text
     // after the known ones became tags is unknown.
     inl.into_iter()

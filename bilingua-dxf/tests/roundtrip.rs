@@ -100,14 +100,14 @@ fn the_target_language_and_merge_options_change_nothing() {
             u.segments[0].target = vec![Inline::text("Zielwert")];
         }
         let a = Dxf.merge(&doc).unwrap();
-        let b = Dxf.merge_with(&doc, &MergeOptions::locos()).unwrap();
+        let b = Dxf.merge_with(&doc, &profile::locos().merge_options("dxf")).unwrap();
         assert_eq!(a, b, "{name}");
         doc.target_lang = None;
         assert_eq!(a, Dxf.merge(&doc).unwrap(), "{name}");
         // nothing translated: the original bytes, with or without a target language
         let mut empty = extract(&data).unwrap();
         empty.target_lang = Some("ja-JP".into());
-        assert_eq!(Dxf.merge_with(&empty, &MergeOptions::locos()).unwrap(), data, "{name}");
+        assert_eq!(Dxf.merge_with(&empty, &profile::locos().merge_options("dxf")).unwrap(), data, "{name}");
     }
 }
 
@@ -137,4 +137,56 @@ fn skeleton_checks() {
     let mut doc = extract(data).unwrap();
     doc.skeleton = Skeleton::Zip { entries: vec![], parser: doc.skeleton.parser().cloned() };
     assert!(matches!(Dxf.merge(&doc), Err(Error::Write(_))));
+}
+
+/// Group-pair attacks from a translation: line breaks, control characters, `0`/`SECTION`/`ENDSEC`/`EOF` text and
+/// `999` lines never add or remove a group; the merged file has the same group codes in the same order.
+#[test]
+fn a_translation_never_makes_a_new_group_pair() {
+    let src = "  0\nSECTION\n  2\nENTITIES\n  0\nTEXT\n  1\nFire exit\n  0\nMTEXT\n  3\nchunk one \n  1\n{\\fArial;Living} room\\P2\n  0\nATTRIB\n  2\nTAG\n  1\nValue\n  0\nENDSEC\n  0\nEOF\n";
+    let codes = |b: &[u8]| -> Vec<String> {
+        let s = String::from_utf8_lossy(b).replace("\r\n", "\n").replace('\r', "\n");
+        s.split('\n').step_by(2).map(|c| c.trim().to_string()).collect()
+    };
+    let hostile = ["x\n  0\nENDSEC\n  0\nEOF", "a\r\n999\r\ncomment", "\r0\rSECTION\r", "line\u{2028}sep\u{85}nel\u{b}\u{c}\u{1}", "  0\nSECTION"];
+    for h in hostile {
+        let mut doc = extract(src.as_bytes()).unwrap();
+        let ids: Vec<String> = doc.units.iter().map(|u| u.segments[0].id.clone()).collect();
+        for id in &ids {
+            doc.set_target(id, vec![Inline::text(h)]).unwrap();
+        }
+        let out = Dxf.merge(&doc).unwrap();
+        let mut want = codes(src.as_bytes());
+        // the MTEXT's two chunks become one short group 1
+        let k = want.iter().position(|c| c == "3").unwrap();
+        want.remove(k);
+        assert_eq!(codes(&out), want, "{h:?}");
+        let back = extract(&out).unwrap();
+        assert_eq!(back.units.len(), 3, "{h:?}");
+    }
+}
+
+/// A hand-made document cannot smuggle a line break into a value through a code: the merge refuses it.
+#[test]
+fn a_code_with_a_line_break_is_refused() {
+    let src = b"  0\nSECTION\n  2\nENTITIES\n  0\nMTEXT\n  1\n{\\fArial;Living} room\n  0\nENDSEC\n  0\nEOF\n";
+    let mut doc = extract(src).unwrap();
+    let u = &mut doc.units[0];
+    u.codes.insert("1".into(), CodeData { standalone: Some("x\n  0\nEOF".into()), ..Default::default() });
+    u.segments[0].target = vec![Inline::tag("1", TagKind::Standalone, "x"), Inline::text("Wohnzimmer")];
+    assert!(matches!(Dxf.merge(&doc), Err(Error::Unwritable { .. })));
+}
+
+/// An empty translation writes an empty value (LocOS writes "" too); the drawing still reads.
+#[test]
+fn an_empty_translation_writes_an_empty_value() {
+    let src = b"  0\nSECTION\n  2\nENTITIES\n  0\nTEXT\n  1\nFire exit\n  0\nMTEXT\n  3\nchunk one \n  1\nLiving room\n  0\nENDSEC\n  0\nEOF\n";
+    let mut doc = extract(src).unwrap();
+    for i in 0..doc.units.len() {
+        let id = doc.units[i].segments[0].id.clone();
+        doc.set_target_empty(&id).unwrap();
+    }
+    let out = Dxf.merge(&doc).unwrap();
+    assert_eq!(out, b"  0\nSECTION\n  2\nENTITIES\n  0\nTEXT\n  1\n\n  0\nMTEXT\n  1\n\n  0\nENDSEC\n  0\nEOF\n");
+    assert!(extract(&out).unwrap().units.is_empty());
 }

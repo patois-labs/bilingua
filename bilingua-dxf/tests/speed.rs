@@ -38,8 +38,8 @@ fn large_file() {
     // BILINGUA_DXF_SPEED_OUT keeps the file; by default it goes to the temp folder next to the timing line
     let path = std::env::var("BILINGUA_DXF_SPEED_OUT").map(std::path::PathBuf::from).unwrap_or_else(|_| std::env::temp_dir().join("bilingua-dxf-speed.dxf"));
     std::fs::write(&path, &data).unwrap();
-    let limits = Limits { max_units: 10_000_000, ..Limits::default() };
-    let opts = ExtractOptions { limits: Some(limits), target_lang: Some("de-DE".into()), ..Default::default() };
+    let limits = Limits::new().with_max_units(10_000_000);
+    let opts = ExtractOptions::new().with_limits(limits).with_target_lang("de-DE");
     let t0 = Instant::now();
     let mut doc = Dxf.extract(&data, &opts).unwrap();
     let t_extract = t0.elapsed();

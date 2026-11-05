@@ -28,4 +28,6 @@ Limits: `ExtractOptions::limits` (input size, units, characters per unit); the g
 group codes per allowed unit.
 
 Tests: `tests/locos_suite.rs` (the 10 LocOS test functions), `locos_golden.rs` (253 files against recorded LocOS output),
-`roundtrip.rs`, `hostile.rs` (proptest), `speed.rs`. Generators are in `tools/` and `tests/tools/`.
+`roundtrip.rs`, `hostile.rs` (proptest), `speed.rs`; a unit test in `src/codec.rs` checks every code page against
+fingerprints of Python's codecs (every code point encoded, every one- and two-byte input decoded; made by
+`tools/codec_fingerprints.py`). Generators are in `tools/` and `tests/tools/`.

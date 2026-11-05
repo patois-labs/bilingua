@@ -23,12 +23,20 @@ use lex::Kind;
 pub struct Dxf;
 
 const ID: &str = "dxf";
-/// The hidden code of a unit: `label` = `text`, `mtext` or `dim`; `standalone` = the original bytes of the first
-/// span (the value for a single value, the whole line block for MTEXT), as one character per byte.
-const HIDDEN: &str = "$dxf";
-/// MTEXT only: `open` = the first code line up to its digits, `close` = the line break after the code,
-/// `standalone` = the line break after the first value (empty at the end of the file).
-const META: &str = "$dxf.m";
+// `Unit::hidden` keys (values are one character per file byte, U+0000..U+00FF).
+/// How the value is lexed and written: `text`, `dim`, `mleader` or `mtext` (the chunked 1/3 groups).
+const KIND: &str = "kind";
+/// MTEXT only: the first code line up to its digits.
+const CODE_LINE: &str = "code";
+/// MTEXT only: the line break after the first code.
+const NL_CODE: &str = "nl";
+/// MTEXT only: the line break after the first value (empty at the end of the file).
+const NL_VALUE: &str = "nl2";
+
+/// The original bytes of the unit's k-th span: the value for a single value, a whole line block for MTEXT.
+fn raw_key(k: usize) -> String {
+    if k == 0 { "raw".to_string() } else { format!("raw.{k}") }
+}
 const TAG_PREFIX: &str = "dxf-bytes;codec=";
 const RESAVE: &str = " Save the drawing as an ASCII DXF (AutoCAD 2007 or later is UTF-8).";
 
@@ -180,7 +188,7 @@ impl Filter for Dxf {
             let mut unit = Unit::new(format!("u{}", idx + 1), parsed.inlines);
             unit.codes = parsed.codes;
             let first = ru.pairs[0];
-            let label = Some(kind_label(ru.style, ru.kind).to_string());
+            unit.set_hidden(KIND, kind_label(ru.style, ru.kind));
             if ru.style == "dxf:mtext" {
                 // spans: whole line blocks, neighbours joined
                 let mut spans: Vec<(usize, usize)> = Vec::new();
@@ -191,26 +199,16 @@ impl Filter for Dxf {
                     }
                 }
                 for (k, (a, b)) in spans.iter().enumerate() {
-                    let key = if k == 0 { HIDDEN.to_string() } else { format!("{HIDDEN}.{k}") };
-                    unit.codes.insert(key, CodeData { standalone: Some(to_chars(&bytes[*a..*b])), label: label.clone(), ..Default::default() });
+                    unit.set_hidden(raw_key(k), to_chars(&bytes[*a..*b]));
                     slots.push(Slot { start: *a, end: *b, unit: idx });
                 }
                 let nl1 = &bytes[first.code_e..first.val_s];
                 let ws = nl1.iter().position(|&c| c != b' ' && c != b'\t').unwrap_or(nl1.len());
-                unit.codes.insert(
-                    META.into(),
-                    CodeData {
-                        open: Some(to_chars(&bytes[first.start..first.code_e])),
-                        close: Some(to_chars(&nl1[ws..])),
-                        standalone: Some(to_chars(&bytes[first.val_e..first.end])),
-                        ..Default::default()
-                    },
-                );
+                unit.set_hidden(CODE_LINE, to_chars(&bytes[first.start..first.code_e]));
+                unit.set_hidden(NL_CODE, to_chars(&nl1[ws..]));
+                unit.set_hidden(NL_VALUE, to_chars(&bytes[first.val_e..first.end]));
             } else {
-                unit.codes.insert(
-                    HIDDEN.into(),
-                    CodeData { standalone: Some(to_chars(&bytes[first.val_s..first.val_e])), label, ..Default::default() },
-                );
+                unit.set_hidden(raw_key(0), to_chars(&bytes[first.val_s..first.val_e]));
                 slots.push(Slot { start: first.val_s, end: first.val_e, unit: idx });
             }
             unit.context.kind = Some(ru.style.trim_start_matches("dxf:").to_string());
@@ -231,24 +229,14 @@ impl Filter for Dxf {
         if pos < bytes.len() {
             parts.push(SkelPart::Raw(to_chars(&bytes[pos..])));
         }
-        let doc = Document {
-            format: ID.into(),
-            source_lang: opts.source_lang.clone(),
-            target_lang: opts.target_lang.clone(),
-            granularity: opts.granularity,
-            units,
-            skeleton: Skeleton::text(parts, format!("{TAG_PREFIX}{}", codec.name()), bilingua_model::parser_info!()),
-            ..Default::default()
-        };
+        let skeleton = Skeleton::text(parts, format!("{TAG_PREFIX}{}", codec.name()), bilingua_model::parser_info!());
+        let doc = Document::new(ID, units, skeleton).with_options(opts);
         guard::finish(doc, Vec::new(), &limits)
     }
 
-    fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
-        self.merge_with(doc, &MergeOptions::default())
-    }
-
-    /// DXF has no language stamp and keeps its code page, so the merge options change nothing (LocOS keeps the
-    /// code page too, so the adapter's UTF-8 option must not be passed for dxf either).
+    /// DXF has no language stamp, and the drawing's code page is part of its header (`$ACADVER`, `$DWGCODEPAGE`):
+    /// a pre-2007 drawing written as UTF-8 would read back as mojibake in AutoCAD. So both merge options change
+    /// nothing; LocOS keeps the code page on build too (the LocOS profile should list dxf as keeping its encoding).
     fn merge_with(&self, doc: &Document, _opts: &MergeOptions) -> Result<Vec<u8>, Error> {
         bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
         let Skeleton::Text { parts, encoding, .. } = &doc.skeleton else {
@@ -274,13 +262,11 @@ impl Filter for Dxf {
 }
 
 fn write_unit(unit: &Unit, occ: usize, changed: &mut bool, codec: Codec, out: &mut Vec<u8>) -> Result<(), Error> {
-    let key = if occ == 0 { HIDDEN.to_string() } else { format!("{HIDDEN}.{occ}") };
-    let h = unit.codes.get(&key).ok_or_else(|| Error::Write(format!("unit {} has no dxf record", unit.id)))?;
-    let original = h.standalone.as_deref().unwrap_or("");
-    let label = unit.codes.get(HIDDEN).and_then(|c| c.label.as_deref()).unwrap_or("text");
+    let original = unit.hidden(&raw_key(occ)).ok_or_else(|| Error::Write(format!("unit {} has no dxf record", unit.id)))?;
+    let label = unit.hidden(KIND).unwrap_or("text");
     let kind = kind_of(label);
     if occ == 0 {
-        *changed = unit.translate && unit.segments.iter().any(|s| !s.target.is_empty()) && unit.output() != unit.source();
+        *changed = unit.is_translated() && unit.output() != unit.source();
     }
     if !*changed {
         return push_bytes(original, out);
@@ -291,16 +277,24 @@ fn write_unit(unit: &Unit, occ: usize, changed: &mut bool, codec: Codec, out: &m
     let text = lex::render(&unit.output(), &unit.codes, kind);
     let value = lex::fit_codec(&text, codec);
     let enc = |s: &str| -> Result<Vec<u8>, Error> {
-        codec.encode(s).ok_or_else(|| Error::Write(format!("unit {}: cannot write the value in {}", unit.id, codec.name())))
+        let b = codec.encode(s).ok_or_else(|| Error::Unwritable {
+            unit: Some(unit.id.clone()),
+            reason: format!("the translation has a character the drawing's code page ({}) cannot hold", codec.name()),
+        })?;
+        // a line break in a value would start a new group pair (the escaping never makes one; a code from a
+        // hand-made document could)
+        if b.iter().any(|&x| x == b'\r' || x == b'\n') {
+            return Err(Error::Unwritable { unit: Some(unit.id.clone()), reason: "the translation would break the group-code pairs (a line break in a value)".into() });
+        }
+        Ok(b)
     };
     if label != "mtext" {
         out.extend_from_slice(&enc(&value)?);
         return Ok(());
     }
-    let m = unit.codes.get(META).ok_or_else(|| Error::Write(format!("unit {} has no dxf layout record", unit.id)))?;
-    let template = m.open.as_deref().unwrap_or("");
-    let nl1 = m.close.as_deref().unwrap_or("");
-    let nl2_orig = m.standalone.as_deref().unwrap_or("");
+    let template = unit.hidden(CODE_LINE).unwrap_or("");
+    let nl1 = unit.hidden(NL_CODE).unwrap_or("\n");
+    let nl2_orig = unit.hidden(NL_VALUE).unwrap_or("");
     let nl2 = if nl2_orig.is_empty() { nl1 } else { nl2_orig };
     let pieces = lex::chunks(&value);
     for (k, piece) in pieces.iter().enumerate() {

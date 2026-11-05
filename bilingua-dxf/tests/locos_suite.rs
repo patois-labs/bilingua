@@ -324,7 +324,7 @@ fn test_hostile_inputs() {
             other => panic!("accepted: {other:?}"),
         }
     }
-    let o = |max_units| ExtractOptions { limits: Some(Limits { max_units, ..Limits::default() }), ..Default::default() };
+    let o = |max_units| ExtractOptions::new().with_limits(Limits::new().with_max_units(max_units));
     let mut many = p(&[(0, "SECTION"), (2, "ENTITIES")]);
     for _ in 0..5 {
         many.extend(p(&[(0, "TEXT"), (1, "word")]));

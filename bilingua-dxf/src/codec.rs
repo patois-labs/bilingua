@@ -277,3 +277,98 @@ impl Codec {
         self == Codec::Utf8 || self.encode(s).is_some()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::Codec;
+
+    /// FNV-1a 64 fingerprints of Python 3.13.9's codecs (the LocOS runtime), made by `tools/codec_fingerprints.py` (LocOS venv):
+    /// (codec, strict encode of every code point, strict decode of every one- and two-byte input).
+    const PY_FINGERPRINTS: &[(&str, u64, u64)] = &[
+        ("cp874", 0xE0D7478D181F92FE, 0x076604FCBF167449),
+        ("cp1250", 0x2F0D10CF9F2061D9, 0xF96BDE145EDCBE6E),
+        ("cp1251", 0xE27B238B5DC1D576, 0x7FB943DB7BEA1336),
+        ("cp1252", 0x771EC181B8238641, 0x9BB0DC520C5D1E19),
+        ("cp1253", 0x48CB340856791783, 0x5A6A769F6D53FB51),
+        ("cp1254", 0x6237EDE083BA37CB, 0x3F9ABE892957CA7F),
+        ("cp1255", 0x8313701B7DAA2B7B, 0x5DDF72461C67E533),
+        ("cp1256", 0xF7E7BE416632B52C, 0x4734B05AB0629197),
+        ("cp1257", 0xF1C8F1E254EC288F, 0xCE35C0AC43C17165),
+        ("cp1258", 0xDE8804FCDA1A44C7, 0xCC22328E5423F23C),
+        ("cp437", 0x5DB5BA1A735A50A9, 0x1F93EFB7EA15FBE9),
+        ("cp850", 0x425CEAEFF41A3B41, 0xBF70FDEAF17F958F),
+        ("cp852", 0xDF0DE303090F2D12, 0xAAC5871145ECE252),
+        ("cp855", 0xB328CC816D7D85AA, 0x681AA45CC65D71CD),
+        ("cp857", 0x10EF7888B4716769, 0xEE04A5AAB29B56C5),
+        ("cp860", 0xD592C7A2594E9404, 0xE922238A38615345),
+        ("cp861", 0xFB779E1D8A160A52, 0x211851A9B7BFBDEE),
+        ("cp863", 0x17DC6CA434253CEE, 0x8C62DAB52448D149),
+        ("cp864", 0xE6ECDFA85F1F22FF, 0x1D1936852A557C39),
+        ("cp865", 0x7BF5A657D870AA01, 0x4D404C058011B881),
+        ("cp866", 0x45649029592E2EE1, 0xF53A1DF13D6D0E86),
+        ("cp869", 0xB86EBEF469CA8572, 0xAC7556E36986E957),
+        ("cp932", 0xA2B20B63CE862F82, 0x4903AE740A37A795),
+        ("gbk", 0x13FFD912D6511F3D, 0x673E2577FF2E316A),
+        ("cp949", 0x670F116063C1DD7B, 0x8F7A0317D35AD44D),
+        ("cp950", 0x236806DF5B5A19E5, 0x5847D992226F1358),
+    ];
+
+    struct Fnv(u64);
+    impl Fnv {
+        fn feed(&mut self, b: &[u8]) {
+            for &x in b {
+                self.0 ^= u64::from(x);
+                self.0 = self.0.wrapping_mul(0x100_0000_01B3);
+            }
+        }
+    }
+
+    fn dec_one(f: &mut Fnv, c: Codec, raw: &[u8]) {
+        f.feed(raw);
+        match c.decode(raw) {
+            Ok(s) => {
+                f.feed(&[1]);
+                f.feed(s.as_bytes());
+                f.feed(&[0xFF]);
+            }
+            Err(p) => {
+                f.feed(&[0]);
+                f.feed(&u32::try_from(p).unwrap().to_le_bytes());
+            }
+        }
+    }
+
+    #[test]
+    fn every_code_page_reads_and_writes_exactly_as_python() {
+        let mut bad = Vec::new();
+        for &(name, want_enc, want_dec) in PY_FINGERPRINTS {
+            let c = Codec::from_name(name).unwrap();
+            let mut e = Fnv(0xCBF2_9CE4_8422_2325);
+            let mut buf = Vec::new();
+            for ch in (0..0x11_0000u32).filter_map(char::from_u32) {
+                buf.clear();
+                if c.encode_char(ch, &mut buf) {
+                    e.feed(&(ch as u32).to_le_bytes());
+                    e.feed(&[u8::try_from(buf.len()).unwrap()]);
+                    e.feed(&buf);
+                }
+            }
+            let mut d = Fnv(0xCBF2_9CE4_8422_2325);
+            for a in 0..=255u8 {
+                dec_one(&mut d, c, &[a]);
+            }
+            for a in 0..=255u8 {
+                for b in 0..=255u8 {
+                    dec_one(&mut d, c, &[a, b]);
+                }
+            }
+            if e.0 != want_enc {
+                bad.push(format!("{name}: encode differs from Python"));
+            }
+            if d.0 != want_dec {
+                bad.push(format!("{name}: decode differs from Python"));
+            }
+        }
+        assert!(bad.is_empty(), "{bad:?}");
+    }
+}
