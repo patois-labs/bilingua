@@ -318,7 +318,6 @@ dependencies = [
 name = "bilingua-json5"
 version = "0.9.0"
 dependencies = [
- "bilingua",
  "bilingua-model",
  "encoding_rs",
  "proptest",
