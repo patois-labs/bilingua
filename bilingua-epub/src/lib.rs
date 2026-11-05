@@ -286,11 +286,22 @@ impl Filter for Epub {
         &["epub"]
     }
 
-    /// A zip that carries the `application/epub+zip` mimetype in the clear (the normal, stored form), or names
-    /// `META-INF/container.xml` and an `.opf` package. Strict enough to sit anywhere in the filter list.
+    /// A zip whose first member is `mimetype` holding `application/epub+zip` (the OCF form), or one that names
+    /// `META-INF/container.xml` and an `.opf` package. The mimetype must be the first member: a Word file that
+    /// stores a part mentioning `application/epub+zip` is not an EPUB. Strict enough to sit anywhere in the list.
     fn sniff(&self, bytes: &[u8]) -> bool {
+        if !bytes.starts_with(b"PK\x03\x04") {
+            return false;
+        }
+        let first = || -> Option<bool> {
+            let n = u16::from_le_bytes([*bytes.get(26)?, *bytes.get(27)?]) as usize;
+            let x = u16::from_le_bytes([*bytes.get(28)?, *bytes.get(29)?]) as usize;
+            let name = bytes.get(30..30 + n)?;
+            let data = bytes.get(30 + n + x..)?;
+            Some(name == b"mimetype" && data.starts_with(pkg::MIMETYPE))
+        };
         let has = |w: &[u8]| bytes.windows(w.len()).any(|x| x == w);
-        bytes.starts_with(b"PK\x03\x04") && (has(pkg::MIMETYPE) || (has(pkg::CONTAINER.as_bytes()) && has(b".opf")))
+        first().unwrap_or(false) || (has(pkg::CONTAINER.as_bytes()) && has(b".opf"))
     }
 
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
@@ -305,6 +316,25 @@ impl Filter for Epub {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn sniff_wants_the_mimetype_first_or_a_container() {
+        use std::io::Write;
+        let zip = |members: &[(&str, &[u8])]| {
+            let mut w = zip::ZipWriter::new(std::io::Cursor::new(Vec::new()));
+            let o = zip::write::SimpleFileOptions::default().compression_method(zip::CompressionMethod::Stored);
+            for (n, d) in members {
+                w.start_file(*n, o).unwrap();
+                w.write_all(d).unwrap();
+            }
+            w.finish().unwrap().into_inner()
+        };
+        assert!(Epub.sniff(&zip(&[("mimetype", pkg::MIMETYPE), ("a.xhtml", b"<p/>")])));
+        assert!(Epub.sniff(&zip(&[("META-INF/container.xml", b"<container/>"), ("OEBPS/content.opf", b"<package/>"), ("mimetype", pkg::MIMETYPE)])));
+        // a stored Word part that only mentions the EPUB mimetype
+        assert!(!Epub.sniff(&zip(&[("[Content_Types].xml", b"<Types/>"), ("word/document.xml", b"<w:document>about application/epub+zip</w:document>")])));
+        assert!(!Epub.sniff(b"PK\x03\x04"));
+    }
 
     #[test]
     fn reserved_html_code_id_is_still_the_attribute_marker() {

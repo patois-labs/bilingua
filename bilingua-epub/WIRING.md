@@ -8,8 +8,8 @@ One filter: `bilingua_epub::Epub` (id `epub`, extension `epub`).
   `bilingua-seg`, `serde_json`.
 - Facade `Cargo.toml`: `bilingua-epub = { workspace = true }`.
 - Facade `filters()`: `Box::new(bilingua_epub::Epub)` next to `Xcloc`, before `Docx` (any place before the loose
-  sniffers works). **Sniff is strict**: a `PK\x03\x04` zip that shows `application/epub+zip` in the clear (the normal
-  stored `mimetype`), or one that names `META-INF/container.xml` and an `.opf`. Docx needs `[Content_Types].xml` and
+  sniffers works). **Sniff is strict**: a `PK\x03\x04` zip whose first member is a stored `mimetype` holding
+  `application/epub+zip` (the OCF form), or one that names `META-INF/container.xml` and an `.opf`. Docx needs `[Content_Types].xml` and
   `word/`, so the two never claim the same file.
 - Facade `own_segmentation`: nothing to add. The units are plain paragraphs and sentence segments are written back in
   order (tested with `bilingua-seg`).
