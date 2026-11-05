@@ -6,7 +6,7 @@
 - Facade filter list: `Box::new(bilingua_xml::XmlFilter::new())`. Facade `Cargo.toml`: `bilingua-xml = { workspace = true }`.
   Contract test `crate_of`: `"xml" => "bilingua-xml"`.
 - Format id `xml`. Extensions: `xml`.
-- **Sniff is loose**: true for any well-formed XML document without a DTD internal subset (it parses the whole file,
+- **Sniff is loose**: true for any well-formed XML document without a DTD internal subset, except XHTML (root `html`, left to the HTML filter) (it parses the whole file,
   UTF-8 or a UTF-16 BOM). Put it **after every filter that owns a specific XML vocabulary** (XLIFF family, SDL packages,
   resx, resw, xaml, wxl, Qt ts, plist, xliff-like) and before the HTML and plain text filters. Detection by extension is
   exact.

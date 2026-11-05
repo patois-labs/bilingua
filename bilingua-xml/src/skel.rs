@@ -291,13 +291,20 @@ fn split_parts(whole: &str) -> Vec<SkelPart> {
     while let Some(p) = rest.find('\0') {
         raw.push_str(&rest[..p]);
         let after = &rest[p + 1..];
-        let end = after.find('\0').expect("marker is closed");
+        // the parser refuses NUL in file text, so every NUL here opens a marker this module wrote; never panic
+        // all the same (an unclosed marker is kept as text and merge reports it)
+        let Some(end) = after.find('\0') else {
+            raw.push('\0');
+            raw.push_str(after);
+            rest = "";
+            break;
+        };
         let body = &after[..end];
-        if let Some(n) = body.strip_prefix('U') {
+        if let Some(n) = body.strip_prefix('U').and_then(|n| n.parse::<usize>().ok()) {
             if !raw.is_empty() {
                 parts.push(SkelPart::Raw(std::mem::take(&mut raw)));
             }
-            parts.push(SkelPart::Unit(n.parse().expect("unit marker")));
+            parts.push(SkelPart::Unit(n));
         } else {
             raw.push('\0');
             raw.push_str(body);

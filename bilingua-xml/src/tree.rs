@@ -353,6 +353,8 @@ impl<'a> Tree<'a> {
                     // namespaces
                     let mark = scopes.len();
                     for &(a_s, a_e, v_s, v_e, _) in &raw.attrs {
+                        // references in attribute values follow the text rules (`&#0;`, a bare `&` are refused)
+                        check_refs(&text[v_s..v_e], t.has_doctype)?;
                         let name = &text[a_s..a_e];
                         let decl = if name == "xmlns" {
                             Some("")
@@ -499,6 +501,8 @@ impl<'a> Tree<'a> {
                         return Err(bad("misplaced DOCTYPE"));
                     }
                     let raw = &text[start..end];
+                    // XML characters only: a NUL here would also be read as a skeleton marker
+                    check_value(raw, false)?;
                     if doctype_has_subset(raw) {
                         return Err(bad("this file declares a DTD internal subset; refused (it is where entities are declared, an entity-expansion / XXE vector). Remove the [ ... ] block."));
                     }

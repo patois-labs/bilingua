@@ -233,7 +233,7 @@ impl Filter for XmlFilter {
         self.exts
     }
 
-    /// Loose: any well-formed XML document without a DTD internal subset. Put this filter after every filter
+    /// Loose: any well-formed XML document without a DTD internal subset (XHTML, root `html`, excepted). Put this filter after every filter
     /// that owns a specific XML vocabulary.
     fn sniff(&self, bytes: &[u8]) -> bool {
         let head = bytes.iter().copied().find(|b| !(b.is_ascii_whitespace() || matches!(*b, 0xEF | 0xBB | 0xBF | 0xFF | 0xFE | 0)));
@@ -245,7 +245,8 @@ impl Filter for XmlFilter {
             return false;
         }
         match read_xml(bytes, &opts) {
-            Ok(d) => Tree::parse(&d.text).is_ok(),
+            // well-formed XHTML is the HTML filter's (it comes after this one)
+            Ok(d) => Tree::parse(&d.text).is_ok_and(|t| !t.local(t.root).eq_ignore_ascii_case("html")),
             Err(_) => false,
         }
     }

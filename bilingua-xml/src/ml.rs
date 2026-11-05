@@ -12,7 +12,7 @@ use crate::its::{bad, Props};
 use crate::langs::{is_known_primary, lang_code_ok, norm};
 use crate::plan::Planner;
 use crate::tree::{Item, Kind, Tree, NONE, XML_NS};
-use crate::xpath::{check_cost, Node, XPath};
+use crate::xpath::{check_cost, Budget, Node, XPath};
 use bilingua_model::{Document, Error, LimitError, LimitKind, Limits};
 use std::collections::{HashMap, HashSet};
 
@@ -560,7 +560,7 @@ fn finish(lay: RawLayout, source: &str, threshold: usize) -> Option<Layout> {
     })
 }
 
-fn layout_xpath(t: &Tree, cfg: &MlConfig, budget: &mut u64) -> Result<Layout, Error> {
+fn layout_xpath(t: &Tree, cfg: &MlConfig, budget: &mut Budget) -> Result<Layout, Error> {
     let ns = t.nsmap(t.root);
     let expr = cfg.source_xpath.replace("{lang}", &cfg.source);
     let xp = XPath::compile(&expr, &ns).map_err(|e| bad(format!("Multilingual source_xpath is not valid XPath: {e}")))?;
@@ -587,7 +587,7 @@ fn layout_xpath(t: &Tree, cfg: &MlConfig, budget: &mut u64) -> Result<Layout, Er
     })
 }
 
-fn detect(t: &Tree, cfg: &MlConfig, budget: &mut u64) -> Result<Option<Layout>, Error> {
+fn detect(t: &Tree, cfg: &MlConfig, budget: &mut Budget) -> Result<Option<Layout>, Error> {
     if !cfg.enabled {
         return Ok(None);
     }
@@ -654,7 +654,7 @@ pub(crate) fn plan(t: &Tree, config: Option<&MlConfig>, limits: &Limits, check_b
     if !cfg.enabled {
         return Ok(None);
     }
-    let mut budget = 400u64 * (t.els.len() as u64 + 1000);
+    let mut budget = Budget::new(t, 400u64 * (t.els.len() as u64 + 1000));
     let Some(layout) = detect(t, &cfg, &mut budget)? else {
         if cfg.explicit {
             return Err(bad("Multilingual XML: no source-language nodes found with the configured rule."));
@@ -733,7 +733,7 @@ fn target_code(lay: &Layout, target: &str) -> String {
     styled(target, &lay.source)
 }
 
-fn find_target(t: &Tree, lay: &Layout, cfg: &MlConfig, el: u32, code: &str, budget: &mut u64) -> Result<Vec<u32>, Error> {
+fn find_target(t: &Tree, lay: &Layout, cfg: &MlConfig, el: u32, code: &str, budget: &mut Budget) -> Result<Vec<u32>, Error> {
     let want = norm(code);
     if lay.mode == MlMode::Xpath {
         let ns = t.nsmap(t.root);
@@ -874,7 +874,7 @@ pub(crate) fn merge(doc: &Document, text: &str, cfg_blob: &str, target: Option<&
     let mut edits: Vec<(usize, usize, usize, String)> = Vec::new();
     let mut used: HashSet<u32> = HashSet::new();
     let sources: HashSet<u32> = lay.sources.iter().copied().collect();
-    let mut budget = 400u64 * (t.els.len() as u64 + 1000);
+    let mut budget = Budget::new(&t, 400u64 * (t.els.len() as u64 + 1000));
     for (k, &el) in mp.unit_src.iter().enumerate() {
         let u = &doc.units[k];
         if !crate::skel::translated(u) {

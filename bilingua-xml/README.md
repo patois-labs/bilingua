@@ -117,7 +117,7 @@ language is left alone. With no `target_lang` the translation replaces the sourc
   prefixes, `]]>` in text, `--` in comments, undefined entities without a DOCTYPE, text outside the root, a second
   byte order mark. Everything is a typed `Error` (`Parse`, `Limit`, `Encoding`), never a panic.
 - The planner and merge recurse at most 1024 levels whatever `Limits::max_xml_depth` says; every XPath evaluation has a
-  step budget, and rules x elements and pointer hits x elements are bounded by `Limits::max_units` as in LocOS.
+  step budget and a string budget (16 x the text + 32 MiB per document), and rules x elements and pointer hits x elements are bounded by `Limits::max_units` as in LocOS.
 
 ## Skeleton (for tools that read it)
 

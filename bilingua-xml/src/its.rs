@@ -8,7 +8,7 @@
 
 use crate::dialect::{Dialect, ITS_NS};
 use crate::tree::{decode_refs, Tree, NONE, XML_NS};
-use crate::xpath::{check_cost, Node, XPath};
+use crate::xpath::{check_cost, Budget, Node, XPath};
 use bilingua_model::{Error, LimitError, LimitKind, Limits};
 use std::collections::HashMap;
 
@@ -168,7 +168,7 @@ fn limit(msg: String) -> Error {
     Error::Limit(LimitError::new(LimitKind::XmlElements, msg))
 }
 
-fn note_for(t: &Tree, rule: &Rule, el: u32, budget: &mut u64) -> String {
+fn note_for(t: &Tree, rule: &Rule, el: u32, budget: &mut Budget) -> String {
     let Some(p) = &rule.pointer else { return rule.note.clone() };
     match p.eval(t, Node::El(el), budget) {
         Ok(crate::xpath::Val::Nodes(nodes)) => {
@@ -274,8 +274,10 @@ pub(crate) fn eval_props(t: &Tree, dialect: Option<&Dialect>, extra: &[Rule], li
         )));
     }
     let budget_per_rule = 400u64 * (n as u64 + 1000);
+    // string bytes are shared by every rule and note pointer of the document
+    let mut bytes = Budget::new(t, 0).bytes;
     for rule in &rules {
-        let mut budget = budget_per_rule;
+        let mut budget = Budget { steps: budget_per_rule, bytes };
         let hits = rule.xpath.select(t, Node::Doc, &mut budget).map_err(|e| bad(format!("ITS rule could not be evaluated: {e}")))?;
         if rule.pointer.is_some() && hits.len().saturating_mul(n) > cap {
             return Err(limit(format!(
@@ -284,7 +286,8 @@ pub(crate) fn eval_props(t: &Tree, dialect: Option<&Dialect>, extra: &[Rule], li
                 n
             )));
         }
-        let mut note_budget = 4u64 * budget_per_rule;
+        bytes = budget.bytes;
+        let mut note_budget = Budget { steps: 4u64 * budget_per_rule, bytes };
         for h in hits {
             match h {
                 Node::El(e) => {
@@ -326,6 +329,7 @@ pub(crate) fn eval_props(t: &Tree, dialect: Option<&Dialect>, extra: &[Rule], li
                 _ => {}
             }
         }
+        bytes = note_budget.bytes;
     }
 
     // local ITS markup beats global rules; ITS elements are never content

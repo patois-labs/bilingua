@@ -596,13 +596,18 @@ impl XPath {
         Ok(XPath(e))
     }
 
-    /// Evaluates with `ctx` as the context node; `budget` bounds the nodes visited.
-    pub(crate) fn eval(&self, t: &Tree, ctx: Node, budget: &mut u64) -> Result<Val, String> {
-        let ev = Ev { t };
-        ev.expr(&self.0, ctx, 1, 1, budget)
+    /// Evaluates with `ctx` as the context node; `budget` bounds the nodes visited and the string bytes built.
+    pub(crate) fn eval(&self, t: &Tree, ctx: Node, budget: &mut Budget) -> Result<Val, String> {
+        let ev = Ev { t, bytes: std::cell::Cell::new(budget.bytes) };
+        let r = ev.expr(&self.0, ctx, 1, 1, &mut budget.steps);
+        budget.bytes = ev.bytes.get();
+        if budget.bytes == 0 {
+            return Err(TOO_EXPENSIVE.into());
+        }
+        r
     }
 
-    pub(crate) fn select(&self, t: &Tree, ctx: Node, budget: &mut u64) -> Result<Vec<Node>, String> {
+    pub(crate) fn select(&self, t: &Tree, ctx: Node, budget: &mut Budget) -> Result<Vec<Node>, String> {
         match self.eval(t, ctx, budget)? {
             Val::Nodes(n) => Ok(n),
             _ => Ok(Vec::new()),
@@ -610,10 +615,31 @@ impl XPath {
     }
 }
 
+const TOO_EXPENSIVE: &str = "expression is too expensive for this document";
+
+/// What evaluations may spend: `steps` (nodes visited, expression nodes evaluated) and `bytes` (string values
+/// built and node comparisons made). Share one `Budget` across the evaluations of one rule (or one document) so a
+/// cheap-looking expression evaluated many times stays bounded too.
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct Budget {
+    pub steps: u64,
+    pub bytes: u64,
+}
+
+impl Budget {
+    /// `steps` as given; string bytes 16 times the document text plus 32 MiB (the string values a selector like
+    /// `//*[contains(., 'x')]` reads on any sensibly nested document).
+    pub(crate) fn new(t: &Tree, steps: u64) -> Budget {
+        Budget { steps, bytes: 16 * t.text.len() as u64 + (32 << 20) }
+    }
+}
+
 // ---------------------------------------------------------------- evaluator
 
 struct Ev<'a, 'b> {
     t: &'b Tree<'a>,
+    /// String bytes and comparisons still allowed; 0 = exhausted (evaluation then fails).
+    bytes: std::cell::Cell<u64>,
 }
 
 fn order_key(t: &Tree, n: Node) -> (usize, u8, u32) {
@@ -631,7 +657,7 @@ fn order_key(t: &Tree, n: Node) -> (usize, u8, u32) {
 
 fn tick(budget: &mut u64, n: u64) -> Result<(), String> {
     if *budget < n {
-        return Err("expression is too expensive for this document".into());
+        return Err(TOO_EXPENSIVE.into());
     }
     *budget -= n;
     Ok(())
@@ -662,17 +688,34 @@ impl<'a, 'b> Ev<'a, 'b> {
         }
     }
 
+    /// Spends `n` from the string budget; false once it is exhausted.
+    fn spend(&self, n: u64) -> bool {
+        let left = self.bytes.get().saturating_sub(n.max(1));
+        self.bytes.set(left);
+        left > 0
+    }
+
     fn node_str(&self, n: Node) -> String {
+        let s = self.node_str_inner(n);
+        self.spend(s.len() as u64);
+        s
+    }
+
+    fn node_str_inner(&self, n: Node) -> String {
         let t = self.t;
+        let cap = (1usize << 20).min(usize::try_from(self.bytes.get()).unwrap_or(usize::MAX));
+        if cap == 0 {
+            return String::new();
+        }
         match n {
             Node::Doc => {
                 let mut s = String::new();
-                t.string_value(t.root, &mut s, 1 << 20);
+                t.string_value(t.root, &mut s, cap);
                 s
             }
             Node::El(e) => {
                 let mut s = String::new();
-                t.string_value(e, &mut s, 1 << 20);
+                t.string_value(e, &mut s, cap);
                 s
             }
             Node::At(_, a) => decode_refs(t.attr_raw(&t.attrs[a as usize]), |_| None),
@@ -693,6 +736,9 @@ impl<'a, 'b> Ev<'a, 'b> {
 
     fn expr(&self, e: &E, ctx: Node, pos: usize, size: usize, budget: &mut u64) -> Result<Val, String> {
         tick(budget, 1)?;
+        if self.bytes.get() == 0 {
+            return Err(TOO_EXPENSIVE.into());
+        }
         match e {
             E::Num(n) => Ok(Val::Num(*n)),
             E::Str(s) => Ok(Val::Str(s.clone())),
@@ -954,6 +1000,10 @@ impl<'a, 'b> Ev<'a, 'b> {
             (Nodes(x), Nodes(y)) => {
                 let ys: Vec<String> = y.iter().map(|n| self.node_str(*n)).collect();
                 x.iter().any(|n| {
+                    // every pair compared costs one unit: `//a = //b` is quadratic
+                    if !self.spend(ys.len() as u64) {
+                        return false;
+                    }
                     let s = self.node_str(*n);
                     ys.iter().any(|o| if eq_like { if matches!(op, Op::Eq) { &s == o } else { &s != o } } else { cmp_num(str_num(&s), str_num(o)) })
                 })
@@ -961,6 +1011,9 @@ impl<'a, 'b> Ev<'a, 'b> {
             (Nodes(x), other) | (other, Nodes(x)) => {
                 let flipped = matches!(b, Nodes(_)) && !matches!(a, Nodes(_));
                 x.iter().any(|n| {
+                    if self.bytes.get() == 0 {
+                        return false;
+                    }
                     let s = self.node_str(*n);
                     let (l, r): (Val, Val) = match other {
                         Num(_) => (Num(str_num(&s)), other.clone()),

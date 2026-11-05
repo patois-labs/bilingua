@@ -259,3 +259,46 @@ fn undeclared_legacy_bytes_are_refused() {
     assert!(matches!(f.extract(b"<?xml version=\"1.0\"?><r>caf\xe9</r>", &opts(None)), Err(Error::Encoding(_))));
     assert!(f.extract(b"<?xml version=\"1.0\" encoding=\"ISO-8859-1\"?><r>caf\xe9</r>", &opts(None)).is_ok());
 }
+
+#[test]
+fn nul_and_bad_references_never_reach_the_skeleton() {
+    let f = XmlFilter::new();
+    // a NUL would be read as a skeleton marker; the parser refuses it everywhere, the DOCTYPE included
+    for doc in [&b"<!DOCTYPE r SYSTEM \"a\x00b\"><r>x</r>"[..], b"<!DOCTYPE r\x00><r>x</r>", b"<r a=\"&#0;\">x</r>", b"<r a=\"x & y\">x</r>"] {
+        assert!(matches!(f.extract(doc, &opts(None)), Err(Error::Parse { .. })), "{:?}", String::from_utf8_lossy(doc));
+        assert!(!f.sniff(doc));
+    }
+    // markers typed by a translator are dropped, never resolved
+    let src = b"<r><p>Hello <b>world</b></p><p a=\"q\">two</p></r>";
+    let mut d = f.extract(src, &opts(None)).unwrap();
+    for u in &mut d.units {
+        u.segments[0].target = vec![Inline::text("\u{0}U0\u{0} \u{0}A0\u{0} \u{0}L\u{0} x")];
+    }
+    let out = f.merge(&d).unwrap();
+    assert!(!out.contains(&0u8));
+}
+
+#[test]
+fn string_heavy_xpath_is_refused_quickly() {
+    // 200 copies of a 1 MB string value at each of 20 nested elements: 4 GB of string building without a budget
+    let args = vec!["."; 200].join(",");
+    let rules = format!("<its:rules xmlns:its=\"http://www.w3.org/2005/11/its\" version=\"2.0\"><its:translateRule selector=\"//*[string-length(concat({args})) = 1]\" translate=\"no\"/></its:rules>");
+    let f = XmlFilter::new().its_rules(bilingua_xml::ItsRules::parse(rules.as_bytes()).unwrap());
+    let doc = format!("<r>{}{}{}</r>", "<a>".repeat(20), "x".repeat(1_000_000), "</a>".repeat(20));
+    let t = std::time::Instant::now();
+    let o = ExtractOptions { limits: Some(Limits { max_unit_chars: 10_000_000, ..Limits::default() }), ..Default::default() };
+    assert!(matches!(f.extract(doc.as_bytes(), &o), Err(Error::Parse { msg, .. }) if msg.contains("too expensive")));
+    assert!(t.elapsed().as_secs() < 20, "{:?}", t.elapsed());
+    // `//a = //b` compares every pair
+    let doc = format!("<r xmlns:its=\"http://www.w3.org/2005/11/its\"><its:rules version=\"2.0\"><its:translateRule selector=\"//a = //b\" translate=\"no\"/></its:rules>{}{}</r>", "<a>1</a>".repeat(20_000), "<b>2</b>".repeat(20_000));
+    let t = std::time::Instant::now();
+    assert!(matches!(XmlFilter::new().extract(doc.as_bytes(), &opts(None)), Err(Error::Parse { msg, .. }) if msg.contains("too expensive")));
+    assert!(t.elapsed().as_secs() < 20, "{:?}", t.elapsed());
+}
+
+#[test]
+fn xhtml_is_left_to_the_html_filter() {
+    let f = XmlFilter::new();
+    assert!(!f.sniff(b"<!DOCTYPE html><html xmlns=\"http://www.w3.org/1999/xhtml\"><body><p>x</p></body></html>"));
+    assert!(f.sniff(b"<doc><p>x</p></doc>"));
+}
