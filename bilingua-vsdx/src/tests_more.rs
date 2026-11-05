@@ -215,9 +215,10 @@ fn hostile_zip_and_xml() {
     let two = zip_of(vec![("visio/pages/page2.xml".into(), page2().into_bytes()), ("visio/pages/page3.xml".into(), page2().into_bytes())]);
     let dup = patched(&two, b"page3", b"page2");
     // the zip reader keeps one entry per name (bilingua-zip's own duplicate check never sees the second): the
-    // filter reads that one and does not panic
+    // crate's own central-directory scan refuses it, in any letter case
     assert_eq!(members(&dup).len(), 1);
-    let _ = Vsdx.extract(&dup, &ExtractOptions::default());
+    refused(&dup, "twice");
+    refused(&patched(&two, b"page3", b"PAGE2"), "twice");
     // a path that climbs out of the package
     let esc = zip_of(vec![("visio/pages/page2.xml".into(), page2().into_bytes()), ("visio/pages/AA/p.xml".into(), b"<x/>".to_vec())]);
     refused(&patched(&esc, b"AA", b".."), "climbs");

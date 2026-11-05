@@ -16,6 +16,7 @@ mod lang;
 mod lcid_table;
 mod render;
 mod xml;
+mod zipdir;
 
 use bilingua_model::*;
 use bilingua_zip::{EntryMeta, Packed, ZipLimits};
@@ -94,5 +95,7 @@ impl Filter for Vsdx {
 mod fixtures;
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod tests_gate;
 #[cfg(test)]
 mod tests_more;

@@ -154,9 +154,14 @@ impl<'a> Renderer<'a> {
             .collect();
         let mut used: BTreeSet<usize> = BTreeSet::new();
         let mut body = String::new();
+        // CRLF files: only the translated text gets CRLF; markers are original markup and keep their own line ends
+        let crlf = u.codes.contains_key(C_CRLF);
         for i in &out {
             match i {
-                Inline::Text(t) => body.push_str(&escape_text(&clean_target(t))),
+                Inline::Text(t) => {
+                    let t = escape_text(&clean_target(t));
+                    body.push_str(&if crlf { t.replace('\n', "\r\n") } else { t });
+                }
                 Inline::Tag { id, .. } => {
                     if let Some(n) = id.parse::<usize>().ok().filter(|n| markers.contains_key(n) && !used.contains(n)) {
                         used.insert(n);
@@ -170,9 +175,6 @@ impl<'a> Renderer<'a> {
             if !used.contains(n) {
                 body.push_str(m);
             }
-        }
-        if u.codes.contains_key(C_CRLF) {
-            body = body.replace('\n', "\r\n");
         }
         Ok(format!("{}{}{}", code_str(u, C_PRE), body, code_str(u, C_SUF)))
     }
@@ -189,7 +191,7 @@ impl<'a> Renderer<'a> {
         }
         if self.rtl {
             let shape = code_str(u, C_SHAPE);
-            let name = shape[1..].split(|c: char| c.is_whitespace() || c == '/' || c == '>').next().unwrap_or("").to_string();
+            let name = shape.get(1..).unwrap_or("").split(|c: char| c.is_whitespace() || c == '/' || c == '>').next().unwrap_or("").to_string();
             let q = shape.bytes().find(|b| *b == b'"' || *b == b'\'').map(|b| b as char).unwrap_or('"');
             let mut used: BTreeSet<u32> = BTreeSet::new();
             used.insert(0);

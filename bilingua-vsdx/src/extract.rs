@@ -381,6 +381,9 @@ fn read_rels(name: &str, e: &RawEntry, opts: &ExtractOptions, depth: usize) -> R
 pub(crate) fn extract_doc(bytes: &[u8], opts: &ExtractOptions, with_comments: bool) -> Result<Document, Error> {
     let l = opts.limits();
     bilingua_model::guard::check_input(bytes, &l)?;
+    if let Some(name) = crate::zipdir::duplicate_name(bytes) {
+        return Err(perr(format!("This Visio file lists the member {name:?} twice. It was not processed.")));
+    }
     let doc = extract_inner(bytes, opts, with_comments)?;
     bilingua_model::guard::finish(doc, vec![], &l)
 }
