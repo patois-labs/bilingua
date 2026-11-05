@@ -263,7 +263,7 @@ fn merge<'py>(
     format_options: Option<&Bound<'py, PyAny>>,
 ) -> PyResult<Bound<'py, PyBytes>> {
     let value = from_py(document, 0).map_err(|f| to_py_err(py, f))?;
-    // a profile gives the defaults (LocOS: UTF-8 out except ini and strings, stamp always); keywords override them
+    // a profile gives the defaults (LocOS: UTF-8 out except ini, strings and dxf, stamp always); keywords override them
     let format = value.get("format").and_then(|f| f.as_str()).unwrap_or("").to_string();
     let mut opts = match profile.as_deref() {
         None => engine::MergeOptions::new(),

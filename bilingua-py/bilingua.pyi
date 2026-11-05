@@ -81,6 +81,7 @@ class Document(TypedDict, total=False):
     units: list[Unit]
     skeleton: dict[str, Any]
     warnings: list[Warning]
+    source_encoding: str
 
 class FormatInfo(TypedDict):
     id: str
@@ -89,8 +90,10 @@ class FormatInfo(TypedDict):
 
 class BilinguaError(Exception):
     """Every Bilingua failure. `code` is stable: "parse", "unsupported", "unknown_segment", "locked",
-    "invented_tag", "duplicated_tag", "parser_version", "write", "limit", "encoding", "format_option",
-    "invalid_argument", "invalid_document", "internal", ..."""
+    "invented_tag", "duplicated_tag", "parser_version", "write" (a broken or foreign skeleton), "unwritable" (the
+    translation cannot be written in this format: the translator has to change it), "limit", "encoding", "io",
+    "invalid_argument" (also an unknown format option or profile), "invalid_document", "internal"; "error" for a
+    failure a later release gives its own code."""
 
     code: str
 
@@ -109,20 +112,30 @@ def extract(
     granularity: Granularity = "paragraph",
     limits: Mapping[str, int] | None = None,
     format_options: Mapping[str, FormatOptionValue] | None = None,
+    profile: str | None = None,
 ) -> Document:
     """Opens a file. `limits` changes any of the safety limits by name (`max_units`, ...). `format_options` are
-    `"<format>.<name>"` keys (`"csv.columns"`, `"odf.translate_comments"`); an unknown key raises
-    BilinguaError with code "format_option"."""
+    `"<format>.<name>"` keys (`"csv.columns"`, `"odf.translate_comments"`) to str, bool or int; a key no format
+    declares, a value of the wrong kind, or an unknown `profile` raises BilinguaError with code
+    "invalid_argument". `profile="locos"` gives Localization OS's behaviour."""
 
 def merge(
     document: Mapping[str, Any],
     *,
-    output_encoding: OutputEncoding = "keep",
-    stamp_target_always: bool = False,
+    output_encoding: OutputEncoding | None = None,
+    stamp_target_always: bool | None = None,
+    profile: str | None = None,
+    format_options: Mapping[str, FormatOptionValue] | None = None,
 ) -> bytes:
-    """Writes a Document back to file bytes. `output_encoding="utf-8"` writes UTF-8 whatever the file's own
-    encoding; `stamp_target_always` stamps the target language and fills plurals even when nothing is translated
-    (Localization OS behaviour)."""
+    """Writes a Document back to file bytes. Every option is keyword-only. `output_encoding="utf-8"` writes UTF-8
+    whatever the file's own encoding ("keep" is the default); `stamp_target_always` stamps the target language and
+    fills plurals even when nothing is translated (default False). `profile="locos"` starts from Localization OS's
+    options (UTF-8 out except ini, strings and dxf, stamp always); `output_encoding` and `stamp_target_always` given
+    here override the profile's. An unknown profile or format option raises BilinguaError with code
+    "invalid_argument"."""
+
+def profiles() -> dict[str, int]:
+    """The profiles Bilingua knows, name to version (`{"locos": 1}`)."""
 
 def version() -> str:
     """The Bilingua version."""

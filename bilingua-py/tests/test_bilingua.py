@@ -411,3 +411,48 @@ def test_empty_target_writes_an_empty_value():
     doc["units"][0]["segments"][0]["empty_target"] = True
     out = bilingua.merge(doc).decode("utf-8")
     assert '"a": ""' in out and "World" in out
+
+
+def test_stubs_match_the_module():
+    """bilingua.pyi names every public function with the real parameters, kinds and defaults."""
+    import ast
+    import inspect
+
+    stub = ast.parse((pathlib.Path(__file__).resolve().parents[1] / "bilingua.pyi").read_text(encoding="utf-8"))
+    funcs = {n.name: n for n in stub.body if isinstance(n, ast.FunctionDef)}
+    public = {n for n in dir(bilingua) if not n.startswith("_") and callable(getattr(bilingua, n)) and n != "BilinguaError"}
+    assert set(funcs) == public, (sorted(funcs), sorted(public))
+    for name, node in funcs.items():
+        real = inspect.signature(getattr(bilingua, name))
+        a = node.args
+        want = [(p.arg, "POSITIONAL_OR_KEYWORD") for p in a.posonlyargs + a.args] + [(p.arg, "KEYWORD_ONLY") for p in a.kwonlyargs]
+        got = [(p.name, p.kind.name) for p in real.parameters.values()]
+        assert got == want, (name, got, want)
+        defaults = [None] * (len(a.args) - len(a.defaults)) + list(a.defaults) + list(a.kw_defaults)
+        for p, d in zip(real.parameters.values(), defaults):
+            if d is None:
+                assert p.default is inspect.Parameter.empty, (name, p.name)
+            else:
+                assert p.default == ast.literal_eval(d), (name, p.name, p.default)
+
+
+def test_error_codes_for_options_and_unwritable():
+    with pytest.raises(bilingua.BilinguaError) as e:
+        bilingua.extract("a.txt", b"Hi.\n", format_options={"nosuch.key": 1})
+    assert e.value.code == "invalid_argument"
+    with pytest.raises(bilingua.BilinguaError) as e:
+        bilingua.extract("a.txt", b"Hi.\n", profile="nope")
+    assert e.value.code == "invalid_argument"
+    with pytest.raises(bilingua.BilinguaError) as e:
+        bilingua.extract("a.txt", b"Hi.\n", format_options={"ftl.translate_terms": 3.5})
+    assert e.value.code == "invalid_argument"
+    # str, bool and int values are all accepted; a key for another format too
+    doc = bilingua.extract("a.txt", b"Hi.\n", format_options={"ftl.translate_terms": True, "csv.columns": "source=1", "docx.walk": 1})
+    with pytest.raises(TypeError):
+        bilingua.merge(doc, "utf-8")  # keyword-only
+    # a translation the format cannot hold: a NUL in a .strings value
+    doc = bilingua.extract("Localizable.strings", b'"k" = "Hello";\n')
+    doc["units"][0]["segments"][0]["target"] = [{"text": "a\u0000b"}]
+    with pytest.raises(bilingua.BilinguaError) as e:
+        bilingua.merge(doc)
+    assert e.value.code == "unwritable"
