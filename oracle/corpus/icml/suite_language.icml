@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<?aid style="50" type="snippet" readerVersion="6.0" featureSet="513" product="20.0(73)" ?>
+<?aid SnippetType="InCopyInterchange"?>
+<Document DOMVersion="20.0" Self="d">
+	<Color Self="Color/Black" Model="Process" Space="CMYK" ColorValue="0 0 0 100" Name="Black"/>
+	<RootCharacterStyleGroup Self="rcsg"><CharacterStyle Self="CharacterStyle/Bold" Name="Bold" FontStyle="Bold"/></RootCharacterStyleGroup>
+	<Language Self="Language/$ID/English%3a USA" Name="$ID/English: USA" Id="269"/>
+	<Language Self="Language/$ID/de_DE_2006" Name="$ID/de_DE_2006" Id="275"/>
+	<Story Self="u1" AppliedTOCStyle="n" TrackChanges="false" StoryTitle="$ID/" AppliedNamedGrid="n">
+		<StoryPreference OpticalMarginAlignment="false" FrameType="TextFrameType"/>
+		<InCopyExportOption IncludeGraphicProxies="true" IncludeAllResources="false"/>
+		<ParagraphStyleRange AppliedParagraphStyle="ParagraphStyle/$ID/NormalParagraphStyle">
+			<CharacterStyleRange AppliedCharacterStyle="CharacterStyle/$ID/[No character style]" AppliedLanguage="$ID/English: USA"><Content>Hello</Content></CharacterStyleRange>
+		</ParagraphStyleRange>
+	</Story>
+</Document>

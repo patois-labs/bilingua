@@ -34,6 +34,8 @@ pub fn filters() -> Vec<Box<dyn Filter>> {
         // XMB and XTB are recognised by extension or by their root element (a tight sniff).
         Box::new(bilingua_xmb::Xmb),
         Box::new(bilingua_xmb::Xtb),
+        // InCopy ICML and WoodWing WCML sniff strictly (InCopyInterchange snippet type or the Smart Connection namespace).
+        Box::new(bilingua_icml::Icml),
         // ARB before JSON: a no-extension file with a string @@locale is ARB.
         Box::new(bilingua_arb::Arb),
         // String Catalog: JSON with a string sourceLanguage and an object strings (strict sniff), before plain JSON.

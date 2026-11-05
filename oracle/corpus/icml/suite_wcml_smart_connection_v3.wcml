@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<ea:Stories ea:WWVersion="2.0" xmlns:aic="http://ns.adobe.com/AdobeInCopy/2.0" xmlns:ea="urn:SmartConnection_v3">
+	<ea:Story ea:GUID="g1" pi0="style=&quot;50&quot; type=&quot;snippet&quot;" pi1="SnippetType=&quot;InCopyInterchange&quot;">
+		<ea:StoryInfo><ea:SI_EL>head</ea:SI_EL><ea:SI_Snippet>Headline preview</ea:SI_Snippet></ea:StoryInfo>
+	<Document DOMVersion="8.0" Self="d">
+	<Color Self="Color/Black" Model="Process" Space="CMYK" ColorValue="0 0 0 100" Name="Black"/>
+	<Condition Self="Condition/Draft" Name="Draft" Visible="false"/>
+	<Story Self="s1" AppliedTOCStyle="n" TrackChanges="false" StoryTitle="$ID/" AppliedNamedGrid="n">
+		<StoryPreference OpticalMarginAlignment="false" FrameType="TextFrameType"/>
+		<InCopyExportOption IncludeGraphicProxies="true" IncludeAllResources="false"/>
+		<ParagraphStyleRange AppliedParagraphStyle="ParagraphStyle/$ID/NormalParagraphStyle">
+			<CharacterStyleRange AppliedCharacterStyle="CharacterStyle/$ID/[No character style]"><Content>Headline here</Content></CharacterStyleRange>			<CharacterStyleRange AppliedCharacterStyle="CharacterStyle/$ID/[No character style]" AppliedConditions="Condition/Draft"><Content> DRAFT</Content></CharacterStyleRange>
+		</ParagraphStyleRange>
+	</Story>
+	</Document>
+	</ea:Story>
+	<ea:Story ea:GUID="g2" pi0="" pi1="">
+		<ea:StoryInfo><ea:SI_EL>body</ea:SI_EL></ea:StoryInfo>
+	<Document DOMVersion="8.0" Self="d">
+	<Color Self="Color/Black" Model="Process" Space="CMYK" ColorValue="0 0 0 100" Name="Black"/>
+	<Condition Self="Condition/Draft" Name="Draft" Visible="true"/>
+	<Story Self="s2" AppliedTOCStyle="n" TrackChanges="false" StoryTitle="$ID/" AppliedNamedGrid="n">
+		<StoryPreference OpticalMarginAlignment="false" FrameType="TextFrameType"/>
+		<InCopyExportOption IncludeGraphicProxies="true" IncludeAllResources="false"/>
+		<ParagraphStyleRange AppliedParagraphStyle="ParagraphStyle/$ID/NormalParagraphStyle">
+			<CharacterStyleRange AppliedCharacterStyle="CharacterStyle/$ID/[No character style]" AppliedConditions="Condition/Draft"><Content>Body text.</Content></CharacterStyleRange>
+		</ParagraphStyleRange>
+	</Story>
+	</Document>
+	</ea:Story>
+	<ea:wwsd_document><ea:wwsd_styles>
+	<Document DOMVersion="8.0" Self="d"><Color Self="Color/Black" Name="Black"/></Document>
+	</ea:wwsd_styles></ea:wwsd_document>
+</ea:Stories>
