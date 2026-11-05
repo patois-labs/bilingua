@@ -87,6 +87,9 @@ pub struct PUnit {
     pub tvt: bool,
     pub crlf: bool,
     pub quote: u8,
+    /// A text unit that sits next to a whitespace-only text node the stylesheet strips: (before, after, the
+    /// prefix of the `xsl:text` element, e.g. `xsl:`). See `Edge`.
+    pub edge: Option<(bool, bool, String)>,
 }
 
 fn is_xml_ws(c: char) -> bool {
@@ -277,13 +280,20 @@ impl<'a> Planner<'a> {
         // Directly inside an xsl:* instruction a whitespace-only text node is stripped from the stylesheet, so it
         // separates outputs: end the run there.
         let ws_breaks = e.is_xsl && e.local != "text" && !ctx.preserve;
+        // The prefix of this element's name, to write an `xsl:text` with when a unit's edge text must stay apart
+        // from a stripped whitespace node.
+        let name_end = self.text[e.s + 1..e.oe].find(|c: char| c.is_whitespace() || c == '>' || c == '/').map_or(e.oe, |i| e.s + 1 + i);
+        let prefix = self.text[e.s + 1..name_end].find(':').map(|i| self.text[e.s + 1..e.s + 2 + i].to_string()).unwrap_or_default();
+        let mut before = false; // the node before the run is a stripped whitespace node
         for c in &e.children {
             if ws_breaks && matches!(c, Child::Leaf(l) if l.kind == LeafKind::Text) && self.blank(c) {
-                self.run(&run, ctx)?;
+                self.run(&run, ctx, ws_breaks.then_some((before, true, prefix.as_str())))?;
                 run.clear();
+                before = true;
             } else if self.ik(c) == Ik::Break {
-                self.run(&run, ctx)?;
+                self.run(&run, ctx, ws_breaks.then_some((before, false, prefix.as_str())))?;
                 run.clear();
+                before = false;
                 if let Child::El(ci) = c {
                     if let Some(cc) = child_ctx(&d.els[*ci], ctx) {
                         self.visit(*ci, cc)?;
@@ -293,7 +303,7 @@ impl<'a> Planner<'a> {
                 run.push(*c);
             }
         }
-        self.run(&run, ctx)
+        self.run(&run, ctx, ws_breaks.then_some((before, false, prefix.as_str())))
     }
 
     fn trim<'n>(&self, nodes: &'n [Child]) -> &'n [Child] {
@@ -307,9 +317,10 @@ impl<'a> Planner<'a> {
         &nodes[i..j]
     }
 
-    fn run(&mut self, nodes: &[Child], ctx: Ctx) -> Result<(), Error> {
+    fn run(&mut self, nodes: &[Child], ctx: Ctx, edge: Option<(bool, bool, &str)>) -> Result<(), Error> {
         let d: &'a Lexed<'a> = self.d;
         let mut ctx = ctx;
+        let mut edge = edge;
         let mut nodes: Vec<Child> = nodes.to_vec();
         loop {
             nodes = self.trim(&nodes).to_vec();
@@ -323,6 +334,7 @@ impl<'a> Planner<'a> {
                         Some(inner) if inner.text_ok => {
                             nodes = el.children.clone();
                             ctx = inner;
+                            edge = None;
                             continue;
                         }
                         _ => return Ok(()),
@@ -359,7 +371,7 @@ impl<'a> Planner<'a> {
         let (Some(first), Some(last)) = (pieces.first(), pieces.last()) else { return Ok(()) };
         let (s, e) = (first.span().0, last.span().1);
         let crlf = text[s..e].contains("\r\n");
-        self.push(PUnit { attr: None, s, e, pieces, tvt: ctx.tvt, crlf, quote: 0 })
+        self.push(PUnit { attr: None, s, e, pieces, tvt: ctx.tvt, crlf, quote: 0, edge: edge.filter(|(b, a, _)| *b || *a).map(|(b, a, p)| (b, a, p.to_string())) })
     }
 
     fn pieces(&self, nodes: &[Child], ctx: Ctx, out: &mut Vec<Piece>) {
@@ -457,7 +469,7 @@ impl<'a> Planner<'a> {
         if !has_letter {
             return Ok(());
         }
-        self.push(PUnit { attr: Some(a.local.to_string()), s: a.vs, e: a.ve, pieces, tvt: true, crlf: false, quote: a.quote })
+        self.push(PUnit { attr: Some(a.local.to_string()), s: a.vs, e: a.ve, pieces, tvt: true, crlf: false, quote: a.quote, edge: None })
     }
 }
 
