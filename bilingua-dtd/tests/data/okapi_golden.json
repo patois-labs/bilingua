@@ -226,9 +226,6 @@
  "Test02.dtd": {
   "units": []
  },
- "bom_crlf.dtd": {
-  "error": "Tikal extract failed (rc=1): Okapi Tikal - Localization Toolset\r\nVersion: 2.1.48.0\r\nExtraction\r\nSource language: en\r\nTarget language: fr\r\nDefault input encoding: UTF-8\r\nFilter configuration: okf_dtd\r\n"
- },
  "browser_ar.dtd": {
   "units": [
    {
@@ -713,15 +710,6 @@
    }
   ]
  },
- "edge.dtd": {
-  "error": "Tikal extract failed (rc=1): Okapi Tikal - Localization Toolset\r\nVersion: 2.1.48.0\r\nExtraction\r\nSource language: en\r\nTarget language: fr\r\nDefault input encoding: UTF-8\r\nFilter configuration: okf_dtd\r\n"
- },
- "empty.dtd": {
-  "units": []
- },
- "locos_src.dtd": {
-  "error": "Tikal extract failed (rc=1): Okapi Tikal - Localization Toolset\r\nVersion: 2.1.48.0\r\nExtraction\r\nSource language: en\r\nTarget language: fr\r\nDefault input encoding: UTF-8\r\nFilter configuration: okf_dtd\r\n"
- },
  "okapi_test01.dtd": {
   "units": [
    {
@@ -945,8 +933,5 @@
     "codes": 0
    }
   ]
- },
- "okapi_test02.dtd": {
-  "units": []
  }
 }
