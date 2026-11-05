@@ -159,6 +159,7 @@ fn crate_of(format: &str) -> &'static str {
         "json" => "bilingua-json",
         "markdown" | "md" => "bilingua-markdown",
         "po" => "bilingua-po",
+        "toml" => "bilingua-toml",
         "srt" | "vtt" => "bilingua-subtitle",
         "txt" | "text" => "bilingua-text",
         "xliff" | "sdlxliff" | "mqxliff" | "mxliff" => "bilingua-xliff",
