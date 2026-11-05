@@ -84,6 +84,7 @@ pub fn extract_html(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Err
     let (text, enc, warnings) = decode_input(bytes, opts)?;
     bilingua_model::guard::check_markup(&text, &opts.limits())?;
     let toks = tokenize(&text);
+    check_depth(&toks, &opts.limits())?;
     let mut ex = Ex {
         s: &text,
         toks,
@@ -108,6 +109,34 @@ pub fn extract_html(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Err
         skeleton: Skeleton::text(skeleton_parts, enc.name(), bilingua_model::parser_info!()),
         warnings: vec![],
     }, warnings, &opts.limits())
+}
+
+/// Elements whose end tag may be left out: a run of them is siblings (the next one closes the last), not nesting.
+const OPTIONAL_END: [&str; 16] =
+    ["p", "li", "dt", "dd", "tr", "td", "th", "option", "optgroup", "thead", "tbody", "tfoot", "colgroup", "caption", "rt", "rp"];
+
+/// Refuses markup nested deeper than `Limits::max_xml_depth` (libxml2's 256, as LocOS): a start tag opens a level
+/// unless it is void or self-closing, an end tag closes one (never below zero). One pass over the tokens, so a file
+/// of 20 000 nested elements is refused at once instead of after a quadratic walk.
+fn check_depth(toks: &[Tok], l: &bilingua_model::Limits) -> Result<(), Error> {
+    let mut depth = 0usize;
+    for t in toks {
+        match t {
+            Tok::Start { name, self_close, .. } if !*self_close && !is_void(name) && !OPTIONAL_END.contains(&name.as_str()) => {
+                depth += 1;
+                if depth > l.max_xml_depth {
+                    return Err(bilingua_model::LimitError::new(
+                        bilingua_model::LimitKind::Depth,
+                        format!("This HTML file is nested more than {} levels deep. It was not processed.", l.max_xml_depth),
+                    )
+                    .into());
+                }
+            }
+            Tok::End { .. } => depth = depth.saturating_sub(1),
+            _ => {}
+        }
+    }
+    Ok(())
 }
 
 fn is_ws_str(s: &str) -> bool {
