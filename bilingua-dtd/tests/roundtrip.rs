@@ -244,6 +244,14 @@ fn limits_and_quirks() {
     assert_eq!(build(b"<!ENTITY a \"  padded  \">", &[(0, "Neu")]), b"<!ENTITY a \"  Neu  \">");
     // a name that starts with a non-ASCII letter is refused, as LocOS does
     assert!(extract("<!ENTITY \u{fc}ber \"x\">".as_bytes()).is_err());
+    // white space inside the name class (U+3000, U+2028) still ends the name, as LocOS's backtracking regex does
+    let src = "<!ENTITY b\u{3000}\"Ideo\">\n<!ENTITY c\u{3000}d\u{2028}'Two'>\n";
+    let doc = extract(src.as_bytes()).unwrap();
+    let keys: Vec<_> = doc.units.iter().map(|u| u.context.key.clone().unwrap()).collect();
+    assert_eq!(keys, vec!["b".to_string(), "c\u{3000}d".to_string()]);
+    assert_identity(src.as_bytes());
+    // ... and then `c"x"` is no quoted value, so LocOS keeps the declaration as it is (no unit)
+    assert!(units("<!ENTITY b\u{3000}c\"x\">".as_bytes()).is_empty());
     // Latin-1 and UTF-16 are refused with a typed error
     assert!(matches!(extract(b"<!ENTITY a \"caf\xe9\">"), Err(Error::Parse { .. })));
     assert!(extract(b"\xff\xfe<\x00!\x00").is_err());

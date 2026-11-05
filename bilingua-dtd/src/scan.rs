@@ -149,12 +149,18 @@ pub fn scan(text: &str) -> Result<Vec<Entity>, Error> {
                 pe = true;
                 j = k;
             }
-            let Some(ne) = name_end(text, j) else { return Err(malformed()) };
-            let name = &text[j..ne];
-            let k = skip_ws(text, ne);
+            let Some(mut ne) = name_end(text, j) else { return Err(malformed()) };
+            let mut k = skip_ws(text, ne);
             if k == ne {
-                return Err(malformed());
+                // The name class holds white space above U+00B7 (U+3000, U+2028, ...). LocOS's regex backtracks to
+                // the last such character in the run, so the name ends there and that white space separates.
+                let Some((p, _)) = text[j..ne].char_indices().rev().find(|&(p, c)| p > 0 && is_ws(c)) else {
+                    return Err(malformed());
+                };
+                ne = j + p;
+                k = skip_ws(text, ne);
             }
+            let name = &text[j..ne];
             j = k;
             let q = b.get(j).copied().unwrap_or(0);
             if pe || (q != b'"' && q != b'\'') {
