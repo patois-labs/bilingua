@@ -252,3 +252,35 @@ fn huge_and_degenerate_files_are_typed_errors_or_fine() {
         check(s.as_bytes());
     }
 }
+
+/// The lexer does not read regular expressions. A `/` in code that a TypeScript type skip would swallow could hide a
+/// template literal from it (`x = /`/ + `...`), and a string inside that real template would then be translated.
+#[test]
+fn a_slash_in_a_skipped_type_refuses_the_file() {
+    for (src, needle) in [
+        (
+            "type T = string\nx = /`/ + `\nexport default { a: \"SELECT 1 FROM users\" } //`\n",
+            "regular expression",
+        ),
+        (
+            "interface I { a: string }\nfoo = /`/ + `\nexport default { a: \"rm -rf home\" } //`\n",
+            "regular expression",
+        ),
+        (
+            "interface I extends A / B { a: string }\nexport default { a: \"Hi\" }\n",
+            "in an interface",
+        ),
+        (
+            "export default { a: \"Hi\" as T / 2 }\n",
+            "regular expression",
+        ),
+    ] {
+        refused(src, needle);
+        assert!(!JsModule.sniff(src.as_bytes()), "{src:?}");
+    }
+    // a type that only has strings with a slash in them is fine
+    assert_eq!(
+        texts_str("type P = 'a/b' | \"c/d\"\nexport default { a: \"Hi\" }\n"),
+        vec!["Hi".to_string()]
+    );
+}

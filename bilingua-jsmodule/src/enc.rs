@@ -124,9 +124,11 @@ fn utf16(body: &[u8], big: bool) -> Result<String, Error> {
     for (n, r) in char::decode_utf16(units).enumerate() {
         match r {
             Ok(c) => s.push(c),
-            Err(_) => return Err(parse_err(format!(
+            Err(_) => {
+                return Err(parse_err(format!(
                 "file is not valid UTF-16 (bad surrogate near unit {n}); re-save the file as UTF-8"
-            ))),
+            )))
+            }
         }
     }
     Ok(s)

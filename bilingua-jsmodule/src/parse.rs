@@ -422,7 +422,7 @@ impl<'a> P<'a, '_> {
         while !self.is_p(self.i, "{") {
             let t = self.next()?;
             let ok = matches!(self.toks[t].kind, Kind::Ident | Kind::Punct)
-                && !matches!(self.raw(t), "=" | ";");
+                && !matches!(self.raw(t), "=" | ";" | "/");
             if !ok {
                 return self.fail(
                     self.toks[t].start,
@@ -442,6 +442,15 @@ impl<'a> P<'a, '_> {
             let t = self.i;
             let punct = self.toks[t].kind == Kind::Punct;
             let raw = self.raw(t);
+            // No TypeScript type holds a `/`. The lexer does not read regular expressions, so a `/` here is code
+            // (division or a regex such as /`/) after which the tokens may no longer match the real file: a string
+            // the lexer then sees could be the inside of a real template literal in that code. Refuse (not in LocOS).
+            if punct && raw == "/" {
+                return self.fail(
+                    self.toks[t].start,
+                    "a `/` (a regular expression or division) where only a TypeScript type may be",
+                );
+            }
             if depth == 0 {
                 if punct && (raw == stops || matches!(raw, "," | ";" | ")" | "]" | "}" | ">")) {
                     if !moved && raw != stops {

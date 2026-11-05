@@ -45,6 +45,10 @@ let out = JsModule.merge(&doc)?;
 
 ## Differences from LocOS (all deliberate or neutral)
 
+- A `/` where a TypeScript type is being skipped refuses the file (LocOS skips it). No type holds a `/`, and the
+  lexer does not read regular expressions, so code such as ``x = /`/ + `...` `` after a type with no `;` could hide a
+  real template literal and get a string inside it translated.
+
 - Unknown or paired `⟦..⟧` tokens in a translation cannot occur: Bilingua targets are tags, and `set_target`
   refuses an invented one. The LocOS adapter drops them before they get here.
 - A string made only of placeholders or symbols stays in the skeleton, as in LocOS; `include_locked` lists it as a
