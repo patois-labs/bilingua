@@ -232,3 +232,15 @@ fn stale_skeleton_and_foreign_document_are_refused() {
     d.units[0].codes.insert("~p".into(), CodeData { standalone: Some("99".into()), ..Default::default() });
     assert!(matches!(Icml.merge(&d), Err(Error::Write(_))));
 }
+
+#[test]
+fn split_ranges_keep_white_space_tails_where_locos_puts_them() {
+    // a range split after each Br keeps its tail and every clone follows with a copy of it; a bare Content wrapped
+    // in a new range takes its own tail along (the lxml model LocOS works on; checked against LocOS output)
+    let head = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<?aid SnippetType=\"InCopyInterchange\"?>\n<Document DOMVersion=\"8.0\">\n";
+    let data = format!("{head}<Story Self=\"s\">\n <ParagraphStyleRange>\n  <CharacterStyleRange><Content>A</Content>\n   <Br/>\n   <Content>B</Content>\n   <Br/>\n   <Content>C</Content>\n  </CharacterStyleRange>\n  <Content>bare</Content>\n  <Br/>\n </ParagraphStyleRange>\n</Story>\n</Document>\n").into_bytes();
+    assert_eq!(units(&data), vec!["A", "B", "Cbare"]);
+    let out = String::from_utf8(translate(&data, &[(1, "X")])).unwrap();
+    let want = format!("{head}<Story Self=\"s\">\n <ParagraphStyleRange>\n  <CharacterStyleRange><Content>A</Content>\n   <Br/>\n   </CharacterStyleRange>\n  <CharacterStyleRange><Content>X</Content><Br/></CharacterStyleRange>\n  <CharacterStyleRange><Content>C</Content>\n  </CharacterStyleRange>\n  <CharacterStyleRange><Content>bare</Content>\n  <Br/>\n </CharacterStyleRange></ParagraphStyleRange>\n</Story>\n</Document>\n");
+    assert_eq!(out, want);
+}

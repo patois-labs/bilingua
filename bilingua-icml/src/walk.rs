@@ -238,7 +238,13 @@ fn wrap_bare(dom: &mut Dom, block: Id) {
         let csr = sibling_elem(dom, group[0], "CharacterStyleRange", Vec::new());
         dom.insert_before(group[0], csr);
         for c in group {
+            // lxml's append moves an element's tail text with it
+            let p = dom.n(c).parent;
+            let tail = dom.index_of(p, c).and_then(|i| dom.n(p).children.get(i + 1).copied()).filter(|t| dom.n(*t).kind == Kind::Text);
             dom.append(csr, c);
+            if let Some(t) = tail {
+                dom.append(csr, t);
+            }
         }
     }
 }
@@ -488,8 +494,16 @@ pub fn normalize(dom: &mut Dom, paras: &[Para]) {
         }
         let old = std::mem::take(&mut dom.nm(csr).children);
         let mut stay = Vec::with_capacity(old.len());
+        // a text node is the tail of the node before it (lxml): it moves with that node
+        let mut last: Option<usize> = None;
         for c in old {
-            match owner.get(&c) {
+            let to = if dom.n(c).kind == Kind::Text {
+                last
+            } else {
+                last = owner.get(&c).copied();
+                last
+            };
+            match to.as_ref() {
                 Some(&k) => {
                     dom.nm(c).parent = clones[k];
                     dom.nm(clones[k]).children.push(c);
@@ -500,11 +514,27 @@ pub fn normalize(dom: &mut Dom, paras: &[Para]) {
         dom.nm(csr).children = stay;
         let p = dom.n(csr).parent;
         if p != NIL {
-            let at = dom.index_of(p, csr).map_or(dom.n(p).children.len(), |i| i + 1);
+            // LocOS: `anchor.addnext(clone); clone.tail = anchor.tail`: the range keeps its tail and every clone
+            // follows it with a copy of that tail
+            let i = dom.index_of(p, csr);
+            let tail = i.and_then(|i| dom.n(p).children.get(i + 1).copied()).filter(|t| dom.n(*t).kind == Kind::Text);
+            let at = match (i, tail) {
+                (Some(i), Some(_)) => i + 2,
+                (Some(i), None) => i + 1,
+                (None, _) => dom.n(p).children.len(),
+            };
+            let mut seq: Vec<Id> = Vec::with_capacity(clones.len() * 2);
             for c in &clones {
                 dom.nm(*c).parent = p;
+                seq.push(*c);
+                if let Some(t) = tail {
+                    // a copy keeps the source bytes (line ends, references) of the tail
+                    let tn = dom.deep_copy(t);
+                    dom.nm(tn).parent = p;
+                    seq.push(tn);
+                }
             }
-            dom.nm(p).children.splice(at..at, clones.iter().copied());
+            dom.nm(p).children.splice(at..at, seq);
             dom.touch(p);
         }
         dom.touch(csr);
