@@ -1,0 +1,10 @@
+#pragma code_page(949)
+STRINGTABLE
+BEGIN
+    IDS_GREETING    "다시 오신 것을 환영합니다, %s!"
+END
+IDD_X DIALOG 0,0,100,50
+CAPTION "주문"
+BEGIN
+    PUSHBUTTON "취소(&C)",IDCANCEL,10,10,40,14
+END

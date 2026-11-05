@@ -1,0 +1,17 @@
+#pragma code_page(932)
+LANGUAGE LANG_JAPANESE, SUBLANG_DEFAULT
+
+IDR_MAINMENU MENU
+BEGIN
+    POPUP "ファイル(&F)"
+    BEGIN
+        MENUITEM "新規注文(&N)...\tCtrl+N",    ID_ORDER_NEW
+        MENUITEM "終了(&X)",                          ID_APP_EXIT
+    END
+END
+
+STRINGTABLE
+BEGIN
+    IDS_GREETING    "ようこそ、%s さん。注文は %d 件あります。"
+    IDS_READY       "ご注文は15分でお渡しできます。"
+END

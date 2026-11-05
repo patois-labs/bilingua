@@ -36,6 +36,7 @@ bilingua-yaml = { workspace = true }
 bilingua-arb = { workspace = true }
 bilingua-dtd = { workspace = true }
 bilingua-xmb = { workspace = true }
+bilingua-rc = { workspace = true }
 
 [dev-dependencies]
 zip = { workspace = true }

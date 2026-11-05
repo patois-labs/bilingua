@@ -45,6 +45,8 @@ pub fn filters() -> Vec<Box<dyn Filter>> {
         Box::new(bilingua_strings::Strings),
         // DTD sniffs strictly (the first declaration must be an ENTITY, ELEMENT or ATTLIST), so it can sit early.
         Box::new(bilingua_dtd::DtdFilter),
+        // rc sniffs only resource-script keywords (STRINGTABLE, DIALOG, MENU, VERSIONINFO, winres.h); strict enough to sit early.
+        Box::new(bilingua_rc::Rc),
         // TOML after INI: a valid-TOML INI file without an extension should stay INI.
         Box::new(bilingua_toml::TomlFilter),
         Box::new(bilingua_jsmodule::JsModule),
