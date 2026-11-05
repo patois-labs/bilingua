@@ -1,0 +1,2 @@
+<?xml version="1.0"?><!-- note --><?pi x?>
+<!DOCTYPE x [<!ENTITY b SYSTEM "file:///etc/passwd">]><xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform"><xsl:template match="/"><p>&b;</p></xsl:template></xsl:stylesheet>

