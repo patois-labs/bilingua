@@ -20,6 +20,8 @@ pub fn filters() -> Vec<Box<dyn Filter>> {
     // sniffers.
     let mut all: Vec<Box<dyn Filter>> = bilingua_sdl::filters();
     all.extend(bilingua_xliff::filters());
+    // OpenDocument (zip): a strict mimetype sniff, so it goes with the other packages.
+    all.extend(bilingua_odf::filters());
     all.extend(vec![
         // Xcode localization bundle (a zip): by extension or by its contents.json and Localized Contents folder.
         Box::new(bilingua_xcstrings::Xcloc) as Box<dyn Filter>,

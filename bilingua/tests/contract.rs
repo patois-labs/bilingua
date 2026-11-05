@@ -176,6 +176,7 @@ fn crate_of(format: &str) -> &'static str {
         "properties" => "bilingua-properties",
         "resx" => "bilingua-resx",
         "xcstrings" | "xcloc" => "bilingua-xcstrings",
+        "odt" | "ods" | "odp" | "odg" => "bilingua-odf",
         "js" => "bilingua-jsmodule",
         "php" => "bilingua-php",
         "arb" => "bilingua-arb",
