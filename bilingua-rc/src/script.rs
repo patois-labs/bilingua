@@ -107,7 +107,7 @@ impl<'a> Script<'a> {
         let t = self.toks[tok];
         let (pieces, _) = lit::pieces(&self.text[t.start..t.end]);
         let alnum = pieces.iter().any(|p| matches!(p, Piece::Text(s) if s.chars().any(char::is_alphanumeric)));
-        if !alnum && !(self.include_locked && !pieces.is_empty()) {
+        if !alnum && (!self.include_locked || pieces.is_empty()) {
             return Ok(());
         }
         self.units.push(Found { start: t.start, end: t.end, style, pieces, locked: !alnum });

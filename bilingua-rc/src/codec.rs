@@ -188,7 +188,7 @@ pub fn decode(data: &[u8]) -> Result<Decoded, Error> {
         };
     }
     let head = &data[..data.len().min(4096)];
-    if head.len() >= 4 && data.len() % 2 == 0 {
+    if head.len() >= 4 && data.len().is_multiple_of(2) {
         let n_odd = head.len() / 2;
         let odd_zero = head.iter().skip(1).step_by(2).filter(|&&b| b == 0).count();
         let even_zero = head.iter().step_by(2).filter(|&&b| b == 0).count();

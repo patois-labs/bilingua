@@ -15,7 +15,7 @@ fn fnv(b: &[u8]) -> String {
 fn map_text(name: &str, i: usize, t: &str) -> Option<String> {
     match name {
         "all" => Some(format!("T{i} \"q\" \u{e9}\nline2\t&x")),
-        "third" => (i % 3 == 0).then(|| format!("Zeta {i} \u{65e5}")),
+        "third" => i.is_multiple_of(3).then(|| format!("Zeta {i} \u{65e5}")),
         "plain" => Some(format!("Plain{i}")),
         "echo" => Some(format!("{t}!")),
         "acc" => Some(["Datei", "&Info &\u{fc}ber", "\u{30d5}\u{30a1}\u{30a4}\u{30eb}", "Open...", "X"][i % 5].to_string()),
@@ -36,7 +36,7 @@ fn run(data: &[u8], map: &[(usize, String)], target: Option<&str>) -> Vec<u8> {
 fn matches_locos_on_random_files_and_sample() {
     let text = std::fs::read_to_string(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/data/locos_golden.json")).unwrap();
     let cases: Vec<serde_json::Value> = serde_json::from_str(&text).unwrap();
-    assert!(cases.len() >= 508);
+    assert!(cases.len() >= 519);
     let (mut ok, mut refused, mut builds) = (0, 0, 0);
     for c in &cases {
         let name = c["name"].as_str().unwrap();
