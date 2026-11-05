@@ -41,6 +41,7 @@ dependencies = [
  "bilingua-toml",
  "bilingua-xliff",
  "bilingua-xlsx",
+ "bilingua-yaml",
  "serde_json",
  "zip",
 ]
@@ -263,6 +264,16 @@ dependencies = [
  "serde",
  "serde_json",
  "zip",
+]
+
+[[package]]
+name = "bilingua-yaml"
+version = "0.1.0"
+dependencies = [
+ "bilingua-model",
+ "proptest",
+ "regex",
+ "serde_json",
 ]
 
 [[package]]
