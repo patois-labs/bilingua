@@ -23,6 +23,10 @@ files, every fixture and 1 731 locale codes against the LocOS filters (digests o
   `portuguese (brazil)`; `language_name`, table made from Babel, the library LocOS uses). The header fingerprint is
   kept, as in LocOS (`catkeys_fingerprint` recomputes it).
 * `catkeys_records(bytes)`: the LocOS `records()` view (source, context, comment, current translation).
+* Known differences from LocOS (gate, 11-04): "has a letter" is Rust `char::is_alphabetic`, wider than Python
+  `str.isalpha` (an entry whose source is only a combining vowel sign such as U+093F, or a letter-like number such
+  as U+216B, is a unit here and not in LocOS; the shared helper will close this). A header fingerprint written with
+  non-ASCII digits (`١٢٣`) is refused here; LocOS accepts it (`str.isdigit`). Haiku reads it as ASCII only.
 
 ## Both
 
