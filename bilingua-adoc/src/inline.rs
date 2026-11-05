@@ -130,7 +130,7 @@ fn attr(s: &[char], i: usize) -> Option<usize> {
         if starts(s, j, p) {
             let st = j + p.len();
             let mut k = st;
-            while at(s, k).is_some_and(|c| c != '}' && !is_nl(c)) {
+            while at(s, k).is_some_and(|c| c != '}' && !is_nl(c)) && k - st <= 200 {
                 k += 1;
             }
             if k > st && k - st <= 200 && at(s, k) == Some('}') {
@@ -154,7 +154,7 @@ fn passm(s: &[char], i: usize) -> Option<usize> {
     }
     let st = j + 1;
     let mut k = st;
-    while at(s, k).is_some_and(|c| c != ']' && !is_nl(c)) {
+    while at(s, k).is_some_and(|c| c != ']' && !is_nl(c)) && k - st <= 500 {
         k += 1;
     }
     if k - st <= 500 && at(s, k) == Some(']') {
@@ -201,7 +201,7 @@ fn run_between(s: &[char], i: usize, open: char, close: char, max: usize) -> Opt
     }
     let st = i + 1;
     let mut k = st;
-    while at(s, k).is_some_and(|c| c != open && c != close && !is_nl(c)) {
+    while at(s, k).is_some_and(|c| c != open && c != close && !is_nl(c)) && k - st <= max {
         k += 1;
     }
     if k > st && k - st <= max && at(s, k) == Some(close) {
@@ -223,7 +223,7 @@ fn macro_at(s: &[char], i: usize) -> Option<Found> {
     let name: &'static str = NAMES.iter().copied().find(|n| starts(s, i, n) && at(s, i + n.len()) == Some(':'))?;
     let t0 = i + name.len() + 1;
     let mut t = t0;
-    while at(s, t).is_some_and(|c| !is_space(c) && c != '[' && c != ']') {
+    while at(s, t).is_some_and(|c| !is_space(c) && c != '[' && c != ']') && t - t0 <= 500 {
         t += 1;
     }
     if t - t0 > 500 || at(s, t) != Some('[') {
@@ -231,7 +231,7 @@ fn macro_at(s: &[char], i: usize) -> Option<Found> {
     }
     let x0 = t + 1;
     let mut x = x0;
-    while at(s, x).is_some_and(|c| c != ']' && !is_nl(c)) {
+    while at(s, x).is_some_and(|c| c != ']' && !is_nl(c)) && x - x0 <= 500 {
         x += 1;
     }
     if x - x0 > 500 || at(s, x) != Some(']') {
@@ -330,7 +330,7 @@ fn ss(s: &[char], i: usize) -> Option<Found> {
     }
     let st = i + 1;
     let mut k = st;
-    while at(s, k).is_some_and(|d| !is_space(d) && d != '^' && d != '~') {
+    while at(s, k).is_some_and(|d| !is_space(d) && d != '^' && d != '~') && k - st <= 200 {
         k += 1;
     }
     if k > st && k - st <= 200 && at(s, k) == Some(c) {
@@ -384,7 +384,7 @@ fn match_at(s: &[char], i: usize) -> Option<Found> {
         // an anchor: two brackets, 1 to 200 characters that are no bracket or line break, two closing brackets
         let st = i + 2;
         let mut k = st;
-        while at(s, k).is_some_and(|d| d != '[' && d != ']' && !is_nl(d)) {
+        while at(s, k).is_some_and(|d| d != '[' && d != ']' && !is_nl(d)) && k - st <= 200 {
             k += 1;
         }
         if k > st && k - st <= 200 && starts(s, k, "]]") {
@@ -394,7 +394,7 @@ fn match_at(s: &[char], i: usize) -> Option<Found> {
     if c == '<' && starts(s, i, "<<") {
         let st = i + 2;
         let mut k = st;
-        while at(s, k).is_some_and(|d| d != '<' && d != '>' && !is_nl(d)) {
+        while at(s, k).is_some_and(|d| d != '<' && d != '>' && !is_nl(d)) && k - st <= 300 {
             k += 1;
         }
         if k > st && k - st <= 300 && starts(s, k, ">>") {

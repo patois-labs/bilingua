@@ -107,6 +107,10 @@ fn deep_nesting_and_long_runs_are_linear() {
     check(format!("= T\n:description: {}\n", "a \\\n  ".repeat(30_000)).as_bytes());
     check(format!("{}\n", "{a}".repeat(30_000)).as_bytes());
     check(format!("{}\n", "https://x.org/ ".repeat(30_000)).as_bytes());
+    // one unit near the 100 000-character cap: scans that never find their closer stop at the pattern's bound
+    for p in ["link:", "{set:", "pass:[", "a link:a[", "x <<y", "[[z"] {
+        check(format!("Text {}\n", p.repeat(90_000 / p.len())).as_bytes());
+    }
     assert!(t0.elapsed().as_secs() < 60, "took {:?}", t0.elapsed());
 }
 
