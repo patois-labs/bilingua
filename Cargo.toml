@@ -1,5 +1,5 @@
 [workspace]
-members = ["bilingua-model", "bilingua-zip", "bilingua", "bilingua-seg", "bilingua-text", "bilingua-json", "bilingua-markdown", "bilingua-cli", "bilingua-docx", "bilingua-html", "bilingua-po", "bilingua-subtitle", "bilingua-xlsx", "bilingua-pptx", "bilingua-py", "bilingua-xliff", "bilingua-sdl", "oracle"]
+members = ["bilingua-model", "bilingua-zip", "bilingua", "bilingua-seg", "bilingua-text", "bilingua-json", "bilingua-markdown", "bilingua-cli", "bilingua-docx", "bilingua-html", "bilingua-po", "bilingua-properties", "bilingua-subtitle", "bilingua-xlsx", "bilingua-pptx", "bilingua-py", "bilingua-xliff", "bilingua-sdl", "oracle"]
 resolver = "2"
 
 [workspace.package]
@@ -18,6 +18,7 @@ bilingua-markdown = { path = "bilingua-markdown" }
 bilingua-docx = { path = "bilingua-docx" }
 bilingua-html = { path = "bilingua-html" }
 bilingua-po = { path = "bilingua-po" }
+bilingua-properties = { path = "bilingua-properties" }
 bilingua-subtitle = { path = "bilingua-subtitle" }
 bilingua-xlsx = { path = "bilingua-xlsx" }
 bilingua-pptx = { path = "bilingua-pptx" }
