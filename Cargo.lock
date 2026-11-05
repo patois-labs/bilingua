@@ -19,7 +19,7 @@ checksum = "f2032f911046de80f0a198e0901378627c33f59ea0ac00e363d481118bd70a53"
 
 [[package]]
 name = "bilingua"
-version = "0.1.0"
+version = "0.9.0"
 dependencies = [
  "bilingua-adoc",
  "bilingua-arb",
@@ -95,7 +95,7 @@ dependencies = [
 
 [[package]]
 name = "bilingua-adoc"
-version = "0.1.0"
+version = "0.9.0"
 dependencies = [
  "bilingua-model",
  "proptest",
@@ -105,7 +105,7 @@ dependencies = [
 
 [[package]]
 name = "bilingua-arb"
-version = "0.1.0"
+version = "0.9.0"
 dependencies = [
  "bilingua-model",
  "bilingua-seg",
@@ -115,7 +115,7 @@ dependencies = [
 
 [[package]]
 name = "bilingua-ass"
-version = "0.1.0"
+version = "0.9.0"
 dependencies = [
  "bilingua-model",
  "proptest",
@@ -124,7 +124,7 @@ dependencies = [
 
 [[package]]
 name = "bilingua-cli"
-version = "0.1.0"
+version = "0.9.0"
 dependencies = [
  "bilingua",
  "bilingua-seg",
@@ -134,7 +134,7 @@ dependencies = [
 
 [[package]]
 name = "bilingua-csv"
-version = "0.1.0"
+version = "0.9.0"
 dependencies = [
  "bilingua-model",
  "bilingua-seg",
@@ -145,7 +145,7 @@ dependencies = [
 
 [[package]]
 name = "bilingua-desktop"
-version = "0.1.0"
+version = "0.9.0"
 dependencies = [
  "bilingua-model",
  "bilingua-seg",
@@ -155,7 +155,7 @@ dependencies = [
 
 [[package]]
 name = "bilingua-docx"
-version = "0.1.0"
+version = "0.9.0"
 dependencies = [
  "bilingua-model",
  "bilingua-zip",
@@ -166,7 +166,7 @@ dependencies = [
 
 [[package]]
 name = "bilingua-dtd"
-version = "0.1.0"
+version = "0.9.0"
 dependencies = [
  "bilingua-model",
  "proptest",
@@ -176,7 +176,7 @@ dependencies = [
 
 [[package]]
 name = "bilingua-dxf"
-version = "0.1.0"
+version = "0.9.0"
 dependencies = [
  "bilingua-model",
  "proptest",
@@ -185,7 +185,7 @@ dependencies = [
 
 [[package]]
 name = "bilingua-email"
-version = "0.1.0"
+version = "0.9.0"
 dependencies = [
  "bilingua-html",
  "bilingua-model",
@@ -196,7 +196,7 @@ dependencies = [
 
 [[package]]
 name = "bilingua-epub"
-version = "0.1.0"
+version = "0.9.0"
 dependencies = [
  "bilingua-html",
  "bilingua-model",
@@ -212,7 +212,7 @@ dependencies = [
 
 [[package]]
 name = "bilingua-flare"
-version = "0.1.0"
+version = "0.9.0"
 dependencies = [
  "bilingua-html",
  "bilingua-model",
@@ -228,7 +228,7 @@ dependencies = [
 
 [[package]]
 name = "bilingua-ftl"
-version = "0.1.0"
+version = "0.9.0"
 dependencies = [
  "bilingua-model",
  "proptest",
@@ -237,14 +237,14 @@ dependencies = [
 
 [[package]]
 name = "bilingua-html"
-version = "0.1.0"
+version = "0.9.0"
 dependencies = [
  "bilingua-model",
 ]
 
 [[package]]
 name = "bilingua-htmlhelp"
-version = "0.1.0"
+version = "0.9.0"
 dependencies = [
  "bilingua-model",
  "proptest",
@@ -254,7 +254,7 @@ dependencies = [
 
 [[package]]
 name = "bilingua-icml"
-version = "0.1.0"
+version = "0.9.0"
 dependencies = [
  "bilingua-model",
  "proptest",
@@ -264,7 +264,7 @@ dependencies = [
 
 [[package]]
 name = "bilingua-idml"
-version = "0.1.0"
+version = "0.9.0"
 dependencies = [
  "bilingua-model",
  "bilingua-zip",
@@ -287,7 +287,7 @@ dependencies = [
 
 [[package]]
 name = "bilingua-ini"
-version = "0.1.0"
+version = "0.9.0"
 dependencies = [
  "bilingua-model",
  "proptest",
@@ -297,7 +297,7 @@ dependencies = [
 
 [[package]]
 name = "bilingua-jsmodule"
-version = "0.1.0"
+version = "0.9.0"
 dependencies = [
  "bilingua-model",
  "proptest",
@@ -307,7 +307,7 @@ dependencies = [
 
 [[package]]
 name = "bilingua-json"
-version = "0.1.0"
+version = "0.9.0"
 dependencies = [
  "bilingua-model",
  "regex",
@@ -316,7 +316,7 @@ dependencies = [
 
 [[package]]
 name = "bilingua-json5"
-version = "0.1.0"
+version = "0.9.0"
 dependencies = [
  "bilingua",
  "bilingua-model",
@@ -328,7 +328,7 @@ dependencies = [
 
 [[package]]
 name = "bilingua-latex"
-version = "0.1.0"
+version = "0.9.0"
 dependencies = [
  "bilingua-model",
  "proptest",
@@ -338,7 +338,7 @@ dependencies = [
 
 [[package]]
 name = "bilingua-markdown"
-version = "0.1.0"
+version = "0.9.0"
 dependencies = [
  "bilingua-model",
  "pulldown-cmark",
@@ -346,7 +346,7 @@ dependencies = [
 
 [[package]]
 name = "bilingua-mdx"
-version = "0.1.0"
+version = "0.9.0"
 dependencies = [
  "bilingua-model",
  "proptest",
@@ -357,7 +357,7 @@ dependencies = [
 
 [[package]]
 name = "bilingua-mif"
-version = "0.1.0"
+version = "0.9.0"
 dependencies = [
  "bilingua-model",
  "proptest",
@@ -366,7 +366,7 @@ dependencies = [
 
 [[package]]
 name = "bilingua-mo"
-version = "0.1.0"
+version = "0.9.0"
 dependencies = [
  "bilingua-model",
  "bilingua-po",
@@ -376,7 +376,7 @@ dependencies = [
 
 [[package]]
 name = "bilingua-model"
-version = "0.1.0"
+version = "0.9.0"
 dependencies = [
  "encoding_rs",
  "regex",
@@ -387,7 +387,7 @@ dependencies = [
 
 [[package]]
 name = "bilingua-odf"
-version = "0.1.0"
+version = "0.9.0"
 dependencies = [
  "bilingua-model",
  "bilingua-zip",
@@ -397,7 +397,7 @@ dependencies = [
 
 [[package]]
 name = "bilingua-oracle"
-version = "0.1.0"
+version = "0.9.0"
 dependencies = [
  "bilingua",
  "serde_json",
@@ -416,7 +416,7 @@ dependencies = [
 
 [[package]]
 name = "bilingua-php"
-version = "0.1.0"
+version = "0.9.0"
 dependencies = [
  "bilingua-model",
  "proptest",
@@ -425,7 +425,7 @@ dependencies = [
 
 [[package]]
 name = "bilingua-plist"
-version = "0.1.0"
+version = "0.9.0"
 dependencies = [
  "bilingua-model",
  "bilingua-seg",
@@ -435,14 +435,14 @@ dependencies = [
 
 [[package]]
 name = "bilingua-po"
-version = "0.1.0"
+version = "0.9.0"
 dependencies = [
  "bilingua-model",
 ]
 
 [[package]]
 name = "bilingua-pptx"
-version = "0.1.0"
+version = "0.9.0"
 dependencies = [
  "bilingua-model",
  "bilingua-zip",
@@ -453,7 +453,7 @@ dependencies = [
 
 [[package]]
 name = "bilingua-properties"
-version = "0.1.0"
+version = "0.9.0"
 dependencies = [
  "bilingua-model",
  "proptest",
@@ -463,7 +463,7 @@ dependencies = [
 
 [[package]]
 name = "bilingua-py"
-version = "0.1.0"
+version = "0.9.0"
 dependencies = [
  "bilingua",
  "pyo3",
@@ -472,7 +472,7 @@ dependencies = [
 
 [[package]]
 name = "bilingua-qtts"
-version = "0.1.0"
+version = "0.9.0"
 dependencies = [
  "bilingua-model",
  "proptest",
@@ -481,7 +481,7 @@ dependencies = [
 
 [[package]]
 name = "bilingua-rc"
-version = "0.1.0"
+version = "0.9.0"
 dependencies = [
  "bilingua-model",
  "proptest",
@@ -491,7 +491,7 @@ dependencies = [
 
 [[package]]
 name = "bilingua-resjson"
-version = "0.1.0"
+version = "0.9.0"
 dependencies = [
  "bilingua-model",
  "proptest",
@@ -501,7 +501,7 @@ dependencies = [
 
 [[package]]
 name = "bilingua-resx"
-version = "0.1.0"
+version = "0.9.0"
 dependencies = [
  "bilingua-model",
  "proptest",
@@ -511,7 +511,7 @@ dependencies = [
 
 [[package]]
 name = "bilingua-rst"
-version = "0.1.0"
+version = "0.9.0"
 dependencies = [
  "bilingua-model",
  "proptest",
@@ -520,7 +520,7 @@ dependencies = [
 
 [[package]]
 name = "bilingua-scc"
-version = "0.1.0"
+version = "0.9.0"
 dependencies = [
  "bilingua-model",
  "proptest",
@@ -530,7 +530,7 @@ dependencies = [
 
 [[package]]
 name = "bilingua-sdl"
-version = "0.1.0"
+version = "0.9.0"
 dependencies = [
  "bilingua-model",
  "bilingua-xliff",
@@ -542,7 +542,7 @@ dependencies = [
 
 [[package]]
 name = "bilingua-sdlproj"
-version = "0.1.0"
+version = "0.9.0"
 dependencies = [
  "bilingua-model",
  "proptest",
@@ -552,7 +552,7 @@ dependencies = [
 
 [[package]]
 name = "bilingua-seg"
-version = "0.1.0"
+version = "0.9.0"
 dependencies = [
  "bilingua-model",
  "icu_segmenter",
@@ -562,7 +562,7 @@ dependencies = [
 
 [[package]]
 name = "bilingua-serverpages"
-version = "0.1.0"
+version = "0.9.0"
 dependencies = [
  "bilingua-model",
  "proptest",
@@ -571,7 +571,7 @@ dependencies = [
 
 [[package]]
 name = "bilingua-stf"
-version = "0.1.0"
+version = "0.9.0"
 dependencies = [
  "bilingua-model",
  "proptest",
@@ -580,7 +580,7 @@ dependencies = [
 
 [[package]]
 name = "bilingua-stl"
-version = "0.1.0"
+version = "0.9.0"
 dependencies = [
  "bilingua-model",
  "proptest",
@@ -590,7 +590,7 @@ dependencies = [
 
 [[package]]
 name = "bilingua-strings"
-version = "0.1.0"
+version = "0.9.0"
 dependencies = [
  "bilingua-model",
  "bilingua-seg",
@@ -600,7 +600,7 @@ dependencies = [
 
 [[package]]
 name = "bilingua-subtext"
-version = "0.1.0"
+version = "0.9.0"
 dependencies = [
  "bilingua-model",
  "proptest",
@@ -609,21 +609,21 @@ dependencies = [
 
 [[package]]
 name = "bilingua-subtitle"
-version = "0.1.0"
+version = "0.9.0"
 dependencies = [
  "bilingua-model",
 ]
 
 [[package]]
 name = "bilingua-text"
-version = "0.1.0"
+version = "0.9.0"
 dependencies = [
  "bilingua-model",
 ]
 
 [[package]]
 name = "bilingua-toml"
-version = "0.1.0"
+version = "0.9.0"
 dependencies = [
  "bilingua-model",
  "proptest",
@@ -633,7 +633,7 @@ dependencies = [
 
 [[package]]
 name = "bilingua-ttml"
-version = "0.1.0"
+version = "0.9.0"
 dependencies = [
  "bilingua-model",
  "proptest",
@@ -644,7 +644,7 @@ dependencies = [
 
 [[package]]
 name = "bilingua-ttx"
-version = "0.1.0"
+version = "0.9.0"
 dependencies = [
  "bilingua-model",
  "proptest",
@@ -653,7 +653,7 @@ dependencies = [
 
 [[package]]
 name = "bilingua-vsdx"
-version = "0.1.0"
+version = "0.9.0"
 dependencies = [
  "bilingua-model",
  "bilingua-zip",
@@ -664,7 +664,7 @@ dependencies = [
 
 [[package]]
 name = "bilingua-wiki"
-version = "0.1.0"
+version = "0.9.0"
 dependencies = [
  "bilingua-model",
  "proptest",
@@ -674,7 +674,7 @@ dependencies = [
 
 [[package]]
 name = "bilingua-wordfast"
-version = "0.1.0"
+version = "0.9.0"
 dependencies = [
  "bilingua-model",
  "proptest",
@@ -684,7 +684,7 @@ dependencies = [
 
 [[package]]
 name = "bilingua-wxl"
-version = "0.1.0"
+version = "0.9.0"
 dependencies = [
  "bilingua-model",
  "bilingua-seg",
@@ -695,7 +695,7 @@ dependencies = [
 
 [[package]]
 name = "bilingua-xaml"
-version = "0.1.0"
+version = "0.9.0"
 dependencies = [
  "bilingua-model",
  "proptest",
@@ -706,7 +706,7 @@ dependencies = [
 
 [[package]]
 name = "bilingua-xcstrings"
-version = "0.1.0"
+version = "0.9.0"
 dependencies = [
  "bilingua-model",
  "bilingua-xliff",
@@ -718,7 +718,7 @@ dependencies = [
 
 [[package]]
 name = "bilingua-xliff"
-version = "0.1.0"
+version = "0.9.0"
 dependencies = [
  "bilingua-model",
  "quick-xml",
@@ -728,7 +728,7 @@ dependencies = [
 
 [[package]]
 name = "bilingua-xliffpkg"
-version = "0.1.0"
+version = "0.9.0"
 dependencies = [
  "bilingua-model",
  "bilingua-xliff",
@@ -741,7 +741,7 @@ dependencies = [
 
 [[package]]
 name = "bilingua-xlsx"
-version = "0.1.0"
+version = "0.9.0"
 dependencies = [
  "bilingua-model",
  "bilingua-zip",
@@ -752,7 +752,7 @@ dependencies = [
 
 [[package]]
 name = "bilingua-xmb"
-version = "0.1.0"
+version = "0.9.0"
 dependencies = [
  "bilingua-model",
  "bilingua-xliff",
@@ -762,7 +762,7 @@ dependencies = [
 
 [[package]]
 name = "bilingua-xml"
-version = "0.1.0"
+version = "0.9.0"
 dependencies = [
  "bilingua-model",
  "proptest",
@@ -772,7 +772,7 @@ dependencies = [
 
 [[package]]
 name = "bilingua-xslt"
-version = "0.1.0"
+version = "0.9.0"
 dependencies = [
  "bilingua-model",
  "proptest",
@@ -781,7 +781,7 @@ dependencies = [
 
 [[package]]
 name = "bilingua-xtg"
-version = "0.1.0"
+version = "0.9.0"
 dependencies = [
  "bilingua-model",
  "proptest",
@@ -790,7 +790,7 @@ dependencies = [
 
 [[package]]
 name = "bilingua-yaml"
-version = "0.1.0"
+version = "0.9.0"
 dependencies = [
  "bilingua-model",
  "proptest",
@@ -800,7 +800,7 @@ dependencies = [
 
 [[package]]
 name = "bilingua-zip"
-version = "0.1.0"
+version = "0.9.0"
 dependencies = [
  "bilingua-model",
  "serde",

@@ -3,7 +3,7 @@ members = ["bilingua-model", "bilingua-zip", "bilingua", "bilingua-seg", "biling
 resolver = "2"
 
 [workspace.package]
-version = "0.1.0"
+version = "0.9.0"
 edition = "2021"
 license = "Apache-2.0"
 repository = "https://github.com/patois-labs/bilingua"
@@ -16,75 +16,75 @@ categories = ["internationalization", "localization", "parser-implementations", 
 include = ["/src/**", "/README.md", "/LICENSE", "/NOTICE"]
 
 [workspace.dependencies]
-bilingua-model = { path = "bilingua-model", version = "=0.1.0" }
-bilingua-zip = { path = "bilingua-zip", version = "=0.1.0" }
-bilingua-seg = { path = "bilingua-seg", version = "=0.1.0" }
-bilingua-text = { path = "bilingua-text", version = "=0.1.0" }
-bilingua-json = { path = "bilingua-json", version = "=0.1.0" }
-bilingua-json5 = { path = "bilingua-json5", version = "=0.1.0" }
-bilingua-markdown = { path = "bilingua-markdown", version = "=0.1.0" }
-bilingua-docx = { path = "bilingua-docx", version = "=0.1.0" }
-bilingua-html = { path = "bilingua-html", version = "=0.1.0" }
-bilingua-po = { path = "bilingua-po", version = "=0.1.0" }
-bilingua-properties = { path = "bilingua-properties", version = "=0.1.0" }
-bilingua-xaml = { path = "bilingua-xaml", version = "=0.1.0" }
-bilingua-subtitle = { path = "bilingua-subtitle", version = "=0.1.0" }
-bilingua-xlsx = { path = "bilingua-xlsx", version = "=0.1.0" }
-bilingua-pptx = { path = "bilingua-pptx", version = "=0.1.0" }
-bilingua = { path = "bilingua", version = "=0.1.0" }
-bilingua-xliff = { path = "bilingua-xliff", version = "=0.1.0" }
-bilingua-sdl = { path = "bilingua-sdl", version = "=0.1.0" }
-bilingua-ini = { path = "bilingua-ini", version = "=0.1.0" }
-bilingua-stf = { path = "bilingua-stf", version = "=0.1.0" }
-bilingua-sdlproj = { path = "bilingua-sdlproj", version = "=0.1.0" }
-bilingua-ass = { path = "bilingua-ass", version = "=0.1.0" }
-bilingua-mo = { path = "bilingua-mo", version = "=0.1.0" }
-bilingua-csv = { path = "bilingua-csv", version = "=0.1.0" }
-bilingua-ftl = { path = "bilingua-ftl", version = "=0.1.0" }
-bilingua-strings = { path = "bilingua-strings", version = "=0.1.0" }
-bilingua-toml = { path = "bilingua-toml", version = "=0.1.0" }
-bilingua-resjson = { path = "bilingua-resjson", version = "=0.1.0" }
-bilingua-resx = { path = "bilingua-resx", version = "=0.1.0" }
-bilingua-wxl = { path = "bilingua-wxl", version = "=0.1.0" }
-bilingua-jsmodule = { path = "bilingua-jsmodule", version = "=0.1.0" }
-bilingua-xcstrings = { path = "bilingua-xcstrings", version = "=0.1.0" }
-bilingua-php = { path = "bilingua-php", version = "=0.1.0" }
-bilingua-xml = { path = "bilingua-xml", version = "=0.1.0" }
-bilingua-latex = { path = "bilingua-latex", version = "=0.1.0" }
-bilingua-yaml = { path = "bilingua-yaml", version = "=0.1.0" }
-bilingua-arb = { path = "bilingua-arb", version = "=0.1.0" }
-bilingua-dtd = { path = "bilingua-dtd", version = "=0.1.0" }
-bilingua-xmb = { path = "bilingua-xmb", version = "=0.1.0" }
-bilingua-qtts = { path = "bilingua-qtts", version = "=0.1.0" }
-bilingua-plist = { path = "bilingua-plist", version = "=0.1.0" }
-bilingua-rc = { path = "bilingua-rc", version = "=0.1.0" }
-bilingua-xslt = { path = "bilingua-xslt", version = "=0.1.0" }
-bilingua-desktop = { path = "bilingua-desktop", version = "=0.1.0" }
-bilingua-epub = { path = "bilingua-epub", version = "=0.1.0" }
-bilingua-idml = { path = "bilingua-idml", version = "=0.1.0" }
-bilingua-odf = { path = "bilingua-odf", version = "=0.1.0" }
-bilingua-icml = { path = "bilingua-icml", version = "=0.1.0" }
-bilingua-mif = { path = "bilingua-mif", version = "=0.1.0" }
-bilingua-vsdx = { path = "bilingua-vsdx", version = "=0.1.0" }
-bilingua-xtg = { path = "bilingua-xtg", version = "=0.1.0" }
-bilingua-adoc = { path = "bilingua-adoc", version = "=0.1.0" }
-bilingua-mdx = { path = "bilingua-mdx", version = "=0.1.0" }
-bilingua-rst = { path = "bilingua-rst", version = "=0.1.0" }
-bilingua-email = { path = "bilingua-email", version = "=0.1.0" }
-bilingua-ttx = { path = "bilingua-ttx", version = "=0.1.0" }
-bilingua-serverpages = { path = "bilingua-serverpages", version = "=0.1.0" }
-bilingua-wordfast = { path = "bilingua-wordfast", version = "=0.1.0" }
-bilingua-xliffpkg = { path = "bilingua-xliffpkg", version = "=0.1.0" }
-bilingua-htmlhelp = { path = "bilingua-htmlhelp", version = "=0.1.0" }
-bilingua-image = { path = "bilingua-image", version = "=0.1.0" }
-bilingua-stl = { path = "bilingua-stl", version = "=0.1.0" }
-bilingua-subtext = { path = "bilingua-subtext", version = "=0.1.0" }
-bilingua-ttml = { path = "bilingua-ttml", version = "=0.1.0" }
-bilingua-wiki = { path = "bilingua-wiki", version = "=0.1.0" }
-bilingua-scc = { path = "bilingua-scc", version = "=0.1.0" }
-bilingua-dxf = { path = "bilingua-dxf", version = "=0.1.0" }
-bilingua-flare = { path = "bilingua-flare", version = "=0.1.0" }
-bilingua-pdf = { path = "bilingua-pdf", version = "=0.1.0" }
+bilingua-model = { path = "bilingua-model", version = "=0.9.0" }
+bilingua-zip = { path = "bilingua-zip", version = "=0.9.0" }
+bilingua-seg = { path = "bilingua-seg", version = "=0.9.0" }
+bilingua-text = { path = "bilingua-text", version = "=0.9.0" }
+bilingua-json = { path = "bilingua-json", version = "=0.9.0" }
+bilingua-json5 = { path = "bilingua-json5", version = "=0.9.0" }
+bilingua-markdown = { path = "bilingua-markdown", version = "=0.9.0" }
+bilingua-docx = { path = "bilingua-docx", version = "=0.9.0" }
+bilingua-html = { path = "bilingua-html", version = "=0.9.0" }
+bilingua-po = { path = "bilingua-po", version = "=0.9.0" }
+bilingua-properties = { path = "bilingua-properties", version = "=0.9.0" }
+bilingua-xaml = { path = "bilingua-xaml", version = "=0.9.0" }
+bilingua-subtitle = { path = "bilingua-subtitle", version = "=0.9.0" }
+bilingua-xlsx = { path = "bilingua-xlsx", version = "=0.9.0" }
+bilingua-pptx = { path = "bilingua-pptx", version = "=0.9.0" }
+bilingua = { path = "bilingua", version = "=0.9.0" }
+bilingua-xliff = { path = "bilingua-xliff", version = "=0.9.0" }
+bilingua-sdl = { path = "bilingua-sdl", version = "=0.9.0" }
+bilingua-ini = { path = "bilingua-ini", version = "=0.9.0" }
+bilingua-stf = { path = "bilingua-stf", version = "=0.9.0" }
+bilingua-sdlproj = { path = "bilingua-sdlproj", version = "=0.9.0" }
+bilingua-ass = { path = "bilingua-ass", version = "=0.9.0" }
+bilingua-mo = { path = "bilingua-mo", version = "=0.9.0" }
+bilingua-csv = { path = "bilingua-csv", version = "=0.9.0" }
+bilingua-ftl = { path = "bilingua-ftl", version = "=0.9.0" }
+bilingua-strings = { path = "bilingua-strings", version = "=0.9.0" }
+bilingua-toml = { path = "bilingua-toml", version = "=0.9.0" }
+bilingua-resjson = { path = "bilingua-resjson", version = "=0.9.0" }
+bilingua-resx = { path = "bilingua-resx", version = "=0.9.0" }
+bilingua-wxl = { path = "bilingua-wxl", version = "=0.9.0" }
+bilingua-jsmodule = { path = "bilingua-jsmodule", version = "=0.9.0" }
+bilingua-xcstrings = { path = "bilingua-xcstrings", version = "=0.9.0" }
+bilingua-php = { path = "bilingua-php", version = "=0.9.0" }
+bilingua-xml = { path = "bilingua-xml", version = "=0.9.0" }
+bilingua-latex = { path = "bilingua-latex", version = "=0.9.0" }
+bilingua-yaml = { path = "bilingua-yaml", version = "=0.9.0" }
+bilingua-arb = { path = "bilingua-arb", version = "=0.9.0" }
+bilingua-dtd = { path = "bilingua-dtd", version = "=0.9.0" }
+bilingua-xmb = { path = "bilingua-xmb", version = "=0.9.0" }
+bilingua-qtts = { path = "bilingua-qtts", version = "=0.9.0" }
+bilingua-plist = { path = "bilingua-plist", version = "=0.9.0" }
+bilingua-rc = { path = "bilingua-rc", version = "=0.9.0" }
+bilingua-xslt = { path = "bilingua-xslt", version = "=0.9.0" }
+bilingua-desktop = { path = "bilingua-desktop", version = "=0.9.0" }
+bilingua-epub = { path = "bilingua-epub", version = "=0.9.0" }
+bilingua-idml = { path = "bilingua-idml", version = "=0.9.0" }
+bilingua-odf = { path = "bilingua-odf", version = "=0.9.0" }
+bilingua-icml = { path = "bilingua-icml", version = "=0.9.0" }
+bilingua-mif = { path = "bilingua-mif", version = "=0.9.0" }
+bilingua-vsdx = { path = "bilingua-vsdx", version = "=0.9.0" }
+bilingua-xtg = { path = "bilingua-xtg", version = "=0.9.0" }
+bilingua-adoc = { path = "bilingua-adoc", version = "=0.9.0" }
+bilingua-mdx = { path = "bilingua-mdx", version = "=0.9.0" }
+bilingua-rst = { path = "bilingua-rst", version = "=0.9.0" }
+bilingua-email = { path = "bilingua-email", version = "=0.9.0" }
+bilingua-ttx = { path = "bilingua-ttx", version = "=0.9.0" }
+bilingua-serverpages = { path = "bilingua-serverpages", version = "=0.9.0" }
+bilingua-wordfast = { path = "bilingua-wordfast", version = "=0.9.0" }
+bilingua-xliffpkg = { path = "bilingua-xliffpkg", version = "=0.9.0" }
+bilingua-htmlhelp = { path = "bilingua-htmlhelp", version = "=0.9.0" }
+bilingua-image = { path = "bilingua-image", version = "=0.9.0" }
+bilingua-stl = { path = "bilingua-stl", version = "=0.9.0" }
+bilingua-subtext = { path = "bilingua-subtext", version = "=0.9.0" }
+bilingua-ttml = { path = "bilingua-ttml", version = "=0.9.0" }
+bilingua-wiki = { path = "bilingua-wiki", version = "=0.9.0" }
+bilingua-scc = { path = "bilingua-scc", version = "=0.9.0" }
+bilingua-dxf = { path = "bilingua-dxf", version = "=0.9.0" }
+bilingua-flare = { path = "bilingua-flare", version = "=0.9.0" }
+bilingua-pdf = { path = "bilingua-pdf", version = "=0.9.0" }
 regex = "1"
 unicode-normalization = { version = "0.1", default-features = false }
 encoding_rs = "0.8"
