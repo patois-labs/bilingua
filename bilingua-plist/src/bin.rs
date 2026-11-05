@@ -6,6 +6,7 @@
 use crate::tree::*;
 use crate::xml::{perr, too_deep, too_many, MAX_DEPTH};
 use bilingua_model::*;
+use std::collections::HashMap;
 
 struct Reader<'a> {
     raw: &'a [u8],
@@ -108,6 +109,66 @@ impl<'a> Reader<'a> {
         }
         let off = self.offset_of(i)?;
         let (hi, n, data) = self.header(off)?;
+        if !matches!(hi, 0xA | 0xD) {
+            // scalars and strings in their own frame: the recursive one stays small (deep nesting in a
+            // debug build on a 1 MB main-thread stack)
+            let node = self.leaf(i, off, hi, n, data)?;
+            let idx = self.tree.nodes.len();
+            self.tree.nodes.push(node);
+            return Ok(idx);
+        }
+        let mut node = Node::new(Kind::Other);
+        match hi {
+            0xA => {
+                node.kind = Kind::Array;
+                let total = n.checked_mul(self.ref_size).ok_or_else(|| self.bad("a length is too large"))?;
+                let refs = self.slice(data, total)?;
+                let idx = self.tree.nodes.len();
+                self.tree.nodes.push(node);
+                for k in 0..n {
+                    let r = be(&refs[k * self.ref_size..(k + 1) * self.ref_size]) as usize;
+                    if r >= self.num {
+                        return Err(self.bad("a reference points past the object table"));
+                    }
+                    let c = self.object(r, depth + 1)?;
+                    self.tree.nodes[idx].kids.push(Kid { key: None, kstart: NO_SPAN, kend: NO_SPAN, node: c });
+                }
+                Ok(idx)
+            }
+            0xD => {
+                node.kind = Kind::Dict;
+                let total = n.checked_mul(self.ref_size * 2).ok_or_else(|| self.bad("a length is too large"))?;
+                let refs = self.slice(data, total)?;
+                let idx = self.tree.nodes.len();
+                self.tree.nodes.push(node);
+                // key -> place among the kids, so a dict of many distinct keys reads in linear time
+                let mut place: HashMap<String, usize> = HashMap::new();
+                for k in 0..n {
+                    let kr = self.r#ref(data + k * self.ref_size)?;
+                    let key = self.string_at(kr)?;
+                    let vr = be(&refs[(n + k) * self.ref_size..(n + k + 1) * self.ref_size]) as usize;
+                    if vr >= self.num {
+                        return Err(self.bad("a reference points past the object table"));
+                    }
+                    let c = self.object(vr, depth + 1)?;
+                    // a repeated key: the last value wins, in the first key's place (a Python dict)
+                    let kids = &mut self.tree.nodes[idx].kids;
+                    match place.get(&key) {
+                        Some(&p) => kids[p].node = c,
+                        None => {
+                            place.insert(key.clone(), kids.len());
+                            kids.push(Kid { key: Some(key), kstart: NO_SPAN, kend: NO_SPAN, node: c });
+                        }
+                    }
+                }
+                Ok(idx)
+            }
+            _ => Err(self.bad("an unsupported object type")),
+        }
+    }
+
+    #[inline(never)]
+    fn leaf(&mut self, i: usize, off: usize, hi: u8, n: usize, data: usize) -> Result<Node, Error> {
         let marker = self.slice(off, 1)?[0];
         let mut node = Node::new(Kind::Other);
         match hi {
@@ -160,49 +221,9 @@ impl<'a> Reader<'a> {
                 }
                 node.scalar = Scalar::Uid(be(self.slice(off + 1, size)?));
             }
-            0xA => {
-                node.kind = Kind::Array;
-                let total = n.checked_mul(self.ref_size).ok_or_else(|| self.bad("a length is too large"))?;
-                let refs = self.slice(data, total)?;
-                let idx = self.tree.nodes.len();
-                self.tree.nodes.push(node);
-                for k in 0..n {
-                    let r = be(&refs[k * self.ref_size..(k + 1) * self.ref_size]) as usize;
-                    if r >= self.num {
-                        return Err(self.bad("a reference points past the object table"));
-                    }
-                    let c = self.object(r, depth + 1)?;
-                    self.tree.nodes[idx].kids.push(Kid { key: None, kstart: NO_SPAN, kend: NO_SPAN, node: c });
-                }
-                return Ok(idx);
-            }
-            0xD => {
-                node.kind = Kind::Dict;
-                let total = n.checked_mul(self.ref_size * 2).ok_or_else(|| self.bad("a length is too large"))?;
-                let refs = self.slice(data, total)?;
-                let idx = self.tree.nodes.len();
-                self.tree.nodes.push(node);
-                for k in 0..n {
-                    let kr = self.r#ref(data + k * self.ref_size)?;
-                    let key = self.string_at(kr)?;
-                    let vr = be(&refs[(n + k) * self.ref_size..(n + k + 1) * self.ref_size]) as usize;
-                    if vr >= self.num {
-                        return Err(self.bad("a reference points past the object table"));
-                    }
-                    let c = self.object(vr, depth + 1)?;
-                    // a repeated key: the last value wins, in the first key's place (a Python dict)
-                    match self.tree.nodes[idx].kids.iter().position(|kid| kid.key.as_deref() == Some(key.as_str())) {
-                        Some(p) => self.tree.nodes[idx].kids[p].node = c,
-                        None => self.tree.nodes[idx].kids.push(Kid { key: Some(key), kstart: NO_SPAN, kend: NO_SPAN, node: c }),
-                    }
-                }
-                return Ok(idx);
-            }
             _ => return Err(self.bad("an unsupported object type")),
         }
-        let idx = self.tree.nodes.len();
-        self.tree.nodes.push(node);
-        Ok(idx)
+        Ok(node)
     }
 }
 

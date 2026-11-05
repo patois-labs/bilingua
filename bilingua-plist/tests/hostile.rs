@@ -335,3 +335,57 @@ proptest! {
         check(&b);
     }
 }
+
+/// One dictionary of `n` distinct keys (objects `2..n+2`), every value the integer at object 1.
+fn many_keys_binary(n: usize) -> Vec<u8> {
+    let mut out = b"bplist00".to_vec();
+    let mut offs: Vec<u32> = vec![out.len() as u32];
+    out.extend_from_slice(&[0xDF, 0x12]);
+    out.extend_from_slice(&(n as u32).to_be_bytes());
+    for k in 0..n {
+        out.extend_from_slice(&((k + 2) as u32).to_be_bytes());
+    }
+    for _ in 0..n {
+        out.extend_from_slice(&1u32.to_be_bytes());
+    }
+    offs.push(out.len() as u32);
+    out.extend_from_slice(&[0x10, 1]);
+    for k in 0..n {
+        offs.push(out.len() as u32);
+        out.push(0x58);
+        out.extend_from_slice(format!("k{k:07}").as_bytes());
+    }
+    let table = out.len() as u64;
+    for o in &offs {
+        out.extend_from_slice(&o.to_be_bytes());
+    }
+    out.extend_from_slice(&[0; 6]);
+    out.extend_from_slice(&[4, 4]);
+    out.extend_from_slice(&((n + 2) as u64).to_be_bytes());
+    out.extend_from_slice(&0u64.to_be_bytes());
+    out.extend_from_slice(&table.to_be_bytes());
+    out
+}
+
+#[test]
+fn a_dict_of_many_distinct_keys_reads_in_linear_time() {
+    // gate: a key lookup per entry made this quadratic (150 000 keys ran for minutes)
+    let b = many_keys_binary(150_000);
+    let t = std::time::Instant::now();
+    let d = Plist.extract(&b, &ExtractOptions { include_locked: true, ..Default::default() }).unwrap();
+    assert!(d.units.is_empty());
+    assert!(t.elapsed().as_secs() < 20, "{:?}", t.elapsed());
+}
+
+#[test]
+fn binary_nesting_at_the_limit_fits_a_one_megabyte_stack() {
+    // gate: 127 nested arrays overflowed a 1 MB main-thread stack in a debug build
+    let h = std::thread::Builder::new()
+        .stack_size(1 << 20)
+        .spawn(|| {
+            assert!(Plist.extract(&deep_binary(127), &ExtractOptions::default()).is_ok());
+            assert_eq!(limit_kind(&Plist.extract(&deep_binary(129), &ExtractOptions::default()).unwrap_err()), Some(LimitKind::XmlDepth));
+        })
+        .unwrap();
+    h.join().unwrap();
+}

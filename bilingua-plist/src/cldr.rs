@@ -30,6 +30,9 @@ mod tests {
         assert_eq!(categories("zh-Hant").unwrap(), ["other"]);
         assert_eq!(categories("ko").unwrap(), ["other"]);
         assert_eq!(categories("es").unwrap(), ["one", "many", "other"]);
+        // old codes babel still resolves
+        assert_eq!(categories("iw").unwrap(), ["one", "two", "other"]);
+        assert_eq!(categories("tl-PH").unwrap(), ["one", "other"]);
         assert!(categories("xx").is_none() && categories("").is_none());
     }
 }

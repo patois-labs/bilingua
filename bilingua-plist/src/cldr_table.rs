@@ -1,5 +1,6 @@
 // Generated from CLDR cardinal plural categories via babel 2.18.0 (the data LocOS uses). Sorted by code.
 // Bit set: zero=1 one=2 two=4 few=8 many=16 other=32.
+// Also the old codes babel still resolves (in, iw, ji, mo, tl), so they fill like id, he, yi, ro, fil.
 pub(crate) const TABLE: &[(&str, u8)] = &[
     ("aa", 32),
     ("ab", 32),
@@ -108,13 +109,16 @@ pub(crate) const TABLE: &[(&str, u8)] = &[
     ("ie", 32),
     ("ig", 32),
     ("ii", 32),
+    ("in", 32),
     ("io", 34),
     ("is", 34),
     ("it", 50),
     ("iu", 38),
+    ("iw", 38),
     ("ja", 32),
     ("jbo", 32),
     ("jgo", 34),
+    ("ji", 34),
     ("jmc", 34),
     ("jv", 32),
     ("ka", 34),
@@ -178,6 +182,7 @@ pub(crate) const TABLE: &[(&str, u8)] = &[
     ("ml", 34),
     ("mn", 34),
     ("mni", 32),
+    ("mo", 42),
     ("moh", 32),
     ("mr", 34),
     ("ms", 32),
@@ -273,6 +278,7 @@ pub(crate) const TABLE: &[(&str, u8)] = &[
     ("ti", 34),
     ("tig", 34),
     ("tk", 34),
+    ("tl", 34),
     ("tn", 34),
     ("to", 32),
     ("tok", 32),
