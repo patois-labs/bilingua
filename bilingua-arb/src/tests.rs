@@ -1,0 +1,78 @@
+use super::*;
+
+#[test]
+fn icu_parse_keeps_every_byte() {
+    for s in [
+        "plain",
+        "Hello {name}!",
+        "{n, plural, =0{none} one{# x} other{# xs}}",
+        "{ count , plural , offset:1 one { # item } other { # items } }",
+        "{g, select, a{A} other{B}} tail",
+        "It''s '{quoted}' text",
+        "{d, date, ::yMMMd} and {n, number, '{'}",
+        "{a, plural, one{{b, select, x{X} other{Y}}} other{Z}}",
+    ] {
+        let parts = icu::parse(s).unwrap_or_else(|_| panic!("{s}"));
+        assert_eq!(render(&parts), s);
+    }
+}
+
+fn render(parts: &[Part]) -> String {
+    let mut out = String::new();
+    for p in parts {
+        match p {
+            Part::Text(t) | Part::Simple(t) => out.push_str(t),
+            Part::Pound => out.push('#'),
+            Part::Complex(cx) => {
+                out.push_str(&cx.head);
+                for b in &cx.branches {
+                    out.push_str(&format!("{}{}{{{}}}{}", b.selector, b.mid, render(&b.msg), b.trail));
+                }
+                out.push('}');
+            }
+        }
+    }
+    out
+}
+
+#[test]
+fn icu_rejects_what_localization_os_rejects() {
+    for bad in ["{", "}", "{n, plural, one{x}", "{n, plural}x{", "{n, plural, }", "{n, plural, one x}", "{, plural, other{x}}", "'{open", "{n, number, {x}", &format!("{}x{}", "{a, select, other{".repeat(60), "}".repeat(60))] {
+        assert!(icu::parse(bad).is_err(), "{bad}");
+    }
+    // typed arguments with and without a style, and a bare plural keyword, are simple
+    assert!(matches!(icu::parse("{n, number}").unwrap()[0], Part::Simple(_)));
+    assert!(matches!(icu::parse("{n, plural}").unwrap()[0], Part::Simple(_)));
+    // # is text outside a plural and inside a select branch
+    assert_eq!(icu::parse("# {g, select, a{#} other{#}}").unwrap().len(), 2);
+}
+
+#[test]
+fn unit_order_is_pre_order() {
+    let plan = plan_message("A {n, plural, one{# b {g, select, x{X} other{Y}}} other{# c}} z");
+    let paths: Vec<&str> = plan.units.iter().map(|u| u.path.as_str()).collect();
+    assert_eq!(paths, ["", "n: plural one", "n: plural one / g: select x", "n: plural one / g: select other", "n: plural other"]);
+}
+
+#[test]
+fn cldr_lookup_reduces_like_babel() {
+    assert_eq!(plural_categories("ru", false).unwrap(), ["one", "few", "many", "other"]);
+    assert_eq!(plural_categories("RU-ru", false).unwrap(), ["one", "few", "many", "other"]);
+    assert_eq!(plural_categories("sr_Latn_RS", false).unwrap(), ["one", "few", "other"]);
+    assert_eq!(plural_categories("en", true).unwrap(), ["one", "two", "few", "other"]);
+    assert!(plural_categories("1x", false).is_none());
+    assert!(BABEL_VERSION.starts_with("2."));
+}
+
+#[test]
+fn scanner_matches_json_loads() {
+    for ok in ["{}", " {\"a\":NaN} ", "{\"a\":[1,-0.5e+3,true,null,-Infinity]}", "{\"\\ud83d\\ude00\":\"\\u00e9\"}"] {
+        assert!(scan::scan(ok, 200).is_ok(), "{ok}");
+    }
+    for bad in ["", "{", "{\"a\":1,}", "{\"a\" 1}", "{'a':1}", "{\"a\":01}", "{\"a\":1.}", "{\"a\":\"\t\"}", "{\"a\":\"\\x\"}", "{\"a\":\"\\u12\"}", "{} {}", "{\"a\":+1}", "{\"a\":.5}", "// c\n{}"] {
+        assert!(scan::scan(bad, 200).is_err(), "{bad}");
+    }
+    assert_eq!(scan::unescape(r"a\u00e9\ud83d\ude00\n").unwrap(), "a\u{e9}\u{1F600}\n");
+    assert!(scan::unescape(r"\ud800").is_none());
+    assert_eq!(scan::quote("a\"\\\n\u{1}é"), "\"a\\\"\\\\\\n\\u0001é\"");
+}
