@@ -1,0 +1,18 @@
+[package]
+name = "bilingua-xliffpkg"
+description = "Bilingua: zipped XLIFF packages (WorldServer .xlz and .wsxz). The XLIFF members go through bilingua-xliff; every other member is carried through untouched."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+bilingua-model = { workspace = true }
+bilingua-zip = { workspace = true }
+bilingua-xliff = { workspace = true }
+quick-xml = { workspace = true }
+zip = { workspace = true }
+
+[dev-dependencies]
+proptest = "1"
+serde_json = { workspace = true }
