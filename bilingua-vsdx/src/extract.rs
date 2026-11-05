@@ -296,7 +296,7 @@ fn split_core(children: &[Node]) -> Option<Core> {
 }
 
 fn translatable(s: &str) -> bool {
-    s.chars().any(char::is_alphanumeric)
+    bilingua_model::py_has_alnum(s)
 }
 
 fn mark_label(raw: &str) -> &'static str {

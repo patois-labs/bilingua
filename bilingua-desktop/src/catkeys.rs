@@ -150,7 +150,7 @@ fn walk<'a>(text: &'a str, limits: &Limits) -> Result<(Walk<'a>, Vec<usize>), Er
             }
             let tr_start = pos + line.len() - f[3].len();
             let e = Entry { source: unescape(f[0]), context: f[1], comment: unescape(f[2]), raw_translation: f[3], tr_start, tr_end: content_end };
-            if e.source.chars().any(char::is_alphabetic) {
+            if bilingua_model::py_has_alpha(&e.source) {
                 units.push(entries.len());
                 guard::check_unit_count(units.len(), limits)?;
             }

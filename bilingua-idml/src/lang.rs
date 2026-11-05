@@ -60,7 +60,7 @@ pub fn indesign_language(declared: &HashSet<String>, tag: &str) -> Option<String
     let norm = tag.replace('_', "-");
     let parts: Vec<&str> = norm.split('-').collect();
     let lang = parts[0].to_ascii_lowercase();
-    let region = parts[1..].iter().find(|p| p.chars().count() == 2 && p.chars().all(char::is_alphabetic)).map(|p| p.to_ascii_uppercase());
+    let region = parts[1..].iter().find(|p| p.chars().count() == 2 && bilingua_model::py_isalpha(p)).map(|p| p.to_ascii_uppercase());
     let script = parts[1..].iter().find(|p| p.chars().count() == 4).map(|p| p.to_ascii_lowercase());
     let mut keys = vec![];
     if let Some(s) = &script {

@@ -38,7 +38,7 @@ pub(crate) fn read(bytes: &[u8], opts: &ExtractOptions, name: &str) -> Result<Re
 
 /// Python's `str.isspace` set (Unicode white space plus the four ASCII separators U+001C..U+001F).
 pub(crate) fn py_ws(c: char) -> bool {
-    c.is_whitespace() || ('\u{1c}'..='\u{1f}').contains(&c)
+    bilingua_model::py_isspace_char(c)
 }
 
 /// Python's `str.strip()`.

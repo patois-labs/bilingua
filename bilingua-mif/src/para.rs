@@ -155,7 +155,7 @@ pub fn analyse(
     for it in &items {
         if let Item::Text(s) = it {
             marker_chars |= s.contains('\u{27e6}') || s.contains('\u{27e7}');
-            alnum = alnum || s.chars().any(char::is_alphanumeric);
+            alnum = alnum || bilingua_model::py_has_alnum(s);
         }
     }
     if idx.is_empty() || marker_chars || !alnum {

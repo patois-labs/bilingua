@@ -176,3 +176,24 @@ fn php_obeys_output_utf8() {
     let out = merge_with(&doc, &utf8()).unwrap();
     assert!(String::from_utf8(out).unwrap().contains("caf\u{e9}"));
 }
+
+#[test]
+fn rc_language_is_stamped_when_asked() {
+    let src = "LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US\r\nSTRINGTABLE\r\nBEGIN\r\n    1 \"Hello\"\r\nEND\r\n";
+    let doc = extract("a.rc", src.as_bytes(), &opts("de-DE")).unwrap();
+    assert_eq!(merge(&doc).unwrap(), src.as_bytes());
+    let out = String::from_utf8_lossy(&merge_with(&doc, &always()).unwrap()).into_owned();
+    // LANG_GERMAN, SUBLANG_GERMAN as numbers, as LocOS writes them
+    assert!(out.starts_with("LANGUAGE 0x07, 0x01\r\n"), "{out}");
+}
+
+#[test]
+fn xml_obeys_output_utf8() {
+    let mut src = b"<?xml version=\"1.0\" encoding=\"windows-1252\"?>\n<root><p>caf".to_vec();
+    src.push(0xE9);
+    src.extend_from_slice(b"</p></root>\n");
+    let doc = extract("a.xml", &src, &opts("fr")).unwrap();
+    assert_eq!(merge(&doc).unwrap(), src);
+    let out = text(merge_with(&doc, &utf8()).unwrap());
+    assert!(out.contains("caf\u{e9}") && out.contains("encoding=\"UTF-8\""), "{out}");
+}

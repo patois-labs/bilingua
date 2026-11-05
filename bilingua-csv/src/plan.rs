@@ -352,7 +352,7 @@ pub fn py_alpha(c: char) -> bool {
     if c.is_ascii() {
         return c.is_ascii_alphabetic();
     }
-    c.is_alphabetic() && !c.is_numeric() && !matches!(c as u32, 0x24B6..=0x24E9 | 0x1F130..=0x1F149 | 0x1F150..=0x1F169 | 0x1F170..=0x1F189)
+    bilingua_model::py_isalpha_char(c)
 }
 
 /// Why a non-blank cell is not a unit.

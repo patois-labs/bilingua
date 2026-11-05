@@ -37,7 +37,7 @@ fn a11y_style(u: &Unit) -> Option<&'static str> {
     let elem = u.context.style.as_deref()?;
     let key = u.context.key.as_deref()?.to_ascii_lowercase();
     // LocOS needs a letter in the value (the HTML crate wants a letter or a digit)
-    if !plain_text(&u.segments.first()?.source).chars().any(char::is_alphabetic) {
+    if !bilingua_model::py_has_alpha(&plain_text(&u.segments.first()?.source)) {
         return None;
     }
     match (elem, key.as_str()) {

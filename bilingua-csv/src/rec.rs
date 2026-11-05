@@ -30,7 +30,7 @@ fn too_long() -> Error {
 
 /// Python `str.isspace` for one character.
 pub fn py_space(c: char) -> bool {
-    c.is_whitespace() || ('\u{1c}'..='\u{1f}').contains(&c)
+    bilingua_model::py_isspace_char(c)
 }
 
 /// Python `str.strip() == ""`.

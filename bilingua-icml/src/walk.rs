@@ -51,7 +51,7 @@ pub struct Para {
 }
 
 pub fn py_space(c: char) -> bool {
-    c.is_whitespace() || ('\u{1c}'..='\u{1f}').contains(&c)
+    bilingua_model::py_isspace_char(c)
 }
 
 fn unquote(s: &str) -> String {
