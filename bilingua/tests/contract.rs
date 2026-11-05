@@ -35,7 +35,7 @@ fn open(name: &str, bytes: &[u8], mode: Granularity) -> Document {
 }
 
 fn is_zip(name: &str) -> bool {
-    name.ends_with(".docx") || name.ends_with(".xlsx") || name.ends_with(".pptx") || name.ends_with(".xcloc")
+    name.ends_with(".docx") || name.ends_with(".xlsx") || name.ends_with(".pptx") || name.ends_with(".vsdx") || name.ends_with(".vsdm") || name.ends_with(".xcloc")
 }
 
 #[test]
@@ -158,6 +158,7 @@ fn crate_of(format: &str) -> &'static str {
         "docx" => "bilingua-docx",
         "xlsx" => "bilingua-xlsx",
         "pptx" => "bilingua-pptx",
+        "vsdx" => "bilingua-vsdx",
         "html" => "bilingua-html",
         "json" => "bilingua-json",
         "resjson" => "bilingua-resjson",

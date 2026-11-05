@@ -336,6 +336,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "bilingua-vsdx"
+version = "0.1.0"
+dependencies = [
+ "bilingua-model",
+ "bilingua-zip",
+ "proptest",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "bilingua-wxl"
 version = "0.1.0"
 dependencies = [
