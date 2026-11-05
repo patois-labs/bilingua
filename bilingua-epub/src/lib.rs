@@ -43,6 +43,15 @@ use xml::Edits;
 
 /// The skeleton entry that holds the whole original file.
 const ARCHIVE: &str = "epub";
+/// The skeleton entry that holds the options the file was read with. The unit ids depend on `include_locked`
+/// (locked text is numbered too) and the limits decide what may be read again, so merge must use the same ones.
+const OPTIONS: &str = "epub-options";
+
+#[derive(serde::Serialize, serde::Deserialize)]
+struct Opts {
+    include_locked: bool,
+    limits: Limits,
+}
 
 /// The EPUB filter.
 pub struct Epub;
@@ -100,7 +109,16 @@ fn extract_epub(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> 
         target_lang: opts.target_lang.clone(),
         granularity: Granularity::Paragraph,
         units,
-        skeleton: Skeleton::zip(vec![ZipEntry { name: ARCHIVE.into(), data: ZipData::Raw(bytes.to_vec()) }], bilingua_model::parser_info!()),
+        skeleton: Skeleton::zip(
+            vec![
+                ZipEntry { name: ARCHIVE.into(), data: ZipData::Raw(bytes.to_vec()) },
+                ZipEntry {
+                    name: OPTIONS.into(),
+                    data: ZipData::Raw(serde_json::to_vec(&Opts { include_locked: opts.include_locked, limits }).map_err(|e| Error::Write(e.to_string()))?),
+                },
+            ],
+            bilingua_model::parser_info!(),
+        ),
         ..Default::default()
     };
     guard::finish(doc, vec![], &limits)
@@ -158,12 +176,25 @@ fn merge_epub(doc: &Document) -> Result<Vec<u8>, Error> {
             _ => None,
         })
         .ok_or_else(|| Error::Write("epub skeleton has no archive".into()))?;
-    let limits = Limits::default();
+    // Nothing translated: the original bytes, without opening the package again.
+    if !doc.units.iter().any(translated) {
+        return Ok(original.to_vec());
+    }
+    let read_with = skel
+        .iter()
+        .find_map(|e| match (&e.data, e.name == OPTIONS) {
+            (ZipData::Raw(b), true) => Some(serde_json::from_slice::<Opts>(b)),
+            _ => None,
+        })
+        .transpose()
+        .map_err(|e| Error::Write(format!("the epub skeleton's options are unreadable: {e}")))?
+        .unwrap_or(Opts { include_locked: false, limits: Limits::default() });
+    let limits = read_with.limits;
     let entries = read_package(original, &limits)?;
     let pkg = Package::open(&entries, &limits)?;
     let by_id: HashMap<&str, &Unit> = doc.units.iter().map(|u| (u.id.as_str(), u)).collect();
-    // The language is declared only when something was translated (an untouched merge returns the original).
-    let lang = if doc.units.iter().any(translated) { doc.target_lang.as_deref().and_then(|l| chapter::target(Some(l))) } else { None };
+    // The language is declared only when something was translated (an untouched merge returned above).
+    let lang = doc.target_lang.as_deref().and_then(|l| chapter::target(Some(l)));
     let lang_ref = lang.as_ref().map(|(t, r)| (t.as_str(), *r));
     let mut replaced: HashMap<usize, Vec<u8>> = HashMap::new();
 
@@ -183,7 +214,7 @@ fn merge_epub(doc: &Document) -> Result<Vec<u8>, Error> {
     }
 
     // 2. XHTML content documents in spine order, then the navigation document
-    let copts = ExtractOptions::default();
+    let copts = ExtractOptions { include_locked: read_with.include_locked, limits: Some(limits), ..Default::default() };
     let chapters: Vec<usize> = pkg.xhtml.iter().copied().chain(pkg.nav).collect();
     for (c, &ei) in chapters.iter().enumerate() {
         let mut ch = Chapter::open(&entries[ei].data, &entries[ei].name, &copts)?;

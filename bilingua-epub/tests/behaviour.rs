@@ -223,3 +223,67 @@ fn nav_in_the_spine_is_read_once_and_a_second_rendition_is_ignored() {
     let src = epub_with(&[("META-INF/container.xml", two.as_bytes()), ("OEBPS/other.opf", b"<package/>")]);
     assert_eq!(extract(&src).units.len(), 14);
 }
+
+#[test]
+fn libreoffice_opens_the_merged_chapters_when_installed() {
+    // LibreOffice cannot open an .epub itself, so the check is on the content documents inside the merged file:
+    // each translated XHTML chapter (Arabic, right to left, among them) must load and convert to PDF.
+    let candidates = [
+        r"C:\Program Files\LibreOffice\program\soffice.exe",
+        r"C:\Program Files (x86)\LibreOffice\program\soffice.exe",
+        "/usr/bin/soffice",
+        "/usr/local/bin/soffice",
+        "/Applications/LibreOffice.app/Contents/MacOS/soffice",
+    ];
+    let Some(soffice) = candidates.iter().find(|p| Path::new(p).exists()) else {
+        eprintln!("skipped: LibreOffice is not installed");
+        return;
+    };
+    let (_, bytes) = corpus_files().into_iter().find(|(n, _)| n == "languages.epub").unwrap();
+    let mut d = extract(&bytes);
+    d.target_lang = Some("ar".into());
+    pseudo(&mut d, "");
+    let (m, _) = members(&merge(&d));
+    let dir = std::env::temp_dir().join(format!("bilingua-epub-lo-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    for name in ["OEBPS/l1.xhtml", "OEBPS/l11.xhtml"] {
+        let file = dir.join(name.rsplit('/').next().unwrap());
+        std::fs::write(&file, &m[name]).unwrap();
+        let out = std::process::Command::new(soffice).args(["--headless", "--convert-to", "pdf", "--outdir"]).arg(&dir).arg(&file).output().unwrap();
+        assert!(out.status.success(), "{}", String::from_utf8_lossy(&out.stderr));
+        assert!(file.with_extension("pdf").exists(), "{}{}", String::from_utf8_lossy(&out.stdout), String::from_utf8_lossy(&out.stderr));
+    }
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn locked_units_keep_the_ids_consistent_between_extract_and_merge() {
+    // With include_locked the translate="no" text is a locked unit and is numbered; merge must number the same way.
+    let ch = CH1.replace("<p>Hello <b>bold</b>", "<p translate=\"no\">Colophon text stays.</p>\n<p>Hello <b>bold</b>");
+    let src = epub_with(&[("OEBPS/text/ch1.xhtml", ch.as_bytes())]);
+    let o = ExtractOptions { include_locked: true, ..Default::default() };
+    let mut d = Epub.extract(&src, &o).unwrap();
+    let locked: Vec<Unit> = d.units.iter().filter(|u| !u.translate).cloned().collect();
+    assert_eq!(locked.len(), 1);
+    assert!(loc_text(&locked[0]).starts_with("Colophon"));
+    let i = d.units.iter().position(|u| loc_text(u).starts_with("Hello")).unwrap();
+    set(&mut d, i, "Bonjour \u{27E6}g1\u{27E7}gras\u{27E6}/g1\u{27E7}");
+    let id = locked[0].segments[0].id.clone();
+    assert!(matches!(d.set_target(&id, vec![Inline::text("x")]), Err(Error::Locked(_))));
+    let (m, _) = members(&merge(&d));
+    let c = member_text(&m, "OEBPS/text/ch1.xhtml");
+    assert!(c.contains("<p translate=\"no\">Colophon text stays.</p>") && c.contains("<p>Bonjour <b>gras</b></p>"), "{c}");
+}
+
+#[test]
+fn custom_limits_travel_with_the_skeleton() {
+    // a file read under raised limits can be merged again under the same ones
+    let big = vec![b'a'; 3 * 1024 * 1024];
+    let src = epub_with(&[("OEBPS/img/pad.bin", &big)]);
+    let o = ExtractOptions { limits: Some(Limits { max_zip_ratio: 1_000_000, ..Limits::default() }), ..Default::default() };
+    let mut d = Epub.extract(&src, &o).unwrap();
+    set(&mut d, 0, "Titre");
+    let (m, _) = members(&merge(&d));
+    assert!(member_text(&m, "OEBPS/content.opf").contains(">Titre<"));
+    assert_eq!(m["OEBPS/img/pad.bin"], big);
+}
