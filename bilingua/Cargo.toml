@@ -36,6 +36,7 @@ bilingua-stf = { workspace = true }
 bilingua-sdlproj = { workspace = true }
 bilingua-htmlhelp = { workspace = true }
 bilingua-image = { workspace = true }
+bilingua-pdf = { workspace = true }
 bilingua-scc = { workspace = true }
 bilingua-dxf = { workspace = true }
 bilingua-mo = { workspace = true }

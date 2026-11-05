@@ -121,6 +121,8 @@ pub fn filters() -> Vec<Box<dyn Filter>> {
         Box::new(bilingua_resx::Resx),
         // MO sniffs only its binary magic number, so its place does not matter.
         Box::new(bilingua_mo::Mo),
+        // PDF sniffs `%PDF-` in the first 1024 bytes (PDFium's header search); strict, so its place does not matter.
+        Box::new(bilingua_pdf::Pdf),
         // An email sniffs a block of Capitalised header fields (From, Subject, MIME-Version, ...); it goes before
         // YAML and properties, which would take `Subject: text` lines.
         Box::new(bilingua_email::Email),

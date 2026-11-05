@@ -55,9 +55,10 @@ fn plural_label(u: &bilingua::Unit) -> Option<(Option<String>, String)> {
 /// GUID, type and name (`app/filters/sdl_package.py`) and never extracts text from it.
 const NO_TEXT_FORMATS: &[&str] = &["sdlproj"];
 
-/// Formats whose translated merge is refused by design with `Error::Unsupported` (the file is read for its text
-/// but cannot be rebuilt): the round trip checks that refusal instead of a reopen. The untouched merge is still
-/// checked. Keep this list narrow. `pdf`: Bilingua extracts PDF text; writing a translated PDF is out of scope.
+/// Formats whose translated merge is `Error::Unsupported` by design, so a corpus file of theirs is checked for an
+/// exact untouched merge and for that refusal instead of a pseudo-translated round trip. Keep this list narrow.
+/// `pdf`: Localization OS re-typesets a translated PDF with typst; that step stays in LocOS for 1.0 (Brent's
+/// decision, see `bilingua-pdf/DESIGN-MERGE.md`), so Bilingua's PDF filter extracts and merges untouched only.
 const MERGE_UNSUPPORTED_FORMATS: &[&str] = &["pdf"];
 
 fn pseudo(v: &[Inline]) -> Vec<Inline> {
