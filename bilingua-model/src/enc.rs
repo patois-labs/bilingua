@@ -238,6 +238,16 @@ fn done(text: String, base: &str, label: Option<&str>, warnings: Vec<Warning>, l
 
 /// Reads a text file (see the module docs for the order of attempts).
 pub fn decode_text(data: &[u8], o: &DecodeOptions) -> Result<Decoded, Error> {
+    let mut d = decode_text_inner(data, o)?;
+    // GBK files from Windows write the euro sign as the single byte 0x80; the GB18030 spelling is A2 E3. A file
+    // that uses A2 E3 keeps it on merge (an untouched merge is byte-identical); the tag says so.
+    if base(&d.encoding) == "gbk" && d.text.contains('\u{20AC}') && data.windows(2).any(|w| w == [0xA2, 0xE3]) {
+        d.encoding.push_str(";euro=a2e3");
+    }
+    Ok(d)
+}
+
+fn decode_text_inner(data: &[u8], o: &DecodeOptions) -> Result<Decoded, Error> {
     crate::guard::check_input(data, &o.limits)?;
     let locale = o.source_lang.unwrap_or("");
     let hint = source_encoding(locale);
@@ -441,14 +451,17 @@ struct Envelope<'a> {
     base: &'a str,
     nl: &'static str,
     label: Option<&'a str>,
+    /// GBK file whose euro sign was the two bytes A2 E3 (GB18030's spelling)
+    euro_a2e3: bool,
 }
 
 fn parse_tag(t: &str) -> Envelope<'_> {
     let mut parts = t.split(';');
     let base = parts.next().unwrap_or("utf-8");
-    let (mut nl, mut label) = ("", None);
+    let (mut nl, mut label, mut euro_a2e3) = ("", None, false);
     for p in parts {
         match p {
+            "euro=a2e3" => euro_a2e3 = true,
             "nl=crlf" => nl = "\r\n",
             "nl=cr" => nl = "\r",
             _ => {
@@ -458,7 +471,7 @@ fn parse_tag(t: &str) -> Envelope<'_> {
             }
         }
     }
-    Envelope { base, nl, label }
+    Envelope { base, nl, label, euro_a2e3 }
 }
 
 fn with_newlines(text: &str, nl: &str) -> String {
@@ -578,12 +591,34 @@ pub fn encode_text(text: &str, encoding: &str) -> Result<Vec<u8>, Error> {
         return Ok(utf8(false));
     }
     // GB18030 writes everything GBK does, with the same bytes, and the four-byte forms GBK's encoder lacks
+    // (B6); only the euro sign differs: GBK and Windows code page 936 readers expect the single byte 0x80
+    if enc == encoding_rs::GBK && !env.euro_a2e3 {
+        return Ok(encode_gbk(&restored).0);
+    }
     let writer = if enc == encoding_rs::GBK { encoding_rs::GB18030 } else { enc };
     let (bytes, _, unmappable) = writer.encode(&restored);
     if unmappable {
         return Ok(utf8(false));
     }
     Ok(bytes.into_owned())
+}
+
+/// Encodes `text` for a GBK / GB2312 / code page 936 file: GB18030's bytes (it holds everything GBK does, plus
+/// four-byte forms for the rest), except that the euro sign U+20AC is the single byte 0x80, which is what GBK and
+/// Windows readers expect (GB18030's A2 E3 is read as a different character by some of them). The flag is true
+/// when a character has no mapping at all (never for GB18030; kept for the caller's fallback logic).
+pub fn encode_gbk(text: &str) -> (Vec<u8>, bool) {
+    let mut out = Vec::with_capacity(text.len() + text.len() / 2);
+    let mut bad = false;
+    for (i, piece) in text.split('\u{20AC}').enumerate() {
+        if i > 0 {
+            out.push(0x80);
+        }
+        let (b, _, unmappable) = encoding_rs::GB18030.encode(piece);
+        bad |= unmappable;
+        out.extend_from_slice(&b);
+    }
+    (out, bad)
 }
 
 /// True when `tag` names a legacy (neither UTF-8 nor UTF-16) encoding.

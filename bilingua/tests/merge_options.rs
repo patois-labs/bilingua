@@ -139,3 +139,16 @@ fn ftl_translate_terms_format_option() {
     assert_eq!(plain.units.len(), 1);
     assert_eq!(terms.units.len(), 2);
 }
+
+#[test]
+fn gbk_html_writes_the_euro_as_one_byte() {
+    let mut src = b"<html><head><meta charset=\"gbk\"></head><body><p>".to_vec();
+    src.extend_from_slice(&[0xD6, 0xD0, 0xCE, 0xC4]);
+    src.extend_from_slice(b" price</p></body></html>");
+    let mut doc = extract("a.html", &src, &opts("zh-CN")).unwrap();
+    assert_eq!(merge(&doc).unwrap(), src);
+    let id = doc.units[0].segments[0].id.clone();
+    doc.set_target(&id, vec![Inline::text("\u{20AC}9")]).unwrap();
+    let out = merge(&doc).unwrap();
+    assert!(out.windows(3).any(|w| w == [b'>', 0x80, b'9']), "{out:?}");
+}
