@@ -55,6 +55,12 @@ fn plural_label(u: &bilingua::Unit) -> Option<(Option<String>, String)> {
 /// GUID, type and name (`app/filters/sdl_package.py`) and never extracts text from it.
 const NO_TEXT_FORMATS: &[&str] = &["sdlproj"];
 
+/// Formats whose translated merge is `Error::Unsupported` by design, so a corpus file of theirs is checked for an
+/// exact untouched merge and for that refusal instead of a pseudo-translated round trip. Keep this list narrow.
+/// `pdf`: Localization OS re-typesets a translated PDF with typst; that step stays in LocOS for 1.0 (Brent's
+/// decision, see `bilingua-pdf/DESIGN-MERGE.md`), so Bilingua's PDF filter extracts and merges untouched only.
+const MERGE_UNSUPPORTED_FORMATS: &[&str] = &["pdf"];
+
 fn pseudo(v: &[Inline]) -> Vec<Inline> {
     let mut out = vec![Inline::text("[")];
     out.extend(v.iter().cloned());
@@ -98,6 +104,12 @@ fn every_corpus_file_round_trips() {
             if let Err(e) = t.set_target(&id, pseudo(&src)) {
                 failures.push(format!("{name}: set_target {id}: {e}"));
             }
+        }
+        if MERGE_UNSUPPORTED_FORMATS.contains(&doc.format.as_str()) {
+            if !matches!(bilingua::merge(&t), Err(bilingua::Error::Unsupported(_))) {
+                failures.push(format!("{name}: a translated merge should be Error::Unsupported"));
+            }
+            continue;
         }
         match bilingua::merge(&t).and_then(|b| bilingua::extract(&name, &b, &opts)) {
             Ok(again) => {
