@@ -82,7 +82,7 @@ fn the_eleven_languages() {
         let data = corpus(n);
         let out = translate(&data, &m);
         assert_eq!(units(&out), back, "{n}");
-        assert_eq!(out[..2] == data[..2], true, "{n}: same BOM");
+        assert!(out[..2] == data[..2], "{n}: same BOM");
     }
 }
 
