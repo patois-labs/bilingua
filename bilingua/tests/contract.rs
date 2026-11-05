@@ -16,7 +16,7 @@ fn corpus() -> Vec<(String, Vec<u8>)> {
         for f in std::fs::read_dir(dir.path()).unwrap().flatten() {
             let name = f.file_name().to_string_lossy().to_string();
             if name.starts_with('.') {
-                continue; // .gitattributes keeps byte-exact fixtures from being re-wrapped
+                continue; // dot files (.gitattributes and the like) are never fixtures
             }
             out.push((name, std::fs::read(f.path()).unwrap()));
         }

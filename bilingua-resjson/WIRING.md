@@ -7,7 +7,8 @@
   `bilingua_json::JsonFilter`. Format id `resjson`, extension `resjson`. `sniff` is conservative (comment or
   `_id.comment` required).
 - `bilingua/tests/contract.rs`: `"resjson" => "bilingua-resjson"` in `crate_of`, and the corpus walker skips
-  dot files (the corpus folder has a `.gitattributes` with `* -text`).
+  dot files (harmless; the corpus folder has no `.gitattributes`, the repo root marks the corpus `-text`).
+- `tools/check-portable.sh` and `.ps1`: `resjson` in `CRATES`.
 - Skeleton `encoding` values: `utf-8`, `utf-8-bom`, `utf-16le`, `utf-16be` (UTF-16 always has its BOM).
 - Oracle: `oracle/corpus/resjson/`; add `resjson` to `FORMATS` in `oracle/run.py` and the LocOS name in
   `scoreboard.py` (not touched here).
