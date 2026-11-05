@@ -31,6 +31,16 @@ fn a_file_that_used_a2e3_keeps_it() {
     assert_eq!(encode_text(&d.text, &d.encoding).unwrap(), bytes);
 }
 
+// The bytes A2 E3 across two characters (B0 A2, then E3 A1) are not the GB18030 euro: the file's 0x80 stays.
+#[test]
+fn a2e3_straddling_two_characters_is_not_the_euro() {
+    let bytes: Vec<u8> = [&[0x80][..], b" ", &[0xB0, 0xA2, 0xE3, 0xA1], b"\n"].concat();
+    let d = decode_text(&bytes, &opts(Some("zh-CN"))).unwrap();
+    assert!(d.text.starts_with('\u{20AC}'));
+    assert!(!d.encoding.contains("euro=a2e3"), "{}", d.encoding);
+    assert_eq!(encode_text(&d.text, &d.encoding).unwrap(), bytes);
+}
+
 #[test]
 fn declared_gb2312_and_cp936_labels_get_the_single_byte_too() {
     for label in ["gb2312", "GBK", "x-gbk", "chinese", "gb_2312"] {

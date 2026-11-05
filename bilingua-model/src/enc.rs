@@ -241,10 +241,30 @@ pub fn decode_text(data: &[u8], o: &DecodeOptions) -> Result<Decoded, Error> {
     let mut d = decode_text_inner(data, o)?;
     // GBK files from Windows write the euro sign as the single byte 0x80; the GB18030 spelling is A2 E3. A file
     // that uses A2 E3 keeps it on merge (an untouched merge is byte-identical); the tag says so.
-    if base(&d.encoding) == "gbk" && d.text.contains('\u{20AC}') && data.windows(2).any(|w| w == [0xA2, 0xE3]) {
+    if base(&d.encoding) == "gbk" && d.text.contains('\u{20AC}') && gbk_has_a2e3(data) {
         d.encoding.push_str(";euro=a2e3");
     }
     Ok(d)
+}
+
+/// True when the GBK / GB18030 bytes hold the character A2 E3 (not the two bytes straddling two characters, such as
+/// a trail byte A2 followed by a lead byte E3).
+fn gbk_has_a2e3(data: &[u8]) -> bool {
+    let mut i = 0;
+    while i < data.len() {
+        let b = data[i];
+        if !(0x81..=0xFE).contains(&b) || i + 1 >= data.len() {
+            i += 1;
+        } else if (0x30..=0x39).contains(&data[i + 1]) {
+            i += 4; // a GB18030 four-byte form
+        } else {
+            if b == 0xA2 && data[i + 1] == 0xE3 {
+                return true;
+            }
+            i += 2;
+        }
+    }
+    false
 }
 
 fn decode_text_inner(data: &[u8], o: &DecodeOptions) -> Result<Decoded, Error> {
