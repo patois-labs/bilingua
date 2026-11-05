@@ -47,6 +47,7 @@ dependencies = [
  "bilingua-subtitle",
  "bilingua-text",
  "bilingua-toml",
+ "bilingua-vsdx",
  "bilingua-wxl",
  "bilingua-xaml",
  "bilingua-xcstrings",
