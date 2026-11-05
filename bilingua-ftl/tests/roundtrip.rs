@@ -115,7 +115,7 @@ fn target_locale_and_paragraph_mode() {
     assert_eq!(doc.target_lang.as_deref(), Some("ar"));
     assert!(doc.units.iter().all(|u| u.segments.len() == 1 && u.separators.is_empty()));
     pseudo(&mut doc);
-    let out = String::from_utf8(FtlFilter.merge(&doc).unwrap()).unwrap();
+    let out = String::from_utf8(FtlFilter.merge_localized(&doc, None).unwrap()).unwrap();
     // Arabic has six plural categories: zero, two, few, many are added before the default variant
     for cat in ["zero", "two", "few", "many"] {
         assert!(out.contains(&format!("[{cat}] [[{{ $count }}")), "{cat}\n{out}");
@@ -125,6 +125,7 @@ fn target_locale_and_paragraph_mode() {
     let mut plain = extract(&data).unwrap();
     pseudo(&mut plain);
     let out = String::from_utf8(FtlFilter.merge(&plain).unwrap()).unwrap();
+    assert!(!String::from_utf8(FtlFilter.merge(&doc).unwrap()).unwrap().contains("[few]"), "plain merge adds no variants");
     assert!(!out.contains("[few]"));
     assert!(out.contains("login = [[Log in]]"));
 }

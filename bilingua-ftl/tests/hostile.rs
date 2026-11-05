@@ -21,8 +21,8 @@ fn check(data: &[u8]) {
                 doc.set_target(&id, merge_text(t)).unwrap();
             }
             let out = FtlFilter.merge(&doc).unwrap();
-            doc.target_lang = Some("pl".into());
-            let filled = FtlFilter.merge(&doc).unwrap();
+
+            let filled = FtlFilter.merge_localized(&doc, Some("pl")).unwrap();
             assert_eq!(structure(&filled).unwrap().junk, structure(&out).unwrap().junk, "plural fill must not add Junk");
             assert_eq!(units(&out).len(), n, "unit count after translation {:?} -> {:?}", String::from_utf8_lossy(data), String::from_utf8_lossy(&out));
         }

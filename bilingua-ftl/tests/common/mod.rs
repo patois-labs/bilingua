@@ -68,13 +68,20 @@ pub fn to_inline(u: &Unit, text: &str) -> Vec<Inline> {
     out
 }
 
-pub fn build_doc(mut doc: Document, mapping: &[(usize, &str)]) -> Vec<u8> {
+pub fn build_doc(doc: Document, mapping: &[(usize, &str)]) -> Vec<u8> {
+    build_doc_with(doc, mapping, None)
+}
+
+pub fn build_doc_with(mut doc: Document, mapping: &[(usize, &str)], locale: Option<&str>) -> Vec<u8> {
     for (i, t) in mapping {
         let id = doc.units[*i].segments[0].id.clone();
         let inl = to_inline(&doc.units[*i], t);
         doc.set_target(&id, inl).expect("set_target");
     }
-    FtlFilter.merge(&doc).expect("merge")
+    match locale {
+        Some(l) => FtlFilter.merge_localized(&doc, Some(l)).expect("merge"),
+        None => FtlFilter.merge(&doc).expect("merge"),
+    }
 }
 
 /// Sets targets by unit index (as the LocOS mapping does) and merges.
@@ -83,8 +90,7 @@ pub fn build(data: &[u8], mapping: &[(usize, &str)]) -> Vec<u8> {
 }
 
 pub fn build_locale(data: &[u8], mapping: &[(usize, &str)], locale: &str) -> Vec<u8> {
-    let o = ExtractOptions { target_lang: Some(locale.into()), ..ExtractOptions::default() };
-    build_doc(FtlFilter.extract(data, &o).expect("extract"), mapping)
+    build_doc_with(extract(data).expect("extract"), mapping, Some(locale))
 }
 
 /// Untouched merge and an echo merge (every unit's own text as target) both give back the original bytes.

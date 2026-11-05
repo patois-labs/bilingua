@@ -12,8 +12,9 @@
 //! written as `{"{"}` and a continuation line starting with `[`, `*` or `.` is escaped the same way, so a
 //! translation can never change the structure of the file.
 //!
-//! A merge of translated units with `Document::target_lang` set also adds, to every plural select, a variant for each CLDR category the
-//! target language uses that the file lacks, holding the translated `[other]` variant (Localization OS decision 13).
+//! `FtlFilter::merge_localized` also adds, to every plural select, a variant for each CLDR category the target
+//! language uses that the file lacks, holding the translated `[other]` variant (Localization OS decision 13). Plain
+//! `merge` never adds units.
 
 /// Skeleton schema number: bump only when this crate's skeleton layout changes (see `bilingua_model::check_parser`).
 pub const SKELETON_SCHEMA: u32 = 1;
@@ -414,6 +415,20 @@ impl Filter for FtlFilter {
     }
 
     fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
+        self.merge_inner(doc, None)
+    }
+}
+
+impl FtlFilter {
+    /// Like `merge`, and also adds to every plural select the CLDR categories `locale` (default: the document's
+    /// `target_lang`) uses that the file lacks, each a copy of the translated `[other]` variant (LocOS
+    /// `build_localized`, decision 13). Nothing is added when no unit has a target. The added variants are new
+    /// units when the file is read again, which is why plain `merge` does not do this.
+    pub fn merge_localized(&self, doc: &Document, locale: Option<&str>) -> Result<Vec<u8>, Error> {
+        self.merge_inner(doc, locale.or(doc.target_lang.as_deref()))
+    }
+
+    fn merge_inner(&self, doc: &Document, fill: Option<&str>) -> Result<Vec<u8>, Error> {
         bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
         let Skeleton::Text { parts, encoding, .. } = &doc.skeleton else {
             return Err(Error::Write("ftl needs a text skeleton".into()));
@@ -429,7 +444,7 @@ impl Filter for FtlFilter {
             }
         }
         let translated = doc.units.iter().any(|u| u.segments.iter().any(|s| !s.target.is_empty()));
-        if let (Some(loc), true) = (doc.target_lang.as_deref(), translated) {
+        if let (Some(loc), true) = (fill, translated) {
             check_budget(&out, &Limits::default()).map_err(|e| Error::Write(e.to_string()))?;
             out = fill_plurals(&out, loc);
         }

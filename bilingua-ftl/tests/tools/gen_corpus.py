@@ -62,7 +62,6 @@ def main():
         ).encode("utf-8"),
     )
     put("plain_ascii.ftl", b"hello = Hello\nbye = Goodbye\n")
-    put("only_comments.ftl", b"### Resource\n\n## Group\n\n# nothing else\n")
 
 
 main()

@@ -14,8 +14,8 @@
   `FTL_TRANSLATE_TERMS`, is `Limits::translate_terms` on `FtlFilter::extract_with(bytes, opts, &Limits)`; the crate
   never reads the environment, so the LocOS adapter passes it. Defaults of `Limits` are the LocOS ones (50000 units,
   100000 characters per unit, 20 lines per unit of cap, 40 nesting levels) plus a 256 MB input cap.
-- Target locale: a merge of a document whose `target_lang` is set also fills plural selects with the target
-  language's missing CLDR categories (LocOS `build_localized`). The tables are in `src/plural_data.rs`, made from
+- Target locale: `FtlFilter::merge_localized(doc, locale)` (locale defaults to `doc.target_lang`) also fills plural selects with the target
+  language's missing CLDR categories (LocOS `build_localized`); plain `merge` never adds units (the oracle and the facade contract reopen a merged file and count units). The tables are in `src/plural_data.rs`, made from
   babel by `tests/tools/gen_plurals.py`.
 - Inline tags: every placeable is a free standalone tag, `label` = `placeholder`, `display` = the source text, so the
   LocOS adapter flattens them to plain text as LocOS has them. Brace literals (`{ "{" }`) are plain text.

@@ -9,7 +9,7 @@ baseline; Okapi has no Fluent filter), with its own parser that follows `fluent.
 - Comments, Junk, identifiers, selectors, keys, indentation of untouched text, line endings and the BOM stay in the
   skeleton byte for byte. A translation can never change the file's structure: braces and line-start `[ * .` are
   escaped.
-- A merge with a target language also adds the language's missing plural variants to plural selects.
+- `merge_localized` also adds the target language's missing plural variants to plural selects; plain `merge` does not.
 - Tests: `tests/locos_suite.rs` (the ten LocOS cases), `tests/locos_golden.rs` (275 files against recorded LocOS
   output, made by `tests/tools/gen_golden.py`), round trips, hostile input (proptest), speed
   (`cargo test -p bilingua-ftl --release --test speed -- --nocapture`, then `tests/tools/speed_locos.py`).

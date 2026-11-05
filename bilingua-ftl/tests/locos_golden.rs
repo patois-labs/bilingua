@@ -45,8 +45,7 @@ fn check(c: &serde_json::Value, key: &str, terms: bool) -> bool {
 }
 
 fn build_with(data: &[u8], lim: &Limits, mapping: &[(usize, &str)], locale: Option<&str>) -> Vec<u8> {
-    let o = ExtractOptions { target_lang: locale.map(str::to_string), ..ExtractOptions::default() };
-    build_doc(FtlFilter.extract_with(data, &o, lim).unwrap(), mapping)
+    build_doc_with(FtlFilter.extract_with(data, &ExtractOptions::default(), lim).unwrap(), mapping, locale)
 }
 
 #[test]
