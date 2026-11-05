@@ -161,6 +161,14 @@ const TEXT_CONTAINERS: [&str; 3] = ["text", "tspan", "textpath"];
 const SKIP_CONTAINERS: [&str; 6] = ["style", "script", "defs", "metadata", "title", "desc"];
 const A11Y_OPAQUE: [&str; 3] = ["style", "script", "metadata"];
 
+/// The local part of a (lowercased) element name: `svg:script` and `h:style` are a script and a style sheet to every
+/// XML reader, so the opaque containers are matched by local name. LocOS matches the whole name and so reads the
+/// code inside a prefixed `<x:script>` or `<x:style>` as text, which a translation could then rewrite (a
+/// deliberate difference).
+fn local(name: &str) -> &str {
+    name.rsplit(':').next().unwrap_or(name)
+}
+
 /// The text nodes in document order (`_svg_units`).
 pub fn text_nodes(toks: &[Cow<'_, str>], cap: Option<&mut dyn FnMut(usize) -> Result<(), bilingua_model::Error>>) -> Result<Vec<Node>, bilingua_model::Error> {
     let mut cap = cap;
@@ -169,7 +177,7 @@ pub fn text_nodes(toks: &[Cow<'_, str>], cap: Option<&mut dyn FnMut(usize) -> Re
     for (ti, tok) in toks.iter().enumerate() {
         if is_markup(tok) {
             let (closing, name, self_closing) = parse_tag(tok);
-            if SKIP_CONTAINERS.contains(&name.as_str()) {
+            if SKIP_CONTAINERS.contains(&local(&name)) {
                 if closing {
                     skip_depth = skip_depth.saturating_sub(1);
                 } else if !self_closing {
@@ -208,7 +216,7 @@ pub fn a11y_nodes(toks: &[Cow<'_, str>], already: usize, cap: Option<&mut dyn Fn
             continue;
         }
         let (closing, name, self_closing) = parse_tag(tok);
-        if A11Y_OPAQUE.contains(&name.as_str()) && !self_closing {
+        if A11Y_OPAQUE.contains(&local(&name)) && !self_closing {
             opaque = if closing { opaque.saturating_sub(1) } else { opaque + 1 };
             continue;
         }

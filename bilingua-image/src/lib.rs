@@ -99,6 +99,12 @@ fn too_many_tags(limits: &Limits) -> Error {
 }
 
 fn svg_extract(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
+    svg_read(bytes, opts, true)
+}
+
+/// `keep_whole`: a file with no units whose code page does not give its bytes back keeps them in a binary skeleton
+/// (there is no unit to hold them), so an untouched merge is still the original.
+fn svg_read(bytes: &[u8], opts: &ExtractOptions, keep_whole: bool) -> Result<Document, Error> {
     let limits = opts.limits();
     guard::check_input(bytes, &limits)?;
     guard::check_xml(bytes, &limits)?;
@@ -151,7 +157,12 @@ fn svg_extract(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
         pos = e;
     }
     parts.push(SkelPart::Raw(text[pos..].to_string()));
-    guard::finish(Document::new("svg", units, Skeleton::text(parts, dec.encoding, parser_info!())).with_options(opts), warnings, &limits)
+    let skeleton = if keep_raw && keep_whole && units.is_empty() {
+        Skeleton::binary(bytes.to_vec(), parser_info!())
+    } else {
+        Skeleton::text(parts, dec.encoding, parser_info!())
+    };
+    guard::finish(Document::new("svg", units, skeleton).with_options(opts), warnings, &limits)
 }
 
 /// The text a unit now holds, when it differs from `old` and is translated (a translation to nothing counts).
@@ -165,6 +176,18 @@ fn changed(unit: &Unit, old: &str) -> Option<String> {
 
 fn svg_merge(doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
     check_parser(doc, &parser_info!())?;
+    if let (Skeleton::Binary { data, .. }, "svg") = (&doc.skeleton, doc.format.as_str()) {
+        // a file kept whole (no units, a code page that does not give its bytes back)
+        if !doc.units.is_empty() {
+            return Err(Error::Write("the document does not match its skeleton (different number of units)".into()));
+        }
+        if opts.stamp_lang(doc, false).and_then(lang::canonical_tag).is_none() && opts.output_encoding != OutputEncoding::Utf8 {
+            return Ok(data.to_vec());
+        }
+        let mut inner = svg_read(data, &ExtractOptions::new(), false)?;
+        inner.target_lang = doc.target_lang.clone();
+        return svg_merge(&inner, opts);
+    }
     let Skeleton::Text { parts, encoding, .. } = &doc.skeleton else {
         return Err(Error::Write("svg needs the skeleton made by its own extract".into()));
     };
@@ -301,6 +324,8 @@ fn raster_merge(doc: &Document) -> Result<Vec<u8>, Error> {
 fn raster_magic(bytes: &[u8]) -> bool {
     match probe::sniff(bytes) {
         Some(Kind::Bmp) => matches!(bytes.get(14..18), Some([12 | 40 | 52 | 56 | 64 | 108 | 124, 0, 0, 0])),
+        // every JPEG marker segment starts with 0xFF: SOI alone (two bytes) is too loose for format detection
+        Some(Kind::Jpeg) => bytes.get(2) == Some(&0xFF),
         Some(Kind::Svg) | None => false,
         Some(_) => true,
     }
@@ -324,6 +349,7 @@ impl Filter for SvgFilter {
     }
 
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         guard::check_input(bytes, &opts.limits())?;
         if !probe::looks_like_svg(bytes) {
             return Err(Error::Parse { format: "svg".into(), msg: "the content is not SVG".into() });
@@ -332,6 +358,7 @@ impl Filter for SvgFilter {
     }
 
     fn merge_with(&self, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         svg_merge(doc, opts)
     }
 }
@@ -350,6 +377,7 @@ impl Filter for ImageFilter {
     }
 
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         guard::check_input(bytes, &opts.limits())?;
         match probe::sniff(bytes) {
             None if probe::looks_like_svg(bytes) => svg_extract(bytes, opts),
@@ -360,8 +388,10 @@ impl Filter for ImageFilter {
     }
 
     fn merge_with(&self, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         match &doc.skeleton {
             Skeleton::Text { .. } => svg_merge(doc, opts),
+            Skeleton::Binary { .. } if doc.format == "svg" => svg_merge(doc, opts),
             Skeleton::Binary { .. } => raster_merge(doc),
             _ => Err(Error::Write("image needs the skeleton made by its own extract".into())),
         }

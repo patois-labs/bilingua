@@ -5,7 +5,7 @@
     declaration, comments, processing instructions and a DOCTYPE) is `<svg`, in UTF-8 or UTF-16. An HTML page with an
     inline `<svg>` does not match.
   - `bilingua_image::ImageFilter`: id `image`, extensions `png jpg jpeg tif tiff bmp gif webp`. Sniff is the raster
-    magic numbers (PNG, JPEG, TIFF, GIF, WebP; BMP also needs a DIB header size). Given SVG bytes it reads them as
+    magic numbers (PNG, TIFF, GIF, WebP; JPEG needs `FF D8 FF`; BMP also needs a DIB header size). Given SVG bytes it reads them as
     `SvgFilter` does (the LocOS `image` filter does the same), and then `Document::format` is `svg`.
 - Facade `filters()`: add both boxes anywhere before `HtmlFilter` and the text filters (done in the wire commit, after
   `Xaml`). The sniffers are strict, so the exact place does not matter beyond that.
@@ -32,4 +32,6 @@
     `Unit::context.location` (`x,y,w,h`).
   - An image with no sidecar (and every JPEG/GIF/TIFF/BMP/WebP) is a document with zero units and a warning of kind
     `no-text-layer`; OCR is LocOS's.
+  - An SVG with no units in a legacy code page that does not round trip has a `Skeleton::Binary` (format `svg`, so
+    no `source_encoding` from the skeleton); both filters merge it.
 - Python wheel: nothing format-specific; it goes through the facade.

@@ -93,6 +93,26 @@ fn text_in_script_style_foreignobject_and_attributes_is_never_a_unit() {
 }
 
 #[test]
+fn prefixed_script_and_style_are_never_text() {
+    // gate 11-05: `<x:script>` bound to the SVG namespace is a script to every XML reader, and `<h:style>` in a
+    // foreignObject is an HTML style sheet; LocOS matches whole names and reads their code as text, which a
+    // translation could then rewrite into a script or a CSS url(). Bilingua matches them by local name.
+    let svg = "<svg xmlns=\"http://www.w3.org/2000/svg\" xmlns:x=\"http://www.w3.org/2000/svg\" xmlns:h=\"http://www.w3.org/1999/xhtml\">\
+        <text>Real<x:script>alert(document.domain)</x:script><SVG:STYLE>text { fill: red }</SVG:STYLE>\
+        <foreignObject><h:style>p { background: url(a.png) }</h:style></foreignObject>Tail</text>\
+        <x:metadata><title>Hidden</title></x:metadata><title>Shown</title></svg>";
+    let d = extract(svg.as_bytes());
+    assert_eq!(texts(&d), ["Real", "Tail", "Shown"]);
+    let mut d = d;
+    for i in 0..d.units.len() {
+        set(&mut d, i, "fetch('//evil.invalid'); url(//evil.invalid)");
+    }
+    let out = s(SvgFilter.merge_with(&d, &locos_opts()).unwrap());
+    assert!(out.contains("<x:script>alert(document.domain)</x:script>") && out.contains("p { background: url(a.png) }"), "{out}");
+    assert!(out.contains("<title>Hidden</title>"), "{out}");
+}
+
+#[test]
 fn text_nodes_inside_comments_cdata_and_attribute_values_are_left_alone() {
     // a `>` in these regions ends a tag early in the LocOS reader and the rest looks like text
     let svg = "<svg><text title=\"a>b\">Hi</text><text><!-- x > y -->Yo</text><text><![CDATA[ p > q ]]>Ya</text></svg>";
@@ -105,6 +125,35 @@ fn text_nodes_inside_comments_cdata_and_attribute_values_are_left_alone() {
     let out = String::from_utf8(SvgFilter.merge(&d).unwrap()).unwrap();
     wellformed(&out).unwrap();
     assert!(out.contains("title=\"a>b\"") && out.contains("<!-- x > y -->") && out.contains("<![CDATA[ p > q ]]>"), "{out}");
+}
+
+#[test]
+fn own_format_option_keys_are_checked() {
+    // neither filter declares a key: a misspelt key of its own family is refused, another format's key is not
+    let bad = ExtractOptions::new().with_format_option("svg.colums", "1");
+    assert!(matches!(SvgFilter.extract(b"<svg><text>Hi</text></svg>", &bad), Err(Error::FormatOption { .. })));
+    let other = ExtractOptions::new().with_format_option("csv.columns", "1");
+    assert!(SvgFilter.extract(b"<svg><text>Hi</text></svg>", &other).is_ok());
+    let img = png(Some("[{\"text\": \"a\", \"bbox\": [1, 2, 3, 4]}]"), 8, 8, &[]);
+    assert!(matches!(ImageFilter.extract(&img, &ExtractOptions::new().with_format_option("image.ocr", "1")), Err(Error::FormatOption { .. })));
+    let d = image_extract(&img).unwrap();
+    assert!(matches!(ImageFilter.merge_with(&d, &MergeOptions::new().with_format_option("image.ocr", "1")), Err(Error::FormatOption { .. })));
+    let d = extract(b"<svg><text>Hi</text></svg>");
+    assert!(matches!(SvgFilter.merge_with(&d, &MergeOptions::new().with_format_option("svg.x", "1")), Err(Error::FormatOption { .. })));
+}
+
+#[test]
+fn facade_sniff_needs_more_than_two_jpeg_bytes() {
+    assert!(!ImageFilter.sniff(b"\xff\xd8\x00\x00 not a jpeg"));
+    assert!(ImageFilter.sniff(b"\xff\xd8\xff\xe0\x00\x10JFIF\x00"));
+    // BMP needs a DIB header size the readers know
+    let mut bmp = b"BM".to_vec();
+    bmp.extend_from_slice(&[0; 12]);
+    bmp.extend_from_slice(&40u32.to_le_bytes());
+    bmp.extend_from_slice(&[0; 16]);
+    assert!(ImageFilter.sniff(&bmp));
+    bmp[14] = 41;
+    assert!(!ImageFilter.sniff(&bmp));
 }
 
 // ---- damaged files ------------------------------------------------------------------------------------------------

@@ -15,10 +15,15 @@ SVG text and the text layer of raster images for Bilingua. Port of Localization 
 * Writing: `&`, `<`, `>` are escaped; control characters XML 1.0 forbids are dropped (vertical tab and form feed
   become a newline), so no translation can make the file ill-formed or add markup.
 * Reading: UTF-8, UTF-16 and the legacy encodings a file declares (the model's text reader); the declaration is
-  binding. Entity declarations (`<!ENTITY`) and nesting over 256 levels are refused before parsing; entities are
+  binding. When a legacy code page does not give the same bytes back from the text, the first unit keeps the
+  original bytes; a file with no units keeps them as a `Skeleton::Binary` (format `svg`), so an untouched merge is
+  always the original. Entity declarations (`<!ENTITY`) and nesting over 256 levels are refused before parsing; entities are
   never expanded.
 * Differences from LocOS, on purpose: text the LocOS tag splitter cuts out of a comment, CDATA section, DOCTYPE or
   quoted attribute value (a `>` there ends its tag early) is not a unit, and a warning says how many were left alone;
+  `<style>`, `<script>`, `<metadata>` (and the other containers LocOS skips) are matched by local name, so the code
+  inside a prefixed `<x:script>` or `<h:style>` is never a unit (LocOS reads it as text, and a translation could
+  rewrite it into a script or a CSS `url()`);
   XML-illegal control characters in a translation are dropped; the declared charset is rewritten when the output is
   UTF-8 even for a pure-ASCII file (LocOS leaves a stale declaration there).
 

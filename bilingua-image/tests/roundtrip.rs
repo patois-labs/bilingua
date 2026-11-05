@@ -59,6 +59,29 @@ fn rtl_changes_only_translated_text_elements() {
 }
 
 #[test]
+fn untouched_merge_keeps_the_bytes_of_a_file_with_no_units_whose_code_page_is_not_one_to_one() {
+    // gate 11-05: 0xED40 (a NEC-selected IBM extension) decodes to U+7E8A, which Shift_JIS encodes as 0xFA5C; with no
+    // unit to hold the original bytes the merge used to write the other form
+    let bytes = b"<?xml version=\"1.0\" encoding=\"shift_jis\"?>\n<svg><!-- \xed\x40 --><rect/></svg>".to_vec();
+    let d = SvgFilter.extract(&bytes, &opts()).unwrap();
+    assert!(d.units.is_empty());
+    assert_eq!(SvgFilter.merge_with(&d, &MergeOptions::default()).unwrap(), bytes);
+    assert_eq!(ImageFilter.merge_with(&ImageFilter.extract(&bytes, &opts()).unwrap(), &MergeOptions::default()).unwrap(), bytes);
+    // a document that survives JSON keeps them too
+    let json = serde_json::to_string(&d).unwrap();
+    let back: Document = serde_json::from_str(&json).unwrap();
+    assert_eq!(SvgFilter.merge(&back).unwrap(), bytes);
+    // UTF-8 out and the always-stamp profile still write the file (as UTF-8, with the language)
+    let d = SvgFilter.extract(&bytes, &with_target("ja-JP")).unwrap();
+    let out = s(SvgFilter.merge_with(&d, &locos_opts()).unwrap());
+    assert!(out.contains("<svg xml:lang=\"ja-JP\">") && out.contains("\u{7e8a}") && !out.to_ascii_lowercase().contains("shift_jis"), "{out}");
+    // with a unit, the first unit holds them (unchanged behaviour)
+    let bytes = b"<?xml version=\"1.0\" encoding=\"shift_jis\"?>\n<svg><!-- \xed\x40 --><text>Hi</text></svg>".to_vec();
+    let d = SvgFilter.extract(&bytes, &opts()).unwrap();
+    assert_eq!(SvgFilter.merge(&d).unwrap(), bytes);
+}
+
+#[test]
 fn untouched_merge_is_the_original_bytes_in_every_encoding() {
     let utf16 = |bom: &[u8], f: fn(u16) -> [u8; 2]| -> Vec<u8> { bom.iter().copied().chain(SRC.encode_utf16().flat_map(f)).collect() };
     let mut cases: Vec<(&str, Vec<u8>)> = vec![
