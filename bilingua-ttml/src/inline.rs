@@ -282,6 +282,9 @@ pub fn render(out: &[Inline], codes: &BTreeMap<String, CodeData>, br_name: &str)
                     res.push_str(line);
                 }
             }
+            // hidden splice data (`~raw`, `~meta`) is never a code a translation can place: `~raw` would copy the
+            // whole source caption into the target
+            Inline::Tag { id, .. } if id.starts_with('~') => {}
             Inline::Tag { id, kind, .. } => {
                 let entry = codes.get(id.as_str());
                 let is_span = entry.is_some_and(|c| c.open.is_some());

@@ -33,13 +33,13 @@ let out = Ttml.merge(&doc)?;
   (elements in another language and `<head>` metadata stay). For a right-to-left target every rebuilt caption gets
   `tts:direction="rtl"`, using the styling prefix the document binds (TTML `#styling`, DFXP `#style` or `#styling`),
   flipping an explicit `ltr`, or an unused prefix bound on `<tt>`; untouched captions keep their level.
-- Encodings (`bilingua_model::enc`): UTF-8 (BOM kept), UTF-16 with a BOM, or a legacy charset the XML declaration names.
+- Encodings (`bilingua_model::enc`): UTF-8 (BOM kept), UTF-16 with a BOM, or a legacy charset the XML declaration names. Legacy bytes with no declaration, or under a false UTF-8 or UTF-16 one, are refused (B6), never guessed.
   The same encoding is written back; a character the charset cannot hold becomes `&#NNNN;`. A file in the engine
   default `MergeOptions` keeps its encoding; `MergeOptions::locos()` writes UTF-8 and rewrites the declaration.
 - Safety: any DOCTYPE is refused, only the five predefined entities and valid character references are read, names and
   attribute syntax are checked, prefixes must be declared, only XML characters. `bilingua_model::guard` limits (input
   size, entity declarations, depth 256, elements, units) plus a pre-parse budget of 40 `<` per allowed unit and at most
-  4096 namespace declarations in scope. The scanner is one pass in this crate (no second parser to disagree with).
+  4096 namespace declarations in scope. The scanner is one pass in this crate (no second parser to disagree with). Namespace lookups are constant time (an index per prefix) and the duplicate-attribute check uses a set, so namespace-heavy files stay linear.
 
 ## Differences from LocOS
 
@@ -51,3 +51,4 @@ let out = Ttml.merge(&doc)?;
   attribute name) and a file with more than 4096 namespace declarations in scope is refused as a limit.
 - A literal `⟦x1⟧` typed in the source text is plain text here; LocOS would read it as a token.
 - A carriage return typed in a translation is written as is (LocOS does the same); XML readers read it as a newline.
+- An undeclared legacy file (Latin-1 bytes and no `encoding=` in the declaration, or a declaration that says UTF-8) is refused here as the B6 rule says; LocOS reads it through its code-page fallback.

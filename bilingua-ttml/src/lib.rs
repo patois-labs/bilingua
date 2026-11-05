@@ -45,12 +45,17 @@ impl Ttml {
         guard::check_xml(bytes, limits)?;
         let dec = enc::decode_text(bytes, &enc::DecodeOptions { declared: true, source_lang: opts.source_lang.as_deref(), limits: *limits })?;
         let text = &dec.text;
+        if enc::is_legacy(&dec.encoding) && enc::declared_encoding(bytes).is_none_or(|e| [encoding_rs::UTF_8, encoding_rs::UTF_16LE, encoding_rs::UTF_16BE].contains(&e)) {
+            // XML (and the B6 rule for every XML format): bytes that are not UTF-8 or UTF-16 must name their
+            // legacy encoding in the declaration; a missing or a false (UTF-8) declaration is refused, never guessed
+            return Err(Error::Encoding("This TTML file is not UTF-8 and does not declare its encoding (<?xml version=\"1.0\" encoding=\"...\"?>). Re-save it as UTF-8, or add the declaration.".into()));
+        }
         if !matches!(enc::base(&dec.encoding), "utf-8" | "utf-8-bom" | "utf-16le" | "utf-16be") && textenc::encode(&dec.text, &dec.encoding, &MergeOptions::default())? != bytes {
             // double-mapped bytes of the CJK code pages read to the same character and write back as the other
             // spelling; an untouched merge must be the original bytes, so the file is refused, never altered
             return Err(Error::Encoding("This TTML file uses byte sequences of its legacy encoding that cannot be written back unchanged. Re-save the file as UTF-8.".into()));
         }
-        let sc = scan::scan(text, limits)?;
+        let sc = scan::scan(text, limits, &std::collections::HashSet::new())?;
         let mut units: Vec<Unit> = Vec::new();
         let mut parts: Vec<SkelPart> = Vec::new();
         let (mut pos, mut line, mut counted) = (0usize, 1usize, 0usize);
@@ -146,12 +151,8 @@ impl Filter for Ttml {
         }
         let tag = if opts.should_stamp(doc) { doc.target_lang.as_deref().and_then(lang::canonical_tag) } else { None };
         let rtl = tag.as_deref().is_some_and(lang::is_rtl);
-        // (start, end, replacement) in file order; ties keep insertion order
-        let mut edits: Vec<(usize, usize, String)> = Vec::new();
-        let mut rebuilt: Vec<usize> = Vec::new(); // caption indexes whose content was rewritten
-        let sc = if tag.is_some() { Some(scan::scan(&orig, &Limits::default()).map_err(|e| Error::Write(format!("the skeleton no longer holds a TTML file: {e}")))?) } else { None };
-        let root_lang = sc.as_ref().and_then(|s| s.root_lang.clone());
-        let src = root_lang.as_deref().map(|l| bilingua_model::py_strip(l).to_lowercase()).unwrap_or_default();
+        // the units whose caption content is rewritten, with their translation and caption index
+        let mut changed: Vec<(usize, usize, usize, Vec<Inline>, usize)> = Vec::new();
         for (start, end, ui) in &spans {
             let u = &doc.units[*ui];
             if !u.translate || u.segments.iter().all(|s| s.target.is_empty()) {
@@ -162,13 +163,31 @@ impl Filter for Ttml {
                 continue; // unchanged text keeps the original bytes (layout whitespace, entity spelling)
             }
             let meta = code(u, META).unwrap_or_default();
-            let mut m = meta.splitn(3, '|');
-            let idx: usize = m.next().and_then(|v| v.parse().ok()).ok_or_else(|| Error::Write("unit has no caption index".into()))?;
-            let br = m.nth(1).unwrap_or("br");
+            let idx: usize = meta.split('|').next().and_then(|v| v.parse().ok()).ok_or_else(|| Error::Write("unit has no caption index".into()))?;
+            changed.push((*start, *end, *ui, new, idx));
+        }
+        // (start, end, replacement) in file order; ties keep insertion order
+        let mut edits: Vec<(usize, usize, String)> = Vec::new();
+        let mut rebuilt: Vec<usize> = Vec::new(); // caption indexes whose content was rewritten
+        let sc = if tag.is_some() {
+            // the skeleton passed the limits at extraction (perhaps wider ones than the defaults): only the facts
+            // are read again here, so the size budgets are not applied a second time
+            let wide = Limits { max_units: usize::MAX / 64, ..Limits::default() };
+            let dir_caps = if rtl { changed.iter().map(|c| c.4).collect() } else { std::collections::HashSet::new() };
+            Some(scan::scan(&orig, &wide, &dir_caps).map_err(|e| Error::Write(format!("the skeleton no longer holds a TTML file: {e}")))?)
+        } else {
+            None
+        };
+        let root_lang = sc.as_ref().and_then(|s| s.root_lang.clone());
+        let src = root_lang.as_deref().map(|l| bilingua_model::py_strip(l).to_lowercase()).unwrap_or_default();
+        for (start, end, ui, new, idx) in &changed {
+            let (idx, u) = (*idx, &doc.units[*ui]);
+            let meta = code(u, META).unwrap_or_default();
+            let br = meta.splitn(3, '|').nth(2).unwrap_or("br");
             let original = &orig[*start..*end];
             let lead = &original[..original.len() - bilingua_model::py_lstrip(original).len()];
             let trail = &original[bilingua_model::py_rstrip(original).len()..];
-            let mut body = inline::render(&new, &u.codes, br);
+            let mut body = inline::render(new, &u.codes, br);
             if let (Some(t), false) = (&tag, src.is_empty()) {
                 body = relang_tags(&body, &src, t);
             }

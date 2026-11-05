@@ -10,7 +10,7 @@ use crate::Limits;
 use bilingua_model::{Error, LimitError, LimitKind};
 use quick_xml::events::Event;
 use quick_xml::Reader;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 /// TTML 1/2 (and IMSC1), then the two DFXP candidate-recommendation drafts older `.dfxp` files still carry.
 pub const TTML_NS: [&str; 3] = ["http://www.w3.org/ns/ttml", "http://www.w3.org/2006/10/ttaf1", "http://www.w3.org/2006/04/ttaf1"];
@@ -101,7 +101,6 @@ enum Role {
 
 struct Frame {
     ns_len: usize,
-    styling_len: usize,
     role: Role,
     preserve: bool,
     cap: Option<usize>,
@@ -275,18 +274,67 @@ pub fn tag_lang_ranges(tok: &str) -> Vec<(usize, usize)> {
     }
 }
 
-fn lookup<'a>(ns: &'a [(String, String)], prefix: &str) -> Option<&'a str> {
-    if prefix == "xml" {
-        return Some(XML_NS);
+/// The namespace bindings in scope, in declaration order, with an index per prefix so a lookup is constant time
+/// however many declarations are in scope (a linear search per name was quadratic on a namespace-heavy file).
+#[derive(Default)]
+struct NsScope {
+    bind: Vec<(String, String)>,
+    /// prefix to the indexes in `bind` that declare it, innermost last (`""` is the default namespace)
+    by_prefix: HashMap<String, Vec<usize>>,
+    /// indexes in `bind` of prefixed bindings to a TT Style namespace, innermost last
+    styling: Vec<usize>,
+}
+
+impl NsScope {
+    fn len(&self) -> usize {
+        self.bind.len()
     }
-    ns.iter().rev().find(|(p, _)| p == prefix).map(|(_, u)| u.as_str())
+
+    fn push(&mut self, prefix: String, uri: String) {
+        let i = self.bind.len();
+        if !prefix.is_empty() && is_styling(&uri) {
+            self.styling.push(i);
+        }
+        self.by_prefix.entry(prefix.clone()).or_default().push(i);
+        self.bind.push((prefix, uri));
+    }
+
+    fn truncate(&mut self, n: usize) {
+        while self.bind.len() > n {
+            let Some((p, _)) = self.bind.pop() else { break };
+            let i = self.bind.len();
+            if let Some(v) = self.by_prefix.get_mut(&p) {
+                v.pop();
+            }
+            if self.styling.last() == Some(&i) {
+                self.styling.pop();
+            }
+        }
+    }
+
+    fn lookup(&self, prefix: &str) -> Option<&str> {
+        if prefix == "xml" {
+            return Some(XML_NS);
+        }
+        self.by_prefix.get(prefix).and_then(|v| v.last()).map(|i| self.bind[*i].1.as_str())
+    }
+
+    /// The innermost prefix in scope bound to `uri` whose binding no inner declaration of the same prefix hides.
+    fn effective_prefix_for(&self, uri: &str) -> Option<&str> {
+        self.styling.iter().rev().find_map(|i| {
+            let (p, u) = &self.bind[*i];
+            (u == uri && self.by_prefix.get(p).and_then(|v| v.last()) == Some(i)).then_some(p.as_str())
+        })
+    }
 }
 
 fn ttml_index(uri: &str) -> Option<usize> {
     TTML_NS.iter().position(|n| *n == uri)
 }
 
-pub fn scan(text: &str, l: &Limits) -> Result<Scan, Error> {
+/// `dir_caps`: the caption indexes whose `tts:direction` facts the writer needs (`dir_attrs`, `style_prefix`); the
+/// other captions leave them empty. Extraction passes an empty set.
+pub fn scan(text: &str, l: &Limits, dir_caps: &HashSet<usize>) -> Result<Scan, Error> {
     if text.bytes().filter(|b| *b == b'<').count() > l.max_units.saturating_mul(40) {
         return Err(limit_err(
             LimitKind::XmlElements,
@@ -308,9 +356,7 @@ pub fn scan(text: &str, l: &Limits) -> Result<Scan, Error> {
         c.check_end_names = true;
     }
     let mut out = Scan::default();
-    let mut ns: Vec<(String, String)> = Vec::new();
-    // number of bindings in `ns` whose URI is a TT Style namespace (so most files skip the per-caption lookup)
-    let mut styling_len = 0usize;
+    let mut ns = NsScope::default();
     let mut stack: Vec<Frame> = Vec::new();
     let mut root_seen = false;
     let mut root_ok = false;
@@ -364,7 +410,6 @@ pub fn scan(text: &str, l: &Limits) -> Result<Scan, Error> {
                 }
                 let (qname, raw_attrs) = lex_tag(text, before, after)?;
                 let ns_len = ns.len();
-                let styling_before = styling_len;
                 for a in &raw_attrs {
                     let (prefix, uri) = if a.name == "xmlns" {
                         (String::new(), unescape(a.vraw))
@@ -381,11 +426,8 @@ pub fn scan(text: &str, l: &Limits) -> Result<Scan, Error> {
                     };
                     if !prefix.is_empty() {
                         out.prefixes.insert(prefix.clone());
-                        if is_styling(&uri) {
-                            styling_len += 1;
-                        }
                     }
-                    ns.push((prefix, uri));
+                    ns.push(prefix, uri);
                     if ns.len() > MAX_NS_IN_SCOPE {
                         return Err(limit_err(LimitKind::XmlElements, "This TTML file declares far too many namespaces at once.".into()));
                     }
@@ -394,24 +436,24 @@ pub fn scan(text: &str, l: &Limits) -> Result<Scan, Error> {
                     Some((p, l)) => (p, l),
                     None => ("", qname),
                 };
-                let uri = match lookup(&ns, prefix) {
+                let uri = match ns.lookup(prefix) {
                     Some(u) => Some(u).filter(|u| !u.is_empty()),
                     None if prefix.is_empty() => None,
                     None => return Err(perr(format!("not well-formed XML: namespace prefix {prefix} is not defined"))),
                 };
-                let mut expanded: Vec<(&str, &str)> = Vec::new();
+                // a set, not a list: one start tag can carry 100 000 prefixed attributes
+                let mut expanded: HashSet<(&str, &str)> = HashSet::new();
                 for a in &raw_attrs {
                     if let Some((p, loc)) = a.name.split_once(':') {
                         if p == "xmlns" {
                             continue;
                         }
-                        match lookup(&ns, p) {
+                        match ns.lookup(p) {
                             None => return Err(perr(format!("not well-formed XML: namespace prefix {p} is not defined"))),
                             Some(u) => {
-                                if expanded.contains(&(u, loc)) {
+                                if !expanded.insert((u, loc)) {
                                     return Err(perr("not well-formed XML: duplicate attribute"));
                                 }
-                                expanded.push((u, loc));
                             }
                         }
                     }
@@ -447,7 +489,8 @@ pub fn scan(text: &str, l: &Limits) -> Result<Scan, Error> {
                 if let (Some(nsi), "p") = (ttml, local) {
                     if is_caption(&stack) {
                         cap = Some(out.caps.len());
-                        out.caps.push(make_cap(before, after, qname, nsi, preserve, &raw_attrs, &ns, styling_len));
+                        let dir = dir_caps.contains(&out.caps.len());
+                        out.caps.push(make_cap(before, after, qname, nsi, preserve, &raw_attrs, &ns, dir));
                     }
                 }
                 if empty {
@@ -455,15 +498,13 @@ pub fn scan(text: &str, l: &Limits) -> Result<Scan, Error> {
                         out.caps[ci].content_end = after;
                     }
                     ns.truncate(ns_len);
-                    styling_len = styling_before;
                 } else {
-                    stack.push(Frame { ns_len, styling_len: styling_before, role, preserve, cap });
+                    stack.push(Frame { ns_len, role, preserve, cap });
                 }
             }
             Event::End(_) => {
                 let Some(f) = stack.pop() else { return Err(perr("not well-formed XML: unbalanced end tag")) };
                 ns.truncate(f.ns_len);
-                styling_len = f.styling_len;
                 if let Some(ci) = f.cap {
                     out.caps[ci].content_end = before;
                 }
@@ -499,22 +540,21 @@ fn is_caption(stack: &[Frame]) -> bool {
 }
 
 #[allow(clippy::too_many_arguments)]
-fn make_cap(start: usize, end: usize, qname: &str, nsi: usize, preserve: bool, attrs: &[RawAttr], ns: &[(String, String)], styling_len: usize) -> Cap {
+fn make_cap(start: usize, end: usize, qname: &str, nsi: usize, preserve: bool, attrs: &[RawAttr], ns: &NsScope, dir: bool) -> Cap {
     let get = |n: &str| attrs.iter().find(|a| a.name == n).map(|a| unescape(a.vraw));
     let a = CapAttrs { begin: get("begin"), end: get("end"), dur: get("dur"), xml_id: get("xml:id"), style: get("style"), region: get("region") };
     let (mut dir_attrs, mut style_prefix) = (Vec::new(), None);
-    if styling_len > 0 {
-        // effective prefix bindings, innermost first (an inner declaration hides an outer one of the same prefix)
-        let mut seen: HashSet<&str> = HashSet::new();
-        let eff: Vec<(&str, &str)> = ns.iter().rev().filter(|(p, _)| !p.is_empty() && seen.insert(p.as_str())).map(|(p, u)| (p.as_str(), u.as_str())).collect();
+    // only for a caption the writer rebuilds for a right-to-left target: the prefix search walks the styling
+    // bindings in scope, which a hostile file can make thousands long
+    if dir && !ns.styling.is_empty() {
         for at in attrs {
             if let Some((p, "direction")) = at.name.split_once(':') {
-                if eff.iter().any(|(k, u)| *k == p && is_styling(u)) {
+                if ns.lookup(p).is_some_and(is_styling) {
                     dir_attrs.push((start_of(at), start_of(at) + at.vraw.len(), at.vraw.to_string()));
                 }
             }
         }
-        style_prefix = STYLING_NS[nsi].iter().find_map(|w| eff.iter().find(|(_, u)| u == w).map(|(k, _)| k.to_string()));
+        style_prefix = STYLING_NS[nsi].iter().find_map(|w| ns.effective_prefix_for(w).map(str::to_string));
     }
     Cap { content_start: end, content_end: end, name_end: start + 1 + qname.len(), qname: qname.to_string(), preserve, attrs: a, dir_attrs, style_prefix }
 }
