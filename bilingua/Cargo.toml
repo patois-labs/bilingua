@@ -33,6 +33,7 @@ bilingua-ini = { workspace = true }
 bilingua-sdlproj = { workspace = true }
 bilingua-htmlhelp = { workspace = true }
 bilingua-mo = { workspace = true }
+bilingua-stl = { workspace = true }
 bilingua-ftl = { workspace = true }
 bilingua-csv = { workspace = true }
 bilingua-strings = { workspace = true }
