@@ -1,0 +1,23 @@
+<MIFFile 2019>
+<PgfCatalog
+ <Pgf
+  <PgfTag `Body'>
+  <PgfLanguage USEnglish>
+  <PgfFont
+   <FLanguage USEnglish>
+  > # end of PgfFont
+ > # end of Pgf
+> # end of PgfCatalog
+<TextFlow
+ <Para
+  <PgfTag `Body'>
+  <Odd =x> <Next 1>
+  <ParaLine
+   <String `Hello <PgfLanguage USEnglish\> world'>
+   <Font
+    <FLanguage UKEnglish>
+   > # end of Font
+   <String `again'>
+  > # end of ParaLine
+ > # end of Para
+> # end of TextFlow

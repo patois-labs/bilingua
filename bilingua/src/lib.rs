@@ -57,6 +57,8 @@ pub fn filters() -> Vec<Box<dyn Filter>> {
         Box::new(bilingua_jsmodule::JsModule),
         // PHP language arrays sniff strictly (the file must open with <?php and parse as a static array).
         Box::new(bilingua_php::Php),
+        // MIF sniffs strictly: the first statement must be <MIFFile version>.
+        Box::new(bilingua_mif::Mif),
         // resx sniffs XML with <root> and resource headers; it goes before the loose key-value sniffers.
         Box::new(bilingua_resx::Resx),
         // MO sniffs only its binary magic number, so its place does not matter.
