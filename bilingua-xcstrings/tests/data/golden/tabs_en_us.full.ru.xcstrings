@@ -1,0 +1,238 @@
+{
+	"sourceLanguage": "en-US",
+	"strings": {
+		"empty.entry": {
+			"localizations": {
+				"ru": {
+					"stringUnit": {
+						"state": "translated",
+						"value": "\u043f\u0435\u0440\u0435\u0432\u043e\u0434 empty.entry"
+					}
+				}
+			}
+		},
+		"  padded  ": {
+			"comment": "key with spaces; also used as the source text",
+			"localizations": {
+				"ru": {
+					"stringUnit": {
+						"state": "translated",
+						"value": "  \u043f\u0435\u0440\u0435\u0432\u043e\u0434 padded  "
+					}
+				}
+			}
+		},
+		"Zeta key": {
+			"localizations": {
+				"fr": {
+					"stringUnit": {
+						"state": "needs_review",
+						"value": "Cle zeta"
+					}
+				},
+				"en-US": {
+					"stringUnit": {
+						"state": "new",
+						"value": "  Zeta value %1$@ of %2$@  "
+					}
+				},
+				"ru": {
+					"stringUnit": {
+						"state": "translated",
+						"value": "  \u043f\u0435\u0440\u0435\u0432\u043e\u0434 Zeta value %1$@ of %2$@  "
+					}
+				}
+			}
+		},
+		"files": {
+			"extractionState": "manual",
+			"localizations": {
+				"en-US": {
+					"stringUnit": {
+						"state": "translated",
+						"value": "%#@count@ in 100%% of folders"
+					},
+					"substitutions": {
+						"count": {
+							"argNum": 1,
+							"formatSpecifier": "d",
+							"variations": {
+								"plural": {
+									"zero": {
+										"stringUnit": {
+											"state": "translated",
+											"value": "No files"
+										}
+									},
+									"one": {
+										"stringUnit": {
+											"state": "translated",
+											"value": "%arg file"
+										}
+									},
+									"other": {
+										"stringUnit": {
+											"state": "translated",
+											"value": "%arg files"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"ru": {
+					"stringUnit": {
+						"state": "translated",
+						"value": "\u043f\u0435\u0440\u0435\u0432\u043e\u0434 %#@count@ in 100%% of folders"
+					},
+					"substitutions": {
+						"count": {
+							"argNum": 1,
+							"formatSpecifier": "d",
+							"variations": {
+								"plural": {
+									"few": {
+										"stringUnit": {
+											"state": "translated",
+											"value": "\u043f\u0435\u0440\u0435\u0432\u043e\u0434 %arg files"
+										}
+									},
+									"many": {
+										"stringUnit": {
+											"state": "translated",
+											"value": "\u043f\u0435\u0440\u0435\u0432\u043e\u0434 %arg files"
+										}
+									},
+									"one": {
+										"stringUnit": {
+											"state": "translated",
+											"value": "\u043f\u0435\u0440\u0435\u0432\u043e\u0434 %arg file"
+										}
+									},
+									"other": {
+										"stringUnit": {
+											"state": "translated",
+											"value": "\u043f\u0435\u0440\u0435\u0432\u043e\u0434 %arg files"
+										}
+									},
+									"zero": {
+										"stringUnit": {
+											"state": "translated",
+											"value": "\u043f\u0435\u0440\u0435\u0432\u043e\u0434 No files"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"zh-Hans": {
+					"stringUnit": {
+						"state": "translated",
+						"value": "zh existing"
+					}
+				}
+			}
+		},
+		"device.plural": {
+			"comment": "Device first, then plural inside",
+			"localizations": {
+				"en-US": {
+					"variations": {
+						"device": {
+							"iphone": {
+								"variations": {
+									"plural": {
+										"one": {
+											"stringUnit": {
+												"state": "translated",
+												"value": "One tap"
+											}
+										},
+										"other": {
+											"stringUnit": {
+												"state": "translated",
+												"value": "%lld taps"
+											}
+										}
+									}
+								}
+							},
+							"other": {
+								"stringUnit": {
+									"state": "translated",
+									"value": "Any other device \u00e9"
+								}
+							}
+						}
+					}
+				},
+				"ru": {
+					"variations": {
+						"device": {
+							"iphone": {
+								"variations": {
+									"plural": {
+										"few": {
+											"stringUnit": {
+												"state": "translated",
+												"value": "\u043f\u0435\u0440\u0435\u0432\u043e\u0434 %lld taps"
+											}
+										},
+										"many": {
+											"stringUnit": {
+												"state": "translated",
+												"value": "\u043f\u0435\u0440\u0435\u0432\u043e\u0434 %lld taps"
+											}
+										},
+										"one": {
+											"stringUnit": {
+												"state": "translated",
+												"value": "\u043f\u0435\u0440\u0435\u0432\u043e\u0434 One tap"
+											}
+										},
+										"other": {
+											"stringUnit": {
+												"state": "translated",
+												"value": "\u043f\u0435\u0440\u0435\u0432\u043e\u0434 %lld taps"
+											}
+										}
+									}
+								}
+							},
+							"other": {
+								"stringUnit": {
+									"state": "translated",
+									"value": "\u043f\u0435\u0440\u0435\u0432\u043e\u0434 Any other device \u00e9"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"12345": {
+			"shouldTranslate": false
+		},
+		"---": {},
+		"%@": {},
+		"Slash/key": {
+			"localizations": {
+				"en-US": {
+					"stringUnit": {
+						"state": "translated",
+						"value": "A/B \u201cquoted\u201d \u2013 done"
+					}
+				},
+				"ru": {
+					"stringUnit": {
+						"state": "translated",
+						"value": "\u043f\u0435\u0440\u0435\u0432\u043e\u0434 A/B \u201cquoted\u201d \u2013 done"
+					}
+				}
+			}
+		}
+	},
+	"version": "1.1"
+}

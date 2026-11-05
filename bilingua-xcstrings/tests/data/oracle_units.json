@@ -1,0 +1,70 @@
+{
+ "xcstrings/bakery.xcstrings": [
+  "Add to basket",
+  "⟦x1⟧ loaf",
+  "⟦x1⟧ loaves",
+  "Pick up on your way",
+  "Pick up at the counter",
+  "Pick up in store",
+  "⟦p1⟧, your order has ⟦x2⟧ and ⟦x3⟧.",
+  "⟦x1⟧ item",
+  "⟦x1⟧ items",
+  "no loaves",
+  "⟦x1⟧ loaf",
+  "⟦x1⟧ loaves",
+  "Welcome back, ⟦x1⟧!",
+  "100%% butter",
+  "Café menu – today",
+  "Version ⟦x1⟧ (build ⟦x2⟧)"
+ ],
+ "xcstrings/bakery_crlf.xcstrings": [
+  "Add to basket",
+  "⟦x1⟧ loaf",
+  "⟦x1⟧ loaves",
+  "Pick up on your way",
+  "Pick up at the counter",
+  "Pick up in store",
+  "⟦p1⟧, your order has ⟦x2⟧ and ⟦x3⟧.",
+  "⟦x1⟧ item",
+  "⟦x1⟧ items",
+  "no loaves",
+  "⟦x1⟧ loaf",
+  "⟦x1⟧ loaves",
+  "Welcome back, ⟦x1⟧!",
+  "100%% butter",
+  "Café menu – today",
+  "Version ⟦x1⟧ (build ⟦x2⟧)"
+ ],
+ "xcstrings/compact_bom.xcstrings": [
+  "Bread/Rolls",
+  "Crème brûlée",
+  "Open 7/7"
+ ],
+ "xcstrings/tabs_en_us.xcstrings": [
+  "empty.entry",
+  "padded",
+  "Zeta value ⟦p1⟧ of ⟦p2⟧",
+  "⟦x1⟧ in 100%% of folders",
+  "No files",
+  "⟦x1⟧ file",
+  "⟦x1⟧ files",
+  "One tap",
+  "⟦x1⟧ taps",
+  "Any other device é",
+  "A/B “quoted” – done"
+ ],
+ "xcloc/lumen_fr.xcloc": [
+  "Add to basket",
+  "%lld loaves",
+  "%1$@, your order has %2$lld items.",
+  "Fresh ⟦g1⟧daily⟦/g1⟧ from ⟦p2⟧ ovens"
+ ],
+ "xcloc/lumen_two_files.xcloc": [
+  "Add to basket",
+  "%lld loaves",
+  "%1$@, your order has %2$lld items.",
+  "Fresh ⟦g1⟧daily⟦/g1⟧ from ⟦p2⟧ ovens",
+  "Lumen Bakery",
+  "Scan a loaf label to reorder it."
+ ]
+}
