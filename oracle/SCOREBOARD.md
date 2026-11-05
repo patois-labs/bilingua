@@ -8,15 +8,15 @@ the LocOS tree).
 
 ## Summary
 
-LocOS formats: 87. Bilingua parses 15 of them (source formats and the bilingual and the bilingual formats).
+LocOS formats: 87. Bilingua parses 35 of them (source formats and the bilingual and the bilingual formats).
 
 | Status | Formats |
 |---|---|
-| same | 5 |
-| differs | 8 |
+| same | 14 |
+| differs | 18 |
 | bilingua-only | 0 |
-| untested | 2 |
-| missing | 73 |
+| untested | 3 |
+| missing | 53 |
 
 Status rules. `same`: every fixture file gives the same units (normalised) on both sides, an unchanged merge gives the same file and a pseudo-translated merge reads back. `differs`: anything else, with the top reasons (counts of unit-level differences, listed by kind). `bilingua-only`: Bilingua reads the files, LocOS cannot. `untested`: Bilingua parses the format but no fixture exists. `missing`: Bilingua has no parser; the LocOS unit count is shown when a fixture exists.
 
@@ -24,21 +24,41 @@ Status rules. `same`: every fixture file gives the same units (normalised) on bo
 
 | LocOS format | Also reads as | Bilingua | Files | Units LocOS | Units Bilingua | Text match | Round trip | Status | Top reasons |
 |---|---|---|---|---|---|---|---|---|---|
+| ini |  | source | 21+0 | 93 | 93 | 100.0% | ok | same |  |
+| js | cjs, cts, mjs, mts, ts | source | 48+1 | 289 | 289 | 100.0% | ok | same |  |
 | mqxliff |  | bilingual | 0+1 | 2 | 2 | 100.0% | ok | same |  |
 | mxliff |  | bilingual | 0+1 | 2 | 2 | 100.0% | ok | same |  |
+| php |  | source | 20+0 | 158 | 158 | 100.0% | ok | same |  |
+| resjson |  | source | 4+0 | 46 | 46 | 100.0% | ok | same |  |
 | sdlxliff | sdlxlf | bilingual | 0+1 | 4 | 4 | 100.0% | ok | same |  |
+| toml |  | source | 5+0 | 64 | 64 | 100.0% | ok | same |  |
 | txt | text | source | 3+1 | 49 | 29 | 100.0% | ok | same |  |
+| xcloc |  | source | 2+0 | 10 | 10 | 100.0% | ok | same |  |
+| xcstrings |  | source | 4+1 | 54 | 54 | 100.0% | ok | same |  |
 | xliff | xlf | bilingual | 0+4 | 14 | 14 | 100.0% | ok | same |  |
+| xmb |  | source | 3+2 | 27 | 27 | 100.0% | ok | same |  |
+| xtb |  | source | 2+1 | 19 | 19 | 100.0% | ok | same |  |
+| arb |  | source | 4+0 | 71 | 70 | 98.6% | ok | differs | missing in Bilingua x1 |
 | docx | docm, dotm, dotx | source | 5+2 | 132 | 137 | 94.2% | ok | differs | extra in Bilingua x6; missing in Bilingua x1; different text x1 |
+| dtd |  | source | 15+0 | 132 | 132 | 79.1% | ok | differs | different text x24; missing in Bilingua x2; extra in Bilingua x2 |
+| ftl |  | source | 14+0 | 101 | 101 | 96.1% | FAIL 1/14 | differs | round trip fails on 1 file(s); missing in Bilingua x2; extra in Bilingua x2 |
 | html | htm, xhtml | source | 6+1 | 121 | 126 | 88.5% | ok | differs | extra in Bilingua x9; missing in Bilingua x4; different text x2 |
 | json |  | source | 5+1 | 65 | 64 | 96.9% | ok | differs | missing in Bilingua x1; different text x1 |
+| json5 | jsonc | source | 6+2 | 52 | 51 | 96.2% | ok | differs | missing in Bilingua x1; different text x1 |
 | md | markdown, mdown, mkd | source | 3+1 | 103 | 98 | 97.4% | ok | differs | different words x6; words missing in Bilingua x4 |
 | po | pot | source | 3+0 | 38 | 38 | 94.7% | ok | differs | different text x2 |
 | pptx | potm, potx, ppsm, ppsx, pptm | source | 1+2 | 37 | 35 | 80.0% | ok | differs | missing in Bilingua x5; extra in Bilingua x3 |
+| properties |  | source | 7+0 | 157 | 157 | 96.8% | ok | differs | different text x3; missing in Bilingua x1; extra in Bilingua x1 |
+| resx | resw | source | 10+1 | 74 | 74 | 98.6% | ok | differs | different text x1 |
 | srt | vtt | source | 4+1 | 52 | 52 | 94.3% | ok | differs | missing in Bilingua x1; extra in Bilingua x1; different text x1 |
+| strings |  | source | 13+0 | 68 | 67 | 80.9% | ok | differs | different text x12; missing in Bilingua x1 |
+| wxl |  | source | 7+1 | 65 | 64 | 80.9% | FAIL 2/8 | differs | round trip fails on 2 file(s); different text x6; missing in Bilingua x4; extra in Bilingua x3 |
+| xaml |  | source | 31+0 | 113 | 113 | 98.2% | ok | differs | different text x2 |
 | xlsx | xlsm, xltm, xltx | source | 2+2 | 74 | 71 | 93.2% | ok | differs | missing in Bilingua x3; extra in Bilingua x2 |
+| yaml | yml | source | 5+3 | 93 | 93 | 95.7% | FAIL 1/8 | differs | round trip fails on 1 file(s); different text x4 |
 | mqxlz |  | bilingual | 0 | - | - | - | - | untested | no fixture file in the LocOS tree |
 | sdlrpx | sdlppx | bilingual | 0 | - | - | - | - | untested | no fixture file in the LocOS tree |
+| ts |  | source | 0 | - | - | - | - | untested | no fixture file in the LocOS tree |
 
 ## Formats Bilingua does not parse yet
 
@@ -46,87 +66,72 @@ Ordered by a usage guess: software resource formats first, then Office, DTP, doc
 
 | # | LocOS format | Also reads as | Group | Files | Units LocOS | LocOS read errors |
 |---|---|---|---|---|---|---|
-| 1 | properties |  | software resource | 0 | - | 0 |
-| 2 | yaml | yml | software resource | 0+3 | 33 | 0 |
-| 3 | xml |  | software resource | 0+7 | 34 | 0 |
-| 4 | strings |  | software resource | 0 | - | 0 |
-| 5 | xcstrings |  | software resource | 0+1 | 8 | 0 |
-| 6 | stringsdict |  | software resource | 0+1 | 11 | 0 |
-| 7 | resx | resw | software resource | 0+1 | 3 | 0 |
-| 8 | arb |  | software resource | 0 | - | 0 |
-| 9 | json5 | jsonc | software resource | 0+2 | 15 | 0 |
-| 10 | csv |  | software resource | 0+1 | 5 | 0 |
-| 11 | plist |  | software resource | 0+2 | 10 | 0 |
-| 12 | js | cjs, cts, mjs, mts, ts | software resource | 0+1 | 4 | 0 |
-| 13 | ts |  | software resource | 0 | - | 0 |
-| 14 | ftl |  | software resource | 0 | - | 0 |
-| 15 | php |  | software resource | 0 | - | 0 |
-| 16 | ini |  | software resource | 0 | - | 0 |
-| 17 | toml |  | software resource | 0 | - | 0 |
-| 18 | mo | gmo | software resource | 0 | - | 0 |
-| 19 | xmb |  | software resource | 0+2 | 8 | 0 |
-| 20 | xtb |  | software resource | 0+1 | 4 | 0 |
-| 21 | resjson |  | software resource | 0 | - | 0 |
-| 22 | rc |  | software resource | 0 | - | 0 |
-| 23 | wxl |  | software resource | 0+1 | 4 | 0 |
-| 24 | desktop |  | software resource | 0 | - | 0 |
-| 25 | dtd |  | software resource | 0 | - | 0 |
-| 26 | tsv | tab | software resource | 0 | - | 0 |
-| 27 | xaml |  | software resource | 0 | - | 0 |
-| 28 | erb |  | software resource | 0 | - | 0 |
-| 29 | catkeys |  | software resource | 0 | - | 0 |
-| 30 | odt | ott | Office, DTP, docs, CAT | 0 | - | 0 |
-| 31 | ods | ots | Office, DTP, docs, CAT | 0 | - | 0 |
-| 32 | odp | otp | Office, DTP, docs, CAT | 0 | - | 0 |
-| 33 | odg | otg | Office, DTP, docs, CAT | 0 | - | 0 |
-| 34 | idml |  | Office, DTP, docs, CAT | 0 | - | 0 |
-| 35 | icml | wcml | Office, DTP, docs, CAT | 0 | - | 0 |
-| 36 | mif |  | Office, DTP, docs, CAT | 0 | - | 0 |
-| 37 | pdf |  | Office, DTP, docs, CAT | 0 | - | 0 |
-| 38 | epub |  | Office, DTP, docs, CAT | 0 | - | 0 |
-| 39 | vsdx | vsdm | Office, DTP, docs, CAT | 0 | - | 0 |
-| 40 | xtg | tag | Office, DTP, docs, CAT | 0 | - | 0 |
-| 41 | adoc | asc, asciidoc | Office, DTP, docs, CAT | 0 | - | 0 |
-| 42 | rst | rest | Office, DTP, docs, CAT | 0 | - | 0 |
-| 43 | mdx |  | Office, DTP, docs, CAT | 0+1 | 11 | 0 |
-| 44 | tex | latex, ltx | Office, DTP, docs, CAT | 0 | - | 0 |
-| 45 | dita | bookmap, ditamap | Office, DTP, docs, CAT | 0+2 | 14 | 0 |
-| 46 | docbook | dbk | Office, DTP, docs, CAT | 0+1 | 5 | 0 |
-| 47 | wiki | mediawiki, wikitext | Office, DTP, docs, CAT | 0 | - | 0 |
-| 48 | dokuwiki |  | Office, DTP, docs, CAT | 0 | - | 0 |
-| 49 | txlf |  | Office, DTP, docs, CAT | 0+1 | 3 | 0 |
-| 50 | txml |  | Office, DTP, docs, CAT | 0+1 | 5 | 0 |
-| 51 | ttx |  | Office, DTP, docs, CAT | 0+2 | 3 | 1 |
-| 52 | xlz | wsxz | Office, DTP, docs, CAT | 0 | - | 0 |
-| 53 | dxf |  | Office, DTP, docs, CAT | 0 | - | 0 |
-| 54 | eml |  | Office, DTP, docs, CAT | 0 | - | 0 |
-| 55 | flprjzip |  | Office, DTP, docs, CAT | 0 | - | 0 |
-| 56 | hhc |  | Office, DTP, docs, CAT | 0 | - | 0 |
-| 57 | hhk |  | Office, DTP, docs, CAT | 0 | - | 0 |
-| 58 | hhp |  | Office, DTP, docs, CAT | 0 | - | 0 |
-| 59 | aspx | ascx | Office, DTP, docs, CAT | 0 | - | 0 |
-| 60 | jsp | jspf | Office, DTP, docs, CAT | 0 | - | 0 |
-| 61 | phtml |  | Office, DTP, docs, CAT | 0 | - | 0 |
-| 62 | shtml | shtm, stm | Office, DTP, docs, CAT | 0 | - | 0 |
-| 63 | xslt | xsl | Office, DTP, docs, CAT | 0 | - | 0 |
-| 64 | ass | ssa | long tail | 0 | - | 0 |
-| 65 | image | bmp, gif, jpeg, jpg, png, svg, tif, tiff, webp | long tail | 0 | - | 0 |
-| 66 | sbv |  | long tail | 0 | - | 0 |
-| 67 | scc |  | long tail | 0 | - | 0 |
-| 68 | sdlproj |  | long tail | 0+1 | 0 | 1 |
-| 69 | stf |  | long tail | 0 | - | 0 |
-| 70 | stl |  | long tail | 0 | - | 0 |
-| 71 | sub |  | long tail | 0 | - | 0 |
-| 72 | ttml | dfxp | long tail | 0 | - | 0 |
-| 73 | xcloc |  | long tail | 0 | - | 0 |
+| 1 | xml |  | software resource | 0+7 | 34 | 0 |
+| 2 | stringsdict |  | software resource | 0+1 | 11 | 0 |
+| 3 | csv |  | software resource | 0+1 | 5 | 0 |
+| 4 | plist |  | software resource | 0+2 | 10 | 0 |
+| 5 | mo | gmo | software resource | 0 | - | 0 |
+| 6 | rc |  | software resource | 0 | - | 0 |
+| 7 | desktop |  | software resource | 0 | - | 0 |
+| 8 | tsv | tab | software resource | 0 | - | 0 |
+| 9 | erb |  | software resource | 0 | - | 0 |
+| 10 | catkeys |  | software resource | 0 | - | 0 |
+| 11 | odt | ott | Office, DTP, docs, CAT | 0 | - | 0 |
+| 12 | ods | ots | Office, DTP, docs, CAT | 0 | - | 0 |
+| 13 | odp | otp | Office, DTP, docs, CAT | 0 | - | 0 |
+| 14 | odg | otg | Office, DTP, docs, CAT | 0 | - | 0 |
+| 15 | idml |  | Office, DTP, docs, CAT | 0 | - | 0 |
+| 16 | icml | wcml | Office, DTP, docs, CAT | 0 | - | 0 |
+| 17 | mif |  | Office, DTP, docs, CAT | 0 | - | 0 |
+| 18 | pdf |  | Office, DTP, docs, CAT | 0 | - | 0 |
+| 19 | epub |  | Office, DTP, docs, CAT | 0 | - | 0 |
+| 20 | vsdx | vsdm | Office, DTP, docs, CAT | 0 | - | 0 |
+| 21 | xtg | tag | Office, DTP, docs, CAT | 0 | - | 0 |
+| 22 | adoc | asc, asciidoc | Office, DTP, docs, CAT | 0 | - | 0 |
+| 23 | rst | rest | Office, DTP, docs, CAT | 0 | - | 0 |
+| 24 | mdx |  | Office, DTP, docs, CAT | 0+1 | 11 | 0 |
+| 25 | tex | latex, ltx | Office, DTP, docs, CAT | 0 | - | 0 |
+| 26 | dita | bookmap, ditamap | Office, DTP, docs, CAT | 0+2 | 14 | 0 |
+| 27 | docbook | dbk | Office, DTP, docs, CAT | 0+1 | 5 | 0 |
+| 28 | wiki | mediawiki, wikitext | Office, DTP, docs, CAT | 0 | - | 0 |
+| 29 | dokuwiki |  | Office, DTP, docs, CAT | 0 | - | 0 |
+| 30 | txlf |  | Office, DTP, docs, CAT | 0+1 | 3 | 0 |
+| 31 | txml |  | Office, DTP, docs, CAT | 0+1 | 5 | 0 |
+| 32 | ttx |  | Office, DTP, docs, CAT | 0+2 | 3 | 1 |
+| 33 | xlz | wsxz | Office, DTP, docs, CAT | 0 | - | 0 |
+| 34 | dxf |  | Office, DTP, docs, CAT | 0 | - | 0 |
+| 35 | eml |  | Office, DTP, docs, CAT | 0 | - | 0 |
+| 36 | flprjzip |  | Office, DTP, docs, CAT | 0 | - | 0 |
+| 37 | hhc |  | Office, DTP, docs, CAT | 0 | - | 0 |
+| 38 | hhk |  | Office, DTP, docs, CAT | 0 | - | 0 |
+| 39 | hhp |  | Office, DTP, docs, CAT | 0 | - | 0 |
+| 40 | aspx | ascx | Office, DTP, docs, CAT | 0 | - | 0 |
+| 41 | jsp | jspf | Office, DTP, docs, CAT | 0 | - | 0 |
+| 42 | phtml |  | Office, DTP, docs, CAT | 0 | - | 0 |
+| 43 | shtml | shtm, stm | Office, DTP, docs, CAT | 0 | - | 0 |
+| 44 | xslt | xsl | Office, DTP, docs, CAT | 0 | - | 0 |
+| 45 | ass | ssa | long tail | 0 | - | 0 |
+| 46 | image | bmp, gif, jpeg, jpg, png, svg, tif, tiff, webp | long tail | 0 | - | 0 |
+| 47 | sbv |  | long tail | 0 | - | 0 |
+| 48 | scc |  | long tail | 0 | - | 0 |
+| 49 | sdlproj |  | long tail | 0+1 | 0 | 1 |
+| 50 | stf |  | long tail | 0 | - | 0 |
+| 51 | stl |  | long tail | 0 | - | 0 |
+| 52 | sub |  | long tail | 0 | - | 0 |
+| 53 | ttml | dfxp | long tail | 0 | - | 0 |
 
 ## Bilingua errors and round-trip failures on these files
 
-None: every file Bilingua claims opened, merged unchanged to the same file and read back after a pseudo-translated merge (bilingual formats: the target is checked, not the source).
+| Format | File and problem |
+|---|---|
+| ftl | edge.ftl: 1 units differ, 0 set_target errors |
+| wxl | edge.wxl: 1 units differ, 0 set_target errors |
+| wxl | v3_overridable.wxl: 1 units differ, 0 set_target errors |
+| yaml | rails.en.yml: reopened with 12 units, expected 10 |
 
 ## Files read
 
-82 files: 32 corpus, 39 in `local-tms/tests/fixtures/formats/`, 5 written by its plain-script generators (stdlib `make_*.py`, to a scratch folder), 6 in `local-tms/sample-docs/`. The 61 `verify_*filter*.py` suites build their inputs inside the suite and import the application, so they were not run; the top-level files of `tests/fixtures/` are UI contracts, not localization files, and are not read.
+303 files: 253 corpus, 39 in `local-tms/tests/fixtures/formats/`, 5 written by its plain-script generators (stdlib `make_*.py`, to a scratch folder), 6 in `local-tms/sample-docs/`. The 61 `verify_*filter*.py` suites build their inputs inside the suite and import the application, so they were not run; the top-level files of `tests/fixtures/` are UI contracts, not localization files, and are not read.
 
 | LocOS format | LocOS fixture file names |
 |---|---|

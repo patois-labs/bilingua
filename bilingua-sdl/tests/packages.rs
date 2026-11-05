@@ -140,6 +140,8 @@ fn default_zip_limits_are_locos_numbers() {
     let l = bilingua_model::Limits::default();
     assert_eq!((z.max_entries, z.max_total_bytes, z.max_ratio), (l.max_zip_entries, l.max_zip_bytes, l.max_zip_ratio));
     assert_eq!(z.max_entries, 10_000);
+    // the open-package API keeps plain Package errors; the Filters ask for typed ones
+    assert!(!z.typed_errors && bilingua_sdl::ZipLimits::from(&l).typed_errors);
 }
 
 // A merge re-reads the entries it was given; limits the caller raised for extract must not refuse it.
