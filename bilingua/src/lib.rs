@@ -89,6 +89,9 @@ pub fn filters() -> Vec<Box<dyn Filter>> {
         // properties sniffs any key=value or key: value text, so it goes after the stricter key-value formats.
         Box::new(bilingua_properties::Properties),
         Box::new(bilingua_xaml::Xaml::default()),
+        // sdlproj sniffs strictly (a PackageProject root, or a Project root with a Guid and Trados project elements); it is
+        // an XML format, so it goes before generic XML.
+        Box::new(bilingua_sdlproj::Sdlproj),
         // XSLT sniffs only XML that names the XSLT namespace in its first 4 KB, so it sits with the other XML formats.
         Box::new(bilingua_xslt::Xslt),
         // Fluent sniffs only with a Fluent-only marker, but its text looks like key = value: after the others.

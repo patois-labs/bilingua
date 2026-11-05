@@ -3,7 +3,10 @@
 Already done in the wire commit (replace at merge):
 - workspace `members` and `[workspace.dependencies]`, facade `bilingua/bilingua/Cargo.toml`, the `filters()` entry in
   `bilingua/bilingua/src/lib.rs`, the `crate_of` row in `bilingua/bilingua/tests/contract.rs`, `Cargo.lock`, `sdlproj`
-  in `CRATES` of `tools/check-portable.sh` and `.ps1`, and the corpus folder `oracle/corpus/sdlproj/` (28 files).
+  in `CRATES` of `tools/check-portable.sh` and `.ps1`.
+- Corpus: the 28 fixtures are in `oracle/corpus/sdlproj/` (the LocOS demo is also kept in
+  `bilingua-sdlproj/tests/data/`). An sdlproj gives zero units by design, so `oracle/tests/corpus.rs` lists it in
+  `NO_TEXT_FORMATS` (the file must still merge back byte for byte). Gate 11-05.
 
 What the facade needs:
 - Format id `sdlproj`, extension `sdlproj`. Filter value: `bilingua_sdlproj::Sdlproj` (unit struct, no options).

@@ -1,4 +1,4 @@
-//! Every fixture in `tests/data`: round trips, the 11 languages and each encoding the filter reads.
+//! Every fixture (`oracle/corpus/sdlproj` and the LocOS demo in `tests/data`): round trips, the 11 languages and each encoding the filter reads.
 
 mod common;
 

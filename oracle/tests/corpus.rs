@@ -49,6 +49,12 @@ fn plural_label(u: &bilingua::Unit) -> Option<(Option<String>, String)> {
     Some((Some(base.to_string()), label.to_string()))
 }
 
+/// Formats whose files hold no translatable text by design, so a corpus file of theirs gives zero units and is
+/// still checked for an exact untouched merge. Keep this list narrow: only a format whose LocOS spec extracts
+/// nothing from it belongs here. `sdlproj`: a Trados project file is a manifest; LocOS reads only its languages,
+/// GUID, type and name (`app/filters/sdl_package.py`) and never extracts text from it.
+const NO_TEXT_FORMATS: &[&str] = &["sdlproj"];
+
 fn pseudo(v: &[Inline]) -> Vec<Inline> {
     let mut out = vec![Inline::text("[")];
     out.extend(v.iter().cloned());
@@ -74,7 +80,7 @@ fn every_corpus_file_round_trips() {
                 continue;
             }
         };
-        if doc.units.is_empty() {
+        if doc.units.is_empty() && !NO_TEXT_FORMATS.contains(&doc.format.as_str()) {
             failures.push(format!("{name}: no units"));
         }
         match bilingua::merge(&doc) {

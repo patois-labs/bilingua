@@ -73,7 +73,7 @@ fn hostile_manifests_are_refused() {
 fn one_source_language_and_unique_targets() {
     let two = b"<Project><LanguageDirection SourceLanguageCode=\"en-US\" TargetLanguageCode=\"de-DE\"/><LanguageDirection SourceLanguageCode=\"fr-FR\" TargetLanguageCode=\"de-DE\"/></Project>";
     assert!(err(two).contains("more than one source language"));
-    let i = project_info(include_bytes!("data/edge.sdlproj")).unwrap();
+    let i = project_info(include_bytes!("../../oracle/corpus/sdlproj/edge.sdlproj")).unwrap();
     assert_eq!(i.source_lang, "en-US", "the first pair's spelling, trimmed");
     assert_eq!(i.target_langs, ["de-DE", "fr-FR"], "DE-de is the same target; an empty target is no pair");
     assert_eq!(i.root, "PackageProject", "a prefixed root is read by its local name");
