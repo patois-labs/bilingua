@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="shift_jis"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <data name="Welcome.en" xml:space="preserve">
+    <value>Welcome to Lumen Bakery. Your fresh bread is ready, {0} loaves waiting.</value>
+    <comment>Greeting, en</comment>
+  </data>
+  <data name="Welcome.ja" xml:space="preserve">
+    <value>ルーメンベーカリーへようこそ。焼きたてのパンの準備ができました。{0}個お待ちしています。</value>
+    <comment>Greeting, ja</comment>
+  </data>
+</root>

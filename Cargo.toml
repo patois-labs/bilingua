@@ -1,5 +1,5 @@
 [workspace]
-members = ["bilingua-model", "bilingua-zip", "bilingua", "bilingua-seg", "bilingua-text", "bilingua-json", "bilingua-markdown", "bilingua-cli", "bilingua-docx", "bilingua-html", "bilingua-po", "bilingua-subtitle", "bilingua-xlsx", "bilingua-pptx", "bilingua-py", "bilingua-xliff", "bilingua-sdl", "bilingua-strings", "bilingua-toml", "bilingua-properties", "bilingua-resjson", "bilingua-json5", "bilingua-jsmodule", "bilingua-yaml", "bilingua-arb", "oracle", "bilingua-ini"]
+members = ["bilingua-model", "bilingua-zip", "bilingua", "bilingua-seg", "bilingua-text", "bilingua-json", "bilingua-markdown", "bilingua-cli", "bilingua-docx", "bilingua-html", "bilingua-po", "bilingua-subtitle", "bilingua-xlsx", "bilingua-pptx", "bilingua-py", "bilingua-xliff", "bilingua-sdl", "bilingua-strings", "bilingua-toml", "bilingua-properties", "bilingua-resjson", "bilingua-json5", "bilingua-jsmodule", "bilingua-yaml", "bilingua-arb", "bilingua-resx", "oracle", "bilingua-ini"]
 resolver = "2"
 
 [workspace.package]
@@ -30,6 +30,7 @@ bilingua-ini = { path = "bilingua-ini" }
 bilingua-strings = { path = "bilingua-strings" }
 bilingua-toml = { path = "bilingua-toml" }
 bilingua-resjson = { path = "bilingua-resjson" }
+bilingua-resx = { path = "bilingua-resx" }
 bilingua-jsmodule = { path = "bilingua-jsmodule" }
 bilingua-yaml = { path = "bilingua-yaml" }
 bilingua-arb = { path = "bilingua-arb" }

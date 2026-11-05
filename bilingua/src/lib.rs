@@ -38,6 +38,8 @@ pub fn filters() -> Vec<Box<dyn Filter>> {
         // TOML after INI: a valid-TOML INI file without an extension should stay INI.
         Box::new(bilingua_toml::TomlFilter),
         Box::new(bilingua_jsmodule::JsModule),
+        // resx sniffs XML with <root> and resource headers; it goes before the loose key-value sniffers.
+        Box::new(bilingua_resx::Resx),
         // YAML sniffs any `word: text` line, so it goes after the stricter formats and before properties.
         Box::new(bilingua_yaml::Yaml),
         // properties sniffs any key=value or key: value text, so it goes after the stricter key-value formats.

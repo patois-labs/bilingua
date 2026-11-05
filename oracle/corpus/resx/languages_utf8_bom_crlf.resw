@@ -1,0 +1,53 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <data name="Welcome.en" xml:space="preserve">
+    <value>Welcome to Lumen Bakery. Your fresh bread is ready, {0} loaves waiting.</value>
+    <comment>Greeting, en</comment>
+  </data>
+  <data name="Welcome.de" xml:space="preserve">
+    <value>Willkommen bei Lumen Bakery. Ihr frisches Brot ist fertig, {0} Laibe warten.</value>
+    <comment>Greeting, de</comment>
+  </data>
+  <data name="Welcome.fr" xml:space="preserve">
+    <value>Bienvenue à Lumen Bakery. Votre pain frais est prêt, {0} miches vous attendent.</value>
+    <comment>Greeting, fr</comment>
+  </data>
+  <data name="Welcome.es" xml:space="preserve">
+    <value>Bienvenido a Lumen Bakery. Su pan fresco está listo, {0} hogazas esperan.</value>
+    <comment>Greeting, es</comment>
+  </data>
+  <data name="Welcome.ru" xml:space="preserve">
+    <value>Добро пожаловать в Lumen Bakery. Ваш свежий хлеб готов, {0} буханок ждут.</value>
+    <comment>Greeting, ru</comment>
+  </data>
+  <data name="Welcome.ar" xml:space="preserve">
+    <value>مرحبا بكم في مخبز لومن. خبزكم الطازج جاهز، {0} أرغفة بانتظاركم.</value>
+    <comment>Greeting, ar</comment>
+  </data>
+  <data name="Welcome.ja" xml:space="preserve">
+    <value>ルーメンベーカリーへようこそ。焼きたてのパンの準備ができました。{0}個お待ちしています。</value>
+    <comment>Greeting, ja</comment>
+  </data>
+  <data name="Welcome.zh" xml:space="preserve">
+    <value>欢迎来到流明面包店。您的新鲜面包已准备好，{0}个面包正在等候。</value>
+    <comment>Greeting, zh</comment>
+  </data>
+  <data name="Welcome.ko" xml:space="preserve">
+    <value>루멘 베이커리에 오신 것을 환영합니다. 신선한 빵이 준비되었습니다. {0}개가 기다리고 있습니다.</value>
+    <comment>Greeting, ko</comment>
+  </data>
+  <data name="Welcome.hi" xml:space="preserve">
+    <value>लूमेन बेकरी में आपका स्वागत है। आपकी ताज़ा रोटी तैयार है, {0} रोटियाँ प्रतीक्षा कर रही हैं।</value>
+    <comment>Greeting, hi</comment>
+  </data>
+  <data name="Welcome.tr" xml:space="preserve">
+    <value>Lumen Bakery'ye hoş geldiniz. Taze ekmeğiniz hazır, {0} somun bekliyor.</value>
+    <comment>Greeting, tr</comment>
+  </data>
+</root>

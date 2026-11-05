@@ -18,6 +18,7 @@ bilingua-docx = { workspace = true }
 bilingua-html = { workspace = true }
 bilingua-po = { workspace = true }
 bilingua-properties = { workspace = true }
+bilingua-resx = { workspace = true }
 bilingua-subtitle = { workspace = true }
 bilingua-xlsx = { workspace = true }
 bilingua-pptx = { workspace = true }

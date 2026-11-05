@@ -1,0 +1,15 @@
+[package]
+name = "bilingua-resx"
+description = "Bilingua: .NET resx and resw resource file parser"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+bilingua-model = { workspace = true }
+quick-xml = { workspace = true }
+
+[dev-dependencies]
+proptest = { version = "1", default-features = false, features = ["std"] }
+serde_json = { workspace = true }

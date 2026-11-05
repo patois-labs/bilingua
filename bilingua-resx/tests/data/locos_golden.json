@@ -1,0 +1,122 @@
+{
+ "lumen_ui.resx": [
+  "Lumen Bakery & Cafe",
+  "Your order #{0} is ready for pickup at {1:HH:mm} on {2:D}.",
+  "Total: {0:C2} ({1} items), {{not a placeholder}}",
+  "She said \"fresh bread\" and it's 5 < 6 — true\nSecond line",
+  "First line of the story\nSecond line of the story\nThird line",
+  "<b>Bold</b> text with a <a href=\"x\">link</a>",
+  "Use <b>bold</b> & \"quotes\" here",
+  "Before <middle> after & end",
+  "Indented paragraph with surrounding blank space",
+  "12345",
+  "{0}",
+  "Cancel order",
+  "Attributes in single quotes",
+  "First definition",
+  "Second definition"
+ ],
+ "languages_cp1252.resx": [
+  "Welcome to Lumen Bakery. Your fresh bread is ready, {0} loaves waiting.",
+  "Willkommen bei Lumen Bakery. Ihr frisches Brot ist fertig, {0} Laibe warten.",
+  "Bienvenue à Lumen Bakery. Votre pain frais est prêt, {0} miches vous attendent.",
+  "Bienvenido a Lumen Bakery. Su pan fresco está listo, {0} hogazas esperan."
+ ],
+ "languages_euckr.resx": [
+  "Welcome to Lumen Bakery. Your fresh bread is ready, {0} loaves waiting.",
+  "루멘 베이커리에 오신 것을 환영합니다. 신선한 빵이 준비되었습니다. {0}개가 기다리고 있습니다."
+ ],
+ "languages_gb2312.resx": [
+  "Welcome to Lumen Bakery. Your fresh bread is ready, {0} loaves waiting.",
+  "欢迎来到流明面包店。您的新鲜面包已准备好，{0}个面包正在等候。"
+ ],
+ "languages_latin1.resx": [
+  "Welcome to Lumen Bakery. Your fresh bread is ready, {0} loaves waiting.",
+  "Willkommen bei Lumen Bakery. Ihr frisches Brot ist fertig, {0} Laibe warten.",
+  "Bienvenue à Lumen Bakery. Votre pain frais est prêt, {0} miches vous attendent.",
+  "Bienvenido a Lumen Bakery. Su pan fresco está listo, {0} hogazas esperan."
+ ],
+ "languages_shiftjis.resx": [
+  "Welcome to Lumen Bakery. Your fresh bread is ready, {0} loaves waiting.",
+  "ルーメンベーカリーへようこそ。焼きたてのパンの準備ができました。{0}個お待ちしています。"
+ ],
+ "languages_utf16be.resx": [
+  "Welcome to Lumen Bakery. Your fresh bread is ready, {0} loaves waiting.",
+  "Willkommen bei Lumen Bakery. Ihr frisches Brot ist fertig, {0} Laibe warten.",
+  "Bienvenue à Lumen Bakery. Votre pain frais est prêt, {0} miches vous attendent.",
+  "Bienvenido a Lumen Bakery. Su pan fresco está listo, {0} hogazas esperan.",
+  "Добро пожаловать в Lumen Bakery. Ваш свежий хлеб готов, {0} буханок ждут.",
+  "مرحبا بكم في مخبز لومن. خبزكم الطازج جاهز، {0} أرغفة بانتظاركم.",
+  "ルーメンベーカリーへようこそ。焼きたてのパンの準備ができました。{0}個お待ちしています。",
+  "欢迎来到流明面包店。您的新鲜面包已准备好，{0}个面包正在等候。",
+  "루멘 베이커리에 오신 것을 환영합니다. 신선한 빵이 준비되었습니다. {0}개가 기다리고 있습니다.",
+  "लूमेन बेकरी में आपका स्वागत है। आपकी ताज़ा रोटी तैयार है, {0} रोटियाँ प्रतीक्षा कर रही हैं।",
+  "Lumen Bakery'ye hoş geldiniz. Taze ekmeğiniz hazır, {0} somun bekliyor."
+ ],
+ "languages_utf16le.resx": [
+  "Welcome to Lumen Bakery. Your fresh bread is ready, {0} loaves waiting.",
+  "Willkommen bei Lumen Bakery. Ihr frisches Brot ist fertig, {0} Laibe warten.",
+  "Bienvenue à Lumen Bakery. Votre pain frais est prêt, {0} miches vous attendent.",
+  "Bienvenido a Lumen Bakery. Su pan fresco está listo, {0} hogazas esperan.",
+  "Добро пожаловать в Lumen Bakery. Ваш свежий хлеб готов, {0} буханок ждут.",
+  "مرحبا بكم في مخبز لومن. خبزكم الطازج جاهز، {0} أرغفة بانتظاركم.",
+  "ルーメンベーカリーへようこそ。焼きたてのパンの準備ができました。{0}個お待ちしています。",
+  "欢迎来到流明面包店。您的新鲜面包已准备好，{0}个面包正在等候。",
+  "루멘 베이커리에 오신 것을 환영합니다. 신선한 빵이 준비되었습니다. {0}개가 기다리고 있습니다.",
+  "लूमेन बेकरी में आपका स्वागत है। आपकी ताज़ा रोटी तैयार है, {0} रोटियाँ प्रतीक्षा कर रही हैं।",
+  "Lumen Bakery'ye hoş geldiniz. Taze ekmeğiniz hazır, {0} somun bekliyor."
+ ],
+ "languages_utf8.resx": [
+  "Welcome to Lumen Bakery. Your fresh bread is ready, {0} loaves waiting.",
+  "Willkommen bei Lumen Bakery. Ihr frisches Brot ist fertig, {0} Laibe warten.",
+  "Bienvenue à Lumen Bakery. Votre pain frais est prêt, {0} miches vous attendent.",
+  "Bienvenido a Lumen Bakery. Su pan fresco está listo, {0} hogazas esperan.",
+  "Добро пожаловать в Lumen Bakery. Ваш свежий хлеб готов, {0} буханок ждут.",
+  "مرحبا بكم في مخبز لومن. خبزكم الطازج جاهز، {0} أرغفة بانتظاركم.",
+  "ルーメンベーカリーへようこそ。焼きたてのパンの準備ができました。{0}個お待ちしています。",
+  "欢迎来到流明面包店。您的新鲜面包已准备好，{0}个面包正在等候。",
+  "루멘 베이커리에 오신 것을 환영합니다. 신선한 빵이 준비되었습니다. {0}개가 기다리고 있습니다.",
+  "लूमेन बेकरी में आपका स्वागत है। आपकी ताज़ा रोटी तैयार है, {0} रोटियाँ प्रतीक्षा कर रही हैं।",
+  "Lumen Bakery'ye hoş geldiniz. Taze ekmeğiniz hazır, {0} somun bekliyor."
+ ],
+ "languages_utf8_bom_crlf.resw": [
+  "Welcome to Lumen Bakery. Your fresh bread is ready, {0} loaves waiting.",
+  "Willkommen bei Lumen Bakery. Ihr frisches Brot ist fertig, {0} Laibe warten.",
+  "Bienvenue à Lumen Bakery. Votre pain frais est prêt, {0} miches vous attendent.",
+  "Bienvenido a Lumen Bakery. Su pan fresco está listo, {0} hogazas esperan.",
+  "Добро пожаловать в Lumen Bakery. Ваш свежий хлеб готов, {0} буханок ждут.",
+  "مرحبا بكم في مخبز لومن. خبزكم الطازج جاهز، {0} أرغفة بانتظاركم.",
+  "ルーメンベーカリーへようこそ。焼きたてのパンの準備ができました。{0}個お待ちしています。",
+  "欢迎来到流明面包店。您的新鲜面包已准备好，{0}个面包正在等候。",
+  "루멘 베이커리에 오신 것을 환영합니다. 신선한 빵이 준비되었습니다. {0}개가 기다리고 있습니다.",
+  "लूमेन बेकरी में आपका स्वागत है। आपकी ताज़ा रोटी तैयार है, {0} रोटियाँ प्रतीक्षा कर रही हैं।",
+  "Lumen Bakery'ye hoş geldiniz. Taze ekmeğiniz hazır, {0} somun bekliyor."
+ ],
+ "okapi_Test01.resx": [
+  "&File",
+  "Last session log",
+  "Last month log",
+  "List of the previous log documents",
+  "Recording Mode",
+  "This shows the type of recording behing done at the moment.",
+  "Main Menu",
+  "&Open Archive...",
+  "&Save Current Log",
+  "E&xit",
+  "Main Toolbar",
+  "Enable Watcher",
+  "Click here to enable the Watcher",
+  "Direct monitoring",
+  "Random monitoring",
+  "List of the monitoring command available.",
+  "&Export...",
+  "Options",
+  "64 frames recording mode.",
+  "32 franes recording mode,",
+  "Start logger when starting session",
+  "Gandalf Monitoring System"
+ ],
+ "okapi_test_with_placeholders.resx": [
+  "<b>File</b> was in the {1} <a href=\"test\">database</a> {dbName} but not on the disk."
+ ]
+}
