@@ -1,0 +1,58 @@
+{
+ "locos_content.xlz": [
+  "Open the ⟦g1⟧Settings⟦/g1⟧ page.",
+  "Use {0} items & ⟦p1⟧more.",
+  "Left untranslated."
+ ],
+ "locos_multi.wsxz": [
+  "Open the ⟦g1⟧Settings⟦/g1⟧ menu.",
+  "Then click Save.",
+  "Line one⟦p1⟧line two & more text.",
+  "Wrapped segment.",
+  "Open the ⟦g1⟧Settings⟦/g1⟧ page.",
+  "Use {0} items & ⟦p1⟧more.",
+  "Left untranslated."
+ ],
+ "locos_sample.mqxlz": [
+  "Press ⟦x1⟧Start⟦x2⟧ to begin.",
+  "Use {0} files & ⟦p1⟧more."
+ ],
+ "lumen_bom.xlz": [
+  "Good morning.",
+  "Thank you."
+ ],
+ "lumen_languages.wsxz": [
+  "Welcome to ⟦g1⟧Lumen Bakery⟦/g1⟧.",
+  "Order bread online.",
+  "Open daily & late.",
+  "Welcome to ⟦g1⟧Lumen Bakery⟦/g1⟧.",
+  "Order bread online.",
+  "Fresh rolls⟦p1⟧every morning.",
+  "Order bread online.",
+  "Open daily.",
+  "Order bread online.",
+  "Open daily."
+ ],
+ "lumen_utf16.xlz": [
+  "Good morning.",
+  "Thank you."
+ ],
+ "okapi_test1.wsxz": [
+  "Okapi Framework",
+  "Introduction",
+  "Downloads",
+  "Standards",
+  "Components",
+  "Applications",
+  "Help and Support",
+  "Developers Notes",
+  "Screen Shots",
+  "Okapi Framework",
+  "Applications",
+  "⟦p1⟧",
+  "Applications",
+  "The Okapi Framework provides a few read-to-use applications is addition to its set of libraries:",
+  "Rainbow",
+  "Ratel"
+ ]
+}

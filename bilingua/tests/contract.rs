@@ -183,6 +183,7 @@ fn crate_of(format: &str) -> &'static str {
         "adoc" => "bilingua-adoc",
         "tex" => "bilingua-latex",
         "rst" => "bilingua-rst",
+        "xlz" => "bilingua-xliffpkg",
         "strings" => "bilingua-strings",
         "plist" | "stringsdict" => "bilingua-plist",
         "toml" => "bilingua-toml",

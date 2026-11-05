@@ -20,6 +20,9 @@ Every file here is made up for Bilingua (Lumen Bakery is a fictional company; no
 | `wordfast/lang_*`, `wordfast/edge_*` | hand-written TXML and TXLF in the 11 test languages and the four encodings (UTF-8, UTF-8 BOM with CRLF, UTF-16 LE, UTF-16 BE), plus edge cases (`seg-source`, nested inline codes, unpaired `ut`) | Apache-2.0, same as Bilingua |
 | `wordfast/locos_sample.txml`, `wordfast/locos_sample.txlf` | The Localization OS Wordfast suite fixtures (`tests/fixtures/formats/wordfast`) | Apache-2.0 (Localization OS) |
 | `wordfast/Test01.docx.txml`, `wordfast/Test02.html.txml`, `wordfast/Test03.mif.txml` | Okapi Framework test resources, copied unmodified from https://gitlab.com/okapiframework/Okapi.git (`okapi/filters/txml/src/test/resources`, tag `v1.48.0`, commit `ce9f9edc2956da5868fcb71ae10426c7c6ae4e0b`) | Apache-2.0 (Okapi Framework) |
+| `xliffpkg/lumen_languages.wsxz`, `xliffpkg/lumen_utf16.xlz`, `xliffpkg/lumen_bom.xlz` | Written by hand for `bilingua-xliffpkg` (invented XLIFF 1.2 text in ar, ja, zh, ko; a UTF-16 and a UTF-8 BOM member), zipped in Rust | Apache-2.0, same as Bilingua |
+| `xliffpkg/locos_content.xlz` | Zip made for `bilingua-xliffpkg`; the XLIFF member inside is ported from the Localization OS test fixtures of its xliff package filter | Apache-2.0 (Localization OS, ours) |
+| `bilingua-xliffpkg/tests/data/okapi_test1.wsxz` (test fixture, not corpus) | Okapi Framework test resource `test1.wsxz`, copied unmodified from https://gitlab.com/okapiframework/Okapi.git (`okapi/filters/wsxzpackage/src/test/resources`, tag `v1.48.0`, commit `ce9f9edc2956da5868fcb71ae10426c7c6ae4e0b`) | Apache-2.0 (Okapi Framework) |
 
 Files from the Localization OS tree (its `sample-docs` folder and the hand-written PPTX and XLSX generators in its
 test fixtures) are used by `python run.py --external` and read in place. Localization OS is open source under

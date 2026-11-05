@@ -22,6 +22,8 @@ pub fn filters() -> Vec<Box<dyn Filter>> {
     // Wordfast TXML and TXLF: TXLF is XLIFF with the gs4tr extension, so it sniffs first (tight) and goes before XLIFF.
     all.extend(bilingua_wordfast::filters());
     all.extend(bilingua_xliff::filters());
+    // WorldServer / Idiom XLIFF packages (.xlz, .wsxz): zips recognised by extension only.
+    all.extend(bilingua_xliffpkg::filters());
     // OpenDocument (zip): a strict mimetype sniff, so it goes with the other packages.
     all.extend(bilingua_odf::filters());
     all.extend(vec![
@@ -124,7 +126,7 @@ pub fn filters() -> Vec<Box<dyn Filter>> {
 /// Formats whose files carry their own segmentation (XLIFF and its dialects, translation packages): sentence
 /// splitting would break the link between a segment and the file's own segment.
 fn own_segmentation(id: &str) -> bool {
-    matches!(id, "xliff" | "sdlxliff" | "mqxliff" | "mxliff" | "txml" | "txlf" | "sdlppx" | "mqxlz" | "xcloc" | "ttx")
+    matches!(id, "xliff" | "sdlxliff" | "mqxliff" | "mxliff" | "txml" | "txlf" | "sdlppx" | "mqxlz" | "xcloc" | "ttx" | "xlz")
 }
 
 /// The filter for a file: by extension first, then by sniffing the bytes.
