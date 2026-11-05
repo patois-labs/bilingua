@@ -148,7 +148,7 @@ fn malformed_xml_is_a_typed_error() {
     ];
     for c in cases {
         match Resx.extract(c, &opts()) {
-            Err(Error::Parse { .. } | Error::Unsupported(_)) => {}
+            Err(Error::Parse { .. } | Error::Unsupported(_) | Error::Encoding(_) | Error::Limit(_)) => {}
             other => panic!("{:?}: {:?}", String::from_utf8_lossy(c), other.map(|d| d.units.len())),
         }
     }
@@ -189,20 +189,20 @@ fn deep_and_wide_input_is_bounded() {
     bad.extend(b"<a>".repeat(11));
     bad.extend(b"</a>".repeat(11));
     bad.extend_from_slice(b"</root>");
-    assert!(matches!(Resx.extract_with(&bad, &opts(), &l), Err(Error::Unsupported(m)) if m.contains("deep")));
+    assert!(matches!(Resx.extract_with(&bad, &opts(), &l), Err(Error::Limit(e)) if e.kind == LimitKind::XmlDepth));
     let wide = format!("<root>{}</root>", "<data name=\"k\"><value>Word</value></data>".repeat(2000));
     let l = Limits { max_units: 1000, ..Limits::default() };
-    assert!(matches!(Resx.extract_with(wide.as_bytes(), &opts(), &l), Err(Error::Unsupported(m)) if m.contains("limit")));
+    assert!(matches!(Resx.extract_with(wide.as_bytes(), &opts(), &l), Err(Error::Limit(e)) if e.kind == LimitKind::Units));
 }
 
 #[test]
 fn size_limits_give_typed_errors() {
     let small = Limits { max_input_bytes: 100, ..Limits::default() };
     let err = Resx.extract_with(&[b'a'; 200], &opts(), &small).unwrap_err();
-    assert!(matches!(err, Error::Unsupported(m) if m.contains("limit")));
+    assert!(matches!(err, Error::Limit(e) if e.kind == LimitKind::InputBytes));
     let l = Limits { max_unit_chars: 50, ..Limits::default() };
     let long = format!("<root><data name=\"a\"><value>{}</value></data></root>", "word ".repeat(100));
-    assert!(matches!(Resx.extract_with(long.as_bytes(), &opts(), &l), Err(Error::Unsupported(_))));
+    assert!(matches!(Resx.extract_with(long.as_bytes(), &opts(), &l), Err(Error::Limit(e)) if e.kind == LimitKind::UnitChars));
 }
 
 #[test]

@@ -122,7 +122,7 @@ fn hostile_inputs() {
     assert!(e.contains("elements"), "{e}");
     let many = Limits { max_units: 2, ..Limits::default() };
     let e = Resx.extract_with(STRINGS, &opts(), &many).unwrap_err().to_string();
-    assert!(e.contains("limit"), "{e}");
+    assert!(e.contains("segments"), "{e}");
 }
 
 #[test]

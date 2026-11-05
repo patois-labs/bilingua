@@ -21,7 +21,6 @@ fn all_files() -> Vec<(String, Vec<u8>)> {
     let mut v: Vec<(String, Vec<u8>)> = std::fs::read_dir(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../oracle/corpus/resx"))
         .unwrap()
         .map(|e| e.unwrap().file_name().to_string_lossy().to_string())
-        .filter(|n| !["shiftjis", "gb2312", "euckr"].iter().any(|x| n.contains(x))) // need the B6 encodings
         .map(|n| (n.clone(), corpus(&n)))
         .collect();
     v.push(("okapi_Test01.resx".into(), include_bytes!("data/okapi_Test01.resx").to_vec()));
@@ -107,10 +106,37 @@ fn legacy_encodings_are_kept() {
 }
 
 #[test]
+fn double_byte_code_pages_declared_in_the_xml_declaration() {
+    for (n, decl, probe) in [("languages_shiftjis.resx", "shift_jis", "ようこそ"), ("languages_gb2312.resx", "gb2312", "欢迎来到"), ("languages_euckr.resx", "euc-kr", "환영합니다")] {
+        let data = corpus(n);
+        assert!(std::str::from_utf8(&data).is_err(), "{n}");
+        let d = extract(&data);
+        assert_eq!(d.units.len(), 2, "{n}");
+        assert!(show(&d.units[1].source()).contains(probe), "{n}");
+        assert_identity(&data);
+        let out = translate(&data, &[(1, &format!("{probe} {{0}}"))]);
+        assert!(std::str::from_utf8(&out).is_err(), "{n}: stays in its code page");
+        assert!(String::from_utf8_lossy(&out).contains(&format!("encoding=\"{decl}\"")), "{n}");
+        assert!(units(&out)[1].contains(probe), "{n}");
+        // a character the code page cannot hold: UTF-8 with a truthful declaration
+        // (GB 2312 files are written as GB 18030, which holds every character)
+        if decl == "gb2312" {
+            continue;
+        }
+        let out = translate(&data, &[(1, "Grüße \u{1f600}")]);
+        assert!(std::str::from_utf8(&out).unwrap().starts_with("<?xml version=\"1.0\" encoding=\"UTF-8\"?>"), "{n}");
+    }
+}
+
+#[test]
 fn utf8_file_declaring_a_legacy_charset_is_declared_utf8_once_text_needs_it() {
     let data = b"<?xml version=\"1.0\" encoding=\"iso-8859-1\"?>\n<root><data name=\"a\"><value>Hello there</value></data></root>\n";
     assert_identity(data);
+    // an ASCII file that declares ISO-8859-1 is read as ISO-8859-1, so text added to it stays in that encoding
     let out = translate(data, &[(0, "Gr\u{fc}\u{df}e")]);
+    assert!(out.starts_with(b"<?xml version=\"1.0\" encoding=\"iso-8859-1\"?>"));
+    assert!(out.windows(5).any(|w| w == b"Gr\xfc\xdfe"));
+    let out = translate(data, &[(0, "Greek \u{3b1}\u{3b2}")]);
     assert!(out.starts_with(b"<?xml version=\"1.0\" encoding=\"UTF-8\"?>"));
     let out = translate(data, &[(0, "Hallo dort")]);
     assert!(out.starts_with(b"<?xml version=\"1.0\" encoding=\"iso-8859-1\"?>"), "ASCII keeps its declaration");

@@ -15,7 +15,7 @@ fn shown(v: &[Inline]) -> String {
 }
 
 fn big() -> Limits {
-    Limits { max_units: 50_000_000, max_unit_chars: 10_000_000, max_input_bytes: 2 << 30, max_xml_elements: 100_000_000, max_xml_depth: 256 }
+    Limits { max_units: 50_000_000, max_unit_chars: 10_000_000, max_input_bytes: 2 << 30, max_lines: usize::MAX, max_xml_elements: 100_000_000, ..Limits::default() }
 }
 
 /// A large resx in the shape Visual Studio writes (made-up Lumen Bakery text).

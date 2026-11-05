@@ -29,16 +29,16 @@ let out = Resx.merge(&doc)?;
   breaks); everything else (declaration, comments, schema, attribute quoting, `<value />`, indentation, CRLF, BOM) is
   byte for byte. A changed value is escaped (`& < >`, a real CR as `&#13;`), written as CDATA again when the original
   was CDATA, and written with CRLF line ends when the whole file uses them. Characters XML 1.0 forbids are dropped.
-- Encodings: UTF-8 (BOM kept), UTF-16 with a BOM, Windows-1252 and ISO-8859-1. The file goes back in the encoding it came
-  in. LocOS rewrites everything to UTF-8; this crate does not. A translation a legacy code page cannot hold makes the
-  file UTF-8 with a truthful declaration. A UTF-8 file that declares a legacy charset gets `UTF-8` in its declaration
-  once non-ASCII text is written.
+- Encodings (B6 `enc`): UTF-8 (BOM kept), UTF-16 with a BOM, and the charset the XML declaration names (ISO-8859-1,
+  Windows-125x, Shift_JIS, GBK, Big5, EUC-KR), else Windows-1252. The file goes back in the encoding it came in, with its
+  own declaration; LocOS rewrites everything to UTF-8, this crate does not. A translation the code page cannot hold makes
+  the file UTF-8 with a truthful declaration. A file whose letters look garbled gets a `Document::warnings` entry.
 - The culture of a resx lives in the file name (`Strings.de-DE.resx`), so a target-locale merge stamps nothing.
 - `Resx.records(bytes)` gives the key-based view (key, value, comment, unit index, translatable), as LocOS `records()`.
   `include_locked` lists plain-text values left alone (`---`, `>>` metadata) as locked units.
 - Safety: a DTD internal subset or any `<!ENTITY` is refused (no expansion, no XXE), undefined entities, invalid
   character references and characters XML forbids are errors, element depth and count, unit count, value length and
-  input size are limited (`Limits`, `extract_with`); everything returns a typed `Error`.
+  input size are limited (`bilingua_model::Limits`, `ExtractOptions::limits`); everything returns a typed `Error`.
 
 ## Differences from LocOS and Okapi
 

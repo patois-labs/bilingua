@@ -3,14 +3,14 @@
 /// Skeleton schema number: bump only when this crate's skeleton layout changes (see `bilingua_model::check_parser`).
 pub const SKELETON_SCHEMA: u32 = 1;
 
-mod io;
 mod ph;
 mod xml;
 
-pub use io::Limits;
+pub use bilingua_model::Limits;
 
 use bilingua_model::*;
-use io::limit;
+use bilingua_model::enc::{self, DecodeOptions};
+use bilingua_model::guard;
 use std::collections::BTreeMap;
 
 /// The `.resx` / `.resw` filter.
@@ -54,15 +54,17 @@ fn has_text(s: &str) -> bool {
 struct Parsed {
     text: String,
     enc: String,
+    warnings: Vec<Warning>,
     scan: xml::Scan,
 }
 
-fn parse(bytes: &[u8], l: &Limits) -> Result<Parsed, Error> {
-    io::check_input(bytes, l)?;
-    let (text, enc) = io::decode(bytes)?;
-    io::check_xml(&text, l)?;
-    let scan = xml::scan(&text)?;
-    Ok(Parsed { text, enc, scan })
+fn parse(bytes: &[u8], opts: &ExtractOptions) -> Result<Parsed, Error> {
+    let l = opts.limits();
+    guard::check_input(bytes, &l)?;
+    let dec = enc::decode_text(bytes, &DecodeOptions::new(opts).declared())?;
+    guard::check_xml(dec.text.as_bytes(), &l)?;
+    let scan = xml::scan(&dec.text)?;
+    Ok(Parsed { text: dec.text, enc: dec.encoding, warnings: dec.warnings, scan })
 }
 
 fn hidden(text: impl Into<String>) -> CodeData {
@@ -139,7 +141,9 @@ fn encode_value(new: &str, cdata: bool, crlf: bool) -> String {
 impl Resx {
     /// Like [`Filter::extract`] with explicit limits.
     pub fn extract_with(&self, bytes: &[u8], opts: &ExtractOptions, limits: &Limits) -> Result<Document, Error> {
-        let p = parse(bytes, limits)?;
+        let opts = &ExtractOptions { limits: Some(*limits), ..opts.clone() };
+        let limits = &opts.limits();
+        let p = parse(bytes, opts)?;
         let mut units: Vec<Unit> = Vec::new();
         let mut parts: Vec<SkelPart> = Vec::new();
         let mut pos = 0usize;
@@ -155,10 +159,7 @@ impl Resx {
             if !translatable && (!opts.include_locked || core.is_empty()) {
                 continue;
             }
-            io::check_unit_count(units.len() + 1, limits)?;
-            if core.len() > limits.max_unit_chars && core.chars().count() > limits.max_unit_chars {
-                return Err(limit(format!("a value is longer than {} characters", limits.max_unit_chars)));
-            }
+            guard::check_unit_count(units.len() + 1, limits)?;
             let mut unit = if translatable {
                 n_tr += 1;
                 let (inl, codes) = tags_of(core);
@@ -203,7 +204,7 @@ impl Resx {
         if pos < p.text.len() {
             parts.push(SkelPart::Raw(p.text[pos..].to_string()));
         }
-        Ok(Document {
+        guard::finish(Document {
             format: "resx".into(),
             name: None,
             source_lang: opts.source_lang.clone(),
@@ -211,12 +212,13 @@ impl Resx {
             granularity: opts.granularity,
             units,
             skeleton: Skeleton::text(parts, p.enc, bilingua_model::parser_info!()),
-        })
+            warnings: Vec::new(),
+        }, p.warnings, limits)
     }
 
     /// Every `<data>` with a `<value>` in file order, translatable or not (the key-based view).
     pub fn records(&self, bytes: &[u8]) -> Result<Vec<Record>, Error> {
-        let p = parse(bytes, &Limits::default())?;
+        let p = parse(bytes, &ExtractOptions::default())?;
         let mut k = 0usize;
         let mut out = Vec::with_capacity(p.scan.entries.len());
         for e in &p.scan.entries {
@@ -242,8 +244,10 @@ impl Filter for Resx {
 
     fn sniff(&self, bytes: &[u8]) -> bool {
         let head = &bytes[..bytes.len().min(8192)];
-        let Ok((t, _)) = io::decode(head).or_else(|_| io::decode(&head[..head.len().saturating_sub(3)])) else { return false };
-        let t = t.to_ascii_lowercase();
+        let o = ExtractOptions::default();
+        let d = DecodeOptions::new(&o);
+        let Ok(t) = enc::decode_text(head, &d).or_else(|_| enc::decode_text(&head[..head.len().saturating_sub(3)], &d)) else { return false };
+        let t = t.text.to_ascii_lowercase();
         t.contains("<root") && (t.contains("<resheader") || t.contains("<data name=") || t.contains("microsoft-resx"))
     }
 
@@ -319,8 +323,7 @@ fn rewrite_decl(text: &str) -> String {
 }
 
 fn finish_bytes(mut out: String, encoding: &str, changed: bool) -> Result<Vec<u8>, Error> {
-    let base = encoding.split(';').next().unwrap_or(encoding);
-    let utf8_family = base == io::UTF8 || base == io::UTF8_BOM;
+    let utf8_family = matches!(encoding, "utf-8" | "utf-8-bom");
     if changed && utf8_family && !out.is_ascii() {
         if let Some((_, _, name)) = declared(&out) {
             if !utf8_name(&name) {
@@ -328,9 +331,5 @@ fn finish_bytes(mut out: String, encoding: &str, changed: bool) -> Result<Vec<u8
             }
         }
     }
-    match io::encode(&out, base)? {
-        Some(b) => Ok(b),
-        // a character the legacy code page cannot hold: write UTF-8 and say so
-        None => Ok(rewrite_decl(&out).into_bytes()),
-    }
+    enc::encode_text(&out, encoding)
 }

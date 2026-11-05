@@ -1,10 +1,13 @@
 //! Reads a resx document with `quick-xml` and reports, for every `<data>` that has a `<value>`, its name, comment,
 //! decoded text and the byte span of the value's inner XML in the (already decoded) text.
 
-use crate::io::parse_err;
 use bilingua_model::Error;
 use quick_xml::events::{BytesStart, Event};
 use quick_xml::Reader;
+
+fn parse_err(msg: impl Into<String>) -> Error {
+    Error::Parse { format: "resx".into(), msg: msg.into() }
+}
 
 #[derive(Debug, Clone)]
 pub struct Entry {
