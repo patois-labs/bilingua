@@ -496,11 +496,17 @@ impl Tree {
         s
     }
 
+    /// Depth first with an explicit stack (no recursion: the depth is bounded by the parser, but a thread's stack
+    /// may be small).
     fn collect_text(&self, text: &str, i: usize, out: &mut String) {
-        for n in self.content(text, i) {
-            match n {
-                Node::Text(t) => out.push_str(&t),
-                Node::El(k) => self.collect_text(text, k, out),
+        let mut stack: Vec<std::vec::IntoIter<Node>> = vec![self.content(text, i).into_iter()];
+        while let Some(top) = stack.last_mut() {
+            match top.next() {
+                Some(Node::Text(t)) => out.push_str(&t),
+                Some(Node::El(k)) => stack.push(self.content(text, k).into_iter()),
+                None => {
+                    stack.pop();
+                }
             }
         }
     }
@@ -535,75 +541,6 @@ impl Tree {
 /// `str.strip()` as Python does it (Unicode white space plus the four information separators).
 pub fn py_strip(s: &str) -> &str {
     s.trim_matches(|c: char| c.is_whitespace() || ('\u{1c}'..='\u{1f}').contains(&c))
-}
-
-/// A start tag found by [`start_tags`].
-pub struct StartTag {
-    pub start: usize,
-    pub end: usize,
-    pub qname: String,
-}
-
-/// Every start tag of `text` in order (comments, CDATA, processing instructions and declarations skipped).
-pub fn start_tags(text: &str) -> Vec<StartTag> {
-    let b = text.as_bytes();
-    let mut out = Vec::new();
-    let mut i = 0;
-    while let Some(p) = b[i..].iter().position(|c| *c == b'<') {
-        i += p;
-        let rest = &b[i..];
-        let skip_to = |pat: &[u8], from: usize| -> Option<usize> { b[from..].windows(pat.len()).position(|w| w == pat).map(|q| from + q + pat.len()) };
-        if rest.starts_with(b"<!--") {
-            match skip_to(b"-->", i + 4) {
-                Some(e) => i = e,
-                None => break,
-            }
-        } else if rest.starts_with(b"<![CDATA[") {
-            match skip_to(b"]]>", i + 9) {
-                Some(e) => i = e,
-                None => break,
-            }
-        } else if rest.starts_with(b"<?") {
-            match skip_to(b"?>", i + 2) {
-                Some(e) => i = e,
-                None => break,
-            }
-        } else if rest.starts_with(b"</") || rest.starts_with(b"<!") {
-            match b[i..].iter().position(|c| *c == b'>') {
-                Some(e) => i += e + 1,
-                None => break,
-            }
-        } else {
-            let (mut j, mut q) = (i + 1, 0u8);
-            let mut end = None;
-            while j < b.len() {
-                let c = b[j];
-                if q != 0 {
-                    if c == q {
-                        q = 0;
-                    }
-                } else if c == b'"' || c == b'\'' {
-                    q = c;
-                } else if c == b'>' {
-                    end = Some(j + 1);
-                    break;
-                }
-                j += 1;
-            }
-            let Some(e) = end else { break };
-            let name_end = b[i + 1..e].iter().position(|c| is_ws(*c) || *c == b'>' || *c == b'/').map_or(e, |q| i + 1 + q);
-            out.push(StartTag { start: i, end: e, qname: text[i + 1..name_end].to_string() });
-            i = e;
-        }
-    }
-    out
-}
-
-/// The unescaped value of attribute `name` in a start tag's text, if present.
-pub fn tag_attr(tag: &str, name: &str) -> Option<String> {
-    let (s, e) = (0, tag.len());
-    let (_, attrs) = lex_tag("xml", tag, s, e).ok()?;
-    attrs.iter().find(|a| a.name == name).map(|a| attr_value(a.vraw))
 }
 
 fn esc_attr(s: &str, quote: u8) -> String {

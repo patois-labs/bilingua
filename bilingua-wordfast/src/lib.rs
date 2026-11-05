@@ -215,7 +215,7 @@ fn content_of(u: &Unit) -> Option<String> {
     Some(inline::render(&target, &u.codes, &code(u, LEAD).unwrap_or_default(), &code(u, TRAIL).unwrap_or_default()))
 }
 
-fn merge(d: Dialect, doc: &Document) -> Result<Vec<u8>, Error> {
+fn merge(d: Dialect, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
     bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
     let Skeleton::Text { parts, encoding, .. } = &doc.skeleton else {
         return Err(Error::Write(format!("{} needs a text skeleton", d.id())));
@@ -264,40 +264,49 @@ fn merge(d: Dialect, doc: &Document) -> Result<Vec<u8>, Error> {
             }
         }
     }
-    if written {
-        if let Some(tag) = doc.target_lang.as_deref().and_then(text::html_lang) {
-            stamp(d, &mut out, &tag);
+    let lang = doc.target_lang.as_deref().and_then(text::html_lang).filter(|_| written || opts.stamp_target_always);
+    if written || lang.is_some() {
+        // the spliced file must still be well-formed (LocOS re-parses it too); the tree also places the stamp
+        let tree = xml::parse(d.id(), &out).map_err(|e| Error::Write(format!("the merged {} file is not well-formed: {e}", d.id().to_uppercase())))?;
+        if let Some(tag) = lang {
+            out = stamp(d, &out, &tree, &tag);
         }
     }
-    enc::encode_text(&out, encoding)
+    enc::encode_text_with(&out, encoding, opts)
 }
 
-/// Declares the target language where the file has none: `targetlocale` on `<txml>` (in the file's own
-/// `en_US` style when its `locale` is written that way), `target-language` on each `<file>`.
-fn stamp(d: Dialect, out: &mut String, tag: &str) {
-    let mut edits: Vec<(usize, usize, String)> = Vec::new();
-    for st in xml::start_tags(out) {
-        let local = st.qname.rsplit(':').next().unwrap_or("").to_ascii_lowercase();
-        let tag_text = &out[st.start..st.end];
-        match d {
-            Dialect::Txml if local == "txml" => {
-                if xml::tag_attr(tag_text, "targetlocale").unwrap_or_default().trim().is_empty() {
-                    let value = if xml::tag_attr(tag_text, "locale").is_some_and(|l| l.contains('_')) { tag.replace('-', "_") } else { tag.to_string() };
-                    edits.push((st.start, st.end, xml::with_attr(tag_text, "targetlocale", &value)));
-                }
-                break;
-            }
-            Dialect::Txlf if local == "file" => {
-                if xml::tag_attr(tag_text, "target-language").unwrap_or_default().trim().is_empty() {
-                    edits.push((st.start, st.end, xml::with_attr(tag_text, "target-language", tag)));
-                }
-            }
-            _ => {}
+/// Declares the target language where the file has none: `targetlocale` on the `<txml>` root (in the file's own
+/// `en_US` style when its `locale` is written that way), `target-language` on each `<file>` of the `<xliff>`
+/// root. An existing value is never changed.
+fn stamp(d: Dialect, out: &str, tree: &xml::Tree, tag: &str) -> String {
+    let root = 0usize;
+    let targets: Vec<usize> = match d {
+        Dialect::Txml => vec![root],
+        Dialect::Txlf => tree.els[root].kids.iter().copied().filter(|&k| tree.els[k].local == "file").collect(),
+    };
+    let (attr, file_style) = match d {
+        Dialect::Txml => ("targetlocale", tree.els[root].attr("locale").is_some_and(|l| l.contains('_'))),
+        Dialect::Txlf => ("target-language", false),
+    };
+    let value = if file_style { tag.replace('-', "_") } else { tag.to_string() };
+    let mut res = String::with_capacity(out.len() + targets.len() * (attr.len() + value.len() + 4));
+    let mut pos = 0usize;
+    for i in targets {
+        let e = &tree.els[i];
+        if !e.attr(attr).unwrap_or_default().trim().is_empty() {
+            continue;
         }
+        res.push_str(&out[pos..e.start]);
+        res.push_str(&xml::with_attr(&out[e.start..e.start_end], attr, &value));
+        pos = e.start_end;
     }
-    for (s, e, new) in edits.into_iter().rev() {
-        out.replace_range(s..e, &new);
-    }
+    res.push_str(&out[pos..]);
+    res
+}
+
+/// The `load_targets` in force: the `wordfast.load_targets` format option when it is set, else the filter's own.
+fn load_targets_of(own: bool, opts: &ExtractOptions) -> bool {
+    opts.format_flag("wordfast.load_targets").unwrap_or(own)
 }
 
 macro_rules! filter_impl {
@@ -305,7 +314,7 @@ macro_rules! filter_impl {
         impl $ty {
             /// Like [`Filter::extract`] with explicit limits.
             pub fn extract_with(&self, bytes: &[u8], opts: &ExtractOptions, limits: &Limits) -> Result<Document, Error> {
-                extract($d, self.load_targets, bytes, opts, limits)
+                extract($d, load_targets_of(self.load_targets, opts), bytes, opts, limits)
             }
             /// The filter that leaves out segments somebody already confirmed (what LocOS translates).
             pub fn without_targets() -> $ty {
@@ -331,11 +340,33 @@ macro_rules! filter_impl {
                 self.extract_with(bytes, opts, &opts.limits())
             }
             fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
-                merge($d, doc)
+                merge($d, doc, &MergeOptions::default())
+            }
+            fn merge_with(&self, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
+                merge($d, doc, opts)
             }
         }
     };
 }
 
 filter_impl!(Txml, Dialect::Txml, "txml", |h: &str| h.contains("<txml"));
-filter_impl!(Txlf, Dialect::Txlf, "txlf", |h: &str| h.contains("<xliff") && h.contains("gs4tr"));
+filter_impl!(Txlf, Dialect::Txlf, "txlf", |h: &str| h.contains("<xliff") && declares_gs4tr(h));
+
+/// True when the head of a file declares a namespace whose URI names gs4tr (`xmlns:gs4tr="http://www.gs4tr.org/..."`).
+/// The word in a note or a comment does not count, so a plain XLIFF that mentions Wordfast stays XLIFF.
+fn declares_gs4tr(h: &str) -> bool {
+    let mut rest = h;
+    while let Some(p) = rest.find("xmlns") {
+        rest = &rest[p + 5..];
+        let after_name = rest.trim_start_matches(|c: char| c == ':' || c.is_alphanumeric() || matches!(c, '_' | '-' | '.'));
+        let Some(v) = after_name.trim_start().strip_prefix('=') else { continue };
+        let v = v.trim_start();
+        let Some(q) = v.chars().next().filter(|c| matches!(c, '"' | '\'')) else { continue };
+        if let Some(end) = v[1..].find(q) {
+            if v[1..1 + end].contains("gs4tr") {
+                return true;
+            }
+        }
+    }
+    false
+}

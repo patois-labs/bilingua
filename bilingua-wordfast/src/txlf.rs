@@ -208,15 +208,24 @@ impl Walker<'_, '_> {
         format!("{base}|{o}")
     }
 
+    /// Depth first with an explicit stack (no recursion: the depth is bounded by the parser, but a thread's stack
+    /// may be small). Each frame is the rest of an element's content and the close code written after it.
     fn visit(&mut self, parent: usize) {
         let tree = self.c.tree;
-        for node in tree.content(self.c.text, parent) {
-            let k = match node {
-                Node::Text(t) => {
+        let mut stack: Vec<(std::vec::IntoIter<Node>, Option<Piece>)> = vec![(tree.content(self.c.text, parent).into_iter(), None)];
+        while let Some((rest, _)) = stack.last_mut() {
+            let k = match rest.next() {
+                None => {
+                    if let Some((_, Some(close))) = stack.pop() {
+                        self.out.push(close);
+                    }
+                    continue;
+                }
+                Some(Node::Text(t)) => {
                     self.out.push(Piece::Text(t));
                     continue;
                 }
-                Node::El(k) => k,
+                Some(Node::El(k)) => k,
             };
             let e = &tree.els[k];
             let key = self.key(k);
@@ -250,8 +259,8 @@ impl Walker<'_, '_> {
                     raw: open,
                     raw_close: close.clone(),
                 }));
-                self.visit(k);
-                self.out.push(Piece::Code(CodePiece { key: format!("{key}/"), kind: TagKind::Close, free: false, display: close.clone(), id, raw: close, raw_close: String::new() }));
+                let close = Piece::Code(CodePiece { key: format!("{key}/"), kind: TagKind::Close, free: false, display: close.clone(), id, raw: close, raw_close: String::new() });
+                stack.push((tree.content(self.c.text, k).into_iter(), Some(close)));
             }
         }
     }
@@ -378,6 +387,21 @@ pub fn walk(c: &Ctx) -> Result<Walked, Error> {
             }
             template.push_str(&c.text[pos..ss.end_start]);
         }
+        // the trans-unit's notes, read once for all its segments (a seg-source unit can have many)
+        let mut notes = Vec::new();
+        for &nk in &tree.els[tu].kids {
+            let ne = &tree.els[nk];
+            if ne.local == "note" {
+                let text = py_strip(&tree.text_of(c.text, nk)).to_string();
+                if !text.is_empty() {
+                    notes.push(Note { author: ne.attr("from").map(str::to_string), text, kind: None });
+                }
+            }
+        }
+        // every segment gets the notes, unless that would copy them a quadratic number of times (a crafted file
+        // with thousands of notes and segments): then the first listed segment carries them
+        let notes_everywhere = notes.len().saturating_mul(slots.len()) <= 10_000;
+        let mut notes = Some(notes);
         for (n, &(k, el, tel)) in slots.iter().enumerate() {
             let status = std::mem::replace(&mut status_of[n], Status::Open);
             let open = matches!(status, Status::Open);
@@ -447,16 +471,6 @@ pub fn walk(c: &Ctx) -> Result<Walked, Error> {
             } else {
                 None // written by the owner of the mirrored target
             };
-            let mut notes = Vec::new();
-            for &nk in &tree.els[tu].kids {
-                let ne = &tree.els[nk];
-                if ne.local == "note" {
-                    let text = py_strip(&tree.text_of(c.text, nk)).to_string();
-                    if !text.is_empty() {
-                        notes.push(Note { author: ne.attr("from").map(str::to_string), text, kind: None });
-                    }
-                }
-            }
             items.push(Item {
                 key: k,
                 status,
@@ -471,7 +485,7 @@ pub fn walk(c: &Ctx) -> Result<Walked, Error> {
                 extra,
                 ctx_key: tree.els[tu].attr("id").map(str::to_string),
                 style: Some("trans-unit".into()),
-                notes,
+                notes: if notes_everywhere { notes.clone().unwrap_or_default() } else { notes.take().unwrap_or_default() },
             });
         }
     }

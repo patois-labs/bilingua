@@ -7,7 +7,9 @@ use std::collections::BTreeMap;
 pub enum Status {
     /// A segment the pipeline translates.
     Open,
-    /// Finished work somebody confirmed: loaded as a read-only target, never overwritten.
+    /// Finished work somebody confirmed: loaded as its target. A translator's confirmation (`"confirmed"`) stays
+    /// editable and is only rewritten when its target changes; reviewer sign-off (`"final"`, `"approved"`) is
+    /// read-only.
     Confirmed(&'static str),
     /// Locked, or not for translation.
     Locked(&'static str),

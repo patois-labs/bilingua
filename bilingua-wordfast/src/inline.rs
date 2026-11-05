@@ -158,6 +158,9 @@ pub fn render(target: &[Inline], codes: &BTreeMap<String, CodeData>, lead: &str,
     for i in &items {
         match i {
             Inline::Text(t) => esc_text(t, &mut out),
+            // the unit's hidden entries (ids starting with `~`: its raw region, splice text) are never tags; a target
+            // that names one (a document edited by hand) must not splice them into the file
+            Inline::Tag { id, .. } if id.starts_with('~') => {}
             Inline::Tag { id, kind, .. } => {
                 let code = codes.get(id.as_str());
                 match kind {

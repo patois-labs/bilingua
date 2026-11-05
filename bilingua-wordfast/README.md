@@ -33,11 +33,14 @@ let out = Txml::default().merge(&doc)?;
   confirmed (LocOS never touches it) is listed as an ordinary unit with its translation as the target and state
   `Translated`, as Okapi does; changing that target rewrites it, leaving it alone does not. Reviewer sign-off
   (TXLF `final`, `signed-off`, `approved`) and locks are read-only (`translate = false`, `lock_reason`).
-  `Txml { load_targets: false }` (also `Txml::without_targets()`) leaves the confirmed segments out: that is
+  `Txml { load_targets: false }` (also `Txml::without_targets()`, or the format option `wordfast.load_targets` =
+  `false` in `ExtractOptions::format_options`, which wins over the struct) leaves the confirmed segments out: that is
   exactly the list LocOS translates, and what the LocOS adapter uses. `include_locked` in the extract options lists
   locked and localizable segments too, read-only.
 - A target's codes are matched to the source's by element and `x` / `id`; one with no partner is dropped (its text
   stays).
+- Notes of a `seg-source` trans-unit go to each of its segments; when that would copy more than 10 000 notes (a
+  crafted file) only the first listed segment carries them.
 
 ## What it writes
 
@@ -58,6 +61,13 @@ attribute quoting, `<ws>`, comments, revisions, segment attributes such as `scor
 - **Language**: when at least one unit was written and `target_lang` is set, a `<txml>` with no `targetlocale` gets
   one (in the file's own `en_US` style when its `locale` is written that way), and each TXLF `<file>` with no
   `target-language` gets one. An existing value is never changed. Nothing written: no stamp, original bytes.
+- `merge_with` takes the model's `MergeOptions`: `stamp_target_always` declares the target language even when
+  nothing was translated (LocOS `build_localized`); `output_encoding: Utf8` writes UTF-8 and rewrites the XML
+  declaration of a UTF-16 file to say so (LocOS itself keeps a Wordfast file's UTF-16, so the adapter can keep the
+  default for these two formats).
+- Every merge that writes something is parsed again before it is returned (as LocOS does); a document whose hidden
+  codes were tampered with gives a write error, never a broken file. Target tags naming a hidden code (`~...`) are
+  ignored.
 - Encodings: UTF-8 (BOM kept), UTF-16 LE / BE with a BOM, CRLF kept. Like LocOS, a declared legacy encoding
   (`ISO-8859-1`, ...) or bytes that are not UTF-8 are refused with a "re-save as UTF-8" error.
 
