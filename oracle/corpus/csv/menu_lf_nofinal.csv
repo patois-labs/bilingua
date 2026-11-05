@@ -1,0 +1,16 @@
+key,source,target,context,max length
+btn.save,Save,,button on the order form,12
+btn.cancel,Cancel,,button,12
+msg.welcome,"Welcome back, baker!",,home screen,
+msg.order,"Your order ""Sourdough Deluxe"" is on its way.",,email,
+msg.hours,"Open Monday to Friday,
+7 AM to 6 PM.",,"footer, two lines",
+msg.items,%d items in your basket (%s),,placeholders,
+msg.tags,<b>Fresh</b> today,,markup,
+num.price,12.50,,not text,
+f.sum,=SUM(A1:A3),,formula,
+f.text,"=""0012""",,excel text number,
+msg.two,Fresh bread daily. Order before noon for same-day delivery.,,two sentences,
+msg.minus,-5 degrees inside the cooler,,starts with a minus,
+msg.plus,+1 free croissant,,starts with a plus,
+msg.at,@home delivery,,starts with at,

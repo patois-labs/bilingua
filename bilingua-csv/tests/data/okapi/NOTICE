@@ -1,0 +1,3 @@
+The files in this folder are the test resources of the Okapi Framework table filter and multi-parser filter
+(okapi/filters/table and okapi/filters/multiparsers, tag v1.48.0, https://gitlab.com/okapiframework/Okapi),
+copied unchanged. Okapi is Apache License 2.0, as is Bilingua. They are test input only.
