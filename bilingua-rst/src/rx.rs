@@ -92,7 +92,7 @@ pub fn field(s: &str) -> bool {
         }
         reps += 1;
     }
-    if reps == 0 || s[p..].chars().next() != Some(':') || last == ' ' {
+    if reps == 0 || !s[p..].starts_with(':') || last == ' ' {
         return false;
     }
     trailer(s, p + 1).is_some()
@@ -154,7 +154,7 @@ pub fn option_list(s: &str) -> Option<bool> {
     let wd = |c: char| is_word(c) || c == '-';
     if s.starts_with('-') {
         let mut starts = vec![1usize];
-        if s[1..].starts_with('-') {
+        if s.starts_with("--") {
             starts.insert(0, 2);
         }
         for p0 in starts {
@@ -324,7 +324,7 @@ pub fn option_line(s: &str) -> bool {
         }
         p += c.len_utf8();
     }
-    if s[p..].chars().next() != Some(':') {
+    if !s[p..].starts_with(':') {
         return false;
     }
     let t = &s[p + 1..];

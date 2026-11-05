@@ -25,10 +25,10 @@ fn map_text(name: &str, i: usize, t: &str) -> Option<String> {
         "echo" => Some(t.to_string()),
         "mark" => Some(format!("~{t}!")),
         "all" => Some(format!("T{i} *em* a_ b| `q` \\ \u{e9}\n\u{65e5}\u{672c}\u{8a9e}")),
-        "third" => (i % 3 == 0).then(|| format!("Zeta {i} \u{65e5}")),
+        "third" => i.is_multiple_of(3).then(|| format!("Zeta {i} \u{65e5}")),
         "cjk" => Some(format!("\u{65e5}\u{672c}{}\u{3067}\u{3059}", t.replace(' ', ""))),
         "long" => Some(format!("{t} {t}")),
-        "short" => (i % 2 == 0).then(|| "Kurz".to_string()),
+        "short" => i.is_multiple_of(2).then(|| "Kurz".to_string()),
         "dash" => (i % 2 == 1).then(|| format!("- {t}")),
         _ => unreachable!(),
     }

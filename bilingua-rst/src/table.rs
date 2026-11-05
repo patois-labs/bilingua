@@ -301,8 +301,8 @@ impl<'a> Grid<'a> {
                 let mut frame = owned(row);
                 for &(t, lf, b, rt) in &self.cells {
                     if t < r && r < b {
-                        for c in lf + 1..rt {
-                            frame[c] = " ".to_string();
+                        for cell in frame.iter_mut().take(rt).skip(lf + 1) {
+                            *cell = " ".to_string();
                         }
                     }
                 }

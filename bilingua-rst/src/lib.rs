@@ -72,7 +72,7 @@ fn starts_with_token(v: &[Inline]) -> bool {
 fn write_title(raw: &str, info: &str, rendered: &str) -> Result<String, Error> {
     let bad = || Error::Write("rst: broken title record".into());
     let nums: Vec<usize> = info.split(',').map(|x| x.parse().map_err(|_| bad())).collect::<Result<_, _>>()?;
-    if nums.len() < 3 || (nums.len() - 3) % 3 != 0 {
+    if nums.len() < 3 || !(nums.len() - 3).is_multiple_of(3) {
         return Err(bad());
     }
     let (width, ts, te) = (nums[0], nums[1], nums[2]);

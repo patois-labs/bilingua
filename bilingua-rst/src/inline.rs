@@ -237,7 +237,7 @@ fn m_fnref(s: &str, i: usize) -> Option<M> {
     let hash = first == '#';
     let star = first == '*';
     loop {
-        let Some(c) = at(s, p) else { return None };
+        let c = at(s, p)?;
         if c == ']' {
             break;
         }
