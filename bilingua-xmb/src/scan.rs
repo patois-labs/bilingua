@@ -109,9 +109,9 @@ pub fn unescape(s: &str) -> String {
     while let Some(p) = rest.find(['&', '\r']) {
         out.push_str(&rest[..p]);
         let after = &rest[p..];
-        if after.starts_with('\r') {
+        if let Some(tail) = after.strip_prefix('\r') {
             out.push('\n');
-            rest = after[1..].strip_prefix('\n').unwrap_or(&after[1..]);
+            rest = tail.strip_prefix('\n').unwrap_or(tail);
             continue;
         }
         let Some(semi) = after.find(';') else {
@@ -273,6 +273,7 @@ pub fn start_tag(text: &str, pos: usize) -> Result<StartTag, Error> {
 fn skip_prolog(text: &str) -> Result<usize, Error> {
     let b = text.as_bytes();
     let mut i = 0;
+    let mut doctype = false;
     loop {
         while i < b.len() && is_ws(b[i]) {
             i += 1;
@@ -283,6 +284,9 @@ fn skip_prolog(text: &str) -> Result<usize, Error> {
         } else if rest.starts_with(b"<!--") {
             i = find(b, i + 4, b"-->").ok_or_else(|| perr("not well-formed XML: unterminated comment"))? + 3;
         } else if rest.len() >= 9 && rest[..9].eq_ignore_ascii_case(b"<!DOCTYPE") {
+            if std::mem::replace(&mut doctype, true) {
+                return Err(perr("not well-formed XML: two DOCTYPE declarations"));
+            }
             let (mut j, mut sq, mut subset) = (i + 9, 0u8, 0usize);
             let head_start = j;
             let mut head_end = None;
@@ -344,9 +348,6 @@ pub fn parse(text: &str) -> Result<Tree, Error> {
     for (i, &c) in b.iter().enumerate() {
         if c < 0x20 && !matches!(c, b'\t' | b'\n' | b'\r') {
             return Err(perr(format!("not well-formed XML: control character at offset {i}")));
-        }
-        if c >= 0xC0 && !text.is_char_boundary(i) {
-            continue;
         }
     }
     if !text.is_ascii() && text.chars().any(|c| !xml_char(c)) {

@@ -206,10 +206,10 @@ fn hostile() {
     let many: Vec<u8> =
         [b"<messagebundle>".to_vec(), (0..5).flat_map(|i| format!("<msg id=\"{i}\">m{i}</msg>").into_bytes()).collect(), b"</messagebundle>".to_vec()].concat();
     let small = Limits { max_units: 3, ..Limits::default() };
-    let e = Xmb.extract_with(&many, &opts(), &small).err().expect("refused");
+    let e = Xmb.extract_with(&many, &opts(), &small).unwrap_err();
     assert!(matches!(e, Error::Limit(LimitError { kind: LimitKind::Units, .. })), "{e}");
     let markup: Vec<u8> = [b"<messagebundle>".to_vec(), b"<x/>".repeat(200), b"</messagebundle>".to_vec()].concat();
-    let e = Xmb.extract_with(&markup, &opts(), &small).err().expect("refused");
+    let e = Xmb.extract_with(&markup, &opts(), &small).unwrap_err();
     assert!(matches!(e, Error::Limit(_)), "{e}");
     // the Angular internal-subset DOCTYPE itself is accepted and kept, never resolved
     assert!(!ex(XMB).units.is_empty());

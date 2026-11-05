@@ -107,15 +107,12 @@ fn itertext(text: &str, tree: &Tree, e: &Elem, out: &mut String) {
 fn direct_text(text: &str, e: &Elem) -> String {
     let mut s = String::new();
     for c in &e.children {
-        match c {
-            Child::Text { start, end, cdata } => {
-                if *cdata {
-                    s.push_str(&text[*start..*end]);
-                } else {
-                    s.push_str(&scan::unescape(&text[*start..*end]));
-                }
+        if let Child::Text { start, end, cdata } = c {
+            if *cdata {
+                s.push_str(&text[*start..*end]);
+            } else {
+                s.push_str(&scan::unescape(&text[*start..*end]));
             }
-            _ => {}
         }
     }
     s
