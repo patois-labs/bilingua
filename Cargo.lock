@@ -31,6 +31,7 @@ dependencies = [
  "bilingua-dxf",
  "bilingua-email",
  "bilingua-epub",
+ "bilingua-flare",
  "bilingua-ftl",
  "bilingua-html",
  "bilingua-htmlhelp",
@@ -193,6 +194,22 @@ dependencies = [
 
 [[package]]
 name = "bilingua-epub"
+version = "0.1.0"
+dependencies = [
+ "bilingua-html",
+ "bilingua-model",
+ "bilingua-seg",
+ "bilingua-zip",
+ "proptest",
+ "quick-xml",
+ "regex",
+ "serde",
+ "serde_json",
+ "zip",
+]
+
+[[package]]
+name = "bilingua-flare"
 version = "0.1.0"
 dependencies = [
  "bilingua-html",

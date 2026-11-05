@@ -59,6 +59,7 @@ bilingua-qtts = { workspace = true }
 bilingua-php = { workspace = true }
 bilingua-rc = { workspace = true }
 bilingua-epub = { workspace = true }
+bilingua-flare = { workspace = true }
 bilingua-idml = { workspace = true }
 bilingua-odf = { workspace = true }
 bilingua-icml = { workspace = true }
