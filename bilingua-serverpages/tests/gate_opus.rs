@@ -1,5 +1,6 @@
 //! Opus gate findings (11-05): a JSP expression joined across a dropped or empty code, code repeated through a
-//! duplicated tag, and the JSP hint of an `.html` page read with the word boundaries of the LocOS pattern.
+//! duplicated tag, the JSP hint of an `.html` page read with the word boundaries of the LocOS pattern, and the
+//! model merge options (`output_encoding`, `stamp_target_always`).
 mod common;
 use bilingua_model::*;
 use bilingua_serverpages::{server_page_for_html, Dialect};
@@ -48,6 +49,27 @@ fn a_tag_that_carries_code_is_written_once() {
     let out = merge_target("phtml", src, 0, target);
     assert_eq!(out.matches("<?php track(); ?>").count(), 1, "{out}");
     assert_eq!(out.matches("<?= $u ?>").count(), 1, "{out}");
+}
+
+#[test]
+fn merge_options_give_the_locos_behaviour() {
+    let mut bytes = b"<html lang=\"en\"><head><meta charset=\"windows-1252\"></head><body><p>Caf".to_vec();
+    bytes.push(0xE9);
+    bytes.extend_from_slice(b" <?= $n ?></p></body></html>");
+    let f = filter("phtml");
+    let mut doc = f.extract(&bytes, &opts()).unwrap();
+    doc.target_lang = Some("ar".into());
+    // the default: nothing translated, the original bytes
+    assert_eq!(f.merge(&doc).unwrap(), bytes.to_vec());
+    // LocOS: stamped although nothing is translated, written as UTF-8 with a truthful charset
+    let out = String::from_utf8(f.merge_with(&doc, &MergeOptions::locos()).unwrap()).unwrap();
+    assert!(out.contains("lang=\"ar\"") && out.contains("dir=\"rtl\""), "{out}");
+    assert!(out.contains("charset=\"UTF-8\"") && out.contains("Caf\u{e9}") && out.contains("<?= $n ?>"), "{out}");
+    // stamp only, keep the encoding
+    let keep = MergeOptions { stamp_target_always: true, ..MergeOptions::default() };
+    let out = f.merge_with(&doc, &keep).unwrap();
+    let text = String::from_utf8_lossy(&out);
+    assert!(out.contains(&0xE9) && text.contains("lang=\"ar\"") && text.contains("charset=\"windows-1252\""), "{text}");
 }
 
 #[test]

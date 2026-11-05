@@ -3,9 +3,9 @@
 
 use crate::entities::{HTML5, INVALID_CHARREFS, INVALID_CODEPOINTS};
 
-/// Python `str.isspace` for one character (Rust's White_Space plus the C0 separators U+001C..U+001F).
+/// Python `str.isspace` for one character.
 pub(crate) fn is_space(c: char) -> bool {
-    c.is_whitespace() || ('\u{1c}'..='\u{1f}').contains(&c)
+    bilingua_model::py_isspace_char(c)
 }
 
 pub(crate) fn trim_start(s: &str) -> &str {
@@ -20,15 +20,14 @@ pub(crate) fn trim(s: &str) -> &str {
     trim_end(trim_start(s))
 }
 
-/// Python `str.isalnum`. Rust's `char::is_alphanumeric` is wider for combining marks that carry the Alphabetic
-/// property (known difference, documented in the README); letter numbers (Nl) are numeric in both.
+/// Python `str.isalnum` for one character.
 pub(crate) fn is_alnum(c: char) -> bool {
-    c.is_alphanumeric()
+    bilingua_model::py_isalnum_char(c)
 }
 
-/// Python `str.isalpha` (same note as [`is_alnum`]; numbers are excluded).
+/// Python `str.isalpha` for one character.
 pub(crate) fn is_alpha(c: char) -> bool {
-    c.is_alphabetic() && !c.is_numeric()
+    bilingua_model::py_isalpha_char(c)
 }
 
 /// LocOS `_PLACEHOLDER_RE`: `\u{27E6}/?[a-z]?\d+\u{27E7}`. Length in bytes of the token at the start of `s`.

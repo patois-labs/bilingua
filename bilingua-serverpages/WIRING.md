@@ -24,9 +24,9 @@
 * Inline codes: every code maps to one LocOS token. Paired tags are `g` (`Open` + `Close`); an unclosed open tag is an
   `Open` with no `Close`, which `to_locos_text` prints as `x` (LocOS keeps it as an unpaired `g`); `img`, `br`, `wbr`,
   self-closed tags, `translate="no"` runs and output islands are `Standalone` (`x`). Nothing is a plain-text placeholder.
-* Merge options still to come in the model (LocOS behaviour): "always write UTF-8" and "stamp the target language
-  even when nothing is translated". Until then the file's own encoding is kept and the language is stamped only when a
-  unit is translated.
+* `merge_with` honours the model `MergeOptions`: `output_encoding` (`Utf8` writes UTF-8 and rewrites a `<meta>`
+  charset) and `stamp_target_always` (stamp `<html lang>` / `dir` even when nothing is translated). `MergeOptions::locos()`
+  is the LocOS behaviour; the default keeps the file's encoding and stamps only when a unit is translated.
 * Oracle corpus: `oracle/corpus/serverpages/` (31 files, made by `tests/tools/gen_corpus.py`; 11 languages, BOM, CRLF,
   CR, Windows-1252, Windows-1251, Shift_JIS, UTF-16). `oracle/run.py` lists FORMATS by extension: add `phtml`, `jsp`,
   `jspf`, `aspx`, `ascx`, `erb`, `shtml`, `shtm`, `stm` there (the oracle code is the lead's).

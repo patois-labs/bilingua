@@ -620,7 +620,7 @@ fn target_plain(t: &[Inline]) -> String {
     plain_text(t)
 }
 
-fn merge_with(d: Dialect, doc: &Document) -> Result<Vec<u8>, Error> {
+fn merge_with(d: Dialect, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
     bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
     let Skeleton::Text { parts, encoding, .. } = &doc.skeleton else {
         return Err(Error::Write(format!("{} needs a text skeleton", d.id())));
@@ -632,9 +632,11 @@ fn merge_with(d: Dialect, doc: &Document) -> Result<Vec<u8>, Error> {
         }
     }
     let targets: Vec<Option<Vec<Inline>>> = doc.units.iter().map(target_of).collect();
-    let tag = doc.target_lang.as_deref().and_then(html::html_lang);
-    if targets.iter().all(Option::is_none) {
-        return enc::encode_text(&text, encoding);
+    let translated = targets.iter().any(Option::is_some);
+    // the language is stamped when a unit is translated, or always with `stamp_target_always` (LocOS)
+    let tag = if translated || opts.stamp_target_always { doc.target_lang.as_deref().and_then(html::html_lang) } else { None };
+    if !translated && tag.is_none() {
+        return enc::encode_text_with(&text, encoding, opts);
     }
     let limits = Limits::default();
     let m = mask(d, &text, &limits)?;
@@ -718,7 +720,7 @@ fn merge_with(d: Dialect, doc: &Document) -> Result<Vec<u8>, Error> {
             )));
         }
     }
-    enc::encode_text(&m.unmask(&out, &text), encoding)
+    enc::encode_text_with(&m.unmask(&out, &text), encoding, opts)
 }
 
 /// LocOS `attr_strictness`: true when a translated value written at (token, start, end) must be made opaque.
@@ -793,7 +795,10 @@ macro_rules! dialect_filter {
                 extract_with($d, bytes, opts, &opts.limits())
             }
             fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
-                merge_with($d, doc)
+                merge_with($d, doc, &MergeOptions::default())
+            }
+            fn merge_with(&self, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
+                merge_with($d, doc, opts)
             }
         }
     };
@@ -873,12 +878,12 @@ pub fn server_page_for_html(text: &str) -> Result<Option<Dialect>, Error> {
             let mut from = 0;
             while let Some(p) = find_bytes(l.as_bytes(), from, b"<%@") {
                 let rest = trim_start(&l[p + 3..]);
-                if rest.starts_with("taglib") && !rest[6..].starts_with(|c: char| c.is_alphanumeric() || c == '_') {
+                if rest.starts_with("taglib") && !rest[6..].starts_with(bilingua_model::py_is_word_char) {
                     hint = true;
                     break;
                 }
                 // `<%@\s*page\b[^%]*?\blanguage\s*=\s*["']?java\b`
-                let word = |c: char| c.is_alphanumeric() || c == '_';
+                let word = bilingua_model::py_is_word_char;
                 if rest.starts_with("page") && !rest[4..].starts_with(word) {
                     let end = rest.find('%').unwrap_or(rest.len());
                     let seg = &rest[..end];

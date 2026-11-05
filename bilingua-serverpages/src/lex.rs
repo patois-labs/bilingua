@@ -141,7 +141,7 @@ fn php_echo_only(body: &str) -> bool {
     };
     let rest = &t[k..];
     // \b: the next character must not be a word character
-    if rest.chars().next().is_some_and(|c| c.is_alphanumeric() || c == '_') {
+    if rest.chars().next().is_some_and(bilingua_model::py_is_word_char) {
         return false;
     }
     match rest.find(['{', '}', ';']) {

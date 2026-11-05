@@ -64,8 +64,6 @@ with the LocOS message and line.
 * The XML cross-check LocOS runs with lxml on well-formed pages (`html_guard._check_xml`) is not ported; the browser
   check is.
 * `skeleton["a11y_images"]` (missing-alt findings) is not produced.
-* Rust's `char::is_alphanumeric` and `is_alphabetic` are slightly wider than Python's `str.isalnum` / `isalpha` for
-  combining marks that carry the Alphabetic property; a unit of only such marks is a unit here and not in LocOS.
 * `check_markup` (B6) also refuses a page that declares `<!ENTITY`.
 
 ## Tests
