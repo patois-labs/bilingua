@@ -197,9 +197,17 @@ def leaf(rng, lang, kind, eol, flowed_ok=True):
     hdr = f'Content-Type: {ct}; charset="{charset}"'
     if flowed:
         hdr += "; format=flowed"
+        if rng.random() < 0.4:
+            hdr += "; delsp=yes"
     if rng.random() < 0.15:
         hdr = hdr.replace(f'charset="{charset}"', "charset=" + charset)
-    h = hdr + eol + f"Content-Transfer-Encoding: {cte}" + eol
+    style = rng.random()
+    if style < 0.12:
+        hdr = hdr.replace("; charset", ";" + eol + " charset", 1)  # folded Content-Type
+    elif style < 0.2:
+        hdr = hdr.lower().replace("content-type", "content-type")  # lower-case header and values
+    cte_name = "content-transfer-encoding" if rng.random() < 0.15 else "Content-Transfer-Encoding"
+    h = hdr + eol + f"{cte_name}: {cte}" + eol
     return h.encode("ascii"), body
 
 
