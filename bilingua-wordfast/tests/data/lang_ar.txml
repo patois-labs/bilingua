@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<txml locale="ar_SA" version="1.0" segtype="sentence" datatype="html" targetlocale="xx_XX" createdby="bilingua test corpus">
+<skeleton>&lt;html&gt;&lt;body&gt;&lt;p&gt;</skeleton>
+<translatable blockId="1" datatype="html">
+<segment segmentId="1">
+<source>افتح قائمة <ut type="start" x="1">&lt;b&gt;</ut>الإعدادات<ut type="end" x="1">&lt;/b&gt;</ut> للمتابعة.</source>
+<ws> </ws>
+</segment>
+<segment segmentId="2" gtmt="true">
+<source>احفظ الملف وأغلقه. <ut x="2">&lt;br/&gt;</ut>مرحبا بالعالم! &amp; &#169;</source>
+<target>احفظ الملف وأغلقه. (machine)</target>
+</segment>
+</translatable>
+<skeleton>&lt;/p&gt;&lt;p&gt;</skeleton>
+<translatable blockId="2" locked="true"><segment segmentId="1"><source>مرحبا بالعالم!</source></segment></translatable>
+<translatable blockId="3">
+<segment segmentId="1" modified="true"><source>احفظ الملف وأغلقه.</source><target score="100">احفظ الملف وأغلقه. (done)</target></segment>
+<segment segmentId="2"><source><![CDATA[افتح قائمة <raw> مرحبا بالعالم!]]></source><target score="85">افتح قائمة (fuzzy)</target></segment>
+<segment segmentId="3"><source>للمتابعة. <!-- inline comment -->الإعدادات</source><comments><comment creationid="pm" type="text">مرحبا بالعالم!</comment></comments></segment>
+</translatable>
+<localizable blockId="4"><segment segmentId="1"><source>الإعدادات</source></segment></localizable>
+</txml>

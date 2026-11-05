@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2" xmlns:gs4tr="http://www.gs4tr.org/schema/xliff-ext">
+  <file original="guide.docx" source-language="ja-JP" target-language="xx-XX" datatype="x-docx">
+    <body>
+      <trans-unit id="1"><source>続行するには <bpt id="1">&lt;b&gt;</bpt>設定<ept id="1">&lt;/b&gt;</ept> メニューを開いてください。</source><target state="needs-translation"/></trans-unit>
+      <trans-unit id="2"><source>ファイルを保存して閉じます。 <ph id="2">{0}</ph> こんにちは世界！</source><target state="needs-review-translation" gs4tr:score="75">ファイルを保存して閉じます。 (fuzzy)</target></trans-unit>
+      <trans-unit id="3"><source>メニューを開いてください。 <g id="3"><x id="4" ctype="image"/>設定</g></source></trans-unit>
+      <trans-unit id="4" gs4tr:locked="true"><source>こんにちは世界！</source><target state="translated" gs4tr:score="100">こんにちは世界！ (locked)</target></trans-unit>
+      <trans-unit id="5"><source>ファイルを保存して閉じます。</source><target state="translated">ファイルを保存して閉じます。 (done)</target></trans-unit>
+      <trans-unit id="6" translate="no"><source>設定</source></trans-unit>
+    </body>
+  </file>
+</xliff>

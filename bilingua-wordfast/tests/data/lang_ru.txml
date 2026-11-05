@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<txml locale="ru_RU" version="1.0" segtype="sentence" datatype="html" targetlocale="xx_XX" createdby="bilingua test corpus">
+<skeleton>&lt;html&gt;&lt;body&gt;&lt;p&gt;</skeleton>
+<translatable blockId="1" datatype="html">
+<segment segmentId="1">
+<source>Откройте меню <ut type="start" x="1">&lt;b&gt;</ut>Настройки<ut type="end" x="1">&lt;/b&gt;</ut> чтобы продолжить.</source>
+<ws> </ws>
+</segment>
+<segment segmentId="2" gtmt="true">
+<source>Сохраните и закройте файл. <ut x="2">&lt;br/&gt;</ut>Привет, мир! &amp; &#169;</source>
+<target>Сохраните и закройте файл. (machine)</target>
+</segment>
+</translatable>
+<skeleton>&lt;/p&gt;&lt;p&gt;</skeleton>
+<translatable blockId="2" locked="true"><segment segmentId="1"><source>Привет, мир!</source></segment></translatable>
+<translatable blockId="3">
+<segment segmentId="1" modified="true"><source>Сохраните и закройте файл.</source><target score="100">Сохраните и закройте файл. (done)</target></segment>
+<segment segmentId="2"><source><![CDATA[Откройте меню <raw> Привет, мир!]]></source><target score="85">Откройте меню (fuzzy)</target></segment>
+<segment segmentId="3"><source>чтобы продолжить. <!-- inline comment -->Настройки</source><comments><comment creationid="pm" type="text">Привет, мир!</comment></comments></segment>
+</translatable>
+<localizable blockId="4"><segment segmentId="1"><source>Настройки</source></segment></localizable>
+</txml>

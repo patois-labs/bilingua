@@ -19,6 +19,8 @@ pub fn filters() -> Vec<Box<dyn Filter>> {
     // The packages (zip) and the XLIFF family are recognised by extension or header; they go before the loose
     // sniffers.
     let mut all: Vec<Box<dyn Filter>> = bilingua_sdl::filters();
+    // Wordfast TXML and TXLF: TXLF is XLIFF with the gs4tr extension, so it sniffs first (tight) and goes before XLIFF.
+    all.extend(bilingua_wordfast::filters());
     all.extend(bilingua_xliff::filters());
     // OpenDocument (zip): a strict mimetype sniff, so it goes with the other packages.
     all.extend(bilingua_odf::filters());
@@ -122,7 +124,7 @@ pub fn filters() -> Vec<Box<dyn Filter>> {
 /// Formats whose files carry their own segmentation (XLIFF and its dialects, translation packages): sentence
 /// splitting would break the link between a segment and the file's own segment.
 fn own_segmentation(id: &str) -> bool {
-    matches!(id, "xliff" | "sdlxliff" | "mqxliff" | "mxliff" | "sdlppx" | "mqxlz" | "xcloc" | "ttx")
+    matches!(id, "xliff" | "sdlxliff" | "mqxliff" | "mxliff" | "txml" | "txlf" | "sdlppx" | "mqxlz" | "xcloc" | "ttx")
 }
 
 /// The filter for a file: by extension first, then by sniffing the bytes.
@@ -135,6 +137,11 @@ pub fn detect(name: &str, bytes: &[u8]) -> Option<Box<dyn Filter>> {
     // LocOS sends a .json file in ARB shape (a string @@locale) to its ARB dialect; so do we.
     if ext == "json" && bilingua_arb::Arb.sniff(bytes) {
         return Some(Box::new(bilingua_arb::Arb));
+    }
+    // A Wordfast Pro TXLF saved as .xlf (XLIFF 1.2 declaring the gs4tr namespace) goes to the TXLF filter, which
+    // knows the gs4tr protection rules; a plain .xlf stays XLIFF.
+    if matches!(ext.as_str(), "xlf" | "xliff") && bilingua_wordfast::Txlf::default().sniff(bytes) {
+        return Some(Box::new(bilingua_wordfast::Txlf::default()));
     }
     let all = filters();
     let mut by_ext = None;
