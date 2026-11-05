@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<?aid style="50" type="snippet" readerVersion="6.0" featureSet="513" product="20.0(73)" ?>
+<?aid SnippetType="InCopyInterchange"?>
+<Document DOMVersion="20.0" Self="d">
+	<Color Self="Color/Black" Model="Process" Space="CMYK" ColorValue="0 0 0 100" Name="Black"/>
+	<RootCharacterStyleGroup Self="rcsg"><CharacterStyle Self="CharacterStyle/Bold" Name="Bold" FontStyle="Bold"/></RootCharacterStyleGroup>
+	<Story Self="u1" AppliedTOCStyle="n" TrackChanges="false" StoryTitle="$ID/" AppliedNamedGrid="n">
+		<StoryPreference OpticalMarginAlignment="false" FrameType="TextFrameType"/>
+		<InCopyExportOption IncludeGraphicProxies="true" IncludeAllResources="false"/>
+		<ParagraphStyleRange AppliedParagraphStyle="ParagraphStyle/$ID/NormalParagraphStyle">
+			<CharacterStyleRange AppliedCharacterStyle="CharacterStyle/$ID/[No character style]"><Content>Page	<?ACE 18?> see </Content><HyperlinkTextSource Self="h1" Name="link"><Content>our site</Content></HyperlinkTextSource><Content> now</Content><PageReference Self="p1" PageReferenceType="CurrentPage"/><Content>.</Content><Footnote>		<ParagraphStyleRange AppliedParagraphStyle="ParagraphStyle/$ID/NormalParagraphStyle">
+			<CharacterStyleRange AppliedCharacterStyle="CharacterStyle/$ID/[No character style]"><Content><?ACE 4?> Footnote text.</Content></CharacterStyleRange>
+		</ParagraphStyleRange></Footnote></CharacterStyleRange>
+		</ParagraphStyleRange>
+		<ParagraphStyleRange AppliedParagraphStyle="ParagraphStyle/$ID/NormalParagraphStyle">
+			<CharacterStyleRange AppliedCharacterStyle="CharacterStyle/$ID/[No character style]"><Table Self="t1" BodyRowCount="1" ColumnCount="2"><Row Self="t1r0" Name="0"/><Column Self="t1c0" Name="0"/><Column Self="t1c1" Name="1"/><Cell Self="t1i0" Name="0:0">		<ParagraphStyleRange AppliedParagraphStyle="ParagraphStyle/$ID/NormalParagraphStyle">
+			<CharacterStyleRange AppliedCharacterStyle="CharacterStyle/$ID/[No character style]"><Content>Cell A</Content></CharacterStyleRange>
+		</ParagraphStyleRange></Cell><Cell Self="t1i1" Name="1:0">		<ParagraphStyleRange AppliedParagraphStyle="ParagraphStyle/$ID/NormalParagraphStyle">
+			<CharacterStyleRange AppliedCharacterStyle="CharacterStyle/$ID/[No character style]"><Content>Cell B</Content></CharacterStyleRange>
+		</ParagraphStyleRange></Cell></Table></CharacterStyleRange>
+		</ParagraphStyleRange>
+	</Story>
+</Document>

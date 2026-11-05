@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<?aid style="50" type="snippet" readerVersion="6.0" featureSet="513" product="20.0(73)" ?>
+<?aid SnippetType="InCopyInterchange"?>
+<Document DOMVersion="20.0" Self="d">
+	<Color Self="Color/Black" Model="Process" Space="CMYK" ColorValue="0 0 0 100" Name="Black"/>
+	<RootCharacterStyleGroup Self="rcsg"><CharacterStyle Self="CharacterStyle/Bold" Name="Bold" FontStyle="Bold"/></RootCharacterStyleGroup>
+	<Story Self="u1" AppliedTOCStyle="n" TrackChanges="false" StoryTitle="$ID/" AppliedNamedGrid="n">
+		<StoryPreference OpticalMarginAlignment="false" FrameType="TextFrameType"/>
+		<InCopyExportOption IncludeGraphicProxies="true" IncludeAllResources="false"/>
+		<ParagraphStyleRange AppliedParagraphStyle="ParagraphStyle/$ID/NormalParagraphStyle">
+			<CharacterStyleRange AppliedCharacterStyle="CharacterStyle/$ID/[No character style]"><Content>First paragraph.</Content><Br/><Content>Second paragraph.</Content></CharacterStyleRange>
+		</ParagraphStyleRange>
+	</Story>
+	<Hyperlink Self="hl1" Name="site" Source="h1" Visible="false"><Properties><Destination type="object">HyperlinkURLDestination/x</Destination></Properties></Hyperlink>
+</Document>
