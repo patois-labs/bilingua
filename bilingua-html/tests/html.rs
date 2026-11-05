@@ -561,3 +561,23 @@ fn deep_nesting_is_a_typed_limit_error_and_fast() {
     assert!(matches!(Html.extract(src.as_bytes(), &tight), Err(Error::Limit(_))));
     assert!(Html.extract(src.as_bytes(), &ExtractOptions::default()).is_ok());
 }
+
+// The depth check must follow the walker: end tags that close nothing, and runs of end-tag-optional elements the
+// walker keeps nested (`<li><dd>` closes neither), must not hide real nesting.
+#[test]
+fn depth_cap_cannot_be_dodged() {
+    use std::time::Instant;
+    for unit in ["<div></p>", "<div></li></td>", "<li><dd>x ", "<td><li>x ", "<section></b>"] {
+        let src = format!("<html><body>{}text</body></html>", unit.repeat(20_000));
+        let t = Instant::now();
+        match Html.extract(src.as_bytes(), &ExtractOptions::default()) {
+            Err(Error::Limit(e)) => assert_eq!(e.kind, LimitKind::Depth, "{unit}"),
+            other => panic!("{unit}: expected a depth limit, got {:?}", other.map(|d| d.units.len())),
+        }
+        assert!(t.elapsed().as_secs_f64() < 2.0, "{unit} took {:?}", t.elapsed());
+    }
+    // ordinary tables and lists are not deep
+    let row = "<tr><td>a<td>b</tr>";
+    let src = format!("<html><body><table>{}</table><ul>{}</ul></body></html>", row.repeat(3000), "<li>x</li>".repeat(3000));
+    assert!(Html.extract(src.as_bytes(), &ExtractOptions::default()).is_ok());
+}

@@ -78,6 +78,9 @@ struct Ex<'a> {
     last_heading: Option<String>,
     html_tag: Option<(usize, usize)>,
     html_lang: Option<String>,
+    /// `Limits::max_xml_depth`; the walk stops and sets `too_deep` when more frames than this are open
+    max_depth: usize,
+    too_deep: bool,
 }
 
 pub fn extract_html(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
@@ -95,8 +98,13 @@ pub fn extract_html(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Err
         last_heading: None,
         html_tag: None,
         html_lang: None,
+        max_depth: opts.limits().max_xml_depth,
+        too_deep: false,
     };
     ex.walk();
+    if ex.too_deep {
+        return Err(too_deep(&opts.limits()));
+    }
     let (units, skeleton_parts) = ex.finish();
     let source_lang = opts.source_lang.clone().or(ex.html_lang.clone());
     bilingua_model::guard::finish(Document {
@@ -115,24 +123,37 @@ pub fn extract_html(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Err
 const OPTIONAL_END: [&str; 16] =
     ["p", "li", "dt", "dd", "tr", "td", "th", "option", "optgroup", "thead", "tbody", "tfoot", "colgroup", "caption", "rt", "rp"];
 
+fn too_deep(l: &bilingua_model::Limits) -> Error {
+    bilingua_model::LimitError::new(
+        bilingua_model::LimitKind::Depth,
+        format!("This HTML file is nested more than {} levels deep. It was not processed.", l.max_xml_depth),
+    )
+    .into()
+}
+
 /// Refuses markup nested deeper than `Limits::max_xml_depth` (libxml2's 256, as LocOS): a start tag opens a level
-/// unless it is void or self-closing, an end tag closes one (never below zero). One pass over the tokens, so a file
-/// of 20 000 nested elements is refused at once instead of after a quadratic walk.
+/// unless it is void or self-closing, an end tag closes one only when an element of its name is open (a stray
+/// `</p>` closes nothing). One pass over the tokens, so a file of 20 000 nested elements is refused at once instead
+/// of after a quadratic walk. End-tag-optional elements are not counted here; the walker itself caps the frames
+/// they leave open (`Ex::walk`).
 fn check_depth(toks: &[Tok], l: &bilingua_model::Limits) -> Result<(), Error> {
     let mut depth = 0usize;
+    let mut open: HashMap<&str, usize> = HashMap::new();
     for t in toks {
         match t {
             Tok::Start { name, self_close, .. } if !*self_close && !is_void(name) && !OPTIONAL_END.contains(&name.as_str()) => {
                 depth += 1;
+                *open.entry(name.as_str()).or_default() += 1;
                 if depth > l.max_xml_depth {
-                    return Err(bilingua_model::LimitError::new(
-                        bilingua_model::LimitKind::Depth,
-                        format!("This HTML file is nested more than {} levels deep. It was not processed.", l.max_xml_depth),
-                    )
-                    .into());
+                    return Err(too_deep(l));
                 }
             }
-            Tok::End { .. } => depth = depth.saturating_sub(1),
+            Tok::End { name, .. } => {
+                if let Some(n) = open.get_mut(name.as_str()).filter(|n| **n > 0) {
+                    *n -= 1;
+                    depth = depth.saturating_sub(1);
+                }
+            }
             _ => {}
         }
     }
@@ -200,6 +221,12 @@ impl<'a> Ex<'a> {
                     ti = self.start(ti, start, end, name, attrs, self_close);
                 }
                 Tok::End { start, end, name } => self.end(start, end, &name),
+            }
+            // end-tag-optional elements the walker keeps open (`<li><dd>` closes neither) still nest; the root
+            // frame does not count
+            if self.frames.len() > self.max_depth + 1 {
+                self.too_deep = true;
+                return;
             }
             ti += 1;
         }
