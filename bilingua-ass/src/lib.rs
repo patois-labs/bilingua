@@ -221,6 +221,8 @@ fn extract(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
                 let field = &rest[field_at..];
                 if !is_comment {
                     guard::check_unit_chars(field.chars().count(), &limits)?;
+                } else if guard::check_unit_chars(field.chars().count(), &limits).is_err() {
+                    continue; // an over-long locked Comment stays skeleton (and is never tokenized)
                 }
                 if tok::in_drawing_mode(field) {
                     continue;
