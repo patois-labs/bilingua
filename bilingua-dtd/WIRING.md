@@ -9,8 +9,9 @@
   `bilingua-dtd = { path = "bilingua-dtd" }`. Dev-dependency `proptest = "1"` is crate-local.
 - `bilingua/tests/contract.rs` `crate_of`: `"dtd" => "bilingua-dtd"`. `tools/check-portable.sh` and `.ps1`: add `dtd`.
 - Options: none. `ExtractOptions::include_locked` adds values that are only references, markup or symbols as locked
-  units. `DtdFilter::extract_with(bytes, opts, &Limits)` takes explicit size limits (LocOS defaults: 50000 units,
-  100000 characters per value, 1000000 line breaks, 4 x units declarations; plus 256 MiB input).
+  units. `DtdFilter::extract_with(bytes, opts, &Limits)` takes explicit size limits; `extract` uses
+  `ExtractOptions::limits()` (B6 `bilingua_model::Limits`, re-exported as `bilingua_dtd::Limits`): `max_input_bytes`,
+  `max_lines`, `max_units` (also the declaration budget, 4 x units), `max_unit_chars`. Refusals are `Error::Limit`.
 - Inline tags (the LocOS adapter flattens them): every tag has label `placeholder` and its display is the exact source
   text, because LocOS keeps references and markup as plain text. Entity references (`&brandShortName;`, `&lt;`) are
   standalone free tags; markup (`<html:b>`, `&lt;i>`) is an open/close pair when it has its partner, else standalone.

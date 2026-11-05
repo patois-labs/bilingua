@@ -137,9 +137,12 @@ fn hostile_and_refusals() {
     // the segment cap and the declaration budget (LocOS sets MAX_DOCUMENT_SEGMENTS = 3 for this test)
     let tight = Limits { max_units: 3, ..Limits::default() };
     let many: String = (0..10).map(|i| format!("<!ENTITY e{i} \"Value {i}\">\n")).collect();
-    assert!(matches!(DtdFilter.extract_with(many.as_bytes(), &opts(), &tight), Err(Error::Unsupported(_))));
+    assert!(matches!(DtdFilter.extract_with(many.as_bytes(), &opts(), &tight), Err(Error::Limit(LimitError { kind: LimitKind::Units, .. }))));
+    // the same limits through ExtractOptions
+    let o = ExtractOptions { limits: Some(tight), ..opts() };
+    assert!(matches!(DtdFilter.extract(many.as_bytes(), &o), Err(Error::Limit(LimitError { kind: LimitKind::Units, .. }))));
     let decls = "<!-- x -->".repeat(20);
-    assert!(matches!(DtdFilter.extract_with(decls.as_bytes(), &opts(), &tight), Err(Error::Unsupported(_))));
+    assert!(matches!(DtdFilter.extract_with(decls.as_bytes(), &opts(), &tight), Err(Error::Limit(LimitError { kind: LimitKind::Units, .. }))));
 }
 
 #[test]

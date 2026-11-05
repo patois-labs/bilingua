@@ -124,7 +124,7 @@ fn bom_and_newlines_kept() {
 #[test]
 fn target_locale_and_paragraph_mode() {
     let data = std::fs::read(corpus_dir().join("browser_en.dtd")).unwrap();
-    let opts = ExtractOptions { source_lang: Some("en".into()), target_lang: Some("ar".into()), granularity: Granularity::Paragraph, include_locked: false };
+    let opts = ExtractOptions { source_lang: Some("en".into()), target_lang: Some("ar".into()), granularity: Granularity::Paragraph, ..Default::default() };
     let mut doc = DtdFilter.extract(&data, &opts).unwrap();
     assert_eq!(doc.granularity, Granularity::Paragraph);
     assert_eq!(doc.target_lang.as_deref(), Some("ar"));
@@ -224,7 +224,7 @@ fn detection() {
 #[test]
 fn limits_and_quirks() {
     let long = format!("<!ENTITY a \"{}\">\n", "x".repeat(101));
-    let tight = Limits { max_value_chars: 100, ..Limits::default() };
+    let tight = Limits { max_unit_chars: 100, ..Limits::default() };
     assert!(DtdFilter.extract_with(long.as_bytes(), &opts(), &tight).is_err());
     let tight = Limits { max_lines: 20, ..Limits::default() };
     assert!(DtdFilter.extract_with("\n".repeat(30).as_bytes(), &opts(), &tight).is_err());

@@ -30,37 +30,16 @@ const BOM8: &[u8] = &[0xEF, 0xBB, 0xBF];
 /// `close` = white space after it, `label` = the quote character.
 const HIDDEN: &str = "$dtd";
 
-/// Size limits (the Localization OS defaults). `bilingua-model` has no limits in this tree, so the crate caps itself.
-#[derive(Debug, Clone, Copy)]
-pub struct Limits {
-    /// Bytes in one file.
-    pub max_input_bytes: usize,
-    /// Units in one file.
-    pub max_units: usize,
-    /// Characters in one value.
-    pub max_value_chars: usize,
-    /// Line breaks in one file.
-    pub max_lines: usize,
-}
-
-impl Default for Limits {
-    fn default() -> Limits {
-        Limits { max_input_bytes: 256 << 20, max_units: 50_000, max_value_chars: 100_000, max_lines: 1_000_000 }
-    }
-}
-
-fn limit_err(msg: String) -> Error {
-    Error::Unsupported(format!("input limit: {msg}"))
-}
+/// The size limits (`bilingua_model::Limits`, Localization OS's numbers). This filter reads `max_input_bytes`,
+/// `max_lines`, `max_units` (also the declaration budget: at most four `<!` per allowed unit) and `max_unit_chars`.
+pub use bilingua_model::Limits;
 
 fn parse_err(msg: String) -> Error {
     Error::Parse { format: ID.into(), msg }
 }
 
 fn read<'a>(bytes: &'a [u8], l: &Limits) -> Result<(&'a str, &'static str, Vec<scan::Entity>), Error> {
-    if bytes.len() > l.max_input_bytes {
-        return Err(limit_err(format!("the file is larger than {} bytes", l.max_input_bytes)));
-    }
+    guard::check_input(bytes, l)?;
     let (body, enc) = match bytes.strip_prefix(BOM8) {
         Some(b) => (b, "utf-8-bom"),
         None => (bytes, "utf-8"),
@@ -71,13 +50,14 @@ fn read<'a>(bytes: &'a [u8], l: &Limits) -> Result<(&'a str, &'static str, Vec<s
     if text.contains('\0') {
         return Err(parse_err("the file holds NUL bytes, so it is not UTF-8 text; re-save the file as UTF-8".into()));
     }
-    let lines = text.bytes().filter(|&b| b == b'\n' || b == b'\r').count();
-    if lines > l.max_lines {
-        return Err(limit_err(format!("this file has more than {} lines; split it into smaller files", l.max_lines)));
-    }
+    guard::check_lines(text, l)?;
     let decls = text.matches("<!").count();
     if decls > l.max_units.saturating_mul(4) {
-        return Err(limit_err(format!("this file has far more declarations than {} segments allow; split it", l.max_units)));
+        return Err(LimitError::new(
+            LimitKind::Units,
+            format!("This DTD file has far more declarations than {} segments allow. Split it into smaller files.", l.max_units),
+        )
+        .into());
     }
     Ok((text, enc, scan::scan(text)?))
 }
@@ -214,7 +194,7 @@ fn flat(u: &Unit, v: &[Inline]) -> String {
 }
 
 impl DtdFilter {
-    /// `extract` with explicit size limits.
+    /// `extract` with explicit size limits (`extract` uses `opts.limits()`).
     pub fn extract_with(&self, bytes: &[u8], opts: &ExtractOptions, limits: &Limits) -> Result<Document, Error> {
         let (text, encoding, entities) = read(bytes, limits)?;
         let mut parts: Vec<SkelPart> = Vec::new();
@@ -228,11 +208,9 @@ impl DtdFilter {
                 continue;
             }
             let (lead, core, trail) = split_ws(&value);
-            if core.chars().take(limits.max_value_chars + 1).count() > limits.max_value_chars {
-                return Err(limit_err(format!("this file has a value longer than {} characters; break it into shorter values", limits.max_value_chars)));
-            }
-            if translatable && units.len() >= limits.max_units {
-                return Err(limit_err(format!("this file has more than {} segments; split it into smaller files", limits.max_units)));
+            guard::check_unit_chars(core.chars().take(limits.max_unit_chars.saturating_add(1)).count(), limits)?;
+            if translatable {
+                guard::check_unit_count(units.len() + 1, limits)?;
             }
             if e.start > pos {
                 parts.push(SkelPart::Raw(text[pos..e.start].to_string()));
@@ -263,6 +241,7 @@ impl DtdFilter {
             granularity: opts.granularity,
             units,
             skeleton: Skeleton::text(parts, encoding, bilingua_model::parser_info!()),
+            warnings: vec![],
         })
     }
 }
@@ -311,7 +290,7 @@ impl Filter for DtdFilter {
     }
 
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
-        self.extract_with(bytes, opts, &Limits::default())
+        self.extract_with(bytes, opts, &opts.limits())
     }
 
     fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {

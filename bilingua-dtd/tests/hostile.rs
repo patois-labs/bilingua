@@ -24,7 +24,7 @@ fn check(data: &[u8]) {
             let back = extract(&out).unwrap_or_else(|e| panic!("translated output must read back: {e}\n{:?}\n{:?}", String::from_utf8_lossy(data), String::from_utf8_lossy(&out)));
             assert_eq!(back.units.len(), n, "unit count after translation {:?} -> {:?}", String::from_utf8_lossy(data), String::from_utf8_lossy(&out));
         }
-        Err(Error::Parse { .. } | Error::Unsupported(_)) => {}
+        Err(Error::Parse { .. } | Error::Limit(_)) => {}
         Err(e) => panic!("unexpected error kind: {e}"),
     }
 }
@@ -126,16 +126,16 @@ fn deep_and_huge_inputs_give_typed_errors_or_stay_linear() {
     timed(format!("<!ENTITY a \"x\"{}>", " ".repeat(3_000_000)).as_bytes());
     // one value over the cap: refused, not truncated
     let big = format!("<!ENTITY a \"{}\">\n", "a".repeat(100_001));
-    assert!(matches!(extract(big.as_bytes()), Err(Error::Unsupported(_))));
+    assert!(matches!(extract(big.as_bytes()), Err(Error::Limit(LimitError { kind: LimitKind::UnitChars, .. }))));
     // more entities than the unit cap: refused
     let many: String = (0..50_001).map(|i| format!("<!ENTITY k{i} \"v{i}\">\n")).collect();
-    assert!(matches!(extract(many.as_bytes()), Err(Error::Unsupported(_))));
+    assert!(matches!(extract(many.as_bytes()), Err(Error::Limit(LimitError { kind: LimitKind::Units, .. }))));
     assert!(DtdFilter.extract_with(many.as_bytes(), &opts(), &Limits { max_units: 60_000, ..Limits::default() }).is_ok());
     // more declarations than 4 x the unit cap: refused before any scan
     let decls = "<!---->".repeat(200_001);
-    assert!(matches!(extract(decls.as_bytes()), Err(Error::Unsupported(_))));
+    assert!(matches!(extract(decls.as_bytes()), Err(Error::Limit(LimitError { kind: LimitKind::Units, .. }))));
     // more lines than the line cap
-    assert!(matches!(extract("\n".repeat(1_000_001).as_bytes()), Err(Error::Unsupported(_))));
+    assert!(matches!(extract("\n".repeat(1_000_001).as_bytes()), Err(Error::Limit(LimitError { kind: LimitKind::Lines, .. }))));
     // truncated multi-byte, truncated declarations at every cut of a real file
     let src = std::fs::read(corpus_dir().join("browser_ja.dtd")).unwrap();
     for cut in 0..src.len() {
