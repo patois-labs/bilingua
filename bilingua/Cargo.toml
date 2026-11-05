@@ -26,6 +26,7 @@ bilingua-sdl = { workspace = true }
 bilingua-ini = { workspace = true }
 bilingua-strings = { workspace = true }
 bilingua-resjson = { workspace = true }
+bilingua-wxl = { workspace = true }
 bilingua-jsmodule = { workspace = true }
 
 [dev-dependencies]
