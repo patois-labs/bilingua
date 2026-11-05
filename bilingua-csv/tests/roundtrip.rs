@@ -70,8 +70,8 @@ fn corpus_pseudo_translation_reads_back() {
             pseudo(&mut doc);
             let out = c.merge(&doc).unwrap_or_else(|e| panic!("{name}: {e}"));
             let back = c.extract(&out).unwrap_or_else(|e| panic!("{name}: {e}"));
-            if name == "unterminated.csv" || src.is_empty() {
-                continue; // an open quote swallows the rest of the file: units may differ
+            if src.is_empty() {
+                continue; // no units to translate
             }
             if in_place(&before) {
                 assert_eq!(back.units.len(), src.len(), "{name} {locale:?}: unit count");

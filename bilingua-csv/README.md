@@ -25,7 +25,7 @@ Tests (`cargo test -p bilingua-csv`):
 | `tests/locos_suite.rs` | the LocOS suite `verify_csv_filter.py`, case by case (13 Rust tests for its 14 test functions; the XLSX column mode, the HTTP API and CLI, and the glossary and TM importers belong to other layers) |
 | `tests/locos_golden.rs` | 811 recorded LocOS runs (random files in all encodings and delimiters, every kind of column mapping, hostile bytes, the Shopify fixture): same units, same notes, same bytes for five translation maps, same refusals (`tests/tools/gen_golden.py`) |
 | `tests/okapi_table.rs` | Okapi 1.48.0 on its own table test resources (`tests/data/okapi/`, `tests/tools/okapi_compare.py`): Bilingua equals LocOS on all of them, the Okapi comparison is printed |
-| `tests/roundtrip.rs` | the corpus (36 files) byte exact and pseudo-translated, 11 languages, 10 legacy code pages, BOM and line endings, paragraph and sentence mode, locked units, serde, parser stamp, detection |
+| `tests/roundtrip.rs` | the corpus (33 files) byte exact and pseudo-translated, 11 languages, 10 legacy code pages, BOM and line endings, paragraph and sentence mode, locked units, serde, parser stamp, detection |
 | `tests/hostile.rs` | proptest over random bytes, random text, CSV-shaped lines, mapping specs and mutated corpus files; deep, wide and huge inputs |
 | `tests/speed.rs` | a 5 MB file, `cargo test -p bilingua-csv --release --test speed -- --nocapture`, then `tests/tools/speed_locos.py` |
 

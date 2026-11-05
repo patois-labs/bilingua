@@ -37,5 +37,5 @@
   legacy file goes back in its page when everything fits, else UTF-8 **with a BOM** (LocOS; the model's own
   `encode_text` would drop the BOM). Written line breaks stay `\n`; the model's newline restoring is switched off
   because LocOS leaves them alone. The "always write UTF-8" merge option the model is getting is not used here yet.
-- Oracle corpus: `oracle/corpus/csv/` (36 files, made by `tests/tools/gen_corpus.py`).
+- Oracle corpus: `oracle/corpus/csv/` (33 files, made by `tests/tools/gen_corpus.py`).
 - Python wheel: nothing format-specific except the `columns` argument above.
