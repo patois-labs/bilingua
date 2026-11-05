@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Welcome back <!--#echo var="USER" --></title><meta name="description" content="Your orders"></head>
+<body>
+<!--#set var="a" value="b" -->
+<h1>Welcome back, <!--#echo var="USER" -->!</h1>
+<!--#include virtual="/header.html" -->
+<p>Sign in to continue. It's quick, and it's free. <b>Your orders</b> <!--#echo var="USER" --> <a href="<!--#echo var="URL" -->" title="Open the inbox">Open the inbox</a>.</p>
+<!--#config timefmt="%Y" -->
+<img src="logo.png" alt="Company logo">
+<ul><li>Your orders</li><li><!--#echo var="USER" --> &amp; Welcome back</li></ul>
+<script>var user = "<!--#echo var="USER" -->"; if (a < b) { go(); }</script>
+</body>
+</html>

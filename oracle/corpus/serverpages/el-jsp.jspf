@@ -1,0 +1,16 @@
+<%@ page contentType="text/html; charset=UTF-8" %>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
+<!DOCTYPE html>
+<html lang="el">
+<head><meta charset="utf-8"><title>Καλώς ήρθατε ${user.name}</title><meta name="description" content="Οι παραγγελίες σας"></head>
+<body>
+<%-- note: not text --%>
+<h1>Καλώς ήρθατε, ${user.name}!</h1>
+<% if (user != null) { %>
+<p>Συνδεθείτε για να συνεχίσετε. <b>Οι παραγγελίες σας</b> ${user.name} <a href="${url}" title="Άνοιγμα επιστολών">Άνοιγμα επιστολών</a>.</p>
+<% } %>
+<img src="logo.png" alt="Λογότυπο">
+<ul><li>Οι παραγγελίες σας</li><li>${user.name} &amp; Καλώς ήρθατε</li></ul>
+<script>var user = "${user.name}"; if (a < b) { go(); }</script>
+</body>
+</html>

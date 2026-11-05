@@ -56,6 +56,7 @@ bilingua-xtg = { workspace = true }
 bilingua-adoc = { workspace = true }
 bilingua-latex = { workspace = true }
 bilingua-rst = { workspace = true }
+bilingua-serverpages = { workspace = true }
 
 [dev-dependencies]
 zip = { workspace = true }

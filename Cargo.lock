@@ -55,6 +55,7 @@ dependencies = [
  "bilingua-rst",
  "bilingua-sdl",
  "bilingua-seg",
+ "bilingua-serverpages",
  "bilingua-strings",
  "bilingua-subtitle",
  "bilingua-text",
@@ -440,6 +441,15 @@ dependencies = [
  "icu_segmenter",
  "quick-xml",
  "regex",
+]
+
+[[package]]
+name = "bilingua-serverpages"
+version = "0.1.0"
+dependencies = [
+ "bilingua-model",
+ "proptest",
+ "serde_json",
 ]
 
 [[package]]

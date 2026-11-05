@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head><meta charset="utf-8"><title>ברוך שובך <!--#echo var="USER" --></title><meta name="description" content="ההזמנות שלך"></head>
+<body>
+<!--#set var="a" value="b" -->
+<h1>ברוך שובך, <!--#echo var="USER" -->!</h1>
+<!--#include virtual="/header.html" -->
+<p>התחבר כדי להמשיך. זה מהיר. <b>ההזמנות שלך</b> <!--#echo var="USER" --> <a href="<!--#echo var="URL" -->" title="פתח את הדואר">פתח את הדואר</a>.</p>
+<!--#config timefmt="%Y" -->
+<img src="logo.png" alt="לוגו החברה">
+<ul><li>ההזמנות שלך</li><li><!--#echo var="USER" --> &amp; ברוך שובך</li></ul>
+<script>var user = "<!--#echo var="USER" -->"; if (a < b) { go(); }</script>
+</body>
+</html>

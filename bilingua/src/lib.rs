@@ -80,6 +80,12 @@ pub fn filters() -> Vec<Box<dyn Filter>> {
         Box::new(bilingua_php::Php),
         // MIF sniffs strictly: the first statement must be <MIFFile version>.
         Box::new(bilingua_mif::Mif),
+        // server pages sniff a code marker (<?php, <%@, <jsp:, <!--#): never a plain HTML page; ERB (<%=) is the loosest
+        Box::new(bilingua_serverpages::Phtml),
+        Box::new(bilingua_serverpages::Jsp),
+        Box::new(bilingua_serverpages::Aspx),
+        Box::new(bilingua_serverpages::Shtml),
+        Box::new(bilingua_serverpages::Erb),
         // resx sniffs XML with <root> and resource headers; it goes before the loose key-value sniffers.
         Box::new(bilingua_resx::Resx),
         // MO sniffs only its binary magic number, so its place does not matter.

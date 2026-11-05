@@ -1,0 +1,10 @@
+<p>Before</p>
+<?php
+$block = <<<EOT
+<p>Not text ?> here</p>
+EOT;
+$n = <<<'RAW'
+</p> still code
+RAW;
+?>
+<p>After <?= $x ?></p>
