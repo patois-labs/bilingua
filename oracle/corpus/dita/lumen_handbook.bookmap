@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE bookmap PUBLIC "-//OASIS//DTD DITA BookMap//EN" "bookmap.dtd">
+<bookmap id="handbook">
+  <booktitle><booklibrary>Lumen Library</booklibrary><mainbooktitle>The Baker's Handbook</mainbooktitle><booktitlealt>Second edition</booktitlealt></booktitle>
+  <bookmeta><author>Lumen Bakery</author><bookrights><copyrfirst><year>2026</year></copyrfirst></bookrights></bookmeta>
+  <frontmatter><notices href="notices.dita" navtitle="Notices"/></frontmatter>
+  <chapter href="lumen_starter.dita" navtitle="Starters"/>
+  <chapter href="breads.dita"><topicmeta><navtitle>Breads of the world</navtitle></topicmeta></chapter>
+  <appendix href="glossary.dita" navtitle="Glossary"/>
+</bookmap>

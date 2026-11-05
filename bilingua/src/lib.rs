@@ -143,6 +143,10 @@ pub fn filters() -> Vec<Box<dyn Filter>> {
         Box::new(bilingua_xslt::Xslt),
         // Fluent sniffs only with a Fluent-only marker, but its text looks like key = value: after the others.
         Box::new(bilingua_ftl::FtlFilter),
+        // DITA and DocBook sniff strictly (a DOCTYPE naming the vocabulary, the DITA architecture attribute or the
+        // DocBook 5 namespace); they own XML vocabularies, so they go just before generic XML.
+        Box::new(bilingua_dita::Dita::new()),
+        Box::new(bilingua_dita::DocBook::new()),
         // generic XML sniffs any well-formed document, so it goes after every filter that owns an XML vocabulary.
         Box::new(bilingua_xml::XmlFilter::new()),
         // SubViewer 2.0 / MicroDVD (.sub) and YouTube SBV sniff tightly (MicroDVD cues, a SubViewer header, or a first

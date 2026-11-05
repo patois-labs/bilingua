@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd">
+<topic id="languages" xml:lang="en">
+  <title>Welcome in eleven languages</title>
+  <body>
+    <section id="s-en" xml:lang="en"><title>en</title><p>Welcome to Lumen Bakery. Fresh bread is ready at six every morning.</p></section>
+    <section id="s-es" xml:lang="es"><title>es</title><p>Bienvenido a Panadería Lumen. El pan fresco está listo a las seis de cada mañana.</p></section>
+    <section id="s-fr" xml:lang="fr"><title>fr</title><p>Bienvenue à la Boulangerie Lumen. Le pain frais est prêt à six heures chaque matin.</p></section>
+    <section id="s-it" xml:lang="it"><title>it</title><p>Benvenuto al Forno Lumen. Il pane fresco è pronto ogni mattina alle sei.</p></section>
+    <section id="s-de" xml:lang="de"><title>de</title><p>Willkommen in der Bäckerei Lumen. Frisches Brot ist jeden Morgen um sechs Uhr fertig.</p></section>
+    <section id="s-nl" xml:lang="nl"><title>nl</title><p>Welkom bij Bakkerij Lumen. Vers brood staat elke ochtend om zes uur klaar.</p></section>
+    <section id="s-pt" xml:lang="pt"><title>pt</title><p>Bem-vindo à Padaria Lumen. O pão fresco fica pronto às seis horas todas as manhãs.</p></section>
+    <section id="s-ja" xml:lang="ja"><title>ja</title><p>ルーメン・ベーカリーへようこそ。焼きたてのパンは毎朝六時にご用意しています。</p></section>
+    <section id="s-zh" xml:lang="zh"><title>zh</title><p>欢迎光临流明面包店。新鲜面包每天早上六点出炉。</p></section>
+    <section id="s-ko" xml:lang="ko"><title>ko</title><p>루멘 베이커리에 오신 것을 환영합니다. 갓 구운 빵은 매일 아침 여섯 시에 준비됩니다.</p></section>
+    <section id="s-ar" xml:lang="ar"><title>ar</title><p>مرحبا بكم في مخبز لومن. الخبز الطازج جاهز كل صباح في السادسة.</p></section>
+  </body>
+</topic>

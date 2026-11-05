@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE map PUBLIC "-//OASIS//DTD DITA Map//EN" "map.dtd">
+<map title="Lumen Bakery Guide" xml:lang="en-US">
+  <topicmeta><navtitle>Lumen Bakery Guide</navtitle><shortdesc>Everything about our bread.</shortdesc></topicmeta>
+  <keydef keys="mixer" href="mixer.dita"><topicmeta><keywords><keyword>Spiral mixer</keyword></keywords></topicmeta></keydef>
+  <topicref href="lumen_starter.dita" navtitle="Feeding the starter"/>
+  <topicref href="shaping.dita" navtitle='Shaping &amp; proofing'>
+    <topicref href="baking.dita"><topicmeta><navtitle>Baking</navtitle></topicmeta></topicref>
+  </topicref>
+  <topicref keyref="mixer"/>
+</map>

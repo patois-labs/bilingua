@@ -211,6 +211,7 @@ fn crate_of(format: &str) -> &'static str {
         "icml" | "wcml" => "bilingua-icml",
         "ts" => "bilingua-qtts",
         "xml" => "bilingua-xml",
+        "dita" | "docbook" => "bilingua-xml",
         "xslt" => "bilingua-xslt",
         "srt" | "vtt" => "bilingua-subtitle",
         "ass" | "ssa" => "bilingua-ass",

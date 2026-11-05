@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE book PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN" "http://www.oasis-open.org/docbook/xml/4.5/docbookx.dtd">
+<book lang="en">
+  <title>Lumen Oven Manual</title>
+  <chapter id="start" xreflabel="Getting started">
+    <title>Getting started</title>
+    <para>Turn the oven on with <guibutton>Power</guibutton>, then read <xref linkend="safety"/>.<footnote><para>The light stays green.</para></footnote></para>
+    <para>Set the heat in <filename>/etc/oven.conf</filename> or run <command>oven --heat 250</command>.</para>
+    <programlisting language="sh">oven --heat 250 --steam on</programlisting>
+    <remark>Check the numbers with the supplier.</remark>
+    <itemizedlist><listitem><para>Preheat for <emphasis role="strong">40</emphasis> minutes.</para></listitem><listitem><para>Load the <productname>Lumen Stone</productname> tray.</para></listitem></itemizedlist>
+  </chapter>
+  <chapter id="safety">
+    <title>Safety</title>
+    <para>Press <keycombo><keycap>Ctrl</keycap><keycap>S</keycap></keycombo> to stop. <ulink url="http://example.invalid/help">Online help</ulink>.</para>
+    <screen>$ oven --stop</screen>
+  </chapter>
+</book>
