@@ -25,6 +25,8 @@ pub fn filters() -> Vec<Box<dyn Filter>> {
         Box::new(bilingua_xcstrings::Xcloc) as Box<dyn Filter>,
         // EPUB (a zip): by extension or by its stored mimetype; a strict sniff, so it cannot take a Word file.
         Box::new(bilingua_epub::Epub),
+        // IDML sniffs strictly (its own mimetype or a design map with stories), so it sits beside the other packages.
+        Box::new(bilingua_idml::Idml),
         Box::new(bilingua_docx::Docx),
         Box::new(bilingua_xlsx::Xlsx::default()),
         Box::new(bilingua_pptx::Pptx),

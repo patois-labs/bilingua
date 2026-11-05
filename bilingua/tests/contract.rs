@@ -159,6 +159,7 @@ fn crate_of(format: &str) -> &'static str {
         "epub" => "bilingua-epub",
         "xlsx" => "bilingua-xlsx",
         "pptx" => "bilingua-pptx",
+        "idml" => "bilingua-idml",
         "html" => "bilingua-html",
         "json" => "bilingua-json",
         "resjson" => "bilingua-resjson",
