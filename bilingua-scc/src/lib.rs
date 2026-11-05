@@ -296,6 +296,47 @@ fn rebuild(u: &Unit) -> Result<Option<String>, String> {
     Ok(Some(format!("{}{}{}{}", cap.lead, cap.tc, cap.sep, words_text(&words))))
 }
 
+/// The units (by index) whose rewritten file would not read them back as a channel-1 caption.
+///
+/// The data channel carries from one line to the next, so a caption that starts with a character before any
+/// channel-1 code is read on whatever channel the line before it ended on. A translation that moves or drops an
+/// inline code that switches to channel 2 can therefore put its own caption, or the next one, on channel 2, and
+/// that caption is no longer a unit (LocOS writes such a file and the caption vanishes). `lines` holds the line
+/// number and unit index of every unit line in `out`.
+fn lost_on_readback(out: &str, lines: &[(usize, usize)]) -> Vec<(usize, bool)> {
+    let spans = split_lines(out);
+    let Some(first) = spans.iter().position(|(s, e, _)| !py_strip(&out[*s..*e]).is_empty()) else {
+        return lines.iter().map(|(_, u)| (*u, false)).collect();
+    };
+    let mut state = State::default();
+    let mut lost = Vec::new();
+    let mut want = lines.iter().peekable();
+    for (i, (s, e, _)) in spans.iter().enumerate() {
+        if want.peek().is_none() {
+            break;
+        }
+        let content = &out[*s..*e];
+        if i <= first || py_strip(content).is_empty() {
+            continue;
+        }
+        let Some(cap) = split_caption(content) else { break };
+        let Ok(words) = parse_words(cap.rest, i + 1) else { break };
+        let line = Line::new(&words, &mut state);
+        if let Some(&&(li, u)) = want.peek() {
+            if li == i {
+                want.next();
+                if !line.unit || line.rows.is_empty() || line.text().is_empty() {
+                    let ch2 = line.rows.iter().flat_map(|r| r.cells.iter()).any(|c| c.is_char && c.chan != 1);
+                    lost.push((u, ch2));
+                }
+            }
+        }
+    }
+    // a unit line the scan never reached is lost too
+    lost.extend(want.map(|(_, u)| (*u, false)));
+    lost
+}
+
 fn merge(doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
     check_parser(doc, &parser_info!())?;
     let Skeleton::Text { parts, encoding, .. } = &doc.skeleton else {
@@ -303,9 +344,16 @@ fn merge(doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
     };
     let mut out = String::new();
     let mut problems: Vec<String> = Vec::new();
+    // (line number in `out`, unit index) of every unit line, and whether any caption was re-encoded
+    let mut unit_lines: Vec<(usize, usize)> = Vec::new();
+    let mut lineno = 0usize;
+    let mut rewritten = false;
     for p in parts {
         match p {
-            SkelPart::Raw(s) => out.push_str(s),
+            SkelPart::Raw(s) => {
+                lineno += split_lines(s).len() - 1;
+                out.push_str(s);
+            }
             SkelPart::Unit(i) => {
                 let u = doc.units.get(*i).ok_or_else(|| Error::Write(format!("skeleton points at missing unit {i}")))?;
                 let raw = u
@@ -313,13 +361,20 @@ fn merge(doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
                     .get(RAW)
                     .and_then(|c| c.standalone.as_deref())
                     .ok_or_else(|| Error::Write(format!("unit {} lost its original line", u.id)))?;
+                if raw.contains(['\r', '\n']) {
+                    return Err(Error::Write(format!("unit {}: its original line holds a line break", u.id)));
+                }
+                unit_lines.push((lineno, *i));
                 let translated = u.translate && u.segments.iter().any(|s| !s.target.is_empty());
                 if !translated {
                     out.push_str(raw);
                     continue;
                 }
                 match rebuild(u) {
-                    Ok(Some(l)) => out.push_str(&l),
+                    Ok(Some(l)) => {
+                        rewritten = true;
+                        out.push_str(&l);
+                    }
                     Ok(None) => out.push_str(raw),
                     Err(why) => {
                         let tc = split_caption(raw).map(|c| c.tc).unwrap_or_default();
@@ -336,6 +391,31 @@ fn merge(doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
             "The SCC file was not exported: CEA-608 captions allow only Latin characters from the 608 set and {ROW_CELLS} characters per row. {}{more}. Shorten or transliterate these captions and export again.",
             problems[..problems.len().min(10)].join("; ")
         )));
+    }
+    if rewritten {
+        // lead decision (11-05, the rc precedent): refuse rather than write a caption that would vanish
+        let lost = lost_on_readback(&out, &unit_lines);
+        if !lost.is_empty() {
+            let shown: Vec<String> = lost
+                .iter()
+                .take(10)
+                .map(|(i, ch2)| {
+                    let raw = doc.units[*i].codes.get(RAW).and_then(|c| c.standalone.as_deref()).unwrap_or("");
+                    let tc = split_caption(raw).map(|c| c.tc).unwrap_or_default();
+                    let why = if *ch2 {
+                        "would be read back on data channel 2"
+                    } else {
+                        "would no longer read back as a caption"
+                    };
+                    format!("caption {} at {tc}: {why}", i + 1)
+                })
+                .collect();
+            let more = if lost.len() > 10 { format!(" (and {} more)", lost.len() - 10) } else { String::new() };
+            return Err(Error::Write(format!(
+                "The SCC file was not exported: after translation these captions would not read back as channel 1 captions and would be lost. {}{more}. An inline code can switch the data channel: keep the inline codes where they were and export again.",
+                shown.join("; ")
+            )));
+        }
     }
     enc::encode_text_with(&out, encoding, opts)
 }

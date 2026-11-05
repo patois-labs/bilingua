@@ -27,9 +27,9 @@ fn check(data: &[u8]) {
                 doc.set_target(id, vec![Inline::text(t)]).unwrap();
             }
             match SccFilter.merge(&doc) {
-                // a caption whose first character comes before any channel-1 code can read back as channel 2
-                // (LocOS does the same), so the count can only fall, never grow
-                Ok(out) => assert!(units(&out).len() <= n, "unit count after translation of {:?}", String::from_utf8_lossy(data)),
+                // a caption that would read back on channel 2 (or vanish otherwise) is refused, so a written file
+                // reads back with the same captions
+                Ok(out) => assert_eq!(units(&out).len(), n, "unit count after translation of {:?}", String::from_utf8_lossy(data)),
                 Err(Error::Write(_)) => {}
                 Err(e) => panic!("unexpected error kind: {e}"),
             }
@@ -38,8 +38,12 @@ fn check(data: &[u8]) {
             for id in &ids {
                 doc2.set_target(id, vec![Inline::text("ok")]).unwrap();
             }
-            let out = SccFilter.merge(&doc2).unwrap_or_else(|e| panic!("short text must fit: {e}"));
-            assert!(units(&out).len() <= n);
+            match SccFilter.merge(&doc2) {
+                Ok(out) => assert_eq!(units(&out).len(), n),
+                // "ok" always fits; only the channel read-back check may refuse it
+                Err(Error::Write(m)) => assert!(m.contains("channel"), "short text must fit: {m}"),
+                Err(e) => panic!("short text must fit: {e}"),
+            }
         }
         Err(Error::Parse { .. } | Error::Limit(_) | Error::Encoding(_) | Error::Unsupported(_)) => {}
         Err(e) => panic!("unexpected error kind: {e}"),

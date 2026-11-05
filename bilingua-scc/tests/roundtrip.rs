@@ -288,3 +288,27 @@ fn sniff_is_strict() {
     assert!(!SccFilter.sniff(b""));
     assert!(!SccFilter.sniff(b"hello"));
 }
+
+#[test]
+fn a_caption_that_would_read_back_on_channel_2_is_refused() {
+    // lead decision 11-05 (the rc precedent): LocOS writes these files and a caption then vanishes on the next read.
+    // Caption 1 switches to channel 2 (1920) and back (9120) mid-row; caption 2 starts with characters before any
+    // code, so it is read on the channel caption 1 ended on.
+    let data = b"Scenarist_SCC V1.0\r\n\r\n00:00:01:00\t9420 9420 9470 9470 c1c2 1920 9120 c3c4\r\n00:00:02:00\tc5c6 e5e6\r\n".to_vec();
+    assert_eq!(units(&data), ["AB \u{27e6}x1\u{27e7} \u{27e6}x2\u{27e7}CD", "EFef"]);
+    // codes kept in order: written, and both captions read back
+    let out = try_build(&data, &[(0, "AB \u{27e6}x1\u{27e7} \u{27e6}x2\u{27e7}CD ok".to_string())]).unwrap();
+    assert_eq!(units(&out).len(), 2);
+    // the channel-2 code moved to the end: caption 1 now ends on channel 2 and caption 2 would vanish
+    let e = try_build(&data, &[(0, "AB \u{27e6}x2\u{27e7} CD \u{27e6}x1\u{27e7}".to_string())]).unwrap_err();
+    let msg = e.to_string();
+    assert!(matches!(e, Error::Write(_)), "{msg}");
+    assert!(msg.contains("caption 2 at 00:00:02:00: would be read back on data channel 2"), "{msg}");
+    assert!(!msg.contains("caption 1 "), "{msg}");
+    // the channel-1 code dropped: caption 1's own text is on channel 2, and so is caption 2
+    let msg = try_build(&data, &[(0, "AB \u{27e6}x1\u{27e7} CD".to_string())]).unwrap_err().to_string();
+    assert!(msg.contains("caption 1 at 00:00:01:00: would be read back on data channel 2"), "{msg}");
+    assert!(msg.contains("caption 2 at 00:00:02:00"), "{msg}");
+    // an untouched or echoed merge is never checked against this and stays exact
+    assert_identity(&data);
+}

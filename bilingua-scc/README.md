@@ -23,3 +23,21 @@ Localization OS SCC filter (`app/filters/scc_filter.py`), which is the baseline 
   (157 files against recorded LocOS output for ten mappings, bytes and refusal texts identical, made by
   `tests/tools/gen_golden.py`), round trips in eleven languages, hostile input (proptest), speed
   (`cargo test -p bilingua-scc --release --test speed -- --nocapture`, then `tests/tools/speed_locos.py`).
+
+## Differences from LocOS
+
+Everything else is LocOS byte parity (units, written bytes and refusal texts; `tests/locos_golden.rs`).
+
+- **Channel 2 on read-back (lead decision 11-05, the rc precedent).** The data channel carries from line to line,
+  so a caption that starts with a character before any channel-1 code is read on the channel the line before it
+  ended on. A translation that moves or drops an inline code that switches to channel 2 can put its own caption,
+  or the next one, on channel 2. LocOS writes that file and the caption vanishes on the next read. Bilingua re-reads
+  the merged file whenever a caption was re-encoded and refuses the merge (`Error::Write`, naming each caption and
+  timecode) when a caption would not read back as a channel-1 caption. Test:
+  `a_caption_that_would_read_back_on_channel_2_is_refused` in `tests/roundtrip.rs`.
+- A literal `⟦xN⟧` typed as text is refused (the token characters are not 608 characters); LocOS treats it as the
+  token, or drops it when the line has no such code. Inline codes travel as tags here.
+- An empty target means "not translated" (the line is kept); LocOS refuses an empty translation as "does not fit".
+- The unsupported-character scan stops at the eight characters the refusal shows (LocOS collects all of them in a
+  list, which is quadratic in distinct characters). The text is the same.
+- A unit whose stored original line holds a line break (a tampered document) is refused.

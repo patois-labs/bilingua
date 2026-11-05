@@ -15,3 +15,5 @@
   `cannot write: ` prefix). Parse errors are `Error::Parse`, size errors `Error::Limit`.
 - Oracle corpus: `oracle/corpus/scc/` (12 files, made by `tests/tools/gen_corpus.py`).
 - Warning kind `scc_lines_kept_verbatim` carries the count LocOS keeps in `skeleton["scc_lines_kept_verbatim"]`.
+- A merge that would leave a caption reading back on data channel 2 is refused with `Error::Write` (its own text,
+  not the `CaptionTargetError` one; see the README "Differences from LocOS"). The LocOS adapter shows it as is.

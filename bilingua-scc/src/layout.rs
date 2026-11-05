@@ -36,13 +36,18 @@ pub fn normalize_608(atoms: &[Atom]) -> Vec<Atom> {
     out
 }
 
-/// Characters (not tokens, not line breaks) that CEA-608 cannot represent, each once, in order.
-pub fn unsupported_chars(atoms: &[Atom]) -> Vec<char> {
+/// The first `cap` characters (not tokens, not line breaks) that CEA-608 cannot represent, each once, in order.
+/// Only the first eight are ever shown, so the scan stops there (LocOS collects them all in a list, which is
+/// quadratic in the number of distinct characters).
+pub fn unsupported_chars(atoms: &[Atom], cap: usize) -> Vec<char> {
     let mut seen: Vec<char> = Vec::new();
     for a in atoms {
         if let Atom::C(c) = a {
             if *c != '\n' && encode_char(*c).is_none() && !seen.contains(c) {
                 seen.push(*c);
+                if seen.len() >= cap {
+                    break;
+                }
             }
         }
     }
@@ -330,9 +335,9 @@ pub fn encode_line(line: &Line, text: &[Atom]) -> Result<Vec<Word>, String> {
         .filter(|a| !matches!(a, Atom::T(n) if *n == 0 || *n as usize > toks.len()))
         .collect();
     let text = normalize_608(&kept);
-    let bad = unsupported_chars(&text);
+    let bad = unsupported_chars(&text, 8);
     if !bad.is_empty() {
-        let shown: Vec<String> = bad.iter().take(8).map(|c| py_repr(*c)).collect();
+        let shown: Vec<String> = bad.iter().map(|c| py_repr(*c)).collect();
         return Err(format!("characters CEA-608 cannot show: {}", shown.join(" ")));
     }
     let n = line.rows.len();
