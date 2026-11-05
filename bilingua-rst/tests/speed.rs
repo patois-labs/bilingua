@@ -26,7 +26,14 @@ pub fn generate() -> String {
         s.push_str(&format!(
             "+------------------------------------------+------------------------------------------+\n| Header one                               | Header two                               |\n+==========================================+==========================================+\n| Cell {i}                                  | Another cell                             |\n+------------------------------------------+------------------------------------------+\n\n"
         ));
-        s.push_str(&format!("=======  ==========================\nName     Value\n=======  ==========================\nAlpha    First value {i}\nBeta     Second value\n=======  ==========================\n\n"));
+        s.push_str(&format!("{b}  {c}
+Name{p}  Value
+{b}  {c}
+Alpha{p2}  First value {i}
+Beta{p}  Second value
+{b}  {c}
+
+", b = "=".repeat(24), c = "=".repeat(26), p = " ".repeat(20), p2 = " ".repeat(19)));
         s.push_str(&format!(".. _target{i}: http://example.com/{i}\n.. |sub| replace:: substituted\n.. [1] The footnote text {i}.\n\n:Author: Jane Doe\n\n"));
         i += 1;
     }

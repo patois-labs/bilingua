@@ -240,11 +240,11 @@ fn a_translation_outside_the_code_page_is_written_as_utf8() {
 #[test]
 fn text_that_looks_like_a_charset_declaration_does_not_change_the_encoding() {
     // reStructuredText declares no charset: a meta field that mentions one is just text
-    let mut data = b"Caf\xe9\n====\n\n.. meta::\n   :http-equiv=Content-Type: text/html; charset=UTF-8\n\nUn paragraphe \xe0 traduire.\n".to_vec();
+    let data = b"Caf\xe9\n====\n\n.. meta::\n   :http-equiv=Content-Type: text/html; charset=UTF-8\n\nUn paragraphe \xe0 traduire.\n".to_vec();
     let mut doc = extract(&data).unwrap();
     assert_eq!(Rst.merge(&doc).unwrap(), data);
     doc.units[1].segments[0].target = vec![Inline::text("Un autre paragraphe \u{e0} lire.")];
     let out = Rst.merge(&doc).unwrap();
-    data = data.replace(b"Un paragraphe \xe0 traduire.", b"Un autre paragraphe \xe0 lire.");
-    assert_eq!(out, data, "still Windows-1252, not UTF-8");
+    let want = b"Caf\xe9\n====\n\n.. meta::\n   :http-equiv=Content-Type: text/html; charset=UTF-8\n\nUn autre paragraphe \xe0 lire.\n".to_vec();
+    assert_eq!(out, want, "still Windows-1252, not UTF-8");
 }
