@@ -12,9 +12,10 @@ let out = merge(&doc)?;                                // original format, targe
 let html = preview(&doc);                              // Markdown only: spans with data-bl-seg
 ```
 
-- `filters()`: text, JSON, Markdown, HTML, PO, SRT and VTT, DOCX, XLSX, PPTX (one crate each).
+- `filters()`: every format Bilingua reads, from office files to subtitles, software strings,
+  XLIFF and translation packages (one crate per format family). The workspace README has the full table.
 - `detect(name, bytes)`: by extension, then by sniffing the bytes.
 - `extract` applies sentence segmentation (`bilingua-seg`) for `opts.granularity`, using the source language
   (default `en`). `resegment`, `join` and `split` change segmentation later.
-- `merge` is byte-identical to the input when nothing is translated.
+- `merge` is byte-identical to the input when nothing is translated (zip formats keep every untouched entry as it was).
 - `preview` and `render_segment` exist for Markdown; other formats return `None`.
