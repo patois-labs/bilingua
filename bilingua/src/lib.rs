@@ -28,6 +28,8 @@ pub fn filters() -> Vec<Box<dyn Filter>> {
         Box::new(bilingua_subtitle::Srt),
         Box::new(bilingua_po::Po),
         Box::new(bilingua_resjson::Resjson),
+        // ARB before JSON: a no-extension file with a string @@locale is ARB.
+        Box::new(bilingua_arb::Arb),
         Box::new(bilingua_json::JsonFilter),
         Box::new(bilingua_json5::Json5Filter::default()),
         Box::new(bilingua_markdown::MarkdownFilter),
@@ -56,6 +58,10 @@ fn own_segmentation(id: &str) -> bool {
 /// The filter for a file: by extension first, then by sniffing the bytes.
 pub fn detect(name: &str, bytes: &[u8]) -> Option<Box<dyn Filter>> {
     let ext = name.rsplit_once('.').map(|(_, e)| e.to_ascii_lowercase()).unwrap_or_default();
+    // LocOS sends a .json file in ARB shape (a string @@locale) to its ARB dialect; so do we.
+    if ext == "json" && bilingua_arb::Arb.sniff(bytes) {
+        return Some(Box::new(bilingua_arb::Arb));
+    }
     let all = filters();
     let mut by_ext = None;
     let mut sniffed = None;

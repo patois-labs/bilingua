@@ -1,0 +1,18 @@
+{
+  "@@locale": "en",
+  "welcome": "Welcome to Larchmoor, {name}",
+  "@welcome": {"description": "Home page greeting", "placeholders": {"name": {"type": "String", "example": "Ana"}}},
+  "loaves": "{count, plural, =0{No loaves} one{# loaf} other{# loaves}} baked today",
+  "es": "Bienvenido a Larchmoor, {name}",
+  "fr": "Bienvenue à Larchmoor, {name}",
+  "it": "Benvenuti a Larchmoor, {name}",
+  "de": "Willkommen in Larchmoor, {name}",
+  "nl": "Welkom in Larchmoor, {name}",
+  "pt": "Bem-vindo a Larchmoor, {name}",
+  "ja": "ラーチムアへようこそ、{name}さん",
+  "zh": "欢迎来到拉奇莫尔，{name}",
+  "ko": "라치모어에 오신 것을 환영합니다, {name}님",
+  "ar": "مرحبا بكم في لارتشمور، {name}",
+  "ar_plural": "{count, plural, zero{لا خبز} one{رغيف واحد} two{رغيفان} few{# أرغفة} many{# رغيفا} other{# رغيف}}",
+  "esc": "tab\there \"quoted\" back\\slash \/ slash 😀"
+}

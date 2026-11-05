@@ -1,0 +1,10 @@
+{
+  "@@locale": "en",
+  "itemCountOne": "{count} item",
+  "itemCountOther": "{count} items",
+  "@itemCountOther": {"placeholders": {"count": {}}},
+  "showOther": "Show other",
+  "dayZero": "no days",
+  "dayFew": "OWN few",
+  "dayOther": "{n} days"
+}
