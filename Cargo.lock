@@ -56,6 +56,7 @@ dependencies = [
  "bilingua-resjson",
  "bilingua-resx",
  "bilingua-rst",
+ "bilingua-scc",
  "bilingua-sdl",
  "bilingua-sdlproj",
  "bilingua-seg",
@@ -462,6 +463,16 @@ dependencies = [
  "bilingua-model",
  "proptest",
  "serde_json",
+]
+
+[[package]]
+name = "bilingua-scc"
+version = "0.1.0"
+dependencies = [
+ "bilingua-model",
+ "proptest",
+ "serde_json",
+ "unicode-normalization",
 ]
 
 [[package]]

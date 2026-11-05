@@ -34,6 +34,7 @@ bilingua-xliffpkg = { workspace = true }
 bilingua-ini = { workspace = true }
 bilingua-sdlproj = { workspace = true }
 bilingua-htmlhelp = { workspace = true }
+bilingua-scc = { workspace = true }
 bilingua-mo = { workspace = true }
 bilingua-stl = { workspace = true }
 bilingua-ftl = { workspace = true }

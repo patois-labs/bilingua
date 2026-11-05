@@ -210,6 +210,7 @@ fn crate_of(format: &str) -> &'static str {
         "xslt" => "bilingua-xslt",
         "srt" | "vtt" => "bilingua-subtitle",
         "ass" | "ssa" => "bilingua-ass",
+        "scc" => "bilingua-scc",
         "txt" | "text" => "bilingua-text",
         "xliff" | "sdlxliff" | "mqxliff" | "mxliff" => "bilingua-xliff",
         "txml" | "txlf" => "bilingua-wordfast",
