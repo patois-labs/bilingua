@@ -206,3 +206,19 @@ fn big_and_odd_inputs_are_handled() {
     check(b"\xEF\xBB\xBF");
     check(b"\n\n\n");
 }
+
+/// A second byte-order mark: quick-xml skips a leading BOM and its offsets no longer matched the text (panic at a
+/// non-boundary byte index). Now a typed error.
+#[test]
+fn doubled_bom_is_a_typed_error() {
+    for bom in [2usize, 3] {
+        let mut data = b"\xEF\xBB\xBF".repeat(bom);
+        data.extend_from_slice(b"<Page xmlns=\"http://schemas.microsoft.com/winfx/2006/xaml/presentation\"><TextBlock Text=\"Hello\"/></Page>");
+        for f in [&OFF, &ON] {
+            assert!(f.extract(&data, &opts()).is_err());
+        }
+    }
+    let mut data = b"\xEF\xBB\xBF".to_vec();
+    data.extend_from_slice(b"<Page xmlns=\"http://schemas.microsoft.com/winfx/2006/xaml/presentation\"><TextBlock Text=\"Hello\"/></Page>");
+    assert!(OFF.extract(&data, &opts()).is_ok());
+}
