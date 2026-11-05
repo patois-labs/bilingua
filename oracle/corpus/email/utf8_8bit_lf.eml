@@ -1,0 +1,15 @@
+From: Ann <ann@example.com>
+To: Bob <bob@example.org>
+Subject: Grüße aus Köln
+MIME-Version: 1.0
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 8bit
+
+Hallo Anna,
+
+Ihre Bestellung wird am Montag versandt. Bitte bestätigen Sie Ihre Adresse bis zum Ende der Woche.
+
+Vielen Dank für Ihre Geduld. Grüße aus Köln.
+
+-- 
+Ann

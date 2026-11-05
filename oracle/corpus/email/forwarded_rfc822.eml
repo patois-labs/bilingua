@@ -1,0 +1,15 @@
+Subject: Fwd: hello
+Content-Type: multipart/mixed; boundary=f
+
+--f
+Content-Type: text/plain
+
+See below.
+--f
+Content-Type: message/rfc822
+
+Subject: inner
+Content-Type: text/plain
+
+Inner body.
+--f--

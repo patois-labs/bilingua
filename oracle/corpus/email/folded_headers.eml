@@ -1,0 +1,14 @@
+Received: from mx.example.com (mx.example.com [192.0.2.1])
+	by mail.example.org with ESMTP id abc123
+	for <bob@example.org>; Sat, 10 Oct 2026 20:00:00 -0600
+From: Ann <ann@example.com>
+To: Bob <bob@example.org>,
+ Carla <carla@example.org>
+Subject: A very long subject line that has to be folded by the mail client because
+ it runs past seventy eight columns
+MIME-Version: 1.0
+Content-Type: text/plain;
+ charset="us-ascii"
+Content-Transfer-Encoding: 7bit
+
+Short body.

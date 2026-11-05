@@ -172,6 +172,7 @@ fn crate_of(format: &str) -> &'static str {
         "po" => "bilingua-po",
         "ini" => "bilingua-ini",
         "mo" => "bilingua-mo",
+        "eml" => "bilingua-email",
         "csv" | "tsv" => "bilingua-csv",
         "desktop" | "catkeys" => "bilingua-desktop",
         "dtd" => "bilingua-dtd",

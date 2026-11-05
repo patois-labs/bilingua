@@ -1,0 +1,31 @@
+From: Ann <ann@example.com>
+To: Bob <bob@example.org>
+Subject: =?utf-8?b?T3JkZXIgdXBkYXRl?=
+MIME-Version: 1.0
+Content-Type: multipart/alternative; boundary="alt-en"
+
+Preamble text.
+--alt-en
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: quoted-printable
+
+Hello Ann,
+
+Your order ships on Monday. Please confirm your address before the end of t=
+he week.
+
+Thank you for your patience.
+
+--=20
+Ann
+
+--alt-en
+Content-Type: text/html; charset=utf-8
+Content-Transfer-Encoding: base64
+
+PGh0bWw+PGhlYWQ+PG1ldGEgY2hhcnNldD0idXRmLTgiPjwvaGVhZD48Ym9keT48aDE+SGVsbG8g
+QW5uLDwvaDE+PHA+WW91ciBvcmRlciBzaGlwcyBvbiBNb25kYXkuIFBsZWFzZSBjb25maXJtIHlv
+dXIgYWRkcmVzcyBiZWZvcmUgdGhlIGVuZCBvZiB0aGUgd2Vlay48L3A+PHA+VGhhbmsgeW91IGZv
+ciB5b3VyIHBhdGllbmNlLiA8Yj5PcmRlciB1cGRhdGU8L2I+PC9wPjwvYm9keT48L2h0bWw+Cg==
+
+--alt-en--

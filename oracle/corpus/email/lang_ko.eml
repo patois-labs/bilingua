@@ -1,0 +1,35 @@
+From: Ann <ann@example.com>
+To: Bob <bob@example.org>
+Subject: =?utf-8?b?7KO866y4IO2ZleyduA==?=
+MIME-Version: 1.0
+Content-Type: multipart/alternative; boundary="alt-ko"
+
+Preamble text.
+--alt-ko
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: quoted-printable
+
+=EC=95=88=EB=85=95=ED=95=98=EC=84=B8=EC=9A=94 =EC=95=A4=EB=8B=98,
+
+=EC=A3=BC=EB=AC=B8=ED=95=98=EC=8B=A0 =EC=83=81=ED=92=88=EC=9D=80 =EC=9B=94=
+=EC=9A=94=EC=9D=BC=EC=97=90 =EB=B0=9C=EC=86=A1=EB=90=A9=EB=8B=88=EB=8B=A4. =
+=EC=9D=B4=EB=B2=88 =EC=A3=BC =EB=A7=90=EA=B9=8C=EC=A7=80 =EC=A3=BC=EC=86=8C=
+=EB=A5=BC =ED=99=95=EC=9D=B8=ED=95=B4 =EC=A3=BC=EC=84=B8=EC=9A=94.
+
+=EA=B8=B0=EB=8B=A4=EB=A0=A4 =EC=A3=BC=EC=85=94=EC=84=9C =EA=B0=90=EC=82=AC=
+=ED=95=A9=EB=8B=88=EB=8B=A4.
+
+--=20
+Ann
+
+--alt-ko
+Content-Type: text/html; charset=utf-8
+Content-Transfer-Encoding: base64
+
+PGh0bWw+PGhlYWQ+PG1ldGEgY2hhcnNldD0idXRmLTgiPjwvaGVhZD48Ym9keT48aDE+7JWI64WV
+7ZWY7IS47JqUIOyVpOuLmCw8L2gxPjxwPuyjvOusuO2VmOyLoCDsg4HtkojsnYAg7JuU7JqU7J28
+7JeQIOuwnOyGoeuQqeuLiOuLpC4g7J2067KIIOyjvCDrp5DquYzsp4Ag7KO87IaM66W8IO2Zleyd
+uO2VtCDso7zshLjsmpQuPC9wPjxwPuq4sOuLpOugpCDso7zshZTshJwg6rCQ7IKs7ZWp64uI64uk
+LiA8Yj7so7zrrLgg7ZmV7J24PC9iPjwvcD48L2JvZHk+PC9odG1sPgo=
+
+--alt-ko--
