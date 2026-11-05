@@ -63,17 +63,41 @@ fn render(u: &Unit, items: &[Item], wide: bool) -> String {
     s
 }
 
+/// Refuses a rendered literal that would not read back as the same unit: it must lex as one string token, and
+/// when the translation has a letter or digit, one must survive outside the codes. Translated text is written
+/// as is (LocOS parity), so a `%` the translator put before a letter can join it into a printf placeholder
+/// (`%E`, `%d`); when that swallows every letter, the literal would read back as codes only and the unit
+/// would vanish from the next extract. That file is refused rather than written.
+fn check_rendered(u: &Unit, target: &[Item], s: &str) -> Result<(), Error> {
+    let toks = lex::lex(s);
+    let one_literal = matches!(toks.as_slice(), [t] if t.kind == lex::Kind::Str && t.start == 0 && t.end == s.len());
+    if !one_literal {
+        return Err(Error::Write(format!("unit {}: the translation does not form one string literal", u.id)));
+    }
+    let has_text = target.iter().any(|it| matches!(it, Item::Ch(c) if c.is_alphanumeric()));
+    let (pieces, _) = lit::pieces(s);
+    let keeps_text = pieces.iter().any(|p| matches!(p, lit::Piece::Text(t) if t.chars().any(char::is_alphanumeric)));
+    if has_text && !keeps_text {
+        return Err(Error::Write(format!(
+            "unit {}: every letter of the translation would be read as a format placeholder (a % right before a \
+             letter, such as %E or %d), so the string would be lost; put a space after the % or rephrase",
+            u.id
+        )));
+    }
+    Ok(())
+}
+
 /// Writes one unit; true when it changed the literal.
-fn write_unit(u: &Unit, out: &mut String) -> bool {
+fn write_unit(u: &Unit, out: &mut String) -> Result<bool, Error> {
     let raw = u.codes.get(RAW).and_then(|c| c.standalone.as_deref()).unwrap_or("");
     if !u.translate || u.segments.iter().all(|s| s.target.is_empty()) {
         out.push_str(raw);
-        return false;
+        return Ok(false);
     }
     let (src, new) = (u.source(), u.output());
     if src == new {
         out.push_str(raw);
-        return false;
+        return Ok(false);
     }
     let mut target = items_of(&new);
     if u.codes.contains_key(ACC) {
@@ -81,8 +105,11 @@ fn write_unit(u: &Unit, out: &mut String) -> bool {
     }
     let s = render(u, &target, raw.starts_with('L'));
     let changed = s != raw;
+    if changed {
+        check_rendered(u, &target, &s)?;
+    }
     out.push_str(&s);
-    changed
+    Ok(changed)
 }
 
 fn stamp_edits(sc: &Script, text: &str, locale: &str) -> Vec<(usize, usize, String)> {
@@ -233,7 +260,7 @@ impl Filter for Rc {
                 SkelPart::Raw(s) => out.push_str(s),
                 SkelPart::Unit(i) => {
                     let u = doc.units.get(*i).ok_or_else(|| Error::Write(format!("skeleton points at missing unit {i}")))?;
-                    edited |= write_unit(u, &mut out);
+                    edited |= write_unit(u, &mut out)?;
                 }
             }
         }
