@@ -37,6 +37,7 @@ bilingua-arb = { workspace = true }
 bilingua-dtd = { workspace = true }
 bilingua-xmb = { workspace = true }
 bilingua-qtts = { workspace = true }
+bilingua-php = { workspace = true }
 
 [dev-dependencies]
 zip = { workspace = true }

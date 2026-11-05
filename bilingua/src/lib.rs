@@ -50,6 +50,8 @@ pub fn filters() -> Vec<Box<dyn Filter>> {
         // Qt Linguist .ts sniffs strictly (XML with a <TS> root); `detect` decides the shared .ts extension.
         Box::new(bilingua_qtts::QtTs),
         Box::new(bilingua_jsmodule::JsModule),
+        // PHP language arrays sniff strictly (the file must open with <?php and parse as a static array).
+        Box::new(bilingua_php::Php),
         // resx sniffs XML with <root> and resource headers; it goes before the loose key-value sniffers.
         Box::new(bilingua_resx::Resx),
         // YAML sniffs any `word: text` line, so it goes after the stricter formats and before properties.
