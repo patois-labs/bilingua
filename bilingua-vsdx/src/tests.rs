@@ -5,7 +5,7 @@ use crate::*;
 use bilingua_zip::{read_zip, RawEntry};
 
 pub fn extract_for(bytes: &[u8], target: Option<&str>) -> Document {
-    Vsdx.extract(bytes, &ExtractOptions { target_lang: target.map(Into::into), ..Default::default() }).unwrap()
+    Vsdx.extract(bytes, &ExtractOptions::new().with_target_lang(target)).unwrap()
 }
 
 pub fn extract(bytes: &[u8]) -> Document {
@@ -302,14 +302,14 @@ fn hostile() {
         o => panic!("{o:?}"),
     }
     // the running cap, then the markup budget before any parse
-    let mut limits = Limits { max_units: 3, ..Default::default() };
-    let o = ExtractOptions { limits: Some(limits), ..Default::default() };
+    let mut limits = Limits::new().with_max_units(3);
+    let o = ExtractOptions::new().with_limits(limits);
     match Vsdx.extract(&package(), &o) {
         Err(Error::Limit(l)) => assert_eq!(l.kind, LimitKind::Units),
         r => panic!("{r:?}"),
     }
     limits.max_units = 1;
-    let o = ExtractOptions { limits: Some(limits), ..Default::default() };
+    let o = ExtractOptions::new().with_limits(limits);
     match Vsdx.extract(&package(), &o) {
         Err(Error::Limit(l)) => assert_eq!(l.kind, LimitKind::XmlElements),
         r => panic!("{r:?}"),

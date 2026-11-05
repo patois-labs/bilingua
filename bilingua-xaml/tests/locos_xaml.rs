@@ -168,7 +168,7 @@ fn hostile_inputs() {
     refused(&OFF, b"<ResourceDictionary><x:String>", "well-formed");
     refused(&OFF, b"<a>&undefined;</a>", "well-formed");
     assert!(OFF.extract(b"\x00\x01binary", &opts()).is_err());
-    let small = Limits { max_units: 3, ..Limits::default() };
+    let small = Limits::new().with_max_units(3);
     let many = format!(
         "<ResourceDictionary xmlns:x=\"http://schemas.microsoft.com/winfx/2009/xaml\">{}</ResourceDictionary>",
         (0..5).map(|i| format!("<x:String x:Key=\"k{i}\">Value {i}</x:String>")).collect::<String>()
@@ -177,7 +177,7 @@ fn hostile_inputs() {
     assert!(matches!(e, Error::Limit(_)));
     let flood = format!("<a>{}</a>", "<b/>".repeat(200));
     assert!(matches!(OFF.extract_with(flood.as_bytes(), &opts(), &small), Err(Error::Limit(_))));
-    let chars = Limits { max_unit_chars: 1000, ..Limits::default() };
+    let chars = Limits::new().with_max_unit_chars(1000);
     let big = format!(
         "<ResourceDictionary xmlns:x=\"http://schemas.microsoft.com/winfx/2009/xaml\"><x:String x:Key=\"k\">{}</x:String></ResourceDictionary>",
         "word ".repeat(400)

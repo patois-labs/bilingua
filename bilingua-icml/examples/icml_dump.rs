@@ -28,7 +28,7 @@ fn tok_text(u: &Unit, v: &[Inline]) -> String {
 }
 
 fn big() -> Limits {
-    Limits { max_units: 50_000_000, max_unit_chars: 10_000_000, max_input_bytes: 2 << 30, max_lines: 100_000_000, max_xml_elements: 100_000_000, ..Limits::default() }
+    Limits::new().with_max_units(50_000_000).with_max_unit_chars(10_000_000).with_max_input_bytes(2 << 30).with_max_lines(100_000_000).with_max_xml_elements(100_000_000)
 }
 
 fn pseudo(d: &mut Document) {
@@ -42,7 +42,7 @@ fn pseudo(d: &mut Document) {
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
-    let opts = ExtractOptions { granularity: Granularity::Paragraph, ..Default::default() };
+    let opts = ExtractOptions::new().with_granularity(Granularity::Paragraph);
     match args.get(1).map(String::as_str) {
         Some("dump") => {
             let bytes = std::fs::read(&args[2]).expect("read");
@@ -60,7 +60,7 @@ fn main() {
         }
         Some("pseudo") => {
             let bytes = std::fs::read(&args[2]).expect("read");
-            let o = ExtractOptions { target_lang: args.get(4).cloned(), ..opts };
+            let o = opts.with_target_lang(args.get(4).cloned());
             let mut d = Icml.extract_with(&bytes, &o, &big()).expect("extract");
             pseudo(&mut d);
             std::fs::write(&args[3], Icml.merge(&d).expect("merge")).expect("write");

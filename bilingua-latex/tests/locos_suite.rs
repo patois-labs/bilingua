@@ -189,7 +189,7 @@ fn hostile() {
     assert!(matches!(extract(bin), Err(Error::Encoding(_))));
     // segment cap
     let many: String = (0..30).map(|i| format!("Paragraph {i}.\n\n")).collect();
-    let o = ExtractOptions { limits: Some(Limits { max_units: 10, ..Limits::default() }), ..Default::default() };
+    let o = ExtractOptions::new().with_limits(Limits::new().with_max_units(10));
     assert!(matches!(Latex::default().extract(many.as_bytes(), &o), Err(Error::Limit(e)) if e.kind == LimitKind::Units));
     let deep = format!("\\section{{{}deep{}}}\n", "{".repeat(5000), "}".repeat(5000));
     let bads: Vec<Vec<u8>> = vec![

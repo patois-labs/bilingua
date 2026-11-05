@@ -183,7 +183,7 @@ fn enc_roundtrip(label: &'static str, lang: &str, text: &str, want_tag: &str) {
     let e = encoding_rs::Encoding::for_label(label.as_bytes()).unwrap();
     let (bytes, _, bad) = e.encode(text);
     assert!(!bad, "{label}");
-    let opts = ExtractOptions { source_lang: Some(lang.into()), granularity: Granularity::Paragraph, ..Default::default() };
+    let opts = ExtractOptions::new().with_source_lang(lang).with_granularity(Granularity::Paragraph);
     let mut doc = Rst.extract(&bytes, &opts).unwrap_or_else(|er| panic!("{label}: {er}"));
     let Skeleton::Text { encoding, .. } = &doc.skeleton else { panic!() };
     assert!(encoding.starts_with(want_tag), "{label}: {encoding}");
@@ -230,7 +230,7 @@ fn utf16_with_a_bom_is_read_and_kept() {
 fn a_translation_outside_the_code_page_is_written_as_utf8() {
     let e = encoding_rs::SHIFT_JIS;
     let (bytes, _, _) = e.encode("\u{898b}\u{51fa}\u{3057}\n======\n\n\u{672c}\u{6587}\u{3067}\u{3059}\u{3002}\n");
-    let opts = ExtractOptions { source_lang: Some("ja".into()), granularity: Granularity::Paragraph, ..Default::default() };
+    let opts = ExtractOptions::new().with_source_lang("ja").with_granularity(Granularity::Paragraph);
     let mut doc = Rst.extract(&bytes, &opts).unwrap();
     doc.units[1].segments[0].target = vec![Inline::text("\u{c548}\u{b155}")];
     let out = Rst.merge(&doc).unwrap();

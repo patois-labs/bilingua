@@ -183,11 +183,11 @@ fn deep_and_huge_inputs() {
 #[test]
 fn limits_are_typed_errors() {
     let many: Vec<u8> = (0..100).flat_map(|i| format!("Paragraph number {i}.\n\n").into_bytes()).collect();
-    let o = |l: Limits| ExtractOptions { limits: Some(l), ..Default::default() };
-    assert!(matches!(Rst.extract(&many, &o(Limits { max_units: 50, ..Limits::default() })), Err(Error::Limit(_))));
-    assert!(matches!(Rst.extract(&many, &o(Limits { max_input_bytes: 100, ..Limits::default() })), Err(Error::Limit(_))));
-    assert!(matches!(Rst.extract(&many, &o(Limits { max_lines: 10, ..Limits::default() })), Err(Error::Limit(_))));
-    assert!(matches!(Rst.extract(&many, &o(Limits { max_unit_chars: 5, ..Limits::default() })), Err(Error::Limit(_))));
+    let o = |l: Limits| ExtractOptions::new().with_limits(l);
+    assert!(matches!(Rst.extract(&many, &o(Limits::new().with_max_units(50))), Err(Error::Limit(_))));
+    assert!(matches!(Rst.extract(&many, &o(Limits::new().with_max_input_bytes(100))), Err(Error::Limit(_))));
+    assert!(matches!(Rst.extract(&many, &o(Limits::new().with_max_lines(10))), Err(Error::Limit(_))));
+    assert!(matches!(Rst.extract(&many, &o(Limits::new().with_max_unit_chars(5))), Err(Error::Limit(_))));
 }
 
 #[test]

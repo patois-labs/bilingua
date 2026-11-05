@@ -34,7 +34,7 @@ fn generate(min_bytes: usize) -> String {
 }
 
 fn big() -> ExtractOptions {
-    ExtractOptions { limits: Some(Limits { max_units: 50_000_000, max_unit_chars: 10_000_000, max_input_bytes: 2 << 30, max_xml_elements: 100_000_000, ..Limits::default() }), granularity: Granularity::Paragraph, ..Default::default() }
+    ExtractOptions::new().with_limits(Limits::new().with_max_units(50_000_000).with_max_unit_chars(10_000_000).with_max_input_bytes(2 << 30).with_max_xml_elements(100_000_000)).with_granularity(Granularity::Paragraph)
 }
 
 fn main() {

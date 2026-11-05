@@ -271,7 +271,7 @@ fn hostile_inputs() {
 
 #[test]
 fn segment_cap() {
-    let o = ExtractOptions { limits: Some(Limits { max_units: 5, ..Limits::default() }), ..Default::default() };
+    let o = ExtractOptions::new().with_limits(Limits::new().with_max_units(5));
     match Epub.extract(&epub(), &o) {
         Err(Error::Limit(l)) => assert_eq!(l.kind, LimitKind::Units),
         other => panic!("expected the unit cap, got {:?}", other.map(|d| d.units.len())),

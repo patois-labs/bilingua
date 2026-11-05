@@ -250,7 +250,7 @@ fn resource_suite_hostile_cases() {
     assert_eq!(show(&d.units[0]), "a \u{27E6}x1\u{27E7} b", "an undefined entity is a tag, never expanded");
     let deep = format!("<resources><string name='x'>{}t{}</string></resources>", "<b>".repeat(3000), "</b>".repeat(3000));
     assert!(xml.extract(deep.as_bytes(), &opts(None)).is_err());
-    let lim = ExtractOptions { limits: Some(Limits { max_units: 5, ..Limits::default() }), ..Default::default() };
+    let lim = ExtractOptions::new().with_limits(Limits::new().with_max_units(5));
     let many = format!("<resources>{}</resources>", (0..20).map(|i| format!("<string name=\"s{i}\">Text {i}</string>")).collect::<String>());
     assert!(matches!(xml.extract(many.as_bytes(), &lim), Err(Error::Limit(e)) if e.kind == LimitKind::Units));
     // a stray ]]> in a translation for a CDATA value falls back to split CDATA, still valid

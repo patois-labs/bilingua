@@ -131,22 +131,22 @@ fn deep_nesting_and_huge_files_are_limited() {
     let ok = format!("<WixLocalization><String Id=\"a\">{}x{}</String></WixLocalization>", "<a>".repeat(200), "</a>".repeat(200));
     assert!(try_ex(ok.as_bytes()).unwrap().units.is_empty());
     // Too many elements.
-    let small = ExtractOptions { limits: Some(Limits { max_xml_elements: 1000, ..Limits::default() }), ..opts(false) };
+    let small = opts(false).with_limits(Limits::new().with_max_xml_elements(1000));
     let many = root(&"<x/>".repeat(1001));
     assert!(matches!(Wxl.extract(&many, &small), Err(Error::Limit(l)) if l.kind == LimitKind::XmlElements));
     // The input size limit.
-    let small = ExtractOptions { limits: Some(Limits { max_input_bytes: 100, ..Limits::default() }), ..opts(false) };
+    let small = opts(false).with_limits(Limits::new().with_max_input_bytes(100));
     assert!(matches!(Wxl.extract(LOCOS_PACKAGE, &small), Err(Error::Limit(l)) if l.kind == LimitKind::InputBytes));
     // A value longer than the unit limit.
-    let small = ExtractOptions { limits: Some(Limits { max_unit_chars: 50, ..Limits::default() }), ..opts(false) };
+    let small = opts(false).with_limits(Limits::new().with_max_unit_chars(50));
     let long = root(&format!("<String Id=\"a\" Value=\"{}\"/>", "word ".repeat(30)));
     assert!(matches!(Wxl.extract(&long, &small), Err(Error::Limit(l)) if l.kind == LimitKind::UnitChars));
     // Exactly at the unit cap is fine, one over is not.
     let strings: String = (0..30).map(|i| format!("<String Id=\"k{i}\" Value=\"Value number {i}\"/>")).collect();
     let data = root(&strings);
-    let at = ExtractOptions { limits: Some(Limits { max_units: 30, ..Limits::default() }), ..opts(false) };
+    let at = opts(false).with_limits(Limits::new().with_max_units(30));
     assert_eq!(Wxl.extract(&data, &at).unwrap().units.len(), 30);
-    let over = ExtractOptions { limits: Some(Limits { max_units: 29, ..Limits::default() }), ..opts(false) };
+    let over = opts(false).with_limits(Limits::new().with_max_units(29));
     assert!(matches!(Wxl.extract(&data, &over), Err(Error::Limit(l)) if l.kind == LimitKind::Units));
     // A deeply nested file that is only comments, PIs and CDATA with markup-looking text is not counted as nesting.
     let tricky = root("<!-- <a><a><a> --><?pi <a><a> ?><String Id=\"s\"><![CDATA[<a><a><a><a>]]></String>");

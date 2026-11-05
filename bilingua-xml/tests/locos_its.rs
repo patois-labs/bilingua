@@ -207,7 +207,7 @@ fn user_rules_file() {
     assert_eq!(doc.units[0].notes[0].text, "Button label");
     // a pointer runs once per hit: hits x elements is bounded
     let many = format!("<d>{}</d>", "<g><p>t</p><n>x</n></g>".repeat(40));
-    let o = ExtractOptions { limits: Some(Limits { max_units: 20, ..Limits::default() }), ..Default::default() };
+    let o = ExtractOptions::new().with_limits(Limits::new().with_max_units(20));
     match f.extract(many.as_bytes(), &o) {
         Err(Error::Limit(e)) => assert!(e.msg.contains("locNotePointer"), "{}", e.msg),
         other => panic!("pointer budget not enforced: {:?}", other.map(|d| d.units.len())),
@@ -324,21 +324,21 @@ fn hostile_inputs() {
         other => panic!("deep nesting accepted: {:?}", other.map(|d| d.units.len())),
     }
     // segment cap
-    let o = ExtractOptions { limits: Some(Limits { max_units: 5, ..Limits::default() }), ..Default::default() };
+    let o = ExtractOptions::new().with_limits(Limits::new().with_max_units(5));
     let many = format!("<r>{}</r>", "<p>x</p>".repeat(6));
     match f.extract(many.as_bytes(), &o) {
         Err(Error::Limit(e)) => assert_eq!(e.kind, LimitKind::Units),
         other => panic!("segment cap not enforced: {:?}", other.map(|d| d.units.len())),
     }
     // element cap
-    let o = ExtractOptions { limits: Some(Limits { max_xml_elements: 100, ..Limits::default() }), ..Default::default() };
+    let o = ExtractOptions::new().with_limits(Limits::new().with_max_xml_elements(100));
     let huge = format!("<r>{}</r>", "<b/>".repeat(300));
     match f.extract(huge.as_bytes(), &o) {
         Err(Error::Limit(e)) => assert_eq!(e.kind, LimitKind::XmlElements),
         other => panic!("element budget not enforced: {:?}", other.map(|d| d.units.len())),
     }
     // rules x elements budget
-    let o = ExtractOptions { limits: Some(Limits { max_units: 5, ..Limits::default() }), ..Default::default() };
+    let o = ExtractOptions::new().with_limits(Limits::new().with_max_units(5));
     let costly = format!(
         r#"<r xmlns:its="http://www.w3.org/2005/11/its"><its:rules version="2.0">{}</its:rules>{}</r>"#,
         r#"<its:translateRule selector="//b" translate="no"/>"#.repeat(6),

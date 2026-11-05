@@ -34,7 +34,7 @@ impl Call {
         self
     }
     pub fn options(&self) -> ExtractOptions {
-        ExtractOptions { source_lang: self.src.clone(), target_lang: self.locale.clone(), ..Default::default() }
+        ExtractOptions::new().with_source_lang(self.src.clone()).with_target_lang(self.locale.clone())
     }
     pub fn copts(&self) -> CsvOptions {
         CsvOptions { columns: self.columns.clone(), target_locales: self.targets.clone() }

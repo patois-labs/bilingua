@@ -172,7 +172,7 @@ fn source_formula_cells_are_never_units() {
     let t = call(Some("de")).units(MULTI);
     assert!(!t.iter().any(|s| s.contains("SUM") || s.contains("0012")));
     // and are locked units only when asked for
-    let o = ExtractOptions { include_locked: true, target_lang: Some("de".into()), source_lang: Some("en".into()), ..Default::default() };
+    let o = ExtractOptions::new().with_include_locked(true).with_target_lang("de").with_source_lang("en");
     let doc = call(Some("de")).extract_with(MULTI, &o).unwrap();
     let locked: Vec<String> = doc.units.iter().filter(|u| !u.translate).map(|u| plain_text(&u.source())).collect();
     assert_eq!(locked, ["=\"0012\"", "=SUM(A1)"]);
@@ -291,7 +291,7 @@ fn hostile_inputs() {
     for i in 0..20 {
         rows.extend(format!("row {i}\n").bytes());
     }
-    let o = ExtractOptions { limits: Some(Limits { max_units: 5, ..Limits::default() }), ..Default::default() };
+    let o = ExtractOptions::new().with_limits(Limits::new().with_max_units(5));
     assert!(matches!(c.extract_with(&rows, &o), Err(Error::Limit(_))), "segment cap");
 }
 

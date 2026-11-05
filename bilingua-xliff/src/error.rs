@@ -4,6 +4,7 @@ use thiserror::Error as ThisError;
 
 /// Errors from opening, parsing and saving.
 #[derive(Debug, ThisError)]
+#[non_exhaustive]
 pub enum Error {
     #[error("I/O error: {0}")]
     Io(#[from] std::io::Error),

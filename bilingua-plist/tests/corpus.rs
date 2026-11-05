@@ -34,7 +34,7 @@ fn kind(name: &str) -> F {
 }
 
 fn open(name: &str, bytes: &[u8], mode: Granularity, target: Option<&str>) -> Document {
-    let opts = ExtractOptions { source_lang: Some("en".into()), target_lang: target.map(String::from), granularity: mode, include_locked: true, ..Default::default() };
+    let opts = ExtractOptions::new().with_source_lang("en").with_target_lang(target.map(String::from)).with_granularity(mode).with_include_locked(true);
     let mut d = ex_with(kind(name), bytes, &opts);
     segment(&mut d, "en", mode, Rules::bundled());
     d
@@ -159,7 +159,7 @@ fn plural_fill_follows_each_of_eleven_target_languages() {
         ("ar", &["one", "zero", "two", "few", "many", "other"]),
     ];
     for (lang, forms) in want {
-        let d = ex_with(F::Sd, &en, &ExtractOptions { target_lang: Some((*lang).into()), ..Default::default() });
+        let d = ex_with(F::Sd, &en, &ExtractOptions::new().with_target_lang(*lang));
         let out = merged(F::Sd, &prefixed(&d, "T "));
         assert_eq!(names(&out, "files_count"), *forms, "{lang}");
         let recs = stringsdict_records(&out).unwrap();
@@ -171,7 +171,7 @@ fn plural_fill_follows_each_of_eleven_target_languages() {
     for lang in ["en", "de", "fr", "es", "ja", "zh", "ko", "ar", "hi", "ru", "pt"] {
         let sub = "../oracle/corpus/plist";
         let bytes = std::fs::read(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(sub).join(format!("lang_{lang}.stringsdict"))).unwrap();
-        let d = ex_with(F::Sd, &bytes, &ExtractOptions { target_lang: Some(lang.into()), ..Default::default() });
+        let d = ex_with(F::Sd, &bytes, &ExtractOptions::new().with_target_lang(lang));
         let out = merged(F::Sd, &prefixed(&d, "T "));
         let before: Vec<String> = names(&bytes, "files_count");
         let mut after = names(&out, "files_count");

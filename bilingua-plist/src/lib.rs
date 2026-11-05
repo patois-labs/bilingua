@@ -255,16 +255,7 @@ fn extract_impl(fmt: Fmt, bytes: &[u8], opts: &ExtractOptions, limits: &Limits) 
         }
         Origin::Binary { .. } => (BINARY.to_string(), Vec::new()),
     };
-    let doc = Document {
-        format: fmt.id().into(),
-        name: None,
-        source_lang: opts.source_lang.clone(),
-        target_lang: opts.target_lang.clone(),
-        granularity: opts.granularity,
-        units,
-        skeleton: Skeleton::text(parts, encoding, bilingua_model::parser_info!()),
-        warnings: Vec::new(),
-    };
+    let doc = Document::new(fmt.id(), units, Skeleton::text(parts, encoding, bilingua_model::parser_info!())).with_options(opts);
     guard::finish(doc, warnings, limits)
 }
 

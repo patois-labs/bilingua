@@ -216,14 +216,14 @@ fn deep_wide_and_huge_files_hit_the_limits() {
     let deep = format!("{}x{}", "<a>".repeat(5000), "</a>".repeat(5000));
     assert!(matches!(f.extract(deep.as_bytes(), &opts(None)), Err(Error::Limit(e)) if e.kind == LimitKind::XmlDepth));
     // a caller who raises the depth limit still gets a typed error, never a stack overflow
-    let o = ExtractOptions { limits: Some(Limits { max_xml_depth: 1_000_000, ..Limits::default() }), ..Default::default() };
+    let o = ExtractOptions::new().with_limits(Limits::new().with_max_xml_depth(1_000_000));
     let deeper = format!("{}x{}", "<a>".repeat(60_000), "</a>".repeat(60_000));
     assert!(matches!(f.extract(deeper.as_bytes(), &o), Err(Error::Limit(e)) if e.kind == LimitKind::XmlDepth));
     let attrs = format!("<r {}/>", (0..20_000).map(|i| format!("a{i}=\"v\"")).collect::<Vec<_>>().join(" "));
     assert!(f.extract(attrs.as_bytes(), &opts(None)).is_ok());
     let dup = format!("<r {}/>", (0..20_000).map(|_| "a=\"v\"".to_string()).collect::<Vec<_>>().join(" "));
     assert!(matches!(f.extract(dup.as_bytes(), &opts(None)), Err(Error::Parse { .. })));
-    let small = ExtractOptions { limits: Some(Limits { max_input_bytes: 100, ..Limits::default() }), ..Default::default() };
+    let small = ExtractOptions::new().with_limits(Limits::new().with_max_input_bytes(100));
     assert!(matches!(f.extract(&[b'<'; 200], &small), Err(Error::Limit(e)) if e.kind == LimitKind::InputBytes));
     let long = format!("<r>{}</r>", "word ".repeat(30_000));
     assert!(matches!(f.extract(long.as_bytes(), &opts(None)), Err(Error::Limit(e)) if e.kind == LimitKind::UnitChars));
@@ -286,7 +286,7 @@ fn string_heavy_xpath_is_refused_quickly() {
     let f = XmlFilter::new().its_rules(bilingua_xml::ItsRules::parse(rules.as_bytes()).unwrap());
     let doc = format!("<r>{}{}{}</r>", "<a>".repeat(20), "x".repeat(1_000_000), "</a>".repeat(20));
     let t = std::time::Instant::now();
-    let o = ExtractOptions { limits: Some(Limits { max_unit_chars: 10_000_000, ..Limits::default() }), ..Default::default() };
+    let o = ExtractOptions::new().with_limits(Limits::new().with_max_unit_chars(10_000_000));
     assert!(matches!(f.extract(doc.as_bytes(), &o), Err(Error::Parse { msg, .. }) if msg.contains("too expensive")));
     assert!(t.elapsed().as_secs() < 20, "{:?}", t.elapsed());
     // `//a = //b` compares every pair

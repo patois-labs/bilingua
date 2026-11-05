@@ -469,7 +469,7 @@ fn hostile() {
     let only_mime = write_zip(&[(EntryMeta { name: "mimetype".into(), stored: true, dir: false, modified: None }, MIME_TEXT.as_bytes().to_vec())]).unwrap();
     refused(&only_mime, "no content.xml");
     // segment cap, then the markup budget
-    let tiny = |n: usize| ExtractOptions { limits: Some(Limits { max_units: n, ..Limits::default() }), ..Default::default() };
+    let tiny = |n: usize| ExtractOptions::new().with_limits(Limits::new().with_max_units(n));
     match Odt::default().extract(&odt(), &tiny(3)) {
         Err(Error::Limit(l)) => assert_eq!(l.kind, LimitKind::Units),
         other => panic!("{:?}", other.map(|d| d.units.len())),

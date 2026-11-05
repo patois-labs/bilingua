@@ -193,7 +193,7 @@ fn test_hostile_inputs() {
     assert_eq!(limit_kind(&e), LimitKind::XmlDepth);
     assert!(e.to_string().contains("nested"));
     // caps (the suite lowers MAX_DOCUMENT_SEGMENTS to 3)
-    let small = ExtractOptions { limits: Some(Limits { max_units: 3, ..Limits::default() }), ..Default::default() };
+    let small = ExtractOptions::new().with_limits(Limits::new().with_max_units(3));
     let many = format!("{{\"sourceLanguage\":\"en\",\"strings\":{{{}}}}}", (0..5).map(|i| format!("\"String {i}\":{{}}")).collect::<Vec<_>>().join(","));
     let e = Xcstrings.extract(many.as_bytes(), &small).unwrap_err();
     assert_eq!(limit_kind(&e), LimitKind::Units);

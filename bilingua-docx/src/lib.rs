@@ -332,16 +332,7 @@ fn extract_doc_inner(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Er
         data: ZipData::Raw(meta_json),
     });
 
-    Ok(Document {
-        format: "docx".into(),
-        name: None,
-        source_lang: opts.source_lang.clone().or(lang_default),
-        target_lang: opts.target_lang.clone(),
-        granularity: Granularity::Paragraph,
-        units,
-        skeleton: Skeleton::zip(zentries, bilingua_model::parser_info!()),
-        warnings: vec![],
-    })
+    Ok(Document::new("docx", units, Skeleton::zip(zentries, bilingua_model::parser_info!())).with_source_lang(opts.source_lang.clone().or(lang_default)).with_target_lang(opts.target_lang.clone()).with_granularity(Granularity::Paragraph))
 }
 
 type Split<'a> = (Option<Meta>, Vec<&'a ZipEntry>);

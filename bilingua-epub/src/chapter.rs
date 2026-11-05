@@ -203,13 +203,7 @@ impl Chapter {
             unit.segments = u
                 .segments
                 .iter()
-                .map(|s| Segment {
-                    id: s.id.strip_prefix(&prefix).unwrap_or(&s.id).to_string(),
-                    source: safe(&s.source, sentinel),
-                    target: safe(&s.target, sentinel),
-                    state: s.state,
-                    origin: s.origin.clone(),
-                })
+                .map(|s| Segment::new(s.id.strip_prefix(&prefix).unwrap_or(&s.id).to_string(), safe(&s.source, sentinel)).with_target(safe(&s.target, sentinel)).with_state(s.state).with_origin(s.origin.clone()))
                 .collect();
             unit.separators = u.separators.iter().map(|x| x.replace('&', &sentinel.to_string())).collect();
         }
@@ -446,7 +440,7 @@ mod tests {
 
     #[test]
     fn depth_ignores_void_elements() {
-        let l = Limits { max_xml_depth: 5, ..Limits::default() };
+        let l = Limits::new().with_max_xml_depth(5);
         let t = format!("<html><body>{}</body></html>", "<br>".repeat(100));
         assert!(check_xhtml(&t, &l).is_ok());
         let deep = format!("{}{}", "<div>".repeat(6), "</div>".repeat(6));

@@ -16,7 +16,7 @@ fn text(b: &[u8]) -> String {
 }
 
 fn opts_for(lang: &str) -> ExtractOptions {
-    ExtractOptions { target_lang: Some(lang.into()), ..Default::default() }
+    ExtractOptions::new().with_target_lang(lang)
 }
 
 /// The stringsdict fixture as a binary plist (what `plistlib.dumps(..., FMT_BINARY)` made in the suite).
@@ -312,13 +312,13 @@ fn test_hostile_inputs() {
     let e = parse_err(f, mid.as_bytes());
     assert!(is_limit(&e, LimitKind::XmlDepth) && e.to_string().contains("nested"), "{e:?}");
     // caps: segment count, markup budget, one huge value
-    let small = Limits { max_units: 3, ..Limits::default() };
+    let small = Limits::new().with_max_units(3);
     let o = ExtractOptions::default();
     let many = format!("{HEAD}<plist><array>{}</array></plist>", "<string>Hello there</string>".repeat(5));
     assert!(is_limit(&Plist.extract_with(many.as_bytes(), &o, &small).unwrap_err(), LimitKind::Units));
     let budget = format!("{HEAD}<plist><array>{}</array></plist>", "<true/>".repeat(200));
     assert!(is_limit(&Plist.extract_with(budget.as_bytes(), &o, &small).unwrap_err(), LimitKind::Units));
-    let short = Limits { max_unit_chars: 50, ..Limits::default() };
+    let short = Limits::new().with_max_unit_chars(50);
     let big = format!("{HEAD}<plist><string>{}</string></plist>", "word ".repeat(40));
     assert!(is_limit(&Plist.extract_with(big.as_bytes(), &o, &short).unwrap_err(), LimitKind::UnitChars));
     // entities and CDATA that ARE allowed decode once and round-trip

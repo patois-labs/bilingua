@@ -5,7 +5,7 @@ const JSON: &str = "{\n  \"title\": \"Harbor lamp. Warm light.\",\n  \"url\": \"
 const MD: &str = "---\ntitle: Lamp guide\n---\n\n# Harbor lamp\n\nFirst sentence. **Second** sentence here. See [docs](https://x.test).\n\n- One item. Another one.\n";
 
 fn opts(lang: &str, mode: Granularity) -> ExtractOptions {
-    ExtractOptions { source_lang: Some(lang.into()), granularity: mode, ..Default::default() }
+    ExtractOptions::new().with_source_lang(lang).with_granularity(mode)
 }
 
 #[test]

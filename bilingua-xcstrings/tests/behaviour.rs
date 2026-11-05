@@ -177,7 +177,7 @@ fn untouched_text_is_byte_for_byte() {
 
 #[test]
 fn locked_units_are_listed_on_request_and_never_merged() {
-    let o = ExtractOptions { include_locked: true, ..Default::default() };
+    let o = ExtractOptions::new().with_include_locked(true);
     let d = Xcstrings.extract(LOCOS_CATALOG, &o).unwrap();
     let locked: Vec<&Unit> = d.units.iter().filter(|u| !u.translate).collect();
     assert_eq!(locked.len(), 2, "{:?}", locked.iter().map(|u| locos_text(u)).collect::<Vec<_>>());
@@ -249,8 +249,8 @@ fn granularity_is_carried_and_sentences_merge_back() {
     let u = &mut d.units[0];
     let s0 = u.segments[0].clone();
     u.segments = vec![
-        Segment { id: "u1#1".into(), source: vec![Inline::text("One.")], target: vec![Inline::text("Eins.")], ..s0.clone() },
-        Segment { id: "u1#2".into(), source: vec![Inline::text("Two.")], target: vec![Inline::text("Zwei.")], ..s0 },
+        Segment::new("u1#1", vec![Inline::text("One.")]).with_target(vec![Inline::text("Eins.")]).with_state(s0.state).with_origin(s0.origin.clone()),
+        Segment::new("u1#2", vec![Inline::text("Two.")]).with_target(vec![Inline::text("Zwei.")]).with_state(s0.state).with_origin(s0.origin),
     ];
     u.separators = vec![" ".into()];
     let v = json(&merged(&d));

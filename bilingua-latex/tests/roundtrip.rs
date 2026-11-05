@@ -175,7 +175,7 @@ fn utf16_keeps_its_byte_order_mark() {
 fn units_ids_are_stable_and_paragraph_mode_works() {
     let data = std::fs::read(corpus_dir().join("features.tex")).unwrap();
     let a = extract(&data).unwrap();
-    let b = Latex::default().extract(&data, &ExtractOptions { granularity: Granularity::Paragraph, ..Default::default() }).unwrap();
+    let b = Latex::default().extract(&data, &ExtractOptions::new().with_granularity(Granularity::Paragraph)).unwrap();
     let ids = |d: &Document| d.units.iter().map(|u| u.id.clone()).collect::<Vec<_>>();
     assert_eq!(ids(&a), ids(&b));
     assert_eq!(ids(&a)[..3], ["u1", "u2", "u3"]);
@@ -189,7 +189,7 @@ fn include_locked_adds_units_without_letters() {
     let data = b"\\begin{document}\nHello.\n\n\\label{a}\\ref{b}\n\n12.5\n\\end{document}\n";
     let plain = extract(data).unwrap();
     assert_eq!(plain.units.len(), 1);
-    let doc = Latex::default().extract(data, &ExtractOptions { include_locked: true, ..Default::default() }).unwrap();
+    let doc = Latex::default().extract(data, &ExtractOptions::new().with_include_locked(true)).unwrap();
     assert_eq!(doc.units.iter().map(|u| u.id.as_str()).collect::<Vec<_>>(), ["u1", "k1", "k2"].map(String::from));
     assert!(doc.units.iter().skip(1).all(|u| !u.translate));
     assert_eq!(Latex::default().merge(&doc).unwrap(), data);

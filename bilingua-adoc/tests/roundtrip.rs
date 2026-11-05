@@ -116,7 +116,7 @@ fn legacy_code_pages_keep_their_bytes() {
     for (lang, enc_, text, tr) in cases {
         let (bytes, _, bad) = enc_.encode(text);
         assert!(!bad, "{lang}");
-        let o = ExtractOptions { source_lang: Some(lang.into()), ..Default::default() };
+        let o = ExtractOptions::new().with_source_lang(lang);
         let mut doc = Adoc.extract(&bytes, &o).unwrap_or_else(|e| panic!("{lang}: {e}"));
         assert!(doc.units.len() >= 2, "{lang}");
         assert_eq!(Adoc.merge(&doc).unwrap(), bytes.as_ref(), "{lang}: untouched");
@@ -162,7 +162,7 @@ fn utf16_and_bom_round_trip() {
 #[test]
 fn locked_units_and_the_skeleton() {
     let src = "== 2026\n\nText here.\n\n* 100\n\n:attr: value\n";
-    let o = ExtractOptions { include_locked: true, ..Default::default() };
+    let o = ExtractOptions::new().with_include_locked(true);
     let doc = Adoc.extract(src.as_bytes(), &o).unwrap();
     assert_eq!(doc.units.iter().filter(|u| !u.translate).count(), 2);
     assert_eq!(Adoc.merge(&doc).unwrap(), src.as_bytes());

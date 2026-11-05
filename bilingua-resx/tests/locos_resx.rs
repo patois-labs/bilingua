@@ -117,10 +117,10 @@ fn hostile_inputs() {
     let mut big = b"<root>".to_vec();
     big.extend(b"<x/>".repeat(300));
     big.extend_from_slice(b"</root>");
-    let small = Limits { max_xml_elements: 200, ..Limits::default() };
+    let small = Limits::new().with_max_xml_elements(200);
     let e = Resx.extract_with(&big, &opts(), &small).unwrap_err().to_string();
     assert!(e.contains("elements"), "{e}");
-    let many = Limits { max_units: 2, ..Limits::default() };
+    let many = Limits::new().with_max_units(2);
     let e = Resx.extract_with(STRINGS, &opts(), &many).unwrap_err().to_string();
     assert!(e.contains("segments"), "{e}");
 }

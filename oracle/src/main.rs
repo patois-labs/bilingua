@@ -116,11 +116,7 @@ fn main() {
             return;
         }
     };
-    let opts = bilingua::ExtractOptions {
-        target_lang: Some("es-ES".into()),
-        granularity: Granularity::Paragraph,
-        ..Default::default()
-    };
+    let opts = bilingua::ExtractOptions::new().with_target_lang("es-ES").with_granularity(Granularity::Paragraph);
     let doc = match bilingua::extract(&name, &bytes, &opts) {
         Ok(d) => d,
         Err(e) => {

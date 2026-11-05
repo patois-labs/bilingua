@@ -169,8 +169,8 @@ fn huge_and_degenerate_files() {
     d.extend(b"a".repeat(200_000));
     assert!(matches!(extract(&d), Err(Error::Limit(_))));
     // oversized input
-    let l = Limits { max_input_bytes: 100, ..Limits::default() };
-    let o = ExtractOptions { limits: Some(l), ..Default::default() };
+    let l = Limits::new().with_max_input_bytes(100);
+    let o = ExtractOptions::new().with_limits(l);
     assert!(matches!(Xtg.extract(&[b'a'; 101], &o), Err(Error::Limit(_))));
 }
 

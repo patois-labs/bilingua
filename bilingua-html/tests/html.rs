@@ -6,7 +6,7 @@ fn extract(src: &str) -> Document {
 }
 
 fn extract_to(src: &str, lang: &str) -> Document {
-    Html.extract(src.as_bytes(), &ExtractOptions { target_lang: Some(lang.into()), ..Default::default() }).unwrap()
+    Html.extract(src.as_bytes(), &ExtractOptions::new().with_target_lang(lang)).unwrap()
 }
 
 fn merged(d: &Document) -> String {
@@ -250,7 +250,7 @@ fn pre_code_and_notranslate_are_protected() {
     assert!(out.contains("<pre>  line one\n  line two <b>bold</b>\n</pre>"));
 
     // With locked units requested, locked text appears but cannot be edited.
-    let mut dl = Html.extract(src.as_bytes(), &ExtractOptions { include_locked: true, ..Default::default() }).unwrap();
+    let mut dl = Html.extract(src.as_bytes(), &ExtractOptions::new().with_include_locked(true)).unwrap();
     let locked: Vec<String> = dl.units.iter().filter(|u| !u.translate).map(|u| u.segments[0].id.clone()).collect();
     assert_eq!(locked.len(), 2);
     assert!(dl.set_target(&locked[0], vec![Inline::text("x")]).is_err());
@@ -498,8 +498,8 @@ fn preview_with_segmented_units() {
     let mut d = extract("<p>One. Two.</p>");
     let u = &mut d.units[0];
     u.segments = vec![
-        Segment { id: "u1#1".into(), source: vec![Inline::text("One.")], target: vec![], state: SegState::New, origin: None },
-        Segment { id: "u1#2".into(), source: vec![Inline::text("Two.")], target: vec![Inline::text("Dos.")], state: SegState::Draft, origin: None },
+        Segment::new("u1#1", vec![Inline::text("One.")]),
+        Segment::new("u1#2", vec![Inline::text("Two.")]).with_target(vec![Inline::text("Dos.")]).with_state(SegState::Draft),
     ];
     u.separators = vec![" ".into()];
     let pv = Html.preview(&d).unwrap();
@@ -557,7 +557,7 @@ fn deep_nesting_is_a_typed_limit_error_and_fast() {
     assert!(Html.extract(src.as_bytes(), &ExtractOptions::default()).is_ok());
     // a caller can raise or lower the cap
     let src = format!("<div>{}x{}</div>", "<div>".repeat(40), "</div>".repeat(40));
-    let tight = ExtractOptions { limits: Some(Limits { max_xml_depth: 20, ..Limits::default() }), ..Default::default() };
+    let tight = ExtractOptions::new().with_limits(Limits::new().with_max_xml_depth(20));
     assert!(matches!(Html.extract(src.as_bytes(), &tight), Err(Error::Limit(_))));
     assert!(Html.extract(src.as_bytes(), &ExtractOptions::default()).is_ok());
     // an unlimited depth (email passes usize::MAX for HTML parts) must not overflow

@@ -107,7 +107,7 @@ fn units_ids_context_and_styles() {
 
 #[test]
 fn paragraph_granularity_is_one_segment_per_unit() {
-    let d = Yaml.extract(b"k: One sentence. Another sentence.\n", &ExtractOptions { granularity: Granularity::Paragraph, ..Default::default() }).unwrap();
+    let d = Yaml.extract(b"k: One sentence. Another sentence.\n", &ExtractOptions::new().with_granularity(Granularity::Paragraph)).unwrap();
     assert_eq!(d.units.len(), 1);
     assert_eq!(d.units[0].segments.len(), 1);
 }

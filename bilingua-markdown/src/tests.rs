@@ -249,8 +249,8 @@ fn preview_wraps_every_segment_and_blocks_scripts() {
     let u = &mut d.units[1];
     let src = u.source();
     u.segments = vec![
-        Segment { id: "u2#1".into(), source: vec![src[0].clone()].into_iter().map(|_| Inline::text("First sentence.")).collect(), target: vec![], state: SegState::New, origin: None },
-        Segment { id: "u2#2".into(), source: src[1..].to_vec(), target: vec![], state: SegState::New, origin: None },
+        Segment::new("u2#1", vec![src[0].clone()].into_iter().map(|_| Inline::text("First sentence.")).collect()),
+        Segment::new("u2#2", src[1..].to_vec()),
     ];
     u.separators = vec![" ".into()];
     d.set_target("u1", vec![Inline::text("T\u{ed}tulo")]).unwrap();
@@ -343,8 +343,8 @@ fn awkward_documents_always_round_trip() {
 fn works_with_segmentation_separators() {
     let mut d = extract("One. Two.\n");
     d.units[0].segments = vec![
-        Segment { id: "u1#1".into(), source: vec![Inline::text("One.")], target: vec![Inline::text("Uno.")], state: SegState::Draft, origin: None },
-        Segment { id: "u1#2".into(), source: vec![Inline::text("Two.")], target: vec![], state: SegState::New, origin: None },
+        Segment::new("u1#1", vec![Inline::text("One.")]).with_target(vec![Inline::text("Uno.")]).with_state(SegState::Draft),
+        Segment::new("u1#2", vec![Inline::text("Two.")]),
     ];
     d.units[0].separators = vec![" ".into()];
     assert_eq!(merged(&d), "Uno. Two.\n");

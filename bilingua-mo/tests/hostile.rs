@@ -171,23 +171,23 @@ fn huge_counts_are_refused_before_allocation() {
         assert!(is_typed(&e), "{n}: {e:?}");
     }
     // a lowered cap is honoured
-    let lim = Limits { max_units: 2, ..Limits::default() };
-    assert!(Mo.extract(&mo_le(), &ExtractOptions { limits: Some(lim), ..Default::default() }).is_err());
+    let lim = Limits::new().with_max_units(2);
+    assert!(Mo.extract(&mo_le(), &ExtractOptions::new().with_limits(lim)).is_err());
     // the input size limit comes first
-    let lim = Limits { max_input_bytes: 10, ..Limits::default() };
-    let e = Mo.extract(&mo_le(), &ExtractOptions { limits: Some(lim), ..Default::default() }).unwrap_err();
+    let lim = Limits::new().with_max_input_bytes(10);
+    let e = Mo.extract(&mo_le(), &ExtractOptions::new().with_limits(lim)).unwrap_err();
     assert!(matches!(e, Error::Limit(ref l) if l.kind == LimitKind::InputBytes), "{e:?}");
     // a string longer than the unit limit allows (8 bytes a character)
-    let lim = Limits { max_unit_chars: 2, ..Limits::default() };
-    assert!(matches!(Mo.extract(&mo_le(), &ExtractOptions { limits: Some(lim), ..Default::default() }), Err(Error::Limit(_))));
+    let lim = Limits::new().with_max_unit_chars(2);
+    assert!(matches!(Mo.extract(&mo_le(), &ExtractOptions::new().with_limits(lim)), Err(Error::Limit(_))));
 }
 
 #[test]
 fn a_unit_longer_than_the_limit_is_refused() {
     let long = "x".repeat(300);
     let f = pack(&pairs(&[("", HEADER_FR), (long.as_str(), "y")]));
-    let lim = Limits { max_unit_chars: 200, ..Limits::default() };
-    let e = Mo.extract(&f, &ExtractOptions { limits: Some(lim), ..Default::default() }).unwrap_err();
+    let lim = Limits::new().with_max_unit_chars(200);
+    let e = Mo.extract(&f, &ExtractOptions::new().with_limits(lim)).unwrap_err();
     assert!(matches!(e, Error::Limit(ref l) if l.kind == LimitKind::UnitChars), "{e:?}");
 }
 

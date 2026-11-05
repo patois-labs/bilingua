@@ -11,7 +11,7 @@ pub fn fixture(name: &str) -> Vec<u8> {
 }
 
 pub fn opts(target: Option<&str>) -> ExtractOptions {
-    ExtractOptions { target_lang: target.map(String::from), ..Default::default() }
+    ExtractOptions::new().with_target_lang(target.map(String::from))
 }
 
 pub fn extract(b: &[u8]) -> Document {

@@ -27,7 +27,7 @@ fn corpus() -> Vec<(String, Vec<u8>)> {
 }
 
 fn opts(mode: Granularity) -> ExtractOptions {
-    ExtractOptions { source_lang: Some("en".into()), target_lang: Some("es-ES".into()), granularity: mode, include_locked: true, limits: None, format_options: Default::default() }
+    ExtractOptions::new().with_source_lang("en").with_target_lang("es-ES").with_granularity(mode).with_include_locked(true).with_format_options(Default::default())
 }
 
 fn open(name: &str, bytes: &[u8], mode: Granularity) -> Document {
@@ -455,7 +455,7 @@ fn raw_zip_bytes_are_base64_and_the_old_array_form_still_merges() {
 #[test]
 fn utf8_out_writes_utf8_for_every_text_format() {
     // `OutputEncoding::Utf8` means UTF-8 out literally, also for formats that keep UTF-16 or a code page by default
-    let utf8 = MergeOptions { output_encoding: OutputEncoding::Utf8, ..MergeOptions::default() };
+    let utf8 = MergeOptions::new().with_output_encoding(OutputEncoding::Utf8);
     for (name, bytes) in corpus() {
         let doc = open(&name, &bytes, Granularity::Paragraph);
         // binary plists keep the file in a text skeleton (tag "bplist"): not text, nothing to re-encode
@@ -470,7 +470,7 @@ fn utf8_out_writes_utf8_for_every_text_format() {
 
 #[test]
 fn a_blank_target_language_never_stamps() {
-    let always = MergeOptions { stamp_target_always: true, ..MergeOptions::default() };
+    let always = MergeOptions::new().with_stamp_target_always(true);
     for (name, bytes) in corpus() {
         let mut doc = open(&name, &bytes, Granularity::Paragraph);
         doc.target_lang = Some("  ".into());

@@ -6,7 +6,7 @@ The Microsoft Visio parser for Bilingua: `.vsdx` and macro-enabled `.vsdm` (Visi
 use bilingua_vsdx::Vsdx;
 use bilingua_model::*;
 
-let mut doc = Vsdx.extract(&bytes, &ExtractOptions { target_lang: Some("de-DE".into()), ..Default::default() })?;
+let mut doc = Vsdx.extract(&bytes, &ExtractOptions::new().with_target_lang("de-DE"))?;
 doc.set_target("page2-1", vec![Inline::text("Anfang")])?;
 let out = Vsdx.merge(&doc)?;
 let with_comments = Vsdx.extract_with_comments(&bytes, &ExtractOptions::default())?; // comments as units too

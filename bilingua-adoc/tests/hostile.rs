@@ -117,13 +117,13 @@ fn deep_nesting_and_long_runs_are_linear() {
 #[test]
 fn limits_are_typed_errors() {
     let many: String = (0..200).map(|i| format!("* item {i}\n")).collect();
-    let o = ExtractOptions { limits: Some(Limits { max_units: 100, ..Limits::default() }), ..Default::default() };
+    let o = ExtractOptions::new().with_limits(Limits::new().with_max_units(100));
     assert!(matches!(Adoc.extract(many.as_bytes(), &o), Err(Error::Limit(e)) if e.kind == LimitKind::Units));
-    let o = ExtractOptions { limits: Some(Limits { max_input_bytes: 50, ..Limits::default() }), ..Default::default() };
+    let o = ExtractOptions::new().with_limits(Limits::new().with_max_input_bytes(50));
     assert!(matches!(Adoc.extract(many.as_bytes(), &o), Err(Error::Limit(e)) if e.kind == LimitKind::InputBytes));
-    let o = ExtractOptions { limits: Some(Limits { max_lines: 10, ..Limits::default() }), ..Default::default() };
+    let o = ExtractOptions::new().with_limits(Limits::new().with_max_lines(10));
     assert!(matches!(Adoc.extract(many.as_bytes(), &o), Err(Error::Limit(e)) if e.kind == LimitKind::Lines));
-    let o = ExtractOptions { limits: Some(Limits { max_unit_chars: 10, ..Limits::default() }), ..Default::default() };
+    let o = ExtractOptions::new().with_limits(Limits::new().with_max_unit_chars(10));
     assert!(matches!(Adoc.extract(b"a very long paragraph indeed\n", &o), Err(Error::Limit(e)) if e.kind == LimitKind::UnitChars));
 }
 

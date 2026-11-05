@@ -277,7 +277,7 @@ fn hostile() {
     assert!(matches!(extract(flood.as_bytes()), Err(Error::Limit(_))));
     // segment cap
     let mut o = opts();
-    o.limits = Some(Limits { max_units: 5, ..Limits::default() });
+    o.limits = Some(Limits::new().with_max_units(5));
     let many: String = (0..10).map(|i| format!("Line {i}.\n\n")).collect();
     assert!(matches!(Mdx.extract(many.as_bytes(), &o), Err(Error::Limit(_))));
     // one huge line

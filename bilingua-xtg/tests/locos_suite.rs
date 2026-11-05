@@ -193,8 +193,8 @@ fn hostile_inputs() {
     assert_eq!(token_text(&doc.units[0]), "Fine");
     assert!(doc.warnings.iter().any(|w| w.kind == "skipped_paragraphs" && w.message.starts_with("1 ")));
     // limits: units, tags, characters
-    let lim = |l: Limits| ExtractOptions { limits: Some(l), ..Default::default() };
-    let l = Limits { max_units: 3, ..Limits::default() };
+    let lim = |l: Limits| ExtractOptions::new().with_limits(l);
+    let l = Limits::new().with_max_units(3);
     let mut four = b"<v1><e9>\n".to_vec();
     four.extend(b"@N:a\n".repeat(4));
     let e = Xtg.extract(&four, &lim(l)).err().unwrap();
@@ -204,7 +204,7 @@ fn hostile_inputs() {
     tags.push(b'\n');
     let e = Xtg.extract(&tags, &lim(l)).err().unwrap();
     assert!(e.to_string().contains("tags"), "{e}");
-    let l = Limits { max_unit_chars: 50, ..Limits::default() };
+    let l = Limits::new().with_max_unit_chars(50);
     let mut long = b"<v1><e9>\n@N:".to_vec();
     long.extend(b"a".repeat(60));
     long.push(b'\n');

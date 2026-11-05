@@ -148,7 +148,8 @@ fn merge_of_a_tampered_document_is_a_typed_error() {
         parts.push(SkelPart::Unit(999));
     }
     assert!(matches!(Resjson.merge(&d), Err(Error::Write(_))));
-    let zip = Document { skeleton: Skeleton::Zip { entries: vec![], parser: None }, ..ex(LOCOS_SUITE) };
+    let mut zip = ex(LOCOS_SUITE);
+    zip.skeleton = Skeleton::Zip { entries: vec![], parser: None };
     assert!(matches!(Resjson.merge(&zip), Err(Error::Write(_))));
 }
 

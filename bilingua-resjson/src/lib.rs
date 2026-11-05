@@ -306,16 +306,7 @@ impl Resjson {
         if pos < text.len() {
             parts.push(SkelPart::Raw(text[pos..].to_string()));
         }
-        Ok(Document {
-            format: ID.into(),
-            name: None,
-            source_lang: opts.source_lang.clone(),
-            target_lang: opts.target_lang.clone(),
-            granularity: opts.granularity,
-            units,
-            skeleton: Skeleton::text(parts, enc.label(), bilingua_model::parser_info!()),
-            ..Default::default()
-        })
+        Ok(Document::new(ID, units, Skeleton::text(parts, enc.label(), bilingua_model::parser_info!())).with_options(opts))
     }
 }
 

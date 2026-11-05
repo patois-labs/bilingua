@@ -217,10 +217,7 @@ fn include_locked_lists_placeholder_only_values_as_locked() {
     let doc = JsModule
         .extract(
             src.as_bytes(),
-            &ExtractOptions {
-                include_locked: true,
-                ..Default::default()
-            },
+            &ExtractOptions::new().with_include_locked(true),
         )
         .unwrap();
     let flags: Vec<(String, bool)> = doc

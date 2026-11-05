@@ -18,6 +18,7 @@ use std::fmt;
 /// Which limit a refusal is about.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[non_exhaustive]
 pub enum LimitKind {
     InputBytes,
     Lines,
@@ -43,6 +44,7 @@ pub enum LimitKind {
 
 /// A file refused for being over a limit or unsafe.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct LimitError {
     pub kind: LimitKind,
     pub msg: String,
@@ -67,8 +69,11 @@ impl From<LimitError> for Error {
 }
 
 /// The limits one extraction runs under. `Default` is Localization OS's configuration.
+/// Build them with [`Limits::new`] and the `with_*` methods (`Limits::new().with_max_units(500)`); new limits are
+/// added without breaking callers.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
+#[non_exhaustive]
 pub struct Limits {
     /// Largest input file (`MAX_UPLOAD_BYTES`).
     pub max_input_bytes: u64,
@@ -122,6 +127,88 @@ impl Default for Limits {
             xlsx_max_cell_chars: 32_767,
             xlsx_max_total_text_chars: 8 * 1024 * 1024,
         }
+    }
+}
+
+impl Limits {
+    /// Localization OS's limits (the same as `Limits::default()`); change any of them with the `with_*` methods.
+    pub fn new() -> Limits {
+        Limits::default()
+    }
+    /// Sets `max_input_bytes`.
+    pub fn with_max_input_bytes(mut self, v: u64) -> Limits {
+        self.max_input_bytes = v;
+        self
+    }
+    /// Sets `max_units`.
+    pub fn with_max_units(mut self, v: usize) -> Limits {
+        self.max_units = v;
+        self
+    }
+    /// Sets `max_unit_chars`.
+    pub fn with_max_unit_chars(mut self, v: usize) -> Limits {
+        self.max_unit_chars = v;
+        self
+    }
+    /// Sets `max_lines`.
+    pub fn with_max_lines(mut self, v: usize) -> Limits {
+        self.max_lines = v;
+        self
+    }
+    /// Sets `max_xml_depth`.
+    pub fn with_max_xml_depth(mut self, v: usize) -> Limits {
+        self.max_xml_depth = v;
+        self
+    }
+    /// Sets `max_xml_elements`.
+    pub fn with_max_xml_elements(mut self, v: usize) -> Limits {
+        self.max_xml_elements = v;
+        self
+    }
+    /// Sets `max_zip_entries`.
+    pub fn with_max_zip_entries(mut self, v: usize) -> Limits {
+        self.max_zip_entries = v;
+        self
+    }
+    /// Sets `max_zip_bytes`.
+    pub fn with_max_zip_bytes(mut self, v: u64) -> Limits {
+        self.max_zip_bytes = v;
+        self
+    }
+    /// Sets `max_zip_ratio`.
+    pub fn with_max_zip_ratio(mut self, v: u64) -> Limits {
+        self.max_zip_ratio = v;
+        self
+    }
+    /// Sets `zip_ratio_floor_bytes`.
+    pub fn with_zip_ratio_floor_bytes(mut self, v: u64) -> Limits {
+        self.zip_ratio_floor_bytes = v;
+        self
+    }
+    /// Sets `max_paragraphs`.
+    pub fn with_max_paragraphs(mut self, v: usize) -> Limits {
+        self.max_paragraphs = v;
+        self
+    }
+    /// Sets `xlsx_max_cells`.
+    pub fn with_xlsx_max_cells(mut self, v: usize) -> Limits {
+        self.xlsx_max_cells = v;
+        self
+    }
+    /// Sets `xlsx_max_rows`.
+    pub fn with_xlsx_max_rows(mut self, v: u32) -> Limits {
+        self.xlsx_max_rows = v;
+        self
+    }
+    /// Sets `xlsx_max_cell_chars`.
+    pub fn with_xlsx_max_cell_chars(mut self, v: usize) -> Limits {
+        self.xlsx_max_cell_chars = v;
+        self
+    }
+    /// Sets `xlsx_max_total_text_chars`.
+    pub fn with_xlsx_max_total_text_chars(mut self, v: usize) -> Limits {
+        self.xlsx_max_total_text_chars = v;
+        self
     }
 }
 

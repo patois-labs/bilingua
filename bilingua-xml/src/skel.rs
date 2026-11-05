@@ -250,16 +250,7 @@ pub(crate) fn build_document(t: &Tree, p: &Planned, notes: &[String], alt: &std:
         }
         units.push(u);
     }
-    Document {
-        format: format.into(),
-        name: None,
-        source_lang: opts.source_lang.clone(),
-        target_lang: opts.target_lang.clone(),
-        granularity: opts.granularity,
-        units,
-        skeleton: Skeleton::text(parts, encoding, parser_info!()),
-        warnings: vec![],
-    }
+    Document::new(format, units, Skeleton::text(parts, encoding, parser_info!())).with_options(opts)
 }
 
 impl Emit<'_, '_> {

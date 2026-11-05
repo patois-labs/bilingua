@@ -30,7 +30,7 @@ return ['a' => 'Hello'];
 ];
 
 fn opts() -> ExtractOptions {
-    ExtractOptions { source_lang: Some("en".into()), target_lang: Some("es-ES".into()), ..Default::default() }
+    ExtractOptions::new().with_source_lang("en").with_target_lang("es-ES")
 }
 
 #[test]

@@ -205,16 +205,7 @@ impl Strings {
         if cursor < text.len() {
             parts.push(SkelPart::Raw(text[cursor..].to_string()));
         }
-        Ok(Document {
-            format: "strings".into(),
-            name: None,
-            source_lang: opts.source_lang.clone(),
-            target_lang: opts.target_lang.clone(),
-            granularity: opts.granularity,
-            units,
-            skeleton: Skeleton::text(parts, enc.name(), bilingua_model::parser_info!()),
-            ..Default::default()
-        })
+        Ok(Document::new("strings", units, Skeleton::text(parts, enc.name(), bilingua_model::parser_info!())).with_options(opts))
     }
 }
 

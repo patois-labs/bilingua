@@ -15,7 +15,7 @@ fn shown(v: &[Inline]) -> String {
 }
 
 fn big() -> Limits {
-    Limits { max_units: 50_000_000, max_unit_chars: 10_000_000, max_input_bytes: 2 << 30, max_lines: usize::MAX, max_xml_elements: 100_000_000, ..Limits::default() }
+    Limits::new().with_max_units(50_000_000).with_max_unit_chars(10_000_000).with_max_input_bytes(2 << 30).with_max_lines(usize::MAX).with_max_xml_elements(100_000_000)
 }
 
 /// A large resx in the shape Visual Studio writes (made-up Lumen Bakery text).
@@ -43,7 +43,7 @@ pub fn generate(min_bytes: usize) -> String {
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
-    let opts = ExtractOptions { granularity: Granularity::Paragraph, ..Default::default() };
+    let opts = ExtractOptions::new().with_granularity(Granularity::Paragraph);
     match args.get(1).map(String::as_str) {
         Some("dump") => {
             let bytes = std::fs::read(&args[2]).expect("read");

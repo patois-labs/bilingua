@@ -5,7 +5,7 @@ use bilingua_model::*;
 use bilingua_xslt::Xslt;
 
 pub fn opts() -> ExtractOptions {
-    ExtractOptions { granularity: Granularity::Paragraph, ..Default::default() }
+    ExtractOptions::new().with_granularity(Granularity::Paragraph)
 }
 
 pub fn extract(data: &[u8]) -> Document {

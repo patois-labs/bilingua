@@ -93,7 +93,7 @@ fn entity_nesting_and_expansion_attempts_are_never_expanded() {
     // a self-referencing entity, a quadratic blow-up and a very long reference chain
     check(b"<!ENTITY a \"&a;\">");
     let chain: String = (0..100_000).map(|i| format!("<!ENTITY e{i} \"&e{};\">\n", i + 1)).collect();
-    let lim = Limits { max_units: 200_000, ..Limits::default() };
+    let lim = Limits::new().with_max_units(200_000);
     assert!(DtdFilter.extract_with(chain.as_bytes(), &opts(), &lim).is_ok());
     // parameter entities that would declare entities, external entities, and remote references stay raw
     let pe = b"<!ENTITY % x \"<!ENTITY y 'z'>\">\n%x;\n<!ENTITY % e SYSTEM \"http://example.invalid/e.dtd\">\n%e;\n<!ENTITY ext SYSTEM \"file:///etc/passwd\">\n<!ENTITY a \"Real\">\n";
@@ -130,7 +130,7 @@ fn deep_and_huge_inputs_give_typed_errors_or_stay_linear() {
     // more entities than the unit cap: refused
     let many: String = (0..50_001).map(|i| format!("<!ENTITY k{i} \"v{i}\">\n")).collect();
     assert!(matches!(extract(many.as_bytes()), Err(Error::Limit(LimitError { kind: LimitKind::Units, .. }))));
-    assert!(DtdFilter.extract_with(many.as_bytes(), &opts(), &Limits { max_units: 60_000, ..Limits::default() }).is_ok());
+    assert!(DtdFilter.extract_with(many.as_bytes(), &opts(), &Limits::new().with_max_units(60_000)).is_ok());
     // more declarations than 4 x the unit cap: refused before any scan
     let decls = "<!---->".repeat(200_001);
     assert!(matches!(extract(decls.as_bytes()), Err(Error::Limit(LimitError { kind: LimitKind::Units, .. }))));

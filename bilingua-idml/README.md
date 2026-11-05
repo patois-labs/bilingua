@@ -9,7 +9,7 @@ use bilingua_idml::Idml;
 use bilingua_model::*;
 
 let f = Idml;
-let mut doc = f.extract(&bytes, &ExtractOptions { target_lang: Some("de-DE".into()), ..Default::default() })?;
+let mut doc = f.extract(&bytes, &ExtractOptions::new().with_target_lang("de-DE"))?;
 doc.set_target("p0", vec![Inline::text("Hallo.")])?;
 let out = f.merge(&doc)?;
 ```

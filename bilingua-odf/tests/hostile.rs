@@ -14,7 +14,7 @@ fn typed(e: &Error) -> bool {
 /// Extract; when it works, translate every unit and merge, then read the result back. Nothing may panic, errors must
 /// be typed, and a merge of something that was read must itself be readable with the same number of units.
 fn exercise(f: &dyn Filter, bytes: &[u8], target: Option<&str>) -> bool {
-    let o = ExtractOptions { target_lang: target.map(str::to_string), ..Default::default() };
+    let o = ExtractOptions::new().with_target_lang(target.map(str::to_string));
     match f.extract(bytes, &o) {
         Err(e) => {
             assert!(typed(&e), "untyped error: {e:?}");
@@ -148,7 +148,7 @@ fn hostile_zips() {
         es.push(r(n, b"x"));
     }
     let z = raw_zip(&es);
-    let few = ExtractOptions { limits: Some(Limits { max_zip_entries: 20, ..Limits::default() }), ..Default::default() };
+    let few = ExtractOptions::new().with_limits(Limits::new().with_max_zip_entries(20));
     assert!(matches!(Odt::default().extract(&z, &few), Err(Error::Limit(l)) if l.kind == LimitKind::ZipEntries));
     // a big zero member: ratio
     assert!(matches!(
@@ -156,10 +156,10 @@ fn hostile_zips() {
         Err(Error::Limit(l)) if l.kind == LimitKind::ZipRatio
     ));
     // the total size
-    let small = ExtractOptions { limits: Some(Limits { max_zip_bytes: 1000, ..Limits::default() }), ..Default::default() };
+    let small = ExtractOptions::new().with_limits(Limits::new().with_max_zip_bytes(1000));
     assert!(matches!(Odt::default().extract(&odt(), &small), Err(Error::Limit(_))));
     // input size
-    let tiny = ExtractOptions { limits: Some(Limits { max_input_bytes: 100, ..Limits::default() }), ..Default::default() };
+    let tiny = ExtractOptions::new().with_limits(Limits::new().with_max_input_bytes(100));
     assert!(matches!(Odt::default().extract(&odt(), &tiny), Err(Error::Limit(l)) if l.kind == LimitKind::InputBytes));
 }
 
@@ -201,7 +201,7 @@ fn deep_and_huge_xml() {
     assert!(exercise(&Odt::default(), &data, Some("de-DE")));
     // more elements than allowed
     let many = odt_content().replace("Getting started", &"<text:bookmark text:name=\"b\"/>".repeat(2000));
-    let l = ExtractOptions { limits: Some(Limits { max_xml_elements: 500, ..Limits::default() }), ..Default::default() };
+    let l = ExtractOptions::new().with_limits(Limits::new().with_max_xml_elements(500));
     assert!(matches!(Odt::default().extract(&Pkg::new(many).build(), &l), Err(Error::Limit(l)) if l.kind == LimitKind::XmlElements));
     // a long attribute and a long name
     let long = odt_content().replace("<text:p>3</text:p>", &format!("<text:p text:style-name=\"{}\">3</text:p>", "n".repeat(500_000)));

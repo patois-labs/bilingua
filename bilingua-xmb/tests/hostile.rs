@@ -126,12 +126,12 @@ fn deep_nesting_is_a_limit_error_not_a_stack_overflow() {
 #[test]
 fn oversized_input_and_unit_text_are_limit_errors() {
     let big = vec![b' '; 2000];
-    let l = Limits { max_input_bytes: 1000, ..Limits::default() };
+    let l = Limits::new().with_max_input_bytes(1000);
     assert!(matches!(Xmb.extract_with(&big, &opts(), &l), Err(Error::Limit(LimitError { kind: LimitKind::InputBytes, .. }))));
     let long = format!("<messagebundle><msg id='1'>{}</msg></messagebundle>", "x".repeat(200));
-    let l = Limits { max_unit_chars: 100, ..Limits::default() };
+    let l = Limits::new().with_max_unit_chars(100);
     assert!(matches!(Xmb.extract_with(long.as_bytes(), &opts(), &l), Err(Error::Limit(LimitError { kind: LimitKind::UnitChars, .. }))));
-    let l = Limits { max_xml_elements: 5, ..Limits::default() };
+    let l = Limits::new().with_max_xml_elements(5);
     let many = format!("<messagebundle>{}</messagebundle>", "<msg id='a'>x</msg>".repeat(10));
     assert!(matches!(Xmb.extract_with(many.as_bytes(), &opts(), &l), Err(Error::Limit(LimitError { kind: LimitKind::XmlElements, .. }))));
     // a huge attribute value and a huge text run are fine (and quick)

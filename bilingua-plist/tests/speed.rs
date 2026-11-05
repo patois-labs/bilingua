@@ -32,7 +32,7 @@ fn timed(f: F, name: &str, text: &str, units: usize) {
     let bytes = text.as_bytes();
     assert!(cfg!(debug_assertions) || bytes.len() > 5_000_000, "{name}: {} bytes", bytes.len());
     let t = Instant::now();
-    let mut d = f.filter().extract(bytes, &ExtractOptions { target_lang: Some("ru".into()), ..Default::default() }).unwrap();
+    let mut d = f.filter().extract(bytes, &ExtractOptions::new().with_target_lang("ru")).unwrap();
     let t_extract = t.elapsed();
     assert_eq!(d.units.len(), units);
     let t = Instant::now();

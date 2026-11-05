@@ -22,7 +22,7 @@ fn tag_count(d: &Document) -> usize {
 }
 
 fn open(bytes: &[u8], lang: Option<&str>, g: Granularity) -> Document {
-    Php.extract(bytes, &ExtractOptions { source_lang: lang.map(Into::into), target_lang: Some("de".into()), granularity: g, ..Default::default() })
+    Php.extract(bytes, &ExtractOptions::new().with_source_lang(lang).with_target_lang("de").with_granularity(g))
         .unwrap()
 }
 
@@ -41,7 +41,7 @@ fn corpus_untouched_merge_is_exact() {
         }
         assert_eq!(Php.merge(&doc).unwrap(), bytes, "{name} echo");
         // a target language changes nothing: PHP arrays carry no language
-        let doc = Php.extract(&bytes, &ExtractOptions { target_lang: Some("fr-CA".into()), ..Default::default() }).unwrap();
+        let doc = Php.extract(&bytes, &ExtractOptions::new().with_target_lang("fr-CA")).unwrap();
         assert_eq!(Php.merge(&doc).unwrap(), bytes, "{name} target lang");
     }
 }
@@ -103,7 +103,7 @@ fn legacy_encodings_with_source_language() {
         let (bytes, _, bad) = enc.encode(&full);
         let bytes = bytes.into_owned();
         assert!(!bad, "{lang}");
-        let opts = ExtractOptions { source_lang: Some(lang.into()), ..Default::default() };
+        let opts = ExtractOptions::new().with_source_lang(lang);
         let doc = Php.extract(&bytes, &opts).unwrap();
         assert_eq!(plain_text(&doc.units[0].source()), text, "{lang}");
         assert!(doc.warnings.is_empty(), "{lang}: {:?}", doc.warnings);
@@ -170,7 +170,7 @@ fn free_tags_may_move_and_ordered_tags_are_kept() {
 #[test]
 fn locked_units_with_include_locked() {
     let src = "<?php return ['a' => 'Text', 'b' => '---', 'c' => '', 'd' => ' ', 'e' => '...'];";
-    let doc = Php.extract(src.as_bytes(), &ExtractOptions { include_locked: true, ..Default::default() }).unwrap();
+    let doc = Php.extract(src.as_bytes(), &ExtractOptions::new().with_include_locked(true)).unwrap();
     let locked: Vec<&str> = doc.units.iter().filter(|u| !u.translate).map(|u| u.context.key.as_deref().unwrap()).collect();
     assert_eq!(locked, ["b", "e"]);
     assert_eq!(Php.merge(&doc).unwrap(), src.as_bytes());

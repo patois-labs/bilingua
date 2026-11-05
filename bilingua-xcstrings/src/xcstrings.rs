@@ -298,20 +298,11 @@ impl Filter for Xcstrings {
                 }
             }
         }
-        let doc = Document {
-            format: FORMAT.into(),
-            name: None,
-            source_lang: opts.source_lang.clone().or(Some(source)),
-            target_lang: opts.target_lang.clone(),
-            granularity: opts.granularity,
-            units,
-            skeleton: Skeleton::text(
+        let doc = Document::new(FORMAT, units, Skeleton::text(
                 vec![SkelPart::Raw(cat.text.clone())],
                 if cat.bom { "utf-8-bom" } else { "utf-8" },
                 bilingua_model::parser_info!(),
-            ),
-            ..Default::default()
-        };
+            )).with_source_lang(opts.source_lang.clone().or(Some(source))).with_target_lang(opts.target_lang.clone()).with_granularity(opts.granularity);
         guard::finish(doc, vec![], &limits)
     }
 
@@ -337,7 +328,7 @@ impl Filter for Xcstrings {
         let limits = Limits::default();
         let cat = Catalog::from_text(text, bom, &limits, false)?;
         // The file was accepted when it was extracted: no unit cap here.
-        let unlimited = Limits { max_units: usize::MAX, ..limits };
+        let unlimited = limits.with_max_units(usize::MAX);
         let entries = cat.walk(&unlimited)?;
         let out = apply(&cat, &entries, doc)?;
         let mut bytes = Vec::with_capacity(out.len() + 3);

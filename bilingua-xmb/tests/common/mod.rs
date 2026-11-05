@@ -10,11 +10,11 @@ pub const XMB_LOCALIZE: &[u8] = include_bytes!("../data/messages-localize.xmb");
 pub const XTB: &[u8] = include_bytes!("../data/messages.fr.xtb");
 
 pub fn opts() -> ExtractOptions {
-    ExtractOptions { source_lang: Some("en".into()), target_lang: Some("fr".into()), ..Default::default() }
+    ExtractOptions::new().with_source_lang("en").with_target_lang("fr")
 }
 
 pub fn opts_to(lang: &str) -> ExtractOptions {
-    ExtractOptions { source_lang: Some("en".into()), target_lang: Some(lang.into()), ..Default::default() }
+    ExtractOptions::new().with_source_lang("en").with_target_lang(lang)
 }
 
 pub fn ex(bytes: &[u8]) -> Document {

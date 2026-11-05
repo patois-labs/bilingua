@@ -28,11 +28,7 @@ fn five_megabytes_round_trip() {
     let data = generate(5_200_000).into_bytes();
     assert!(data.len() > 5_000_000);
     let f = XmlFilter::new();
-    let o = ExtractOptions {
-        limits: Some(Limits { max_units: 10_000_000, max_xml_elements: 100_000_000, ..Limits::default() }),
-        target_lang: Some("fr".into()),
-        ..Default::default()
-    };
+    let o = ExtractOptions::new().with_limits(Limits::new().with_max_units(10_000_000).with_max_xml_elements(100_000_000)).with_target_lang("fr");
     let t0 = std::time::Instant::now();
     let mut d = f.extract(&data, &o).unwrap();
     assert!(d.units.len() > 50_000);

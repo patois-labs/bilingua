@@ -151,7 +151,7 @@ pub fn ex(z: &[u8]) -> Document {
 }
 
 pub fn ex_with(z: &[u8], target: Option<&str>) -> Document {
-    Xcloc.extract(z, &ExtractOptions { target_lang: target.map(str::to_string), ..Default::default() }).unwrap_or_else(|e| panic!("extract failed: {e}"))
+    Xcloc.extract(z, &ExtractOptions::new().with_target_lang(target.map(str::to_string))).unwrap_or_else(|e| panic!("extract failed: {e}"))
 }
 
 /// Text of a unit the way LocOS shows it (tokens for inline codes).

@@ -190,13 +190,7 @@ fn bom_and_endings_are_kept() {
 #[test]
 fn target_locale_and_paragraph_mode() {
     let data = std::fs::read(corpus_dir().join("menu_crlf.csv")).unwrap();
-    let o = ExtractOptions {
-        source_lang: Some("en".into()),
-        target_lang: Some("ar".into()),
-        granularity: Granularity::Paragraph,
-        include_locked: false,
-        ..Default::default()
-    };
+    let o = ExtractOptions::new().with_source_lang("en").with_target_lang("ar").with_granularity(Granularity::Paragraph);
     let mut doc = Call::csv().extract_with(&data, &o).unwrap();
     assert_eq!(doc.granularity, Granularity::Paragraph);
     assert_eq!(doc.target_lang.as_deref(), Some("ar"));
@@ -207,7 +201,7 @@ fn target_locale_and_paragraph_mode() {
     assert!(out.starts_with("key,source,target,context,max length\r\n"));
     assert!(out.contains("btn.save,Save,[[Save]],button on the order form,12\r\n"));
     // sentence granularity: the unit's sentences are joined back into the cell
-    let sent = ExtractOptions { granularity: Granularity::Sentence, ..o.clone() };
+    let sent = o.clone().with_granularity(Granularity::Sentence);
     let mut doc = Call::csv().extract_with(&data, &sent).unwrap();
     bilingua_seg::segment(&mut doc, "en", Granularity::Sentence, bilingua_seg::Rules::bundled());
     assert_eq!(Call::csv().merge(&doc).unwrap(), data, "split units merge back to the same bytes");
@@ -226,7 +220,7 @@ fn locked_units_context_and_ids() {
     let data = b"key,source,target,notes,max length\nbtn,Save,,the button,12\nnum,12.50,,,\nf,=SUM(A1),,,\nm,Hello,,,\n";
     let c = Call::csv().langs("en", &["de"], Some("de"));
     assert_eq!(c.units(data), ["Save", "Hello"]);
-    let o = ExtractOptions { include_locked: true, source_lang: Some("en".into()), target_lang: Some("de".into()), ..Default::default() };
+    let o = ExtractOptions::new().with_include_locked(true).with_source_lang("en").with_target_lang("de");
     let doc = c.extract_with(data, &o).unwrap();
     let flags: Vec<(String, bool)> = doc.units.iter().map(|u| (plain_text(&u.source()), u.translate)).collect();
     assert_eq!(flags, [("Save".into(), true), ("12.50".into(), false), ("=SUM(A1)".into(), false), ("Hello".into(), true)]);
@@ -302,10 +296,10 @@ fn limits_and_quirks() {
     assert!(Call::csv().units(b"\n\n\n").is_empty());
     // too many lines
     let many = "\n".repeat(30);
-    let o = ExtractOptions { limits: Some(Limits { max_lines: 20, ..Limits::default() }), ..Default::default() };
+    let o = ExtractOptions::new().with_limits(Limits::new().with_max_lines(20));
     assert!(matches!(Call::csv().extract_with(many.as_bytes(), &o), Err(Error::Limit(_))));
     // too large an input
-    let o = ExtractOptions { limits: Some(Limits { max_input_bytes: 10, ..Limits::default() }), ..Default::default() };
+    let o = ExtractOptions::new().with_limits(Limits::new().with_max_input_bytes(10));
     assert!(matches!(Call::csv().extract_with(b"source\nHello world, hello\n", &o), Err(Error::Limit(_))));
     // broken UTF-16 (odd length, lone surrogate) is a typed error; a UTF-32 BOM reads as UTF-16, as LocOS does
     assert!(matches!(Call::csv().extract(b"\xff\xfea\x00b"), Err(Error::Encoding(_))));

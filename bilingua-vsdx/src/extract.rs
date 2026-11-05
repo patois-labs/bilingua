@@ -607,16 +607,7 @@ fn extract_inner(bytes: &[u8], opts: &ExtractOptions, with_comments: bool) -> Re
     let meta = Meta { entries: entries.iter().map(|e| e.meta.clone()).collect(), packed, enc: enc_map, comments: with_comments };
     let meta_json = serde_json::to_vec(&meta).map_err(|e| perr(e.to_string()))?;
     zentries.push(ZipEntry { name: META_NAME.into(), data: ZipData::Raw(meta_json) });
-    Ok(Document {
-        format: "vsdx".into(),
-        name: None,
-        source_lang: opts.source_lang.clone(),
-        target_lang: opts.target_lang.clone(),
-        granularity: Granularity::Paragraph,
-        units: b.units,
-        skeleton: Skeleton::zip(zentries, bilingua_model::parser_info!()),
-        warnings: vec![],
-    })
+    Ok(Document::new("vsdx", b.units, Skeleton::zip(zentries, bilingua_model::parser_info!())).with_source_lang(opts.source_lang.clone()).with_target_lang(opts.target_lang.clone()).with_granularity(Granularity::Paragraph))
 }
 
 /// The codes a run-holding unit needs to be written back: original content, prefix, suffix, line-end style.

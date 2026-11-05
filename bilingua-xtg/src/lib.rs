@@ -173,15 +173,7 @@ impl Filter for Xtg {
                 format!("{skipped} paragraph(s) that already contain the characters U+27E6 or U+27E7 were left out."),
             ));
         }
-        let doc = Document {
-            format: "xtg".into(),
-            source_lang: opts.source_lang.clone(),
-            target_lang: opts.target_lang.clone(),
-            granularity: opts.granularity,
-            units,
-            skeleton: Skeleton::text(parts, d.enc.tag(), bilingua_model::parser_info!()),
-            ..Default::default()
-        };
+        let doc = Document::new("xtg", units, Skeleton::text(parts, d.enc.tag(), bilingua_model::parser_info!())).with_options(opts);
         guard::finish(doc, warnings, &limits)
     }
 

@@ -119,11 +119,7 @@ fn encodings_keep_their_form() {
 #[test]
 fn target_locale_and_paragraph_mode() {
     let data = std::fs::read(corpus_dir().join("joomla_en.ini")).unwrap();
-    let opts = ExtractOptions {
-        source_lang: Some("en".into()),
-        target_lang: Some("ar".into()),
-        granularity: Granularity::Paragraph,
-        include_locked: false, ..Default::default() };
+    let opts = ExtractOptions::new().with_source_lang("en").with_target_lang("ar").with_granularity(Granularity::Paragraph);
     let mut doc = IniFilter.extract(&data, &opts).unwrap();
     assert_eq!(doc.granularity, Granularity::Paragraph);
     assert_eq!(doc.target_lang.as_deref(), Some("ar"));
@@ -139,7 +135,7 @@ fn target_locale_and_paragraph_mode() {
 fn locked_units_and_context() {
     let data = b"[S]\n; the note\nA=%d\nB=---\nC=Hello\nC=Hello again\nD=\"\"\n";
     assert_eq!(units(data), vec!["Hello", "Hello again"]);
-    let opts = ExtractOptions { include_locked: true, ..Default::default() };
+    let opts = ExtractOptions::new().with_include_locked(true);
     let doc = IniFilter.extract(data, &opts).unwrap();
     let flags: Vec<(String, bool)> = doc.units.iter().map(|u| (plain_text(&u.source()), u.translate)).collect();
     assert_eq!(

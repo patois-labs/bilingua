@@ -332,7 +332,7 @@ fn hostile_inputs() {
     assert!(matches!(&e, Error::Limit(l) if l.kind == LimitKind::XmlDepth) && err_text(&e).contains("nested"), "{e}");
     // caps from the limits in ExtractOptions
     let mut o = opts();
-    o.limits = Some(Limits { max_units: 2, ..Limits::default() });
+    o.limits = Some(Limits::new().with_max_units(2));
     let paras: String = (0..3).map(|i| format!("<Para <ParaLine <String `Para {i}'>>>\n")).collect();
     let e = Mif.extract(format!("<MIFFile 2019>\n{paras}").as_bytes(), &o).unwrap_err();
     assert!(err_text(&e).contains("segments"), "{e}");

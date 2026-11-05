@@ -55,7 +55,7 @@ fn large_catalog_round_trips_and_is_timed() {
     if let Ok(dir) = std::env::var("XC_SPEED_OUT") {
         std::fs::write(format!("{dir}/big.xcstrings"), &bytes).unwrap();
     }
-    let o = ExtractOptions { target_lang: Some("ru".into()), ..Default::default() };
+    let o = ExtractOptions::new().with_target_lang("ru");
     let t = Instant::now();
     let mut d = Xcstrings.extract(&bytes, &o).unwrap();
     let t_extract = t.elapsed();
@@ -86,7 +86,7 @@ fn large_bundle_round_trips_and_is_timed() {
         std::fs::write(format!("{dir}/big.xcloc"), &bundle).unwrap();
     }
     let t = Instant::now();
-    let mut d = Xcloc.extract(&bundle, &ExtractOptions { target_lang: Some("de".into()), ..Default::default() }).unwrap();
+    let mut d = Xcloc.extract(&bundle, &ExtractOptions::new().with_target_lang("de")).unwrap();
     let t_extract = t.elapsed();
     assert_eq!(d.units.len(), 20_000);
     let t = Instant::now();

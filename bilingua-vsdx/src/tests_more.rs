@@ -306,7 +306,7 @@ proptest! {
             }
         }
         let src = Pkg { page1: String::from_utf8_lossy(&b).into_owned(), ..Default::default() }.build();
-        if let Ok(mut doc) = Vsdx.extract(&src, &ExtractOptions { target_lang: Some("ar".into()), ..Default::default() }) {
+        if let Ok(mut doc) = Vsdx.extract(&src, &ExtractOptions::new().with_target_lang("ar")) {
             // whatever was read can be pseudo translated, written and read again
             pseudo(&mut doc);
             let out = Vsdx.merge(&doc).expect("a document this filter extracted merges");

@@ -186,7 +186,7 @@ fn target_locale_adds_nothing_the_format_has_no_place_for() {
     // .resjson has no language or direction field: a merge with a target locale is the plain merge.
     for (name, bytes) in fixtures() {
         for lang in ["ar", "ja", "zh-CN", "ko", "es-ES"] {
-            let d = Resjson.extract(bytes, &ExtractOptions { target_lang: Some(lang.into()), ..Default::default() }).unwrap();
+            let d = Resjson.extract(bytes, &ExtractOptions::new().with_target_lang(lang)).unwrap();
             assert_eq!(d.target_lang.as_deref(), Some(lang));
             assert_eq!(merged(&d), bytes, "{name} {lang}");
         }

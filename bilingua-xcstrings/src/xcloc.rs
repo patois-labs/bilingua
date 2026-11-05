@@ -181,16 +181,7 @@ impl Filter for Xcloc {
                 guard::check_unit_count(units.len(), &limits)?;
             }
         }
-        let d = Document {
-            format: FORMAT.into(),
-            name: None,
-            source_lang: opts.source_lang.clone().or_else(|| (!contents.development_region.is_empty()).then(|| contents.development_region.clone())),
-            target_lang: opts.target_lang.clone(),
-            granularity: Granularity::Paragraph,
-            units,
-            skeleton: Skeleton::zip(vec![ZipEntry { name: ARCHIVE.into(), data: ZipData::Raw(bytes.to_vec()) }], bilingua_model::parser_info!()),
-            ..Default::default()
-        };
+        let d = Document::new(FORMAT, units, Skeleton::zip(vec![ZipEntry { name: ARCHIVE.into(), data: ZipData::Raw(bytes.to_vec()) }], bilingua_model::parser_info!())).with_source_lang(opts.source_lang.clone().or_else(|| (!contents.development_region.is_empty()).then(|| contents.development_region.clone()))).with_target_lang(opts.target_lang.clone()).with_granularity(Granularity::Paragraph);
         guard::finish(d, warnings, &limits)
     }
 

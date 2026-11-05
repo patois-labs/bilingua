@@ -161,7 +161,7 @@ fn style_survives_for_each_kind_and_escapes_are_kept_when_untouched() {
 
 #[test]
 fn paragraph_mode_gives_one_segment_per_unit() {
-    let d = TomlFilter.extract(include_bytes!("data/hugo.toml"), &ExtractOptions { granularity: Granularity::Paragraph, ..Default::default() }).unwrap();
+    let d = TomlFilter.extract(include_bytes!("data/hugo.toml"), &ExtractOptions::new().with_granularity(Granularity::Paragraph)).unwrap();
     assert!(d.units.iter().all(|u| u.segments.len() == 1));
     assert_eq!(d.granularity, Granularity::Paragraph);
 }
@@ -170,7 +170,7 @@ fn paragraph_mode_gives_one_segment_per_unit() {
 fn include_locked_adds_context_units_only_when_asked() {
     let src = b"id = \"abc\"\nname = \"Name\"\ndash = \"---\"\nblank = \"\"\n";
     assert_eq!(extract(src).units.len(), 1);
-    let d = TomlFilter.extract(src, &ExtractOptions { include_locked: true, ..Default::default() }).unwrap();
+    let d = TomlFilter.extract(src, &ExtractOptions::new().with_include_locked(true)).unwrap();
     let flags: Vec<bool> = d.units.iter().map(|u| u.translate).collect();
     assert_eq!(flags, vec![false, true, false]);
     assert_eq!(merge(&d), src);

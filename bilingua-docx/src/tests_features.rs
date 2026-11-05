@@ -670,20 +670,8 @@ fn units_survive_segment_splitting_by_the_model() {
     let mut doc = extract(&bytes);
     let u = &mut doc.units[0];
     u.segments = vec![
-        Segment {
-            id: "p1#1".into(),
-            source: vec![Inline::text("One.")],
-            target: vec![Inline::text("Uno.")],
-            state: SegState::Draft,
-            origin: None,
-        },
-        Segment {
-            id: "p1#2".into(),
-            source: vec![Inline::text("Two.")],
-            target: vec![Inline::text("Dos.")],
-            state: SegState::Draft,
-            origin: None,
-        },
+        Segment::new("p1#1", vec![Inline::text("One.")]).with_target(vec![Inline::text("Uno.")]).with_state(SegState::Draft),
+        Segment::new("p1#2", vec![Inline::text("Two.")]).with_target(vec![Inline::text("Dos.")]).with_state(SegState::Draft),
     ];
     u.separators = vec![" ".into()];
     assert_eq!(plain_text(&u.source()), "One. Two.");

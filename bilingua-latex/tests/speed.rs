@@ -32,8 +32,8 @@ fn large_file() {
     if let Ok(p) = std::env::var("BILINGUA_LATEX_SPEED_OUT") {
         std::fs::write(p, &data).unwrap();
     }
-    let limits = Limits { max_units: 10_000_000, max_lines: 100_000_000, ..Limits::default() };
-    let opts = ExtractOptions { limits: Some(limits), target_lang: Some("de-DE".into()), ..Default::default() };
+    let limits = Limits::new().with_max_units(10_000_000).with_max_lines(100_000_000);
+    let opts = ExtractOptions::new().with_limits(limits).with_target_lang("de-DE");
     let f = Latex::default();
     let t0 = Instant::now();
     let mut doc = f.extract(&data, &opts).unwrap();

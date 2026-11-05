@@ -7,7 +7,7 @@ live-preview page.
 use bilingua_html::Html;
 use bilingua_model::*;
 
-let mut doc = Html.extract(&bytes, &ExtractOptions { target_lang: Some("es".into()), ..Default::default() })?;
+let mut doc = Html.extract(&bytes, &ExtractOptions::new().with_target_lang("es"))?;
 doc.set_target("u3", vec![Inline::text("Hola.")])?;
 let out = Html.merge(&doc)?;          // bytes
 let page = Html.preview(&doc);        // HTML with data-bl-seg spans, scripts removed

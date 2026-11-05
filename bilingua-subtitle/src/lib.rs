@@ -180,16 +180,7 @@ fn extract(k: Kind, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Err
     if cursor < text.len() {
         parts.push(SkelPart::Raw(text[cursor..].to_string()));
     }
-    bilingua_model::guard::finish(Document {
-        format: fmt_name(k).into(),
-        name: None,
-        source_lang: opts.source_lang.clone(),
-        target_lang: opts.target_lang.clone(),
-        granularity: opts.granularity,
-        units,
-        skeleton: Skeleton::text(parts, dec.encoding.as_str(), bilingua_model::parser_info!()),
-        warnings: vec![],
-    }, std::mem::take(&mut dec.warnings), &opts.limits())
+    bilingua_model::guard::finish(Document::new(fmt_name(k), units, Skeleton::text(parts, dec.encoding.as_str(), bilingua_model::parser_info!())).with_options(opts), std::mem::take(&mut dec.warnings), &opts.limits())
 }
 
 // ---------- cue text ----------

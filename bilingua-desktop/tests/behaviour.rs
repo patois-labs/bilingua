@@ -148,7 +148,7 @@ fn no_inline_tags_placeholders_stay_text() {
 fn paragraph_sentence_and_document_modes_round_trip() {
     for g in [Granularity::Paragraph, Granularity::Sentence, Granularity::Document] {
         for (name, bytes) in [("a.desktop", LOCOS_DESKTOP), ("a.catkeys", LOCOS_CATKEYS)] {
-            let o = ExtractOptions { granularity: g, source_lang: Some("en".into()), ..Default::default() };
+            let o = ExtractOptions::new().with_granularity(g).with_source_lang("en");
             let mut d = if name.ends_with("desktop") { DesktopFilter.extract(bytes, &o) } else { CatkeysFilter.extract(bytes, &o) }.unwrap();
             bilingua_seg::segment(&mut d, "en", g, bilingua_seg::Rules::bundled());
             assert_eq!(merge(&d), bytes, "{name} {g:?}");
@@ -208,7 +208,7 @@ fn escapes_in_catkeys_translations() {
 
 #[test]
 fn include_locked_adds_letterless_catkeys_entries_as_locked_units() {
-    let o = ExtractOptions { include_locked: true, ..Default::default() };
+    let o = ExtractOptions::new().with_include_locked(true);
     let d = CatkeysFilter.extract(LOCOS_CATKEYS, &o).unwrap();
     assert_eq!(d.units.len(), 5);
     assert!(!d.units[2].translate && d.units[2].lock_reason.is_some());

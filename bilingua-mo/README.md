@@ -7,7 +7,7 @@ gettext binary message catalog (`.mo`, `.gmo`) filter for Bilingua. Spec and bas
 use bilingua_mo::Mo;
 use bilingua_model::*;
 
-let mut doc = Mo.extract(&bytes, &ExtractOptions { target_lang: Some("ru-RU".into()), ..Default::default() })?;
+let mut doc = Mo.extract(&bytes, &ExtractOptions::new().with_target_lang("ru-RU"))?;
 doc.set_target("e2.0", vec![Inline::text("%d файл")])?;
 let out = Mo.merge(&doc)?;
 ```

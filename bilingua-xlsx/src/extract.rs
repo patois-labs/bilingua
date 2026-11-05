@@ -1065,14 +1065,5 @@ fn extract_doc_inner(bytes: &[u8], opts: &ExtractOptions, xo: &XlsxOptions) -> R
     let meta_json = serde_json::to_vec(&meta).map_err(|e| perr(e.to_string()))?;
     zentries.push(ZipEntry { name: META_NAME.into(), data: ZipData::Raw(meta_json) });
 
-    Ok(Document {
-        format: "xlsx".into(),
-        name: None,
-        source_lang: opts.source_lang.clone(),
-        target_lang: opts.target_lang.clone(),
-        granularity: Granularity::Paragraph,
-        units,
-        skeleton: Skeleton::zip(zentries, bilingua_model::parser_info!()),
-        warnings: vec![],
-    })
+    Ok(Document::new("xlsx", units, Skeleton::zip(zentries, bilingua_model::parser_info!())).with_source_lang(opts.source_lang.clone()).with_target_lang(opts.target_lang.clone()).with_granularity(Granularity::Paragraph))
 }

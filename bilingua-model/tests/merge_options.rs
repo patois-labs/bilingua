@@ -8,7 +8,7 @@ fn dec(bytes: &[u8]) -> bilingua_model::enc::Decoded {
 }
 
 fn utf8() -> MergeOptions {
-    MergeOptions { output_encoding: OutputEncoding::Utf8, ..MergeOptions::default() }
+    MergeOptions::new().with_output_encoding(OutputEncoding::Utf8)
 }
 
 fn legacy(e: &'static bilingua_model::encoding_rs::Encoding, s: &str) -> Vec<u8> {

@@ -151,7 +151,7 @@ fn edge_file_units_and_keys() {
 
 #[test]
 fn include_locked_lists_the_values_left_alone() {
-    let o = ExtractOptions { include_locked: true, ..opts() };
+    let o = opts().with_include_locked(true);
     let d = Properties.extract(FILES[6].1, &o).unwrap();
     let locked: Vec<&str> = d.units.iter().filter(|u| !u.translate).map(|u| u.context.key.as_deref().unwrap()).collect();
     assert!(locked.contains(&"rule") && locked.contains(&"placeholders"));
@@ -180,7 +180,7 @@ fn ids_and_target_language_are_stable() {
 fn paragraph_and_sentence_granularity_both_round_trip() {
     let src = b"a = First sentence. Second sentence.\nb = Only one\n";
     for g in [Granularity::Paragraph, Granularity::Sentence, Granularity::Document] {
-        let o = ExtractOptions { granularity: g, ..opts() };
+        let o = opts().with_granularity(g);
         let d = Properties.extract(src, &o).unwrap();
         assert_eq!(d.units.len(), 2);
         assert_eq!(d.units[0].segments.len(), 1);

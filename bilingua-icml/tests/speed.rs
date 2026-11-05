@@ -31,7 +31,7 @@ fn generate(min_bytes: usize) -> String {
 fn five_megabytes_round_trip() {
     let data = generate(5_200_000).into_bytes();
     assert!(data.len() > 5_000_000);
-    let limits = Limits { max_units: 10_000_000, ..Limits::default() };
+    let limits = Limits::new().with_max_units(10_000_000);
     let mut d = Icml.extract_with(&data, &opts(), &limits).unwrap();
     assert!(d.units.len() > 15_000, "{}", d.units.len());
     assert_eq!(Icml.merge(&d).unwrap(), data);

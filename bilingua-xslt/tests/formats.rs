@@ -29,7 +29,7 @@ fn untouched_merge_is_the_original_bytes() {
         let d = extract(data);
         assert_eq!(Xslt.merge(&d).unwrap(), data, "{name}");
         // a target language alone changes nothing: nothing is translated
-        let d = Xslt.extract(data, &ExtractOptions { target_lang: Some("fr-FR".into()), ..opts() }).unwrap();
+        let d = Xslt.extract(data, &opts().with_target_lang("fr-FR")).unwrap();
         assert_eq!(Xslt.merge(&d).unwrap(), data, "{name} with a target language");
         assert_identity(data);
     }
@@ -177,7 +177,7 @@ fn edge_file() {
 #[test]
 fn language_stamp_on_html_lang() {
     let data = file("lang_de");
-    let with = |lang: &str| Xslt.extract(data, &ExtractOptions { target_lang: Some(lang.into()), ..opts() }).unwrap();
+    let with = |lang: &str| Xslt.extract(data, &opts().with_target_lang(lang)).unwrap();
     // nothing translated: no stamp
     assert_eq!(Xslt.merge(&with("fr_fr")).unwrap(), data);
     let mut d = with("fr_fr");
@@ -189,7 +189,7 @@ fn language_stamp_on_html_lang() {
     set_locos(&mut d, 0, "x");
     assert!(s(&Xslt.merge(&d).unwrap()).contains("<html lang=\"en\">"));
     let src = b"<xsl:stylesheet version=\"1.0\" xmlns:xsl=\"http://www.w3.org/1999/XSL/Transform\"><xsl:template match=\"/\"><HTML lang=\"{$l}\" xml:lang='en'><p>Hi</p></HTML><p xml:lang=\"en\">Other</p></xsl:template></xsl:stylesheet>";
-    let mut d = Xslt.extract(src, &ExtractOptions { target_lang: Some("ja".into()), ..opts() }).unwrap();
+    let mut d = Xslt.extract(src, &opts().with_target_lang("ja")).unwrap();
     set_locos(&mut d, 0, "Hallo");
     let out = s(&Xslt.merge(&d).unwrap());
     assert!(out.contains("<HTML lang=\"{$l}\" xml:lang='ja'><p>Hallo</p></HTML><p xml:lang=\"en\">Other</p>"), "{out}");

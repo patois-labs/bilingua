@@ -6,7 +6,7 @@ Qt Linguist `.ts` filter for Bilingua (the translation source files `lupdate` wr
 use bilingua_qtts::QtTs;
 use bilingua_model::*;
 
-let opts = ExtractOptions { target_lang: Some("de-DE".into()), ..Default::default() };
+let opts = ExtractOptions::new().with_target_lang("de-DE");
 let mut doc = QtTs.extract(&bytes, &opts)?;
 doc.set_target("u1", vec![Inline::text("Datei &öffnen...")])?;
 let out = QtTs.merge(&doc)?;

@@ -140,7 +140,7 @@ fn encode_value(new: &str, cdata: bool, crlf: bool) -> String {
 impl Resx {
     /// Like [`Filter::extract`] with explicit limits.
     pub fn extract_with(&self, bytes: &[u8], opts: &ExtractOptions, limits: &Limits) -> Result<Document, Error> {
-        let opts = &ExtractOptions { limits: Some(*limits), ..opts.clone() };
+        let opts = &opts.clone().with_limits(*limits);
         let limits = &opts.limits();
         let p = parse(bytes, opts)?;
         let mut units: Vec<Unit> = Vec::new();
@@ -203,16 +203,7 @@ impl Resx {
         if pos < p.text.len() {
             parts.push(SkelPart::Raw(p.text[pos..].to_string()));
         }
-        guard::finish(Document {
-            format: "resx".into(),
-            name: None,
-            source_lang: opts.source_lang.clone(),
-            target_lang: opts.target_lang.clone(),
-            granularity: opts.granularity,
-            units,
-            skeleton: Skeleton::text(parts, p.enc, bilingua_model::parser_info!()),
-            warnings: Vec::new(),
-        }, p.warnings, limits)
+        guard::finish(Document::new("resx", units, Skeleton::text(parts, p.enc, bilingua_model::parser_info!())).with_options(opts), p.warnings, limits)
     }
 
     /// Every `<data>` with a `<value>` in file order, translatable or not (the key-based view).

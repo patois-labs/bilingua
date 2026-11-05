@@ -74,13 +74,7 @@ fn same(a: &Raw, b: &Raw) -> bool {
 #[test]
 fn untouched_entries_keep_their_compressed_bytes_and_merge_is_fast() {
     let bytes = big_docx();
-    let opts = ExtractOptions {
-        source_lang: Some("en".into()),
-        target_lang: Some("es".into()),
-        granularity: Granularity::Sentence,
-        include_locked: false,
-        limits: None, format_options: Default::default(),
-    };
+    let opts = ExtractOptions::new().with_source_lang("en").with_target_lang("es").with_granularity(Granularity::Sentence).with_format_options(Default::default());
     let mut doc = extract("big.docx", &bytes, &opts).unwrap();
     let before = raw_entries(&bytes);
 
@@ -137,7 +131,7 @@ fn schema_1_zip_skeletons_with_plain_bytes_still_merge() {
         w.write_all(data).unwrap();
     }
     let bytes = w.finish().unwrap().into_inner();
-    let opts = ExtractOptions { source_lang: Some("en".into()), target_lang: None, granularity: Granularity::Sentence, include_locked: false, limits: None, format_options: Default::default() };
+    let opts = ExtractOptions::new().with_source_lang("en").with_granularity(Granularity::Sentence).with_format_options(Default::default());
     let new = extract("a.docx", &bytes, &opts).unwrap();
     let mut json = serde_json::to_value(&new).unwrap();
     let zip_obj = json["skeleton"]["zip"].as_object_mut().unwrap();
@@ -170,13 +164,7 @@ fn schema_1_zip_skeletons_with_plain_bytes_still_merge() {
 }
 
 fn sentence_opts() -> ExtractOptions {
-    ExtractOptions {
-        source_lang: Some("en".into()),
-        target_lang: Some("es".into()),
-        granularity: Granularity::Sentence,
-        include_locked: false,
-        limits: None, format_options: Default::default(),
-    }
+    ExtractOptions::new().with_source_lang("en").with_target_lang("es").with_granularity(Granularity::Sentence).with_format_options(Default::default())
 }
 
 fn raw_entry<'a>(doc: &'a mut Document, name: &str) -> &'a mut Vec<u8> {

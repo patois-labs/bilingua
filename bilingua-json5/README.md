@@ -29,7 +29,7 @@ use bilingua_json5::Json5Filter;
 use bilingua_model::*;
 
 let f = Json5Filter::default();
-let mut doc = f.extract(&bytes, &ExtractOptions { source_lang: Some("en".into()), ..Default::default() })?;
+let mut doc = f.extract(&bytes, &ExtractOptions::new().with_source_lang("en"))?;
 doc.set_target("u1", vec![Inline::text("Hallo")])?;
 let out = f.merge(&doc)?;
 ```

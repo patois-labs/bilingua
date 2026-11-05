@@ -257,7 +257,7 @@ fn hostile() {
     set(&mut doc, 0, "x");
     assert!(f().merge(&doc).is_err() || { !s(&f().merge(&doc).unwrap()).contains("//*") });
     // caps
-    let lim = |n| ExtractOptions { limits: Some(Limits { max_units: n, ..Limits::default() }), ..Default::default() };
+    let lim = |n| ExtractOptions::new().with_limits(Limits::new().with_max_units(n));
     assert!(matches!(f().extract(&data("catalog-attr.xml"), &lim(2)), Err(Error::Limit(_))));
     let many = format!("<r>{}</r>", r#"<g><t xml:lang="en">a</t><t xml:lang="de">b</t></g>"#.repeat(30));
     match f().extract(many.as_bytes(), &lim(20)) {
@@ -281,7 +281,7 @@ fn scale_linear_build() {
         data.push_str(&format!("  <g><t xml:lang=\"en\">Text {i}</t><t xml:lang=\"de\">T {i}</t></g>\n"));
     }
     data.push_str("</r>\n");
-    let lim = ExtractOptions { target_lang: Some("fr".into()), limits: Some(Limits { max_units: 100_000, ..Limits::default() }), ..Default::default() };
+    let lim = ExtractOptions::new().with_target_lang("fr").with_limits(Limits::new().with_max_units(100_000));
     let filt = f();
     let mut doc = filt.extract(data.as_bytes(), &lim).unwrap();
     assert_eq!(doc.units.len(), n);

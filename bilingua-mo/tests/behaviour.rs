@@ -73,7 +73,7 @@ fn units_codes_and_ids() {
     let tt: Vec<&Inline> = d.units[2].segments[0].target.iter().filter(|i| matches!(i, Inline::Tag { .. })).collect();
     assert_eq!(tt.len(), 2);
     // paragraph mode gives the same units
-    let p = Mo.extract(&mo_le(), &ExtractOptions { granularity: Granularity::Paragraph, ..Default::default() }).unwrap();
+    let p = Mo.extract(&mo_le(), &ExtractOptions::new().with_granularity(Granularity::Paragraph)).unwrap();
     assert_eq!(texts(&p), texts(&d));
 }
 

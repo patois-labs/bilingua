@@ -431,9 +431,9 @@ fn encodings_binary_and_pgp() {
 #[test]
 fn caps() {
     let many: String = (0..20).map(|i| format!("* item {i}\n")).collect();
-    let o = ExtractOptions { limits: Some(Limits { max_units: 5, ..Limits::default() }), ..Default::default() };
+    let o = ExtractOptions::new().with_limits(Limits::new().with_max_units(5));
     assert!(matches!(Adoc.extract(many.as_bytes(), &o), Err(Error::Limit(e)) if e.kind == LimitKind::Units));
-    let o = ExtractOptions { limits: Some(Limits { max_unit_chars: 50, ..Limits::default() }), ..Default::default() };
+    let o = ExtractOptions::new().with_limits(Limits::new().with_max_unit_chars(50));
     let long = format!("{}\n", "word ".repeat(30));
     assert!(matches!(Adoc.extract(long.as_bytes(), &o), Err(Error::Limit(e)) if e.kind == LimitKind::UnitChars));
 }

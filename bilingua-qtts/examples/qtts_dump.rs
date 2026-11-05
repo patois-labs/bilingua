@@ -6,7 +6,7 @@ use bilingua_qtts::QtTs;
 fn main() {
     for f in std::env::args().skip(1) {
         let bytes = std::fs::read(&f).unwrap();
-        let opts = ExtractOptions { source_lang: Some("en".into()), ..Default::default() };
+        let opts = ExtractOptions::new().with_source_lang("en");
         match QtTs.extract(&bytes, &opts) {
             Ok(d) => {
                 let units: Vec<serde_json::Value> = d

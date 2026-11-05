@@ -82,7 +82,7 @@ fn deep_and_huge_files() {
     let nl = format!("1\tenglish\tx\t1\n{}", "\n".repeat(1_100_000));
     assert!(matches!(catkeys(nl.as_bytes()), Err(Error::Limit(l)) if l.kind == LimitKind::Lines));
     // the input size limit
-    let o = ExtractOptions { limits: Some(Limits { max_input_bytes: 100, ..Limits::default() }), ..Default::default() };
+    let o = ExtractOptions::new().with_limits(Limits::new().with_max_input_bytes(100));
     let big = vec![b'a'; 1000];
     assert!(matches!(DesktopFilter.extract(&big, &o), Err(Error::Limit(l)) if l.kind == LimitKind::InputBytes));
     assert!(matches!(CatkeysFilter.extract(&big, &o), Err(Error::Limit(l)) if l.kind == LimitKind::InputBytes));

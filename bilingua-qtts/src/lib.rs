@@ -155,16 +155,7 @@ impl QtTs {
             parts.push(SkelPart::Raw(text[pos..].to_string()));
         }
         let root_attr = |n: &str| sc.attr(text, 0, n).map(|v| v.trim().replace('_', "-")).filter(|v| !v.is_empty());
-        let doc = Document {
-            format: "ts".into(),
-            name: None,
-            source_lang: opts.source_lang.clone().or_else(|| root_attr("sourcelanguage")),
-            target_lang: opts.target_lang.clone(),
-            granularity: opts.granularity,
-            units,
-            skeleton: Skeleton::text(parts, dec.encoding, bilingua_model::parser_info!()),
-            warnings: Vec::new(),
-        };
+        let doc = Document::new("ts", units, Skeleton::text(parts, dec.encoding, bilingua_model::parser_info!())).with_source_lang(opts.source_lang.clone().or_else(|| root_attr("sourcelanguage"))).with_target_lang(opts.target_lang.clone()).with_granularity(opts.granularity);
         guard::finish(doc, dec.warnings, limits)
     }
 

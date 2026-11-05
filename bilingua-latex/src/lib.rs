@@ -126,15 +126,7 @@ impl Filter for Latex {
         if pos < text.len() {
             parts.push(SkelPart::Raw(text[pos..].to_string()));
         }
-        let doc = Document {
-            format: "tex".into(),
-            source_lang: opts.source_lang.clone(),
-            target_lang: opts.target_lang.clone(),
-            granularity: opts.granularity,
-            units,
-            skeleton: Skeleton::text(parts, dec.encoding.as_str(), bilingua_model::parser_info!()),
-            ..Default::default()
-        };
+        let doc = Document::new("tex", units, Skeleton::text(parts, dec.encoding.as_str(), bilingua_model::parser_info!())).with_options(opts);
         guard::finish(doc, std::mem::take(&mut dec.warnings), &limits)
     }
 

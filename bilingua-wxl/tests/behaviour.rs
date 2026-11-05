@@ -283,7 +283,7 @@ fn a_prefixed_v3_file_reads_and_writes() {
 #[test]
 fn paragraph_and_sentence_modes_both_round_trip() {
     for g in [Granularity::Paragraph, Granularity::Sentence, Granularity::Document] {
-        let mut d = Wxl.extract(LANGUAGES, &ExtractOptions { granularity: g, ..opts(false) }).unwrap();
+        let mut d = Wxl.extract(LANGUAGES, &opts(false).with_granularity(g)).unwrap();
         bilingua_seg::segment(&mut d, "en", g, bilingua_seg::Rules::bundled());
         assert_eq!(merged(&d), LANGUAGES, "{g:?}");
         // Translate every segment and read the file back: same number of units.

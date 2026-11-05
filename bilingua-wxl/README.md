@@ -6,7 +6,7 @@ WiX localization (`.wxl`) filter for Bilingua.
 use bilingua_wxl::Wxl;
 use bilingua_model::*;
 
-let mut doc = Wxl.extract(&bytes, &ExtractOptions { target_lang: Some("de-DE".into()), ..Default::default() })?;
+let mut doc = Wxl.extract(&bytes, &ExtractOptions::new().with_target_lang("de-DE"))?;
 doc.set_target("u1", vec![Inline::text("Hallo")])?;
 let out = Wxl.merge(&doc)?; // Culture="de-de" on the root, everything else as it was
 ```

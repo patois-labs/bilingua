@@ -4,15 +4,15 @@
 use bilingua::*;
 
 fn opts(target: &str) -> ExtractOptions {
-    ExtractOptions { source_lang: Some("en".into()), target_lang: Some(target.into()), ..Default::default() }
+    ExtractOptions::new().with_source_lang("en").with_target_lang(target)
 }
 
 fn always() -> MergeOptions {
-    MergeOptions { stamp_target_always: true, ..MergeOptions::default() }
+    MergeOptions::new().with_stamp_target_always(true)
 }
 
 fn utf8() -> MergeOptions {
-    MergeOptions { output_encoding: OutputEncoding::Utf8, ..MergeOptions::default() }
+    MergeOptions::new().with_output_encoding(OutputEncoding::Utf8)
 }
 
 fn text(b: Vec<u8>) -> String {

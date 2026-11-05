@@ -320,16 +320,7 @@ impl Xslt {
         if pos < text.len() {
             parts.push(SkelPart::Raw(text[pos..].to_string()));
         }
-        let doc = Document {
-            format: "xslt".into(),
-            name: None,
-            source_lang: opts.source_lang.clone(),
-            target_lang: opts.target_lang.clone(),
-            granularity: opts.granularity,
-            units: built.into_iter().map(|b| b.unit).collect(),
-            skeleton: Skeleton::text(parts, dec.encoding, bilingua_model::parser_info!()),
-            warnings: Vec::new(),
-        };
+        let doc = Document::new("xslt", built.into_iter().map(|b| b.unit).collect(), Skeleton::text(parts, dec.encoding, bilingua_model::parser_info!())).with_options(opts);
         guard::finish(doc, dec.warnings, limits)
     }
 }

@@ -4,7 +4,9 @@
 use bilingua_model::{plain_text, ExtractOptions, Filter, Inline, OriginKind, SegState, TagKind};
 use bilingua_xliff::{filters, Doc, Format};
 
-const OPTS: ExtractOptions = ExtractOptions { source_lang: None, target_lang: None, granularity: bilingua_model::Granularity::Paragraph, include_locked: true, limits: None, format_options: std::collections::BTreeMap::new() };
+fn opts() -> ExtractOptions {
+    ExtractOptions::new().with_granularity(bilingua_model::Granularity::Paragraph).with_include_locked(true)
+}
 
 fn filter(id: &str) -> Box<dyn Filter> {
     filters().into_iter().find(|f| f.id() == id).unwrap()
@@ -18,7 +20,7 @@ const AR_12: &str = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<xliff version=
 
 #[test]
 fn arabic_xliff12_reads_states_notes_origin_locks_and_free_codes() {
-    let d = filter("xliff").extract(AR_12.as_bytes(), &OPTS).unwrap();
+    let d = filter("xliff").extract(AR_12.as_bytes(), &opts()).unwrap();
     assert_eq!(d.target_lang.as_deref(), Some("ar"));
     assert_eq!(d.units.len(), 3);
     let (u1, s1) = d.find("u1").unwrap();
@@ -43,7 +45,7 @@ fn arabic_xliff12_reads_states_notes_origin_locks_and_free_codes() {
 #[test]
 fn untouched_merge_is_byte_identical_and_edits_patch_only_the_target() {
     let f = filter("xliff");
-    let d = f.extract(AR_12.as_bytes(), &OPTS).unwrap();
+    let d = f.extract(AR_12.as_bytes(), &opts()).unwrap();
     assert_eq!(f.merge(&d).unwrap(), AR_12.as_bytes());
     let mut d = d;
     let src = d.find("u2").unwrap().1.source.clone();
@@ -56,7 +58,7 @@ fn untouched_merge_is_byte_identical_and_edits_patch_only_the_target() {
     assert!(out.contains("<target state=\"translated\">\u{645}\u{631}\u{62D}\u{628}\u{627} <x id=\"2\" equiv-text=\"{name}\"/>!</target>"), "{out}");
     // Everything else is untouched.
     assert!(out.starts_with(&AR_12[..AR_12.find("<trans-unit id=\"u2\">").unwrap()]));
-    let d2 = f.extract(out.as_bytes(), &OPTS).unwrap();
+    let d2 = f.extract(out.as_bytes(), &opts()).unwrap();
     assert_eq!(tgt(&d2, "u2"), "\u{645}\u{631}\u{62D}\u{628}\u{627} !");
     assert_eq!(d2.find("u2").unwrap().1.state, SegState::Translated);
     // A locked unit cannot be set.
@@ -69,7 +71,7 @@ const JA_SDL: &str = "\u{FEFF}<?xml version=\"1.0\" encoding=\"utf-8\"?>\r\n<xli
 #[test]
 fn japanese_sdlxliff_with_bom_reads_conf_origin_and_lock_and_writes_back() {
     let f = filter("sdlxliff");
-    let d = f.extract(JA_SDL.as_bytes(), &OPTS).unwrap();
+    let d = f.extract(JA_SDL.as_bytes(), &opts()).unwrap();
     assert_eq!(d.units.len(), 1);
     assert_eq!(d.units[0].segments.len(), 2);
     let (_, s1) = d.find("1").unwrap();
@@ -99,7 +101,7 @@ const JA_X2: &str = "<?xml version=\"1.0\"?>\n<xliff xmlns=\"urn:oasis:names:tc:
 #[test]
 fn japanese_xliff2_free_codes_notes_and_ids() {
     let f = filter("xliff");
-    let d = f.extract(JA_X2.as_bytes(), &OPTS).unwrap();
+    let d = f.extract(JA_X2.as_bytes(), &opts()).unwrap();
     assert_eq!(d.source_lang.as_deref(), Some("en"));
     let (ua, sa) = d.find("a").unwrap();
     assert_eq!(sa.state, SegState::Reviewed);
@@ -127,7 +129,7 @@ fn japanese_xliff2_free_codes_notes_and_ids() {
 fn memoq_statuses_machine_origin_and_lock() {
     let x = "<?xml version=\"1.0\"?>\n<xliff version=\"1.2\" xmlns=\"urn:oasis:names:tc:xliff:document:1.2\" xmlns:mq=\"MQXliff\">\n<file source-language=\"en\" target-language=\"de\" datatype=\"x\"><body>\n<trans-unit id=\"1\" mq:status=\"MachineTranslated\"><source>A</source><target>B</target></trans-unit>\n<trans-unit id=\"2\" mq:status=\"Proofread\" mq:locked=\"locked\"><source>C</source><target>D</target></trans-unit>\n<trans-unit id=\"3\" mq:status=\"PreTranslated\" mq:percent=\"92\"><source>E</source><target>F</target></trans-unit>\n</body></file></xliff>\n";
     let f = filter("mqxliff");
-    let d = f.extract(x.as_bytes(), &OPTS).unwrap();
+    let d = f.extract(x.as_bytes(), &opts()).unwrap();
     assert_eq!(d.find("1").unwrap().1.origin.as_ref().unwrap().kind, OriginKind::Mt);
     assert_eq!(d.find("1").unwrap().1.state, SegState::Draft);
     assert_eq!(d.find("2").unwrap().1.state, SegState::Reviewed);
@@ -145,7 +147,7 @@ const GLOBALLINK: &str = "<?xml version=\"1.0\"?>\n<xliff version=\"1.2\" xmlns=
 #[test]
 fn globallink_finished_and_locked_segments() {
     let f = filter("xliff");
-    let d = f.extract(GLOBALLINK.as_bytes(), &OPTS).unwrap();
+    let d = f.extract(GLOBALLINK.as_bytes(), &opts()).unwrap();
     // Finished work counts as translated, a locked segment is locked, an open one is new.
     assert_eq!(d.find("g1").unwrap().1.state, SegState::Translated);
     assert!(d.find("g1").unwrap().0.translate);
@@ -166,7 +168,7 @@ fn globallink_finished_and_locked_segments() {
 #[test]
 fn free_rule_follows_the_localization_os_rule() {
     let x = "<?xml version=\"1.0\"?>\n<xliff version=\"1.2\" xmlns=\"urn:oasis:names:tc:xliff:document:1.2\"><file source-language=\"en\" target-language=\"fr\" datatype=\"x\"><body><trans-unit id=\"1\"><source><x id=\"1\"/><x id=\"START_BOLD_TEXT\"/><x id=\"3\" ctype=\"bold\"/><x id=\"4\" equiv-text=\"%d\"/><x id=\"5\" equiv-text=\"%1$d\"/><ph id=\"6\">{}</ph><ph id=\"7\">&lt;br/&gt;</ph><bpt id=\"8\">&lt;i&gt;</bpt>t<ept id=\"8\">&lt;/i&gt;</ept></source></trans-unit></body></file></xliff>";
-    let d = filter("xliff").extract(x.as_bytes(), &OPTS).unwrap();
+    let d = filter("xliff").extract(x.as_bytes(), &opts()).unwrap();
     let got: Vec<(String, bool)> = d.units[0].segments[0]
         .source
         .iter()
@@ -185,7 +187,7 @@ fn free_rule_follows_the_localization_os_rule() {
 #[test]
 fn skeleton_is_stamped_and_a_foreign_one_is_refused() {
     let f = filter("xliff");
-    let mut d = f.extract(AR_12.as_bytes(), &OPTS).unwrap();
+    let mut d = f.extract(AR_12.as_bytes(), &opts()).unwrap();
     assert_eq!(d.skeleton.parser().unwrap().name, "bilingua-xliff");
     if let bilingua_model::Skeleton::Text { parser, .. } = &mut d.skeleton {
         *parser = Some(bilingua_model::ParserInfo::new("bilingua-po", "0.1.0", 1));
@@ -196,8 +198,8 @@ fn skeleton_is_stamped_and_a_foreign_one_is_refused() {
 #[test]
 fn not_utf8_or_not_xliff_is_refused() {
     let f = filter("xliff");
-    assert!(f.extract(b"hello", &OPTS).is_err());
+    assert!(f.extract(b"hello", &opts()).is_err());
     let mut bad = AR_12.as_bytes().to_vec();
     bad.push(0xFF);
-    assert!(f.extract(&bad, &OPTS).is_err());
+    assert!(f.extract(&bad, &opts()).is_err());
 }

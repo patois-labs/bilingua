@@ -16,11 +16,11 @@ pub const HEAD: &str = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"ye
 \t<RootCharacterStyleGroup Self=\"rcsg\"><CharacterStyle Self=\"CharacterStyle/Bold\" Name=\"Bold\" FontStyle=\"Bold\"/></RootCharacterStyleGroup>\n";
 
 pub fn opts() -> ExtractOptions {
-    ExtractOptions { granularity: Granularity::Paragraph, ..Default::default() }
+    ExtractOptions::new().with_granularity(Granularity::Paragraph)
 }
 
 pub fn opts_to(lang: &str) -> ExtractOptions {
-    ExtractOptions { target_lang: Some(lang.into()), granularity: Granularity::Paragraph, ..Default::default() }
+    ExtractOptions::new().with_target_lang(lang).with_granularity(Granularity::Paragraph)
 }
 
 pub fn psr(inner: &str) -> String {
@@ -114,7 +114,7 @@ pub fn parse_tokens(text: &str) -> Vec<Inline> {
 }
 
 pub fn translate_doc(data: &[u8], mapping: &[(usize, &str)], target: Option<&str>) -> Vec<u8> {
-    let mut d = Icml.extract(data, &ExtractOptions { target_lang: target.map(str::to_string), granularity: Granularity::Paragraph, ..Default::default() }).expect("extract");
+    let mut d = Icml.extract(data, &ExtractOptions::new().with_target_lang(target.map(str::to_string)).with_granularity(Granularity::Paragraph)).expect("extract");
     for (p, t) in mapping {
         let u = d.units.iter_mut().find(|u| p_index(u) == *p).unwrap_or_else(|| panic!("no unit for paragraph {p}"));
         u.segments[0].target = parse_tokens(t);

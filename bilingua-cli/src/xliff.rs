@@ -76,6 +76,8 @@ fn state_name(s: SegState) -> &'static str {
         SegState::Translated => "translated",
         SegState::Reviewed => "reviewed",
         SegState::Confirmed | SegState::SignedOff | SegState::Locked => "final",
+        // a state added later: accepted or not
+        other => if other.is_accepted() { "translated" } else { "initial" },
     }
 }
 

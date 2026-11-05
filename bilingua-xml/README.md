@@ -14,7 +14,7 @@ use bilingua_model::*;
 use bilingua_xml::XmlFilter;
 
 let f = XmlFilter::new();                       // any XML; DITA and DocBook recognised; multilingual detected
-let mut doc = f.extract(&bytes, &ExtractOptions { target_lang: Some("fr-FR".into()), ..Default::default() })?;
+let mut doc = f.extract(&bytes, &ExtractOptions::new().with_target_lang("fr-FR"))?;
 doc.set_target("u3", vec![Inline::text("Bonjour")])?;
 let out = f.merge(&doc)?;                       // root xml:lang becomes fr-FR where the vocabulary has one
 ```

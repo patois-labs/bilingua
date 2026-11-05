@@ -8,7 +8,7 @@ pub const LOCOS_DESKTOP: &[u8] = include_bytes!("../data/locos_example.desktop")
 pub const LOCOS_CATKEYS: &[u8] = include_bytes!("../data/locos_example.catkeys");
 
 pub fn opts(target: Option<&str>) -> ExtractOptions {
-    ExtractOptions { source_lang: Some("en".into()), target_lang: target.map(str::to_string), ..Default::default() }
+    ExtractOptions::new().with_source_lang("en").with_target_lang(target.map(str::to_string))
 }
 
 pub fn flat(v: &[Inline]) -> String {

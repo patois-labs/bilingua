@@ -7,7 +7,7 @@ use serde_json::json;
 
 fn main() {
     let f = Json5Filter::default();
-    let o = ExtractOptions { include_locked: true, ..Default::default() };
+    let o = ExtractOptions::new().with_include_locked(true);
     for path in std::env::args().skip(1) {
         let bytes = std::fs::read(&path).unwrap_or_default();
         let v = match f.extract(&bytes, &o) {

@@ -2,7 +2,7 @@
 //!
 //! ```ignore
 //! let f = bilingua_idml::Idml;
-//! let mut doc = f.extract(&bytes, &ExtractOptions { target_lang: Some("de-DE".into()), ..Default::default() })?;
+//! let mut doc = f.extract(&bytes, &ExtractOptions::new().with_target_lang("de-DE"))?;
 //! doc.set_target("p0", vec![Inline::text("Hallo.")])?;
 //! let out = f.merge(&doc)?;
 //! ```
@@ -67,15 +67,7 @@ fn extract_doc(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
         }
     }
     let skeleton = Skeleton::zip(vec![ZipEntry { name: ORIGINAL.into(), data: ZipData::Raw(bytes.to_vec()) }], parser_info!());
-    let doc = Document {
-        format: "idml".into(),
-        source_lang: opts.source_lang.clone(),
-        target_lang: opts.target_lang.clone(),
-        granularity: opts.granularity,
-        units,
-        skeleton,
-        ..Default::default()
-    };
+    let doc = Document::new("idml", units, skeleton).with_options(opts);
     guard::finish(doc, vec![], &l)
 }
 

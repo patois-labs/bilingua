@@ -6,7 +6,7 @@ YAML filter for Bilingua: generic YAML, Rails i18n files and Symfony translation
 use bilingua_yaml::Yaml;
 use bilingua_model::*;
 
-let mut doc = Yaml.extract(&bytes, &ExtractOptions { target_lang: Some("de-DE".into()), ..Default::default() })?;
+let mut doc = Yaml.extract(&bytes, &ExtractOptions::new().with_target_lang("de-DE"))?;
 doc.set_target("u1", vec![Inline::text("Hallo")])?;
 let out = Yaml.merge(&doc)?;
 ```

@@ -112,11 +112,11 @@ fn package_zip_limits_come_from_the_extract_options() {
     let pkg = sample_package();
     let f = filter("sdlppx");
     assert!(f.extract(&pkg, &ExtractOptions::default()).is_ok());
-    let o = |l: bilingua_model::Limits| ExtractOptions { limits: Some(l), ..Default::default() };
+    let o = |l: bilingua_model::Limits| ExtractOptions::new().with_limits(l);
     let base = bilingua_model::Limits::default();
-    assert_eq!(limit_kind(f.extract(&pkg, &o(bilingua_model::Limits { max_zip_entries: 2, ..base }))), Some(bilingua_model::LimitKind::ZipEntries));
-    assert_eq!(limit_kind(f.extract(&pkg, &o(bilingua_model::Limits { max_zip_bytes: 50, ..base }))), Some(bilingua_model::LimitKind::ZipBytes));
-    assert_eq!(limit_kind(f.extract(&pkg, &o(bilingua_model::Limits { max_input_bytes: 100, ..base }))), Some(bilingua_model::LimitKind::InputBytes));
+    assert_eq!(limit_kind(f.extract(&pkg, &o(base.with_max_zip_entries(2)))), Some(bilingua_model::LimitKind::ZipEntries));
+    assert_eq!(limit_kind(f.extract(&pkg, &o(base.with_max_zip_bytes(50)))), Some(bilingua_model::LimitKind::ZipBytes));
+    assert_eq!(limit_kind(f.extract(&pkg, &o(base.with_max_input_bytes(100)))), Some(bilingua_model::LimitKind::InputBytes));
     // the ratio check: a large repetitive entry
     let big = "x".repeat(3 << 20);
     let bomb = {
@@ -129,7 +129,7 @@ fn package_zip_limits_come_from_the_extract_options() {
     };
     assert_eq!(limit_kind(f.extract(&bomb, &ExtractOptions::default())), Some(bilingua_model::LimitKind::ZipRatio));
     // a caller can raise the ratio; the file is then refused for what it is (not an XLIFF), not for its size
-    let lax = o(bilingua_model::Limits { max_zip_ratio: 1_000_000, ..base });
+    let lax = o(base.with_max_zip_ratio(1_000_000));
     assert_eq!(limit_kind(f.extract(&bomb, &lax)), None);
 }
 
@@ -150,7 +150,7 @@ fn merge_works_with_raised_limits() {
     let pkg = sample_package();
     let f = filter("sdlppx");
     let base = bilingua_model::Limits::default();
-    let opts = ExtractOptions { limits: Some(bilingua_model::Limits { max_zip_bytes: 1 << 40, ..base }), ..Default::default() };
+    let opts = ExtractOptions::new().with_limits(base.with_max_zip_bytes(1 << 40));
     let d = f.extract(&pkg, &opts).unwrap();
     assert!(f.merge(&d).is_ok());
 }

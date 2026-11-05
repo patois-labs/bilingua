@@ -134,7 +134,7 @@ fn legacy_encodings_are_kept() {
     ];
     for (lang, e, title, body) in cases {
         let bytes = encode_as(e, &sample(title, body));
-        let o = ExtractOptions { source_lang: Some(lang.to_string()), ..Default::default() };
+        let o = ExtractOptions::new().with_source_lang(lang.to_string());
         let out = round_trip(&bytes, &o);
         // the translation only has characters of the code page (the pseudo marks are Latin-1 but not in every
         // page), so the file is read back in the same way and still has its units
@@ -143,7 +143,7 @@ fn legacy_encodings_are_kept() {
     }
     // a translation that does not fit the code page is written as UTF-8
     let bytes = encode_as(encoding_rs::WINDOWS_1252, "Caf\u{e9} <B>cr\u{e8}me</B>.\n");
-    let o = ExtractOptions { source_lang: Some("fr-FR".into()), ..Default::default() };
+    let o = ExtractOptions::new().with_source_lang("fr-FR");
     let mut doc = Mdx.extract(&bytes, &o).unwrap();
     let id = doc.units[0].segments[0].id.clone();
     doc.set_target(&id, vec![Inline::text("\u{65e5}\u{672c}\u{8a9e}")]).unwrap();
@@ -164,7 +164,7 @@ fn guide_round_trips() {
 
 #[test]
 fn paragraph_granularity_is_the_only_mode() {
-    let o = ExtractOptions { granularity: Granularity::Paragraph, ..Default::default() };
+    let o = ExtractOptions::new().with_granularity(Granularity::Paragraph);
     let doc = Mdx.extract(&guide(), &o).unwrap();
     assert!(doc.units.iter().all(|u| u.segments.len() == 1));
     let ids: std::collections::HashSet<_> = doc.units.iter().map(|u| u.id.clone()).collect();

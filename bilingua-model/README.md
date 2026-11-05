@@ -31,7 +31,7 @@ Not done: the LocOS adapter itself, and `free` for XLIFF codes read from files (
 Safety belongs to the engine, not to each app. The rules and the default numbers are Localization OS's.
 
 **Limits** (`guard::Limits`, also `bilingua_model::Limits`): one `Copy` struct, `Default` = LocOS. A caller sets it per
-call in `ExtractOptions { limits: Some(Limits { max_units: 10_000, ..Limits::default() }), .. }` (`None` = defaults;
+call with `ExtractOptions::new().with_limits(Limits::new().with_max_units(10_000))` (`None` = defaults;
 `ExtractOptions::limits()` gives the one in force; the struct is serde with `#[serde(default)]`, so a JSON or Python
 dict may list only the fields it changes).
 

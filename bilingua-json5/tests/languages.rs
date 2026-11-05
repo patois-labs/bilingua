@@ -19,7 +19,7 @@ const LANGS: [(&str, &str); 11] = [
 ];
 
 fn opts(src: &str) -> ExtractOptions {
-    ExtractOptions { source_lang: Some(src.into()), target_lang: Some("es-ES".into()), granularity: Granularity::Paragraph, include_locked: false, ..Default::default() }
+    ExtractOptions::new().with_source_lang(src).with_target_lang("es-ES").with_granularity(Granularity::Paragraph)
 }
 
 fn pseudo(v: &[Inline]) -> Vec<Inline> {
@@ -201,7 +201,7 @@ fn utf16_both_byte_orders_and_utf8_bom() {
 #[test]
 fn locked_units_for_strings_without_letters() {
     let f = Json5Filter::default();
-    let o = ExtractOptions { include_locked: true, ..opts("en") };
+    let o = (opts("en")).with_include_locked(true);
     let d = f.extract(b"{a: 'Hello', b: '---', c: '', d: '12:30'}", &o).unwrap();
     // 'Hello' and '12:30' (it has digits) are units; '---' is locked context; the empty string is skipped
     let flags: Vec<(String, bool)> = d.units.iter().map(|u| (plain_text(&u.source()), u.translate)).collect();

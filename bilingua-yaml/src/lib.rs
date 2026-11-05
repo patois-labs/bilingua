@@ -228,16 +228,7 @@ impl Yaml {
                 u.context.extra.insert("rails_locale".into(), r.key.clone());
             }
         }
-        Ok(Document {
-            format: "yaml".into(),
-            name: None,
-            source_lang: opts.source_lang.clone(),
-            target_lang: opts.target_lang.clone(),
-            granularity: opts.granularity,
-            units,
-            skeleton: Skeleton::text(parts, enc.label(), bilingua_model::parser_info!()),
-            ..Default::default()
-        })
+        Ok(Document::new("yaml", units, Skeleton::text(parts, enc.label(), bilingua_model::parser_info!())).with_options(opts))
     }
 }
 

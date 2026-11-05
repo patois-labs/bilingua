@@ -56,7 +56,7 @@ fn crlf_files_keep_crlf_for_new_line_breaks() {
 #[test]
 fn locked_units_show_what_is_not_translated() {
     let src = plist("<dict><key>CFBundleIdentifier</key><string>com.example.app</string><key>CFBundleName</key><string>Name</string><key>CFBundleVersion</key><string>12</string><key>Empty</key><string/><key>Blank</key><string>  </string></dict>");
-    let o = ExtractOptions { include_locked: true, ..Default::default() };
+    let o = ExtractOptions::new().with_include_locked(true);
     let mut d = ex_with(F::Plist, &src, &o);
     // empty and blank values have no text to show
     let ids: Vec<(&str, bool)> = d.units.iter().map(|u| (u.id.as_str(), u.translate)).collect();
@@ -213,7 +213,7 @@ fn plural_fill_corner_cases() {
     let sd = |body: &str| plist(&format!("<dict><key>e</key><dict><key>NSStringLocalizedFormatKey</key><string>%#@n@</string><key>n</key><dict>{body}</dict></dict></dict>"));
     let spec = "<key>NSStringFormatSpecTypeKey</key><string>NSStringPluralRuleType</string><key>NSStringFormatValueTypeKey</key><string>d</string>";
     let ru = |bytes: &[u8]| {
-        let d = ex_with(F::Sd, bytes, &ExtractOptions { target_lang: Some("ru".into()), ..Default::default() });
+        let d = ex_with(F::Sd, bytes, &ExtractOptions::new().with_target_lang("ru"));
         s(&merged(F::Sd, &prefixed(&d, "R ")))
     };
     // a compact one-line file has no white space between its keys, so the added forms start on a new line
@@ -239,11 +239,11 @@ fn plural_fill_corner_cases() {
     assert!(!ru(&weird).contains("<key>few</key>"));
     // unknown, empty and malformed target languages add nothing
     for lang in ["xx", "", "  ", "-", "_RU", "zzz-ZZ"] {
-        let d = ex_with(F::Sd, &tight, &ExtractOptions { target_lang: Some(lang.into()), ..Default::default() });
+        let d = ex_with(F::Sd, &tight, &ExtractOptions::new().with_target_lang(lang));
         assert!(!s(&merged(F::Sd, &prefixed(&d, "R "))).contains("<key>few</key>"), "{lang:?}");
     }
     // a plist (not a stringsdict) never gets forms added
-    let d = ex_with(F::Plist, &tight, &ExtractOptions { target_lang: Some("ru".into()), ..Default::default() });
+    let d = ex_with(F::Plist, &tight, &ExtractOptions::new().with_target_lang("ru"));
     assert!(!s(&merged(F::Plist, &prefixed(&d, "R "))).contains("<key>few</key>"));
     // the added form carries the translated text of `other`, including a CDATA original
     let cd = sd(&format!("{spec}<key>other</key><string><![CDATA[<b>%d</b> things]]></string>"));
@@ -253,7 +253,7 @@ fn plural_fill_corner_cases() {
 
 #[test]
 fn a_translated_plural_fills_from_the_translation_not_the_source() {
-    let d = ex_with(F::Sd, include_bytes!("data/Localizable.stringsdict"), &ExtractOptions { target_lang: Some("ru".into()), ..Default::default() });
+    let d = ex_with(F::Sd, include_bytes!("data/Localizable.stringsdict"), &ExtractOptions::new().with_target_lang("ru"));
     let mut p = d.clone();
     // translate only `other` of files_count
     let id = d.units.iter().filter(|u| u.translate).nth(2).unwrap().segments[0].id.clone();
@@ -305,7 +305,7 @@ fn positional_specifiers_may_move() {
 #[test]
 fn a_binary_file_survives_json_and_a_second_extract() {
     let bytes = std::fs::read(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../oracle/corpus/plist/binary_ru.stringsdict")).unwrap();
-    let mut d = ex_with(F::Sd, &bytes, &ExtractOptions { target_lang: Some("ru".into()), ..Default::default() });
+    let mut d = ex_with(F::Sd, &bytes, &ExtractOptions::new().with_target_lang("ru"));
     set_nth(&mut d, 0, "\u{41d}\u{435}\u{442} \u{444}\u{430}\u{439}\u{43b}\u{43e}\u{432}");
     let json = serde_json::to_string(&d).unwrap();
     let back: Document = serde_json::from_str(&json).unwrap();

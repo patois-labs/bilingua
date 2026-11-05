@@ -264,7 +264,7 @@ fn hostile_inputs() {
     // unterminated block comment
     extract(b"STRINGTABLE BEGIN 1 \"a\" END /* never closed \"b\"").unwrap();
     // segment cap
-    let small = ExtractOptions { limits: Some(Limits { max_units: 5, ..Limits::default() }), ..Default::default() };
+    let small = ExtractOptions::new().with_limits(Limits::new().with_max_units(5));
     let mut big = String::from("STRINGTABLE\nBEGIN\n");
     for i in 0..20 {
         big.push_str(&format!(" {i} \"Text {i}\"\n"));
@@ -289,7 +289,7 @@ fn hostile_inputs() {
 #[test]
 fn end_to_end_upload_export() {
     let src = utf16le(&sample_crlf(), true);
-    let mut doc = Rc.extract(&src, &ExtractOptions { source_lang: Some("en-US".into()), target_lang: Some("de-DE".into()), ..Default::default() }).unwrap();
+    let mut doc = Rc.extract(&src, &ExtractOptions::new().with_source_lang("en-US").with_target_lang("de-DE")).unwrap();
     let by_src: std::collections::BTreeMap<String, String> = doc.units.iter().map(|u| (plain_text(&u.source()), u.segments[0].id.clone())).collect();
     assert!(by_src.contains_key("About Sample") && by_src.contains_key("&About"));
     for (source, target) in [("About Sample", "Info zu Sample"), ("&About", "Info")] {

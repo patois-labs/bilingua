@@ -4,7 +4,7 @@ use crate::zipio::{read_zip, ZipLimits};
 use crate::*;
 
 fn extract_with_opts(bytes: &[u8], xo: &XlsxOptions) -> Document {
-    extract_with(bytes, &ExtractOptions { target_lang: Some("es-ES".into()), ..Default::default() }, xo).unwrap()
+    extract_with(bytes, &ExtractOptions::new().with_target_lang("es-ES"), xo).unwrap()
 }
 
 fn extract(bytes: &[u8]) -> Document {

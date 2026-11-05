@@ -107,16 +107,7 @@ pub fn extract_html(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Err
     }
     let (units, skeleton_parts) = ex.finish();
     let source_lang = opts.source_lang.clone().or(ex.html_lang.clone());
-    bilingua_model::guard::finish(Document {
-        format: "html".into(),
-        name: None,
-        source_lang,
-        target_lang: opts.target_lang.clone(),
-        granularity: opts.granularity,
-        units,
-        skeleton: Skeleton::text(skeleton_parts, enc.name(), bilingua_model::parser_info!()),
-        warnings: vec![],
-    }, warnings, &opts.limits())
+    bilingua_model::guard::finish(Document::new("html", units, Skeleton::text(skeleton_parts, enc.name(), bilingua_model::parser_info!())).with_source_lang(source_lang).with_target_lang(opts.target_lang.clone()).with_granularity(opts.granularity), warnings, &opts.limits())
 }
 
 /// Elements whose end tag may be left out: a run of them is siblings (the next one closes the last), not nesting.

@@ -221,7 +221,7 @@ fn non_string_entries_comments_and_odd_values_are_left_alone() {
 #[test]
 fn include_locked_lists_text_values_left_alone() {
     let data = corpus("lumen_ui.resx");
-    let o = ExtractOptions { include_locked: true, ..opts() };
+    let o = opts().with_include_locked(true);
     let d = Resx.extract(&data, &o).unwrap();
     let locked: Vec<String> = d.units.iter().filter(|u| !u.translate).map(|u| show(&u.source())).collect();
     assert_eq!(locked, ["---", "cancelButton"]);
@@ -234,7 +234,7 @@ fn include_locked_lists_text_values_left_alone() {
 fn target_locale_changes_nothing_in_the_file() {
     // the culture lives in the file name (Strings.de-DE.resx); nothing is stamped
     let data = corpus("lumen_ui.resx");
-    let mut d = Resx.extract(&data, &ExtractOptions { target_lang: Some("ar".into()), ..opts() }).unwrap();
+    let mut d = Resx.extract(&data, &opts().with_target_lang("ar")).unwrap();
     d.target_lang = Some("ja".into());
     assert_eq!(Resx.merge(&d).unwrap(), data);
 }

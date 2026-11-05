@@ -406,15 +406,7 @@ impl Filter for Rst {
                 format!("The table at line {line} ({reason}) is kept as written and not translated."),
             ));
         }
-        let doc = Document {
-            format: "rst".into(),
-            source_lang: opts.source_lang.clone(),
-            target_lang: opts.target_lang.clone(),
-            granularity: opts.granularity,
-            units,
-            skeleton: Skeleton::text(parts, d.encoding, bilingua_model::parser_info!()),
-            ..Default::default()
-        };
+        let doc = Document::new("rst", units, Skeleton::text(parts, d.encoding, bilingua_model::parser_info!())).with_options(opts);
         guard::finish(doc, warnings, &limits)
     }
 

@@ -140,7 +140,7 @@ fn edge_file() {
     assert!(out.contains("<![CDATA[cdata skipped]]>") && out.ends_with("<!-- tail -->\n"));
     assert!(out.contains(">p\r\nq<"), "CRLF source convention kept: {out:?}");
     // locked units list what is left alone
-    let locked = Xaml::default().extract(data, &ExtractOptions { include_locked: true, ..opts() }).unwrap();
+    let locked = Xaml::default().extract(data, &opts().with_include_locked(true)).unwrap();
     assert!(locked.units.iter().any(|u| !u.translate && show(u, &u.source()) == "{Binding}"));
 }
 

@@ -367,15 +367,7 @@ impl Filter for Mo {
             bilingua_model::parser_info!(),
         );
         guard::finish(
-            Document {
-                format: "mo".into(),
-                source_lang: opts.source_lang.clone(),
-                target_lang: opts.target_lang.clone(),
-                granularity: opts.granularity,
-                units,
-                skeleton,
-                ..Default::default()
-            },
+            Document::new("mo", units, skeleton).with_options(opts),
             vec![],
             &limits,
         )
@@ -385,7 +377,7 @@ impl Filter for Mo {
         bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
         let original = original_bytes(doc)?;
         // The file was checked when it was extracted; read it again under limits only the file size bounds.
-        let limits = Limits { max_units: usize::MAX, max_unit_chars: usize::MAX / 16, ..Limits::default() };
+        let limits = Limits::new().with_max_units(usize::MAX).with_max_unit_chars(usize::MAX / 16);
         let cat = read::read(original, &limits)?;
         let codec = cat.codec;
         let mut entries = cat.entries;

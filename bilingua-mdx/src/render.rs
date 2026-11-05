@@ -163,16 +163,7 @@ pub(crate) fn build_document(w: &Walk, l: &Loaded, opts: &ExtractOptions) -> Res
         parts.push(SkelPart::Raw(text[pos..].to_string()));
     }
     let warnings = a11y_warnings(w);
-    let doc = Document {
-        format: crate::ID.into(),
-        name: None,
-        source_lang: opts.source_lang.clone(),
-        target_lang: opts.target_lang.clone(),
-        granularity: opts.granularity,
-        units,
-        skeleton: Skeleton::text(parts, l.encoding.clone(), bilingua_model::parser_info!()),
-        ..Default::default()
-    };
+    let doc = Document::new(crate::ID, units, Skeleton::text(parts, l.encoding.clone(), bilingua_model::parser_info!())).with_options(opts);
     Ok((doc, warnings))
 }
 

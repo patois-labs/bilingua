@@ -203,8 +203,8 @@ fn hostile() {
     assert!(matches!(r, Err(Error::Encoding(_))), "{r:?}");
     // the segment cap
     let data: Vec<u8> = (0..30).flat_map(|i| format!("Paragraph {i}.\n\n").into_bytes()).collect();
-    let limits = Limits { max_units: 10, ..Limits::default() };
-    let r = Rst.extract(&data, &ExtractOptions { limits: Some(limits), ..Default::default() });
+    let limits = Limits::new().with_max_units(10);
+    let r = Rst.extract(&data, &ExtractOptions::new().with_limits(limits));
     assert!(matches!(r, Err(Error::Limit(_))), "over-cap file must be refused");
     // deep nesting
     let deep: Vec<u8> = (0..200).flat_map(|k| format!("{}- item\n\n", "  ".repeat(k)).into_bytes()).collect();

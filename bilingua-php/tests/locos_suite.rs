@@ -193,7 +193,7 @@ fn refusals() {
 fn caps() {
     let deep = format!("<?php return {}'x'{};", "[".repeat(40), "]".repeat(40));
     refused(&deep, "nested");
-    let small = |max_units| ExtractOptions { limits: Some(Limits { max_units, ..Limits::default() }), ..Default::default() };
+    let small = |max_units| ExtractOptions::new().with_limits(Limits::new().with_max_units(max_units));
     let kind = |src: &str| match Php.extract(src.as_bytes(), &small(5)) {
         Err(Error::Limit(e)) => e.kind,
         other => panic!("{src:.40}: expected a limit error, got {:?}", other.map(|d| d.units.len())),

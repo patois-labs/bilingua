@@ -7,7 +7,7 @@ Google / Angular message bundles for Bilingua: `.xmb` (the source file `ng extra
 use bilingua_xmb::Xmb;
 use bilingua_model::*;
 
-let mut doc = Xmb.extract(&bytes, &ExtractOptions { target_lang: Some("fr".into()), ..Default::default() })?;
+let mut doc = Xmb.extract(&bytes, &ExtractOptions::new().with_target_lang("fr"))?;
 doc.set_target("u1", vec![Inline::text("Bonjour")])?;
 let xtb = Xmb.merge(&doc)?; // an XTB: <translationbundle lang="fr">
 ```

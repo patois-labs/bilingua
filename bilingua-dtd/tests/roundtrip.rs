@@ -124,7 +124,7 @@ fn bom_and_newlines_kept() {
 #[test]
 fn target_locale_and_paragraph_mode() {
     let data = std::fs::read(corpus_dir().join("browser_en.dtd")).unwrap();
-    let opts = ExtractOptions { source_lang: Some("en".into()), target_lang: Some("ar".into()), granularity: Granularity::Paragraph, ..Default::default() };
+    let opts = ExtractOptions::new().with_source_lang("en").with_target_lang("ar").with_granularity(Granularity::Paragraph);
     let mut doc = DtdFilter.extract(&data, &opts).unwrap();
     assert_eq!(doc.granularity, Granularity::Paragraph);
     assert_eq!(doc.target_lang.as_deref(), Some("ar"));
@@ -167,7 +167,7 @@ fn tags_move_and_escape_once() {
 fn locked_units_and_context() {
     let data = b"<!-- the note -->\n<!ENTITY a \"&#037;\">\n<!ENTITY b \"---\">\n<!ENTITY c \"Hello\">\n<!ENTITY e \"\">\n<!ENTITY f \"&brandShortName;\">\n";
     assert_eq!(units(data), vec!["Hello"]);
-    let opts = ExtractOptions { include_locked: true, ..Default::default() };
+    let opts = ExtractOptions::new().with_include_locked(true);
     let doc = DtdFilter.extract(data, &opts).unwrap();
     let flags: Vec<(String, bool)> = doc.units.iter().map(|u| (flat(&u.source()), u.translate)).collect();
     assert_eq!(flags, vec![("%".into(), false), ("---".into(), false), ("Hello".into(), true), ("&brandShortName;".into(), false)]);
@@ -224,11 +224,11 @@ fn detection() {
 #[test]
 fn limits_and_quirks() {
     let long = format!("<!ENTITY a \"{}\">\n", "x".repeat(101));
-    let tight = Limits { max_unit_chars: 100, ..Limits::default() };
+    let tight = Limits::new().with_max_unit_chars(100);
     assert!(DtdFilter.extract_with(long.as_bytes(), &opts(), &tight).is_err());
-    let tight = Limits { max_lines: 20, ..Limits::default() };
+    let tight = Limits::new().with_max_lines(20);
     assert!(DtdFilter.extract_with("\n".repeat(30).as_bytes(), &opts(), &tight).is_err());
-    let tight = Limits { max_input_bytes: 10, ..Limits::default() };
+    let tight = Limits::new().with_max_input_bytes(10);
     assert!(DtdFilter.extract_with(b"<!ENTITY a \"One\">", &opts(), &tight).is_err());
     assert!(units(b"").is_empty());
     // an unchanged value keeps its spelling (references, odd quoting)

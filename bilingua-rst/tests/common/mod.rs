@@ -5,7 +5,7 @@ use bilingua_model::*;
 use bilingua_rst::Rst;
 
 pub fn opts() -> ExtractOptions {
-    ExtractOptions { source_lang: Some("en".into()), granularity: Granularity::Paragraph, ..Default::default() }
+    ExtractOptions::new().with_source_lang("en").with_granularity(Granularity::Paragraph)
 }
 
 pub fn extract(data: &[u8]) -> Result<Document, Error> {

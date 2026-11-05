@@ -16,7 +16,7 @@ fn main() {
             "odg" | "otg" => Box::new(Odg::with_options(o)),
             _ => Box::new(Odt::with_options(o)),
         };
-        let opts = ExtractOptions { source_lang: Some("en".into()), ..Default::default() };
+        let opts = ExtractOptions::new().with_source_lang("en");
         match filter.extract(&bytes, &opts) {
             Ok(d) => {
                 let units: Vec<serde_json::Value> = d

@@ -7,7 +7,7 @@ binary plist, and the plural, device and width rules of `Localizable.stringsdict
 use bilingua_model::*;
 use bilingua_plist::Stringsdict;
 
-let mut doc = Stringsdict.extract(&bytes, &ExtractOptions { target_lang: Some("ru".into()), ..Default::default() })?;
+let mut doc = Stringsdict.extract(&bytes, &ExtractOptions::new().with_target_lang("ru"))?;
 doc.set_target("s5", vec![Inline::tag("1", TagKind::Standalone, "%lld"), Inline::text(" файла")])?;
 let out = Stringsdict.merge(&doc)?; // the Russian few and many forms are added, filled from `other`
 ```

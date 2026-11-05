@@ -4,7 +4,7 @@ use crate::zipio::{read_zip, ZipLimits};
 use crate::*;
 
 fn extract_for(bytes: &[u8], target: &str) -> Document {
-    Pptx.extract(bytes, &ExtractOptions { target_lang: Some(target.into()), ..Default::default() }).unwrap()
+    Pptx.extract(bytes, &ExtractOptions::new().with_target_lang(target)).unwrap()
 }
 
 fn extract(bytes: &[u8]) -> Document {

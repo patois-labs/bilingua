@@ -93,7 +93,7 @@ fn deep_nesting_is_refused_not_a_stack_overflow() {
     assert_eq!(extract(&d).unwrap().units.len(), 1);
     // a caller's own depth limit is honoured
     let mut o = opts();
-    o.limits = Some(Limits { max_xml_depth: 8, ..Limits::default() });
+    o.limits = Some(Limits::new().with_max_xml_depth(8));
     let mut d = b"<MIFFile 2019>\n".to_vec();
     d.extend(b"<A ".repeat(9));
     d.extend(b">".repeat(9));
@@ -125,7 +125,7 @@ fn unterminated_and_huge_inputs() {
     }
     // over the input limit
     let mut o = opts();
-    o.limits = Some(Limits { max_input_bytes: 100, ..Limits::default() });
+    o.limits = Some(Limits::new().with_max_input_bytes(100));
     let e = Mif.extract(SUITE, &o).unwrap_err();
     assert!(matches!(&e, Error::Limit(l) if l.kind == LimitKind::InputBytes), "{e}");
     // a statement flood and a unit flood
@@ -135,7 +135,7 @@ fn unterminated_and_huge_inputs() {
     assert!(matches!(&e, Error::Limit(l) if l.kind == LimitKind::XmlElements), "{e}");
     // a million tiny paragraphs under raised limits: no quadratic work
     let mut o = opts();
-    o.limits = Some(Limits { max_units: 2_000_000, ..Limits::default() });
+    o.limits = Some(Limits::new().with_max_units(2_000_000));
     let mut big = b"<MIFFile 2019>\n<TextFlow\n".to_vec();
     for i in 0..30_000 {
         big.extend(format!(" <Para <PgfTag `B'><ParaLine <String `Word {i}'>>>\n").as_bytes());

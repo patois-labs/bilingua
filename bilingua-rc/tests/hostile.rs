@@ -138,13 +138,13 @@ fn limits_are_typed_errors() {
         many.push_str(&format!(" {i} \"Text {i}\"\n"));
     }
     many.push_str("END\n");
-    let o = ExtractOptions { limits: Some(Limits { max_units: 100, ..Limits::default() }), ..Default::default() };
+    let o = ExtractOptions::new().with_limits(Limits::new().with_max_units(100));
     assert!(matches!(Rc.extract(many.as_bytes(), &o), Err(Error::Limit(e)) if e.kind == LimitKind::Units));
-    let o = ExtractOptions { limits: Some(Limits { max_input_bytes: 50, ..Limits::default() }), ..Default::default() };
+    let o = ExtractOptions::new().with_limits(Limits::new().with_max_input_bytes(50));
     assert!(matches!(Rc.extract(many.as_bytes(), &o), Err(Error::Limit(e)) if e.kind == LimitKind::InputBytes));
-    let o = ExtractOptions { limits: Some(Limits { max_lines: 10, ..Limits::default() }), ..Default::default() };
+    let o = ExtractOptions::new().with_limits(Limits::new().with_max_lines(10));
     assert!(matches!(Rc.extract(many.as_bytes(), &o), Err(Error::Limit(e)) if e.kind == LimitKind::Lines));
-    let o = ExtractOptions { limits: Some(Limits { max_unit_chars: 10, ..Limits::default() }), ..Default::default() };
+    let o = ExtractOptions::new().with_limits(Limits::new().with_max_unit_chars(10));
     assert!(matches!(Rc.extract(b"STRINGTABLE BEGIN 1 \"a very long string indeed\" END", &o), Err(Error::Limit(e)) if e.kind == LimitKind::UnitChars));
 }
 

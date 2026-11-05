@@ -7,14 +7,7 @@ use bilingua::*;
 const FIXTURES: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures");
 
 fn opts(mode: Granularity) -> ExtractOptions {
-    ExtractOptions {
-        source_lang: Some("en".into()),
-        target_lang: Some("es-ES".into()),
-        granularity: mode,
-        include_locked: false,
-        limits: None,
-        ..Default::default()
-    }
+    ExtractOptions::new().with_source_lang("en").with_target_lang("es-ES").with_granularity(mode)
 }
 
 fn samples() -> Vec<(&'static str, Vec<u8>)> {

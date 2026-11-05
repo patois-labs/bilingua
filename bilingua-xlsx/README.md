@@ -8,7 +8,7 @@ use bilingua_xlsx::{Xlsx, XlsxOptions};
 use bilingua_model::*;
 
 let f = Xlsx::default();                       // or Xlsx::with_options(XlsxOptions { .. })
-let mut doc = f.extract(&bytes, &ExtractOptions { target_lang: Some("es-ES".into()), ..Default::default() })?;
+let mut doc = f.extract(&bytes, &ExtractOptions::new().with_target_lang("es-ES"))?;
 doc.set_target("ss3", vec![Inline::text("Hola.")])?;
 let (out, report) = bilingua_xlsx::merge_with_report(&doc)?;   // or f.merge(&doc) for just the bytes
 ```

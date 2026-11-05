@@ -134,7 +134,7 @@ fn huge_and_degenerate_files_are_typed_errors_or_fine() {
     let small = |f: &dyn Fn(&mut Limits)| {
         let mut l = Limits::default();
         f(&mut l);
-        ExtractOptions { limits: Some(l), ..Default::default() }
+        ExtractOptions::new().with_limits(l)
     };
     let big = vec![b' '; 1001];
     match Php.extract(&big, &small(&|l| l.max_input_bytes = 1000)) {

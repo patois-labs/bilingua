@@ -7,7 +7,7 @@ Behaviour follows Localization OS (`odf_filter.py`, `office_comments.py`); `WIRI
 ```rust
 use bilingua_model::*;
 let f = bilingua_odf::Odt::default();            // Ods, Odp, Odg alike; Odt::with_options(OdfOptions { .. })
-let mut doc = f.extract(&bytes, &ExtractOptions { target_lang: Some("de-DE".into()), ..Default::default() })?;
+let mut doc = f.extract(&bytes, &ExtractOptions::new().with_target_lang("de-DE"))?;
 doc.set_target("p0", vec![Inline::text("Erste Schritte")])?;
 let out = f.merge(&doc)?;
 ```

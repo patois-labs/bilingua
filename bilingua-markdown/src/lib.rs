@@ -41,16 +41,7 @@ impl Filter for MarkdownFilter {
         let text = text_owned.as_str();
         let encoding = dec.encoding.as_str();
         let ex = extract::extract(text, opts.include_locked);
-        let doc = Document {
-            format: ID.into(),
-            name: None,
-            source_lang: opts.source_lang.clone(),
-            target_lang: opts.target_lang.clone(),
-            granularity: opts.granularity,
-            units: ex.units,
-            skeleton: Skeleton::text(ex.parts, encoding, bilingua_model::parser_info!()),
-            warnings: vec![],
-        };
+        let doc = Document::new(ID, ex.units, Skeleton::text(ex.parts, encoding, bilingua_model::parser_info!())).with_options(opts);
         // Safety net: nothing translated must mean nothing changed.
         if self.merge(&doc)? != bytes {
             return Err(Error::Parse { format: ID.into(), msg: "internal error: the file does not round-trip".into() });

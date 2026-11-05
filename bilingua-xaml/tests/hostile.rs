@@ -185,10 +185,10 @@ fn malformed_and_truncated_files_are_typed_errors() {
 
 #[test]
 fn limits_give_typed_errors() {
-    let small = Limits { max_input_bytes: 100, ..Limits::default() };
+    let small = Limits::new().with_max_input_bytes(100);
     let e = Xaml::default().extract_with(&[b'a'; 200], &opts(), &small).unwrap_err();
     assert!(matches!(e, Error::Limit(ref l) if l.kind == LimitKind::InputBytes));
-    let few = Limits { max_xml_elements: 10, ..Limits::default() };
+    let few = Limits::new().with_max_xml_elements(10);
     let doc = format!("<r {NS}>{}</r>", "<a/>".repeat(100));
     assert!(matches!(Xaml::default().extract_with(doc.as_bytes(), &opts(), &few), Err(Error::Limit(_))));
 }

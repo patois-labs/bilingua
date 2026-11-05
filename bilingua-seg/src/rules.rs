@@ -13,6 +13,7 @@ use std::collections::HashMap;
 use std::sync::OnceLock;
 
 #[derive(Debug)]
+#[non_exhaustive]
 pub enum SrxError {
     Xml(String),
     Regex(String),

@@ -287,16 +287,7 @@ impl Properties {
             parts.push(SkelPart::Raw(p.text[pos..].to_string()));
         }
         mark_duplicates(&mut units);
-        Ok(Document {
-            format: "properties".into(),
-            name: None,
-            source_lang: opts.source_lang.clone(),
-            target_lang: opts.target_lang.clone(),
-            granularity: opts.granularity,
-            units,
-            skeleton: Skeleton::text(parts, p.mode.label(p.bom), bilingua_model::parser_info!()),
-            ..Default::default()
-        })
+        Ok(Document::new("properties", units, Skeleton::text(parts, p.mode.label(p.bom), bilingua_model::parser_info!())).with_options(opts))
     }
 
     /// Every entry in file order, translatable or not (the key-based view).

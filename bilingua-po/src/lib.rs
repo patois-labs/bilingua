@@ -231,16 +231,7 @@ impl Filter for Po {
         if cursor < text.len() {
             parts.push(SkelPart::Raw(text[cursor..].to_string()));
         }
-        bilingua_model::guard::finish(Document {
-            format: "po".into(),
-            name: None,
-            source_lang: opts.source_lang.clone(),
-            target_lang,
-            granularity: opts.granularity,
-            units,
-            skeleton: Skeleton::text(parts, dec.encoding.as_str(), bilingua_model::parser_info!()),
-            warnings: vec![],
-        }, std::mem::take(&mut dec.warnings), &opts.limits())
+        bilingua_model::guard::finish(Document::new("po", units, Skeleton::text(parts, dec.encoding.as_str(), bilingua_model::parser_info!())).with_source_lang(opts.source_lang.clone()).with_target_lang(target_lang).with_granularity(opts.granularity), std::mem::take(&mut dec.warnings), &opts.limits())
     }
 
     fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {

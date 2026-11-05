@@ -37,7 +37,7 @@ pub fn fixtures() -> Vec<(&'static str, &'static [u8])> {
 }
 
 pub fn opts(locked: bool) -> ExtractOptions {
-    ExtractOptions { source_lang: Some("en".into()), target_lang: Some("de".into()), include_locked: locked, ..Default::default() }
+    ExtractOptions::new().with_source_lang("en").with_target_lang("de").with_include_locked(locked)
 }
 
 pub fn ex(bytes: &[u8]) -> Document {

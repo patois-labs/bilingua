@@ -4,13 +4,9 @@
 //! use bilingua_model::*;
 //! use bilingua_seg::{segment, Rules};
 //!
-//! let mut doc = Document {
-//!     format: "txt".into(), name: None, source_lang: None, target_lang: None,
-//!     granularity: Granularity::Sentence,
-//!     units: vec![Unit::new("p1", vec![Inline::text("Hello there. How are you?")])],
-//!     skeleton: Skeleton::Text { parts: vec![SkelPart::Unit(0)], encoding: "utf-8".into(), parser: None },
-//!     warnings: vec![],
-//! };
+//! let units = vec![Unit::new("p1", vec![Inline::text("Hello there. How are you?")])];
+//! let skeleton = Skeleton::Text { parts: vec![SkelPart::Unit(0)], encoding: "utf-8".into(), parser: None };
+//! let mut doc = Document::new("txt", units, skeleton);
 //! segment(&mut doc, "en", Granularity::Sentence, Rules::bundled());
 //! assert_eq!(doc.units[0].segments.len(), 2);
 //! assert_eq!(doc.units[0].segments[1].id, "p1#2");
@@ -136,13 +132,7 @@ fn collapse(unit: &mut Unit) {
         Some(first) if all_translated && unit.segments.iter().all(|s| &s.origin == first) => first.clone(),
         _ => None,
     };
-    unit.segments = vec![Segment {
-        id: unit.id.clone(),
-        source,
-        target,
-        state: if all_translated { state } else { SegState::New },
-        origin,
-    }];
+    unit.segments = vec![Segment::new(unit.id.clone(), source).with_target(target).with_state(if all_translated { state } else { SegState::New }).with_origin(origin)];
     unit.separators.clear();
 }
 
@@ -181,7 +171,7 @@ fn split_at_cuts(unit: &mut Unit, a: &[Atom], cuts: &[usize]) {
     segs.push(a[start..].to_vec());
     unit.segments = segs
         .into_iter()
-        .map(|s| Segment { id: String::new(), source: inlines(&s), target: vec![], state: SegState::New, origin: None })
+        .map(|s| Segment::new(String::new(), inlines(&s)))
         .collect();
     unit.separators = seps;
     renumber(unit);
@@ -317,8 +307,8 @@ pub fn split(doc: &mut Document, seg_id: &str, at_char: usize) -> Result<(String
     if inside_pair(&pr, left) || inside_pair(&pr, right) {
         return Err(Error::Unsupported("cannot split inside a tag pair".into()));
     }
-    let first = Segment { id: String::new(), source: inlines(&a[..left]), target: vec![], state: SegState::New, origin: None };
-    let second = Segment { id: String::new(), source: inlines(&a[right..]), target: vec![], state: SegState::New, origin: None };
+    let first = Segment::new(String::new(), inlines(&a[..left]));
+    let second = Segment::new(String::new(), inlines(&a[right..]));
     unit.segments.splice(i..=i, [first, second]);
     unit.separators.insert(i, text_of(&a[left..right]));
     renumber(unit);
@@ -331,16 +321,7 @@ mod tests {
 
     fn doc_of(units: Vec<Vec<Inline>>) -> Document {
         let n = units.len();
-        Document {
-            format: "test".into(),
-            name: None,
-            source_lang: None,
-            target_lang: None,
-            granularity: Granularity::Sentence,
-            units: units.into_iter().enumerate().map(|(i, s)| Unit::new(format!("u{}", i + 1), s)).collect(),
-            skeleton: Skeleton::Text { parts: (0..n).map(SkelPart::Unit).collect(), encoding: "utf-8".into(), parser: None },
-            warnings: vec![],
-        }
+        Document::new("test", units.into_iter().enumerate().map(|(i, s)| Unit::new(format!("u{}", i + 1), s)).collect(), Skeleton::Text { parts: (0..n).map(SkelPart::Unit).collect(), encoding: "utf-8".into(), parser: None })
     }
 
     fn segs(lang: &str, text: &str) -> Vec<String> {

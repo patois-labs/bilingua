@@ -121,7 +121,7 @@ fn deep_and_huge_inputs_give_typed_errors() {
         many.push_str(&format!("row {i}\n"));
     }
     assert!(matches!(c.extract(many.as_bytes()), Err(Error::Limit(_))));
-    let o = ExtractOptions { limits: Some(Limits { max_units: 60_000, ..Limits::default() }), ..Default::default() };
+    let o = ExtractOptions::new().with_limits(Limits::new().with_max_units(60_000));
     assert!(c.extract_with(many.as_bytes(), &o).is_ok());
     // more lines than the line cap: refused before any scan
     let lines = "\n".repeat(1_000_001);

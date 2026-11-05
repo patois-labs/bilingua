@@ -300,16 +300,7 @@ impl Filter for Wxl {
         if pos < text.len() {
             parts.push(SkelPart::Raw(text[pos..].to_string()));
         }
-        let doc = Document {
-            format: ID.into(),
-            name: None,
-            source_lang: opts.source_lang.clone(),
-            target_lang: opts.target_lang.clone(),
-            granularity: opts.granularity,
-            units,
-            skeleton: Skeleton::text(parts, dec.encoding, bilingua_model::parser_info!()),
-            warnings: vec![],
-        };
+        let doc = Document::new(ID, units, Skeleton::text(parts, dec.encoding, bilingua_model::parser_info!())).with_options(opts);
         guard::finish(doc, dec.warnings, &limits)
     }
 

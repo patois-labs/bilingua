@@ -443,10 +443,7 @@ fn end_to_end_extract_save_merge_and_app_code_refused() {
     let mut doc = JsModule
         .extract(
             TS.as_bytes(),
-            &ExtractOptions {
-                target_lang: Some("de-DE".into()),
-                ..Default::default()
-            },
+            &ExtractOptions::new().with_target_lang("de-DE"),
         )
         .unwrap();
     let id = doc

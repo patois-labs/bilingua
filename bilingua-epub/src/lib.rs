@@ -103,13 +103,7 @@ fn extract_epub(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> 
     }
 
     let lang = pkg.first_language().and_then(|i| xml::text_only(&pkg.opf.dom, &pkg.opf.t.text, i)).map(|t| t.trim().to_string()).filter(|t| !t.is_empty());
-    let doc = Document {
-        format: "epub".into(),
-        source_lang: opts.source_lang.clone().or(lang),
-        target_lang: opts.target_lang.clone(),
-        granularity: Granularity::Paragraph,
-        units,
-        skeleton: Skeleton::zip(
+    let doc = Document::new("epub", units, Skeleton::zip(
             vec![
                 ZipEntry { name: ARCHIVE.into(), data: ZipData::Raw(bytes.to_vec()) },
                 ZipEntry {
@@ -118,9 +112,7 @@ fn extract_epub(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> 
                 },
             ],
             bilingua_model::parser_info!(),
-        ),
-        ..Default::default()
-    };
+        )).with_source_lang(opts.source_lang.clone().or(lang)).with_target_lang(opts.target_lang.clone()).with_granularity(Granularity::Paragraph);
     guard::finish(doc, vec![], &limits)
 }
 
@@ -217,7 +209,7 @@ fn merge_epub(doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
     }
 
     // 2. XHTML content documents in spine order, then the navigation document
-    let copts = ExtractOptions { include_locked: read_with.include_locked, limits: Some(limits), ..Default::default() };
+    let copts = ExtractOptions::new().with_include_locked(read_with.include_locked).with_limits(limits);
     let chapters: Vec<usize> = pkg.xhtml.iter().copied().chain(pkg.nav).collect();
     for (c, &ei) in chapters.iter().enumerate() {
         let mut ch = Chapter::open(&entries[ei].data, &entries[ei].name, &copts)?;

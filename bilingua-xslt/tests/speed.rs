@@ -27,7 +27,7 @@ fn generate(min_bytes: usize) -> String {
 fn five_megabytes_round_trip() {
     let data = generate(5_200_000).into_bytes();
     assert!(data.len() > 5_000_000);
-    let limits = Limits { max_units: 10_000_000, max_xml_elements: 10_000_000, ..Limits::default() };
+    let limits = Limits::new().with_max_units(10_000_000).with_max_xml_elements(10_000_000);
     let mut d = Xslt.extract_with(&data, &opts(), &limits).unwrap();
     assert!(d.units.len() > 30_000);
     assert_eq!(Xslt.merge(&d).unwrap(), data);

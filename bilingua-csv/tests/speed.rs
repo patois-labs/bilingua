@@ -31,8 +31,8 @@ fn large_file() {
     if let Ok(p) = std::env::var("BILINGUA_CSV_SPEED_OUT") {
         std::fs::write(p, &text).unwrap();
     }
-    let limits = Limits { max_units: 10_000_000, ..Limits::default() };
-    let opts = ExtractOptions { source_lang: Some("en".into()), target_lang: Some("de".into()), limits: Some(limits), ..Default::default() };
+    let limits = Limits::new().with_max_units(10_000_000);
+    let opts = ExtractOptions::new().with_source_lang("en").with_target_lang("de").with_limits(limits);
     let c = Call::csv().langs("en", &["de"], Some("de"));
     let t0 = Instant::now();
     let mut doc = c.extract_with(text.as_bytes(), &opts).unwrap();

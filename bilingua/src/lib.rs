@@ -1,10 +1,16 @@
 //! Bilingua: open a source file for translation, segment it, and write it back.
 //!
-//! ```ignore
-//! let opts = ExtractOptions { target_lang: Some("es-ES".into()), ..Default::default() };
-//! let mut doc = bilingua::extract("page.html", &bytes, &opts)?;
-//! doc.set_target("p3#1", vec![Inline::text("Hola.")])?;
+//! ```
+//! use bilingua::{ExtractOptions, Granularity, Inline};
+//!
+//! let bytes = b"<html><body><p>Hello world.</p></body></html>";
+//! let opts = ExtractOptions::new().with_source_lang("en").with_target_lang("es-ES").with_granularity(Granularity::Paragraph);
+//! let mut doc = bilingua::extract("page.html", bytes, &opts)?;
+//! let id = doc.units[0].segments[0].id.clone();
+//! doc.set_target(&id, vec![Inline::text("Hola mundo.")])?;
 //! let out: Vec<u8> = bilingua::merge(&doc)?;
+//! assert!(String::from_utf8(out).unwrap().contains("Hola mundo."));
+//! # Ok::<(), bilingua::Error>(())
 //! ```
 //!
 //! Formats register in [`filters`]: DOCX, XLSX, PPTX, HTML, Markdown, JSON, JSON5 and JSONC, PO, SRT, WebVTT, plain text, XLIFF 1.2 and 2

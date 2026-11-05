@@ -188,7 +188,7 @@ fn hostile() {
     // segment cap
     let units: String = (0..30).map(|i| format!("<trans-unit id=\"u{i}\"><source>String {i}</source></trans-unit>")).collect();
     let many = String::from_utf8(XLIFF2.to_vec()).unwrap().replace("<source>My App</source>", &format!("<source>My App</source>{units}"));
-    let small = ExtractOptions { limits: Some(Limits { max_units: 20, ..Limits::default() }), ..Default::default() };
+    let small = ExtractOptions::new().with_limits(Limits::new().with_max_units(20));
     let e = err(Xcloc.extract(&Bundle { xliffs: vec![("fr.xliff", many.as_bytes())], ..Default::default() }.build(), &small));
     assert_eq!(lk(&e), LimitKind::Units);
 }

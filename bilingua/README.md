@@ -5,8 +5,7 @@ The Bilingua facade: one API over the format crates.
 ```rust
 use bilingua::*;
 
-let opts = ExtractOptions { source_lang: Some("en".into()), target_lang: Some("es-ES".into()),
-                            granularity: Granularity::Sentence, ..Default::default() };
+let opts = ExtractOptions::new().with_source_lang("en").with_target_lang("es-ES").with_granularity(Granularity::Sentence);
 let mut doc = extract("page.md", &bytes, &opts)?;      // detect, parse, split into sentences
 doc.set_target("u3#1", vec![Inline::text("Primera frase.")])?;
 let out = merge(&doc)?;                                // original format, targets in place

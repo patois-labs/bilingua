@@ -275,8 +275,8 @@ fn several_segments_join_with_their_separators() {
     let mut d = f.extract(&data, &opts(None)).unwrap();
     let u = d.units.iter_mut().find(|u| p_index(u) == 2).unwrap();
     u.segments = vec![
-        Segment { id: "p2#1".into(), source: vec![Inline::text("A footnote")], target: vec![Inline::text("Eine Fu\u{df}note")], state: SegState::Translated, origin: None },
-        Segment { id: "p2#2".into(), source: vec![Inline::text("about %1$s.")], target: vec![], state: SegState::New, origin: None },
+        Segment::new("p2#1", vec![Inline::text("A footnote")]).with_target(vec![Inline::text("Eine Fu\u{df}note")]).with_state(SegState::Translated),
+        Segment::new("p2#2", vec![Inline::text("about %1$s.")]),
     ];
     u.separators = vec![" ".into()];
     let out = f.merge(&d).unwrap();

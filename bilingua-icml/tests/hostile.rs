@@ -32,7 +32,7 @@ fn seeds() -> Vec<Vec<u8>> {
 fn check(data: &[u8]) {
     let _ = Icml.sniff(data);
     for lang in [None, Some("ar"), Some("de-DE")] {
-        let o = ExtractOptions { target_lang: lang.map(str::to_string), granularity: Granularity::Paragraph, ..Default::default() };
+        let o = ExtractOptions::new().with_target_lang(lang.map(str::to_string)).with_granularity(Granularity::Paragraph);
         let Ok(d) = Icml.extract(data, &o) else { return };
         assert!(Icml.merge(&d).expect("merge") == data, "untouched merge");
         let mut e = d.clone();
@@ -67,7 +67,7 @@ fn deep_nesting_is_a_typed_error() {
     // a caller who raises the limit still gets a refusal, never a stack overflow
     let n = 100_000;
     let doc = format!("<Document><Story>{}x{}</Story></Document>", "<a>".repeat(n), "</a>".repeat(n));
-    let lim = Limits { max_xml_depth: 10_000_000, ..Limits::default() };
+    let lim = Limits::new().with_max_xml_depth(10_000_000);
     assert!(Icml.extract_with(doc.as_bytes(), &opts(), &lim).is_err());
     // nesting that is allowed works
     let ok = icml(&psr(&csr(&format!("<Content>deep</Content>{}", "<Note>".repeat(50) + &"</Note>".repeat(50)))), "", "");
@@ -128,7 +128,7 @@ fn oddities_are_typed_errors() {
     let long = format!("<Document><Story><{n}/></Story></Document>", n = "n".repeat(1_000_000));
     let _ = Icml.extract(long.as_bytes(), &opts());
     // oversized input
-    let lim = Limits { max_input_bytes: 100, ..Limits::default() };
+    let lim = Limits::new().with_max_input_bytes(100);
     assert!(matches!(Icml.extract_with(&good, &opts(), &lim), Err(Error::Limit(_))));
 }
 

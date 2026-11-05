@@ -150,29 +150,14 @@ pub fn to_document_in(
             u.translate = false;
             u.lock_reason = v.lock_reason.map(str::to_string);
         }
-        u.segments.push(Segment {
-            id: v.id.to_string(),
-            source: v.source.to_vec(),
-            target: v.target.to_vec(),
-            state: v.state,
-            origin: v.origin.cloned(),
-        });
+        u.segments.push(Segment::new(v.id.to_string(), v.source.to_vec()).with_target(v.target.to_vec()).with_state(v.state).with_origin(v.origin.cloned()));
     }
     let lang = |s: &str, fallback: &Option<String>| (!s.trim().is_empty()).then(|| s.to_string()).or_else(|| fallback.clone());
-    bilingua_model::guard::finish(Document {
-        format: id.to_string(),
-        name: None,
-        source_lang: lang(doc.source_lang(), &opts.source_lang),
-        target_lang: lang(doc.target_lang(), &opts.target_lang),
-        granularity: Granularity::Paragraph,
-        units,
-        skeleton: Skeleton::text(
+    bilingua_model::guard::finish(Document::new(id.to_string(), units, Skeleton::text(
             vec![SkelPart::Raw(text.to_string())],
             encoding.unwrap_or_else(|| if bom { "utf-8-bom" } else { "utf-8" }.to_string()),
             bilingua_model::parser_info!(),
-        ),
-        warnings: vec![],
-    }, warnings, &limits)
+        )).with_source_lang(lang(doc.source_lang(), &opts.source_lang)).with_target_lang(lang(doc.target_lang(), &opts.target_lang)).with_granularity(Granularity::Paragraph), warnings, &limits)
 }
 
 /// Writes the targets and states of `document` into an open file (matching segments by id). Locked segments

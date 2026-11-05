@@ -76,7 +76,7 @@ fn open(a: &Args, path: &str) -> Result<(Document, String), String> {
     let bytes = std::fs::read(path).map_err(|e| format!("cannot read {path}: {e}"))?;
     let name = Path::new(path).file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_else(|| path.to_string());
     let src = a.source.clone().unwrap_or_else(|| "en".to_string());
-    let opts = ExtractOptions { source_lang: Some(src.clone()), target_lang: a.target.clone(), granularity: a.mode, ..Default::default() };
+    let opts = ExtractOptions::new().with_source_lang(src.clone()).with_target_lang(a.target.clone()).with_granularity(a.mode);
     let mut doc = extract(&name, &bytes, &opts).map_err(|e| format!("{path}: {e}"))?;
     doc.source_lang = Some(src);
     Ok((doc, name))

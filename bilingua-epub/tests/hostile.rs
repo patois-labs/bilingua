@@ -53,7 +53,7 @@ fn deep_nesting_is_a_typed_error() {
     let n = 100_000;
     // the nesting compresses far past the zip ratio limit; raise that limit so the XML guard is what answers
     let extract_err = |b: &[u8]| {
-        let o = ExtractOptions { limits: Some(Limits { max_zip_ratio: 1_000_000, ..Limits::default() }), ..Default::default() };
+        let o = ExtractOptions::new().with_limits(Limits::new().with_max_zip_ratio(1_000_000));
         Epub.extract(b, &o).expect_err("expected a refusal")
     };
     let deep = |open: &str, close: &str| format!("{}x{}", open.repeat(n), close.repeat(n));
@@ -68,7 +68,7 @@ fn deep_nesting_is_a_typed_error() {
     let e = extract_err(&epub_with(&[("OEBPS/text/chapter 2.xhtml", ch.as_bytes())]));
     assert_eq!(kind(&e), Some(LimitKind::XmlDepth), "{e}");
     // a custom limit is honoured
-    let o = ExtractOptions { limits: Some(Limits { max_xml_depth: 3, ..Limits::default() }), ..Default::default() };
+    let o = ExtractOptions::new().with_limits(Limits::new().with_max_xml_depth(3));
     assert_eq!(kind(&Epub.extract(&epub(), &o).expect_err("depth 3")), Some(LimitKind::XmlDepth));
 }
 
@@ -193,11 +193,11 @@ fn many_unclosed_protected_elements_stay_fast() {
 
 #[test]
 fn an_oversized_input_and_zip_entry_count_are_limits() {
-    let o = ExtractOptions { limits: Some(Limits { max_input_bytes: 100, ..Limits::default() }), ..Default::default() };
+    let o = ExtractOptions::new().with_limits(Limits::new().with_max_input_bytes(100));
     assert_eq!(kind(&Epub.extract(&epub(), &o).expect_err("big")), Some(LimitKind::InputBytes));
-    let o = ExtractOptions { limits: Some(Limits { max_zip_entries: 3, ..Limits::default() }), ..Default::default() };
+    let o = ExtractOptions::new().with_limits(Limits::new().with_max_zip_entries(3));
     assert_eq!(kind(&Epub.extract(&epub(), &o).expect_err("many")), Some(LimitKind::ZipEntries));
-    let o = ExtractOptions { limits: Some(Limits { max_unit_chars: 4, ..Limits::default() }), ..Default::default() };
+    let o = ExtractOptions::new().with_limits(Limits::new().with_max_unit_chars(4));
     assert_eq!(kind(&Epub.extract(&epub(), &o).expect_err("long")), Some(LimitKind::UnitChars));
 }
 

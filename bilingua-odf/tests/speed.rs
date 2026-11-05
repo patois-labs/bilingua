@@ -40,7 +40,7 @@ fn large_document_round_trips_and_is_timed() {
         std::fs::write(format!("{dir}/big.odt"), &bytes).unwrap();
     }
     let f = Odt::default();
-    let o = ExtractOptions { target_lang: Some("de-DE".into()), ..Default::default() };
+    let o = ExtractOptions::new().with_target_lang("de-DE");
     let t = Instant::now();
     let mut d = f.extract(&bytes, &o).unwrap();
     let t_extract = t.elapsed();

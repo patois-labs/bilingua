@@ -205,7 +205,7 @@ fn hostile() {
     // the segment cap
     let many: Vec<u8> =
         [b"<messagebundle>".to_vec(), (0..5).flat_map(|i| format!("<msg id=\"{i}\">m{i}</msg>").into_bytes()).collect(), b"</messagebundle>".to_vec()].concat();
-    let small = Limits { max_units: 3, ..Limits::default() };
+    let small = Limits::new().with_max_units(3);
     let e = Xmb.extract_with(&many, &opts(), &small).unwrap_err();
     assert!(matches!(e, Error::Limit(LimitError { kind: LimitKind::Units, .. })), "{e}");
     let markup: Vec<u8> = [b"<messagebundle>".to_vec(), b"<x/>".repeat(200), b"</messagebundle>".to_vec()].concat();
@@ -220,7 +220,7 @@ fn hostile() {
 fn xliff_translate(src: &[u8], lang: &str) -> (Document, String) {
     let xliff = bilingua_xliff::filters().into_iter().find(|f| f.id() == "xliff").unwrap();
     let mut d = xliff
-        .extract(src, &ExtractOptions { source_lang: Some("en-US".into()), target_lang: Some(lang.into()), ..Default::default() })
+        .extract(src, &ExtractOptions::new().with_source_lang("en-US").with_target_lang(lang))
         .unwrap();
     for u in d.units.iter_mut() {
         for s in u.segments.iter_mut() {

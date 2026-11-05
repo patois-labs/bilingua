@@ -85,7 +85,7 @@ fn ex(src: &str) -> Document {
 }
 
 fn ex_to(src: &str, lang: &str) -> Document {
-    Po.extract(src.as_bytes(), &ExtractOptions { target_lang: Some(lang.into()), ..Default::default() }).unwrap()
+    Po.extract(src.as_bytes(), &ExtractOptions::new().with_target_lang(lang)).unwrap()
 }
 
 fn merged(d: &Document) -> String {

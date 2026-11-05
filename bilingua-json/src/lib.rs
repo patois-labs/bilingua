@@ -71,16 +71,7 @@ impl Filter for JsonFilter {
             parts.push(SkelPart::Raw(text[pos..].to_string()));
         }
 
-        bilingua_model::guard::finish(Document {
-            format: ID.into(),
-            name: None,
-            source_lang: opts.source_lang.clone(),
-            target_lang: opts.target_lang.clone(),
-            granularity: opts.granularity,
-            units,
-            skeleton: Skeleton::text(parts, encoding, bilingua_model::parser_info!()),
-            warnings: vec![],
-        }, std::mem::take(&mut dec.warnings), &opts.limits())
+        bilingua_model::guard::finish(Document::new(ID, units, Skeleton::text(parts, encoding, bilingua_model::parser_info!())).with_options(opts), std::mem::take(&mut dec.warnings), &opts.limits())
     }
 
     fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {

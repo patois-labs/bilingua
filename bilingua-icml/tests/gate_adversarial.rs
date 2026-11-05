@@ -11,7 +11,7 @@ fn doc(body: &str) -> Vec<u8> {
 }
 
 fn opts(t: Option<&str>) -> ExtractOptions {
-    ExtractOptions { granularity: Granularity::Paragraph, target_lang: t.map(str::to_string), ..Default::default() }
+    ExtractOptions::new().with_granularity(Granularity::Paragraph).with_target_lang(t.map(str::to_string))
 }
 
 fn reread(out: &[u8]) -> usize {
@@ -29,7 +29,7 @@ fn deep_wrappers_at_depth_1000_on_a_small_stack() {
                 inner = format!("<XMLElement MarkupTag=\"XMLTag/b\">{inner}</XMLElement>");
             }
             let data = doc(&format!("<Story Self=\"s\"><ParagraphStyleRange><CharacterStyleRange>{inner}</CharacterStyleRange></ParagraphStyleRange></Story>"));
-            let lim = Limits { max_xml_depth: 1000, ..Limits::default() };
+            let lim = Limits::new().with_max_xml_depth(1000);
             let r = Icml.extract_with(&data, &opts(Some("de-DE")), &lim);
             if let Ok(mut d) = r {
                 let src = d.units[0].source();

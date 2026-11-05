@@ -153,18 +153,18 @@ fn test_desktop_hostile() {
     assert!(matches!(desktop(b"[Desktop Entry]\nName=a\x00b\n"), Err(Error::Encoding(_))));
     // LocOS refuses a file without a translatable value; Bilingua returns a document with no units
     assert!(desktop(b"[Desktop Entry]\nType=Application\nExec=x\n").unwrap().units.is_empty());
-    let low = |l: Limits| ExtractOptions { limits: Some(l), ..Default::default() };
+    let low = |l: Limits| ExtractOptions::new().with_limits(l);
     let many = format!("[Desktop Entry]\nKeywords={}\n", (0..10).map(|i| format!("k{i}")).collect::<Vec<_>>().join(";"));
-    let e = DesktopFilter.extract(many.as_bytes(), &low(Limits { max_units: 3, ..Limits::default() })).unwrap_err();
+    let e = DesktopFilter.extract(many.as_bytes(), &low(Limits::new().with_max_units(3))).unwrap_err();
     assert!(matches!(e, Error::Limit(ref l) if l.kind == LimitKind::Units), "{e}");
     let mut lines = b"[Desktop Entry]\n".to_vec();
     lines.extend(b"\n".repeat(100));
-    let e = DesktopFilter.extract(&lines, &low(Limits { max_lines: 60, ..Limits::default() })).unwrap_err();
+    let e = DesktopFilter.extract(&lines, &low(Limits::new().with_max_lines(60))).unwrap_err();
     assert!(matches!(e, Error::Limit(ref l) if l.kind == LimitKind::Lines), "{e}");
     let mut long = b"[Desktop Entry]\nComment=".to_vec();
     long.extend(b"w ".repeat(200));
     long.push(b'\n');
-    let e = DesktopFilter.extract(&long, &low(Limits { max_unit_chars: 100, ..Limits::default() })).unwrap_err();
+    let e = DesktopFilter.extract(&long, &low(Limits::new().with_max_unit_chars(100))).unwrap_err();
     assert!(matches!(e, Error::Limit(ref l) if l.kind == LimitKind::UnitChars), "{e}");
     // a stray line without '=' and odd keys are kept byte for byte
     let odd = b"[Desktop Entry]\nName=Ok\ngarbage line\nName[x y]=z\n";
@@ -256,7 +256,7 @@ fn test_catkeys_crlf_bom_and_hostile() {
     // a catalog whose only entry has no letter: LocOS refuses, Bilingua returns a document with no units
     assert!(catkeys(b"1\tenglish\tx\t1\n(\t\t\t(\n").unwrap().units.is_empty());
     let many: String = std::iter::once("1\tenglish\tx\t1\n".to_string()).chain((0..10).map(|i| format!("S{i}\t\t\t\n"))).collect();
-    let o = ExtractOptions { limits: Some(Limits { max_units: 3, ..Limits::default() }), ..Default::default() };
+    let o = ExtractOptions::new().with_limits(Limits::new().with_max_units(3));
     assert!(matches!(CatkeysFilter.extract(many.as_bytes(), &o), Err(Error::Limit(l)) if l.kind == LimitKind::Units));
 }
 

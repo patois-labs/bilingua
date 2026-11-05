@@ -302,14 +302,14 @@ fn malformed_and_hostile() {
     }
     refused(&utf16, "UTF-16");
     // markup budget (forty `<` per allowed unit): refused before a tree is built
-    let small = Limits { max_units: 2, ..Limits::default() };
+    let small = Limits::new().with_max_units(2);
     let big = icml(&psr(&csr(&"<Content>x</Content>".repeat(100))), "", "");
     match Icml.extract_with(&big, &opts(), &small) {
         Err(Error::Limit(_)) => {}
         other => panic!("markup budget must be a limit error: {other:?}"),
     }
     let many = icml(&psr(&csr(&(0..4).map(|i| format!("<Content>p{i}</Content>")).collect::<Vec<_>>().join("<Br/>"))), "", "");
-    let cap = Limits { max_units: 3, ..Limits::default() };
+    let cap = Limits::new().with_max_units(3);
     assert!(many.iter().filter(|c| **c == b'<').count() < 120);
     match Icml.extract_with(&many, &opts(), &cap) {
         Err(Error::Limit(e)) => assert!(e.msg.to_lowercase().contains("unit") || e.msg.to_lowercase().contains("segment"), "{}", e.msg),

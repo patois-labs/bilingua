@@ -137,7 +137,7 @@ pub fn extract(data: &[u8]) -> Document {
     Idml.extract(data, &ExtractOptions::default()).unwrap()
 }
 pub fn extract_for(data: &[u8], lang: &str) -> Document {
-    Idml.extract(data, &ExtractOptions { target_lang: Some(lang.into()), ..Default::default() }).unwrap()
+    Idml.extract(data, &ExtractOptions::new().with_target_lang(lang)).unwrap()
 }
 
 /// A unit as LocOS shows it: `⟦r1⟧bold⟦/r1⟧`.

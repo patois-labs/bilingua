@@ -31,8 +31,7 @@ segmentation, tag-aware), `bilingua` (one API over all of them), `bilingua-cli` 
 ```rust
 use bilingua::*;
 
-let opts = ExtractOptions { source_lang: Some("en".into()), target_lang: Some("es-ES".into()),
-                            granularity: Granularity::Sentence, ..Default::default() };
+let opts = ExtractOptions::new().with_source_lang("en").with_target_lang("es-ES").with_granularity(Granularity::Sentence);
 let mut doc = extract("page.md", &bytes, &opts)?;
 doc.set_target("u3#1", vec![Inline::text("Primera frase.")])?;
 let out = merge(&doc)?; // the original format, with the translations in place

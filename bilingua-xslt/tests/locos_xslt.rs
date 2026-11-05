@@ -118,7 +118,7 @@ fn value_templates() {
 fn simplified_and_inline_attr_inside_text_unit() {
     let texts = units(SIMPLIFIED);
     assert_eq!(texts, ["Expense Report Summary", "Total Amount: \u{27E6}x1\u{27E7}", "\u{27E6}x1\u{27E7} Inline image here", "Company logo"]);
-    let mut d = Xslt.extract(SIMPLIFIED, &ExtractOptions { target_lang: Some("fr-FR".into()), ..opts() }).unwrap();
+    let mut d = Xslt.extract(SIMPLIFIED, &opts().with_target_lang("fr-FR")).unwrap();
     for i in 0..d.units.len() {
         let t = format!("[fr] {}", locos(&d.units[i]));
         set_locos(&mut d, i, &t);
@@ -202,14 +202,14 @@ fn hostile_inputs() {
     assert!(is_limit(&refused(deep.as_bytes(), ""), LimitKind::XmlDepth));
     // LocOS refuses a stylesheet with no literal text; Bilingua returns an empty document
     assert!(extract(include_bytes!("data/locos_no_text.xsl")).units.is_empty());
-    let small = Limits { max_units: 3, ..Limits::default() };
+    let small = Limits::new().with_max_units(3);
     let many = format!(
         "<xsl:stylesheet version=\"1.0\" xmlns:xsl=\"http://www.w3.org/1999/XSL/Transform\"><xsl:template match=\"/\">{}</xsl:template></xsl:stylesheet>",
         (0..6).map(|i| format!("<p>Line {i}</p>")).collect::<String>()
     );
     assert!(matches!(Xslt.extract_with(many.as_bytes(), &opts(), &small), Err(Error::Limit(_))));
     assert!(matches!(Xslt.extract_with("<p>".repeat(200).as_bytes(), &opts(), &small), Err(Error::Limit(_))));
-    let chars = Limits { max_unit_chars: 1000, ..Limits::default() };
+    let chars = Limits::new().with_max_unit_chars(1000);
     let big = format!(
         "<xsl:stylesheet version=\"1.0\" xmlns:xsl=\"http://www.w3.org/1999/XSL/Transform\"><xsl:template match=\"/\"><p>{}</p></xsl:template></xsl:stylesheet>",
         "word ".repeat(400)

@@ -779,7 +779,7 @@ mod tests {
     fn depth_and_count_are_limited_without_recursion() {
         let deep = "<a>".repeat(100_000) + &"</a>".repeat(100_000);
         assert!(matches!(tree(&deep), Err(Error::Limit(_))));
-        let l = Limits { max_xml_elements: 10, ..Limits::default() };
+        let l = Limits::new().with_max_xml_elements(10);
         assert!(matches!(Tree::parse("<a>".to_string() + &"<b/>".repeat(20) + "</a>", &l), Err(Error::Limit(_))));
     }
 

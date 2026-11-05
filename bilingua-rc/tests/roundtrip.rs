@@ -182,7 +182,7 @@ fn utf8_file_with_non_ascii_text_gets_a_pragma_only_when_edited() {
 #[test]
 fn locked_units_on_request_stay_untouched() {
     let src = "STRINGTABLE\nBEGIN\n IDS_A \"%d%%\"\n IDS_B \"Tea\"\n IDS_C \"\"\nEND\n";
-    let doc = Rc.extract(src.as_bytes(), &ExtractOptions { include_locked: true, ..Default::default() }).unwrap();
+    let doc = Rc.extract(src.as_bytes(), &ExtractOptions::new().with_include_locked(true)).unwrap();
     assert_eq!(doc.units.len(), 2);
     assert!(!doc.units[0].translate && doc.units[0].lock_reason.is_some() && doc.units[1].translate);
     assert_eq!(doc.units[0].id, "k1");
@@ -200,8 +200,8 @@ fn segments_of_one_unit_are_joined_on_merge() {
     let mut doc = extract(src.as_bytes()).unwrap();
     let u = &mut doc.units[0];
     u.segments = vec![
-        Segment { id: "u1#1".into(), source: vec![Inline::text("One.")], target: vec![Inline::text("Un.")], state: SegState::Draft, origin: None },
-        Segment { id: "u1#2".into(), source: vec![Inline::text("Two.")], target: vec![Inline::text("Deux.")], state: SegState::Draft, origin: None },
+        Segment::new("u1#1", vec![Inline::text("One.")]).with_target(vec![Inline::text("Un.")]).with_state(SegState::Draft),
+        Segment::new("u1#2", vec![Inline::text("Two.")]).with_target(vec![Inline::text("Deux.")]).with_state(SegState::Draft),
     ];
     u.separators = vec![" ".into()];
     let out = String::from_utf8(Rc.merge(&doc).unwrap()).unwrap();

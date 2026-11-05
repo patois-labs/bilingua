@@ -41,7 +41,7 @@ fn registered() {
 #[test]
 fn units_match_po() {
     let po = bilingua_po::Po
-        .extract(PO_EQUIVALENT.as_bytes(), &ExtractOptions { target_lang: Some("fr".into()), ..Default::default() })
+        .extract(PO_EQUIVALENT.as_bytes(), &ExtractOptions::new().with_target_lang("fr"))
         .unwrap();
     let want: Vec<String> = po.units.iter().map(flat).collect();
     for (name, data) in [("LE", mo_le()), ("BE+hash", mo_be_hash())] {
@@ -302,7 +302,7 @@ fn hostile() {
     // Bytes that are not the declared charset.
     refused(&pack(&[(b"".to_vec(), HEADER_FR.as_bytes().to_vec()), (b"\xff\xfe".to_vec(), b"x".to_vec())]), "UTF-8");
     // The unit cap applies while units are built.
-    let lim = Limits { max_units: 3, ..Limits::default() };
-    let e = Mo.extract(&le, &ExtractOptions { limits: Some(lim), ..Default::default() }).unwrap_err();
+    let lim = Limits::new().with_max_units(3);
+    let e = Mo.extract(&le, &ExtractOptions::new().with_limits(lim)).unwrap_err();
     assert!(matches!(e, Error::Limit(ref l) if l.kind == LimitKind::Units), "{e:?}");
 }

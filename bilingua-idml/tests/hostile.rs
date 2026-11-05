@@ -21,7 +21,7 @@ fn fixture() -> Pkg {
 }
 
 fn try_all(data: &[u8]) {
-    if let Ok(mut doc) = Idml.extract(data, &ExtractOptions { target_lang: Some("ar-SA".into()), ..Default::default() }) {
+    if let Ok(mut doc) = Idml.extract(data, &ExtractOptions::new().with_target_lang("ar-SA")) {
         let _ = Idml.merge(&doc);
         for u in &mut doc.units {
             let mut t = u.segments[0].source.clone();
@@ -176,23 +176,23 @@ fn entity_bombs_and_doctypes_are_refused() {
 #[test]
 fn limits_apply() {
     let data = fixture().build();
-    let few = ExtractOptions { limits: Some(Limits { max_units: 1, ..Default::default() }), ..Default::default() };
+    let few = ExtractOptions::new().with_limits(Limits::new().with_max_units(1));
     assert!(matches!(Idml.extract(&data, &few), Err(Error::Limit(_))));
-    let small = ExtractOptions { limits: Some(Limits { max_input_bytes: 100, ..Default::default() }), ..Default::default() };
+    let small = ExtractOptions::new().with_limits(Limits::new().with_max_input_bytes(100));
     assert!(matches!(Idml.extract(&data, &small), Err(Error::Limit(_))));
-    let entries = ExtractOptions { limits: Some(Limits { max_zip_entries: 3, ..Default::default() }), ..Default::default() };
+    let entries = ExtractOptions::new().with_limits(Limits::new().with_max_zip_entries(3));
     assert!(matches!(Idml.extract(&data, &entries), Err(Error::Limit(_))));
-    let elements = ExtractOptions { limits: Some(Limits { max_xml_elements: 5, ..Default::default() }), ..Default::default() };
+    let elements = ExtractOptions::new().with_limits(Limits::new().with_max_xml_elements(5));
     assert!(matches!(Idml.extract(&data, &elements), Err(Error::Limit(_))));
     // a story with a million empty elements
     let body = format!("<Content>x</Content>{}", "<a/>".repeat(1_000_000));
     let xml = String::from_utf8(story_xml("a", &psr(&csr(&body)))).unwrap();
-    let opts = ExtractOptions { limits: Some(Limits { max_xml_elements: 100_000, ..Default::default() }), ..Default::default() };
+    let opts = ExtractOptions::new().with_limits(Limits::new().with_max_xml_elements(100_000));
     assert!(matches!(Idml.extract(&with_story(xml), &opts), Err(Error::Limit(_))));
     // the markup budget: forty tags per allowed unit
     let many = format!("<Content>x</Content>{}", "<a/>".repeat(500));
     let xml = String::from_utf8(story_xml("a", &psr(&csr(&many)))).unwrap();
-    let opts = ExtractOptions { limits: Some(Limits { max_units: 5, ..Default::default() }), ..Default::default() };
+    let opts = ExtractOptions::new().with_limits(Limits::new().with_max_units(5));
     assert!(matches!(Idml.extract(&with_story(xml), &opts), Err(Error::Limit(_))));
 }
 

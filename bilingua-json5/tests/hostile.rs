@@ -9,7 +9,7 @@ const APP: &[u8] = include_bytes!("data/app.json5");
 const SETTINGS: &[u8] = include_bytes!("data/settings.jsonc");
 
 fn opts() -> ExtractOptions {
-    ExtractOptions { source_lang: Some("en".into()), target_lang: Some("es".into()), granularity: Granularity::Paragraph, include_locked: true, ..Default::default() }
+    ExtractOptions::new().with_source_lang("en").with_target_lang("es").with_granularity(Granularity::Paragraph).with_include_locked(true)
 }
 
 /// Extract; when accepted, the untouched merge is the same bytes and a pseudo merge re-opens with the same count.

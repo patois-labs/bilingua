@@ -33,7 +33,7 @@ fn main() {
     let mut out = out.lock();
     for (n, f) in args.enumerate() {
         let bytes = std::fs::read(&f).unwrap();
-        let opts = ExtractOptions { target_lang: target.clone(), ..Default::default() };
+        let opts = ExtractOptions::new().with_target_lang(target.clone());
         let mut line = serde_json::json!({"file": f, "n": n});
         match Yaml.extract_with(&bytes, &opts, &Limits::unlimited()) {
             Err(e) => line["error"] = serde_json::json!(e.to_string()),

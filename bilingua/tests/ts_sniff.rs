@@ -9,7 +9,7 @@ const TYPESCRIPT: &[u8] = b"export const messages = {\n  greeting: 'Hello there,
 fn a_qt_ts_file_goes_to_the_qt_filter() {
     assert_eq!(detect("app_de.ts", QT).unwrap().id(), "ts");
     assert_eq!(detect("APP.TS", QT).unwrap().id(), "ts");
-    let opts = ExtractOptions { target_lang: Some("fr-FR".into()), ..Default::default() };
+    let opts = ExtractOptions::new().with_target_lang("fr-FR");
     let mut doc = extract("app_de.ts", QT, &opts).unwrap();
     assert_eq!(doc.format, "ts");
     assert_eq!(doc.units.len(), 1);

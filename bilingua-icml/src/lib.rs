@@ -301,20 +301,11 @@ impl Icml {
                 idx += 1;
             }
         }
-        let doc = Document {
-            format: FORMAT.into(),
-            name: None,
-            source_lang: opts.source_lang.clone(),
-            target_lang: opts.target_lang.clone(),
-            granularity: opts.granularity,
-            units,
-            skeleton: Skeleton::text(
+        let doc = Document::new(FORMAT, units, Skeleton::text(
                 vec![SkelPart::Raw(std::mem::take(&mut prep.dom.text))],
                 if bom { "utf-8-bom" } else { "utf-8" },
                 bilingua_model::parser_info!(),
-            ),
-            warnings: Vec::new(),
-        };
+            )).with_options(opts);
         guard::finish(doc, Vec::new(), limits)
     }
 }

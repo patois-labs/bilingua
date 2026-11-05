@@ -44,7 +44,7 @@ fn check(b: &[u8]) {
     let _ = plist_records(b);
     let _ = stringsdict_records(b);
     for f in [F::Plist, F::Sd] {
-        let opts = ExtractOptions { include_locked: true, target_lang: Some("ru".into()), ..Default::default() };
+        let opts = ExtractOptions::new().with_include_locked(true).with_target_lang("ru");
         let Ok(d) = f.filter().extract(b, &opts) else { continue };
         assert_eq!(merged(f, &d), b, "a parsed file must merge back unchanged");
         let mut p = d.clone();
@@ -58,7 +58,7 @@ fn check(b: &[u8]) {
             Err(Error::Write(_)) => continue,
             Err(e) => panic!("{e}"),
         };
-        let back = f.filter().extract(&out, &ExtractOptions { include_locked: true, ..Default::default() }).expect("a merged file must parse again");
+        let back = f.filter().extract(&out, &ExtractOptions::new().with_include_locked(true)).expect("a merged file must parse again");
         assert!(back.units.len() >= d.units.len());
     }
 }
@@ -172,7 +172,7 @@ fn deep_shared_and_huge() {
     let over = format!("<plist><string>{}</string></plist>", "v".repeat(100_001));
     assert_eq!(limit_kind(&parse_err(F::Plist, over.as_bytes())), Some(LimitKind::UnitChars));
     // over the byte cap
-    let small = Limits { max_input_bytes: 100, ..Limits::default() };
+    let small = Limits::new().with_max_input_bytes(100);
     assert_eq!(limit_kind(&Plist.extract_with(&[b' '; 101], &ExtractOptions::default(), &small).unwrap_err()), Some(LimitKind::InputBytes));
     // a newline bomb
     let nl = format!("<plist><string>x</string></plist>{}", "\n".repeat(20 * 50_000 + 1));
@@ -372,7 +372,7 @@ fn a_dict_of_many_distinct_keys_reads_in_linear_time() {
     // gate: a key lookup per entry made this quadratic (150 000 keys ran for minutes)
     let b = many_keys_binary(150_000);
     let t = std::time::Instant::now();
-    let d = Plist.extract(&b, &ExtractOptions { include_locked: true, ..Default::default() }).unwrap();
+    let d = Plist.extract(&b, &ExtractOptions::new().with_include_locked(true)).unwrap();
     assert!(d.units.is_empty());
     assert!(t.elapsed().as_secs() < 20, "{:?}", t.elapsed());
 }

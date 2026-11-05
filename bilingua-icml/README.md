@@ -7,7 +7,7 @@ OS ICML filter unit for unit, and Okapi `okf_icml` on Okapi's own test resource.
 use bilingua_icml::Icml;
 use bilingua_model::*;
 
-let mut doc = Icml.extract(&bytes, &ExtractOptions { target_lang: Some("de-DE".into()), ..Default::default() })?;
+let mut doc = Icml.extract(&bytes, &ExtractOptions::new().with_target_lang("de-DE"))?;
 doc.set_target("u3", vec![Inline::text("Willkommen")])?;
 let out = Icml.merge(&doc)?;
 ```

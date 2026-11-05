@@ -239,6 +239,8 @@ pub fn sdl_conf_to(s: SegState) -> Option<&'static str> {
         SegState::Confirmed | SegState::Reviewed => Some("ApprovedTranslation"),
         SegState::SignedOff | SegState::Locked => Some("ApprovedSignOff"),
         SegState::Rejected => Some("RejectedTranslation"),
+        // a state added later: accepted or not
+        other => if other.is_accepted() { Some("Translated") } else { Some("Draft") },
     }
 }
 
@@ -267,6 +269,8 @@ pub fn mq_state_to(s: SegState) -> &'static str {
         SegState::Confirmed => "Reviewer1Confirmed",
         SegState::Reviewed => "Proofread",
         SegState::SignedOff | SegState::Locked => "Reviewer2Confirmed",
+        // a state added later: accepted or not
+        other => if other.is_accepted() { "ManuallyConfirmed" } else { "PartiallyEdited" },
     }
 }
 
@@ -326,6 +330,8 @@ pub fn plain_state_to(s: SegState) -> &'static str {
         SegState::Translated => "translated",
         SegState::Confirmed | SegState::Reviewed | SegState::Locked => "final",
         SegState::SignedOff => "signed-off",
+        // a state added later: accepted or not
+        other => if other.is_accepted() { "translated" } else { "needs-translation" },
     }
 }
 

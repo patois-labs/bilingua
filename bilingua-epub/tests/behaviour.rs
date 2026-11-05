@@ -261,7 +261,7 @@ fn locked_units_keep_the_ids_consistent_between_extract_and_merge() {
     // With include_locked the translate="no" text is a locked unit and is numbered; merge must number the same way.
     let ch = CH1.replace("<p>Hello <b>bold</b>", "<p translate=\"no\">Colophon text stays.</p>\n<p>Hello <b>bold</b>");
     let src = epub_with(&[("OEBPS/text/ch1.xhtml", ch.as_bytes())]);
-    let o = ExtractOptions { include_locked: true, ..Default::default() };
+    let o = ExtractOptions::new().with_include_locked(true);
     let mut d = Epub.extract(&src, &o).unwrap();
     let locked: Vec<Unit> = d.units.iter().filter(|u| !u.translate).cloned().collect();
     assert_eq!(locked.len(), 1);
@@ -280,7 +280,7 @@ fn custom_limits_travel_with_the_skeleton() {
     // a file read under raised limits can be merged again under the same ones
     let big = vec![b'a'; 3 * 1024 * 1024];
     let src = epub_with(&[("OEBPS/img/pad.bin", &big)]);
-    let o = ExtractOptions { limits: Some(Limits { max_zip_ratio: 1_000_000, ..Limits::default() }), ..Default::default() };
+    let o = ExtractOptions::new().with_limits(Limits::new().with_max_zip_ratio(1_000_000));
     let mut d = Epub.extract(&src, &o).unwrap();
     set(&mut d, 0, "Titre");
     let (m, _) = members(&merge(&d));

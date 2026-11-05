@@ -115,7 +115,7 @@ fn deep_and_huge_inputs_give_typed_errors() {
     let lines = "\n".repeat(1_000_001);
     assert!(matches!(extract(lines.as_bytes()), Err(Error::Limit(LimitError { kind: LimitKind::Lines, .. }))));
     // the caller's limits in ExtractOptions are the ones in force
-    let few = ExtractOptions { limits: Some(bilingua_model::Limits { max_units: 2, ..Default::default() }), ..Default::default() };
+    let few = ExtractOptions::new().with_limits(bilingua_model::Limits::new().with_max_units(2));
     assert!(matches!(FtlFilter.extract(b"a = A\nb = B\nc = C\n", &few), Err(Error::Limit(LimitError { kind: LimitKind::Units, .. }))));
     // over the input size cap
     let small = Limits { max_input_bytes: 10, ..Limits::default() };

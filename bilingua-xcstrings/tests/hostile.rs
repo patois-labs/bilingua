@@ -13,7 +13,7 @@ fn typed(e: &Error) -> bool {
 
 /// Extract; when it works, translate everything and merge: neither may panic, an error must be typed.
 fn exercise(f: &dyn Filter, bytes: &[u8], target: Option<&str>) -> bool {
-    let o = ExtractOptions { target_lang: target.map(str::to_string), ..Default::default() };
+    let o = ExtractOptions::new().with_target_lang(target.map(str::to_string));
     match f.extract(bytes, &o) {
         Err(e) => {
             assert!(typed(&e), "untyped error: {e:?}");
@@ -107,7 +107,7 @@ fn deep_but_legal_nesting_below_a_localization_is_refused() {
 
 #[test]
 fn huge_inputs_hit_the_limits() {
-    let o = ExtractOptions { limits: Some(Limits { max_input_bytes: 100, ..Limits::default() }), ..Default::default() };
+    let o = ExtractOptions::new().with_limits(Limits::new().with_max_input_bytes(100));
     let e = Xcstrings.extract(common::LOCOS_CATALOG, &o).unwrap_err();
     assert!(matches!(e, Error::Limit(ref l) if l.kind == LimitKind::InputBytes));
     // 2 million empty entries: refused before a tree is built
@@ -259,7 +259,7 @@ proptest! {
         }
         let doc = serde_json::json!({"sourceLanguage": "en", "strings": strings, "version": "1.0"});
         let bytes = if tabs { serde_json::to_vec_pretty(&doc).unwrap() } else { serde_json::to_vec(&doc).unwrap() };
-        let d0 = Xcstrings.extract(&bytes, &ExtractOptions { target_lang: Some(lang.into()), ..Default::default() }).unwrap();
+        let d0 = Xcstrings.extract(&bytes, &ExtractOptions::new().with_target_lang(lang)).unwrap();
         prop_assert_eq!(Xcstrings.merge(&d0).unwrap(), bytes.clone());
         let mut d = d0.clone();
         for u in d.units.iter_mut() {

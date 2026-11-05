@@ -286,16 +286,7 @@ impl DesktopFilter {
             last = e.v_end;
         }
         parts.push(SkelPart::Raw(text[last..].to_string()));
-        let doc = Document {
-            format: ID.into(),
-            name: None,
-            source_lang: opts.source_lang.clone(),
-            target_lang: opts.target_lang.clone(),
-            granularity: opts.granularity,
-            units,
-            skeleton: Skeleton::text(parts, rd.encoding, bilingua_model::parser_info!()),
-            ..Default::default()
-        };
+        let doc = Document::new(ID, units, Skeleton::text(parts, rd.encoding, bilingua_model::parser_info!())).with_options(opts);
         guard::finish(doc, rd.warnings, &limits)
     }
 }
@@ -381,7 +372,7 @@ impl Filter for DesktopFilter {
 
 /// Adds or replaces `Key[loc]=value` for every entry that has a translated unit.
 fn localize(orig: &str, doc: &Document, tr: &[Option<String>], loc: &str) -> Result<String, Error> {
-    let sc = scan(orig, &Limits { max_units: usize::MAX, max_lines: usize::MAX, ..Limits::default() })?;
+    let sc = scan(orig, &Limits::new().with_max_units(usize::MAX).with_max_lines(usize::MAX))?;
     if sc.units.len() != doc.units.len() {
         return Err(Error::Write("the skeleton does not match the units".into()));
     }

@@ -192,7 +192,7 @@ fn values_that_are_not_prose_are_skipped() {
 
 #[test]
 fn skipped_values_can_be_extracted_as_locked_units() {
-    let opts = ExtractOptions { include_locked: true, ..Default::default() };
+    let opts = ExtractOptions::new().with_include_locked(true);
     let src = r#"{"url": "https://example.test/x", "t": "Hello", "empty": ""}"#;
     let d = JsonFilter.extract(src.as_bytes(), &opts).unwrap();
     assert_eq!(d.units.len(), 2);
@@ -279,8 +279,8 @@ fn output_stays_valid_json_for_awkward_translations() {
 fn works_with_segmentation_separators() {
     let mut d = extract(r#"{"a": "One. Two."}"#);
     d.units[0].segments = vec![
-        Segment { id: "u1#1".into(), source: vec![Inline::text("One.")], target: vec![Inline::text("Uno.")], state: SegState::Draft, origin: None },
-        Segment { id: "u1#2".into(), source: vec![Inline::text("Two.")], target: vec![], state: SegState::New, origin: None },
+        Segment::new("u1#1", vec![Inline::text("One.")]).with_target(vec![Inline::text("Uno.")]).with_state(SegState::Draft),
+        Segment::new("u1#2", vec![Inline::text("Two.")]),
     ];
     d.units[0].separators = vec![" ".into()];
     assert_eq!(merged(&d), r#"{"a": "Uno. Two."}"#);

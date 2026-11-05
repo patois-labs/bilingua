@@ -6,7 +6,7 @@ use bilingua_qtts::QtTs;
 fn main() {
     let a: Vec<String> = std::env::args().skip(1).collect();
     let bytes = std::fs::read(&a[0]).unwrap();
-    let opts = ExtractOptions { source_lang: Some("en".into()), target_lang: a.get(2).cloned(), ..Default::default() };
+    let opts = ExtractOptions::new().with_source_lang("en").with_target_lang(a.get(2).cloned());
     let mut d = QtTs.extract(&bytes, &opts).unwrap();
     for u in d.units.iter_mut().filter(|u| u.translate) {
         let mut t = vec![Inline::text("T:")];

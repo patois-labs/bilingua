@@ -22,7 +22,7 @@ fn corpus() -> Vec<(String, Vec<u8>)> {
 }
 
 fn open(bytes: &[u8], mode: Granularity) -> Document {
-    let mut d = Strings.extract(bytes, &ExtractOptions { source_lang: Some("en".into()), target_lang: Some("es-ES".into()), granularity: mode, include_locked: true, ..Default::default() }).unwrap();
+    let mut d = Strings.extract(bytes, &ExtractOptions::new().with_source_lang("en").with_target_lang("es-ES").with_granularity(mode).with_include_locked(true)).unwrap();
     segment(&mut d, "en", mode, Rules::bundled());
     d
 }
@@ -96,7 +96,7 @@ fn ids_stamp_and_tokens() {
     // Unit ids count every entry, so they are the same whether or not an entry is locked.
     let b = b"a = \"---\";\nb = \"Beta\";\n";
     assert_eq!(ex(b).units[0].id, "s2");
-    let locked = Strings.extract(b, &ExtractOptions { include_locked: true, ..Default::default() }).unwrap();
+    let locked = Strings.extract(b, &ExtractOptions::new().with_include_locked(true)).unwrap();
     assert_eq!(locked.units.iter().map(|u| u.id.as_str()).collect::<Vec<_>>(), ["s1", "s2"]);
     assert!(!locked.units[0].translate && locked.units[1].translate);
 }

@@ -265,7 +265,7 @@ fn okapi_corpus_files_round_trip() {
         }
         let data = std::fs::read(&p).unwrap();
         let name = p.file_name().unwrap().to_string_lossy().to_string();
-        let mut doc = Idml.extract(&data, &ExtractOptions { target_lang: Some("de-DE".into()), ..Default::default() }).unwrap_or_else(|e| panic!("{name}: {e}"));
+        let mut doc = Idml.extract(&data, &ExtractOptions::new().with_target_lang("de-DE")).unwrap_or_else(|e| panic!("{name}: {e}"));
         assert!(!doc.units.is_empty(), "{name}");
         assert_eq!(merge(&doc), data, "{name}: untouched merge");
         set_accented(&mut doc);

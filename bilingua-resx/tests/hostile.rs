@@ -179,7 +179,7 @@ fn deep_and_wide_input_is_bounded() {
     let mut deep = b"<root>".to_vec();
     deep.extend(b"<a>".repeat(100_000));
     assert!(is_err(&deep));
-    let l = Limits { max_xml_depth: 10, ..Limits::default() };
+    let l = Limits::new().with_max_xml_depth(10);
     let mut ok = b"<root>".to_vec();
     ok.extend(b"<a>".repeat(8));
     ok.extend(b"</a>".repeat(8));
@@ -191,16 +191,16 @@ fn deep_and_wide_input_is_bounded() {
     bad.extend_from_slice(b"</root>");
     assert!(matches!(Resx.extract_with(&bad, &opts(), &l), Err(Error::Limit(e)) if e.kind == LimitKind::XmlDepth));
     let wide = format!("<root>{}</root>", "<data name=\"k\"><value>Word</value></data>".repeat(2000));
-    let l = Limits { max_units: 1000, ..Limits::default() };
+    let l = Limits::new().with_max_units(1000);
     assert!(matches!(Resx.extract_with(wide.as_bytes(), &opts(), &l), Err(Error::Limit(e)) if e.kind == LimitKind::Units));
 }
 
 #[test]
 fn size_limits_give_typed_errors() {
-    let small = Limits { max_input_bytes: 100, ..Limits::default() };
+    let small = Limits::new().with_max_input_bytes(100);
     let err = Resx.extract_with(&[b'a'; 200], &opts(), &small).unwrap_err();
     assert!(matches!(err, Error::Limit(e) if e.kind == LimitKind::InputBytes));
-    let l = Limits { max_unit_chars: 50, ..Limits::default() };
+    let l = Limits::new().with_max_unit_chars(50);
     let long = format!("<root><data name=\"a\"><value>{}</value></data></root>", "word ".repeat(100));
     assert!(matches!(Resx.extract_with(long.as_bytes(), &opts(), &l), Err(Error::Limit(e)) if e.kind == LimitKind::UnitChars));
 }
@@ -208,11 +208,11 @@ fn size_limits_give_typed_errors() {
 #[test]
 fn long_values_attributes_and_many_references_are_handled() {
     let big = format!("<root><data name=\"{0}\"><value>{1}</value></data></root>", "n".repeat(100_000), "&amp;".repeat(100_000));
-    let d = Resx.extract_with(big.as_bytes(), &opts(), &Limits { max_unit_chars: 1_000_000, ..Limits::default() });
+    let d = Resx.extract_with(big.as_bytes(), &opts(), &Limits::new().with_max_unit_chars(1_000_000));
     // "&&&&" has no letter or digit: no unit, but no trouble either
     assert_eq!(d.unwrap().units.len(), 0);
     let text = format!("<root><data name=\"a\"><value>{}</value></data></root>", "Word &amp; ".repeat(10_000));
-    let d = Resx.extract_with(text.as_bytes(), &opts(), &Limits { max_unit_chars: 1_000_000, ..Limits::default() }).unwrap();
+    let d = Resx.extract_with(text.as_bytes(), &opts(), &Limits::new().with_max_unit_chars(1_000_000)).unwrap();
     assert_eq!(d.units.len(), 1);
     assert_eq!(Resx.merge(&d).unwrap(), text.as_bytes());
 }

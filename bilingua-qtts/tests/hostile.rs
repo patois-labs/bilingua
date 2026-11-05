@@ -121,18 +121,18 @@ fn deep_wide_and_huge_files_are_limited() {
     let deep = format!("<TS>{}{}</TS>", "<a>".repeat(300), "</a>".repeat(300));
     assert!(matches!(try_ex(deep.as_bytes()), Err(Error::Limit(_))));
     // more elements than allowed
-    let few = Limits { max_xml_elements: 100, ..Limits::default() };
+    let few = Limits::new().with_max_xml_elements(100);
     let wide = format!("<TS>{}</TS>", "<a/>".repeat(1000));
     assert!(matches!(QtTs.extract_with(wide.as_bytes(), &opts(None), &few), Err(Error::Limit(_))));
     // a value over the unit length
-    let small = Limits { max_unit_chars: 50, ..Limits::default() };
+    let small = Limits::new().with_max_unit_chars(50);
     let long = format!("<TS><context><name>x</name><message><source>{}</source><translation/></message></context></TS>", "word ".repeat(100));
     assert!(matches!(QtTs.extract_with(long.as_bytes(), &opts(None), &small), Err(Error::Limit(_))));
     // over the input limit
-    let tiny = Limits { max_input_bytes: 20, ..Limits::default() };
+    let tiny = Limits::new().with_max_input_bytes(20);
     assert!(matches!(QtTs.extract_with(&data("edge.ts"), &opts(None), &tiny), Err(Error::Limit(_))));
     // many units
-    let few_units = Limits { max_units: 3, ..Limits::default() };
+    let few_units = Limits::new().with_max_units(3);
     assert!(matches!(QtTs.extract_with(&data("edge.ts"), &opts(None), &few_units), Err(Error::Limit(_))));
 }
 

@@ -160,16 +160,7 @@ impl Xaml {
         if pos < text.len() {
             parts.push(SkelPart::Raw(text[pos..].to_string()));
         }
-        let doc = Document {
-            format: "xaml".into(),
-            name: None,
-            source_lang: opts.source_lang.clone(),
-            target_lang: opts.target_lang.clone(),
-            granularity: opts.granularity,
-            units,
-            skeleton: Skeleton::text(parts, dec.encoding, bilingua_model::parser_info!()),
-            warnings: Vec::new(),
-        };
+        let doc = Document::new("xaml", units, Skeleton::text(parts, dec.encoding, bilingua_model::parser_info!())).with_options(opts);
         guard::finish(doc, dec.warnings, limits)
     }
 }

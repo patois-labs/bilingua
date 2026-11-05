@@ -90,14 +90,14 @@ fn test_hostile_inputs_on_a_wxl() {
     refused(&deep, Some(LimitKind::XmlDepth));
     // The unit cap (LocOS lowers MAX_DOCUMENT_SEGMENTS to 5 and feeds 20 strings).
     let many: String = (0..20).map(|i| format!("<String Id=\"s{i}\" Value=\"Text {i}\"/>")).collect();
-    let small = ExtractOptions { limits: Some(Limits { max_units: 5, ..Limits::default() }), ..opts(false) };
+    let small = opts(false).with_limits(Limits::new().with_max_units(5));
     match Wxl.extract(wrap(&many, "").as_bytes(), &small) {
         Err(Error::Limit(l)) => assert_eq!(l.kind, LimitKind::Units),
         other => panic!("{other:?}"),
     }
     // ... and the element budget (LocOS: 300 empty elements against a cap of 5 units).
     let big = format!("<WixLocalization>{}</WixLocalization>", "<x/>".repeat(300));
-    let small = ExtractOptions { limits: Some(Limits { max_xml_elements: 100, ..Limits::default() }), ..opts(false) };
+    let small = opts(false).with_limits(Limits::new().with_max_xml_elements(100));
     match Wxl.extract(big.as_bytes(), &small) {
         Err(Error::Limit(l)) => assert_eq!(l.kind, LimitKind::XmlElements),
         other => panic!("{other:?}"),

@@ -121,7 +121,7 @@ fn pseudo_translated_merge_reads_back() {
 fn target_locale_merge_is_the_same_file() {
     // .strings carries no language tag (the folder `xx.lproj` does), so a target locale changes nothing.
     for (name, b) in all() {
-        let d = Strings.extract(b, &ExtractOptions { target_lang: Some("ar-SA".into()), ..Default::default() }).unwrap();
+        let d = Strings.extract(b, &ExtractOptions::new().with_target_lang("ar-SA")).unwrap();
         assert_eq!(d.target_lang.as_deref(), Some("ar-SA"));
         assert_eq!(merged(&d), b, "{name}");
     }
@@ -165,7 +165,7 @@ fn edge_file() {
     let out = String::from_utf8(merged(&p)).unwrap();
     assert!(out.contains("\"quote\" = \"Er sagte \\\"hallo\\\"\\n\";"), "{out}");
     // Locked units on request: the empty-ish values, never touched by a merge.
-    let locked = Strings.extract(EDGE, &ExtractOptions { include_locked: true, ..Default::default() }).unwrap();
+    let locked = Strings.extract(EDGE, &ExtractOptions::new().with_include_locked(true)).unwrap();
     assert!(locked.units.len() > d.units.len() && locked.units.iter().any(|u| !u.translate));
     assert_eq!(merged(&locked), EDGE);
     // Notes: comments above a key.

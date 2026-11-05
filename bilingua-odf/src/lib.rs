@@ -4,7 +4,7 @@
 //!
 //! ```ignore
 //! let f = bilingua_odf::Odt::default();
-//! let mut doc = f.extract(&bytes, &ExtractOptions { target_lang: Some("de-DE".into()), ..Default::default() })?;
+//! let mut doc = f.extract(&bytes, &ExtractOptions::new().with_target_lang("de-DE"))?;
 //! doc.set_target("p0", vec![Inline::text("Erste Schritte")])?;
 //! let out = f.merge(&doc)?;
 //! ```
@@ -80,7 +80,7 @@ struct Loaded {
 
 fn decode_part(bytes: &[u8], l: &Limits) -> Result<(String, String, Vec<Warning>), Error> {
     // no line budget: an OpenDocument part is one long line or pretty printed, either way the tree limits apply
-    let lim = Limits { max_lines: usize::MAX, ..*l };
+    let lim = l.with_max_lines(usize::MAX);
     let d = enc::decode_text(bytes, &enc::DecodeOptions { declared: true, source_lang: None, limits: lim })?;
     let tag: Vec<&str> = d.encoding.split(';').filter(|p| !p.starts_with("nl=")).collect();
     let tag = tag.join(";");
@@ -240,16 +240,7 @@ fn extract_doc(bytes: &[u8], opts: &ExtractOptions, id: &'static str, o: &OdfOpt
         }
     }
     let skeleton = Skeleton::zip(vec![ZipEntry { name: ARCHIVE.into(), data: ZipData::Raw(bytes.to_vec()) }], parser_info!());
-    let doc = Document {
-        format: id.into(),
-        name: None,
-        source_lang: opts.source_lang.clone(),
-        target_lang: opts.target_lang.clone(),
-        granularity: opts.granularity,
-        units,
-        skeleton,
-        ..Default::default()
-    };
+    let doc = Document::new(id, units, skeleton).with_options(opts);
     guard::finish(doc, warnings, &l)
 }
 
@@ -286,7 +277,7 @@ fn merge_doc(doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
     let entries = bilingua_zip::read_zip("odf", archive, &ZipLimits::from(&l)).map_err(|e| Error::Write(format!("the stored archive is unreadable: {e}")))?;
     let mut parts: Vec<Loaded> = Vec::new();
     for name in PARTS {
-        if let Some(p) = load_part(&entries, name, &Limits { max_xml_elements: usize::MAX, max_xml_depth: 4096, ..l }, false)? {
+        if let Some(p) = load_part(&entries, name, &l.with_max_xml_elements(usize::MAX).with_max_xml_depth(4096), false)? {
             parts.push(p);
         }
     }

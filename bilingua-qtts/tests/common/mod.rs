@@ -43,7 +43,7 @@ pub fn lf(name: &str) -> Vec<u8> {
 }
 
 pub fn opts(target: Option<&str>) -> ExtractOptions {
-    ExtractOptions { source_lang: Some("en".into()), target_lang: target.map(str::to_string), ..Default::default() }
+    ExtractOptions::new().with_source_lang("en").with_target_lang(target.map(str::to_string))
 }
 
 pub fn ex(bytes: &[u8]) -> Document {
@@ -55,7 +55,7 @@ pub fn ex_to(bytes: &[u8], target: &str) -> Document {
 }
 
 pub fn ex_locked(bytes: &[u8]) -> Document {
-    QtTs.extract(bytes, &ExtractOptions { include_locked: true, ..opts(None) }).unwrap()
+    QtTs.extract(bytes, &opts(None).with_include_locked(true)).unwrap()
 }
 
 pub fn try_ex(bytes: &[u8]) -> Result<Document, Error> {

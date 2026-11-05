@@ -6,11 +6,11 @@ use bilingua_model::{LimitKind, Limits};
 use std::io::{Read, Write};
 
 fn opts_with(l: Limits) -> ExtractOptions {
-    ExtractOptions { source_lang: Some("en".into()), target_lang: Some("es".into()), limits: Some(l), ..Default::default() }
+    ExtractOptions::new().with_source_lang("en").with_target_lang("es").with_limits(l)
 }
 
 fn lang(l: &str) -> ExtractOptions {
-    ExtractOptions { source_lang: Some(l.into()), target_lang: Some("en".into()), ..Default::default() }
+    ExtractOptions::new().with_source_lang(l).with_target_lang("en")
 }
 
 fn kind(r: Result<Document, Error>) -> LimitKind {
@@ -72,7 +72,7 @@ const XXE: &str = r#"<!ENTITY x SYSTEM "file:///etc/passwd">"#;
 
 #[test]
 fn input_size_limit_check_upload_bytes() {
-    let l = Limits { max_input_bytes: 50, ..Limits::default() };
+    let l = Limits::new().with_max_input_bytes(50);
     for (name, bytes) in [("a.txt", vec![b'a'; 60]), ("a.md", vec![b'a'; 60]), ("a.json", vec![b' '; 60]), ("a.po", vec![b'a'; 60])] {
         assert_eq!(kind(extract(name, &bytes, &opts_with(l))), LimitKind::InputBytes, "{name}");
     }
@@ -83,7 +83,7 @@ fn input_size_limit_check_upload_bytes() {
 
 #[test]
 fn unit_count_limit_check_segment_cap() {
-    let l = Limits { max_units: 10, ..Limits::default() };
+    let l = Limits::new().with_max_units(10);
     let txt: String = (0..11).map(|i| format!("Paragraph number {i}.\n\n")).collect();
     assert_eq!(kind(extract("a.txt", txt.as_bytes(), &opts_with(l))), LimitKind::Units);
     let md: String = (0..11).map(|i| format!("Paragraph number {i}.\n\n")).collect();
@@ -96,14 +96,14 @@ fn unit_count_limit_check_segment_cap() {
     let two: String = (0..10).map(|i| format!("One sentence {i}. Another sentence {i}.
 
 ")).collect();
-    let sentences = ExtractOptions { granularity: Granularity::Sentence, ..opts_with(l) };
+    let sentences = opts_with(l).with_granularity(Granularity::Sentence);
     assert_eq!(kind(extract("a.txt", two.as_bytes(), &sentences)), LimitKind::Units);
-    assert!(extract("a.txt", two.as_bytes(), &ExtractOptions { granularity: Granularity::Paragraph, ..opts_with(l) }).is_ok());
+    assert!(extract("a.txt", two.as_bytes(), &opts_with(l).with_granularity(Granularity::Paragraph)).is_ok());
 }
 
 #[test]
 fn unit_text_length_limit_check_unit_texts() {
-    let l = Limits { max_unit_chars: 30, ..Limits::default() };
+    let l = Limits::new().with_max_unit_chars(30);
     let long = "x".repeat(31);
     assert_eq!(kind(extract("a.txt", long.as_bytes(), &opts_with(l))), LimitKind::UnitChars);
     assert_eq!(kind(extract("a.md", long.as_bytes(), &opts_with(l))), LimitKind::UnitChars);
@@ -115,7 +115,7 @@ fn unit_text_length_limit_check_unit_texts() {
 
 #[test]
 fn line_budget_check_line_budget() {
-    let l = Limits { max_lines: 20, ..Limits::default() };
+    let l = Limits::new().with_max_lines(20);
     assert_eq!(kind(extract("a.txt", "\n".repeat(21).as_bytes(), &opts_with(l))), LimitKind::Lines);
     assert_eq!(kind(extract("a.srt", "\r".repeat(21).as_bytes(), &opts_with(l))), LimitKind::Lines);
     assert!(extract("a.txt", "\n".repeat(20).as_bytes(), &opts_with(l)).is_ok());
@@ -123,7 +123,7 @@ fn line_budget_check_line_budget() {
 
 #[test]
 fn docx_paragraph_cap_counts_empty_paragraphs() {
-    let l = Limits { max_paragraphs: 3, ..Limits::default() };
+    let l = Limits::new().with_max_paragraphs(3);
     let many = with_part(&corpus("docx/manual.docx"), "word/document.xml", |x| x.replace("<w:body>", &format!("<w:body>{}", "<w:p/>".repeat(10))));
     assert_eq!(kind(extract("a.docx", &many, &opts_with(l))), LimitKind::Paragraphs);
     assert!(extract("a.docx", &corpus("docx/manual.docx"), &opts_with(Limits::default())).is_ok());
@@ -133,10 +133,10 @@ fn docx_paragraph_cap_counts_empty_paragraphs() {
 fn xlsx_cell_row_and_text_limits_check_xlsx_guard() {
     let menu = corpus("xlsx/menu.xlsx");
     assert!(extract("a.xlsx", &menu, &opts_with(Limits::default())).is_ok());
-    assert_eq!(kind(extract("a.xlsx", &menu, &opts_with(Limits { xlsx_max_cells: 2, ..Limits::default() }))), LimitKind::Spreadsheet);
-    assert_eq!(kind(extract("a.xlsx", &menu, &opts_with(Limits { xlsx_max_rows: 1, ..Limits::default() }))), LimitKind::Spreadsheet);
-    assert_eq!(kind(extract("a.xlsx", &menu, &opts_with(Limits { xlsx_max_cell_chars: 3, ..Limits::default() }))), LimitKind::Spreadsheet);
-    assert_eq!(kind(extract("a.xlsx", &menu, &opts_with(Limits { xlsx_max_total_text_chars: 10, ..Limits::default() }))), LimitKind::Spreadsheet);
+    assert_eq!(kind(extract("a.xlsx", &menu, &opts_with(Limits::new().with_xlsx_max_cells(2)))), LimitKind::Spreadsheet);
+    assert_eq!(kind(extract("a.xlsx", &menu, &opts_with(Limits::new().with_xlsx_max_rows(1)))), LimitKind::Spreadsheet);
+    assert_eq!(kind(extract("a.xlsx", &menu, &opts_with(Limits::new().with_xlsx_max_cell_chars(3)))), LimitKind::Spreadsheet);
+    assert_eq!(kind(extract("a.xlsx", &menu, &opts_with(Limits::new().with_xlsx_max_total_text_chars(10)))), LimitKind::Spreadsheet);
 }
 
 // ---------------------------------------------------------------- XML (xml_guard.py)
@@ -165,10 +165,10 @@ fn entity_bomb_and_xxe_are_refused_in_every_xml_format() {
 #[test]
 fn xml_depth_and_element_count_are_bounded() {
     let deep = with_part(&corpus("docx/manual.docx"), "word/document.xml", |x| x.replace("<w:body>", &format!("<w:body>{}{}", "<w:sdt>".repeat(40), "</w:sdt>".repeat(40))));
-    let l = Limits { max_xml_depth: 20, ..Limits::default() };
+    let l = Limits::new().with_max_xml_depth(20);
     assert_eq!(kind(extract("a.docx", &deep, &opts_with(l))), LimitKind::XmlDepth);
     let wide = with_part(&corpus("docx/manual.docx"), "word/document.xml", |x| x.replace("<w:body>", &format!("<w:body>{}", "<w:bookmarkEnd w:id=\"1\"/>".repeat(100))));
-    let l = Limits { max_xml_elements: 50, ..Limits::default() };
+    let l = Limits::new().with_max_xml_elements(50);
     assert_eq!(kind(extract("a.docx", &wide, &opts_with(l))), LimitKind::XmlElements);
     // the default depth is generous enough for real files
     assert!(extract("a.docx", &corpus("docx/manual.docx"), &ExtractOptions::default()).is_ok());
@@ -180,10 +180,10 @@ fn xml_depth_and_element_count_are_bounded() {
 fn zip_entry_count_total_size_and_ratio_are_bounded() {
     let docx = corpus("docx/manual.docx");
     let n = zip::ZipArchive::new(std::io::Cursor::new(&docx)).unwrap().len();
-    assert_eq!(kind(extract("a.docx", &docx, &opts_with(Limits { max_zip_entries: n - 1, ..Limits::default() }))), LimitKind::ZipEntries);
-    assert!(extract("a.docx", &docx, &opts_with(Limits { max_zip_entries: n, ..Limits::default() })).is_ok());
+    assert_eq!(kind(extract("a.docx", &docx, &opts_with(Limits::new().with_max_zip_entries(n - 1)))), LimitKind::ZipEntries);
+    assert!(extract("a.docx", &docx, &opts_with(Limits::new().with_max_zip_entries(n))).is_ok());
     // total uncompressed size
-    assert_eq!(kind(extract("a.docx", &docx, &opts_with(Limits { max_zip_bytes: 500, ..Limits::default() }))), LimitKind::ZipBytes);
+    assert_eq!(kind(extract("a.docx", &docx, &opts_with(Limits::new().with_max_zip_bytes(500)))), LimitKind::ZipBytes);
     // a part that expands 1000 times (a zip bomb in miniature: 3 MB of zeros)
     let bomb = zip_of(&[("zeros.bin", vec![0u8; 3 * 1024 * 1024]), ("[Content_Types].xml", b"<Types/>".to_vec())]);
     assert!((bomb.len() as u64) < 100_000);
@@ -269,7 +269,7 @@ msgstr \"\"
 fn a_translation_that_fits_stays_in_the_code_page_and_one_that_does_not_becomes_utf8() {
     let (lang_tag, label, text) = cases().into_iter().find(|c| c.0 == "ja").unwrap();
     let bytes = encode_as(label, &format!("{text}\n"));
-    let mut doc = extract("a.txt", &bytes, &ExtractOptions { granularity: Granularity::Paragraph, ..lang(lang_tag) }).unwrap();
+    let mut doc = extract("a.txt", &bytes, &lang(lang_tag).with_granularity(Granularity::Paragraph)).unwrap();
     let id = doc.units[0].segments[0].id.clone();
     doc.set_target(&id, vec![Inline::text("\u{3053}\u{3093}\u{306b}\u{3061}\u{306f}")]).unwrap();
     assert_eq!(merge(&doc).unwrap(), encode_as(label, "\u{3053}\u{3093}\u{306b}\u{3061}\u{306f}\n"));

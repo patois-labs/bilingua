@@ -6,7 +6,7 @@ gettext PO and POT filter for Bilingua.
 use bilingua_po::Po;
 use bilingua_model::*;
 
-let mut doc = Po.extract(&bytes, &ExtractOptions { target_lang: Some("es".into()), ..Default::default() })?;
+let mut doc = Po.extract(&bytes, &ExtractOptions::new().with_target_lang("es"))?;
 doc.set_target("e2", vec![Inline::text("Hola")])?;
 let out = Po.merge(&doc)?;
 ```

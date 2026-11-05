@@ -185,12 +185,12 @@ fn unit_budget_is_enforced() {
         many.push_str(&format!("<message><source>Text {i}</source><translation type=\"unfinished\"/></message>"));
     }
     many.push_str("</context></TS>");
-    let small = Limits { max_units: 5, ..Limits::default() };
+    let small = Limits::new().with_max_units(5);
     let e = QtTs.extract_with(many.as_bytes(), &opts(None), &small).unwrap_err();
     assert!(matches!(e, Error::Limit(_)), "{e}");
     // far more markup than units can ever need is refused before it is parsed
     let big = format!("<TS>{}</TS>", "<x/>".repeat(300));
-    let tiny = Limits { max_units: 5, ..Limits::default() };
+    let tiny = Limits::new().with_max_units(5);
     assert!(matches!(QtTs.extract_with(big.as_bytes(), &opts(None), &tiny), Err(Error::Limit(_))));
 }
 

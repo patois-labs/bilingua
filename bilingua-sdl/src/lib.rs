@@ -134,16 +134,7 @@ impl Filter for PackageFilter {
             .iter()
             .map(|e| ZipEntry { name: e.name.clone(), data: ZipData::Raw(e.data.clone()) })
             .collect();
-        Ok(Document {
-            format: self.id.to_string(),
-            name: None,
-            source_lang,
-            target_lang,
-            granularity: bilingua_model::Granularity::Paragraph,
-            units,
-            skeleton: Skeleton::zip(zentries, bilingua_model::parser_info!()),
-            warnings: vec![],
-        })
+        Ok(Document::new(self.id.to_string(), units, Skeleton::zip(zentries, bilingua_model::parser_info!())).with_source_lang(source_lang).with_target_lang(target_lang).with_granularity(bilingua_model::Granularity::Paragraph))
     }
 
     fn merge_with(&self, document: &Document, _opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, bilingua_model::Error> {

@@ -33,6 +33,43 @@ pub use encoding_rs;
 pub use guard::{LimitError, LimitKind, Limits};
 pub use pytext::{py_is_word_char, py_is_word_start_char, py_isdecimal_char, py_isalnum_char, py_isalpha_char, py_isspace_char, py_has_alnum, py_has_alpha, py_isalnum, py_isalpha, py_isspace, py_lstrip, py_rstrip, py_strip};
 
+/// What a builder takes for an optional text field: `"de-DE"`, a `String`, or an `Option` of either (`None`
+/// clears the field).
+pub trait IntoOptionString {
+    fn into_option_string(self) -> Option<String>;
+}
+
+impl IntoOptionString for &str {
+    fn into_option_string(self) -> Option<String> {
+        Some(self.to_string())
+    }
+}
+impl IntoOptionString for String {
+    fn into_option_string(self) -> Option<String> {
+        Some(self)
+    }
+}
+impl IntoOptionString for &String {
+    fn into_option_string(self) -> Option<String> {
+        Some(self.clone())
+    }
+}
+impl IntoOptionString for Option<String> {
+    fn into_option_string(self) -> Option<String> {
+        self
+    }
+}
+impl IntoOptionString for Option<&str> {
+    fn into_option_string(self) -> Option<String> {
+        self.map(str::to_string)
+    }
+}
+impl IntoOptionString for Option<&String> {
+    fn into_option_string(self) -> Option<String> {
+        self.cloned()
+    }
+}
+
 /// One piece of segment content, in logical order.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -94,6 +131,7 @@ pub struct CodeData {
 /// Where a segment is in its life, from untouched to signed off. Monolingual files only use `New`, `Draft`,
 /// `Translated` and `Confirmed`; bilingual files and review workflows use the rest.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[non_exhaustive]
 pub enum SegState {
     /// No target yet.
     #[default]
@@ -203,6 +241,7 @@ impl Origin {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[non_exhaustive]
 pub struct Segment {
     /// Unique within the document: `<unit id>` when the unit has one segment, else `<unit id>#<n>` (1-based).
     pub id: String,
@@ -215,6 +254,26 @@ pub struct Segment {
     /// Where the target came from. `None` for monolingual files and for targets nobody labelled.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub origin: Option<Origin>,
+}
+
+impl Segment {
+    /// An untranslated segment (no target, state `New`, no origin).
+    pub fn new(id: impl Into<String>, source: Vec<Inline>) -> Segment {
+        Segment { id: id.into(), source, target: vec![], state: SegState::New, origin: None }
+    }
+    /// Sets the target as it is (no tag check: use [`Document::set_target`] for edits).
+    pub fn with_target(mut self, target: Vec<Inline>) -> Segment {
+        self.target = target;
+        self
+    }
+    pub fn with_state(mut self, state: SegState) -> Segment {
+        self.state = state;
+        self
+    }
+    pub fn with_origin(mut self, origin: impl Into<Option<Origin>>) -> Segment {
+        self.origin = origin.into();
+        self
+    }
 }
 
 /// A comment on a unit: a translator query, a developer instruction, a reviewer remark.
@@ -253,6 +312,7 @@ pub struct UnitContext {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[non_exhaustive]
 pub struct Unit {
     /// Unique within the document, stable for the same input file.
     pub id: String,
@@ -286,16 +346,51 @@ impl Unit {
     /// A unit with one segment holding `source`.
     pub fn new(id: impl Into<String>, source: Vec<Inline>) -> Unit {
         let id = id.into();
+        let seg = Segment::new(id.clone(), source);
+        Unit::from_segments(id, vec![seg])
+    }
+
+    /// A unit made of the given segments (their ids are kept as they are). Separators start empty, one per gap.
+    pub fn from_segments(id: impl Into<String>, segments: Vec<Segment>) -> Unit {
         Unit {
-            segments: vec![Segment { id: id.clone(), source, target: vec![], state: SegState::New, origin: None }],
-            id,
-            separators: vec![],
+            separators: vec![String::new(); segments.len().saturating_sub(1)],
+            segments,
+            id: id.into(),
             codes: BTreeMap::new(),
             context: UnitContext::default(),
             translate: true,
             notes: vec![],
             lock_reason: None,
         }
+    }
+    pub fn with_separators(mut self, separators: Vec<String>) -> Unit {
+        self.separators = separators;
+        self
+    }
+    pub fn with_codes(mut self, codes: BTreeMap<String, CodeData>) -> Unit {
+        self.codes = codes;
+        self
+    }
+    /// Adds (or replaces) the original markup of one inline code.
+    pub fn with_code(mut self, id: impl Into<String>, code: CodeData) -> Unit {
+        self.codes.insert(id.into(), code);
+        self
+    }
+    pub fn with_context(mut self, context: UnitContext) -> Unit {
+        self.context = context;
+        self
+    }
+    pub fn with_translate(mut self, translate: bool) -> Unit {
+        self.translate = translate;
+        self
+    }
+    pub fn with_notes(mut self, notes: Vec<Note>) -> Unit {
+        self.notes = notes;
+        self
+    }
+    pub fn with_lock_reason(mut self, reason: impl IntoOptionString) -> Unit {
+        self.lock_reason = reason.into_option_string();
+        self
     }
 
     /// The whole unit's source, segments joined with their separators.
@@ -488,6 +583,7 @@ impl Skeleton {
 /// How finely units are split into segments.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
+#[non_exhaustive]
 pub enum Granularity {
     /// SRX sentence segmentation (the classic CAT default).
     #[default]
@@ -500,6 +596,7 @@ pub enum Granularity {
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[non_exhaustive]
 pub struct Document {
     /// Parser id, e.g. "html", "docx", "json".
     pub format: String,
@@ -534,6 +631,39 @@ impl Warning {
 }
 
 impl Document {
+    /// A document of `format` (the filter id) with its units and skeleton; no name, no languages, sentence
+    /// granularity, no warnings.
+    pub fn new(format: impl Into<String>, units: Vec<Unit>, skeleton: Skeleton) -> Document {
+        Document { format: format.into(), name: None, source_lang: None, target_lang: None, granularity: Granularity::default(), units, skeleton, warnings: vec![] }
+    }
+    /// Takes the languages and the granularity from the options the file was opened with (what every parser does).
+    pub fn with_options(mut self, opts: &ExtractOptions) -> Document {
+        self.source_lang = opts.source_lang.clone();
+        self.target_lang = opts.target_lang.clone();
+        self.granularity = opts.granularity;
+        self
+    }
+    pub fn with_name(mut self, name: impl IntoOptionString) -> Document {
+        self.name = name.into_option_string();
+        self
+    }
+    pub fn with_source_lang(mut self, lang: impl IntoOptionString) -> Document {
+        self.source_lang = lang.into_option_string();
+        self
+    }
+    pub fn with_target_lang(mut self, lang: impl IntoOptionString) -> Document {
+        self.target_lang = lang.into_option_string();
+        self
+    }
+    pub fn with_granularity(mut self, granularity: Granularity) -> Document {
+        self.granularity = granularity;
+        self
+    }
+    pub fn with_warnings(mut self, warnings: Vec<Warning>) -> Document {
+        self.warnings = warnings;
+        self
+    }
+
     pub fn segments(&self) -> impl Iterator<Item = (&Unit, &Segment)> {
         self.units.iter().flat_map(|u| u.segments.iter().map(move |s| (u, s)))
     }
@@ -666,7 +796,10 @@ fn check_tags(source: &[Inline], target: &[Inline]) -> Result<(), Error> {
     Ok(())
 }
 
+/// Options for [`Filter::extract`]. Build them with [`ExtractOptions::new`] and the `with_*` methods
+/// (`ExtractOptions::new().with_target_lang("de-DE")`); new options are added without breaking callers.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[non_exhaustive]
 pub struct ExtractOptions {
     pub source_lang: Option<String>,
     pub target_lang: Option<String>,
@@ -684,6 +817,42 @@ pub struct ExtractOptions {
 }
 
 impl ExtractOptions {
+    /// The defaults: no languages, sentence granularity, locked text skipped, Localization OS's limits.
+    pub fn new() -> ExtractOptions {
+        ExtractOptions::default()
+    }
+    pub fn with_source_lang(mut self, lang: impl IntoOptionString) -> ExtractOptions {
+        self.source_lang = lang.into_option_string();
+        self
+    }
+    pub fn with_target_lang(mut self, lang: impl IntoOptionString) -> ExtractOptions {
+        self.target_lang = lang.into_option_string();
+        self
+    }
+    pub fn with_granularity(mut self, granularity: Granularity) -> ExtractOptions {
+        self.granularity = granularity;
+        self
+    }
+    pub fn with_include_locked(mut self, include_locked: bool) -> ExtractOptions {
+        self.include_locked = include_locked;
+        self
+    }
+    /// Limits for this call (`Limits` or `Option<Limits>`; `None` is the defaults).
+    pub fn with_limits(mut self, limits: impl Into<Option<Limits>>) -> ExtractOptions {
+        self.limits = limits.into();
+        self
+    }
+    /// Sets one format option (`"<format>.<name>"`); the value is text (`true`, `42`, `name=Name`).
+    pub fn with_format_option(mut self, key: impl Into<String>, value: impl ToString) -> ExtractOptions {
+        self.format_options.insert(key.into(), value.to_string());
+        self
+    }
+    /// Replaces all format options.
+    pub fn with_format_options(mut self, options: BTreeMap<String, String>) -> ExtractOptions {
+        self.format_options = options;
+        self
+    }
+
     /// A format option as text, if set.
     pub fn format_option(&self, key: &str) -> Option<&str> {
         self.format_options.get(key).map(String::as_str)
@@ -707,6 +876,7 @@ impl ExtractOptions {
 
 /// How a merge writes text files.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[non_exhaustive]
 pub enum OutputEncoding {
     /// The file's own encoding, BOM and line endings (the default; an untouched merge is byte-identical).
     #[default]
@@ -727,14 +897,27 @@ pub enum OutputEncoding {
 ///   language stamp, no plural fill, no format conversion). With `true` the target language is stamped and
 ///   missing plural forms are filled even then, as Localization OS does. It only has an effect when
 ///   `Document::target_lang` is set.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
+#[non_exhaustive]
 pub struct MergeOptions {
     pub output_encoding: OutputEncoding,
     pub stamp_target_always: bool,
 }
 
 impl MergeOptions {
+    /// The defaults: keep the file's encoding, no stamp when nothing is translated (what [`Filter::merge`] does).
+    pub fn new() -> MergeOptions {
+        MergeOptions::default()
+    }
+    pub fn with_output_encoding(mut self, output_encoding: OutputEncoding) -> MergeOptions {
+        self.output_encoding = output_encoding;
+        self
+    }
+    pub fn with_stamp_target_always(mut self, stamp_target_always: bool) -> MergeOptions {
+        self.stamp_target_always = stamp_target_always;
+        self
+    }
     /// The Localization OS behaviour: UTF-8 out, stamp and fill always.
     pub fn locos() -> MergeOptions {
         MergeOptions { output_encoding: OutputEncoding::Utf8, stamp_target_always: true }
@@ -760,6 +943,7 @@ impl MergeOptions {
 }
 
 #[derive(Debug, thiserror::Error)]
+#[non_exhaustive]
 pub enum Error {
     #[error("not a {format} file: {msg}")]
     Parse { format: String, msg: String },

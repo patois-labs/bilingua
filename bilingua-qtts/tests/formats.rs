@@ -19,7 +19,7 @@ fn untouched_merge_gives_back_the_exact_bytes_of_every_fixture() {
         let d = QtTs.extract(&bytes, &opts(None)).unwrap_or_else(|e| panic!("{name}: {e}"));
         assert_eq!(merged(&d), bytes, "{name}");
         // with locked units and a target language the file is still the same file
-        let d = QtTs.extract(&bytes, &ExtractOptions { include_locked: true, ..opts(Some("es-ES")) }).unwrap();
+        let d = QtTs.extract(&bytes, &(opts(Some("es-ES"))).with_include_locked(true)).unwrap();
         assert_eq!(merged(&d), bytes, "{name} (target set)");
     }
 }

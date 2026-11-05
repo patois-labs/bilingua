@@ -20,7 +20,7 @@ fn big() -> Limits {
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
-    let opts = ExtractOptions { granularity: Granularity::Paragraph, ..Default::default() };
+    let opts = ExtractOptions::new().with_granularity(Granularity::Paragraph);
     match args.get(1).map(String::as_str) {
         Some("dump") => {
             let bytes = std::fs::read(&args[2]).expect("read");

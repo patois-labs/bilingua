@@ -43,10 +43,7 @@ fn large_file() {
     if let Ok(p) = std::env::var("BILINGUA_MIF_SPEED_OUT") {
         std::fs::write(p, &text).unwrap();
     }
-    let o = ExtractOptions {
-        limits: Some(Limits { max_units: 10_000_000, ..Limits::default() }),
-        ..Default::default()
-    };
+    let o = ExtractOptions::new().with_limits(Limits::new().with_max_units(10_000_000));
     let t0 = Instant::now();
     let mut doc = Mif.extract(text.as_bytes(), &o).unwrap();
     let t_extract = t0.elapsed();

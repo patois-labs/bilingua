@@ -38,7 +38,7 @@ fn large_file() {
     if let Ok(p) = std::env::var("BILINGUA_PHP_SPEED_OUT") {
         std::fs::write(p, &text).unwrap();
     }
-    let opts = ExtractOptions { limits: Some(Limits { max_units: 10_000_000, max_input_bytes: 1 << 30, max_lines: 100_000_000, ..Limits::default() }), ..Default::default() };
+    let opts = ExtractOptions::new().with_limits(Limits::new().with_max_units(10_000_000).with_max_input_bytes(1 << 30).with_max_lines(100_000_000));
     let t0 = Instant::now();
     let mut doc = Php.extract(text.as_bytes(), &opts).unwrap();
     let t_extract = t0.elapsed();

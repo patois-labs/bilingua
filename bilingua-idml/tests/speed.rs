@@ -43,7 +43,7 @@ fn large_package_speed() {
     if let Ok(p) = std::env::var("IDML_SPEED_OUT") {
         std::fs::write(p, &data).unwrap();
     }
-    let opts = ExtractOptions { limits: Some(Limits { max_units: 100_000, ..Default::default() }), target_lang: Some("de-DE".into()), ..Default::default() };
+    let opts = ExtractOptions::new().with_limits(Limits::new().with_max_units(100_000)).with_target_lang("de-DE");
     let t0 = Instant::now();
     let mut doc = Idml.extract(&data, &opts).unwrap();
     let t_extract = t0.elapsed();

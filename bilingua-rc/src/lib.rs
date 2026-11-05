@@ -225,15 +225,7 @@ impl Filter for Rc {
         if pos < d.text.len() {
             parts.push(SkelPart::Raw(d.text[pos..].to_string()));
         }
-        let doc = Document {
-            format: "rc".into(),
-            source_lang: opts.source_lang.clone(),
-            target_lang: opts.target_lang.clone(),
-            granularity: opts.granularity,
-            units,
-            skeleton: Skeleton::text(parts, d.tag, bilingua_model::parser_info!()),
-            ..Default::default()
-        };
+        let doc = Document::new("rc", units, Skeleton::text(parts, d.tag, bilingua_model::parser_info!())).with_options(opts);
         guard::finish(doc, warnings, &limits)
     }
 

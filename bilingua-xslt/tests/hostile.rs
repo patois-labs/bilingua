@@ -24,7 +24,7 @@ const SEEDS: [&[u8]; 8] = [
 /// same unit count and a translated merge with a target language is still readable.
 fn check(data: &[u8]) {
     let _ = Xslt.sniff(data);
-    let o = ExtractOptions { target_lang: Some("de-DE".into()), ..opts() };
+    let o = opts().with_target_lang("de-DE");
     let Ok(d) = Xslt.extract(data, &o) else { return };
     assert!(Xslt.merge(&d).expect("merge") == data, "untouched merge");
     let mut e = d.clone();
@@ -200,11 +200,11 @@ fn deep_and_wide_files_return_typed_errors() {
     // unclosed deep nesting
     assert!(Xslt.extract("<a>".repeat(100_000).as_bytes(), &opts()).is_err());
     // an element flood against a small limit
-    let small = Limits { max_xml_elements: 50, ..Limits::default() };
+    let small = Limits::new().with_max_xml_elements(50);
     let flood = format!("<xsl:stylesheet version=\"1.0\" xmlns:xsl=\"http://www.w3.org/1999/XSL/Transform\"><xsl:template match=\"/\">{}</xsl:template></xsl:stylesheet>", "<br/>".repeat(500));
     assert!(matches!(Xslt.extract_with(flood.as_bytes(), &opts(), &small), Err(Error::Limit(_))));
     // input size
-    let tiny = Limits { max_input_bytes: 100, ..Limits::default() };
+    let tiny = Limits::new().with_max_input_bytes(100);
     assert!(matches!(Xslt.extract_with(include_bytes!("data/locos_basic.xsl"), &opts(), &tiny), Err(Error::Limit(_))));
 }
 
@@ -402,7 +402,7 @@ fn edge_text_next_to_stripped_whitespace_keeps_units_apart() {
   <p>Para</p>
 </t:template></t:stylesheet>";
     check(src);
-    let o = ExtractOptions { target_lang: Some("de-DE".into()), ..opts() };
+    let o = opts().with_target_lang("de-DE");
     let d = Xslt.extract(src, &o).unwrap();
     let mut e = d.clone();
     for u in &mut e.units {

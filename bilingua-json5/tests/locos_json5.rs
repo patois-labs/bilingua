@@ -12,7 +12,7 @@ const APP: &[u8] = include_bytes!("data/app.json5");
 const SETTINGS: &[u8] = include_bytes!("data/settings.jsonc");
 
 fn opts() -> ExtractOptions {
-    ExtractOptions { source_lang: Some("en".into()), target_lang: Some("de-DE".into()), granularity: Granularity::Paragraph, include_locked: false, ..Default::default() }
+    ExtractOptions::new().with_source_lang("en").with_target_lang("de-DE").with_granularity(Granularity::Paragraph)
 }
 
 fn open(data: &[u8]) -> Result<Document, Error> {
@@ -229,7 +229,7 @@ fn tokens_are_labelled_placeholder_so_the_locos_adapter_flattens_them() {
 // ---------------------------------------------------------------- records
 
 fn doc_keys(data: &[u8]) -> Vec<(Option<String>, String, Vec<String>)> {
-    let o = ExtractOptions { include_locked: true, ..opts() };
+    let o = opts().with_include_locked(true);
     Json5Filter::default()
         .extract(data, &o)
         .unwrap()
@@ -247,7 +247,7 @@ fn records_dotted_keys_comments_and_unit_order() {
     assert!(by("farewell").2.is_empty()); // the same-line comment follows the value
     assert_eq!(by("nested.list[1]").1, "Two");
     // '---' is counted as a string but is not a translatable unit (a locked unit here)
-    let doc = Json5Filter::default().extract(APP, &ExtractOptions { include_locked: true, ..opts() }).unwrap();
+    let doc = Json5Filter::default().extract(APP, &opts().with_include_locked(true)).unwrap();
     let dash = doc.units.iter().find(|u| u.context.key.as_deref() == Some("nested.list[3]")).unwrap();
     assert!(!dash.translate);
     // the unit_index of LocOS records(): position among translatable units
@@ -261,7 +261,7 @@ fn records_dotted_keys_comments_and_unit_order() {
 
 #[test]
 fn records_settings_keys_and_leading_comment() {
-    let doc = Json5Filter::default().extract(SETTINGS, &ExtractOptions { include_locked: true, ..opts() }).unwrap();
+    let doc = Json5Filter::default().extract(SETTINGS, &opts().with_include_locked(true)).unwrap();
     let first = &doc.units[0];
     assert_eq!(first.context.key.as_deref(), Some("editor.title"));
     assert!(first.context.notes[0].contains("Editor settings"));

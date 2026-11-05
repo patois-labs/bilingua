@@ -7,7 +7,7 @@ use bilingua::*;
 const MARK: &str = "\u{0903}";
 
 fn opts() -> ExtractOptions {
-    ExtractOptions { source_lang: Some("en".into()), ..Default::default() }
+    ExtractOptions::new().with_source_lang("en")
 }
 
 fn units(name: &str, text: &str) -> usize {

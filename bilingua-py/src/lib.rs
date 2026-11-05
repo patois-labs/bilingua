@@ -38,6 +38,7 @@ impl From<engine::Error> for Fail {
             E::Limit(_) => "limit",
             E::Encoding(_) => "encoding",
             E::Io(_) => "io",
+            _ => "error",
         };
         Fail::new(code, e.to_string())
     }
@@ -210,7 +211,7 @@ fn extract(
     };
     let (name, data) = (name.to_string(), data.to_vec());
     let value = guarded(py, move || {
-        let opts = ExtractOptions { source_lang, target_lang, granularity: g, include_locked: false, limits, format_options };
+        let opts = ExtractOptions::new().with_source_lang(source_lang).with_target_lang(target_lang).with_granularity(g).with_limits(limits).with_format_options(format_options);
         let doc = engine::extract(&name, &data, &opts)?;
         serde_json::to_value(&doc).map_err(|e| Fail::new("internal", e.to_string()))
     })?;

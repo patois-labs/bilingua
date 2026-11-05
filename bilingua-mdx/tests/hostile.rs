@@ -116,17 +116,17 @@ fn deep_nesting_does_not_overflow_the_stack() {
 #[test]
 fn limits_give_typed_errors() {
     let mut o = opts();
-    o.limits = Some(Limits { max_input_bytes: 100, ..Limits::default() });
+    o.limits = Some(Limits::new().with_max_input_bytes(100));
     assert!(matches!(Mdx.extract(&[b'a'; 101], &o), Err(Error::Limit(e)) if e.kind == LimitKind::InputBytes));
     let mut o = opts();
-    o.limits = Some(Limits { max_lines: 10, ..Limits::default() });
+    o.limits = Some(Limits::new().with_max_lines(10));
     assert!(matches!(Mdx.extract("a\n".repeat(20).as_bytes(), &o), Err(Error::Limit(e)) if e.kind == LimitKind::Lines));
     let mut o = opts();
-    o.limits = Some(Limits { max_units: 3, ..Limits::default() });
+    o.limits = Some(Limits::new().with_max_units(3));
     let many = "<A title=\"t\" />\n".repeat(4);
     assert!(matches!(Mdx.extract(many.as_bytes(), &o), Err(Error::Limit(e)) if e.kind == LimitKind::Units));
     let mut o = opts();
-    o.limits = Some(Limits { max_unit_chars: 10, ..Limits::default() });
+    o.limits = Some(Limits::new().with_max_unit_chars(10));
     assert!(matches!(Mdx.extract(b"a very long line of words\n", &o), Err(Error::Limit(e)) if e.kind == LimitKind::UnitChars));
     // binary and unreadable encodings
     let bin: Vec<u8> = [0u8, 1, 2, 0xff].iter().copied().cycle().take(200).collect();

@@ -68,7 +68,7 @@ fn every_corpus_file_round_trips() {
     let mut all = vec![];
     files(&root, &mut all);
     assert!(all.len() >= 25, "corpus is missing: {} files", all.len());
-    let opts = bilingua::ExtractOptions { target_lang: Some("es-ES".into()), granularity: Granularity::Paragraph, ..Default::default() };
+    let opts = bilingua::ExtractOptions::new().with_target_lang("es-ES").with_granularity(Granularity::Paragraph);
     let mut failures = vec![];
     for p in &all {
         let name = p.file_name().unwrap().to_string_lossy().to_string();

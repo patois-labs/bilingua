@@ -48,7 +48,7 @@ fn large_file_round_trips_and_is_timed() {
     if let Ok(path) = std::env::var("QTTS_SPEED_OUT") {
         std::fs::write(path, &bytes).unwrap();
     }
-    let big = Limits { max_units: 1_000_000, max_lines: 10_000_000, ..Limits::default() };
+    let big = Limits::new().with_max_units(1_000_000).with_max_lines(10_000_000);
     let t0 = Instant::now();
     let mut d = QtTs.extract_with(&bytes, &opts(None), &big).unwrap();
     let t_extract = t0.elapsed();

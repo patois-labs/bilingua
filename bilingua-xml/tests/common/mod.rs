@@ -10,7 +10,7 @@ pub fn data(name: &str) -> Vec<u8> {
 }
 
 pub fn opts(target: Option<&str>) -> ExtractOptions {
-    ExtractOptions { target_lang: target.map(String::from), granularity: Granularity::Paragraph, ..Default::default() }
+    ExtractOptions::new().with_target_lang(target.map(String::from)).with_granularity(Granularity::Paragraph)
 }
 
 pub fn ex(f: &XmlFilter, d: &[u8]) -> Document {
