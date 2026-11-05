@@ -1,0 +1,61 @@
++++
+title = "Edge cases"
+description = 'Toml front matter, single quoted'
+author = "Not translated"
++++
+
+export default function Layout({children}) {
+  return <main>{children}</main>
+}
+
+# Heading with <Icon name="star" /> and {`template ${nested}`}
+
+Text with an unclosed { brace and a lone < sign stays text, as does x < y > z.
+
+A line with `code {braces}` and ``double `tick` code`` and escapes \* \_ \{ \}.
+
+Multi-line {items
+  .map(i => i.name)
+  .join(', ')} expression inside a paragraph.
+
+<Tabs
+  items={['One', 'Two']}
+  defaultIndex="0"
+>
+  <Tab value="One">
+  First tab text with **bold** and <Kbd>Esc</Kbd>.
+  </Tab>
+</Tabs>
+
+<Card title="Quote's \"inner\"" caption='Single' placeholder="" aria-label="Close dialog" data-x="Not listed" />
+
+Fully-wrapped <B>unpaired open and </I> orphan close and <C /> self closing.
+
+Table:
+
+| Left | Right |
+|:-----|------:|
+| a \| b | c |
+
+* * *
+
+1984\. was a year.
+
+\# not a heading
+
+Setext heading
+==============
+
+Footnote ref[^note] and a link ref [x].
+
+[x]: <https://example.org/a b> 'Single quoted title'
+[^note]: The footnote text goes here.
+
+<!--
+A multi-line comment
+that is skipped.
+-->
+
+日本語のテキストと <Kbd>Ctrl</Kbd> キー、{count} 件。
+مرحبا <Kbd>Ctrl</Kbd> بالعالم {count}
+한국어 문장 <Icon name="x" /> 입니다.

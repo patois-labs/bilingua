@@ -37,6 +37,7 @@ dependencies = [
  "bilingua-json",
  "bilingua-json5",
  "bilingua-markdown",
+ "bilingua-mdx",
  "bilingua-mif",
  "bilingua-mo",
  "bilingua-model",
@@ -242,6 +243,17 @@ version = "0.1.0"
 dependencies = [
  "bilingua-model",
  "pulldown-cmark",
+]
+
+[[package]]
+name = "bilingua-mdx"
+version = "0.1.0"
+dependencies = [
+ "bilingua-model",
+ "proptest",
+ "regex",
+ "serde_json",
+ "toml",
 ]
 
 [[package]]
