@@ -38,7 +38,7 @@ LANGS = {
 
 def doc(lang, e, head=None):
     h1, p1, bold, p2, p3, p4, p5, ix, ital, p7, n8, n9, red = LANGS[lang]
-    return DOC.format(head=head or "<v19.00><e%d>" % e, h1=h1, p1=p1, bold=bold, p2=p2, p3=p3, p4=p4, p5=p5, ix=ix,
+    return DOC.format(head=head if head is not None else "<v19.00><e%d>" % e, h1=h1, p1=p1, bold=bold, p2=p2, p3=p3, p4=p4, p5=p5, ix=ix,
                       p6=p5, ital=ital, p7=p7, p8=n8, p9=n9, p10=red)
 
 

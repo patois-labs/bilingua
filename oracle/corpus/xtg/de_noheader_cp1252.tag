@@ -1,4 +1,3 @@
-<v19.00><e1>
 @Normal=[S"",""]<*L*h"Standard"f"Helvetica"z12>
 @Heading=[S"","Body"]<*C><B>
 @Heading:<*C>Erste Schritte
