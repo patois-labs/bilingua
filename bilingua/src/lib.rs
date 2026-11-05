@@ -35,6 +35,7 @@ pub fn filters() -> Vec<Box<dyn Filter>> {
         Box::new(bilingua_strings::Strings),
         // TOML after INI: a valid-TOML INI file without an extension should stay INI.
         Box::new(bilingua_toml::TomlFilter),
+        Box::new(bilingua_jsmodule::JsModule),
         // properties sniffs any key=value or key: value text, so it goes after the stricter key-value formats.
         Box::new(bilingua_properties::Properties),
         // HTML sniffs loosely and plain text accepts any UTF-8, so they go last.
