@@ -26,6 +26,7 @@ dependencies = [
  "bilingua-dtd",
  "bilingua-ftl",
  "bilingua-html",
+ "bilingua-idml",
  "bilingua-ini",
  "bilingua-jsmodule",
  "bilingua-json",
@@ -114,6 +115,16 @@ name = "bilingua-html"
 version = "0.1.0"
 dependencies = [
  "bilingua-model",
+]
+
+[[package]]
+name = "bilingua-idml"
+version = "0.1.0"
+dependencies = [
+ "bilingua-model",
+ "bilingua-zip",
+ "proptest",
+ "serde_json",
 ]
 
 [[package]]

@@ -41,6 +41,7 @@ bilingua-xmb = { workspace = true }
 bilingua-qtts = { workspace = true }
 bilingua-php = { workspace = true }
 bilingua-rc = { workspace = true }
+bilingua-idml = { workspace = true }
 
 [dev-dependencies]
 zip = { workspace = true }
