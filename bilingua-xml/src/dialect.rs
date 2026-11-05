@@ -42,7 +42,7 @@ pub struct Detect {
     pub root_names: Vec<String>,
 }
 
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Default)]
 pub struct Dialect {
     pub name: String,
     /// Elements whose content (and their descendants') is never translated.
@@ -62,6 +62,9 @@ pub struct Dialect {
     pub no_translate_if_attr: Vec<String>,
     pub lang: LangStamp,
     pub detect: Detect,
+    /// ITS rules that belong to the vocabulary (a localization note on `<note>`, a `locNotePointer`, white space
+    /// rules). Applied before the rules given to the filter and the ones inside the document.
+    pub its_rules: crate::its::ItsRules,
 }
 
 fn set<I, S>(v: I) -> HashSet<String>
@@ -116,6 +119,11 @@ impl Dialect {
     }
     pub fn detect(mut self, d: Detect) -> Self {
         self.detect = d;
+        self
+    }
+    /// Adds the rules of an `<its:rules>` document (see [`crate::ItsRules::parse`]).
+    pub fn its_rules(mut self, r: crate::its::ItsRules) -> Self {
+        self.its_rules.rules.extend(r.rules);
         self
     }
 

@@ -414,7 +414,7 @@ impl P<'_> {
             if preds.is_empty() && steps.is_empty() {
                 return Ok(prim);
             }
-            return Ok(E::Path { abs: false, start: Some(Box::new(prim)), preds, steps });
+            return Ok(E::Path { abs: false, start: Some(Box::new(prim)), preds, steps: fuse(steps) });
         }
         let mut steps = Vec::new();
         let abs = if self.eat("/") {
@@ -433,7 +433,7 @@ impl P<'_> {
         while self.is_op("/") || self.is_op("//") {
             self.rel_steps(&mut steps)?;
         }
-        Ok(E::Path { abs, start: None, preds: vec![], steps })
+        Ok(E::Path { abs, start: None, preds: vec![], steps: fuse(steps) })
     }
 
     fn rel_steps(&mut self, steps: &mut Vec<Step>) -> Result<(), String> {
@@ -545,6 +545,43 @@ impl P<'_> {
             t => Err(format!("unexpected token {t:?}")),
         }
     }
+}
+
+/// Predicates that are certainly true or false for a node, never a position test.
+fn boolean_pred(e: &E) -> bool {
+    match e {
+        E::Bin(Op::And | Op::Or | Op::Eq | Op::Ne | Op::Lt | Op::Le | Op::Gt | Op::Ge, a, b) => !uses_position(a) && !uses_position(b),
+        E::Func(n, args) => matches!(n.as_str(), "not" | "contains" | "starts-with" | "boolean" | "true" | "false" | "lang") && !args.iter().any(uses_position),
+        E::Path { .. } => !uses_position(e),
+        _ => false,
+    }
+}
+
+fn uses_position(e: &E) -> bool {
+    match e {
+        E::Func(n, args) => n == "position" || n == "last" || args.iter().any(uses_position),
+        E::Bin(_, a, b) => uses_position(a) || uses_position(b),
+        E::Neg(a) => uses_position(a),
+        E::Union(v) => v.iter().any(uses_position),
+        E::Path { start, preds, steps, .. } => start.as_deref().is_some_and(uses_position) || preds.iter().any(uses_position) || steps.iter().any(|s| s.preds.iter().any(uses_position)),
+        _ => false,
+    }
+}
+
+/// `descendant-or-self::node()/child::x[p]` is `descendant::x[p]` when no predicate looks at a position.
+fn fuse(steps: Vec<Step>) -> Vec<Step> {
+    let mut out: Vec<Step> = Vec::with_capacity(steps.len());
+    for st in steps {
+        if let Some(prev) = out.last() {
+            if matches!(prev.axis, Axis::DescendantOrSelf) && matches!(prev.test, Test::AnyNode) && prev.preds.is_empty() && matches!(st.axis, Axis::Child) && st.preds.iter().all(boolean_pred) {
+                out.pop();
+                out.push(Step { axis: Axis::Descendant, test: st.test, preds: st.preds });
+                continue;
+            }
+        }
+        out.push(st);
+    }
+    out
 }
 
 impl XPath {
@@ -801,6 +838,39 @@ impl<'a, 'b> Ev<'a, 'b> {
         let t = self.t;
         let attr_axis = matches!(axis, Axis::Attribute);
         let mut raw: Vec<Node> = Vec::new();
+        if let (Axis::Descendant | Axis::Child, Test::Name(..) | Test::AnyName) = (axis, test) {
+            // names only match elements: walk the element tree and skip text, comments and the rest
+            let mut out = Vec::new();
+            match (axis, n) {
+                (Axis::Child, Node::Doc) => {
+                    if self.matches(Node::El(t.root), test, false) {
+                        out.push(Node::El(t.root));
+                    }
+                }
+                (Axis::Child, Node::El(e)) => {
+                    for it in &t.els[e as usize].items {
+                        if it.kind == Kind::Elem && self.matches(Node::El(it.el), test, false) {
+                            out.push(Node::El(it.el));
+                        }
+                    }
+                }
+                (Axis::Descendant, Node::Doc | Node::El(_)) => {
+                    let mut stack: Vec<u32> = match n {
+                        Node::El(e) => t.els[e as usize].items.iter().rev().filter(|i| i.kind == Kind::Elem).map(|i| i.el).collect(),
+                        _ => vec![t.root],
+                    };
+                    while let Some(x) = stack.pop() {
+                        tick(budget, 1)?;
+                        if self.matches(Node::El(x), test, false) {
+                            out.push(Node::El(x));
+                        }
+                        stack.extend(t.els[x as usize].items.iter().rev().filter(|i| i.kind == Kind::Elem).map(|i| i.el));
+                    }
+                }
+                _ => {}
+            }
+            return Ok(out);
+        }
         match axis {
             Axis::Child => raw = self.children(n),
             Axis::Descendant => self.descendants(n, &mut raw, budget)?,

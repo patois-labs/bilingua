@@ -255,7 +255,8 @@ pub(crate) fn eval_props(t: &Tree, dialect: Option<&Dialect>, extra: &[Rule], li
     }
 
     // rules: extra first, then those in the document
-    let mut rules: Vec<Rule> = extra.to_vec();
+    let mut rules: Vec<Rule> = dialect.map(|d| d.its_rules.rules.clone()).unwrap_or_default();
+    rules.extend(extra.iter().cloned());
     for i in 0..n as u32 {
         if t.local(i) == "rules" && t.el_ns(i) == ITS_NS {
             rules.extend(rules_from_element(t, i)?);
@@ -328,10 +329,12 @@ pub(crate) fn eval_props(t: &Tree, dialect: Option<&Dialect>, extra: &[Rule], li
     }
 
     // local ITS markup beats global rules; ITS elements are never content
+    let has_its = t.uris.iter().any(|u| u == ITS_NS);
+    let has_xml = t.uris.iter().any(|u| u == XML_NS);
     for i in 0..n as u32 {
         let iu = i as usize;
-        let local = |name: &str| t.attr_value(i, ITS_NS, name);
-        if t.els[iu].attr_lo != t.els[iu].attr_hi {
+        let local = |name: &str| if has_its { t.attr_value(i, ITS_NS, name) } else { None };
+        if t.els[iu].attr_lo != t.els[iu].attr_hi && (has_its || has_xml) {
             match local("translate").as_deref() {
                 Some("yes") => tr_x[iu] = 2,
                 Some("no") => tr_x[iu] = 1,
@@ -349,7 +352,7 @@ pub(crate) fn eval_props(t: &Tree, dialect: Option<&Dialect>, extra: &[Rule], li
                     note_x[iu] = u32::MAX;
                 }
             }
-            match t.attr_value(i, XML_NS, "space").as_deref() {
+            match if has_xml { t.attr_value(i, XML_NS, "space") } else { None }.as_deref() {
                 Some("preserve") => pre_x[iu] = 2,
                 Some("default") => pre_x[iu] = 1,
                 _ => {}

@@ -292,6 +292,9 @@ struct Scope<'a> {
 impl<'a> Tree<'a> {
     /// Parses `text` (already decoded, no BOM).
     pub(crate) fn parse(text: &'a str) -> Result<Tree<'a>, Error> {
+        if text.starts_with('\u{FEFF}') {
+            return Err(bad("a second byte order mark at the start of the file"));
+        }
         let mut rd = Reader::from_str(text);
         {
             let c = rd.config_mut();
@@ -595,16 +598,21 @@ impl<'a> Tree<'a> {
         out
     }
 
-    /// The decoded text content of an element and everything below it.
+    /// The decoded text content of an element and everything below it (stops once `out` holds `cap` bytes).
     pub(crate) fn string_value(&self, el: u32, out: &mut String, cap: usize) {
-        for it in &self.els[el as usize].items {
+        // iterative: a document may nest as deep as the caller's depth limit allows
+        let mut stack: Vec<(u32, usize)> = vec![(el, 0)];
+        while let Some((e, i)) = stack.pop() {
             if out.len() >= cap {
                 return;
             }
+            let items = &self.els[e as usize].items;
+            let Some(it) = items.get(i) else { continue };
+            stack.push((e, i + 1));
             match it.kind {
                 Kind::Text => out.push_str(&decode_refs(&self.text[it.s..it.e], |_| None)),
                 Kind::Cdata => out.push_str(&self.text[it.s + 9..it.e - 3]),
-                Kind::Elem => self.string_value(it.el, out, cap),
+                Kind::Elem => stack.push((it.el, 0)),
                 _ => {}
             }
         }

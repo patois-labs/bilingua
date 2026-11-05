@@ -564,6 +564,8 @@ fn layout_xpath(t: &Tree, cfg: &MlConfig, budget: &mut u64) -> Result<Layout, Er
     let ns = t.nsmap(t.root);
     let expr = cfg.source_xpath.replace("{lang}", &cfg.source);
     let xp = XPath::compile(&expr, &ns).map_err(|e| bad(format!("Multilingual source_xpath is not valid XPath: {e}")))?;
+    // the target rule must compile now, not first at merge time
+    XPath::compile(&cfg.target_xpath.replace("{lang}", &cfg.source), &ns).map_err(|e| bad(format!("Multilingual target_xpath is not valid XPath: {e}")))?;
     let hits = xp.select(t, Node::Doc, budget).map_err(|e| bad(format!("Multilingual source_xpath failed: {e}")))?;
     let cands: Vec<(u32, String)> = hits
         .into_iter()
