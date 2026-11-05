@@ -60,6 +60,8 @@ fn escapes_decode_per_json5() {
     assert_eq!(vals(&bs("['one@\ntwo']"))[0].1, "onetwo");
     assert_eq!(vals(&bs("['one@\r\ntwo']"))[0].1, "onetwo");
     assert_eq!(vals(&bs("['@ud83d@ude00']"))[0].1, "\u{1f600}");
+    // a line continuation between the two halves of a pair produces nothing (LocOS joins the pair)
+    assert_eq!(vals(&bs("['@ud83d@\n@ude00']"))[0].1, "\u{1f600}");
 }
 
 #[test]

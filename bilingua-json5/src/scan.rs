@@ -274,7 +274,8 @@ fn decode_string(text: &str, start: usize, end: usize) -> Result<Cow<'_, str>, E
             }
             continue;
         }
-        if high.is_some() {
+        // A line continuation produces nothing, so it may sit between the two halves of a pair (as in LocOS).
+        if high.is_some() && !matches!(e, '\n' | '\r' | '\u{2028}' | '\u{2029}') {
             return Err(perr(text, start, "lone UTF-16 surrogate escape"));
         }
         i += 1 + e.len_utf8();

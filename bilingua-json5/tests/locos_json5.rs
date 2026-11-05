@@ -205,6 +205,27 @@ fn tokens_are_protected_inline_tags() {
     }
 }
 
+#[test]
+fn tokens_are_labelled_placeholder_so_the_locos_adapter_flattens_them() {
+    // LocOS keeps placeholders and HTML as plain text in the unit; every tag must be a `placeholder` whose display
+    // is the exact source text, so flattening gives back the LocOS unit text.
+    for src in [APP, SETTINGS] {
+        for u in open(src).unwrap().units {
+            let mut flat = String::new();
+            for i in u.source() {
+                match i {
+                    Inline::Text(t) => flat.push_str(&t),
+                    Inline::Tag { id, display, .. } => {
+                        assert_eq!(u.codes[&id].label.as_deref(), Some("placeholder"), "{display}");
+                        flat.push_str(&display);
+                    }
+                }
+            }
+            assert_eq!(flat, show(&u.source()));
+        }
+    }
+}
+
 // ---------------------------------------------------------------- records
 
 fn doc_keys(data: &[u8]) -> Vec<(Option<String>, String, Vec<String>)> {

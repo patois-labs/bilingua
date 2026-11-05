@@ -1,4 +1,6 @@
-//! Placeholders and HTML tags inside a string value become inline tags (the same set as `bilingua-json`).
+//! Placeholders and HTML tags inside a string value become inline tags (the same set as `bilingua-json`). Each tag
+//! has the label `placeholder` and its exact source markup as display (LocOS keeps them as text; the adapter
+//! flattens them).
 
 use bilingua_model::*;
 use bilingua_model::locos;
@@ -118,6 +120,8 @@ fn element_name(rest: &str) -> String {
     rest.chars().take_while(|c| c.is_ascii_alphanumeric() || *c == ':' || *c == '-').collect::<String>().to_ascii_lowercase()
 }
 
-fn label(f: &Found) -> Option<String> {
-    Some(if f.name.is_empty() { "placeholder".to_string() } else { f.name.clone() })
+/// Every tag is labelled `placeholder`: Localization OS keeps these as plain text in a JSON5 unit (its segmenter
+/// protects them later), so the LocOS adapter flattens a `placeholder` tag back to its display, the exact markup.
+fn label(_f: &Found) -> Option<String> {
+    Some("placeholder".to_string())
 }
