@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="euc-kr"?>
+<WixLocalization Culture="ko-xx" xmlns="http://schemas.microsoft.com/wix/2006/localization">
+  <String Id="Welcome">라치모어에 오신 것을 환영합니다</String>
+  <String Id="Quit" Value="라치모어에 오신 것을 환영합니다!" />
+</WixLocalization>

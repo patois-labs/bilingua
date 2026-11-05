@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- header comment -->
+<?pi keep?>
+<WixLocalization xmlns="http://schemas.microsoft.com/wix/2006/localization" Culture='en-US' Language="1033">
+  <!-- a note -->
+  <String Id="Single" Value='It&apos;s &quot;fine&quot; &amp; ok' />
+  <String Id="Multi" Value="Line one&#10;Line two&#9;tab" />
+  <String Id="Cd"><![CDATA[Use <b>bold</b> & more]]></String>
+  <String Id="Ent">Fish &amp; chips &#233;&#x00e8; &lt;tag&gt;</String>
+  <String Id="Pad">
+    Padded text
+  </String>
+  <String Id="Empty" Value="" />
+  <String Id="EmptyEl"></String>
+  <String Id="SelfClosed"/>
+  <String Id="Off" Localizable="no" Value="Do not touch" />
+  <String Id="Off2" Localizable=" False ">Nor this</String>
+  <String Id="Yes" Localizable="yes" Overridable="yes" Value="Touch this" />
+  <String Id="WithKids">Has <b>kids</b></String>
+  <String Id="WithComment">Before<!-- c -->after</String>
+  <String Id="Num" Value="1234" />
+  <String Id="Sym" Value="---" />
+  <String Id="OnlyRef" Value="[ProductName]" />
+  <String Id="Refs" Value="[1] of [2]: [%TEMP] [!File] [$Comp] [
+] [~] [not a ref] [a b]" />
+  <String Id="a Value='x'" Value="Look-alike id" />
+  <UI Dialog="WelcomeDlg" Text="No control" />
+  <UI Id="Solo" Text="Only an id" />
+  <UI Dialog="D" Control="C" />
+  <Other Value="Not read" />
+  <String Id="Nested"><Deep Value="x"/></String>
+</WixLocalization>
