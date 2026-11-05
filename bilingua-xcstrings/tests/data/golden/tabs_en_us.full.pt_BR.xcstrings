@@ -1,0 +1,226 @@
+{
+	"sourceLanguage": "en-US",
+	"strings": {
+		"empty.entry": {
+			"localizations": {
+				"pt-BR": {
+					"stringUnit": {
+						"state": "translated",
+						"value": "[pt] empty.entry"
+					}
+				}
+			}
+		},
+		"  padded  ": {
+			"comment": "key with spaces; also used as the source text",
+			"localizations": {
+				"pt-BR": {
+					"stringUnit": {
+						"state": "translated",
+						"value": "  [pt] padded  "
+					}
+				}
+			}
+		},
+		"Zeta key": {
+			"localizations": {
+				"fr": {
+					"stringUnit": {
+						"state": "needs_review",
+						"value": "Cle zeta"
+					}
+				},
+				"en-US": {
+					"stringUnit": {
+						"state": "new",
+						"value": "  Zeta value %1$@ of %2$@  "
+					}
+				},
+				"pt-BR": {
+					"stringUnit": {
+						"state": "translated",
+						"value": "  [pt] Zeta value %1$@ of %2$@  "
+					}
+				}
+			}
+		},
+		"files": {
+			"extractionState": "manual",
+			"localizations": {
+				"en-US": {
+					"stringUnit": {
+						"state": "translated",
+						"value": "%#@count@ in 100%% of folders"
+					},
+					"substitutions": {
+						"count": {
+							"argNum": 1,
+							"formatSpecifier": "d",
+							"variations": {
+								"plural": {
+									"zero": {
+										"stringUnit": {
+											"state": "translated",
+											"value": "No files"
+										}
+									},
+									"one": {
+										"stringUnit": {
+											"state": "translated",
+											"value": "%arg file"
+										}
+									},
+									"other": {
+										"stringUnit": {
+											"state": "translated",
+											"value": "%arg files"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"pt-BR": {
+					"stringUnit": {
+						"state": "translated",
+						"value": "[pt] %#@count@ in 100%% of folders"
+					},
+					"substitutions": {
+						"count": {
+							"argNum": 1,
+							"formatSpecifier": "d",
+							"variations": {
+								"plural": {
+									"many": {
+										"stringUnit": {
+											"state": "translated",
+											"value": "[pt] %arg files"
+										}
+									},
+									"one": {
+										"stringUnit": {
+											"state": "translated",
+											"value": "[pt] %arg file"
+										}
+									},
+									"other": {
+										"stringUnit": {
+											"state": "translated",
+											"value": "[pt] %arg files"
+										}
+									},
+									"zero": {
+										"stringUnit": {
+											"state": "translated",
+											"value": "[pt] No files"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"zh-Hans": {
+					"stringUnit": {
+						"state": "translated",
+						"value": "zh existing"
+					}
+				}
+			}
+		},
+		"device.plural": {
+			"comment": "Device first, then plural inside",
+			"localizations": {
+				"en-US": {
+					"variations": {
+						"device": {
+							"iphone": {
+								"variations": {
+									"plural": {
+										"one": {
+											"stringUnit": {
+												"state": "translated",
+												"value": "One tap"
+											}
+										},
+										"other": {
+											"stringUnit": {
+												"state": "translated",
+												"value": "%lld taps"
+											}
+										}
+									}
+								}
+							},
+							"other": {
+								"stringUnit": {
+									"state": "translated",
+									"value": "Any other device \u00e9"
+								}
+							}
+						}
+					}
+				},
+				"pt-BR": {
+					"variations": {
+						"device": {
+							"iphone": {
+								"variations": {
+									"plural": {
+										"many": {
+											"stringUnit": {
+												"state": "translated",
+												"value": "[pt] %lld taps"
+											}
+										},
+										"one": {
+											"stringUnit": {
+												"state": "translated",
+												"value": "[pt] One tap"
+											}
+										},
+										"other": {
+											"stringUnit": {
+												"state": "translated",
+												"value": "[pt] %lld taps"
+											}
+										}
+									}
+								}
+							},
+							"other": {
+								"stringUnit": {
+									"state": "translated",
+									"value": "[pt] Any other device \u00e9"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"12345": {
+			"shouldTranslate": false
+		},
+		"---": {},
+		"%@": {},
+		"Slash/key": {
+			"localizations": {
+				"en-US": {
+					"stringUnit": {
+						"state": "translated",
+						"value": "A/B \u201cquoted\u201d \u2013 done"
+					}
+				},
+				"pt-BR": {
+					"stringUnit": {
+						"state": "translated",
+						"value": "[pt] A/B \u201cquoted\u201d \u2013 done"
+					}
+				}
+			}
+		}
+	},
+	"version": "1.1"
+}

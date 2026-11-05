@@ -1,0 +1,17 @@
+[package]
+name = "bilingua-xcstrings"
+description = "Bilingua: Xcode String Catalog (.xcstrings) and Xcode localization bundle (.xcloc) filters"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+bilingua-model = { workspace = true }
+bilingua-zip = { workspace = true }
+bilingua-xliff = { workspace = true }
+regex = { workspace = true }
+
+[dev-dependencies]
+proptest = "1"
+serde_json = { workspace = true }

@@ -1,0 +1,211 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "Add to basket" : {
+      "comment" : "Button on a product page",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In den Warenkorb"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "[src] Add to basket"
+          }
+        }
+      }
+    },
+    "%lld loaves" : {
+      "comment" : "Basket line count",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "[src] %lld loaf"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "[src] %lld loaves"
+                }
+              }
+            }
+          }
+        },
+        "fr" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld pain"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld pains"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Pickup" : {
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "device" : {
+              "iphone" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "[src] Pick up on your way"
+                }
+              },
+              "ipad" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "[src] Pick up at the counter"
+                }
+              },
+              "mac" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "[src] Pick up in store"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "order_summary" : {
+      "comment" : "%1$@ is the customer name",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "[src] %1$@, your order has %#@items@ and %#@loaves@."
+          },
+          "substitutions" : {
+            "items" : {
+              "argNum" : 2,
+              "formatSpecifier" : "lld",
+              "variations" : {
+                "plural" : {
+                  "one" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "[src] %arg item"
+                    }
+                  },
+                  "other" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "[src] %arg items"
+                    }
+                  }
+                }
+              }
+            },
+            "loaves" : {
+              "argNum" : 3,
+              "formatSpecifier" : "lld",
+              "variations" : {
+                "plural" : {
+                  "zero" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "[src] no loaves"
+                    }
+                  },
+                  "one" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "[src] %arg loaf"
+                    }
+                  },
+                  "other" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "[src] %arg loaves"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Welcome back, %@!" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "[src] Welcome back, %@!"
+          }
+        }
+      }
+    },
+    "100%% butter" : {
+      "comment" : "Literal percent",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "[src] 100%% butter"
+          }
+        }
+      }
+    },
+    "Café menu – today" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "[src] Café menu – today"
+          }
+        }
+      }
+    },
+    "Old promo" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Spring promo"
+          }
+        }
+      }
+    },
+    "SKU-%@" : {
+      "shouldTranslate" : false
+    },
+    "Version" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "  [src] Version %@ (build %@)  "
+          }
+        }
+      }
+    },
+    "•" : {},
+    "https://example.com/bakery" : {
+      "shouldTranslate" : false
+    }
+  },
+  "version" : "1.0"
+}

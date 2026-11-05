@@ -21,7 +21,9 @@ pub fn filters() -> Vec<Box<dyn Filter>> {
     let mut all: Vec<Box<dyn Filter>> = bilingua_sdl::filters();
     all.extend(bilingua_xliff::filters());
     all.extend(vec![
-        Box::new(bilingua_docx::Docx) as Box<dyn Filter>,
+        // Xcode localization bundle (a zip): by extension or by its contents.json and Localized Contents folder.
+        Box::new(bilingua_xcstrings::Xcloc) as Box<dyn Filter>,
+        Box::new(bilingua_docx::Docx),
         Box::new(bilingua_xlsx::Xlsx::default()),
         Box::new(bilingua_pptx::Pptx),
         Box::new(bilingua_subtitle::Vtt),
@@ -31,6 +33,8 @@ pub fn filters() -> Vec<Box<dyn Filter>> {
         Box::new(bilingua_resjson::Resjson),
         // ARB before JSON: a no-extension file with a string @@locale is ARB.
         Box::new(bilingua_arb::Arb),
+        // String Catalog: JSON with a string sourceLanguage and an object strings (strict sniff), before plain JSON.
+        Box::new(bilingua_xcstrings::Xcstrings),
         Box::new(bilingua_json::JsonFilter),
         Box::new(bilingua_json5::Json5Filter::default()),
         Box::new(bilingua_markdown::MarkdownFilter),
@@ -60,7 +64,7 @@ pub fn filters() -> Vec<Box<dyn Filter>> {
 /// Formats whose files carry their own segmentation (XLIFF and its dialects, translation packages): sentence
 /// splitting would break the link between a segment and the file's own segment.
 fn own_segmentation(id: &str) -> bool {
-    matches!(id, "xliff" | "sdlxliff" | "mqxliff" | "mxliff" | "sdlppx" | "mqxlz")
+    matches!(id, "xliff" | "sdlxliff" | "mqxliff" | "mxliff" | "sdlppx" | "mqxlz" | "xcloc")
 }
 
 /// The filter for a file: by extension first, then by sniffing the bytes.
