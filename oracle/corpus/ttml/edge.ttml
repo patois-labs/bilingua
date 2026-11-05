@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- edge cases -->
+<tt:tt xmlns:tt="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling" xmlns:foo="urn:foo" xml:lang="en-GB">
+  <tt:head><tt:metadata><tt:p>not a caption</tt:p></tt:metadata></tt:head>
+  <tt:body xml:space="preserve"><tt:div xml:lang="en-GB">
+    <tt:p begin="1s" end="2s">  keep   spacing  <tt:span tts:fontStyle="italic">inner <tt:span>nested</tt:span> end</tt:span> </tt:p>
+    <tt:p begin="2s" end="3s" xml:space="default">
+       line one
+       <tt:br/>
+       line two <foo:thing a="1">kept &amp; whole</foo:thing> tail
+    </tt:p>
+    <tt:p begin="3s" end="4s"/>
+    <tt:p begin="4s" end="5s"><tt:br/></tt:p>
+    <tt:p begin="5s" end="6s"><!-- c --><?pi data?>&#169; &#x263A; &lt;tag&gt; <![CDATA[<raw & text>]]></tt:p>
+    <tt:p begin="6s" end="7s"><tt:br></tt:br>after br pair</tt:p>
+    <tt:p begin="7s" end="8s"><tt:span xml:lang="en-GB" tts:color="red">Colour</tt:span> at 5 &gt; 3</tt:p>
+  </tt:div></tt:body>
+</tt:tt>
