@@ -1,0 +1,11 @@
+﻿<?xml version='1.0' encoding='utf-8'?>
+<TRADOStag Version="2.0"><FrontMatter>
+<ToolSettings CreationDate="20071015T101500Z" CreationTool="TRADOS TagEditor" CreationToolVersion="7.0.0.615"></ToolSettings>
+<UserSettings DataType="HTML" O-Encoding="UTF-8" SettingsName="HTML" SettingsPath="" SourceLanguage="PT-BR" TargetLanguage="EN-US" TargetDefaultFont="" SourceDocumentPath="guide_pt.htm" SettingsRelativePath="" PlugInInfo=""></UserSettings>
+</FrontMatter><Body><Raw>
+<ut Type="start" Style="external" RightEdge="angle" DisplayText="p">&lt;p&gt;</ut><Tu MatchPercent="0"><Tuv Lang="PT-BR">Bem-vindo de volta, entre na sua conta.</Tuv><Tuv Lang="EN-US"></Tuv></Tu><ut Type="end" Style="external" LeftEdge="angle" DisplayText="p">&lt;/p&gt;</ut>
+<ut Type="start" Style="external" RightEdge="angle" DisplayText="p">&lt;p&gt;</ut><Tu MatchPercent="0"><Tuv Lang="PT-BR">Clique em <ut Type="start" RightEdge="angle" DisplayText="b">&lt;b&gt;</ut>Salvar<ut Type="end" LeftEdge="angle" DisplayText="b">&lt;/b&gt;</ut> para manter suas notas.</Tuv></Tu><ut Type="end" Style="external" LeftEdge="angle" DisplayText="p">&lt;/p&gt;</ut>
+<ut Type="start" Style="external" RightEdge="angle" DisplayText="li">&lt;li&gt;</ut><Tu MatchPercent="0"><Tuv Lang="PT-BR">Total do pedido:<ut DisplayText="br">&lt;br&gt;</ut><df Bold="on">Obrigado pelo seu pedido.</df> </Tuv><Tuv Lang="EN-US"/></Tu><ut Type="end" Style="external" LeftEdge="angle" DisplayText="li">&lt;/li&gt;</ut>
+<ut Type="start" Style="external" RightEdge="angle" DisplayText="h2">&lt;h2&gt;</ut>Configurações<ut Type="end" Style="external" LeftEdge="angle" DisplayText="h2">&lt;/h2&gt;</ut>
+<ut Type="start" Style="external" RightEdge="angle" DisplayText="p">&lt;p&gt;</ut><Tu MatchPercent="100" Origin="manual"><Tuv Lang="PT-BR">Linha já traduzida.</Tuv><Tuv Lang="EN-US">Done &amp; dusted.</Tuv></Tu><ut Type="end" Style="external" LeftEdge="angle" DisplayText="p">&lt;/p&gt;</ut>
+</Raw></Body></TRADOStag>
