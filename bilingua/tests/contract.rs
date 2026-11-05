@@ -157,6 +157,7 @@ fn crate_of(format: &str) -> &'static str {
     match format {
         "docx" => "bilingua-docx",
         "epub" => "bilingua-epub",
+        "flprjzip" => "bilingua-flare",
         "xlsx" => "bilingua-xlsx",
         "pptx" => "bilingua-pptx",
         "idml" => "bilingua-idml",
