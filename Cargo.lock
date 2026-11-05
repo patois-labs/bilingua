@@ -35,6 +35,7 @@ dependencies = [
  "bilingua-jsmodule",
  "bilingua-json",
  "bilingua-json5",
+ "bilingua-latex",
  "bilingua-markdown",
  "bilingua-mif",
  "bilingua-mo",
@@ -219,6 +220,16 @@ dependencies = [
  "bilingua",
  "bilingua-model",
  "encoding_rs",
+ "proptest",
+ "regex",
+ "serde_json",
+]
+
+[[package]]
+name = "bilingua-latex"
+version = "0.1.0"
+dependencies = [
+ "bilingua-model",
  "proptest",
  "regex",
  "serde_json",

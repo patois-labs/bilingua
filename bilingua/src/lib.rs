@@ -63,6 +63,8 @@ pub fn filters() -> Vec<Box<dyn Filter>> {
         Box::new(bilingua_plist::Plist),
         // rc sniffs only resource-script keywords (STRINGTABLE, DIALOG, MENU, VERSIONINFO, winres.h); strict enough to sit early.
         Box::new(bilingua_rc::Rc),
+        // LaTeX sniffs strictly (documentclass, usepackage or begin-document at a line start); chapter files go by extension.
+        Box::new(bilingua_latex::Latex::default()),
         // TOML after INI: a valid-TOML INI file without an extension should stay INI.
         Box::new(bilingua_toml::TomlFilter),
         // Qt Linguist .ts sniffs strictly (XML with a <TS> root); `detect` decides the shared .ts extension.
