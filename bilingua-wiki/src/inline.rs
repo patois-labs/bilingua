@@ -119,7 +119,7 @@ fn ent_at(m: &str, i: usize, limit: usize) -> Option<usize> {
 }
 
 /// `\[(?:https?:|ftps?:|mailto:|irc:|//)[^\s\[\]\x00]{1,2000}(?:[ \t]+(?P<elt>[^\]\r\n]{0,2000}))?\]`
-fn ext_link_at(m: &str, i: usize, limit: usize) -> Option<Hit> {
+fn ext_link_at(m: &str, i: usize, limit: usize, sk: &mut Seekers) -> Option<Hit> {
     let b = m.as_bytes();
     let rest = &b[i + 1..limit];
     let scheme = ["https:", "http:", "ftps:", "ftp:", "mailto:", "irc:", "//"].iter().find(|s| rest.starts_with(s.as_bytes()))?;
@@ -138,8 +138,8 @@ fn ext_link_at(m: &str, i: usize, limit: usize) -> Option<Hit> {
     while es < limit && (b[es] == b' ' || b[es] == b'\t') {
         es += 1;
     }
-    let ee = run(m, es, limit, 2000, |c| !matches!(c, ']' | '\r' | '\n'));
-    (ee < limit && b[ee] == b']').then_some(Hit { s: i, e: ee + 1, k: Kind::El(Some(es)) })
+    let ee = sk.label_end(m, es, limit)?;
+    Some(Hit { s: i, e: ee + 1, k: Kind::El(Some(es)) })
 }
 
 fn quote_at(m: &str, i: usize, limit: usize) -> Option<Hit> {
@@ -165,7 +165,7 @@ fn quote_at(m: &str, i: usize, limit: usize) -> Option<Hit> {
     None
 }
 
-fn mw_search(m: &str, pos: usize, limit: usize) -> Option<Hit> {
+fn mw_search(m: &str, pos: usize, limit: usize, sk: &mut Seekers) -> Option<Hit> {
     let b = m.as_bytes();
     let mut i = pos;
     while i < limit {
@@ -179,7 +179,7 @@ fn mw_search(m: &str, pos: usize, limit: usize) -> Option<Hit> {
                 if at(b, i, limit, b"[[") {
                     Some(Hit { s: i, e: i + 2, k: Kind::Wl })
                 } else {
-                    ext_link_at(m, i, limit)
+                    ext_link_at(m, i, limit, sk)
                 }
             }
             b'h' | b'f' => url_at(m, i, limit, false).map(|e| Hit { s: i, e, k: Kind::Plain }),
@@ -206,7 +206,7 @@ fn email_at(m: &str, i: usize, limit: usize) -> Option<usize> {
     (d > a + 1 && d < limit && b[d] == b'>').then_some(d + 1)
 }
 
-fn dw_search(m: &str, pos: usize, limit: usize) -> Option<Hit> {
+fn dw_search(m: &str, pos: usize, limit: usize, sk: &mut Seekers) -> Option<Hit> {
     let b = m.as_bytes();
     let mut i = pos;
     while i < limit {
@@ -216,12 +216,12 @@ fn dw_search(m: &str, pos: usize, limit: usize) -> Option<Hit> {
                 let e = b[i..limit].iter().position(|c| *c != 0).map_or(limit, |p| i + p);
                 Some(Hit { s: i, e, k: Kind::Rg })
             }
-            b'[' if at(b, i, limit, b"[[") => lazy_close(m, i + 2, limit, 0, 2000, b"]]").map(|(ie, e)| Hit { s: i, e, k: Kind::DLink(i + 2, ie) }),
+            b'[' if at(b, i, limit, b"[[") => sk.lazy_far(m, i + 2, limit, 0, 2000, false).map(|(ie, e)| Hit { s: i, e, k: Kind::DLink(i + 2, ie) }),
             b'{' if at(b, i, limit, b"{{") => {
                 let ie = run(m, i + 2, limit, 2000, |c| !matches!(c, '{' | '}' | '\r' | '\n'));
                 at(b, ie, limit, b"}}").then_some(Hit { s: i, e: ie + 2, k: Kind::Media(i + 2, ie) })
             }
-            b'(' if at(b, i, limit, b"((") => lazy_close(m, i + 2, limit, 1, 2000, b"))").map(|(ie, e)| Hit { s: i, e, k: Kind::Foot(i + 2, ie) }),
+            b'(' if at(b, i, limit, b"((") => sk.lazy_far(m, i + 2, limit, 1, 2000, true).map(|(ie, e)| Hit { s: i, e, k: Kind::Foot(i + 2, ie) }),
             b'<' => email_at(m, i, limit).or_else(|| tag_at(m, i, limit)).map(|e| Hit { s: i, e, k: Kind::Plain }),
             b'h' | b'f' => url_at(m, i, limit, true).map(|e| Hit { s: i, e, k: Kind::Plain }),
             b'\\' if at(b, i, limit, b"\\\\") && (i + 2 == limit || matches!(b[i + 2], b' ' | b'\t' | b'\r' | b'\n')) => {
@@ -359,11 +359,12 @@ pub struct Tok<'a> {
     cx: &'a Ctx<'a>,
     n: usize,
     pub codes: BTreeMap<String, CodeData>,
+    seek: Seekers,
 }
 
 impl<'a> Tok<'a> {
     pub fn new(cx: &'a Ctx<'a>) -> Tok<'a> {
-        Tok { cx, n: 0, codes: BTreeMap::new() }
+        Tok { cx, n: 0, codes: BTreeMap::new(), seek: Seekers::default() }
     }
 
     fn point(&mut self, raw: &str, out: &mut Vec<Inline>) {
@@ -431,7 +432,7 @@ impl<'a> Tok<'a> {
                 self.point(sl(t, pos, b), out);
                 return;
             }
-            let hit = if self.cx.dw { dw_search(m, pos, b) } else { mw_search(m, pos, b) };
+            let hit = if self.cx.dw { dw_search(m, pos, b, &mut self.seek) } else { mw_search(m, pos, b, &mut self.seek) };
             let Some(h) = hit else { break };
             let p = plain(sl(t, pos, h.s));
             if !p.is_empty() {

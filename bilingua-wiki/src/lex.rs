@@ -37,6 +37,7 @@ pub fn is_letter(c: char) -> bool {
     match c as u32 {
         0xC0..=0x24F => return c != '\u{d7}' && c != '\u{f7}',
         0x3041..=0x3096 | 0x30A1..=0x30FA | 0x3400..=0x4DBF | 0x4E00..=0x9FFF | 0xAC00..=0xD7A3 => return true,
+        0x3A2 => return false, // unassigned, inside the Greek capitals
         0x391..=0x3A9 | 0x3B1..=0x3C9 | 0x410..=0x44F => return true,
         0x621..=0x64A => return true,
         _ => {}
@@ -128,6 +129,118 @@ pub fn lazy_close(m: &str, from: usize, limit: usize, min: usize, max: usize, cl
         }
         i += utf8_len(c);
         k += 1;
+    }
+}
+
+/// The next position at or after a query where a byte pattern starts, remembered between queries: while queries move
+/// forward and stay before the answer, the answer stands, so a walk that asks at every position costs one pass in
+/// all (a pattern scan per query would cost its bound, up to 2000 characters, at every position).
+#[derive(Debug, Default, Clone, Copy)]
+pub struct Seek {
+    used: bool,
+    from: usize,
+    at: Option<usize>,
+}
+
+impl Seek {
+    pub fn find(&mut self, b: &[u8], q: usize, hit: impl Fn(&[u8], usize) -> bool) -> Option<usize> {
+        if self.used && q >= self.from && self.at.is_none_or(|a| q <= a) {
+            return self.at;
+        }
+        self.used = true;
+        self.from = q;
+        self.at = (q..b.len()).find(|&i| hit(b, i));
+        self.at
+    }
+}
+
+/// Characters between two positions, counted with two forward cursors from one origin (for the character bounds of
+/// the lazy patterns, without a count per query).
+#[derive(Debug, Default, Clone, Copy)]
+pub struct Chars {
+    used: bool,
+    origin: usize,
+    cur: [(usize, usize); 2],
+}
+
+impl Chars {
+    fn upto(&mut self, b: &[u8], k: usize, x: usize) -> usize {
+        let (pos, n) = self.cur[k];
+        let (pos, n) = if x >= pos { (pos, n) } else { (self.origin, 0) };
+        let add = b[pos..x].iter().filter(|c| (**c & 0xC0) != 0x80).count();
+        self.cur[k] = (x, n + add);
+        n + add
+    }
+
+    /// Characters in `b[from..to]`.
+    pub fn between(&mut self, b: &[u8], from: usize, to: usize) -> usize {
+        if !self.used || from < self.origin {
+            *self = Chars { used: true, origin: from, cur: [(from, 0), (from, 0)] };
+        }
+        let a = self.upto(b, 0, from);
+        self.upto(b, 1, to) - a
+    }
+}
+
+/// The search state of one tokenizer: where the next closer, `]` and line end are.
+#[derive(Debug, Default, Clone, Copy)]
+pub struct Seekers {
+    pub link_close: Seek,
+    pub foot_close: Seek,
+    pub bracket: Seek,
+    pub line_end: Seek,
+    pub chars: Chars,
+}
+
+fn is_line_end(b: &[u8], i: usize) -> bool {
+    matches!(b[i], b'\r' | b'\n')
+}
+
+impl Seekers {
+    /// [`lazy_close`] for a closer that is not also the opener (`]]`, or `))` for a footnote): the first closer after `min` (0 or 1)
+    /// characters, on the same line, within `max` characters. Same answer, one pass for a whole walk.
+    pub fn lazy_far(&mut self, m: &str, from: usize, limit: usize, min: usize, max: usize, foot: bool) -> Option<(usize, usize)> {
+        let closer: &[u8] = if foot { b"))" } else { b"]]" };
+        let b = m.as_bytes();
+        let mut start = from;
+        if min == 1 {
+            let c = *b.get(from)?;
+            if from >= limit || c == b'\r' || c == b'\n' {
+                return None;
+            }
+            start = from + utf8_len(c);
+        }
+        let seek = if foot { &mut self.foot_close } else { &mut self.link_close };
+        let q = seek.find(b, start, |b, i| b[i..].starts_with(closer))?;
+        if q + closer.len() > limit {
+            return None;
+        }
+        if self.line_end.find(b, from, is_line_end).is_some_and(|n| n < q) {
+            return None;
+        }
+        self.within(b, from, q, max).then_some((q, q + closer.len()))
+    }
+
+    /// The `]` that ends an external link label starting at `es`: on the same line, before `limit`, within 2000
+    /// characters (`[^\]\r\n]{0,2000}\]`).
+    pub fn label_end(&mut self, m: &str, es: usize, limit: usize) -> Option<usize> {
+        let b = m.as_bytes();
+        let q = self.bracket.find(b, es, |b, i| b[i] == b']')?;
+        if q >= limit || self.line_end.find(b, es, is_line_end).is_some_and(|n| n < q) {
+            return None;
+        }
+        self.within(b, es, q, 2000).then_some(q)
+    }
+
+    fn within(&mut self, b: &[u8], from: usize, to: usize, max: usize) -> bool {
+        let bytes = to - from;
+        if bytes <= max {
+            return true;
+        }
+        if bytes > 4 * max {
+            return false;
+        }
+        self.chars.between(b, from, to) <= max
     }
 }
 
