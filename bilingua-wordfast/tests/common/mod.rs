@@ -5,7 +5,7 @@ use bilingua_model::*;
 use bilingua_wordfast::{Txlf, Txml};
 
 pub fn opts() -> ExtractOptions {
-    ExtractOptions { target_lang: Some("de-DE".into()), granularity: Granularity::Paragraph, ..Default::default() }
+    ExtractOptions::new().with_target_lang("de-DE").with_granularity(Granularity::Paragraph)
 }
 
 /// The filters as the LocOS adapter uses them: no confirmed segments listed.
@@ -20,12 +20,12 @@ pub fn extract(f: &dyn Filter, data: &[u8]) -> Document {
 }
 
 pub fn locked_opts() -> ExtractOptions {
-    ExtractOptions { include_locked: true, ..opts() }
+    opts().with_include_locked(true)
 }
 
 /// A unit's source as LocOS text (tokens).
 pub fn locos(u: &Unit) -> String {
-    locos::to_locos_text(&u.source()).0
+    profile::tokens::to_locos_text(&u.source()).0
 }
 
 /// (unit id, LocOS text) of every unit.
@@ -40,8 +40,8 @@ pub fn unit_map(f: &dyn Filter, data: &[u8]) -> std::collections::BTreeMap<usize
 /// Sets the target of unit `key` from LocOS text (tokens of the source).
 pub fn set(doc: &mut Document, key: usize, text: &str) {
     let i = doc.units.iter().position(|u| u.id == key.to_string()).unwrap_or_else(|| panic!("no unit {key}"));
-    let (_, map) = locos::to_locos_text(&doc.units[i].source());
-    let (inl, problems) = locos::parse_locos_text(text, &map);
+    let (_, map) = profile::tokens::to_locos_text(&doc.units[i].source());
+    let (inl, problems) = profile::tokens::parse_locos_text(text, &map);
     assert!(problems.is_empty(), "{problems:?}");
     let id = doc.units[i].segments[0].id.clone();
     doc.set_target(&id, inl).expect("set_target");

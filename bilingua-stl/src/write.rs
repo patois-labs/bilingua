@@ -7,7 +7,7 @@ use bilingua_model::{py_isspace_char, Error};
 use std::collections::{BTreeMap, BTreeSet};
 
 pub fn refuse(msg: impl Into<String>) -> Error {
-    Error::Write(msg.into())
+    Error::Unwritable { unit: None, reason: msg.into() }
 }
 
 /// Python `repr` of one character, close enough for error messages.

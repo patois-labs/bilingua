@@ -1,7 +1,8 @@
 //! Bilingua EBU STL filter (Tech 3264-E binary subtitles, `.stl`). See the README.
 
 /// Skeleton schema number: bump only when this crate's skeleton layout changes (see `bilingua_model::check_parser`).
-pub const SKELETON_SCHEMA: u32 = 1;
+/// 2: the file is a `Skeleton::Binary` (schema 1 kept it as a one-entry zip skeleton, still read).
+pub const SKELETON_SCHEMA: u32 = 2;
 
 mod codec;
 mod lang;
@@ -156,24 +157,12 @@ impl Filter for Stl {
             u.context.extra.insert("max_cpl".into(), mnc.to_string());
             units.push(u);
         }
-        let skeleton = Skeleton::zip(vec![ZipEntry { name: MEMBER.into(), data: ZipData::Raw(bytes.to_vec()) }], parser_info!());
+        let skeleton = Skeleton::binary(bytes.to_vec(), parser_info!());
         guard::finish(
-            Document {
-                format: "stl".into(),
-                name: None,
-                source_lang: opts.source_lang.clone(),
-                target_lang: opts.target_lang.clone(),
-                granularity: opts.granularity,
-                units,
-                skeleton,
-                warnings: vec![],
-            },
+            Document::new("stl", units, skeleton).with_options(opts),
             vec![],
             &limits,
         )
-    }
-    fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
-        merge(doc, &MergeOptions::default())
     }
     fn merge_with(&self, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
         merge(doc, opts)
@@ -183,11 +172,13 @@ impl Filter for Stl {
 fn merge(doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
     check_parser(doc, &parser_info!())?;
     let raw = match &doc.skeleton {
+        Skeleton::Binary { data, .. } => Some(data.as_slice()),
+        // schema 1
         Skeleton::Zip { entries, .. } => entries.iter().find(|e| e.name == MEMBER).and_then(|e| match &e.data {
             ZipData::Raw(b) => Some(b.as_slice()),
             ZipData::Parts(_) => None,
         }),
-        Skeleton::Text { .. } => None,
+        _ => None,
     }
     .ok_or_else(|| Error::Write("the skeleton does not hold an EBU STL file".into()))?;
     let parsed = read::parse(raw, None)?;

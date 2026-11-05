@@ -66,7 +66,7 @@ fn cases() -> Vec<(&'static str, Members, &'static str)> {
 }
 
 fn opts() -> ExtractOptions {
-    ExtractOptions { source_lang: Some("en".into()), target_lang: Some("fr".into()), ..Default::default() }
+    ExtractOptions::new().with_source_lang("en").with_target_lang("fr")
 }
 
 #[test]

@@ -40,8 +40,8 @@ fn large_files() {
         if let Ok(dir) = std::env::var("BILINGUA_SUBTEXT_SPEED_DIR") {
             std::fs::write(format!("{dir}/speed_{kind}.{}", if fmt == "sbv" { "sbv" } else { "sub" }), &data).unwrap();
         }
-        let limits = Limits { max_units: 10_000_000, max_lines: 100_000_000, ..Limits::default() };
-        let o = ExtractOptions { limits: Some(limits), ..Default::default() };
+        let limits = Limits::new().with_max_units(10_000_000).with_max_lines(100_000_000);
+        let o = ExtractOptions::new().with_limits(limits);
         let f = filter(fmt);
         let t0 = Instant::now();
         let mut doc = f.extract(&data, &o).unwrap();
@@ -55,7 +55,7 @@ fn large_files() {
             t.extend(u.source());
             u.segments[0].target = t;
         }
-        let out = f.merge_with(&doc, &MergeOptions::locos()).unwrap();
+        let out = f.merge_with(&doc, &bilingua_model::profile::locos().merge_options("xml")).unwrap();
         let t_merge = t1.elapsed();
         assert!(out.len() > 5_000_000);
         let back = f.extract(&out, &o).unwrap();

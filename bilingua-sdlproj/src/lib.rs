@@ -292,7 +292,7 @@ fn open(bytes: &[u8], opts: &ExtractOptions, limits: &Limits) -> Result<(Project
         return Err(LimitError::new(LimitKind::InputBytes, "This Trados .sdlproj file is too large to read (16 MB at most).").into());
     }
     guard::check_xml(bytes, limits)?;
-    let dec = enc::decode_text(bytes, &enc::DecodeOptions { declared: true, source_lang: opts.source_lang.as_deref(), limits: *limits })?;
+    let dec = enc::decode_text(bytes, &enc::DecodeOptions::with_limits(*limits).with_source_lang(opts.source_lang.as_deref()).declared())?;
     // XML without a declaration is UTF-8 (or UTF-16 with a BOM); anything else is refused, as LocOS and the XML
     // specification do
     if !matches!(enc::base(&dec.encoding), "utf-8" | "utf-8-bom" | "utf-16le" | "utf-16be") {
@@ -384,16 +384,7 @@ impl Sdlproj {
         if !matches!(enc::base(&dec.encoding), "utf-8" | "utf-8-bom" | "utf-16le" | "utf-16be") && enc::encode_text(&dec.text, &dec.encoding)? != bytes {
             return Err(Error::Encoding("This .sdlproj file uses byte sequences of its legacy encoding that cannot be written back unchanged. Re-save the file as UTF-8.".into()));
         }
-        let doc = Document {
-            format: "sdlproj".into(),
-            name: if info.name.is_empty() { None } else { Some(info.name.clone()) },
-            source_lang: Some(info.source_lang.clone()),
-            target_lang: info.target_langs.first().cloned(),
-            granularity: opts.granularity,
-            units: Vec::new(),
-            skeleton: Skeleton::text(vec![SkelPart::Raw(dec.text.clone())], dec.encoding.clone(), bilingua_model::parser_info!()),
-            warnings: Vec::new(),
-        };
+        let doc = Document::new("sdlproj", Vec::new(), Skeleton::text(vec![SkelPart::Raw(dec.text.clone())], dec.encoding.clone(), bilingua_model::parser_info!())).with_name(if info.name.is_empty() { None } else { Some(info.name.clone()) }).with_source_lang(info.source_lang.clone()).with_target_lang(info.target_langs.first().cloned()).with_granularity(opts.granularity);
         guard::finish(doc, dec.warnings, limits)
     }
 }
@@ -428,10 +419,6 @@ impl Filter for Sdlproj {
 
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
         self.extract_with(bytes, opts, &opts.limits())
-    }
-
-    fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
-        self.merge_with(doc, &MergeOptions::default())
     }
 
     /// Every option gives the original bytes in the file's own encoding. A project file has no text to translate,

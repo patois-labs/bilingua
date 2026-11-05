@@ -88,12 +88,12 @@ pub fn extract(f: &dyn Filter, pkg: &[u8]) -> Document {
 }
 
 pub fn extract_to(f: &dyn Filter, pkg: &[u8], lang: &str) -> Document {
-    f.extract(pkg, &ExtractOptions { target_lang: Some(lang.into()), ..Default::default() }).unwrap()
+    f.extract(pkg, &ExtractOptions::new().with_target_lang(lang)).unwrap()
 }
 
 /// Text of the inlines with every tag as a marker.
 pub fn locos(v: &[Inline]) -> String {
-    bilingua_model::locos::to_locos_text(v).0
+    bilingua_model::profile::tokens::to_locos_text(v).0
 }
 
 /// A translated copy of the source: text parts replaced by `f`, tags kept.

@@ -46,7 +46,7 @@ fn identity() {
         assert_identity(&LOCOS, &raw);
         assert_identity(&DEFAULT, &raw);
         // the target language is already set: a target language in the options changes nothing
-        let d = LOCOS.extract(&raw, &ExtractOptions { target_lang: Some("de-DE".into()), ..opts() }).unwrap();
+        let d = LOCOS.extract(&raw, &opts().with_target_lang("de-DE")).unwrap();
         assert_eq!(LOCOS.merge(&d).unwrap(), raw);
     }
 }
@@ -130,7 +130,7 @@ fn unsegmented_and_all_translated() {
     let w = d.warnings.iter().find(|w| w.kind == "ttx_not_segmented").expect("warning");
     assert!(w.message.contains("not segmented") && w.message.contains("Pre-translate"), "{}", w.message);
     // its text outside any segment is listed, locked, with include_locked
-    let d = LOCOS.extract(&unseg(), &ExtractOptions { include_locked: true, ..opts() }).unwrap();
+    let d = LOCOS.extract(&unseg(), &opts().with_include_locked(true)).unwrap();
     assert_eq!(d.units.len(), 1);
     assert!(!d.units[0].translate);
     assert_eq!(d.units[0].segments[0].source, vec![Inline::text("Nothing here is segmented yet.")]);
@@ -215,7 +215,7 @@ fn hostile_inputs() {
         assert!(LOCOS.extract(&raw, &opts()).is_err(), "{name} must be refused");
     }
     // 4 units, a cap of 2
-    let capped = ExtractOptions { limits: Some(Limits { max_units: 2, ..Limits::default() }), ..opts() };
+    let capped = opts().with_limits(Limits::new().with_max_units(2));
     for raw in [ttx(), utf16(&ttx(), false, true)] {
         match DEFAULT.extract(&raw, &capped) {
             Err(Error::Limit(e)) => assert_eq!(e.kind, LimitKind::Units),
@@ -223,7 +223,7 @@ fn hostile_inputs() {
         }
     }
     let flood = String::from_utf8(ttx()).unwrap().replace("</Raw>", &format!("{}</Raw>", "<ut/>".repeat(50))).into_bytes();
-    match DEFAULT.extract(&flood, &ExtractOptions { limits: Some(Limits { max_units: 1, ..Limits::default() }), ..opts() }) {
+    match DEFAULT.extract(&flood, &opts().with_limits(Limits::new().with_max_units(1))) {
         Err(Error::Limit(e)) => assert!(e.msg.contains("segments")),
         other => panic!("the pre-parse markup budget must refuse: {other:?}"),
     }
@@ -237,7 +237,7 @@ fn localized_language() {
         .replace("<Tuv Lang=\"DE-DE\"></Tuv>", "")
         .replace("<Tuv Lang=\"DE-DE\"/>", "")
         .into_bytes();
-    let fr = ExtractOptions { target_lang: Some("fr-FR".into()), ..opts() };
+    let fr = opts().with_target_lang("fr-FR");
     let mut d = LOCOS.extract(&raw, &fr).unwrap();
     set(&mut d, 0, "Bonjour ⟦g1⟧x⟦/g1⟧.");
     set(&mut d, 3, "Cible.");
@@ -248,7 +248,7 @@ fn localized_language() {
     let d0 = LOCOS.extract(&raw, &fr).unwrap();
     assert_eq!(LOCOS.merge(&d0).unwrap(), raw);
     // no target language anywhere: a target Tuv cannot be named
-    let mut d = LOCOS.extract(&raw, &ExtractOptions { target_lang: None, ..opts() }).unwrap();
+    let mut d = LOCOS.extract(&raw, &opts().with_target_lang(None::<String>)).unwrap();
     set(&mut d, 3, "Cible.");
     match LOCOS.merge(&d) {
         Err(Error::Write(m)) => assert!(m.contains("target language"), "{m}"),

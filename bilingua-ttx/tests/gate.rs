@@ -18,7 +18,7 @@ fn s(b: &[u8]) -> String {
 }
 
 fn reread_units(out: &[u8]) -> usize {
-    DEFAULT.extract(out, &ExtractOptions { include_locked: true, ..opts() }).expect("merged file reads back").units.len()
+    DEFAULT.extract(out, &opts().with_include_locked(true)).expect("merged file reads back").units.len()
 }
 
 #[test]
@@ -97,7 +97,7 @@ fn locos_mode_skips_finished_segments_default_loads_them() {
     let l = extract_with(&LOCOS, &raw);
     assert_eq!(l.units.iter().map(|u| u.context.key.clone().unwrap()).collect::<Vec<_>>(), ["1"]);
     assert_eq!(LOCOS.merge(&l).unwrap(), raw);
-    let l = LOCOS.extract(&raw, &ExtractOptions { include_locked: true, ..opts() }).unwrap();
+    let l = LOCOS.extract(&raw, &opts().with_include_locked(true)).unwrap();
     assert_eq!(l.units.len(), 2);
     assert!(!l.units[0].translate);
     assert_eq!(LOCOS.merge(&l).unwrap(), raw);
@@ -183,7 +183,7 @@ fn odd_but_valid_files_round_trip_exactly() {
             e.units.iter_mut().find(|x| x.id == u.id).unwrap().segments[0].target = vec![Inline::text("Z")];
         }
         let out = DEFAULT.merge(&e).unwrap();
-        assert_eq!(reread_units(&out), DEFAULT.extract(&raw, &ExtractOptions { include_locked: true, ..opts() }).unwrap().units.len(), "{}", s(&out));
+        assert_eq!(reread_units(&out), DEFAULT.extract(&raw, &opts().with_include_locked(true)).unwrap().units.len(), "{}", s(&out));
     }
 }
 

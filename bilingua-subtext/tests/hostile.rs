@@ -27,7 +27,7 @@ fn check(fmt: &str, data: &[u8]) {
                     // rewritten; everything written reads back with as many units
                     assert_eq!(back.units.len(), n, "unit count after a translated merge");
                 }
-                Err(Error::Write(_)) => {}
+                Err(Error::Write(_) | Error::Unwritable { .. }) => {}
                 Err(e) => panic!("unexpected merge error: {e}"),
             }
         }
@@ -176,7 +176,7 @@ fn reopened_pairs_cannot_multiply_a_cue() {
     t.push(Inline::text(format!("w{}", "\nw".repeat(2_000))));
     t.extend(closes.into_iter().rev());
     doc.units[0].segments[0].target = t;
-    assert!(matches!(filter("sub").merge(&doc), Err(Error::Write(m)) if m.contains("too many lines")));
+    assert!(matches!(filter("sub").merge(&doc), Err(Error::Unwritable { reason: m, .. }) if m.contains("too many lines")));
     // a few pairs over a few lines are written as LocOS writes them
     let out = build("sub", b"{1}{2}{y:i}a {c:$FF}b c|d\n", &[(0, "\u{27e6}g1\u{27e7}A\nB \u{27e6}g2\u{27e7}C\nD\u{27e6}/g2\u{27e7}\u{27e6}/g1\u{27e7}|E")]);
     assert_eq!(String::from_utf8(out).unwrap(), "{1}{2}{y:i}A|{y:i}B {c:$FF}C|{y:i}{c:$FF}D|E\n");
@@ -187,19 +187,19 @@ fn reopened_pairs_cannot_multiply_a_cue() {
 #[test]
 fn a_literal_half_token_is_words_as_in_locos() {
     let doc = extract("sub", "{1}{2}a|\u{27e6}x{P:1}1\u{27e7}{y:i}w\n".as_bytes()).unwrap();
-    assert!(!doc.units[0].codes.contains_key("~heads"), "{:?}", doc.units[0].codes);
+    assert!(!doc.units[0].has_hidden("heads"), "{:?}", doc.units[0].hidden);
     assert_eq!(units("sub", "{1}{2}a|\u{27e6}x{P:1}1\u{27e7}{y:i}w\n".as_bytes()), vec!["a\n\u{27e6}x\u{27e6}x1\u{27e7}1\u{27e7}\u{27e6}g2\u{27e7}w\u{27e6}/g2\u{27e7}"]);
 }
 
 #[test]
 fn limits_are_typed_errors() {
     let many: Vec<u8> = (0..100).flat_map(|i| format!("{{{i}}}{{{}}}Cue number {i}.\n", i + 1).into_bytes()).collect();
-    let o = |l: Limits| ExtractOptions { limits: Some(l), ..opts() };
+    let o = |l: Limits| opts().with_limits(l);
     let f = filter("sub");
-    assert!(matches!(f.extract(&many, &o(Limits { max_units: 50, ..Limits::default() })), Err(Error::Limit(_))));
-    assert!(matches!(f.extract(&many, &o(Limits { max_input_bytes: 100, ..Limits::default() })), Err(Error::Limit(_))));
-    assert!(matches!(f.extract(&many, &o(Limits { max_lines: 10, ..Limits::default() })), Err(Error::Limit(_))));
-    assert!(matches!(f.extract(&many, &o(Limits { max_unit_chars: 5, ..Limits::default() })), Err(Error::Limit(_))));
+    assert!(matches!(f.extract(&many, &o(Limits::new().with_max_units(50))), Err(Error::Limit(_))));
+    assert!(matches!(f.extract(&many, &o(Limits::new().with_max_input_bytes(100))), Err(Error::Limit(_))));
+    assert!(matches!(f.extract(&many, &o(Limits::new().with_max_lines(10))), Err(Error::Limit(_))));
+    assert!(matches!(f.extract(&many, &o(Limits::new().with_max_unit_chars(5))), Err(Error::Limit(_))));
 }
 
 #[test]
@@ -208,9 +208,9 @@ fn a_foreign_skeleton_is_refused() {
     doc.skeleton = Skeleton::Text { parts: vec![SkelPart::Unit(7)], encoding: "utf-8".into(), parser: Some(ParserInfo::new("bilingua-other", "0.1.0", 1)) };
     assert!(matches!(filter("sbv").merge(&doc), Err(Error::ParserVersion { .. })));
     doc.skeleton = Skeleton::Text { parts: vec![SkelPart::Unit(7)], encoding: "utf-8".into(), parser: None };
-    assert!(matches!(filter("sbv").merge(&doc), Err(Error::Write(_))));
+    assert!(matches!(filter("sbv").merge(&doc), Err(Error::Write(_) | Error::Unwritable { .. })));
     doc.skeleton = Skeleton::Zip { entries: vec![], parser: None };
-    assert!(matches!(filter("sbv").merge(&doc), Err(Error::Write(_))));
+    assert!(matches!(filter("sbv").merge(&doc), Err(Error::Write(_) | Error::Unwritable { .. })));
 }
 
 // ---------------------------------------------------------------------------------------- structural attacks
@@ -257,19 +257,19 @@ fn a_translation_that_is_a_timecode_line_is_refused() {
             // a joiner that is a real newline (SBV, SubViewer without [br]) must refuse; [br] makes one line
             let r = translate(fmt, data, 1, text);
             match r {
-                Err(Error::Write(m)) => assert!(m.contains("timecode"), "{m}"),
+                Err(e @ (Error::Write(_) | Error::Unwritable { .. })) => { let m = e.to_string(); assert!(m.contains("timecode"), "{m}") }
                 Ok(out) => assert_eq!(extract(fmt, &out).unwrap().units.len(), 2, "{fmt} {text:?}"),
                 Err(e) => panic!("{e}"),
             }
         }
     }
-    assert!(matches!(translate("sbv", SBV, 0, "0:00:09.000,0:00:09.500"), Err(Error::Write(_))));
+    assert!(matches!(translate("sbv", SBV, 0, "0:00:09.000,0:00:09.500"), Err(Error::Write(_) | Error::Unwritable { .. })));
 }
 
 #[test]
 fn a_translation_cannot_make_a_control_code() {
     for text in ["{y:i}", "Hi {y:i} there", "{c:$0000FF}x", "x{P:1,2}", "{Y:b}"] {
-        assert!(matches!(translate("sub", MDVD, 2, text), Err(Error::Write(m)) if m.contains("control code")), "{text:?}");
+        assert!(matches!(translate("sub", MDVD, 2, text), Err(Error::Unwritable { reason: m, .. }) if m.contains("control code")), "{text:?}");
     }
     // pieces that join into a code once a token is dropped
     let src: &[u8] = b"{1}{2}{y:}a{Y:b}{y:i}b|c\n";
@@ -292,8 +292,8 @@ fn a_translation_cannot_make_a_control_code() {
 #[test]
 fn a_translation_cannot_make_a_frame_rate_line() {
     // the cue {0}{1} would read as a frame-rate declaration and drop out of the file's cues
-    assert!(matches!(translate("sub", MDVD, 0, "25"), Err(Error::Write(m)) if m.contains("frame-rate")));
-    assert!(matches!(translate("sub", MDVD, 0, "23.976"), Err(Error::Write(_))));
+    assert!(matches!(translate("sub", MDVD, 0, "25"), Err(Error::Unwritable { reason: m, .. }) if m.contains("frame-rate")));
+    assert!(matches!(translate("sub", MDVD, 0, "23.976"), Err(Error::Write(_) | Error::Unwritable { .. })));
     assert!(translate("sub", MDVD, 0, "25 fps").is_ok());
     // another cue is not affected
     let out = translate("sub", MDVD, 2, "25").unwrap();
@@ -308,7 +308,7 @@ fn a_translation_cannot_make_a_header_or_mix_formats() {
     assert!(String::from_utf8(out).unwrap().starts_with("[INFORMATION]\n[TITLE]t\n[END INFORMATION]\n"));
     // a MicroDVD-looking line in a SubViewer file would make the file ambiguous
     const SV2N: &[u8] = b"00:00:01.00,00:00:02.00\nOne\nx\n\n00:00:03.00,00:00:04.00\nTwo\n";
-    assert!(matches!(translate("sub", SV2N, 0, "A\n{1}{2}B"), Err(Error::Write(m)) if m.contains("MicroDVD cue")));
+    assert!(matches!(translate("sub", SV2N, 0, "A\n{1}{2}B"), Err(Error::Unwritable { reason: m, .. }) if m.contains("MicroDVD cue")));
     // with [br] as the line break the text stays on one line and cannot be a cue
     let out = translate("sub", SV2, 0, "A\n{1}{2}B").unwrap();
     assert_eq!(extract("sub", &out).unwrap().units.len(), 2);
@@ -318,11 +318,11 @@ fn a_translation_cannot_make_a_header_or_mix_formats() {
 fn an_empty_or_blank_translation_is_refused_not_a_deleted_cue() {
     for (fmt, data) in [("sbv", SBV), ("sub", SV2), ("sub", MDVD)] {
         for text in [" ", "\n", "\u{3000}"] {
-            assert!(matches!(translate(fmt, data, 1, text), Err(Error::Write(_))), "{fmt} {text:?}");
+            assert!(matches!(translate(fmt, data, 1, text), Err(Error::Write(_) | Error::Unwritable { .. })), "{fmt} {text:?}");
         }
     }
     // codes and breaks only
-    assert!(matches!(translate("sub", MDVD, 1, "|"), Err(Error::Write(_))));
+    assert!(matches!(translate("sub", MDVD, 1, "|"), Err(Error::Write(_) | Error::Unwritable { .. })));
 }
 
 #[test]

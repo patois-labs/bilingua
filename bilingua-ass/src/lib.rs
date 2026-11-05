@@ -19,11 +19,19 @@ use std::collections::HashSet;
 pub struct AssFilter;
 
 /// Hidden code of every unit: `standalone` = the original core text, `label` = `title` or `event`.
-const RAW: &str = "~raw";
+const RAW: &str = "raw";
+const KIND: &str = "kind"; // "title" (a [Script Info] title) or "event" (a Dialogue line)
 /// Characters per line a QA check may use as a default (the same hint the SRT and VTT filters carry).
 pub const DEFAULT_MAX_CPL: &str = "42";
 
+/// The `format_options` keys of the ASS/SSA filter.
+pub const FORMAT_OPTIONS: &[bilingua_model::FormatOptionKey] =
+    &[bilingua_model::FormatOptionKey::bool("ass.include_locked", "List commented-out and other locked lines as locked units too.")];
+
 impl Filter for AssFilter {
+    fn format_option_keys(&self) -> &'static [bilingua_model::FormatOptionKey] {
+        FORMAT_OPTIONS
+    }
     fn id(&self) -> &'static str {
         "ass"
     }
@@ -35,9 +43,6 @@ impl Filter for AssFilter {
     }
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
         extract(bytes, opts)
-    }
-    fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
-        merge(doc, &MergeOptions::default())
     }
     fn merge_with(&self, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
         merge(doc, opts)
@@ -191,7 +196,8 @@ fn extract(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
                         u.context.kind = Some("title".into());
                         u.context.key = Some("Title".into());
                         u.context.location = Some(format!("line {}", lineno + 1));
-                        u.codes.insert(RAW.into(), CodeData { standalone: Some(core.to_string()), label: Some("title".into()), ..Default::default() });
+                        u.set_hidden(RAW, core.to_string());
+                        u.set_hidden(KIND, "title");
                         let a = start + h;
                         found.push(Found { core: (a, a + core.len()), unit: u });
                         guard::check_unit_count(found.len(), &limits)?;
@@ -231,7 +237,8 @@ fn extract(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
                 let mut u = Unit::new(format!("l{}", lineno + 1), tk.inlines);
                 u.codes = tk.codes;
                 let core = &field[tk.prefix_len..field.len() - tk.suffix_len];
-                u.codes.insert(RAW.into(), CodeData { standalone: Some(core.to_string()), label: Some("event".into()), ..Default::default() });
+                u.set_hidden(RAW, core.to_string());
+                u.set_hidden(KIND, "event");
                 u.context.kind = Some("subtitle".into());
                 u.context.key = Some(event_no.to_string());
                 u.context.location = Some(format!("line {}", lineno + 1));
@@ -264,16 +271,7 @@ fn extract(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
         parts.push(SkelPart::Raw(text[cursor..].to_string()));
     }
     guard::finish(
-        Document {
-            format: "ass".into(),
-            name: None,
-            source_lang: opts.source_lang.clone(),
-            target_lang: opts.target_lang.clone(),
-            granularity: opts.granularity,
-            units,
-            skeleton: Skeleton::text(parts, dec.encoding.as_str(), parser_info!()),
-            warnings: vec![],
-        },
+        Document::new("ass", units, Skeleton::text(parts, dec.encoding.as_str(), parser_info!())).with_options(opts),
         std::mem::take(&mut dec.warnings),
         &limits,
     )
@@ -335,12 +333,11 @@ fn merge(doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
             SkelPart::Raw(s) => out.push_str(s),
             SkelPart::Unit(i) => {
                 let u = doc.units.get(*i).ok_or_else(|| Error::Write(format!("skeleton points at missing unit {i}")))?;
-                let raw = u.codes.get(RAW);
-                let original = raw.and_then(|c| c.standalone.as_deref()).unwrap_or("");
-                let translated = u.translate && u.segments.iter().any(|s| !s.target.is_empty());
+                let original = u.hidden(RAW).unwrap_or("");
+                let translated = u.translate && u.segments.iter().any(|s| s.has_target());
                 if !translated || u.output() == u.source() {
                     out.push_str(original);
-                } else if raw.and_then(|c| c.label.as_deref()) == Some("title") {
+                } else if u.hidden(KIND) == Some("title") {
                     out.push_str(&render_title(u));
                 } else {
                     out.push_str(&render_event(u));

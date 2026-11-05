@@ -28,7 +28,7 @@ fn untouched_merge_is_the_original_bytes() {
 fn a_target_locale_merge_changes_nothing_because_nothing_is_translated() {
     // lead decision 11-04: nothing translated means no language stamp; and a project file has no field to stamp
     for (name, data) in FILES {
-        let d = Sdlproj.extract(data, &ExtractOptions { target_lang: Some("ja-JP".into()), ..opts() }).unwrap();
+        let d = Sdlproj.extract(data, &opts().with_target_lang("ja-JP")).unwrap();
         let out = Sdlproj.merge(&d).unwrap();
         assert_eq!(out, data, "{name}");
         let again = extract(&out);
@@ -40,7 +40,7 @@ fn a_target_locale_merge_changes_nothing_because_nothing_is_translated() {
 #[test]
 fn paragraph_and_sentence_mode_agree() {
     for (name, data) in FILES {
-        let s = Sdlproj.extract(data, &ExtractOptions { granularity: Granularity::Sentence, ..opts() }).unwrap();
+        let s = Sdlproj.extract(data, &opts().with_granularity(Granularity::Sentence)).unwrap();
         let p = extract(data);
         assert_eq!(s.units.len(), p.units.len(), "{name}");
     }

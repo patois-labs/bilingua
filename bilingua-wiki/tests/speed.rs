@@ -39,8 +39,8 @@ fn run(label: &str, f: &dyn Filter, text: String, ext: &str) {
         std::fs::write(std::path::Path::new(&dir).join(format!("speed.{ext}")), &text).unwrap();
     }
     let data = text.into_bytes();
-    let limits = Limits { max_units: 10_000_000, max_lines: 100_000_000, max_unit_chars: 1_000_000, ..Limits::default() };
-    let opts = ExtractOptions { limits: Some(limits), target_lang: Some("de-DE".into()), ..Default::default() };
+    let limits = Limits::new().with_max_units(10_000_000).with_max_lines(100_000_000).with_max_unit_chars(1_000_000);
+    let opts = ExtractOptions::new().with_limits(limits).with_target_lang("de-DE");
     let t0 = Instant::now();
     let mut doc = f.extract(&data, &opts).unwrap();
     let t_extract = t0.elapsed();

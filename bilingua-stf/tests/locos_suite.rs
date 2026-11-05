@@ -79,7 +79,7 @@ fn bilingual_units_and_identity() {
 fn bilingual_translated_import_shape() {
     let data = BILINGUAL.as_bytes();
     let all = all_with(data, pt);
-    let out = s(build_with(data, &all, Some("de-DE"), &MergeOptions::locos()));
+    let out = s(build_with(data, &all, Some("de-DE"), &bilingua_model::profile::locos().merge_options("stf")));
     let lines: Vec<&str> = out.split('\n').collect();
     assert!(lines.contains(&"CustomField.Account.Region.FieldLabel\tRegion\t[de] Region\t-"), "{out}");
     assert!(
@@ -207,14 +207,14 @@ fn hostile_inputs() {
     assert!(extract(&b"\x00\x01\x02\x03".repeat(100)).is_err());
     // segment cap
     let rows: String = (0..10).map(|i| format!("CustomLabel.K{i}\tText {i}\n")).collect();
-    let l = Limits { max_units: 5, ..Limits::default() };
+    let l = Limits::new().with_max_units(5);
     let text = format!("Language code: de\n{rows}");
     assert!(matches!(StfFilter.extract_with(text.as_bytes(), &opts(), &l), Err(Error::Limit(_))));
     // line budget (20 x cap) before any per-line work
-    let l = Limits { max_units: 5, max_lines: 100, ..Limits::default() };
+    let l = Limits::new().with_max_units(5).with_max_lines(100);
     assert!(matches!(StfFilter.extract_with("\n".repeat(200).as_bytes(), &opts(), &l), Err(Error::Limit(_))));
     // long single cell
-    let l = Limits { max_unit_chars: 50, ..Limits::default() };
+    let l = Limits::new().with_max_unit_chars(50);
     let long = format!("CustomLabel.X\t{}\n", "a".repeat(100));
     assert!(matches!(StfFilter.extract_with(long.as_bytes(), &opts(), &l), Err(Error::Limit(_))));
     // header-looking text after data is not a header; keyless rows and comments never units

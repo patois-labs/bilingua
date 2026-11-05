@@ -459,8 +459,9 @@ fn utf8_out_writes_utf8_for_every_text_format() {
     let utf8 = MergeOptions::new().with_output_encoding(OutputEncoding::Utf8);
     for (name, bytes) in corpus() {
         let doc = open(&name, &bytes, Granularity::Paragraph);
-        // binary plists keep the file in a text skeleton (tag "bplist"): not text, nothing to re-encode
-        if !matches!(&doc.skeleton, Skeleton::Text { encoding, .. } if encoding != "bplist") {
+        // binary plists keep the file in a text skeleton (tag "bplist"): not text, nothing to re-encode. A Trados
+        // project file is a manifest Trados reads back as it wrote it: kept byte for byte (sdlproj gate decision).
+        if !matches!(&doc.skeleton, Skeleton::Text { encoding, .. } if encoding != "bplist") || name.ends_with(".sdlproj") {
             continue;
         }
         let out = merge_with(&doc, &utf8).unwrap_or_else(|e| panic!("{name}: {e}"));

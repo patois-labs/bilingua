@@ -181,9 +181,8 @@ fn translation_whose_letters_become_a_placeholder_is_refused() {
         doc.target_lang = Some("de-DE".into());
         doc.set_target("u1", vec![Inline::text(target)]).unwrap();
         match Rc.merge(&doc) {
-            Err(e @ Error::Unwritable { .. }) => {
-                let m = e.to_string();
-                assert!(m.contains("format placeholder") && m.contains("u1"), "{m}");
+            Err(Error::Unwritable { unit, reason }) => {
+                assert!(reason.contains("format placeholder") && unit.as_deref() == Some("u1"), "{unit:?} {reason}");
             }
             other => panic!("expected a refusal, got {other:?}"),
         }

@@ -224,7 +224,7 @@ fn hostile_inputs() {
     }
     assert_eq!(texts(&HhcFilter, b"< <<< <OBJECT type='text/sitemap'><param name='Name' value='a < b'>"), ["a < b"]);
     // caps: pre-parse budget, segment cap, one huge value
-    let small = ExtractOptions { limits: Some(Limits { max_units: 5, ..Limits::default() }), ..Default::default() };
+    let small = ExtractOptions::new().with_limits(Limits::new().with_max_units(5));
     let e = HhcFilter.extract(&b"<".repeat(500), &small).unwrap_err();
     assert!(matches!(e, Error::Limit(_)) && e.to_string().contains("segments"), "{e}");
     let many: Vec<u8> = (0..6).flat_map(|i| format!("<OBJECT type=\"text/sitemap\"><param name=\"Name\" value=\"Entry {i}\"></OBJECT>").into_bytes()).collect();

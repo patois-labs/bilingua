@@ -1,5 +1,6 @@
-//! A declared encoding (XML declaration, meta charset, byte order mark) is binding: bytes that are not valid in it
-//! are refused, never read with a fallback code page. Only an undeclared file is sniffed.
+//! A declared encoding (XML declaration, meta charset, or a byte order mark in a format that declares its charset)
+//! is binding: bytes that are not valid in it are refused, never read with a fallback code page. An undeclared
+//! format is still sniffed, as LocOS's `read_text_upload` does.
 
 use bilingua_model::enc::{decode_text, DecodeOptions};
 use bilingua_model::{Error, Limits};
@@ -25,17 +26,20 @@ fn bad_bytes_in_a_declared_code_page_are_refused() {
     assert!(matches!(decode_text(b, &declared()), Err(Error::Encoding(_))));
     // the same file in valid Shift_JIS reads
     let ok = b"<?xml version=\"1.0\" encoding=\"Shift_JIS\"?><a>\x82\xa0</a>";
-    assert_eq!(decode_text(ok, &declared()).unwrap().text, "<?xml version=\"1.0\" encoding=\"Shift_JIS\"?><a>\u{3042}</a>");
+    let d = decode_text(ok, &declared()).unwrap();
+    assert!(d.text.ends_with("<a>\u{3042}</a>") && d.encoding.starts_with("shift_jis"), "{d:?}");
 }
 
 #[test]
-fn a_bom_is_a_declaration() {
+fn a_bom_is_a_declaration_in_a_declared_format() {
     let b = b"\xef\xbb\xbfcaf\xe9\n";
-    assert!(matches!(decode_text(b, &plain()), Err(Error::Encoding(_))));
+    assert!(matches!(decode_text(b, &declared()), Err(Error::Encoding(_))));
+    assert!(matches!(decode_text(b"\xff\xfe\x00\xd8", &declared()), Err(Error::Encoding(_))));
+    // an undeclared format falls back as LocOS's read_text_upload does (Windows-1252, the BOM bytes included)
+    assert_eq!(decode_text(b, &plain()).unwrap().text, "\u{ef}\u{bb}\u{bf}caf\u{e9}\n");
     // LocOS's plain text and subtitle readers: UTF-8 with replacement characters
     let d = decode_text(b, &plain().lossy_after_utf8_bom()).unwrap();
     assert_eq!((d.text.as_str(), d.encoding.as_str()), ("caf\u{fffd}\n", "utf-8-bom"));
-    assert!(matches!(decode_text(b"\xff\xfe\x00\xd8", &plain()), Err(Error::Encoding(_))));
 }
 
 #[test]

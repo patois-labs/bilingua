@@ -324,7 +324,7 @@ def test_bad_base64_is_an_invalid_document():
 
 
 def test_bilingual_flag_comes_from_the_formats():
-    assert {f["id"] for f in bilingua.formats() if f["bilingual"]} == {"po", "mo", "xliff", "sdlxliff", "mqxliff", "mxliff", "sdlppx", "mqxlz", "xcloc"}
+    assert {f["id"] for f in bilingua.formats() if f["bilingual"]} == {"po", "mo", "xliff", "sdlxliff", "mqxliff", "mxliff", "sdlppx", "mqxlz", "xcloc", "txml", "txlf", "ttx", "xlz"}
 
 
 def test_limits_are_refused_with_the_limit_code():

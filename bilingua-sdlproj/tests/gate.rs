@@ -58,7 +58,7 @@ fn depth_is_capped_by_the_model_limit() {
     let at = |n: usize| format!("<PackageProject>{}{LD}{}</PackageProject>", "<a>".repeat(n), "</a>".repeat(n));
     assert!(Sdlproj.extract(at(l.max_xml_depth - 1).as_bytes(), &opts()).is_ok());
     assert!(matches!(Sdlproj.extract(at(l.max_xml_depth + 1).as_bytes(), &opts()), Err(Error::Limit(_))));
-    let small = Limits { max_xml_depth: 4, ..Limits::default() };
+    let small = Limits::new().with_max_xml_depth(4);
     assert!(matches!(Sdlproj.extract_with(at(4).as_bytes(), &opts(), &small), Err(Error::Limit(_))));
 }
 
@@ -109,12 +109,12 @@ fn legacy_bytes_that_would_not_write_back_are_refused() {
 fn every_legacy_fixture_writes_back_exactly_under_every_merge_option() {
     let all = [
         MergeOptions::default(),
-        MergeOptions::locos(),
-        MergeOptions { output_encoding: OutputEncoding::Utf8, stamp_target_always: false },
-        MergeOptions { output_encoding: OutputEncoding::default(), stamp_target_always: true },
+        bilingua_model::profile::locos().merge_options("xml"),
+        MergeOptions::new().with_output_encoding(OutputEncoding::Utf8).with_stamp_target_always(false),
+        MergeOptions::new().with_output_encoding(OutputEncoding::default()).with_stamp_target_always(true),
     ];
     for (name, data) in FILES {
-        let d = Sdlproj.extract(data, &ExtractOptions { target_lang: Some("ja-JP".into()), ..opts() }).unwrap();
+        let d = Sdlproj.extract(data, &opts().with_target_lang("ja-JP")).unwrap();
         for o in &all {
             assert_eq!(Sdlproj.merge_with(&d, o).unwrap(), data, "{name}: {o:?}");
         }

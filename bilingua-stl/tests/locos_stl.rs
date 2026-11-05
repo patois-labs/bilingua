@@ -44,6 +44,8 @@ fn unit_texts(data: &[u8]) -> Vec<(usize, String)> {
 
 fn write_msg(r: Result<Vec<u8>, Error>) -> String {
     match r {
+        // the reason keeps LocOS's message text
+        Err(Error::Unwritable { reason, .. }) => reason,
         Err(Error::Write(m)) => m,
         other => panic!("expected a refusal, got {:?}", other.map(|b| b.len())),
     }
@@ -69,7 +71,7 @@ fn identity() {
         let src = locos_text(&d2.units[k]);
         set(&mut d2, k, &src);
     }
-    assert_eq!(Stl.merge_with(&d2, &MergeOptions::locos()).unwrap(), data);
+    assert_eq!(Stl.merge_with(&d2, &bilingua_model::profile::locos().merge_options("xml")).unwrap(), data);
     assert_eq!(Stl.merge(&d2).unwrap(), data);
 }
 
@@ -205,7 +207,7 @@ fn hostile() {
         assert!(matches!(Stl.extract(&bad, &opts(None)), Err(Error::Parse { .. }) | Err(Error::Limit(_))));
     }
     // the segment cap refuses
-    let o = ExtractOptions { limits: Some(Limits { max_units: 3, ..Default::default() }), ..Default::default() };
+    let o = ExtractOptions::new().with_limits(Limits::new().with_max_units(3));
     assert!(matches!(Stl.extract(&stl(), &o), Err(Error::Limit(_))));
     // a dangling diacritic and odd control bytes decode without crashing
     let odd = cat(&[&gsi_default(1), &t(1, b"ab\xc2\x8b\x9f\x7fend\xc8")]);
@@ -234,7 +236,7 @@ fn pipeline() {
         t.extend(d.units[k].segments[0].source.iter().cloned());
         d.units[k].segments[0].target = t;
     }
-    let out = Stl.merge_with(&d, &MergeOptions::locos()).unwrap();
+    let out = Stl.merge_with(&d, &bilingua_model::profile::locos().merge_options("xml")).unwrap();
     assert!(n >= 5);
     assert_eq!(&out[14..16], b"0F");
     assert!(unit_texts(&out).iter().all(|(_, t)| t.starts_with("Bon")));

@@ -30,7 +30,7 @@ fn check(data: &[u8]) {
                 // a caption that would read back on channel 2 (or vanish otherwise) is refused, so a written file
                 // reads back with the same captions
                 Ok(out) => assert_eq!(units(&out).len(), n, "unit count after translation of {:?}", String::from_utf8_lossy(data)),
-                Err(Error::Write(_)) => {}
+                Err(Error::Write(_) | Error::Unwritable { .. }) => {}
                 Err(e) => panic!("unexpected error kind: {e}"),
             }
             // only the units that fit
@@ -41,7 +41,7 @@ fn check(data: &[u8]) {
             match SccFilter.merge(&doc2) {
                 Ok(out) => assert_eq!(units(&out).len(), n),
                 // "ok" always fits; only the channel read-back check may refuse it
-                Err(Error::Write(m)) => assert!(m.contains("channel"), "short text must fit: {m}"),
+                Err(e @ (Error::Write(_) | Error::Unwritable { .. })) => { let m = e.to_string(); assert!(m.contains("channel"), "short text must fit: {m}") }
                 Err(e) => panic!("short text must fit: {e}"),
             }
         }
@@ -139,21 +139,21 @@ fn every_fixture_truncated_at_every_length_never_panics() {
 fn limits_are_typed_errors() {
     let data = b"Scenarist_SCC V1.0\n\n00:00:01:00\t9420 9420\n";
     // input size
-    let o = ExtractOptions { limits: Some(Limits { max_input_bytes: 10, ..Limits::default() }), ..Default::default() };
+    let o = ExtractOptions::new().with_limits(Limits::new().with_max_input_bytes(10));
     assert!(matches!(SccFilter.extract(data, &o), Err(Error::Limit(ref l)) if l.kind == LimitKind::InputBytes));
     // lines
-    let o = ExtractOptions { limits: Some(Limits { max_lines: 2, ..Limits::default() }), ..Default::default() };
+    let o = ExtractOptions::new().with_limits(Limits::new().with_max_lines(2));
     assert!(matches!(SccFilter.extract(data, &o), Err(Error::Limit(ref l)) if l.kind == LimitKind::Lines));
     // 100 000 newlines under a small line budget
     let many = format!("Scenarist_SCC V1.0{}", "\n".repeat(100_000));
-    let o = ExtractOptions { limits: Some(Limits { max_lines: 1000, ..Limits::default() }), ..Default::default() };
+    let o = ExtractOptions::new().with_limits(Limits::new().with_max_lines(1000));
     assert!(matches!(SccFilter.extract(many.as_bytes(), &o), Err(Error::Limit(_))));
     // words per line: 4096 pass, 4097 are refused
     let line = |n: usize| format!("Scenarist_SCC V1.0\n\n00:00:01:00\t{}\n", vec!["c845"; n].join(" "));
     assert!(extract(line(4096).as_bytes()).is_ok());
     assert!(matches!(extract(line(4097).as_bytes()), Err(Error::Limit(_))));
     // unit characters
-    let o = ExtractOptions { limits: Some(Limits { max_unit_chars: 100, ..Limits::default() }), ..Default::default() };
+    let o = ExtractOptions::new().with_limits(Limits::new().with_max_unit_chars(100));
     assert!(matches!(SccFilter.extract(line(200).as_bytes(), &o), Err(Error::Limit(ref l)) if l.kind == LimitKind::UnitChars));
 }
 
@@ -187,7 +187,7 @@ fn a_hundred_thousand_short_captions_in_a_row() {
     for i in 0..60_000 {
         s.push_str(&format!("00:00:{:02}:00\t9420 9420 9470 9470 c845 4c4c 4f80 942f 942f\n\n", i % 60));
     }
-    let o = ExtractOptions { limits: Some(Limits { max_units: 1_000_000, ..Limits::default() }), ..Default::default() };
+    let o = ExtractOptions::new().with_limits(Limits::new().with_max_units(1_000_000));
     let t = Instant::now();
     let doc = SccFilter.extract(s.as_bytes(), &o).unwrap();
     assert_eq!(doc.units.len(), 60_000);

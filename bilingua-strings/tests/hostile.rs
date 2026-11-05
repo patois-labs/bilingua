@@ -168,7 +168,7 @@ proptest! {
 fn nul_in_a_translation_is_refused_unless_utf16_bom() {
     let mut d = ex(b"\"a\" = \"b\";\n");
     set_nth(&mut d, 0, "x\0y");
-    assert!(matches!(Strings.merge(&d), Err(Error::Write(_))));
+    assert!(matches!(Strings.merge(&d), Err(Error::Unwritable { .. })));
     let mut b = vec![0xFF, 0xFE];
     for u in "\"a\" = \"b\";\n".encode_utf16() {
         b.extend_from_slice(&u.to_le_bytes());

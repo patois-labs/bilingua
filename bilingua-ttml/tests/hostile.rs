@@ -29,7 +29,7 @@ fn check(data: &[u8]) {
         t.push(Inline::text("]"));
         u.segments[0].target = t;
     }
-    for (lang, o) in [(None, MergeOptions::default()), (Some("ar"), MergeOptions::locos()), (Some("en-US"), MergeOptions::default())] {
+    for (lang, o) in [(None, MergeOptions::default()), (Some("ar"), bilingua_model::profile::locos().merge_options("xml")), (Some("en-US"), MergeOptions::default())] {
         let mut e = e.clone();
         e.target_lang = lang.map(String::from);
         let out = F.merge_with(&e, &o).expect("pseudo merge");
@@ -135,7 +135,7 @@ proptest! {
         let mut d = extract(data);
         d.units[0].segments[0].target = vec![Inline::text(format!("x{t}"))];
         d.target_lang = Some("de".into());
-        let out = F.merge_with(&d, &MergeOptions::locos()).unwrap();
+        let out = F.merge_with(&d, &bilingua_model::profile::locos().merge_options("xml")).unwrap();
         let back = F.extract(&out, &opts()).unwrap();
         prop_assert_eq!(back.units.len(), 3);
         let s = String::from_utf8(out).unwrap();
@@ -217,13 +217,13 @@ fn malformed_and_truncated_files_are_typed_errors() {
 
 #[test]
 fn limits_give_typed_errors() {
-    let small = Limits { max_input_bytes: 100, ..Limits::default() };
+    let small = Limits::new().with_max_input_bytes(100);
     let e = Ttml.extract_with(&[b'a'; 200], &opts(), &small).unwrap_err();
     assert!(matches!(e, Error::Limit(ref l) if l.kind == LimitKind::InputBytes));
-    let few = Limits { max_xml_elements: 10, ..Limits::default() };
+    let few = Limits::new().with_max_xml_elements(10);
     let doc = format!("<tt {NS}><body><div>{}</div></body></tt>", "<p>a</p>".repeat(100));
     assert!(matches!(Ttml.extract_with(doc.as_bytes(), &opts(), &few), Err(Error::Limit(_))));
-    let fewer = Limits { max_units: 3, ..Limits::default() };
+    let fewer = Limits::new().with_max_units(3);
     assert!(matches!(Ttml.extract_with(doc.as_bytes(), &opts(), &fewer), Err(Error::Limit(_))));
     let many_ns: String = (0..5000).map(|i| format!(" xmlns:n{i}=\"urn:n{i}\"")).collect();
     assert!(matches!(Ttml.extract(format!("<tt {NS}{many_ns}/>").as_bytes(), &opts()), Err(Error::Limit(_))));
@@ -266,12 +266,12 @@ fn tampered_skeletons_are_typed_errors() {
     }
     assert!(F.merge(&d).is_err());
     let mut d = extract(SEEDS[0]);
-    d.units[0].codes.insert("~meta".into(), CodeData { standalone: Some("zzz".into()), ..Default::default() });
+    d.units[0].set_hidden("meta", "zzz");
     d.units[0].segments[0].target = vec![Inline::text("x")];
     assert!(F.merge(&d).is_err());
     let mut d = extract(SEEDS[0]);
     d.target_lang = Some("ar".into());
-    d.units[0].codes.insert("~meta".into(), CodeData { standalone: Some("99999|0|br".into()), ..Default::default() });
+    d.units[0].set_hidden("meta", "99999|0|br");
     d.units[0].segments[0].target = vec![Inline::text("x")];
-    assert!(F.merge_with(&d, &MergeOptions::locos()).is_err());
+    assert!(F.merge_with(&d, &bilingua_model::profile::locos().merge_options("xml")).is_err());
 }

@@ -1236,9 +1236,10 @@ pub enum Error {
     /// The translation cannot be written in this format: it does not fit (a caption too long), a character has no
     /// code in the file's code table, or the text would read back as structure (every letter swallowed by a
     /// placeholder). The document itself is fine; the translator has to change the text. `unit` names the unit when
-    /// one is to blame; `reason` is plain text (LocOS's message where LocOS has one), safe to show the translator.
+    /// one is to blame; `reason` is plain text (LocOS's message where LocOS has one), safe to show the translator, and
+    /// is also the whole `Display` text.
     /// `Write` stays for a broken or foreign skeleton.
-    #[error("the translation cannot be written{}: {reason}", unit.as_ref().map(|u| format!(" (unit {u})")).unwrap_or_default())]
+    #[error("{reason}")]
     Unwritable { unit: Option<String>, reason: String },
     /// The file is over a safety limit or holds something unsafe (a zip bomb, an XML entity bomb, too many
     /// units). The message is short, names the limit and is safe to show the person who uploaded the file.
@@ -1334,6 +1335,7 @@ mod tests {
             units: vec![Unit::new("u1", vec![Inline::text("Hi "), Inline::free_tag("1", "{name}"), Inline::tag("2", TagKind::Standalone, "%s")])],
             skeleton: Skeleton::Text { parts: vec![SkelPart::Unit(0)], encoding: "utf-8".into(), parser: None },
             warnings: vec![],
+            source_encoding: None,
         };
         // An editor that does not know the flag sends both codes as not free, and claims the %s is free.
         let t = vec![
@@ -1357,6 +1359,7 @@ mod tests {
             units: vec![Unit::new("u1", vec![Inline::tag("1", TagKind::Open, "<b>"), Inline::text("x"), Inline::tag("1", TagKind::Close, "</b>")])],
             skeleton: Skeleton::Text { parts: vec![SkelPart::Unit(0)], encoding: "utf-8".into(), parser: None },
             warnings: vec![],
+            source_encoding: None,
         };
         assert!(d.set_target("u1", vec![Inline::text("y")]).is_ok());
         assert!(matches!(d.set_target("u1", vec![Inline::tag("2", TagKind::Open, "<i>")]), Err(Error::InventedTag(_))));

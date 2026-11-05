@@ -269,8 +269,8 @@ fn a_document_survives_json_and_a_foreign_skeleton_is_refused() {
 #[test]
 fn input_over_the_size_limit_is_refused() {
     let data = mixed();
-    let lim = Limits { max_input_bytes: 100, ..Default::default() };
-    let e = Email.extract(&data, &ExtractOptions { limits: Some(lim), ..Default::default() }).unwrap_err();
+    let lim = Limits::new().with_max_input_bytes(100);
+    let e = Email.extract(&data, &ExtractOptions::new().with_limits(lim)).unwrap_err();
     assert!(matches!(e, Error::Limit(_)));
 }
 

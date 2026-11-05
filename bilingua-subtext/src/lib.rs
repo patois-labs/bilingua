@@ -13,11 +13,11 @@ use std::collections::{BTreeMap, HashSet};
 /// Default characters per line, stored in `context.extra["max_cpl"]` like the SRT filter.
 pub const DEFAULT_MAX_CPL: &str = "42";
 
-const RAW: &str = "~raw"; // the cue text as written
-const KIND: &str = "~kind"; // sbv, sv (SubViewer 2.0) or mdvd (MicroDVD)
-const JOINER: &str = "~joiner"; // what a line break is written as
-const HEADS: &str = "~heads"; // MicroDVD: pairs whose code opens its line, comma separated
-const FPS: &str = "~fps"; // MicroDVD: the text may not read as a frame-rate declaration
+const RAW: &str = "raw"; // the cue text as written
+const KIND: &str = "kind"; // sbv, sv (SubViewer 2.0) or mdvd (MicroDVD)
+const JOINER: &str = "joiner"; // what a line break is written as
+const HEADS: &str = "heads"; // MicroDVD: pairs whose code opens its line, comma separated
+const FPS: &str = "fps"; // MicroDVD: the text may not read as a frame-rate declaration
 const VOBSUB_MAGIC: &[u8] = &[0, 0, 1, 0xBA];
 const SNIFF_LINES: usize = 400;
 
@@ -269,15 +269,14 @@ fn extract(fmt: &'static str, bytes: &[u8], opts: &ExtractOptions) -> Result<Doc
     for (i, s) in slots.into_iter().enumerate() {
         let mut u = Unit::new(format!("c{}", i + 1), s.inl);
         u.codes = s.codes;
-        let code = |v: &str| CodeData { standalone: Some(v.to_string()), ..Default::default() };
-        u.codes.insert(RAW.into(), code(&text[s.start..s.end]));
-        u.codes.insert(KIND.into(), code(dialect.kind()));
-        u.codes.insert(JOINER.into(), code(&s.joiner));
+        u.set_hidden(RAW, &text[s.start..s.end]);
+        u.set_hidden(KIND, dialect.kind());
+        u.set_hidden(JOINER, &s.joiner);
         if !s.heads.is_empty() {
-            u.codes.insert(HEADS.into(), code(&s.heads.join(",")));
+            u.set_hidden(HEADS, s.heads.join(","));
         }
         if s.fps {
-            u.codes.insert(FPS.into(), code("1"));
+            u.set_hidden(FPS, "1");
         }
         u.context.kind = Some("subtitle".into());
         u.context.key = Some((i + 1).to_string());
@@ -296,15 +295,7 @@ fn extract(fmt: &'static str, bytes: &[u8], opts: &ExtractOptions) -> Result<Doc
         parts.push(SkelPart::Raw(text[cursor..].to_string()));
     }
     guard::finish(
-        Document {
-            format: fmt.into(),
-            source_lang: opts.source_lang.clone(),
-            target_lang: opts.target_lang.clone(),
-            granularity: opts.granularity,
-            units,
-            skeleton: Skeleton::text(parts, dec.encoding.as_str(), parser_info!()),
-            ..Default::default()
-        },
+        Document::new(fmt, units, Skeleton::text(parts, dec.encoding.as_str(), parser_info!())).with_options(opts),
         std::mem::take(&mut dec.warnings),
         &limits,
     )
@@ -313,7 +304,7 @@ fn extract(fmt: &'static str, bytes: &[u8], opts: &ExtractOptions) -> Result<Doc
 // ------------------------------------------------------------------------------------------ merge
 
 fn get<'a>(u: &'a Unit, id: &str) -> Option<&'a str> {
-    u.codes.get(id).and_then(|c| c.standalone.as_deref())
+    u.hidden(id)
 }
 
 fn render_block(target: &[Inline], joiner: &str, sv: bool) -> Result<String, String> {
@@ -357,7 +348,7 @@ fn render_block(target: &[Inline], joiner: &str, sv: bool) -> Result<String, Str
 /// Writes one unit; true when the translation (not the original text) was written.
 fn write_unit(u: &Unit, out: &mut String) -> Result<bool, Error> {
     let raw = get(u, RAW).unwrap_or("");
-    if !u.translate || u.segments.iter().all(|s| s.target.is_empty()) {
+    if !u.translate || u.segments.iter().all(|s| !s.has_target()) {
         out.push_str(raw);
         return Ok(false);
     }
@@ -380,7 +371,7 @@ fn write_unit(u: &Unit, out: &mut String) -> Result<bool, Error> {
             out.push_str(&s);
             Ok(true)
         }
-        Err(m) => Err(Error::Write(format!("cue {}: {m}", u.context.key.as_deref().unwrap_or(&u.id)))),
+        Err(m) => Err(Error::Unwritable { unit: Some(u.context.key.clone().unwrap_or_else(|| u.id.clone())), reason: m.to_string() }),
     }
 }
 
@@ -405,7 +396,8 @@ fn merge(fmt: &str, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Erro
     if out.starts_with('\u{feff}') {
         out.insert(0, '\u{feff}');
     }
-    if !written {
+    // (`output_encoding: Utf8` alone writes UTF-8 literally; the LocOS profile keeps LocOS's behaviour)
+    if !written && (opts.output_encoding == bilingua_model::OutputEncoding::Keep || opts.is_profile(bilingua_model::profile::LOCOS)) {
         return enc::encode_text(&out, encoding);
     }
     enc::encode_text_with(&out, encoding, opts)
@@ -429,9 +421,6 @@ impl Filter for Sbv {
     }
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
         extract("sbv", bytes, opts)
-    }
-    fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
-        merge("sbv", doc, &MergeOptions::default())
     }
     fn merge_with(&self, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
         merge("sbv", doc, opts)
@@ -462,9 +451,6 @@ impl Filter for Sub {
     }
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
         extract("sub", bytes, opts)
-    }
-    fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
-        merge("sub", doc, &MergeOptions::default())
     }
     fn merge_with(&self, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
         merge("sub", doc, opts)

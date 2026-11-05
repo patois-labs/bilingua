@@ -325,26 +325,31 @@ fn decode_text_inner(data: &[u8], o: &DecodeOptions) -> Result<Decoded, Error> {
         };
         return done(s.to_string(), if bom { "utf-8-bom" } else { "utf-8" }, label.as_deref(), w, &o.limits);
     }
-    // A byte order mark declares the encoding: bytes that are not valid in it are refused, never read with a
-    // fallback code page (an XML parser and LocOS do the same). LocOS's plain text and subtitle readers are the
-    // exception: UTF-8 with replacement characters.
+    // In a format that declares its charset (XML, HTML, PO, ...) a byte order mark is a declaration too: bytes
+    // that are not valid in it are refused, never read with a fallback code page (lxml in LocOS refuses them). An
+    // undeclared format falls back to a code page, as LocOS's `read_text_upload` does; LocOS's plain text and
+    // subtitle readers instead read UTF-8 with replacement characters (`lossy_after_utf8_bom`).
     if bom {
         let bad = std::str::from_utf8(body).err().map_or(0, |e| e.valid_up_to());
         if o.lossy_after_utf8_bom {
             return done(String::from_utf8_lossy(body).into_owned(), "utf-8-bom", None, Vec::new(), &o.limits);
         }
-        return Err(enc_err(format!(
+        if o.declared {
+            return Err(enc_err(format!(
             "This file starts with a UTF-8 byte order mark but is not valid UTF-8 (byte 0x{:02x} at position {}). Re-save the file as UTF-8.",
             body.get(bad).copied().unwrap_or(0),
             bad + 3
-        )));
+            )));
+        }
+        // an undeclared format reads it as LocOS's `read_text_upload` does: the code page fallback below
     }
     if data.starts_with(&[0xFF, 0xFE]) || data.starts_with(&[0xFE, 0xFF]) {
         let (e, name) = if data[0] == 0xFF { (encoding_rs::UTF_16LE, "utf-16le") } else { (encoding_rs::UTF_16BE, "utf-16be") };
-        let Some(s) = e.decode_without_bom_handling_and_without_replacement(&data[2..]) else {
+        let decoded = e.decode_without_bom_handling_and_without_replacement(&data[2..]);
+        if decoded.is_none() && o.declared {
             return Err(enc_err(format!("This file starts with a {} byte order mark but is not valid {}. Re-save the file as UTF-8.", name.to_ascii_uppercase(), name.to_ascii_uppercase())));
-        };
-        {
+        }
+        if let Some(s) = decoded {
             let (text, label) = if o.declared {
                 let head = e.decode_without_bom_handling(&data[2..data.len().min(8194)]).0.into_owned();
                 let l = decl_re().captures(&head).and_then(|c| c.get(2)).map(|m| m.as_str().to_string());
@@ -621,7 +626,29 @@ fn utf8_text(text: &str, encoding: &str, base_is_label: bool) -> Vec<u8> {
 
 /// Writes the merged `text` in the envelope `encoding` (a skeleton tag from [`decode_text`], or plain `"utf-8"` /
 /// `"utf-8-bom"`). Text that does not fit the original legacy encoding is written as UTF-8.
+///
+/// A legacy code page result that the same extract would refuse as binary ([`looks_binary`]: a merge that shortened
+/// a file below its control-byte allowance) is written as UTF-8 instead, which LocOS also writes and which always
+/// reads back ([`legacy_output_or_utf8`]).
 pub fn encode_text(text: &str, encoding: &str) -> Result<Vec<u8>, Error> {
+    let out = encode_text_as_is(text, encoding)?;
+    legacy_output_or_utf8(out, text, encoding)
+}
+
+/// For a writer with its own legacy codec: `out` (the bytes it wrote for `text` under the skeleton tag `encoding`)
+/// unless they are a legacy code page that [`decode_text`] would refuse as binary; then `text` written as UTF-8
+/// (newline style kept). Every filter that writes a legacy code page goes through this, so a merge never writes a
+/// file its own extract refuses.
+pub fn legacy_output_or_utf8(out: Vec<u8>, text: &str, encoding: &str) -> Result<Vec<u8>, Error> {
+    let b = base(encoding);
+    let legacy = !matches!(b, "utf-8" | "utf-8-bom" | "utf-16le" | "utf-16be");
+    if legacy && std::str::from_utf8(&out).is_err() && looks_binary(&out) {
+        return encode_text_as_is(text, &format!("utf-8{}", &encoding[b.len()..]));
+    }
+    Ok(out)
+}
+
+fn encode_text_as_is(text: &str, encoding: &str) -> Result<Vec<u8>, Error> {
     let env = parse_tag(encoding);
     let text = text.strip_prefix('\u{FEFF}').unwrap_or(text);
     let normalized;

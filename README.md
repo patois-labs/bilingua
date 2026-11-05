@@ -60,5 +60,10 @@ wasm32-unknown-unknown` over every parsing crate and greps their non-test source
 - More formats (IDML, DITA, and others as users ask).
 - A published crate on crates.io.
 
+## Migrating to 1.0
+The API changed before 1.0 (builders instead of struct literals, `merge_with` as the required `Filter` method,
+typed format options, profiles). [MIGRATION.md](MIGRATION.md) lists every change for callers, format-crate builders
+and the Localization OS adapter.
+
 ## Where it is developed
 Bilingua is developed inside the CAT OS repository (`bilingua/`), which uses it, and mirrored here with its history.

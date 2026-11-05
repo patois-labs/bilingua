@@ -33,7 +33,7 @@ fn the_document_carries_the_languages_and_no_units() {
     assert_eq!(d.name.as_deref(), Some("demo"));
     // LocOS has no filter for a loose .sdlproj and extracts no text from the manifest of a package
     assert!(d.units.is_empty());
-    let all = Sdlproj.extract(PROJ, &ExtractOptions { include_locked: true, ..opts() }).unwrap();
+    let all = Sdlproj.extract(PROJ, &opts().with_include_locked(true)).unwrap();
     assert!(all.units.is_empty());
 }
 

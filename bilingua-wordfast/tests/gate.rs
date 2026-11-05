@@ -31,8 +31,8 @@ fn merge_with_default_is_merge() {
 
 #[test]
 fn stamp_target_always_stamps_an_untouched_file() {
-    let o = ExtractOptions { target_lang: Some("de-DE".into()), ..Default::default() };
-    let always = MergeOptions { stamp_target_always: true, ..Default::default() };
+    let o = ExtractOptions::new().with_target_lang("de-DE");
+    let always = MergeOptions::new().with_stamp_target_always(true);
     // TXML: the file's own en_US style
     let d = Txml::default().extract(NO_LANG_TXML, &o).unwrap();
     assert_eq!(Txml::default().merge(&d).unwrap(), NO_LANG_TXML, "nothing translated: original bytes");
@@ -54,7 +54,7 @@ fn stamp_target_always_stamps_an_untouched_file() {
 
 #[test]
 fn utf8_output_rewrites_the_declaration_and_reads_back() {
-    let utf8 = MergeOptions { output_encoding: OutputEncoding::Utf8, ..Default::default() };
+    let utf8 = MergeOptions::new().with_output_encoding(OutputEncoding::Utf8);
     for (f, data) in [(&TXML as &dyn Filter, AR16_TXML), (&TXLF, KO16_TXLF)] {
         let mut d = extract(f, data);
         let id = first_seg(&d);
@@ -65,7 +65,7 @@ fn utf8_output_rewrites_the_declaration_and_reads_back() {
         assert!(!out.starts_with(&[0xFF, 0xFE]) && !out.starts_with(&[0xFE, 0xFF]));
         let text = std::str::from_utf8(&out).expect("UTF-8 out");
         assert!(text.starts_with("<?xml") && text[..60].to_ascii_uppercase().contains("UTF-8"), "{}", &text[..80]);
-        let all = ExtractOptions { include_locked: true, ..opts() };
+        let all = opts().with_include_locked(true);
         assert_eq!(f.extract(&out, &all).expect("reads back").units.len(), f.extract(data, &all).unwrap().units.len());
         // the kept encoding writes UTF-16 again
         let kept = f.merge(&d).unwrap();
@@ -75,8 +75,8 @@ fn utf8_output_rewrites_the_declaration_and_reads_back() {
 
 #[test]
 fn load_targets_from_format_options() {
-    let off = ExtractOptions { format_options: [("wordfast.load_targets".to_string(), "false".to_string())].into(), ..opts() };
-    let on = ExtractOptions { format_options: [("wordfast.load_targets".to_string(), "yes".to_string())].into(), ..opts() };
+    let off = opts().with_format_options([("wordfast.load_targets".to_string(), "false".to_string())].into());
+    let on = opts().with_format_options([("wordfast.load_targets".to_string(), "yes".to_string())].into());
     let ids = |d: Document| d.units.into_iter().map(|u| u.id).collect::<Vec<_>>();
     {
         let data = DE_TXML;
@@ -106,7 +106,7 @@ fn a_target_naming_a_hidden_code_splices_nothing() {
         let out = f.merge(&d).unwrap();
         let s = String::from_utf8(out.clone()).unwrap();
         assert!(s.contains(">Neu Ende<"), "{s}");
-        let all = ExtractOptions { include_locked: true, ..opts() };
+        let all = opts().with_include_locked(true);
         assert_eq!(f.extract(&out, &all).unwrap().units.len(), f.extract(data, &all).unwrap().units.len());
     }
 }
@@ -114,7 +114,7 @@ fn a_target_naming_a_hidden_code_splices_nothing() {
 #[test]
 fn a_tampered_splice_is_a_write_error_not_a_broken_file() {
     let mut d = extract(&TXML, DE_TXML);
-    d.units[0].codes.insert("~post".into(), CodeData { standalone: Some("</target></segment>".into()), ..Default::default() });
+    d.units[0].set_hidden("post", "</target></segment>");
     d.units[0].segments[0].target = vec![Inline::text("Neu")];
     assert!(matches!(TXML.merge(&d), Err(Error::Write(_))));
 }
@@ -123,7 +123,7 @@ fn a_tampered_splice_is_a_write_error_not_a_broken_file() {
 fn txlf_stamp_only_touches_file_elements_of_the_root() {
     // an inline element that happens to be called <file> is a code, not an XLIFF file
     let data = b"<?xml version=\"1.0\"?>\n<xliff version=\"1.2\" xmlns=\"urn:oasis:names:tc:xliff:document:1.2\" xmlns:gs4tr=\"http://www.gs4tr.org/schema/xliff-ext\">\n<file original=\"a\" source-language=\"en-US\" datatype=\"plaintext\"><body>\n<trans-unit id=\"1\"><source>Open <file/> now.</source></trans-unit>\n</body></file></xliff>\n";
-    let o = ExtractOptions { target_lang: Some("fr-FR".into()), ..Default::default() };
+    let o = ExtractOptions::new().with_target_lang("fr-FR");
     let mut d = Txlf::default().extract(data, &o).unwrap();
     let id = first_seg(&d);
     let src = d.units[0].source();
@@ -166,7 +166,7 @@ fn stamping_many_files_stays_linear() {
         s.push_str(&format!("<file original=\"f{i}\" source-language=\"en\" datatype=\"plaintext\"><body><trans-unit id=\"{i}\"><source>Line {i} of the long file with some padding text.</source></trans-unit></body></file>\n"));
     }
     s.push_str("</xliff>");
-    let o = ExtractOptions { target_lang: Some("de".into()), ..Default::default() };
+    let o = ExtractOptions::new().with_target_lang("de");
     let mut d = Txlf::default().extract(s.as_bytes(), &o).unwrap();
     let id = first_seg(&d);
     d.set_target(&id, vec![Inline::text("Zeile")]).unwrap();
@@ -179,11 +179,11 @@ fn stamping_many_files_stays_linear() {
 #[test]
 fn the_parser_depth_cap_holds_on_a_small_stack_whatever_the_limits() {
     // a caller may raise max_xml_depth; the crate's own 1024 cap keeps the recursive walkers inside a 1 MB stack
-    let big = Limits { max_xml_depth: 100_000, ..Limits::default() };
+    let big = Limits::new().with_max_xml_depth(100_000);
     let run = move || {
         for n in [1000usize, 1018] {
             let g = format!("<xliff version=\"1.2\"><file><body><trans-unit id=\"1\"><source>{}x{}</source></trans-unit></body></file></xliff>", "<g id=\"1\">".repeat(n), "</g>".repeat(n));
-            let o = ExtractOptions { limits: Some(big), ..opts() };
+            let o = opts().with_limits(big);
             let mut d = TXLF.extract(g.as_bytes(), &o).unwrap();
             assert_eq!(TXLF.merge(&d).unwrap(), g.as_bytes());
             let id = d.units[0].segments[0].id.clone();
@@ -195,7 +195,7 @@ fn the_parser_depth_cap_holds_on_a_small_stack_whatever_the_limits() {
             assert_eq!(TXML.extract(t.as_bytes(), &o).unwrap().units.len(), 1);
         }
         let g = format!("<xliff version=\"1.2\"><file><body><trans-unit id=\"1\"><source>{}x{}</source></trans-unit></body></file></xliff>", "<g id=\"1\">".repeat(5000), "</g>".repeat(5000));
-        let o = ExtractOptions { limits: Some(big), ..opts() };
+        let o = opts().with_limits(big);
         assert!(matches!(TXLF.extract(g.as_bytes(), &o), Err(Error::Limit(_))));
     };
     std::thread::Builder::new().stack_size(1 << 20).spawn(run).unwrap().join().unwrap();

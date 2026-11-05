@@ -219,7 +219,7 @@ fn hostile_caps() {
     let long = "x".repeat(100_000 + 10);
     let data = format!("{HEAD}{long}\n");
     assert!(matches!(extract(data.as_bytes()), Err(Error::Limit(_))), "an over-long Text field must be refused");
-    let small = ExtractOptions { limits: Some(Limits { max_units: 3, max_lines: 60, ..Limits::default() }), ..Default::default() };
+    let small = ExtractOptions::new().with_limits(Limits::new().with_max_units(3).with_max_lines(60));
     let many = format!("[Events]\n{}", "Dialogue: 0,0:00:01.00,0:00:02.00,Default,,0,0,0,,Hi\n".repeat(5));
     assert!(matches!(extract_with(many.as_bytes(), &small), Err(Error::Limit(_))), "more units than the cap");
     assert!(matches!(extract_with(&[b'\n'; 70], &small), Err(Error::Limit(_))), "the line budget refuses blank lines");
@@ -234,8 +234,8 @@ fn hostile_caps() {
 #[test]
 fn pipeline_mock_translate() {
     let data = ass().into_bytes();
-    let mut doc = AssFilter.extract(&data, &ExtractOptions { target_lang: Some("fr-FR".into()), ..Default::default() }).unwrap();
-    let srcs: Vec<String> = doc.units.iter().map(|u| bilingua_model::locos::to_locos_text(&u.source()).0).collect();
+    let mut doc = AssFilter.extract(&data, &ExtractOptions::new().with_target_lang("fr-FR")).unwrap();
+    let srcs: Vec<String> = doc.units.iter().map(|u| bilingua_model::profile::tokens::to_locos_text(&u.source()).0).collect();
     assert!(srcs.iter().any(|t| t.contains("⟦x1⟧")), "{srcs:?}");
     assert!(!srcs.iter().any(|t| t.contains("Do not translate")), "{srcs:?}");
     let targets: Vec<(String, Vec<Inline>)> = doc
@@ -254,7 +254,7 @@ fn pipeline_mock_translate() {
         })
         .collect();
     doc.set_targets(targets).unwrap();
-    let out = s(AssFilter.merge_with(&doc, &MergeOptions::locos()).unwrap());
+    let out = s(AssFilter.merge_with(&doc, &bilingua_model::profile::locos().merge_options("xml")).unwrap());
     assert!(out.contains("Comment: 0,0:00:01.00,0:00:04.00,Default,,0,0,0,,Do not translate this note"), "{out}");
     assert!(out.contains("{\\an8}") && out.contains("{\\i1}") && out.contains("{\\i0}") && out.contains("\\N"), "{out}");
     assert!(!out.contains('⟦') && !out.contains('⟧'), "{out}");

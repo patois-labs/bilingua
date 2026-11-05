@@ -254,7 +254,7 @@ fn hostile_inputs() {
     }
     assert!(TXLF.extract(SAMPLE_TXML, &opts()).is_err(), "txml is not txlf");
     // segment cap
-    let one = ExtractOptions { limits: Some(Limits { max_units: 1, ..Limits::default() }), ..opts() };
+    let one = opts().with_limits(Limits::new().with_max_units(1));
     for (f, raw) in [(&TXML as &dyn Filter, SAMPLE_TXML), (&TXLF, SAMPLE_TXLF)] {
         assert!(matches!(f.extract(raw, &one), Err(Error::Limit(_))), "over the segment cap must be refused");
     }
@@ -262,7 +262,7 @@ fn hostile_inputs() {
     let mut bomb = String::from("<txml><translatable>");
     bomb.push_str(&"<segment><source>a</source></segment>".repeat(50));
     bomb.push_str("</translatable></txml>");
-    let three = ExtractOptions { limits: Some(Limits { max_units: 3, ..Limits::default() }), ..opts() };
+    let three = opts().with_limits(Limits::new().with_max_units(3));
     match TXML.extract(bomb.as_bytes(), &three) {
         Err(Error::Limit(e)) => assert!(e.msg.contains("TXML"), "{}", e.msg),
         other => panic!("{other:?}"),

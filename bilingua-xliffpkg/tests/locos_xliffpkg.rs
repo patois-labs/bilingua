@@ -192,7 +192,7 @@ fn hostile_inputs() {
     let legacy = text(WS).replacen("encoding=\"UTF-8\"", "encoding=\"ISO-8859-1\"", 1);
     refused(&zip_of(&[("content.xlf", legacy.as_bytes(), true)], b""), "a legacy encoding");
     // segment cap
-    let o = ExtractOptions { limits: Some(Limits { max_units: 2, ..Default::default() }), ..Default::default() };
+    let o = ExtractOptions::new().with_limits(Limits::new().with_max_units(2));
     match filter().extract(&xlz(), &o) {
         Err(Error::Limit(l)) => assert_eq!(l.kind, LimitKind::Units),
         r => panic!("{r:?}"),

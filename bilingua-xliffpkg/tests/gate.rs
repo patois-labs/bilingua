@@ -256,7 +256,7 @@ fn stamp_target_always_stamps_an_untranslated_package() {
     let pkg = zip_of(&[("a.xlf", plain("a", "UTF-8").as_bytes(), true), ("b.xliff", plain("b", "UTF-8").as_bytes(), true)], b"keep");
     let d = extract_to(&*f, &pkg, "ja-JP");
     assert_eq!(f.merge(&d).unwrap(), pkg, "default: nothing translated, original bytes");
-    let always = MergeOptions { stamp_target_always: true, ..Default::default() };
+    let always = MergeOptions::new().with_stamp_target_always(true);
     let out = f.merge_with(&d, &always).unwrap();
     for m in ["a.xlf", "b.xliff"] {
         assert!(text(&member(&out, m)).contains("target-language=\"ja-JP\""), "{m}");
@@ -279,7 +279,7 @@ fn output_encoding_utf8_rewrites_a_utf16_member_as_utf8() {
     let pkg = zip_of(&[("u.xlf", &u16, true), ("w.xlf", &utf16le(&plain("w", "UTF-16")), true)], b"");
     let mut d = extract_to(&*f, &pkg, "ko-KR");
     translate(&mut d, "u.xlf|1", |_| "\u{D558}\u{B098}.".into());
-    let out = f.merge_with(&d, &MergeOptions { output_encoding: OutputEncoding::Utf8, ..Default::default() }).unwrap();
+    let out = f.merge_with(&d, &MergeOptions::new().with_output_encoding(OutputEncoding::Utf8)).unwrap();
     let u = member(&out, "u.xlf");
     let s = String::from_utf8(u).expect("UTF-8 out");
     assert!(s.starts_with("<?xml version=\"1.0\" encoding=\"UTF-8\"?>"), "{s}");
@@ -292,7 +292,7 @@ fn output_encoding_utf8_rewrites_a_utf16_member_as_utf8() {
     let kept = member(&f.merge(&d).unwrap(), "u.xlf");
     assert!(kept.starts_with(&[0xFF, 0xFE]));
     // LocOS's adapter options together
-    let both = f.merge_with(&d, &MergeOptions::locos()).unwrap();
+    let both = f.merge_with(&d, &bilingua_model::profile::locos().merge_options("xml")).unwrap();
     assert!(String::from_utf8(member(&both, "u.xlf")).is_ok());
 }
 

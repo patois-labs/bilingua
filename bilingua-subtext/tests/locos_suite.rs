@@ -57,7 +57,7 @@ fn subviewer() {
 fn microdvd() {
     let doc = extract("sub", MDVD).unwrap();
     assert_eq!(units("sub", MDVD), ["\u{27E6}g1\u{27E7}Hello!\u{27E6}/g1\u{27E7}\nHow are you?", "Plain {0} text", "\u{27E6}g1\u{27E7}Red\u{27E6}/g1\u{27E7}\n\u{27E6}g2\u{27E7}Bold line\u{27E6}/g2\u{27E7}"]);
-    let (_, m0) = bilingua_model::locos::to_locos_text(&doc.units[0].source());
+    let (_, m0) = bilingua_model::profile::tokens::to_locos_text(&doc.units[0].source());
     assert_eq!(m0["1"].open.as_deref(), Some("{y:i}"));
     assert_eq!(doc.units[0].codes["1"].open.as_deref(), Some("{y:i}"));
     assert_eq!(doc.units[2].codes["2"].open.as_deref(), Some("{y:b}"));
@@ -186,16 +186,16 @@ impl Enc for Document {
 
 #[test]
 fn caps() {
-    let lim = |l: Limits| ExtractOptions { limits: Some(l), ..opts() };
+    let lim = |l: Limits| opts().with_limits(l);
     let many: Vec<u8> = (10..30).flat_map(|i| format!("{{{i}}}{{{}}}line {i}\n", i + 1).into_bytes()).collect();
     let sbv: Vec<u8> = (0..20).flat_map(|i| format!("0:00:01.000,0:00:02.000\nx{i}\n\n").into_bytes()).collect();
-    let l = Limits { max_units: 5, ..Limits::default() };
+    let l = Limits::new().with_max_units(5);
     assert!(matches!(Sub.extract(&many, &lim(l)), Err(Error::Limit(_))));
     assert!(matches!(Sbv.extract(&sbv, &lim(l)), Err(Error::Limit(_))));
     let mut long = b"{1}{2}".to_vec();
     long.extend([b'a'; 80]);
     long.push(b'\n');
-    assert!(matches!(Sub.extract(&long, &lim(Limits { max_unit_chars: 50, ..Limits::default() })), Err(Error::Limit(_))));
+    assert!(matches!(Sub.extract(&long, &lim(Limits::new().with_max_unit_chars(50))), Err(Error::Limit(_))));
 }
 
 #[test]
@@ -223,7 +223,7 @@ fn surfaces() {
             t.extend(u.source());
             u.segments[0].target = t;
         }
-        let out = filter(fmt).merge_with(&doc, &MergeOptions::locos()).unwrap();
+        let out = filter(fmt).merge_with(&doc, &bilingua_model::profile::locos().merge_options("xml")).unwrap();
         assert!(out.windows(keep.len()).any(|w| w == keep), "{fmt}");
         assert!(!s(&out).contains('\u{27E6}'));
         assert_ne!(out, data);

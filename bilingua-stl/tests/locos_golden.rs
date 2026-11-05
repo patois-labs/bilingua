@@ -66,7 +66,7 @@ fn check(name: &str, what: &str, got: Result<Vec<u8>, Error>, want: &serde_json:
     if let Some(err) = want.get("err") {
         let msg = want["msg"].as_str().unwrap();
         match got {
-            Err(Error::Write(m)) if err == "CaptionTargetError" && m == msg => {}
+            Err(Error::Unwritable { reason: m, .. }) if err == "CaptionTargetError" && m == msg => {}
             Err(e) => bad.push(format!("{name}: {what}: LocOS refuses with {err} {msg:?}, we give error {e:?}")),
             Ok(_) => bad.push(format!("{name}: {what}: LocOS refuses ({msg}) but we wrote a file")),
         }

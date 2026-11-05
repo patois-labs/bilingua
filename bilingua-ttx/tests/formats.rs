@@ -25,7 +25,7 @@ fn tag_count(d: &Document) -> usize {
 }
 
 fn with_locked() -> ExtractOptions {
-    ExtractOptions { include_locked: true, ..opts() }
+    opts().with_include_locked(true)
 }
 
 #[test]

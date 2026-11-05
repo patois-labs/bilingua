@@ -35,7 +35,7 @@ pub fn decode(fmt_name: &str, bytes: &[u8], opts: &ExtractOptions, limits: &Limi
             }
         }
     }
-    let o = DecodeOptions { declared: true, source_lang: opts.source_lang.as_deref(), limits: *limits };
+    let o = DecodeOptions::with_limits(*limits).with_source_lang(opts.source_lang.as_deref()).declared();
     let dec = enc::decode_text(bytes, &o)?;
     if !matches!(enc::base(&dec.encoding), "utf-8" | "utf-8-bom" | "utf-16le" | "utf-16be") {
         return Err(Error::Encoding(format!("This {upper} file is not valid UTF-8. Re-save it as UTF-8.")));

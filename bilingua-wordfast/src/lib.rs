@@ -31,6 +31,10 @@ impl Dialect {
     }
 }
 
+/// The `format_options` keys of the Wordfast filters.
+pub const FORMAT_OPTIONS: &[FormatOptionKey] =
+    &[FormatOptionKey::bool("wordfast.load_targets", "List confirmed segments as read-only units with their translation (the filter's own setting when unset).")];
+
 /// The Wordfast Pro TXML filter. `load_targets` (default true) lists segments somebody already confirmed as
 /// read-only units with their translation as the target; the Localization OS adapter turns it off, which leaves
 /// exactly the segments LocOS translates. `include_locked` in the extract options lists the locked and
@@ -64,21 +68,17 @@ pub fn filters() -> Vec<Box<dyn Filter>> {
 }
 
 // Hidden codes (ids start with `~`, never a tag id).
-const RAW: &str = "~raw"; // the region as the file had it
-const PRE: &str = "~pre"; // text before a written translation
-const POST: &str = "~post"; // text after it
-const LEAD: &str = "~lead"; // white space the source had before / after its text
-const TRAIL: &str = "~trail";
-const T0: &str = "~t0"; // the target as it was loaded (comparison string)
-const TMPL: &str = "~tmpl"; // a mirrored seg-source target to create
-const KEY: &str = "~key"; // the LocOS unit key
-
-fn hidden(text: impl Into<String>) -> CodeData {
-    CodeData { standalone: Some(text.into()), ..Default::default() }
-}
+const RAW: &str = "raw"; // the region as the file had it
+const PRE: &str = "pre"; // text before a written translation
+const POST: &str = "post"; // text after it
+const LEAD: &str = "lead"; // white space the source had before / after its text
+const TRAIL: &str = "trail";
+const T0: &str = "t0"; // the target as it was loaded (comparison string)
+const TMPL: &str = "tmpl"; // a mirrored seg-source target to create
+const KEY: &str = "key"; // the LocOS unit key
 
 fn code(u: &Unit, key: &str) -> Option<String> {
-    u.codes.get(key).and_then(|c| c.standalone.clone())
+    u.hidden(key).map(str::to_string)
 }
 
 fn head_text(bytes: &[u8]) -> String {
@@ -153,16 +153,7 @@ fn extract(d: Dialect, load_targets: bool, bytes: &[u8], opts: &ExtractOptions, 
         parts.push(SkelPart::Raw(text[pos..].to_string()));
     }
     let lang = |file: &str, fallback: &Option<String>| (!file.is_empty()).then(|| file.to_string()).or_else(|| fallback.clone());
-    let doc = Document {
-        format: name.into(),
-        name: None,
-        source_lang: lang(&source_lang, &opts.source_lang),
-        target_lang: lang(&target_lang, &opts.target_lang),
-        granularity: opts.granularity,
-        units,
-        skeleton: Skeleton::text(parts, dec.encoding, bilingua_model::parser_info!()),
-        warnings: Vec::new(),
-    };
+    let doc = Document::new(name, units, Skeleton::text(parts, dec.encoding, bilingua_model::parser_info!())).with_source_lang(lang(&source_lang, &opts.source_lang)).with_target_lang(lang(&target_lang, &opts.target_lang)).with_granularity(opts.granularity);
     guard::finish(doc, dec.warnings, limits)
 }
 
@@ -172,7 +163,7 @@ fn unit_of(it: Item, text: &str) -> Unit {
     seg.target = it.target;
     seg.state = it.state;
     seg.origin = it.origin;
-    let t0 = (!seg.target.is_empty()).then(|| inline::flat(&seg.target));
+    let t0 = (seg.has_target()).then(|| inline::flat(&seg.target));
     u.codes = it.codes;
     u.notes = it.notes;
     u.context.kind = Some("segment".into());
@@ -186,18 +177,18 @@ fn unit_of(it: Item, text: &str) -> Unit {
             u.lock_reason = Some(r.to_string());
         }
     }
-    u.codes.insert(KEY.into(), hidden(it.key.to_string()));
+    u.set_hidden(KEY, it.key.to_string());
     if let Some(r) = it.region {
-        u.codes.insert(RAW.into(), hidden(&text[r.start..r.end]));
-        u.codes.insert(PRE.into(), hidden(r.pre));
-        u.codes.insert(POST.into(), hidden(r.post));
-        u.codes.insert(LEAD.into(), hidden(it.lead));
-        u.codes.insert(TRAIL.into(), hidden(it.trail));
+        u.set_hidden(RAW, &text[r.start..r.end]);
+        u.set_hidden(PRE, r.pre);
+        u.set_hidden(POST, r.post);
+        u.set_hidden(LEAD, it.lead);
+        u.set_hidden(TRAIL, it.trail);
         if let Some(t) = t0 {
-            u.codes.insert(T0.into(), hidden(t));
+            u.set_hidden(T0, t);
         }
         for (k, v) in it.extra {
-            u.codes.insert(k.into(), hidden(v));
+            u.set_hidden(k, v);
         }
     }
     u
@@ -205,7 +196,7 @@ fn unit_of(it: Item, text: &str) -> Unit {
 
 /// The translation to write for a unit, or None when it has none or it is the one the file already had.
 fn content_of(u: &Unit) -> Option<String> {
-    if !u.translate || u.segments.iter().all(|s| s.target.is_empty()) {
+    if !u.translate || u.segments.iter().all(|s| !s.has_target()) {
         return None;
     }
     let target = u.output();
@@ -231,7 +222,7 @@ fn merge(d: Dialect, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Err
                 let raw = code(u, RAW).unwrap_or_default();
                 if let Some(tmpl) = code(u, TMPL) {
                     // a target mirroring seg-source, created once for all the segments of the trans-unit
-                    let map = by_key.get_or_insert_with(|| doc.units.iter().filter_map(|u| u.codes.get(KEY).and_then(|c| c.standalone.as_deref()).map(|k| (k, u))).collect());
+                    let map = by_key.get_or_insert_with(|| doc.units.iter().filter_map(|u| u.hidden(KEY).map(|k| (k, u))).collect());
                     let mut body = String::new();
                     let mut any = false;
                     for (n, piece) in tmpl.split('\u{1}').enumerate() {
@@ -339,8 +330,8 @@ macro_rules! filter_impl {
             fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
                 self.extract_with(bytes, opts, &opts.limits())
             }
-            fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
-                merge($d, doc, &MergeOptions::default())
+            fn format_option_keys(&self) -> &'static [bilingua_model::FormatOptionKey] {
+                FORMAT_OPTIONS
             }
             fn merge_with(&self, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
                 merge($d, doc, opts)

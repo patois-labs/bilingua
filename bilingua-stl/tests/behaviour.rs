@@ -43,7 +43,7 @@ fn round_trips_in_eleven_languages() {
         let r = Stl.merge(&d);
         if !ok {
             match r {
-                Err(Error::Write(m)) => assert!(m.contains("subtitle 1"), "{locale}: {m}"),
+                Err(e @ (Error::Write(_) | Error::Unwritable { .. })) => { let m = e.to_string(); assert!(m.contains("subtitle 1"), "{locale}: {m}") }
                 other => panic!("{locale}: expected a refusal, got {:?}", other.map(|b| b.len())),
             }
             continue;
@@ -100,19 +100,19 @@ fn stamp_and_nothing_translated() {
     let d = Stl.extract(&data, &opts(Some("fr"))).unwrap();
     assert_eq!(Stl.merge(&d).unwrap(), data);
     // LocOS behaviour: stamp even so
-    let out = Stl.merge_with(&d, &MergeOptions { stamp_target_always: true, ..Default::default() }).unwrap();
+    let out = Stl.merge_with(&d, &MergeOptions::new().with_stamp_target_always(true)).unwrap();
     assert_eq!(&out[14..16], b"0F");
     assert_eq!(out[16..], data[16..]);
     // no target language: never stamped
     let d = ex(&data);
-    assert_eq!(Stl.merge_with(&d, &MergeOptions::locos()).unwrap(), data);
+    assert_eq!(Stl.merge_with(&d, &bilingua_model::profile::locos().merge_options("xml")).unwrap(), data);
     // translated with a target: stamped by the default merge
     let mut d = Stl.extract(&data, &opts(Some("de"))).unwrap();
     set(&mut d, 2, "Einfach");
     let out = Stl.merge(&d).unwrap();
     assert_eq!(&out[14..16], b"08");
     // output_encoding has no meaning for a binary format: same bytes
-    let a = Stl.merge_with(&d, &MergeOptions { output_encoding: OutputEncoding::Utf8, ..Default::default() }).unwrap();
+    let a = Stl.merge_with(&d, &MergeOptions::new().with_output_encoding(OutputEncoding::Utf8)).unwrap();
     assert_eq!(a, out);
 }
 
@@ -148,7 +148,7 @@ fn context_and_tags() {
 #[test]
 fn paragraph_granularity_and_set_target_checks() {
     let data = ascii_file();
-    let o = ExtractOptions { granularity: Granularity::Paragraph, ..Default::default() };
+    let o = ExtractOptions::new().with_granularity(Granularity::Paragraph);
     let d = Stl.extract(&data, &o).unwrap();
     assert!(d.units.iter().all(|u| u.segments.len() == 1));
     assert_eq!(d.granularity, Granularity::Paragraph);
@@ -162,14 +162,14 @@ fn skeleton_checks() {
     let mut d = ex(&data);
     // units dropped: refused, not mis-merged
     d.units.pop();
-    assert!(matches!(Stl.merge(&d), Err(Error::Write(_))));
+    assert!(matches!(Stl.merge(&d), Err(Error::Write(_) | Error::Unwritable { .. })));
     // a text skeleton (not ours)
     let mut d = ex(&data);
     d.skeleton = Skeleton::default();
     assert!(matches!(Stl.merge(&d), Err(Error::Write(_))));
     // another parser's skeleton
     let mut d = ex(&data);
-    if let Skeleton::Zip { parser, .. } = &mut d.skeleton {
+    if let Skeleton::Binary { parser, .. } = &mut d.skeleton {
         *parser = Some(ParserInfo::new("bilingua-other", "0.1.0", 1));
     }
     assert!(matches!(Stl.merge(&d), Err(Error::ParserVersion { .. })));

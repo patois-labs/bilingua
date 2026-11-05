@@ -85,7 +85,7 @@ fn deep_and_huge_files() {
     let many: Vec<u8> = (0..50_001).flat_map(|i| sitemap_entry(&format!("e{i}"))).collect();
     assert!(matches!(HhcFilter.extract(&many, &ExtractOptions::default()).unwrap_err(), Error::Limit(_)));
     // over the input size limit
-    let tiny = ExtractOptions { limits: Some(Limits { max_input_bytes: 100, ..Limits::default() }), ..Default::default() };
+    let tiny = ExtractOptions::new().with_limits(Limits::new().with_max_input_bytes(100));
     assert!(matches!(HhcFilter.extract(&cp1252(HHC), &tiny).unwrap_err(), Error::Limit(_)));
     // an hhp of ten thousand sections and windows
     let mut hp = String::from("[OPTIONS]\r\nTitle=T\r\n[WINDOWS]\r\n");

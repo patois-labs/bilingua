@@ -22,7 +22,7 @@ let out = Xslt.merge(&doc)?;
   `Close` tags; `xsl:value-of`, `xsl:copy-of`, `xsl:apply-templates`, `xsl:call-template`, `xsl:number`, comments,
   CDATA, processing instructions, entity references and XSLT 3.0 text value templates (`{$n}` under
   `expand-text="yes"`) are standalone tags. Tag ids are the LocOS token numbers (`1`, `2`, ...; a pair shares one),
-  so `bilingua_model::locos::to_locos_text` gives the LocOS text exactly.
+  so `bilingua_model::profile::tokens::to_locos_text` gives the LocOS text exactly.
 - Translatable attributes of literal result elements: `alt`, `title`, `placeholder`, `aria-label`, and the content
   of `<xsl:attribute name="title">` (same names). They are units after every text unit (`context.style` =
   `attr:title`). Attribute value template expressions (`{@name}`) are tags; `{{` and `}}` are shown as one brace

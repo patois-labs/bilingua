@@ -155,8 +155,8 @@ fn hostile() {
         assert!(matches!(e, Error::Parse { .. } | Error::Limit(_)), "{e}");
     }
     // the segment cap (LocOS MAX_DOCUMENT_SEGMENTS = 2)
-    let limits = Limits { max_units: 2, ..Limits::default() };
-    let opts = ExtractOptions { limits: Some(limits), ..Default::default() };
+    let limits = Limits::new().with_max_units(2);
+    let opts = ExtractOptions::new().with_limits(limits);
     let e = SccFilter.extract(scc().as_bytes(), &opts).expect_err("segment cap must refuse");
     assert!(matches!(e, Error::Limit(ref l) if l.kind == LimitKind::Units), "{e}");
 }

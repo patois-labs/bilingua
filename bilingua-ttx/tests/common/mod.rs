@@ -1,12 +1,12 @@
 #![allow(dead_code)]
 //! Helpers shared by the integration tests.
 
-use bilingua_model::locos::{from_locos_text, to_locos_text};
+use bilingua_model::profile::tokens::{from_locos_text, to_locos_text};
 use bilingua_model::*;
 use bilingua_ttx::Ttx;
 
 pub fn opts() -> ExtractOptions {
-    ExtractOptions { target_lang: Some("de-DE".into()), granularity: Granularity::Paragraph, ..Default::default() }
+    ExtractOptions::new().with_target_lang("de-DE").with_granularity(Granularity::Paragraph)
 }
 
 /// Bilingua's default: finished translations are loaded as targets.

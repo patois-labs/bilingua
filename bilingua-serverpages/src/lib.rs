@@ -454,7 +454,7 @@ fn attr_units(toks: &[Tok]) -> Vec<html::AttrUnit> {
 
 fn load(bytes: &[u8], opts: &ExtractOptions, limits: &Limits) -> Result<enc::Decoded, Error> {
     guard::check_input(bytes, limits)?;
-    let dec = enc::decode_text(bytes, &enc::DecodeOptions { declared: true, source_lang: opts.source_lang.as_deref(), limits: *limits })?;
+    let dec = enc::decode_text(bytes, &enc::DecodeOptions::with_limits(*limits).with_source_lang(opts.source_lang.as_deref()).declared())?;
     if !matches!(enc::base(&dec.encoding), "utf-8" | "utf-8-bom" | "utf-16le" | "utf-16be") && enc::encode_text(&dec.text, &dec.encoding)? != bytes {
         return Err(Error::Encoding(
             "This file uses byte sequences of its legacy encoding that cannot be written back unchanged. Re-save the file as UTF-8.".into(),
@@ -497,16 +497,7 @@ fn extract_with(d: Dialect, bytes: &[u8], opts: &ExtractOptions, limits: &Limits
         u.context.key = html::parse_tag(&toks[a.ti]).1.into();
         units.push(u);
     }
-    let doc = Document {
-        format: d.id().into(),
-        name: None,
-        source_lang: opts.source_lang.clone(),
-        target_lang: opts.target_lang.clone(),
-        granularity: opts.granularity,
-        units,
-        skeleton: Skeleton::text(vec![SkelPart::Raw(text.to_string())], dec.encoding.clone(), bilingua_model::parser_info!()),
-        ..Default::default()
-    };
+    let doc = Document::new(d.id(), units, Skeleton::text(vec![SkelPart::Raw(text.to_string())], dec.encoding.clone(), bilingua_model::parser_info!())).with_options(opts);
     guard::finish(doc, dec.warnings, limits)
 }
 
@@ -514,7 +505,7 @@ fn extract_with(d: Dialect, bytes: &[u8], opts: &ExtractOptions, limits: &Limits
 
 /// A target the page writes: the unit's output when it is translated and different from the source.
 fn target_of(u: &Unit) -> Option<Vec<Inline>> {
-    if u.segments.iter().all(|s| s.target.is_empty()) {
+    if u.segments.iter().all(|s| !s.has_target()) {
         return None;
     }
     let out = u.output();
@@ -794,9 +785,6 @@ macro_rules! dialect_filter {
             fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
                 extract_with($d, bytes, opts, &opts.limits())
             }
-            fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
-                merge_with($d, doc, &MergeOptions::default())
-            }
             fn merge_with(&self, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
                 merge_with($d, doc, opts)
             }
@@ -917,7 +905,7 @@ pub fn server_page_for_html(text: &str) -> Result<Option<Dialect>, Error> {
 /// LocOS `_has_page_text`: true when a `.php` file holds page text outside its PHP islands (otherwise it is PHP
 /// code, not a template). The facade uses it to route `.php` between the language-array filter and [`Phtml`].
 pub fn php_has_page_text(bytes: &[u8]) -> Result<bool, Error> {
-    let dec = enc::decode_text(bytes, &enc::DecodeOptions { declared: true, source_lang: None, limits: Limits::default() })?;
+    let dec = enc::decode_text(bytes, &enc::DecodeOptions::with_limits(Limits::default()).declared())?;
     let text = dec.text;
     let islands = lex::php_islands(&text).map_err(|r| refused_lex(Dialect::Phtml, &text, r))?;
     let mut pos = 0;

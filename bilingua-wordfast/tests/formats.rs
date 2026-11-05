@@ -28,7 +28,7 @@ fn encoding(d: &Document) -> String {
 }
 
 fn show(v: &[Inline]) -> String {
-    locos::to_locos_text(v).0
+    profile::tokens::to_locos_text(v).0
 }
 
 #[test]
@@ -37,7 +37,7 @@ fn untouched_merge_is_the_original_bytes() {
         for targets in [false, true] {
             let f = filter_for(name, targets);
             for locked in [false, true] {
-                let o = ExtractOptions { include_locked: locked, ..opts() };
+                let o = opts().with_include_locked(locked);
                 let d = f.extract(data, &o).unwrap_or_else(|e| panic!("{name}: {e}"));
                 assert_eq!(f.merge(&d).unwrap(), *data, "{name}");
                 // every unit's own target written back unchanged is still the original bytes
@@ -173,7 +173,7 @@ fn target_language_is_declared_for_each_of_the_11_languages() {
     let txml = String::from_utf8_lossy(FILES.iter().find(|(n, _)| *n == "lang_en.txml").unwrap().1).replace(" targetlocale=\"xx_XX\"", "");
     let txlf = String::from_utf8_lossy(FILES.iter().find(|(n, _)| *n == "lang_en.txlf").unwrap().1).replace(" target-language=\"xx-XX\"", "");
     for (tag, under, hyph) in LANGS {
-        let o = ExtractOptions { target_lang: Some(tag.replace('-', "_")), ..opts() };
+        let o = opts().with_target_lang(tag.replace('-', "_"));
         let mut d = TXML.extract(txml.as_bytes(), &o).unwrap();
         set(&mut d, 5, "x");
         let out = merged(&TXML, &d);

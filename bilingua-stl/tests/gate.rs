@@ -37,9 +37,9 @@ fn untouched_merges_return_the_exact_bytes() {
         for target in [None, Some("fr-FR")] {
             let Ok(mut d) = Stl.extract(&data, &opts(target)) else { continue };
             assert_eq!(Stl.merge(&d).unwrap(), data, "{name}: merge");
-            assert_eq!(Stl.merge_with(&d, &MergeOptions { output_encoding: OutputEncoding::Utf8, stamp_target_always: false }).unwrap(), data, "{name}: utf-8 asked");
+            assert_eq!(Stl.merge_with(&d, &MergeOptions::new().with_output_encoding(OutputEncoding::Utf8).with_stamp_target_always(false)).unwrap(), data, "{name}: utf-8 asked");
             if target.is_none() {
-                assert_eq!(Stl.merge_with(&d, &MergeOptions::locos()).unwrap(), data, "{name}: locos, no target");
+                assert_eq!(Stl.merge_with(&d, &bilingua_model::profile::locos().merge_options("xml")).unwrap(), data, "{name}: locos, no target");
             }
             // every target set to its own source: nothing changed, so no table switch and no relayout
             for u in d.units.iter_mut() {
@@ -68,7 +68,7 @@ fn an_empty_target_language_stamps_nothing() {
     // LocOS: `language_code(target_locale) if target_locale else None`
     let data = cat(&[&gsi_default(1), &t(1, b"Hello there")]);
     let mut d = Stl.extract(&data, &opts(Some(""))).unwrap();
-    assert_eq!(Stl.merge_with(&d, &MergeOptions::locos()).unwrap(), data);
+    assert_eq!(Stl.merge_with(&d, &bilingua_model::profile::locos().merge_options("xml")).unwrap(), data);
     set(&mut d, 0, "Bonjour");
     let out = Stl.merge(&d).unwrap();
     assert_eq!(&out[14..16], b"09");
@@ -123,7 +123,7 @@ fn many_refused_subtitles_are_reported_in_linear_time() {
     let start = Instant::now();
     let r = build(&data, &map);
     let secs = start.elapsed().as_secs_f64();
-    let Err(Error::Write(m)) = r else { panic!("must refuse") };
+    let Err(Error::Unwritable { reason: m, .. }) = r else { panic!("must refuse") };
     assert!(m.contains("subtitle 1: does not fit in 2 rows of 40 characters"), "{m}");
     assert!(m.contains("(and 44990 more)"), "{m}");
     assert!(secs < 30.0, "{secs:.1} s");
@@ -137,7 +137,7 @@ fn many_distinct_characters_are_checked_in_linear_time() {
     let start = Instant::now();
     let r = build(&data, &[(0, text)]);
     let secs = start.elapsed().as_secs_f64();
-    assert!(matches!(r, Err(Error::Write(_))));
+    assert!(matches!(r, Err(Error::Write(_) | Error::Unwritable { .. })));
     assert!(secs < 30.0, "{secs:.1} s");
 }
 
@@ -153,6 +153,6 @@ fn zero_width_codes_in_long_words_wrap_in_linear_time() {
     let r = build(&data, &[(0, text)]);
     let secs = start.elapsed().as_secs_f64();
     // laid out in rows, then refused: more than 240 extension blocks
-    assert!(matches!(r, Err(Error::Write(ref m)) if m.contains("240 extension blocks")), "{r:?}");
+    assert!(matches!(r, Err(Error::Unwritable { reason: ref m, .. }) if m.contains("240 extension blocks")), "{r:?}");
     assert!(secs < 30.0, "{secs:.1} s");
 }

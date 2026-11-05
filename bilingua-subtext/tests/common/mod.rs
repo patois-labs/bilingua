@@ -1,7 +1,7 @@
 //! Shared helpers: units as LocOS writes them (inline codes as numbered tokens) and builds from LocOS-style text,
 //! the way the Localization OS adapter calls the filter (UTF-8 out, unresolved tokens dropped).
 #![allow(dead_code)]
-use bilingua_model::locos::{parse_locos_text, to_locos_text, TokenProblem};
+use bilingua_model::profile::tokens::{parse_locos_text, to_locos_text, TokenProblem};
 use bilingua_model::*;
 use bilingua_subtext::{Sbv, Sub};
 
@@ -14,7 +14,7 @@ pub fn filter(fmt: &str) -> &'static dyn Filter {
 }
 
 pub fn opts() -> ExtractOptions {
-    ExtractOptions { source_lang: Some("en".into()), granularity: Granularity::Paragraph, ..Default::default() }
+    ExtractOptions::new().with_source_lang("en").with_granularity(Granularity::Paragraph)
 }
 
 pub fn extract(fmt: &str, data: &[u8]) -> Result<Document, Error> {
@@ -51,7 +51,7 @@ pub fn try_build_with(fmt: &str, data: &[u8], tr: &[(usize, String)], mo: &Merge
 
 /// The adapter's way: UTF-8 out.
 pub fn try_build(fmt: &str, data: &[u8], tr: &[(usize, String)]) -> Result<Vec<u8>, Error> {
-    try_build_with(fmt, data, tr, &MergeOptions::locos())
+    try_build_with(fmt, data, tr, &bilingua_model::profile::locos().merge_options("xml"))
 }
 
 pub fn build(fmt: &str, data: &[u8], tr: &[(usize, &str)]) -> Vec<u8> {

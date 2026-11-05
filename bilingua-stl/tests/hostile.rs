@@ -42,12 +42,12 @@ fn check_file(bytes: &[u8]) {
         };
         assert_eq!(Stl.merge(&d).expect("merge of an extracted document"), bytes, "untouched merge changed the file");
         pseudo(&mut d);
-        match Stl.merge_with(&d, &MergeOptions::locos()) {
+        match Stl.merge_with(&d, &bilingua_model::profile::locos().merge_options("xml")) {
             Ok(out) => {
                 let back = Stl.extract(&out, &opts(None)).expect("the translated file must extract");
                 assert_eq!(back.units.len(), d.units.len());
             }
-            Err(Error::Write(_)) => {}
+            Err(Error::Write(_) | Error::Unwritable { .. }) => {}
             Err(e) => panic!("untyped merge error {e:?}"),
         }
     }
@@ -98,9 +98,9 @@ fn more_than_99999_blocks_is_refused() {
 #[test]
 fn input_limit_and_unit_chars() {
     let f = fixture();
-    let o = ExtractOptions { limits: Some(Limits { max_input_bytes: 1500, ..Default::default() }), ..Default::default() };
+    let o = ExtractOptions::new().with_limits(Limits::new().with_max_input_bytes(1500));
     assert!(matches!(Stl.extract(&f, &o), Err(Error::Limit(_))));
-    let o = ExtractOptions { limits: Some(Limits { max_unit_chars: 5, ..Default::default() }), ..Default::default() };
+    let o = ExtractOptions::new().with_limits(Limits::new().with_max_unit_chars(5));
     assert!(matches!(Stl.extract(&f, &o), Err(Error::Limit(_))));
 }
 
@@ -120,7 +120,7 @@ fn deep_extension_chain_and_many_rows_do_not_blow_up() {
     // a translation that needs fewer rows still works, and an over-long one is refused quickly
     let big = vec![(0usize, "x ".repeat(5000))];
     let r = build(&data, &big);
-    assert!(matches!(r, Ok(_) | Err(Error::Write(_))));
+    assert!(matches!(r, Ok(_) | Err(Error::Write(_) | Error::Unwritable { .. })));
 }
 
 #[test]
@@ -217,9 +217,9 @@ proptest! {
         let mut d = ex(&v);
         let kk = k % d.units.len();
         set(&mut d, kk, &text);
-        match Stl.merge_with(&d, &MergeOptions::locos()) {
+        match Stl.merge_with(&d, &bilingua_model::profile::locos().merge_options("xml")) {
             Ok(out) => { prop_assert!(Stl.extract(&out, &opts(None)).is_ok()); }
-            Err(Error::Write(_)) => {}
+            Err(Error::Write(_) | Error::Unwritable { .. }) => {}
             Err(e) => prop_assert!(false, "untyped {e:?}"),
         }
     }

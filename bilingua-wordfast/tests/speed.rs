@@ -52,7 +52,7 @@ fn generate_txlf(min_bytes: usize) -> String {
 
 fn round_trip(f: &dyn Filter, data: &[u8]) {
     assert!(data.len() > 5_000_000);
-    let o = ExtractOptions { limits: Some(Limits { max_units: 10_000_000, max_xml_elements: 100_000_000, ..Limits::default() }), ..opts() };
+    let o = opts().with_limits(Limits::new().with_max_units(10_000_000).with_max_xml_elements(100_000_000));
     let mut d = f.extract(data, &o).unwrap();
     assert!(d.units.len() > 20_000, "{}", d.units.len());
     assert_eq!(f.merge(&d).unwrap(), data);

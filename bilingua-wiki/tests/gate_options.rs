@@ -48,7 +48,7 @@ fn utf16_with_a_bom_reads_like_utf8_and_stays_utf16() {
             let back = texts(f.as_ref(), &out);
             assert!(back[0].starts_with("\u{65e5}\u{672c} "), "{back:?}");
             // LocOS behaviour: UTF-8 out, no UTF-16 BOM
-            let u8out = f.merge_with(&doc, &MergeOptions { output_encoding: OutputEncoding::Utf8, ..Default::default() }).unwrap();
+            let u8out = f.merge_with(&doc, &MergeOptions::new().with_output_encoding(OutputEncoding::Utf8)).unwrap();
             let utf8_doc = translate_all(f.as_ref(), page.as_bytes(), "\u{65e5}\u{672c}");
             assert_eq!(u8out, f.merge(&utf8_doc).unwrap());
         }
@@ -66,13 +66,13 @@ fn windows_1252_is_kept_and_utf8_on_request() {
         let out = f.merge(&doc).unwrap();
         assert!(std::str::from_utf8(&out).is_err(), "still Windows-1252");
         assert!(out.windows(2).any(|w| w == b"\xe9\x80"));
-        let u8out = f.merge_with(&doc, &MergeOptions::locos()).unwrap();
+        let u8out = f.merge_with(&doc, &bilingua_model::profile::locos().merge_options("xml")).unwrap();
         let utf8_doc = translate_all(f.as_ref(), page.as_bytes(), "Pr\u{e9}\u{20ac}");
         assert_eq!(u8out, f.merge(&utf8_doc).unwrap(), "LocOS writes UTF-8");
         // stamp_target_always has nothing to stamp: an untouched merge stays the original bytes
         let mut d = extract(f.as_ref(), &data).unwrap();
         d.target_lang = Some("de-DE".into());
-        let keep = MergeOptions { stamp_target_always: true, ..Default::default() };
+        let keep = MergeOptions::new().with_stamp_target_always(true);
         assert_eq!(f.merge_with(&d, &keep).unwrap(), data);
     }
 }

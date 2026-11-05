@@ -110,8 +110,8 @@ fn a_split_unit_writes_its_segments_joined() {
     let mut d = extract_with(&DEFAULT, &raw);
     let u = &mut d.units[0];
     u.segments = vec![
-        Segment { id: "u1#1".into(), source: vec![Inline::text("One.")], target: vec![Inline::text("Eins.")], state: SegState::Draft, origin: None },
-        Segment { id: "u1#2".into(), source: vec![Inline::text("Two.")], target: vec![], state: SegState::New, origin: None },
+        Segment::new("u1#1", vec![Inline::text("One.")]).with_target(vec![Inline::text("Eins.")]).with_state(SegState::Draft),
+        Segment::new("u1#2", vec![Inline::text("Two.")]),
     ];
     u.separators = vec![" ".into()];
     let out = s(DEFAULT.merge(&d).unwrap());
@@ -137,7 +137,7 @@ fn nested_tu_is_inline_and_header_lookups() {
     assert_eq!(units_with(&DEFAULT, &raw), [(0, "A".to_string())]);
     // a stamped language on a file whose UserSettings is missing is not invented
     let nolang = b"<TRADOStag><Body><Raw><Tu><Tuv Lang=\"EN-US\">A</Tuv></Tu></Raw></Body></TRADOStag>";
-    let mut d = DEFAULT.extract(nolang, &ExtractOptions { target_lang: Some("fr-FR".into()), ..opts() }).unwrap();
+    let mut d = DEFAULT.extract(nolang, &opts().with_target_lang("fr-FR")).unwrap();
     set(&mut d, 0, "B");
     let out = s(DEFAULT.merge(&d).unwrap());
     assert!(out.contains("<Tuv Lang=\"FR-FR\">B</Tuv>") && !out.contains("TargetLanguage"), "{out}");

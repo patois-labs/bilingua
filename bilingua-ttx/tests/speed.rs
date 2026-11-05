@@ -35,7 +35,7 @@ fn generate(min_chars: usize) -> Vec<u8> {
 fn five_megabytes_round_trip() {
     let data = generate(2_800_000);
     assert!(data.len() > 5_000_000, "{}", data.len());
-    let limits = Limits { max_units: 10_000_000, ..Limits::default() };
+    let limits = Limits::new().with_max_units(10_000_000);
     let mut d = DEFAULT.extract_with(&data, &opts(), &limits).unwrap();
     assert!(d.units.len() > 5_000);
     assert_eq!(DEFAULT.merge(&d).unwrap(), data);

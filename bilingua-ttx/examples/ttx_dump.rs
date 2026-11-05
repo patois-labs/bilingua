@@ -2,13 +2,13 @@
 //! `ttx_dump gen PATH MB` writes a large generated UTF-16 file, `ttx_dump time [--locos] FILE` times extract,
 //! untouched merge and a pseudo-translated merge.
 
-use bilingua_model::locos::to_locos_text;
+use bilingua_model::profile::tokens::to_locos_text;
 use bilingua_model::*;
 use bilingua_ttx::{Limits, Ttx};
 use std::time::Instant;
 
 fn big() -> Limits {
-    Limits { max_units: 50_000_000, max_unit_chars: 10_000_000, max_input_bytes: 2 << 30, max_lines: 100_000_000, max_xml_elements: 100_000_000, ..Limits::default() }
+    Limits::new().with_max_units(50_000_000).with_max_unit_chars(10_000_000).with_max_input_bytes(2 << 30).with_max_lines(100_000_000).with_max_xml_elements(100_000_000)
 }
 
 fn main() {
@@ -17,7 +17,7 @@ fn main() {
     let locked = args.iter().any(|a| a == "--locked");
     args.retain(|a| !a.starts_with("--"));
     let f = Ttx { skip_translated: locos };
-    let opts = ExtractOptions { granularity: Granularity::Paragraph, include_locked: locked, ..Default::default() };
+    let opts = ExtractOptions::new().with_granularity(Granularity::Paragraph).with_include_locked(locked);
     match args.get(1).map(String::as_str) {
         Some("dump") => {
             let bytes = std::fs::read(&args[2]).expect("read");

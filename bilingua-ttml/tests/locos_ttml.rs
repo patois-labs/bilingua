@@ -149,7 +149,7 @@ fn hostile() {
     refused(b"<tt xmlns='http://www.w3.org/ns/ttml'><body><p>unclosed</body></tt>");
     refused(b"\x00\x01\x02 not xml at all \x00");
     // MAX_DOCUMENT_SEGMENTS = 5
-    let l = Limits { max_units: 5, ..Limits::default() };
+    let l = Limits::new().with_max_units(5);
     let many: String = (0..8).map(|i| format!("<p>line {i}</p>")).collect();
     let doc = format!("<tt xmlns=\"http://www.w3.org/ns/ttml\"><body><div>{many}</div></body></tt>");
     assert!(matches!(F.extract_with(doc.as_bytes(), &opts(), &l), Err(Error::Limit(_))));

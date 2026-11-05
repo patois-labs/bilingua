@@ -46,10 +46,10 @@ fn load_targets_false_gives_the_locos_unit_list() {
     let src = |d: &Document| d.units.iter().map(|u| u.source()).collect::<Vec<_>>();
     assert_eq!(src(&doc), src(&on));
     for v in ["0", "no", "off", "FALSE"] {
-        let o = ExtractOptions { format_options: [(LOAD_TARGETS.to_string(), v.to_string())].into(), ..opts() };
+        let o = opts().with_format_options([(LOAD_TARGETS.to_string(), v.to_string())].into());
         assert!(StfFilter.extract(BILINGUAL.as_bytes(), &o).unwrap().units.iter().all(|u| u.segments[0].target.is_empty()), "{v}");
     }
-    let o = ExtractOptions { format_options: [(LOAD_TARGETS.to_string(), "true".to_string())].into(), ..opts() };
+    let o = opts().with_format_options([(LOAD_TARGETS.to_string(), "true".to_string())].into());
     assert_eq!(targets(&StfFilter.extract(BILINGUAL.as_bytes(), &o).unwrap()), targets(&on));
 }
 
@@ -60,7 +60,7 @@ fn untouched_merge_is_exact_in_both_modes_even_with_a_target_language() {
     for (name, data) in &files {
         for eo in [opts(), off()] {
             for target in [None, Some("ja-JP"), Some("de")] {
-                let eo = ExtractOptions { target_lang: target.map(String::from), ..eo.clone() };
+                let eo = eo.clone().with_target_lang(target.map(String::from));
                 let doc = StfFilter.extract(data, &eo).unwrap();
                 assert_eq!(StfFilter.merge(&doc).unwrap(), *data, "{name} {target:?}");
                 assert_eq!(StfFilter.merge_with(&doc, &MergeOptions::default()).unwrap(), *data, "{name} {target:?}");
@@ -82,7 +82,7 @@ fn editing_one_loaded_target_changes_only_that_cell_and_stamps() {
     let out = String::from_utf8(StfFilter.merge(&doc).unwrap()).unwrap();
     assert_eq!(out, BILINGUAL.replace("CustomLabel.F\tWelcome", "CustomLabel.F\tWillkommen"));
     // merge_with keeps the same rules and writes UTF-8 when asked
-    let out = StfFilter.merge_with(&doc, &MergeOptions::locos()).unwrap();
+    let out = StfFilter.merge_with(&doc, &bilingua_model::profile::locos().merge_options("stf")).unwrap();
     assert!(String::from_utf8(out).unwrap().contains("CustomLabel.F\tWillkommen\n"));
 }
 
@@ -109,7 +109,7 @@ fn hostile_translations_cannot_split_rows_or_add_headers() {
             for id in &ids {
                 doc.set_target(id, vec![Inline::text(format!("x{e}"))]).unwrap();
             }
-            for mo in [MergeOptions::default(), MergeOptions::locos()] {
+            for mo in [MergeOptions::default(), bilingua_model::profile::locos().merge_options("stf")] {
                 let out = StfFilter.merge_with(&doc, &mo).unwrap();
                 let text = String::from_utf8(out.clone()).unwrap();
                 assert_eq!(text.lines().count(), BILINGUAL.lines().count(), "{e:?}: a row split");

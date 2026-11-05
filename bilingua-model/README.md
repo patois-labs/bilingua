@@ -98,7 +98,7 @@ bilingua-py has `merge(document, options={...})`.
 | `output_encoding` | `"keep"` | `"keep"`: the file's own encoding, BOM and line endings (an untouched merge is byte-identical). `"utf-8"`: always UTF-8 (a UTF-8 BOM stays, a UTF-16 BOM goes); an XML, HTML or PO charset declaration is rewritten to say UTF-8 (`enc::encode_text_with`, so every crate on B6 encoding has it; HTML, XAML and the XLIFF family too). |
 | `stamp_target_always` | `false` | By default a merge with nothing translated returns the original bytes. `true`: stamp the `target_lang` and fill plurals even then (Localization OS): XLIFF `target-language`/`trgLang`, YAML root key, ARB `@@locale`, WiX `Culture`, PO header, HTML `lang`/`dir`, Fluent plural variants, xcloc target locale. Needs `Document::target_lang`. |
 
-`MergeOptions::locos()` is both on, for the LocOS adapter. A format that ignores an option says so in its README.
+`profile::locos().merge_options(format)` turns both on (UTF-8 except ini and strings), for the LocOS adapter. A format that ignores an option says so in its README.
 
 `ExtractOptions::format_options` is a `BTreeMap<String, String>` of options only one format knows, keyed
 `"<format>.<name>"` (read with `format_option` / `format_flag`; unknown keys are ignored). Known keys:

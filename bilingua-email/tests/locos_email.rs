@@ -255,14 +255,14 @@ fn caps() {
     for i in 0..10 {
         lots.extend_from_slice(format!("line {i}\n\n").as_bytes());
     }
-    let lim = Limits { max_units: 3, ..Default::default() };
-    let e = Email.extract(&lots, &ExtractOptions { limits: Some(lim), ..Default::default() }).unwrap_err();
+    let lim = Limits::new().with_max_units(3);
+    let e = Email.extract(&lots, &ExtractOptions::new().with_limits(lim)).unwrap_err();
     assert!(is_limit(&e), "{e}");
     let mut long = b"Subject: s\n\n".to_vec();
     long.extend_from_slice(&b"word ".repeat(400));
     long.push(b'\n');
-    let lim = Limits { max_unit_chars: 1000, ..Default::default() };
-    let e = Email.extract(&long, &ExtractOptions { limits: Some(lim), ..Default::default() }).unwrap_err();
+    let lim = Limits::new().with_max_unit_chars(1000);
+    let e = Email.extract(&long, &ExtractOptions::new().with_limits(lim)).unwrap_err();
     assert!(is_limit(&e), "{e}");
     // a boundary that never closes still parses (the last part runs to the end)
     let open_ended = b"Subject: o\nContent-Type: multipart/mixed; boundary=q\n\n--q\nContent-Type: text/plain\n\nbody\n";

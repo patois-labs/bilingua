@@ -8,7 +8,7 @@ use proptest::prelude::*;
 
 fn try_all(data: &[u8]) {
     let f = filter();
-    if let Ok(mut doc) = f.extract(data, &ExtractOptions { target_lang: Some("ar-SA".into()), ..Default::default() }) {
+    if let Ok(mut doc) = f.extract(data, &ExtractOptions::new().with_target_lang("ar-SA")) {
         let _ = f.merge(&doc);
         for u in &mut doc.units {
             let mut t = u.segments[0].source.clone();

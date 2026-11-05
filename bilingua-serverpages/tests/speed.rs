@@ -48,7 +48,7 @@ fn run<F: Filter>(name: &str, f: F, text: &str, ext: &str) {
     if let Ok(d) = std::env::var("BILINGUA_SP_SPEED_DIR") {
         std::fs::write(std::path::Path::new(&d).join(format!("big.{ext}")), text).unwrap();
     }
-    let opts = ExtractOptions { limits: Some(Limits { max_units: 10_000_000, max_input_bytes: 1 << 30, max_lines: 100_000_000, max_xml_elements: 100_000_000, ..Limits::default() }), ..Default::default() };
+    let opts = ExtractOptions::new().with_limits(Limits::new().with_max_units(10_000_000).with_max_input_bytes(1 << 30).with_max_lines(100_000_000).with_max_xml_elements(100_000_000));
     let t0 = Instant::now();
     let mut doc = f.extract(text.as_bytes(), &opts).unwrap();
     let t_extract = t0.elapsed();

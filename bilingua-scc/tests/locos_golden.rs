@@ -65,7 +65,7 @@ fn matches_locos_on_random_files_and_corpus() {
             let got = if identity {
                 try_build(&data, &[])
             } else {
-                try_build_with(&data, &m, &bilingua_model::MergeOptions::locos())
+                try_build_with(&data, &m, &bilingua_model::profile::locos().merge_options("xml"))
             };
             let g = &c["builds"][label];
             match g.get("error") {

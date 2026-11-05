@@ -1,6 +1,6 @@
 //! `cargo run -p bilingua-xliffpkg --example xliffpkg_dump -- FILE`: prints one JSON line per segment
 //! (id, LocOS-style text, state, locked). Used to compare with the LocOS filter.
-use bilingua_model::{locos::to_locos_text, ExtractOptions};
+use bilingua_model::{profile::tokens::to_locos_text, ExtractOptions};
 
 fn main() {
     let path = std::env::args().nth(1).expect("file");

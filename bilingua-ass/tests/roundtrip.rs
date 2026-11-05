@@ -2,7 +2,7 @@
 //! text, locked comments, ids, language stamping.
 mod common;
 use bilingua_ass::AssFilter;
-use bilingua_model::locos::to_locos_text;
+use bilingua_model::profile::tokens::to_locos_text;
 use bilingua_model::*;
 use common::*;
 
@@ -162,7 +162,7 @@ fn legacy_code_pages_keep_their_encoding() {
         let (b, _, bad) = enc.encode(&src);
         assert!(!bad, "{lang}");
         let b = b.into_owned();
-        let o = ExtractOptions { source_lang: Some(lang.into()), ..Default::default() };
+        let o = ExtractOptions::new().with_source_lang(lang);
         let d = AssFilter.extract(&b, &o).unwrap();
         assert_eq!(d.units.len(), 2, "{lang}");
         assert!(plain_text(&d.units[1].source()).contains(text), "{lang}: read as {}", plain_text(&d.units[1].source()));
@@ -176,7 +176,7 @@ fn legacy_code_pages_keep_their_encoding() {
         let back = AssFilter.extract(&out, &o).unwrap();
         assert_eq!(plain_text(&back.units[0].source()), text.chars().rev().collect::<String>(), "{lang}: kept in its code page");
         assert!(out.len() < b.len() + 8, "{lang}: not widened to UTF-8");
-        let utf8 = AssFilter.merge_with(&d2, &MergeOptions::locos()).unwrap();
+        let utf8 = AssFilter.merge_with(&d2, &bilingua_model::profile::locos().merge_options("xml")).unwrap();
         assert!(std::str::from_utf8(&utf8).is_ok(), "{lang}: UTF-8 on request");
     }
 }
@@ -260,7 +260,7 @@ fn ids_context_and_locked_comments() {
     assert_eq!(d.context.extra.get("name").map(String::as_str), Some("Anna"));
     assert_eq!(a.units[0].context.kind.as_deref(), Some("title"));
     // locked comments on request
-    let o = ExtractOptions { include_locked: true, ..Default::default() };
+    let o = ExtractOptions::new().with_include_locked(true);
     let l = AssFilter.extract(&data, &o).unwrap();
     assert_eq!(l.units.len(), a.units.len() + 1);
     let c = l.units.iter().find(|u| !u.translate).unwrap();
@@ -268,10 +268,10 @@ fn ids_context_and_locked_comments() {
     assert_eq!(AssFilter.merge(&l).unwrap(), data);
     let mut l2 = l.clone();
     assert!(matches!(l2.set_target(&c.id, vec![Inline::text("x")]), Err(Error::Locked(_))));
-    let flag = ExtractOptions { format_options: [("ass.include_locked".to_string(), "yes".to_string())].into(), ..Default::default() };
+    let flag = ExtractOptions::new().with_format_options([("ass.include_locked".to_string(), "yes".to_string())].into());
     assert_eq!(AssFilter.extract(&data, &flag).unwrap().units.len(), l.units.len());
     // paragraph mode and segment splitting keep working
-    let p = AssFilter.extract(&data, &ExtractOptions { granularity: Granularity::Paragraph, ..Default::default() }).unwrap();
+    let p = AssFilter.extract(&data, &ExtractOptions::new().with_granularity(Granularity::Paragraph)).unwrap();
     assert_eq!(p.granularity, Granularity::Paragraph);
     assert!(p.units.iter().all(|u| u.segments.len() == 1));
 }
@@ -279,22 +279,22 @@ fn ids_context_and_locked_comments() {
 #[test]
 fn language_stamping_rules() {
     let (_, data) = corpus().into_iter().find(|c| c.0 == "lumen_en.ass").unwrap();
-    let mut doc = AssFilter.extract(&data, &ExtractOptions { target_lang: Some("fr-FR".into()), ..Default::default() }).unwrap();
+    let mut doc = AssFilter.extract(&data, &ExtractOptions::new().with_target_lang("fr-FR")).unwrap();
     // nothing translated: the original bytes, no stamp
     assert_eq!(AssFilter.merge(&doc).unwrap(), data);
     // unless asked (the LocOS behaviour)
-    let always = MergeOptions { stamp_target_always: true, ..Default::default() };
+    let always = MergeOptions::new().with_stamp_target_always(true);
     assert!(String::from_utf8(AssFilter.merge_with(&doc, &always).unwrap()).unwrap().starts_with("[Script Info]\nLanguage: fr\n"));
     // something translated: stamped
     doc.set_target("l13", vec![Inline::text("Bonjour")]).unwrap();
     assert!(String::from_utf8(AssFilter.merge(&doc).unwrap()).unwrap().starts_with("[Script Info]\nLanguage: fr\n"));
     // a header on the very last line with no line end gets one before the new header line
-    let mut d = AssFilter.extract(b"[Script Info]", &ExtractOptions { target_lang: Some("de".into()), ..Default::default() }).unwrap();
+    let mut d = AssFilter.extract(b"[Script Info]", &ExtractOptions::new().with_target_lang("de")).unwrap();
     d.units.clear();
     assert_eq!(AssFilter.merge_with(&d, &always).unwrap(), b"[Script Info]\nLanguage: de\n");
     // a CRLF file gets a CRLF header line; a bad tag changes nothing
     let crlf = b"[Script Info]\r\nTitle: x\r\n";
-    let mut d = AssFilter.extract(crlf, &ExtractOptions { target_lang: Some("de".into()), ..Default::default() }).unwrap();
+    let mut d = AssFilter.extract(crlf, &ExtractOptions::new().with_target_lang("de")).unwrap();
     d.set_target("l2", vec![Inline::text("y")]).unwrap();
     assert_eq!(AssFilter.merge(&d).unwrap(), b"[Script Info]\r\nLanguage: de\r\nTitle: y\r\n");
     d.target_lang = Some("not a tag".into());
@@ -307,6 +307,6 @@ fn utf8_option_matches_locos_for_utf8_files() {
     assert!(data.starts_with(&[0xEF, 0xBB, 0xBF]));
     let mut doc = extract(&data).unwrap();
     pseudo(&mut doc);
-    let out = AssFilter.merge_with(&doc, &MergeOptions::locos()).unwrap();
+    let out = AssFilter.merge_with(&doc, &bilingua_model::profile::locos().merge_options("xml")).unwrap();
     assert!(out.starts_with(&[0xEF, 0xBB, 0xBF]) && !out[3..].starts_with(&[0xEF, 0xBB, 0xBF]));
 }

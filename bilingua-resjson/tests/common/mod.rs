@@ -61,7 +61,7 @@ pub fn pseudo(d: &mut Document) {
 }
 
 pub fn small_limits(max_units: usize) -> Limits {
-    Limits { max_units: max_units, ..Limits::default() }
+    Limits { max_units, ..Limits::default() }
 }
 
 pub fn parse_msg(r: Result<Document, Error>) -> String {

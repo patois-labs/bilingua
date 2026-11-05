@@ -18,7 +18,7 @@ const SEEDS: [&[u8]; 7] = [
 ];
 
 fn open_opts() -> ExtractOptions {
-    ExtractOptions { include_locked: true, ..opts() }
+    opts().with_include_locked(true)
 }
 
 /// Extract, and when it works: untouched merge is the same bytes; a pseudo-translated merge reads back with the
@@ -236,15 +236,15 @@ fn malformed_and_truncated_files_are_typed_errors() {
 
 #[test]
 fn limits_give_typed_errors() {
-    let small = Limits { max_input_bytes: 100, ..Limits::default() };
+    let small = Limits::new().with_max_input_bytes(100);
     let e = DEFAULT.extract_with(&[b'a'; 200], &opts(), &small).unwrap_err();
     assert!(matches!(e, Error::Limit(ref l) if l.kind == LimitKind::InputBytes));
-    let few = Limits { max_xml_elements: 10, ..Limits::default() };
+    let few = Limits::new().with_max_xml_elements(10);
     let doc = wrap(&"<a/>".repeat(100));
     assert!(matches!(DEFAULT.extract_with(&doc, &opts(), &few), Err(Error::Limit(_))));
-    let lines = Limits { max_lines: 5, ..Limits::default() };
+    let lines = Limits::new().with_max_lines(5);
     assert!(matches!(DEFAULT.extract_with(&wrap(&"\n".repeat(50)), &opts(), &lines), Err(Error::Limit(_))));
-    let chars = Limits { max_unit_chars: 10, ..Limits::default() };
+    let chars = Limits::new().with_max_unit_chars(10);
     let long = wrap("<Tu><Tuv Lang=\"EN-US\">this segment is far too long</Tuv></Tu>");
     assert!(matches!(DEFAULT.extract_with(&long, &opts(), &chars), Err(Error::Limit(e)) if e.kind == LimitKind::UnitChars));
 }
@@ -269,10 +269,10 @@ fn big_and_odd_inputs_are_handled() {
 #[test]
 fn a_damaged_document_is_refused_at_merge_not_panicked_on() {
     let mut d = DEFAULT.extract(include_bytes!("data/locos_suite_sample.ttx"), &opts()).unwrap();
-    d.units[0].codes.remove("~raw");
+    d.units[0].hidden.remove("raw");
     assert!(matches!(DEFAULT.merge(&d), Err(Error::Write(_))));
     let mut d = DEFAULT.extract(include_bytes!("data/locos_suite_sample.ttx"), &opts()).unwrap();
-    d.units[0].codes.insert("~meta".into(), CodeData { standalone: Some("n\u{1f}999\u{1f}1\u{1f}2\u{1f}Tuv\u{1f}\u{1f}\u{1f}".into()), ..Default::default() });
+    d.units[0].set_hidden("meta", "n\u{1f}999\u{1f}1\u{1f}2\u{1f}Tuv\u{1f}\u{1f}\u{1f}");
     d.units[0].segments[0].target = vec![Inline::text("x")];
     assert!(matches!(DEFAULT.merge(&d), Err(Error::Write(_))));
     let mut d = DEFAULT.extract(include_bytes!("data/locos_suite_sample.ttx"), &opts()).unwrap();

@@ -115,10 +115,10 @@ fn every_truncation_of_the_demo_is_a_typed_error_or_a_read() {
 fn deep_and_huge_files_are_limit_errors() {
     let deep = format!("{}{}", "<a>".repeat(300), "</a>".repeat(300));
     assert!(matches!(Sdlproj.extract(deep.as_bytes(), &opts()), Err(Error::Limit(_))));
-    let l = Limits { max_input_bytes: 100, ..Limits::default() };
+    let l = Limits::new().with_max_input_bytes(100);
     let data = fixture(&FILES, "locos_demo");
     assert!(matches!(Sdlproj.extract_with(data, &opts(), &l), Err(Error::Limit(_))));
-    let l = Limits { max_xml_elements: 3, ..Limits::default() };
+    let l = Limits::new().with_max_xml_elements(3);
     assert!(matches!(Sdlproj.extract_with(data, &opts(), &l), Err(Error::Limit(_))));
     // a million nested open tags is refused before any tree exists
     let wide = "<a>".repeat(1_000_000);

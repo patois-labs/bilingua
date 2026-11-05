@@ -1,18 +1,18 @@
 #![allow(dead_code)]
 //! Helpers shared by the integration tests.
 
-use bilingua_model::locos::{from_locos_text, to_locos_text};
+use bilingua_model::profile::tokens::{from_locos_text, to_locos_text};
 use bilingua_model::*;
 use bilingua_ttml::Ttml;
 
 pub const F: Ttml = Ttml;
 
 pub fn opts() -> ExtractOptions {
-    ExtractOptions { granularity: Granularity::Paragraph, ..Default::default() }
+    ExtractOptions::new().with_granularity(Granularity::Paragraph)
 }
 
 pub fn opts_for(lang: Option<&str>) -> ExtractOptions {
-    ExtractOptions { target_lang: lang.map(String::from), granularity: Granularity::Paragraph, ..Default::default() }
+    ExtractOptions::new().with_target_lang(lang.map(String::from)).with_granularity(Granularity::Paragraph)
 }
 
 pub fn extract(data: &[u8]) -> Document {
@@ -51,7 +51,7 @@ pub fn build(data: &[u8], mapping: &[(usize, &str)], locale: Option<&str>) -> Ve
     for (i, t) in mapping {
         set(&mut d, *i, t);
     }
-    F.merge_with(&d, &MergeOptions::locos()).expect("merge")
+    F.merge_with(&d, &bilingua_model::profile::locos().merge_options("xml")).expect("merge")
 }
 
 pub fn build_str(data: &[u8], mapping: &[(usize, &str)], locale: Option<&str>) -> String {

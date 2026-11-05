@@ -127,7 +127,7 @@ fn deep_and_huge_files_are_typed_errors_or_fine() {
         let many = "<p>a b</p>".repeat(60_000);
         assert!(matches!(f.extract(many.as_bytes(), &opts()), Err(Error::Limit(_))), "{fmt}");
         // an input over the byte limit
-        let small = ExtractOptions { limits: Some(Limits { max_input_bytes: 100, ..Limits::default() }), ..Default::default() };
+        let small = ExtractOptions::new().with_limits(Limits::new().with_max_input_bytes(100));
         assert!(matches!(f.extract(&[b'a'; 101], &small), Err(Error::Limit(_))), "{fmt}");
     }
 }

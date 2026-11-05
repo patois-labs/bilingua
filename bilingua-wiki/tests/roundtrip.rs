@@ -53,7 +53,7 @@ fn untouched_merge_is_the_original_bytes() {
 fn pseudo_translated_merge_reads_back_the_same() {
     for (name, data) in corpus() {
         let f = filter_for(&name);
-        let mut doc = f.extract(&data, &ExtractOptions { target_lang: Some("de-DE".into()), ..Default::default() }).unwrap();
+        let mut doc = f.extract(&data, &ExtractOptions::new().with_target_lang("de-DE")).unwrap();
         let n = doc.units.len();
         pseudo(&mut doc);
         let out = f.merge(&doc).unwrap();
@@ -108,7 +108,7 @@ fn ids_are_stable_and_paragraph_mode_works() {
     for (name, data) in corpus() {
         let f = filter_for(&name);
         let a = extract(f.as_ref(), &data).unwrap();
-        let b = f.extract(&data, &ExtractOptions { granularity: Granularity::Paragraph, source_lang: Some("en-US".into()), ..Default::default() }).unwrap();
+        let b = f.extract(&data, &ExtractOptions::new().with_granularity(Granularity::Paragraph).with_source_lang("en-US")).unwrap();
         assert_eq!(a.units.iter().map(|u| u.id.clone()).collect::<Vec<_>>(), b.units.iter().map(|u| u.id.clone()).collect::<Vec<_>>());
         assert!(a.units.iter().all(|u| u.segments.len() == 1));
         for (i, u) in a.units.iter().enumerate() {
@@ -121,7 +121,7 @@ fn ids_are_stable_and_paragraph_mode_works() {
 fn locked_units_for_text_without_letters() {
     let f = mw();
     let src = b"Text here.\n\n* 123\n* 45 678\n";
-    let o = ExtractOptions { include_locked: true, ..Default::default() };
+    let o = ExtractOptions::new().with_include_locked(true);
     let doc = f.extract(src, &o).unwrap();
     assert_eq!(doc.units.len(), 3);
     assert!(doc.units[1..].iter().all(|u| !u.translate && u.id.starts_with('k')));

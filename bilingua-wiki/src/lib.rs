@@ -16,11 +16,11 @@ mod regions;
 mod render;
 
 use bilingua_model::*;
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{HashMap, HashSet};
 
 // Hidden codes on a unit (names start with `~`, never a tag id).
-const RAW: &str = "~raw"; // the source text of the span
-const CELL: &str = "~cell"; // how the translation is escaped: tpl, mw or dw
+const RAW: &str = "raw"; // the source text of the span
+const CELL: &str = "cell"; // how the translation is escaped: tpl, mw or dw
 
 /// The MediaWiki filter. `template_params` is the install's allow-list of translatable template parameters
 /// (LocOS `WIKI_TEMPLATE_PARAMS`); empty by default, which protects every template.
@@ -32,6 +32,10 @@ pub struct MediaWiki {
 /// The `ExtractOptions::format_options` key that lists translatable template parameters for one call, in the
 /// [`MediaWiki::with_template_params`] spelling (`Quote:text,Note:1`); it adds to the filter's own list.
 pub const TEMPLATE_PARAMS_KEY: &str = "wiki.template_params";
+
+/// The `format_options` keys of the MediaWiki filter.
+pub const FORMAT_OPTIONS: &[FormatOptionKey] =
+    &[FormatOptionKey::text(TEMPLATE_PARAMS_KEY, "Template parameters whose values are translated (see TEMPLATE_PARAMS_KEY).")];
 
 /// The DokuWiki filter.
 #[derive(Debug, Clone, Copy, Default)]
@@ -53,10 +57,6 @@ impl MediaWiki {
         }
         MediaWiki { allow }
     }
-}
-
-fn hidden(c: &mut BTreeMap<String, CodeData>, key: &str, v: &str) {
-    c.insert(key.into(), CodeData { standalone: Some(v.to_string()), ..Default::default() });
 }
 
 fn strip_edges(inl: Vec<Inline>) -> Vec<Inline> {
@@ -144,9 +144,9 @@ fn extract_wiki(id: &'static str, dw: bool, allow: &HashSet<(String, String)>, b
         };
         let mut u = Unit::new(uid, inl);
         u.codes = tok.codes;
-        hidden(&mut u.codes, RAW, raw);
+        u.set_hidden(RAW, raw);
         if let Some(c) = slot.cell {
-            hidden(&mut u.codes, CELL, c);
+            u.set_hidden(CELL, c);
         }
         if !translatable {
             u.translate = false;
@@ -166,15 +166,7 @@ fn extract_wiki(id: &'static str, dw: bool, allow: &HashSet<(String, String)>, b
     }
     parts.push(SkelPart::Raw(text.get(pos..).unwrap_or("").to_string()));
     parts.retain(|p| !matches!(p, SkelPart::Raw(s) if s.is_empty()));
-    let doc = Document {
-        format: id.into(),
-        source_lang: opts.source_lang.clone(),
-        target_lang: opts.target_lang.clone(),
-        granularity: opts.granularity,
-        units,
-        skeleton: Skeleton::text(parts, dec.encoding.clone(), bilingua_model::parser_info!()),
-        ..Default::default()
-    };
+    let doc = Document::new(id, units, Skeleton::text(parts, dec.encoding.clone(), bilingua_model::parser_info!())).with_options(opts);
     guard::finish(doc, std::mem::take(&mut dec.warnings), &limits)
 }
 
@@ -183,7 +175,7 @@ fn merge_wiki(id: &str, dw: bool, doc: &Document, opts: &MergeOptions) -> Result
     let Skeleton::Text { parts, encoding, .. } = &doc.skeleton else {
         return Err(Error::Write(format!("{id} needs a text skeleton")));
     };
-    let raw_of = |u: &Unit| u.codes.get(RAW).and_then(|c| c.standalone.clone()).unwrap_or_default();
+    let raw_of = |u: &Unit| u.hidden(RAW).map(str::to_string).unwrap_or_default();
     let mut out = String::new();
     for p in parts {
         match p {
@@ -191,7 +183,7 @@ fn merge_wiki(id: &str, dw: bool, doc: &Document, opts: &MergeOptions) -> Result
             SkelPart::Unit(i) => {
                 let u = doc.units.get(*i).ok_or_else(|| Error::Write(format!("skeleton points at missing unit {i}")))?;
                 let raw = raw_of(u);
-                if !u.translate || u.segments.iter().all(|s| s.target.is_empty()) {
+                if !u.translate || u.segments.iter().all(|s| !s.has_target()) {
                     out.push_str(&raw);
                     continue;
                 }
@@ -199,7 +191,7 @@ fn merge_wiki(id: &str, dw: bool, doc: &Document, opts: &MergeOptions) -> Result
                 if src == new {
                     out.push_str(&raw);
                 } else {
-                    let cell = u.codes.get(CELL).and_then(|c| c.standalone.as_deref());
+                    let cell = u.hidden(CELL);
                     out.push_str(&render::render(&new, &u.codes, cell, u.context.kind.as_deref(), dw));
                 }
             }
@@ -213,6 +205,9 @@ fn merge_wiki(id: &str, dw: bool, doc: &Document, opts: &MergeOptions) -> Result
 impl Filter for MediaWiki {
     fn id(&self) -> &'static str {
         "wiki"
+    }
+    fn format_option_keys(&self) -> &'static [FormatOptionKey] {
+        FORMAT_OPTIONS
     }
     fn extensions(&self) -> &'static [&'static str] {
         &["wiki", "mediawiki", "wikitext"]
@@ -231,9 +226,6 @@ impl Filter for MediaWiki {
             _ => extract_wiki("wiki", false, &self.allow, bytes, opts),
         }
     }
-    fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
-        merge_wiki("wiki", false, doc, &MergeOptions::default())
-    }
     fn merge_with(&self, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
         merge_wiki("wiki", false, doc, opts)
     }
@@ -251,9 +243,6 @@ impl Filter for DokuWiki {
     }
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
         extract_wiki("dokuwiki", true, &HashSet::new(), bytes, opts)
-    }
-    fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
-        merge_wiki("dokuwiki", true, doc, &MergeOptions::default())
     }
     fn merge_with(&self, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
         merge_wiki("dokuwiki", true, doc, opts)

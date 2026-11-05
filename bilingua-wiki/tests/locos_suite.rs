@@ -310,7 +310,7 @@ fn encodings() {
 
 #[test]
 fn caps() {
-    let lim = |units: usize, chars: usize| ExtractOptions { limits: Some(Limits { max_units: units, max_unit_chars: chars, ..Limits::default() }), ..Default::default() };
+    let lim = |units: usize, chars: usize| ExtractOptions::new().with_limits(Limits::new().with_max_units(units).with_max_unit_chars(chars));
     let mw_many: String = (0..20).map(|i| format!("* item {i}\n")).collect();
     let dw_many: String = (0..20).map(|i| format!("  * item {i}\n")).collect();
     let braces = format!("{}\n", "{{".repeat(300));

@@ -1,19 +1,19 @@
 //! Developer tool (not shipped): `dump FILE` prints the units as JSON, `gen PATH MB` writes a large generated file,
 //! `time FILE` times extract, untouched merge and a pseudo-translated merge.
 
-use bilingua_model::locos::to_locos_text;
+use bilingua_model::profile::tokens::to_locos_text;
 use bilingua_model::*;
 use bilingua_ttml::{Limits, Ttml};
 use std::time::Instant;
 
 fn big() -> Limits {
-    Limits { max_units: 50_000_000, max_unit_chars: 10_000_000, max_input_bytes: 2 << 30, max_lines: 100_000_000, max_xml_elements: 100_000_000, ..Limits::default() }
+    Limits::new().with_max_units(50_000_000).with_max_unit_chars(10_000_000).with_max_input_bytes(2 << 30).with_max_lines(100_000_000).with_max_xml_elements(100_000_000)
 }
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
     let f = Ttml;
-    let opts = ExtractOptions { granularity: Granularity::Paragraph, ..Default::default() };
+    let opts = ExtractOptions::new().with_granularity(Granularity::Paragraph);
     match args.get(1).map(String::as_str) {
         Some("dump") => {
             let bytes = std::fs::read(&args[2]).expect("read");

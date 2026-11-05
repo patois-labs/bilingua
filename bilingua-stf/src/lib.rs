@@ -51,6 +51,10 @@ const MONOLINGUAL: &str = "label";
 /// The format option that turns target loading off.
 pub const LOAD_TARGETS: &str = "stf.load_targets";
 
+/// The `format_options` keys of the STF filter.
+pub const FORMAT_OPTIONS: &[FormatOptionKey] =
+    &[FormatOptionKey::bool(LOAD_TARGETS, "Load the translations of a Bilingual STF file as targets (default true).")];
+
 /// Salesforce label limits by key type, never enforced by truncation.
 pub fn max_length_for_key(key: &str) -> Option<usize> {
     if let Some(r) = key.strip_prefix("CustomField.") {
@@ -140,7 +144,7 @@ pub struct OverLimit {
 }
 
 fn decode(bytes: &[u8], opts: &ExtractOptions, limits: &Limits) -> Result<enc::Decoded, Error> {
-    let o = DecodeOptions { declared: false, source_lang: opts.source_lang.as_deref(), limits: *limits };
+    let o = DecodeOptions::with_limits(*limits).with_source_lang(opts.source_lang.as_deref());
     let dec = enc::decode_text(bytes, &o)?;
     if dec.text.contains('\0') {
         return Err(Error::Encoding(
@@ -281,7 +285,7 @@ fn has_new_target(u: &Unit) -> bool {
 }
 
 fn has_target(u: &Unit) -> bool {
-    u.translate && u.segments.iter().any(|s| !s.target.is_empty())
+    u.translate && u.segments.iter().any(|s| s.has_target())
 }
 
 /// The cell text to write for a unit.
@@ -400,16 +404,7 @@ impl StfFilter {
         if pos < text.len() {
             parts.push(SkelPart::Raw(text[pos..].to_string()));
         }
-        let doc = Document {
-            format: ID.into(),
-            name: None,
-            source_lang: opts.source_lang.clone(),
-            target_lang: opts.target_lang.clone(),
-            granularity: opts.granularity,
-            units,
-            skeleton: Skeleton::text(parts, dec.encoding, bilingua_model::parser_info!()),
-            ..Default::default()
-        };
+        let doc = Document::new(ID, units, Skeleton::text(parts, dec.encoding, bilingua_model::parser_info!())).with_options(opts);
         guard::finish(doc, dec.warnings, limits)
     }
 }
@@ -447,6 +442,9 @@ impl Filter for StfFilter {
     fn id(&self) -> &'static str {
         ID
     }
+    fn format_option_keys(&self) -> &'static [FormatOptionKey] {
+        FORMAT_OPTIONS
+    }
 
     fn extensions(&self) -> &'static [&'static str] {
         &["stf"]
@@ -483,10 +481,6 @@ impl Filter for StfFilter {
 
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
         self.extract_with(bytes, opts, &opts.limits())
-    }
-
-    fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
-        merge(doc, &MergeOptions::default())
     }
 
     fn merge_with(&self, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {

@@ -37,7 +37,7 @@ fn matches_locos_on_random_files_and_corpus() {
         let want: Vec<String> = c["units"].as_array().unwrap().iter().map(|u| u.as_str().unwrap().to_string()).collect();
         assert_eq!(units(&data), want, "{name}: units");
         let off = bilingua_stf::StfFilter.extract(&data, &locos_opts()).unwrap();
-        let off_units: Vec<String> = off.units.iter().map(|u| bilingua_model::locos::to_locos_text(&u.source()).0).collect();
+        let off_units: Vec<String> = off.units.iter().map(|u| bilingua_model::profile::tokens::to_locos_text(&u.source()).0).collect();
         assert_eq!(off_units, want, "{name}: units without targets");
         assert!(off.units.iter().all(|u| u.segments[0].target.is_empty()), "{name}: stf.load_targets=false loads nothing");
         let styles: Vec<String> = extract(&data).unwrap().units.iter().map(|u| u.context.style.clone().unwrap()).collect();
@@ -54,20 +54,20 @@ fn matches_locos_on_random_files_and_corpus() {
             assert_eq!(r.section, w["section"].as_str().unwrap(), "{name}");
             assert_eq!(r.max_length.map(|n| n as u64), w["max_length"].as_u64(), "{name}");
         }
-        let utf8 = MergeOptions { output_encoding: OutputEncoding::Utf8, stamp_target_always: false };
+        let utf8 = MergeOptions::new().with_output_encoding(OutputEncoding::Utf8).with_stamp_target_always(false);
         for (label, want_hex) in c["builds"].as_object().unwrap() {
             let (kind, loc) = match label.split_once('@') {
                 Some((k, l)) => (k, locales.iter().find(|(n, _)| *n == l).map(|(_, v)| *v)),
                 None => (label.as_str(), None),
             };
             let m = mapping(kind, &want);
-            let (target, opts) = if loc.is_some() || label == "none@loc" { (Some(loc.unwrap_or("pt-BR")), MergeOptions::locos()) } else { (None, utf8) };
+            let (target, opts) = if loc.is_some() || label == "none@loc" { (Some(loc.unwrap_or("pt-BR")), bilingua_model::profile::locos().merge_options("stf")) } else { (None, utf8.clone()) };
             let opts = if target.is_none() && m.is_empty() { MergeOptions::default() } else { opts };
             // LocOS B-bytes: a plain build() with nothing written returns the upload as it came
             let want_bytes = if target.is_none() && m.is_empty() { data.clone() } else { hex(want_hex.as_str().unwrap()) };
             // both modes: the adapter's (no targets loaded) and the default (existing translations loaded as targets)
             for (mode, eo) in [("locos", locos_opts()), ("default", common::opts())] {
-                let eo = ExtractOptions { target_lang: target.map(String::from), ..eo };
+                let eo = eo.with_target_lang(target.map(String::from));
                 let got = build_opts(&data, &m, &eo, &opts);
                 assert_eq!(got, want_bytes, "{name}: build {label} ({mode})");
                 builds += 1;

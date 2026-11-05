@@ -69,7 +69,7 @@ fn line_endings_bom_and_utf16_are_kept() {
         // a translated merge keeps UTF-16; "write UTF-8" (the LocOS adapter) turns it into UTF-8
         let kept = build(&data, &[(0, "SALUT\nMONDE")]);
         assert_eq!(&kept[..2], &data[..2]);
-        let utf8 = try_build_with(&data, &[(0, "SALUT\nMONDE".into())], &MergeOptions::locos()).unwrap();
+        let utf8 = try_build_with(&data, &[(0, "SALUT\nMONDE".into())], &bilingua_model::profile::locos().merge_options("xml")).unwrap();
         assert!(utf8.starts_with(b"Scenarist_SCC"));
         assert_eq!(units(&utf8)[0], "SALUT\nMONDE");
     }
@@ -164,15 +164,15 @@ fn eleven_languages() {
             assert_eq!(same, b.lines().count() - 1, "{lang}");
         } else {
             let e = r.expect_err(lang);
-            assert!(matches!(e, Error::Write(_)), "{lang}: {e}");
+            assert!(matches!(e, Error::Write(_) | Error::Unwritable { .. }), "{lang}: {e}");
             let m = e.to_string();
             assert!(m.contains("caption 1 at 00:00:01:00") && m.contains("CEA-608 cannot show"), "{lang}: {m}");
         }
     }
     // and the same text in a document with a target language set: no language field exists in SCC, so nothing is
     // stamped, with or without "stamp always"
-    let mut doc = SccFilter.extract(&data, &ExtractOptions { target_lang: Some("fr".into()), ..Default::default() }).unwrap();
-    assert_eq!(SccFilter.merge_with(&doc, &MergeOptions { stamp_target_always: true, ..Default::default() }).unwrap(), data);
+    let mut doc = SccFilter.extract(&data, &ExtractOptions::new().with_target_lang("fr")).unwrap();
+    assert_eq!(SccFilter.merge_with(&doc, &MergeOptions::new().with_stamp_target_always(true)).unwrap(), data);
     doc.set_target("c1", vec![Inline::text("BONJOUR")]).unwrap();
     let out = SccFilter.merge(&doc).unwrap();
     assert_eq!(String::from_utf8(out).unwrap().lines().count(), SUITE.len());
@@ -210,7 +210,7 @@ fn a_translation_cannot_add_captions_codes_or_header_fields() {
                     }
                 }
             }
-            Err(e) => assert!(matches!(e, Error::Write(_)), "{a:?}: {e}"),
+            Err(e) => assert!(matches!(e, Error::Write(_) | Error::Unwritable { .. }), "{a:?}: {e}"),
         }
     }
     // an inline code the caption does not have cannot be set at all
@@ -235,22 +235,22 @@ fn tampered_documents_return_errors() {
     let doc = extract(&data).unwrap();
     // lost original line
     let mut d = doc.clone();
-    d.units[0].codes.remove("~raw");
-    assert!(matches!(SccFilter.merge(&d), Err(Error::Write(_))));
+    d.units[0].hidden.remove("raw");
+    assert!(matches!(SccFilter.merge(&d), Err(Error::Write(_) | Error::Unwritable { .. })));
     // lost or broken state
     let mut d = doc.clone();
     d.units[0].segments[0].target = vec![Inline::text("A")];
-    d.units[0].codes.get_mut("~state").unwrap().standalone = Some("9 nope 99".into());
-    assert!(matches!(SccFilter.merge(&d), Err(Error::Write(_)) | Ok(_)));
+    d.units[0].set_hidden("state", "9 nope 99");
+    assert!(matches!(SccFilter.merge(&d), Err(Error::Write(_) | Error::Unwritable { .. }) | Ok(_)));
     // a skeleton pointing at a missing unit
     let mut d = doc.clone();
     d.units.truncate(1);
-    assert!(matches!(SccFilter.merge(&d), Err(Error::Write(_))));
+    assert!(matches!(SccFilter.merge(&d), Err(Error::Write(_) | Error::Unwritable { .. })));
     // the raw line replaced by something that is not a caption line
     let mut d = doc.clone();
     d.units[0].segments[0].target = vec![Inline::text("A")];
-    d.units[0].codes.get_mut("~raw").unwrap().standalone = Some("hello".into());
-    assert!(matches!(SccFilter.merge(&d), Err(Error::Write(_))));
+    d.units[0].set_hidden("raw", "hello");
+    assert!(matches!(SccFilter.merge(&d), Err(Error::Write(_) | Error::Unwritable { .. })));
     // another crate's skeleton
     let mut d = doc.clone();
     d.skeleton = Skeleton::Text {
@@ -302,7 +302,7 @@ fn a_caption_that_would_read_back_on_channel_2_is_refused() {
     // the channel-2 code moved to the end: caption 1 now ends on channel 2 and caption 2 would vanish
     let e = try_build(&data, &[(0, "AB \u{27e6}x2\u{27e7} CD \u{27e6}x1\u{27e7}".to_string())]).unwrap_err();
     let msg = e.to_string();
-    assert!(matches!(e, Error::Write(_)), "{msg}");
+    assert!(matches!(e, Error::Write(_) | Error::Unwritable { .. }), "{msg}");
     assert!(msg.contains("caption 2 at 00:00:02:00: would be read back on data channel 2"), "{msg}");
     assert!(!msg.contains("caption 1 "), "{msg}");
     // the channel-1 code dropped: caption 1's own text is on channel 2, and so is caption 2

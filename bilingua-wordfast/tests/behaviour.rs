@@ -20,7 +20,7 @@ fn unit<'a>(d: &'a Document, id: &str) -> &'a Unit {
 }
 
 fn flat_target(u: &Unit) -> String {
-    locos::to_locos_text(&u.output()).0
+    profile::tokens::to_locos_text(&u.output()).0
 }
 
 #[test]

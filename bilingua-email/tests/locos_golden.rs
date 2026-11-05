@@ -73,8 +73,8 @@ fn build_map(data: &[u8], m: &[(usize, String)], locale: Option<&str>) -> Result
     let mut d = try_ex_to(data, locale).map_err(|e| e.to_string())?;
     for (i, t) in m {
         let u = &d.units[*i];
-        let (_, map) = bilingua_model::locos::to_locos_text(&u.source());
-        let inl = bilingua_model::locos::from_locos_text(t, &map);
+        let (_, map) = bilingua_model::profile::tokens::to_locos_text(&u.source());
+        let inl = bilingua_model::profile::tokens::from_locos_text(t, &map);
         let seg = u.segments[0].id.clone();
         d.set_target(&seg, inl).map_err(|e| e.to_string())?;
     }

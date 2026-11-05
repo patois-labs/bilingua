@@ -38,9 +38,9 @@ fn large_file() {
     if let Ok(p) = std::env::var("BILINGUA_STF_SPEED_OUT") {
         std::fs::write(p, &text).unwrap();
     }
-    let limits = Limits { max_units: 10_000_000, max_lines: 10_000_000, ..Limits::default() };
+    let limits = Limits::new().with_max_units(10_000_000).with_max_lines(10_000_000);
     let t0 = Instant::now();
-    let mut doc = StfFilter.extract_with(text.as_bytes(), &ExtractOptions { target_lang: Some("de-DE".into()), ..Default::default() }, &limits).unwrap();
+    let mut doc = StfFilter.extract_with(text.as_bytes(), &ExtractOptions::new().with_target_lang("de-DE"), &limits).unwrap();
     let t_extract = t0.elapsed();
     let n = doc.units.len();
     let t1 = Instant::now();
@@ -49,7 +49,7 @@ fn large_file() {
         t.extend(u.segments[0].source.iter().filter(|x| matches!(x, Inline::Tag { .. })).cloned());
         u.segments[0].target = t;
     }
-    let out = StfFilter.merge_with(&doc, &MergeOptions::locos()).unwrap();
+    let out = StfFilter.merge_with(&doc, &bilingua_model::profile::locos().merge_options("stf")).unwrap();
     let t_merge = t1.elapsed();
     let untouched = StfFilter.extract_with(text.as_bytes(), &ExtractOptions::default(), &limits).unwrap();
     assert_eq!(StfFilter.merge(&untouched).unwrap(), text.as_bytes());

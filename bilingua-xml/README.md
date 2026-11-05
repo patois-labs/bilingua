@@ -39,7 +39,7 @@ Decided the ITS 2.0 way (<https://www.w3.org/TR/its20/>), plus the dialect:
   back escaped. A run that is one CDATA section stays CDATA (`]]>` in a translation is split safely).
 - Unit ids are `u1`, `u2`, ... in document order. `context.key` is the element path (`/a/b/@title` for an attribute),
   `context.style` is `attr:<name>` or `a11y:img-alt` for an attribute unit, `context.location` the line.
-- Tag ids are the LocOS token numbers, so `bilingua_model::locos::to_locos_text` gives exactly `⟦g1⟧`,
+- Tag ids are the LocOS token numbers, so `bilingua_model::profile::tokens::to_locos_text` gives exactly `⟦g1⟧`,
   `⟦x2⟧` as the LocOS filter does. Display text: the start tag for an open tag, the end tag for a close
   tag, the raw markup (shortened to `<name>...</name>` when long) for a standalone one.
 

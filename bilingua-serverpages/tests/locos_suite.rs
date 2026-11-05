@@ -222,7 +222,7 @@ fn encodings() {
 fn caps() {
     // 10) segment and island caps enforced; large inputs stay linear
     let f = filter("phtml");
-    let small = ExtractOptions { limits: Some(Limits { max_units: 5, ..Limits::default() }), ..Default::default() };
+    let small = ExtractOptions::new().with_limits(Limits::new().with_max_units(5));
     let many: String = (0..10).map(|i| format!("<p>Line {i} <?= $v ?></p>")).collect();
     assert!(matches!(f.extract(many.as_bytes(), &small), Err(Error::Limit(_))));
     let islands = format!("<p>x</p>{}", "<?php ?>".repeat(60));

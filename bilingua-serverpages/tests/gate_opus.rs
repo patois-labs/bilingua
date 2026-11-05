@@ -62,11 +62,11 @@ fn merge_options_give_the_locos_behaviour() {
     // the default: nothing translated, the original bytes
     assert_eq!(f.merge(&doc).unwrap(), bytes.to_vec());
     // LocOS: stamped although nothing is translated, written as UTF-8 with a truthful charset
-    let out = String::from_utf8(f.merge_with(&doc, &MergeOptions::locos()).unwrap()).unwrap();
+    let out = String::from_utf8(f.merge_with(&doc, &bilingua_model::profile::locos().merge_options("xml")).unwrap()).unwrap();
     assert!(out.contains("lang=\"ar\"") && out.contains("dir=\"rtl\""), "{out}");
     assert!(out.contains("charset=\"UTF-8\"") && out.contains("Caf\u{e9}") && out.contains("<?= $n ?>"), "{out}");
     // stamp only, keep the encoding
-    let keep = MergeOptions { stamp_target_always: true, ..MergeOptions::default() };
+    let keep = MergeOptions::new().with_stamp_target_always(true);
     let out = f.merge_with(&doc, &keep).unwrap();
     let text = String::from_utf8_lossy(&out);
     assert!(out.contains(&0xE9) && text.contains("lang=\"ar\"") && text.contains("charset=\"windows-1252\""), "{text}");

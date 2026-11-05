@@ -1,5 +1,5 @@
 #![allow(dead_code)]
-use bilingua_model::locos::{from_locos_text, to_locos_text};
+use bilingua_model::profile::tokens::{from_locos_text, to_locos_text};
 use bilingua_model::*;
 use bilingua_stf::StfFilter;
 
@@ -14,7 +14,7 @@ pub fn extract(data: &[u8]) -> Result<Document, Error> {
 }
 
 pub fn extract_for(data: &[u8], target: Option<&str>) -> Result<Document, Error> {
-    StfFilter.extract(data, &ExtractOptions { target_lang: target.map(String::from), ..opts() })
+    StfFilter.extract(data, &opts().with_target_lang(target.map(String::from)))
 }
 
 /// The unit texts as LocOS makes them (`\u{27E6}x1\u{27E7}` for a placeholder).
@@ -25,12 +25,12 @@ pub fn units(data: &[u8]) -> Vec<String> {
 /// LocOS `build` / `build_localized` through Bilingua: `mapping` holds LocOS-token texts by unit index (as the
 /// adapter maps them), `target` the target locale (None = `build`), `merge` the options.
 pub fn build_with(data: &[u8], mapping: &[(usize, String)], target: Option<&str>, merge: &MergeOptions) -> Vec<u8> {
-    build_opts(data, mapping, &ExtractOptions { target_lang: target.map(String::from), ..opts() }, merge)
+    build_opts(data, mapping, &opts().with_target_lang(target.map(String::from)), merge)
 }
 
 /// The options the LocOS adapter extracts with: no targets loaded.
 pub fn locos_opts() -> ExtractOptions {
-    ExtractOptions { format_options: [(bilingua_stf::LOAD_TARGETS.to_string(), "false".to_string())].into(), ..opts() }
+    opts().with_format_options([(bilingua_stf::LOAD_TARGETS.to_string(), "false".to_string())].into())
 }
 
 /// `build_with` with explicit extract options.
@@ -47,7 +47,7 @@ pub fn build_opts(data: &[u8], mapping: &[(usize, String)], eo: &ExtractOptions,
 /// LocOS behaviour: UTF-8 out, stamp always when a target is given.
 pub fn build(data: &[u8], mapping: &[(usize, &str)], target: Option<&str>) -> Vec<u8> {
     let m: Vec<(usize, String)> = mapping.iter().map(|(i, t)| (*i, t.to_string())).collect();
-    build_with(data, &m, target, &MergeOptions::locos())
+    build_with(data, &m, target, &bilingua_model::profile::locos().merge_options("stf"))
 }
 
 pub fn all_with(data: &[u8], f: impl Fn(&str) -> String) -> Vec<(usize, String)> {

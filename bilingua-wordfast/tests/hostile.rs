@@ -24,7 +24,7 @@ fn check(data: &[u8]) {
     for (f, loads) in filters {
         let _ = f.sniff(data);
         for locked in [false, true] {
-            let o = ExtractOptions { include_locked: locked, ..opts() };
+            let o = opts().with_include_locked(locked);
             let Ok(d) = f.extract(data, &o) else { continue };
             assert!(f.merge(&d).expect("merge") == data, "untouched merge");
             if !loads {
@@ -230,13 +230,13 @@ fn malformed_and_truncated_files_are_typed_errors() {
 
 #[test]
 fn limits_give_typed_errors() {
-    let small = ExtractOptions { limits: Some(Limits { max_input_bytes: 100, ..Limits::default() }), ..opts() };
+    let small = opts().with_limits(Limits::new().with_max_input_bytes(100));
     let e = TXML.extract(&[b'a'; 200], &small).unwrap_err();
     assert!(matches!(e, Error::Limit(ref l) if l.kind == LimitKind::InputBytes));
-    let few = ExtractOptions { limits: Some(Limits { max_xml_elements: 10, ..Limits::default() }), ..opts() };
+    let few = opts().with_limits(Limits::new().with_max_xml_elements(10));
     let doc = format!("<txml>{}</txml>", "<a/>".repeat(100));
     assert!(matches!(TXML.extract(doc.as_bytes(), &few), Err(Error::Limit(_))));
-    let chars = ExtractOptions { limits: Some(Limits { max_unit_chars: 10, ..Limits::default() }), ..opts() };
+    let chars = opts().with_limits(Limits::new().with_max_unit_chars(10));
     let doc = "<txml><translatable><segment><source>this one is far too long</source></segment></translatable></txml>";
     assert!(matches!(TXML.extract(doc.as_bytes(), &chars), Err(Error::Limit(ref l)) if l.kind == LimitKind::UnitChars));
 }

@@ -132,15 +132,7 @@ impl XliffPackage {
             guard::check_unit_count(units.len(), &l)?;
         }
         let skeleton = Skeleton::zip(vec![ZipEntry { name: ORIGINAL.into(), data: ZipData::Raw(bytes.to_vec()) }], parser_info!());
-        let doc = Document {
-            format: self.id.to_string(),
-            source_lang,
-            target_lang,
-            granularity: Granularity::Paragraph,
-            units,
-            skeleton,
-            ..Default::default()
-        };
+        let doc = Document::new(self.id.to_string(), units, skeleton).with_source_lang(source_lang).with_target_lang(target_lang).with_granularity(Granularity::Paragraph);
         guard::finish(doc, vec![], &l)
     }
 
@@ -258,9 +250,6 @@ impl Filter for XliffPackage {
     }
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
         self.extract_doc(bytes, opts)
-    }
-    fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
-        self.merge_doc(doc, &MergeOptions::default())
     }
     /// `stamp_target_always`: with a `target_lang`, every XLIFF member's `<file>` without a language is stamped even
     /// when nothing was translated (LocOS `build_localized`). `output_encoding: utf-8`: a rewritten UTF-16 member is

@@ -230,8 +230,8 @@ impl Filter for Rc {
         guard::finish(doc, warnings, &limits)
     }
 
-    /// `stamp_target_always` writes the target LANGUAGE even when nothing is translated. `output_encoding` is not
-    /// used yet: the file keeps its code page.
+    /// `stamp_target_always` writes the target LANGUAGE even when nothing is translated. `output_encoding: Utf8`
+    /// writes UTF-8 (a UTF-8 BOM is kept; a UTF-16 BOM or code page is not); `Keep` keeps the file's encoding.
     fn merge_with(&self, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
         bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
         let Skeleton::Text { parts, encoding, .. } = &doc.skeleton else {
@@ -272,6 +272,9 @@ impl Filter for Rc {
                 out = s;
                 edited = true;
             }
+        }
+        if let Some(b) = bilingua_model::enc::utf8_output(&out, encoding, opts) {
+            return Ok(b);
         }
         Ok(codec::encode(&out, encoding, edited))
     }

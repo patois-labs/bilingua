@@ -324,7 +324,7 @@ mod tests {
 
     fn tl(t: &str) -> Option<String> {
         let tk = tokenize(t)?;
-        Some(bilingua_model::locos::to_locos_text(&tk.inlines).0)
+        Some(bilingua_model::profile::tokens::to_locos_text(&tk.inlines).0)
     }
 
     #[test]

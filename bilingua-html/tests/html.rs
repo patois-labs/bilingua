@@ -561,7 +561,7 @@ fn deep_nesting_is_a_typed_limit_error_and_fast() {
     assert!(matches!(Html.extract(src.as_bytes(), &tight), Err(Error::Limit(_))));
     assert!(Html.extract(src.as_bytes(), &ExtractOptions::default()).is_ok());
     // an unlimited depth (email passes usize::MAX for HTML parts) must not overflow
-    let open = ExtractOptions { limits: Some(Limits { max_xml_depth: usize::MAX, ..Limits::default() }), ..Default::default() };
+    let open = ExtractOptions::new().with_limits(Limits::new().with_max_xml_depth(usize::MAX));
     assert!(Html.extract(src.as_bytes(), &open).is_ok());
 }
 

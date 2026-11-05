@@ -142,15 +142,7 @@ fn parse_message(data: &[u8]) -> Result<Parsed, Error> {
 
 /// Limits that never refuse: the file was already accepted when it was extracted.
 fn unlimited() -> Limits {
-    Limits {
-        max_input_bytes: u64::MAX,
-        max_units: usize::MAX,
-        max_unit_chars: usize::MAX,
-        max_lines: usize::MAX,
-        max_xml_depth: usize::MAX,
-        max_xml_elements: usize::MAX,
-        ..Limits::default()
-    }
+    Limits::new().with_max_input_bytes(u64::MAX).with_max_units(usize::MAX).with_max_unit_chars(usize::MAX).with_max_lines(usize::MAX).with_max_xml_depth(usize::MAX).with_max_xml_elements(usize::MAX)
 }
 
 /// The HTML of a part read by `bilingua-html` as UTF-8 (a byte-order mark makes it skip the charset declaration,
@@ -159,7 +151,7 @@ fn html_doc(text: &str, source_lang: Option<&str>, limits: Limits) -> Result<Doc
     let mut bytes = Vec::with_capacity(text.len() + 3);
     bytes.extend_from_slice(&[0xEF, 0xBB, 0xBF]);
     bytes.extend_from_slice(text.as_bytes());
-    let opts = ExtractOptions { source_lang: source_lang.map(str::to_string), limits: Some(limits), ..Default::default() };
+    let opts = ExtractOptions::new().with_source_lang(source_lang.map(str::to_string)).with_limits(limits);
     shielded(|| Html.extract(&bytes, &opts))
 }
 
@@ -268,7 +260,7 @@ fn flat(inl: &[Inline]) -> String {
 
 /// Some(new inlines) when the unit holds a translation different from its source.
 fn changed(u: &Unit) -> Option<Vec<Inline>> {
-    if !u.translate || !u.segments.iter().any(|s| !s.target.is_empty()) {
+    if !u.translate || !u.segments.iter().any(|s| s.has_target()) {
         return None;
     }
     let out = u.output();
@@ -454,27 +446,21 @@ impl Filter for Email {
         if units.iter().all(blank) {
             return Err(Error::Unsupported("This email has no Subject or text body to translate (attachments are never translated).".into()));
         }
-        let doc = Document {
-            format: FORMAT.into(),
-            name: None,
-            source_lang: opts.source_lang.clone(),
-            target_lang: opts.target_lang.clone(),
-            granularity: opts.granularity,
-            units,
-            skeleton: Skeleton::zip(vec![ZipEntry { name: MEMBER.into(), data: ZipData::Raw(bytes.to_vec()) }], bilingua_model::parser_info!()),
-            warnings: vec![],
-        };
+        let doc = Document::new(FORMAT, units, Skeleton::zip(vec![ZipEntry { name: MEMBER.into(), data: ZipData::Raw(bytes.to_vec()) }], bilingua_model::parser_info!())).with_options(opts);
         guard::finish(doc, vec![], &limits)
     }
 
-    fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
+    /// `stamp_target_always` sets the Content-Language even when nothing is translated. `output_encoding` does not
+    /// re-encode the message: each MIME part keeps the charset its header declares (a mail client reads it from
+    /// there), so `Utf8` changes nothing here.
+    fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
         bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
         let data = original_of(doc)?;
         let parsed = parse_message(data)?;
         let limits = unlimited();
         let by_id: HashMap<&str, &Unit> = doc.units.iter().map(|u| (u.id.as_str(), u)).collect();
         let any_translated = doc.units.iter().any(|u| changed(u).is_some());
-        let tag = if any_translated { doc.target_lang.as_deref().and_then(lang::canonical_tag) } else { None };
+        let tag = opts.stamp_lang(doc, any_translated).and_then(lang::canonical_tag);
         let delims = delimiters(&parsed);
         let beol = parsed.eol.as_bytes();
         let mut header_edits: HashMap<usize, Edits> = HashMap::new();

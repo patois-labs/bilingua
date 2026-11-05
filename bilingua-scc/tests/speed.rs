@@ -69,7 +69,7 @@ fn large_file() {
     if let Ok(p) = std::env::var("BILINGUA_SCC_SPEED_OUT") {
         std::fs::write(p, &text).unwrap();
     }
-    let opts = ExtractOptions { limits: Some(Limits { max_units: 10_000_000, ..Limits::default() }), ..Default::default() };
+    let opts = ExtractOptions::new().with_limits(Limits::new().with_max_units(10_000_000));
     let t0 = Instant::now();
     let mut doc = SccFilter.extract(text.as_bytes(), &opts).unwrap();
     let t_extract = t0.elapsed();
@@ -78,7 +78,7 @@ fn large_file() {
     for (i, u) in doc.units.iter_mut().enumerate() {
         u.segments[0].target = vec![Inline::text(format!("Salut le monde, num\u{e9}ro {i}"))];
     }
-    let out = SccFilter.merge_with(&doc, &MergeOptions::locos()).unwrap();
+    let out = SccFilter.merge_with(&doc, &bilingua_model::profile::locos().merge_options("xml")).unwrap();
     let t_merge = t1.elapsed();
     let t2 = Instant::now();
     let untouched = SccFilter.merge(&SccFilter.extract(text.as_bytes(), &opts).unwrap()).unwrap();

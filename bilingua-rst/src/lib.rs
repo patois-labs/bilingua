@@ -186,12 +186,8 @@ fn write_unit(doc: &Document, i: usize, out: &mut String) -> Result<(), Error> {
 /// LocOS writes for every translated rst file and which is always read back.
 fn write_bytes(text: &str, tag: &str) -> Result<Vec<u8>, Error> {
     let base = enc::base(tag);
-    let out = write_legacy(text, tag, base)?;
-    let legacy = !matches!(base, "utf-8" | "utf-8-bom" | "utf-16le" | "utf-16be");
-    if legacy && std::str::from_utf8(&out).is_err() && enc::looks_binary(&out) {
-        return enc::encode_text(text, &format!("utf-8{}", &tag[base.len()..]));
-    }
-    Ok(out)
+    // the model's check (also inside `encode_text`): a shortened legacy merge that would read back as binary is UTF-8
+    enc::legacy_output_or_utf8(write_legacy(text, tag, base)?, text, tag)
 }
 
 fn write_legacy(text: &str, tag: &str, base: &str) -> Result<Vec<u8>, Error> {

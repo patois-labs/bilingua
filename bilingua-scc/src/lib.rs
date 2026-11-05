@@ -19,8 +19,8 @@ use line::*;
 const HEADER: &str = "Scenarist_SCC V1.0";
 /// A pre-parse budget: words per line. Real lines carry well under 100 words.
 pub const MAX_WORDS_PER_LINE: usize = 4096;
-const RAW: &str = "~raw";
-const STATE: &str = "~state";
+const RAW: &str = "raw";
+const STATE: &str = "state";
 
 /// The SCC filter.
 pub struct SccFilter;
@@ -213,11 +213,11 @@ impl Filter for SccFilter {
             }
             let n = units.len() + 1;
             guard::check_unit_count(n, &limits)?;
-            let (inl, mut codes) = atoms_to_inlines(&atoms, &line);
+            let (inl, codes) = atoms_to_inlines(&atoms, &line);
             let mut u = Unit::new(format!("c{n}"), inl);
-            codes.insert(RAW.into(), CodeData { standalone: Some(content.to_string()), ..Default::default() });
-            codes.insert(STATE.into(), CodeData { standalone: Some(before.to_text()), ..Default::default() });
             u.codes = codes;
+            u.set_hidden(RAW, content);
+            u.set_hidden(STATE, before.to_text());
             u.context.kind = Some("subtitle".into());
             u.context.key = Some(cap.tc.to_string());
             u.context.location = Some(format!("line {lineno}"));
@@ -250,23 +250,10 @@ impl Filter for SccFilter {
             ));
         }
         guard::finish(
-            Document {
-                format: "scc".into(),
-                name: None,
-                source_lang: opts.source_lang.clone(),
-                target_lang: opts.target_lang.clone(),
-                granularity: opts.granularity,
-                units,
-                skeleton: Skeleton::text(parts, dec.encoding.as_str(), parser_info!()),
-                warnings: vec![],
-            },
+            Document::new("scc", units, Skeleton::text(parts, dec.encoding.as_str(), parser_info!())).with_options(opts),
             warnings,
             &limits,
         )
-    }
-
-    fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
-        merge(doc, &MergeOptions::default())
     }
 
     fn merge_with(&self, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
@@ -276,11 +263,8 @@ impl Filter for SccFilter {
 
 /// The new text of a changed caption line, or the reason it was refused.
 fn rebuild(u: &Unit) -> Result<Option<String>, String> {
-    let raw = u.codes.get(RAW).and_then(|c| c.standalone.as_deref()).ok_or("the unit lost its original line")?;
-    let st = u
-        .codes
-        .get(STATE)
-        .and_then(|c| c.standalone.as_deref())
+    let raw = u.hidden(RAW).ok_or("the unit lost its original line")?;
+    let st = u.hidden(STATE)
         .and_then(State::from_text)
         .ok_or("the unit lost its caption state")?;
     let cap = split_caption(raw).ok_or("the original line is not a caption line")?;
@@ -356,16 +340,13 @@ fn merge(doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
             }
             SkelPart::Unit(i) => {
                 let u = doc.units.get(*i).ok_or_else(|| Error::Write(format!("skeleton points at missing unit {i}")))?;
-                let raw = u
-                    .codes
-                    .get(RAW)
-                    .and_then(|c| c.standalone.as_deref())
+                let raw = u.hidden(RAW)
                     .ok_or_else(|| Error::Write(format!("unit {} lost its original line", u.id)))?;
                 if raw.contains(['\r', '\n']) {
                     return Err(Error::Write(format!("unit {}: its original line holds a line break", u.id)));
                 }
                 unit_lines.push((lineno, *i));
-                let translated = u.translate && u.segments.iter().any(|s| !s.target.is_empty());
+                let translated = u.translate && u.segments.iter().any(|s| s.has_target());
                 if !translated {
                     out.push_str(raw);
                     continue;
@@ -387,10 +368,13 @@ fn merge(doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
     }
     if !problems.is_empty() {
         let more = if problems.len() > 10 { format!(" (and {} more)", problems.len() - 10) } else { String::new() };
-        return Err(Error::Write(format!(
-            "The SCC file was not exported: CEA-608 captions allow only Latin characters from the 608 set and {ROW_CELLS} characters per row. {}{more}. Shorten or transliterate these captions and export again.",
-            problems[..problems.len().min(10)].join("; ")
-        )));
+        return Err(Error::Unwritable {
+            unit: None,
+            reason: format!(
+                "The SCC file was not exported: CEA-608 captions allow only Latin characters from the 608 set and {ROW_CELLS} characters per row. {}{more}. Shorten or transliterate these captions and export again.",
+                problems[..problems.len().min(10)].join("; ")
+            ),
+        });
     }
     if rewritten {
         // lead decision (11-05, the rc precedent): refuse rather than write a caption that would vanish
@@ -400,7 +384,7 @@ fn merge(doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
                 .iter()
                 .take(10)
                 .map(|(i, ch2)| {
-                    let raw = doc.units[*i].codes.get(RAW).and_then(|c| c.standalone.as_deref()).unwrap_or("");
+                    let raw = doc.units[*i].hidden(RAW).unwrap_or("");
                     let tc = split_caption(raw).map(|c| c.tc).unwrap_or_default();
                     let why = if *ch2 {
                         "would be read back on data channel 2"
@@ -411,10 +395,13 @@ fn merge(doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
                 })
                 .collect();
             let more = if lost.len() > 10 { format!(" (and {} more)", lost.len() - 10) } else { String::new() };
-            return Err(Error::Write(format!(
-                "The SCC file was not exported: after translation these captions would not read back as channel 1 captions and would be lost. {}{more}. An inline code can switch the data channel: keep the inline codes where they were and export again.",
-                shown.join("; ")
-            )));
+            return Err(Error::Unwritable {
+                unit: None,
+                reason: format!(
+                    "The SCC file was not exported: after translation these captions would not read back as channel 1 captions and would be lost. {}{more}. An inline code can switch the data channel: keep the inline codes where they were and export again.",
+                    shown.join("; ")
+                ),
+            });
         }
     }
     enc::encode_text_with(&out, encoding, opts)

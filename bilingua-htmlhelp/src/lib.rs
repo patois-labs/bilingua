@@ -70,6 +70,10 @@ impl Kind {
 /// the merge being refused. HTML Help Workshop does not show those characters correctly. Off by default. The extract
 /// records it in the skeleton, so the merge of that document honours it.
 pub const UTF8_FALLBACK: &str = "htmlhelp.utf8_fallback";
+
+/// The `format_options` keys of the HTML Help filters.
+pub const FORMAT_OPTIONS: &[FormatOptionKey] =
+    &[FormatOptionKey::bool(UTF8_FALLBACK, "Write text the file's code page cannot hold as UTF-8 (LocOS HTMLHELP_UTF8_FALLBACK).")];
 const FALLBACK_MARK: &str = "utf8_fallback";
 
 /// The ANSI code page of an HTML Help project's language: `Language=0x419 Russian` in `[OPTIONS]` gives 1251. `None`
@@ -160,22 +164,14 @@ fn extract_impl(kind: Kind, bytes: &[u8], opts: &ExtractOptions, hint: Option<u1
     }
     parts.push(SkelPart::Raw(text[pos..].to_string()));
     guard::finish(
-        Document {
-            format: kind.id().into(),
-            source_lang: opts.source_lang.clone(),
-            target_lang: opts.target_lang.clone(),
-            granularity: opts.granularity,
-            units,
-            skeleton: Skeleton::text(parts, tag, bilingua_model::parser_info!()),
-            ..Default::default()
-        },
+        Document::new(kind.id(), units, Skeleton::text(parts, tag, bilingua_model::parser_info!())).with_options(opts),
         Vec::new(),
         &limits,
     )
 }
 
 fn changed(unit: &Unit, old: &str) -> Option<String> {
-    if !unit.translate || unit.segments.iter().all(|s| s.target.is_empty()) {
+    if !unit.translate || unit.segments.iter().all(|s| !s.has_target()) {
         return None;
     }
     let new = plain_text(&unit.output());
@@ -275,7 +271,7 @@ fn merge_impl(kind: Kind, doc: &Document, mo: &MergeOptions) -> Result<Vec<u8>, 
             }
         }
     }
-    let limits = Limits { max_units: usize::MAX, max_lines: usize::MAX, ..Limits::default() };
+    let limits = Limits::new().with_max_units(usize::MAX).with_max_lines(usize::MAX);
     let (spans, extra_see, extra_fonts, lang) = if kind == Kind::Hhp {
         let (u, l) = hhp::walk(&orig, &limits)?;
         (u, Vec::new(), Vec::new(), l)
@@ -286,7 +282,7 @@ fn merge_impl(kind: Kind, doc: &Document, mo: &MergeOptions) -> Result<Vec<u8>, 
     if spans.len() != order.len() || spans.iter().zip(&at).any(|(s, a)| (s.start, s.end) != *a) {
         return Err(Error::Write("the skeleton does not match its file; open the file again with the current parser".into()));
     }
-    let translated = order.iter().any(|&i| doc.units[i].translate && doc.units[i].segments.iter().any(|s| !s.target.is_empty()));
+    let translated = order.iter().any(|&i| doc.units[i].translate && doc.units[i].segments.iter().any(|s| s.has_target()));
     let target = doc.target_lang.as_deref().filter(|t| !t.trim().is_empty());
     // Localization OS's build_localized always stamps; Bilingua only when something is translated, unless asked.
     let localized = target.is_some() && (translated || mo.stamp_target_always);
@@ -456,8 +452,8 @@ macro_rules! filter {
             fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
                 extract_impl($kind, bytes, opts, None)
             }
-            fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
-                merge_impl($kind, doc, &MergeOptions::default())
+            fn format_option_keys(&self) -> &'static [FormatOptionKey] {
+                FORMAT_OPTIONS
             }
             fn merge_with(&self, doc: &Document, mo: &MergeOptions) -> Result<Vec<u8>, Error> {
                 merge_impl($kind, doc, mo)

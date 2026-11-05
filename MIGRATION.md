@@ -34,11 +34,30 @@ item below breaks code written against 0.1; after 1.0 these types grow without b
   empty. `Segment::has_target()` / `Unit::is_translated()` are the tests to use.
 - **Profiles.** `bilingua_model::locos` (the token conversion) is now `bilingua_model::profile::tokens`;
   `MergeOptions::locos()` is gone: use `profile::locos().merge_options(format)`.
+- **`Error::Unwritable { unit, reason }`** is new: the translation cannot be written in this format (does not
+  fit, a character has no code in the code table, it would read back as structure). `Error::Write` now only means
+  a broken or foreign skeleton. rc, properties and strings use it; `Error::UnknownProfile` and
+  `Error::FormatOption` are new too.
+- **A declared encoding is binding.** `enc::decode_text` refuses bytes that are not valid in the encoding a file
+  declares (XML declaration, meta charset, or a BOM in a declared format) with `Error::Encoding`, where it used to
+  fall back to a code page. Undeclared formats still fall back, as LocOS's `read_text_upload` does; plain text and
+  subtitles read a UTF-8 BOM plus invalid bytes as UTF-8 with U+FFFD (LocOS). `enc::DecodeOptions` is
+  `#[non_exhaustive]`: `DecodeOptions::new(&opts)` or `DecodeOptions::with_limits(l).with_source_lang(..).declared()`.
+- **bilingua-xml / bilingua-idml.** `MlConfig`, `MlInfo`, `Inspection`, `LangStamp`, `Detect` and `MlMode` are
+  `#[non_exhaustive]` (`MlConfig::new().with_source("en")`, `LangStamp::new().with_update(["xml:lang"])`,
+  `Detect::new().with_root_names(["recipe"])`); idml's `story::Where`, `Point` and `Part` are private.
 - **`sdl` limits.** `bilingua_sdl::ZipLimits` is gone: `SdlPackage::from_bytes_with_limits` and
   `MqPackage::from_bytes_with_limits` take `bilingua_model::Limits` (LocOS's numbers by default: 10 000 entries,
   256 MB unpacked; raise them for desktop use with `Limits::new().with_max_zip_bytes(..).with_max_zip_entries(..)`).
 
 ## Format-crate builders
+
+- **Binary files use `Skeleton::Binary`.** A crate that keeps the original bytes of a non-zip file (mo did; stl
+  does on its branch) stores them as `Skeleton::binary(bytes, parser_info!())`, not as a one-entry
+  `Skeleton::Zip`; bump `SKELETON_SCHEMA` and keep reading the old zip form in `merge` (see bilingua-mo's
+  `original_bytes`).
+- **`Error::Unwritable`** for a translation the format cannot hold (keep LocOS's message as `reason`); scc, stl and
+  subtext move over when they rebase.
 
 - **`Filter::merge_with(doc, &MergeOptions)` is the required method**; `merge(doc)` is provided. Implement
   `merge_with` only, and honour both options:
@@ -72,3 +91,13 @@ item below breaks code written against 0.1; after 1.0 these types grow without b
   `BilinguaError` with `code == "invalid_argument"`.
 - LocOS export keywords are accepted and ignored for now: `docx.walk`, `xlsx.walk`, `pptx.walk`, `xlsx.table`,
   `csv.table`, `markdown.walk`, `markdown.md_walk`, `markdown.fm_keys`, `json.dialect`.
+
+## CAT OS core (note for the lead)
+
+- `catcore` re-exported `bilingua_sdl::ZipLimits`; it now re-exports `bilingua_model::Limits as PackageLimits`
+  (`catcore/src/lib.rs`), and `catcore/tests/packages.rs` builds it with `PackageLimits::new().with_max_zip_*`.
+  `SdlPackage::from_bytes` / `MqPackage::from_bytes` keep LocOS's numbers (10 000 entries, 256 MB); the desktop
+  open-package path should call `from_bytes_with_limits` with larger limits of its own (not done here: no call
+  site in core passes limits today).
+- `catos-server/src/workspace.rs` builds its `ExtractOptions` with the builders; `catcore/src/inline.rs` maps a
+  future `SegState` by `is_accepted()`.

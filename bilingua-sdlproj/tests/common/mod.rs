@@ -5,7 +5,7 @@ use bilingua_model::*;
 use bilingua_sdlproj::Sdlproj;
 
 pub fn opts() -> ExtractOptions {
-    ExtractOptions { target_lang: Some("de-DE".into()), granularity: Granularity::Paragraph, ..Default::default() }
+    ExtractOptions::new().with_target_lang("de-DE").with_granularity(Granularity::Paragraph)
 }
 
 pub fn extract(data: &[u8]) -> Document {

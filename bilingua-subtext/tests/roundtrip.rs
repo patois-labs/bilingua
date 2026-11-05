@@ -38,7 +38,7 @@ fn enc(label: &str, s: &str) -> Vec<u8> {
 }
 
 fn pseudo(fmt: &str, data: &[u8], lang: &str, mo: &MergeOptions) -> (Document, Vec<u8>) {
-    let o = ExtractOptions { source_lang: Some(lang.into()), target_lang: Some("es-ES".into()), ..opts() };
+    let o = opts().with_source_lang(lang).with_target_lang("es-ES");
     let mut doc = filter(fmt).extract(data, &o).unwrap();
     for u in &mut doc.units {
         let mut t = vec![Inline::text("\u{3042}\u{627} Zq ")];
@@ -51,18 +51,18 @@ fn pseudo(fmt: &str, data: &[u8], lang: &str, mo: &MergeOptions) -> (Document, V
 }
 
 fn check(fmt: &str, data: &[u8], lang: &str, expect_units: usize) {
-    let o = ExtractOptions { source_lang: Some(lang.into()), ..opts() };
+    let o = opts().with_source_lang(lang);
     let doc = filter(fmt).extract(data, &o).unwrap_or_else(|e| panic!("{fmt} {lang}: {e}"));
     assert_eq!(doc.units.len(), expect_units, "{fmt} {lang}");
     assert_eq!(filter(fmt).merge(&doc).unwrap(), data, "{fmt} {lang}: untouched merge");
     // a target locale and the stamp-always option change nothing: neither format names a language
     let mut with_target = doc.clone();
     with_target.target_lang = Some("fr-FR".into());
-    let always = MergeOptions { stamp_target_always: true, ..Default::default() };
+    let always = MergeOptions::new().with_stamp_target_always(true);
     assert_eq!(filter(fmt).merge_with(&with_target, &always).unwrap(), data, "{fmt} {lang}: stamp");
-    for mo in [MergeOptions::default(), MergeOptions::locos()] {
+    for mo in [MergeOptions::default(), bilingua_model::profile::locos().merge_options("xml")] {
         let (before, out) = pseudo(fmt, data, lang, &mo);
-        let back = filter(fmt).extract(&out, &ExtractOptions { source_lang: Some(lang.into()), ..opts() }).unwrap_or_else(|e| panic!("{fmt} {lang}: reread: {e}"));
+        let back = filter(fmt).extract(&out, &opts().with_source_lang(lang)).unwrap_or_else(|e| panic!("{fmt} {lang}: reread: {e}"));
         assert_eq!(back.units.len(), before.units.len(), "{fmt} {lang}: unit count");
         for (a, b) in before.units.iter().zip(&back.units) {
             let tags = |u: &Unit| u.source().iter().filter(|i| matches!(i, Inline::Tag { .. })).count();
@@ -100,7 +100,7 @@ fn eleven_languages_in_utf8_bom_crlf_and_their_code_pages() {
 
 /// A pseudo translation that fits the code page (ASCII), merged keeping the encoding.
 fn pseudo_keep(fmt: &str, data: &[u8], lang: &str) -> (Document, Vec<u8>) {
-    let o = ExtractOptions { source_lang: Some(lang.into()), ..opts() };
+    let o = opts().with_source_lang(lang);
     let mut doc = filter(fmt).extract(data, &o).unwrap();
     for u in &mut doc.units {
         let mut t = vec![Inline::text("Zq ")];
@@ -127,7 +127,7 @@ fn utf16_both_orders() {
             // kept as UTF-16 by default, UTF-8 for the adapter
             let (_, kept) = pseudo(fmt, &le, src, &MergeOptions::default());
             assert!(kept.starts_with(&[0xFF, 0xFE]), "{lang}");
-            let (_, utf8) = pseudo(fmt, &le, src, &MergeOptions::locos());
+            let (_, utf8) = pseudo(fmt, &le, src, &bilingua_model::profile::locos().merge_options("xml"));
             assert!(!utf8.starts_with(&[0xFF, 0xFE]) && std::str::from_utf8(&utf8).is_ok(), "{lang}");
         }
     }
@@ -137,7 +137,7 @@ fn utf16_both_orders() {
 fn a_translation_outside_the_code_page_is_written_as_utf8() {
     let (_, _, cp, lines) = LANGS[1];
     let data = enc(cp, &sbv(&lines, "\n"));
-    let o = ExtractOptions { source_lang: Some("fr".into()), ..opts() };
+    let o = opts().with_source_lang("fr");
     let mut doc = Sbv.extract(&data, &o).unwrap();
     doc.units[0].segments[0].target = vec![Inline::text("\u{65e5}\u{672c}\u{8a9e}")];
     let out = Sbv.merge(&doc).unwrap();
@@ -163,8 +163,8 @@ fn units_carry_their_timing_and_stable_ids() {
 fn nothing_translated_keeps_every_byte_even_with_the_adapter_options() {
     let (_, _, cp, lines) = LANGS[6];
     for data in [enc(cp, &sbv(&lines, "\r\n")), sbv(&lines, "\r\n").into_bytes()] {
-        let o = ExtractOptions { source_lang: Some("ar".into()), target_lang: Some("en".into()), ..opts() };
+        let o = opts().with_source_lang("ar").with_target_lang("en");
         let doc = Sbv.extract(&data, &o).unwrap();
-        assert_eq!(Sbv.merge_with(&doc, &MergeOptions::locos()).unwrap(), data);
+        assert_eq!(Sbv.merge_with(&doc, &bilingua_model::profile::locos().merge_options("xml")).unwrap(), data);
     }
 }

@@ -30,7 +30,7 @@ fn check(data: &[u8]) {
             let n = doc.units.len();
             doc.set_targets(items).unwrap();
             doc.target_lang = Some("de".into());
-            let out = AssFilter.merge_with(&doc, &MergeOptions::locos()).unwrap();
+            let out = AssFilter.merge_with(&doc, &bilingua_model::profile::locos().merge_options("xml")).unwrap();
             // a translation can grow a line past the cap (each `{\r}` closing many pairs writes them all): refused, typed
             let back = match extract(&out) {
                 Ok(b) => b,
@@ -111,7 +111,7 @@ fn deep_and_huge_inputs_give_typed_errors_or_stay_linear() {
     // more events than the unit cap: refused
     let many = format!("[Events]\n{}", "Dialogue: 0,0,0,Default,,0,0,0,,Hi\n".repeat(50_001));
     assert!(matches!(extract(many.as_bytes()), Err(Error::Limit(_))));
-    let wide = ExtractOptions { limits: Some(Limits { max_units: 60_000, ..Limits::default() }), ..Default::default() };
+    let wide = ExtractOptions::new().with_limits(Limits::new().with_max_units(60_000));
     assert!(extract_with(many.as_bytes(), &wide).is_ok());
     // more lines than the line budget: refused before any scan
     assert!(matches!(extract("\n".repeat(1_000_001).as_bytes()), Err(Error::Limit(_))));
@@ -123,7 +123,7 @@ fn deep_and_huge_inputs_give_typed_errors_or_stay_linear() {
     check(b"\xff\xfe[\x00E\x00");
     assert!(extract(b"\xff\xfe\x00\xd8").is_err()); // a lone surrogate half
     // an input over the byte cap
-    let tiny = ExtractOptions { limits: Some(Limits { max_input_bytes: 10, ..Limits::default() }), ..Default::default() };
+    let tiny = ExtractOptions::new().with_limits(Limits::new().with_max_input_bytes(10));
     assert!(matches!(extract_with(b"[Events]\nDialogue: 0,0,0,0,0,0,0,0,0,hello", &tiny), Err(Error::Limit(_))));
 }
 

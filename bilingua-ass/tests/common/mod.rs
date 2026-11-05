@@ -2,7 +2,7 @@
 //! Helpers shared by the test files: the LocOS view of a document (unit texts with `\u{27E6}..\u{27E7}` tokens, builds
 //! from a `{index: text}` mapping) on top of the Bilingua model.
 use bilingua_ass::AssFilter;
-use bilingua_model::locos::{from_locos_text, parse_locos_text, to_locos_text, TokenProblem};
+use bilingua_model::profile::tokens::{from_locos_text, parse_locos_text, to_locos_text, TokenProblem};
 use bilingua_model::*;
 
 pub fn opts() -> ExtractOptions {
@@ -44,12 +44,12 @@ pub fn build(data: &[u8], mapping: &[(usize, &str)]) -> Vec<u8> {
 
 /// LocOS `build`: UTF-8 out.
 pub fn build_locos(data: &[u8], mapping: &[(usize, &str)]) -> Vec<u8> {
-    build_with(data, mapping, None, &MergeOptions::locos())
+    build_with(data, mapping, None, &bilingua_model::profile::locos().merge_options("xml"))
 }
 
 /// LocOS `build_localized`.
 pub fn build_localized(data: &[u8], mapping: &[(usize, &str)], target: Option<&str>) -> Vec<u8> {
-    build_with(data, mapping, target, &MergeOptions::locos())
+    build_with(data, mapping, target, &bilingua_model::profile::locos().merge_options("xml"))
 }
 
 pub fn build_with(data: &[u8], mapping: &[(usize, &str)], target: Option<&str>, mo: &MergeOptions) -> Vec<u8> {

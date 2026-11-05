@@ -158,7 +158,7 @@ fn stamp_only_when_something_is_translated_unless_asked() {
     let mut d = F.extract(TT, &opts_for(Some("ar"))).unwrap();
     // nothing translated: original bytes with the engine default, stamped with stamp_target_always
     assert_eq!(F.merge(&d).unwrap(), TT);
-    let always = MergeOptions { stamp_target_always: true, ..Default::default() };
+    let always = MergeOptions::new().with_stamp_target_always(true);
     let s = String::from_utf8(F.merge_with(&d, &always).unwrap()).unwrap();
     assert!(s.contains("xml:lang=\"ar\">\n  <head>") && s.contains("<div xml:lang=\"ar\">"), "{s}");
     assert!(!s.contains("direction"), "no caption rebuilt, so no direction: {s}");

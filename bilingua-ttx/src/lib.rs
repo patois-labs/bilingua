@@ -34,15 +34,11 @@ const WRITTEN_ORIGIN: &str = "mt";
 const SEP: char = '\u{1f}';
 
 // Hidden codes (ids start with `~`, never a tag id).
-const RAW: &str = "~raw"; // the source span as written
-const META: &str = "~meta"; // splice data, see `Meta`
-
-fn hidden(text: impl Into<String>) -> CodeData {
-    CodeData { standalone: Some(text.into()), ..Default::default() }
-}
+const RAW: &str = "raw"; // the source span as written
+const META: &str = "meta"; // splice data, see `Meta`
 
 fn code(u: &Unit, key: &str) -> Option<String> {
-    u.codes.get(key).and_then(|c| c.standalone.clone())
+    u.hidden(key).map(str::to_string)
 }
 
 fn perr(msg: impl Into<String>) -> Error {
@@ -270,7 +266,7 @@ impl Ttx {
             unit.context.kind = Some("segment".into());
             unit.context.location = Some(format!("Tu {}", key + 1));
             unit.context.key = Some(key.to_string());
-            unit.codes.insert(RAW.into(), hidden(tu_raw));
+            unit.set_hidden(RAW, tu_raw);
             if locked_reason.is_none() {
                 let tu_tag = &text[el.start..el.start_end];
                 let mut sig = String::new();
@@ -300,7 +296,7 @@ impl Ttx {
                     None => ('n', s_el.end - el.start, s_el.end - el.start, tree.qname(text, src)),
                 };
                 let meta = [kind.to_string(), (el.start_end - el.start).to_string(), rs.to_string(), re.to_string(), nm.to_string(), lead, trail, sig].join(&SEP.to_string());
-                unit.codes.insert(META.into(), hidden(meta));
+                unit.set_hidden(META, meta);
             }
             items.push(Item { start: el.start, end: el.end, unit });
         }
@@ -328,7 +324,7 @@ impl Ttx {
                 u.translate = false;
                 u.lock_reason = Some("text outside any segment".into());
                 u.context.kind = Some("unsegmented".into());
-                u.codes.insert(RAW.into(), hidden(&text[s..e]));
+                u.set_hidden(RAW, &text[s..e]);
                 items.push(Item { start: s, end: e, unit: u });
             }
         }
@@ -370,16 +366,7 @@ impl Ttx {
             parts.push(SkelPart::Raw(text[pos..].to_string()));
         }
         let pick = |header: &str, fallback: &Option<String>| if header.is_empty() { fallback.clone() } else { Some(header.to_string()) };
-        let doc = Document {
-            format: "ttx".into(),
-            name: None,
-            source_lang: pick(&l.source, &opts.source_lang),
-            target_lang: pick(&l.target, &opts.target_lang),
-            granularity: opts.granularity,
-            units,
-            skeleton: Skeleton::text(parts, codec::tag(dec.base, text, us_part), bilingua_model::parser_info!()),
-            warnings: Vec::new(),
-        };
+        let doc = Document::new("ttx", units, Skeleton::text(parts, codec::tag(dec.base, text, us_part), bilingua_model::parser_info!())).with_source_lang(pick(&l.source, &opts.source_lang)).with_target_lang(pick(&l.target, &opts.target_lang)).with_granularity(opts.granularity);
         guard::finish(doc, warnings, limits)
     }
 }
@@ -423,7 +410,7 @@ impl Filter for Ttx {
         self.extract_with(bytes, opts, &opts.limits())
     }
 
-    fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
+    fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
         bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
         let Skeleton::Text { parts, encoding, .. } = &doc.skeleton else {
             return Err(Error::Write("ttx needs a text skeleton".into()));
@@ -451,10 +438,14 @@ impl Filter for Ttx {
                 }
             }
         }
-        if let (true, true, false, Some((a, b)), Some(tag)) = (touched, header_target.is_empty(), doc_lang.is_empty(), us_range, us_tag) {
+        let stamp = opts.stamp_lang(doc, touched).is_some();
+        if let (true, true, false, Some((a, b)), Some(tag)) = (stamp, header_target.is_empty(), doc_lang.is_empty(), us_range, us_tag) {
             out.replace_range(a..b, &tagattr::set(tag, "TargetLanguage", &doc_lang));
         }
-        codec::encode(&out, &env.base)
+        match bilingua_model::enc::utf8_output(&out, &env.base, opts) {
+            Some(b) => Ok(b),
+            None => codec::encode(&out, &env.base),
+        }
     }
 }
 
@@ -466,7 +457,7 @@ fn write_unit(u: &Unit, tgt_lang: &str, crlf: bool, out: &mut String) -> Result<
         Ok(false)
     };
     let Some(meta) = code(u, META).filter(|_| u.translate) else { return untouched(out) };
-    let cur: Vec<Inline> = if u.segments.iter().all(|s| s.target.is_empty()) { Vec::new() } else { u.output() };
+    let cur: Vec<Inline> = if u.segments.iter().all(|s| !s.has_target()) { Vec::new() } else { u.output() };
     let f: Vec<&str> = meta.split(SEP).collect();
     if f.len() != 8 || cur.is_empty() || tokens::signature(&cur) == f[7] {
         return untouched(out);

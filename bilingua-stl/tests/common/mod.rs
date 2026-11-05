@@ -79,7 +79,7 @@ pub fn blocks(data: &[u8]) -> Vec<&[u8]> {
 }
 
 pub fn opts(target: Option<&str>) -> ExtractOptions {
-    ExtractOptions { target_lang: target.map(Into::into), ..Default::default() }
+    ExtractOptions::new().with_target_lang(target)
 }
 
 pub fn ex(data: &[u8]) -> Document {
@@ -155,7 +155,7 @@ pub fn build(data: &[u8], map: &[(usize, String)]) -> Result<Vec<u8>, Error> {
     for (k, t) in map {
         set(&mut d, *k, t);
     }
-    Stl.merge_with(&d, &MergeOptions::locos())
+    Stl.merge_with(&d, &bilingua_model::profile::locos().merge_options("xml"))
 }
 
 pub fn build_localized(data: &[u8], map: &[(usize, String)], locale: &str) -> Result<Vec<u8>, Error> {
@@ -163,5 +163,5 @@ pub fn build_localized(data: &[u8], map: &[(usize, String)], locale: &str) -> Re
     for (k, t) in map {
         set(&mut d, *k, t);
     }
-    Stl.merge_with(&d, &MergeOptions::locos())
+    Stl.merge_with(&d, &bilingua_model::profile::locos().merge_options("xml"))
 }

@@ -16,15 +16,11 @@ pub use bilingua_model::Limits;
 pub struct Ttml;
 
 // Hidden codes (ids start with `~`, never a tag id).
-const RAW: &str = "~raw"; // the content as written
-const META: &str = "~meta"; // `<p index>|<preserve 0/1>|<br element name>`
-
-fn hidden(text: impl Into<String>) -> CodeData {
-    CodeData { standalone: Some(text.into()), ..Default::default() }
-}
+const RAW: &str = "raw"; // the content as written
+const META: &str = "meta"; // `<p index>|<preserve 0/1>|<br element name>`
 
 fn code(u: &Unit, key: &str) -> Option<String> {
-    u.codes.get(key).and_then(|c| c.standalone.clone())
+    u.hidden(key).map(str::to_string)
 }
 
 fn head_text(bytes: &[u8]) -> String {
@@ -43,7 +39,7 @@ impl Ttml {
     pub fn extract_with(&self, bytes: &[u8], opts: &ExtractOptions, limits: &Limits) -> Result<Document, Error> {
         guard::check_input(bytes, limits)?;
         guard::check_xml(bytes, limits)?;
-        let dec = enc::decode_text(bytes, &enc::DecodeOptions { declared: true, source_lang: opts.source_lang.as_deref(), limits: *limits })?;
+        let dec = enc::decode_text(bytes, &enc::DecodeOptions::with_limits(*limits).with_source_lang(opts.source_lang.as_deref()).declared())?;
         let text = &dec.text;
         if enc::is_legacy(&dec.encoding) && enc::declared_encoding(bytes).is_none_or(|e| [encoding_rs::UTF_8, encoding_rs::UTF_16LE, encoding_rs::UTF_16BE].contains(&e)) {
             // XML (and the B6 rule for every XML format): bytes that are not UTF-8 or UTF-16 must name their
@@ -69,8 +65,8 @@ impl Ttml {
             let prefix = cap.qname.rsplit_once(':').map(|(p, _)| format!("{p}:")).unwrap_or_default();
             let mut u = Unit::new(format!("p{}", idx + 1), inl);
             u.codes = codes;
-            u.codes.insert(RAW.into(), hidden(content));
-            u.codes.insert(META.into(), hidden(format!("{idx}|{}|{prefix}br", u8::from(cap.preserve))));
+            u.set_hidden(RAW, content);
+            u.set_hidden(META, format!("{idx}|{}|{prefix}br", u8::from(cap.preserve)));
             line += text.as_bytes()[counted..cap.content_start].iter().filter(|b| **b == b'\n').count();
             counted = cap.content_start;
             u.context.kind = Some("subtitle".into());
@@ -92,16 +88,7 @@ impl Ttml {
         if pos < text.len() || parts.is_empty() {
             parts.push(SkelPart::Raw(text[pos..].to_string()));
         }
-        let doc = Document {
-            format: "ttml".into(),
-            name: None,
-            source_lang: opts.source_lang.clone().or_else(|| sc.root_lang.clone().filter(|l| !l.trim().is_empty())),
-            target_lang: opts.target_lang.clone(),
-            granularity: opts.granularity,
-            units,
-            skeleton: Skeleton::text(parts, dec.encoding, parser_info!()),
-            warnings: Vec::new(),
-        };
+        let doc = Document::new("ttml", units, Skeleton::text(parts, dec.encoding, parser_info!())).with_source_lang(opts.source_lang.clone().or_else(|| sc.root_lang.clone().filter(|l| !l.trim().is_empty()))).with_target_lang(opts.target_lang.clone()).with_granularity(opts.granularity);
         guard::finish(doc, dec.warnings, limits)
     }
 }
@@ -123,10 +110,6 @@ impl Filter for Ttml {
 
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
         self.extract_with(bytes, opts, &opts.limits())
-    }
-
-    fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
-        self.merge_with(doc, &MergeOptions::default())
     }
 
     fn merge_with(&self, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
@@ -155,7 +138,7 @@ impl Filter for Ttml {
         let mut changed: Vec<(usize, usize, usize, Vec<Inline>, usize)> = Vec::new();
         for (start, end, ui) in &spans {
             let u = &doc.units[*ui];
-            if !u.translate || u.segments.iter().all(|s| s.target.is_empty()) {
+            if !u.translate || u.segments.iter().all(|s| !s.has_target()) {
                 continue;
             }
             let new = u.output();
@@ -172,7 +155,7 @@ impl Filter for Ttml {
         let sc = if tag.is_some() {
             // the skeleton passed the limits at extraction (perhaps wider ones than the defaults): only the facts
             // are read again here, so the size budgets are not applied a second time
-            let wide = Limits { max_units: usize::MAX / 64, ..Limits::default() };
+            let wide = Limits::new().with_max_units(usize::MAX / 64);
             let dir_caps = if rtl { changed.iter().map(|c| c.4).collect() } else { std::collections::HashSet::new() };
             Some(scan::scan(&orig, &wide, &dir_caps).map_err(|e| Error::Write(format!("the skeleton no longer holds a TTML file: {e}")))?)
         } else {

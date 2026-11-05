@@ -466,7 +466,7 @@ pub fn walk(c: &Ctx) -> Result<Walked, Error> {
                 let ss = &tree.els[seg_source.expect("seg-source")];
                 let q = &ss.qname;
                 let tname = format!("{}target", &q[..q.len() - "seg-source".len()]);
-                extra.push(("~tmpl", std::mem::take(&mut template)));
+                extra.push(("tmpl", std::mem::take(&mut template)));
                 Some(Region { start: ss.end, end: ss.end, pre: format!("<{tname}>"), post: format!("</{tname}>") })
             } else {
                 None // written by the owner of the mirrored target

@@ -6,8 +6,8 @@ use std::time::Instant;
 fn main() {
     let path = std::env::args().nth(1).expect("file");
     let bytes = std::fs::read(&path).expect("read");
-    let limits = Limits { max_units: 10_000_000, max_xml_elements: 100_000_000, ..Limits::default() };
-    let opts = ExtractOptions { granularity: Granularity::Paragraph, ..Default::default() };
+    let limits = Limits::new().with_max_units(10_000_000).with_max_xml_elements(100_000_000);
+    let opts = ExtractOptions::new().with_granularity(Granularity::Paragraph);
     let txlf = path.ends_with(".txlf");
     let t = Instant::now();
     let mut d = if txlf { Txlf { load_targets: false }.extract_with(&bytes, &opts, &limits) } else { Txml { load_targets: false }.extract_with(&bytes, &opts, &limits) }.expect("extract");

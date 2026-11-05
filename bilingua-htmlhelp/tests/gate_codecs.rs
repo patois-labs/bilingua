@@ -73,28 +73,28 @@ fn gb2312_writes_python_bytes() {
 fn stamp_target_always_localizes_with_nothing_translated() {
     let hhp = cp1252(HHP);
     assert_eq!(merge_with(&HhpFilter, &hhp, &[], Some("fr-FR"), MergeOptions::default()).unwrap(), hhp);
-    let mo = MergeOptions { stamp_target_always: true, ..Default::default() };
-    let out = String::from_utf8(merge_with(&HhpFilter, &hhp, &[], Some("fr-FR"), mo).unwrap()).unwrap();
+    let mo = MergeOptions::new().with_stamp_target_always(true);
+    let out = String::from_utf8(merge_with(&HhpFilter, &hhp, &[], Some("fr-FR"), mo.clone()).unwrap()).unwrap();
     assert!(out.contains("Language=0x40c French (France)"), "{out}");
     // a sitemap: the target code page and the Font charset
     let hhc = cp1252(HHC);
-    let out = merge_with(&HhcFilter, &hhc, &[], Some("pl-PL"), mo).unwrap();
+    let out = merge_with(&HhcFilter, &hhc, &[], Some("pl-PL"), mo.clone()).unwrap();
     assert!(out.windows(14).any(|w| w == b"Tahoma,8,238\">"), "{}", String::from_utf8_lossy(&out));
 }
 
 #[test]
 fn output_encoding_utf8_writes_utf8_and_says_so() {
     let hhk = cp1252(HHK);
-    let mo = MergeOptions { output_encoding: OutputEncoding::Utf8, ..Default::default() };
-    let out = String::from_utf8(merge_with(&HhkFilter, &hhk, &[(0, "\u{43f}\u{435}\u{447}\u{430}\u{442}\u{44c}")], Some("ru-RU"), mo).unwrap()).unwrap();
+    let mo = MergeOptions::new().with_output_encoding(OutputEncoding::Utf8);
+    let out = String::from_utf8(merge_with(&HhkFilter, &hhk, &[(0, "\u{43f}\u{435}\u{447}\u{430}\u{442}\u{44c}")], Some("ru-RU"), mo.clone()).unwrap()).unwrap();
     assert!(out.contains("charset=UTF-8\"") && out.contains("value=\"\u{43f}\u{435}\u{447}\u{430}\u{442}\u{44c}\""), "{out}");
     // a UTF-8 BOM stays, a UTF-16 one goes
     let mut bom = b"\xef\xbb\xbf".to_vec();
     bom.extend_from_slice(HHC.as_bytes());
-    assert!(merge_with(&HhcFilter, &bom, &[(0, "x")], None, mo).unwrap().starts_with(b"\xef\xbb\xbf<!DOCTYPE"));
+    assert!(merge_with(&HhcFilter, &bom, &[(0, "x")], None, mo.clone()).unwrap().starts_with(b"\xef\xbb\xbf<!DOCTYPE"));
     let mut u16 = vec![0xFF, 0xFE];
     u16.extend(HHC.encode_utf16().flat_map(|u| u.to_le_bytes()));
-    assert!(merge_with(&HhcFilter, &u16, &[(0, "x")], None, mo).unwrap().starts_with(b"<!DOCTYPE"));
+    assert!(merge_with(&HhcFilter, &u16, &[(0, "x")], None, mo.clone()).unwrap().starts_with(b"<!DOCTYPE"));
 }
 
 #[test]

@@ -55,7 +55,7 @@ fn pseudo_translation_reads_back_with_the_same_units_and_tags() {
             assert_eq!(a.context.extra, b.context.extra, "{name}: timing never changes");
         }
         // and once more through the LocOS-style export (UTF-8 out)
-        let utf8 = F.merge_with(&d, &MergeOptions::locos()).unwrap();
+        let utf8 = F.merge_with(&d, &bilingua_model::profile::locos().merge_options("xml")).unwrap();
         let again = extract(&utf8);
         assert_eq!(again.units.len(), before.units.len(), "{name} utf-8 export");
         assert!(encoding(&again).starts_with("utf-8"), "{name}");

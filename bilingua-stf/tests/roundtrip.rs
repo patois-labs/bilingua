@@ -22,7 +22,7 @@ fn pseudo_translation_reads_back_with_same_units_and_tags() {
         let doc = extract(&data).unwrap();
         let before: Vec<Vec<Inline>> = doc.units.iter().map(|u| u.source()).collect();
         let m: Vec<(usize, String)> = all_with(&data, |t| format!("\u{ab}{t}\u{bb}"));
-        for opts in [MergeOptions::default(), MergeOptions::locos()] {
+        for opts in [MergeOptions::default(), bilingua_model::profile::locos().merge_options("stf")] {
             let out = build_with(&data, &m, Some("de-DE"), &opts);
             let back = extract(&out).unwrap_or_else(|e| panic!("{name}: {e}"));
             assert_eq!(back.units.len(), before.len(), "{name}");
@@ -50,7 +50,7 @@ fn untouched_merge_does_not_stamp_unless_asked() {
     let data = &corpus().into_iter().find(|(n, _)| n == "bilingual_en.stf").unwrap().1;
     let doc = extract_for(data, Some("de-DE")).unwrap();
     assert_eq!(StfFilter.merge(&doc).unwrap(), *data);
-    let stamped = StfFilter.merge_with(&doc, &MergeOptions { stamp_target_always: true, ..Default::default() }).unwrap();
+    let stamped = StfFilter.merge_with(&doc, &MergeOptions::new().with_stamp_target_always(true)).unwrap();
     assert!(String::from_utf8(stamped).unwrap().contains("Language code: de_DE\n"));
 }
 
@@ -62,7 +62,7 @@ fn keeps_the_encoding_unless_utf8_is_asked() {
         let kept = build_with(data, &m, None, &MergeOptions::default());
         assert_eq!(&kept[..2.min(kept.len())], &data[..2.min(data.len())], "{name}: byte-order mark kept");
         assert_eq!(units(&kept).len(), units(data).len(), "{name}");
-        let utf8 = build_with(data, &m, None, &MergeOptions { output_encoding: OutputEncoding::Utf8, ..Default::default() });
+        let utf8 = build_with(data, &m, None, &MergeOptions::new().with_output_encoding(OutputEncoding::Utf8));
         assert!(std::str::from_utf8(&utf8).is_ok(), "{name}: UTF-8 out");
         assert_eq!(units(&utf8), units(&kept), "{name}");
     }
@@ -78,7 +78,7 @@ fn legacy_code_pages_follow_the_source_language() {
     ] {
         let text = format!("Language code: {lang}\n# KEY\tLABEL\nCustomLabel.A\t{labels}\n");
         let (bytes, _, _) = bilingua_model::encoding_rs::Encoding::for_label(enc.as_bytes()).unwrap().encode(&text);
-        let o = ExtractOptions { source_lang: Some(lang.into()), ..Default::default() };
+        let o = ExtractOptions::new().with_source_lang(lang);
         let doc = StfFilter.extract(&bytes, &o).unwrap();
         assert_eq!(plain_text(&doc.units[0].source()), labels, "{lang}");
         assert_eq!(StfFilter.merge(&doc).unwrap(), bytes.as_ref(), "{lang}: untouched merge");

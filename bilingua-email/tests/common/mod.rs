@@ -7,7 +7,7 @@ use bilingua_email::Email;
 use bilingua_model::*;
 
 pub fn opts(target: Option<&str>) -> ExtractOptions {
-    ExtractOptions { source_lang: Some("en".into()), target_lang: target.map(str::to_string), ..Default::default() }
+    ExtractOptions::new().with_source_lang("en").with_target_lang(target.map(str::to_string))
 }
 
 pub fn ex(data: &[u8]) -> Document {
@@ -20,7 +20,7 @@ pub fn try_ex(data: &[u8]) -> Result<Document, Error> {
 
 /// The unit text the way Localization OS shows it.
 pub fn loc(u: &Unit) -> String {
-    bilingua_model::locos::to_locos_text(&u.source()).0
+    bilingua_model::profile::tokens::to_locos_text(&u.source()).0
 }
 
 pub fn texts(data: &[u8]) -> Vec<String> {
@@ -34,8 +34,8 @@ pub fn merged(d: &Document) -> Vec<u8> {
 /// Sets the target of unit number `i`, written with LocOS tokens.
 pub fn set_idx(d: &mut Document, i: usize, text: &str) {
     let u = &d.units[i];
-    let (_, map) = bilingua_model::locos::to_locos_text(&u.source());
-    let inl = bilingua_model::locos::from_locos_text(text, &map);
+    let (_, map) = bilingua_model::profile::tokens::to_locos_text(&u.source());
+    let inl = bilingua_model::profile::tokens::from_locos_text(text, &map);
     let seg = u.segments[0].id.clone();
     d.set_target(&seg, inl).unwrap_or_else(|e| panic!("set_target {i}: {e}"));
 }

@@ -154,7 +154,7 @@ fn script_info_language_stamp() {
     // nothing translated, default options: the exact bytes
     assert_eq!(AssFilter.merge(&doc).unwrap(), data);
     // stamp always: Language added after the header with the file's line end, other sections untouched
-    let mo = MergeOptions { stamp_target_always: true, ..Default::default() };
+    let mo = MergeOptions::new().with_stamp_target_always(true);
     let out = s(AssFilter.merge_with(&doc, &mo).unwrap());
     assert!(out.starts_with("[Script Info]\r\nLanguage: pt\r\nTitle: Show\r\n"), "{out:?}");
     assert!(out.contains("[V4+ Styles]\r\nLanguage: keep\r\n"));
@@ -182,7 +182,7 @@ fn legacy(enc: &'static Encoding, lang: &str, text: &str, tr: &str) {
     let (bytes, _, bad) = enc.encode(&src);
     assert!(!bad);
     let bytes = bytes.into_owned();
-    let o = ExtractOptions { source_lang: Some(lang.into()), ..Default::default() };
+    let o = ExtractOptions::new().with_source_lang(lang);
     let mut doc = AssFilter.extract(&bytes, &o).unwrap();
     assert_eq!(doc.units[1].source(), vec![Inline::text(text)], "{}", enc.name());
     assert_eq!(AssFilter.merge(&doc).unwrap(), bytes, "{} untouched", enc.name());
@@ -192,7 +192,7 @@ fn legacy(enc: &'static Encoding, lang: &str, text: &str, tr: &str) {
     let want_text = src.replace(text, tr);
     let (want, _, _) = enc.encode(&want_text);
     assert_eq!(out, want.into_owned(), "{} keeps its code page", enc.name());
-    let utf = AssFilter.merge_with(&doc, &MergeOptions { output_encoding: OutputEncoding::Utf8, ..Default::default() }).unwrap();
+    let utf = AssFilter.merge_with(&doc, &MergeOptions::new().with_output_encoding(OutputEncoding::Utf8)).unwrap();
     assert_eq!(s(utf), src.replace(text, tr));
 }
 
@@ -232,7 +232,7 @@ fn utf16_and_line_ends_survive_a_translation() {
 #[test]
 fn locked_comments_are_capped_too() {
     let big = format!("[Events]\nComment: 0,0,0,Default,,0,0,0,,{}x\nComment: 0,0,0,Default,,0,0,0,,small\nDialogue: 0,0,0,Default,,0,0,0,,Hi\n", "{\\i1}".repeat(30_000));
-    let o = ExtractOptions { include_locked: true, ..Default::default() };
+    let o = ExtractOptions::new().with_include_locked(true);
     let t = std::time::Instant::now();
     let doc = extract_with(big.as_bytes(), &o).unwrap();
     assert!(t.elapsed().as_secs() < 5);

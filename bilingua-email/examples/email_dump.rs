@@ -8,7 +8,7 @@ use std::collections::BTreeMap;
 fn units(path: &str) -> Result<Vec<String>, String> {
     let data = std::fs::read(path).map_err(|e| e.to_string())?;
     let d = Email.extract(&data, &ExtractOptions::default()).map_err(|e| e.to_string())?;
-    Ok(d.units.iter().map(|u| bilingua_model::locos::to_locos_text(&u.source()).0).collect())
+    Ok(d.units.iter().map(|u| bilingua_model::profile::tokens::to_locos_text(&u.source()).0).collect())
 }
 
 fn main() {

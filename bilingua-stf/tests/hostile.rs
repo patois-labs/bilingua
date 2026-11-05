@@ -18,7 +18,7 @@ fn check(data: &[u8]) {
             for (id, t) in ids {
                 doc.set_target(&id, vec![Inline::text(format!("~{t}~"))]).unwrap();
             }
-            for opts in [MergeOptions::default(), MergeOptions::locos()] {
+            for opts in [MergeOptions::default(), bilingua_model::profile::locos().merge_options("stf")] {
                 let out = StfFilter.merge_with(&doc, &opts).unwrap();
                 // a translation can stay a unit only if it has a letter; "~x~" always does
                 assert_eq!(units(&out).len(), n, "unit count after translation");
@@ -87,12 +87,12 @@ fn deep_and_huge_inputs_give_typed_errors() {
         many.push_str(&format!("K{i}\tv{i}\n"));
     }
     assert!(matches!(extract(many.as_bytes()), Err(Error::Limit(_))));
-    assert!(StfFilter.extract_with(many.as_bytes(), &ExtractOptions::default(), &Limits { max_units: 60_000, ..Limits::default() }).is_ok());
+    assert!(StfFilter.extract_with(many.as_bytes(), &ExtractOptions::default(), &Limits::new().with_max_units(60_000)).is_ok());
     // more lines than the line cap: refused before any scan
     let lines = "\n".repeat(1_000_001);
     assert!(matches!(extract(lines.as_bytes()), Err(Error::Limit(_))));
     // input over the byte cap
-    let l = Limits { max_input_bytes: 10, ..Limits::default() };
+    let l = Limits::new().with_max_input_bytes(10);
     assert!(matches!(StfFilter.extract_with(&[b'a'; 11], &opts(), &l), Err(Error::Limit(_))));
     // truncated multi-byte and UTF-16 files, lone surrogates, NUL
     let mut s = "K\t\u{65e5}\u{672c}\u{8a9e}\n".as_bytes().to_vec();
