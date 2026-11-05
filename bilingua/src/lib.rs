@@ -31,6 +31,9 @@ pub fn filters() -> Vec<Box<dyn Filter>> {
         Box::new(bilingua_po::Po),
         Box::new(bilingua_wxl::Wxl),
         Box::new(bilingua_resjson::Resjson),
+        // XMB and XTB are recognised by extension or by their root element (a tight sniff).
+        Box::new(bilingua_xmb::Xmb),
+        Box::new(bilingua_xmb::Xtb),
         // ARB before JSON: a no-extension file with a string @@locale is ARB.
         Box::new(bilingua_arb::Arb),
         // String Catalog: JSON with a string sourceLanguage and an object strings (strict sniff), before plain JSON.
