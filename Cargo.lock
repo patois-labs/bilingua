@@ -23,6 +23,7 @@ version = "0.1.0"
 dependencies = [
  "bilingua-adoc",
  "bilingua-arb",
+ "bilingua-ass",
  "bilingua-csv",
  "bilingua-desktop",
  "bilingua-docx",
@@ -94,6 +95,15 @@ version = "0.1.0"
 dependencies = [
  "bilingua-model",
  "bilingua-seg",
+ "proptest",
+ "serde_json",
+]
+
+[[package]]
+name = "bilingua-ass"
+version = "0.1.0"
+dependencies = [
+ "bilingua-model",
  "proptest",
  "serde_json",
 ]

@@ -1,5 +1,5 @@
 [workspace]
-members = ["bilingua-model", "bilingua-zip", "bilingua", "bilingua-seg", "bilingua-text", "bilingua-json", "bilingua-markdown", "bilingua-cli", "bilingua-docx", "bilingua-html", "bilingua-po", "bilingua-subtitle", "bilingua-xlsx", "bilingua-pptx", "bilingua-py", "bilingua-xliff", "bilingua-sdl", "bilingua-strings", "bilingua-toml", "bilingua-properties", "bilingua-resjson", "bilingua-json5", "bilingua-jsmodule", "bilingua-yaml", "bilingua-arb", "bilingua-resx", "bilingua-xaml", "bilingua-dtd", "bilingua-wxl", "bilingua-ftl", "bilingua-xcstrings", "bilingua-xmb", "bilingua-qtts", "bilingua-php", "bilingua-plist", "bilingua-xml", "bilingua-rc", "bilingua-mo", "bilingua-csv", "bilingua-xslt", "bilingua-desktop", "bilingua-epub", "bilingua-idml", "bilingua-odf", "bilingua-icml", "bilingua-mif", "bilingua-vsdx", "bilingua-xtg", "bilingua-adoc", "bilingua-mdx", "bilingua-latex", "bilingua-rst", "bilingua-email", "bilingua-ttx", "bilingua-serverpages", "bilingua-wordfast", "oracle", "bilingua-ini"]
+members = ["bilingua-model", "bilingua-zip", "bilingua", "bilingua-seg", "bilingua-text", "bilingua-json", "bilingua-markdown", "bilingua-cli", "bilingua-docx", "bilingua-html", "bilingua-po", "bilingua-subtitle", "bilingua-xlsx", "bilingua-pptx", "bilingua-py", "bilingua-xliff", "bilingua-sdl", "bilingua-strings", "bilingua-toml", "bilingua-properties", "bilingua-resjson", "bilingua-json5", "bilingua-jsmodule", "bilingua-yaml", "bilingua-arb", "bilingua-resx", "bilingua-xaml", "bilingua-dtd", "bilingua-wxl", "bilingua-ftl", "bilingua-xcstrings", "bilingua-xmb", "bilingua-qtts", "bilingua-php", "bilingua-plist", "bilingua-xml", "bilingua-rc", "bilingua-mo", "bilingua-csv", "bilingua-xslt", "bilingua-desktop", "bilingua-epub", "bilingua-idml", "bilingua-odf", "bilingua-icml", "bilingua-mif", "bilingua-vsdx", "bilingua-xtg", "bilingua-adoc", "bilingua-mdx", "bilingua-latex", "bilingua-rst", "bilingua-email", "bilingua-ttx", "bilingua-serverpages", "bilingua-wordfast", "oracle", "bilingua-ini", "bilingua-ass"]
 resolver = "2"
 
 [workspace.package]
@@ -28,6 +28,7 @@ bilingua = { path = "bilingua" }
 bilingua-xliff = { path = "bilingua-xliff" }
 bilingua-sdl = { path = "bilingua-sdl" }
 bilingua-ini = { path = "bilingua-ini" }
+bilingua-ass = { path = "bilingua-ass" }
 bilingua-mo = { path = "bilingua-mo" }
 bilingua-csv = { path = "bilingua-csv" }
 bilingua-ftl = { path = "bilingua-ftl" }

@@ -23,6 +23,7 @@ bilingua-xaml = { workspace = true }
 bilingua-xslt = { workspace = true }
 bilingua-xcstrings = { workspace = true }
 bilingua-subtitle = { workspace = true }
+bilingua-ass = { workspace = true }
 bilingua-xlsx = { workspace = true }
 bilingua-pptx = { workspace = true }
 bilingua-xliff = { workspace = true }
