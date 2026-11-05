@@ -322,7 +322,11 @@ impl Filter for Yaml {
                 return false;
             }
             let t = t.trim_start();
-            return t.starts_with("- ") || (t.find(':').is_some_and(|i| t[..i].chars().all(|c| !c.is_whitespace() || c == ' ') && (t.len() == i + 1 || t.as_bytes()[i + 1] == b' ') && i > 0));
+            // `key = "a: b"` (TOML, .strings, JS) and `// note: x` comments are not YAML keys
+            if t.starts_with('/') {
+                return false;
+            }
+            return t.starts_with("- ") || (t.find(':').is_some_and(|i| !t[..i].contains(['=', ';']) && t[..i].chars().all(|c| !c.is_whitespace() || c == ' ') && (t.len() == i + 1 || t.as_bytes()[i + 1] == b' ') && i > 0));
         }
         false
     }

@@ -163,3 +163,14 @@ fn rails_hundred_percent_of_fixture_values_survive() {
     assert_eq!(back.units.len(), d.units.len());
     assert!(String::from_utf8(out).unwrap().contains("\nde-DE:\n"));
 }
+
+#[test]
+fn sniff_claims_yaml_not_other_key_value_formats() {
+    use bilingua_model::Filter;
+    for yes in ["a: b\n", "---\nx: 1\n", "# c\n- item\n", "%YAML 1.1\n---\n", "\u{feff}k:\n  v: x\n"] {
+        assert!(bilingua_yaml::Yaml.sniff(yes.as_bytes()), "{yes:?}");
+    }
+    for no in ["title = \"a: b\"\n", "\"k\" = \"v: w\";\n", "// Copyright: me\nexport default {}\n", "module.exports = { a: 1 }\n", "key=value\n", "{\"a\": 1}\n", "[section]\n"] {
+        assert!(!bilingua_yaml::Yaml.sniff(no.as_bytes()), "{no:?}");
+    }
+}
