@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="gbk"?>
+<!-- zh strings -->
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib">
+    <sys:String x:Key="Welcome">欢迎来到流明面包店</sys:String>
+    <sys:String x:Key="Order">为{1}订购{0}个面包</sys:String>
+    <sys:String x:Key="Save">保存并关闭 &amp; 退出</sys:String>
+    <sys:String x:Key="Total">共计: %d 件</sys:String>
+    <sys:String x:Key="Bound">{Binding Path=Name}</sys:String>
+    <sys:String x:Key="Num">42</sys:String>
+    <SolidColorBrush x:Key="Accent" Color="#FF0078D7"/>
+</ResourceDictionary>

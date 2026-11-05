@@ -1,0 +1,17 @@
+[package]
+name = "bilingua-xaml"
+description = "Bilingua: XAML resource strings (WPF, UWP, WinUI, MAUI, Avalonia) parser and byte-faithful writer"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+bilingua-model = { workspace = true }
+quick-xml = { workspace = true }
+regex = { workspace = true }
+encoding_rs = "0.8"
+
+[dev-dependencies]
+proptest = { version = "1", default-features = false, features = ["std"] }
+serde_json = { workspace = true }

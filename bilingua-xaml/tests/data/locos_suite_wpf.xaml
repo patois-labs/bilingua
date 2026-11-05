@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Strings for the main window -->
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:system="clr-namespace:System;assembly=mscorlib">
+    <system:String x:Key="Greeting">Hello, {0}!</system:String>
+    <system:String x:Key='Save' >Save &amp; close</system:String>
+    <system:String x:Key="Empty"></system:String>
+    <system:String x:Key="Dash">--</system:String>
+    <system:String x:Key="Bound">{Binding Name}</system:String>
+    <system:String x:Key="Note"><!-- todo -->Later</system:String>
+    <system:String x:Key="Multi">
+        First line &#x41;&lt;b&gt;
+    </system:String>
+    <SolidColorBrush x:Key="Accent" Color="#FF0078D7"/>
+    <x:Double x:Key="Size">12</x:Double>
+</ResourceDictionary>

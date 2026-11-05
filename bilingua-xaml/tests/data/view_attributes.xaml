@@ -1,0 +1,16 @@
+<Window x:Class="App.Main" Title="Lumen Bakery orders"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" mc:Ignorable="d">
+  <!-- main layout -->
+  <Grid>
+    <Button Content="Place order" ToolTip="Sends the order &amp; closes" x:Name="Go"/>
+    <TextBlock Text="{Binding Status}"/>
+    <TextBlock Text="{}{0} loaves waiting"/>
+    <MenuItem Header="_File" />
+    <TextBox Text="12.5"/>
+    <TextBlock>
+      <Run Text="Fresh bread"/>
+    </TextBlock>
+  </Grid>
+</Window>
