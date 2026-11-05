@@ -1,0 +1,22 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<HTML><HEAD><meta http-equiv="Content-Type" content="text/html; charset=big5">
+<!-- Sitemap 1.0 -->
+</HEAD><BODY>
+<UL>
+	<LI> <OBJECT type="text/sitemap">
+		<param name="Name" value="線上訂購麵包">
+		<param name="Name" value="入門">
+		<param name="Local" value="html/zh-tw/start.htm">
+		<param name="Name" value="配送與自取">
+		<param name="Local" value="html/zh-tw/delivery.htm">
+		</OBJECT>
+	<LI> <OBJECT type="text/sitemap">
+		<param name="Keyword" value="常見問題">
+		<param name="Local" value="html/zh-tw/faq.htm">
+		</OBJECT>
+	<LI> <OBJECT type="text/sitemap">
+		<param name="Name" value="麵包店手冊">
+		<param name="See Also" value="線上訂購麵包">
+		</OBJECT>
+</UL>
+</BODY></HTML>

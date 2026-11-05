@@ -148,7 +148,7 @@ fn contains(hay: &[u8], needle: &[u8]) -> bool {
 
 fn fixtures() -> Vec<Vec<u8>> {
     let mut v = vec![cp1252(HHC), cp1252(HHK), cp1252(HHP), HHC.as_bytes().to_vec()];
-    let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../oracle/corpus/htmlhelp");
+    let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/corpus");
     if let Ok(rd) = std::fs::read_dir(dir) {
         let mut names: Vec<_> = rd.flatten().map(|f| f.path()).collect();
         names.sort();

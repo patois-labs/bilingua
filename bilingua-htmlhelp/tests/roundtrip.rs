@@ -1,5 +1,7 @@
-//! Round trips over the made-up corpus (`oracle/corpus/htmlhelp`): twelve languages in their Windows ANSI code pages, a
-//! UTF-8 (BOM) and a UTF-16 contents file.
+//! Round trips over the made-up corpus (`tests/fixtures/corpus`): twelve languages in their Windows ANSI code pages,
+//! a UTF-8 (BOM) and a UTF-16 contents file. The oracle corpus (`oracle/corpus/htmlhelp`) holds the files of it that
+//! the oracle's Spanish pseudo-translation can be written into (an Arabic or Korean ANSI file is refused for es-ES, as
+//! Localization OS refuses it).
 mod common;
 use bilingua_htmlhelp::*;
 use bilingua_model::encoding_rs::{Encoding, BIG5, EUC_KR, GBK, SHIFT_JIS, WINDOWS_1250, WINDOWS_1251, WINDOWS_1252, WINDOWS_1253, WINDOWS_1256, WINDOWS_1258};
@@ -7,7 +9,7 @@ use bilingua_model::*;
 use common::*;
 
 fn corpus() -> Vec<(String, Vec<u8>)> {
-    let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../oracle/corpus/htmlhelp");
+    let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/corpus");
     let mut out: Vec<(String, Vec<u8>)> = std::fs::read_dir(dir).unwrap().flatten().map(|f| (f.file_name().to_string_lossy().to_string(), std::fs::read(f.path()).unwrap())).collect();
     out.sort();
     assert!(out.len() >= 38, "{} corpus files", out.len());

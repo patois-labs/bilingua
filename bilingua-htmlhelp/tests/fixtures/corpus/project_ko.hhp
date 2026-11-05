@@ -1,0 +1,18 @@
+[OPTIONS]
+Compatibility=1.1 or later
+Compiled file=manual.chm
+Contents file=toc.hhc
+Default topic=html/ko/start.htm
+Display compile progress=No
+Index file=index.hhk
+Language=0x412 Korean (South Korea)
+Title=베이커리 안내서
+
+[WINDOWS]
+main="베이커리 도움말","toc.hhc","index.hhk","html/ko/start.htm","html/ko/start.htm",,,,,0x23520,,0x387e,,,,,,,,0
+
+[FILES]
+html/ko/start.htm
+; Title=not an option here
+
+[INFOTYPES]

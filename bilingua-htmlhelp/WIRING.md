@@ -14,7 +14,10 @@
   `bilingua-htmlhelp = { path = "bilingua-htmlhelp" }`. Dev-dependency `proptest = "1"` is already in the lockfile.
 - `bilingua/tests/contract.rs` `crate_of`: `"hhc" | "hhk" | "hhp" => "bilingua-htmlhelp"`.
 - `tools/check-portable.sh` and `.ps1`: add `htmlhelp` to `CRATES`.
-- Oracle corpus: `oracle/corpus/htmlhelp/` (38 files, made by `tests/tools/gen_corpus.py`).
+- Oracle corpus: `oracle/corpus/htmlhelp/` (20 files: every project file, the English, German and French contents and
+  index, the UTF-8 BOM and UTF-16 contents), a copy of the files of `tests/fixtures/corpus` (38, made by
+  `tests/tools/gen_corpus.py`) that the oracle's es-ES pseudo-translation fits: an Arabic, Greek or CJK ANSI sitemap
+  cannot be written in Windows-1252 and is refused, as LocOS refuses it. Row for `oracle/corpus/SOURCES.md` below.
 - Options, none in `ExtractOptions` beyond the usual:
   - `source_lang` picks the code page of an undeclared non-UTF-8 file (Japanese: Shift_JIS) when no project hint is given;
   - `HhcFilter::extract_with(bytes, opts, hhp_code_page)` / `HhkFilter::extract_with` / `HhpFilter::extract_with`

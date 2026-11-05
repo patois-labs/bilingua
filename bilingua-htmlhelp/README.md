@@ -25,7 +25,7 @@ Microsoft HTML Help 1.x project files for Bilingua: contents (`.hhc`), index (`.
   so an untouched merge is byte-exact.
 
 Tests: the Localization OS suite ported one to one (`tests/locos_suite.rs`), a differential test against 580 files
-LocOS produced goldens for (`tests/locos_golden.rs`), round trips over `oracle/corpus/htmlhelp`, hostile input and
+LocOS produced goldens for (`tests/locos_golden.rs`), round trips over `tests/fixtures/corpus`, hostile input and
 property tests, and a speed test. See `WIRING.md` for the facade lines.
 
 ```

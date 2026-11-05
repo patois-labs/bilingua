@@ -1,6 +1,9 @@
-"""Writes the made-up HTML Help corpus into oracle/corpus/htmlhelp (run once; the files are committed).
+"""Writes the made-up HTML Help corpus into tests/fixtures/corpus (run once; the files are committed).
 
-    C:\\Users\\brent\\code\\local-tms\\.venv\\Scripts\\python.exe gen_corpus.py ../../../oracle/corpus/htmlhelp
+    C:\\Users\\brent\\code\\local-tms\\.venv\\Scripts\\python.exe gen_corpus.py ../fixtures/corpus
+
+The oracle corpus (oracle/corpus/htmlhelp) is a copy of the files a Spanish pseudo-translation fits: every project
+file, the English, German and French contents and index, and the UTF-8 (BOM) and UTF-16 contents files.
 
 Twelve languages (English, German, French, Russian, Arabic, Japanese, Chinese simplified and traditional, Korean,
 Greek, Vietnamese, Polish), each as a contents, an index and a project file in the Windows ANSI code page of the

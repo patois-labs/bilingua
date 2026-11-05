@@ -1,0 +1,34 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<HTML>
+<HEAD>
+<meta http-equiv="Content-Type" content="text/html; charset=shift_jis">
+<meta name="GENERATOR" content="Microsoft&reg; HTML Help Workshop 4.1">
+<!-- Sitemap 1.0 -->
+</HEAD><BODY>
+<OBJECT type="text/site properties">
+	<param name="ImageType" value="Folder">
+	<param name="Font" value="Tahoma,8,128">
+</OBJECT>
+<UL>
+	<LI> <OBJECT type="text/sitemap">
+		<param name="Name" value="はじめに">
+		<param name="Local" value="html/ja/start.htm">
+		<param name="ImageNumber" value="1">
+		</OBJECT>
+	<LI> <OBJECT type="text/sitemap">
+		<param name="Name" value="パンをオンラインで注文">
+		<param name="Local" value="html/ja/order.htm">
+		</OBJECT>
+	<UL>
+		<LI> <OBJECT type="text/sitemap">
+			<param name="Name" value="配達と受け取り">
+			<param name="Local" value="html/ja/delivery.htm#top">
+			</OBJECT>
+	</UL>
+	<LI> <OBJECT type="text/sitemap">
+		<PARAM NAME=Name VALUE='よくある質問'>
+		<param name="Local" value="html/ja/faq.htm">
+		<param name="Comment" value="not translated">
+		</OBJECT>
+</UL>
+</BODY></HTML>

@@ -1,0 +1,18 @@
+[OPTIONS]
+Compatibility=1.1 or later
+Compiled file=manual.chm
+Contents file=toc.hhc
+Default topic=html/el/start.htm
+Display compile progress=No
+Index file=index.hhk
+Language=0x408 Greek (Greece)
+Title=Εγχειρίδιο αρτοποιείου
+
+[WINDOWS]
+main="Βοήθεια αρτοποιείου","toc.hhc","index.hhk","html/el/start.htm","html/el/start.htm",,,,,0x23520,,0x387e,,,,,,,,0
+
+[FILES]
+html/el/start.htm
+; Title=not an option here
+
+[INFOTYPES]

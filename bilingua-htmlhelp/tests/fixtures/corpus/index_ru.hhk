@@ -1,0 +1,22 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<HTML><HEAD><meta http-equiv="Content-Type" content="text/html; charset=windows-1251">
+<!-- Sitemap 1.0 -->
+</HEAD><BODY>
+<UL>
+	<LI> <OBJECT type="text/sitemap">
+		<param name="Name" value="Заказ хлеба онлайн">
+		<param name="Name" value="Начало работы">
+		<param name="Local" value="html/ru/start.htm">
+		<param name="Name" value="Доставка и самовывоз">
+		<param name="Local" value="html/ru/delivery.htm">
+		</OBJECT>
+	<LI> <OBJECT type="text/sitemap">
+		<param name="Keyword" value="Часто задаваемые вопросы">
+		<param name="Local" value="html/ru/faq.htm">
+		</OBJECT>
+	<LI> <OBJECT type="text/sitemap">
+		<param name="Name" value="Справочник пекарни">
+		<param name="See Also" value="Заказ хлеба онлайн">
+		</OBJECT>
+</UL>
+</BODY></HTML>

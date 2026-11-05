@@ -1,0 +1,34 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<HTML>
+<HEAD>
+<meta http-equiv="Content-Type" content="text/html; charset=gb2312">
+<meta name="GENERATOR" content="Microsoft&reg; HTML Help Workshop 4.1">
+<!-- Sitemap 1.0 -->
+</HEAD><BODY>
+<OBJECT type="text/site properties">
+	<param name="ImageType" value="Folder">
+	<param name="Font" value="Tahoma,8,134">
+</OBJECT>
+<UL>
+	<LI> <OBJECT type="text/sitemap">
+		<param name="Name" value="入门">
+		<param name="Local" value="html/zh/start.htm">
+		<param name="ImageNumber" value="1">
+		</OBJECT>
+	<LI> <OBJECT type="text/sitemap">
+		<param name="Name" value="在线订购面包">
+		<param name="Local" value="html/zh/order.htm">
+		</OBJECT>
+	<UL>
+		<LI> <OBJECT type="text/sitemap">
+			<param name="Name" value="配送与自取">
+			<param name="Local" value="html/zh/delivery.htm#top">
+			</OBJECT>
+	</UL>
+	<LI> <OBJECT type="text/sitemap">
+		<PARAM NAME=Name VALUE='常见问题'>
+		<param name="Local" value="html/zh/faq.htm">
+		<param name="Comment" value="not translated">
+		</OBJECT>
+</UL>
+</BODY></HTML>
