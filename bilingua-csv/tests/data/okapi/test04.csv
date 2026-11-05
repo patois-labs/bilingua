@@ -1,0 +1,4 @@
+col_notrans,col_text,col_html,col_markdown
+notrans,text,okf_html,okf_markdown
+data,some text,html <b>bold</b>,markdown **bold**
+data2,some text2,html <b>bold2</b>,markdown **bold2**

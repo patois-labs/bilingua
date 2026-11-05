@@ -1,0 +1,16 @@
+[package]
+name = "bilingua-csv"
+description = "Bilingua: CSV and TSV filter"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+bilingua-model = { workspace = true }
+encoding_rs = { workspace = true }
+
+[dev-dependencies]
+proptest = "1"
+serde_json = { workspace = true }
+bilingua-seg = { workspace = true }

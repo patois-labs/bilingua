@@ -1,5 +1,5 @@
 [workspace]
-members = ["bilingua-model", "bilingua-zip", "bilingua", "bilingua-seg", "bilingua-text", "bilingua-json", "bilingua-markdown", "bilingua-cli", "bilingua-docx", "bilingua-html", "bilingua-po", "bilingua-subtitle", "bilingua-xlsx", "bilingua-pptx", "bilingua-py", "bilingua-xliff", "bilingua-sdl", "bilingua-strings", "bilingua-toml", "bilingua-properties", "bilingua-resjson", "bilingua-json5", "bilingua-jsmodule", "bilingua-yaml", "bilingua-arb", "bilingua-resx", "bilingua-xaml", "bilingua-dtd", "bilingua-wxl", "bilingua-ftl", "bilingua-xcstrings", "bilingua-xmb", "bilingua-qtts", "bilingua-php", "bilingua-plist", "bilingua-xml", "bilingua-rc", "bilingua-mo", "oracle", "bilingua-ini"]
+members = ["bilingua-model", "bilingua-zip", "bilingua", "bilingua-seg", "bilingua-text", "bilingua-json", "bilingua-markdown", "bilingua-cli", "bilingua-docx", "bilingua-html", "bilingua-po", "bilingua-subtitle", "bilingua-xlsx", "bilingua-pptx", "bilingua-py", "bilingua-xliff", "bilingua-sdl", "bilingua-strings", "bilingua-toml", "bilingua-properties", "bilingua-resjson", "bilingua-json5", "bilingua-jsmodule", "bilingua-yaml", "bilingua-arb", "bilingua-resx", "bilingua-xaml", "bilingua-dtd", "bilingua-wxl", "bilingua-ftl", "bilingua-xcstrings", "bilingua-xmb", "bilingua-qtts", "bilingua-php", "bilingua-plist", "bilingua-xml", "bilingua-rc", "bilingua-mo", "bilingua-csv", "oracle", "bilingua-ini"]
 resolver = "2"
 
 [workspace.package]
@@ -29,6 +29,7 @@ bilingua-xliff = { path = "bilingua-xliff" }
 bilingua-sdl = { path = "bilingua-sdl" }
 bilingua-ini = { path = "bilingua-ini" }
 bilingua-mo = { path = "bilingua-mo" }
+bilingua-csv = { path = "bilingua-csv" }
 bilingua-ftl = { path = "bilingua-ftl" }
 bilingua-strings = { path = "bilingua-strings" }
 bilingua-toml = { path = "bilingua-toml" }

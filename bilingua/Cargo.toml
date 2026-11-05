@@ -29,6 +29,7 @@ bilingua-sdl = { workspace = true }
 bilingua-ini = { workspace = true }
 bilingua-mo = { workspace = true }
 bilingua-ftl = { workspace = true }
+bilingua-csv = { workspace = true }
 bilingua-strings = { workspace = true }
 bilingua-plist = { workspace = true }
 bilingua-resjson = { workspace = true }
