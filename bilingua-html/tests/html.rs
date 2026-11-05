@@ -560,6 +560,9 @@ fn deep_nesting_is_a_typed_limit_error_and_fast() {
     let tight = ExtractOptions { limits: Some(Limits { max_xml_depth: 20, ..Limits::default() }), ..Default::default() };
     assert!(matches!(Html.extract(src.as_bytes(), &tight), Err(Error::Limit(_))));
     assert!(Html.extract(src.as_bytes(), &ExtractOptions::default()).is_ok());
+    // an unlimited depth (email passes usize::MAX for HTML parts) must not overflow
+    let open = ExtractOptions { limits: Some(Limits { max_xml_depth: usize::MAX, ..Limits::default() }), ..Default::default() };
+    assert!(Html.extract(src.as_bytes(), &open).is_ok());
 }
 
 // The depth check must follow the walker: end tags that close nothing, and runs of end-tag-optional elements the

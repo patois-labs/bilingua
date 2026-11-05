@@ -224,7 +224,7 @@ impl<'a> Ex<'a> {
             }
             // end-tag-optional elements the walker keeps open (`<li><dd>` closes neither) still nest; the root
             // frame does not count
-            if self.frames.len() > self.max_depth + 1 {
+            if self.frames.len() > self.max_depth.saturating_add(1) {
                 self.too_deep = true;
                 return;
             }

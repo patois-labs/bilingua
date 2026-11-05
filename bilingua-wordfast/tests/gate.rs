@@ -78,7 +78,8 @@ fn load_targets_from_format_options() {
     let off = ExtractOptions { format_options: [("wordfast.load_targets".to_string(), "false".to_string())].into(), ..opts() };
     let on = ExtractOptions { format_options: [("wordfast.load_targets".to_string(), "yes".to_string())].into(), ..opts() };
     let ids = |d: Document| d.units.into_iter().map(|u| u.id).collect::<Vec<_>>();
-    for data in [DE_TXML] {
+    {
+        let data = DE_TXML;
         assert_eq!(ids(Txml::default().extract(data, &off).unwrap()), ids(TXML.extract(data, &opts()).unwrap()));
         assert_eq!(ids(TXML.extract(data, &on).unwrap()), ids(Txml::default().extract(data, &opts()).unwrap()));
         assert_ne!(ids(TXML.extract(data, &opts()).unwrap()), ids(Txml::default().extract(data, &opts()).unwrap()));
