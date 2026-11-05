@@ -1,6 +1,7 @@
 //! Which strings of a property list are translatable text (Localization OS `apple_filter` policy).
 
 use crate::tree::*;
+use bilingua_model::Error;
 use crate::xml::is_space;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -52,30 +53,50 @@ pub(crate) fn mode(tree: &Tree) -> Mode {
 }
 
 /// Every string value in document order.
-pub(crate) fn walk(tree: &Tree) -> Vec<Leaf> {
-    fn rec(tree: &Tree, i: usize, path: &str, depth: usize, near: &str, usage: bool, out: &mut Vec<Leaf>) {
-        let n = &tree.nodes[i];
-        match n.kind {
-            Kind::Str => out.push(Leaf { node: i, path: path.to_string(), near: near.to_string(), usage_dict: usage }),
-            Kind::Dict => {
-                for kid in &n.kids {
-                    let k = kid.key.as_deref().unwrap_or("");
-                    let p = if depth == 0 { k.to_string() } else { format!("{path}/{k}") };
-                    rec(tree, kid.node, &p, depth + 1, k, usage || k.ends_with("UsageDescriptionDictionary"), out);
+pub(crate) fn walk(tree: &Tree, max_units: usize) -> Result<Vec<Leaf>, Error> {
+    struct W<'t> {
+        tree: &'t Tree,
+        out: Vec<Leaf>,
+        /// Bytes of path text still allowed to be built (deep nesting under long keys would copy them for ever).
+        budget: usize,
+        max_units: usize,
+    }
+    impl W<'_> {
+        fn spend(&mut self, n: usize) -> Result<(), Error> {
+            self.budget = self.budget.checked_sub(n).ok_or_else(|| crate::xml::too_many(self.max_units))?;
+            Ok(())
+        }
+        fn rec(&mut self, i: usize, path: &str, depth: usize, near: &str, usage: bool) -> Result<(), Error> {
+            let tree = self.tree;
+            let n = &tree.nodes[i];
+            match n.kind {
+                Kind::Str => {
+                    self.spend(path.len() + near.len())?;
+                    self.out.push(Leaf { node: i, path: path.to_string(), near: near.to_string(), usage_dict: usage });
                 }
-            }
-            Kind::Array => {
-                for (pos, kid) in n.kids.iter().enumerate() {
-                    let p = if depth == 0 { pos.to_string() } else { format!("{path}/{pos}") };
-                    rec(tree, kid.node, &p, depth + 1, near, usage, out);
+                Kind::Dict => {
+                    for kid in &n.kids {
+                        let k = kid.key.as_deref().unwrap_or("");
+                        let p = if depth == 0 { k.to_string() } else { format!("{path}/{k}") };
+                        self.spend(p.len())?;
+                        self.rec(kid.node, &p, depth + 1, k, usage || k.ends_with("UsageDescriptionDictionary"))?;
+                    }
                 }
+                Kind::Array => {
+                    for (pos, kid) in n.kids.iter().enumerate() {
+                        let p = if depth == 0 { pos.to_string() } else { format!("{path}/{pos}") };
+                        self.spend(p.len())?;
+                        self.rec(kid.node, &p, depth + 1, near, usage)?;
+                    }
+                }
+                Kind::Other => {}
             }
-            Kind::Other => {}
+            Ok(())
         }
     }
-    let mut out = Vec::new();
-    rec(tree, tree.root, "", 0, "", false, &mut out);
-    out
+    let mut w = W { tree, out: Vec::new(), budget: 64 << 20, max_units };
+    w.rec(tree.root, "", 0, "", false)?;
+    Ok(w.out)
 }
 
 /// Whether the value of `leaf` is a unit. `stringsdict` files take every string except the type tags; the others

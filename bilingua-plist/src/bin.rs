@@ -16,6 +16,8 @@ struct Reader<'a> {
     table: usize,
     max_nodes: usize,
     max_units: usize,
+    /// Bytes of strings and data still allowed to be copied out of the file (a shared string counts every use).
+    text_budget: usize,
     tree: Tree,
 }
 
@@ -23,12 +25,12 @@ fn be(bytes: &[u8]) -> u64 {
     bytes.iter().fold(0u64, |a, b| (a << 8) | *b as u64)
 }
 
-impl Reader<'_> {
+impl<'a> Reader<'a> {
     fn bad(&self, why: &str) -> Error {
         perr(self.fmt, format!("not a readable binary property list ({why})"))
     }
 
-    fn slice(&self, at: usize, len: usize) -> Result<&[u8], Error> {
+    fn slice(&self, at: usize, len: usize) -> Result<&'a [u8], Error> {
         at.checked_add(len).and_then(|e| self.raw.get(at..e)).ok_or_else(|| self.bad("an object runs past the end of the file"))
     }
 
@@ -69,12 +71,18 @@ impl Reader<'_> {
         Ok((hi, n, off + 2 + size))
     }
 
-    fn string_at(&self, i: usize) -> Result<String, Error> {
+    fn spend(&mut self, n: usize) -> Result<(), Error> {
+        self.text_budget = self.text_budget.checked_sub(n).ok_or_else(|| too_many(self.max_units))?;
+        Ok(())
+    }
+
+    fn string_at(&mut self, i: usize) -> Result<String, Error> {
         let off = self.offset_of(i)?;
         let (hi, n, data) = self.header(off)?;
         match hi {
             0x5 => {
                 let s = self.slice(data, n)?;
+                self.spend(n)?;
                 if !s.is_ascii() {
                     return Err(self.bad("an ASCII string holds other bytes"));
                 }
@@ -82,6 +90,7 @@ impl Reader<'_> {
             }
             0x6 => {
                 let len = n.checked_mul(2).ok_or_else(|| self.bad("a length is too large"))?;
+                self.spend(len)?;
                 let s = self.slice(data, len)?;
                 let units: Vec<u16> = s.chunks_exact(2).map(|c| u16::from_be_bytes([c[0], c[1]])).collect();
                 String::from_utf16(&units).map_err(|_| self.bad("a string is not valid UTF-16"))
@@ -137,7 +146,10 @@ impl Reader<'_> {
                 let b = self.slice(off + 1, 8)?;
                 node.scalar = Scalar::Date(f64::from_be_bytes(b.try_into().map_err(|_| self.bad("a date is cut off"))?));
             }
-            0x4 => node.scalar = Scalar::Data(self.slice(data, n)?.to_vec()),
+            0x4 => {
+                self.spend(n)?;
+                node.scalar = Scalar::Data(self.slice(data, n)?.to_vec());
+            }
             0x5 | 0x6 => {
                 node = Node::string(self.string_at(i)?);
             }
@@ -151,7 +163,7 @@ impl Reader<'_> {
             0xA => {
                 node.kind = Kind::Array;
                 let total = n.checked_mul(self.ref_size).ok_or_else(|| self.bad("a length is too large"))?;
-                let refs = self.slice(data, total)?.to_vec();
+                let refs = self.slice(data, total)?;
                 let idx = self.tree.nodes.len();
                 self.tree.nodes.push(node);
                 for k in 0..n {
@@ -167,7 +179,7 @@ impl Reader<'_> {
             0xD => {
                 node.kind = Kind::Dict;
                 let total = n.checked_mul(self.ref_size * 2).ok_or_else(|| self.bad("a length is too large"))?;
-                let refs = self.slice(data, total)?.to_vec();
+                let refs = self.slice(data, total)?;
                 let idx = self.tree.nodes.len();
                 self.tree.nodes.push(node);
                 for k in 0..n {
@@ -229,6 +241,7 @@ pub(crate) fn read(raw: &[u8], fmt: &'static str, lim: &Limits) -> Result<Tree, 
         table: table as usize,
         max_nodes,
         max_units: lim.max_units,
+        text_budget: raw.len().saturating_mul(8).saturating_add(1 << 20),
         tree: Tree { nodes: Vec::new(), root: 0 },
     };
     let root = r.object(top as usize, 0)?;

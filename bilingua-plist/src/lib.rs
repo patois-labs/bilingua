@@ -189,7 +189,7 @@ fn read_any(fmt: Fmt, bytes: &[u8], opts: &ExtractOptions, limits: &Limits) -> R
 fn extract_impl(fmt: Fmt, bytes: &[u8], opts: &ExtractOptions, limits: &Limits) -> Result<Document, Error> {
     let (tree, origin) = read_any(fmt, bytes, opts, limits)?;
     let mode = if fmt == Fmt::Plist { policy::mode(&tree) } else { Mode::Generic };
-    let leaves = policy::walk(&tree);
+    let leaves = policy::walk(&tree, limits.max_units)?;
     let mut units: Vec<Unit> = Vec::new();
     let mut parts: Vec<SkelPart> = Vec::new();
     let binary = matches!(origin, Origin::Binary { .. });
@@ -374,7 +374,7 @@ fn merge_impl(fmt: Fmt, doc: &Document) -> Result<Vec<u8>, Error> {
         let Some(SkelPart::Raw(b)) = parts.first() else { return Err(Error::Write("binary plist skeleton lost the original file".into())) };
         let original = b64::decode(b).map_err(|e| Error::Write(format!("binary plist skeleton is damaged: {e}")))?;
         let mut tree = bin::read(&original, fmt.id(), &Limits::default())?;
-        let leaves: Vec<Leaf> = policy::walk(&tree);
+        let leaves: Vec<Leaf> = policy::walk(&tree, Limits::default().max_units)?;
         let mut changed = false;
         for p in parts {
             let SkelPart::Unit(i) = p else { continue };
@@ -506,7 +506,7 @@ fn unit_index(fmt: Fmt, tree: &Tree, leaves: &[Leaf]) -> HashMap<usize, usize> {
 /// Every string value of a plist as a record (key = its path joined with `/`).
 pub fn plist_records(bytes: &[u8]) -> Result<Vec<Record>, Error> {
     let (tree, _) = read_any(Fmt::Plist, bytes, &ExtractOptions::default(), &Limits::default())?;
-    let leaves = policy::walk(&tree);
+    let leaves = policy::walk(&tree, Limits::default().max_units)?;
     let idx = unit_index(Fmt::Plist, &tree, &leaves);
     Ok(leaves
         .iter()
@@ -517,7 +517,7 @@ pub fn plist_records(bytes: &[u8]) -> Result<Vec<Record>, Error> {
 /// One record per stringsdict entry (a plural variable per record, device and width variants as forms).
 pub fn stringsdict_records(bytes: &[u8]) -> Result<Vec<Record>, Error> {
     let (tree, _) = read_any(Fmt::Stringsdict, bytes, &ExtractOptions::default(), &Limits::default())?;
-    let leaves = policy::walk(&tree);
+    let leaves = policy::walk(&tree, Limits::default().max_units)?;
     let idx = unit_index(Fmt::Stringsdict, &tree, &leaves);
     let root = &tree.nodes[tree.root];
     let mut out = Vec::new();

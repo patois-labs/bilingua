@@ -454,12 +454,12 @@ pub(crate) fn scan(text: &str, fmt: &'static str, lim: &Limits) -> Result<Tree, 
             }
             let name = &text[lt + 1..i];
             let (end, empty) = attributes(text, i, fmt)?;
-            let Some(el) = El::from_name(name) else { return Err(perr(fmt, format!("unknown property list element <{name}>"))) };
             if let Some(top) = stack.last() {
                 if top.el.is_text() || top.el.is_scalar() {
                     return Err(perr(fmt, format!("<{}> cannot contain elements", top.el.name())));
                 }
             }
+            let Some(el) = El::from_name(name) else { return Err(perr(fmt, format!("unknown property list element <{name}>"))) };
             if stack.len() > MAX_DEPTH {
                 return Err(too_deep());
             }
