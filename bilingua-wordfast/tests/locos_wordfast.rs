@@ -120,7 +120,7 @@ fn txml_tag_damage_is_safe() {
     assert_eq!(back.units.len(), 4);
     let s1 = String::from_utf8_lossy(seg(&out, "1")).to_string();
     assert!(!s1.contains("x=\"9\"") && !s1.contains('\u{27e6}'), "{s1}");
-    assert!(s1.contains("Tags</ut>"), "{s1}");
+    assert!(s1.contains("Tags<ut type=\"end\" x=\"1\">&lt;/b&gt;</ut></target>"), "{s1}");
     assert!(contains(seg(&out, "2"), "score=\"85\">x</target>"));
 }
 

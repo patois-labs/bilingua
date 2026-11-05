@@ -97,7 +97,7 @@ fn eleven_languages() {
             assert_eq!(d.units.len(), want, "{name}");
             let text = show(&d.units[0].source());
             assert!(!text.is_empty() && text.chars().any(|c| c.is_alphabetic()), "{name}: {text}");
-            assert_eq!(d.source_lang.is_some(), true);
+            assert!(d.source_lang.is_some());
             // translate every unit with text in the same language and read it back
             let mut e = d.clone();
             for u in e.units.iter_mut() {

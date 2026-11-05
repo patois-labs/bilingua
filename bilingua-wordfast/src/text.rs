@@ -45,32 +45,20 @@ pub fn decode(fmt_name: &str, bytes: &[u8], opts: &ExtractOptions, limits: &Limi
 
 /// Escapes character data: `&` and `<`, and `]]>`. A bare `>` stays as written.
 pub fn esc_text(s: &str, out: &mut String) {
-    let mut rest = s;
-    loop {
-        match rest.find(['&', '<', ']']) {
-            None => {
-                out.push_str(rest);
-                return;
-            }
-            Some(p) => {
-                out.push_str(&rest[..p]);
-                let r = &rest[p..];
-                if r.starts_with('&') {
-                    out.push_str("&amp;");
-                    rest = &r[1..];
-                } else if r.starts_with('<') {
-                    out.push_str("&lt;");
-                    rest = &r[1..];
-                } else if r.starts_with("]]>") {
-                    out.push_str("]]&gt;");
-                    rest = &r[3..];
-                } else {
-                    out.push(']');
-                    rest = &r[1..];
-                }
-            }
-        }
+    let b = s.as_bytes();
+    let mut last = 0;
+    for (i, c) in b.iter().enumerate() {
+        let rep = match c {
+            b'&' => "&amp;",
+            b'<' => "&lt;",
+            b'>' if i >= 2 && &b[i - 2..i] == b"]]" => "&gt;",
+            _ => continue,
+        };
+        out.push_str(&s[last..i]);
+        out.push_str(rep);
+        last = i + 1;
     }
+    out.push_str(&s[last..]);
 }
 
 /// Keeps XML 1.0 characters, turning pasted Word breaks into newlines.

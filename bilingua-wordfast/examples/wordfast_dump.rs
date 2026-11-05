@@ -16,7 +16,7 @@ fn main() {
             for u in &d.units {
                 let (text, _) = locos::to_locos_text(&u.source());
                 let tgt = if u.segments.iter().any(|s| !s.target.is_empty()) { Some(locos::to_locos_text(&u.output()).0) } else { None };
-                println!("{}", serde_json::json!({ "id": u.id, "text": text, "target": tgt, "translate": u.translate, "state": format!("{:?}", u.segments[0].state) }));
+                println!("{}", serde_json::json!({ "id": u.id, "text": text, "target": tgt, "translate": u.translate, "key": u.context.key, "state": format!("{:?}", u.segments[0].state) }));
             }
         }
     }
