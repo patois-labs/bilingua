@@ -88,6 +88,8 @@ pub fn filters() -> Vec<Box<dyn Filter>> {
         Box::new(bilingua_plist::Plist),
         // rc sniffs only resource-script keywords (STRINGTABLE, DIALOG, MENU, VERSIONINFO, winres.h); strict enough to sit early.
         Box::new(bilingua_rc::Rc),
+        // DXF sniffs strictly (a group-code pair 0 / SECTION then 2, or the binary sentinel), so it can sit early.
+        Box::new(bilingua_dxf::Dxf),
         // XPress Tags sniffs only the <vNN.NN> / <eN> header at the very start of the file (also UTF-16); strict enough to sit early.
         Box::new(bilingua_xtg::Xtg),
         // LaTeX sniffs strictly (documentclass, usepackage or begin-document at a line start); chapter files go by extension.
