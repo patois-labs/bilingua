@@ -21,6 +21,7 @@ checksum = "f2032f911046de80f0a198e0901378627c33f59ea0ac00e363d481118bd70a53"
 name = "bilingua"
 version = "0.1.0"
 dependencies = [
+ "bilingua-adoc",
  "bilingua-arb",
  "bilingua-csv",
  "bilingua-desktop",
@@ -63,6 +64,16 @@ dependencies = [
  "bilingua-yaml",
  "serde_json",
  "zip",
+]
+
+[[package]]
+name = "bilingua-adoc"
+version = "0.1.0"
+dependencies = [
+ "bilingua-model",
+ "proptest",
+ "regex",
+ "serde_json",
 ]
 
 [[package]]

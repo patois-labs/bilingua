@@ -1,0 +1,44 @@
+= Order Guide
+Jane Doe <jane@example.com>
+v1.2, 2026-10-01
+:product: Lumen Bakery
+:toc:
+:description: How to order bread online.
+:keywords: bread, order
+
+// A comment that stays.
+
+Welcome to our *bakery* with {product} `code` and see https://example.com[our site].
+Fresh bread is _baked daily_ and kbd:[Ctrl+S].
+
+== Getting Started ==
+
+NOTE: Read the guide before you order.
+
+.Pickup options
+* Pick up in store
+* Delivery, see <<anchor,the map>>
+** Free over 20 dollars
+* [x] Account created
+. Choose a loaf
+. Pay online +
+Then wait for the message.
+
+Sourdough:: A slow-fermented loaf.
+
+[source,python]
+----
+print("not translated")  # a comment
+----
+
+[cols="1,2"]
+|===
+|Item |Description
+
+|Rye
+|Dark bread \| heavy
+|===
+
+include::partials/legal.adoc[]
+
+Thank you for ordering. footnote:[Prices include tax.]

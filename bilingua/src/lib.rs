@@ -48,6 +48,8 @@ pub fn filters() -> Vec<Box<dyn Filter>> {
         // .desktop sniffs a [Desktop Entry] line; it must come before INI, which would also accept the file.
         Box::new(bilingua_desktop::DesktopFilter),
         Box::new(bilingua_desktop::CatkeysFilter),
+        // AsciiDoc is plain text with no sniffer (extension only), like Markdown.
+        Box::new(bilingua_adoc::Adoc),
         Box::new(bilingua_ini::IniFilter),
         Box::new(bilingua_strings::Strings),
         // DTD sniffs strictly (the first declaration must be an ENTITY, ELEMENT or ATTLIST), so it can sit early.
