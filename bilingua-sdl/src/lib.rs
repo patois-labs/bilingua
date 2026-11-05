@@ -45,10 +45,16 @@ pub fn filters() -> Vec<Box<dyn Filter>> {
 }
 
 fn perr(id: &str, e: Error) -> bilingua_model::Error {
+    if let Error::Limit(l) = e {
+        return bilingua_model::Error::Limit(l);
+    }
     bilingua_model::Error::Parse { format: id.to_string(), msg: e.to_string() }
 }
 
 fn werr(e: Error) -> bilingua_model::Error {
+    if let Error::Limit(l) = e {
+        return bilingua_model::Error::Limit(l);
+    }
     bilingua_model::Error::Write(e.to_string())
 }
 
@@ -71,14 +77,14 @@ struct Opened {
     docs: Vec<String>,
 }
 
-fn open_entries(family: Family, bytes: &[u8]) -> Result<Opened, Error> {
+fn open_entries(family: Family, bytes: &[u8], limits: &ZipLimits) -> Result<Opened, Error> {
     Ok(match family {
         Family::Sdl => {
-            let p = SdlPackage::<Doc>::from_bytes(bytes)?;
+            let p = SdlPackage::<Doc>::from_bytes_with_limits(bytes, limits)?;
             Opened { entries: p.entries().to_vec(), docs: p.document_paths() }
         }
         Family::Mq => {
-            let p = MqPackage::<Doc>::from_bytes(bytes)?;
+            let p = MqPackage::<Doc>::from_bytes_with_limits(bytes, limits)?;
             Opened { entries: p.entries().to_vec(), docs: p.document_paths() }
         }
     })
@@ -100,7 +106,10 @@ impl Filter for PackageFilter {
     }
 
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, bilingua_model::Error> {
-        let opened = open_entries(self.family, bytes).map_err(|e| perr(self.id, e))?;
+        // the B6 limits of this call (Localization OS's numbers unless the caller sets others)
+        let limits = opts.limits();
+        bilingua_model::guard::check_input(bytes, &limits)?;
+        let opened = open_entries(self.family, bytes, &ZipLimits::from(&limits)).map_err(|e| perr(self.id, e))?;
         let mut units = Vec::new();
         let mut source_lang = None;
         let mut target_lang = None;
@@ -152,7 +161,7 @@ impl Filter for PackageFilter {
         let zipped = zipio::write_zip(&raw, (1980, 1, 1, 0, 0, 0)).map_err(werr)?;
         match self.family {
             Family::Sdl => {
-                let mut p = SdlPackage::<Doc>::from_bytes_with_limits(&zipped, &ZipLimits::default()).map_err(werr)?;
+                let mut p = SdlPackage::<Doc>::from_bytes_with_limits(&zipped, &ZipLimits::unlimited()).map_err(werr)?;
                 let paths = p.document_paths();
                 for path in paths {
                     if let Some(doc) = p.doc_mut(&path) {
@@ -162,7 +171,7 @@ impl Filter for PackageFilter {
                 p.to_bytes().map_err(werr)
             }
             Family::Mq => {
-                let mut p = MqPackage::<Doc>::from_bytes_with_limits(&zipped, &ZipLimits::default()).map_err(werr)?;
+                let mut p = MqPackage::<Doc>::from_bytes_with_limits(&zipped, &ZipLimits::unlimited()).map_err(werr)?;
                 let paths = p.document_paths();
                 for path in paths {
                     if let Some(doc) = p.doc_mut(&path) {

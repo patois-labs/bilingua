@@ -11,6 +11,7 @@
 //! Nothing here touches the disk besides the caller's own `read`/`write`: entries stay in memory
 //! as `(name, bytes)`, so a bad name cannot write outside anywhere.
 
+use bilingua_model::{LimitError, LimitKind};
 use bilingua_xliff::Error;
 use std::collections::HashSet;
 use std::io::{Cursor, Read, Write};
@@ -31,16 +32,36 @@ pub struct ZipLimits {
     pub ratio_floor_bytes: u64,
 }
 
-impl Default for ZipLimits {
-    fn default() -> Self {
+/// The B6 limits of an extraction (`ExtractOptions::limits()`), which are Localization OS's numbers by default:
+/// 10 000 entries, 256 MB unpacked in total (and so per entry), ratio 200 over 1 MB. (This crate used to carry its
+/// own, looser defaults: 20 000 entries, 512 MB per entry, 2 GB in total.)
+impl From<&bilingua_model::Limits> for ZipLimits {
+    fn from(l: &bilingua_model::Limits) -> ZipLimits {
         ZipLimits {
-            max_entries: 20_000,
-            max_entry_bytes: 512 * 1024 * 1024,
-            max_total_bytes: 2 * 1024 * 1024 * 1024,
-            max_ratio: 200,
-            ratio_floor_bytes: 1024 * 1024,
+            max_entries: l.max_zip_entries,
+            max_entry_bytes: l.max_zip_bytes,
+            max_total_bytes: l.max_zip_bytes,
+            max_ratio: l.max_zip_ratio,
+            ratio_floor_bytes: l.zip_ratio_floor_bytes,
         }
     }
+}
+
+impl Default for ZipLimits {
+    fn default() -> Self {
+        ZipLimits::from(&bilingua_model::Limits::default())
+    }
+}
+
+impl ZipLimits {
+    /// No cap: for re-reading a package this crate wrote itself from entries that were already accepted.
+    pub fn unlimited() -> ZipLimits {
+        ZipLimits { max_entries: usize::MAX, max_entry_bytes: u64::MAX - 1, max_total_bytes: u64::MAX, max_ratio: u64::MAX, ratio_floor_bytes: u64::MAX }
+    }
+}
+
+fn limit(kind: LimitKind, msg: String) -> Error {
+    Error::Limit(LimitError::new(kind, msg))
 }
 
 /// One file of a package, in memory.
@@ -104,7 +125,7 @@ pub fn read_zip(bytes: &[u8], limits: &ZipLimits) -> Result<Vec<Entry>, Error> {
     }
     let mut zip = zip::ZipArchive::new(Cursor::new(bytes)).map_err(|e| bad(format!("unreadable zip: {e}")))?;
     if zip.len() > limits.max_entries {
-        return Err(bad(format!("{} entries, the limit is {}", zip.len(), limits.max_entries)));
+        return Err(limit(LimitKind::ZipEntries, format!("This package has {} entries, more than the {} allowed. It was not processed.", zip.len(), limits.max_entries)));
     }
     let mut seen: HashSet<String> = HashSet::new();
     let mut out = Vec::new();
@@ -131,27 +152,27 @@ pub fn read_zip(bytes: &[u8], limits: &ZipLimits) -> Result<Vec<Entry>, Error> {
             continue;
         }
         if claimed > limits.max_entry_bytes {
-            return Err(bad(format!("entry {name:?} claims {claimed} bytes, the limit is {}", limits.max_entry_bytes)));
+            return Err(limit(LimitKind::ZipBytes, format!("A file in this package is larger than {} bytes unpacked. It was not processed.", limits.max_entry_bytes)));
         }
         if claimed > limits.ratio_floor_bytes && claimed / packed.max(1) > limits.max_ratio {
-            return Err(bad(format!("entry {name:?} expands {}x, the limit is {}x", claimed / packed.max(1), limits.max_ratio)));
+            return Err(limit(LimitKind::ZipRatio, format!("A file in this package expands more than {}x. It was not processed.", limits.max_ratio)));
         }
         let mut f = zip.by_index(i).map_err(|e| bad(format!("cannot read entry {name:?}: {e}")))?;
         let mut data = Vec::with_capacity(claimed.min(64 * 1024 * 1024) as usize);
         // The header can lie about the size: stop one byte past the limit.
         let got = (&mut f)
-            .take(limits.max_entry_bytes + 1)
+            .take(limits.max_entry_bytes.saturating_add(1))
             .read_to_end(&mut data)
             .map_err(|e| bad(format!("cannot decompress entry {name:?}: {e}")))? as u64;
         if got > limits.max_entry_bytes {
-            return Err(bad(format!("entry {name:?} expands past {} bytes", limits.max_entry_bytes)));
+            return Err(limit(LimitKind::ZipBytes, format!("A file in this package unpacks to more than {} bytes. It was not processed.", limits.max_entry_bytes)));
         }
         if got > limits.ratio_floor_bytes && got / packed.max(1) > limits.max_ratio {
-            return Err(bad(format!("entry {name:?} expands {}x, the limit is {}x", got / packed.max(1), limits.max_ratio)));
+            return Err(limit(LimitKind::ZipRatio, format!("A file in this package expands more than {}x. It was not processed.", limits.max_ratio)));
         }
         total += got;
         if total > limits.max_total_bytes {
-            return Err(bad(format!("the package expands past {} bytes", limits.max_total_bytes)));
+            return Err(limit(LimitKind::ZipBytes, format!("This package unpacks to more than {} bytes. It was not processed.", limits.max_total_bytes)));
         }
         out.push(Entry { name, data, modified });
     }

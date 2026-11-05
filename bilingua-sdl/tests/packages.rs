@@ -92,3 +92,63 @@ fn a_bar_in_a_package_path_does_not_send_one_file_s_segments_into_another() {
     assert_eq!(read(&out, "a.mqxliff"), a, "the first file must stay untouched");
     assert!(read(&out, "a.mqxliff|b.mqxliff").contains("\u{3053}\u{3093}\u{306B}\u{3061}\u{306F}"));
 }
+
+fn limit_kind(r: Result<bilingua_model::Document, bilingua_model::Error>) -> Option<bilingua_model::LimitKind> {
+    match r {
+        Err(bilingua_model::Error::Limit(e)) => Some(e.kind),
+        _ => None,
+    }
+}
+
+fn sample_package() -> Vec<u8> {
+    let en = sdlx("en-US", "");
+    let ar = sdlx("ar-SA", "\u{62D}\u{641}\u{638}");
+    zip_of(&[("p.sdlproj", PROJ), ("en-US/a.sdlxliff", &en), ("ar-SA/a.sdlxliff", &ar)])
+}
+
+// Package zips use the B6 limits of the call (Localization OS's numbers by default), as a typed Limit error.
+#[test]
+fn package_zip_limits_come_from_the_extract_options() {
+    let pkg = sample_package();
+    let f = filter("sdlppx");
+    assert!(f.extract(&pkg, &ExtractOptions::default()).is_ok());
+    let o = |l: bilingua_model::Limits| ExtractOptions { limits: Some(l), ..Default::default() };
+    let base = bilingua_model::Limits::default();
+    assert_eq!(limit_kind(f.extract(&pkg, &o(bilingua_model::Limits { max_zip_entries: 2, ..base }))), Some(bilingua_model::LimitKind::ZipEntries));
+    assert_eq!(limit_kind(f.extract(&pkg, &o(bilingua_model::Limits { max_zip_bytes: 50, ..base }))), Some(bilingua_model::LimitKind::ZipBytes));
+    assert_eq!(limit_kind(f.extract(&pkg, &o(bilingua_model::Limits { max_input_bytes: 100, ..base }))), Some(bilingua_model::LimitKind::InputBytes));
+    // the ratio check: a large repetitive entry
+    let big = "x".repeat(3 << 20);
+    let bomb = {
+        let mut w = zip::ZipWriter::new(Cursor::new(Vec::new()));
+        w.start_file("p.sdlproj", zip::write::SimpleFileOptions::default().compression_method(zip::CompressionMethod::Deflated)).unwrap();
+        w.write_all(PROJ.as_bytes()).unwrap();
+        w.start_file("en-US/a.sdlxliff", zip::write::SimpleFileOptions::default().compression_method(zip::CompressionMethod::Deflated)).unwrap();
+        w.write_all(big.as_bytes()).unwrap();
+        w.finish().unwrap().into_inner()
+    };
+    assert_eq!(limit_kind(f.extract(&bomb, &ExtractOptions::default())), Some(bilingua_model::LimitKind::ZipRatio));
+    // a caller can raise the ratio; the file is then refused for what it is (not an XLIFF), not for its size
+    let lax = o(bilingua_model::Limits { max_zip_ratio: 1_000_000, ..base });
+    assert_eq!(limit_kind(f.extract(&bomb, &lax)), None);
+}
+
+// The defaults changed from this crate's own (20 000 entries, 512 MB per entry, 2 GB) to Localization OS's.
+#[test]
+fn default_zip_limits_are_locos_numbers() {
+    let z = bilingua_sdl::ZipLimits::default();
+    let l = bilingua_model::Limits::default();
+    assert_eq!((z.max_entries, z.max_total_bytes, z.max_ratio), (l.max_zip_entries, l.max_zip_bytes, l.max_zip_ratio));
+    assert_eq!(z.max_entries, 10_000);
+}
+
+// A merge re-reads the entries it was given; limits the caller raised for extract must not refuse it.
+#[test]
+fn merge_works_with_raised_limits() {
+    let pkg = sample_package();
+    let f = filter("sdlppx");
+    let base = bilingua_model::Limits::default();
+    let opts = ExtractOptions { limits: Some(bilingua_model::Limits { max_zip_bytes: 1 << 40, ..base }), ..Default::default() };
+    let d = f.extract(&pkg, &opts).unwrap();
+    assert!(f.merge(&d).is_ok());
+}
