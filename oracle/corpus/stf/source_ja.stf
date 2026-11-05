@@ -1,0 +1,10 @@
+# Use the Source file to translate labels for the first time.
+Language code: ja
+Type: Source
+Translation type: Metadata
+
+# KEY	LABEL
+
+ButtonOrLink.Account.Call	ログイン
+LayoutSection.Account.Account Layout.Address	カートの商品
+CustomLabel.Tagline	毎朝焼きたてのパン {0}

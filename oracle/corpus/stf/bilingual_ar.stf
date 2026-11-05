@@ -1,0 +1,26 @@
+# Use the Bilingual file to review translations and add translations.
+# - The TRANSLATED section of the file contains text that has been translated.
+# - The UNTRANSLATED section of the file contains text that hasn't been translated.
+Language code: ar
+Type: Bilingual
+Translation type: Metadata
+
+------------------TRANSLATED-------------------
+
+# KEY	LABEL	TRANSLATION	OUT OF DATE
+
+# CustomField
+CustomField.Account.Region.FieldLabel	تسجيل الدخول	تسجيل الدخول	-
+CustomField.Account.Region.HelpText	انقر حفظ للمتابعة\nخبز طازج كل صباح	انقر حفظ للمتابعة	*
+
+------------------UNTRANSLATED-----------------
+
+# KEY	LABEL
+
+# CustomLabel
+CustomLabel.Welcome	تسجيل الدخول, {0}! العناصر في سلتك {!$User.FirstName}.
+CustomLabel.Count	{0,number} العناصر في سلتك
+PicklistValue.Lumen.Bakery.Fresh	خبز طازج كل صباح
+CustomLabel.Blank	
+CustomLabel.Escapes	\n
+CustomLabel.Tabbed	تسجيل الدخول\tخبز طازج كل صباح\\done

@@ -1,0 +1,26 @@
+# Use the Bilingual file to review translations and add translations.
+# - The TRANSLATED section of the file contains text that has been translated.
+# - The UNTRANSLATED section of the file contains text that hasn't been translated.
+Language code: pt_BR
+Type: Bilingual
+Translation type: Metadata
+
+------------------TRANSLATED-------------------
+
+# KEY	LABEL	TRANSLATION	OUT OF DATE
+
+# CustomField
+CustomField.Account.Region.FieldLabel	Entrar	Entrar	-
+CustomField.Account.Region.HelpText	Clique em "Salvar"\nPão fresco toda manhã	Clique em "Salvar"	*
+
+------------------UNTRANSLATED-----------------
+
+# KEY	LABEL
+
+# CustomLabel
+CustomLabel.Welcome	Entrar, {0}! Itens no seu carrinho {!$User.FirstName}.
+CustomLabel.Count	{0,number} Itens no seu carrinho
+PicklistValue.Lumen.Bakery.Fresh	Pão fresco toda manhã
+CustomLabel.Blank	
+CustomLabel.Escapes	\n
+CustomLabel.Tabbed	Entrar\tPão fresco toda manhã\\done

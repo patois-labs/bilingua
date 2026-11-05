@@ -1,0 +1,26 @@
+# Use the Bilingual file to review translations and add translations.
+# - The TRANSLATED section of the file contains text that has been translated.
+# - The UNTRANSLATED section of the file contains text that hasn't been translated.
+Language code: ru
+Type: Bilingual
+Translation type: Metadata
+
+------------------TRANSLATED-------------------
+
+# KEY	LABEL	TRANSLATION	OUT OF DATE
+
+# CustomField
+CustomField.Account.Region.FieldLabel	Войти	Войти	-
+CustomField.Account.Region.HelpText	Нажмите «Сохранить»\nСвежий хлеб каждое утро	Нажмите «Сохранить»	*
+
+------------------UNTRANSLATED-----------------
+
+# KEY	LABEL
+
+# CustomLabel
+CustomLabel.Welcome	Войти, {0}! Товары в корзине {!$User.FirstName}.
+CustomLabel.Count	{0,number} Товары в корзине
+PicklistValue.Lumen.Bakery.Fresh	Свежий хлеб каждое утро
+CustomLabel.Blank	
+CustomLabel.Escapes	\n
+CustomLabel.Tabbed	Войти\tСвежий хлеб каждое утро\\done

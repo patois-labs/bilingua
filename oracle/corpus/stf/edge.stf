@@ -1,0 +1,9 @@
+Language code:	de
+Type: Source
+# KEY	LABEL
+	orphan label
+CustomLabel.A	Alpha secondthirdfourth fifth
+CustomLabel.B	{0}
+#CustomLabel.C	Commented
+stray line without a tab
+CustomLabel.D	Last row without a final line break

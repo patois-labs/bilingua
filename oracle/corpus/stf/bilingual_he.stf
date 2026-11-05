@@ -1,0 +1,26 @@
+# Use the Bilingual file to review translations and add translations.
+# - The TRANSLATED section of the file contains text that has been translated.
+# - The UNTRANSLATED section of the file contains text that hasn't been translated.
+Language code: iw
+Type: Bilingual
+Translation type: Metadata
+
+------------------TRANSLATED-------------------
+
+# KEY	LABEL	TRANSLATION	OUT OF DATE
+
+# CustomField
+CustomField.Account.Region.FieldLabel	התחברות	התחברות	-
+CustomField.Account.Region.HelpText	לחץ על שמור\nלחם טרי כל בוקר	לחץ על שמור	*
+
+------------------UNTRANSLATED-----------------
+
+# KEY	LABEL
+
+# CustomLabel
+CustomLabel.Welcome	התחברות, {0}! פריטים בעגלה {!$User.FirstName}.
+CustomLabel.Count	{0,number} פריטים בעגלה
+PicklistValue.Lumen.Bakery.Fresh	לחם טרי כל בוקר
+CustomLabel.Blank	
+CustomLabel.Escapes	\n
+CustomLabel.Tabbed	התחברות\tלחם טרי כל בוקר\\done

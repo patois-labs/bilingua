@@ -1,0 +1,26 @@
+# Use the Bilingual file to review translations and add translations.
+# - The TRANSLATED section of the file contains text that has been translated.
+# - The UNTRANSLATED section of the file contains text that hasn't been translated.
+Language code: ja
+Type: Bilingual
+Translation type: Metadata
+
+------------------TRANSLATED-------------------
+
+# KEY	LABEL	TRANSLATION	OUT OF DATE
+
+# CustomField
+CustomField.Account.Region.FieldLabel	ログイン	ログイン	-
+CustomField.Account.Region.HelpText	「保存」をクリック\n毎朝焼きたてのパン	「保存」をクリック	*
+
+------------------UNTRANSLATED-----------------
+
+# KEY	LABEL
+
+# CustomLabel
+CustomLabel.Welcome	ログイン, {0}! カートの商品 {!$User.FirstName}.
+CustomLabel.Count	{0,number} カートの商品
+PicklistValue.Lumen.Bakery.Fresh	毎朝焼きたてのパン
+CustomLabel.Blank	
+CustomLabel.Escapes	\n
+CustomLabel.Tabbed	ログイン\t毎朝焼きたてのパン\\done

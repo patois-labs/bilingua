@@ -1,0 +1,26 @@
+# Use the Bilingual file to review translations and add translations.
+# - The TRANSLATED section of the file contains text that has been translated.
+# - The UNTRANSLATED section of the file contains text that hasn't been translated.
+Language code: es_MX
+Type: Bilingual
+Translation type: Metadata
+
+------------------TRANSLATED-------------------
+
+# KEY	LABEL	TRANSLATION	OUT OF DATE
+
+# CustomField
+CustomField.Account.Region.FieldLabel	Iniciar sesión	Iniciar sesión	-
+CustomField.Account.Region.HelpText	Pulse "Guardar"\nPan fresco cada mañana	Pulse "Guardar"	*
+
+------------------UNTRANSLATED-----------------
+
+# KEY	LABEL
+
+# CustomLabel
+CustomLabel.Welcome	Iniciar sesión, {0}! Artículos en su cesta {!$User.FirstName}.
+CustomLabel.Count	{0,number} Artículos en su cesta
+PicklistValue.Lumen.Bakery.Fresh	Pan fresco cada mañana
+CustomLabel.Blank	
+CustomLabel.Escapes	\n
+CustomLabel.Tabbed	Iniciar sesión\tPan fresco cada mañana\\done

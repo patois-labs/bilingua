@@ -1,0 +1,26 @@
+# Use the Bilingual file to review translations and add translations.
+# - The TRANSLATED section of the file contains text that has been translated.
+# - The UNTRANSLATED section of the file contains text that hasn't been translated.
+Language code: zh_CN
+Type: Bilingual
+Translation type: Metadata
+
+------------------TRANSLATED-------------------
+
+# KEY	LABEL	TRANSLATION	OUT OF DATE
+
+# CustomField
+CustomField.Account.Region.FieldLabel	登录	登录	-
+CustomField.Account.Region.HelpText	点击“保存”继续\n每天早晨新鲜面包	点击“保存”继续	*
+
+------------------UNTRANSLATED-----------------
+
+# KEY	LABEL
+
+# CustomLabel
+CustomLabel.Welcome	登录, {0}! 购物车中的商品 {!$User.FirstName}.
+CustomLabel.Count	{0,number} 购物车中的商品
+PicklistValue.Lumen.Bakery.Fresh	每天早晨新鲜面包
+CustomLabel.Blank	
+CustomLabel.Escapes	\n
+CustomLabel.Tabbed	登录\t每天早晨新鲜面包\\done
