@@ -1,0 +1,21 @@
+{{Infobox bakery
+| name = Lumen
+}}
+== Panadería Lumen ==
+Nuestro '''pan de masa madre''' se hornea cada mañana en la [[Bakery|vieja panadería]]. See https://example.com/menu for more.<ref>El horario puede cambiar en días festivos.</ref>
+
+* Pida antes del mediodía
+* Recogida en el mostrador ''café gratis''
+# Pague con tarjeta o en efectivo
+
+{| class="wikitable"
+|+ Menú semanal
+! Día !! Pan
+|-
+| Lunes || Pan de centeno
+|}
+
+[[File:Loaf.jpg|thumb|200px|Un pan recién hecho en el mostrador]]
+
+<!-- editor note: keep -->
+[[Category:Bakery]]

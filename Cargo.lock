@@ -69,6 +69,7 @@ dependencies = [
  "bilingua-ttml",
  "bilingua-ttx",
  "bilingua-vsdx",
+ "bilingua-wiki",
  "bilingua-wordfast",
  "bilingua-wxl",
  "bilingua-xaml",
@@ -585,6 +586,16 @@ dependencies = [
  "bilingua-zip",
  "proptest",
  "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "bilingua-wiki"
+version = "0.1.0"
+dependencies = [
+ "bilingua-model",
+ "proptest",
+ "regex",
  "serde_json",
 ]
 

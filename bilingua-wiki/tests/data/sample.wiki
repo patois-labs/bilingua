@@ -1,0 +1,41 @@
+{{Infobox city
+| name = Paris
+| caption = The Eiffel Tower at night
+| population = {{formatnum:2100000}}
+}}
+'''Paris''' is the [[capital city|capital]] of [[France]].<ref name="a">Source text here.</ref>
+It has many ''museums'' and [https://example.com an official site].
+<!-- editor comment that must stay -->
+
+== History ==
+=== Early days <!-- note --> ===
+* First item with {{lang|fr|Bonjour}} inside
+** Nested [[File:Tower.jpg|thumb|200px|A tall tower]] item
+# Numbered item
+; Term : The definition
+: Indented reply
+
+{| class="wikitable"
+|+ Table caption
+|-
+! Header one !! Header two
+|-
+| style="color:red" | Red cell || Plain cell
+| [[Link|label]] cell
+|}
+
+ preformatted code line
+<syntaxhighlight lang="python">
+print("hi")  # code stays
+</syntaxhighlight>
+<pre>
+Pre block stays.
+</pre>
+Use <code>foo()</code> and <nowiki>[[not a link]]</nowiki> here.
+
+{{{1|Default param}}} is a parameter.
+__NOTOC__
+Signed ~~~~
+----
+[[Category:Cities]]
+[[fr:Paris]]

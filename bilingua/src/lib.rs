@@ -83,6 +83,9 @@ pub fn filters() -> Vec<Box<dyn Filter>> {
         Box::new(bilingua_xtg::Xtg),
         // LaTeX sniffs strictly (documentclass, usepackage or begin-document at a line start); chapter files go by extension.
         Box::new(bilingua_latex::Latex::default()),
+        // Wiki markup is plain text: both filters are claimed by extension only (sniff is false).
+        Box::new(bilingua_wiki::MediaWiki::default()),
+        Box::new(bilingua_wiki::DokuWiki),
         // TOML after INI: a valid-TOML INI file without an extension should stay INI.
         Box::new(bilingua_toml::TomlFilter),
         // Qt Linguist .ts sniffs strictly (XML with a <TS> root); `detect` decides the shared .ts extension.

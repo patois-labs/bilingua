@@ -1,0 +1,14 @@
+====== Lumen Bakery ======
+Our **sourdough** is baked every morning at the [[bakery:menu|old bakery]] ((Opening hours may change on holidays.)).
+
+  * Order before noon
+  * Pick up at the counter //free coffee//
+
+^ Day ^ Bread ^
+| Monday | Rye loaf |
+
+> Fresh bread makes every day better.
+<code>
+echo "keep";
+</code>
+{{logo.png?100|A fresh loaf on the counter}}

@@ -1,0 +1,21 @@
+{{Infobox bakery
+| name = Lumen
+}}
+== Bäckerei Lumen ==
+Unser '''Sauerteigbrot''' wird jeden Morgen in der [[Bakery|alten Bäckerei]]. See https://example.com/menu for more.<ref>Die Öffnungszeiten können an Feiertagen abweichen.</ref>
+
+* Bestellen Sie vor Mittag
+* Abholung an der Theke ''Kaffee gratis''
+# Zahlung mit Karte oder bar
+
+{| class="wikitable"
+|+ Wochenkarte
+! Tag !! Brot
+|-
+| Montag || Roggenbrot
+|}
+
+[[File:Loaf.jpg|thumb|200px|Ein frisches Brot auf der Theke]]
+
+<!-- editor note: keep -->
+[[Category:Bakery]]

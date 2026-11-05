@@ -1,0 +1,21 @@
+{{Infobox bakery
+| name = Lumen
+}}
+== Lumen Bakery ==
+Our '''sourdough''' is baked every morning at the [[Bakery|old bakery]]. See https://example.com/menu for more.<ref>Opening hours may change on holidays.</ref>
+
+* Order before noon
+* Pick up at the counter ''free coffee''
+# Pay by card or cash
+
+{| class="wikitable"
+|+ Weekly menu
+! Day !! Bread
+|-
+| Monday || Rye loaf
+|}
+
+[[File:Loaf.jpg|thumb|200px|A fresh loaf on the counter]]
+
+<!-- editor note: keep -->
+[[Category:Bakery]]

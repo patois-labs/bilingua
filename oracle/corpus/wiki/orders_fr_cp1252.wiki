@@ -1,0 +1,21 @@
+{{Infobox bakery
+| name = Lumen
+}}
+== Boulangerie Lumière ==
+Notre '''pain au levain''' est cuit chaque matin à la [[Bakery|vieille boulangerie]]. See https://example.com/menu for more.<ref>Les horaires peuvent changer les jours fériés.</ref>
+
+* Commandez avant midi
+* Retrait au comptoir ''café offert''
+# Payez par carte ou en espèces
+
+{| class="wikitable"
+|+ Menu de la semaine
+! Jour !! Pain
+|-
+| Lundi || Pain de seigle
+|}
+
+[[File:Loaf.jpg|thumb|200px|Un pain frais sur le comptoir]]
+
+<!-- editor note: keep -->
+[[Category:Bakery]]

@@ -1,0 +1,21 @@
+{{Infobox bakery
+| name = Lumen
+}}
+== Padaria Lumen ==
+O nosso '''pão de fermentação natural''' é assado todas as manhãs na [[Bakery|velha padaria]]. See https://example.com/menu for more.<ref>O horário pode mudar nos feriados.</ref>
+
+* Encomende antes do meio-dia
+* Levante ao balcão ''café grátis''
+# Pague com cartão ou dinheiro
+
+{| class="wikitable"
+|+ Menu semanal
+! Dia !! Pão
+|-
+| Segunda || Pão de centeio
+|}
+
+[[File:Loaf.jpg|thumb|200px|Um pão fresco no balcão]]
+
+<!-- editor note: keep -->
+[[Category:Bakery]]

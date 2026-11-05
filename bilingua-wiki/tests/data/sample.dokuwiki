@@ -1,0 +1,22 @@
+====== Main title ======
+This is **bold** and //italic// text with [[ns:page|a link]] and [[other]].
+Second line ((a footnote)) with {{img.png?200|An image caption}}.
+
+  * List item one
+  - Ordered item
+
+^ Head A ^ Head B ^
+| Cell [[x|y]] one | Cell two |
+| ::: | more |
+
+  indented code stays
+<code python>
+print("x")
+</code>
+<file php example.php>
+<?php echo 1; ?>
+</file>
+%%**not bold**%% stays, ''mono'' too, see https://example.com/a//b and <a@b.example>.
+> quoted line
+~~NOTOC~~
+----

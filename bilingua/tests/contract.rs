@@ -187,6 +187,7 @@ fn crate_of(format: &str) -> &'static str {
         "rst" => "bilingua-rst",
         "xlz" => "bilingua-xliffpkg",
         "sbv" | "sub" => "bilingua-subtext",
+        "wiki" | "dokuwiki" => "bilingua-wiki",
         "strings" => "bilingua-strings",
         "plist" | "stringsdict" => "bilingua-plist",
         "toml" => "bilingua-toml",
