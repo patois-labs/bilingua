@@ -1,0 +1,15 @@
+[package]
+name = "bilingua-odf"
+description = "Bilingua: OpenDocument (odt ott ods ots odp otp odg otg) filters"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+bilingua-model = { workspace = true }
+bilingua-zip = { workspace = true }
+
+[dev-dependencies]
+proptest = "1"
+serde_json = { workspace = true }

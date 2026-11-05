@@ -47,6 +47,7 @@ bilingua-php = { workspace = true }
 bilingua-rc = { workspace = true }
 bilingua-epub = { workspace = true }
 bilingua-idml = { workspace = true }
+bilingua-odf = { workspace = true }
 
 [dev-dependencies]
 zip = { workspace = true }

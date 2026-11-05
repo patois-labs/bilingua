@@ -37,6 +37,7 @@ dependencies = [
  "bilingua-markdown",
  "bilingua-mo",
  "bilingua-model",
+ "bilingua-odf",
  "bilingua-php",
  "bilingua-plist",
  "bilingua-po",
@@ -237,6 +238,16 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror",
+]
+
+[[package]]
+name = "bilingua-odf"
+version = "0.1.0"
+dependencies = [
+ "bilingua-model",
+ "bilingua-zip",
+ "proptest",
+ "serde_json",
 ]
 
 [[package]]

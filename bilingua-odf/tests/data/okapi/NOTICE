@@ -1,0 +1,10 @@
+The OpenDocument packages in this folder are test resources of the Okapi Framework, copied unchanged.
+
+Source:  https://gitlab.com/okapiframework/Okapi.git
+Tag:     v1.48.0
+Commit:  ce9f9edc2956da5868fcb71ae10426c7c6ae4e0b
+Folder:  okapi/filters/openoffice/src/test/resources
+Licence: Apache License, Version 2.0 (https://www.apache.org/licenses/LICENSE-2.0)
+
+Okapi Framework, Copyright (C) the Okapi Framework contributors.
+They are used only as test input for bilingua-odf (tests/oracle.rs) and are not part of any build output.
