@@ -91,6 +91,9 @@ pub struct Limits {
     pub max_zip_entries: usize,
     /// Most bytes all entries of a zip unpack to (`ZIP_MAX_UNCOMPRESSED_BYTES`).
     pub max_zip_bytes: u64,
+    /// Most bytes one zip entry may unpack to. LocOS has no cap of its own beyond the total, so the default is the
+    /// same 256 MB; a caller may set it lower (or raise both for desktop use).
+    pub max_zip_entry_bytes: u64,
     /// Largest unpacked/packed ratio of one entry (`ZIP_MAX_RATIO`).
     pub max_zip_ratio: u64,
     /// Entries smaller than this are not checked for ratio (`ZIP_RATIO_MIN_BYTES`).
@@ -119,6 +122,7 @@ impl Default for Limits {
             max_xml_elements: 4_000_000,
             max_zip_entries: 10_000,
             max_zip_bytes: 256 * 1024 * 1024,
+            max_zip_entry_bytes: 256 * 1024 * 1024,
             max_zip_ratio: 200,
             zip_ratio_floor_bytes: 1024 * 1024,
             max_paragraphs: 50_000,
@@ -173,6 +177,11 @@ impl Limits {
     /// Sets `max_zip_bytes`.
     pub fn with_max_zip_bytes(mut self, v: u64) -> Limits {
         self.max_zip_bytes = v;
+        self
+    }
+    /// Sets `max_zip_entry_bytes`.
+    pub fn with_max_zip_entry_bytes(mut self, v: u64) -> Limits {
+        self.max_zip_entry_bytes = v;
         self
     }
     /// Sets `max_zip_ratio`.

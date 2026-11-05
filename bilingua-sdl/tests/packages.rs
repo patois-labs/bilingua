@@ -136,12 +136,15 @@ fn package_zip_limits_come_from_the_extract_options() {
 // The defaults changed from this crate's own (20 000 entries, 512 MB per entry, 2 GB) to Localization OS's.
 #[test]
 fn default_zip_limits_are_locos_numbers() {
-    let z = bilingua_sdl::ZipLimits::default();
     let l = bilingua_model::Limits::default();
-    assert_eq!((z.max_entries, z.max_total_bytes, z.max_ratio), (l.max_zip_entries, l.max_zip_bytes, l.max_zip_ratio));
-    assert_eq!(z.max_entries, 10_000);
-    // the open-package API keeps plain Package errors; the Filters ask for typed ones
-    assert!(!z.typed_errors && bilingua_sdl::ZipLimits::from(&l).typed_errors);
+    assert_eq!((l.max_zip_entries, l.max_zip_bytes, l.max_zip_entry_bytes, l.max_zip_ratio), (10_000, 256 << 20, 256 << 20, 200));
+    // the open-package API takes the same Limits and keeps plain Package errors; a caller can raise them
+    let pkg = sample_package();
+    assert!(bilingua_sdl::SdlPackage::<bilingua_xliff::Doc>::from_bytes_with_limits(&pkg, &l).is_ok());
+    let tight = l.with_max_zip_entries(1);
+    assert!(matches!(bilingua_sdl::SdlPackage::<bilingua_xliff::Doc>::from_bytes_with_limits(&pkg, &tight), Err(bilingua_xliff::Error::Package(_))));
+    let big = l.with_max_zip_entries(1_000_000).with_max_zip_bytes(4 << 30).with_max_zip_entry_bytes(2 << 30);
+    assert!(bilingua_sdl::SdlPackage::<bilingua_xliff::Doc>::from_bytes_with_limits(&pkg, &big).is_ok());
 }
 
 // A merge re-reads the entries it was given; limits the caller raised for extract must not refuse it.

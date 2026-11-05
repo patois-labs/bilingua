@@ -16,9 +16,9 @@ use bilingua_xliff::Error;
 use std::collections::HashSet;
 use std::io::{Cursor, Read, Write};
 
-/// Limits applied when reading a package.
+/// Limits applied when reading a package: `bilingua_model::Limits` as this module uses them.
 #[derive(Debug, Clone, Copy)]
-pub struct ZipLimits {
+pub(crate) struct ZipLimits {
     /// Most entries (folders included) a package may hold.
     pub max_entries: usize,
     /// Most bytes one entry may expand to.
@@ -36,33 +36,23 @@ pub struct ZipLimits {
     pub typed_errors: bool,
 }
 
-/// The B6 limits of an extraction (`ExtractOptions::limits()`), which are Localization OS's numbers by default:
-/// 10 000 entries, 256 MB unpacked in total (and so per entry), ratio 200 over 1 MB. (This crate used to carry its
-/// own, looser defaults: 20 000 entries, 512 MB per entry, 2 GB in total.)
-impl From<&bilingua_model::Limits> for ZipLimits {
-    fn from(l: &bilingua_model::Limits) -> ZipLimits {
+impl ZipLimits {
+    /// The zip limits of `l` (Localization OS's numbers by default: 10 000 entries, 256 MB unpacked in total and per
+    /// entry, ratio 200 over 1 MB). `typed`: refuse with `Error::Limit` (the `Filter`s) rather than a plain
+    /// `Error::Package` message (the open-package API).
+    pub(crate) fn of(l: &bilingua_model::Limits, typed: bool) -> ZipLimits {
         ZipLimits {
             max_entries: l.max_zip_entries,
-            max_entry_bytes: l.max_zip_bytes,
+            max_entry_bytes: l.max_zip_entry_bytes.min(l.max_zip_bytes),
             max_total_bytes: l.max_zip_bytes,
             max_ratio: l.max_zip_ratio,
             ratio_floor_bytes: l.zip_ratio_floor_bytes,
-            typed_errors: true,
+            typed_errors: typed,
         }
     }
-}
 
-impl Default for ZipLimits {
-    fn default() -> Self {
-        let mut z = ZipLimits::from(&bilingua_model::Limits::default());
-        z.typed_errors = false;
-        z
-    }
-}
-
-impl ZipLimits {
     /// No cap: for re-reading a package this crate wrote itself from entries that were already accepted.
-    pub fn unlimited() -> ZipLimits {
+    pub(crate) fn unlimited() -> ZipLimits {
         ZipLimits { max_entries: usize::MAX, max_entry_bytes: u64::MAX - 1, max_total_bytes: u64::MAX, max_ratio: u64::MAX, ratio_floor_bytes: u64::MAX, typed_errors: false }
     }
 }
@@ -131,7 +121,7 @@ pub fn safe_name(raw: &str) -> Result<String, Error> {
 }
 
 /// Read every file of a zip held in memory, applying `limits`. Folder entries are dropped.
-pub fn read_zip(bytes: &[u8], limits: &ZipLimits) -> Result<Vec<Entry>, Error> {
+pub(crate) fn read_zip(bytes: &[u8], limits: &ZipLimits) -> Result<Vec<Entry>, Error> {
     if bytes.len() < 22 || !(bytes.starts_with(b"PK\x03\x04") || bytes.starts_with(b"PK\x05\x06")) {
         return Err(bad("not a zip file (no PK signature)"));
     }

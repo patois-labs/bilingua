@@ -1,7 +1,7 @@
 //! Translation packages: Trados `.sdlppx` / `.sdlrpx` and memoQ `.mqxlz`.
 //!
 //! All three are zip files. Opening reads every entry into memory under the limits in
-//! [`ZipLimits`] (see `zipio.rs`), opens the bilingual files inside as documents (any type that implements
+//! the zip fields of `bilingua_model::Limits` (see `zipio.rs`), opens the bilingual files inside as documents (any type that implements
 //! [`PackageDoc`]; `bilingua_xliff::Doc` does), and keeps all
 //! other entries as they were. Saving a Trados return package or a memoQ file writes a new zip;
 //! nothing is ever extracted to disk.
@@ -17,7 +17,8 @@
 //!   `.mqxlz` is in the fixtures; the container is inferred from memoQ documentation.
 
 use bilingua_xliff::Error;
-pub use crate::zipio::{Entry, ZipLimits};
+pub use crate::zipio::Entry;
+use crate::zipio::ZipLimits;
 use crate::zipio::{read_zip, safe_name, write_zip};
 use quick_xml::events::Event;
 use quick_xml::Reader;
@@ -248,10 +249,17 @@ pub struct SdlPackage<D: PackageDoc> {
 
 impl<D: PackageDoc> SdlPackage<D> {
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, Error> {
-        Self::from_bytes_with_limits(bytes, &ZipLimits::default())
+        Self::from_bytes_with_limits(bytes, &bilingua_model::Limits::default())
     }
 
-    pub fn from_bytes_with_limits(bytes: &[u8], limits: &ZipLimits) -> Result<Self, Error> {
+    /// Opens a package under `limits` (the zip ones: `max_zip_entries`, `max_zip_bytes`, `max_zip_entry_bytes`,
+    /// `max_zip_ratio`, `zip_ratio_floor_bytes`). `Limits::default()` is Localization OS's numbers; CAT OS desktop
+    /// may pass larger ones. A refusal is a plain `Error::Package` message.
+    pub fn from_bytes_with_limits(bytes: &[u8], limits: &bilingua_model::Limits) -> Result<Self, Error> {
+        Self::open(bytes, &ZipLimits::of(limits, false))
+    }
+
+    pub(crate) fn open(bytes: &[u8], limits: &ZipLimits) -> Result<Self, Error> {
         let entries = read_zip(bytes, limits)?;
         let projects: Vec<usize> = entries
             .iter()
@@ -568,10 +576,17 @@ pub struct MqPackage<D: PackageDoc> {
 
 impl<D: PackageDoc> MqPackage<D> {
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, Error> {
-        Self::from_bytes_with_limits(bytes, &ZipLimits::default())
+        Self::from_bytes_with_limits(bytes, &bilingua_model::Limits::default())
     }
 
-    pub fn from_bytes_with_limits(bytes: &[u8], limits: &ZipLimits) -> Result<Self, Error> {
+    /// Opens a package under `limits` (the zip ones: `max_zip_entries`, `max_zip_bytes`, `max_zip_entry_bytes`,
+    /// `max_zip_ratio`, `zip_ratio_floor_bytes`). `Limits::default()` is Localization OS's numbers; CAT OS desktop
+    /// may pass larger ones. A refusal is a plain `Error::Package` message.
+    pub fn from_bytes_with_limits(bytes: &[u8], limits: &bilingua_model::Limits) -> Result<Self, Error> {
+        Self::open(bytes, &ZipLimits::of(limits, false))
+    }
+
+    pub(crate) fn open(bytes: &[u8], limits: &ZipLimits) -> Result<Self, Error> {
         let entries = read_zip(bytes, limits)?;
         let mut docs = HashMap::new();
         for (i, e) in entries.iter().enumerate() {

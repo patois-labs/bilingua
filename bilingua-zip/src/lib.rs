@@ -33,8 +33,8 @@ impl From<&Limits> for ZipLimits {
     fn from(l: &Limits) -> ZipLimits {
         ZipLimits {
             max_entries: l.max_zip_entries,
-            // LocOS has no per-entry cap beyond the total.
-            max_entry_bytes: l.max_zip_bytes,
+            // LocOS has no per-entry cap beyond the total (the default of `max_zip_entry_bytes`).
+            max_entry_bytes: l.max_zip_entry_bytes.min(l.max_zip_bytes),
             max_total_bytes: l.max_zip_bytes,
             max_ratio: l.max_zip_ratio,
             ratio_floor_bytes: l.zip_ratio_floor_bytes,

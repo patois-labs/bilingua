@@ -1,7 +1,7 @@
 //! Bilingua packages: Trados project and return packages (`.sdlppx`, `.sdlrpx`) and memoQ packages (`.mqxlz`).
 //!
 //! All three are zip files that hold bilingual XLIFF files. [`SdlPackage`] and [`MqPackage`] open them under
-//! zip safety limits ([`ZipLimits`]), read the bilingual files inside, and write a package back with the edited
+//! zip safety limits (the zip fields of `bilingua_model::Limits`), read the bilingual files inside, and write a package back with the edited
 //! files replaced and every other entry as it was. [`SdlPackage::to_return_package`] builds the Trados return
 //! package.
 //!
@@ -17,7 +17,8 @@ mod zipio;
 
 pub use bilingua_xliff::Error;
 pub use package::{FileRole, MqPackage, PackageDoc, PackageFile, ReturnStamp, SdlPackage, SdlPackageKind};
-pub use zipio::{Entry, ZipLimits};
+pub use zipio::Entry;
+use zipio::ZipLimits;
 
 use bilingua_model::{Document, ExtractOptions, Filter, Skeleton, ZipData, ZipEntry};
 use bilingua_xliff::Doc;
@@ -80,11 +81,11 @@ struct Opened {
 fn open_entries(family: Family, bytes: &[u8], limits: &ZipLimits) -> Result<Opened, Error> {
     Ok(match family {
         Family::Sdl => {
-            let p = SdlPackage::<Doc>::from_bytes_with_limits(bytes, limits)?;
+            let p = SdlPackage::<Doc>::open(bytes, limits)?;
             Opened { entries: p.entries().to_vec(), docs: p.document_paths() }
         }
         Family::Mq => {
-            let p = MqPackage::<Doc>::from_bytes_with_limits(bytes, limits)?;
+            let p = MqPackage::<Doc>::open(bytes, limits)?;
             Opened { entries: p.entries().to_vec(), docs: p.document_paths() }
         }
     })
@@ -109,7 +110,7 @@ impl Filter for PackageFilter {
         // the B6 limits of this call (Localization OS's numbers unless the caller sets others)
         let limits = opts.limits();
         bilingua_model::guard::check_input(bytes, &limits)?;
-        let opened = open_entries(self.family, bytes, &ZipLimits::from(&limits)).map_err(|e| perr(self.id, e))?;
+        let opened = open_entries(self.family, bytes, &ZipLimits::of(&limits, true)).map_err(|e| perr(self.id, e))?;
         let mut units = Vec::new();
         let mut source_lang = None;
         let mut target_lang = None;
@@ -154,7 +155,7 @@ impl Filter for PackageFilter {
         let zipped = zipio::write_zip(&raw, (1980, 1, 1, 0, 0, 0)).map_err(werr)?;
         match self.family {
             Family::Sdl => {
-                let mut p = SdlPackage::<Doc>::from_bytes_with_limits(&zipped, &ZipLimits::unlimited()).map_err(werr)?;
+                let mut p = SdlPackage::<Doc>::open(&zipped, &ZipLimits::unlimited()).map_err(werr)?;
                 let paths = p.document_paths();
                 for path in paths {
                     if let Some(doc) = p.doc_mut(&path) {
@@ -164,7 +165,7 @@ impl Filter for PackageFilter {
                 p.to_bytes().map_err(werr)
             }
             Family::Mq => {
-                let mut p = MqPackage::<Doc>::from_bytes_with_limits(&zipped, &ZipLimits::unlimited()).map_err(werr)?;
+                let mut p = MqPackage::<Doc>::open(&zipped, &ZipLimits::unlimited()).map_err(werr)?;
                 let paths = p.document_paths();
                 for path in paths {
                     if let Some(doc) = p.doc_mut(&path) {
