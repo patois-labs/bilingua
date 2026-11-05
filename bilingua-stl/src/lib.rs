@@ -217,7 +217,8 @@ fn merge(doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
         }
     }
     let stamp = opts.should_stamp(doc);
-    let lc = if stamp { doc.target_lang.as_deref().map(language_code) } else { None };
+    // an empty target language stamps nothing, as LocOS (`language_code(t) if t else None`)
+    let lc = if stamp { doc.target_lang.as_deref().filter(|t| !t.is_empty()).map(language_code) } else { None };
     if changed.is_empty() && lc.is_none() {
         return Ok(raw.to_vec());
     }

@@ -63,10 +63,13 @@ pub fn prep(atoms: &[Atom], cct: Cct) -> Vec<Atom> {
 
 /// The distinct characters of a text (after `prep`) the table cannot encode, in order of appearance.
 pub fn unsupported(atoms: &[Atom], cct: Cct) -> Vec<char> {
+    // a set beside the ordered list: a translation can hold 100 000 distinct characters (gate: was quadratic)
     let mut seen: Vec<char> = Vec::new();
+    let mut set: BTreeSet<char> = BTreeSet::new();
     for a in prep(atoms, cct) {
         if let Atom::C(c) = a {
-            if c != '\n' && !seen.contains(&c) && codec::encode_char(c, cct).is_none() {
+            if c != '\n' && !set.contains(&c) && codec::encode_char(c, cct).is_none() {
+                set.insert(c);
                 seen.push(c);
             }
         }
@@ -108,25 +111,31 @@ fn strip(r: &[Atom]) -> &[Atom] {
     &r[s..e]
 }
 
-/// Greedy wrap; `None` as soon as it needs more than `limit` rows.
-fn wrap(words: &[&[Atom]], w: usize, limit: usize) -> Option<Vec<Vec<Atom>>> {
+/// Greedy wrap; `None` as soon as it needs more than `limit` rows. `widths[i]` is the width of word i on its own,
+/// `spaced[i]` its width after a joining space (the space included): a space resets the "previous was a space"
+/// state of `width`, so a candidate row's width is the row's width plus `spaced[i]` (gate: no re-measure of the
+/// whole row per word, which was quadratic in zero-width codes).
+fn wrap(words: &[&[Atom]], widths: &[usize], spaced: &[usize], w: usize, limit: usize) -> Option<Vec<Vec<Atom>>> {
     let mut lines: Vec<Vec<Atom>> = Vec::new();
     let mut cur: Vec<Atom> = Vec::new();
-    for word in words {
+    let mut cur_w = 0usize;
+    for (i, word) in words.iter().enumerate() {
         if cur.is_empty() {
             cur.extend_from_slice(word);
+            cur_w = widths[i];
             continue;
         }
-        let cand = width(cur.iter().chain(std::iter::once(&Atom::C(' '))).chain(word.iter()));
-        if cand <= w {
+        if cur_w + spaced[i] <= w {
             cur.push(Atom::C(' '));
             cur.extend_from_slice(word);
+            cur_w += spaced[i];
         } else {
             lines.push(std::mem::take(&mut cur));
             if lines.len() >= limit {
                 return None;
             }
             cur.extend_from_slice(word);
+            cur_w = widths[i];
         }
     }
     if !cur.is_empty() {
@@ -149,13 +158,14 @@ pub fn layout(text: &[Atom], n_rows: usize, max_rows: usize, mnc: usize) -> Opti
     if widths.iter().sum::<usize>() > mnc.saturating_mul(max_rows) {
         return None; // cannot fit whatever the breaks: refuse now, not after a re-wrap per width
     }
+    let spaced: Vec<usize> = words.iter().map(|w| width(std::iter::once(&Atom::C(' ')).chain(w.iter()))).collect();
     let target = n_rows.min(max_rows).max(1);
     for w in 1..=mnc {
-        if let Some(rows) = wrap(&words, w, target) {
+        if let Some(rows) = wrap(&words, &widths, &spaced, w, target) {
             return Some(rows);
         }
     }
-    wrap(&words, mnc, max_rows)
+    wrap(&words, &widths, &spaced, mnc, max_rows)
 }
 
 fn encode_atoms(atoms: &[Atom], cct: Cct) -> Option<Vec<u8>> {
@@ -260,6 +270,8 @@ pub fn rebuild(raw: &[u8], parsed: &read::Parsed, units: &[UnitInfo], changed: &
     let mnc = read::mnc(raw);
     let fits = |cand: Cct| changed.values().all(|t| unsupported(t, cand).is_empty());
     let mut problems: Vec<String> = Vec::new();
+    // the units already named in `problems` (gate: a prefix search of `problems` per refused unit was quadratic)
+    let mut reported: BTreeSet<usize> = BTreeSet::new();
     let chosen = if fits(cct) {
         cct
     } else {
@@ -277,6 +289,7 @@ pub fn rebuild(raw: &[u8], parsed: &read::Parsed, units: &[UnitInfo], changed: &
                 for (k, t) in changed {
                     let bad = unsupported(t, best);
                     if !bad.is_empty() {
+                        reported.insert(*k);
                         let list: Vec<String> = bad.iter().take(8).map(|c| py_repr(*c)).collect();
                         problems.push(format!(
                             "subtitle {}: characters no EBU STL code table (00-04) can hold together with the rest of the file: {}",
@@ -304,9 +317,8 @@ pub fn rebuild(raw: &[u8], parsed: &read::Parsed, units: &[UnitInfo], changed: &
                 new_tf.insert(first, (k, tf, dvp));
             }
             Err(why) => {
-                let pre = format!("subtitle {}:", k + 1);
-                if !problems.iter().any(|p| p.starts_with(&pre)) {
-                    problems.push(format!("{pre} {why}"));
+                if reported.insert(k) {
+                    problems.push(format!("subtitle {}: {why}", k + 1));
                 }
             }
         }

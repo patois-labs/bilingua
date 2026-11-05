@@ -1,8 +1,9 @@
 # Wiring for the lead
 
 - Workspace: `"bilingua-stl"` in `members`, `bilingua-stl = { path = "bilingua-stl" }` in `[workspace.dependencies]`
-  (done in the last commit, replace at merge). New external dependency: `unicode-normalization = "0.1"` with
-  `default-features = false` (NFC and NFD for the table 00 floating diacritics and for Greek, Cyrillic and Arabic
+  (done in the last commit, replace at merge). External dependency: the workspace's `unicode-normalization`
+  (`[workspace.dependencies]`, `version = "0.1"`, `default-features = false`; shared with `bilingua-scc`, which
+  should switch to `{ workspace = true }` too; keep one entry) (NFC and NFD for the table 00 floating diacritics and for Greek, Cyrillic and Arabic
   text; pulls in `tinyvec`; both are portable to wasm). Dev-dependencies: `proptest = "1"`, `serde_json`.
 - Facade (`bilingua/Cargo.toml` and `filters()`): `Box::new(bilingua_stl::Stl)`. Format id `stl`, extension `stl`.
   `sniff` is strict (bytes 3 to 11 read `STL25.01` or `STL30.01`), so its place in `filters()` does not matter. It

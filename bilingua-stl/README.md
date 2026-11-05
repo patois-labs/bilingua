@@ -44,3 +44,8 @@ let out = Stl.merge(&doc)?;
   translation is plain (unencodable) text here, not a code.
 - Unicode normalisation uses the `unicode-normalization` crate (Unicode 16); LocOS uses Python's (15.1).
 - Row, unit and block caps come from `Limits`; more than 99 999 blocks is `Error::Limit`.
+- Linear where LocOS is quadratic (gate 11-05): the list of refused subtitles, the unsupported-character check
+  (100 000 distinct characters) and the row wrap (zero-width codes such as italics in long words). Same output.
+- Kept as LocOS for byte parity (LocOS issues, to fix in both together): a table switch leaves comment subtitles
+  and undefined upper-half bytes in the old table; a floating diacritic on a letter with no precomposed form (`C1 78`,
+  x with grave) reads as two code points and cannot be written back, so such a subtitle refuses when changed.
