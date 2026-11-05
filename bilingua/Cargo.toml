@@ -30,6 +30,7 @@ bilingua-wordfast = { workspace = true }
 bilingua-sdl = { workspace = true }
 bilingua-ini = { workspace = true }
 bilingua-mo = { workspace = true }
+bilingua-stl = { workspace = true }
 bilingua-ftl = { workspace = true }
 bilingua-csv = { workspace = true }
 bilingua-strings = { workspace = true }
