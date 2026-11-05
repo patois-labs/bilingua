@@ -46,13 +46,22 @@ fn eleven_languages_stamp_the_language_and_keep_everything_else() {
 }
 
 #[test]
-fn the_language_alone_changes_two_members() {
+fn a_translated_bundle_changes_two_members() {
     let src = Bundle::default().build();
-    let out = merge(&ex_with(&src, Some("de")));
+    let mut d = ex_with(&src, Some("de"));
+    put(&mut d, 0, "Hallo %@");
+    let out = merge(&d);
     let (a, b) = (members(&src), members(&out));
     let changed: Vec<&String> = a.iter().zip(&b).filter(|(x, y)| x.3 != y.3).map(|(x, _)| &x.0).collect();
     assert_eq!(changed, ["fr.xcloc/contents.json", "fr.xcloc/Localized Contents/fr.xliff"]);
     assert_eq!(comment(&out), b"made by hand");
+}
+
+#[test]
+fn an_untranslated_export_stays_the_file_it_was_even_with_a_language() {
+    // LocOS would declare the language anyway; Bilingua leaves a bundle with nothing translated alone
+    let src = Bundle::default().build();
+    assert_eq!(merge(&ex_with(&src, Some("de"))), src);
 }
 
 #[test]
@@ -81,7 +90,9 @@ fn xliff_two_gets_trg_lang() {
 fn a_file_without_a_target_language_gets_one() {
     let x = String::from_utf8(XLIFF.to_vec()).unwrap().replace(" target-language=\"fr\"", "");
     let src = Bundle { xliffs: vec![("fr.xliff", x.as_bytes())], ..Default::default() }.build();
-    let out = merge(&ex_with(&src, Some("de")));
+    let mut d = ex_with(&src, Some("de"));
+    put(&mut d, 0, "Hallo %@");
+    let out = merge(&d);
     let got = String::from_utf8(member(&out, "fr.xcloc/Localized Contents/fr.xliff")).unwrap();
     assert!(got.contains("datatype=\"plaintext\" target-language=\"de\""), "{got}");
 }
@@ -90,7 +101,9 @@ fn a_file_without_a_target_language_gets_one() {
 fn a_comment_and_cdata_do_not_fool_the_language_stamp() {
     let x = String::from_utf8(XLIFF.to_vec()).unwrap().replace("<body>", "<!-- <file target-language=\"zz\"> --><body>");
     let src = Bundle { xliffs: vec![("fr.xliff", x.as_bytes())], ..Default::default() }.build();
-    let out = merge(&ex_with(&src, Some("de")));
+    let mut d = ex_with(&src, Some("de"));
+    put(&mut d, 0, "Hallo %@");
+    let out = merge(&d);
     let got = String::from_utf8(member(&out, "fr.xcloc/Localized Contents/fr.xliff")).unwrap();
     assert!(got.contains("<!-- <file target-language=\"zz\"> -->") && got.contains("target-language=\"de\""), "{got}");
 }
@@ -99,8 +112,11 @@ fn a_comment_and_cdata_do_not_fool_the_language_stamp() {
 fn an_unusable_language_is_ignored() {
     let src = Bundle::default().build();
     for bad in ["", "  ", "<script>", "x y", "123"] {
-        let d = ex_with(&src, Some(bad));
-        assert_eq!(merge(&d), src, "{bad:?}");
+        let mut d = ex_with(&src, Some(bad));
+        put(&mut d, 0, "Bonjour %@");
+        let mut plain = ex(&src);
+        put(&mut plain, 0, "Bonjour %@");
+        assert_eq!(merge(&d), merge(&plain), "{bad:?}");
     }
 }
 

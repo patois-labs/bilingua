@@ -360,12 +360,17 @@ fn lookup<'a>(t: &'a Trans, path: &[String]) -> Option<&'a str> {
 struct Shape {
     items: Vec<ShapeItem>,
 }
+/// A plural or device category, with its shape when its value is an object.
+type Category = (String, Option<Shape>);
+/// A substitution: name, shape, copied `argNum` / `formatSpecifier`.
+type Substitution = (String, Shape, Vec<(String, J)>);
+
 enum ShapeItem {
     StringUnit,
     /// variation type -> (category, shape or None for a value that is not an object)
-    Variations(Vec<(String, Vec<(String, Option<Shape>)>)>),
+    Variations(Vec<(String, Vec<Category>)>),
     /// name, shape, copied `argNum` / `formatSpecifier`
-    Substitutions(Vec<(String, Shape, Vec<(String, J)>)>),
+    Substitutions(Vec<Substitution>),
 }
 
 fn shape_of(text: &str, loc: &Node) -> Shape {
@@ -523,7 +528,16 @@ fn replace_node(st: &Style, n: &Node, v: &J, depth: usize) -> Edit {
 }
 
 /// Sets `entry["localizations"][lang] = newj` where the localizations object may be missing or empty.
-fn set_locale(text: &str, st: &Style, e: &Entry<'_>, lang: &str, existing: Option<&Node>, newj: J, was_sorted: bool, edits: &mut Vec<Edit>) {
+/// The language being written: its key, the member it replaces, and whether the catalog keeps languages sorted.
+#[derive(Clone, Copy)]
+struct Slot<'a> {
+    lang: &'a str,
+    existing: Option<&'a Node>,
+    was_sorted: bool,
+}
+
+fn set_locale(text: &str, st: &Style, e: &Entry<'_>, slot: &Slot<'_>, newj: J, edits: &mut Vec<Edit>) {
+    let Slot { lang, existing, was_sorted } = *slot;
     let locs_member = e.obj.members.iter().rev().find(|m| m.key == "localizations");
     let locs_obj = locs_member.and_then(|m| m.val.obj());
     match (locs_member, locs_obj) {
@@ -600,7 +614,7 @@ fn apply(cat: &Catalog, entries: &[Entry<'_>], doc: &Document) -> Result<String,
                 if value != e.key {
                     let newj = J::Obj(vec![("stringUnit".into(), translated_unit(value))]);
                     let existing = locs_obj.and_then(|o| o.get(source));
-                    set_locale(text, &st, e, source, existing, newj, false, &mut edits);
+                    set_locale(text, &st, e, &Slot { lang: source, existing, was_sorted: false }, newj, &mut edits);
                 }
             }
             continue;
@@ -629,7 +643,7 @@ fn apply(cat: &Catalog, entries: &[Entry<'_>], doc: &Document) -> Result<String,
                 continue;
             }
         }
-        set_locale(text, &st, e, &lang, found.map(|(_, n)| n), newj, was_sorted, &mut edits);
+        set_locale(text, &st, e, &Slot { lang: &lang, existing: found.map(|(_, n)| n), was_sorted }, newj, &mut edits);
     }
     if edits.is_empty() {
         return Ok(text.clone());

@@ -61,14 +61,12 @@ fn run_with(name: &str, data: &[u8], exact: bool, lf: bool) {
     for (loc, prefix) in cases {
         for mode in ["full", "half"] {
             let mut d = ex(data, loc);
-            let mut n = 0usize;
-            for u in d.units.iter_mut().filter(|u| u.translate) {
-                if mode == "full" || n % 2 == 0 {
+            for (n, u) in d.units.iter_mut().filter(|u| u.translate).enumerate() {
+                if mode == "full" || n.is_multiple_of(2) {
                     let (text, map) = locos::to_locos_text(&u.source());
                     u.segments[0].target = locos::from_locos_text(&format!("{prefix}{text}"), &map);
                     u.segments[0].state = SegState::Draft;
                 }
-                n += 1;
             }
             let mut got = Xcstrings.merge(&d).unwrap();
             if lf {

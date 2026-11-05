@@ -29,7 +29,7 @@ fn units_tags_and_notes() {
     let u = d.units.iter().find(|u| text_of(u) == "padded").unwrap();
     assert_eq!(u.context.notes, ["key with spaces; also used as the source text"]);
     assert_eq!(u.context.key.as_deref(), Some("  padded  "));
-    let tags: Vec<bool> = d.units.iter().find(|u| text_of(u).starts_with("Zeta")).unwrap().source().iter().filter_map(|i| matches!(i, Inline::Tag { .. }).then(|| i.is_free())).collect();
+    let tags: Vec<bool> = d.units.iter().find(|u| text_of(u).starts_with("Zeta")).unwrap().source().iter().filter(|i| matches!(i, Inline::Tag { .. })).map(Inline::is_free).collect();
     assert_eq!(tags, [true, true]);
     let v: Vec<&String> = d.units.iter().filter_map(|u| u.context.extra.get("variation")).collect();
     assert!(v.iter().any(|s| s.as_str() == "device:iphone plural:one"), "{v:?}");

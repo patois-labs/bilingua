@@ -208,6 +208,7 @@ impl Filter for Xcloc {
         let lay = layout(&entries)?;
         let tag = doc.target_lang.as_deref().and_then(canonical_tag);
         let mut replaced: Vec<Option<Vec<u8>>> = vec![None; entries.len()];
+        let mut any_touched = false;
         for (k, &ei) in lay.xliffs.iter().enumerate() {
             let e = &entries[ei];
             let mut x = xliff_doc(e, &limits)?;
@@ -241,19 +242,21 @@ impl Filter for Xcloc {
                     touched = true;
                 }
             }
-            let mut bytes = if touched { x.to_bytes() } else { e.data.clone() };
-            if let Some(t) = &tag {
-                if let Some(b) = stamp_target_language(&bytes, t) {
-                    bytes = b;
-                }
-            }
-            if bytes != e.data {
-                replaced[ei] = Some(bytes);
+            if touched {
+                any_touched = true;
+                replaced[ei] = Some(x.to_bytes());
             }
         }
-        if let Some(t) = &tag {
-            let ce = &entries[lay.contents];
-            if let Some(b) = set_target_locale(&ce.data, t) {
+        // The language is declared only on a bundle that received a translation: an export with nothing
+        // translated stays the file it was (LocOS declares it anyway; documented difference).
+        if let (Some(t), true) = (&tag, any_touched) {
+            for &ei in &lay.xliffs {
+                let cur = replaced[ei].as_deref().unwrap_or(&entries[ei].data);
+                if let Some(b) = stamp_target_language(cur, t) {
+                    replaced[ei] = Some(b);
+                }
+            }
+            if let Some(b) = set_target_locale(&entries[lay.contents].data, t) {
                 replaced[lay.contents] = Some(b);
             }
         }

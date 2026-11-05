@@ -122,7 +122,10 @@ impl Bundle<'_> {
     }
 }
 
-pub fn members(z: &[u8]) -> Vec<(String, Option<[u16; 6]>, bool, Vec<u8>)> {
+/// name, time stamp, stored, bytes
+pub type Member = (String, Option<[u16; 6]>, bool, Vec<u8>);
+
+pub fn members(z: &[u8]) -> Vec<Member> {
     bilingua_zip::read_zip("xcloc", z, &bilingua_zip::ZipLimits::default())
         .unwrap()
         .into_iter()
