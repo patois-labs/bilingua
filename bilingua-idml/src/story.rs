@@ -9,7 +9,9 @@
 //! let paras = story::collect(&mut tree, &Opts::default());
 //! let tok = story::tokenize(&tree, &paras[0]);
 //! let unit_inlines = tok.core_inlines();          // what a translator sees
-//! story::rebuild(&mut tree, &paras[0], &tok, &translated, story::stamp_none());
+//! // when more than one paragraph of the story may change: story::normalize(&mut tree, &paras), then collect again
+//! let ranges = story::rebuild(&mut tree, &paras[0], &tok, &translated);
+//! story::stamp_language(&mut tree, &ranges, "$ID/de_DE_2006");
 //! ```
 //!
 //! Inline codes follow the Localization OS token grammar, one numbered tag each:
@@ -926,6 +928,9 @@ pub fn rebuild(t: &mut Tree, para: &Para, tok: &Tok, target: &[Inline]) -> Vec<I
     let parts = target_parts(target, &lead, &trail);
     let pcs = pieces(&parts, tok);
     let br = para.runs.iter().rev().find_map(|r| r.br);
+    if para.runs.is_empty() {
+        return vec![]; // `collect` never returns an empty paragraph; `Para::default()` is one
+    }
     if tok.mode_a {
         let parent = t.parent(para.runs[0].csr).unwrap_or(t.root());
         let mut old: Vec<Id> = vec![];
@@ -1048,11 +1053,25 @@ fn nested_ranges(t: &Tree, el: Id) -> Vec<Id> {
 /// `AppliedLanguage` on every rebuilt range, nested ranges (inside a hyperlink or XML tag) included. Never
 /// descends into a point element (footnote, table, note, hidden text, anchored frame).
 pub fn stamp_language(t: &mut Tree, ranges: &[Id], language: &str) {
+    for el in stamp_walk(t, ranges) {
+        t.set_attr(el, "AppliedLanguage", language);
+    }
+}
+
+/// The rebuilt ranges and the ranges nested under them, each once. A range under alternating wrappers and ranges is
+/// reachable from every range above it, so a walk without the seen set grows exponentially with the nesting.
+fn stamp_walk(t: &Tree, ranges: &[Id]) -> Vec<Id> {
+    let mut seen: HashSet<Id> = HashSet::new();
+    let mut out = vec![];
     let mut stack = ranges.to_vec();
     while let Some(el) = stack.pop() {
-        t.set_attr(el, "AppliedLanguage", language);
-        stack.extend(nested_ranges(t, el));
+        if !seen.insert(el) {
+            continue;
+        }
+        out.push(el);
+        stack.extend(nested_ranges(t, el).into_iter().filter(|r| !seen.contains(r)));
     }
+    out
 }
 
 const RTL_COMPOSER: &str = "HL Composer Optyca";
@@ -1062,8 +1081,7 @@ const RTL_SINGLE: &str = "HL Single Optyca";
 /// a World-Ready composer; an explicit left-to-right `CharacterDirection` becomes `DefaultDirection`.
 pub fn stamp_rtl(t: &mut Tree, ranges: &[Id]) {
     let mut paras: Vec<Id> = vec![];
-    let mut stack = ranges.to_vec();
-    while let Some(el) = stack.pop() {
+    for el in stamp_walk(t, ranges) {
         if t.attr(el, "CharacterDirection") == Some("LeftToRightDirection") {
             t.set_attr(el, "CharacterDirection", "DefaultDirection");
         }
@@ -1080,7 +1098,6 @@ pub fn stamp_rtl(t: &mut Tree, ranges: &[Id]) {
             }
             up = t.parent(u);
         }
-        stack.extend(nested_ranges(t, el));
     }
     for psr in paras {
         t.set_attr(psr, "ParagraphDirection", "RightToLeftDirection");

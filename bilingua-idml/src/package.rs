@@ -152,6 +152,7 @@ pub fn open(entries: &[RawEntry], l: &Limits, budget: &mut Budget) -> Result<Pkg
     let mut hidden_layers: HashSet<String> = HashSet::new();
     let mut languages = HashSet::new();
     let mut story_order: Vec<String> = vec![];
+    let mut listed: HashSet<String> = HashSet::new();
     for el in tree.iter(tree.root()) {
         if !tree.is_element(el) {
             continue;
@@ -179,7 +180,7 @@ pub fn open(entries: &[RawEntry], l: &Limits, budget: &mut Budget) -> Result<Pkg
             }
             "Story" => {
                 if let Some(src) = tree.attr(el, "src") {
-                    if names.contains(src) && !story_order.iter().any(|s| s == src) {
+                    if names.contains(src) && listed.insert(src.to_string()) {
                         story_order.push(src.to_string());
                     }
                 }
@@ -225,19 +226,21 @@ fn nonprinting_stories(entries: &[RawEntry], hidden_layers: &HashSet<String>, l:
 /// The zip reader indexes members by name, so a repeated name would silently show only one of the two copies; the
 /// directory is read here, before that.
 pub fn check_member_names(bytes: &[u8]) -> Result<(), Error> {
-    let u16at = |o: usize| bytes.get(o..o + 2).map(|b| u16::from_le_bytes([b[0], b[1]]) as usize);
-    let u32at = |o: usize| bytes.get(o..o + 4).map(|b| u32::from_le_bytes([b[0], b[1], b[2], b[3]]) as usize);
+    // checked offsets: a hostile directory offset must not overflow `usize` on a 32-bit (WASM) target
+    let span = |o: usize, n: usize| o.checked_add(n).and_then(|e| bytes.get(o..e));
+    let u16at = |o: usize| span(o, 2).map(|b| u16::from_le_bytes([b[0], b[1]]) as usize);
+    let u32at = |o: usize| span(o, 4).map(|b| u32::from_le_bytes([b[0], b[1], b[2], b[3]]) as usize);
     let sig = [0x50u8, 0x4b, 5, 6];
     let from = bytes.len().saturating_sub(22 + 65535);
     let Some(eocd) = bytes.get(from..).and_then(|t| t.windows(4).rposition(|w| w == sig)).map(|p| p + from) else { return Ok(()) };
     let (Some(count), Some(mut off)) = (u16at(eocd + 10), u32at(eocd + 16)) else { return Ok(()) };
     let mut seen: HashSet<String> = HashSet::new();
     for _ in 0..count {
-        if bytes.get(off..off + 4) != Some(&[0x50, 0x4b, 1, 2]) {
+        if span(off, 4) != Some(&[0x50, 0x4b, 1, 2][..]) {
             return Ok(()); // damaged directory: the zip reader reports it
         }
         let (Some(n), Some(x), Some(c)) = (u16at(off + 28), u16at(off + 30), u16at(off + 32)) else { return Ok(()) };
-        let Some(name) = bytes.get(off + 46..off + 46 + n) else { return Ok(()) };
+        let Some(name) = span(off + 46, n) else { return Ok(()) };
         let name = String::from_utf8_lossy(name).to_ascii_lowercase();
         if name.contains('\\') {
             return Err(perr(format!("a package member has an unsafe name: {name:?}")));
