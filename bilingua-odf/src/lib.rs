@@ -17,12 +17,13 @@ mod lang;
 mod stamp;
 mod walk;
 mod xml;
+mod zipdir;
 
 use bilingua_model::*;
 use bilingua_zip::{Body, EntryMeta, RawEntry, ZipLimits};
 use edit::Edits;
 use std::collections::BTreeMap;
-use xml::{Kind, Tree, NS_OFFICE, NS_TABLE};
+use xml::{Kind, Tree, NS_TABLE};
 
 /// The skeleton's only entry: the whole original archive. It holds a NUL, which no real zip entry name can.
 const ARCHIVE: &str = "\0bilingua-odf-archive";
@@ -46,6 +47,9 @@ fn perr(id: &str, msg: impl Into<String>) -> Error {
 
 fn open_package(bytes: &[u8], id: &str, l: &Limits) -> Result<Vec<RawEntry>, Error> {
     guard::check_input(bytes, l)?;
+    if let Some(name) = zipdir::duplicate_name(bytes) {
+        return Err(perr(id, format!("the zip lists the member {name:?} twice. It was not processed.")));
+    }
     let entries = bilingua_zip::read_zip(id, bytes, &ZipLimits::from(l))?;
     bilingua_zip::check_xml_parts(&entries, l)?;
     if !entries.iter().any(|e| e.name == "content.xml") {

@@ -337,8 +337,8 @@ impl Tree {
                     continue;
                 }
                 let rest = &src[pos..];
-                if rest.starts_with("<!--") {
-                    let e = rest[4..].find("-->").ok_or_else(|| invalid("unterminated comment"))? + 4;
+                if let Some(after) = rest.strip_prefix("<!--") {
+                    let e = after.find("-->").ok_or_else(|| invalid("unterminated comment"))? + 4;
                     let body = &rest[4..e];
                     if body.contains("--") || body.ends_with('-') {
                         return Err(invalid("'--' inside a comment"));
@@ -355,7 +355,7 @@ impl Tree {
                     self.push(Kind::Cdata, &stack, &mut lastc, pos, pos + e + 3, 0, 0, 0, NS_NONE);
                     pos += e + 3;
                 } else if rest.starts_with("<?") {
-                    let e = rest.find("?>").ok_or_else(|| invalid("unterminated processing instruction"))?;
+                    let e = rest[2..].find("?>").ok_or_else(|| invalid("unterminated processing instruction"))? + 2;
                     let target: &str = rest[2..e].split(|c: char| c.is_whitespace()).next().unwrap_or("");
                     if !valid_qname(target.as_bytes()) {
                         return Err(invalid("a processing instruction has no valid target"));
@@ -602,9 +602,6 @@ impl Tree {
         let n = self.node(i);
         n.kind == Kind::Elem && n.ns == ns && self.local(i) == local
     }
-    pub fn is_elem(&self, i: u32) -> bool {
-        self.node(i).kind == Kind::Elem
-    }
     pub fn start_tag(&self, i: u32) -> &str {
         let n = self.node(i);
         &self.src[n.s0 as usize..n.s1 as usize]
@@ -766,6 +763,12 @@ mod tests {
             "",
             "<!DOCTYPE a [<!ENTITY x \"y\">]><a/>",
             "<!DOCTYPE a><a/>",
+            "<a><?></a>",
+            "<?><a/>",
+            "<a><?x?></a><?>",
+            "<a><!--></a>",
+            "<a><!---></a>",
+            "<a><![CDATA[]]></a",
         ] {
             assert!(tree(bad).is_err(), "{bad:?} must be refused");
         }

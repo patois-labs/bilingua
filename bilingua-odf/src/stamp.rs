@@ -9,7 +9,6 @@ use crate::lang::{self, Slot};
 use crate::xml::*;
 
 pub struct Lang {
-    pub tag: String,
     names: [(u16, &'static str); 3],
     values: [Option<String>; 3],
     pub rtl: bool,
@@ -23,7 +22,7 @@ impl Lang {
             Slot::Complex => [(NS_STYLE, "language-complex"), (NS_STYLE, "country-complex"), (NS_STYLE, "script-complex")],
             Slot::Latin => [(NS_FO, "language"), (NS_FO, "country"), (NS_FO, "script")],
         };
-        Lang { tag: tag.to_string(), names, values: [Some(l), c, s], rtl: lang::is_rtl(tag) }
+        Lang { names, values: [Some(l), c, s], rtl: lang::is_rtl(tag) }
     }
 }
 

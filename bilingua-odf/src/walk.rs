@@ -54,9 +54,7 @@ pub fn paragraphs(t: &Tree, styles_part: bool) -> Vec<u32> {
             out.push(i);
         }
         let mut st = parent_state;
-        if is_skip_container(t, i) {
-            st |= SKIP;
-        } else if node.ns == NS_TABLE && t.local(i) == "table-cell" && st & SKIP == 0 && !cell_is_text(t, i) {
+        if is_skip_container(t, i) || (node.ns == NS_TABLE && t.local(i) == "table-cell" && st & SKIP == 0 && !cell_is_text(t, i)) {
             st |= SKIP;
         } else if node.ns == NS_STYLE && matches!(t.local(i), "header" | "footer" | "header-left" | "footer-left" | "header-first" | "footer-first") {
             st |= HF;
@@ -148,20 +146,28 @@ impl Tz<'_> {
             return Ok(());
         }
         // runs of space, tab, CR and LF are one space
-        let mut tmp = String::with_capacity(s.len());
-        let mut in_ws = false;
-        for c in s.chars() {
-            if matches!(c, ' ' | '\t' | '\r' | '\n') {
-                if !in_ws {
-                    tmp.push(' ');
+        let b = s.as_bytes();
+        let plain = !b.iter().any(|c| matches!(c, b'\t' | b'\r' | b'\n')) && !b.windows(2).any(|w| w == b"  ");
+        let tmp: String;
+        let mut s: &str = if plain {
+            s
+        } else {
+            let mut t = String::with_capacity(s.len());
+            let mut in_ws = false;
+            for c in s.chars() {
+                if matches!(c, ' ' | '\t' | '\r' | '\n') {
+                    if !in_ws {
+                        t.push(' ');
+                    }
+                    in_ws = true;
+                } else {
+                    in_ws = false;
+                    t.push(c);
                 }
-                in_ws = true;
-            } else {
-                in_ws = false;
-                tmp.push(c);
             }
-        }
-        let mut s: &str = &tmp;
+            tmp = t;
+            &tmp
+        };
         if s.starts_with(' ') && (self.space || !self.started) {
             s = &s[1..];
         }
