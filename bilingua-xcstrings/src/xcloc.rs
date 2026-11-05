@@ -195,6 +195,10 @@ impl Filter for Xcloc {
     }
 
     fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
+        self.merge_with(doc, &bilingua_model::MergeOptions::default())
+    }
+
+    fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
         bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
         let Skeleton::Zip { entries: skel, .. } = &doc.skeleton else {
             return Err(Error::Write("xcloc needs a zip skeleton".into()));
@@ -252,7 +256,7 @@ impl Filter for Xcloc {
         }
         // The language is declared only on a bundle that received a translation: an export with nothing
         // translated stays the file it was (LocOS declares it anyway; documented difference).
-        if let (Some(t), true) = (&tag, any_touched) {
+        if let (Some(t), true) = (&tag, any_touched || opts.stamp_target_always) {
             for &ei in &lay.xliffs {
                 let cur = replaced[ei].as_deref().unwrap_or(&entries[ei].data);
                 if let Some(b) = stamp_target_language(cur, t) {

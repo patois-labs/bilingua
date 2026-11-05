@@ -429,11 +429,25 @@ impl Filter for FtlFilter {
     }
 
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
-        self.extract_with(bytes, opts, &Limits::from_model(&opts.limits()))
+        let mut limits = Limits::from_model(&opts.limits());
+        // `format_options["ftl.translate_terms"]` is the generic spelling of `Limits::translate_terms`
+        if let Some(on) = opts.format_flag("ftl.translate_terms") {
+            limits.translate_terms = on;
+        }
+        self.extract_with(bytes, opts, &limits)
     }
 
     fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
-        self.merge_inner(doc, None)
+        self.merge_inner(doc, None, false)
+    }
+
+    /// With `stamp_target_always` the plural selects are filled for the document's `target_lang` even when nothing
+    /// is translated (LocOS `build_localized`); otherwise the same as `merge`.
+    fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
+        match (opts.stamp_target_always, doc.target_lang.as_deref().filter(|t| !t.trim().is_empty())) {
+            (true, Some(t)) => self.merge_inner(doc, Some(t), true),
+            _ => self.merge_inner(doc, None, false),
+        }
     }
 }
 
@@ -443,10 +457,10 @@ impl FtlFilter {
     /// `build_localized`, decision 13). Nothing is added when no unit has a target. The added variants are new
     /// units when the file is read again, which is why plain `merge` does not do this.
     pub fn merge_localized(&self, doc: &Document, locale: Option<&str>) -> Result<Vec<u8>, Error> {
-        self.merge_inner(doc, locale.or(doc.target_lang.as_deref()))
+        self.merge_inner(doc, locale.or(doc.target_lang.as_deref()), false)
     }
 
-    fn merge_inner(&self, doc: &Document, fill: Option<&str>) -> Result<Vec<u8>, Error> {
+    fn merge_inner(&self, doc: &Document, fill: Option<&str>, even_untranslated: bool) -> Result<Vec<u8>, Error> {
         bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
         let Skeleton::Text { parts, encoding, .. } = &doc.skeleton else {
             return Err(Error::Write("ftl needs a text skeleton".into()));
@@ -462,7 +476,7 @@ impl FtlFilter {
             }
         }
         let translated = doc.units.iter().any(|u| u.segments.iter().any(|s| !s.target.is_empty()));
-        if let (Some(loc), true) = (fill, translated) {
+        if let (Some(loc), true) = (fill, translated || even_untranslated) {
             check_budget(&out, &Limits::default()).map_err(|e| Error::Write(e.to_string()))?;
             out = fill_plurals(&out, loc);
         }

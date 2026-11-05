@@ -35,8 +35,12 @@ impl Filter for Html {
     }
 
     fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
+        self.merge_with(doc, &bilingua_model::MergeOptions::default())
+    }
+
+    fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
         bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
-        merge::merge_html(doc)
+        merge::merge_html(doc, opts)
     }
 
     fn preview(&self, doc: &Document) -> Option<String> {

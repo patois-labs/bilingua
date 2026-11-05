@@ -244,6 +244,10 @@ impl Filter for Po {
     }
 
     fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
+        self.merge_with(doc, &bilingua_model::MergeOptions::default())
+    }
+
+    fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
         bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
         let Skeleton::Text { parts, encoding, .. } = &doc.skeleton else {
             return Err(Error::Write("po needs a text skeleton".into()));
@@ -259,7 +263,7 @@ impl Filter for Po {
                 *d &= done(u);
             }
         }
-        let any = doc.units.iter().any(changed);
+        let any = doc.units.iter().any(changed) || (opts.stamp_target_always && doc.target_lang.is_some());
         let mut seen: HashSet<usize> = HashSet::new();
         let mut out = String::new();
         for (pi, p) in parts.iter().enumerate() {
@@ -283,7 +287,7 @@ impl Filter for Po {
                 }
             }
         }
-        bilingua_model::enc::encode_text(&out, encoding)
+        bilingua_model::enc::encode_text_with(&out, encoding, opts)
     }
 }
 

@@ -177,7 +177,7 @@ fn parse_granularity(s: &str) -> Result<Granularity, Fail> {
 
 /// Opens a file and returns the Document as dicts and lists.
 #[pyfunction]
-#[pyo3(signature = (name, data, *, source_lang=None, target_lang=None, granularity="paragraph", limits=None))]
+#[pyo3(signature = (name, data, *, source_lang=None, target_lang=None, granularity="paragraph", limits=None, format_options=None))]
 fn extract(
     py: Python<'_>,
     name: &str,
@@ -186,6 +186,7 @@ fn extract(
     target_lang: Option<String>,
     granularity: &str,
     limits: Option<&Bound<'_, PyAny>>,
+    format_options: Option<&Bound<'_, PyAny>>,
 ) -> PyResult<Py<PyAny>> {
     let g = parse_granularity(granularity).map_err(|f| to_py_err(py, f))?;
     // A dict of limit names (see `Limits`); anything left out keeps Localization OS's default.
@@ -197,9 +198,18 @@ fn extract(
             Some(serde_json::from_value(v).map_err(|e| to_py_err(py, Fail::new("invalid_argument", format!("limits: {e}"))))?)
         }
     };
+    // Options only one format knows, e.g. {"ftl.translate_terms": "true"}; values are strings.
+    let format_options: std::collections::BTreeMap<String, String> = match format_options {
+        None => Default::default(),
+        Some(o) if o.is_none() => Default::default(),
+        Some(o) => {
+            let v = from_py(o, 0).map_err(|f| to_py_err(py, f))?;
+            serde_json::from_value(v).map_err(|e| to_py_err(py, Fail::new("invalid_argument", format!("format_options: {e}"))))?
+        }
+    };
     let (name, data) = (name.to_string(), data.to_vec());
     let value = guarded(py, move || {
-        let opts = ExtractOptions { source_lang, target_lang, granularity: g, include_locked: false, limits };
+        let opts = ExtractOptions { source_lang, target_lang, granularity: g, include_locked: false, limits, format_options };
         let doc = engine::extract(&name, &data, &opts)?;
         serde_json::to_value(&doc).map_err(|e| Fail::new("internal", e.to_string()))
     })?;
@@ -207,12 +217,25 @@ fn extract(
 }
 
 /// Writes a Document (as returned by `extract`, with targets filled in) back to file bytes.
+///
+/// `options` is an optional dict of merge options: `output_encoding` ("keep", the default, or "utf-8", which
+/// writes UTF-8 and makes charset declarations say so) and `stamp_target_always` (bool: stamp the target language
+/// and fill plurals even when nothing is translated, as Localization OS does). Unknown names are an error.
 #[pyfunction]
-fn merge<'py>(py: Python<'py>, document: &Bound<'py, PyAny>) -> PyResult<Bound<'py, PyBytes>> {
+#[pyo3(signature = (document, options=None))]
+fn merge<'py>(py: Python<'py>, document: &Bound<'py, PyAny>, options: Option<&Bound<'py, PyAny>>) -> PyResult<Bound<'py, PyBytes>> {
     let value = from_py(document, 0).map_err(|f| to_py_err(py, f))?;
+    let opts: engine::MergeOptions = match options {
+        None => Default::default(),
+        Some(o) if o.is_none() => Default::default(),
+        Some(o) => {
+            let v = from_py(o, 0).map_err(|f| to_py_err(py, f))?;
+            serde_json::from_value(v).map_err(|e| to_py_err(py, Fail::new("invalid_argument", format!("options: {e}"))))?
+        }
+    };
     let bytes = guarded(py, move || {
         let doc: Document = serde_json::from_value(value).map_err(|e| Fail::new("invalid_document", e.to_string()))?;
-        Ok(engine::merge(&doc)?)
+        Ok(engine::merge_with(&doc, &opts)?)
     })?;
     Ok(PyBytes::new(py, &bytes))
 }

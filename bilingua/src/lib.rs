@@ -176,6 +176,13 @@ pub fn merge(doc: &Document) -> Result<Vec<u8>, Error> {
     filter_for(doc)?.merge(doc)
 }
 
+/// [`merge`] with [`MergeOptions`]: `output_encoding` (keep the file's encoding, or write UTF-8 and make the
+/// declarations say so) and `stamp_target_always` (stamp the target language and fill plurals even when nothing is
+/// translated, as Localization OS does). `merge(doc)` is `merge_with(doc, &MergeOptions::default())`.
+pub fn merge_with(doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
+    filter_for(doc)?.merge_with(doc, opts)
+}
+
 /// Translated HTML preview with `data-bl-seg` spans, for formats that have one.
 pub fn preview(doc: &Document) -> Option<String> {
     filter_for(doc).ok()?.preview(doc)

@@ -84,6 +84,10 @@ impl Filter for JsonFilter {
     }
 
     fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
+        self.merge_with(doc, &bilingua_model::MergeOptions::default())
+    }
+
+    fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
         bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
         let Skeleton::Text { parts, encoding, .. } = &doc.skeleton else {
             return Err(Error::Write("json needs a text skeleton".into()));
@@ -98,7 +102,7 @@ impl Filter for JsonFilter {
                 }
             }
         }
-        bilingua_model::enc::encode_text(&out, encoding)
+        bilingua_model::enc::encode_text_with(&out, encoding, opts)
     }
 }
 

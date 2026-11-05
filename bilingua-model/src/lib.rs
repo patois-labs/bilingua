@@ -677,12 +677,78 @@ pub struct ExtractOptions {
     /// Safety limits for this call; `None` uses [`Limits::default`] (Localization OS's numbers).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub limits: Option<Limits>,
+    /// Options only one format knows, as `"<format>.<name>"` to a string value (`"ftl.translate_terms"` to
+    /// `"true"`). Booleans are `true`/`false`/`1`/`0`/`yes`/`no`; a format ignores keys it does not know.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub format_options: BTreeMap<String, String>,
 }
 
 impl ExtractOptions {
+    /// A format option as text, if set.
+    pub fn format_option(&self, key: &str) -> Option<&str> {
+        self.format_options.get(key).map(String::as_str)
+    }
+
+    /// A format option as a boolean (`true`, `1`, `yes`, `on` are true; `false`, `0`, `no`, `off` are false; any
+    /// other text or no entry gives `None`).
+    pub fn format_flag(&self, key: &str) -> Option<bool> {
+        match self.format_option(key)?.trim().to_ascii_lowercase().as_str() {
+            "true" | "1" | "yes" | "on" => Some(true),
+            "false" | "0" | "no" | "off" => Some(false),
+            _ => None,
+        }
+    }
+
     /// The limits in force: the caller's, or the defaults.
     pub fn limits(&self) -> Limits {
         self.limits.unwrap_or_default()
+    }
+}
+
+/// How a merge writes text files.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub enum OutputEncoding {
+    /// The file's own encoding, BOM and line endings (the default; an untouched merge is byte-identical).
+    #[default]
+    #[serde(rename = "keep")]
+    Keep,
+    /// Always UTF-8 (Localization OS behaviour). An XML, HTML or PO charset declaration is rewritten to say UTF-8,
+    /// so the file stays truthful; a UTF-8 BOM the file had is kept, a UTF-16 BOM is dropped.
+    #[serde(rename = "utf-8", alias = "utf8")]
+    Utf8,
+}
+
+/// Options for [`Filter::merge_with`]. The default is what [`Filter::merge`] does. They live here, once, and
+/// every format that stamps a language, fills plurals or writes text honours them:
+///
+/// - `output_encoding`: [`OutputEncoding::Keep`] or [`OutputEncoding::Utf8`] (through `enc::encode_text_with`, so
+///   every text format that keeps its encoding in the skeleton gets it).
+/// - `stamp_target_always`: by default a merge in which nothing is translated returns the original bytes (no target
+///   language stamp, no plural fill, no format conversion). With `true` the target language is stamped and
+///   missing plural forms are filled even then, as Localization OS does. It only has an effect when
+///   `Document::target_lang` is set.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct MergeOptions {
+    pub output_encoding: OutputEncoding,
+    pub stamp_target_always: bool,
+}
+
+impl MergeOptions {
+    /// The Localization OS behaviour: UTF-8 out, stamp and fill always.
+    pub fn locos() -> MergeOptions {
+        MergeOptions { output_encoding: OutputEncoding::Utf8, stamp_target_always: true }
+    }
+
+    /// True when the document has at least one segment with a target.
+    pub fn any_translated(doc: &Document) -> bool {
+        doc.segments().any(|(_, s)| !s.target.is_empty())
+    }
+
+    /// Should a format stamp the target language and fill plurals for this document? `target_lang` must be set and
+    /// something translated, or `stamp_target_always`.
+    pub fn should_stamp(&self, doc: &Document) -> bool {
+        doc.target_lang.is_some() && (self.stamp_target_always || Self::any_translated(doc))
     }
 }
 
@@ -732,6 +798,12 @@ pub trait Filter: Send + Sync {
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error>;
     /// Document back to a file in the original format, targets in place of sources.
     fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error>;
+    /// [`Filter::merge`] with [`MergeOptions`]. The default ignores the options, which is right for a format that
+    /// neither writes text in a legacy encoding nor stamps languages; a format that does overrides this and
+    /// makes `merge` call it with `MergeOptions::default()`.
+    fn merge_with(&self, doc: &Document, _opts: &MergeOptions) -> Result<Vec<u8>, Error> {
+        self.merge(doc)
+    }
     /// For formats a browser can show: the translated document as HTML in which every segment's text sits in
     /// `<span data-bl-seg="SEGMENT_ID">..</span>`, so a live preview can patch one segment without reloading.
     /// Scripts must be stripped. `None` when the format has no preview.

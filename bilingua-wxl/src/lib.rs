@@ -305,12 +305,16 @@ impl Filter for Wxl {
     }
 
     fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
+        self.merge_with(doc, &bilingua_model::MergeOptions::default())
+    }
+
+    fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
         bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
         let Skeleton::Text { parts, encoding, .. } = &doc.skeleton else {
             return Err(Error::Write("wxl needs a text skeleton".into()));
         };
         let changed = doc.units.iter().any(|u| u.translate && flatten(&u.output()) != flatten(&u.source()));
-        let culture = doc.target_lang.as_deref().and_then(culture_of).filter(|_| changed);
+        let culture = doc.target_lang.as_deref().and_then(culture_of).filter(|_| changed || opts.stamp_target_always);
         let mut out = String::new();
         let mut first = true;
         for p in parts {
@@ -329,7 +333,7 @@ impl Filter for Wxl {
                 }
             }
         }
-        enc::encode_text(&out, encoding)
+        enc::encode_text_with(&out, encoding, opts)
     }
 }
 

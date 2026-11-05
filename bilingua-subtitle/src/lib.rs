@@ -39,7 +39,10 @@ impl Filter for Srt {
         extract(Kind::Srt, bytes, opts)
     }
     fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
-        merge(Kind::Srt, doc)
+        merge(Kind::Srt, doc, &bilingua_model::MergeOptions::default())
+    }
+    fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
+        merge(Kind::Srt, doc, opts)
     }
 }
 
@@ -58,7 +61,10 @@ impl Filter for Vtt {
         extract(Kind::Vtt, bytes, opts)
     }
     fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
-        merge(Kind::Vtt, doc)
+        merge(Kind::Vtt, doc, &bilingua_model::MergeOptions::default())
+    }
+    fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
+        merge(Kind::Vtt, doc, opts)
     }
 }
 
@@ -418,7 +424,7 @@ fn cue_inlines(k: Kind, raw: &str) -> (Vec<Inline>, BTreeMap<String, CodeData>) 
     (merge_text(inl), codes)
 }
 
-fn merge(k: Kind, doc: &Document) -> Result<Vec<u8>, Error> {
+fn merge(k: Kind, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
     bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
     let Skeleton::Text { parts, encoding, .. } = &doc.skeleton else {
         return Err(Error::Write(format!("{} needs a text skeleton", fmt_name(k))));
@@ -439,7 +445,7 @@ fn merge(k: Kind, doc: &Document) -> Result<Vec<u8>, Error> {
             }
         }
     }
-    bilingua_model::enc::encode_text(&out, encoding)
+    bilingua_model::enc::encode_text_with(&out, encoding, opts)
 }
 
 fn render(k: Kind, u: &Unit, eol: &str) -> String {

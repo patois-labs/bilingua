@@ -255,6 +255,10 @@ impl Filter for Resx {
     }
 
     fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
+        self.merge_with(doc, &bilingua_model::MergeOptions::default())
+    }
+
+    fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
         bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
         let Skeleton::Text { parts, encoding, .. } = &doc.skeleton else {
             return Err(Error::Write("resx needs a text skeleton".into()));
@@ -270,7 +274,7 @@ impl Filter for Resx {
                 }
             }
         }
-        finish_bytes(out, encoding, changed)
+        finish_bytes(out, encoding, changed, opts)
     }
 }
 
@@ -321,7 +325,7 @@ fn rewrite_decl(text: &str) -> String {
     }
 }
 
-fn finish_bytes(mut out: String, encoding: &str, changed: bool) -> Result<Vec<u8>, Error> {
+fn finish_bytes(mut out: String, encoding: &str, changed: bool, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
     let utf8_family = matches!(encoding, "utf-8" | "utf-8-bom");
     if changed && utf8_family && !out.is_ascii() {
         if let Some((_, _, name)) = declared(&out) {
@@ -330,5 +334,5 @@ fn finish_bytes(mut out: String, encoding: &str, changed: bool) -> Result<Vec<u8
             }
         }
     }
-    enc::encode_text(&out, encoding)
+    enc::encode_text_with(&out, encoding, opts)
 }

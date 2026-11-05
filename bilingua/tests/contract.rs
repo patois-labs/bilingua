@@ -27,7 +27,7 @@ fn corpus() -> Vec<(String, Vec<u8>)> {
 }
 
 fn opts(mode: Granularity) -> ExtractOptions {
-    ExtractOptions { source_lang: Some("en".into()), target_lang: Some("es-ES".into()), granularity: mode, include_locked: true, limits: None }
+    ExtractOptions { source_lang: Some("en".into()), target_lang: Some("es-ES".into()), granularity: mode, include_locked: true, limits: None, format_options: Default::default() }
 }
 
 fn open(name: &str, bytes: &[u8], mode: Granularity) -> Document {

@@ -75,12 +75,20 @@ fn retarget(tag: &str, lang: &str, enc: Enc) -> String {
 
 impl<'a> Ctx<'a> {
     fn new(doc: &'a Document, preview: bool) -> Result<Ctx<'a>, Error> {
-        let enc = match &doc.skeleton {
+        Ctx::new_with(doc, preview, &MergeOptions::default())
+    }
+
+    fn new_with(doc: &'a Document, preview: bool, opts: &MergeOptions) -> Result<Ctx<'a>, Error> {
+        let mut enc = match &doc.skeleton {
             Skeleton::Text { encoding, .. } => {
                 Enc::from_name(encoding).ok_or_else(|| Error::Write(format!("unknown encoding {encoding}")))?
             }
             _ => return Err(Error::Write("html needs a text skeleton".into())),
         };
+        if opts.output_encoding == OutputEncoding::Utf8 && !matches!(enc, Enc::Utf8 | Enc::Utf8Bom) {
+            // written as UTF-8: nothing needs a numeric reference any more
+            enc = Enc::Utf8;
+        }
         let mut owned: HashMap<(String, String), Vec<Owned>> = HashMap::new();
         for (i, u) in doc.units.iter().enumerate() {
             let Some(spec) = u.codes.get(OWNER).and_then(|c| c.standalone.as_deref()) else { continue };
@@ -234,8 +242,8 @@ fn mark_element(buf: &mut String, ids: &str, attr: &str) {
     buf.insert_str(name_end, &format!(" data-bl-attr-seg=\"{ids}\" data-bl-attr=\"{attr}\""));
 }
 
-fn assemble(doc: &Document, preview: bool) -> Result<(String, Enc), Error> {
-    let ctx = Ctx::new(doc, preview)?;
+fn assemble(doc: &Document, preview: bool, opts: &MergeOptions) -> Result<(String, Enc), Error> {
+    let ctx = Ctx::new_with(doc, preview, opts)?;
     let Skeleton::Text { parts, .. } = &doc.skeleton else {
         return Err(Error::Write("html needs a text skeleton".into()));
     };
@@ -247,7 +255,7 @@ fn assemble(doc: &Document, preview: bool) -> Result<(String, Enc), Error> {
             SkelPart::Raw(s) => {
                 if !html_done && is_html_tag(s) {
                     html_done = true;
-                    match (&doc.target_lang, any_translated) {
+                    match (&doc.target_lang, any_translated || opts.stamp_target_always) {
                         (Some(l), true) => out.push_str(&retarget(s, l, ctx.enc)),
                         _ => out.push_str(s),
                     }
@@ -268,15 +276,19 @@ fn assemble(doc: &Document, preview: bool) -> Result<(String, Enc), Error> {
     Ok((out, ctx.enc))
 }
 
-pub fn merge_html(doc: &Document) -> Result<Vec<u8>, Error> {
-    let (s, enc) = assemble(doc, false)?;
+pub fn merge_html(doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
+    let (s, enc) = assemble(doc, false, opts)?;
+    if opts.output_encoding == OutputEncoding::Utf8 {
+        // the charset declaration (`<meta charset>`) must say what the bytes are
+        return Ok(enc.encode(&bilingua_model::enc::declare_utf8(&s)));
+    }
     Ok(enc.encode(&s))
 }
 
 const PREVIEW_STYLE: &str = "<style>[data-bl-seg]{outline:none}[data-bl-seg].bl-active{outline:2px solid #3b82f6;outline-offset:2px}</style>";
 
 pub fn preview_html(doc: &Document) -> Option<String> {
-    let (s, _) = assemble(doc, true).ok()?;
+    let (s, _) = assemble(doc, true, &MergeOptions::default()).ok()?;
     Some(sanitize_html(&s, true))
 }
 
