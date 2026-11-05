@@ -1,9 +1,9 @@
 Received: from mx.example.com (mx.example.com [192.0.2.1])
-	by mail.example.org with ESMTP id abc123
-	for <bob@example.org>; Sat, 10 Oct 2026 20:00:00 -0600
+	by mail.example.com with ESMTP id abc123
+	for <bob@example.com>; Sat, 10 Oct 2026 20:00:00 -0600
 From: Ann <ann@example.com>
-To: Bob <bob@example.org>,
- Carla <carla@example.org>
+To: Bob <bob@example.com>,
+ Carla <carla@example.com>
 Subject: A very long subject line that has to be folded by the mail client because
  it runs past seventy eight columns
 MIME-Version: 1.0

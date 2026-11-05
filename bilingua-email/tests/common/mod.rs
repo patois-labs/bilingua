@@ -335,9 +335,9 @@ pub fn mixed() -> Vec<u8> {
     let s = format!(
         "Return-Path: <ann@example.com>\r\n\
 Received: from mx.example.com (mx.example.com [192.0.2.1])\r\n\
-\tby mail.example.org; Sat, 10 Oct 2026 20:00:00 -0600\r\n\
+\tby mail.example.com; Sat, 10 Oct 2026 20:00:00 -0600\r\n\
 From: Ann <ann@example.com>\r\n\
-To: Bob <bob@example.org>\r\n\
+To: Bob <bob@example.com>\r\n\
 Subject: =?ISO-8859-1?Q?Caf=E9_menu?= for {{0}} guests\r\n\
 Date: Sat, 10 Oct 2026 20:00:00 -0600\r\n\
 Message-ID: <abc123@example.com>\r\n\

@@ -58,6 +58,12 @@ schema 1. `merge` reads the message again and splices the changes in.
   no mail reader knows; this crate writes `gb2312` and `big5`, and reads the Python names too.
 - The `Subject` of a message that cannot be decoded (an unknown charset in an encoded word, damaged base64) is
   skipped, as in LocOS, but a damaged base64 word does not crash as it does there.
+- Text parts in UTF-16 or UTF-7 are refused (lead decision): LocOS decodes them with Python's codecs.
+- Japanese charsets go through the WHATWG tables of `encoding_rs`, which follow Windows: `0x2141` reads as
+  U+FF5E (LocOS: U+301C WAVE DASH), and five more characters differ the same way (U+2225, U+FF0D, U+FFE0 to
+  U+FFE2). The ISO-2022-JP writer keeps to the JIS X 0208 rows (no NEC row 13, no IBM rows), so everything it
+  writes reads back in Python; a character outside them, or `¥` and `‾` (which Python writes as JIS-Roman), sends
+  the part to UTF-8.
 - Attribute value escaping inside HTML parts follows `bilingua-html` (an apostrophe in an attribute value is
   written as it is; LocOS writes `&#x27;`).
 - Panics inside `bilingua-html` (its entity scan slices text at byte 34 after an `&`, which can fall inside a

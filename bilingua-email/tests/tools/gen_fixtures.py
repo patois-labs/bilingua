@@ -64,7 +64,7 @@ def cte_body(raw, cte, eol):
 def single(lang, cs, cte, subj_how, kind="plain", eol=b"\r\n", subject_cs=None):
     text = body(lang, kind)
     raw = text.encode(cs)
-    head = [b"From: Ann <ann@example.com>", b"To: Bob <bob@example.org>"]
+    head = [b"From: Ann <ann@example.com>", b"To: Bob <bob@example.com>"]
     sc = subject_cs or cs
     if subj_how == "raw":
         head.append(b"Subject: " + SUBJ[lang].encode("utf-8"))
@@ -81,7 +81,7 @@ def alternative(lang, eol=b"\r\n"):
         raw = body(lang, kind).encode("utf-8")
         ct = "text/plain" if kind == "plain" else "text/html"
         parts.append(('Content-Type: %s; charset=utf-8' % ct).encode() + eol + b"Content-Transfer-Encoding: " + cte.encode() + eol + eol + cte_body(raw, cte, eol))
-    head = eol.join([b"From: Ann <ann@example.com>", b"To: Bob <bob@example.org>", b"Subject: " + enc_word(SUBJ[lang], "utf-8", "b").encode(), b"MIME-Version: 1.0", b'Content-Type: multipart/alternative; boundary="alt-' + lang.encode() + b'"']) + eol + eol
+    head = eol.join([b"From: Ann <ann@example.com>", b"To: Bob <bob@example.com>", b"Subject: " + enc_word(SUBJ[lang], "utf-8", "b").encode(), b"MIME-Version: 1.0", b'Content-Type: multipart/alternative; boundary="alt-' + lang.encode() + b'"']) + eol + eol
     out = head + b"Preamble text." + eol
     for p in parts:
         out += b"--alt-" + lang.encode() + eol + p + eol
@@ -124,8 +124,8 @@ def main():
     )
     write(
         "folded_headers.eml",
-        b"Received: from mx.example.com (mx.example.com [192.0.2.1])\r\n\tby mail.example.org with ESMTP id abc123\r\n\tfor <bob@example.org>; Sat, 10 Oct 2026 20:00:00 -0600\r\n"
-        b"From: Ann <ann@example.com>\r\nTo: Bob <bob@example.org>,\r\n Carla <carla@example.org>\r\nSubject: A very long subject line that has to be folded by the mail client because\r\n it runs past seventy eight columns\r\n"
+        b"Received: from mx.example.com (mx.example.com [192.0.2.1])\r\n\tby mail.example.com with ESMTP id abc123\r\n\tfor <bob@example.com>; Sat, 10 Oct 2026 20:00:00 -0600\r\n"
+        b"From: Ann <ann@example.com>\r\nTo: Bob <bob@example.com>,\r\n Carla <carla@example.com>\r\nSubject: A very long subject line that has to be folded by the mail client because\r\n it runs past seventy eight columns\r\n"
         b"MIME-Version: 1.0\r\nContent-Type: text/plain;\r\n charset=\"us-ascii\"\r\nContent-Transfer-Encoding: 7bit\r\n\r\nShort body.\r\n",
     )
     write(

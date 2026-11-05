@@ -118,6 +118,11 @@ fn encode_iso2022jp(s: &str) -> Option<Vec<u8>> {
             if pair[0] < 0xA1 || pair[0] > 0xFE || pair[1] < 0xA1 || pair[1] > 0xFE {
                 return None;
             }
+            // JIS X 0208 rows only (RFC 1468): the WHATWG table also has the NEC row 13 and the IBM rows
+            // 89 to 92, which strict ISO-2022-JP readers (Python's codec, so LocOS) cannot read back
+            if !matches!(pair[0] - 0x80, 0x21..=0x28 | 0x30..=0x74) {
+                return None;
+            }
             out.push(pair[0] - 0x80);
             out.push(pair[1] - 0x80);
         }
@@ -203,6 +208,9 @@ mod tests {
         assert!(b.ends_with(b"\x1b(B xyz"));
         assert_eq!(Codec::Iso2022Jp.decode(&b).unwrap(), s);
         assert!(Codec::Iso2022Jp.encode("\u{0e01}").is_none());
+        // NEC row 13 (circled one) and an IBM extension kanji are not JIS X 0208: UTF-8 is written instead
+        assert!(Codec::Iso2022Jp.encode("\u{2460}").is_none());
+        assert!(Codec::Iso2022Jp.encode("\u{2170}").is_none());
     }
 
     #[test]

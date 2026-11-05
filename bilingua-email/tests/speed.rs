@@ -23,7 +23,7 @@ pub fn generate() -> Vec<u8> {
     html.push_str("</body></html>\n");
     let qp_plain = plain.replace('\u{e9}', "=C3=A9");
     format!(
-        "From: Ann <ann@example.com>\r\nTo: Bob <bob@example.org>\r\nSubject: Large guide\r\nMIME-Version: 1.0\r\nContent-Type: multipart/alternative; boundary=\"speed\"\r\n\r\n--speed\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Transfer-Encoding: quoted-printable\r\n\r\n{}--speed\r\nContent-Type: text/html; charset=utf-8\r\nContent-Transfer-Encoding: base64\r\n\r\n{}--speed--\r\n",
+        "From: Ann <ann@example.com>\r\nTo: Bob <bob@example.com>\r\nSubject: Large guide\r\nMIME-Version: 1.0\r\nContent-Type: multipart/alternative; boundary=\"speed\"\r\n\r\n--speed\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Transfer-Encoding: quoted-printable\r\n\r\n{}--speed\r\nContent-Type: text/html; charset=utf-8\r\nContent-Transfer-Encoding: base64\r\n\r\n{}--speed--\r\n",
         qp_plain.replace('\n', "\r\n"),
         b64_crlf(html.as_bytes())
     )

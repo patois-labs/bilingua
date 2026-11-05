@@ -13,6 +13,7 @@ Every file here is made up for Bilingua (Lumen Bakery is a fictional company; no
 | `vsdx/fixture.vsdx`, `vsdx/fixture.vsdm`, `vsdx/languages.vsdx`, `vsdx/rtl-paragraph.vsdx`, `vsdx/shiftjis.vsdx`, `vsdx/utf16.vsdx` | Written by the `write_corpus` test of `bilingua-vsdx` (hand-written XML parts, zipped in Rust) | Apache-2.0, same as Bilingua |
 | `vsdx/okapi-2-pages.vsdx` (also `bilingua-vsdx/tests/data/2-pages.vsdx`) | Okapi Framework test resource `2-pages.vsdx`, copied unmodified from https://gitlab.com/okapiframework/Okapi.git (`okapi/filters/openxml/src/test/resources`, tag `v1.48.0`, commit `ce9f9edc2956da5868fcb71ae10426c7c6ae4e0b`) | Apache-2.0 (Okapi Framework) |
 | `mdx/handbook.mdx`, `mdx/edge.mdx` | Written by hand for `bilingua-mdx` (invented text, YAML and TOML front matter, JSX, expressions, ES modules) | Apache-2.0, same as Bilingua |
+| `email/*.eml` (34 messages; copies of `bilingua-email/tests/data/*.eml` minus `hard_wrapped.eml`) | `bilingua-email/tests/tools/gen_fixtures.py` writes them (stdlib only; invented people and text, `example.com` addresses) | Apache-2.0, same as Bilingua |
 
 Files from the Localization OS tree (its `sample-docs` folder and the hand-written PPTX and XLSX generators in its
 test fixtures) are used by `python run.py --external` and read in place. Localization OS is open source under

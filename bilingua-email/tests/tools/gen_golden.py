@@ -214,7 +214,7 @@ def leaf(rng, lang, kind, eol, flowed_ok=True):
 def make_message(rng, idx):
     eol = rng.choice(["\n", "\r\n"])
     lang = rng.choice(list(LANGS))
-    head = b"From: Ann <ann@example.com>" + eol.encode() + b"To: Bob <bob@example.org>" + eol.encode()
+    head = b"From: Ann <ann@example.com>" + eol.encode() + b"To: Bob <bob@example.com>" + eol.encode()
     head += make_subject(rng, lang, eol)
     head += b"MIME-Version: 1.0" + eol.encode()
     if rng.random() < 0.4:
