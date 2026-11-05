@@ -26,9 +26,12 @@ pub mod enc;
 pub mod garble;
 pub mod guard;
 pub mod locos;
+mod pytables;
+pub mod pytext;
 
 pub use encoding_rs;
 pub use guard::{LimitError, LimitKind, Limits};
+pub use pytext::{py_has_alnum, py_has_alpha, py_isalnum, py_isalpha, py_isspace, py_lstrip, py_rstrip, py_strip};
 
 /// One piece of segment content, in logical order.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
