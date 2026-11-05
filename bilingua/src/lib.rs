@@ -45,6 +45,8 @@ pub fn filters() -> Vec<Box<dyn Filter>> {
         // TOML after INI: a valid-TOML INI file without an extension should stay INI.
         Box::new(bilingua_toml::TomlFilter),
         Box::new(bilingua_jsmodule::JsModule),
+        // PHP language arrays sniff strictly (the file must open with <?php and parse as a static array).
+        Box::new(bilingua_php::Php),
         // resx sniffs XML with <root> and resource headers; it goes before the loose key-value sniffers.
         Box::new(bilingua_resx::Resx),
         // YAML sniffs any `word: text` line, so it goes after the stricter formats and before properties.
