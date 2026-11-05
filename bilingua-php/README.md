@@ -48,6 +48,11 @@ let out = Php.merge(&doc)?;
   `\s` differ for some combining marks and non-decimal digits); `\d` in numbers and plural conditions is ASCII only.
 - A string made of unknown or paired `⟦..⟧` tokens in a translation cannot occur: Bilingua targets are tags and
   `set_target` refuses an invented one. The LocOS adapter drops them before they get here.
+- Stricter than LocOS where PHP would run code LocOS does not see (gate, 11-04): a `//` or `#` comment ends at a bare
+  CR as in PHP (LocOS reads on to the next LF and hides the code after it); a heredoc or nowdoc with a bare CR in
+  its body is refused (PHP closes it at a label after that CR, LocOS reads code between two heredocs as text); `$`
+  before any non-ASCII character is interpolation (LocOS misses characters above U+FFFF). See
+  `tests/gate_adversarial.rs`.
 - "Nested too deeply" (more than 32 levels) is `Error::Unsupported`; `bilingua-model` has no depth `LimitKind`.
 
 ## Differences from Okapi `okf_phpcontent`

@@ -145,7 +145,9 @@ fn decode_dq<'a>(
         let rest = &probe[at + 1..];
         let next = rest.chars().next();
         let hit = if pb[at] == b'$' {
-            next.is_some_and(|c| c.is_ascii_alphabetic() || c == '_' || c == '{' || ('\u{80}'..='\u{ffff}').contains(&c))
+            // PHP: a label starts with [a-zA-Z_] or any byte 0x80..0xff, so any non-ASCII character starts one
+            // (LocOS stops at U+FFFF and misses "$" before an emoji, which PHP interpolates)
+            next.is_some_and(|c| c.is_ascii_alphabetic() || c == '_' || c == '{' || !c.is_ascii())
         } else {
             next == Some('$')
         };
@@ -305,6 +307,16 @@ fn heredoc<'a>(text: &'a str, pos: usize) -> Result<Tok<'a>, Error> {
     let Some((cstart, indent_len, cend)) = close else {
         return Err(refuse(text, pos, "a heredoc with no closing label"));
     };
+    // PHP also ends a body line at a bare CR, so a closing label after one closes the heredoc there; this scanner
+    // looks after LF only, so a bare CR in the body is refused (else code between two heredocs would read as text)
+    let region = &b[body_start..cstart];
+    if region
+        .iter()
+        .enumerate()
+        .any(|(k, &x)| x == b'\r' && region.get(k + 1) != Some(&b'\n'))
+    {
+        return Err(refuse(text, pos, "a heredoc with a bare CR line break"));
+    }
     let indent = &text[cstart..cstart + indent_len];
     let mut body = &text[body_start..cstart];
     if let Some(r) = body.strip_suffix("\r\n") {
@@ -449,8 +461,9 @@ pub fn lex<'a>(text: &'a str, mut pos: usize, limits: &Limits) -> Result<Vec<Tok
         {
             let mut i = pos + if b[pos] == b'#' { 1 } else { 2 };
             while i < n {
+                // PHP ends a line comment at LF, at a CR (a bare CR too) or before `?>`
                 match b[i] {
-                    b'\n' => break,
+                    b'\n' | b'\r' => break,
                     b'?' if b.get(i + 1) == Some(&b'>') => break,
                     _ => i += 1,
                 }
