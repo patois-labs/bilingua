@@ -75,3 +75,29 @@ pub fn crlf(s: &str) -> String {
 pub fn hex(s: &str) -> Vec<u8> {
     (0..s.len() / 2).map(|i| u8::from_str_radix(&s[2 * i..2 * i + 2], 16).unwrap()).collect()
 }
+
+pub fn corpus_dir() -> std::path::PathBuf {
+    std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../oracle/corpus/wiki")
+}
+
+/// The right filter for a file name: `.dokuwiki` is DokuWiki, everything else MediaWiki.
+pub fn filter_for(name: &str) -> Box<dyn Filter> {
+    if name.ends_with(".dokuwiki") {
+        Box::new(DokuWiki)
+    } else {
+        Box::new(MediaWiki::default())
+    }
+}
+
+/// Every corpus file: (name, bytes), sorted by name.
+pub fn corpus() -> Vec<(String, Vec<u8>)> {
+    let mut v: Vec<(String, Vec<u8>)> = std::fs::read_dir(corpus_dir())
+        .unwrap()
+        .map(|e| {
+            let p = e.unwrap().path();
+            (p.file_name().unwrap().to_string_lossy().into_owned(), std::fs::read(&p).unwrap())
+        })
+        .collect();
+    v.sort();
+    v
+}

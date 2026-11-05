@@ -1,0 +1,7 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc aa926901a65e4551ab1a61fd11f21316f7a1f0b3f38e6aeb848a382c5098eeab # shrinks to words = [";", "<nowiki>", "[https://x.y ", "a", "[["], glue = ""
