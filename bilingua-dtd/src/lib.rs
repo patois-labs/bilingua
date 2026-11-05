@@ -80,7 +80,7 @@ fn shape(tok: &str) -> (Shape, &str) {
         Some(r) => (true, r),
         None => (false, inner),
     };
-    let name_len = inner.find(|c: char| c.is_whitespace() || c == '/' || c == '>').unwrap_or(inner.len());
+    let name_len = inner.find(|c: char| bilingua_model::py_isspace_char(c) || c == '/' || c == '>').unwrap_or(inner.len());
     let shape = if closing {
         Shape::Close
     } else if tok.ends_with("/>") {

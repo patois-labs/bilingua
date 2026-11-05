@@ -119,7 +119,7 @@ pub fn has_text(value: &str) -> bool {
             }
             _ => {
                 let ch = value[i..].chars().next().unwrap_or('\u{fffd}');
-                if ch.is_alphanumeric() {
+                if bilingua_model::py_isalnum_char(ch) {
                     return true;
                 }
                 i += ch.len_utf8();

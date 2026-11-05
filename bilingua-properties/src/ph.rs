@@ -116,7 +116,7 @@ pub fn split(s: &str, mozilla: bool) -> Vec<Piece<'_>> {
             b'{' => mf_arg(b, i).or_else(|| named(b, i)),
             b'$' => dollar(b, i),
             b'#' if mozilla => {
-                let prev_ok = s[..i].chars().next_back().is_none_or(|p| !(p == '&' || p.is_alphanumeric() || p == '_'));
+                let prev_ok = s[..i].chars().next_back().is_none_or(|p| !(p == '&' || bilingua_model::py_isalnum_char(p) || p == '_'));
                 if prev_ok && b.get(i + 1).is_some_and(|c| (b'1'..=b'9').contains(c)) && !b.get(i + 2).is_some_and(u8::is_ascii_digit) {
                     Some(i + 2)
                 } else {

@@ -31,7 +31,7 @@ pub mod pytext;
 
 pub use encoding_rs;
 pub use guard::{LimitError, LimitKind, Limits};
-pub use pytext::{py_has_alnum, py_has_alpha, py_isalnum, py_isalpha, py_isspace, py_lstrip, py_rstrip, py_strip};
+pub use pytext::{py_is_word_char, py_is_word_start_char, py_isdecimal_char, py_isalnum_char, py_isalpha_char, py_isspace_char, py_has_alnum, py_has_alpha, py_isalnum, py_isalpha, py_isspace, py_lstrip, py_rstrip, py_strip};
 
 /// One piece of segment content, in logical order.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

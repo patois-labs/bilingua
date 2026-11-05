@@ -58,13 +58,13 @@ fn placeholder_only() -> &'static Regex {
 
 /// A value with a letter or digit outside its placeholders. `{0}`, `%1$@` and `---` are skipped.
 fn is_translatable(v: &str) -> bool {
-    if !v.chars().any(char::is_alphanumeric) {
+    if !bilingua_model::py_has_alnum(v) {
         return false;
     }
     if !v.contains(['{', '%']) {
         return true;
     }
-    placeholder_only().replace_all(v, "").chars().any(char::is_alphanumeric)
+    placeholder_only().replace_all(v, "").chars().any(bilingua_model::py_isalnum_char)
 }
 
 /// MessageFormat value whose apostrophes are all doubled (or absent): the translator sees single ones.
@@ -150,7 +150,7 @@ fn double_elisions(s: &str) -> String {
             i += 2;
             continue;
         }
-        if !quoted && i > 0 && chars[i - 1].is_alphabetic() && chars.get(i + 1).is_some_and(|c| c.is_alphabetic()) {
+        if !quoted && i > 0 && bilingua_model::py_isalpha_char(chars[i - 1]) && chars.get(i + 1).is_some_and(|c| bilingua_model::py_isalpha_char(*c)) {
             out.push_str("''");
         } else {
             out.push('\'');
@@ -357,7 +357,7 @@ impl Filter for Properties {
             cont = t.ends_with('\\');
             let key_end = t.find(['=', ':', ' ', '\t']).unwrap_or(t.len());
             let key = &t[..key_end];
-            let key_ok = !key.is_empty() && key.chars().all(|c| c.is_alphanumeric() || matches!(c, '.' | '_' | '-' | '[' | ']' | '/' | '$' | '\\'));
+            let key_ok = !key.is_empty() && key.chars().all(|c| bilingua_model::py_isalnum_char(c) || matches!(c, '.' | '_' | '-' | '[' | ']' | '/' | '$' | '\\'));
             let sep = t[key_end..].trim_start().starts_with(['=', ':']);
             if key_ok && sep && !t.starts_with(['{', '[', '<']) {
                 kv += 1;

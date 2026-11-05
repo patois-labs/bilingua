@@ -36,19 +36,18 @@ const NL: &str = "~nl"; // "crlf" when the file's line ends are all CRLF
 
 /// (leading white space, core, trailing white space), as Python's `str.strip()` would cut it.
 fn split_ws(s: &str) -> (&str, &str, &str) {
-    let core = s.trim_matches(char::is_whitespace);
+    let core = s.trim_matches(bilingua_model::py_isspace_char);
     if core.is_empty() {
         return (s, "", "");
     }
-    let lead = &s[..s.len() - s.trim_start_matches(char::is_whitespace).len()];
-    let trail = &s[s.trim_end_matches(char::is_whitespace).len()..];
+    let lead = &s[..s.len() - s.trim_start_matches(bilingua_model::py_isspace_char).len()];
+    let trail = &s[s.trim_end_matches(bilingua_model::py_isspace_char).len()..];
     (lead, core, trail)
 }
 
-/// A value with a letter or digit. (Known difference: Rust counts a few combining marks as letters that Python's
-/// `isalnum` does not.)
+/// A value with a letter or digit. (Python's `isalnum`, exactly.)
 fn has_text(s: &str) -> bool {
-    s.chars().any(char::is_alphanumeric)
+    bilingua_model::py_has_alnum(s)
 }
 
 struct Parsed {

@@ -100,7 +100,7 @@ pub(crate) fn decode(data: &[u8]) -> Result<Decoded<'_>, Error> {
 
 /// Characters Python (and so Localization OS) treats as white space.
 pub(crate) fn is_space(c: char) -> bool {
-    c.is_whitespace() || ('\u{1c}'..='\u{1f}').contains(&c)
+    bilingua_model::py_isspace_char(c)
 }
 
 pub(crate) fn strip(s: &str) -> &str {

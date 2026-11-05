@@ -10,7 +10,7 @@ fn is_ph(inner: &str) -> bool {
     let name_end = inner.find([',', ':']).unwrap_or(inner.len());
     let name = &inner[..name_end];
     !name.is_empty()
-        && name.chars().all(|c| c.is_alphanumeric() || matches!(c, '_' | '.' | '-'))
+        && name.chars().all(|c| bilingua_model::py_isalnum_char(c) || matches!(c, '_' | '.' | '-'))
         && !inner.contains(['<', '>', '&', '"', '\'', '\n', '\r', '{'])
 }
 

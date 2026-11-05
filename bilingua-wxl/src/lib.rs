@@ -56,7 +56,7 @@ pub struct Wxl;
 
 /// Python `str.isspace` (what LocOS strips): White_Space plus U+001C to U+001F.
 fn is_space(c: char) -> bool {
-    c.is_whitespace() || ('\u{1c}'..='\u{1f}').contains(&c)
+    bilingua_model::py_isspace_char(c)
 }
 
 fn split_ws(s: &str) -> (&str, &str, &str) {
@@ -69,10 +69,10 @@ fn split_ws(s: &str) -> (&str, &str, &str) {
     (&s[..lead_len], core, &s[trail_start..])
 }
 
-/// LocOS `is_translatable`. Rust's `char::is_alphanumeric` is wider than Python's `str.isalnum` (it accepts
-/// combining marks); a value made only of marks and symbols is the one place the two can differ.
+/// LocOS `is_translatable`: Python's `str.isalnum`, exactly (`bilingua_model::py_has_alnum`); a value of
+/// combining marks and symbols only is skipped.
 fn is_translatable(v: &str) -> bool {
-    v.chars().any(char::is_alphanumeric)
+    bilingua_model::py_has_alnum(v)
 }
 
 fn text_escape(s: &str) -> String {

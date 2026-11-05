@@ -254,7 +254,7 @@ fn plan_message(value: &str) -> Plan {
             Plan { units, fallback: false }
         }
         Err(_) => {
-            let units = if value.chars().any(char::is_alphanumeric) { vec![fallback_unit(value)] } else { vec![] };
+            let units = if bilingua_model::py_has_alnum(value) { vec![fallback_unit(value)] } else { vec![] };
             Plan { units, fallback: true }
         }
     }

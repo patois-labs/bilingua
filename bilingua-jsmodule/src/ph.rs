@@ -68,7 +68,7 @@ enum K {
 }
 
 fn is_sp(c: char) -> bool {
-    c.is_whitespace() || matches!(c, '\u{1c}'..='\u{1f}')
+    bilingua_model::py_isspace_char(c)
 }
 
 struct Icu<'a> {
@@ -340,5 +340,5 @@ pub fn unit_inlines(value: &str) -> (Vec<Inline>, BTreeMap<String, CodeData>) {
 /// True when some text outside the placeholders has a letter or digit.
 pub fn translatable(inl: &[Inline]) -> bool {
     inl.iter()
-        .any(|i| matches!(i, Inline::Text(t) if t.chars().any(char::is_alphanumeric)))
+        .any(|i| matches!(i, Inline::Text(t) if bilingua_model::py_has_alnum(t)))
 }

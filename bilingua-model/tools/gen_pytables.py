@@ -50,6 +50,7 @@ def main():
     print()
     emit("ALPHA", "`str.isalpha`: general category L*.", ranges(str.isalpha))
     emit("ALNUM", "`str.isalnum`: `isalpha` or `isdecimal` or `isdigit` or `isnumeric`.", ranges(str.isalnum))
+    emit("DECIMAL", "`str.isdecimal`: category Nd (what `\\d` matches in a Python `re` pattern).", ranges(str.isdecimal))
     emit("SPACE", "`str.isspace`: bidirectional class WS, B or S, or category Zs.", ranges(str.isspace))
 
 

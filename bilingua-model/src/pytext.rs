@@ -6,7 +6,7 @@
 //! out U+001C..U+001F, which Python treats as whitespace. A format crate that must skip or keep the same values as
 //! Localization OS calls these instead. The tables come from `tools/gen_pytables.py`.
 
-use crate::pytables::{ALNUM, ALPHA, SPACE};
+use crate::pytables::{ALNUM, ALPHA, DECIMAL, SPACE};
 
 fn in_table(t: &[(u32, u32)], c: char) -> bool {
     let c = c as u32;
@@ -36,6 +36,25 @@ pub fn py_isalnum_char(c: char) -> bool {
         return c.is_ascii_alphanumeric();
     }
     in_table(ALNUM, c)
+}
+
+/// `str.isdecimal` for one character: a decimal digit (category Nd), what `\d` matches in a Python `re` pattern.
+pub fn py_isdecimal_char(c: char) -> bool {
+    if c.is_ascii() {
+        return c.is_ascii_digit();
+    }
+    in_table(DECIMAL, c)
+}
+
+/// What `\w` matches in a Python `re` pattern on a `str`: [`py_isalnum_char`] or `_`.
+pub fn py_is_word_char(c: char) -> bool {
+    c == '_' || py_isalnum_char(c)
+}
+
+/// What `[^\W\d]` matches: a word character that is not a decimal digit (a letter, `_`, or a number such as a
+/// superscript or roman numeral). The first character of a Python `re` identifier pattern.
+pub fn py_is_word_start_char(c: char) -> bool {
+    py_is_word_char(c) && !py_isdecimal_char(c)
 }
 
 /// `str.isspace` for one character.
@@ -112,6 +131,14 @@ mod tests {
     }
 
     #[test]
+    fn word_chars_follow_python_re() {
+        assert!(py_is_word_char('_') && py_is_word_char('\u{00B2}') && !py_is_word_char('-'));
+        // superscript two is \w but not \d, so it may start a JSON5 identifier; an Arabic-Indic digit may not
+        assert!(py_is_word_start_char('\u{00B2}') && !py_is_word_start_char('\u{0665}') && !py_is_word_start_char('7'));
+        assert!(!py_is_word_char('\u{0301}'));
+    }
+
+    #[test]
     fn whitespace_matches_python() {
         for c in ['\t', '\n', '\x0b', '\x0c', '\r', '\x1c', '\x1d', '\x1e', '\x1f', ' ', '\u{85}', '\u{A0}', '\u{1680}', '\u{2003}', '\u{2028}', '\u{2029}', '\u{202F}', '\u{205F}', '\u{3000}'] {
             assert!(py_isspace_char(c), "{c:?}");
@@ -133,7 +160,7 @@ mod tests {
 
     #[test]
     fn tables_are_sorted_and_the_ascii_fast_path_agrees() {
-        for t in [ALPHA, ALNUM, SPACE] {
+        for t in [ALPHA, ALNUM, DECIMAL, SPACE] {
             assert!(t.windows(2).all(|w| w[0].1 < w[1].0 && w[0].0 <= w[0].1));
         }
         for c in (0u8..128).map(char::from) {

@@ -52,4 +52,4 @@ let out = Xaml::default().merge(&doc)?;
 - A file with no declaration and bytes that are not UTF-8 is read as Windows-1252 (or the source language's code
   page), as every Bilingua text format does (a warning only when the letters look garbled); LocOS refuses it.
 - Placeholders are tags (see above).
-- Python's `isalnum`/`isalpha` and Rust's differ for combining marks.
+- The letter and digit tests are Python's `isalnum`/`isalpha` exactly (`bilingua_model::py_*`); no known difference.

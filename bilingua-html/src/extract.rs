@@ -242,7 +242,7 @@ impl<'a> Ex<'a> {
                 _ => continue,
             };
             let value = decode_entities(&s[inner.0..inner.1]);
-            if !value.chars().any(|c| c.is_alphanumeric()) {
+            if !bilingua_model::py_has_alnum(&value) {
                 continue;
             }
             out.push(AttrCand { attr: a.name.clone(), elem: name.to_string(), kind, full, value, path: path.to_string() });
@@ -435,7 +435,7 @@ impl<'a> Ex<'a> {
         }
         let has_text = items
             .iter()
-            .any(|i| i.kind == IK::Text && decode_entities(&s[i.a..i.b]).chars().any(|c| c.is_alphanumeric()));
+            .any(|i| i.kind == IK::Text && decode_entities(&s[i.a..i.b]).chars().any(bilingua_model::py_isalnum_char));
         if !has_text {
             let all: Vec<AttrCand> = items.into_iter().flat_map(|i| i.attrs).collect();
             self.push_top_attrs(all);

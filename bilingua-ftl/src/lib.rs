@@ -89,7 +89,7 @@ fn limit_err(msg: String) -> Error {
 
 /// Python `str.isspace` (Rust's `White_Space` plus the four separators U+001C to U+001F).
 fn py_space(c: char) -> bool {
-    c.is_whitespace() || ('\u{1c}'..='\u{1f}').contains(&c)
+    bilingua_model::py_isspace_char(c)
 }
 
 fn py_strip(s: &str) -> &str {
@@ -247,11 +247,11 @@ fn runs(src: &str, items: &[Item], terms: bool) -> Vec<(Run, Option<String>)> {
     out.into_iter().zip(comments).collect()
 }
 
-/// A letter or digit outside the placeables (Python `str.isalnum`; Rust's is slightly wider for combining marks).
+/// A letter or digit outside the placeables (Python `str.isalnum`, exactly: `bilingua_model::py_has_alnum`).
 fn translatable(pieces: &[Piece]) -> bool {
     let mut phs: Vec<&str> = pieces.iter().filter_map(|p| if let Piece::Ph(s) = p { Some(s.as_str()) } else { None }).collect();
     if phs.is_empty() {
-        return pieces.iter().any(|p| matches!(p, Piece::Text(t) if t.chars().any(char::is_alphanumeric)));
+        return pieces.iter().any(|p| matches!(p, Piece::Text(t) if bilingua_model::py_has_alnum(t)));
     }
     phs.sort_by_key(|s| std::cmp::Reverse(s.len()));
     phs.dedup();
@@ -259,7 +259,7 @@ fn translatable(pieces: &[Piece]) -> bool {
     for p in phs {
         s = s.replace(p, "");
     }
-    s.chars().any(char::is_alphanumeric)
+    bilingua_model::py_has_alnum(&s)
 }
 
 /// What a Fluent file holds, for tools and tests: messages, terms and Junk entries (text the Fluent grammar

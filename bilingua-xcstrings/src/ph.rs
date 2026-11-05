@@ -83,7 +83,7 @@ pub fn is_positional(spec: &str) -> bool {
 
 /// Python `str.isspace` (what LocOS strips).
 pub fn is_space(c: char) -> bool {
-    c.is_whitespace() || ('\u{1c}'..='\u{1f}').contains(&c)
+    bilingua_model::py_isspace_char(c)
 }
 
 pub fn split_ws(s: &str) -> (&str, &str, &str) {
@@ -96,15 +96,15 @@ pub fn split_ws(s: &str) -> (&str, &str, &str) {
     (&s[..lead], core, &s[trail..])
 }
 
-/// A letter or digit outside the specifiers (LocOS `is_translatable`). Known difference: Rust's
-/// `char::is_alphanumeric` counts some combining marks that Python's `str.isalnum` does not.
+/// A letter or digit outside the specifiers (LocOS `is_translatable`). Uses Python's `str.isalnum`
+/// exactly (`bilingua_model::py_has_alnum`).
 pub fn is_translatable(v: &str) -> bool {
-    if !v.chars().any(char::is_alphanumeric) {
+    if !bilingua_model::py_has_alnum(v) {
         return false;
     }
     for p in split(&v.replace("%%", "")) {
         if let Piece::Text(t) = p {
-            if t.chars().any(char::is_alphanumeric) {
+            if bilingua_model::py_has_alnum(t) {
                 return true;
             }
         }

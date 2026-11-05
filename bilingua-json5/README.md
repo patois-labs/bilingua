@@ -39,8 +39,7 @@ let out = f.merge(&doc)?;
 - A UTF-16 file is written back as UTF-16 (LocOS converts it to UTF-8).
 - The text-encoding guess for legacy files does not do LocOS's "letters look garbled" check or its warning.
 - `\d` in a number is ASCII digits only (LocOS's regex also accepts other Unicode decimal digits).
-- Unit selection uses Rust's `is_alphanumeric`, Python's `str.isalnum` differs only for strings made of nothing but
-  combining marks.
+- Unit selection and whitespace use `bilingua_model::py_isalnum`/`py_isspace` (Python 3.13 `str.isalnum`/`isspace`, tables generated from `unicodedata`): no known difference. Identifier characters follow Python's `\w`.
 - Limits default higher than LocOS's 50 000 segments (an engine, not a web upload); configurable.
 
 ## Tests

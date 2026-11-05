@@ -410,7 +410,7 @@ pub struct Style {
 impl Style {
     pub fn detect(text: &str) -> Style {
         let ensure_ascii = text.is_ascii() && text.contains("\\u");
-        let trimmed = text.trim_matches(|c: char| c.is_whitespace());
+        let trimmed = text.trim_matches(bilingua_model::py_isspace_char);
         let second = split_lines(trimmed).get(1).copied();
         let (indent, item_sep, key_sep) = match second {
             Some(second) => {

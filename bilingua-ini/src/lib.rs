@@ -186,7 +186,7 @@ impl Filter for IniFilter {
         for line in text.lines().map(scan::trim).filter(|l| !l.is_empty() && !l.starts_with([';', '#'])) {
             if line.starts_with('[') && line.ends_with(']') && line.len() > 2 {
                 section = true;
-            } else if line.find('=').is_some_and(|i| i > 0 && !scan::trim(&line[..i]).contains(char::is_whitespace)) {
+            } else if line.find('=').is_some_and(|i| i > 0 && !scan::trim(&line[..i]).contains(bilingua_model::py_isspace_char)) {
                 pairs += 1;
             } else {
                 other += 1;
