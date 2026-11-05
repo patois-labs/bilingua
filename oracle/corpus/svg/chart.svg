@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 220" role="img" aria-labelledby="t d">
+  <title id="t">Quarterly revenue</title>
+  <desc id="d">Bar chart of revenue per quarter in thousands of dollars</desc>
+  <style>text { font: 12px sans-serif; } .axis { stroke: #999; }</style>
+  <line class="axis" x1="40" y1="180" x2="380" y2="180"/>
+  <rect x="60" y="80" width="40" height="100" fill="#4a7"/><text x="60" y="198">Q1</text>
+  <rect x="140" y="60" width="40" height="120" fill="#4a7"/><text x="140" y="198">Q2</text>
+  <rect x="220" y="40" width="40" height="140" fill="#4a7"/><text x="220" y="198">Q3</text>
+  <rect x="300" y="20" width="40" height="160" fill="#4a7"/><text x="300" y="198">Q4</text>
+  <text x="200" y="14" text-anchor="middle">Revenue grew <tspan font-weight="bold">every</tspan> quarter</text>
+  <text x="4" y="110">Sales (k$)</text>
+</svg>

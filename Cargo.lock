@@ -37,6 +37,7 @@ dependencies = [
  "bilingua-htmlhelp",
  "bilingua-icml",
  "bilingua-idml",
+ "bilingua-image",
  "bilingua-ini",
  "bilingua-jsmodule",
  "bilingua-json",
@@ -267,6 +268,19 @@ dependencies = [
  "bilingua-model",
  "bilingua-zip",
  "proptest",
+ "serde_json",
+]
+
+[[package]]
+name = "bilingua-image"
+version = "0.1.0"
+dependencies = [
+ "bilingua-model",
+ "crc32fast",
+ "flate2",
+ "proptest",
+ "quick-xml",
+ "regex",
  "serde_json",
 ]
 

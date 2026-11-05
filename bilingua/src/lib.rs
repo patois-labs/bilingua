@@ -131,6 +131,9 @@ pub fn filters() -> Vec<Box<dyn Filter>> {
         // properties sniffs any key=value or key: value text, so it goes after the stricter key-value formats.
         Box::new(bilingua_properties::Properties),
         Box::new(bilingua_xaml::Xaml::default()),
+        // SVG sniffs an <svg root element; raster images sniff their magic numbers (BMP also needs a DIB header).
+        Box::new(bilingua_image::SvgFilter),
+        Box::new(bilingua_image::ImageFilter),
         // sdlproj sniffs strictly (a PackageProject root, or a Project root with a Guid and Trados project elements); it is
         // an XML format, so it goes before generic XML.
         Box::new(bilingua_sdlproj::Sdlproj),
