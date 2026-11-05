@@ -185,6 +185,7 @@ fn crate_of(format: &str) -> &'static str {
         "xmb" | "xtb" => "bilingua-xmb",
         "ts" => "bilingua-qtts",
         "xml" => "bilingua-xml",
+        "xslt" => "bilingua-xslt",
         "srt" | "vtt" => "bilingua-subtitle",
         "txt" | "text" => "bilingua-text",
         "xliff" | "sdlxliff" | "mqxliff" | "mxliff" => "bilingua-xliff",
