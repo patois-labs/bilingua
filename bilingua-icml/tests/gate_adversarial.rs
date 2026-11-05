@@ -86,7 +86,7 @@ fn tampered_paragraph_index_is_a_typed_error() {
 
 #[test]
 fn undeclared_language_is_not_stamped_and_untouched_story_is_byte_exact() {
-    let data = format!(
+    let data = String::from(
         "<?xml version='1.0' encoding='utf-8'?>\r\n<ea:Stories xmlns:ea='urn:SmartConnection_v3'><ea:Story><Document><Story Self='a'><ParagraphStyleRange><CharacterStyleRange><Content>Keep &amp; me</Content><Br /></CharacterStyleRange></ParagraphStyleRange></Story></Document></ea:Story><ea:Story><Document><Story Self='b'><ParagraphStyleRange><CharacterStyleRange><Content>Change</Content></CharacterStyleRange></ParagraphStyleRange></Story></Document></ea:Story></ea:Stories>"
     )
     .into_bytes();
