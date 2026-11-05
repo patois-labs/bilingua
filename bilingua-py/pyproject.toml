@@ -5,7 +5,7 @@ build-backend = "maturin"
 [project]
 name = "bilingua"
 requires-python = ">=3.11"
-description = "Open, segment and rebuild source files for translation: 85 file formats, bytes in and bytes out"
+description = "Open, segment and rebuild source files for translation: 87 file formats, bytes in and bytes out"
 readme = "README.md"
 license = "Apache-2.0"
 license-files = ["LICENSE", "NOTICE"]

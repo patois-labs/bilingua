@@ -11,14 +11,14 @@ The first public release.
 
 ### Formats
 
-85 filter ids in 63 format crates, all behind the `bilingua` facade (`bilingua::filters()`, `bilingua::detect`). The full
+87 filter ids in 64 format crates, all behind the `bilingua` facade (`bilingua::filters()`, `bilingua::detect`). The full
 table, with extensions, is in the README.
 
 - Office and publishing: Word, Excel, PowerPoint, Visio, OpenDocument (text, spreadsheet, presentation, drawing),
   InDesign IDML, InCopy ICML and WCML, FrameMaker MIF, QuarkXPress Tags, EPUB 2 and 3, AutoCAD DXF.
 - Web, documentation and help: HTML and XHTML, Markdown, MDX, AsciiDoc, reStructuredText, LaTeX, MediaWiki and
   DokuWiki, XML with ITS 2.0 rules, XSLT, server pages (ASP.NET, JSP, PHP templates, SSI, ERB), HTML Help, MadCap
-  Flare projects, email messages.
+  Flare projects, email messages, SVG text and the text layer of raster images.
 - Software strings: JSON, JSON5 and JSONC, YAML, TOML, INI, Java and Mozilla properties, gettext PO, POT and MO,
   .NET resx and resw, XAML, Windows resjson and RC, WiX, Apple strings, stringsdict, property lists, String Catalogs
   and Xcode localization bundles, Flutter ARB, Mozilla Fluent and DTD, Qt Linguist TS, JavaScript and TypeScript

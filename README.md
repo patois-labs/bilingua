@@ -79,12 +79,14 @@ yours.
 | Plain text | `txt` | `.txt` `.text` |  |
 | Qt Linguist TS | `ts` | `.ts` |  |
 | QuarkXPress Tags | `xtg` | `.xtg` `.tag` |  |
+| Raster images (text layer: PNG, JPEG, TIFF, BMP, GIF, WebP) | `image` | `.png` `.jpg` `.jpeg` `.tif` `.tiff` `.bmp` `.gif` `.webp` |  |
 | reStructuredText | `rst` | `.rst` `.rest` |  |
 | Salesforce Translation Workbench | `stf` | `.stf` |  |
 | Scenarist Closed Captions | `scc` | `.scc` |  |
 | Server-side includes (SSI) | `shtml` | `.shtml` `.shtm` `.stm` |  |
 | SubRip subtitles | `srt` | `.srt` |  |
 | SubViewer 2.0 and MicroDVD subtitles | `sub` | `.sub` |  |
+| SVG text | `svg` | `.svg` |  |
 | TOML | `toml` | `.toml` |  |
 | Trados project and return packages | `sdlppx` | `.sdlppx` `.sdlrpx` | yes |
 | Trados SDLXLIFF | `sdlxliff` | `.sdlxliff` | yes |
@@ -108,7 +110,7 @@ yours.
 | YAML (generic, Rails i18n, Symfony) | `yaml` | `.yaml` `.yml` |  |
 | YouTube SBV subtitles | `sbv` | `.sbv` |  |
 
-85 formats.
+87 formats.
 <!-- formats:end -->
 
 `bilingua::detect` picks the format by extension and then by looking at the bytes, so most files need no hint.
