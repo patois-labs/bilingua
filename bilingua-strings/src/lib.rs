@@ -31,18 +31,14 @@ impl Default for Limits {
 }
 
 // Reserved hidden code ids (start with `~`, never a numeric tag id).
-const OV: &str = "~ov"; // original core text of the value (unescaped)
-const RAW: &str = "~raw"; // original raw value as written in the file
-const LEAD: &str = "~lead"; // white space before the core
-const TRAIL: &str = "~trail"; // white space after the core
-const UNQ: &str = "~unq"; // the value was an unquoted word
-
-fn hidden(text: impl Into<String>) -> CodeData {
-    CodeData { standalone: Some(text.into()), ..Default::default() }
-}
+const OV: &str = "ov"; // original core text of the value (unescaped)
+const RAW: &str = "raw"; // original raw value as written in the file
+const LEAD: &str = "lead"; // white space before the core
+const TRAIL: &str = "trail"; // white space after the core
+const UNQ: &str = "unq"; // the value was an unquoted word
 
 fn code(u: &Unit, key: &str) -> Option<String> {
-    u.codes.get(key).and_then(|c| c.standalone.clone())
+    u.hidden(key).map(str::to_string)
 }
 
 fn limit_err(msg: String) -> Error {
@@ -184,16 +180,16 @@ impl Strings {
             if !translatable {
                 u.lock_reason = Some("no translatable text".into());
             }
-            u.codes.insert(OV.into(), hidden(core));
-            u.codes.insert(RAW.into(), hidden(&text[e.vstart..e.vend]));
+            u.set_hidden(OV, core);
+            u.set_hidden(RAW, &text[e.vstart..e.vend]);
             if !lead.is_empty() {
-                u.codes.insert(LEAD.into(), hidden(lead));
+                u.set_hidden(LEAD, lead);
             }
             if !trail.is_empty() {
-                u.codes.insert(TRAIL.into(), hidden(trail));
+                u.set_hidden(TRAIL, trail);
             }
             if !e.quoted {
-                u.codes.insert(UNQ.into(), hidden("1"));
+                u.set_hidden(UNQ, "1");
             }
             if e.vstart > cursor {
                 parts.push(SkelPart::Raw(text[cursor..e.vstart].to_string()));
@@ -283,7 +279,7 @@ fn render(u: &Unit, enc: Enc, out: &mut String) -> Result<(), Error> {
     }
     let value = format!("{}{}{}", code(u, LEAD).unwrap_or_default(), new, code(u, TRAIL).unwrap_or_default());
     let body = escape(&value);
-    if u.codes.contains_key(UNQ) {
+    if u.has_hidden(UNQ) {
         out.push('"');
         out.push_str(&body);
         out.push('"');

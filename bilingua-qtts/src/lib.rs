@@ -20,18 +20,14 @@ pub use cldr::BABEL_VERSION;
 #[derive(Debug, Clone, Copy, Default)]
 pub struct QtTs;
 
-// Hidden codes (ids start with `~`, never a placeholder id).
-const RAW: &str = "~raw"; // the `<translation>` element as written
-const LEAD: &str = "~lead"; // white space before the text in the source
-const TRAIL: &str = "~trail"; // white space after it
-const NUM: &str = "~num"; // present for a numerus message
-
-fn hidden(text: impl Into<String>) -> CodeData {
-    CodeData { standalone: Some(text.into()), ..Default::default() }
-}
+// Keys of the unit's hidden values (`Unit::hidden`).
+const RAW: &str = "raw"; // the `<translation>` element as written
+const LEAD: &str = "lead"; // white space before the text in the source
+const TRAIL: &str = "trail"; // white space after it
+const NUM: &str = "num"; // present for a numerus message
 
 fn code(u: &Unit, key: &str) -> Option<String> {
-    u.codes.get(key).and_then(|c| c.standalone.clone())
+    u.hidden(key).map(str::to_string)
 }
 
 fn first_child(sc: &Scan, text: &str, i: usize, name: &str) -> Option<usize> {
@@ -199,16 +195,16 @@ impl QtTs {
         let numerus = sc.attr(text, msg, "numerus").is_some_and(|v| v.eq_ignore_ascii_case("yes"));
         if let Some(t) = tr {
             let e = &sc.els[t];
-            unit.codes.insert(RAW.into(), hidden(&text[e.start..e.end]));
+            unit.set_hidden(RAW, &text[e.start..e.end]);
         }
         if !lead.is_empty() {
-            unit.codes.insert(LEAD.into(), hidden(lead));
+            unit.set_hidden(LEAD, lead);
         }
         if !trail.is_empty() {
-            unit.codes.insert(TRAIL.into(), hidden(trail));
+            unit.set_hidden(TRAIL, trail);
         }
         if numerus {
-            unit.codes.insert(NUM.into(), hidden("yes"));
+            unit.set_hidden(NUM, "yes");
         }
         // context: key, location, notes
         let src_lead = leading_text(&nodes);
@@ -544,7 +540,7 @@ fn body_of(u: &Unit, crlf: bool) -> String {
         match i {
             Inline::Text(t) => s.push_str(&escape_text(&xml_target_text(&t))),
             Inline::Tag { id, .. } => {
-                if let Some(raw) = code(u, &id).filter(|_| !id.starts_with('~')) {
+                if let Some(raw) = u.codes.get(&id).and_then(|c| c.standalone.clone()) {
                     if used.insert(id) {
                         s.push_str(&raw);
                     }
@@ -569,7 +565,7 @@ fn write_unit(u: &Unit, crlf: bool, fill: bool, plural_lang: &str, refs: CharRef
         return Ok(());
     }
     let body = with_char_refs(body_of(u, crlf), refs);
-    let numerus = u.codes.contains_key(NUM);
+    let numerus = u.has_hidden(NUM);
     let sc = scan(&raw, true, &Limits::default()).map_err(|_| Error::Write("the skeleton's translation element is not XML any more".into()))?;
     let el = sc.els[0];
     let qname = sc.qname(&raw, 0).to_string();

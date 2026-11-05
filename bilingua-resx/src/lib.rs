@@ -28,11 +28,11 @@ pub struct Record {
 }
 
 // Reserved code ids (start with `~`, never a numeric tag id).
-const RAW: &str = "~raw"; // the raw inner XML of the original <value>
-const LEAD: &str = "~lead"; // white space the value started with (decoded)
-const TRAIL: &str = "~trail"; // white space the value ended with (decoded)
-const CDATA: &str = "~cdata"; // the original held a CDATA section
-const NL: &str = "~nl"; // "crlf" when the file's line ends are all CRLF
+const RAW: &str = "raw"; // the raw inner XML of the original <value>
+const LEAD: &str = "lead"; // white space the value started with (decoded)
+const TRAIL: &str = "trail"; // white space the value ended with (decoded)
+const CDATA: &str = "cdata"; // the original held a CDATA section
+const NL: &str = "nl"; // "crlf" when the file's line ends are all CRLF
 
 /// (leading white space, core, trailing white space), as Python's `str.strip()` would cut it.
 fn split_ws(s: &str) -> (&str, &str, &str) {
@@ -66,12 +66,8 @@ fn parse(bytes: &[u8], opts: &ExtractOptions) -> Result<Parsed, Error> {
     Ok(Parsed { text: dec.text, enc: dec.encoding, warnings: dec.warnings, scan })
 }
 
-fn hidden(text: impl Into<String>) -> CodeData {
-    CodeData { standalone: Some(text.into()), ..Default::default() }
-}
-
 fn code(u: &Unit, key: &str) -> Option<String> {
-    u.codes.get(key).and_then(|c| c.standalone.clone())
+    u.hidden(key).map(str::to_string)
 }
 
 fn tags_of(core: &str) -> (Vec<Inline>, BTreeMap<String, CodeData>) {
@@ -172,18 +168,18 @@ impl Resx {
                 u.lock_reason = Some(if e.name.starts_with(">>") { "designer metadata".into() } else { "no translatable text".into() });
                 u
             };
-            unit.codes.insert(RAW.into(), hidden(&p.text[a..b]));
+            unit.set_hidden(RAW, &p.text[a..b]);
             if !lead.is_empty() {
-                unit.codes.insert(LEAD.into(), hidden(lead));
+                unit.set_hidden(LEAD, lead);
             }
             if !trail.is_empty() {
-                unit.codes.insert(TRAIL.into(), hidden(trail));
+                unit.set_hidden(TRAIL, trail);
             }
             if e.cdata {
-                unit.codes.insert(CDATA.into(), hidden("1"));
+                unit.set_hidden(CDATA, "1");
             }
             if p.scan.crlf {
-                unit.codes.insert(NL.into(), hidden("crlf"));
+                unit.set_hidden(NL, "crlf");
             }
             line += p.text.as_bytes()[line_at..e.start].iter().filter(|c| **c == b'\n').count();
             line_at = e.start;
@@ -266,7 +262,7 @@ impl Filter for Resx {
 }
 
 fn write_unit(u: &Unit, out: &mut String) -> bool {
-    let raw = u.codes.get(RAW).and_then(|c| c.standalone.as_deref()).unwrap_or("");
+    let raw = u.hidden(RAW).unwrap_or("");
     if !u.translate || u.segments.iter().all(|s| s.target.is_empty()) {
         out.push_str(raw);
         return false;

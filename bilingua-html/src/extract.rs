@@ -16,9 +16,9 @@ const PROTECTED: &[&str] = &["code", "kbd", "samp"];
 const SKIP_SUBTREE: &[&str] = &["pre", "template", "svg", "math", "textarea", "script", "style"];
 
 /// Reserved code ids (they start with `~`, which never collides with the numeric tag ids).
-pub const RAW: &str = "~raw";
-pub const VALUE: &str = "~v";
-pub const OWNER: &str = "~attr";
+pub const RAW: &str = "raw";
+pub const VALUE: &str = "v";
+pub const OWNER: &str = "attr";
 
 struct AttrCand {
     attr: String,
@@ -305,8 +305,8 @@ impl<'a> Ex<'a> {
         u.context.location = Some(format!("{}[{}]", c.path, c.attr));
         u.context.heading = self.last_heading.clone();
         u.translate = !self.locked_now();
-        u.codes.insert(RAW.into(), CodeData { standalone: Some(self.s[c.full.0..c.full.1].to_string()), ..Default::default() });
-        u.codes.insert(VALUE.into(), CodeData { label: Some("attr".into()), ..Default::default() });
+        u.set_hidden(RAW, self.s[c.full.0..c.full.1].to_string());
+        u.set_hidden(VALUE, "attr");
         u
     }
 
@@ -552,9 +552,9 @@ impl<'a> Ex<'a> {
 
         let mut unit = Unit::new("", inlines);
         unit.codes = codes;
-        unit.codes.insert(RAW.into(), CodeData { standalone: Some(s[start..end].to_string()), ..Default::default() });
+        unit.set_hidden(RAW, s[start..end].to_string());
         if plain_elem {
-            unit.codes.insert(VALUE.into(), CodeData { label: Some("text".into()), ..Default::default() });
+            unit.set_hidden(VALUE, "text");
         }
         let mut kind = kind_for(&frame_name);
         let mut style = if frame_name.is_empty() { None } else { Some(frame_name.clone()) };
@@ -631,10 +631,7 @@ impl<'a> Ex<'a> {
             }
             if let Some(o) = &p.owner {
                 let owner_id = format!("u{}", rank[o.run] + 1);
-                p.unit.codes.insert(
-                    OWNER.into(),
-                    CodeData { standalone: Some(format!("{}|{}|{}|{}|{}", owner_id, o.code, o.part, o.rs, o.re)), ..Default::default() },
-                );
+                p.unit.set_hidden(OWNER, format!("{}|{}|{}|{}|{}", owner_id, o.code, o.part, o.rs, o.re));
             }
             if p.skel && p.start >= cursor {
                 push_raw(&mut parts, cursor, p.start);

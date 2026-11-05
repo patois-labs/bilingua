@@ -46,10 +46,10 @@ pub struct Record {
 }
 
 // Reserved code ids (start with `~`, never a numeric tag id).
-const RAW: &str = "~raw"; // the raw value text of the original
-const LEAD: &str = "~lead"; // white space the value started with
-const TRAIL: &str = "~trail"; // white space the value ended with
-const MF: &str = "~mf"; // "d": MessageFormat value with every apostrophe doubled; "e": other MessageFormat value
+const RAW: &str = "raw"; // the raw value text of the original
+const LEAD: &str = "lead"; // white space the value started with
+const TRAIL: &str = "trail"; // white space the value ended with
+const MF: &str = "mf"; // "d": MessageFormat value with every apostrophe doubled; "e": other MessageFormat value
 
 fn placeholder_only() -> &'static Regex {
     static RE: OnceLock<Regex> = OnceLock::new();
@@ -110,12 +110,8 @@ fn tags_of(core: &str, mozilla: bool) -> (Vec<Inline>, std::collections::BTreeMa
     (inl, codes)
 }
 
-fn hidden(text: impl Into<String>) -> CodeData {
-    CodeData { standalone: Some(text.into()), ..Default::default() }
-}
-
 fn code(u: &Unit, key: &str) -> Option<String> {
-    u.codes.get(key).and_then(|c| c.standalone.clone())
+    u.hidden(key).map(str::to_string)
 }
 
 fn render(u: &Unit, v: &[Inline]) -> String {
@@ -256,18 +252,18 @@ impl Properties {
                 u.translate = false;
                 u
             };
-            unit.codes.insert(RAW.into(), hidden(&p.text[e.start..e.end]));
+            unit.set_hidden(RAW, &p.text[e.start..e.end]);
             if !lead.is_empty() {
-                unit.codes.insert(LEAD.into(), hidden(lead));
+                unit.set_hidden(LEAD, lead);
             }
             if !trail.is_empty() {
-                unit.codes.insert(TRAIL.into(), hidden(trail));
+                unit.set_hidden(TRAIL, trail);
             }
             if translatable {
                 if mf_is_doubled {
-                    unit.codes.insert(MF.into(), hidden("d"));
+                    unit.set_hidden(MF, "d");
                 } else if moz::mf_arg().is_match(&e.value) {
-                    unit.codes.insert(MF.into(), hidden("e"));
+                    unit.set_hidden(MF, "e");
                 }
             } else {
                 unit.lock_reason = Some("no translatable text".into());
@@ -399,7 +395,7 @@ impl Filter for Properties {
 }
 
 fn write_unit(u: &Unit, mode: Mode, out: &mut String) {
-    let raw = u.codes.get(RAW).and_then(|c| c.standalone.as_deref()).unwrap_or("");
+    let raw = u.hidden(RAW).unwrap_or("");
     if !u.translate || u.segments.iter().all(|s| s.target.is_empty()) {
         out.push_str(raw);
         return;

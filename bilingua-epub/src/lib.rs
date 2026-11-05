@@ -333,11 +333,11 @@ mod tests {
 
     #[test]
     fn reserved_html_code_id_is_still_the_attribute_marker() {
-        // chapter.rs reads `bilingua-html`'s reserved "~v" code to tell attribute units from body units.
+        // chapter.rs reads `bilingua-html`'s hidden "v" value to tell attribute units from body units.
         let d = bilingua_html::Html
             .extract(b"<p><img src=\"a\" alt=\"Cover art\"/></p>", &ExtractOptions::default())
             .unwrap();
         assert_eq!(d.units.len(), 1);
-        assert!(d.units[0].codes.get("~v").is_some_and(|c| c.label.as_deref() == Some("attr")));
+        assert!(d.units[0].hidden("v") == Some("attr"));
     }
 }

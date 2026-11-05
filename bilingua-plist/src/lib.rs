@@ -32,12 +32,12 @@ pub fn filters() -> Vec<Box<dyn Filter>> {
     vec![Box::new(Stringsdict), Box::new(Plist)]
 }
 
-// Hidden codes (ids start with `~`, never a placeholder id).
-const OV: &str = "~ov"; // the value's core text as written (decoded)
-const RAW: &str = "~raw"; // XML: the content as written in the file
-const LEAD: &str = "~lead";
-const TRAIL: &str = "~trail";
-const ORD: &str = "~ord"; // binary: position of the value among the file's strings
+// Keys of the unit's hidden values (`Unit::hidden`).
+const OV: &str = "ov"; // the value's core text as written (decoded)
+const RAW: &str = "raw"; // XML: the content as written in the file
+const LEAD: &str = "lead";
+const TRAIL: &str = "trail";
+const ORD: &str = "ord"; // binary: position of the value among the file's strings
 
 /// Skeleton encoding tag of a binary plist (the skeleton keeps the original file as base64).
 const BINARY: &str = "bplist";
@@ -57,12 +57,8 @@ impl Fmt {
     }
 }
 
-fn hidden(text: impl Into<String>) -> CodeData {
-    CodeData { standalone: Some(text.into()), ..Default::default() }
-}
-
 fn code(u: &Unit, key: &str) -> Option<String> {
-    u.codes.get(key).and_then(|c| c.standalone.clone())
+    u.hidden(key).map(str::to_string)
 }
 
 fn split_ws(s: &str) -> (&str, &str, &str) {
@@ -224,15 +220,15 @@ fn extract_impl(fmt: Fmt, bytes: &[u8], opts: &ExtractOptions, limits: &Limits) 
         if !translatable {
             u.lock_reason = Some(if ph::is_translatable(&node.text) { "not a translatable key".into() } else { "no translatable text".into() });
         }
-        u.codes.insert(OV.into(), hidden(core));
+        u.set_hidden(OV, core);
         if !lead.is_empty() {
-            u.codes.insert(LEAD.into(), hidden(lead));
+            u.set_hidden(LEAD, lead);
         }
         if !trail.is_empty() {
-            u.codes.insert(TRAIL.into(), hidden(trail));
+            u.set_hidden(TRAIL, trail);
         }
         if let Origin::Xml { text, .. } = &origin {
-            u.codes.insert(RAW.into(), hidden(&text[node.cstart..node.cend]));
+            u.set_hidden(RAW, &text[node.cstart..node.cend]);
             line += text.as_bytes()[counted_to..node.cstart].iter().filter(|c| **c == b'\n').count();
             counted_to = node.cstart;
             u.context.location = Some(format!("line {line}"));
@@ -241,7 +237,7 @@ fn extract_impl(fmt: Fmt, bytes: &[u8], opts: &ExtractOptions, limits: &Limits) 
             }
             cursor = node.cend;
         } else {
-            u.codes.insert(ORD.into(), hidden((ord0 + 1).to_string()));
+            u.set_hidden(ORD, (ord0 + 1).to_string());
         }
         parts.push(SkelPart::Unit(units.len()));
         units.push(u);

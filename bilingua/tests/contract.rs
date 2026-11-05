@@ -222,7 +222,8 @@ fn crate_of(format: &str) -> &'static str {
 
 fn with_parser(d: &mut Document, f: impl FnOnce(&mut Option<ParserInfo>)) {
     match &mut d.skeleton {
-        Skeleton::Text { parser, .. } | Skeleton::Zip { parser, .. } => f(parser),
+        Skeleton::Text { parser, .. } | Skeleton::Zip { parser, .. } | Skeleton::Binary { parser, .. } => f(parser),
+        _ => panic!("a skeleton kind this test does not know"),
     }
 }
 

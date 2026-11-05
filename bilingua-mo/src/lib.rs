@@ -1,7 +1,8 @@
 //! Bilingua gettext MO filter (compiled message catalogs, `.mo` and `.gmo`). See the README.
 
 /// Skeleton schema number: bump only when this crate's skeleton layout changes (see `bilingua_model::check_parser`).
-pub const SKELETON_SCHEMA: u32 = 1;
+/// 2: the catalog is a `Skeleton::Binary` (schema 1 kept it as a zip entry named `catalog.mo`, still read).
+pub const SKELETON_SCHEMA: u32 = 2;
 
 mod header;
 mod ph;
@@ -321,8 +322,11 @@ fn compile(entries: &[Entry], codec: Codec, full_charset: bool) -> Result<Vec<u8
 }
 
 fn original_bytes(doc: &Document) -> Result<&[u8], Error> {
-    let Skeleton::Zip { entries, .. } = &doc.skeleton else {
-        return Err(Error::Write("mo needs the skeleton made by its own extract".into()));
+    let entries = match &doc.skeleton {
+        Skeleton::Binary { data, .. } => return Ok(data),
+        // schema 1: the catalog as the one entry of a zip skeleton
+        Skeleton::Zip { entries, .. } => entries,
+        _ => return Err(Error::Write("mo needs the skeleton made by its own extract".into())),
     };
     entries
         .iter()
@@ -362,10 +366,7 @@ impl Filter for Mo {
             }
             guard::check_unit_count(units.len(), &limits)?;
         }
-        let skeleton = Skeleton::zip(
-            vec![ZipEntry { name: MEMBER.into(), data: ZipData::Raw(bytes.to_vec()) }],
-            bilingua_model::parser_info!(),
-        );
+        let skeleton = Skeleton::binary(bytes.to_vec(), bilingua_model::parser_info!());
         guard::finish(
             Document::new("mo", units, skeleton).with_options(opts),
             vec![],

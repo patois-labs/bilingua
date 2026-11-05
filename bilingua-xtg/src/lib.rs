@@ -144,10 +144,8 @@ impl Filter for Xtg {
                     let built = para::build(text, &items);
                     let mut u = Unit::new(format!("u{}", units.len() + 1), built.inlines);
                     u.codes = built.codes;
-                    u.codes.insert(
-                        para::RAW.into(),
-                        CodeData { standalone: Some(text[built.start..built.end].to_string()), ..Default::default() },
-                    );
+                    u.hidden = built.hidden;
+                    u.set_hidden(para::RAW, &text[built.start..built.end]);
                     if !walker.style.is_empty() {
                         u.context.style = Some(walker.style.clone());
                     }
@@ -213,7 +211,7 @@ fn same_content(a: &[Inline], b: &[Inline]) -> bool {
 }
 
 fn write_unit(u: &Unit, out: &mut String) {
-    let raw = u.codes.get(para::RAW).and_then(|c| c.standalone.as_deref()).unwrap_or("");
+    let raw = u.hidden(para::RAW).unwrap_or("");
     if !u.translate || u.segments.iter().all(|s| s.target.is_empty()) {
         out.push_str(raw);
         return;
@@ -223,5 +221,5 @@ fn write_unit(u: &Unit, out: &mut String) {
         out.push_str(raw);
         return;
     }
-    out.push_str(&render::render(&u.codes, &new));
+    out.push_str(&render::render(&u.codes, &u.hidden, &new));
 }

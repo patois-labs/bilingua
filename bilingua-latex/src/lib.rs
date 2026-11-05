@@ -18,7 +18,7 @@ use regex::Regex;
 use std::sync::OnceLock;
 
 /// The hidden code of a unit: `standalone` = the source text as written.
-const RAW: &str = "~raw";
+const RAW: &str = "raw";
 
 /// The LaTeX filter. `extra_inline` adds inline text commands by name (LocOS `LATEX_TEXT_COMMANDS`): their last
 /// argument is text and the command stays in the markup. It changes the units of a file, so give the same list when
@@ -110,7 +110,7 @@ impl Filter for Latex {
                 u
             };
             u.codes.extend(codes);
-            u.codes.insert(RAW.into(), CodeData { standalone: Some(raw.to_string()), ..Default::default() });
+            u.set_hidden(RAW, raw.to_string());
             line += text.as_bytes()[line_pos..s.a].iter().filter(|&&b| b == b'\n').count();
             line_pos = s.a;
             u.context.kind = Some(s.kind.to_string());
@@ -142,7 +142,7 @@ impl Filter for Latex {
                 SkelPart::Raw(s) => out.push_str(s),
                 SkelPart::Unit(i) => {
                     let u = doc.units.get(*i).ok_or_else(|| Error::Write(format!("skeleton points at missing unit {i}")))?;
-                    let raw = u.codes.get(RAW).and_then(|c| c.standalone.as_deref()).unwrap_or("");
+                    let raw = u.hidden(RAW).unwrap_or("");
                     if !u.translate || u.segments.iter().all(|s| s.target.is_empty()) {
                         out.push_str(raw);
                         continue;

@@ -76,10 +76,10 @@ fn hostile_targets_never_break_the_xml() {
 fn tampered_paragraph_index_is_a_typed_error() {
     let data = doc("<Story Self=\"s\"><ParagraphStyleRange><CharacterStyleRange><Content>One</Content></CharacterStyleRange></ParagraphStyleRange></Story>");
     let mut d = Icml.extract(&data, &opts(None)).unwrap();
-    d.units[0].codes.insert("~p".into(), CodeData { standalone: Some("18446744073709551615".into()), ..Default::default() });
+    d.units[0].set_hidden("p", "18446744073709551615");
     d.units[0].segments[0].target = vec![Inline::text("x")];
     assert!(Icml.merge(&d).is_err());
-    d.units[0].codes.insert("~p".into(), CodeData { standalone: Some("-1".into()), ..Default::default() });
+    d.units[0].set_hidden("p", "-1");
     let out = Icml.merge(&d).unwrap();
     assert_eq!(out, data);
 }

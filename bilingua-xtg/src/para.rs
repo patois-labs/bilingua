@@ -6,12 +6,12 @@ use crate::lex::Item;
 use bilingua_model::{CodeData, Inline, TagKind};
 use std::collections::{BTreeMap, HashMap};
 
-/// Reserved code ids (start with `~`, never a numeric tag id).
-pub const RAW: &str = "~raw";
-pub const GROUPS: &str = "~groups";
-pub const RESET_ALL: &str = "~all";
+/// Keys of the unit's hidden values (`Unit::hidden`).
+pub const RAW: &str = "raw";
+pub const GROUPS: &str = "groups";
+pub const RESET_ALL: &str = "all";
 pub fn resets_id(id: &str) -> String {
-    format!("~r{id}")
+    format!("r{id}")
 }
 
 #[derive(Default)]
@@ -171,6 +171,8 @@ pub struct Built {
     pub end: usize,
     pub inlines: Vec<Inline>,
     pub codes: BTreeMap<String, CodeData>,
+    /// The unit's hidden values: reset lists and attribute groups.
+    pub hidden: BTreeMap<String, String>,
 }
 
 struct Out {
@@ -335,15 +337,16 @@ pub fn build(text: &str, items: &[Item]) -> Built {
     }
     flush(&mut pending, &mut out, &mut codes, &mut count);
     out.flush_text();
+    let mut hidden = BTreeMap::new();
     for (tid, r) in &resets {
-        codes.insert(resets_id(tid), CodeData { standalone: Some(r.clone()), ..Default::default() });
+        hidden.insert(resets_id(tid), r.clone());
     }
     if !groups.is_empty() {
         let s: Vec<String> = groups.iter().map(|g| g.join(",")).collect();
-        codes.insert(GROUPS.into(), CodeData { standalone: Some(s.join(";")), ..Default::default() });
+        hidden.insert(GROUPS.into(), s.join(";"));
     }
     if !reset_all.is_empty() {
-        codes.insert(RESET_ALL.into(), CodeData { standalone: Some(reset_all.join(",")), ..Default::default() });
+        hidden.insert(RESET_ALL.into(), reset_all.join(","));
     }
-    Built { start: items[lo].a, end: items[hi.max(lo)].b, inlines: out.inl, codes }
+    Built { start: items[lo].a, end: items[hi.max(lo)].b, inlines: out.inl, codes, hidden }
 }

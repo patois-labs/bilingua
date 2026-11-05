@@ -22,11 +22,11 @@ use std::collections::BTreeMap;
 pub struct Adoc;
 
 const ID: &str = "adoc";
-// Hidden codes on a unit (names start with `~`, never a tag id).
-const RAW: &str = "~raw"; // the source text of the span
-const SEP: &str = "~sep"; // table cell separator
-const LS: &str = "~ls"; // the span starts a line
-const META: &str = "~meta"; // a header description / keywords value
+// Keys of the unit's hidden values (`Unit::hidden`).
+const RAW: &str = "raw"; // the source text of the span
+const SEP: &str = "sep"; // table cell separator
+const LS: &str = "ls"; // the span starts a line
+const META: &str = "meta"; // a header description / keywords value
 
 struct Item {
     start: usize,
@@ -34,12 +34,8 @@ struct Item {
     unit: usize,
 }
 
-fn hidden(c: &mut BTreeMap<String, CodeData>, key: &str, v: String) {
-    c.insert(key.into(), CodeData { standalone: Some(v), ..Default::default() });
-}
-
 fn flag(u: &Unit, key: &str) -> bool {
-    u.codes.contains_key(key)
+    u.has_hidden(key)
 }
 
 impl Filter for Adoc {
@@ -85,12 +81,12 @@ impl Filter for Adoc {
             }
             let mut u = Unit::new(format!("u{}", units.len() + 1), inl);
             u.codes = codes;
-            hidden(&mut u.codes, RAW, raw.to_string());
+            u.set_hidden(RAW, raw.to_string());
             if let Some(sep) = sl.sep {
-                hidden(&mut u.codes, SEP, sep.to_string());
+                u.set_hidden(SEP, sep.to_string());
             }
             if sl.start == 0 || matches!(text.as_bytes()[sl.start - 1], b'\r' | b'\n') {
-                hidden(&mut u.codes, LS, "1".into());
+                u.set_hidden(LS, "1");
             }
             u.context.kind = Some(sl.kind.to_string());
             if sl.kind == "heading" {
@@ -112,8 +108,8 @@ impl Filter for Adoc {
             let (inl, codes) = meta::meta_unit(&m.value);
             let mut u = Unit::new(format!("u{}", units.len() + 1), inl);
             u.codes = codes;
-            hidden(&mut u.codes, RAW, text[m.start..m.end].to_string());
-            hidden(&mut u.codes, META, "1".into());
+            u.set_hidden(RAW, text[m.start..m.end].to_string());
+            u.set_hidden(META, "1");
             u.context.kind = Some("metadata".into());
             u.context.style = Some(m.style.to_string());
             u.context.location = Some(format!("line {}", m.line));
@@ -127,7 +123,7 @@ impl Filter for Adoc {
             }
             let mut u = Unit::new(format!("k{}", n + 1), inl);
             u.codes = codes;
-            hidden(&mut u.codes, RAW, text[sl.start..sl.end].to_string());
+            u.set_hidden(RAW, text[sl.start..sl.end].to_string());
             u.translate = false;
             u.lock_reason = Some("no translatable text".into());
             u.context.kind = Some(sl.kind.to_string());
@@ -157,7 +153,7 @@ impl Filter for Adoc {
         let Skeleton::Text { parts, encoding, .. } = &doc.skeleton else {
             return Err(Error::Write("adoc needs a text skeleton".into()));
         };
-        let raw_of = |u: &Unit| u.codes.get(RAW).and_then(|c| c.standalone.clone()).unwrap_or_default();
+        let raw_of = |u: &Unit| u.hidden(RAW).map(str::to_string).unwrap_or_default();
         // the original text, for the URL attributes (built only when a link needs it)
         let original = || {
             let mut s = String::new();
@@ -194,7 +190,7 @@ impl Filter for Adoc {
                         let t = meta::meta_render(u, &new);
                         out.push_str(if t.is_empty() { &raw } else { &t });
                     } else {
-                        let sep = u.codes.get(SEP).and_then(|c| c.standalone.as_deref()).and_then(|s| s.chars().next());
+                        let sep = u.hidden(SEP).and_then(|s| s.chars().next());
                         let mut r = render::render(u, &new, sep, &mut attrs);
                         // a translation that opens with block syntax would turn the paragraph into another block
                         if flag(u, LS) && sep.is_none() && lex::is_block_start(&r) {

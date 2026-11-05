@@ -193,7 +193,7 @@ impl XmlFilter {
                 let mut doc = skel::build_document(&t, &mp.planned, &[String::new()], &HashSet::new(), opts, dec.encoding.clone(), None, self.id);
                 doc.skeleton = Skeleton::text(vec![SkelPart::Raw(dec.text.clone())], dec.encoding.clone(), parser_info!());
                 if let Some(u) = doc.units.first_mut() {
-                    u.codes.insert(ML_CODE.into(), CodeData { standalone: Some(mp.cfg.encode()), ..Default::default() });
+                    u.set_hidden(ML_CODE, mp.cfg.encode());
                 }
                 return guard::finish(doc, dec.warnings, &limits);
             }
@@ -222,7 +222,7 @@ fn read_xml(bytes: &[u8], opts: &ExtractOptions) -> Result<enc::Decoded, Error> 
 }
 
 /// Hidden code on the first unit of a multilingual document: the layout to replay on merge.
-const ML_CODE: &str = "~ml";
+const ML_CODE: &str = "ml";
 
 impl Filter for XmlFilter {
     fn id(&self) -> &'static str {
@@ -263,7 +263,7 @@ impl Filter for XmlFilter {
             return Err(Error::Write("xml needs a text skeleton".into()));
         };
         let tag = doc.target_lang.as_deref().and_then(langs::html_lang);
-        let out = match doc.units.first().and_then(|u| u.codes.get(ML_CODE)).and_then(|c| c.standalone.as_deref()) {
+        let out = match doc.units.first().and_then(|u| u.hidden(ML_CODE)) {
             Some(blob) => {
                 let Some(SkelPart::Raw(text)) = parts.first() else {
                     return Err(Error::Write("multilingual xml needs its source text in the skeleton".into()));

@@ -25,16 +25,12 @@ impl Xaml {
 
 pub use bilingua_model::Limits;
 
-// Hidden codes (ids start with `~`, never a placeholder id).
-const RAW: &str = "~raw"; // the source span as written
-const META: &str = "~meta"; // `t` text, `tc` text with CRLF, `a"` / `a'` attribute, plus `e` when `{}` escaped
-
-fn hidden(text: impl Into<String>) -> CodeData {
-    CodeData { standalone: Some(text.into()), ..Default::default() }
-}
+// Keys of the unit's hidden values (`Unit::hidden`).
+const RAW: &str = "raw"; // the source span as written
+const META: &str = "meta"; // `t` text, `tc` text with CRLF, `a"` / `a'` attribute, plus `e` when `{}` escaped
 
 fn code(u: &Unit, key: &str) -> Option<String> {
-    u.codes.get(key).and_then(|c| c.standalone.clone())
+    u.hidden(key).map(str::to_string)
 }
 
 fn render(u: &Unit, v: &[Inline]) -> String {
@@ -130,12 +126,12 @@ impl Xaml {
                 u.lock_reason = Some("markup extension or no letters".into());
                 u
             };
-            unit.codes.insert(RAW.into(), hidden(&text[it.start..it.end]));
+            unit.set_hidden(RAW, &text[it.start..it.end]);
             let mut meta = if it.attr { if it.quote == b'"' { "a\"" } else { "a'" }.to_string() } else if it.crlf { "tc".into() } else { "t".into() };
             if it.escaped {
                 meta.push('e');
             }
-            unit.codes.insert(META.into(), hidden(meta));
+            unit.set_hidden(META, meta);
             unit.context.kind = Some(it.kind.clone());
             unit.context.style = Some(it.element.clone());
             unit.context.key = it.key.clone();

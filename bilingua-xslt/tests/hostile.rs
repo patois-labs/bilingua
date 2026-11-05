@@ -282,9 +282,9 @@ fn a_skeleton_from_another_crate_or_a_tampered_one_is_refused_not_panicked() {
         let n = d.units.len();
         for (i, u) in d.units.iter_mut().enumerate() {
             let all: Vec<String> = (0..n).map(|j| format!("0-1-{j}")).collect();
-            u.codes.insert("~nest".into(), CodeData { standalone: Some(format!("0-1-{i};{}", all.join(";"))), ..Default::default() });
+            u.set_hidden("nest", format!("0-1-{i};{}", all.join(";")));
             for id in 1..4 {
-                u.codes.insert(format!("~n{id}"), CodeData { standalone: Some(all.join(";")), ..Default::default() });
+                u.set_hidden(format!("n{id}"), all.join(";"));
             }
             if translated {
                 let mut t = u.source();

@@ -229,7 +229,7 @@ fn stale_skeleton_and_foreign_document_are_refused() {
     assert!(matches!(Icml.merge(&d), Err(Error::ParserVersion { .. })));
     let mut d = Icml.extract(&data, &opts()).unwrap();
     d.units[0].segments[0].target = vec![Inline::text("Hallo")];
-    d.units[0].codes.insert("~p".into(), CodeData { standalone: Some("99".into()), ..Default::default() });
+    d.units[0].set_hidden("p", "99");
     assert!(matches!(Icml.merge(&d), Err(Error::Write(_))));
 }
 

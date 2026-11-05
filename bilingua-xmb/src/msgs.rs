@@ -330,10 +330,9 @@ pub fn extract(bytes: &[u8], opts: &ExtractOptions, limits: &Limits) -> Result<D
         guard::check_unit_count(units.len() + 1, limits)?;
         let mut u = Unit::new(format!("u{}", units.len() + 1), m.inl.clone());
         u.codes = m.codes.clone();
-        let hidden = |s: &str| CodeData { standalone: Some(s.to_string()), ..Default::default() };
-        u.codes.insert(RAW.into(), hidden(&text[m.open_end..m.close_start]));
-        u.codes.insert(LEAD.into(), hidden(&m.lead));
-        u.codes.insert(TRAIL.into(), hidden(&m.trail));
+        u.set_hidden(RAW, &text[m.open_end..m.close_start]);
+        u.set_hidden(LEAD, &m.lead);
+        u.set_hidden(TRAIL, &m.trail);
         u.context.kind = Some("message".into());
         u.context.key = m.id.clone();
         u.context.location = Some(format!("message {}", mi + 1));
@@ -362,7 +361,7 @@ fn has_target(u: &Unit) -> bool {
 }
 
 fn raw_of(u: &Unit, key: &str) -> String {
-    u.codes.get(key).and_then(|c| c.standalone.clone()).unwrap_or_default()
+    u.hidden(key).map(str::to_string).unwrap_or_default()
 }
 
 /// One unit of an XTB splice: the original content unless the translation differs from the source.

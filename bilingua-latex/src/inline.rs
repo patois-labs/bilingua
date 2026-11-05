@@ -462,7 +462,7 @@ pub fn render(u: &Unit, target: &[Inline]) -> String {
     }
     // a paragraph or cell that starts with `[` would read as the optional argument of the command before it
     // (unless the source text started with one too: then it was already in a safe place)
-    let raw_starts = u.codes.get("~raw").and_then(|c| c.standalone.as_deref()).is_some_and(|r| r.starts_with('['));
+    let raw_starts = u.hidden("raw").is_some_and(|r| r.starts_with('['));
     if matches!(kind, "paragraph" | "cell") && !raw_starts {
         if let Some(first) = out.first_mut() {
             if let Some(rest) = first.strip_prefix('[') {

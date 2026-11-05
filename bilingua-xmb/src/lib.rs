@@ -14,10 +14,10 @@ use msgs::Kind;
 
 pub use bilingua_model::Limits;
 
-// Hidden codes (ids start with `~`, never a placeholder id).
-pub(crate) const RAW: &str = "~raw"; // the message content as written
-pub(crate) const LEAD: &str = "~lead"; // white space before the text
-pub(crate) const TRAIL: &str = "~trail"; // white space after the text
+// Keys of the unit's hidden values (`Unit::hidden`).
+pub(crate) const RAW: &str = "raw"; // the message content as written
+pub(crate) const LEAD: &str = "lead"; // white space before the text
+pub(crate) const TRAIL: &str = "trail"; // white space after the text
 
 /// The XMB filter (Angular `ng extract-i18n --format=xmb`, Google message bundles). An XMB merge with no
 /// translation gives the original bytes back; with translations it gives the XTB Angular reads (what Localization
@@ -111,7 +111,7 @@ fn changed_text(doc: &Document) -> bool {
 }
 
 fn code(u: &Unit, key: &str) -> String {
-    u.codes.get(key).and_then(|c| c.standalone.clone()).unwrap_or_default()
+    u.hidden(key).map(str::to_string).unwrap_or_default()
 }
 
 fn merge(doc: &Document, force: bool, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {

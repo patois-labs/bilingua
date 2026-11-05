@@ -51,7 +51,7 @@ fn main() {
                     let v: Vec<_> = d
                         .units
                         .iter()
-                        .map(|u| serde_json::json!({"p": u.codes["~p"].standalone.clone().unwrap_or_default().parse::<u64>().unwrap_or(0), "text": tok_text(u, &u.source())}))
+                        .map(|u| serde_json::json!({"p": u.hidden("p").unwrap_or_default().parse::<u64>().unwrap_or(0), "text": tok_text(u, &u.source())}))
                         .collect();
                     println!("{}", serde_json::to_string(&v).unwrap());
                 }

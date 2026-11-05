@@ -85,7 +85,7 @@ pub fn units(data: &[u8]) -> Vec<String> {
 }
 
 pub fn p_index(u: &Unit) -> usize {
-    u.codes["~p"].standalone.as_ref().expect("p").parse().expect("number")
+    u.hidden("p").expect("p").parse().expect("number")
 }
 
 /// LocOS token text back to inlines (any token, valid or not, becomes a tag with that id).

@@ -13,7 +13,7 @@ use bilingua_model::*;
 use std::collections::HashMap;
 
 /// Reserved code ids of `bilingua-html` (see its `extract.rs`): the attribute marker.
-const VALUE: &str = "~v";
+const VALUE: &str = "v";
 
 pub struct Chapter {
     pub path: String,
@@ -29,7 +29,7 @@ pub fn translated(u: &Unit) -> bool {
 }
 
 fn is_attr(u: &Unit) -> bool {
-    u.codes.get(VALUE).and_then(|c| c.label.as_deref()) == Some("attr")
+    u.hidden(VALUE) == Some("attr")
 }
 
 /// The LocOS style of an attribute unit, when LocOS offers that attribute (`a11y:img-alt` and the like).

@@ -9,8 +9,8 @@
 //!   target-language merge.
 //!
 //! Markers appear in `Raw` parts and in the markup strings of a unit's codes (`open`, `close`, `standalone`).
-//! Hidden codes (ids starting with `~`): `~raw` the original markup of the run (or the raw value of an attribute),
-//! `~lead` and `~trail` the white space around it, `~cdata` the run is one CDATA section, `~q` the quote of an
+//! Hidden values (`Unit::hidden`): `raw` the original markup of the run (or the raw value of an attribute),
+//! `lead` and `trail` the white space around it, `cdata` the run is one CDATA section, `q` the quote of an
 //! attribute value.
 
 use crate::dialect::LangStamp;
@@ -21,15 +21,11 @@ use bilingua_model::{
 };
 use std::collections::HashMap;
 
-pub(crate) const RAW: &str = "~raw";
-pub(crate) const LEAD: &str = "~lead";
-pub(crate) const TRAIL: &str = "~trail";
-pub(crate) const CDATA: &str = "~cdata";
-pub(crate) const QUOTE: &str = "~q";
-
-fn hidden(s: impl Into<String>) -> CodeData {
-    CodeData { standalone: Some(s.into()), ..Default::default() }
-}
+pub(crate) const RAW: &str = "raw";
+pub(crate) const LEAD: &str = "lead";
+pub(crate) const TRAIL: &str = "trail";
+pub(crate) const CDATA: &str = "cdata";
+pub(crate) const QUOTE: &str = "q";
 
 pub(crate) struct Emit<'a, 'b> {
     pub t: &'b Tree<'a>,
@@ -216,22 +212,22 @@ pub(crate) fn build_document(t: &Tree, p: &Planned, notes: &[String], alt: &std:
         match &pu.attr {
             Some(a) => {
                 let at = &t.attrs[a.attr as usize];
-                u.codes.insert(RAW.into(), hidden(t.attr_raw(at)));
-                u.codes.insert(QUOTE.into(), hidden((at.quote as char).to_string()));
+                u.set_hidden(RAW, t.attr_raw(at));
+                u.set_hidden(QUOTE, (at.quote as char).to_string());
                 u.context.kind = Some("attribute".into());
                 u.context.style = Some(if alt.contains(&a.local) { "a11y:img-alt".into() } else { format!("attr:{}", a.local) });
                 u.context.key = Some(format!("{}/@{}", path_of(t, a.el), a.local));
             }
             None => {
-                u.codes.insert(RAW.into(), hidden(em.range(pu.owner, pu.lo, pu.hi)));
+                u.set_hidden(RAW, em.range(pu.owner, pu.lo, pu.hi));
                 if !pu.lead.is_empty() {
-                    u.codes.insert(LEAD.into(), hidden(pu.lead.clone()));
+                    u.set_hidden(LEAD, pu.lead.clone());
                 }
                 if !pu.trail.is_empty() {
-                    u.codes.insert(TRAIL.into(), hidden(pu.trail.clone()));
+                    u.set_hidden(TRAIL, pu.trail.clone());
                 }
                 if pu.cdata {
-                    u.codes.insert(CDATA.into(), hidden("1"));
+                    u.set_hidden(CDATA, "1");
                 }
                 u.context.kind = Some("element".into());
                 u.context.key = Some(path_of(t, pu.owner));
@@ -353,7 +349,7 @@ pub(crate) fn esc_attr(s: &str, quote: char) -> String {
 }
 
 fn code_str<'u>(u: &'u Unit, key: &str) -> Option<&'u str> {
-    u.codes.get(key).and_then(|c| c.standalone.as_deref())
+    u.hidden(key)
 }
 
 pub(crate) fn translated(u: &Unit) -> bool {

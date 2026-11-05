@@ -14,14 +14,14 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 pub struct Po;
 
 /// Reserved code ids (start with `~`, never a numeric tag id).
-const RAW: &str = "~raw"; // original msgstr field (plural: whole block on the first form)
-const FRAW: &str = "~fraw"; // original text of this form's own field
-const FLAGS: &str = "~fl"; // original `#,` line that holds "fuzzy"
-const ENTRY: &str = "~e"; // entry id, shared by all forms
-const MID: &str = "~mid"; // "1" when the msgid used the multi-line layout
-const OV: &str = "~ov"; // original msgstr value of this form (unescaped)
-const FMULTI: &str = "~fmulti"; // "1" when the original field used the multi-line layout
-const PN: &str = "~pn"; // number of plural forms of the entry
+const RAW: &str = "raw"; // original msgstr field (plural: whole block on the first form)
+const FRAW: &str = "fraw"; // original text of this form's own field
+const FLAGS: &str = "fl"; // original `#,` line that holds "fuzzy"
+const ENTRY: &str = "e"; // entry id, shared by all forms
+const MID: &str = "mid"; // "1" when the msgid used the multi-line layout
+const OV: &str = "ov"; // original msgstr value of this form (unescaped)
+const FMULTI: &str = "fmulti"; // "1" when the original field used the multi-line layout
+const PN: &str = "pn"; // number of plural forms of the entry
 
 /// Plural-Forms for the languages Bilingua knows. (nplurals, expression)
 fn plural_rule(lang: &str) -> Option<(usize, &'static str)> {
@@ -109,11 +109,7 @@ fn out_text(u: &Unit, v: &[Inline]) -> String {
 }
 
 fn code(u: &Unit, key: &str) -> Option<String> {
-    u.codes.get(key).and_then(|c| c.standalone.clone())
-}
-
-fn hidden(text: String) -> CodeData {
-    CodeData { standalone: Some(text), ..Default::default() }
+    u.hidden(key).map(str::to_string)
 }
 
 /// The text this unit writes as its msgstr ("" when no segment has a target).
@@ -266,7 +262,7 @@ impl Filter for Po {
                     let u = doc.units.get(*i).ok_or_else(|| Error::Write(format!("skeleton points at missing unit {i}")))?;
                     let first = seen.insert(*i);
                     let entry = code(u, ENTRY).unwrap_or_default();
-                    if first && u.codes.contains_key(FLAGS) {
+                    if first && u.has_hidden(FLAGS) {
                         out.push_str(&render_flags(u, entry_done.get(&entry).copied().unwrap_or(false)));
                     } else {
                         out.push_str(&render_msgstr(u, entry_changed.get(&entry).copied().unwrap_or(false), eol));
@@ -340,7 +336,7 @@ fn entry_units(
         }
         if plural {
             u.context.extra.insert("plural".into(), k.to_string());
-            u.codes.insert(PN.into(), hidden(n.to_string()));
+            u.set_hidden(PN, n.to_string());
         }
         if fuzzy {
             u.context.extra.insert("fuzzy".into(), "true".into());
@@ -348,24 +344,24 @@ fn entry_units(
         if !other_flags.is_empty() {
             u.context.extra.insert("flags".into(), other_flags.join(", "));
         }
-        u.codes.insert(ENTRY.into(), hidden(entry_id.clone()));
-        u.codes.insert(OV.into(), hidden(tgt_text.to_string()));
+        u.set_hidden(ENTRY, entry_id.clone());
+        u.set_hidden(OV, tgt_text.to_string());
         if id.multiline() {
-            u.codes.insert(MID.into(), hidden("1".into()));
+            u.set_hidden(MID, "1");
         }
         if let Some(f) = field {
-            u.codes.insert(FRAW.into(), hidden(text[f.start..f.end].to_string()));
+            u.set_hidden(FRAW, text[f.start..f.end].to_string());
             if f.multiline() {
-                u.codes.insert(FMULTI.into(), hidden("1".into()));
+                u.set_hidden(FMULTI, "1");
             }
         }
         idxs.push(units.len());
         units.push(u);
     }
     let block = (first_str.start, last_str.end);
-    units[idxs[0]].codes.insert(RAW.into(), hidden(text[block.0..block.1].to_string()));
+    units[idxs[0]].set_hidden(RAW, text[block.0..block.1].to_string());
     if let Some((fs, fe)) = e.flag_line {
-        units[idxs[0]].codes.insert(FLAGS.into(), hidden(text[fs..fe].to_string()));
+        units[idxs[0]].set_hidden(FLAGS, text[fs..fe].to_string());
         edits.push((fs, fe, vec![idxs[0]]));
     }
     edits.push((block.0, block.1, idxs));

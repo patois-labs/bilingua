@@ -24,14 +24,10 @@ pub struct Icml;
 
 const FORMAT: &str = "icml";
 /// Hidden code holding the paragraph number of a unit.
-const PIDX: &str = "~p";
+const PIDX: &str = "p";
 
 fn parse_err(msg: impl Into<String>) -> Error {
     Error::Parse { format: FORMAT.into(), msg: msg.into() }
-}
-
-fn hidden_code(text: impl Into<String>) -> CodeData {
-    CodeData { standalone: Some(text.into()), ..Default::default() }
 }
 
 /// A parsed file: the tree, the stories in document order (each with the document that declares its
@@ -269,7 +265,7 @@ fn unit_for(dom: &Dom, tok: &Tok, para: &Para, p_index: usize, story: Id) -> Uni
     }
     let mut u = Unit::new(format!("u{p_index}"), merge_text(inl));
     u.codes = codes;
-    u.codes.insert(PIDX.into(), hidden_code(p_index.to_string()));
+    u.set_hidden(PIDX, p_index.to_string());
     u.context.kind = Some("paragraph".into());
     let style = style_of(dom, para);
     if !style.is_empty() {
@@ -311,7 +307,7 @@ impl Icml {
 }
 
 fn p_index_of(u: &Unit) -> Option<usize> {
-    u.codes.get(PIDX).and_then(|c| c.standalone.as_deref()).and_then(|s| s.parse().ok())
+    u.hidden(PIDX).and_then(|s| s.parse().ok())
 }
 
 /// A target as translated pieces; XML-illegal characters dropped, line ends turned into spaces (a newline is

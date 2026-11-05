@@ -320,7 +320,7 @@ fn a_binary_file_survives_json_and_a_second_extract() {
     }
     assert!(matches!(Stringsdict.merge(&broken), Err(Error::Write(_))));
     let mut wrong = d.clone();
-    wrong.units[0].codes.insert("~ord".into(), CodeData { standalone: Some("9999".into()), ..Default::default() });
+    wrong.units[0].set_hidden("ord", "9999");
     assert!(matches!(Stringsdict.merge(&wrong), Err(Error::Write(_))));
     let mut zip = d.clone();
     zip.skeleton = Skeleton::Zip { entries: vec![], parser: None };

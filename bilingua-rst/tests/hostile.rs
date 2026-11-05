@@ -205,7 +205,7 @@ fn a_foreign_skeleton_is_refused() {
 fn a_tampered_title_record_is_a_typed_error() {
     let mut doc = extract(b"Title\n=====\n\nBody.\n").unwrap();
     let u = &mut doc.units[0];
-    u.codes.insert("~title".into(), CodeData { standalone: Some("5,0,5,9,6,61".into()), ..Default::default() });
+    u.set_hidden("title", "5,0,5,9,6,61");
     u.segments[0].target = vec![Inline::Text("Titel".into())];
     u.segments[0].state = SegState::Draft;
     assert!(matches!(Rst.merge(&doc), Err(Error::Write(_))));

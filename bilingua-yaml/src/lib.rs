@@ -23,11 +23,11 @@ use walk::{py_space, walk, Walk};
 /// The YAML filter.
 pub struct Yaml;
 
-const RAW: &str = "~raw"; // the scalar's original text (its whole span)
-const LEAD: &str = "~lead"; // white space of the value before the unit text
-const TRAIL: &str = "~trail"; // and after it
-const STY: &str = "~sty"; // style: p ' " | >
-const FLOW: &str = "~flow"; // "1" inside a flow collection
+const RAW: &str = "raw"; // the scalar's original text (its whole span)
+const LEAD: &str = "lead"; // white space of the value before the unit text
+const TRAIL: &str = "trail"; // and after it
+const STY: &str = "sty"; // style: p ' " | >
+const FLOW: &str = "flow"; // "1" inside a flow collection
 
 fn style_char(s: Style) -> &'static str {
     match s {
@@ -69,12 +69,8 @@ fn parse_err(text: &str, e: &scan::ScanError) -> Error {
     Error::Parse { format: "yaml".into(), msg: format!("This YAML file could not be read: {} (line {line}, column {col}).", e.msg) }
 }
 
-fn hidden(s: impl Into<String>) -> CodeData {
-    CodeData { standalone: Some(s.into()), ..Default::default() }
-}
-
 fn code(u: &Unit, key: &str) -> String {
-    u.codes.get(key).and_then(|c| c.standalone.clone()).unwrap_or_default()
+    u.hidden(key).map(str::to_string).unwrap_or_default()
 }
 
 fn out_text(u: &Unit, v: &[Inline]) -> String {
@@ -189,12 +185,12 @@ impl Yaml {
             let (inl, codes) = inline::tag_placeholders(core);
             let mut u = Unit::new(format!("u{}", i + 1), inl);
             u.codes = codes;
-            u.codes.insert(RAW.into(), hidden(&text[wu.start..wu.end]));
-            u.codes.insert(LEAD.into(), hidden(lead));
-            u.codes.insert(TRAIL.into(), hidden(trail));
-            u.codes.insert(STY.into(), hidden(style_char(wu.style)));
+            u.set_hidden(RAW, &text[wu.start..wu.end]);
+            u.set_hidden(LEAD, lead);
+            u.set_hidden(TRAIL, trail);
+            u.set_hidden(STY, style_char(wu.style));
             if wu.flow {
-                u.codes.insert(FLOW.into(), hidden("1"));
+                u.set_hidden(FLOW, "1");
             }
             u.context.kind = Some("string".into());
             let key = match strip {

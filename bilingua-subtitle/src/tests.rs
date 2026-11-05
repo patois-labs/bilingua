@@ -108,7 +108,7 @@ fn vtt_round_trip_and_units() {
     // No identifier: the cue number is the key. Class span and timestamp.
     let second = &d.units[1];
     assert_eq!(second.context.key.as_deref(), Some("2"));
-    let labels: Vec<&str> = second.codes.values().filter_map(|c| c.label.as_deref()).filter(|l| *l != "~raw").collect();
+    let labels: Vec<&str> = second.codes.values().filter_map(|c| c.label.as_deref()).collect();
     assert!(labels.contains(&"class") && labels.contains(&"timestamp"), "{labels:?}");
     // Unclosed voice and bold become standalone tags.
     let third = &d.units[2];

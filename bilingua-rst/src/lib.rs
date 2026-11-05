@@ -18,19 +18,15 @@ use pyu::*;
 pub struct Rst;
 
 // Reserved code ids (start with `~`, never a numeric tag id).
-const RAW: &str = "~raw"; // the source text of the unit's region (a paragraph, a title with its adornments, a table)
-const KIND: &str = "~kind"; // para, span, title, grid, simple, or cell (a later cell of the table the head unit holds)
-const TITLE: &str = "~title"; // width, title span and adornment lines of a title, relative to the region
-const CELL: &str = "~cell"; // the cell's index in its table
-const LINE: &str = "~line"; // the first line of a table
-const COUNT: &str = "~n"; // on a table's head unit: how many units belong to the table
+const RAW: &str = "raw"; // the source text of the unit's region (a paragraph, a title with its adornments, a table)
+const KIND: &str = "kind"; // para, span, title, grid, simple, or cell (a later cell of the table the head unit holds)
+const TITLE: &str = "title"; // width, title span and adornment lines of a title, relative to the region
+const CELL: &str = "cell"; // the cell's index in its table
+const LINE: &str = "line"; // the first line of a table
+const COUNT: &str = "n"; // on a table's head unit: how many units belong to the table
 
-fn code(v: impl Into<String>) -> CodeData {
-    CodeData { standalone: Some(v.into()), ..Default::default() }
-}
-
-fn get<'a>(u: &'a Unit, id: &str) -> Option<&'a str> {
-    u.codes.get(id).and_then(|c| c.standalone.as_deref())
+fn get<'a>(u: &'a Unit, key: &str) -> Option<&'a str> {
+    u.hidden(key)
 }
 
 fn trimmed(v: Vec<Inline>) -> Vec<Inline> {
@@ -258,13 +254,13 @@ impl Rst {
         style: Option<&str>,
         line: usize,
     ) -> usize {
-        let (inl, mut codes) = tok.inlines(inline::label_for);
-        codes.insert(KIND.into(), code(kind));
-        if !raw.is_empty() {
-            codes.insert(RAW.into(), code(raw));
-        }
+        let (inl, codes) = tok.inlines(inline::label_for);
         let mut u = Unit::new(format!("u{}", units.len() + 1), inl);
         u.codes = codes;
+        u.set_hidden(KIND, kind);
+        if !raw.is_empty() {
+            u.set_hidden(RAW, raw);
+        }
         u.context.kind = Some(slot_kind.to_string());
         u.context.style = style.map(str::to_string);
         u.context.location = Some(format!("line {line}"));
@@ -342,12 +338,12 @@ impl Filter for Rst {
                         }
                         let head = idxs.is_empty();
                         let k = Rst::unit(&mut units, if head { region } else { "" }, &tok, if head { kind } else { "cell" }, "cell", None, w.line_no(slot.start) + 1);
-                        units[k].codes.insert(CELL.into(), code(ci.to_string()));
+                        units[k].set_hidden(CELL, ci.to_string());
                         idxs.push(k);
                     }
                     if let Some(&h) = idxs.first() {
-                        units[h].codes.insert(LINE.into(), code(slot.line.to_string()));
-                        units[h].codes.insert(COUNT.into(), code(idxs.len().to_string()));
+                        units[h].set_hidden(LINE, slot.line.to_string());
+                        units[h].set_hidden(COUNT, idxs.len().to_string());
                         regions.push(Region { start: slot.start, end: slot.end, units: idxs });
                     }
                 }
@@ -376,7 +372,7 @@ impl Filter for Rst {
                         for &(a, b, ch) in &slot.adorn {
                             info.push_str(&format!(",{},{},{}", a - rs, b - rs, ch as u32));
                         }
-                        units[k].codes.insert(TITLE.into(), code(info));
+                        units[k].set_hidden(TITLE, info);
                     }
                     regions.push(Region { start: rs, end: re, units: vec![k] });
                 }

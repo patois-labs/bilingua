@@ -312,6 +312,7 @@ pub struct UnitContext {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(from = "UnitRepr")]
 #[non_exhaustive]
 pub struct Unit {
     /// Unique within the document, stable for the same input file.
@@ -336,10 +337,66 @@ pub struct Unit {
     /// `translate == false`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub lock_reason: Option<String>,
+    /// What the parser needs to write the unit back and nobody else sees: the value as written in the file, its
+    /// white space, a layout flag. Keyed by a short name the parser picks ("raw", "lead"). It is not an inline code,
+    /// so editors, the LocOS token map and tag checks never see it. Left out of the JSON when empty. (Parsers used
+    /// to keep this in `codes` under `~` names; such codes in an old JSON document are moved here when it is read.)
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub hidden: BTreeMap<String, String>,
 }
 
 fn yes() -> bool {
     true
+}
+
+/// The JSON form of a [`Unit`] as read: the same fields, with old `~` codes moved into `hidden`.
+#[derive(Deserialize)]
+struct UnitRepr {
+    id: String,
+    segments: Vec<Segment>,
+    #[serde(default)]
+    separators: Vec<String>,
+    #[serde(default)]
+    codes: BTreeMap<String, CodeData>,
+    #[serde(default)]
+    context: UnitContext,
+    #[serde(default = "yes")]
+    translate: bool,
+    #[serde(default)]
+    notes: Vec<Note>,
+    #[serde(default)]
+    lock_reason: Option<String>,
+    #[serde(default)]
+    hidden: BTreeMap<String, String>,
+}
+
+impl From<UnitRepr> for Unit {
+    fn from(r: UnitRepr) -> Unit {
+        let mut hidden = r.hidden;
+        let mut codes = BTreeMap::new();
+        for (k, c) in r.codes {
+            match k.strip_prefix('~') {
+                // an old parser's hidden value: `standalone` (or, for a flag, `label`) held it
+                Some(name) if c.open.is_none() && c.close.is_none() => {
+                    hidden.entry(name.to_string()).or_insert_with(|| c.standalone.or(c.label).unwrap_or_default());
+                }
+                _ => {
+                    codes.insert(k, c);
+                }
+            }
+        }
+        Unit {
+            id: r.id,
+            segments: r.segments,
+            separators: r.separators,
+            codes,
+            context: r.context,
+            translate: r.translate,
+            notes: r.notes,
+            lock_reason: r.lock_reason,
+            hidden,
+        }
+    }
 }
 
 impl Unit {
@@ -361,7 +418,24 @@ impl Unit {
             translate: true,
             notes: vec![],
             lock_reason: None,
+            hidden: BTreeMap::new(),
         }
+    }
+    /// A hidden value (see [`Unit::hidden`]).
+    pub fn hidden(&self, key: &str) -> Option<&str> {
+        self.hidden.get(key).map(String::as_str)
+    }
+    /// Sets a hidden value.
+    pub fn set_hidden(&mut self, key: impl Into<String>, value: impl Into<String>) {
+        self.hidden.insert(key.into(), value.into());
+    }
+    /// True when the hidden value is set (a flag).
+    pub fn has_hidden(&self, key: &str) -> bool {
+        self.hidden.contains_key(key)
+    }
+    pub fn with_hidden(mut self, key: impl Into<String>, value: impl Into<String>) -> Unit {
+        self.set_hidden(key, value);
+        self
     }
     pub fn with_separators(mut self, separators: Vec<String>) -> Unit {
         self.separators = separators;
@@ -540,6 +614,7 @@ pub fn check_parser_min(doc: &Document, current: &ParserInfo, oldest: u32) -> Re
 /// Everything in the file that is not translatable text.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
+#[non_exhaustive]
 pub enum Skeleton {
     /// A text file: parts in order. `encoding` is what the writer must produce ("utf-8", "utf-8-bom", ...).
     Text {
@@ -551,6 +626,14 @@ pub enum Skeleton {
     /// A zip container (DOCX, XLSX, PPTX, ODF, IDML): entries in their original order.
     Zip {
         entries: Vec<ZipEntry>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        parser: Option<ParserInfo>,
+    },
+    /// A binary file kept whole (a compiled MO catalog): the writer rebuilds the file from these bytes and the
+    /// units. In JSON the bytes are a base64 string.
+    Binary {
+        #[serde(with = "b64")]
+        data: Vec<u8>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         parser: Option<ParserInfo>,
     },
@@ -572,10 +655,14 @@ impl Skeleton {
     pub fn zip(entries: Vec<ZipEntry>, parser: ParserInfo) -> Skeleton {
         Skeleton::Zip { entries, parser: Some(parser) }
     }
+    /// A binary skeleton stamped with the producing parser.
+    pub fn binary(data: Vec<u8>, parser: ParserInfo) -> Skeleton {
+        Skeleton::Binary { data, parser: Some(parser) }
+    }
     /// The parser that made this skeleton, if recorded.
     pub fn parser(&self) -> Option<&ParserInfo> {
         match self {
-            Skeleton::Text { parser, .. } | Skeleton::Zip { parser, .. } => parser.as_ref(),
+            Skeleton::Text { parser, .. } | Skeleton::Zip { parser, .. } | Skeleton::Binary { parser, .. } => parser.as_ref(),
         }
     }
 }

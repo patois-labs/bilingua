@@ -26,7 +26,7 @@ fn translated(u: &Unit) -> bool {
 }
 
 fn label<'a>(u: &'a Unit, key: &str) -> Option<&'a str> {
-    u.codes.get(key).and_then(|c| c.label.as_deref())
+    u.hidden(key)
 }
 
 fn is_rtl(lang: &str) -> bool {
@@ -91,7 +91,7 @@ impl<'a> Ctx<'a> {
         }
         let mut owned: HashMap<(String, String), Vec<Owned>> = HashMap::new();
         for (i, u) in doc.units.iter().enumerate() {
-            let Some(spec) = u.codes.get(OWNER).and_then(|c| c.standalone.as_deref()) else { continue };
+            let Some(spec) = u.hidden(OWNER) else { continue };
             let f: Vec<&str> = spec.split('|').collect();
             if f.len() != 5 {
                 continue;
@@ -171,7 +171,7 @@ impl<'a> Ctx<'a> {
     }
 
     fn render_merge(&self, u: &Unit) -> String {
-        let raw = u.codes.get(RAW).and_then(|c| c.standalone.as_deref());
+        let raw = u.hidden(RAW);
         match label(u, VALUE) {
             Some("attr") => match raw {
                 Some(r) if !translated(u) => r.to_string(),
@@ -190,7 +190,7 @@ impl<'a> Ctx<'a> {
     }
 
     fn render_preview(&self, u: &Unit, buf: &mut String) {
-        let raw = u.codes.get(RAW).and_then(|c| c.standalone.as_deref());
+        let raw = u.hidden(RAW);
         match label(u, VALUE) {
             Some(kind) => {
                 let is_attr = kind == "attr";

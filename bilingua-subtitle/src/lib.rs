@@ -9,7 +9,7 @@ use std::collections::BTreeMap;
 /// Default characters per line stored in `context.extra["max_cpl"]`. A unit's QA can check against it.
 pub const DEFAULT_MAX_CPL: &str = "42";
 
-const RAW: &str = "~raw";
+const RAW: &str = "raw";
 const LINE_BREAK_DISPLAY: &str = "\u{21b5}";
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -150,7 +150,7 @@ fn extract(k: Kind, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Err
         let (inl, codes) = cue_inlines(k, raw);
         let mut u = Unit::new(format!("c{n}"), inl);
         u.codes = codes;
-        u.codes.insert(RAW.into(), CodeData { standalone: Some(raw.to_string()), ..Default::default() });
+        u.set_hidden(RAW, raw.to_string());
         u.context.kind = Some("subtitle".into());
         u.context.key = Some(ident.unwrap_or_else(|| n.to_string()));
         u.context.location = Some(format!("line {}", ti + 1));
@@ -421,7 +421,7 @@ fn merge(k: Kind, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result
             SkelPart::Raw(s) => out.push_str(s),
             SkelPart::Unit(i) => {
                 let u = doc.units.get(*i).ok_or_else(|| Error::Write(format!("skeleton points at missing unit {i}")))?;
-                let raw = u.codes.get(RAW).and_then(|c| c.standalone.as_deref());
+                let raw = u.hidden(RAW);
                 let translated = u.translate && u.segments.iter().any(|s| !s.target.is_empty());
                 match raw {
                     Some(r) if !translated => out.push_str(r),

@@ -36,12 +36,11 @@ struct M<'a> {
     adj_prev: bool,
 }
 
-pub fn render(codes: &BTreeMap<String, CodeData>, new: &[Inline]) -> String {
-    let paired: HashSet<&str> = codes.iter().filter(|(k, c)| !k.starts_with('~') && c.open.is_some()).map(|(k, _)| k.as_str()).collect();
-    let code_str = |id: &str| codes.get(id).and_then(|c| c.standalone.as_deref());
-    let groups: Vec<Vec<&str>> = codes
+pub fn render(codes: &BTreeMap<String, CodeData>, hidden: &BTreeMap<String, String>, new: &[Inline]) -> String {
+    let paired: HashSet<&str> = codes.iter().filter(|(_, c)| c.open.is_some()).map(|(k, _)| k.as_str()).collect();
+    let code_str = |id: &str| hidden.get(id).map(String::as_str);
+    let groups: Vec<Vec<&str>> = hidden
         .get(GROUPS)
-        .and_then(|c| c.standalone.as_deref())
         .map(|s| s.split(';').map(|g| g.split(',').collect()).collect())
         .unwrap_or_default();
     let reset_all: HashSet<&str> = code_str(RESET_ALL).map(|s| s.split(',').collect()).unwrap_or_default();
@@ -136,7 +135,7 @@ pub fn render(codes: &BTreeMap<String, CodeData>, new: &[Inline]) -> String {
                     continue;
                 }
                 if !m.slash && !m.pair_kind && !used.contains(tid) {
-                    if let Some(raw) = code_str(tid).filter(|_| !tid.starts_with('~')) {
+                    if let Some(raw) = codes.get(tid).and_then(|c| c.standalone.as_deref()) {
                         used.insert(tid);
                         out.push_str(raw);
                     }

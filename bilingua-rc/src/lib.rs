@@ -23,8 +23,8 @@ use std::sync::OnceLock;
 pub struct Rc;
 
 // Reserved code ids (start with `~`, never a numeric tag id).
-const RAW: &str = "~raw"; // the literal as written, quotes and L prefix included
-const ACC: &str = "~acc"; // present on menu items and dialog controls: the `&` accelerator is kept
+const RAW: &str = "raw"; // the literal as written, quotes and L prefix included
+const ACC: &str = "acc"; // present on menu items and dialog controls: the `&` accelerator is kept
 
 fn limit_err(msg: String) -> Error {
     LimitError::new(LimitKind::Units, msg).into()
@@ -89,7 +89,7 @@ fn check_rendered(u: &Unit, target: &[Item], s: &str) -> Result<(), Error> {
 
 /// Writes one unit; true when it changed the literal.
 fn write_unit(u: &Unit, out: &mut String) -> Result<bool, Error> {
-    let raw = u.codes.get(RAW).and_then(|c| c.standalone.as_deref()).unwrap_or("");
+    let raw = u.hidden(RAW).unwrap_or("");
     if !u.translate || u.segments.iter().all(|s| s.target.is_empty()) {
         out.push_str(raw);
         return Ok(false);
@@ -100,7 +100,7 @@ fn write_unit(u: &Unit, out: &mut String) -> Result<bool, Error> {
         return Ok(false);
     }
     let mut target = items_of(&new);
-    if u.codes.contains_key(ACC) {
+    if u.has_hidden(ACC) {
         target = accel::fix(&items_of(&src), target, &|id| raw_of(u, id));
     }
     let s = render(u, &target, raw.starts_with('L'));
@@ -208,9 +208,9 @@ impl Filter for Rc {
                 let label = if lit::is_format(&raw) { "format" } else { "escape" };
                 u.codes.insert(id, CodeData { standalone: Some(raw), label: Some(label.into()), ..Default::default() });
             }
-            u.codes.insert(RAW.into(), CodeData { standalone: Some(d.text[f.start..f.end].to_string()), ..Default::default() });
+            u.set_hidden(RAW, d.text[f.start..f.end].to_string());
             if matches!(f.style, "rc:menu" | "rc:control") && !f.locked {
-                u.codes.insert(ACC.into(), CodeData { standalone: Some("1".into()), ..Default::default() });
+                u.set_hidden(ACC, "1");
             }
             u.context.kind = Some(f.style.trim_start_matches("rc:").to_string());
             u.context.style = Some(f.style.to_string());

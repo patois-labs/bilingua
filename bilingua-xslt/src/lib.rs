@@ -20,20 +20,20 @@ pub use bilingua_model::Limits;
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Xslt;
 
-// Hidden codes (ids start with `~`, never a placeholder id).
-const RAW: &str = "~raw"; // the source span as written
-const META: &str = "~meta"; // kind (t text, a attribute), quote, crlf, braces doubled
-const EDGE: &str = "~edge"; // `ba` flags (1/0) then the `xsl:` prefix: the unit touches a stripped whitespace node
-const NEST: &str = "~nest"; // attribute units that sit inside the span: `from-to-unit;...` (offsets in the span)
-const TVT: &str = "~v"; // + token id: braces doubled inside this paired element
-const TNEST: &str = "~n"; // + token id: attribute units inside the token's opening markup
+// Keys of the unit's hidden values (`Unit::hidden`).
+const RAW: &str = "raw"; // the source span as written
+const META: &str = "meta"; // kind (t text, a attribute), quote, crlf, braces doubled
+const EDGE: &str = "edge"; // `ba` flags (1/0) then the `xsl:` prefix: the unit touches a stripped whitespace node
+const NEST: &str = "nest"; // attribute units that sit inside the span: `from-to-unit;...` (offsets in the span)
+const TVT: &str = "v"; // + token id: braces doubled inside this paired element
+const TNEST: &str = "n"; // + token id: attribute units inside the token's opening markup
 
 fn hidden(text: impl Into<String>) -> CodeData {
     CodeData { standalone: Some(text.into()), ..Default::default() }
 }
 
 fn code(u: &Unit, key: &str) -> Option<String> {
-    u.codes.get(key).and_then(|c| c.standalone.clone())
+    u.hidden(key).map(str::to_string)
 }
 
 /// Keeps XML 1.0 characters, turning pasted Word breaks into newlines.
@@ -120,6 +120,7 @@ fn build_unit(text: &str, idx: usize, p: &PUnit) -> Built {
     let attr = p.attr.is_some();
     let mut inl: Vec<Inline> = Vec::new();
     let mut codes: BTreeMap<String, CodeData> = BTreeMap::new();
+    let mut hidden_vals: Vec<(String, &'static str)> = Vec::new();
     let mut tokens = Vec::new();
     let mut n = 0usize;
     let mut open_ids: BTreeMap<usize, String> = BTreeMap::new();
@@ -144,7 +145,7 @@ fn build_unit(text: &str, idx: usize, p: &PUnit) -> Built {
                 open_ids.insert(key, id.clone());
                 inl.push(Inline::tag(id.clone(), TagKind::Open, &text[s..e]));
                 codes.insert(id.clone(), CodeData { open: Some(text[s..e].to_string()), ..Default::default() });
-                codes.insert(format!("{TVT}{id}"), hidden(if tvt { "1" } else { "0" }));
+                hidden_vals.push((format!("{TVT}{id}"), if tvt { "1" } else { "0" }));
                 tokens.push((s, e, id));
             }
             Piece::Close { s, e, key } => {
@@ -158,11 +159,14 @@ fn build_unit(text: &str, idx: usize, p: &PUnit) -> Built {
     }
     let mut unit = Unit::new(format!("u{}", idx + 1), merge_text(inl));
     unit.codes = codes;
-    unit.codes.insert(RAW.into(), hidden(&text[p.s..p.e]));
+    for (k, v) in hidden_vals {
+        unit.set_hidden(k, v);
+    }
+    unit.set_hidden(RAW, &text[p.s..p.e]);
     let quote = if p.quote == 0 { '-' } else { p.quote as char };
-    unit.codes.insert(META.into(), hidden(format!("{}{}{}{}", if attr { 'a' } else { 't' }, quote, u8::from(p.crlf), u8::from(p.tvt))));
+    unit.set_hidden(META, format!("{}{}{}{}", if attr { 'a' } else { 't' }, quote, u8::from(p.crlf), u8::from(p.tvt)));
     if let Some((b, a, prefix)) = &p.edge {
-        unit.codes.insert(EDGE.into(), hidden(format!("{}{}{prefix}", u8::from(*b), u8::from(*a))));
+        unit.set_hidden(EDGE, format!("{}{}{prefix}", u8::from(*b), u8::from(*a)));
     }
     match &p.attr {
         Some(a) => {
@@ -272,10 +276,10 @@ impl Xslt {
         }
         for (t, v) in &unit_nests {
             let v: Vec<_> = v.iter().map(|(s, e, i)| (*s, *e, *i)).collect();
-            built[*t].unit.codes.insert(NEST.into(), hidden(nest_list(&v, plans[*t].s)));
+            built[*t].unit.set_hidden(NEST, nest_list(&v, plans[*t].s));
         }
         for ((t, id), v) in &tok_nests {
-            built[*t].unit.codes.insert(format!("{TNEST}{id}"), hidden(nest_list(v, 0)));
+            built[*t].unit.set_hidden(format!("{TNEST}{id}"), nest_list(v, 0));
         }
 
         // spans of the skeleton, in file order
