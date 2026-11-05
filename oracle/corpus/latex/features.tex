@@ -1,0 +1,79 @@
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[english]{babel}
+\usepackage{graphicx,amsmath,hyperref,booktabs}
+% preamble comment with a "quote" and {braces
+\newcommand{\pkg}[1]{\texttt{#1}}
+\title{Lumen Bakery \emph{Handbook}}
+\author{The Lumen Team}
+\date{\today}
+\begin{document}
+\maketitle
+\tableofcontents
+
+\begin{abstract}
+This handbook explains how the bakery works, from the first oven to the last customer.
+\end{abstract}
+
+\section{Welcome}\label{sec:welcome}
+Fresh bread is ready at \textbf{six} every morning---see Section~\ref{sec:hours} and \cite[p.~3]{baker99}.
+Prices start at 3\,\% of the \$12 loaf; ask about R\&D loaves, a\_b and {\bf grouped} words.
+Inline math $E = mc^2$ and \(a+b\) stay, and so does display math:
+\[ \sum_{i=1}^n i = \frac{n(n+1)}{2} \]
+$$ x^2 + y^2 = z^2 $$
+
+\subsection*{Hours}\label{sec:hours}
+\begin{itemize}
+  \item Open from six to noon.
+  \item[Sundays] Closed\footnote{Except on holidays; call us first.}.
+  \item Visit \url{https://lumen.example/hours%20today} or \href{https://lumen.example}{our website}.
+\end{itemize}
+
+\begin{enumerate}
+  \item Mix the dough. % remove for the demo
+  \item Let it rest.
+\end{enumerate}
+
+\begin{equation}
+  a^2 + b^2 = c^2 \text{ never translated}
+\end{equation}
+\begin{align*}
+  f(x) &= x^2 \\
+  g(x) &= x^3
+\end{align*}
+
+\begin{verbatim}
+printf("Do not translate this: 100%");
+\end{verbatim}
+Use \verb|code_here| and \texttt{plain text} in a sentence.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.5\textwidth]{bread.png}
+  \caption[Bread]{A fresh loaf of bread.}
+  \label{fig:bread}
+\end{figure}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|l|r|}
+  \hline
+  Product & Price \\
+  \hline
+  Rye bread & 3.50 \\
+  Sourdough & 4.20 \\ \hline
+\end{tabular}
+\caption{Today's prices}
+\end{table}
+
+\begin{lstlisting}[language=Python]
+print("no")
+\end{lstlisting}
+
+Written with \LaTeX\ and plain \TeX. See \S 2 and \ldots{} more.
+\input{appendix}
+\bibliographystyle{plain}
+\bibliography{refs}
+\end{document}
+Text after the document end is still read.

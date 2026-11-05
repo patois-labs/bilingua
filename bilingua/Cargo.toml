@@ -54,6 +54,7 @@ bilingua-icml = { workspace = true }
 bilingua-mif = { workspace = true }
 bilingua-xtg = { workspace = true }
 bilingua-adoc = { workspace = true }
+bilingua-latex = { workspace = true }
 
 [dev-dependencies]
 zip = { workspace = true }

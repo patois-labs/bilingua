@@ -69,6 +69,8 @@ pub fn filters() -> Vec<Box<dyn Filter>> {
         Box::new(bilingua_rc::Rc),
         // XPress Tags sniffs only the <vNN.NN> / <eN> header at the very start of the file (also UTF-16); strict enough to sit early.
         Box::new(bilingua_xtg::Xtg),
+        // LaTeX sniffs strictly (documentclass, usepackage or begin-document at a line start); chapter files go by extension.
+        Box::new(bilingua_latex::Latex::default()),
         // TOML after INI: a valid-TOML INI file without an extension should stay INI.
         Box::new(bilingua_toml::TomlFilter),
         // Qt Linguist .ts sniffs strictly (XML with a <TS> root); `detect` decides the shared .ts extension.
