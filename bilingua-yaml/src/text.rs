@@ -62,7 +62,7 @@ pub fn decode(bytes: &[u8]) -> Result<(String, Enc), Error> {
     let le = bytes.starts_with(&[0xFF, 0xFE]);
     if le || bytes.starts_with(&[0xFE, 0xFF]) {
         let body = &bytes[2..];
-        if body.len() % 2 == 0 {
+        if body.len().is_multiple_of(2) {
             let units = body.chunks_exact(2).map(|c| if le { u16::from_le_bytes([c[0], c[1]]) } else { u16::from_be_bytes([c[0], c[1]]) });
             if let Ok(s) = char::decode_utf16(units).collect::<Result<String, _>>() {
                 return Ok((s, if le { Enc::Utf16Le } else { Enc::Utf16Be }));

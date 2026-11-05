@@ -190,6 +190,9 @@ impl<'a> P<'a> {
             }
             if self.doc_marker_at(self.pos) && !explicit {
                 // a stray `...`: an empty document end
+                if first {
+                    return self.err("did not find expected <document start>");
+                }
                 self.skip_to_eol();
                 first = false;
                 continue;
@@ -255,6 +258,9 @@ impl<'a> P<'a> {
                         }
                     }
                     let t = &self.s[s..self.pos];
+                    if t == "!!" || (t.len() > 2 && t.ends_with('!') && !t.starts_with("!<")) {
+                        return self.err("did not find expected tag URI");
+                    }
                     if t.len() > 2 && !t.starts_with("!<") && !t.starts_with("!!") {
                         if let Some(i) = t[1..].find('!') {
                             let handle = &t[..i + 2];
@@ -624,9 +630,7 @@ impl<'a> P<'a> {
                     colon = true;
                     break;
                 }
-            } else if c == b'#' && i > from && matches!(self.b[i - 1], b' ' | b'\t') {
-                break;
-            } else if flow && is_flow_ind(c) {
+            } else if (c == b'#' && i > from && matches!(self.b[i - 1], b' ' | b'\t')) || (flow && is_flow_ind(c)) {
                 break;
             }
             i += 1;
@@ -966,16 +970,11 @@ impl<'a> P<'a> {
     // ------------------------------------------------------------------ flow context
 
     fn flow_skip(&mut self) -> R<()> {
-        loop {
-            self.skip_to_token_flow()?;
-            if self.eof() {
-                return Ok(());
-            }
-            if self.doc_marker_at(self.pos) {
-                return self.err("found unexpected document indicator inside a flow collection");
-            }
-            return Ok(());
+        self.skip_to_token_flow()?;
+        if !self.eof() && self.doc_marker_at(self.pos) {
+            return self.err("found unexpected document indicator inside a flow collection");
         }
+        Ok(())
     }
 
     fn skip_to_token_flow(&mut self) -> R<()> {

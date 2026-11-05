@@ -1,0 +1,35 @@
+# Eleven languages (made up for the Bilingua oracle)
+en:
+  en:
+    welcome: "Welcome back, %{name}! You have {count} new messages."
+    save: Save changes
+  es:
+    welcome: "¡Bienvenido de nuevo, %{name}! Tienes {count} mensajes nuevos."
+    save: Guardar cambios
+  fr:
+    welcome: "Bon retour, %{name} ! Vous avez {count} nouveaux messages."
+    save: Enregistrer les modifications
+  it:
+    welcome: "Bentornato, %{name}! Hai {count} nuovi messaggi."
+    save: Salva le modifiche
+  de:
+    welcome: "Willkommen zurück, %{name}! Sie haben {count} neue Nachrichten."
+    save: Änderungen speichern
+  nl:
+    welcome: "Welkom terug, %{name}! U heeft {count} nieuwe berichten."
+    save: Wijzigingen opslaan
+  pt:
+    welcome: "Bem-vindo de volta, %{name}! Você tem {count} novas mensagens."
+    save: Guardar alterações
+  ja:
+    welcome: "おかえりなさい、%{name}さん。新しいメッセージが{count}件あります。"
+    save: 変更を保存
+  zh:
+    welcome: "欢迎回来，%{name}！您有 {count} 条新消息。"
+    save: 保存更改
+  ko:
+    welcome: "다시 오신 것을 환영합니다, %{name}님! 새 메시지가 {count}개 있습니다."
+    save: 변경 사항 저장
+  ar:
+    welcome: "مرحباً بعودتك، %{name}! لديك {count} رسائل جديدة."
+    save: حفظ التغييرات

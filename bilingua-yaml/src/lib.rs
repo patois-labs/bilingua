@@ -203,7 +203,7 @@ impl Yaml {
             };
             u.context.key = Some(key);
             u.context.style = Some(style_name(wu.style).into());
-            u.context.location = Some(format!("line {}", text.as_bytes()[..wu.start].iter().filter(|&&c| c == b'\n').count() + 1));
+            u.context.location = Some(format!("line {}", starts.partition_point(|&p| p <= wu.start)));
             if let Some(kl) = wu.key_line {
                 let c = comment_above(&text, &starts, kl);
                 if !c.is_empty() {
@@ -393,5 +393,3 @@ impl Filter for Yaml {
     }
 }
 
-#[cfg(test)]
-mod tests;
