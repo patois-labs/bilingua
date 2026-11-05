@@ -38,22 +38,48 @@ const UTF8: &str = "utf-8";
 const UTF8_BOM: &str = "utf-8-bom";
 const MAX_NESTING: usize = 40;
 
-/// Size limits (the Localization OS defaults) and the one option.
+/// Size limits and the one option. The numbers are `bilingua_model::Limits` (Localization OS's configuration):
+/// `Filter::extract` takes them from `ExtractOptions::limits`, and over-limit files fail with `Error::Limit`.
 #[derive(Debug, Clone, Copy)]
 pub struct Limits {
-    /// Units in one file.
+    /// Units in one file (`MAX_DOCUMENT_SEGMENTS`); twenty times this is also the placeable budget.
     pub max_units: usize,
-    /// Characters in one unit.
+    /// Characters in one unit (`MAX_SEGMENT_CHARS`).
     pub max_value_chars: usize,
-    /// Bytes in one file.
+    /// Bytes in one file (`MAX_UPLOAD_BYTES`).
     pub max_input_bytes: usize,
+    /// Lines in one file (twenty per allowed unit, LocOS's line budget).
+    pub max_lines: usize,
     /// Translate terms (`-brand-name = Firefox`) too. Localization OS: the `FTL_TRANSLATE_TERMS` environment variable.
     pub translate_terms: bool,
 }
 
 impl Default for Limits {
     fn default() -> Limits {
-        Limits { max_units: 50_000, max_value_chars: 100_000, max_input_bytes: 256 << 20, translate_terms: false }
+        Limits::from_model(&bilingua_model::Limits::default())
+    }
+}
+
+impl Limits {
+    /// The model's limits (as `ExtractOptions::limits` carries them), terms not translated.
+    pub fn from_model(l: &bilingua_model::Limits) -> Limits {
+        Limits {
+            max_units: l.max_units,
+            max_value_chars: l.max_unit_chars,
+            max_input_bytes: usize::try_from(l.max_input_bytes).unwrap_or(usize::MAX),
+            max_lines: l.max_lines,
+            translate_terms: false,
+        }
+    }
+
+    fn model(&self) -> bilingua_model::Limits {
+        bilingua_model::Limits {
+            max_units: self.max_units,
+            max_unit_chars: self.max_value_chars,
+            max_input_bytes: self.max_input_bytes as u64,
+            max_lines: self.max_lines,
+            ..bilingua_model::Limits::default()
+        }
     }
 }
 
@@ -94,11 +120,11 @@ fn decode(bytes: &[u8]) -> Result<(&str, bool), Error> {
 
 /// Line count, placeable count and nesting depth, before the parser builds anything.
 fn check_budget(text: &str, l: &Limits) -> Result<(), Error> {
+    bilingua_model::guard::check_lines(text, &l.model())?;
     let budget = l.max_units.saturating_mul(20);
-    let (mut lines, mut opens, mut depth) = (0usize, 0usize, 0usize);
+    let (mut opens, mut depth) = (0usize, 0usize);
     for &b in text.as_bytes() {
         match b {
-            b'\n' | b'\r' => lines += 1,
             b'{' => {
                 opens += 1;
                 depth += 1;
@@ -109,9 +135,6 @@ fn check_budget(text: &str, l: &Limits) -> Result<(), Error> {
             b'}' => depth = depth.saturating_sub(1),
             _ => {}
         }
-    }
-    if lines > budget {
-        return Err(limit_err(format!("this file has more than {budget} lines; split it into smaller files")));
     }
     if opens > budget {
         return Err(limit_err(format!("this Fluent file has more than {budget} placeables; split it into smaller files")));
@@ -266,9 +289,7 @@ pub fn structure(bytes: &[u8]) -> Result<Structure, Error> {
 impl FtlFilter {
     /// `extract` with explicit limits and options.
     pub fn extract_with(&self, bytes: &[u8], opts: &ExtractOptions, limits: &Limits) -> Result<Document, Error> {
-        if bytes.len() > limits.max_input_bytes {
-            return Err(limit_err(format!("the file is larger than {} bytes", limits.max_input_bytes)));
-        }
+        bilingua_model::guard::check_input(bytes, &limits.model())?;
         let (text, bom) = decode(bytes)?;
         check_budget(text, limits)?;
         let items = parser::parse(text);
@@ -313,12 +334,8 @@ impl FtlFilter {
                     }
                 }
             }
-            if chars > limits.max_value_chars {
-                return Err(limit_err(format!("this file has a message longer than {} characters; break it into shorter messages", limits.max_value_chars)));
-            }
-            if units.len() >= limits.max_units {
-                return Err(limit_err(format!("this file has more than {} segments; split it into smaller files", limits.max_units)));
-            }
+            bilingua_model::guard::check_unit_chars(chars, &limits.model())?;
+            bilingua_model::guard::check_unit_count(units.len() + 1, &limits.model())?;
             if run.start > pos {
                 parts.push(SkelPart::Raw(text[pos..run.start].to_string()));
             }
@@ -363,6 +380,7 @@ impl FtlFilter {
             granularity: opts.granularity,
             units,
             skeleton: Skeleton::text(parts, if bom { UTF8_BOM } else { UTF8 }, bilingua_model::parser_info!()),
+            ..Default::default()
         })
     }
 }
@@ -411,7 +429,7 @@ impl Filter for FtlFilter {
     }
 
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
-        self.extract_with(bytes, opts, &Limits::default())
+        self.extract_with(bytes, opts, &Limits::from_model(&opts.limits()))
     }
 
     fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {

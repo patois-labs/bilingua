@@ -109,7 +109,7 @@ fn bom_and_line_endings_keep_their_form() {
 #[test]
 fn target_locale_and_paragraph_mode() {
     let data = std::fs::read(corpus_dir().join("app_en.ftl")).unwrap();
-    let opts = ExtractOptions { source_lang: Some("en".into()), target_lang: Some("ar".into()), granularity: Granularity::Paragraph, include_locked: false };
+    let opts = ExtractOptions { source_lang: Some("en".into()), target_lang: Some("ar".into()), granularity: Granularity::Paragraph, ..Default::default() };
     let mut doc = FtlFilter.extract(&data, &opts).unwrap();
     assert_eq!(doc.granularity, Granularity::Paragraph);
     assert_eq!(doc.target_lang.as_deref(), Some("ar"));

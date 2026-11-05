@@ -12,8 +12,10 @@
 - `tools/check-portable.sh` and `.ps1`: add `ftl` to `CRATES`.
 - Options: none in `ExtractOptions`. `include_locked` is ignored (Fluent has no locked text). The one LocOS option,
   `FTL_TRANSLATE_TERMS`, is `Limits::translate_terms` on `FtlFilter::extract_with(bytes, opts, &Limits)`; the crate
-  never reads the environment, so the LocOS adapter passes it. Defaults of `Limits` are the LocOS ones (50000 units,
-  100000 characters per unit, 20 lines per unit of cap, 40 nesting levels) plus a 256 MB input cap.
+  never reads the environment, so the LocOS adapter passes it. `Filter::extract` takes its numbers from
+  `ExtractOptions::limits` (B6 `bilingua_model::Limits`: 100 MB, 50000 units, 100000 characters per unit, the line
+  budget) and refuses with `Error::Limit`; the 40-level nesting cap and the placeable budget (20 per allowed unit)
+  are the crate's own and refuse with `Error::Unsupported`, as LocOS.
 - Target locale: `FtlFilter::merge_localized(doc, locale)` (locale defaults to `doc.target_lang`) also fills plural selects with the target
   language's missing CLDR categories (LocOS `build_localized`); plain `merge` never adds units (the oracle and the facade contract reopen a merged file and count units). The tables are in `src/plural_data.rs`, made from
   babel by `tests/tools/gen_plurals.py`.

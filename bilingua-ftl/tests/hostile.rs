@@ -26,7 +26,7 @@ fn check(data: &[u8]) {
             assert_eq!(structure(&filled).unwrap().junk, structure(&out).unwrap().junk, "plural fill must not add Junk");
             assert_eq!(units(&out).len(), n, "unit count after translation {:?} -> {:?}", String::from_utf8_lossy(data), String::from_utf8_lossy(&out));
         }
-        Err(Error::Parse { .. } | Error::Unsupported(_)) => {}
+        Err(Error::Parse { .. } | Error::Unsupported(_) | Error::Limit(_)) => {}
         Err(e) => panic!("unexpected error kind: {e}"),
     }
 }
@@ -103,17 +103,20 @@ fn deep_and_huge_inputs_give_typed_errors() {
     check("a =\n".repeat(100_000).as_bytes());
     // one value over the cap: refused, not truncated
     let big = format!("k = {}\n", "a".repeat(100_001));
-    assert!(matches!(extract(big.as_bytes()), Err(Error::Unsupported(_))));
+    assert!(matches!(extract(big.as_bytes()), Err(Error::Limit(LimitError { kind: LimitKind::UnitChars, .. }))));
     // more entries than the unit cap: refused
     let mut many = String::new();
     for i in 0..50_001 {
         many.push_str(&format!("k{i} = v{i}\n"));
     }
-    assert!(matches!(extract(many.as_bytes()), Err(Error::Unsupported(_))));
+    assert!(matches!(extract(many.as_bytes()), Err(Error::Limit(LimitError { kind: LimitKind::Units, .. }))));
     assert!(FtlFilter.extract_with(many.as_bytes(), &ExtractOptions::default(), &Limits { max_units: 60_000, ..Limits::default() }).is_ok());
     // more lines than the line cap: refused before any scan
     let lines = "\n".repeat(1_000_001);
-    assert!(matches!(extract(lines.as_bytes()), Err(Error::Unsupported(_))));
+    assert!(matches!(extract(lines.as_bytes()), Err(Error::Limit(LimitError { kind: LimitKind::Lines, .. }))));
+    // the caller's limits in ExtractOptions are the ones in force
+    let few = ExtractOptions { limits: Some(bilingua_model::Limits { max_units: 2, ..Default::default() }), ..Default::default() };
+    assert!(matches!(FtlFilter.extract(b"a = A\nb = B\nc = C\n", &few), Err(Error::Limit(LimitError { kind: LimitKind::Units, .. }))));
     // over the input size cap
     let small = Limits { max_input_bytes: 10, ..Limits::default() };
     assert!(FtlFilter.extract_with(b"hello = Hello world\n", &ExtractOptions::default(), &small).is_err());
