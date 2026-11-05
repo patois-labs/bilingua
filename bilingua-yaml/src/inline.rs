@@ -81,7 +81,9 @@ pub fn tag_placeholders(s: &str) -> (Vec<Inline>, BTreeMap<String, CodeData>) {
         }
         pos = f.end;
         let markup = &s[f.start..f.end];
-        let label = Some(if f.name.is_empty() { "placeholder".to_string() } else { f.name.clone() });
+        // LocOS keeps every placeholder and HTML tag as plain text: label "placeholder" and the exact source markup
+        // as display let the LocOS adapter flatten them back.
+        let label = Some("placeholder".to_string());
         let (kind, id) = match (f.kind, partner[i]) {
             (TagKind::Open, Some(_)) => {
                 let id = next.to_string();

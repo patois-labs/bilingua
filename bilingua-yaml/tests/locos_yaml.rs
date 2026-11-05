@@ -308,6 +308,15 @@ fn hostile() {
 }
 
 #[test]
+fn parsers_agree_multibyte_anchor() {
+    // LocOS test_pure_python_parser_matches: the extra source with an anchored multi-byte value (LocOS output pinned)
+    let src = "k: &a \u{65e5}\u{672c}\u{8a9e} \u{1d518}\nl: *a\nm: \"\u{e9}\"\n";
+    assert_eq!(texts(src.as_bytes()), ["\u{65e5}\u{672c}\u{8a9e} \u{1d518}", "\u{e9}"]);
+    let out = all(src.as_bytes(), Some("de"), |t| format!("[x] {t}"));
+    assert_eq!(s(&out), "k: &a \"[x] \u{65e5}\u{672c}\u{8a9e} \u{1d518}\"\nl: *a\nm: \"[x] \u{e9}\"\n");
+}
+
+#[test]
 fn gate_fixes() {
     // Rails %{name} is one tag (a dropped % is then caught as a tag problem)
     let d = extract(b"k: \"Hello %{name}, {count} left\"\n");
@@ -315,6 +324,21 @@ fn gate_fixes() {
     let tags: Vec<&str> = src_inl.iter().filter_map(|i| if let Inline::Tag { display, .. } = i { Some(display.as_str()) } else { None }).collect();
     assert_eq!(tags, ["%{name}", "{count}"]);
     assert!(d.units[0].source().iter().all(|i| !matches!(i, Inline::Tag { free: false, kind: TagKind::Standalone, .. })));
+    // LocOS keeps placeholders and HTML as plain text: every tag is labelled "placeholder" and displays its source text
+    let d = extract(b"k: \"<b>Hi</b> %{name} %s\"\n");
+    let u = &d.units[0];
+    for i in u.source() {
+        if let Inline::Tag { id, kind, display, .. } = i {
+            let c = &u.codes[&id];
+            assert_eq!(c.label.as_deref(), Some("placeholder"), "{display}");
+            let raw = match kind {
+                TagKind::Open => c.open.as_deref(),
+                TagKind::Close => c.close.as_deref(),
+                TagKind::Standalone => c.standalone.as_deref(),
+            };
+            assert_eq!(raw, Some(display.as_str()));
+        }
+    }
     // a 3-letter root key that is not a Rails locale is not renamed
     let src = b"nav:\n  home: Home page\n  about: About us\n";
     let mut d = extract_to(src, "de");

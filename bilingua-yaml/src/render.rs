@@ -97,8 +97,14 @@ fn render_block(new: &str, style: Style, region: &str) -> Option<String> {
         return None;
     }
     let lines: Vec<&str> = body.split('\n').collect();
-    let first_text = lines.iter().find(|l| !strip(l).is_empty()).copied().unwrap_or("");
+    let first_at = lines.iter().position(|l| !strip(l).is_empty());
+    let first_text = first_at.map_or("", |i| lines[i]);
     if first_text.is_empty() || first_text.starts_with(' ') {
+        return None;
+    }
+    // A white-space-only line before the first text would set the block's indentation (YAML auto-detects it from
+    // the leading blank lines) and break the file; LocOS writes it anyway, Bilingua double-quotes instead.
+    if lines[..first_at.unwrap_or(0)].iter().any(|l| !l.is_empty()) {
         return None;
     }
     let mut header = header.to_string();
@@ -170,5 +176,7 @@ mod tests {
         assert_eq!(render("Ja", Style::Single, false, "'x'"), "'Ja'");
         assert_eq!(render("yes", Style::Plain, false, "x"), "\"yes\"");
         assert_eq!(render("x\ny", Style::Folded, false, ">-\n  a\n  b\n"), "|-\n  x\n  y\n");
+        // a white-space-only first line would change the block's indentation: double-quoted instead
+        assert_eq!(render(" \n%\n", Style::Literal, false, "|\n    blk\n"), "\" \\n%\\n\"\n");
     }
 }
