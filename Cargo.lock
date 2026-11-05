@@ -35,6 +35,7 @@ dependencies = [
  "bilingua-po",
  "bilingua-pptx",
  "bilingua-properties",
+ "bilingua-qtts",
  "bilingua-resjson",
  "bilingua-resx",
  "bilingua-sdl",
@@ -212,6 +213,15 @@ version = "0.1.0"
 dependencies = [
  "bilingua",
  "pyo3",
+ "serde_json",
+]
+
+[[package]]
+name = "bilingua-qtts"
+version = "0.1.0"
+dependencies = [
+ "bilingua-model",
+ "proptest",
  "serde_json",
 ]
 
