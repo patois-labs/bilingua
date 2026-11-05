@@ -1,4 +1,4 @@
-"""Compares Bilingua (examples/dump.rs), LocOS (read only) and Okapi okf_xml on Okapi's own XML / ITS test files.
+"""Compares Bilingua (examples/xml_dump.rs), LocOS (read only) and Okapi okf_xml on Okapi's own XML / ITS test files.
 
 Run with the LocOS venv Python (it imports app.filters read only; nothing is written in the LocOS tree):
 
@@ -21,7 +21,7 @@ from concurrent.futures import ThreadPoolExecutor
 LOCOS = os.environ.get("LOCOS_DIR", r"C:\Users\brent\code\local-tms")
 OKAPI = r"C:\Users\brent\code\okapi-oracle\okapi_dump.py"
 RES = r"C:\Users\brent\code\okapi-oracle\resources\okapi-src\okapi\filters\its\src\test\resources"
-BL_DUMP = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", "target", "release", "examples", "dump.exe")
+BL_DUMP = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", "target", "release", "examples", "xml_dump.exe")
 os.environ["LOC_TMS_DATA_DIR"] = tempfile.mkdtemp(prefix="locos-xml-okapi-")
 sys.dont_write_bytecode = True
 sys.path.insert(0, LOCOS)

@@ -1,5 +1,5 @@
 //! A generated file of more than 5 MB. The real timing (release build, against the LocOS filter) is
-//! `examples/dump.rs` (`gen` and `time`) and `tests/tools/speed_locos.py`; this test keeps the size, the round trip
+//! `examples/xml_dump.rs` (`gen` and `time`) and `tests/tools/speed_locos.py`; this test keeps the size, the round trip
 //! and a generous time budget honest in every build.
 
 use bilingua_model::*;

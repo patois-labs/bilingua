@@ -1,7 +1,7 @@
 """Times the LocOS generic XML filter on the large file the Rust tool writes (read only use of LocOS).
 
-    cargo run -p bilingua-xml --release --example dump -- gen big.xml 6
-    cargo run -p bilingua-xml --release --example dump -- time big.xml
+    cargo run -p bilingua-xml --release --example xml_dump -- gen big.xml 6
+    cargo run -p bilingua-xml --release --example xml_dump -- time big.xml
     the LocOS venv python speed_locos.py big.xml
 """
 
