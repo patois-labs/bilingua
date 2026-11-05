@@ -60,6 +60,7 @@ dependencies = [
  "bilingua-text",
  "bilingua-toml",
  "bilingua-vsdx",
+ "bilingua-wordfast",
  "bilingua-wxl",
  "bilingua-xaml",
  "bilingua-xcstrings",
@@ -484,6 +485,16 @@ dependencies = [
  "bilingua-zip",
  "proptest",
  "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "bilingua-wordfast"
+version = "0.1.0"
+dependencies = [
+ "bilingua-model",
+ "proptest",
+ "quick-xml",
  "serde_json",
 ]
 

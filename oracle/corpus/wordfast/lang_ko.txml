@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<txml locale="ko_KR" version="1.0" segtype="sentence" datatype="html" targetlocale="xx_XX" createdby="bilingua test corpus">
+<skeleton>&lt;html&gt;&lt;body&gt;&lt;p&gt;</skeleton>
+<translatable blockId="1" datatype="html">
+<segment segmentId="1">
+<source>계속하려면 <ut type="start" x="1">&lt;b&gt;</ut>설정<ut type="end" x="1">&lt;/b&gt;</ut> 메뉴를 여십시오.</source>
+<ws> </ws>
+</segment>
+<segment segmentId="2" gtmt="true">
+<source>파일을 저장하고 닫으십시오. <ut x="2">&lt;br/&gt;</ut>안녕하세요 세계! &amp; &#169;</source>
+<target>파일을 저장하고 닫으십시오. (machine)</target>
+</segment>
+</translatable>
+<skeleton>&lt;/p&gt;&lt;p&gt;</skeleton>
+<translatable blockId="2" locked="true"><segment segmentId="1"><source>안녕하세요 세계!</source></segment></translatable>
+<translatable blockId="3">
+<segment segmentId="1" modified="true"><source>파일을 저장하고 닫으십시오.</source><target score="100">파일을 저장하고 닫으십시오. (done)</target></segment>
+<segment segmentId="2"><source><![CDATA[계속하려면 <raw> 안녕하세요 세계!]]></source><target score="85">계속하려면 (fuzzy)</target></segment>
+<segment segmentId="3"><source>메뉴를 여십시오. <!-- inline comment -->설정</source><comments><comment creationid="pm" type="text">안녕하세요 세계!</comment></comments></segment>
+</translatable>
+<localizable blockId="4"><segment segmentId="1"><source>설정</source></segment></localizable>
+</txml>

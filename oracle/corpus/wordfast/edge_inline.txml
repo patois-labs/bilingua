@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<txml locale="en_US" version="1.0">
+<translatable blockId="1">
+<segment segmentId="1"><source>A <ut x="1" type="start">&lt;i&gt;</ut>unpaired start<ut x="9" type="end">&lt;/i&gt;</ut> end<ut x="3"/></source></segment>
+<segment segmentId="2"><source>  <ut x="1">&lt;br/&gt;</ut>  </source></segment>
+<segment segmentId="3"><source>   </source></segment>
+<segment segmentId="4"><source>&lt;b&gt; &#233;&#x1F600; <?pi x?>ok</source><target>old &lt;b&gt;</target></segment>
+<segment segmentId="5"><source><foo a="1">kept as a point</foo> text</source></segment>
+</translatable>
+<translatable blockId="2"><segment segmentId="9"/><segment segmentId="10"><target>no source</target></segment></translatable>
+</txml>
