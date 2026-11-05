@@ -14,7 +14,7 @@ redo them by hand.
 - Corpus: `bilingua/oracle/corpus/idml/` holds 7 small packages that are **Okapi test resources** (Okapi Framework
   v1.48.0, Apache 2.0, `okapi/filters/idml/src/test/resources`): `03-hyperlink-and-table-content`, `07-paragraph-breaks`,
   `08-conditional-text-and-tracked-changes`, `09-footnotes`, `10-tables`, `11-xml-structures`, `1415-adjacent-codes`.
-  `oracle/corpus/SOURCES.md` says nothing was copied from Okapi; it needs one row for these (Apache 2.0, unmodified).
+  `oracle/corpus/SOURCES.md` lists them (source URL, tag, commit, Apache 2.0, unmodified).
   Drop the folder if Brent would rather not carry third-party files.
 
 ## LocOS adapter notes
