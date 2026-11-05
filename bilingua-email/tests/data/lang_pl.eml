@@ -1,0 +1,32 @@
+From: Ann <ann@example.com>
+To: Bob <bob@example.org>
+Subject: =?utf-8?b?UG90d2llcmR6ZW5pZSB6YW3Ds3dpZW5pYQ==?=
+MIME-Version: 1.0
+Content-Type: multipart/alternative; boundary="alt-pl"
+
+Preamble text.
+--alt-pl
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: quoted-printable
+
+Witaj Anno,
+
+Twoje zam=C3=B3wienie zostanie wys=C5=82ane w poniedzia=C5=82ek. Prosimy o =
+potwierdzenie adresu do ko=C5=84ca tygodnia.
+
+Dzi=C4=99kujemy za cierpliwo=C5=9B=C4=87.
+
+--=20
+Ann
+
+--alt-pl
+Content-Type: text/html; charset=utf-8
+Content-Transfer-Encoding: base64
+
+PGh0bWw+PGhlYWQ+PG1ldGEgY2hhcnNldD0idXRmLTgiPjwvaGVhZD48Ym9keT48aDE+V2l0YWog
+QW5ubyw8L2gxPjxwPlR3b2plIHphbcOzd2llbmllIHpvc3RhbmllIHd5c8WCYW5lIHcgcG9uaWVk
+emlhxYJlay4gUHJvc2lteSBvIHBvdHdpZXJkemVuaWUgYWRyZXN1IGRvIGtvxYRjYSB0eWdvZG5p
+YS48L3A+PHA+RHppxJlrdWplbXkgemEgY2llcnBsaXdvxZvEhy4gPGI+UG90d2llcmR6ZW5pZSB6
+YW3Ds3dpZW5pYTwvYj48L3A+PC9ib2R5PjwvaHRtbD4K
+
+--alt-pl--

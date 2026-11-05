@@ -1,0 +1,32 @@
+From: Ann <ann@example.com>
+To: Bob <bob@example.org>
+Subject: =?utf-8?b?Q2Fmw6kgbWVudQ==?=
+MIME-Version: 1.0
+Content-Type: multipart/alternative; boundary="alt-fr"
+
+Preamble text.
+--alt-fr
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: quoted-printable
+
+Bonjour Anne,
+
+Votre commande sera exp=C3=A9di=C3=A9e lundi. Veuillez confirmer votre adre=
+sse avant la fin de la semaine.
+
+Merci de votre patience. =C3=80 bient=C3=B4t !
+
+--=20
+Ann
+
+--alt-fr
+Content-Type: text/html; charset=utf-8
+Content-Transfer-Encoding: base64
+
+PGh0bWw+PGhlYWQ+PG1ldGEgY2hhcnNldD0idXRmLTgiPjwvaGVhZD48Ym9keT48aDE+Qm9uam91
+ciBBbm5lLDwvaDE+PHA+Vm90cmUgY29tbWFuZGUgc2VyYSBleHDDqWRpw6llIGx1bmRpLiBWZXVp
+bGxleiBjb25maXJtZXIgdm90cmUgYWRyZXNzZSBhdmFudCBsYSBmaW4gZGUgbGEgc2VtYWluZS48
+L3A+PHA+TWVyY2kgZGUgdm90cmUgcGF0aWVuY2UuIMOAIGJpZW50w7R0ICEgPGI+Q2Fmw6kgbWVu
+dTwvYj48L3A+PC9ib2R5PjwvaHRtbD4K
+
+--alt-fr--

@@ -1,0 +1,16 @@
+[package]
+name = "bilingua-email"
+description = "Bilingua: email message (eml) filter"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+bilingua-model = { workspace = true }
+bilingua-html = { workspace = true }
+regex = { workspace = true }
+
+[dev-dependencies]
+proptest = "1"
+serde_json = { workspace = true }
