@@ -414,7 +414,7 @@ pub fn walk(c: &Ctx) -> Result<Walked, Error> {
                 None => (Vec::new(), SegState::New, None),
             };
             let mut extra = Vec::new();
-            let region = if !matches!(status, Status::Open) {
+            let region = if !matches!(status, Status::Open | Status::Confirmed("confirmed")) {
                 None
             } else if whole {
                 Some(match target {

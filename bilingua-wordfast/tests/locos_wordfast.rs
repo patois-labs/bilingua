@@ -55,7 +55,7 @@ fn txml_units_and_protection() {
     );
     let r = lock_reasons(&TXML, SAMPLE_TXML);
     assert_eq!(r.get("locked"), Some(&2), "{r:?}");
-    assert_eq!(r.get("confirmed"), Some(&2), "{r:?}");
+    assert_eq!(r.get("confirmed"), None, "{r:?}"); // confirmed work is an editable unit with a target, see behaviour.rs
     assert_eq!(r.get("localizable"), Some(&1), "{r:?}");
 
     let mut d = extract(&TXML, SAMPLE_TXML);
@@ -95,8 +95,8 @@ fn txml_units_and_protection() {
         assert_eq!(seg(&out, sid), seg(SAMPLE_TXML, sid), "{sid}");
     }
     // set_target refuses a locked unit
-    let mut d = extract(&TXML_T, SAMPLE_TXML);
-    let locked = d.units.iter().find(|u| u.id == "4").unwrap().segments[0].id.clone();
+    let mut d = TXML.extract(SAMPLE_TXML, &locked_opts()).unwrap();
+    let locked = d.units.iter().find(|u| u.id == "3").unwrap().segments[0].id.clone();
     assert!(matches!(d.set_target(&locked, vec![Inline::text("x")]), Err(Error::Locked(_))));
 }
 
@@ -133,7 +133,7 @@ fn txlf_units_protection_and_writing() {
         map(&[(0, "Open the \u{27e6}x1\u{27e7}Settings\u{27e6}x2\u{27e7} menu."), (1, "Then click \u{27e6}p1\u{27e7}."), (4, "Left untranslated.")])
     );
     let r = lock_reasons(&TXLF, SAMPLE_TXLF);
-    assert_eq!((r.get("locked"), r.get("confirmed"), r.get("final")), (Some(&1), Some(&1), Some(&1)), "{r:?}");
+    assert_eq!((r.get("locked"), r.get("confirmed"), r.get("final")), (Some(&1), None, Some(&1)), "{r:?}");
 
     let mut d = extract(&TXLF, SAMPLE_TXLF);
     set(&mut d, 0, "Oeffnen \u{27e6}x1\u{27e7}Einstellungen\u{27e6}x2\u{27e7}.");

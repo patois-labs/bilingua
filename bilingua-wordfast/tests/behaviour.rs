@@ -40,13 +40,19 @@ fn txml_existing_translations_load_as_targets() {
     for (id, text) in [("4", "Bestaetigte Zeile."), ("8", "Vorbefuellte Zeile.")] {
         let u = unit(&d, id);
         assert_eq!(flat_target(u), text);
-        assert!(!u.translate);
-        assert_eq!(u.lock_reason.as_deref(), Some("confirmed"));
+        assert!(u.translate, "confirmed work stays editable");
+        assert_eq!(u.lock_reason, None);
         assert_eq!(u.segments[0].state, SegState::Translated);
     }
     // not translated yet
     assert!(unit(&d, "6").segments[0].target.is_empty());
     assert_eq!(unit(&d, "6").segments[0].state, SegState::New);
+    // a confirmed target can be changed; only that segment's target changes in the file
+    let mut e = d.clone();
+    set(&mut e, 4, "Neue Zeile.");
+    let out = merged(&TXML_T, &e);
+    assert!(contains(seg(&out, "5"), "<target score=\"100\">Neue Zeile.</target>"), "{}", String::from_utf8_lossy(seg(&out, "5")));
+    only_changed(SAMPLE_TXML, &out, seg_owned, &["5"]);
     // the LocOS list is the same without the confirmed ones
     let l = extract(&TXML, SAMPLE_TXML);
     assert_eq!(ids(&l), ["0", "1", "5", "6", "7"]);
@@ -88,6 +94,7 @@ fn txlf_existing_translations_load_as_targets() {
     assert_eq!(u.segments[0].origin, Some(Origin::new(OriginKind::Tm).with_match(75)));
     assert_eq!(unit(&d, "0").segments[0].state, SegState::New); // <target state="needs-translation"></target>
     assert_eq!(unit(&d, "3").segments[0].state, SegState::Translated);
+    assert!(unit(&d, "3").translate && unit(&d, "3").lock_reason.is_none());
     assert_eq!(unit(&d, "5").segments[0].state, SegState::SignedOff);
     assert_eq!(unit(&d, "5").lock_reason.as_deref(), Some("final"));
     let all = TXLF.extract(SAMPLE_TXLF, &locked_opts()).unwrap();

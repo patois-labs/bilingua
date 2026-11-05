@@ -29,11 +29,13 @@ let out = Txml::default().merge(&doc)?;
   `gtmt="true"` and not a fuzzy match below 100); TXLF `translate="no"`, `approved="yes"`, `final` / `signed-off`,
   `gs4tr:locked`, a gs4tr target past `needs-*`, and the memoQ, Phrase and WorldServer status attributes.
 - **Existing translations are loaded as targets** (Brent, 11-05). A fuzzy or machine target on a segment you can
-  translate is a draft target with its origin (`Tm` with the match score, or `Mt`). Confirmed segments are listed as
-  read-only units (`translate = false`, `lock_reason` `confirmed` / `final` / `approved`) with their translation as
-  the target and their state (`Translated`, `Confirmed`, `SignedOff`). `Txml { load_targets: false }` (also
-  `Txml::without_targets()`) leaves them out: that is exactly the list LocOS translates, and what the LocOS adapter
-  uses. `include_locked` in the extract options lists locked and localizable segments too, read-only.
+  translate is a draft target with its origin (`Tm` with the match score, or `Mt`). A segment somebody already
+  confirmed (LocOS never touches it) is listed as an ordinary unit with its translation as the target and state
+  `Translated`, as Okapi does; changing that target rewrites it, leaving it alone does not. Reviewer sign-off
+  (TXLF `final`, `signed-off`, `approved`) and locks are read-only (`translate = false`, `lock_reason`).
+  `Txml { load_targets: false }` (also `Txml::without_targets()`) leaves the confirmed segments out: that is
+  exactly the list LocOS translates, and what the LocOS adapter uses. `include_locked` in the extract options lists
+  locked and localizable segments too, read-only.
 - A target's codes are matched to the source's by element and `x` / `id`; one with no partner is dropped (its text
   stays).
 

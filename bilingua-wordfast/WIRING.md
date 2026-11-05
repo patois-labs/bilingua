@@ -12,7 +12,7 @@
 - `own_segmentation` in the facade: add `"txml" | "txlf"` (the files carry their segmentation, like XLIFF).
 - `contract.rs` `crate_of`: `"txml" | "txlf" => "bilingua-wordfast"`.
 - Options (no facade options hook yet): `Txml { load_targets }` / `Txlf { load_targets }`, default `true`: confirmed
-  segments are listed as read-only units with their translation (Brent, 11-05). The LocOS adapter uses
+  segments are listed as ordinary units with their translation as the target, state `Translated`, as Okapi does (Brent, 11-05); sign-off and locks are read-only. The LocOS adapter uses
   `load_targets: false` (`Txml::without_targets()`), which gives exactly the LocOS unit list. `include_locked` in
   `ExtractOptions` also lists locked and localizable segments (read-only).
 - Unit ids are LocOS's `p_index` as text (stable; `1000000000 + n` for `seg-source` segments). The adapter can use

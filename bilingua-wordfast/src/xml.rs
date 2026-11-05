@@ -3,7 +3,7 @@
 //! parser refuses (malformed markup, undefined entities, undeclared prefixes, a DOCTYPE, characters XML does not
 //! allow) and bounds depth and element count through the B6 guard that runs before it.
 
-use bilingua_model::Error;
+use bilingua_model::{Error, LimitError, LimitKind};
 use quick_xml::events::Event;
 use quick_xml::Reader;
 use std::collections::HashSet;
@@ -320,6 +320,10 @@ pub fn parse(fmt: &str, text: &str) -> Result<Tree, Error> {
                         return Err(perr(fmt, "not well-formed XML: more than one root element"));
                     }
                     root_seen = true;
+                }
+                if stack.len() >= 1024 {
+                    // the recursive walkers below stay on a bounded stack whatever limit the caller set
+                    return Err(LimitError::new(LimitKind::XmlDepth, "This file nests XML elements more than 1024 deep. It was not processed.").into());
                 }
                 let (qname, raw_attrs) = lex_tag(fmt, text, before, after)?;
                 let ns_len = ns.len();

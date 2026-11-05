@@ -175,7 +175,7 @@ pub fn walk(c: &Ctx) -> Result<Walked, Error> {
             }
             None => (Vec::new(), SegState::New),
         };
-        let region = if matches!(status, Status::Open) {
+        let region = if matches!(status, Status::Open | Status::Confirmed("confirmed")) {
             Some(match target {
                 Some(t) => {
                     let e = &tree.els[t];

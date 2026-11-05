@@ -179,7 +179,8 @@ fn unit_of(it: Item, text: &str) -> Unit {
     u.context.key = it.ctx_key;
     u.context.style = it.style;
     match it.status {
-        Status::Open => {}
+        // somebody's confirmed translation stays editable (its state says so); sign-off and locks are read-only
+        Status::Open | Status::Confirmed("confirmed") => {}
         Status::Confirmed(r) | Status::Locked(r) => {
             u.translate = false;
             u.lock_reason = Some(r.to_string());
