@@ -1,0 +1,17 @@
+[package]
+name = "bilingua-json5"
+description = "Bilingua: JSON5 and JSONC filter (comments, trailing commas, unquoted keys, single quotes; edits strings in place)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+bilingua-model = { workspace = true }
+regex = { workspace = true }
+encoding_rs = "0.8"
+
+[dev-dependencies]
+proptest = { version = "1", default-features = false, features = ["std"] }
+serde_json = { workspace = true }
+bilingua = { workspace = true }

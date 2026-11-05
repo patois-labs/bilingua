@@ -161,6 +161,7 @@ fn crate_of(format: &str) -> &'static str {
         "html" => "bilingua-html",
         "json" => "bilingua-json",
         "resjson" => "bilingua-resjson",
+        "json5" => "bilingua-json5",
         "markdown" | "md" => "bilingua-markdown",
         "po" => "bilingua-po",
         "ini" => "bilingua-ini",
@@ -230,7 +231,7 @@ fn every_skeleton_records_its_parser_and_merge_checks_it() {
         let back: Document = serde_json::from_value(json).unwrap();
         assert_eq!(back, doc, "{name}: JSON round trip");
     }
-    for f in ["docx", "xlsx", "pptx", "html", "json", "po", "srt", "vtt"] {
+    for f in ["docx", "xlsx", "pptx", "html", "json", "json5", "po", "srt", "vtt"] {
         assert!(formats.contains(f), "no corpus file for {f}: {formats:?}");
     }
 }
