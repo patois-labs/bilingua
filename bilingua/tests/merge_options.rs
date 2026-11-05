@@ -152,3 +152,27 @@ fn gbk_html_writes_the_euro_as_one_byte() {
     let out = merge(&doc).unwrap();
     assert!(out.windows(3).any(|w| w == [b'>', 0x80, b'9']), "{out:?}");
 }
+
+#[test]
+fn xmb_becomes_the_xtb_only_when_asked_and_qt_language_is_stamped() {
+    let xmb = "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n<messagebundle><msg id=\"1\">Hello</msg></messagebundle>\n";
+    let doc = extract("a.xmb", xmb.as_bytes(), &opts("es")).unwrap();
+    assert_eq!(merge(&doc).unwrap(), xmb.as_bytes());
+    let out = text(merge_with(&doc, &always()).unwrap());
+    assert!(out.contains("<translationbundle") && out.contains("lang=\"es\""), "{out}");
+    let qt = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!DOCTYPE TS>\n<TS version=\"2.1\" language=\"en_US\"><context><name>C</name><message><source>Hello</source><translation type=\"unfinished\"></translation></message></context></TS>\n";
+    let doc = extract("a.ts", qt.as_bytes(), &opts("es-ES")).unwrap();
+    assert_eq!(merge(&doc).unwrap(), qt.as_bytes());
+    assert!(text(merge_with(&doc, &always()).unwrap()).contains("language=\"es_ES\""));
+}
+
+#[test]
+fn php_obeys_output_utf8() {
+    let mut php = b"<?php\nreturn ['a' => 'caf".to_vec();
+    php.push(0xE9);
+    php.extend_from_slice(b"'];\n");
+    let doc = extract("a.php", &php, &opts("fr")).unwrap();
+    assert_eq!(merge(&doc).unwrap(), php);
+    let out = merge_with(&doc, &utf8()).unwrap();
+    assert!(String::from_utf8(out).unwrap().contains("caf\u{e9}"));
+}

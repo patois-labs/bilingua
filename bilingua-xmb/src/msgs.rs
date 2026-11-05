@@ -314,7 +314,7 @@ pub fn extract(bytes: &[u8], opts: &ExtractOptions, limits: &Limits) -> Result<D
         // XML without an encoding declaration is UTF-8 (or UTF-16 with a BOM): never guess a code page
         return Err(Error::Encoding("This file is not valid UTF-8 and declares no other encoding. Re-save it as UTF-8 and upload it again.".into()));
     }
-    if !matches!(enc::base(&dec.encoding), "utf-8" | "utf-8-bom" | "utf-16le" | "utf-16be") && textenc::encode(&dec.text, &dec.encoding)? != bytes {
+    if !matches!(enc::base(&dec.encoding), "utf-8" | "utf-8-bom" | "utf-16le" | "utf-16be") && textenc::encode(&dec.text, &dec.encoding, &bilingua_model::MergeOptions::default())? != bytes {
         // double-mapped bytes of the CJK code pages read to the same character and write back as the other spelling;
         // an untouched merge must be the original bytes, so the file is refused, never altered
         return Err(Error::Encoding("This file uses byte sequences of its legacy encoding that cannot be written back unchanged. Re-save the file as UTF-8.".into()));

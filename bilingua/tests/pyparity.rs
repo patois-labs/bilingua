@@ -38,6 +38,11 @@ fn mark_only_values_are_skipped_like_python() {
         ("a.js", |v| format!("export default {{ a: \"{v}\", b: \"hello\" }};\n")),
         ("a.resx", |v| format!(r#"<root><resheader name="resmimetype"><value>text/microsoft-resx</value></resheader><data name="a"><value>{v}</value></data><data name="b"><value>hello</value></data></root>"#)),
         ("a.xcstrings", xcstrings),
+        ("a.php", |v| format!("<?php\nreturn ['a' => '{v}', 'b' => 'hello'];\n")),
+        ("a.ts", |v| format!(r#"<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE TS>
+<TS version="2.1" language="en_US"><context><name>C</name><message><source>{v}</source><translation type="unfinished"></translation></message><message><source>hello</source><translation type="unfinished"></translation></message></context></TS>
+"#)),
     ];
     for (name, make) in cases {
         let plain = units(name, &make("\u{e9}!"));

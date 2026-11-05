@@ -51,12 +51,13 @@ FORMATS = {
     "arb": "ARB", "dtd": "DTD", "ftl": "Fluent", "ini": "INI", "properties": "Properties", "strings": "Apple .strings",
     "toml": "TOML", "yaml": "YAML", "yml": "YAML", "resx": "RESX", "resw": "RESX", "resjson": "RESJSON",
     "json5": "JSON5", "jsonc": "JSON5", "wxl": "WXL", "xaml": "XAML", "xcstrings": "xcstrings", "xcloc": "xcloc",
-    "js": "JS module", "mjs": "JS module", "cjs": "JS module", "ts": "JS module", "mts": "JS module", "cts": "JS module",
+    "js": "JS module", "mjs": "JS module", "cjs": "JS module", "ts": "TS (Qt or JS module)", "mts": "JS module", "cts": "JS module",
+    "php": "PHP array", "xmb": "XMB", "xtb": "XTB",
     "xlf": "XLIFF", "xliff": "XLIFF", "sdlxliff": "XLIFF", "mqxliff": "XLIFF", "mxliff": "XLIFF",
 }
 ORDER = ["DOCX", "XLSX", "PPTX", "HTML", "Markdown", "JSON", "PO", "SRT", "VTT", "TXT",
          "ARB", "DTD", "Fluent", "INI", "Properties", "Apple .strings", "TOML", "YAML", "RESX", "RESJSON", "JSON5", "WXL",
-         "XAML", "xcstrings", "xcloc", "JS module", "XLIFF"]
+         "XAML", "xcstrings", "xcloc", "JS module", "TS (Qt or JS module)", "PHP array", "XMB", "XTB", "XLIFF"]
 CODE = "\u00a4"
 LINE_BASED = {"txt": True, "md": True, "markdown": True}
 LOCOS_TOKEN = re.compile("\u27e6/?[a-z]?\\d+\u27e7")

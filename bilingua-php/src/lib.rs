@@ -283,6 +283,10 @@ impl Filter for Php {
     }
 
     fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
+        self.merge_with(doc, &bilingua_model::MergeOptions::default())
+    }
+
+    fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
         bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
         let Skeleton::Text {
             parts, encoding, ..
@@ -310,6 +314,6 @@ impl Filter for Php {
                 }
             }
         }
-        enc::encode_text(&out, encoding)
+        enc::encode_text_with(&out, encoding, opts)
     }
 }
