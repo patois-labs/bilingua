@@ -23,8 +23,6 @@ use quick_xml::events::Event;
 use quick_xml::Reader;
 use serde::Serialize;
 use std::collections::HashMap;
-use std::hash::{BuildHasher, Hasher};
-use std::path::Path;
 
 /// A bilingual file inside a package, as the package needs it: open from bytes, count, tell whether it was
 /// edited, write back. `bilingua_xliff::Doc` is one; an editor can wrap it in its own type.
@@ -105,10 +103,10 @@ pub struct ReturnStamp {
 }
 
 impl ReturnStamp {
-    /// Now, with a fresh random GUID.
-    pub fn now() -> ReturnStamp {
-        let d = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default();
-        ReturnStamp { unix_secs: d.as_secs(), nanos: d.subsec_nanos(), package_guid: random_guid(d.as_nanos() as u64) }
+    /// A stamp for a time the caller read from its own clock, with a GUID made from `entropy` (any 64 random
+    /// bits the caller has). The crate has no clock and no random source of its own, so it runs in the browser too.
+    pub fn from_clock(unix_secs: u64, nanos: u32, entropy: u64) -> ReturnStamp {
+        ReturnStamp { unix_secs, nanos, package_guid: guid_from(entropy, unix_secs ^ u64::from(nanos)) }
     }
 
     /// A fixed time and GUID (for repeatable output and tests).
@@ -117,13 +115,16 @@ impl ReturnStamp {
     }
 }
 
-fn random_guid(seed: u64) -> String {
-    let s = std::collections::hash_map::RandomState::new();
-    let mut a = s.build_hasher();
-    a.write_u64(seed);
-    let mut b = s.build_hasher();
-    b.write_u64(!seed);
-    let (x, y) = (a.finish(), b.finish());
+fn mix(mut z: u64) -> u64 {
+    // splitmix64 finalizer.
+    z = z.wrapping_add(0x9e37_79b9_7f4a_7c15);
+    z = (z ^ (z >> 30)).wrapping_mul(0xbf58_476d_1ce4_e5b9);
+    z = (z ^ (z >> 27)).wrapping_mul(0x94d0_49bb_1331_11eb);
+    z ^ (z >> 31)
+}
+
+fn guid_from(entropy: u64, salt: u64) -> String {
+    let (x, y) = (mix(entropy ^ salt), mix(!entropy ^ mix(salt)));
     let mut bytes = [0u8; 16];
     bytes[..8].copy_from_slice(&x.to_be_bytes());
     bytes[8..].copy_from_slice(&y.to_be_bytes());
@@ -246,10 +247,6 @@ pub struct SdlPackage<D: PackageDoc> {
 }
 
 impl<D: PackageDoc> SdlPackage<D> {
-    pub fn open(path: impl AsRef<Path>) -> Result<Self, Error> {
-        Self::from_bytes(&std::fs::read(path)?)
-    }
-
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, Error> {
         Self::from_bytes_with_limits(bytes, &ZipLimits::default())
     }
@@ -408,13 +405,6 @@ impl<D: PackageDoc> SdlPackage<D> {
         }];
         out.extend(files);
         write_zip(&out, (y, mo, d, h, mi, s))
-    }
-
-    /// `to_return_package` with the current time, written to `path`.
-    pub fn write_return_package(&self, path: impl AsRef<Path>) -> Result<(), Error> {
-        let bytes = self.to_return_package(&ReturnStamp::now())?;
-        std::fs::write(path, bytes)?;
-        Ok(())
     }
 }
 
@@ -577,10 +567,6 @@ pub struct MqPackage<D: PackageDoc> {
 }
 
 impl<D: PackageDoc> MqPackage<D> {
-    pub fn open(path: impl AsRef<Path>) -> Result<Self, Error> {
-        Self::from_bytes(&std::fs::read(path)?)
-    }
-
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, Error> {
         Self::from_bytes_with_limits(bytes, &ZipLimits::default())
     }
@@ -656,11 +642,6 @@ impl<D: PackageDoc> MqPackage<D> {
             .collect();
         write_zip(&out, (1980, 1, 1, 0, 0, 0))
     }
-
-    pub fn save(&self, path: impl AsRef<Path>) -> Result<(), Error> {
-        std::fs::write(path, self.to_bytes()?)?;
-        Ok(())
-    }
 }
 
 #[cfg(test)]
@@ -682,6 +663,23 @@ mod tests {
         assert_eq!(set_attr(t, "z", "3"), "<A x=\"1\" y=\"2\" z=\"3\">");
         assert_eq!(set_attr("<A x=\"1\" />", "z", "3"), "<A x=\"1\" z=\"3\" />");
         assert_eq!(remove_attr(t, "x"), "<A y=\"2\">");
-        assert!(random_guid(1).len() == 36);
+        assert!(guid_from(1, 2).len() == 36);
+    }
+}
+
+#[cfg(test)]
+mod stamp_tests {
+    use super::ReturnStamp;
+
+    #[test]
+    fn from_clock_is_repeatable_and_a_v4_guid() {
+        let a = ReturnStamp::from_clock(1_700_000_000, 5, 42);
+        let b = ReturnStamp::from_clock(1_700_000_000, 5, 42);
+        assert_eq!(a.package_guid, b.package_guid);
+        assert_ne!(a.package_guid, ReturnStamp::from_clock(1_700_000_000, 5, 43).package_guid);
+        let g = &a.package_guid;
+        assert_eq!(g.len(), 36);
+        assert_eq!(&g[14..15], "4");
+        assert!(matches!(&g[19..20], "8" | "9" | "a" | "b"));
     }
 }

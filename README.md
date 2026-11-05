@@ -49,8 +49,15 @@ From the command line: `bilingua extract page.docx --target es-ES -o page.xlf`, 
 - `oracle/` compares Bilingua's output with another open-source filter set on a made-up corpus; the findings are in
   `oracle/REPORT.md`. The comparison is a test aid only, never a dependency.
 
+## Portable core
+The parsing crates are bytes in, bytes out: no file system, threads, network, clock or process APIs, so the same code
+runs in the browser, on the desktop, on a server and inside Python. The CLI, the oracle and `bilingua-py` do the file
+access. `tools/check-portable.sh` (or `tools/check-portable.ps1` on Windows) runs `cargo check --target
+wasm32-unknown-unknown` over every parsing crate and greps their non-test source for the forbidden APIs. It needs
+`rustup target add wasm32-unknown-unknown`.
+
 ## Not done yet
-- WebAssembly build for the browser.
+- A WebAssembly package with JavaScript bindings (the crates compile for WASM; nothing is packaged yet).
 - More formats (IDML, DITA, and others as users ask).
 - A published crate on crates.io.
 
