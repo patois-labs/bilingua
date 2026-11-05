@@ -313,17 +313,13 @@ impl Filter for Wxl {
         guard::finish(doc, dec.warnings, &limits)
     }
 
-    fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
-        self.merge_with(doc, &bilingua_model::MergeOptions::default())
-    }
-
     fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
         bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
         let Skeleton::Text { parts, encoding, .. } = &doc.skeleton else {
             return Err(Error::Write("wxl needs a text skeleton".into()));
         };
         let changed = doc.units.iter().any(|u| u.translate && flatten(&u.output()) != flatten(&u.source()));
-        let culture = doc.target_lang.as_deref().and_then(culture_of).filter(|_| changed || opts.stamp_target_always);
+        let culture = opts.stamp_lang(doc, changed).and_then(culture_of);
         let mut out = String::new();
         let mut first = true;
         for p in parts {

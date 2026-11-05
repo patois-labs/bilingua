@@ -437,16 +437,13 @@ impl Filter for FtlFilter {
         self.extract_with(bytes, opts, &limits)
     }
 
-    fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
-        self.merge_inner(doc, None, false)
-    }
-
     /// With `stamp_target_always` the plural selects are filled for the document's `target_lang` even when nothing
     /// is translated (LocOS `build_localized`); otherwise the same as `merge`.
     fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
-        match (opts.stamp_target_always, doc.target_lang.as_deref().filter(|t| !t.trim().is_empty())) {
-            (true, Some(t)) => self.merge_inner(doc, Some(t), true),
-            _ => self.merge_inner(doc, None, false),
+        // plain `merge` never fills (see `merge_localized`), so only the "always" half of the stamp rule applies
+        match opts.stamp_lang(doc, false) {
+            Some(t) => self.merge_inner(doc, Some(t), true),
+            None => self.merge_inner(doc, None, false),
         }
     }
 }

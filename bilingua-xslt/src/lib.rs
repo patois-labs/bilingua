@@ -216,7 +216,7 @@ impl Xslt {
             if declared.is_none() || declared == Some(UTF_8) {
                 return Err(unreadable("This XSLT file is not valid UTF-8 and declares no other encoding; re-save the file as UTF-8."));
             }
-            if textenc::encode(&dec.text, &dec.encoding)? != bytes {
+            if textenc::encode(&dec.text, &dec.encoding, &bilingua_model::MergeOptions::default())? != bytes {
                 // double-mapped bytes of the CJK code pages read to the same character and write back as the other
                 // spelling; an untouched merge must be the original bytes, so the file is refused, never altered
                 return Err(unreadable("This XSLT file uses byte sequences of its legacy encoding that cannot be written back unchanged. Re-save the file as UTF-8."));
@@ -364,14 +364,14 @@ impl Filter for Xslt {
         self.extract_with(bytes, opts, &opts.limits())
     }
 
-    fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
+    fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
         bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
         let Skeleton::Text { parts, encoding, .. } = &doc.skeleton else {
             return Err(Error::Write("xslt needs a text skeleton".into()));
         };
         let refs = char_refs(parts, encoding);
         let any_translated = doc.units.iter().any(|u| u.translate && u.segments.iter().any(|s| !s.target.is_empty()));
-        let lang = if any_translated { doc.target_lang.as_deref().and_then(html_lang) } else { None };
+        let lang = opts.stamp_lang(doc, any_translated).and_then(html_lang);
         let mut out = String::new();
         for p in parts {
             match p {
@@ -385,7 +385,7 @@ impl Filter for Xslt {
                 }
             }
         }
-        textenc::encode(&out, encoding)
+        textenc::encode(&out, encoding, opts)
     }
 }
 

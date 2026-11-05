@@ -293,7 +293,8 @@ impl Filter for Mif {
         guard::finish(doc, warnings, &limits)
     }
 
-    fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
+    fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
+        // MIF is written as UTF-8 here (BOM kept), so `output_encoding` has nothing to change
         bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
         let Skeleton::Text {
             parts, encoding, ..
@@ -335,9 +336,7 @@ impl Filter for Mif {
                 }
             }
         }
-        let stamp = translated
-            .then(|| doc.target_lang.as_deref().and_then(fm_language))
-            .flatten();
+        let stamp = opts.stamp_lang(doc, translated).and_then(fm_language);
         if changed || stamp.is_some() {
             // every rebuild must still be well-formed MIF (and the language words are found in it)
             let tree = scan(&out, usize::MAX).map_err(|e| match e {

@@ -303,7 +303,8 @@ impl Filter for TomlFilter {
         })
     }
 
-    fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
+    fn merge_with(&self, doc: &Document, _opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
+        // UTF-8 in, UTF-8 out (BOM kept), so `output_encoding` has nothing to change; no language stamp in this format
         bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
         let Skeleton::Text { parts, encoding, .. } = &doc.skeleton else {
             return Err(Error::Write("toml needs a text skeleton".into()));

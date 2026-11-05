@@ -226,7 +226,7 @@ pub fn merge_document_with(document: &Document, id: &str, opts: &MergeOptions) -
     let mut doc = Doc::from_bytes_hint(bytes, id == "mxliff").map_err(|e| parse_err(id, e))?;
     apply_document(&mut doc, document);
     let mut out = doc.to_bytes();
-    let stamp = document.target_lang.as_deref().filter(|t| !t.trim().is_empty()).filter(|_| doc.is_dirty() || opts.stamp_target_always);
+    let stamp = opts.stamp_lang(document, doc.is_dirty());
     if let Some(t) = stamp {
         out = lang::stamp_target_language(&out, doc.format(), t);
     }
@@ -291,9 +291,6 @@ impl Filter for XliffFilter {
         bilingua_model::guard::check_xml(dec.text.as_bytes(), &limits)?;
         let doc = Doc::from_bytes_hint(dec.text.into_bytes(), self.id == "mxliff").map_err(|e| parse_err(self.id, e))?;
         to_document_in(&doc, self.id, opts, Some(dec.encoding), dec.warnings)
-    }
-    fn merge(&self, doc: &Document) -> Result<Vec<u8>, bilingua_model::Error> {
-        merge_document(doc, self.id)
     }
     fn merge_with(&self, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, bilingua_model::Error> {
         merge_document_with(doc, self.id, opts)

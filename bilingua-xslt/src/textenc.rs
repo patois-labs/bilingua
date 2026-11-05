@@ -4,7 +4,7 @@
 //! encoding and its declaration instead of switching to UTF-8.
 
 use bilingua_model::encoding_rs::Encoding;
-use bilingua_model::{enc, Error};
+use bilingua_model::{enc, Error, MergeOptions, OutputEncoding};
 use std::borrow::Cow;
 
 fn fits(e: &'static Encoding, base: &str, c: char) -> bool {
@@ -17,9 +17,11 @@ fn fits(e: &'static Encoding, base: &str, c: char) -> bool {
     !e.encode(c.encode_utf8(&mut [0u8; 4])).2
 }
 
-pub fn encode(text: &str, tag: &str) -> Result<Vec<u8>, Error> {
+pub fn encode(text: &str, tag: &str, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
     let base = enc::base(tag);
     let legacy = match base {
+        // written as UTF-8: every character fits, no references needed
+        _ if opts.output_encoding == OutputEncoding::Utf8 => None,
         "utf-8" | "utf-8-bom" | "utf-16le" | "utf-16be" => None,
         other => Encoding::for_label(other.as_bytes()),
     };
@@ -37,5 +39,5 @@ pub fn encode(text: &str, tag: &str) -> Result<Vec<u8>, Error> {
         }
         _ => Cow::Borrowed(text),
     };
-    enc::encode_text(&text, tag)
+    enc::encode_text_with(&text, tag, opts)
 }

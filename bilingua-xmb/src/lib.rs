@@ -72,13 +72,10 @@ macro_rules! bundle_filter {
             fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
                 self.extract_with(bytes, opts, &opts.limits())
             }
-            fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
-                merge(doc, false, &bilingua_model::MergeOptions::default())
-            }
             /// `stamp_target_always` writes the target language even when nothing is translated, as LocOS does
             /// (an XMB then comes back as the XTB for its target language); `output_encoding` as everywhere.
             fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
-                merge(doc, opts.stamp_target_always && doc.target_lang.as_deref().is_some_and(|t| !t.trim().is_empty()), opts)
+                merge(doc, opts.stamp_lang(doc, false).is_some(), opts)
             }
         }
     };

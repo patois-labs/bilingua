@@ -745,10 +745,17 @@ impl MergeOptions {
         doc.segments().any(|(_, s)| !s.target.is_empty())
     }
 
-    /// Should a format stamp the target language and fill plurals for this document? `target_lang` must be set and
-    /// something translated, or `stamp_target_always`.
+    /// Should a format stamp the target language and fill plurals for this document? `target_lang` must be set (and
+    /// not blank) and something translated, or `stamp_target_always`. "Translated" is [`MergeOptions::any_translated`];
+    /// a format with its own notion of a change uses [`MergeOptions::stamp_lang`].
     pub fn should_stamp(&self, doc: &Document) -> bool {
-        doc.target_lang.is_some() && (self.stamp_target_always || Self::any_translated(doc))
+        self.stamp_lang(doc, Self::any_translated(doc)).is_some()
+    }
+
+    /// The one stamp rule every format uses: the document's `target_lang` (as written, never blank) when
+    /// `translated` (the format's own "something was written" test) or `stamp_target_always`, else `None`.
+    pub fn stamp_lang<'a>(&self, doc: &'a Document, translated: bool) -> Option<&'a str> {
+        doc.target_lang.as_deref().filter(|t| !t.trim().is_empty()).filter(|_| translated || self.stamp_target_always)
     }
 }
 
@@ -796,13 +803,15 @@ pub trait Filter: Send + Sync {
     }
     /// Source file to document. One segment per unit; no sentence splitting here.
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error>;
-    /// Document back to a file in the original format, targets in place of sources.
-    fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error>;
-    /// [`Filter::merge`] with [`MergeOptions`]. The default ignores the options, which is right for a format that
-    /// neither writes text in a legacy encoding nor stamps languages; a format that does overrides this and
-    /// makes `merge` call it with `MergeOptions::default()`.
-    fn merge_with(&self, doc: &Document, _opts: &MergeOptions) -> Result<Vec<u8>, Error> {
-        self.merge(doc)
+    /// Document back to a file in the original format, targets in place of sources, with [`MergeOptions`]. Every
+    /// format honours both options: `output_encoding` (keep the file's encoding, or write UTF-8) and
+    /// `stamp_target_always` (stamp the target language and fill plurals even when nothing is translated; the
+    /// rule is [`MergeOptions::should_stamp`]).
+    fn merge_with(&self, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error>;
+    /// [`Filter::merge_with`] with the default options: the file's own encoding, and no stamp when nothing is
+    /// translated (an untouched merge gives the original bytes).
+    fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
+        self.merge_with(doc, &MergeOptions::default())
     }
     /// For formats a browser can show: the translated document as HTML in which every segment's text sits in
     /// `<span data-bl-seg="SEGMENT_ID">..</span>`, so a live preview can patch one segment without reloading.

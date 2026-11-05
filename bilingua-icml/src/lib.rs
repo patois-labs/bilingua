@@ -417,7 +417,7 @@ impl Filter for Icml {
         self.extract_with(bytes, opts, &opts.limits())
     }
 
-    fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
+    fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
         let (text, bom) = skeleton_text(doc)?;
         let finish = |s: &str| -> Vec<u8> {
             let mut v = Vec::with_capacity(s.len() + 3);
@@ -440,7 +440,9 @@ impl Filter for Icml {
         }
         let limits = Limits::default();
         let mut prep = prepare_text(text, &limits)?;
-        let tag = doc.target_lang.as_deref().and_then(lang::html_lang);
+        // the language is set per rewritten (translated) paragraph, so `stamp_target_always` adds nothing; ICML is
+        // UTF-8 XML, so `output_encoding` has nothing to change either
+        let tag = opts.stamp_lang(doc, true).and_then(lang::html_lang);
         let language = tag.as_deref().and_then(|t| lang::indesign_language(&declared_languages(&prep.dom), t));
         let rtl = tag.as_deref().is_some_and(lang::is_rtl);
         let mut changes: Vec<(usize, usize, String)> = Vec::new();

@@ -381,7 +381,7 @@ impl Filter for Mo {
         )
     }
 
-    fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
+    fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
         bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
         let original = original_bytes(doc)?;
         // The file was checked when it was extracted; read it again under limits only the file size bounds.
@@ -413,7 +413,9 @@ impl Filter for Mo {
             supplied.push((singular, plural_text));
             orig.push(e.strs.clone());
         }
-        if changes.is_empty() {
+        let stamp = opts.stamp_lang(doc, !changes.is_empty());
+        let utf8 = opts.output_encoding == bilingua_model::OutputEncoding::Utf8;
+        if changes.is_empty() && stamp.is_none() && !(utf8 && matches!(codec, Codec::Latin1 | Codec::Legacy(_))) {
             return Ok(original.to_vec());
         }
         for (pos, slot, text) in changes {
@@ -423,10 +425,10 @@ impl Filter for Mo {
             }
             e.strs[slot] = edge_newlines(&e.id, &text);
         }
-        let full_charset = match doc.target_lang.as_deref().filter(|l| !l.trim().is_empty()) {
+        let full_charset = match stamp {
             Some(lang) => localize(&mut entries, &orig, &supplied, lang),
             None => false,
         };
-        compile(&entries, codec, full_charset)
+        compile(&entries, if utf8 { Codec::Utf8 } else { codec }, full_charset)
     }
 }

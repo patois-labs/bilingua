@@ -210,9 +210,9 @@ fn extract_impl(kind: Kind, bytes: &[u8], opts: &ExtractOptions, copts: &CsvOpti
 
 /// Text back to bytes. A legacy file goes back in its own code page when every character fits, else as UTF-8 with a
 /// BOM. Line endings are written as they are in the merged text (a written line break stays `\n`).
-fn to_bytes(text: &str, tag: &str) -> Result<Vec<u8>, Error> {
+fn to_bytes(text: &str, tag: &str, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
     let base = enc::base(tag);
-    if enc::is_legacy(tag) {
+    if enc::is_legacy(tag) && opts.output_encoding != OutputEncoding::Utf8 {
         if let Some(e) = encoding_rs::Encoding::for_label(base.as_bytes()) {
             let writer = if e == encoding_rs::GBK { encoding_rs::GB18030 } else { e };
             let (bytes, _, unmappable) = writer.encode(text);
@@ -222,12 +222,22 @@ fn to_bytes(text: &str, tag: &str) -> Result<Vec<u8>, Error> {
     // `encode_text` drops one leading U+FEFF (the byte-order mark it writes itself); a file whose first cell
     // really starts with U+FEFF after its BOM keeps it.
     if text.starts_with('\u{feff}') {
-        return enc::encode_text(&format!("\u{feff}{text}"), base);
+        return enc::encode_text_with(&format!("\u{feff}{text}"), utf8_base(base, opts), opts);
     }
-    enc::encode_text(text, base)
+    enc::encode_text_with(text, utf8_base(base, opts), opts)
 }
 
-fn merge_impl(doc: &Document) -> Result<Vec<u8>, Error> {
+/// With UTF-8 out a legacy file is written as plain UTF-8; a UTF-8 BOM the file had is kept.
+fn utf8_base<'a>(base: &'a str, opts: &MergeOptions) -> &'a str {
+    if opts.output_encoding == OutputEncoding::Utf8 && base != "utf-8-bom" {
+        "utf-8"
+    } else {
+        base
+    }
+}
+
+fn merge_impl(doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
+    // no language stamp in CSV: the target column is chosen at extract time
     bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
     let Skeleton::Text { parts, encoding, .. } = &doc.skeleton else {
         return Err(Error::Write("csv needs a text skeleton".into()));
@@ -252,7 +262,7 @@ fn merge_impl(doc: &Document) -> Result<Vec<u8>, Error> {
             }
         }
     }
-    to_bytes(&out, encoding)
+    to_bytes(&out, encoding, opts)
 }
 
 fn render_record(doc: &Document, first: usize, group: &[usize]) -> Result<String, Error> {
@@ -342,8 +352,8 @@ macro_rules! filter_impl {
             fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
                 extract_impl($kind, bytes, opts, &self.options)
             }
-            fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
-                merge_impl(doc)
+            fn merge_with(&self, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
+                merge_impl(doc, opts)
             }
         }
     };

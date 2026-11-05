@@ -126,7 +126,9 @@ impl Filter for Pptx {
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
         extract::extract_doc(bytes, opts)
     }
-    fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
+    fn merge_with(&self, doc: &Document, _opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
+        // The parts are UTF-8 XML, and the language is set on the runs this merge rewrites (translated text), so neither
+        // option changes anything: an untranslated run is never rewritten.
         merge_with_report(doc).map(|(b, _)| b)
     }
     fn preview(&self, doc: &Document) -> Option<String> {

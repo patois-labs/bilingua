@@ -138,7 +138,7 @@ impl Filter for Latex {
         guard::finish(doc, std::mem::take(&mut dec.warnings), &limits)
     }
 
-    fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
+    fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
         bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
         let Skeleton::Text { parts, encoding, .. } = &doc.skeleton else {
             return Err(Error::Write("tex needs a text skeleton".into()));
@@ -166,7 +166,8 @@ impl Filter for Latex {
             }
         }
         let bytes = enc::encode_text(&out, encoding)?;
-        if changed && enc::is_legacy(encoding) && fell_back_to_utf8(&bytes, &out, encoding) {
+        let utf8_out = opts.output_encoding == bilingua_model::OutputEncoding::Utf8;
+        if enc::is_legacy(encoding) && (utf8_out || (changed && fell_back_to_utf8(&bytes, &out, encoding))) {
             // The translation did not fit the file's code page and went out as UTF-8: an `inputenc` option that
             // names the old code page would now be false. Only the preamble is rewritten: the same line in the body
             // (a verbatim example, a comment) is text and stays as written.
@@ -174,6 +175,9 @@ impl Filter for Latex {
             let head = inputenc_re().replace_all(&out[..cut], |c: &regex::Captures| format!("{}utf8{}", &c[1], &c[3]));
             let fixed = format!("{head}{}", &out[cut..]);
             return enc::encode_text(&fixed, "utf-8");
+        }
+        if let Some(b) = enc::utf8_output(&out, encoding, opts) {
+            return Ok(b);
         }
         Ok(bytes)
     }

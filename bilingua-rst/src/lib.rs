@@ -418,7 +418,7 @@ impl Filter for Rst {
         guard::finish(doc, warnings, &limits)
     }
 
-    fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
+    fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
         bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
         let Skeleton::Text { parts, encoding, .. } = &doc.skeleton else {
             return Err(Error::Write("rst needs a text skeleton".into()));
@@ -430,7 +430,10 @@ impl Filter for Rst {
                 SkelPart::Unit(i) => write_unit(doc, *i, &mut out)?,
             }
         }
-        write_bytes(&out, encoding)
+        match enc::utf8_output(&out, encoding, opts) {
+            Some(b) => Ok(b),
+            None => write_bytes(&out, encoding),
+        }
     }
 }
 

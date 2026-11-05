@@ -255,10 +255,6 @@ impl Filter for XmlFilter {
         self.do_extract(bytes, opts)
     }
 
-    fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
-        self.merge_with(doc, &MergeOptions::default())
-    }
-
     /// `stamp_target_always` declares the target language even when nothing is translated; `output_encoding`
     /// UTF-8 writes UTF-8 with the declaration saying so.
     fn merge_with(&self, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
@@ -275,8 +271,8 @@ impl Filter for XmlFilter {
                 ml::merge(doc, text, blob, tag.as_deref(), &Limits::default())?
             }
             None => {
-                let any = opts.stamp_target_always || doc.units.iter().any(skel::translated);
-                skel::merge_parts(doc, parts, if any { tag } else { None })?
+                let stamp = opts.stamp_lang(doc, doc.units.iter().any(skel::translated)).is_some();
+                skel::merge_parts(doc, parts, if stamp { tag } else { None })?
             }
         };
         enc::encode_text_with(&out, encoding, opts)

@@ -83,7 +83,7 @@ fn paragraph_index(id: &str) -> Option<usize> {
     id.strip_prefix('p')?.parse().ok()
 }
 
-fn merge_doc(doc: &Document) -> Result<Vec<u8>, Error> {
+fn merge_doc(doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
     check_parser(doc, &parser_info!())?;
     let Skeleton::Zip { entries: skel, .. } = &doc.skeleton else {
         return Err(Error::Write("idml needs a zip skeleton".into()));
@@ -109,7 +109,10 @@ fn merge_doc(doc: &Document) -> Result<Vec<u8>, Error> {
     let l = Limits::default();
     let entries = read(original, &l)?;
     let pkg = package::open(&entries, &l, &mut Budget::new(&l))?;
-    let tag = doc.target_lang.as_deref().filter(|t| !t.trim().is_empty());
+    // InDesign keeps the language per paragraph: the stories this merge rewrites (the translated ones) get it, so
+    // `stamp_target_always` adds nothing (an untranslated story is never rewritten). The stories are UTF-8 XML, so
+    // `output_encoding` has nothing to change either.
+    let tag = opts.stamp_lang(doc, true);
     let language = tag.and_then(|t| lang::indesign_language(&pkg.languages, t));
     let rtl = tag.is_some_and(lang::is_rtl);
     let so = story::Opts { hidden_conditions: pkg.hidden_conditions.clone() };
@@ -188,7 +191,7 @@ impl Filter for Idml {
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
         extract_doc(bytes, opts)
     }
-    fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
-        merge_doc(doc)
+    fn merge_with(&self, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
+        merge_doc(doc, opts)
     }
 }

@@ -199,7 +199,7 @@ impl Filter for IniFilter {
         self.extract_with(bytes, opts, &Limits::default())
     }
 
-    fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
+    fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
         bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
         let Skeleton::Text { parts, encoding, .. } = &doc.skeleton else {
             return Err(Error::Write("ini needs a text skeleton".into()));
@@ -214,7 +214,10 @@ impl Filter for IniFilter {
                 }
             }
         }
-        enc::encode(&out, encoding)
+        match bilingua_model::enc::utf8_output(&out, encoding, opts) {
+            Some(b) => Ok(b),
+            None => enc::encode(&out, encoding),
+        }
     }
 }
 

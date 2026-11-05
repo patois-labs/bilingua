@@ -336,7 +336,7 @@ impl Filter for DesktopFilter {
         self.extract_inner(bytes, opts)
     }
 
-    fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
+    fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
         bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
         if doc.format != ID {
             return Err(Error::Write(format!("a {} document cannot be merged by the desktop filter", doc.format)));
@@ -345,8 +345,8 @@ impl Filter for DesktopFilter {
             return Err(Error::Write("desktop needs a text skeleton".into()));
         };
         let tr: Vec<Option<String>> = doc.units.iter().map(translated_text).collect();
-        let loc = doc.target_lang.as_deref().map(posix_locale).filter(|l| !l.is_empty());
         let any = tr.iter().any(Option::is_some);
+        let loc = opts.stamp_lang(doc, any).map(posix_locale).filter(|l| !l.is_empty());
         let get = |i: usize| doc.units.get(i).ok_or_else(|| Error::Write(format!("no unit {i}")));
         let raw_of = |u: &Unit| u.codes.get(HIDDEN).and_then(|c| c.standalone.clone()).unwrap_or_default();
         let in_list = |u: &Unit| u.codes.get(HIDDEN).and_then(|c| c.label.as_deref()) == Some("list");
@@ -372,10 +372,10 @@ impl Filter for DesktopFilter {
             }
         }
         let out = match &loc {
-            Some(loc) if any => localize(&orig, doc, &tr, loc)?,
+            Some(loc) => localize(&orig, doc, &tr, loc)?,
             _ => spliced,
         };
-        bilingua_model::enc::encode_text(&out, encoding)
+        bilingua_model::enc::encode_text_with(&out, encoding, opts)
     }
 }
 

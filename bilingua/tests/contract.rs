@@ -451,3 +451,32 @@ fn raw_zip_bytes_are_base64_and_the_old_array_form_still_merges() {
         assert_eq!(merge(&old).unwrap(), expected, "{name}: old skeleton does not merge");
     }
 }
+
+#[test]
+fn utf8_out_writes_utf8_for_every_text_format() {
+    // `OutputEncoding::Utf8` means UTF-8 out literally, also for formats that keep UTF-16 or a code page by default
+    let utf8 = MergeOptions { output_encoding: OutputEncoding::Utf8, ..MergeOptions::default() };
+    for (name, bytes) in corpus() {
+        let doc = open(&name, &bytes, Granularity::Paragraph);
+        // binary plists keep the file in a text skeleton (tag "bplist"): not text, nothing to re-encode
+        if !matches!(&doc.skeleton, Skeleton::Text { encoding, .. } if encoding != "bplist") {
+            continue;
+        }
+        let out = merge_with(&doc, &utf8).unwrap_or_else(|e| panic!("{name}: {e}"));
+        let body = out.strip_prefix(&[0xEF, 0xBB, 0xBF][..]).unwrap_or(&out);
+        assert!(std::str::from_utf8(body).is_ok(), "{name}: UTF-8 out is not UTF-8");
+    }
+}
+
+#[test]
+fn a_blank_target_language_never_stamps() {
+    let always = MergeOptions { stamp_target_always: true, ..MergeOptions::default() };
+    for (name, bytes) in corpus() {
+        let mut doc = open(&name, &bytes, Granularity::Paragraph);
+        doc.target_lang = Some("  ".into());
+        assert!(!always.should_stamp(&doc), "{name}");
+        assert_eq!(always.stamp_lang(&doc, true), None, "{name}");
+        // so "always" changes nothing for it (po used to stamp a blank language)
+        assert_eq!(merge_with(&doc, &always).unwrap(), merge(&doc).unwrap(), "{name}");
+    }
+}

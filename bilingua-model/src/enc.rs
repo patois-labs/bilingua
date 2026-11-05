@@ -523,12 +523,40 @@ pub fn encode_text_with(text: &str, encoding: &str, opts: &MergeOptions) -> Resu
     if opts.output_encoding != OutputEncoding::Utf8 {
         return encode_text(text, encoding);
     }
+    Ok(utf8_text(text, encoding, false))
+}
+
+/// For a format crate with its own codec and its own encoding names: the bytes to write when `opts` asks for UTF-8
+/// out ([`OutputEncoding::Utf8`]), or `None` when the crate writes its own encoding (`Keep`). The text is written as
+/// UTF-8 (a UTF-8 BOM is kept when `encoding` is `utf-8-bom`; a UTF-16 BOM is not), and an XML, HTML or PO charset
+/// declaration that names `encoding` (or UTF-16, for a UTF-16 file) is rewritten to say UTF-8. Newlines stay as
+/// they are in `text`, except that a model envelope's `nl=` is honoured.
+pub fn utf8_output(text: &str, encoding: &str, opts: &MergeOptions) -> Option<Vec<u8>> {
+    (opts.output_encoding == OutputEncoding::Utf8).then(|| utf8_text(text, encoding, true))
+}
+
+fn utf8_text(text: &str, encoding: &str, base_is_label: bool) -> Vec<u8> {
     let env = parse_tag(encoding);
     let text = text.strip_prefix('\u{FEFF}').unwrap_or(text);
     let mut out = if env.nl.is_empty() { text.to_string() } else { with_newlines(text, env.nl) };
-    if let Some(l) = env.label.filter(|l| !l.eq_ignore_ascii_case("utf-8") && !l.eq_ignore_ascii_case("utf8")) {
+    let is_utf8 = |l: &str| l.eq_ignore_ascii_case("utf-8") || l.eq_ignore_ascii_case("utf8") || l.eq_ignore_ascii_case("utf-8-bom");
+    let mut labels: Vec<&str> = env.label.into_iter().collect();
+    if base_is_label {
+        labels.push(env.base);
+        if env.base.to_ascii_lowercase().starts_with("utf-16") {
+            labels.push("utf-16");
+        }
+    }
+    labels.retain(|l| !is_utf8(l));
+    if !labels.is_empty() {
         out = decl_re()
-            .replace_all(&out, |c: &regex::Captures| if c[2].eq_ignore_ascii_case(l) { format!("{}UTF-8", &c[1]) } else { c[0].to_string() })
+            .replace_all(&out, |c: &regex::Captures| {
+                if labels.iter().any(|l| c[2].eq_ignore_ascii_case(l)) {
+                    format!("{}UTF-8", &c[1])
+                } else {
+                    c[0].to_string()
+                }
+            })
             .into_owned();
     }
     let mut v = Vec::with_capacity(out.len() + 3);
@@ -536,7 +564,7 @@ pub fn encode_text_with(text: &str, encoding: &str, opts: &MergeOptions) -> Resu
         v.extend_from_slice(BOM8);
     }
     v.extend_from_slice(out.as_bytes());
-    Ok(v)
+    v
 }
 
 /// Writes the merged `text` in the envelope `encoding` (a skeleton tag from [`decode_text`], or plain `"utf-8"` /

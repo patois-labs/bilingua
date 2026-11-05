@@ -152,10 +152,6 @@ impl Filter for Arb {
         self.extract_with(bytes, opts, &Limits::default())
     }
 
-    fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
-        self.merge_with(doc, &bilingua_model::MergeOptions::default())
-    }
-
     fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
         bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
         let Skeleton::Text { parts, encoding, .. } = &doc.skeleton else {
@@ -174,7 +170,7 @@ impl Filter for Arb {
             }
         }
         let touched = |u: &Unit| u.segments.iter().any(|s| !s.target.is_empty());
-        let stamp = opts.stamp_target_always && doc.target_lang.as_deref().is_some_and(|t| !t.trim().is_empty());
+        let stamp = opts.stamp_lang(doc, false).is_some();
         let out = if stamp || doc.units.iter().any(touched) { splice(&orig, doc)? } else { orig };
         let mut bytes = Vec::with_capacity(out.len() + 3);
         if encoding == "utf-8-bom" {

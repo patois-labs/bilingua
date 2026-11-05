@@ -428,7 +428,8 @@ fn render_unit(doc: &Document, u: &Unit) -> Result<String, Error> {
     }
 }
 
-pub(crate) fn merge(doc: &Document) -> Result<Vec<u8>, Error> {
+pub(crate) fn merge(doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
+    // no language stamp in MDX
     check_parser(doc, &bilingua_model::parser_info!())?;
     let Skeleton::Text { parts, encoding, .. } = &doc.skeleton else {
         return Err(Error::Write("mdx needs a text skeleton".into()));
@@ -443,7 +444,7 @@ pub(crate) fn merge(doc: &Document) -> Result<Vec<u8>, Error> {
             }
         }
     }
-    enc::encode_text(&out, encoding)
+    enc::encode_text_with(&out, encoding, opts)
 }
 
 #[allow(dead_code)]

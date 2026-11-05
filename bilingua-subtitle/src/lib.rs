@@ -38,9 +38,6 @@ impl Filter for Srt {
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
         extract(Kind::Srt, bytes, opts)
     }
-    fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
-        merge(Kind::Srt, doc, &bilingua_model::MergeOptions::default())
-    }
     fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
         merge(Kind::Srt, doc, opts)
     }
@@ -59,9 +56,6 @@ impl Filter for Vtt {
     }
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
         extract(Kind::Vtt, bytes, opts)
-    }
-    fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
-        merge(Kind::Vtt, doc, &bilingua_model::MergeOptions::default())
     }
     fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
         merge(Kind::Vtt, doc, opts)

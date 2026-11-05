@@ -11,7 +11,7 @@ fn code_str(u: &Unit, key: &str) -> String {
     u.codes.get(key).and_then(|c| c.standalone.clone()).unwrap_or_default()
 }
 
-pub fn merge(doc: &Document) -> Result<Vec<u8>, Error> {
+pub fn merge(doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
     check_parser(doc, &parser_info!())?;
     let Skeleton::Zip { entries, .. } = &doc.skeleton else {
         return Err(Error::Write("vsdx needs a zip skeleton".into()));
@@ -27,7 +27,7 @@ pub fn merge(doc: &Document) -> Result<Vec<u8>, Error> {
             real.push(e);
         }
     }
-    let mut r = Renderer::new(doc);
+    let mut r = Renderer::new(doc, opts);
     let mut out: Vec<(EntryMeta, bilingua_zip::Body)> = Vec::with_capacity(real.len());
     for e in real {
         let body = match &e.data {
@@ -35,7 +35,7 @@ pub fn merge(doc: &Document) -> Result<Vec<u8>, Error> {
             ZipData::Parts(parts) => {
                 let s = r.render_parts(parts)?;
                 match meta.as_ref().and_then(|m| m.enc.get(&e.name)) {
-                    Some(tag) => bilingua_zip::Body::Owned(bilingua_model::enc::encode_text(&s, tag)?),
+                    Some(tag) => bilingua_zip::Body::Owned(bilingua_model::enc::encode_text_with(&s, tag, opts)?),
                     None => bilingua_zip::Body::Owned(s.into_bytes()),
                 }
             }
@@ -59,8 +59,10 @@ pub struct Renderer<'a> {
 }
 
 impl<'a> Renderer<'a> {
-    pub fn new(doc: &'a Document) -> Renderer<'a> {
-        let tl = doc.target_lang.as_deref();
+    /// The language is set on the shapes whose text changed, so `stamp_target_always` adds nothing (an unchanged
+    /// shape is never rewritten).
+    pub fn new(doc: &'a Document, opts: &bilingua_model::MergeOptions) -> Renderer<'a> {
+        let tl = opts.stamp_lang(doc, true);
         Renderer { doc, lcid: tl.and_then(lang::lcid), rtl: tl.is_some_and(lang::is_rtl), changed: vec![None; doc.units.len()] }
     }
 

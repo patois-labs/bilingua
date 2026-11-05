@@ -362,8 +362,7 @@ fn fill_tree(tree: &mut Tree, locale: &str) {
 /// Plural forms are filled for the target language when something was translated, or always with
 /// `MergeOptions::stamp_target_always`.
 fn wants_fill<'d>(fmt: Fmt, doc: &'d Document, opts: &MergeOptions) -> Option<&'d str> {
-    let lang = doc.target_lang.as_deref().filter(|l| !l.trim().is_empty())?;
-    (fmt == Fmt::Stringsdict && (opts.stamp_target_always || doc.units.iter().any(|u| u.translate && has_target(u)))).then_some(lang)
+    opts.stamp_lang(doc, doc.units.iter().any(|u| u.translate && has_target(u))).filter(|_| fmt == Fmt::Stringsdict)
 }
 
 fn merge_impl(fmt: Fmt, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
@@ -466,9 +465,6 @@ macro_rules! filter_impl {
             }
             fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
                 extract_impl($fmt, bytes, opts, &opts.limits())
-            }
-            fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
-                merge_impl($fmt, doc, &MergeOptions::default())
             }
             fn merge_with(&self, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
                 merge_impl($fmt, doc, opts)

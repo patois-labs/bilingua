@@ -315,7 +315,9 @@ impl Filter for Xcstrings {
         guard::finish(doc, vec![], &limits)
     }
 
-    fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
+    fn merge_with(&self, doc: &Document, _opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
+        // JSON is UTF-8 in and out (BOM kept); the target language names where translations go, it is not a
+        // stamp, so with nothing translated there is nothing to write
         bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
         let Skeleton::Text { parts, encoding, .. } = &doc.skeleton else {
             return Err(Error::Write("xcstrings needs a text skeleton".into()));

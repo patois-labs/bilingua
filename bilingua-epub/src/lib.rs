@@ -164,7 +164,8 @@ fn stamp_opf(edits: &mut Edits, pkg: &Package, tag: &str, rtl: bool) {
     }
 }
 
-fn merge_epub(doc: &Document) -> Result<Vec<u8>, Error> {
+fn merge_epub(doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
+    // the package's XHTML and OPF are written as UTF-8, so `output_encoding` has nothing to change
     bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
     let Skeleton::Zip { entries: skel, .. } = &doc.skeleton else {
         return Err(Error::Write("epub needs a zip skeleton".into()));
@@ -176,8 +177,10 @@ fn merge_epub(doc: &Document) -> Result<Vec<u8>, Error> {
             _ => None,
         })
         .ok_or_else(|| Error::Write("epub skeleton has no archive".into()))?;
-    // Nothing translated: the original bytes, without opening the package again.
-    if !doc.units.iter().any(translated) {
+    // Nothing translated (and no stamp asked for): the original bytes, without opening the package again.
+    let any = doc.units.iter().any(translated);
+    let stamp = opts.stamp_lang(doc, any);
+    if !any && stamp.is_none() {
         return Ok(original.to_vec());
     }
     let read_with = skel
@@ -193,8 +196,8 @@ fn merge_epub(doc: &Document) -> Result<Vec<u8>, Error> {
     let entries = read_package(original, &limits)?;
     let pkg = Package::open(&entries, &limits)?;
     let by_id: HashMap<&str, &Unit> = doc.units.iter().map(|u| (u.id.as_str(), u)).collect();
-    // The language is declared only when something was translated (an untouched merge returned above).
-    let lang = doc.target_lang.as_deref().and_then(|l| chapter::target(Some(l)));
+    // The language is declared when something was translated, or always with `stamp_target_always`.
+    let lang = stamp.and_then(|l| chapter::target(Some(l)));
     let lang_ref = lang.as_ref().map(|(t, r)| (t.as_str(), *r));
     let mut replaced: HashMap<usize, Vec<u8>> = HashMap::new();
 
@@ -308,8 +311,8 @@ impl Filter for Epub {
         extract_epub(bytes, opts)
     }
 
-    fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
-        merge_epub(doc)
+    fn merge_with(&self, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
+        merge_epub(doc, opts)
     }
 }
 

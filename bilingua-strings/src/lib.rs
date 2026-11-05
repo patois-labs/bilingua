@@ -253,7 +253,7 @@ impl Filter for Strings {
         self.extract_with(bytes, opts, &Limits::default())
     }
 
-    fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
+    fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
         bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
         let Skeleton::Text { parts, encoding, .. } = &doc.skeleton else {
             return Err(Error::Write("strings needs a text skeleton".into()));
@@ -269,7 +269,8 @@ impl Filter for Strings {
                 }
             }
         }
-        Ok(enc.encode(&out))
+        // LocOS keeps a strings file's own encoding (UTF-16 included): that is the default `Keep`
+        Ok(bilingua_model::enc::utf8_output(&out, encoding, opts).unwrap_or_else(|| enc.encode(&out)))
     }
 }
 

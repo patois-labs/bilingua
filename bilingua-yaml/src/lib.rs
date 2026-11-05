@@ -336,10 +336,6 @@ impl Filter for Yaml {
         self.extract_with(bytes, opts, &Limits::default())
     }
 
-    fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
-        self.merge_with(doc, &bilingua_model::MergeOptions::default())
-    }
-
     fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
         bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
         let Skeleton::Text { parts, encoding, .. } = &doc.skeleton else {
@@ -349,7 +345,7 @@ impl Filter for Yaml {
         let mut changed = false;
         let out: String = // The root key and plural forms follow the target language only once something is translated (an untouched
         // document comes back byte for byte, like PO).
-        match doc.target_lang.as_deref().filter(|t| !t.trim().is_empty()).filter(|_| opts.stamp_target_always || doc.units.iter().any(has_target)) {
+        match opts.stamp_lang(doc, doc.units.iter().any(has_target)) {
             None => {
                 let mut out = String::new();
                 for p in parts {

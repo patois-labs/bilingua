@@ -237,10 +237,6 @@ impl Filter for Rc {
         guard::finish(doc, warnings, &limits)
     }
 
-    fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
-        self.merge_with(doc, &MergeOptions::default())
-    }
-
     /// `stamp_target_always` writes the target LANGUAGE even when nothing is translated. `output_encoding` is not
     /// used yet: the file keeps its code page.
     fn merge_with(&self, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
@@ -265,8 +261,8 @@ impl Filter for Rc {
             }
         }
         // the target language: only when something was translated
-        let translated = opts.stamp_target_always || doc.units.iter().any(|u| u.translate && u.segments.iter().any(|s| !s.target.is_empty()));
-        if let (Some(loc), true) = (doc.target_lang.as_deref(), translated) {
+        let translated = doc.units.iter().any(|u| u.translate && u.segments.iter().any(|s| !s.target.is_empty()));
+        if let Some(loc) = opts.stamp_lang(doc, translated) {
             let sc = Script::new(&out, false, false, &Limits::default())?;
             let mut edits = stamp_edits(&sc, &out, loc);
             edits.retain(|(a, b, v)| out[*a..*b] != *v);

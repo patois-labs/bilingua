@@ -146,7 +146,9 @@ impl Filter for PackageFilter {
         })
     }
 
-    fn merge(&self, document: &Document) -> Result<Vec<u8>, bilingua_model::Error> {
+    fn merge_with(&self, document: &Document, _opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, bilingua_model::Error> {
+        // The package files are the project's: they already name its target language, and they are written as
+        // UTF-8 XML, so neither option changes anything here.
         bilingua_model::check_parser(document, &bilingua_model::parser_info!())?;
         let Skeleton::Zip { entries, .. } = &document.skeleton else {
             return Err(bilingua_model::Error::Write(format!("{} needs a zip skeleton", self.id)));

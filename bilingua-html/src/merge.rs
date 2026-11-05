@@ -255,9 +255,9 @@ fn assemble(doc: &Document, preview: bool, opts: &MergeOptions) -> Result<(Strin
             SkelPart::Raw(s) => {
                 if !html_done && is_html_tag(s) {
                     html_done = true;
-                    match (&doc.target_lang, any_translated || opts.stamp_target_always) {
-                        (Some(l), true) => out.push_str(&retarget(s, l, ctx.enc)),
-                        _ => out.push_str(s),
+                    match opts.stamp_lang(doc, any_translated) {
+                        Some(l) => out.push_str(&retarget(s, l, ctx.enc)),
+                        None => out.push_str(s),
                     }
                 } else {
                     out.push_str(s);

@@ -83,10 +83,6 @@ impl Filter for JsonFilter {
         }, std::mem::take(&mut dec.warnings), &opts.limits())
     }
 
-    fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
-        self.merge_with(doc, &bilingua_model::MergeOptions::default())
-    }
-
     fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
         bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
         let Skeleton::Text { parts, encoding, .. } = &doc.skeleton else {

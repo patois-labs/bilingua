@@ -114,7 +114,7 @@ impl Filter for Mdx {
         self.extract_with(bytes, opts, &MdxOptions::default())
     }
 
-    fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
-        render::merge(doc)
+    fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
+        render::merge(doc, opts)
     }
 }

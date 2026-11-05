@@ -373,7 +373,7 @@ impl Filter for Resjson {
         self.extract_with(bytes, opts, &Limits::default())
     }
 
-    fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
+    fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
         bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
         let Skeleton::Text { parts, encoding, .. } = &doc.skeleton else {
             return Err(Error::Write("resjson needs a text skeleton".into()));
@@ -389,6 +389,6 @@ impl Filter for Resjson {
                 }
             }
         }
-        Ok(encode(&out, enc))
+        Ok(bilingua_model::enc::utf8_output(&out, encoding, opts).unwrap_or_else(|| encode(&out, enc)))
     }
 }

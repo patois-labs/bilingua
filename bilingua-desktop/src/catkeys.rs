@@ -258,7 +258,7 @@ impl Filter for CatkeysFilter {
         self.extract_inner(bytes, opts)
     }
 
-    fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
+    fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
         bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
         if doc.format != ID {
             return Err(Error::Write(format!("a {} document cannot be merged by the catkeys filter", doc.format)));
@@ -268,7 +268,7 @@ impl Filter for CatkeysFilter {
         };
         let translated = |u: &Unit| u.translate && u.segments.iter().any(|s| !s.target.is_empty());
         let any = doc.units.iter().any(translated);
-        let lang = doc.target_lang.as_deref().map(language_name).filter(|l| !l.is_empty() && any);
+        let lang = opts.stamp_lang(doc, any).map(language_name).filter(|l| !l.is_empty());
         let mut out = String::new();
         for (idx, p) in parts.iter().enumerate() {
             match p {
@@ -291,7 +291,7 @@ impl Filter for CatkeysFilter {
                 }
             }
         }
-        bilingua_model::enc::encode_text(&out, encoding)
+        bilingua_model::enc::encode_text_with(&out, encoding, opts)
     }
 }
 

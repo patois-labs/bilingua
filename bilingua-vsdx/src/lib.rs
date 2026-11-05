@@ -86,8 +86,8 @@ impl Filter for Vsdx {
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
         extract::extract_doc(bytes, opts, false)
     }
-    fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
-        render::merge(doc)
+    fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
+        render::merge(doc, opts)
     }
 }
 

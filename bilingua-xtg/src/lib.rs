@@ -185,7 +185,7 @@ impl Filter for Xtg {
         guard::finish(doc, warnings, &limits)
     }
 
-    fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
+    fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
         bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
         let Skeleton::Text { parts, encoding, .. } = &doc.skeleton else {
             return Err(Error::Write("xtg needs a text skeleton".into()));
@@ -206,7 +206,7 @@ impl Filter for Xtg {
         let mut items = Vec::new();
         for_lines(&out, |a, b, n| w.line(&out, a, b, n, &mut items).map(|_| ()))
             .map_err(|e| Error::Write(format!("the merged file is not valid XPress Tags: {e}")))?;
-        Ok(codec::encode(&out, enc))
+        Ok(bilingua_model::enc::utf8_output(&out, encoding, opts).unwrap_or_else(|| codec::encode(&out, enc)))
     }
 }
 

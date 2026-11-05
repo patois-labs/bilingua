@@ -372,7 +372,7 @@ impl Filter for Properties {
         self.extract_with(bytes, opts, &Limits::default())
     }
 
-    fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
+    fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
         bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
         let Skeleton::Text { parts, encoding, .. } = &doc.skeleton else {
             return Err(Error::Write("properties needs a text skeleton".into()));
@@ -392,7 +392,7 @@ impl Filter for Properties {
         if bom {
             bytes.extend_from_slice(&[0xEF, 0xBB, 0xBF]);
         }
-        if mode == Mode::Latin1 {
+        if mode == Mode::Latin1 && opts.output_encoding != bilingua_model::OutputEncoding::Utf8 {
             for c in out.chars() {
                 let v = c as u32;
                 if v > 0xFF {

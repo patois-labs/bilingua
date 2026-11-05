@@ -342,10 +342,6 @@ impl Filter for QtTs {
         self.extract_with(bytes, opts, &opts.limits())
     }
 
-    fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
-        self.merge_with(doc, &bilingua_model::MergeOptions::default())
-    }
-
     fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
         bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
         let Skeleton::Text { parts, encoding, .. } = &doc.skeleton else {
@@ -368,8 +364,8 @@ impl Filter for QtTs {
             }
         }
         let crlf = lf > 0 && lf == crlf_n;
-        let target = doc.target_lang.as_deref().map(str::trim).filter(|t| !t.is_empty());
         let touched = doc.units.iter().any(|u| u.translate && u.segments.iter().any(|s| !s.target.is_empty()));
+        let target = opts.stamp_lang(doc, touched).map(str::trim);
         let first_raw = parts.iter().position(|p| matches!(p, SkelPart::Raw(_)));
         let file_lang = first_raw.and_then(|i| match &parts[i] {
             SkelPart::Raw(s) => root_language(s),
@@ -377,10 +373,9 @@ impl Filter for QtTs {
         });
         // LocOS: the target's tag stamps the file and picks the plural forms; an unusable tag leaves both to the file
         // (`stamp_target_always`: even when nothing is translated)
-        let touched = touched || opts.stamp_target_always;
-        let tag = target.filter(|_| touched).and_then(lang::qt_language);
+        let tag = target.and_then(lang::qt_language);
         let plural_lang = tag.clone().or(file_lang.clone()).unwrap_or_default();
-        let fill = touched && target.is_some();
+        let fill = target.is_some();
         // LocOS writes the Qt spelling whenever the target is usable, so `PL-pl` becomes `pl_PL`; an equal value is left
     // as written (same bytes either way)
     let stamp = tag.filter(|t| file_lang.as_deref() != Some(t.as_str()));

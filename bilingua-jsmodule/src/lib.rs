@@ -337,7 +337,7 @@ impl Filter for JsModule {
         self.extract_with(bytes, opts, &Limits::default())
     }
 
-    fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
+    fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
         bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
         let Skeleton::Text {
             parts, encoding, ..
@@ -373,6 +373,9 @@ impl Filter for JsModule {
         }
         // Like LocOS: a file with nothing changed comes back exactly as it was read; a changed file is written as
         // UTF-8 (the byte order mark is kept when the source had one).
+        if let Some(b) = bilingua_model::enc::utf8_output(&out, encoding, opts) {
+            return Ok(b);
+        }
         if !changed {
             return enc::encode(&out, encoding);
         }

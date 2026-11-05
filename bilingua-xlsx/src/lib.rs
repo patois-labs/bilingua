@@ -155,7 +155,8 @@ impl Filter for Xlsx {
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
         extract::extract_doc(bytes, opts, &self.options)
     }
-    fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
+    fn merge_with(&self, doc: &Document, _opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
+        // The parts are UTF-8 XML and a workbook has no language to stamp, so neither option changes anything.
         merge_with_report(doc).map(|(b, _)| b)
     }
 }

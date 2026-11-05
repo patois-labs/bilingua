@@ -269,7 +269,7 @@ fn same_content(a: &[Inline], b: &[Inline]) -> bool {
         })
 }
 
-fn merge_doc(doc: &Document) -> Result<Vec<u8>, Error> {
+fn merge_doc(doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
     check_parser(doc, &parser_info!())?;
     let Skeleton::Zip { entries: skel, .. } = &doc.skeleton else {
         return Err(Error::Write("an OpenDocument skeleton must be a zip skeleton".into()));
@@ -278,7 +278,8 @@ fn merge_doc(doc: &Document) -> Result<Vec<u8>, Error> {
         return Err(Error::Write("the OpenDocument skeleton has lost its archive".into()));
     };
     let work: Vec<&Unit> = doc.units.iter().filter(|u| u.translate && translated(u)).collect();
-    if work.is_empty() {
+    let stamp = opts.stamp_lang(doc, !work.is_empty()).and_then(lang::html_lang);
+    if work.is_empty() && stamp.is_none() {
         return Ok(archive.clone());
     }
     let l = Limits::default();
@@ -311,8 +312,8 @@ fn merge_doc(doc: &Document) -> Result<Vec<u8>, Error> {
         let tok = walk::tokenize(t, node, usize::MAX)?;
         walk::rebuild(t, &mut edits[pi], node, &tok, &out);
     }
-    if let Some(tag) = doc.target_lang.as_deref().and_then(lang::html_lang) {
-        let lg = stamp::Lang::new(&tag);
+    if let Some(tag) = &stamp {
+        let lg = stamp::Lang::new(tag);
         for (i, p) in parts.iter().enumerate() {
             stamp::stamp_part(&p.tree, &mut edits[i], p.name == "styles.xml", p.name == "content.xml", &lg);
         }
@@ -321,16 +322,16 @@ fn merge_doc(doc: &Document) -> Result<Vec<u8>, Error> {
     for (i, p) in parts.iter().enumerate() {
         if edits[i].is_edited() {
             let text = edits[i].emit(&p.tree);
-            replaced.insert(p.name.to_string(), enc::encode_text(&text, &p.enc)?);
+            replaced.insert(p.name.to_string(), enc::encode_text_with(&text, &p.enc, opts)?);
         }
     }
-    if let Some(tag) = doc.target_lang.as_deref().and_then(lang::html_lang) {
+    if let Some(tag) = &stamp {
         if let Some(e) = entries.iter().find(|e| e.name == "meta.xml") {
             let (text, enc_tag, _) = decode_part(&e.data, &l)?;
             let tree = Tree::parse(text, &l)?;
             let mut ed = Edits::new(&tree);
-            if stamp::stamp_meta(&tree, &mut ed, &tag) {
-                replaced.insert("meta.xml".into(), enc::encode_text(&ed.emit(&tree), &enc_tag)?);
+            if stamp::stamp_meta(&tree, &mut ed, tag) {
+                replaced.insert("meta.xml".into(), enc::encode_text_with(&ed.emit(&tree), &enc_tag, opts)?);
             }
         }
     }
@@ -400,8 +401,8 @@ macro_rules! odf_filter {
             fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
                 extract_doc(bytes, opts, $id, &self.options)
             }
-            fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
-                merge_doc(doc)
+            fn merge_with(&self, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
+                merge_doc(doc, opts)
             }
         }
     };
