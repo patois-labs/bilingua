@@ -1,0 +1,15 @@
+[package]
+name = "bilingua-toml"
+description = "Bilingua: TOML filter (string values as units, quoting style kept, byte-for-byte skeleton)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+bilingua-model = { workspace = true }
+
+[dev-dependencies]
+serde_json = { workspace = true }
+toml = { version = "0.8", default-features = false, features = ["parse", "display"] }
+proptest = { version = "1", default-features = false, features = ["std"] }
