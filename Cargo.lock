@@ -33,6 +33,7 @@ dependencies = [
  "bilingua-markdown",
  "bilingua-model",
  "bilingua-php",
+ "bilingua-plist",
  "bilingua-po",
  "bilingua-pptx",
  "bilingua-properties",
@@ -187,6 +188,16 @@ name = "bilingua-php"
 version = "0.1.0"
 dependencies = [
  "bilingua-model",
+ "proptest",
+ "serde_json",
+]
+
+[[package]]
+name = "bilingua-plist"
+version = "0.1.0"
+dependencies = [
+ "bilingua-model",
+ "bilingua-seg",
  "proptest",
  "serde_json",
 ]

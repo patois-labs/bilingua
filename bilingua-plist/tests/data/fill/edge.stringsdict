@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>inbox_summary</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>You have %1$#@messages@ in %2$#@folders@ &amp; more</string>
+		<key>messages</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>d</string>
+			<key>one</key>
+			<string>%d message</string>
+			<key>other</key>
+			<string>%d messages</string>
+		</dict>
+		<key>folders</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>d</string>
+			<key>zero</key>
+			<string>no folders</string>
+			<key>other</key>
+			<string>%d folders</string>
+		</dict>
+	</dict>
+	<key>tap_to_continue</key>
+	<dict>
+		<key>NSStringDeviceSpecificRuleType</key>
+		<dict>
+			<key>iphone</key>
+			<string>Tap to continue</string>
+			<key>mac</key>
+			<string>Click to continue</string>
+			<key>appletv</key>
+			<string>Press &lt;Select&gt; to continue</string>
+		</dict>
+	</dict>
+	<key>width_title</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@title@</string>
+		<key>title</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringVariableWidthRuleType</string>
+			<key>25</key>
+			<string>Short</string>
+			<key>0</key>
+			<string>A much longer title for wide screens</string>
+		</dict>
+	</dict>
+	<key>plain_entry</key>
+	<string>A plain string entry with %@</string>
+	<key>tight</key><dict><key>NSStringLocalizedFormatKey</key><string>%#@n@</string><key>n</key><dict><key>NSStringFormatSpecTypeKey</key><string>NSStringPluralRuleType</string><key>NSStringFormatValueTypeKey</key><string>d</string><key>other</key><string>%d items</string></dict></dict>
+</dict>
+</plist>
