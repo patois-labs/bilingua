@@ -19,8 +19,8 @@
 //! **`Xcloc`** (Localization OS `xcloc_filter.py`). A bundle arrives as a zip under the `.xcloc` extension. Every
 //! `Localized Contents/*.xliff` goes through `bilingua-xliff`; unit ids are prefixed `x1/`, `x2/`, ... by file.
 //! Merge rewrites only the XLIFF files that received a translation (a `state="new"` target that was written
-//! becomes `translated`) and, with a `target_lang`, the XLIFF `target-language` and `targetLocale` in
-//! `contents.json`. Every other member keeps its bytes, name, order, time stamp and compression; with nothing
+//! becomes `translated`) and, with a `target_lang` and at least one translation, the XLIFF `target-language`
+//! and `targetLocale` in `contents.json`. Every other member keeps its bytes, name, order, time stamp and compression; with nothing
 //! to change the original archive comes back byte for byte.
 
 /// Skeleton schema number: bump only when this crate's skeleton layout changes (see `bilingua_model::check_parser`).
