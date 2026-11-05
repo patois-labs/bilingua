@@ -21,7 +21,14 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
 pub mod b64;
+pub mod codepage;
+pub mod enc;
+pub mod garble;
+pub mod guard;
 pub mod locos;
+
+pub use encoding_rs;
+pub use guard::{LimitError, LimitKind, Limits};
 
 /// One piece of segment content, in logical order.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -493,6 +500,27 @@ pub struct Document {
     pub granularity: Granularity,
     pub units: Vec<Unit>,
     pub skeleton: Skeleton,
+    /// Things the reader noticed but did not refuse the file for (text that looks garbled in the code page it was
+    /// read with, ...). Left out of the JSON when empty.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub warnings: Vec<Warning>,
+}
+
+/// A notice about a file that was read anyway: it never stops a merge. `kind` is a stable word for programs
+/// ("text_encoding"); `message` is plain text safe to show the person who uploaded the file.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Warning {
+    pub kind: String,
+    /// Which part of the file the notice is about ("text encoding", an entry name, ...).
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub part: String,
+    pub message: String,
+}
+
+impl Warning {
+    pub fn new(kind: impl Into<String>, part: impl Into<String>, message: impl Into<String>) -> Warning {
+        Warning { kind: kind.into(), part: part.into(), message: message.into() }
+    }
 }
 
 impl Document {
@@ -584,6 +612,16 @@ pub struct ExtractOptions {
     pub granularity: Granularity,
     /// Extract text the format marks as not translatable as locked units (for context), instead of skipping it.
     pub include_locked: bool,
+    /// Safety limits for this call; `None` uses [`Limits::default`] (Localization OS's numbers).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub limits: Option<Limits>,
+}
+
+impl ExtractOptions {
+    /// The limits in force: the caller's, or the defaults.
+    pub fn limits(&self) -> Limits {
+        self.limits.unwrap_or_default()
+    }
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -604,6 +642,13 @@ pub enum Error {
     ParserVersion { found: String, expected: String },
     #[error("cannot write: {0}")]
     Write(String),
+    /// The file is over a safety limit or holds something unsafe (a zip bomb, an XML entity bomb, too many
+    /// units). The message is short, names the limit and is safe to show the person who uploaded the file.
+    #[error("{0}")]
+    Limit(LimitError),
+    /// The bytes cannot be read as text in any encoding Bilingua knows.
+    #[error("{0}")]
+    Encoding(String),
     #[error(transparent)]
     Io(#[from] std::io::Error),
 }
@@ -671,6 +716,7 @@ mod tests {
             granularity: Granularity::Paragraph,
             units: vec![Unit::new("u1", vec![Inline::text("Hi "), Inline::free_tag("1", "{name}"), Inline::tag("2", TagKind::Standalone, "%s")])],
             skeleton: Skeleton::Text { parts: vec![SkelPart::Unit(0)], encoding: "utf-8".into(), parser: None },
+            warnings: vec![],
         };
         // An editor that does not know the flag sends both codes as not free, and claims the %s is free.
         let t = vec![
@@ -693,6 +739,7 @@ mod tests {
             granularity: Granularity::Paragraph,
             units: vec![Unit::new("u1", vec![Inline::tag("1", TagKind::Open, "<b>"), Inline::text("x"), Inline::tag("1", TagKind::Close, "</b>")])],
             skeleton: Skeleton::Text { parts: vec![SkelPart::Unit(0)], encoding: "utf-8".into(), parser: None },
+            warnings: vec![],
         };
         assert!(d.set_target("u1", vec![Inline::text("y")]).is_ok());
         assert!(matches!(d.set_target("u1", vec![Inline::tag("2", TagKind::Open, "<i>")]), Err(Error::InventedTag(_))));

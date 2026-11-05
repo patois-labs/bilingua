@@ -93,11 +93,9 @@ fn lines(s: &str) -> Vec<Line<'_>> {
 }
 
 fn extract(k: Kind, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
-    let (body, bom) = match bytes.strip_prefix(&[0xEF, 0xBB, 0xBF]) {
-        Some(r) => (r, true),
-        None => (bytes, false),
-    };
-    let text = std::str::from_utf8(body).map_err(|e| perr(k, format!("not valid UTF-8: {e}")))?;
+    let mut dec = bilingua_model::enc::decode_text(bytes, &bilingua_model::enc::DecodeOptions::new(opts))?;
+    let text_owned = std::mem::take(&mut dec.text);
+    let text = text_owned.as_str();
     let ls = lines(text);
     if k == Kind::Vtt && !ls.first().is_some_and(|l| l.text.starts_with("WEBVTT")) {
         return Err(perr(k, "a WebVTT file must start with WEBVTT"));
@@ -182,15 +180,16 @@ fn extract(k: Kind, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Err
     if cursor < text.len() {
         parts.push(SkelPart::Raw(text[cursor..].to_string()));
     }
-    Ok(Document {
+    bilingua_model::guard::finish(Document {
         format: fmt_name(k).into(),
         name: None,
         source_lang: opts.source_lang.clone(),
         target_lang: opts.target_lang.clone(),
         granularity: opts.granularity,
         units,
-        skeleton: Skeleton::text(parts, if bom { "utf-8-bom" } else { "utf-8" }, bilingua_model::parser_info!()),
-    })
+        skeleton: Skeleton::text(parts, dec.encoding.as_str(), bilingua_model::parser_info!()),
+        warnings: vec![],
+    }, std::mem::take(&mut dec.warnings), &opts.limits())
 }
 
 // ---------- cue text ----------
@@ -440,12 +439,7 @@ fn merge(k: Kind, doc: &Document) -> Result<Vec<u8>, Error> {
             }
         }
     }
-    let mut bytes = Vec::new();
-    if encoding == "utf-8-bom" {
-        bytes.extend_from_slice(&[0xEF, 0xBB, 0xBF]);
-    }
-    bytes.extend_from_slice(out.as_bytes());
-    Ok(bytes)
+    bilingua_model::enc::encode_text(&out, encoding)
 }
 
 fn render(k: Kind, u: &Unit, eol: &str) -> String {

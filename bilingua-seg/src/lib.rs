@@ -9,6 +9,7 @@
 //!     granularity: Granularity::Sentence,
 //!     units: vec![Unit::new("p1", vec![Inline::text("Hello there. How are you?")])],
 //!     skeleton: Skeleton::Text { parts: vec![SkelPart::Unit(0)], encoding: "utf-8".into(), parser: None },
+//!     warnings: vec![],
 //! };
 //! segment(&mut doc, "en", Granularity::Sentence, Rules::bundled());
 //! assert_eq!(doc.units[0].segments.len(), 2);
@@ -338,6 +339,7 @@ mod tests {
             granularity: Granularity::Sentence,
             units: units.into_iter().enumerate().map(|(i, s)| Unit::new(format!("u{}", i + 1), s)).collect(),
             skeleton: Skeleton::Text { parts: (0..n).map(SkelPart::Unit).collect(), encoding: "utf-8".into(), parser: None },
+            warnings: vec![],
         }
     }
 

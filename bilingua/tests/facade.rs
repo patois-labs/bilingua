@@ -113,8 +113,9 @@ fn resegment_changes_granularity_and_join_split_are_exported() {
 #[test]
 fn bad_files_are_errors_not_panics() {
     assert!(extract("a.json", b"{oops", &ExtractOptions::default()).is_err());
-    assert!(extract("a.txt", &[0xFF, 0xFE, 0x41, 0x00], &ExtractOptions::default()).is_err());
-    assert!(extract("a.md", &[0x23, 0x20, 0xFF], &ExtractOptions::default()).is_err());
+    // UTF-16 with a BOM is text now; a binary file is still refused
+    assert!(extract("a.txt", &[0x00, 0xFF, 0x02, 0x41], &ExtractOptions::default()).is_err());
+    assert!(extract("a.md", &[0x23, 0x20, 0xFF, 0], &ExtractOptions::default()).is_err());
 }
 
 #[test]

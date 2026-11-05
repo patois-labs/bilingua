@@ -4,7 +4,7 @@
 use bilingua_model::{plain_text, ExtractOptions, Filter, Inline, OriginKind, SegState, TagKind};
 use bilingua_xliff::{filters, Doc, Format};
 
-const OPTS: ExtractOptions = ExtractOptions { source_lang: None, target_lang: None, granularity: bilingua_model::Granularity::Paragraph, include_locked: true };
+const OPTS: ExtractOptions = ExtractOptions { source_lang: None, target_lang: None, granularity: bilingua_model::Granularity::Paragraph, include_locked: true, limits: None };
 
 fn filter(id: &str) -> Box<dyn Filter> {
     filters().into_iter().find(|f| f.id() == id).unwrap()

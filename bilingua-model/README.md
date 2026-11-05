@@ -10,7 +10,7 @@ The document model every Bilingua parser fills and every writer reads back.
   editor shows bilingual files and source files the same way.
 - `ExtractOptions`, `Granularity` (sentence, paragraph, document) and `Error`.
 
-No parsing happens here; this crate is types and small helpers only.
+No format parsing happens here; this crate is types, the safety guards and the text-encoding rules (below).
 
 ## Bilingual units, tag kinds, parser stamp (D27)
 
@@ -25,3 +25,54 @@ No parsing happens here; this crate is types and small helpers only.
 - Raw zip bytes in a skeleton are a base64 string in JSON; the old array form still reads.
 
 Not done: the LocOS adapter itself, and `free` for XLIFF codes read from files (that belongs to the XLIFF crate).
+
+## Limits, guards and encodings (D27 step 5)
+
+Safety belongs to the engine, not to each app. The rules and the default numbers are Localization OS's.
+
+**Limits** (`guard::Limits`, also `bilingua_model::Limits`): one `Copy` struct, `Default` = LocOS. A caller sets it per
+call in `ExtractOptions { limits: Some(Limits { max_units: 10_000, ..Limits::default() }), .. }` (`None` = defaults;
+`ExtractOptions::limits()` gives the one in force; the struct is serde with `#[serde(default)]`, so a JSON or Python
+dict may list only the fields it changes).
+
+| Field | Default | LocOS name |
+|---|---|---|
+| `max_input_bytes` | 100 MB | `MAX_UPLOAD_BYTES` |
+| `max_units` (units and segments) | 50 000 | `MAX_DOCUMENT_SEGMENTS` |
+| `max_unit_chars` | 100 000 | `MAX_SEGMENT_CHARS` |
+| `max_lines` (text files) | 1 000 000 | 20 x segments |
+| `max_xml_depth` / `max_xml_elements` | 256 / 4 000 000 | libxml2 depth |
+| `max_zip_entries` / `max_zip_bytes` / `max_zip_ratio` | 10 000 / 256 MB / 200 | `ZIP_MAX_*` |
+| `zip_ratio_floor_bytes` | 1 MB | `ZIP_RATIO_MIN_BYTES` |
+| `max_paragraphs` | 50 000 | `DOCX_MAX_PARAGRAPHS` |
+| `xlsx_max_cells` / `_rows` / `_cell_chars` / `_total_text_chars` | 500 000 / 100 000 / 32 767 / 8 MB | `XLSX_MAX_*` |
+
+A refusal is `Error::Limit(LimitError { kind: LimitKind, msg })`: `kind` is a stable value to branch on
+(`input_bytes`, `lines`, `units`, `unit_chars`, `xml_depth`, `xml_elements`, `xml_entities`, `paragraphs`,
+`spreadsheet`, `zip_entries`, `zip_bytes`, `zip_ratio`, `zip_malformed`), `msg` is short and safe to show the person
+who uploaded the file. Unreadable text is `Error::Encoding(msg)`.
+
+**What a new format crate calls** (all in `guard`):
+1. `check_input(bytes, &limits)` first.
+2. XML: `check_xml(bytes, &limits)` on every XML part before parsing (refuses `<!ENTITY` declarations: entity bombs
+   and external entities; bounds depth and element count; looks inside UTF-16). HTML and other markup:
+   `check_markup(text, &limits)`. Zip packages: `bilingua_zip::read_zip` applies the zip limits and proves every
+   entry's real size and checksum against the directory; `bilingua_zip::check_xml_parts(&entries, &limits)` runs the
+   XML guard over every XML part.
+3. Text files: `enc::decode_text(bytes, &DecodeOptions::new(opts))` instead of `from_utf8`, and
+   `enc::encode_text(&merged, &encoding_tag)` on merge (see below). It also applies `max_lines`.
+4. While walking: `check_unit_count(n, &limits)`; at the end return `guard::finish(doc, warnings, &limits)` (checks
+   unit, segment and unit-length limits and puts the warnings on the document).
+
+**Encodings** (`enc`): `decode_text` tries UTF-8 (a BOM is kept), a UTF-16 BOM, then (formats that declare a charset:
+`.declared()`) the declared legacy charset, a binary-file check, then the Windows code page of
+`ExtractOptions::source_lang` (`codepage`: Windows-125x, 874, Shift_JIS, GBK/GB18030, Big5, EUC-KR as LocOS), with
+Windows-1252 the default. The result's `encoding` string goes into `Skeleton::Text::encoding`; `encode_text` writes it
+back in the same encoding, BOM and line endings (when the file used one style), and in UTF-8 when a translation does
+not fit the code page. Untouched merges are byte-identical. When the decoded letters look wrong (`garble`: scripts
+mixed inside words, accented-letter soup, UTF-8 read as a single-byte page) the file is still read and the
+`Document` gets a `Warning { kind: "text_encoding", part, message }` in `Document::warnings` (left out of the JSON when
+empty). `enc::warn_if_garbled` is there for a reader with its own legacy decode.
+
+Not ported: LocOS's `html_guard` (a WHATWG tokenizer that re-parses the built HTML to catch attribute injection);
+Bilingua's HTML writer escapes quotes, `&`, `<` and `>` in attributes as before.

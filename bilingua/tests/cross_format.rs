@@ -12,6 +12,7 @@ fn opts(mode: Granularity) -> ExtractOptions {
         target_lang: Some("es-ES".into()),
         granularity: mode,
         include_locked: false,
+        limits: None,
     }
 }
 

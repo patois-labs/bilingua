@@ -75,6 +75,8 @@ pub fn extract(name: &str, bytes: &[u8], opts: &ExtractOptions) -> Result<Docume
     }
     let lang = opts.source_lang.as_deref().unwrap_or("en");
     bilingua_seg::segment(&mut doc, lang, opts.granularity, Rules::bundled());
+    // sentences count against the segment cap too (LocOS checks again after splitting)
+    bilingua_model::guard::check_document(&doc, &opts.limits())?;
     Ok(doc)
 }
 

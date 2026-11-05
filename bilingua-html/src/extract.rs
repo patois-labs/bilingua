@@ -81,7 +81,8 @@ struct Ex<'a> {
 }
 
 pub fn extract_html(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
-    let (text, enc) = decode_input(bytes)?;
+    let (text, enc, warnings) = decode_input(bytes, opts)?;
+    bilingua_model::guard::check_markup(&text, &opts.limits())?;
     let toks = tokenize(&text);
     let mut ex = Ex {
         s: &text,
@@ -97,7 +98,7 @@ pub fn extract_html(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Err
     ex.walk();
     let (units, skeleton_parts) = ex.finish();
     let source_lang = opts.source_lang.clone().or(ex.html_lang.clone());
-    Ok(Document {
+    bilingua_model::guard::finish(Document {
         format: "html".into(),
         name: None,
         source_lang,
@@ -105,7 +106,8 @@ pub fn extract_html(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Err
         granularity: opts.granularity,
         units,
         skeleton: Skeleton::text(skeleton_parts, enc.name(), bilingua_model::parser_info!()),
-    })
+        warnings: vec![],
+    }, warnings, &opts.limits())
 }
 
 fn is_ws_str(s: &str) -> bool {
