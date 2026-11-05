@@ -71,7 +71,8 @@ fn entity_at(s: &str) -> Option<(usize, char)> {
     if b.first() != Some(&b'&') {
         return None;
     }
-    let semi = s[..s.len().min(34)].find(';')?;
+    // Search the bytes: byte 34 may fall inside a multi-byte character, and ';' is ASCII so `semi` is a char boundary.
+    let semi = b[..b.len().min(34)].iter().position(|&c| c == b';')?;
     let body = &s[1..semi];
     if let Some(num) = body.strip_prefix('#') {
         let cp = if let Some(h) = num.strip_prefix('x').or_else(|| num.strip_prefix('X')) {
@@ -96,7 +97,7 @@ fn unknown_entity_at(s: &str) -> bool {
     if b.first() != Some(&b'&') || b.len() < 3 {
         return false;
     }
-    let Some(semi) = s[..s.len().min(34)].find(';') else {
+    let Some(semi) = b[..b.len().min(34)].iter().position(|&c| c == b';') else {
         return false;
     };
     let body = &s[1..semi];
@@ -358,6 +359,19 @@ fn perr(msg: String) -> Error {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn multibyte_text_after_an_ampersand_never_panics() {
+        // Byte 34 after the '&' lands inside a multi-byte character; this used to panic on a str slice.
+        for pad in 0..8 {
+            let s = format!("&amp;{}日本語のテキストが続きます。日本語のテキスト", "a".repeat(pad));
+            let out = decode_entities(&s);
+            assert!(out.starts_with('&'));
+            let s2 = format!("&{}日本語のテキストが続きます。日本語のテキスト;", "b".repeat(pad));
+            let _ = decode_entities(&s2);
+            let _ = esc_text(&s2, Enc::Utf8);
+        }
+    }
 
     #[test]
     fn latin1_table_is_complete() {
