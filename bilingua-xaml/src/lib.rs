@@ -23,22 +23,7 @@ impl Xaml {
     }
 }
 
-/// Size limits (the shape of `bilingua_model::Limits` once B6 is in the tree). Refusals are
-/// `Error::Unsupported("input limit: ...")`.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Limits {
-    pub max_input_bytes: u64,
-    pub max_units: usize,
-    pub max_unit_chars: usize,
-    pub max_xml_depth: usize,
-    pub max_xml_elements: usize,
-}
-
-impl Default for Limits {
-    fn default() -> Limits {
-        Limits { max_input_bytes: 100 << 20, max_units: 50_000, max_unit_chars: 100_000, max_xml_depth: 256, max_xml_elements: 4_000_000 }
-    }
-}
+pub use bilingua_model::Limits;
 
 // Hidden codes (ids start with `~`, never a placeholder id).
 const RAW: &str = "~raw"; // the source span as written
@@ -111,11 +96,15 @@ fn escape_attr(s: &str, quote: u8) -> String {
 impl Xaml {
     /// Like [`Filter::extract`] with explicit limits.
     pub fn extract_with(&self, bytes: &[u8], opts: &ExtractOptions, limits: &Limits) -> Result<Document, Error> {
-        if bytes.len() as u64 > limits.max_input_bytes {
-            return Err(scan::limit_err(format!("the file is larger than {} bytes", limits.max_input_bytes)));
-        }
-        let dec = textenc::decode(bytes)?;
+        guard::check_input(bytes, limits)?;
+        guard::check_xml(bytes, limits)?;
+        let dec = enc::decode_text(bytes, &enc::DecodeOptions { declared: true, source_lang: opts.source_lang.as_deref(), limits: *limits })?;
         let text = &dec.text;
+        if !matches!(enc::base(&dec.encoding), "utf-8" | "utf-8-bom" | "utf-16le" | "utf-16be") && textenc::encode(&dec.text, &dec.encoding)? != bytes {
+            // double-mapped bytes of the CJK code pages read to the same character and write back as the other
+            // spelling; an untouched merge must be the original bytes, so the file is refused, never altered
+            return Err(Error::Encoding("This XAML file uses byte sequences of its legacy encoding that cannot be written back unchanged. Re-save the file as UTF-8.".into()));
+        }
         let items = scan::walk(text, self.view_attributes, limits)?;
         let mut units: Vec<Unit> = Vec::new();
         let (mut n_tr, mut n_lock) = (0usize, 0usize);
@@ -124,11 +113,9 @@ impl Xaml {
             if !it.translatable && !opts.include_locked {
                 continue;
             }
-            if units.len() >= limits.max_units {
-                return Err(scan::limit_err(format!("the file has more than {} units", limits.max_units)));
-            }
-            if it.value.len() > limits.max_unit_chars && it.value.chars().count() > limits.max_unit_chars {
-                return Err(scan::limit_err(format!("a unit is longer than {} characters", limits.max_unit_chars)));
+            guard::check_unit_count(units.len() + 1, limits)?;
+            if it.value.len() > limits.max_unit_chars {
+                guard::check_unit_chars(it.value.chars().count(), limits)?;
             }
             let mut unit = if it.translatable {
                 n_tr += 1;
@@ -173,15 +160,17 @@ impl Xaml {
         if pos < text.len() {
             parts.push(SkelPart::Raw(text[pos..].to_string()));
         }
-        Ok(Document {
+        let doc = Document {
             format: "xaml".into(),
             name: None,
             source_lang: opts.source_lang.clone(),
             target_lang: opts.target_lang.clone(),
             granularity: opts.granularity,
             units,
-            skeleton: Skeleton::text(parts, dec.tag, bilingua_model::parser_info!()),
-        })
+            skeleton: Skeleton::text(parts, dec.encoding, bilingua_model::parser_info!()),
+            warnings: Vec::new(),
+        };
+        guard::finish(doc, dec.warnings, limits)
     }
 }
 
@@ -219,7 +208,7 @@ impl Filter for Xaml {
     }
 
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
-        self.extract_with(bytes, opts, &Limits::default())
+        self.extract_with(bytes, opts, &opts.limits())
     }
 
     fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {

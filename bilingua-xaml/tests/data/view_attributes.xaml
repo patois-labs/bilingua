@@ -1,7 +1,11 @@
 <Window x:Class="App.Main" Title="Lumen Bakery orders"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:sys="clr-namespace:System;assembly=System.Runtime"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" mc:Ignorable="d">
+  <Window.Resources>
+    <sys:String x:Key="Thanks">Thank you</sys:String>
+  </Window.Resources>
   <!-- main layout -->
   <Grid>
     <Button Content="Place order" ToolTip="Sends the order &amp; closes" x:Name="Go"/>

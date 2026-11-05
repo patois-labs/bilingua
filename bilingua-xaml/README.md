@@ -32,19 +32,22 @@ let out = Xaml::default().merge(&doc)?;
   attribute order and quoting, indentation, line ends, the BOM and the final newline come back byte for byte.
   Text is escaped (`& < >`), attribute values per their quote style plus `&#9; &#10; &#13;`; XML-illegal characters
   are dropped; a newline in a translation follows the source's CRLF convention.
-- Encodings: UTF-8 (BOM kept), UTF-16 with a BOM, or a legacy charset the XML declaration names (Windows-125x,
-  ISO-8859-x, KOI8, Shift_JIS, EUC-JP, GBK, GB18030, Big5, EUC-KR). The file is written in the same encoding;
-  characters it cannot hold become `&#NNNN;`. Undeclared non-UTF-8 bytes are refused, never guessed.
-- Safety: a DOCTYPE/DTD of any kind is refused (no entity expansion, no external entities); only the five predefined
-  entities and valid character references are read; a prefix must be declared; XML characters only. Limits
-  (`Limits`, `extract_with`): input 100 MB, 50,000 units, 100,000 characters per unit, depth 256, 4,000,000
-  elements, and 40 `<` per allowed unit. They return `Error::Unsupported("input limit: ...")`.
+- Encodings (`bilingua_model::enc`, declared charsets honoured): UTF-8 (BOM kept), UTF-16 with a BOM, or a legacy
+  charset the XML declaration names (Windows-125x, ISO-8859-x, KOI8, Shift_JIS, EUC-JP, GBK, GB18030, Big5,
+  EUC-KR). The file is written in the same encoding with its declaration; characters the legacy charset cannot hold
+  become `&#NNNN;` (LocOS behaviour; the engine default would switch the file to UTF-8). A legacy file whose bytes
+  would not come back unchanged (double-mapped Shift_JIS bytes) is refused, never altered.
+- Safety (`bilingua_model::guard`): input size, `<!ENTITY` declarations (entity bombs, external entities), depth 256
+  and element count come from `check_input` / `check_xml`; units and unit length from `check_unit_count` and
+  `finish`. On top of that any DOCTYPE is refused, only the five predefined entities and valid character references
+  are read, a prefix must be declared, and only XML characters are allowed. Limits are `ExtractOptions::limits`
+  (`extract_with` takes explicit ones); refusals are `Error::Limit`.
 
 ## Differences from LocOS
 
 - An empty result (nothing to translate) is an empty document, not an error.
 - `encoding="us-ascii"` is read as UTF-8 (LocOS refuses it).
+- A file with no declaration and bytes that are not UTF-8 is read as Windows-1252 (or the source language's code
+  page) with a garble warning, as every Bilingua text format does; LocOS refuses it.
 - Placeholders are tags (see above).
 - Python's `isalnum`/`isalpha` and Rust's differ for combining marks.
-- Legacy charsets use `encoding_rs`, so `iso-8859-1` is Windows-1252 and a file whose bytes would not come back
-  unchanged (rare double-mapped CJK bytes) is refused.

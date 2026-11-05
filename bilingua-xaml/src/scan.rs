@@ -6,7 +6,7 @@
 //! switching the option never moves a resource string's unit index.
 
 use crate::Limits;
-use bilingua_model::Error;
+use bilingua_model::{Error, LimitError, LimitKind};
 use quick_xml::events::Event;
 use quick_xml::Reader;
 use std::collections::HashSet;
@@ -19,8 +19,8 @@ pub fn perr(msg: impl Into<String>) -> Error {
     Error::Parse { format: "xaml".into(), msg: msg.into() }
 }
 
-pub fn limit_err(msg: String) -> Error {
-    Error::Unsupported(format!("input limit: {msg}"))
+fn limit_err(kind: LimitKind, msg: String) -> Error {
+    LimitError::new(kind, msg).into()
 }
 
 /// One span of text the writer may replace.
@@ -280,7 +280,7 @@ fn trim_xml(s: &str) -> &str {
 
 pub fn walk(text: &str, with_attrs: bool, l: &Limits) -> Result<Vec<Item>, Error> {
     if text.bytes().filter(|b| *b == b'<').count() > l.max_units.saturating_mul(40) {
-        return Err(limit_err(format!("the file has far more elements than {} units allow", l.max_units)));
+        return Err(limit_err(LimitKind::XmlElements, format!("This file has far more elements than {} units allow. Split it into smaller files.", l.max_units)));
     }
     if let Some(c) = text.chars().find(|c| !xml_char(*c)) {
         return Err(perr(format!("not well-formed XML: character U+{:04X} is not allowed", c as u32)));
@@ -295,7 +295,7 @@ pub fn walk(text: &str, with_attrs: bool, l: &Limits) -> Result<Vec<Item>, Error
     let mut stack: Vec<Frame> = Vec::new();
     let mut resources: Vec<Item> = Vec::new();
     let mut attrs_out: Vec<Item> = Vec::new();
-    let (mut root_seen, mut elements) = (false, 0usize);
+    let mut root_seen = false;
     let mut note: Option<String> = None;
     loop {
         let before = reader.buffer_position() as usize;
@@ -358,10 +358,6 @@ pub fn walk(text: &str, with_attrs: bool, l: &Limits) -> Result<Vec<Item>, Error
                         return Err(perr("not well-formed XML: more than one root element"));
                     }
                     root_seen = true;
-                }
-                elements += 1;
-                if elements > l.max_xml_elements {
-                    return Err(limit_err(format!("the file has more than {} XML elements", l.max_xml_elements)));
                 }
                 let (qname, raw_attrs) = lex_tag(text, before, after)?;
                 let ns_len = ns.len();
@@ -442,9 +438,6 @@ pub fn walk(text: &str, with_attrs: bool, l: &Limits) -> Result<Vec<Item>, Error
                     ns.truncate(ns_len);
                 } else {
                     stack.push(Frame { ns_len, is_string, content_start: after, mixed: false, key, element: local.to_string(), note: note.take() });
-                    if stack.len() > l.max_xml_depth {
-                        return Err(limit_err(format!("the file nests XML elements more than {} deep", l.max_xml_depth)));
-                    }
                 }
                 note = None;
             }
@@ -478,7 +471,7 @@ pub fn walk(text: &str, with_attrs: bool, l: &Limits) -> Result<Vec<Item>, Error
             }
         }
         if resources.len() + attrs_out.len() > l.max_units.saturating_mul(4).max(1000) {
-            return Err(limit_err(format!("the file has more than {} entries", l.max_units)));
+            return Err(limit_err(LimitKind::Units, format!("This file has more than {} segments. Split it into smaller files.", l.max_units)));
         }
     }
     if !root_seen {

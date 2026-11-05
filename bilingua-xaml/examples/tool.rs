@@ -15,7 +15,7 @@ fn shown(v: &[Inline]) -> String {
 }
 
 fn big() -> Limits {
-    Limits { max_units: 50_000_000, max_unit_chars: 10_000_000, max_input_bytes: 2 << 30, max_xml_depth: 256, max_xml_elements: 100_000_000 }
+    Limits { max_units: 50_000_000, max_unit_chars: 10_000_000, max_input_bytes: 2 << 30, max_lines: 100_000_000, max_xml_elements: 100_000_000, ..Limits::default() }
 }
 
 fn main() {

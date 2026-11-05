@@ -1,8 +1,7 @@
 # Wiring for the lead
 
 - Workspace: `"bilingua-xaml"` in `members`, `bilingua-xaml = { path = "bilingua-xaml" }` in
-  `[workspace.dependencies]` (done in the wire commit). The crate has its own `encoding_rs = "0.8"`; when B6 is in
-  the tree it can use `bilingua_model::enc` / `guard` and drop that line and its local `Limits`.
+  `[workspace.dependencies]` (done in the wire commit). The crate uses `bilingua_model::{enc, guard}` (B6).
 - Facade filter list: `Box::new(bilingua_xaml::Xaml::default())`, before `Html`/`TextFilter`. Format id `xaml`,
   extension `xaml`.
 - `sniff`: XML whose first 4 KB names a winfx, dotnet (MAUI), Avalonia or xaml namespace, or `<ResourceDictionary`.

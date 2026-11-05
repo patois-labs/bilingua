@@ -149,9 +149,13 @@ fn encodings_and_bom() {
     assert!(out.windows(15).any(|w| w == b">Caf\xe9 &#10003;<"), "{}", String::from_utf8_lossy(&out));
     // UTF-8 files carry the plain tag
     assert!(matches!(&extract(MAUI).skeleton, Skeleton::Text { encoding, .. } if encoding == "utf-8"));
-    // undeclared non-UTF-8 is refused, never mojibake
+    // Undeclared non-UTF-8: LocOS refuses it; Bilingua follows its engine-wide rule (decision 22) and reads it as
+    // Windows-1252 (the source language's code page when it has one), writing it back in the same encoding.
     let bad = encoding_rs::WINDOWS_1252.encode(&s(MAUI).replace("Welcome", "Café")).0.into_owned();
-    refused(&OFF, &bad, "UTF-8");
+    assert_eq!(units(&bad)[0], "Café");
+    assert_identity(&bad);
+    // bytes no code page can read are still refused
+    refused(&OFF, b"<r>\x81\x8d\x8f</r>", "UTF-8");
 }
 
 #[test]
@@ -159,8 +163,8 @@ fn hostile_inputs() {
     let xxe = b"<?xml version=\"1.0\"?><!DOCTYPE r [<!ENTITY x SYSTEM \"file:///c:/windows/win.ini\">]>\
 <ResourceDictionary xmlns:x=\"http://schemas.microsoft.com/winfx/2006/xaml\">\
 <x:String x:Key=\"a\">&x;</x:String></ResourceDictionary>";
-    refused(&OFF, xxe, "DOCTYPE");
-    refused(&OFF, b"<!DOCTYPE l [<!ENTITY a \"aaaa\"><!ENTITY b \"&a;&a;&a;\">]><r>&b;</r>", "DOCTYPE");
+    refused(&OFF, xxe, "DTD");
+    refused(&OFF, b"<!DOCTYPE l [<!ENTITY a \"aaaa\"><!ENTITY b \"&a;&a;&a;\">]><r>&b;</r>", "DTD");
     refused(&OFF, b"<ResourceDictionary><x:String>", "well-formed");
     refused(&OFF, b"<a>&undefined;</a>", "well-formed");
     assert!(OFF.extract(b"\x00\x01binary", &opts()).is_err());
@@ -170,15 +174,15 @@ fn hostile_inputs() {
         (0..5).map(|i| format!("<x:String x:Key=\"k{i}\">Value {i}</x:String>")).collect::<String>()
     );
     let e = OFF.extract_with(many.as_bytes(), &opts(), &small).unwrap_err();
-    assert!(matches!(e, Error::Unsupported(m) if m.contains("limit")));
+    assert!(matches!(e, Error::Limit(_)));
     let flood = format!("<a>{}</a>", "<b/>".repeat(200));
-    assert!(matches!(OFF.extract_with(flood.as_bytes(), &opts(), &small), Err(Error::Unsupported(_))));
+    assert!(matches!(OFF.extract_with(flood.as_bytes(), &opts(), &small), Err(Error::Limit(_))));
     let chars = Limits { max_unit_chars: 1000, ..Limits::default() };
     let big = format!(
         "<ResourceDictionary xmlns:x=\"http://schemas.microsoft.com/winfx/2009/xaml\"><x:String x:Key=\"k\">{}</x:String></ResourceDictionary>",
         "word ".repeat(400)
     );
-    assert!(matches!(OFF.extract_with(big.as_bytes(), &opts(), &chars), Err(Error::Unsupported(m)) if m.contains("limit")));
+    assert!(matches!(OFF.extract_with(big.as_bytes(), &opts(), &chars), Err(Error::Limit(_))));
 }
 
 #[test]

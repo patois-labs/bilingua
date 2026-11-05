@@ -14,7 +14,7 @@ fn tag_count(d: &Document) -> usize {
 
 fn encoding(d: &Document) -> String {
     match &d.skeleton {
-        Skeleton::Text { encoding, .. } => encoding.clone(),
+        Skeleton::Text { encoding, .. } => enc::base(encoding).to_string(),
         _ => String::new(),
     }
 }
@@ -67,7 +67,7 @@ fn eleven_languages_and_their_encodings() {
         ("lang_ko_utf16be", "lang_ko", "utf-16be"),
         ("lang_ko_euckr", "lang_ko", "euc-kr"),
         ("lang_fr_cp1252", "lang_fr", "windows-1252"),
-        ("lang_de_latin1", "lang_de", "windows-1252"),
+        ("lang_de_latin1", "lang_de", "iso-8859-1"),
         ("lang_ru_cp1251", "lang_ru", "windows-1251"),
         ("lang_ru_koi8r", "lang_ru", "koi8-r"),
         ("lang_tr_cp1254", "lang_tr", "windows-1254"),
@@ -94,7 +94,7 @@ fn legacy_files_translated_into_another_script_stay_readable() {
     let out = translate(data, &[(0, "ようこそ"), (1, "{0} と {1}")]);
     assert_eq!(units(&out)[0], "ようこそ");
     assert_eq!(units(&out)[1], "{0} と {1}");
-    assert_eq!(encoding(&extract(&out)), "windows-1252");
+    assert_eq!(encoding(&extract(&out)), "iso-8859-1");
     // Arabic into a Shift_JIS file
     let data = FILES.iter().find(|(n, _)| *n == "lang_ja_shiftjis").unwrap().1;
     let out = translate(data, &[(2, "حفظ وإغلاق")]);
@@ -127,12 +127,12 @@ fn view_attributes_carry_context() {
     let data = FILES.iter().find(|(n, _)| *n == "view_attributes").unwrap().1;
     let d = extract_with(&ON, data);
     let t: Vec<String> = d.units.iter().map(|u| show(u, &u.source())).collect();
-    assert_eq!(t, ["Lumen Bakery orders", "Place order", "Sends the order & closes", "{0} loaves waiting", "_File", "Fresh bread"]);
-    assert_eq!(d.units[1].context.kind.as_deref(), Some("content"));
-    assert_eq!(d.units[1].context.key.as_deref(), Some("Go"));
+    assert_eq!(t, ["Thank you", "Lumen Bakery orders", "Place order", "Sends the order & closes", "{0} loaves waiting", "_File", "Fresh bread"]);
+    assert_eq!(d.units[2].context.kind.as_deref(), Some("content"));
+    assert_eq!(d.units[2].context.key.as_deref(), Some("Go"));
     assert_identity_with(&ON, data);
     let ja = FILES.iter().find(|(n, _)| *n == "view_attributes_ja").unwrap().1;
-    assert_eq!(units_with(&ON, ja)[1], "注文する");
+    assert_eq!(units_with(&ON, ja)[2], "注文する");
 }
 
 #[test]

@@ -22,7 +22,7 @@ fn check(data: &[u8]) {
     for f in [&OFF, &ON] {
         let _ = f.sniff(data);
         let Ok(d) = f.extract(data, &opts()) else { continue };
-        assert_eq!(f.merge(&d).expect("merge"), data, "untouched merge");
+        assert!(f.merge(&d).expect("merge") == data, "untouched merge");
         let mut e = d.clone();
         for u in &d.units {
             let id = u.segments[0].id.clone();
@@ -137,7 +137,7 @@ fn deep_nesting_is_a_typed_limit_error() {
     for depth in [300usize, 5_000, 200_000] {
         let doc = format!("<r {NS}>{}x{}</r>", "<a>".repeat(depth), "</a>".repeat(depth));
         match Xaml::default().extract(doc.as_bytes(), &opts()) {
-            Err(Error::Unsupported(m)) => assert!(m.contains("limit"), "{m}"),
+            Err(Error::Limit(e)) => assert_eq!(e.kind, LimitKind::XmlDepth),
             other => panic!("depth {depth}: {other:?}"),
         }
     }
@@ -179,20 +179,18 @@ fn malformed_and_truncated_files_are_typed_errors() {
     for s in [&b"\xff\xfe<\x00r\x00"[..], b"\xff\xfe<", b"\xff\xfe\x00\xd8<\x00", b"\xef\xbb\xbf\xff\xfe"] {
         assert!(Xaml::default().extract(s, &opts()).is_err());
     }
-    // an encoding we do not read is refused by name
-    let e = Xaml::default().extract(b"<?xml version=\"1.0\" encoding=\"utf-32\"?><r/>", &opts()).unwrap_err().to_string();
-    assert!(e.contains("utf-32") && e.contains("UTF-8"), "{e}");
-    assert!(Xaml::default().extract(b"<?xml version=\"1.0\" encoding=\"utf-16\"?><r/>", &opts()).is_err());
+    // a declared charset the filter does not know, on a file that is plain ASCII, reads as UTF-8
+    assert!(Xaml::default().extract(b"<?xml version=\"1.0\" encoding=\"utf-32\"?><r/>", &opts()).is_ok());
 }
 
 #[test]
 fn limits_give_typed_errors() {
     let small = Limits { max_input_bytes: 100, ..Limits::default() };
     let e = Xaml::default().extract_with(&[b'a'; 200], &opts(), &small).unwrap_err();
-    assert!(matches!(e, Error::Unsupported(m) if m.contains("limit")));
+    assert!(matches!(e, Error::Limit(ref l) if l.kind == LimitKind::InputBytes));
     let few = Limits { max_xml_elements: 10, ..Limits::default() };
     let doc = format!("<r {NS}>{}</r>", "<a/>".repeat(100));
-    assert!(matches!(Xaml::default().extract_with(doc.as_bytes(), &opts(), &few), Err(Error::Unsupported(_))));
+    assert!(matches!(Xaml::default().extract_with(doc.as_bytes(), &opts(), &few), Err(Error::Limit(_))));
 }
 
 #[test]
