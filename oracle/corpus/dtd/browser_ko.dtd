@@ -1,0 +1,16 @@
+<!-- This Source Code Form is subject to the terms of the Mozilla Public
+   - License, v. 2.0. If a copy of the MPL was not distributed with this
+   - file, You can obtain one at http://mozilla.org/MPL/2.0/. -->
+
+<!ENTITY % brandDTD SYSTEM "chrome://branding/locale/brand.dtd">
+%brandDTD;
+
+<!-- LOCALIZATION NOTE (window.title): &brandShortName; is the product name (ko). -->
+<!ENTITY window.title "&brandShortName; - 루멘 베이커리">
+<!ENTITY login.label "로그인">
+<!ENTITY login.accesskey "로">
+<!ENTITY save.label '저장 후 닫기'>
+<!ENTITY click.text "'저장'을 눌러주세요">
+<!ENTITY tagline.text "<html:b>매일 아침 신선한 빵</html:b> &#169; 100&#037;">
+<!ENTITY ref.only "&brandShortName;">
+<!ENTITY escaped.markup "&lt;i>매일 아침 신선한 빵&lt;/i> &lt;now&gt;">

@@ -1,0 +1,16 @@
+<!-- This Source Code Form is subject to the terms of the Mozilla Public
+   - License, v. 2.0. If a copy of the MPL was not distributed with this
+   - file, You can obtain one at http://mozilla.org/MPL/2.0/. -->
+
+<!ENTITY % brandDTD SYSTEM "chrome://branding/locale/brand.dtd">
+%brandDTD;
+
+<!-- LOCALIZATION NOTE (window.title): &brandShortName; is the product name (ja). -->
+<!ENTITY window.title "&brandShortName; - ルーメン・ベーカリー">
+<!ENTITY login.label "ログイン">
+<!ENTITY login.accesskey "ロ">
+<!ENTITY save.label '保存して閉じる'>
+<!ENTITY click.text "「保存」をクリックしてください">
+<!ENTITY tagline.text "<html:b>毎朝焼きたてのパン</html:b> &#169; 100&#037;">
+<!ENTITY ref.only "&brandShortName;">
+<!ENTITY escaped.markup "&lt;i>毎朝焼きたてのパン&lt;/i> &lt;now&gt;">
