@@ -117,7 +117,13 @@ pub fn codec_for_label(label: &str) -> Codec {
     match l.as_str() {
         "utf-8" | "utf8" | "u8" | "utf" | "utf8-ucs2" => return Codec::Utf8,
         "ascii" | "us-ascii" | "646" | "ansi-x3.4-1968" | "iso646-us" | "us" => return Codec::Ascii,
-        "latin1" | "latin-1" | "l1" | "iso-8859-1" | "iso8859-1" | "8859" | "cp819" | "iso8859" | "iso-8859" => return Codec::Latin1,
+        "latin1" | "latin-1" | "l1" | "iso-8859-1" | "iso8859-1" | "8859" | "cp819" | "iso8859" | "iso-8859" | "latin" | "ibm819"
+        | "csisolatin1" | "iso-ir-100" | "iso-8859-1:1987" | "iso-8859-1-1987" => return Codec::Latin1,
+        // Windows code page names Python knows and WHATWG does not (encoding_rs's Shift_JIS, EUC-KR and GBK are
+        // the Windows variants of those code pages).
+        "cp932" | "ms932" => return Codec::Legacy(encoding_rs::SHIFT_JIS),
+        "cp949" | "ms949" | "uhc" => return Codec::Legacy(encoding_rs::EUC_KR),
+        "cp936" | "ms936" => return Codec::Legacy(encoding_rs::GBK),
         _ => {}
     }
     match Encoding::for_label(l.as_bytes()) {
@@ -263,4 +269,20 @@ pub fn read(buf: &[u8], limits: &Limits) -> Result<Catalog, Error> {
         });
     }
     Ok(Catalog { entries, codec })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Labels Python's codecs read and WHATWG does not (or reads as Windows-1252): decoded as LocOS decodes them.
+    #[test]
+    fn python_only_charset_labels() {
+        for l in ["latin", "csisolatin1", "IBM819", "iso-ir-100", "ISO_8859-1:1987"] {
+            assert_eq!(decode(codec_for_label(l), b"\x80\xe9").as_deref(), Some("\u{80}\u{e9}"), "{l}");
+        }
+        assert_eq!(decode(codec_for_label("CP949"), b"\xb0\xa1\xc7\xd1").as_deref(), Some("\u{ac00}\u{d55c}"));
+        assert_eq!(decode(codec_for_label("cp932"), b"\x93\xfa\x96{").as_deref(), Some("\u{65e5}\u{672c}"));
+        assert_eq!(decode(codec_for_label("cp936"), b"\xd6\xd0\xce\xc4").as_deref(), Some("\u{4e2d}\u{6587}"));
+    }
 }
