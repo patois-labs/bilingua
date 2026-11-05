@@ -1,0 +1,20 @@
+[package]
+name = "bilingua-image"
+description = "Bilingua: SVG text and the text layer of raster images (the PNG region sidecar of Localization OS)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+bilingua-model = { workspace = true }
+crc32fast = "1"
+flate2 = { version = "1", default-features = false, features = ["zlib-rs"] }
+regex = { workspace = true }
+
+[dev-dependencies]
+proptest = { workspace = true }
+serde_json = { workspace = true }
+crc32fast = "1"
+flate2 = { version = "1", default-features = false, features = ["zlib-rs"] }
+quick-xml = { workspace = true }
