@@ -34,7 +34,13 @@ let same = Pdf.merge(&doc)?; // untouched: the original bytes
 - Limits: LocOS's page cap (1000), page-object cap (80 x `max_units`), OCR pixel budget, unit cap; all decoded
   streams together may unpack to `max_zip_bytes` (256 MB): a decompression bomb is `Error::Limit`.
 - Merge: untouched gives the original bytes. A translated PDF is re-typeset by LocOS (typst), not here:
-  `Error::Unsupported` (see `DESIGN-MERGE.md`).
+  `Error::Unsupported`. This is Brent's decision for 1.0 (11-05): the typeset step stays in Localization OS and
+  this crate has no typesetter or `typeset` feature (see `DESIGN-MERGE.md`).
+- Hostile files: besides the stream budget, raw stream bytes read, copied or decrypted are charged to a second
+  budget (the stream budget plus eight times the file), fonts and glyph programs to a work meter (font loads,
+  `Differences`, `W`/`W2`, ToUnicode writes, CFF charstring operations), and form runs to the page-object cap. A
+  page-tree branch is walked once, large dictionaries are hashed, a line's objects are kept in an ordered map, `q`
+  nesting past 65 536 and marked content past 512 levels are counted instead of copied.
 
 `format_options`: `pdf.max_pages`, `pdf.max_stream_bytes`, `pdf.ocr_min_chars`, `pdf.ocr_max_pixel_dim`,
 `pdf.ocr_max_total_pixels` (integers).

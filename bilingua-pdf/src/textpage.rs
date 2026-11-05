@@ -9,6 +9,7 @@
 use crate::content::{Matrix, PageObj, Rect, TextObj};
 use crate::font::INVALID_CODE;
 use crate::text::{self, Dir};
+use std::collections::BTreeMap;
 use std::rc::Rc;
 
 const SIZE_EPS: f32 = 0.01;
@@ -37,6 +38,96 @@ struct CharInfo {
 struct TObj {
     t: Rc<TextObj>,
     form: Matrix,
+}
+
+const NIL: usize = usize::MAX;
+
+/// The objects of the current line in PDFium's order (`m_LineObj`): a new object goes right after the last one,
+/// scanning from the end, whose x is not greater than its own, or first when there is none. PDFium inserts into a
+/// vector, which costs time in proportion to the line; a hostile page with hundreds of thousands of objects on one
+/// line made that quadratic. Here the objects are a linked list and the numeric x positions an ordered map: the
+/// numeric objects of the list are always in ascending x (equal x in arrival order), so "the last one not greater"
+/// is the map's greatest key not above (x, any). An object with a NaN x compares false with everything, as in the
+/// scan: it goes first and is never a place to insert after.
+struct Line<T> {
+    nodes: Vec<(T, usize)>,
+    head: usize,
+    tail: usize,
+    by_x: BTreeMap<(u32, usize), usize>,
+}
+
+/// An order-preserving key of a non-NaN float (`-0.0` is `0.0`, as `>=` sees it).
+fn x_key(x: f32) -> u32 {
+    let b = (x + 0.0).to_bits();
+    if b & 0x8000_0000 != 0 {
+        !b
+    } else {
+        b | 0x8000_0000
+    }
+}
+
+impl<T> Default for Line<T> {
+    fn default() -> Self {
+        Line { nodes: Vec::new(), head: NIL, tail: NIL, by_x: BTreeMap::new() }
+    }
+}
+
+impl<T> Line<T> {
+    fn is_empty(&self) -> bool {
+        self.nodes.is_empty()
+    }
+    fn clear(&mut self) {
+        self.nodes.clear();
+        self.by_x.clear();
+    }
+    fn last(&self) -> Option<&T> {
+        if self.nodes.is_empty() {
+            None
+        } else {
+            Some(&self.nodes[self.tail].0)
+        }
+    }
+    fn insert(&mut self, o: T, x: f32) {
+        let id = self.nodes.len();
+        if id == 0 {
+            self.nodes.push((o, NIL));
+            self.head = 0;
+            self.tail = 0;
+        } else {
+            let after = if x.is_nan() { None } else { self.by_x.range(..=(x_key(x), usize::MAX)).next_back().map(|(_, &n)| n) };
+            match after {
+                Some(p) => {
+                    let next = self.nodes[p].1;
+                    self.nodes.push((o, next));
+                    self.nodes[p].1 = id;
+                    if next == NIL {
+                        self.tail = id;
+                    }
+                }
+                None => {
+                    self.nodes.push((o, self.head));
+                    self.head = id;
+                }
+            }
+        }
+        if !x.is_nan() {
+            self.by_x.insert((x_key(x), id), id);
+        }
+    }
+    fn take(&mut self) -> Vec<T> {
+        let links: Vec<usize> = self.nodes.iter().map(|n| n.1).collect();
+        let mut slots: Vec<Option<T>> = std::mem::take(&mut self.nodes).into_iter().map(|(o, _)| Some(o)).collect();
+        let mut out = Vec::with_capacity(slots.len());
+        let mut i = if slots.is_empty() { NIL } else { self.head };
+        while i != NIL {
+            if let Some(o) = slots[i].take() {
+                out.push(o);
+            }
+            i = links[i];
+        }
+        self.by_x.clear();
+        out
+    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -68,7 +159,7 @@ pub struct TextPage {
     buf: Vec<u16>,
     tchars: Vec<CharInfo>,
     tbuf: Vec<u16>,
-    objs: Vec<TObj>,
+    objs: Line<TObj>,
     prev: Option<Rc<TextObj>>,
     prev_matrix: Matrix,
     curline: Rect,
@@ -165,7 +256,7 @@ impl TextPage {
             buf: Vec::new(),
             tchars: Vec::new(),
             tbuf: Vec::new(),
-            objs: Vec::new(),
+            objs: Line::default(),
             prev: None,
             prev_matrix: Matrix::default(),
             curline: Rect::default(),
@@ -209,8 +300,10 @@ impl TextPage {
             return;
         }
         let new = TObj { t: t.clone(), form };
+        let tp = form.apply(t.pos.0, t.pos.1);
+        let this_pos = self.display.apply(tp.0, tp.1);
         if self.objs.is_empty() {
-            self.objs.push(new);
+            self.objs.insert(new, this_pos.0);
             return;
         }
         if self.same_as_previous(t, list, idx) {
@@ -231,24 +324,13 @@ impl TextPage {
         let threshold = prev_width.max(this_width) / 4.0;
         let pp = prev.form.apply(pt.pos.0, pt.pos.1);
         let prev_pos = self.display.apply(pp.0, pp.1);
-        let tp = form.apply(t.pos.0, t.pos.1);
-        let this_pos = self.display.apply(tp.0, tp.1);
         if (this_pos.1 - prev_pos.1).abs() > threshold * 2.0 {
             self.process_transformed();
             self.objs.clear();
-            self.objs.push(new);
+            self.objs.insert(new, this_pos.0);
             return;
         }
-        for i in (1..=self.objs.len()).rev() {
-            let o = &self.objs[i - 1];
-            let q = o.form.apply(o.t.pos.0, o.t.pos.1);
-            let np = self.display.apply(q.0, q.1);
-            if this_pos.0 >= np.0 {
-                self.objs.insert(i, new);
-                return;
-            }
-        }
-        self.objs.insert(0, new);
+        self.objs.insert(new, this_pos.0);
     }
 
     fn same_as_previous(&self, t: &Rc<TextObj>, list: &[PageObj], idx: usize) -> bool {
@@ -313,7 +395,7 @@ impl TextPage {
     }
 
     fn process_transformed(&mut self) {
-        let objs = std::mem::take(&mut self.objs);
+        let objs = self.objs.take();
         for o in &objs {
             let t = &o.t;
             if t.rect.width().abs() < SIZE_EPS {
@@ -356,7 +438,6 @@ impl TextPage {
                 self.reverse_temp(ci, bi);
             }
         }
-        self.objs = objs;
     }
 
     fn reverse_temp(&mut self, ci: usize, bi: usize) {
@@ -967,5 +1048,47 @@ fn flow_orientation(objs: &[PageObj], w: f32, h: f32) -> Orient {
         Orient::Vertical
     } else {
         Orient::Unknown
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// PDFium's vector insertion, the reference for [`Line`].
+    fn naive(xs: &[f32]) -> Vec<usize> {
+        let mut v: Vec<(usize, f32)> = Vec::new();
+        for (id, &x) in xs.iter().enumerate() {
+            let mut at = 0;
+            for i in (1..=v.len()).rev() {
+                if x >= v[i - 1].1 {
+                    at = i;
+                    break;
+                }
+            }
+            v.insert(at, (id, x));
+        }
+        v.into_iter().map(|(id, _)| id).collect()
+    }
+
+    #[test]
+    fn line_order_is_pdfiums_vector_order() {
+        let mut seed = 12345u64;
+        let mut next = || {
+            seed = seed.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+            (seed >> 33) as u32
+        };
+        let pool = [0.0f32, -0.0, 1.0, 2.5, -3.0, f32::NAN, f32::INFINITY, f32::NEG_INFINITY, 1e-30, 7.0];
+        for _ in 0..3000 {
+            let n = (next() % 40) as usize;
+            let xs: Vec<f32> = (0..n).map(|_| if next() % 3 == 0 { pool[(next() % 10) as usize] } else { (next() % 9) as f32 - 4.0 }).collect();
+            let mut l = Line::default();
+            for (id, &x) in xs.iter().enumerate() {
+                l.insert(id, x);
+                let want = naive(&xs[..=id]);
+                assert_eq!(l.last(), want.last(), "{xs:?}");
+            }
+            assert_eq!(l.take(), naive(&xs), "{xs:?}");
+        }
     }
 }

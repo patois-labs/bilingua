@@ -614,8 +614,10 @@ fn mix_columns(st: &mut [u8; 16], inverse: bool) {
     }
 }
 
-/// AES-CBC with the IV in the first 16 bytes and PKCS#5 padding removed when it is valid (PDFium keeps the bytes
-/// when the padding is not).
+/// AES-CBC with the IV in the first 16 bytes, padding handled as PDFium's `CPDF_CryptoHandler` does: the last
+/// block is held back and, at the end, kept minus its last byte's value when that value is below 16 (0 keeps the
+/// whole block), dropped whole when the value is 16 or more. Data that does not end on a block boundary has its
+/// partial tail dropped and no padding removed (the last full block was already written).
 pub fn aes_cbc_decrypt(key: &[u8], data: &[u8]) -> Vec<u8> {
     if data.len() < 16 || !matches!(key.len(), 16 | 24 | 32) {
         return Vec::new();
@@ -623,11 +625,9 @@ pub fn aes_cbc_decrypt(key: &[u8], data: &[u8]) -> Vec<u8> {
     let aes = Aes::new(key);
     let mut prev = [0u8; 16];
     prev.copy_from_slice(&data[..16]);
-    let mut out = Vec::with_capacity(data.len());
-    for block in data[16..].chunks(16) {
-        if block.len() < 16 {
-            break;
-        }
+    let body = &data[16..];
+    let mut out = Vec::with_capacity(body.len());
+    for block in body.chunks_exact(16) {
         let mut b = [0u8; 16];
         b.copy_from_slice(block);
         let d = aes.decrypt_block(&b);
@@ -636,9 +636,10 @@ pub fn aes_cbc_decrypt(key: &[u8], data: &[u8]) -> Vec<u8> {
         }
         prev = b;
     }
-    if let Some(&pad) = out.last() {
-        if (1..=16).contains(&pad) && out.len() >= pad as usize {
-            out.truncate(out.len() - pad as usize);
+    if body.len().is_multiple_of(16) {
+        if let Some(&pad) = out.last() {
+            let cut = if pad < 16 { pad as usize } else { 16 };
+            out.truncate(out.len() - cut);
         }
     }
     out
@@ -676,5 +677,121 @@ mod tests {
         let ct = Aes::new(&k256).encrypt_block(&pt);
         assert_eq!(ct.to_vec(), hex("8ea2b7ca516745bfeafc49904b496089"));
         assert_eq!(Aes::new(&k256).decrypt_block(&ct), pt);
+        // FIPS-197 C.2 (AES-192, accepted for V4 keys of 24 bytes).
+        let k192 = hex("000102030405060708090a0b0c0d0e0f1011121314151617");
+        let ct = Aes::new(&k192).encrypt_block(&pt);
+        assert_eq!(ct.to_vec(), hex("dda97ca4864cdfe06eaf70a0ec0d7191"));
+        assert_eq!(Aes::new(&k192).decrypt_block(&ct), pt);
+    }
+
+    #[test]
+    fn r6_hash_matches_an_independent_implementation() {
+        // Values from a Python implementation of ISO 32000-2 algorithm 2.B over the `cryptography` package.
+        let salt: Vec<u8> = (0..8).collect();
+        assert_eq!(hash_r6(b"", &salt, None).to_vec(), hex("1403c04eb647d2e60452dfc4eb0a5e0cf322e8a83a759eabbd17d498a93ba041"));
+        let salt: Vec<u8> = (8..16).collect();
+        assert_eq!(hash_r6(b"secret", &salt, None).to_vec(), hex("0041f28c8d536f8693e0accd1411f6a910f02387ee6d74117cdea4953555e593"));
+    }
+
+    fn cbc_encrypt(key: &[u8], iv: [u8; 16], plain: &[u8]) -> Vec<u8> {
+        let aes = Aes::new(key);
+        let mut out = iv.to_vec();
+        let mut prev = iv;
+        for block in plain.chunks(16) {
+            let mut b = [0u8; 16];
+            for j in 0..16 {
+                b[j] = block[j] ^ prev[j];
+            }
+            prev = aes.encrypt_block(&b);
+            out.extend_from_slice(&prev);
+        }
+        out
+    }
+
+    #[test]
+    fn aes_padding_follows_pdfium() {
+        let key = [7u8; 16];
+        let iv = [9u8; 16];
+        let mut p = b"0123456789abcdef0123456789".to_vec();
+        p.extend_from_slice(&[6; 6]);
+        assert_eq!(aes_cbc_decrypt(&key, &cbc_encrypt(&key, iv, &p)), b"0123456789abcdef0123456789");
+        // A last byte of 0 keeps the block; 16 or more drops it; the IV alone or less is nothing.
+        let mut z = [b'x'; 32];
+        z[31] = 0;
+        assert_eq!(aes_cbc_decrypt(&key, &cbc_encrypt(&key, iv, &z)), z);
+        z[31] = 16;
+        assert_eq!(aes_cbc_decrypt(&key, &cbc_encrypt(&key, iv, &z)), &z[..16]);
+        z[31] = 200;
+        assert_eq!(aes_cbc_decrypt(&key, &cbc_encrypt(&key, iv, &z)), &z[..16]);
+        assert!(aes_cbc_decrypt(&key, &iv).is_empty());
+        assert!(aes_cbc_decrypt(&key, &iv[..7]).is_empty());
+        // A partial tail is dropped and the last full block is not unpadded.
+        z[31] = 3;
+        let mut c = cbc_encrypt(&key, iv, &z);
+        c.extend_from_slice(b"tail");
+        assert_eq!(aes_cbc_decrypt(&key, &c), z);
+    }
+
+    #[test]
+    fn r5_empty_user_password_opens() {
+        // Build an AES-256 R5 dictionary for an empty user password and a known file key.
+        let file_key: Vec<u8> = (100..132).collect();
+        let (vs, ks) = ([1u8; 8], [2u8; 8]);
+        let mut u = sha256(&vs).to_vec();
+        u.extend_from_slice(&vs);
+        u.extend_from_slice(&ks);
+        let ik = sha256(&ks);
+        let a = Aes::new(&ik);
+        let mut ue = Vec::new();
+        let mut prev = [0u8; 16];
+        for block in file_key.chunks(16) {
+            let mut b = [0u8; 16];
+            for j in 0..16 {
+                b[j] = block[j] ^ prev[j];
+            }
+            prev = a.encrypt_block(&b);
+            ue.extend_from_slice(&prev);
+        }
+        let p: i32 = -4;
+        let mut perms = [0u8; 16];
+        perms[..4].copy_from_slice(&p.to_le_bytes());
+        perms[4..8].copy_from_slice(&[0xff; 4]);
+        perms[8] = b'T';
+        perms[9..12].copy_from_slice(b"adb");
+        let perms = Aes::new(&file_key).encrypt_block(&perms);
+        let s = |b: &[u8]| Obj::Str(std::rc::Rc::new(b.to_vec()));
+        let n = |b: &[u8]| Obj::Name(std::rc::Rc::new(b.to_vec()));
+        let mut cf = Dict::default();
+        let mut std_cf = Dict::default();
+        std_cf.insert(b"CFM", n(b"AESV3"));
+        cf.insert(b"StdCF", Obj::Dict(std::rc::Rc::new(std_cf)));
+        let mut d = Dict::default();
+        for (k, v) in [
+            (&b"Filter"[..], n(b"Standard")),
+            (b"V", Obj::Int(5)),
+            (b"R", Obj::Int(5)),
+            (b"Length", Obj::Int(256)),
+            (b"P", Obj::Int(p as i64)),
+            (b"O", s(&[0u8; 48])),
+            (b"U", s(&u)),
+            (b"UE", s(&ue)),
+            (b"Perms", s(&perms)),
+            (b"StmF", n(b"StdCF")),
+            (b"StrF", n(b"StdCF")),
+            (b"CF", Obj::Dict(std::rc::Rc::new(cf))),
+        ] {
+            d.insert(k, v);
+        }
+        let h = Handler::open(&d, b"", &|o: &Obj| o.clone()).unwrap();
+        assert_eq!(h.cipher, Cipher::Aes);
+        assert_eq!(h.key, file_key);
+        let enc = cbc_encrypt(&file_key, [5; 16], b"BT (Hi) Tj ET\x03\x03\x03");
+        assert_eq!(h.decrypt(4, 0, &enc), b"BT (Hi) Tj ET");
+        // A wrong validation salt is a password file.
+        let mut bad = d.clone();
+        let mut u2 = u.clone();
+        u2[0] ^= 1;
+        bad.insert(b"U", s(&u2));
+        assert_eq!(Handler::open(&bad, b"", &|o: &Obj| o.clone()).err(), Some(CryptError::Password));
     }
 }

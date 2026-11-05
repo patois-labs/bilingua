@@ -4,6 +4,7 @@
 //! than 64 levels gives no object, a dictionary keeps the last value of a repeated key, a stream may not sit
 //! inside an array or dictionary, a hex string with an odd digit count gets a trailing zero.
 
+use std::collections::HashMap;
 use std::rc::Rc;
 
 /// Nesting deeper than this gives no object (PDFium's `kParserMaxRecursionDepth`).
@@ -23,21 +24,60 @@ pub enum Obj {
     Stream(Rc<Stream>),
 }
 
-#[derive(Debug, Clone, Default, PartialEq)]
+/// A dictionary: each key once (a repeated key keeps its last value, as PDFium does). A large one (a hostile
+/// resource dictionary can hold hundreds of thousands of keys) gets a hash index, so that building it and looking
+/// a key up do not cost time in proportion to its size.
+#[derive(Debug, Clone, Default)]
 pub struct Dict {
-    pub items: Vec<(Vec<u8>, Obj)>,
+    items: Vec<(Vec<u8>, Obj)>,
+    index: Option<Rc<HashMap<Vec<u8>, usize>>>,
+}
+
+/// Dictionaries with more keys than this get an index.
+const INDEX_FROM: usize = 16;
+
+impl PartialEq for Dict {
+    fn eq(&self, o: &Dict) -> bool {
+        self.items == o.items
+    }
 }
 
 impl Dict {
+    pub fn items(&self) -> &[(Vec<u8>, Obj)] {
+        &self.items
+    }
+    pub fn values_mut(&mut self) -> impl Iterator<Item = &mut Obj> {
+        self.items.iter_mut().map(|(_, v)| v)
+    }
+    /// The place of `key` among the items (stable while the dictionary lives).
+    pub fn position(&self, key: &[u8]) -> Option<usize> {
+        match &self.index {
+            Some(ix) => ix.get(key).copied(),
+            None => self.items.iter().position(|(k, _)| k == key),
+        }
+    }
     pub fn get(&self, key: &[u8]) -> Option<&Obj> {
-        self.items.iter().rev().find(|(k, _)| k == key).map(|(_, v)| v)
+        self.position(key).map(|i| &self.items[i].1)
     }
     pub fn has(&self, key: &[u8]) -> bool {
         self.get(key).is_some()
     }
     pub fn insert(&mut self, key: &[u8], v: Obj) {
-        self.items.retain(|(k, _)| k != key);
+        if let Some(i) = self.position(key) {
+            self.items[i].1 = v;
+            return;
+        }
         self.items.push((key.to_vec(), v));
+        let n = self.items.len() - 1;
+        match &mut self.index {
+            Some(ix) => {
+                Rc::make_mut(ix).insert(key.to_vec(), n);
+            }
+            None if self.items.len() > INDEX_FROM => {
+                self.index = Some(Rc::new(self.items.iter().enumerate().map(|(i, (k, _))| (k.clone(), i)).collect()));
+            }
+            None => {}
+        }
     }
 }
 

@@ -119,6 +119,20 @@ fn format_option_keys_are_declared() {
     for k in ["pdf.max_pages", "pdf.max_stream_bytes", "pdf.ocr_min_chars", "pdf.ocr_max_pixel_dim", "pdf.ocr_max_total_pixels"] {
         assert!(keys.contains(&k), "{k}");
     }
+    assert!(Pdf.format_option_keys().iter().all(|k| k.kind == OptionKind::Int));
+    // Called directly, the filter refuses a misspelt key of its own family, a value that is not an integer and a
+    // negative one; another format's key is left for the facade.
+    let b = data("typst_digital.pdf");
+    for (k, v) in [("pdf.max_page", "10"), ("pdf.max_pages", "ten"), ("pdf.max_pages", "-1"), ("pdf.ocr_max_pixel_dim", "4000.5")] {
+        let o = ExtractOptions::new().with_format_option(k, v);
+        assert!(matches!(Pdf.extract(&b, &o), Err(Error::FormatOption { .. })), "{k}={v}");
+        assert!(matches!(page_texts(&b, &o), Err(Error::FormatOption { .. })), "{k}={v}");
+    }
+    let o = ExtractOptions::new().with_format_option("docx.translate_comments", "true").with_format_option("pdf.max_pages", " 5 ");
+    assert!(Pdf.extract(&b, &o).is_ok());
+    let d = Pdf.extract(&b, &ExtractOptions::default()).unwrap();
+    let m = MergeOptions::new().with_format_option("pdf.nope", "1");
+    assert!(matches!(Pdf.merge_with(&d, &m), Err(Error::FormatOption { .. })));
 }
 
 #[test]

@@ -57,12 +57,13 @@ pub struct PageInfo {
 /// The text layer of every page, with PDFium's page text. Exposed for the oracle and for callers that need the raw
 /// page text (an OCR adapter, a preview).
 pub fn page_texts(bytes: &[u8], opts: &ExtractOptions) -> Result<Vec<PageInfo>, Error> {
+    bilingua_model::check_own_options(&Pdf, &opts.format_options)?;
     let limits = opts.limits();
     guard::check_input(bytes, &limits)?;
-    let budget = opts.format_option("pdf.max_stream_bytes").and_then(|v| v.trim().parse::<u64>().ok()).unwrap_or(limits.max_zip_bytes);
-    let d = doc::Doc::open(bytes, budget).map_err(open_error)?;
+    let budget = uint_option(opts, "pdf.max_stream_bytes")?.unwrap_or(limits.max_zip_bytes);
+    let d = doc::Doc::open(bytes, budget).map_err(|e| open_error(e, budget))?;
     let n = d.page_count();
-    let max_pages = opts.format_option("pdf.max_pages").and_then(|v| v.trim().parse::<usize>().ok()).unwrap_or(MAX_PAGES);
+    let max_pages = uint_option(opts, "pdf.max_pages")?.map_or(MAX_PAGES, |v| v.min(usize::MAX as u64) as usize);
     if n > max_pages {
         return Err(LimitError::new(LimitKind::Units, format!("This PDF has {n} pages; the limit is {max_pages}. Split it into smaller files and upload those.")).into());
     }
@@ -73,10 +74,10 @@ pub fn page_texts(bytes: &[u8], opts: &ExtractOptions) -> Result<Vec<PageInfo>, 
     let max_objects = limits.max_units.saturating_mul(80);
     let mut fonts = content::FontCache::default();
     let rtl = d.rtl();
-    let min_chars = opts.format_option("pdf.ocr_min_chars").and_then(|v| v.trim().parse::<usize>().ok()).unwrap_or(OCR_MIN_CHARS);
+    let min_chars = uint_option(opts, "pdf.ocr_min_chars")?.map_or(OCR_MIN_CHARS, |v| v.min(usize::MAX as u64) as usize);
     let mut objects_left = max_objects as i64;
-    let max_dim = opts.format_option("pdf.ocr_max_pixel_dim").and_then(|v| v.trim().parse::<f64>().ok()).unwrap_or(OCR_MAX_PIXEL_DIM).max(1.0).floor();
-    let max_total = opts.format_option("pdf.ocr_max_total_pixels").and_then(|v| v.trim().parse::<f64>().ok()).unwrap_or(OCR_MAX_TOTAL_PIXELS);
+    let max_dim = uint_option(opts, "pdf.ocr_max_pixel_dim")?.map_or(OCR_MAX_PIXEL_DIM, |v| v as f64).max(1.0);
+    let max_total = uint_option(opts, "pdf.ocr_max_total_pixels")?.map_or(OCR_MAX_TOTAL_PIXELS, |v| v as f64);
     let mut total_pixels = 0.0;
     let mut out = Vec::with_capacity(n);
     for (i, p) in pages.iter().enumerate() {
@@ -94,6 +95,9 @@ pub fn page_texts(bytes: &[u8], opts: &ExtractOptions) -> Result<Vec<PageInfo>, 
         }
         if d.budget.borrow().exceeded {
             return Err(budget_error(budget));
+        }
+        if d.work.get() == 0 {
+            return Err(work_error());
         }
         let tp = textpage::TextPage::new(&objs, p.bbox().map(|v| v as f32), p.rotation(), rtl);
         let text = tp.text();
@@ -113,13 +117,16 @@ pub fn page_texts(bytes: &[u8], opts: &ExtractOptions) -> Result<Vec<PageInfo>, 
     if d.budget.borrow().exceeded {
         return Err(budget_error(budget));
     }
+    if d.work.get() == 0 {
+        return Err(work_error());
+    }
     Ok(out)
 }
 
 /// One line per text object of a page (font, size, position, rectangle, text), for debugging the text layer.
 #[doc(hidden)]
 pub fn debug_page(bytes: &[u8], page: usize) -> Result<String, Error> {
-    let d = doc::Doc::open(bytes, 256 * 1024 * 1024).map_err(open_error)?;
+    let d = doc::Doc::open(bytes, 256 * 1024 * 1024).map_err(|e| open_error(e, 256 * 1024 * 1024))?;
     let pages = d.pages(d.page_count());
     let Some(Some(p)) = pages.get(page) else { return Err(parse_err("no such page")) };
     let data = d.page_content(p);
@@ -166,6 +173,16 @@ pub fn debug_page(bytes: &[u8], page: usize) -> Result<String, Error> {
     Ok(out)
 }
 
+/// A `pdf.*` integer option: `None` when unset; a negative value is refused (the kind check already refused text
+/// that is not an integer).
+fn uint_option(opts: &ExtractOptions, key: &str) -> Result<Option<u64>, Error> {
+    match opts.format_int(key) {
+        None => Ok(None),
+        Some(v) if v >= 0 => Ok(Some(v as u64)),
+        Some(v) => Err(Error::FormatOption { key: key.into(), msg: format!("the value {v} is negative") }),
+    }
+}
+
 /// LocOS `_ocr_render_scale`: 150 dpi, lowered until the longer edge fits; `None` for a page with no usable size.
 pub fn ocr_render_scale(w: f64, h: f64, max_dim: f64) -> Option<f64> {
     let mut scale = OCR_RENDER_DPI / 72.0;
@@ -184,15 +201,19 @@ fn parse_err(msg: &str) -> Error {
 }
 
 fn budget_error(budget: u64) -> Error {
-    LimitError::new(LimitKind::ZipBytes, format!("The streams of this PDF unpack to more than {} MB. Split it into smaller files.", budget / (1024 * 1024))).into()
+    LimitError::new(LimitKind::ZipBytes, format!("The streams of this PDF unpack to more than {} MB. Split it into smaller files.", budget.div_ceil(1024 * 1024))).into()
 }
 
-fn open_error(e: doc::OpenError) -> Error {
+fn work_error() -> Error {
+    LimitError::new(LimitKind::Units, "This PDF needs far too much work to read its fonts and glyphs. Split it into smaller files.").into()
+}
+
+fn open_error(e: doc::OpenError, budget: u64) -> Error {
     match e {
         doc::OpenError::Format(m) => parse_err(m),
         doc::OpenError::Password => Error::Unsupported("pdf: this PDF is protected with a password".into()),
         doc::OpenError::Security => Error::Unsupported("pdf: this PDF uses a security handler that is not supported".into()),
-        doc::OpenError::Budget => budget_error(256 * 1024 * 1024),
+        doc::OpenError::Budget => budget_error(budget),
     }
 }
 
@@ -282,6 +303,7 @@ impl Filter for Pdf {
     }
 
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         let limits = opts.limits();
         let pages = page_texts(bytes, opts)?;
         let mut units: Vec<Unit> = Vec::new();
@@ -311,6 +333,7 @@ impl Filter for Pdf {
     }
 
     fn merge_with(&self, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
         let Skeleton::Binary { data: original, .. } = &doc.skeleton else {
             return Err(Error::Write("pdf needs the skeleton made by its own extract".into()));

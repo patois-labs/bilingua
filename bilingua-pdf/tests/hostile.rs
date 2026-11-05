@@ -10,6 +10,59 @@ fn opts() -> ExtractOptions {
     ExtractOptions::default()
 }
 
+fn fuzz_cases() -> u32 {
+    std::env::var("BILINGUA_PDF_FUZZ_CASES").ok().and_then(|v| v.parse().ok()).unwrap_or(400)
+}
+
+/// One content-stream token: operators, odd numbers, names of the resources below, strings, arrays, dicts.
+fn token() -> impl Strategy<Value = String> {
+    let ops = [
+        "q", "Q", "cm", "BT", "ET", "Tf", "Td", "TD", "Tm", "T*", "Tj", "TJ", "'", "\"", "Tc", "Tw", "Tz", "TL", "Ts", "Tr", "Do",
+        "BMC", "BDC", "EMC", "gs", "m", "l", "re", "f", "S", "n", "BI", "ID", "EI", "d0", "d1", "sh", "w",
+    ];
+    let nums = ["0", "-0", "1", "-1", "0.5", "12", "1000", "1e38", "99999999999", "-2147483649", ".", "-.", "3.4028236e38", "1000000000"];
+    let names = ["/F1", "/F2", "/F3", "/F4", "/X1", "/X2", "/G1", "/P1", "/Span", "/Nope"];
+    let strs = ["(abc)", "(\\101\\376)", "<0041 0042>", "<00410042004300440045>", "()", "(\\)", "<>", "(a\\(b)"];
+    let mixed = ["[(a) -250 (b) 1e30 (c)]", "[1 2 3 4 5 6]", "<</ActualText (x)>>", "<</ActualText <feff0041>>>", "[]", "<<>>"];
+    prop_oneof![
+        proptest::sample::select(ops.to_vec()).prop_map(String::from),
+        proptest::sample::select(nums.to_vec()).prop_map(String::from),
+        proptest::sample::select(names.to_vec()).prop_map(String::from),
+        proptest::sample::select(strs.to_vec()).prop_map(String::from),
+        proptest::sample::select(mixed.to_vec()).prop_map(String::from),
+        any::<i32>().prop_map(|v| v.to_string()),
+    ]
+}
+
+/// A page with every kind of font and form the interpreter knows, around the given content.
+fn fuzz_page(content: &[u8]) -> Vec<u8> {
+    let objs = vec![
+        O::Plain("<</Type /Catalog /Pages 2 0 R>>".into()),
+        O::Plain("<</Type /Pages /Kids [3 0 R] /Count 1>>".into()),
+        O::Plain(
+            "<</Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources <</Font <</F1 5 0 R /F2 6 0 R /F3 8 0 R /F4 10 0 R>> \
+             /XObject <</X1 11 0 R /X2 12 0 R>> /ExtGState <</G1 <</Font [5 0 R 9] /LW 2>>>> /Properties <</P1 <</ActualText (P)>>>>>> /Contents 4 0 R>>"
+                .into(),
+        ),
+        O::Stream(String::new(), content.to_vec()),
+        O::Plain("<</Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding <</Differences [32 /space 65 /A /B /fi]>>>>".into()),
+        O::Plain("<</Type /Font /Subtype /Type0 /BaseFont /X /Encoding /Identity-H /DescendantFonts [7 0 R] /ToUnicode 13 0 R>>".into()),
+        O::Plain("<</Type /Font /Subtype /CIDFontType2 /BaseFont /X /W [1 [500 600] 3 9 700 0 65535 1] /DW 1000>>".into()),
+        O::Plain(
+            "<</Type /Font /Subtype /Type3 /FontBBox [0 0 0 0] /FontMatrix [0.001 0 0 0.001 0 0] /FirstChar 0 /LastChar 255 \
+             /Encoding <</Differences [97 /a /b /c]>> /CharProcs <</a 14 0 R /b 14 0 R>> /Resources <</Font <</F3 8 0 R>>>>>>"
+                .into(),
+        ),
+        O::Plain("<</Type /Font /Subtype /Type0 /BaseFont /Y /Encoding /90ms-RKSJ-V /DescendantFonts [7 0 R]>>".into()),
+        O::Plain("<</Type /Font /Subtype /TrueType /BaseFont /Arial /FirstChar 32 /Widths [250 300]>>".into()),
+        O::Stream("/Type /XObject /Subtype /Form /BBox [0 0 10 10] /Resources <</XObject <</X1 11 0 R /X2 12 0 R>> /Font <</F1 5 0 R>>>>".into(), b"/X2 Do BT /F1 9 Tf (in form) Tj ET /X1 Do".to_vec()),
+        O::Stream("/Type /XObject /Subtype /Form /BBox [0 0 10 10] /Matrix [0 1 -1 0 5 5]".into(), b"BT /F1 9 Tf (rotated form) Tj ET".to_vec()),
+        O::Stream(String::new(), b"2 beginbfrange <0001> <0003> <0041> <0004> <0004> [<00660069>] endbfrange 1 beginbfchar <0005> <D83DDE00> endbfchar".to_vec()),
+        O::Stream(String::new(), b"0 0 d0 BT /F3 1 Tf (ab) Tj ET 0 0 m 500 700 l S".to_vec()),
+    ];
+    pdf(&objs)
+}
+
 #[test]
 fn decompression_bomb_is_a_limit_error() {
     // 300 MB of spaces packs to about 300 KB; the default stream budget is 256 MB.
@@ -111,7 +164,15 @@ fn broken_fonts_and_tounicode_maps_still_read() {
 }
 
 proptest! {
-    #![proptest_config(ProptestConfig { cases: 400, ..ProptestConfig::default() })]
+    // `BILINGUA_PDF_FUZZ_CASES=5000` for a longer run (release).
+    #![proptest_config(ProptestConfig { cases: fuzz_cases(), ..ProptestConfig::default() })]
+
+    #[test]
+    fn random_content_streams_never_panic(ops in proptest::collection::vec(token(), 0..400)) {
+        let content = ops.join(" ");
+        let b = fuzz_page(content.as_bytes());
+        let _ = page_texts(&b, &opts());
+    }
 
     #[test]
     fn random_bytes_never_panic(b in proptest::collection::vec(any::<u8>(), 0..2048)) {

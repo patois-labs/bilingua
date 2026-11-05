@@ -9,7 +9,7 @@
 
 use crate::obj::{Dict, Lexer, Obj, Tok};
 use bilingua_model::encoding_rs;
-use crate::fontprog::Program;
+use crate::fontprog::{Program, Work};
 use crate::tables;
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -103,6 +103,8 @@ pub fn unicode_from_name(name: &str) -> u32 {
 pub struct ToUnicode {
     map: HashMap<u32, Vec<u16>>,
     reverse: HashMap<u16, u32>,
+    /// Mappings written while parsing (a range is up to 256 of them), charged to the document's work.
+    pub writes: usize,
 }
 
 impl ToUnicode {
@@ -237,6 +239,7 @@ impl ToUnicode {
     }
 
     fn insert(&mut self, code: u32, dst: Vec<u16>) {
+        self.writes += 1;
         if dst.len() == 1 {
             self.reverse.insert(dst[0], code);
         }
@@ -724,6 +727,60 @@ pub struct Loader<'r> {
     /// The bounding box of the text a Type 3 glyph procedure draws (glyph space), for a `d0` glyph.
     #[allow(clippy::type_complexity)]
     pub form_box: &'r dyn Fn(&[u8], Option<Rc<Dict>>) -> Option<[f64; 4]>,
+    /// The document's work meter (see `fontprog::Work`); a font load charges its arrays to it.
+    pub work: &'r Work,
+}
+
+/// Charges `n` units to the work meter (never below zero).
+fn spend(w: &Work, n: usize) {
+    w.set(w.get().saturating_sub(n as u64));
+}
+
+/// `/W` or `/W2` ranges as disjoint, sorted runs with PDFium's first-match rule (an earlier range wins where ranges
+/// overlap). CIDs are 16-bit, so the runs cover 0..=0xFFFF; a lookup is a bisection instead of a scan of the
+/// whole list, which a hostile font can make millions of entries long, for every character.
+fn first_match_runs<V: Copy + PartialEq>(list: &[(u32, u32, V)]) -> Vec<(u32, u32, V)> {
+    const N: usize = 0x10000;
+    if list.is_empty() {
+        return Vec::new();
+    }
+    let mut next: Vec<u32> = (0..=N as u32).collect();
+    let mut val: Vec<Option<V>> = vec![None; N];
+    fn find(next: &mut [u32], mut i: u32) -> u32 {
+        while next[i as usize] != i {
+            let n = next[next[i as usize] as usize];
+            next[i as usize] = n;
+            i = n;
+        }
+        i
+    }
+    for &(a, b, v) in list {
+        if a > b || a as usize >= N {
+            continue;
+        }
+        let b = b.min(N as u32 - 1);
+        let mut i = find(&mut next, a);
+        while i <= b {
+            val[i as usize] = Some(v);
+            next[i as usize] = i + 1;
+            i = find(&mut next, i + 1);
+        }
+    }
+    let mut out: Vec<(u32, u32, V)> = Vec::new();
+    for (c, v) in val.iter().enumerate() {
+        let Some(v) = *v else { continue };
+        let c = c as u32;
+        match out.last_mut() {
+            Some(last) if last.1 + 1 == c && last.2 == v => last.1 = c,
+            _ => out.push((c, c, v)),
+        }
+    }
+    out
+}
+
+fn run_lookup<V: Copy>(runs: &[(u32, u32, V)], cid: u32) -> Option<V> {
+    let i = runs.partition_point(|r| r.1 < cid);
+    runs.get(i).filter(|r| r.0 <= cid).map(|r| r.2)
 }
 
 impl Loader<'_> {
@@ -743,10 +800,17 @@ impl Loader<'_> {
 
     /// PDFium's `CPDF_Font::Create` and `Load`. `None` when the font does not load (the previous font stays).
     pub fn load(&self, fd: &Dict, id: usize) -> Option<Font> {
+        // A font load walks its 256 codes (or a CID font's tables): charged so that a page naming hundreds of
+        // thousands of distinct fonts ends with a limit error instead of running for minutes.
+        spend(self.work, 2048);
         let subtype = self.name(fd, b"Subtype");
         let to_unicode = match fd.get(b"ToUnicode") {
             Some(o) => match (self.resolve)(o) {
-                s @ Obj::Stream(_) => (self.stream)(&s).map(|d| ToUnicode::parse(&d)),
+                s @ Obj::Stream(_) => (self.stream)(&s).map(|d| {
+                    let t = ToUnicode::parse(&d);
+                    spend(self.work, t.writes.saturating_mul(16));
+                    t
+                }),
                 _ => None,
             },
             None => None,
@@ -795,7 +859,7 @@ impl Loader<'_> {
         let (desc, mut flags, mut ascent, mut descent, mut fbbox, file) = self.descriptor(fd);
         let embedded = file.is_some();
         let file_data = file.as_ref().and_then(|f| (self.stream)(f));
-        let prog = if truetype || subtype == b"Type1" || subtype == b"MMType1" { file_data.as_deref().and_then(Program::parse) } else { None };
+        let prog = if truetype || subtype == b"Type1" || subtype == b"MMType1" { file_data.as_deref().and_then(|d| Program::parse(d, self.work)) } else { None };
         let base14 = if !type3 && !truetype { standard_font_index(&base_font) } else { None };
         let mut base = BaseEnc::Builtin;
         let mut widths = [0xFFFF_i32; 256];
@@ -927,6 +991,7 @@ impl Loader<'_> {
                     base = BaseEnc::Standard;
                 }
                 if let Obj::Array(diffs) = self.get(d, b"Differences") {
+                    spend(self.work, diffs.len());
                     names = vec![None; 256];
                     let mut code: i64 = 0;
                     for x in diffs.iter() {
@@ -1085,7 +1150,7 @@ impl Loader<'_> {
             _ => return None,
         };
         let (_desc, _flags, mut ascent, mut descent, fbbox, file) = self.descriptor(&cf);
-        let prog = file.as_ref().and_then(|f| (self.stream)(f)).as_deref().and_then(Program::parse).map(Rc::new);
+        let prog = file.as_ref().and_then(|f| (self.stream)(f)).as_deref().and_then(|d| Program::parse(d, self.work)).map(Rc::new);
         let cid_to_gid = match self.get(&cf, b"CIDToGIDMap") {
             s @ Obj::Stream(_) => (self.stream)(&s).map(|d| d.chunks(2).map(|c| u16::from_be_bytes([c[0], *c.get(1).unwrap_or(&0)])).collect()),
             _ => None,
@@ -1093,12 +1158,15 @@ impl Loader<'_> {
         let default_width = self.int(&cf, b"DW", 1000) as i32;
         let mut widths = Vec::new();
         if let Obj::Array(w) = self.get(&cf, b"W") {
+            spend(self.work, w.len() + 0x10000);
             metrics(&w, self.resolve, |a, b, v| widths.push((a, b, v[0])), 1);
         }
+        let widths = first_match_runs(&widths);
         let mut vert = Vec::new();
         let mut dw2 = [880, -1000];
         if cmap.vertical {
             if let Obj::Array(w) = self.get(&cf, b"W2") {
+                spend(self.work, w.len() + 0x10000);
                 metrics(&w, self.resolve, |a, b, v| vert.push((a, b, [v[0], v[1], v[2]])), 3);
             }
             if let Obj::Array(d) = self.get(&cf, b"DW2") {
@@ -1107,6 +1175,7 @@ impl Loader<'_> {
                 }
             }
         }
+        let vert = first_match_runs(&vert);
         if ascent == 0 && descent == 0 {
             ascent = if fbbox[3] != 0 { fbbox[3] } else { 880 };
             descent = if fbbox[1] != 0 { fbbox[1] } else { -120 };
@@ -1404,13 +1473,7 @@ impl Font {
         match &self.kind {
             Kind::Simple { widths, .. } => widths[if code > 255 { 0 } else { code as usize }],
             Kind::Cid { cmap, default_width, widths, .. } => {
-                let cid = cmap.cid(code);
-                for (a, b, w) in widths.iter() {
-                    if cid >= *a && cid <= *b {
-                        return *w;
-                    }
-                }
-                *default_width
+                run_lookup(widths, cmap.cid(code)).unwrap_or(*default_width)
             }
         }
     }
@@ -1419,11 +1482,8 @@ impl Font {
     pub fn vert(&self, code: u32) -> (i32, i32, i32) {
         match &self.kind {
             Kind::Cid { cmap, vert, dw2, .. } => {
-                let cid = cmap.cid(code);
-                for (a, b, v) in vert.iter() {
-                    if cid >= *a && cid <= *b {
-                        return (v[0], v[1], v[2]);
-                    }
+                if let Some(v) = run_lookup(vert, cmap.cid(code)) {
+                    return (v[0], v[1], v[2]);
                 }
                 (dw2[1], self.width(code) / 2, dw2[0])
             }
@@ -1453,17 +1513,18 @@ impl Font {
         match &self.kind {
             Kind::Simple { bbox, .. } => bbox[if code > 255 { 0 } else { code as usize }],
             Kind::Cid { cmap, prog: Some(p), cid_to_gid, boxes, .. } => {
-                if let Some(b) = boxes.borrow().get(&code) {
-                    return *b;
-                }
+                // Cached by glyph: many codes can name one glyph, and a glyph's charstring may be expensive.
                 let cid = cmap.cid(code);
                 let gid = match cid_to_gid {
                     Some(m) => m.get(cid as usize).copied().unwrap_or(0) as u32,
                     None => p.gid_for_cid(cid),
                 };
+                if let Some(b) = boxes.borrow().get(&gid) {
+                    return *b;
+                }
                 let b = p.glyph_bbox(gid, true).unwrap_or([0, 0, 0, 0]);
                 if boxes.borrow().len() < 100_000 {
-                    boxes.borrow_mut().insert(code, b);
+                    boxes.borrow_mut().insert(gid, b);
                 }
                 b
             }

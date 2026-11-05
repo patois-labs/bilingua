@@ -60,9 +60,9 @@ pub fn decode(dict: &Dict, data: &[u8], resolve: &dyn Fn(&Obj) -> Obj, budget: &
                 let early = p.and_then(|d| d.get(b"EarlyChange")).map(resolve).and_then(|o| o.int()).unwrap_or(1) != 0;
                 predict(lzw(&cur, early, budget), p, resolve, budget)?
             }
-            b"ASCII85Decode" | b"A85" => keep(a85(&cur), budget)?,
+            b"ASCII85Decode" | b"A85" => a85(&cur, budget)?,
             b"ASCIIHexDecode" | b"AHx" => keep(ahx(&cur), budget)?,
-            b"RunLengthDecode" | b"RL" => keep(rle(&cur), budget)?,
+            b"RunLengthDecode" | b"RL" => rle(&cur, budget)?,
             b"Crypt" => cur,
             _ => return None,
         };
@@ -210,7 +210,9 @@ fn predict(data: Vec<u8>, p: Option<&Dict>, resolve: &dyn Fn(&Obj) -> Obj, budge
         return Some(data);
     }
     let bpp = ((colors * bpc + 7) / 8).max(1) as usize;
-    let row = ((columns * colors * bpc + 7) / 8) as usize;
+    // A row longer than the data is the data's one partial row: a hostile /Columns must not allocate (and walk)
+    // hundreds of MB per stream.
+    let row = (((columns * colors * bpc + 7) / 8) as usize).min(data.len());
     if row == 0 {
         return Some(data);
     }
@@ -259,7 +261,8 @@ fn predict(data: Vec<u8>, p: Option<&Dict>, resolve: &dyn Fn(&Obj) -> Obj, budge
     Some(out)
 }
 
-fn a85(src: &[u8]) -> Vec<u8> {
+/// ASCII85 into the budget: `z` makes four bytes of one, so the output is charged as it grows.
+fn a85(src: &[u8], budget: &mut Budget) -> Option<Vec<u8>> {
     let mut out = Vec::with_capacity(src.len() * 4 / 5 + 4);
     let (mut state, mut res) = (0usize, 0u32);
     let mut pos = 0;
@@ -270,6 +273,9 @@ fn a85(src: &[u8]) -> Vec<u8> {
             continue;
         }
         if ch == b'z' {
+            if !budget.take(4) {
+                return None;
+            }
             out.extend_from_slice(&[0, 0, 0, 0]);
             state = 0;
             res = 0;
@@ -283,6 +289,9 @@ fn a85(src: &[u8]) -> Vec<u8> {
             state += 1;
             continue;
         }
+        if !budget.take(4) {
+            return None;
+        }
         out.extend_from_slice(&res.to_be_bytes());
         state = 0;
         res = 0;
@@ -291,9 +300,12 @@ fn a85(src: &[u8]) -> Vec<u8> {
         for _ in state..5 {
             res = res.wrapping_mul(85).wrapping_add(84);
         }
+        if !budget.take(state - 1) {
+            return None;
+        }
         out.extend_from_slice(&res.to_be_bytes()[..state - 1]);
     }
-    out
+    Some(out)
 }
 
 fn ahx(src: &[u8]) -> Vec<u8> {
@@ -316,13 +328,18 @@ fn ahx(src: &[u8]) -> Vec<u8> {
     out
 }
 
-fn rle(src: &[u8]) -> Vec<u8> {
+/// RunLength into the budget: a two-byte run is 128 bytes out, so the output is charged as it grows.
+fn rle(src: &[u8], budget: &mut Budget) -> Option<Vec<u8>> {
     let mut out = Vec::new();
     let mut i = 0;
     while i < src.len() {
         let n = src[i];
         if n == 128 {
             break;
+        }
+        let produced = if n < 128 { n as usize + 1 } else { 257 - n as usize };
+        if !budget.take(produced) {
+            return None;
         }
         if n < 128 {
             let len = n as usize + 1;
@@ -338,7 +355,7 @@ fn rle(src: &[u8]) -> Vec<u8> {
             i += 2;
         }
     }
-    out
+    Some(out)
 }
 
 #[cfg(test)]
@@ -351,10 +368,13 @@ mod tests {
 
     #[test]
     fn filters_decode() {
-        assert_eq!(a85(b"87cURD]i,\"Ebo80~>"), b"Hello World!");
+        let mut big = Budget::new(1 << 20);
+        assert_eq!(a85(b"87cURD]i,\"Ebo80~>", &mut big).unwrap(), b"Hello World!");
+        assert!(a85(&[b'z'; 100], &mut Budget::new(300)).is_none());
+        assert!(rle(&[0x81, b' '].repeat(10), &mut Budget::new(1000)).is_none());
         assert_eq!(ahx(b"48 65 6c6c6f>"), b"Hello");
         assert_eq!(ahx(b"414"), b"A@");
-        assert_eq!(rle(&[2, b'a', b'b', b'c', 254, b'x', 128]), b"abcxxx");
+        assert_eq!(rle(&[2, b'a', b'b', b'c', 254, b'x', 128], &mut big).unwrap(), b"abcxxx");
         let z = {
             use std::io::Write;
             let mut e = flate2::write::ZlibEncoder::new(Vec::new(), flate2::Compression::default());

@@ -14,6 +14,12 @@ const MAX_FORM_LEVEL: usize = 40;
 const MAX_STRING: usize = 32767;
 /// PDFium keeps the last 16 operands of an operator.
 const PARAM_BUF: usize = 16;
+/// Saved graphics states kept (`q` deeper than this is counted, not copied: 100 MB of `q` would otherwise be
+/// tens of GB of states). PDFium has no cap; no real page nests this deep.
+const MAX_SAVED_STATES: usize = 1 << 16;
+/// Marked-content levels kept (each level copies the list of the open ones, so an unbounded nesting is
+/// quadratic). Deeper `BMC`/`BDC` are counted and their `EMC` matched.
+const MAX_MARKS: usize = 512;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Matrix {
@@ -295,6 +301,9 @@ impl<'d, 'a> Interp<'d, 'a> {
 
     fn load_font(&mut self, d: &Dict) -> Option<FontRef> {
         let doc = self.doc;
+        if doc.work.get() == 0 {
+            return None;
+        }
         let resolve = |o: &Obj| doc.resolve(o);
         let stream = |o: &Obj| match o {
             Obj::Stream(s) => doc.stream_data(s),
@@ -324,7 +333,7 @@ impl<'d, 'a> Interp<'d, 'a> {
             b.map(|r| [r.left as f64, r.bottom as f64, r.right as f64, r.top as f64])
         };
         self.fonts.next_id += 1;
-        let l = Loader { resolve: &resolve, stream: &stream, form_box: &form_box };
+        let l = Loader { resolve: &resolve, stream: &stream, form_box: &form_box, work: &doc.work };
         l.load(d, self.fonts.next_id).map(Rc::new)
     }
 
@@ -337,9 +346,12 @@ impl<'d, 'a> Interp<'d, 'a> {
         let mut marks: Vec<Mark> = Vec::new();
         let mut marks_rc: Rc<Vec<Mark>> = Rc::new(Vec::new());
         let mut path_pending = false;
+        let (mut states_over, mut marks_over) = (0usize, 0usize);
         let top = level == 0;
         loop {
-            if self.text_objects > self.max_text_objects {
+            // A page over its object cap, or a document over its stream budget, stops here: the caller reports
+            // the limit. Without the budget check a fan-out of forms runs on with empty data.
+            if self.text_objects > self.max_text_objects || self.doc.budget.borrow().exceeded || self.doc.work.get() == 0 {
                 return;
             }
             let before = lx.pos;
@@ -392,9 +404,17 @@ impl<'d, 'a> Interp<'d, 'a> {
             let w = w.to_vec();
             let num = |i: usize| -> f32 { ops.len().checked_sub(i + 1).and_then(|k| ops[k].numf()).unwrap_or(0.0) };
             match w.as_slice() {
-                b"q" => stack.push(st.clone()),
+                b"q" => {
+                    if stack.len() < MAX_SAVED_STATES {
+                        stack.push(st.clone());
+                    } else {
+                        states_over += 1;
+                    }
+                }
                 b"Q" => {
-                    if let Some(s) = stack.pop() {
+                    if states_over > 0 {
+                        states_over -= 1;
+                    } else if let Some(s) = stack.pop() {
                         st = s;
                     }
                 }
@@ -565,6 +585,9 @@ impl<'d, 'a> Interp<'d, 'a> {
                                     fst.ctm = fm;
                                     fst.text_m = st.text_m;
                                     let mut inner = Vec::new();
+                                    // Every form run counts against the page's object cap (forms that draw
+                                    // each other several times fan out exponentially).
+                                    self.text_objects += 1;
                                     self.form_stack.push(key);
                                     self.run(&data, form_res, page_res.clone(), fst, &mut inner, level + 1);
                                     self.form_stack.pop();
@@ -593,6 +616,7 @@ impl<'d, 'a> Interp<'d, 'a> {
                         self.top_level_count += 1;
                     }
                 }
+                b"BMC" | b"BDC" if marks.len() >= MAX_MARKS => marks_over += 1,
                 b"BMC" => {
                     marks.push(Mark { param: None, actual_text: None });
                     marks_rc = Rc::new(marks.clone());
@@ -614,6 +638,7 @@ impl<'d, 'a> Interp<'d, 'a> {
                     marks.push(Mark { param, actual_text: at });
                     marks_rc = Rc::new(marks.clone());
                 }
+                b"EMC" if marks_over > 0 => marks_over -= 1,
                 b"EMC" => {
                     if marks.pop().is_some() {
                         marks_rc = Rc::new(marks.clone());
@@ -786,7 +811,7 @@ fn find_resource(doc: &Doc, res: &Option<Rc<Dict>>, page_res: &Option<Rc<Dict>>,
             if let Some(raw) = c.get(name) {
                 let key = match raw {
                     Obj::Ref(n, _) => *n as usize,
-                    _ => 0x4000_0000 + Rc::as_ptr(&c) as usize + c.items.iter().position(|(k, _)| k == name).unwrap_or(0),
+                    _ => 0x4000_0000 + Rc::as_ptr(&c) as usize + c.position(name).unwrap_or(0),
                 };
                 return Some((key, doc.resolve(raw)));
             }

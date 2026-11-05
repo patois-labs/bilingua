@@ -16,7 +16,8 @@
   (`bilingua_pdf::page_texts` gives page sizes for LocOS's render scale) and inserts their units at that page.
 - Merge: untouched = original bytes; translated or `stamp_target_always` = `Error::Unsupported` (the adapter keeps
   LocOS's typst `build`). See `DESIGN-MERGE.md` for the decision this needs.
-- Corpus: `oracle/corpus/pdf/` is ready in the worktree but **not committed**: `oracle/tests/corpus.rs` merges a
-  pseudo-translated copy of every corpus file, which a PDF cannot pass while merge is extract-only. Add the corpus
-  together with an exception for `pdf` there (like `NO_TEXT_FORMATS`), or after the merge decision. `oracle/run.py`
-  needs `pdf` in `FORMATS` and `scoreboard.py` the LocOS name `pdf`.
+- Corpus: `oracle/corpus/pdf/` (49 files) is committed by the gate together with `MERGE_UNSUPPORTED_FORMATS =
+  ["pdf"]` in `oracle/tests/corpus.rs` (a translated merge must be `Error::Unsupported`; the untouched merge must
+  be exact). The two all-scanned fixtures (`raw_arabic_visual.pdf`, `typst_scanned.pdf`) stay out of the corpus:
+  they give zero units by design (OCR pages) and are tested in the crate. `oracle/run.py` still needs `pdf` in
+  `FORMATS` and `scoreboard.py` the LocOS name `pdf`.

@@ -7,12 +7,20 @@
 //! operations and subroutine depth.
 
 use crate::tables;
+use std::cell::Cell;
 use std::collections::HashMap;
+use std::rc::Rc;
+
+/// Work left for the whole document (shared with `Doc`): charstring operations are charged to it, so a font whose
+/// glyphs each loop through subroutines up to the per-glyph cap cannot multiply that cap by every glyph of every
+/// font. At zero no more glyphs run (no box) and the extraction ends with a limit error.
+pub type Work = Rc<Cell<u64>>;
 
 pub struct Program {
     kind: Kind,
     /// Units per em (1000 for CFF unless the font matrix says otherwise).
     upem: u32,
+    work: Work,
 }
 
 enum Kind {
@@ -40,21 +48,22 @@ fn norm(v: i64, upem: u32) -> i32 {
 }
 
 impl Program {
-    pub fn parse(data: &[u8]) -> Option<Program> {
+    pub fn parse(data: &[u8], work: &Work) -> Option<Program> {
+        let work = work.clone();
         if data.len() >= 12 && (data.starts_with(&[0, 1, 0, 0]) || data.starts_with(b"true") || data.starts_with(b"OTTO")) {
             let tt = TrueType::parse(data)?;
             if let Some(cff) = &tt.cff {
                 let c = Cff::parse(cff)?;
                 let upem = c.upem;
-                return Some(Program { kind: Kind::Cff(c), upem });
+                return Some(Program { kind: Kind::Cff(c), upem, work });
             }
             let upem = tt.upem;
-            return Some(Program { kind: Kind::TrueType(tt), upem });
+            return Some(Program { kind: Kind::TrueType(tt), upem, work });
         }
         if data.len() >= 4 && data[0] == 1 && data[1] == 0 {
             let c = Cff::parse(data)?;
             let upem = c.upem;
-            return Some(Program { kind: Kind::Cff(c), upem });
+            return Some(Program { kind: Kind::Cff(c), upem, work });
         }
         None
     }
@@ -65,7 +74,7 @@ impl Program {
     pub fn glyph_bbox(&self, gid: u32, inflate: bool) -> Option<[i32; 4]> {
         let (x0, y0, x1, y1) = match &self.kind {
             Kind::TrueType(t) => t.bbox(gid)?,
-            Kind::Cff(c) => c.bbox(gid)?,
+            Kind::Cff(c) => c.run(gid, &self.work)?.0,
         };
         let left = norm(x0 as i64, self.upem);
         let top = norm(y1 as i64, self.upem);
@@ -78,7 +87,7 @@ impl Program {
     pub fn advance(&self, gid: u32) -> Option<i32> {
         match &self.kind {
             Kind::TrueType(t) => t.advance(gid).map(|a| norm(a as i64, self.upem)),
-            Kind::Cff(c) => c.advance(gid).map(|a| norm(a as i64, self.upem)),
+            Kind::Cff(c) => c.run(gid, &self.work).map(|r| norm(r.1 as i64, self.upem)),
         }
     }
 
@@ -225,15 +234,24 @@ impl TrueType {
                 let starts = ends + segx2 + 2;
                 let deltas = starts + segx2;
                 let ranges = deltas + segx2;
-                let mut found = None;
-                for s in 0..segx2 / 2 {
-                    let end = u16_at(d, ends + 2 * s)? as u32;
-                    if code > end {
-                        continue;
+                // The first segment whose end is not below the code (ends ascend), found by bisection: a table
+                // of 32 767 segments is looked up for every code of every font.
+                let segs = segx2 / 2;
+                let (mut lo, mut hi) = (0usize, segs);
+                while lo < hi {
+                    let mid = (lo + hi) / 2;
+                    if (u16_at(d, ends + 2 * mid)? as u32) < code {
+                        lo = mid + 1;
+                    } else {
+                        hi = mid;
                     }
+                }
+                let mut found = None;
+                if lo < segs {
+                    let s = lo;
                     let start = u16_at(d, starts + 2 * s)? as u32;
                     if code < start {
-                        break;
+                        return None;
                     }
                     let delta = u16_at(d, deltas + 2 * s)?;
                     let ro = u16_at(d, ranges + 2 * s)? as usize;
@@ -249,7 +267,6 @@ impl TrueType {
                         }
                     };
                     found = Some(gid as u32);
-                    break;
                 }
                 found?
             }
@@ -262,17 +279,26 @@ impl TrueType {
                 u16_at(d, off + 10 + 2 * (code - first) as usize)? as u32
             }
             12 => {
-                let n = u32_at(d, off + 12)? as usize;
-                let mut found = None;
-                for i in 0..n.min(1 << 20) {
-                    let r = off + 16 + 12 * i;
-                    let (a, b, g) = (u32_at(d, r)?, u32_at(d, r + 4)?, u32_at(d, r + 8)?);
-                    if code >= a && code <= b {
-                        found = Some(g + code - a);
-                        break;
+                // Groups ascend by start code: the last group starting at or below the code, by bisection.
+                let n = (u32_at(d, off + 12)? as usize).min(1 << 20);
+                let (mut lo, mut hi) = (0usize, n);
+                while lo < hi {
+                    let mid = (lo + hi) / 2;
+                    if u32_at(d, off + 16 + 12 * mid)? <= code {
+                        lo = mid + 1;
+                    } else {
+                        hi = mid;
                     }
                 }
-                found?
+                if lo == 0 {
+                    return None;
+                }
+                let r = off + 16 + 12 * (lo - 1);
+                let (a, b, g) = (u32_at(d, r)?, u32_at(d, r + 4)?, u32_at(d, r + 8)?);
+                if code < a || code > b {
+                    return None;
+                }
+                g.wrapping_add(code - a)
             }
             _ => return None,
         };
@@ -515,13 +541,19 @@ impl Cff {
                         }
                     }
                     Some(3) => {
+                        // Ranges come in ascending order; a range that starts before the previous one ended only
+                        // fills what is new, so 65 535 overlapping ranges cannot cost 65 535 times the glyph count.
                         let nr = u16_at(d, fs + 1).unwrap_or(0) as usize;
+                        let mut done = 0usize;
                         for r in 0..nr {
-                            let a = u16_at(d, fs + 3 + 3 * r).unwrap_or(0) as usize;
+                            let a = (u16_at(d, fs + 3 + 3 * r).unwrap_or(0) as usize).max(done);
                             let fd = *d.get(fs + 5 + 3 * r).unwrap_or(&0);
-                            let b = u16_at(d, fs + 6 + 3 * r).unwrap_or(0) as usize;
-                            for slot in fd_select.iter_mut().take(b.min(n)).skip(a) {
-                                *slot = fd;
+                            let b = (u16_at(d, fs + 6 + 3 * r).unwrap_or(0) as usize).min(n);
+                            if b > a {
+                                for slot in &mut fd_select[a..b] {
+                                    *slot = fd;
+                                }
+                                done = b;
                             }
                         }
                     }
@@ -601,21 +633,16 @@ impl Cff {
         self.privs.get(fd).or(self.privs.first())
     }
 
-    fn bbox(&self, gid: u32) -> Option<(i32, i32, i32, i32)> {
-        let r = self.run(gid)?;
-        Some(r.0)
-    }
-
-    fn advance(&self, gid: u32) -> Option<f64> {
-        self.run(gid).map(|r| r.1)
-    }
-
-    /// Runs a charstring: (control box, advance width).
-    fn run(&self, gid: u32) -> Option<((i32, i32, i32, i32), f64)> {
+    /// Runs a charstring: (control box, advance width). `None` when the document's work is spent.
+    fn run(&self, gid: u32, work: &Work) -> Option<((i32, i32, i32, i32), f64)> {
         let &(o, l) = self.charstrings.get(gid as usize)?;
+        if work.get() == 0 {
+            return None;
+        }
         let (subrs, default_w, nominal_w) = self.priv_of(gid).cloned().unwrap_or((vec![], 0.0, 0.0));
         let mut st = Cs { x: 0.0, y: 0.0, bbox: None, stack: Vec::new(), stems: 0, width: None, ops: 0, done: false };
         st.exec(&self.data, (o, l), &subrs, &self.gsubrs, 0);
+        work.set(work.get().saturating_sub(st.ops as u64));
         let w = match st.width {
             Some(w) if !w.is_nan() => w + nominal_w,
             _ => default_w,
@@ -903,10 +930,11 @@ mod tests {
                 v[1] = 0;
                 v[2] = 4;
             }
-            let _ = Program::parse(&v);
+            let w: Work = Rc::new(Cell::new(1 << 30));
+            let _ = Program::parse(&v, &w);
             let mut t = vec![0, 1, 0, 0];
             t.extend(std::iter::repeat_n(0xffu8, n));
-            if let Some(p) = Program::parse(&t) {
+            if let Some(p) = Program::parse(&t, &w) {
                 let _ = p.glyph_bbox(3, true);
             }
         }

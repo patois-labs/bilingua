@@ -51,7 +51,14 @@ pub struct Doc<'a> {
     crypt: Option<Handler>,
     encrypt_num: u32,
     pub budget: RefCell<Budget>,
+    /// Raw stream bytes still allowed (see [`Doc::charge_raw`]): the decoded budget plus eight times the file.
+    raw_left: std::cell::Cell<u64>,
+    /// Work left for fonts and glyph programs (see `fontprog::Work`); at zero the extraction is a limit error.
+    pub work: crate::fontprog::Work,
 }
+
+/// Units of work a document may spend on font loads and charstring operations (about a few seconds).
+pub const WORK_LIMIT: u64 = 1 << 30;
 
 impl<'a> Doc<'a> {
     pub fn open(file: &'a [u8], budget: u64) -> Result<Doc<'a>, OpenError> {
@@ -71,6 +78,8 @@ impl<'a> Doc<'a> {
             crypt: None,
             encrypt_num: 0,
             budget: RefCell::new(Budget::new(budget)),
+            raw_left: std::cell::Cell::new(budget.saturating_add((data.len() as u64).saturating_mul(8))),
+            work: Rc::new(std::cell::Cell::new(WORK_LIMIT)),
         };
         let start = doc.start_xref();
         let mut rebuilt = false;
@@ -334,7 +343,7 @@ impl<'a> Doc<'a> {
                 }
                 Tok::Word(b"trailer", _) => {
                     if let Some(Parsed::Obj(Obj::Dict(t))) = obj::parse_obj(&mut lx, 0, true) {
-                        for (k, v) in t.items.iter() {
+                        for (k, v) in t.items().iter() {
                             trailer.insert(k, v.clone());
                         }
                         have_trailer = true;
@@ -347,7 +356,7 @@ impl<'a> Doc<'a> {
                             lx.pos = end.max(lx.pos);
                             if let Obj::Stream(s) = &o {
                                 if s.dict.get(b"Type").and_then(|t| t.as_name()) == Some(b"XRef") {
-                                    for (k, v) in s.dict.items.iter() {
+                                    for (k, v) in s.dict.items().iter() {
                                         if !matches!(k.as_slice(), b"Type" | b"W" | b"Index" | b"Length" | b"Filter" | b"DecodeParms" | b"Prev") {
                                             trailer.insert(k, v.clone());
                                         }
@@ -466,13 +475,15 @@ impl<'a> Doc<'a> {
                         p += 1;
                     }
                     if d[p..].starts_with(b"endstream") {
-                        return (d[start..end].to_vec(), p + 9);
+                        return (self.copy_raw(&d[start..end]), p + 9);
                     }
                 }
             }
         }
+        // `endobj` only counts before the first `endstream`: looking for it past that point would scan the rest
+        // of the file for every such stream.
         let es = find(d, b"endstream", start);
-        let eo = find(d, b"endobj", start);
+        let eo = find(&d[..es.unwrap_or(d.len())], b"endobj", start);
         let stop = match (es, eo) {
             (Some(a), Some(b)) => a.min(b),
             (Some(a), None) | (None, Some(a)) => a,
@@ -486,7 +497,29 @@ impl<'a> Doc<'a> {
             end -= 1;
         }
         let next = if es == Some(stop) { stop + 9 } else { stop };
-        (d[start..end.max(start)].to_vec(), next)
+        (self.copy_raw(&d[start..end.max(start)]), next)
+    }
+
+    /// Charges raw stream bytes read, copied or decrypted to the raw budget. A file can make every one of many
+    /// streams run to its end (no `endstream`), or use one large stream many times; without this, the copies and
+    /// scans grow with the square of the file. Over the budget the extraction ends with the stream limit error.
+    fn charge_raw(&self, n: usize) -> bool {
+        let left = self.raw_left.get();
+        if n as u64 > left {
+            self.raw_left.set(0);
+            self.budget.borrow_mut().exceeded = true;
+            return false;
+        }
+        self.raw_left.set(left - n as u64);
+        true
+    }
+
+    fn copy_raw(&self, b: &[u8]) -> Vec<u8> {
+        if self.charge_raw(b.len()) {
+            b.to_vec()
+        } else {
+            Vec::new()
+        }
     }
 
     fn objstm_index(&self, num: u32, s: &Stream) -> Option<ObjStmIndex> {
@@ -547,6 +580,9 @@ impl<'a> Doc<'a> {
 
     /// The decrypted, decoded data of a stream. `None` for an image codec or unknown filter.
     pub fn stream_data(&self, s: &Stream) -> Option<Vec<u8>> {
+        if !self.charge_raw(s.raw.len()) {
+            return None;
+        }
         let raw: std::borrow::Cow<[u8]> = match &self.crypt {
             Some(h) if s.num != 0 && s.num != self.encrypt_num && !self.skip_decrypt(&s.dict) => std::borrow::Cow::Owned(h.decrypt(s.num, s.gen, &s.raw)),
             _ => std::borrow::Cow::Borrowed(&s.raw),
@@ -579,11 +615,14 @@ impl<'a> Doc<'a> {
         }
     }
 
-    fn decrypt_dict(&self, d: Dict, num: u32, gen: u16) -> Dict {
+    fn decrypt_dict(&self, mut d: Dict, num: u32, gen: u16) -> Dict {
         if self.crypt.is_none() || num == self.encrypt_num {
             return d;
         }
-        Dict { items: d.items.into_iter().map(|(k, v)| (k, self.decrypt_obj(v, num, gen))).collect() }
+        for v in d.values_mut() {
+            *v = self.decrypt_obj(std::mem::replace(v, Obj::Null), num, gen);
+        }
+        d
     }
 
     // ------------------------------------------------------------ pages
@@ -640,11 +679,15 @@ impl<'a> Doc<'a> {
             return out;
         }
         let mut stack: Vec<Rc<Dict>> = vec![pages.clone()];
-        self.walk(&pages, &mut stack, &mut out, want, 0);
+        let mut seen: HashSet<*const Dict> = HashSet::new();
+        seen.insert(Rc::as_ptr(&pages));
+        self.walk(&pages, &mut stack, &mut out, want, 0, &mut seen);
         out
     }
 
-    fn walk(&self, node: &Rc<Dict>, stack: &mut Vec<Rc<Dict>>, out: &mut Vec<Option<Page>>, want: usize, level: usize) {
+    /// A branch is walked once: a page tree whose branches share children (a DAG, not a tree) would otherwise be
+    /// walked once per path, exponentially many times.
+    fn walk(&self, node: &Rc<Dict>, stack: &mut Vec<Rc<Dict>>, out: &mut Vec<Option<Page>>, want: usize, level: usize, seen: &mut HashSet<*const Dict>) {
         if level >= MAX_PAGE_LEVEL || out.len() >= want {
             return;
         }
@@ -661,8 +704,11 @@ impl<'a> Doc<'a> {
                 continue;
             }
             if kd.has(b"Kids") {
+                if !seen.insert(Rc::as_ptr(&kd)) {
+                    continue;
+                }
                 stack.push(kd.clone());
-                self.walk(&kd, stack, out, want, level + 1);
+                self.walk(&kd, stack, out, want, level + 1, seen);
                 stack.pop();
             } else {
                 out.push(Some(self.page_of(&kd, stack)));
