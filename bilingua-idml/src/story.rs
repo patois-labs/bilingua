@@ -419,12 +419,7 @@ pub fn tokenize(t: &Tree, para: &Para) -> Tok {
             reg.insert(n, Reg::Run(ri));
             codes.insert(
                 n.to_string(),
-                CodeData {
-                    open: Some(t.start_tag(r.csr, false)),
-                    close: Some(format!("</{}>", t.name(r.csr))),
-                    standalone: None,
-                    label: Some("run".into()),
-                },
+                CodeData::new().with_open(t.start_tag(r.csr, false)).with_close(format!("</{}>", t.name(r.csr))).with_label("run".to_string()),
             );
             parts.push(Part::Open(n));
         }
@@ -446,12 +441,7 @@ pub fn tokenize(t: &Tree, para: &Para) -> Tok {
                     open_ids.insert(*el, n);
                     codes.insert(
                         n.to_string(),
-                        CodeData {
-                            open: Some(t.start_tag(*el, false)),
-                            close: Some(format!("</{}>", t.name(*el))),
-                            standalone: None,
-                            label: Some(label_of(t.local(*el)).into()),
-                        },
+                        CodeData::new().with_open(t.start_tag(*el, false)).with_close(format!("</{}>", t.name(*el))).with_label(label_of(t.local(*el)).to_string()),
                     );
                     parts.push(Part::Open(n));
                 }
@@ -494,7 +484,7 @@ fn point_code(t: &Tree, p: Point) -> CodeData {
             }
         },
     };
-    CodeData { open: None, close: None, standalone: Some(display), label: Some(label) }
+    CodeData::new().with_standalone(display).with_label(label)
 }
 
 /// True when the characters of a part list contain anything but white space.

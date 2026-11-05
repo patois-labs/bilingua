@@ -122,6 +122,7 @@ pub fn salesforce_language_code(locale: &str) -> String {
 
 /// One row as a key-based project sees it (unit or not).
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct Record {
     pub key: String,
     /// The source LABEL.
@@ -136,6 +137,7 @@ pub struct Record {
 
 /// A translation longer than Salesforce allows for its key.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct OverLimit {
     pub unit_index: usize,
     pub key: String,
@@ -347,7 +349,7 @@ impl StfFilter {
                 }
                 let id = (n + 1).to_string();
                 chars += 1;
-                codes.insert(id.clone(), CodeData { standalone: Some(label[s..e].to_string()), label: Some("placeholder".into()), ..Default::default() });
+                codes.insert(id.clone(), CodeData::new().with_standalone(label[s..e].to_string()).with_label("placeholder".to_string()));
                 inl.push(Inline::tag(id, TagKind::Standalone, &label[s..e]));
                 at = e;
             }
@@ -369,12 +371,7 @@ impl StfFilter {
             let bilingual = r.dst != r.src;
             codes.insert(
                 HIDDEN.into(),
-                CodeData {
-                    standalone: Some(text[a..b].to_string()),
-                    open: (!pad.is_empty()).then_some(pad),
-                    label: Some(if bilingual { BILINGUAL } else { MONOLINGUAL }.into()),
-                    ..Default::default()
-                },
+                CodeData::new().with_open((!pad.is_empty()).then_some(pad)).with_standalone(text[a..b].to_string()).with_label(if bilingual { BILINGUAL } else { MONOLINGUAL }.to_string()),
             );
             unit.codes = codes;
             if load && bilingual {
@@ -480,10 +477,12 @@ impl Filter for StfFilter {
     }
 
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         self.extract_with(bytes, opts, &opts.limits())
     }
 
     fn merge_with(&self, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         merge(doc, opts)
     }
 }

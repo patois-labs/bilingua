@@ -213,6 +213,7 @@ impl Filter for Mif {
     }
 
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         let limits = opts.limits();
         let (text, bom) = Mif::parse_text(bytes, &limits)?;
         let budget = STATEMENTS_PER_UNIT.saturating_mul(limits.max_units);
@@ -286,6 +287,7 @@ impl Filter for Mif {
     }
 
     fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         // MIF is written as UTF-8 here (BOM kept), so `output_encoding` has nothing to change
         bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
         let Skeleton::Text {

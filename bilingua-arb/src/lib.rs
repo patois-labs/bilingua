@@ -30,6 +30,7 @@ const RAW_KEY: &str = "$raw";
 
 /// Size limits. The defaults are far above any real resource file; a caller that takes uploads can lower them.
 #[derive(Debug, Clone)]
+#[non_exhaustive]
 pub struct Limits {
     /// Largest file in bytes.
     pub max_bytes: usize,
@@ -86,7 +87,7 @@ impl Arb {
                     unit.context.notes = meta.notes.clone();
                 }
                 if k == 0 {
-                    unit.codes.insert(RAW_KEY.into(), CodeData { standalone: Some(text[m.start..m.end].to_string()), ..Default::default() });
+                    unit.codes.insert(RAW_KEY.into(), CodeData::new().with_standalone(text[m.start..m.end].to_string()));
                 }
                 unit.context.kind = Some("message".into());
                 unit.context.key = Some(m.key.clone());
@@ -140,10 +141,12 @@ impl Filter for Arb {
     }
 
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         self.extract_with(bytes, opts, &Limits::default())
     }
 
     fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
         let Skeleton::Text { parts, encoding, .. } = &doc.skeleton else {
             return Err(Error::Write("arb needs a text skeleton".into()));
@@ -290,19 +293,19 @@ fn level_unit(parts: &[Part], path: &str) -> UnitPlan {
             Part::Text(t) => inlines.push(Inline::Text(t.clone())),
             Part::Simple(raw) => {
                 inlines.push(Inline::free_tag(id.clone(), raw.clone()));
-                codes.insert(id, CodeData { standalone: Some(raw.clone()), label: Some("placeholder".into()), ..Default::default() });
+                codes.insert(id, CodeData::new().with_standalone(raw.clone()).with_label("placeholder".to_string()));
                 roles.push(Role::Simple(raw.clone()));
             }
             Part::Pound => {
                 inlines.push(Inline::tag(id.clone(), TagKind::Standalone, "#"));
-                codes.insert(id, CodeData { standalone: Some("#".into()), label: Some("number".into()), ..Default::default() });
+                codes.insert(id, CodeData::new().with_standalone("#".to_string()).with_label("number".to_string()));
                 roles.push(Role::Token(tokens, false));
                 tokens += 1;
             }
             Part::Complex(cx) => {
                 let display = format!("{} ...}}", cx.head.trim_end());
                 inlines.push(Inline::tag(id.clone(), TagKind::Standalone, display.clone()));
-                codes.insert(id, CodeData { standalone: Some(display), label: Some("plural or select".into()), ..Default::default() });
+                codes.insert(id, CodeData::new().with_standalone(display).with_label("plural or select".to_string()));
                 roles.push(Role::Token(tokens, true));
                 tokens += 1;
             }
@@ -332,7 +335,7 @@ fn fallback_unit(value: &str) -> UnitPlan {
                 let raw = value[i..=j].to_string();
                 let id = (roles.len() + 1).to_string();
                 inlines.push(Inline::free_tag(id.clone(), raw.clone()));
-                codes.insert(id, CodeData { standalone: Some(raw.clone()), label: Some("placeholder".into()), ..Default::default() });
+                codes.insert(id, CodeData::new().with_standalone(raw.clone()).with_label("placeholder".to_string()));
                 roles.push(Role::Simple(raw));
                 i = j + 1;
                 run = i;

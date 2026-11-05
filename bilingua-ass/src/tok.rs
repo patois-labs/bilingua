@@ -306,11 +306,11 @@ pub(crate) fn tokenize(text: &str) -> Option<Tokenized> {
         match opener_of.get(&k) {
             Some(&c) if c < hi => {
                 ids.insert(k, n);
-                codes.insert(id.clone(), CodeData { open: Some(s.to_string()), close: None, standalone: None, label: Some(label_of(s).into()) });
+                codes.insert(id.clone(), CodeData::new().with_open(s.to_string()).with_label(label_of(s).to_string()));
                 inlines.push(Inline::tag(id, TagKind::Open, s));
             }
             _ => {
-                codes.insert(id.clone(), CodeData { open: None, close: None, standalone: Some(s.to_string()), label: Some(label_of(s).into()) });
+                codes.insert(id.clone(), CodeData::new().with_standalone(s.to_string()).with_label(label_of(s).to_string()));
                 inlines.push(Inline::tag(id, TagKind::Standalone, s));
             }
         }

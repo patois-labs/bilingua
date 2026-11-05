@@ -157,12 +157,21 @@ fn pairs(inl: &[Inline]) -> Vec<Option<usize>> {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TokenProblem {
     /// A `\u{27E6}` or `\u{27E7}` that is not part of a well-formed token. Left in the text.
-    Stray { at: usize },
+    Stray {
+        /// Its byte position.
+        at: usize,
+    },
     /// A well-formed token whose number is not in the map. Left in the text.
-    Unknown { token: String },
+    Unknown {
+        /// The token.
+        token: String,
+    },
     /// A token whose kind does not fit the map (a closing token for a standalone code, an `x` token for a pair).
     /// Left in the text.
-    KindMismatch { token: String },
+    KindMismatch {
+        /// The token.
+        token: String,
+    },
 }
 
 /// LocOS text back to inline codes. Tokens that cannot be resolved stay in the text; see [`parse_locos_text`]

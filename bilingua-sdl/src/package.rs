@@ -57,6 +57,7 @@ impl PackageDoc for bilingua_xliff::Doc {
 /// What a file inside a package is.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "lowercase")]
+#[non_exhaustive]
 pub enum FileRole {
     /// The `.sdlproj` project description.
     Project,
@@ -72,6 +73,7 @@ pub enum FileRole {
 
 /// One entry of a package, for listing.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[non_exhaustive]
 pub struct PackageFile {
     /// Path inside the zip, forward slashes.
     pub path: String,
@@ -87,6 +89,7 @@ pub struct PackageFile {
 /// Project package (to the translator) or return package (back to the project manager).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "lowercase")]
+#[non_exhaustive]
 pub enum SdlPackageKind {
     Project,
     Return,
@@ -94,6 +97,7 @@ pub enum SdlPackageKind {
 
 /// Time and identity written into a return package.
 #[derive(Debug, Clone)]
+#[non_exhaustive]
 pub struct ReturnStamp {
     /// Seconds since 1970-01-01 UTC.
     pub unix_secs: u64,

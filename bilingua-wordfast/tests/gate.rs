@@ -96,7 +96,7 @@ fn a_target_naming_a_hidden_code_splices_nothing() {
         let tags: Vec<Inline> = ["~raw", "~pre", "~post", "~t0", "~key", "~lead"]
             .iter()
             .flat_map(|id| {
-                [TagKind::Standalone, TagKind::Open, TagKind::Close].map(|kind| Inline::Tag { id: id.to_string(), kind, display: String::new(), free: false })
+                [TagKind::Standalone, TagKind::Open, TagKind::Close].map(|kind| Inline::tag(id.to_string(), kind, String::new()))
             })
             .collect();
         let mut t = vec![Inline::text("Neu ")];

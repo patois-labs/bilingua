@@ -39,7 +39,7 @@ fn large_file() {
     if let Ok(p) = std::env::var("BILINGUA_JS_SPEED_OUT") {
         std::fs::write(p, &text).unwrap();
     }
-    let limits = Limits { max_units: 10_000_000, ..Limits::default() };
+    let limits = { let mut built = Limits::default(); built.max_units = 10_000_000; built };
     let t0 = Instant::now();
     let mut doc = JsModule
         .extract_with(text.as_bytes(), &ExtractOptions::default(), &limits)

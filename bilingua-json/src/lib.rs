@@ -45,6 +45,7 @@ impl Filter for JsonFilter {
     }
 
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         let mut dec = bilingua_model::enc::decode_text(bytes, &bilingua_model::enc::DecodeOptions::new(opts))?;
         let text_owned = std::mem::take(&mut dec.text);
         let text = text_owned.as_str();
@@ -68,7 +69,7 @@ impl Filter for JsonFilter {
             pos = v.end;
             let mut unit = Unit::new(format!("u{}", units.len() + 1), inl);
             unit.codes = codes;
-            unit.codes.insert(RAW_KEY.into(), CodeData { standalone: Some(token.to_string()), ..Default::default() });
+            unit.codes.insert(RAW_KEY.into(), CodeData::new().with_standalone(token.to_string()));
             unit.context.kind = Some("string".into());
             unit.context.key = Some(v.pointer);
             unit.translate = !skip;
@@ -83,6 +84,7 @@ impl Filter for JsonFilter {
     }
 
     fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
         let Skeleton::Text { parts, encoding, .. } = &doc.skeleton else {
             return Err(Error::Write("json needs a text skeleton".into()));

@@ -40,25 +40,51 @@ pub const FORMAT_OPTIONS: &[FormatOptionKey] =
 /// exactly the segments LocOS translates. `include_locked` in the extract options lists the locked and
 /// non-translatable segments too.
 #[derive(Debug, Clone, Copy)]
+#[non_exhaustive]
 pub struct Txml {
     pub load_targets: bool,
 }
 
 /// The Wordfast Pro TXLF filter (XLIFF 1.2 with the gs4tr extension). Options as for [`Txml`].
 #[derive(Debug, Clone, Copy)]
+#[non_exhaustive]
 pub struct Txlf {
     pub load_targets: bool,
 }
 
 impl Default for Txml {
     fn default() -> Self {
-        Txml { load_targets: true }
+        Txml::new()
     }
 }
 
 impl Default for Txlf {
     fn default() -> Self {
+        Txlf::new()
+    }
+}
+
+impl Txml {
+    /// The default filter: finished translations are loaded as targets.
+    pub const fn new() -> Txml {
+        Txml { load_targets: true }
+    }
+    /// With `false`, existing translations are not loaded (Localization OS's reading).
+    pub const fn with_load_targets(mut self, load_targets: bool) -> Txml {
+        self.load_targets = load_targets;
+        self
+    }
+}
+
+impl Txlf {
+    /// The default filter: finished translations are loaded as targets.
+    pub const fn new() -> Txlf {
         Txlf { load_targets: true }
+    }
+    /// With `false`, existing translations are not loaded (Localization OS's reading).
+    pub const fn with_load_targets(mut self, load_targets: bool) -> Txlf {
+        self.load_targets = load_targets;
+        self
     }
 }
 
@@ -328,12 +354,14 @@ macro_rules! filter_impl {
                 true
             }
             fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
+                bilingua_model::check_own_options(self, &opts.format_options)?;
                 self.extract_with(bytes, opts, &opts.limits())
             }
             fn format_option_keys(&self) -> &'static [bilingua_model::FormatOptionKey] {
                 FORMAT_OPTIONS
             }
             fn merge_with(&self, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
+                bilingua_model::check_own_options(self, &opts.format_options)?;
                 merge($d, doc, opts)
             }
         }

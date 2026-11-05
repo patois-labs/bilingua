@@ -30,7 +30,7 @@ fn check(c: &serde_json::Value, key: &str, terms: bool) -> bool {
     let want: Vec<(&str, &str)> = g["units"].as_array().unwrap().iter().map(|u| (u[0].as_str().unwrap(), u[1].as_str().unwrap())).collect();
     let got: Vec<(String, String)> = doc.units.iter().map(|u| (flat(u), u.context.style.clone().unwrap())).collect();
     assert_eq!(got.iter().map(|(a, b)| (a.as_str(), b.as_str())).collect::<Vec<_>>(), want, "{name} ({key}): units");
-    let lim = Limits { translate_terms: terms, ..Limits::default() };
+    let lim = { let mut built = Limits::default(); built.translate_terms = terms; built };
     for (label, m) in mappings(want.len()) {
         let merged = build_with(&data, &lim, &pairs(&m), None);
         assert_eq!(String::from_utf8_lossy(&merged), String::from_utf8_lossy(&hex(g["builds"][label].as_str().unwrap())), "{name} ({key}): build {label}");

@@ -265,7 +265,7 @@ impl DesktopFilter {
                 match unit_at.get(&(e_idx, i)) {
                     Some(&n) => {
                         let mut unit = Unit::new(format!("u{}", n + 1), vec![Inline::text(unescape(raw))]);
-                        unit.codes.insert(HIDDEN.into(), CodeData { standalone: Some((*raw).to_string()), open: None, close: None, label: e.in_list().then(|| "list".to_string()) });
+                        unit.codes.insert(HIDDEN.into(), CodeData::new().with_standalone((*raw).to_string()).with_label(e.in_list().then(|| "list".to_string())));
                         unit.context.kind = Some("key".into());
                         let k = unit_key(e, i);
                         unit.context.notes = e.comments.iter().filter(|c| !c.is_empty()).map(|c| c.to_string()).collect();
@@ -324,10 +324,12 @@ impl Filter for DesktopFilter {
     }
 
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         self.extract_inner(bytes, opts)
     }
 
     fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
         if doc.format != ID {
             return Err(Error::Write(format!("a {} document cannot be merged by the desktop filter", doc.format)));

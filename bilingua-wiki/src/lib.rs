@@ -216,6 +216,7 @@ impl Filter for MediaWiki {
         false // wikitext is plain text; only the extension says so
     }
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         // The filter's allow-list plus `format_options["wiki.template_params"]` (same spelling) for this call.
         match opts.format_option(TEMPLATE_PARAMS_KEY) {
             Some(spec) if !lex::strip(spec).is_empty() => {
@@ -227,6 +228,7 @@ impl Filter for MediaWiki {
         }
     }
     fn merge_with(&self, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         merge_wiki("wiki", false, doc, opts)
     }
 }
@@ -242,9 +244,11 @@ impl Filter for DokuWiki {
         false // a .txt file is never guessed to be DokuWiki
     }
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         extract_wiki("dokuwiki", true, &HashSet::new(), bytes, opts)
     }
     fn merge_with(&self, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         merge_wiki("dokuwiki", true, doc, opts)
     }
 }

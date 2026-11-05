@@ -12,6 +12,7 @@ pub const DITA_ARCH_NS: &str = "http://dita.oasis-open.org/architecture/2005/";
 
 /// An attribute that carries translatable text on the named elements (`*` = on any element).
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct AttrRule {
     pub attr: String,
     pub elements: Vec<String>,
@@ -95,6 +96,7 @@ impl Detect {
 }
 
 #[derive(Debug, Clone, Default)]
+#[non_exhaustive]
 pub struct Dialect {
     pub name: String,
     /// Elements whose content (and their descendants') is never translated.

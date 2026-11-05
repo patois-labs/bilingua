@@ -255,12 +255,14 @@ impl Filter for XmlFilter {
     }
 
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         self.do_extract(bytes, opts)
     }
 
     /// `stamp_target_always` declares the target language even when nothing is translated; `output_encoding`
     /// UTF-8 writes UTF-8 with the declaration saying so.
     fn merge_with(&self, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         check_parser(doc, &parser_info!())?;
         let Skeleton::Text { parts, encoding, .. } = &doc.skeleton else {
             return Err(Error::Write("xml needs a text skeleton".into()));

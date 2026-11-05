@@ -20,6 +20,7 @@ pub enum Flavor {
 
 /// The original markup of one tag.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct RawTag {
     pub id: String,
     pub kind: TagKind,
@@ -28,6 +29,7 @@ pub struct RawTag {
 
 /// Display strings for SDLXLIFF tag ids, taken from `<tag-defs>`.
 #[derive(Debug, Clone, Default)]
+#[non_exhaustive]
 pub struct TagDef {
     pub open: Option<String>,
     pub close: Option<String>,
@@ -102,7 +104,7 @@ impl Builder<'_> {
         let display = self.display(&id, kind, tag);
         let free = kind == TagKind::Standalone && self.is_free(raw, tag);
         self.out.raws.push(RawTag { id: id.clone(), kind, raw: String::from_utf8_lossy(raw).into_owned() });
-        self.out.inlines.push(Inline::Tag { id, kind, display, free });
+        self.out.inlines.push(Inline::tag(id, kind, display).with_free(free));
     }
 
     /// The Localization OS rule for an `x` or `ph` placeholder that a translation may move: it needs an `id`,
@@ -346,7 +348,7 @@ pub fn split_brace_codes(p: Parsed) -> Parsed {
             if !out.raws.iter().any(|r| r.id == id && r.kind == kind) {
                 out.raws.push(RawTag { id: id.clone(), kind, raw });
             }
-            out.inlines.push(Inline::Tag { id, kind, display: shown.to_owned(), free: false });
+            out.inlines.push(Inline::tag(id, kind, shown.to_owned()));
             i += len;
             plain_from = i;
         }

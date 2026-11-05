@@ -22,6 +22,7 @@ const HIDDEN: &str = "$js";
 
 /// Size limits (the Localization OS defaults). `bilingua-model` has no limits in this tree, so the crate caps itself.
 #[derive(Debug, Clone, Copy)]
+#[non_exhaustive]
 pub struct Limits {
     /// String values in one file (and the base of the token, quote and line budgets).
     pub max_units: usize,
@@ -64,6 +65,7 @@ impl From<ModuleError> for Error {
 
 /// One translatable string as a key-based project sees it.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct Record {
     /// Dotted key path (the default export's own name is dropped).
     pub key: String,
@@ -283,12 +285,7 @@ impl JsModule {
             u.codes = codes;
             u.codes.insert(
                 HIDDEN.into(),
-                CodeData {
-                    standalone: Some(text[ru.start..ru.end].to_string()),
-                    open: Some((ru.quote as char).to_string()),
-                    close: Some(if ru.multiline { "1" } else { "0" }.into()),
-                    ..Default::default()
-                },
+                CodeData::new().with_open((ru.quote as char).to_string()).with_close(if ru.multiline { "1" } else { "0" }.to_string()).with_standalone(text[ru.start..ru.end].to_string()),
             );
             u.context.kind = Some("string".into());
             u.context.style = Some("js".into());
@@ -325,10 +322,12 @@ impl Filter for JsModule {
     }
 
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         self.extract_with(bytes, opts, &Limits::default())
     }
 
     fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
         let Skeleton::Text {
             parts, encoding, ..

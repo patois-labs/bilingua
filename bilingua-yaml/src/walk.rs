@@ -74,6 +74,7 @@ fn translatable(s: &str) -> bool {
     bilingua_model::py_has_alnum(s)
 }
 
+#[non_exhaustive]
 pub struct Limits {
     pub max_units: usize,
     pub max_unit_chars: usize,

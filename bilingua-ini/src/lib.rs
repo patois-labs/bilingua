@@ -29,6 +29,7 @@ const HIDDEN: &str = "$ini";
 
 /// Size limits (the Localization OS defaults). `bilingua-model` has no limits in this tree, so the crate caps itself.
 #[derive(Debug, Clone, Copy)]
+#[non_exhaustive]
 pub struct Limits {
     /// Units in one file.
     pub max_units: usize,
@@ -46,6 +47,7 @@ impl Default for Limits {
 
 /// One entry as a key-based project sees it (translatable or not).
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct Record {
     pub key: String,
     pub value: String,
@@ -125,12 +127,7 @@ impl IniFilter {
             }
             pos = e.end;
             let mut unit = Unit::new(format!("u{}", units.len() + 1), vec![Inline::text(core)]);
-            let hidden = CodeData {
-                standalone: Some(text[e.start..e.end].to_string()),
-                open: owned(lead),
-                close: owned(trail),
-                label: owned(e.quote.code()),
-            };
+            let hidden = CodeData::new().with_open(owned(lead)).with_close(owned(trail)).with_standalone(text[e.start..e.end].to_string()).with_label(owned(e.quote.code()));
             unit.codes.insert(HIDDEN.into(), hidden);
             unit.translate = translatable;
             unit.context.kind = Some("key".into());
@@ -187,10 +184,12 @@ impl Filter for IniFilter {
     }
 
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         self.extract_with(bytes, opts, &Limits::default())
     }
 
     fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
         let Skeleton::Text { parts, encoding, .. } = &doc.skeleton else {
             return Err(Error::Write("ini needs a text skeleton".into()));

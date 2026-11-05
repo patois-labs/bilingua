@@ -40,6 +40,7 @@ pub const DEFAULT_ATTRS: &[&str] = &["alt", "aria-label", "caption", "label", "p
 
 /// What an MDX extraction can be told (the LocOS settings `LOC_TMS_MDX_ATTRS` and `LOC_TMS_FRONT_MATTER_KEYS`).
 #[derive(Debug, Clone)]
+#[non_exhaustive]
 pub struct MdxOptions {
     /// JSX attribute names whose string values are units.
     pub attrs: Vec<String>,
@@ -134,10 +135,12 @@ impl Filter for Mdx {
         FORMAT_OPTIONS
     }
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         self.extract_with(bytes, opts, &MdxOptions::default().from_format_options(opts))
     }
 
     fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         render::merge(doc, opts)
     }
 }

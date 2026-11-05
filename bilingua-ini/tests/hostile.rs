@@ -84,7 +84,7 @@ fn deep_and_huge_inputs_give_typed_errors() {
         many.push_str(&format!("k{i}=v{i}\n"));
     }
     assert!(matches!(extract(many.as_bytes()), Err(Error::Unsupported(_))));
-    assert!(IniFilter.extract_with(many.as_bytes(), &ExtractOptions::default(), &Limits { max_units: 60_000, ..Limits::default() }).is_ok());
+    assert!(IniFilter.extract_with(many.as_bytes(), &ExtractOptions::default(), &{ let mut built = Limits::default(); built.max_units = 60_000; built }).is_ok());
     // more lines than the line cap: refused before any scan
     let lines = "\n".repeat(1_000_001);
     assert!(matches!(extract(lines.as_bytes()), Err(Error::Unsupported(_))));

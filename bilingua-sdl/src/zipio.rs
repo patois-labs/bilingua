@@ -68,6 +68,7 @@ fn refuse(l: &ZipLimits, kind: LimitKind, typed: String, plain: String) -> Error
 
 /// One file of a package, in memory.
 #[derive(Debug, Clone)]
+#[non_exhaustive]
 pub struct Entry {
     /// Forward-slash path inside the zip, checked by [`safe_name`].
     pub name: String,

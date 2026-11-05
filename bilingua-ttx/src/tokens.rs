@@ -128,7 +128,7 @@ fn visit(tree: &Tree, text: &str, el: usize, t: &mut Tok, n: &mut usize) {
                         *n += 1;
                         let id = n.to_string();
                         let Kid::Elem(close) = kids[p] else { unreachable!("partner is an element") };
-                        t.codes.insert(id.clone(), CodeData { open: Some(lit(c)), close: Some(lit(close)), standalone: None, label });
+                        t.codes.insert(id.clone(), CodeData::new().with_open(lit(c)).with_close(lit(close)).with_label(label));
                         t.inl.push(Inline::tag(id, TagKind::Open, display(tree, text, c)));
                         num_of[pos] = *n;
                     }
@@ -141,7 +141,7 @@ fn visit(tree: &Tree, text: &str, el: usize, t: &mut Tok, n: &mut usize) {
                         let id = n.to_string();
                         let open = text[ce.start..ce.start_end].to_string();
                         let close = text[ce.end_start..ce.end].to_string();
-                        t.codes.insert(id.clone(), CodeData { open: Some(open.clone()), close: Some(close.clone()), standalone: None, label: Some("df".into()) });
+                        t.codes.insert(id.clone(), CodeData::new().with_open(open.clone()).with_close(close.clone()).with_label("df".to_string()));
                         t.inl.push(Inline::tag(id.clone(), TagKind::Open, open));
                         visit(tree, text, c, t, n);
                         t.inl.push(Inline::tag(id, TagKind::Close, close));
@@ -150,7 +150,7 @@ fn visit(tree: &Tree, text: &str, el: usize, t: &mut Tok, n: &mut usize) {
                         *n += 1;
                         let id = n.to_string();
                         let d = if ce.kind == Kind::Ut { display(tree, text, c) } else { lit(c) };
-                        t.codes.insert(id.clone(), CodeData { open: None, close: None, standalone: Some(lit(c)), label });
+                        t.codes.insert(id.clone(), CodeData::new().with_standalone(lit(c)).with_label(label));
                         t.inl.push(Inline::tag(id, TagKind::Standalone, d));
                     }
                 }
@@ -181,7 +181,7 @@ pub fn map_target(src: &BTreeMap<String, CodeData>, tgt: Tok) -> (Vec<Inline>, B
     let mut out = Vec::with_capacity(tgt.inl.len());
     for i in tgt.inl {
         match i {
-            Inline::Tag { id, kind, display, free: f } => {
+            Inline::Tag { id, kind, display, free: f, .. } => {
                 let new = if kind == TagKind::Close {
                     renamed.get(&id).cloned().unwrap_or_else(|| id.clone())
                 } else {
@@ -198,7 +198,7 @@ pub fn map_target(src: &BTreeMap<String, CodeData>, tgt: Tok) -> (Vec<Inline>, B
                     renamed.insert(id.clone(), nid.clone());
                     nid
                 };
-                out.push(Inline::Tag { id: new, kind, display, free: f });
+                out.push(Inline::tag(new, kind, display).with_free(f));
             }
             t => out.push(t),
         }

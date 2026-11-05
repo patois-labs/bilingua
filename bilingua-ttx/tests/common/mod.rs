@@ -10,9 +10,9 @@ pub fn opts() -> ExtractOptions {
 }
 
 /// Bilingua's default: finished translations are loaded as targets.
-pub const DEFAULT: Ttx = Ttx { skip_translated: false };
+pub const DEFAULT: Ttx = Ttx::new();
 /// The filter as Localization OS reads TTX: a `<Tu>` with a finished translation is not a unit.
-pub const LOCOS: Ttx = Ttx { skip_translated: true };
+pub const LOCOS: Ttx = Ttx::new().with_skip_translated(true);
 
 pub fn extract_with(f: &Ttx, data: &[u8]) -> Document {
     f.extract(data, &opts()).expect("extract")

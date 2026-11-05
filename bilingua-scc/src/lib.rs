@@ -126,7 +126,7 @@ fn atoms_to_inlines(atoms: &[Atom], line: &Line) -> (Vec<Inline>, std::collectio
                 let id = n.to_string();
                 codes.insert(
                     id.clone(),
-                    CodeData { standalone: Some(words_text(&ev.words)), label: Some(ev.name.label().to_string()), ..Default::default() },
+                    CodeData::new().with_standalone(words_text(&ev.words)).with_label(ev.name.label().to_string()),
                 );
                 inl.push(Inline::tag(id, TagKind::Standalone, ev.display()));
             }
@@ -171,6 +171,7 @@ impl Filter for SccFilter {
     }
 
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         let limits = opts.limits();
         let mut dec = enc::decode_text(bytes, &enc::DecodeOptions::new(opts))?;
         let text_owned = std::mem::take(&mut dec.text);
@@ -257,6 +258,7 @@ impl Filter for SccFilter {
     }
 
     fn merge_with(&self, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         merge(doc, opts)
     }
 }

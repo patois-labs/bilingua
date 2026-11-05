@@ -297,12 +297,12 @@ fn hostile() {
             other => panic!("{bad:?}: {other:?}"),
         }
     }
-    let small = Limits { max_units: 5, ..Limits::default() };
+    let small = { let mut built = Limits::default(); built.max_units = 5; built };
     let many: String = (0..10).map(|i| format!("k{i}: Value {i}\n")).collect();
     assert!(matches!(Yaml.extract_with(many.as_bytes(), &opts(None), &small), Err(Error::Unsupported(_))));
     let flow = format!("k: [{}]\n", vec!["1"; 200].join(","));
-    assert!(matches!(Yaml.extract_with(flow.as_bytes(), &opts(None), &Limits { max_units: 5, ..Limits::default() }), Err(Error::Unsupported(_))));
-    let chars = Limits { max_unit_chars: 50, ..Limits::default() };
+    assert!(matches!(Yaml.extract_with(flow.as_bytes(), &opts(None), &{ let mut built = Limits::default(); built.max_units = 5; built }), Err(Error::Unsupported(_))));
+    let chars = { let mut built = Limits::default(); built.max_unit_chars = 50; built };
     let long = format!("k: {}\n", "word ".repeat(40));
     assert!(matches!(Yaml.extract_with(long.as_bytes(), &opts(None), &chars), Err(Error::Unsupported(_))));
 }

@@ -103,7 +103,7 @@ pub fn build(body: &str) -> Built {
                 if !styles.contains(code) {
                     n += 1;
                     let id = n.to_string();
-                    codes.insert(id.clone(), CodeData { standalone: Some(code.to_string()), label: Some(label(code).into()), ..Default::default() });
+                    codes.insert(id.clone(), CodeData::new().with_standalone(code.to_string()).with_label(label(code).to_string()));
                     cur.push(Inline::tag(id, TagKind::Standalone, *code));
                 }
             }
@@ -111,7 +111,7 @@ pub fn build(body: &str) -> Built {
                 n += 1;
                 let id = n.to_string();
                 let joined = styles.concat();
-                codes.insert(id.clone(), CodeData { open: Some(joined.clone()), close: Some(String::new()), label: Some(label(styles[0]).into()), ..Default::default() });
+                codes.insert(id.clone(), CodeData::new().with_open(joined.clone()).with_close(String::new()).with_label(label(styles[0]).to_string()));
                 if !words_before {
                     heads.push(id.clone());
                 }

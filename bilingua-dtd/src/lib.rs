@@ -156,7 +156,7 @@ fn tokenize(core: &str) -> (Vec<Inline>, BTreeMap<String, CodeData>) {
                             Err(c) => c.raw,
                             Ok(_) => "",
                         };
-                        codes.insert(id.clone(), CodeData { open: Some(t.raw.to_string()), close: Some(close.to_string()), standalone: None, label });
+                        codes.insert(id.clone(), CodeData::new().with_open(t.raw.to_string()).with_close(close.to_string()).with_label(label));
                         inl.push(Inline::tag(id, TagKind::Open, t.raw));
                     } else {
                         inl.push(Inline::tag(id, TagKind::Close, t.raw));
@@ -164,7 +164,7 @@ fn tokenize(core: &str) -> (Vec<Inline>, BTreeMap<String, CodeData>) {
                 } else {
                     n += 1;
                     let id = n.to_string();
-                    codes.insert(id.clone(), CodeData { standalone: Some(t.raw.to_string()), label, ..Default::default() });
+                    codes.insert(id.clone(), CodeData::new().with_standalone(t.raw.to_string()).with_label(label));
                     inl.push(if t.shape.is_none() { Inline::free_tag(id, t.raw) } else { Inline::tag(id, TagKind::Standalone, t.raw) });
                 }
             }
@@ -220,7 +220,7 @@ impl DtdFilter {
             let mut unit = Unit::new(format!("u{}", units.len() + 1), inl);
             codes.insert(
                 HIDDEN.into(),
-                CodeData { standalone: Some(raw.to_string()), open: owned(lead), close: owned(trail), label: Some(e.quote.to_string()) },
+                CodeData::new().with_open(owned(lead)).with_close(owned(trail)).with_standalone(raw.to_string()).with_label(e.quote.to_string()),
             );
             unit.codes = codes;
             unit.translate = translatable;
@@ -281,10 +281,12 @@ impl Filter for DtdFilter {
     }
 
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         self.extract_with(bytes, opts, &opts.limits())
     }
 
-    fn merge_with(&self, doc: &Document, _opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
+    fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         // UTF-8 in, UTF-8 out (BOM kept), so `output_encoding` has nothing to change; no language stamp in this format
         bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
         let Skeleton::Text { parts, encoding, .. } = &doc.skeleton else {

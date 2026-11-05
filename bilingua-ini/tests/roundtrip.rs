@@ -194,11 +194,11 @@ fn detection() {
 fn limits_and_quirks() {
     // a value over the character cap
     let long = format!("k={}\n", "x".repeat(101));
-    let tight = Limits { max_value_chars: 100, ..Limits::default() };
+    let tight = { let mut built = Limits::default(); built.max_value_chars = 100; built };
     assert!(IniFilter.extract_with(long.as_bytes(), &ExtractOptions::default(), &tight).is_err());
     // too many lines (non-translatable lines count too)
     let many = "\n".repeat(30);
-    let tight = Limits { max_lines: 20, ..Limits::default() };
+    let tight = { let mut built = Limits::default(); built.max_lines = 20; built };
     assert!(IniFilter.extract_with(many.as_bytes(), &ExtractOptions::default(), &tight).is_err());
     // UTF-32 and broken UTF-16 are typed errors
     assert!(matches!(extract(b"\xff\xfe\x00\x00a\x00\x00\x00"), Err(Error::Unsupported(_))));

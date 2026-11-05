@@ -53,7 +53,7 @@ fn source_inlines(text: &str) -> Source {
             ph::Piece::Text(t) => inl.push(Inline::text(t)),
             ph::Piece::Ph(p) => {
                 let id = (tags.len() + 1).to_string();
-                codes.insert(id.clone(), CodeData { standalone: Some(p.to_string()), label: Some("placeholder".into()), ..Default::default() });
+                codes.insert(id.clone(), CodeData::new().with_standalone(p.to_string()).with_label("placeholder".to_string()));
                 inl.push(placeholder_tag(&id, p));
                 tags.push((id, p.to_string()));
             }
@@ -150,6 +150,7 @@ impl Filter for Po {
     }
 
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         let mut dec = bilingua_model::enc::decode_text(bytes, &bilingua_model::enc::DecodeOptions::new(opts).declared())?;
         let text_owned = std::mem::take(&mut dec.text);
         let text = text_owned.as_str();
@@ -231,6 +232,7 @@ impl Filter for Po {
     }
 
     fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
         let Skeleton::Text { parts, encoding, .. } = &doc.skeleton else {
             return Err(Error::Write("po needs a text skeleton".into()));

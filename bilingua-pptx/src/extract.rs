@@ -404,7 +404,7 @@ impl Extractor {
             (_, None, None) => ("textbox", None),
         };
         let slide = pi.slide_no;
-        let mut cx = UnitContext { kind: Some(kind.into()), style, ..Default::default() };
+        let mut cx = UnitContext::new().with_kind(kind.to_string()).with_style(style);
         let shape_part = format!("shape \"{}\"", shape.name);
         let loc = match pi.kind {
             Kind::Slide => format!("slide {slide}, {shape_part}"),
@@ -452,9 +452,9 @@ impl Extractor {
         let orig = raw_of(&orig_nodes);
         let mut u = Unit::new(id.clone(), built.inlines);
         u.codes = built.codes;
-        u.codes.insert(C_ORIG.into(), CodeData { standalone: Some(orig), ..Default::default() });
-        u.codes.insert(C_LEAD.into(), CodeData { standalone: Some(lead), ..Default::default() });
-        u.codes.insert(C_PFX.into(), CodeData { standalone: Some(ns.a.pfx.clone()), ..Default::default() });
+        u.codes.insert(C_ORIG.into(), CodeData::new().with_standalone(orig));
+        u.codes.insert(C_LEAD.into(), CodeData::new().with_standalone(lead));
+        u.codes.insert(C_PFX.into(), CodeData::new().with_standalone(ns.a.pfx.clone()));
         u.context = cx;
         let plain = plain_text(&u.source());
         if matches!(pi.kind, Kind::Diagram) {
@@ -698,11 +698,11 @@ fn extract_doc_inner(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Er
             }
             None => ZipData::Raw(e.keep(&mut packed)),
         };
-        zentries.push(ZipEntry { name: e.name.clone(), data });
+        zentries.push(ZipEntry::new(e.name.clone(), data));
     }
     let meta = Meta { entries: entries.iter().map(|e| e.meta.clone()).collect(), packed };
     let meta_json = serde_json::to_vec(&meta).map_err(|e| perr(e.to_string()))?;
-    zentries.push(ZipEntry { name: META_NAME.into(), data: ZipData::Raw(meta_json) });
+    zentries.push(ZipEntry::raw(META_NAME, meta_json));
 
     Ok(Document::new("pptx", units, Skeleton::zip(zentries, bilingua_model::parser_info!())).with_source_lang(opts.source_lang.clone().or(ex.lang)).with_target_lang(opts.target_lang.clone()).with_granularity(Granularity::Paragraph))
 }

@@ -121,7 +121,7 @@ fn hostile_inputs() {
     for i in 0..30 {
         data.extend_from_slice(format!("KEY_{i}=\"Value number {i}\"\n").as_bytes());
     }
-    let tight = Limits { max_units: 10, ..Limits::default() };
+    let tight = { let mut built = Limits::default(); built.max_units = 10; built };
     assert!(matches!(IniFilter.extract_with(&data, &opts(), &tight), Err(Error::Unsupported(_))));
     assert!(IniFilter.extract(&data, &opts()).is_ok());
     // degenerate lines are tolerated

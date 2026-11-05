@@ -48,7 +48,7 @@ fn states_and_origins_are_read_from_the_tu() {
     let seg = |i: usize| &d.units[i].segments[0];
     assert_eq!((seg(0).state, seg(0).origin.clone()), (SegState::Translated, Some(Origin::new(OriginKind::Tm).with_match(101))));
     assert_eq!(seg(1).state, SegState::Draft);
-    assert_eq!(seg(1).origin, Some(Origin { kind: OriginKind::Other, name: Some("TM1".into()), match_pct: Some(90) }));
+    assert_eq!(seg(1).origin, Some(Origin::new(OriginKind::Other).with_name("TM1".to_string()).with_match(90)));
     assert_eq!((seg(2).state, seg(2).origin.clone()), (SegState::Draft, Some(Origin::new(OriginKind::Mt).with_match(0))));
 }
 

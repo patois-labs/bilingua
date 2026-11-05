@@ -37,6 +37,7 @@ pub struct DecodeOptions<'a> {
     pub declared: bool,
     /// The project's source language, which picks the legacy code page of an undeclared non-UTF-8 file.
     pub source_lang: Option<&'a str>,
+    /// The limits the decoded text is checked against.
     pub limits: Limits,
     /// A UTF-8 byte order mark followed by bytes that are not UTF-8 is read as UTF-8 with replacement characters
     /// (U+FFFD), as Localization OS does for plain text and subtitles. Off: such a file is refused.
@@ -72,9 +73,11 @@ impl<'a> DecodeOptions<'a> {
 /// A decoded text file: the text (without BOM), the envelope tag for the skeleton and any warnings.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Decoded {
+    /// The decoded text.
     pub text: String,
     /// Goes into `Skeleton::Text::encoding`; hand it back to [`encode_text`] on merge.
     pub encoding: String,
+    /// What the decoder noticed (text that looks garbled in the code page it was read with).
     pub warnings: Vec<Warning>,
 }
 

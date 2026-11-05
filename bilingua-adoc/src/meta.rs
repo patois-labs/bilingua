@@ -104,7 +104,7 @@ pub fn meta_unit(value: &str) -> (Vec<Inline>, BTreeMap<String, CodeData>) {
             inl.push(Inline::Text(value[pos..m.start()].to_string()));
         }
         let id = (codes.len() + 1).to_string();
-        codes.insert(id.clone(), CodeData { standalone: Some(m.as_str().to_string()), label: Some("attribute".into()), ..Default::default() });
+        codes.insert(id.clone(), CodeData::new().with_standalone(m.as_str().to_string()).with_label("attribute".to_string()));
         inl.push(Inline::tag(id, TagKind::Standalone, m.as_str()));
         pos = m.end();
     }

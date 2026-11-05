@@ -13,9 +13,12 @@
 //! # Ok::<(), bilingua::Error>(())
 //! ```
 //!
-//! Formats register in [`filters`]: DOCX, XLSX, PPTX, HTML, Markdown, JSON, JSON5 and JSONC, PO, SRT, WebVTT, plain text, XLIFF 1.2 and 2
-//! (with SDLXLIFF, MQXLIFF and MXLIFF) and the Trados and memoQ packages. `extract` also applies sentence
-//! segmentation (`bilingua-seg`) for the granularity in the options.
+//! Every format Bilingua knows registers in [`filters`] (office files, web and help formats, software strings,
+//! subtitles, desktop publishing, XLIFF and its dialects, translation packages; [`format_option_keys`] lists the
+//! options they take). `extract` also applies sentence segmentation (`bilingua-seg`) for the granularity in the
+//! options. A filter of another crate is not in this list: call it directly.
+
+#![warn(missing_docs)]
 
 pub use bilingua_model::*;
 pub use bilingua_seg::{join, split, Rules};

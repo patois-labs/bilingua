@@ -226,6 +226,7 @@ impl Filter for TomlFilter {
     }
 
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         let (text, bom) = decode(bytes)?;
         let scan = scan::scan(text).map_err(scan_err)?;
         let nl = match text.find('\n') {
@@ -245,7 +246,7 @@ impl Filter for TomlFilter {
                 inl.push(Inline::text(&v[p..a]));
                 bare_alnum |= bilingua_model::py_has_alnum(&v[p..a]);
                 let id = (n + 1).to_string();
-                codes.insert(id.clone(), CodeData { standalone: Some(v[a..b].to_string()), label: Some("placeholder".into()), ..Default::default() });
+                codes.insert(id.clone(), CodeData::new().with_standalone(v[a..b].to_string()).with_label("placeholder".to_string()));
                 inl.push(Inline::tag(id, TagKind::Standalone, &v[a..b]));
                 p = b;
             }
@@ -268,14 +269,14 @@ impl Filter for TomlFilter {
             pos = s.end;
             let mut u = Unit::new(format!("u{}", units.len() + 1), inl);
             u.codes = codes;
-            u.codes.insert(RAW.into(), CodeData { standalone: Some(text[s.start..s.end].to_string()), ..Default::default() });
-            u.codes.insert(OV.into(), CodeData { standalone: Some(v.to_string()), ..Default::default() });
+            u.codes.insert(RAW.into(), CodeData::new().with_standalone(text[s.start..s.end].to_string()));
+            u.codes.insert(OV.into(), CodeData::new().with_standalone(v.to_string()));
             let lead = match s.lead {
                 "\r\n" => 'r',
                 "\n" => 'n',
                 _ => '-',
             };
-            u.codes.insert(META.into(), CodeData { standalone: Some(format!("{}{}{}", kind_char(s.kind), lead, nl)), ..Default::default() });
+            u.codes.insert(META.into(), CodeData::new().with_standalone(format!("{}{}{}", kind_char(s.kind), lead, nl)));
             u.context.kind = Some("string".into());
             u.context.style = Some(cls.style);
             u.context.key = Some(s.key.clone());
@@ -294,7 +295,8 @@ impl Filter for TomlFilter {
         Ok(Document::new(ID, units, Skeleton::text(parts, if bom { "utf-8-bom" } else { "utf-8" }, bilingua_model::parser_info!())).with_options(opts))
     }
 
-    fn merge_with(&self, doc: &Document, _opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
+    fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         // UTF-8 in, UTF-8 out (BOM kept), so `output_encoding` has nothing to change; no language stamp in this format
         bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
         let Skeleton::Text { parts, encoding, .. } = &doc.skeleton else {

@@ -431,6 +431,7 @@ impl Filter for Email {
     }
 
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         let limits = opts.limits();
         guard::check_input(bytes, &limits)?;
         let parsed = parse_message(bytes)?;
@@ -446,7 +447,7 @@ impl Filter for Email {
         if units.iter().all(blank) {
             return Err(Error::Unsupported("This email has no Subject or text body to translate (attachments are never translated).".into()));
         }
-        let doc = Document::new(FORMAT, units, Skeleton::zip(vec![ZipEntry { name: MEMBER.into(), data: ZipData::Raw(bytes.to_vec()) }], bilingua_model::parser_info!())).with_options(opts);
+        let doc = Document::new(FORMAT, units, Skeleton::zip(vec![ZipEntry::raw(MEMBER, bytes.to_vec())], bilingua_model::parser_info!())).with_options(opts);
         guard::finish(doc, vec![], &limits)
     }
 
@@ -454,6 +455,7 @@ impl Filter for Email {
     /// re-encode the message: each MIME part keeps the charset its header declares (a mail client reads it from
     /// there), so `Utf8` changes nothing here.
     fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
         let data = original_of(doc)?;
         let parsed = parse_message(data)?;

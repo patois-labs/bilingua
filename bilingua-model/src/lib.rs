@@ -18,6 +18,8 @@
 //! [`profile`] holds what one consumer needs and no other (the Localization OS profile, and
 //! [`profile::tokens`], which converts inline codes to and from LocOS's text tokens, one token per tag).
 
+#![warn(missing_docs)]
+
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
@@ -35,9 +37,23 @@ pub use guard::{LimitError, LimitKind, Limits};
 pub use pytext::{py_is_word_char, py_is_word_start_char, py_isdecimal_char, py_isalnum_char, py_isalpha_char, py_isspace_char, py_has_alnum, py_has_alpha, py_isalnum, py_isalpha, py_isspace, py_lstrip, py_rstrip, py_strip};
 
 /// What a builder takes for an optional text field: `"de-DE"`, a `String`, or an `Option` of either (`None`
-/// clears the field).
-pub trait IntoOptionString {
+/// clears the field). `impl Into<Option<String>>` would refuse a plain `&str`, so the builders take this instead.
+///
+/// The trait is sealed: Bilingua implements it for `&str`, `String`, `&String` and their `Option`s, and may add
+/// more types in a 1.x release; other crates cannot implement it.
+pub trait IntoOptionString: sealed::Sealed {
+    /// The value as an optional `String`.
     fn into_option_string(self) -> Option<String>;
+}
+
+mod sealed {
+    pub trait Sealed {}
+    impl Sealed for &str {}
+    impl Sealed for String {}
+    impl Sealed for &String {}
+    impl Sealed for Option<String> {}
+    impl Sealed for Option<&str> {}
+    impl Sealed for Option<&String> {}
 }
 
 impl IntoOptionString for &str {
@@ -72,18 +88,28 @@ impl IntoOptionString for Option<&String> {
 }
 
 /// One piece of segment content, in logical order.
+///
+/// The enum is closed (text or a code), matching catcore's JSON. The `Tag` variant is `#[non_exhaustive]`: build it
+/// with [`Inline::tag`] or [`Inline::free_tag`] (and [`Inline::with_free`]), and match it with `..`, so a code can
+/// carry more in a 1.x release.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Inline {
+    /// Plain text.
     Text(String),
     /// An inline code. `free` is true for a standalone code that names its argument (`%1$s`, `{name}`, `{0}`, an
     /// XLIFF `<x id>` or `<ph id>`): a translation may move it, because the writer finds it again by `id`. It is
     /// false for markup and for unnumbered placeholders (`%s`), whose order is the argument order. Only a
     /// standalone code can be free.
+    #[non_exhaustive]
     Tag {
+        /// The code's id: the key of its original markup in [`Unit::codes`]. An open and its close share it.
         id: String,
+        /// Open, close or standalone.
         kind: TagKind,
+        /// What an editor shows for the code (`<b>`, `{name}`).
         display: String,
+        /// The code may move freely in the target (see above).
         #[serde(default, skip_serializing_if = "is_false")]
         free: bool,
     },
@@ -94,9 +120,11 @@ fn is_false(b: &bool) -> bool {
 }
 
 impl Inline {
+    /// A text piece.
     pub fn text(s: impl Into<String>) -> Inline {
         Inline::Text(s.into())
     }
+    /// A code that is not free (markup, or an unnumbered placeholder).
     pub fn tag(id: impl Into<String>, kind: TagKind, display: impl Into<String>) -> Inline {
         Inline::Tag { id: id.into(), kind, display: display.into(), free: false }
     }
@@ -108,25 +136,79 @@ impl Inline {
     pub fn is_free(&self) -> bool {
         matches!(self, Inline::Tag { free: true, .. })
     }
+    /// Sets the free flag of a standalone code (`Inline::tag(id, kind, display).with_free(f)`). Only a standalone
+    /// code can be free: on an open or close code, and on text, the flag stays false.
+    pub fn with_free(mut self, value: bool) -> Inline {
+        if let Inline::Tag { kind, free, .. } = &mut self {
+            *free = value && *kind == TagKind::Standalone;
+        }
+        self
+    }
 }
 
+/// The kind of an inline code. Closed: a code opens, closes or stands alone.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum TagKind {
+    /// Opens a pair (`<b>`).
     Open,
+    /// Closes a pair (`</b>`).
     Close,
+    /// Stands alone (`<br/>`, `{name}`, `%s`).
     Standalone,
 }
 
 /// The original markup of one inline code, kept so the writer can reproduce it.
-/// A paired code fills `open` and `close`; a standalone code fills `standalone`.
+/// A paired code fills `open` and `close`; a standalone code fills `standalone`. Build it with
+/// [`CodeData::paired`], [`CodeData::standalone`] or [`CodeData::new`] and the `with_*` methods.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[non_exhaustive]
 pub struct CodeData {
+    /// The opening markup of a paired code.
     pub open: Option<String>,
+    /// The closing markup of a paired code.
     pub close: Option<String>,
+    /// The markup of a standalone code.
     pub standalone: Option<String>,
     /// Human label for the tag chip, e.g. "bold", "link".
     pub label: Option<String>,
+}
+
+impl CodeData {
+    /// No markup and no label.
+    pub fn new() -> CodeData {
+        CodeData::default()
+    }
+    /// A paired code's markup.
+    pub fn paired(open: impl Into<String>, close: impl Into<String>) -> CodeData {
+        let (open, close): (String, String) = (open.into(), close.into());
+        CodeData::new().with_open(open).with_close(close)
+    }
+    /// A standalone code's markup.
+    pub fn standalone(markup: impl Into<String>) -> CodeData {
+        let markup: String = markup.into();
+        CodeData::new().with_standalone(markup)
+    }
+    /// Sets (or with `None` clears) the opening markup.
+    pub fn with_open(mut self, open: impl IntoOptionString) -> CodeData {
+        self.open = open.into_option_string();
+        self
+    }
+    /// Sets (or clears) the closing markup.
+    pub fn with_close(mut self, close: impl IntoOptionString) -> CodeData {
+        self.close = close.into_option_string();
+        self
+    }
+    /// Sets (or clears) the standalone markup.
+    pub fn with_standalone(mut self, standalone: impl IntoOptionString) -> CodeData {
+        self.standalone = standalone.into_option_string();
+        self
+    }
+    /// Sets (or clears) the chip label.
+    pub fn with_label(mut self, label: impl IntoOptionString) -> CodeData {
+        self.label = label.into_option_string();
+        self
+    }
 }
 
 /// Where a segment is in its life, from untouched to signed off. Monolingual files only use `New`, `Draft`,
@@ -197,9 +279,11 @@ impl SegState {
     }
 }
 
-/// Where a segment's target came from.
+/// Where a segment's target came from. Match with a wildcard arm: a 1.x release may add kinds (a JSON file with
+/// a kind this release does not know reads as `Other`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
+#[non_exhaustive]
 pub enum OriginKind {
     /// Translation memory.
     Tm,
@@ -215,9 +299,11 @@ pub enum OriginKind {
     Other,
 }
 
-/// How a target came to be, with the match percentage when it came from memory.
+/// How a target came to be, with the match percentage when it came from memory. Build it with [`Origin::new`].
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[non_exhaustive]
 pub struct Origin {
+    /// Memory, machine, AI, person or other.
     pub kind: OriginKind,
     /// Engine, memory or person: "Acme TM", "engine-2", "ana". Free text.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -228,28 +314,40 @@ pub struct Origin {
 }
 
 impl Origin {
+    /// An origin of this kind, with no name and no match percentage.
     pub fn new(kind: OriginKind) -> Origin {
         Origin { kind, name: None, match_pct: None }
     }
+    /// Sets the match percentage.
     pub fn with_match(mut self, pct: u8) -> Origin {
         self.match_pct = Some(pct);
         self
     }
-    pub fn with_name(mut self, name: impl Into<String>) -> Origin {
-        self.name = Some(name.into());
+    /// Sets (or with `None` clears) the match percentage.
+    pub fn with_match_pct(mut self, pct: Option<u8>) -> Origin {
+        self.match_pct = pct;
+        self
+    }
+    /// Sets (or with `None` clears) the engine, memory or person name.
+    pub fn with_name(mut self, name: impl IntoOptionString) -> Origin {
+        self.name = name.into_option_string();
         self
     }
 }
 
+/// One translatable piece of a unit: its source, and its target once there is one. Build it with
+/// [`Segment::new`] and the `with_*` methods.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct Segment {
     /// Unique within the document: `<unit id>` when the unit has one segment, else `<unit id>#<n>` (1-based).
     pub id: String,
+    /// The source text with its inline codes.
     pub source: Vec<Inline>,
     /// Empty = untranslated, unless `empty_target` says the translation is empty on purpose (see below).
     #[serde(default)]
     pub target: Vec<Inline>,
+    /// Where the segment is in its life (new, draft, translated, ...).
     #[serde(default)]
     pub state: SegState,
     /// Where the target came from. `None` for monolingual files and for targets nobody labelled.
@@ -282,6 +380,7 @@ impl Segment {
             &self.source
         }
     }
+    /// Marks (or unmarks) the segment as translated to nothing on purpose; marking clears the target.
     pub fn with_empty_target(mut self, empty_target: bool) -> Segment {
         self.empty_target = empty_target;
         if empty_target {
@@ -294,29 +393,54 @@ impl Segment {
         self.target = target;
         self
     }
+    /// Sets the state.
     pub fn with_state(mut self, state: SegState) -> Segment {
         self.state = state;
         self
     }
+    /// Sets (or with `None` clears) where the target came from.
     pub fn with_origin(mut self, origin: impl Into<Option<Origin>>) -> Segment {
         self.origin = origin.into();
         self
     }
 }
 
-/// A comment on a unit: a translator query, a developer instruction, a reviewer remark.
+/// A comment on a unit: a translator query, a developer instruction, a reviewer remark. Build it with
+/// [`Note::new`].
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[non_exhaustive]
 pub struct Note {
+    /// Who wrote it, when the file says.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub author: Option<String>,
+    /// The comment.
     pub text: String,
     /// Kind as the file has it: "comment", "instruction", "developer", "reviewer", ... Free text.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub kind: Option<String>,
 }
 
-/// What helps a translator, an AI lane or a preview understand a unit.
+impl Note {
+    /// A note with this text, no author and no kind.
+    pub fn new(text: impl Into<String>) -> Note {
+        Note { author: None, text: text.into(), kind: None }
+    }
+    /// Sets (or with `None` clears) the author.
+    pub fn with_author(mut self, author: impl IntoOptionString) -> Note {
+        self.author = author.into_option_string();
+        self
+    }
+    /// Sets (or clears) the kind ("comment", "developer", ...).
+    pub fn with_kind(mut self, kind: impl IntoOptionString) -> Note {
+        self.kind = kind.into_option_string();
+        self
+    }
+}
+
+/// What helps a translator, an AI lane or a preview understand a unit. Build it with [`UnitContext::new`] and the
+/// `with_*` methods; `extra` takes anything without a field of its own.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[non_exhaustive]
 pub struct UnitContext {
     /// What the unit is: "heading", "paragraph", "list-item", "cell", "button", "title", "alt", "key",
     /// "subtitle", ... Free text; parsers use the most specific word they know.
@@ -327,7 +451,7 @@ pub struct UnitContext {
     pub key: Option<String>,
     /// Nearest heading text above the unit, when the format has headings.
     pub heading: Option<String>,
-    /// Location in the original, readable: "word/document.xml paragraph 12", "/html/body/main/p[3]".
+    /// Location in the original, readable: `word/document.xml paragraph 12`, `/html/body/main/p[3]`.
     pub location: Option<String>,
     /// Maximum length in characters, when the file states one.
     pub max_len: Option<usize>,
@@ -339,12 +463,62 @@ pub struct UnitContext {
     pub extra: BTreeMap<String, String>,
 }
 
+impl UnitContext {
+    /// An empty context.
+    pub fn new() -> UnitContext {
+        UnitContext::default()
+    }
+    /// Sets (or with `None` clears) what the unit is ("heading", "cell", ...).
+    pub fn with_kind(mut self, kind: impl IntoOptionString) -> UnitContext {
+        self.kind = kind.into_option_string();
+        self
+    }
+    /// Sets (or clears) the style or element name.
+    pub fn with_style(mut self, style: impl IntoOptionString) -> UnitContext {
+        self.style = style.into_option_string();
+        self
+    }
+    /// Sets (or clears) the resource key or path.
+    pub fn with_key(mut self, key: impl IntoOptionString) -> UnitContext {
+        self.key = key.into_option_string();
+        self
+    }
+    /// Sets (or clears) the nearest heading.
+    pub fn with_heading(mut self, heading: impl IntoOptionString) -> UnitContext {
+        self.heading = heading.into_option_string();
+        self
+    }
+    /// Sets (or clears) the readable location.
+    pub fn with_location(mut self, location: impl IntoOptionString) -> UnitContext {
+        self.location = location.into_option_string();
+        self
+    }
+    /// Sets (or clears) the maximum length in characters.
+    pub fn with_max_len(mut self, max_len: Option<usize>) -> UnitContext {
+        self.max_len = max_len;
+        self
+    }
+    /// Replaces the notes.
+    pub fn with_notes(mut self, notes: Vec<String>) -> UnitContext {
+        self.notes = notes;
+        self
+    }
+    /// Replaces the extras.
+    pub fn with_extra(mut self, extra: BTreeMap<String, String>) -> UnitContext {
+        self.extra = extra;
+        self
+    }
+}
+
+/// One translatable unit of the file (a paragraph, a cell, a string): its segments, the original markup of its
+/// inline codes and its context. Build it with [`Unit::new`] or [`Unit::from_segments`] and the `with_*` methods.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(from = "UnitRepr")]
 #[non_exhaustive]
 pub struct Unit {
     /// Unique within the document, stable for the same input file.
     pub id: String,
+    /// One segment before sentence splitting; one per sentence after.
     pub segments: Vec<Segment>,
     /// Text between segments as it appeared in the source (spaces after a full stop). Always
     /// `segments.len() - 1` entries; the writer joins segment targets with these.
@@ -353,6 +527,7 @@ pub struct Unit {
     /// Original markup per inline code id.
     #[serde(default)]
     pub codes: BTreeMap<String, CodeData>,
+    /// What helps a translator understand the unit.
     #[serde(default)]
     pub context: UnitContext,
     /// False for content shown for context only (locked).
@@ -461,14 +636,17 @@ impl Unit {
     pub fn has_hidden(&self, key: &str) -> bool {
         self.hidden.contains_key(key)
     }
+    /// Sets a hidden value (builder form of [`Unit::set_hidden`]).
     pub fn with_hidden(mut self, key: impl Into<String>, value: impl Into<String>) -> Unit {
         self.set_hidden(key, value);
         self
     }
+    /// Replaces the separators (one per gap between segments).
     pub fn with_separators(mut self, separators: Vec<String>) -> Unit {
         self.separators = separators;
         self
     }
+    /// Replaces the original markup of the inline codes.
     pub fn with_codes(mut self, codes: BTreeMap<String, CodeData>) -> Unit {
         self.codes = codes;
         self
@@ -478,18 +656,22 @@ impl Unit {
         self.codes.insert(id.into(), code);
         self
     }
+    /// Sets the context.
     pub fn with_context(mut self, context: UnitContext) -> Unit {
         self.context = context;
         self
     }
+    /// Sets whether the unit is translatable (`false`: shown for context only).
     pub fn with_translate(mut self, translate: bool) -> Unit {
         self.translate = translate;
         self
     }
+    /// Replaces the bilingual-file notes.
     pub fn with_notes(mut self, notes: Vec<Note>) -> Unit {
         self.notes = notes;
         self
     }
+    /// Sets (or with `None` clears) why the unit is locked.
     pub fn with_lock_reason(mut self, reason: impl IntoOptionString) -> Unit {
         self.lock_reason = reason.into_option_string();
         self
@@ -550,15 +732,18 @@ pub fn plain_text(v: &[Inline]) -> String {
         .collect()
 }
 
-/// One piece of a text skeleton: literal output, or the place where a unit's text goes.
+/// One piece of a text skeleton: literal output, or the place where a unit's text goes. Closed: anything else a
+/// format needs lives in its own parts' text or in [`Unit::hidden`].
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum SkelPart {
+    /// Literal output.
     Raw(String),
     /// Index into `Document::units`. The parser decides how the unit's inlines are rendered (escaping, codes).
     Unit(usize),
 }
 
+/// The content of one zip entry in a skeleton. Closed: copied bytes or rebuilt text.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum ZipData {
@@ -568,16 +753,32 @@ pub enum ZipData {
     Parts(Vec<SkelPart>),
 }
 
+/// One entry of a zip skeleton, in the archive's order. Build it with [`ZipEntry::new`] or [`ZipEntry::raw`].
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[non_exhaustive]
 pub struct ZipEntry {
+    /// The member name in the archive.
     pub name: String,
+    /// Its content.
     pub data: ZipData,
+}
+
+impl ZipEntry {
+    /// An entry with this name and content.
+    pub fn new(name: impl Into<String>, data: ZipData) -> ZipEntry {
+        ZipEntry { name: name.into(), data }
+    }
+    /// An entry copied unchanged.
+    pub fn raw(name: impl Into<String>, bytes: Vec<u8>) -> ZipEntry {
+        ZipEntry::new(name, ZipData::Raw(bytes))
+    }
 }
 
 /// Which parser made a skeleton: the crate name, its version (for information) and the skeleton schema number.
 /// The schema is an integer each format crate bumps only when its skeleton layout changes, so a new crate release
 /// that did not touch the layout still merges old skeletons (see [`check_parser`]).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[non_exhaustive]
 pub struct ParserInfo {
     /// The producing crate, e.g. "bilingua-docx".
     pub name: String,
@@ -593,6 +794,7 @@ fn legacy_schema() -> u32 {
 }
 
 impl ParserInfo {
+    /// A stamp for this crate name, version and skeleton schema (usually written `parser_info!()`).
     pub fn new(name: impl Into<String>, version: impl Into<String>, schema: u32) -> ParserInfo {
         ParserInfo { name: name.into(), version: version.into(), schema }
     }
@@ -644,29 +846,38 @@ pub fn check_parser_min(doc: &Document, current: &ParserInfo, oldest: u32) -> Re
     }
 }
 
-/// Everything in the file that is not translatable text.
+/// Everything in the file that is not translatable text. New kinds of skeleton come as new variants (match with a
+/// wildcard arm); the fields of each variant are fixed for 1.x (a format records more in its parts, in the
+/// `encoding` tag's `;name=value` items, or in [`Unit::hidden`]).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 #[non_exhaustive]
 pub enum Skeleton {
     /// A text file: parts in order. `encoding` is what the writer must produce ("utf-8", "utf-8-bom", ...).
     Text {
+        /// The parts in order.
         parts: Vec<SkelPart>,
+        /// The encoding tag (the envelope of [`enc::decode_text`]: `"utf-8"`, `"windows-1252;nl=crlf"`, ...).
         encoding: String,
+        /// The parser that made it.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         parser: Option<ParserInfo>,
     },
     /// A zip container (DOCX, XLSX, PPTX, ODF, IDML): entries in their original order.
     Zip {
+        /// The entries in archive order.
         entries: Vec<ZipEntry>,
+        /// The parser that made it.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         parser: Option<ParserInfo>,
     },
     /// A binary file kept whole (a compiled MO catalog): the writer rebuilds the file from these bytes and the
     /// units. In JSON the bytes are a base64 string.
     Binary {
+        /// The original file.
         #[serde(with = "b64")]
         data: Vec<u8>,
+        /// The parser that made it.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         parser: Option<ParserInfo>,
     },
@@ -715,6 +926,9 @@ pub enum Granularity {
     Document,
 }
 
+/// An extracted file: its units and its skeleton. Build it with [`Document::new`] and the `with_*` methods; edit
+/// targets with [`Document::set_target`] and friends, which check the tags. `Default` is an empty document of no
+/// format (no writer accepts it).
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct Document {
@@ -722,10 +936,15 @@ pub struct Document {
     pub format: String,
     /// Original file name, when known.
     pub name: Option<String>,
+    /// The source language (a BCP 47 tag, `en`, `de-DE`), when known.
     pub source_lang: Option<String>,
+    /// The target language, when known.
     pub target_lang: Option<String>,
+    /// How finely the units are segmented.
     pub granularity: Granularity,
+    /// The translatable units, in file order.
     pub units: Vec<Unit>,
+    /// Everything else in the file.
     pub skeleton: Skeleton,
     /// Things the reader noticed but did not refuse the file for (text that looks garbled in the code page it was
     /// read with, ...). Left out of the JSON when empty.
@@ -741,15 +960,19 @@ pub struct Document {
 /// A notice about a file that was read anyway: it never stops a merge. `kind` is a stable word for programs
 /// ("text_encoding"); `message` is plain text safe to show the person who uploaded the file.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[non_exhaustive]
 pub struct Warning {
+    /// A stable word for programs (`text_encoding`).
     pub kind: String,
     /// Which part of the file the notice is about ("text encoding", an entry name, ...).
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub part: String,
+    /// Plain text for the person who uploaded the file.
     pub message: String,
 }
 
 impl Warning {
+    /// A warning of this kind about this part.
     pub fn new(kind: impl Into<String>, part: impl Into<String>, message: impl Into<String>) -> Warning {
         Warning { kind: kind.into(), part: part.into(), message: message.into() }
     }
@@ -768,18 +991,22 @@ impl Document {
         self.granularity = opts.granularity;
         self
     }
+    /// Sets (or with `None` clears) the file name.
     pub fn with_name(mut self, name: impl IntoOptionString) -> Document {
         self.name = name.into_option_string();
         self
     }
+    /// Sets (or clears) the source language.
     pub fn with_source_lang(mut self, lang: impl IntoOptionString) -> Document {
         self.source_lang = lang.into_option_string();
         self
     }
+    /// Sets (or clears) the target language.
     pub fn with_target_lang(mut self, lang: impl IntoOptionString) -> Document {
         self.target_lang = lang.into_option_string();
         self
     }
+    /// Sets the granularity.
     pub fn with_granularity(mut self, granularity: Granularity) -> Document {
         self.granularity = granularity;
         self
@@ -792,19 +1019,23 @@ impl Document {
         let base = base.strip_suffix("-bom").or_else(|| base.strip_suffix("-nobom")).unwrap_or(&base).to_string();
         (!matches!(base.as_str(), "" | "utf-8" | "utf8" | "bplist")).then_some(base)
     }
+    /// Replaces the warnings.
     pub fn with_warnings(mut self, warnings: Vec<Warning>) -> Document {
         self.warnings = warnings;
         self
     }
 
+    /// Every segment with its unit, in order.
     pub fn segments(&self) -> impl Iterator<Item = (&Unit, &Segment)> {
         self.units.iter().flat_map(|u| u.segments.iter().map(move |s| (u, s)))
     }
 
+    /// The number of segments.
     pub fn segment_count(&self) -> usize {
         self.units.iter().map(|u| u.segments.len()).sum()
     }
 
+    /// The segment with this id and its unit.
     pub fn find(&self, seg_id: &str) -> Option<(&Unit, &Segment)> {
         self.segments().find(|(_, s)| s.id == seg_id)
     }
@@ -916,6 +1147,7 @@ impl Document {
         Ok(())
     }
 
+    /// Sets a segment's state (for many, [`Document::set_states`]).
     pub fn set_state(&mut self, seg_id: &str, state: SegState) -> Result<(), Error> {
         let seg = self
             .units
@@ -955,7 +1187,9 @@ fn check_tags(source: &[Inline], target: &[Inline]) -> Result<(), Error> {
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct ExtractOptions {
+    /// The source language (a BCP 47 tag, `en`, `de-DE`), when known.
     pub source_lang: Option<String>,
+    /// The target language, when known.
     pub target_lang: Option<String>,
     /// Parsers always extract one segment per unit; `bilingua-seg` applies the granularity afterwards.
     pub granularity: Granularity,
@@ -990,18 +1224,22 @@ impl ExtractOptions {
     pub fn new() -> ExtractOptions {
         ExtractOptions::default()
     }
+    /// Sets (or with `None` clears) the source language; it picks the sentence rules.
     pub fn with_source_lang(mut self, lang: impl IntoOptionString) -> ExtractOptions {
         self.source_lang = lang.into_option_string();
         self
     }
+    /// Sets (or clears) the target language.
     pub fn with_target_lang(mut self, lang: impl IntoOptionString) -> ExtractOptions {
         self.target_lang = lang.into_option_string();
         self
     }
+    /// Sets the granularity.
     pub fn with_granularity(mut self, granularity: Granularity) -> ExtractOptions {
         self.granularity = granularity;
         self
     }
+    /// Extracts locked text as locked units, for context.
     pub fn with_include_locked(mut self, include_locked: bool) -> ExtractOptions {
         self.include_locked = include_locked;
         self
@@ -1065,21 +1303,28 @@ pub enum OptionKind {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[non_exhaustive]
 pub struct FormatOptionKey {
+    /// The full key, `<family>.<name>`.
     pub key: &'static str,
+    /// The kind of value.
     pub kind: OptionKind,
+    /// One line of help.
     pub help: &'static str,
 }
 
 impl FormatOptionKey {
+    /// A key of this kind.
     pub const fn new(key: &'static str, kind: OptionKind, help: &'static str) -> FormatOptionKey {
         FormatOptionKey { key, kind, help }
     }
+    /// A boolean key.
     pub const fn bool(key: &'static str, help: &'static str) -> FormatOptionKey {
         FormatOptionKey::new(key, OptionKind::Bool, help)
     }
+    /// An integer key.
     pub const fn int(key: &'static str, help: &'static str) -> FormatOptionKey {
         FormatOptionKey::new(key, OptionKind::Int, help)
     }
+    /// A text key.
     pub const fn text(key: &'static str, help: &'static str) -> FormatOptionKey {
         FormatOptionKey::new(key, OptionKind::Text, help)
     }
@@ -1128,6 +1373,36 @@ pub fn check_option_map(options: &BTreeMap<String, String>, known: &[FormatOptio
     Ok(())
 }
 
+/// The check every filter makes when it is called directly (not through the `bilingua` facade), first thing in
+/// `extract` (with `&opts.format_options`) and in `merge_with` (with its `MergeOptions::format_options`): an option
+/// in one of the filter's own families (its id, and the `<family>.` prefix of every key it declares) that it does
+/// not declare is refused (a misspelt `csv.colums` would otherwise be ignored), and so is a value of the wrong kind
+/// for a key it declares. Keys of other formats are left alone: one option map may be meant for many formats, and
+/// only the facade, which knows every filter's keys, can tell a good foreign key from a misspelt one.
+pub fn check_own_options<F: Filter + ?Sized>(filter: &F, options: &BTreeMap<String, String>) -> Result<(), Error> {
+    if options.is_empty() {
+        return Ok(());
+    }
+    let keys = filter.format_option_keys();
+    let id = filter.id();
+    let family = |k: &str| k.split('.').next().unwrap_or("").to_string();
+    for (k, v) in options {
+        let fam = family(k);
+        if fam != id && !keys.iter().any(|f| family(f.key) == fam) {
+            continue;
+        }
+        match keys.iter().find(|f| f.key == k) {
+            Some(f) => f.check(v)?,
+            None => {
+                let mine: Vec<&str> = keys.iter().map(|f| f.key).collect();
+                let msg = if mine.is_empty() { format!("{id} has no options") } else { format!("unknown option; {id} knows {}", mine.join(", ")) };
+                return Err(Error::FormatOption { key: k.clone(), msg });
+            }
+        }
+    }
+    Ok(())
+}
+
 /// How a merge writes text files.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[non_exhaustive]
@@ -1155,7 +1430,9 @@ pub enum OutputEncoding {
 #[serde(default, deny_unknown_fields)]
 #[non_exhaustive]
 pub struct MergeOptions {
+    /// Keep the file's encoding, or write UTF-8.
     pub output_encoding: OutputEncoding,
+    /// Stamp the target language and fill plurals even when nothing is translated.
     pub stamp_target_always: bool,
     /// The profile the document is written for (see [`ExtractOptions::profile`]); format crates may switch on it.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -1170,14 +1447,17 @@ impl MergeOptions {
     pub fn new() -> MergeOptions {
         MergeOptions::default()
     }
+    /// Sets the output encoding.
     pub fn with_output_encoding(mut self, output_encoding: OutputEncoding) -> MergeOptions {
         self.output_encoding = output_encoding;
         self
     }
+    /// Sets the stamp rule.
     pub fn with_stamp_target_always(mut self, stamp_target_always: bool) -> MergeOptions {
         self.stamp_target_always = stamp_target_always;
         self
     }
+    /// Switches a profile on (`"locos"`), or off with `None`.
     pub fn with_profile(mut self, profile: impl IntoOptionString) -> MergeOptions {
         self.profile = profile.into_option_string();
         self
@@ -1186,10 +1466,12 @@ impl MergeOptions {
     pub fn is_profile(&self, name: &str) -> bool {
         self.profile.as_deref() == Some(name)
     }
+    /// Sets one format option (`"<format>.<name>"`).
     pub fn with_format_option(mut self, key: impl Into<String>, value: impl ToString) -> MergeOptions {
         self.format_options.insert(key.into(), value.to_string());
         self
     }
+    /// Replaces all format options.
     pub fn with_format_options(mut self, options: BTreeMap<String, String>) -> MergeOptions {
         self.format_options = options;
         self
@@ -1216,22 +1498,41 @@ impl MergeOptions {
 
 #[derive(Debug, thiserror::Error)]
 #[non_exhaustive]
+/// Every Bilingua failure. Match with a wildcard arm: a 1.x release may add variants.
 pub enum Error {
     #[error("not a {format} file: {msg}")]
-    Parse { format: String, msg: String },
+    /// The bytes are not a file of this format.
+    Parse {
+        /// The format id.
+        format: String,
+        /// What is wrong.
+        msg: String,
+    },
     #[error("unsupported: {0}")]
+    /// No parser for the file, or a feature the format crate does not have.
     Unsupported(String),
     #[error("unknown segment {0}")]
+    /// No segment has this id.
     UnknownSegment(String),
     #[error("segment {0} is locked")]
+    /// The segment belongs to a locked unit.
     Locked(String),
     #[error("tag {0} is not in the source")]
+    /// The target uses a tag the source does not have.
     InventedTag(String),
     #[error("tag {0} appears more often than in the source")]
+    /// The target uses a tag more often than the source.
     DuplicatedTag(String),
     #[error("this skeleton was made by {found}, but this is {expected}; open the file again with the current parser")]
-    ParserVersion { found: String, expected: String },
+    /// The skeleton comes from another parser or a newer skeleton schema.
+    ParserVersion {
+        /// The parser that made the skeleton.
+        found: String,
+        /// The parser that tried to read it.
+        expected: String,
+    },
     #[error("cannot write: {0}")]
+    /// The skeleton is broken or does not belong to this document.
     Write(String),
     /// The translation cannot be written in this format: it does not fit (a caption too long), a character has no
     /// code in the file's code table, or the text would read back as structure (every letter swallowed by a
@@ -1240,7 +1541,12 @@ pub enum Error {
     /// is also the whole `Display` text.
     /// `Write` stays for a broken or foreign skeleton.
     #[error("{reason}")]
-    Unwritable { unit: Option<String>, reason: String },
+    Unwritable {
+        /// The unit to blame, when there is one.
+        unit: Option<String>,
+        /// Why, safe to show the translator.
+        reason: String,
+    },
     /// The file is over a safety limit or holds something unsafe (a zip bomb, an XML entity bomb, too many
     /// units). The message is short, names the limit and is safe to show the person who uploaded the file.
     #[error("{0}")]
@@ -1250,15 +1556,28 @@ pub enum Error {
     Encoding(String),
     /// A `format_options` key no format declares, or a value of the wrong kind.
     #[error("format option {key}: {msg}")]
-    FormatOption { key: String, msg: String },
+    FormatOption {
+        /// The key.
+        key: String,
+        /// What is wrong with it.
+        msg: String,
+    },
     /// A profile name Bilingua does not know (see [`profile::profiles`]).
     #[error("unknown profile {0:?}")]
     UnknownProfile(String),
     #[error(transparent)]
+    /// An I/O error from a reader (Bilingua itself reads no files).
     Io(#[from] std::io::Error),
 }
 
 /// A file parser. Implementations live in one crate per format (`bilingua-html`, `bilingua-docx`, ...).
+///
+/// The trait is open: another crate may implement it for a format of its own. It implements `id`, `extensions`,
+/// `sniff`, `extract` and `merge_with`; the rest have defaults, and a 1.x release adds methods only with defaults.
+/// Such a filter is called directly (and segmented with `bilingua_seg::segment`): the `bilingua` facade's
+/// `filters()` list is Bilingua's own formats. What a writer needs is public: [`Document::new`], [`Unit::new`],
+/// [`Skeleton::text`] and friends, [`parser_info!`] with a `SKELETON_SCHEMA` constant, [`check_parser`], the
+/// [`enc`] codecs and the [`guard`] limits. Start `extract` and `merge_with` with [`check_own_options`].
 pub trait Filter: Send + Sync {
     /// Short id, e.g. "html".
     fn id(&self) -> &'static str;
@@ -1271,8 +1590,9 @@ pub trait Filter: Send + Sync {
     fn bilingual(&self) -> bool {
         false
     }
-    /// The `ExtractOptions::format_options` keys this filter reads (`"csv.columns"`, ...). The facade refuses keys
-    /// no filter declares. Default: none.
+    /// The `ExtractOptions::format_options` keys this filter reads (`"csv.columns"`, ...), each with the
+    /// `<family>.` prefix of its format. The facade refuses keys no filter declares; the filter itself refuses
+    /// undeclared keys of its own families ([`check_own_options`]). Default: none.
     fn format_option_keys(&self) -> &'static [FormatOptionKey] {
         &[]
     }

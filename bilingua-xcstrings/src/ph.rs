@@ -123,7 +123,7 @@ pub fn inlines(core: &str, codes: &mut std::collections::BTreeMap<String, CodeDa
             Piece::Ph(s) => {
                 n += 1;
                 let id = n.to_string();
-                codes.insert(id.clone(), CodeData { standalone: Some(s.to_string()), label: Some("placeholder".into()), ..Default::default() });
+                codes.insert(id.clone(), CodeData::new().with_standalone(s.to_string()).with_label("placeholder".to_string()));
                 out.push(if is_positional(s) { Inline::free_tag(id, s) } else { Inline::tag(id, TagKind::Standalone, s) });
             }
         }

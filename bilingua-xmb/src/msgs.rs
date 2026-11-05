@@ -160,7 +160,7 @@ fn analyse(text: &str, tree: &Tree, el: &Elem) -> Msg {
                 n += 1;
                 let id = n.to_string();
                 let disp: String = shorten(r, 120);
-                codes.insert(id.clone(), CodeData { standalone: Some(r.clone()), ..Default::default() });
+                codes.insert(id.clone(), CodeData::new().with_standalone(r.clone()));
                 inl.push(Inline::tag(id, TagKind::Standalone, disp));
             }
             Piece::Ph(ei) => {
@@ -196,10 +196,10 @@ fn analyse(text: &str, tree: &Tree, el: &Elem) -> Msg {
                     let id = n.to_string();
                     if close_of[ph_i].is_some() {
                         token_of.insert(ph_i, id.clone());
-                        codes.insert(id.clone(), CodeData { open: Some(raw), label: Some(name.clone()), ..Default::default() });
+                        codes.insert(id.clone(), CodeData::new().with_open(raw).with_label(name.clone()));
                         inl.push(Inline::tag(id, TagKind::Open, display));
                     } else {
-                        codes.insert(id.clone(), CodeData { standalone: Some(raw), label: Some(name.clone()), ..Default::default() });
+                        codes.insert(id.clone(), CodeData::new().with_standalone(raw).with_label(name.clone()));
                         inl.push(Inline::tag(id, TagKind::Standalone, display));
                     }
                     if let Some(x) = ex_text.filter(|x| !x.is_empty()) {

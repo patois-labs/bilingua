@@ -21,7 +21,7 @@ fn generate() -> String {
 fn large_file_extract_and_merge_speed() {
     let src = generate();
     assert!(src.len() > 5_000_000, "{} bytes", src.len());
-    let f = Json5Filter::with_limits(Limits { max_units: 1_000_000, ..Limits::default() });
+    let f = Json5Filter::with_limits({ let mut built = Limits::default(); built.max_units = 1_000_000; built });
     let o = ExtractOptions::new().with_source_lang("en").with_target_lang("de").with_granularity(Granularity::Paragraph);
 
     let t0 = Instant::now();

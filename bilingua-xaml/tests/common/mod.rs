@@ -8,8 +8,8 @@ pub fn opts() -> ExtractOptions {
     ExtractOptions::new().with_target_lang("de-DE").with_granularity(Granularity::Paragraph)
 }
 
-pub const OFF: Xaml = Xaml { view_attributes: false };
-pub const ON: Xaml = Xaml { view_attributes: true };
+pub const OFF: Xaml = Xaml::new();
+pub const ON: Xaml = Xaml::with_view_attributes();
 
 pub fn extract(data: &[u8]) -> Document {
     OFF.extract(data, &opts()).expect("extract")

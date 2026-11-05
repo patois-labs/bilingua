@@ -28,7 +28,7 @@ fn generate(min_bytes: usize) -> String {
 fn five_megabytes_round_trip() {
     let data = generate(5_200_000).into_bytes();
     assert!(data.len() > 5_000_000);
-    let limits = Limits { max_units: 10_000_000, ..Limits::default() };
+    let limits = { let mut built = Limits::default(); built.max_units = 10_000_000; built };
     let mut d = Properties.extract_with(&data, &opts(), &limits).unwrap();
     assert!(d.units.len() > 50_000);
     assert_eq!(Properties.merge(&d).unwrap(), data);

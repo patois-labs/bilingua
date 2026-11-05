@@ -108,6 +108,10 @@ fn the_locos_profile() {
     let m = profile::locos().merge_options("ini");
     assert_eq!((m.output_encoding, m.stamp_target_always, m.profile.as_deref()), (OutputEncoding::Keep, true, Some("locos")));
     assert_eq!(profile::locos().merge_options("html").output_encoding, OutputEncoding::Utf8);
+    // a drawing declares its code page and AutoCAD before 2007 has no UTF-8: LocOS keeps it (lead decision 11-05)
+    for keep in ["strings", "dxf"] {
+        assert_eq!(profile::locos().merge_options(keep).output_encoding, OutputEncoding::Keep, "{keep}");
+    }
     let doc = extract("a.txt", b"Hi.\n", &ExtractOptions::new()).unwrap();
     assert!(matches!(merge_with(&doc, &MergeOptions::new().with_profile("nope")), Err(Error::UnknownProfile(_))));
     assert!(matches!(merge_with(&doc, &MergeOptions::new().with_format_option("nope.x", 1)), Err(Error::FormatOption { .. })));
@@ -125,4 +129,59 @@ fn the_source_encoding_is_reported() {
     }
     let ini = extract("a.ini", &b, &ExtractOptions::new()).unwrap();
     assert_eq!(ini.source_encoding.as_deref(), Some("utf-16le"));
+}
+
+fn family(k: &str) -> &str {
+    k.split('.').next().unwrap_or("")
+}
+
+/// The facade accepts a key when some filter declares it; the filter the file goes to then checks the keys of its
+/// own families again. Both checks must agree, or a key the facade lets through would fail inside the filter.
+#[test]
+fn every_filter_declares_every_key_of_its_own_families() {
+    let all = format_option_keys();
+    for f in filters() {
+        let mine: Vec<&str> = f.format_option_keys().iter().map(|k| k.key).collect();
+        for k in &all {
+            let own = family(k.key) == f.id() || mine.iter().any(|m| family(m) == family(k.key));
+            if own {
+                assert!(mine.contains(&k.key), "{} owns the {} family but does not declare {}", f.id(), family(k.key), k.key);
+            }
+        }
+        // and every key it declares is accepted by its own check
+        let opts: std::collections::BTreeMap<String, String> = f
+            .format_option_keys()
+            .iter()
+            .map(|k| (k.key.to_string(), if k.kind == OptionKind::Int { "1".into() } else { "true".into() }))
+            .collect();
+        check_own_options(f.as_ref(), &opts).unwrap_or_else(|e| panic!("{}: {e}", f.id()));
+    }
+}
+
+/// Called directly (not through the facade), a filter refuses a misspelt key of its own format and a bad value
+/// for one of its keys, at extract and at merge; keys of other formats are left to the facade.
+#[test]
+fn a_filter_called_directly_refuses_its_own_unknown_keys() {
+    use bilingua_csv::CsvFilter;
+    use bilingua_ftl::FtlFilter;
+    use bilingua_ini::IniFilter;
+    let csv = b"id,English,German\nk1,Hello,\nk2,Bye,\n";
+    let typo = ExtractOptions::new().with_format_option("csv.colums", "source=English");
+    match CsvFilter::default().extract(csv, &typo) {
+        Err(Error::FormatOption { key, msg }) => assert!(key == "csv.colums" && msg.contains("csv.columns"), "{key}: {msg}"),
+        other => panic!("{other:?}"),
+    }
+    let ok = ExtractOptions::new().with_format_option("csv.columns", "key=id, source=English, target.de=German").with_target_lang("de");
+    assert_eq!(CsvFilter::default().extract(csv, &ok).unwrap().units.len(), 2);
+    // another format's keys are not this filter's business
+    let foreign = ExtractOptions::new().with_format_option("docx.walk", "x").with_format_option("nosuch.key", "1");
+    let doc = IniFilter.extract(b"[a]\nk=Hello\n", &foreign).unwrap();
+    // a key in the filter's own family (its id), even though it declares no keys at all
+    let own = ExtractOptions::new().with_format_option("ini.anything", "1");
+    assert!(matches!(IniFilter.extract(b"[a]\nk=Hello\n", &own), Err(Error::FormatOption { .. })));
+    assert!(matches!(IniFilter.merge_with(&doc, &MergeOptions::new().with_format_option("ini.anything", 1)), Err(Error::FormatOption { .. })));
+    assert!(IniFilter.merge_with(&doc, &MergeOptions::new().with_format_option("docx.walk", 1)).is_ok());
+    // a declared key with a value of the wrong kind
+    let bad = ExtractOptions::new().with_format_option("ftl.translate_terms", "maybe");
+    assert!(matches!(FtlFilter.extract(b"hello = Hello\n", &bad), Err(Error::FormatOption { .. })));
 }

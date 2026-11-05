@@ -13,7 +13,7 @@ use std::collections::HashMap;
 use std::sync::OnceLock;
 
 fn hidden_code(kind: &str, orig: &str, extra: &str) -> CodeData {
-    CodeData { open: Some(kind.to_string()), standalone: Some(orig.to_string()), close: Some(extra.to_string()), ..Default::default() }
+    CodeData::new().with_open(kind.to_string()).with_close(extra.to_string()).with_standalone(orig.to_string())
 }
 
 fn span_str(s: Span, base: usize) -> String {
@@ -101,7 +101,7 @@ pub(crate) fn build_document(w: &Walk, l: &Loaded, opts: &ExtractOptions) -> Res
             }
         }
         for tok in &lu.toks {
-            let mut c = CodeData { open: Some(span_str(tok.open, lu.start)), ..Default::default() };
+            let mut c = CodeData::new().with_open(span_str(tok.open, lu.start));
             if let Some(cl) = tok.close {
                 c.close = Some(span_str(cl, lu.start));
             }
@@ -115,7 +115,7 @@ pub(crate) fn build_document(w: &Walk, l: &Loaded, opts: &ExtractOptions) -> Res
             let a = &w.attr_units[k];
             codes.insert(
                 format!("$a{}", n + 1),
-                CodeData { open: Some((attr_base + k).to_string()), standalone: Some(span_str((a.start, a.end), lu.start)), ..Default::default() },
+                CodeData::new().with_open((attr_base + k).to_string()).with_standalone(span_str((a.start, a.end), lu.start)),
             );
         }
         let u = &mut units[i];

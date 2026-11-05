@@ -110,7 +110,7 @@ fn deep_and_huge_inputs_give_typed_errors() {
         many.push_str(&format!("k{i} = v{i}\n"));
     }
     assert!(matches!(extract(many.as_bytes()), Err(Error::Limit(LimitError { kind: LimitKind::Units, .. }))));
-    assert!(FtlFilter.extract_with(many.as_bytes(), &ExtractOptions::default(), &Limits { max_units: 60_000, ..Limits::default() }).is_ok());
+    assert!(FtlFilter.extract_with(many.as_bytes(), &ExtractOptions::default(), &{ let mut built = Limits::default(); built.max_units = 60_000; built }).is_ok());
     // more lines than the line cap: refused before any scan
     let lines = "\n".repeat(1_000_001);
     assert!(matches!(extract(lines.as_bytes()), Err(Error::Limit(LimitError { kind: LimitKind::Lines, .. }))));
@@ -118,7 +118,7 @@ fn deep_and_huge_inputs_give_typed_errors() {
     let few = ExtractOptions::new().with_limits(bilingua_model::Limits::new().with_max_units(2));
     assert!(matches!(FtlFilter.extract(b"a = A\nb = B\nc = C\n", &few), Err(Error::Limit(LimitError { kind: LimitKind::Units, .. }))));
     // over the input size cap
-    let small = Limits { max_input_bytes: 10, ..Limits::default() };
+    let small = { let mut built = Limits::default(); built.max_input_bytes = 10; built };
     assert!(FtlFilter.extract_with(b"hello = Hello world\n", &ExtractOptions::default(), &small).is_err());
     // truncated multi-byte, a lone BOM, invalid UTF-8 and NUL
     let mut s = "k = \u{65e5}\u{672c}\u{8a9e}\n".as_bytes().to_vec();

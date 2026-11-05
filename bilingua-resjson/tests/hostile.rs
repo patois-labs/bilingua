@@ -103,7 +103,7 @@ fn deep_nesting_is_refused_without_a_stack_overflow() {
     }
     assert!(try_ex(&objs).is_err());
     // Custom depth.
-    let lim = Limits { max_depth: 3, ..Limits::default() };
+    let lim = { let mut built = Limits::default(); built.max_depth = 3; built };
     assert!(Resjson.extract_with(b"{\"a\":{\"b\":\"Text\"}}", &opts(false), &lim).is_ok());
     assert!(Resjson.extract_with(b"{\"a\":{\"b\":{\"c\":{\"d\":\"Text\"}}}}", &opts(false), &lim).is_err());
 }
@@ -129,10 +129,10 @@ fn oversized_files_are_refused() {
     arr.extend_from_slice(b"]}");
     assert!(matches!(try_ex(&arr), Err(Error::Unsupported(_))));
     // More bytes than the byte limit.
-    let lim = Limits { max_bytes: 10, ..Limits::default() };
+    let lim = { let mut built = Limits::default(); built.max_bytes = 10; built };
     assert!(matches!(Resjson.extract_with(b"{\"a\": \"Hello there\"}", &opts(false), &lim), Err(Error::Unsupported(_))));
     // A value longer than the character limit.
-    let lim = Limits { max_unit_chars: 20, ..Limits::default() };
+    let lim = { let mut built = Limits::default(); built.max_unit_chars = 20; built };
     let long = format!("{{\"a\": \"{}\"}}", "x".repeat(21));
     assert!(matches!(Resjson.extract_with(long.as_bytes(), &opts(false), &lim), Err(Error::Unsupported(_))));
     assert!(Resjson.extract_with(long.replace("x".repeat(21).as_str(), &"x".repeat(20)).as_bytes(), &opts(false), &lim).is_ok());

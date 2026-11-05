@@ -18,6 +18,7 @@ pub struct Resx;
 
 /// One resource entry as a key-based project sees it (translatable or not).
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct Record {
     pub key: String,
     pub value: String,
@@ -80,7 +81,7 @@ fn tags_of(core: &str) -> (Vec<Inline>, BTreeMap<String, CodeData>) {
             ph::Piece::Ph(p) => {
                 n += 1;
                 let id = n.to_string();
-                codes.insert(id.clone(), CodeData { standalone: Some(p.to_string()), label: Some("placeholder".into()), ..Default::default() });
+                codes.insert(id.clone(), CodeData::new().with_standalone(p.to_string()).with_label("placeholder".to_string()));
                 inl.push(if profile::tokens::is_named_placeholder(p) { Inline::free_tag(id, p) } else { Inline::tag(id, TagKind::Standalone, p) });
             }
         }
@@ -238,10 +239,12 @@ impl Filter for Resx {
     }
 
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         self.extract_with(bytes, opts, &Limits::default())
     }
 
     fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
         let Skeleton::Text { parts, encoding, .. } = &doc.skeleton else {
             return Err(Error::Write("resx needs a text skeleton".into()));

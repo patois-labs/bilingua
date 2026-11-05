@@ -91,9 +91,11 @@ impl Filter for Vsdx {
         FORMAT_OPTIONS
     }
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         extract::extract_doc(bytes, opts, opts.format_flag("vsdx.translate_comments").unwrap_or(false))
     }
     fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         render::merge(doc, opts)
     }
 }

@@ -152,7 +152,7 @@ fn test_hostile_inputs() {
     assert_refused(b"\"a\" = \"b\";\n\"c\" =", "");
     // Segment cap: more entries than the limit are refused.
     let data: Vec<u8> = (0..30).flat_map(|i| format!("\"k{i}\" = \"Value number {i}\";\n").into_bytes()).collect();
-    let small = Limits { max_units: 10, ..Limits::default() };
+    let small = { let mut built = Limits::default(); built.max_units = 10; built };
     assert!(matches!(Strings.extract_with(&data, &opts(), &small), Err(Error::Unsupported(_))));
     assert!(Strings.extract_with(&data, &opts(), &Limits::default()).is_ok());
 }

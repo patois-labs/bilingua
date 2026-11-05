@@ -36,9 +36,11 @@ impl Filter for Srt {
         !head.trim_start().starts_with("WEBVTT") && head.lines().take(6).any(|l| l.contains(" --> ") && l.contains(','))
     }
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         extract(Kind::Srt, bytes, opts)
     }
     fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         merge(Kind::Srt, doc, opts)
     }
 }
@@ -55,9 +57,11 @@ impl Filter for Vtt {
         head.trim_start_matches('\u{feff}').starts_with("WEBVTT")
     }
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         extract(Kind::Vtt, bytes, opts)
     }
     fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         merge(Kind::Vtt, doc, opts)
     }
 }
@@ -382,7 +386,7 @@ fn cue_inlines(k: Kind, raw: &str) -> (Vec<Inline>, BTreeMap<String, CodeData>) 
                 let id = next.to_string();
                 next += 1;
                 let close = pair[idx].and_then(|c| if let Tok::Close { raw, .. } = &toks[c] { Some(raw.to_string()) } else { None });
-                codes.insert(id.clone(), CodeData { open: Some(raw.to_string()), close, standalone: None, label: Some(label(name).into()) });
+                codes.insert(id.clone(), CodeData::new().with_open(raw.to_string()).with_close(close).with_label(label(name).to_string()));
                 inl.push(Inline::tag(id.clone(), TagKind::Open, display_open(raw, name)));
                 ids[idx] = Some(id);
             }
@@ -401,7 +405,7 @@ fn cue_inlines(k: Kind, raw: &str) -> (Vec<Inline>, BTreeMap<String, CodeData>) 
                     Tok::Break(b) => (b.to_string(), "line break", LINE_BREAK_DISPLAY.to_string()),
                     Tok::Text(_) => continue,
                 };
-                codes.insert(id.clone(), CodeData { open: None, close: None, standalone: Some(raw), label: Some(label(name).into()) });
+                codes.insert(id.clone(), CodeData::new().with_standalone(raw).with_label(label(name).to_string()));
                 inl.push(Inline::tag(id, TagKind::Standalone, display));
             }
         }

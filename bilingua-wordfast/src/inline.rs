@@ -78,15 +78,15 @@ pub fn build_source(pieces: Vec<Piece>) -> Source {
                 let id = c.id.to_string();
                 match c.kind {
                     TagKind::Open => {
-                        codes.insert(id.clone(), CodeData { open: Some(c.raw), close: Some(c.raw_close), ..Default::default() });
+                        codes.insert(id.clone(), CodeData::new().with_open(c.raw).with_close(c.raw_close));
                     }
                     TagKind::Close => {}
                     TagKind::Standalone => {
-                        codes.insert(id.clone(), CodeData { standalone: Some(c.raw), ..Default::default() });
+                        codes.insert(id.clone(), CodeData::new().with_standalone(c.raw));
                     }
                 }
                 keys.insert(c.key, (id.clone(), c.kind, c.display.clone(), c.free));
-                inlines.push(Inline::Tag { id, kind: c.kind, display: c.display, free: c.free });
+                inlines.push(Inline::tag(id, c.kind, c.display).with_free(c.free));
             }
         }
     }
@@ -105,7 +105,7 @@ pub fn build_target(pieces: Vec<Piece>, source: &Source) -> Vec<Inline> {
             Piece::Code(c) => {
                 if let Some((id, kind, display, free)) = source.keys.get(&c.key) {
                     if used.insert((id.clone(), *kind)) {
-                        inlines.push(Inline::Tag { id: id.clone(), kind: *kind, display: display.clone(), free: *free });
+                        inlines.push(Inline::tag(id.clone(), *kind, display.clone()).with_free(*free));
                     }
                 }
             }

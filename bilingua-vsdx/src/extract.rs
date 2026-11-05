@@ -340,7 +340,7 @@ impl Builder {
 }
 
 fn code(s: impl Into<String>) -> CodeData {
-    CodeData { standalone: Some(s.into()), ..Default::default() }
+    CodeData::standalone(s)
 }
 
 fn r_id(rel: &El, anc: &[&El]) -> Option<String> {
@@ -602,11 +602,11 @@ fn extract_inner(bytes: &[u8], opts: &ExtractOptions, with_comments: bool) -> Re
             }
             None => ZipData::Raw(e.keep(&mut packed)),
         };
-        zentries.push(ZipEntry { name: e.name.clone(), data });
+        zentries.push(ZipEntry::new(e.name.clone(), data));
     }
     let meta = Meta { entries: entries.iter().map(|e| e.meta.clone()).collect(), packed, enc: enc_map, comments: with_comments };
     let meta_json = serde_json::to_vec(&meta).map_err(|e| perr(e.to_string()))?;
-    zentries.push(ZipEntry { name: META_NAME.into(), data: ZipData::Raw(meta_json) });
+    zentries.push(ZipEntry::raw(META_NAME, meta_json));
     Ok(Document::new("vsdx", b.units, Skeleton::zip(zentries, bilingua_model::parser_info!())).with_source_lang(opts.source_lang.clone()).with_target_lang(opts.target_lang.clone()).with_granularity(Granularity::Paragraph))
 }
 
@@ -661,7 +661,7 @@ impl PageWalk<'_> {
                                 tags += 1;
                                 let id = tags.to_string();
                                 src.push(Inline::tag(id.clone(), TagKind::Standalone, raw.clone()));
-                                u.codes.insert(id, CodeData { standalone: Some(raw.clone()), label: Some(mark_label(raw).into()), ..Default::default() });
+                                u.codes.insert(id, CodeData::new().with_standalone(raw.clone()).with_label(mark_label(raw).to_string()));
                             }
                         }
                     }

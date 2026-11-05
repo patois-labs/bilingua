@@ -66,7 +66,7 @@ fn inlines(atoms: &[Atom]) -> (Vec<Inline>, BTreeMap<String, CodeData>) {
                 n += 1;
                 let id = n.to_string();
                 let display = format!("<{b:02X}>");
-                codes.insert(id.clone(), CodeData { standalone: Some(display.clone()), label: Some(label(*b).into()), ..Default::default() });
+                codes.insert(id.clone(), CodeData::new().with_standalone(display.clone()).with_label(label(*b).to_string()));
                 out.push(Inline::tag(id, TagKind::Standalone, display));
             }
             Atom::U => {}
@@ -132,6 +132,7 @@ impl Filter for Stl {
         bytes.len() >= 11 && matches!(&bytes[3..11], b"STL25.01" | b"STL30.01")
     }
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         let limits = opts.limits();
         guard::check_input(bytes, &limits)?;
         let p = read::parse(bytes, Some(&limits))?;
@@ -165,6 +166,7 @@ impl Filter for Stl {
         )
     }
     fn merge_with(&self, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         merge(doc, opts)
     }
 }

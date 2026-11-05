@@ -32,6 +32,7 @@ use std::collections::HashSet;
 
 /// Which bilingual dialect a file was read as.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[non_exhaustive]
 pub enum Format {
     /// XLIFF 2.x (`unit` / `segment`).
     Xliff2,
@@ -59,6 +60,7 @@ impl Format {
 
 /// Phrase (MXLIFF) metadata of one trans-unit, as the file had it when opened.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
 pub struct MxMeta {
     /// `m:confirmed` is `1` / `true`.
     pub confirmed: bool,
@@ -263,6 +265,7 @@ impl Filter for XliffFilter {
         true
     }
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, bilingua_model::Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         let limits = opts.limits();
         bilingua_model::guard::check_input(bytes, &limits)?;
         bilingua_model::guard::check_xml(bytes, &limits)?;
@@ -278,6 +281,7 @@ impl Filter for XliffFilter {
         to_document_in(&doc, self.id, opts, Some(dec.encoding), dec.warnings)
     }
     fn merge_with(&self, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, bilingua_model::Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         merge_document_with(doc, self.id, opts)
     }
 }

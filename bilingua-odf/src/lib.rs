@@ -38,6 +38,7 @@ pub const FORMAT_OPTIONS: &[FormatOptionKey] =
 /// Options that `ExtractOptions` has no field for. `format_options["odf.translate_comments"]`, when set, wins
 /// over the filter's own `translate_comments`.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct OdfOptions {
     /// Make the paragraphs of comments (`office:annotation`) units (`c0`, `c1`, ...). Off by default: the comment
     /// rides in its host paragraph as an untranslated inline code.
@@ -143,7 +144,7 @@ fn code_for(t: &Tree, node: u32, part: &walk::Part) -> (String, CodeData) {
             let close = if t.self_closing(node) { format!("</{}>", t.qname(node)) } else { t.end_tag(node).to_string() };
             let label = label_of(t.local(node)).to_string();
             let disp = if matches!(part, walk::Part::Open(_)) { open.clone() } else { close.clone() };
-            (disp, CodeData { open: Some(open), close: Some(close), standalone: None, label: Some(label) })
+            (disp, CodeData::new().with_open(open).with_close(close).with_label(label))
         }
         _ => {
             let (disp, label) = if n.kind == Kind::Elem {
@@ -153,7 +154,7 @@ fn code_for(t: &Tree, node: u32, part: &walk::Part) -> (String, CodeData) {
             } else {
                 (clip(t.raw(node), 200), if n.kind == Kind::Comment { "xml comment".to_string() } else { "instruction".to_string() })
             };
-            (disp.clone(), CodeData { open: None, close: None, standalone: Some(disp), label: Some(label) })
+            (disp.clone(), CodeData::new().with_standalone(disp).with_label(label))
         }
     }
 }
@@ -244,7 +245,7 @@ fn extract_doc(bytes: &[u8], opts: &ExtractOptions, id: &'static str, o: &OdfOpt
             }
         }
     }
-    let skeleton = Skeleton::zip(vec![ZipEntry { name: ARCHIVE.into(), data: ZipData::Raw(bytes.to_vec()) }], parser_info!());
+    let skeleton = Skeleton::zip(vec![ZipEntry::raw(ARCHIVE, bytes.to_vec())], parser_info!());
     let doc = Document::new(id, units, skeleton).with_options(opts);
     guard::finish(doc, warnings, &l)
 }
@@ -398,6 +399,7 @@ macro_rules! odf_filter {
                 FORMAT_OPTIONS
             }
             fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
+                bilingua_model::check_own_options(self, &opts.format_options)?;
                 let mut o = self.options;
                 if let Some(on) = opts.format_flag("odf.translate_comments") {
                     o.translate_comments = on;
@@ -405,6 +407,7 @@ macro_rules! odf_filter {
                 extract_doc(bytes, opts, $id, &o)
             }
             fn merge_with(&self, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
+                bilingua_model::check_own_options(self, &opts.format_options)?;
                 merge_doc(doc, opts)
             }
         }

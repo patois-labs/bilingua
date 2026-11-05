@@ -69,10 +69,10 @@ fn round_trip(f: &dyn Filter, data: &[u8]) {
 
 #[test]
 fn txml_five_megabytes_round_trip() {
-    round_trip(&Txml { load_targets: true }, generate_txml(5_200_000).as_bytes());
+    round_trip(&Txml::new().with_load_targets(true), generate_txml(5_200_000).as_bytes());
 }
 
 #[test]
 fn txlf_five_megabytes_round_trip() {
-    round_trip(&Txlf { load_targets: true }, generate_txlf(5_200_000).as_bytes());
+    round_trip(&Txlf::new().with_load_targets(true), generate_txlf(5_200_000).as_bytes());
 }

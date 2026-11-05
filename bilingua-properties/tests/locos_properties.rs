@@ -149,7 +149,7 @@ fn hostile_inputs() {
     assert!(matches!(&err, Error::Unsupported(m) if m.contains("UTF-16")), "{err}");
     // over the unit cap
     let big: String = (0..30).map(|i| format!("key{i} = Value number {i}\n")).collect();
-    let small = Limits { max_units: 10, ..Limits::default() };
+    let small = { let mut built = Limits::default(); built.max_units = 10; built };
     let err = Properties.extract_with(big.as_bytes(), &opts(), &small).unwrap_err();
     assert!(matches!(&err, Error::Unsupported(m) if m.contains("limit")), "{err}");
     // a key-only file and a file of comments only parse to nothing

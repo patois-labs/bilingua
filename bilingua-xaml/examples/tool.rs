@@ -22,7 +22,7 @@ fn main() {
     let mut args: Vec<String> = std::env::args().collect();
     let attrs = args.iter().any(|a| a == "--attrs");
     args.retain(|a| a != "--attrs");
-    let f = Xaml { view_attributes: attrs };
+    let f = if attrs { Xaml::with_view_attributes() } else { Xaml::new() };
     let opts = ExtractOptions::new().with_granularity(Granularity::Paragraph);
     match args.get(1).map(String::as_str) {
         Some("dump") => {

@@ -16,7 +16,7 @@ fn main() {
     let locos = args.iter().any(|a| a == "--locos");
     let locked = args.iter().any(|a| a == "--locked");
     args.retain(|a| !a.starts_with("--"));
-    let f = Ttx { skip_translated: locos };
+    let f = Ttx::new().with_skip_translated(locos);
     let opts = ExtractOptions::new().with_granularity(Granularity::Paragraph).with_include_locked(locked);
     match args.get(1).map(String::as_str) {
         Some("dump") => {

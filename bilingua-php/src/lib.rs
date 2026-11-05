@@ -21,6 +21,7 @@ const HIDDEN: &str = "$php";
 
 /// One translatable string as a key-based project sees it.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct Record {
     /// Dotted key path (`nested.deep.title`; a `$lang` variable is dropped).
     pub key: String,
@@ -212,11 +213,7 @@ impl Php {
             u.codes = codes;
             u.codes.insert(
                 HIDDEN.into(),
-                CodeData {
-                    standalone: Some(text[ru.start..ru.end].to_string()),
-                    open: Some(ru.quote.as_char().to_string()),
-                    ..Default::default()
-                },
+                CodeData::new().with_open(ru.quote.as_char().to_string()).with_standalone(text[ru.start..ru.end].to_string()),
             );
             u.context.kind = Some("string".into());
             u.context.style = Some("php".into());
@@ -266,10 +263,12 @@ impl Filter for Php {
     }
 
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         self.extract_with(bytes, opts, &opts.limits())
     }
 
     fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
         let Skeleton::Text {
             parts, encoding, ..

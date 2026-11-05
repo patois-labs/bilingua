@@ -105,7 +105,7 @@ fn truncated_everywhere_is_an_error_or_a_clean_file() {
 
 #[test]
 fn a_huge_file_over_the_byte_limit_is_refused() {
-    let f = Json5Filter::with_limits(Limits { max_bytes: 1000, ..Limits::default() });
+    let f = Json5Filter::with_limits({ let mut built = Limits::default(); built.max_bytes = 1000; built });
     let big = format!("[{}]", "'word',".repeat(1000));
     let e = f.extract(big.as_bytes(), &opts()).unwrap_err();
     assert!(matches!(e, Error::Parse { .. }));

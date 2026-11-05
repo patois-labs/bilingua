@@ -15,7 +15,7 @@ fn shown(v: &[Inline]) -> String {
 }
 
 fn big() -> Limits {
-    Limits { max_units: 50_000_000, max_value_chars: 10_000_000, max_input_bytes: 2 << 30 }
+    { let mut built = Limits::default(); built.max_units = 50_000_000; built.max_value_chars = 10_000_000; built.max_input_bytes = 2 << 30; built }
 }
 
 fn main() {

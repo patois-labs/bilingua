@@ -369,7 +369,7 @@ fn hostile_large_real_file_parses_quickly() {
 
 #[test]
 fn hostile_budgets_and_caps() {
-    let five = Json5Filter::with_limits(Limits { max_units: 5, ..Limits::default() });
+    let five = Json5Filter::with_limits({ let mut built = Limits::default(); built.max_units = 5; built });
     let many = format!("{{{}}}", (0..10).map(|i| format!("k{i}: 'Value {i}'")).collect::<Vec<_>>().join(","));
     let quotes = format!("[{}]", vec!["''"; 200].join(","));
     let commas = format!("[{}]", vec!["1"; 200].join(","));
@@ -377,9 +377,9 @@ fn hostile_budgets_and_caps() {
         let e = five.extract(bad.as_bytes(), &opts()).unwrap_err();
         assert!(matches!(e, Error::Parse { .. }), "{e}");
     }
-    let short = Json5Filter::with_limits(Limits { max_unit_chars: 50, ..Limits::default() });
+    let short = Json5Filter::with_limits({ let mut built = Limits::default(); built.max_unit_chars = 50; built });
     let long = format!("{{a: '{}'}}", "word ".repeat(40));
     assert!(short.extract(long.as_bytes(), &opts()).is_err());
-    let tiny = Json5Filter::with_limits(Limits { max_bytes: 10, ..Limits::default() });
+    let tiny = Json5Filter::with_limits({ let mut built = Limits::default(); built.max_bytes = 10; built });
     assert!(tiny.extract(b"{a: 'hello world'}", &opts()).is_err());
 }

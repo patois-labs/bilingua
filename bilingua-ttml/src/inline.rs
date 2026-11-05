@@ -107,7 +107,7 @@ pub fn tokenize(fragment: &str, preserve: bool) -> (Vec<Inline>, BTreeMap<String
     let toks = tokens(fragment);
     let mut i = 0;
     let mut spans: Vec<usize> = Vec::new();
-    let std_code = |s: &str, label: &str| CodeData { standalone: Some(s.to_string()), label: Some(label.into()), ..Default::default() };
+    let std_code = |s: &str, label: &str| CodeData::new().with_standalone(s.to_string()).with_label(label.to_string());
     while i < toks.len() {
         let (ts, te) = toks[i];
         parts.push((K::Text, unescape(&fragment[pos..ts])));
@@ -159,7 +159,7 @@ pub fn tokenize(fragment: &str, preserve: bool) -> (Vec<Inline>, BTreeMap<String
             codes.insert(n.to_string(), std_code(&fragment[ts..raw_end], "line break"));
             parts.push((K::Br, n.to_string()));
         } else if loc == "span" && !self_closing {
-            codes.insert(n.to_string(), CodeData { open: Some(tok.to_string()), close: None, label: Some("span".into()), ..Default::default() });
+            codes.insert(n.to_string(), CodeData::new().with_open(tok.to_string()).with_label("span".to_string()));
             spans.push(n);
             parts.push((K::Open, n.to_string()));
         } else {

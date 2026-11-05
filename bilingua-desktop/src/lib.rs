@@ -26,6 +26,7 @@ pub use locale::{language_name, posix_locale};
 
 /// One entry as a key-based project sees it (translatable or not for catkeys; one per unit for `.desktop`).
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct Record {
     /// `.desktop`: `<group>/<Key>` (`Keywords` items: `<group>/Keywords[<n>]`). `.catkeys`: the source string.
     pub key: String,

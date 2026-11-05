@@ -89,7 +89,7 @@ pub fn tag_placeholders(s: &str) -> (Vec<Inline>, BTreeMap<String, CodeData>) {
                 let id = next.to_string();
                 next += 1;
                 ids[i] = Some(id.clone());
-                codes.insert(id.clone(), CodeData { open: Some(markup.to_string()), label, ..Default::default() });
+                codes.insert(id.clone(), CodeData::new().with_open(markup.to_string()).with_label(label));
                 (TagKind::Open, id)
             }
             (TagKind::Close, Some(o)) => {
@@ -102,7 +102,7 @@ pub fn tag_placeholders(s: &str) -> (Vec<Inline>, BTreeMap<String, CodeData>) {
             _ => {
                 let id = next.to_string();
                 next += 1;
-                codes.insert(id.clone(), CodeData { standalone: Some(markup.to_string()), label, ..Default::default() });
+                codes.insert(id.clone(), CodeData::new().with_standalone(markup.to_string()).with_label(label));
                 (TagKind::Standalone, id)
             }
         };

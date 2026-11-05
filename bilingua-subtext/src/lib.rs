@@ -420,9 +420,11 @@ impl Filter for Sbv {
         first.is_some_and(|l| time_pair(l.text).is_some()) && !lines(&head).take(SNIFF_LINES).any(|l| mdvd_cue(l.text).is_some())
     }
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         extract("sbv", bytes, opts)
     }
     fn merge_with(&self, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         merge("sbv", doc, opts)
     }
 }
@@ -450,9 +452,11 @@ impl Filter for Sub {
         }
     }
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         extract("sub", bytes, opts)
     }
     fn merge_with(&self, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         merge("sub", doc, opts)
     }
 }

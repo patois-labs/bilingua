@@ -175,7 +175,7 @@ impl QtTs {
                     n += 1;
                     let id = n.to_string();
                     let raw = text[*s..*e].to_string();
-                    codes.insert(id.clone(), CodeData { standalone: Some(raw.clone()), label: Some(label.clone()), ..Default::default() });
+                    codes.insert(id.clone(), CodeData::new().with_standalone(raw.clone()).with_label(label.clone()));
                     inl.push(Inline::tag(id, TagKind::Standalone, raw));
                 }
             }
@@ -326,10 +326,12 @@ impl Filter for QtTs {
     }
 
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         self.extract_with(bytes, opts, &opts.limits())
     }
 
     fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
         let Skeleton::Text { parts, encoding, .. } = &doc.skeleton else {
             return Err(Error::Write("a Qt Linguist file needs a text skeleton".into()));

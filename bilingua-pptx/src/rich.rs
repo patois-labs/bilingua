@@ -93,7 +93,7 @@ pub fn build(mut atoms: Vec<Atom>, props: Props) -> Built {
     let mut codes: BTreeMap<String, CodeData> = BTreeMap::new();
     codes.insert(
         C_BASE.into(),
-        CodeData { standalone: Some(base.1.clone()), ..Default::default() },
+        CodeData::new().with_standalone(base.1.clone()),
     );
     let mut counter = 0usize;
     let mut open: Option<(String, String)> = None; // (key, tag id)
@@ -123,7 +123,7 @@ pub fn build(mut atoms: Vec<Atom>, props: Props) -> Built {
                     };
                     codes.insert(
                         id.clone(),
-                        CodeData { open: Some(fmt), label: Some(label), ..Default::default() },
+                        CodeData::new().with_open(fmt).with_label(label),
                     );
                     inlines.push(Inline::tag(id.clone(), TagKind::Open, format!("<{name}>")));
                     close_display = format!("</{name}>");
@@ -144,7 +144,7 @@ pub fn build(mut atoms: Vec<Atom>, props: Props) -> Built {
                 let id = counter.to_string();
                 codes.insert(
                     id.clone(),
-                    CodeData { standalone: Some(xml), label: Some(label), ..Default::default() },
+                    CodeData::new().with_standalone(xml).with_label(label),
                 );
                 inlines.push(Inline::tag(id, TagKind::Standalone, display));
             }

@@ -42,6 +42,7 @@ pub(crate) const C_PFX: &str = "_p";
 
 /// Options that `ExtractOptions` has no field for.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct XlsxOptions {
     /// Make sheet names units. Off by default: formulas, charts and macros refer to sheet names.
     /// Formulas and defined names in the workbook are rewritten; charts and external links are not.
@@ -72,6 +73,7 @@ pub const FORMAT_OPTIONS: &[FormatOptionKey] = &[
 ];
 
 #[derive(Default)]
+#[non_exhaustive]
 pub struct Xlsx {
     pub options: XlsxOptions,
 }
@@ -165,6 +167,7 @@ impl Filter for Xlsx {
         FORMAT_OPTIONS
     }
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         let mut xo = self.options.clone();
         let set = |key: &str, field: &mut bool| {
             if let Some(on) = opts.format_flag(key) {
@@ -176,7 +179,8 @@ impl Filter for Xlsx {
         set("xlsx.skip_hidden", &mut xo.skip_hidden);
         extract::extract_doc(bytes, opts, &xo)
     }
-    fn merge_with(&self, doc: &Document, _opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
+    fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         // The parts are UTF-8 XML and a workbook has no language to stamp, so neither option changes anything.
         merge_with_report(doc).map(|(b, _)| b)
     }

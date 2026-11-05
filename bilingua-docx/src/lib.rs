@@ -315,10 +315,7 @@ fn extract_doc_inner(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Er
             Some(t) if t.contains(M_UNIT) => ZipData::Parts(split_template(t, &idx)?),
             _ => ZipData::Raw(e.keep(&mut packed)),
         };
-        zentries.push(ZipEntry {
-            name: e.name.clone(),
-            data,
-        });
+        zentries.push(ZipEntry::new(e.name.clone(), data));
     }
     let meta = Meta {
         wp,
@@ -327,10 +324,7 @@ fn extract_doc_inner(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Er
         packed,
     };
     let meta_json = serde_json::to_vec(&meta).map_err(|e| perr(e.to_string()))?;
-    zentries.push(ZipEntry {
-        name: META_NAME.into(),
-        data: ZipData::Raw(meta_json),
-    });
+    zentries.push(ZipEntry::raw(META_NAME, meta_json));
 
     Ok(Document::new("docx", units, Skeleton::zip(zentries, bilingua_model::parser_info!())).with_source_lang(opts.source_lang.clone().or(lang_default)).with_target_lang(opts.target_lang.clone()).with_granularity(Granularity::Paragraph))
 }
@@ -424,6 +418,7 @@ impl Filter for Docx {
         FORMAT_OPTIONS
     }
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         let mut doc = extract_doc(bytes, opts)?;
         // Word comments are part of the document walk (as in LocOS): with the option off they stay in the
         // document as locked context, so unit ids and the skeleton do not change
@@ -435,7 +430,8 @@ impl Filter for Docx {
         }
         Ok(doc)
     }
-    fn merge_with(&self, doc: &Document, _opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
+    fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         // The parts are UTF-8 XML, and the language is set on the runs this merge rewrites (translated text), so neither
         // option changes anything: an untranslated run is never rewritten.
         merge_with_report(doc).map(|(b, _)| b)

@@ -223,12 +223,7 @@ pub fn analyse(
         let label = label_of(tree.name(text, run[0]));
         codes.insert(
             id.clone(),
-            CodeData {
-                open: Some(pack(&stmts)),
-                close: None,
-                standalone: Some(display.clone()),
-                label: Some(label.into()),
-            },
+            CodeData::new().with_open(pack(&stmts)).with_standalone(display.clone()).with_label(label.to_string()),
         );
         inlines.push(Inline::tag(id, TagKind::Standalone, display));
         run.clear();
@@ -249,12 +244,7 @@ pub fn analyse(
             let (o_raw, c_raw) = (raw_of(&items[j]), raw_of(&items[c]));
             codes.insert(
                 id.clone(),
-                CodeData {
-                    open: Some(o_raw.into()),
-                    close: Some(c_raw.into()),
-                    standalone: None,
-                    label: Some("font".into()),
-                },
+                CodeData::new().with_open(o_raw.to_string()).with_close(c_raw.to_string()).with_label("font".to_string()),
             );
             inlines.push(Inline::tag(id.clone(), TagKind::Open, o_raw));
             ids.insert(j, id);
@@ -309,12 +299,7 @@ pub fn analyse(
     let span = (fl_start, tree.nodes[last_line as usize].end);
     codes.insert(
         HIDDEN.into(),
-        CodeData {
-            open: Some(pack(&[nl, ind, &b, &t, &e])),
-            close: None,
-            standalone: Some(text[span.0..span.1].to_string()),
-            label: None,
-        },
+        CodeData::new().with_open(pack(&[nl, ind, &b, &t, &e])).with_standalone(text[span.0..span.1].to_string()),
     );
     Outcome::Unit(Box::new(Analysed {
         inlines,

@@ -263,7 +263,7 @@ pub fn to_inlines(pieces: &[Piece], map: &[Entry]) -> (Vec<Inline>, Vec<(String,
                     inl.push(Inline::tag(n.to_string(), TagKind::Open, o.clone()));
                     codes.push((
                         n.to_string(),
-                        CodeData { open: Some(o.clone()), close: Some(c.clone()), label: Some(pair_label(o)), ..Default::default() },
+                        CodeData::new().with_open(o.clone()).with_close(c.clone()).with_label(pair_label(o)),
                     ));
                 }
             }
@@ -277,7 +277,7 @@ pub fn to_inlines(pieces: &[Piece], map: &[Entry]) -> (Vec<Inline>, Vec<(String,
                     inl.push(Inline::tag(n.to_string(), TagKind::Standalone, r.clone()));
                     codes.push((
                         n.to_string(),
-                        CodeData { standalone: Some(r.clone()), label: Some(point_label(r)), ..Default::default() },
+                        CodeData::new().with_standalone(r.clone()).with_label(point_label(r)),
                     ));
                 }
             }

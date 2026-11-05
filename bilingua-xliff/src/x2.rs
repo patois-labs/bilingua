@@ -217,11 +217,7 @@ pub fn parse(buf: &[u8]) -> Result<ParsedDoc, Error> {
                                 .map(|p| crate::inline::plain(&p.inlines))
                                 .unwrap_or_else(|_| String::from_utf8_lossy(&buf[from..start]).into_owned());
                             if !text.trim().is_empty() {
-                                cur_notes.push(Note {
-                                    author: tag.value(buf, "appliesTo").filter(|v| !v.is_empty()).map(|v| format!("applies to {v}")),
-                                    text,
-                                    kind: tag.value(buf, "category").filter(|v| !v.is_empty()),
-                                });
+                                cur_notes.push(Note::new(text).with_author(tag.value(buf, "appliesTo").filter(|v| !v.is_empty()).map(|v| format!("applies to {v}"))).with_kind(tag.value(buf, "category").filter(|v| !v.is_empty())));
                             }
                         }
                     }

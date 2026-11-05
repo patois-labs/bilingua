@@ -178,7 +178,7 @@ pub(crate) fn build_document(t: &Tree, p: &Planned, notes: &[String], alt: &std:
                             em.stag_for_code(*el, &mut open);
                             let disp = short(&t.text[e.s0..e.s1], 120);
                             let close = t.text[e.e0..e.e1].to_string();
-                            codes.insert(id.clone(), CodeData { open: Some(open), close: Some(close), standalone: None, label: None });
+                            codes.insert(id.clone(), CodeData::new().with_open(open).with_close(close));
                             inl.push(Inline::tag(id, TagKind::Open, disp));
                         }
                         Piece::Close(_) => {
@@ -200,7 +200,7 @@ pub(crate) fn build_document(t: &Tree, p: &Planned, notes: &[String], alt: &std:
                                 Ref::Entity(src) => (src.clone(), src.clone()),
                                 Ref::Pair(_) => continue,
                             };
-                            codes.insert(id.clone(), CodeData { open: None, close: None, standalone: Some(markup), label: None });
+                            codes.insert(id.clone(), CodeData::new().with_standalone(markup));
                             inl.push(Inline::tag(id, TagKind::Standalone, disp));
                         }
                     }
@@ -242,7 +242,7 @@ pub(crate) fn build_document(t: &Tree, p: &Planned, notes: &[String], alt: &std:
         if pu.note != 0 {
             let text = notes[pu.note as usize].clone();
             u.context.notes.push(text.clone());
-            u.notes.push(Note { author: None, text, kind: Some("locNote".into()) });
+            u.notes.push(Note::new(text).with_kind("locNote".to_string()));
         }
         units.push(u);
     }

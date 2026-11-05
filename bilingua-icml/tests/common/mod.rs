@@ -104,7 +104,7 @@ pub fn parse_tokens(text: &str) -> Vec<Inline> {
             None => (TagKind::Open, body),
         };
         let id: String = body.trim_start_matches(|c: char| c.is_ascii_lowercase()).to_string();
-        out.push(Inline::Tag { id, kind, display: String::new(), free: false });
+        out.push(Inline::tag(id, kind, String::new()));
         rest = &rest[p + end + 3..];
     }
     if !rest.is_empty() {

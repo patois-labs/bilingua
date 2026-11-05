@@ -41,6 +41,7 @@ const MAX_NESTING: usize = 40;
 /// Size limits and the one option. The numbers are `bilingua_model::Limits` (Localization OS's configuration):
 /// `Filter::extract` takes them from `ExtractOptions::limits`, and over-limit files fail with `Error::Limit`.
 #[derive(Debug, Clone, Copy)]
+#[non_exhaustive]
 pub struct Limits {
     /// Units in one file (`MAX_DOCUMENT_SEGMENTS`); twenty times this is also the placeable budget.
     pub max_units: usize,
@@ -259,6 +260,7 @@ fn translatable(pieces: &[Piece]) -> bool {
 /// What a Fluent file holds, for tools and tests: messages, terms and Junk entries (text the Fluent grammar
 /// rejects, kept as is).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct Structure {
     pub messages: usize,
     pub terms: usize,
@@ -323,7 +325,7 @@ impl FtlFilter {
                         chars += raw.chars().count();
                         n += 1;
                         let id = n.to_string();
-                        codes.insert(id.clone(), CodeData { standalone: Some(raw.clone()), label: Some("placeholder".into()), ..Default::default() });
+                        codes.insert(id.clone(), CodeData::new().with_standalone(raw.clone()).with_label("placeholder".to_string()));
                         inl.push(Inline::free_tag(id, raw));
                     }
                 }
@@ -338,11 +340,7 @@ impl FtlFilter {
             unit.codes = codes;
             unit.codes.insert(
                 HIDDEN.into(),
-                CodeData {
-                    standalone: Some(text[run.start..run.end].to_string()),
-                    open: (!lead.is_empty()).then_some(lead),
-                    close: (!trail.is_empty()).then_some(trail),
-                    label: Some(format!(
+                CodeData::new().with_open((!lead.is_empty()).then_some(lead)).with_close((!trail.is_empty()).then_some(trail)).with_standalone(text[run.start..run.end].to_string()).with_label(format!(
                         "{}{}{}",
                         if crlf { 'c' } else { 'l' },
                         match &text[line_start(text, run.start)..run.start] {
@@ -352,7 +350,6 @@ impl FtlFilter {
                         },
                         run.indent
                     )),
-                },
             );
             unit.context.kind = Some("key".into());
             unit.context.style = Some(format!("ftl:{}", run.label));
@@ -422,6 +419,7 @@ impl Filter for FtlFilter {
     }
 
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         let mut limits = Limits::from_model(&opts.limits());
         // `format_options["ftl.translate_terms"]` is the generic spelling of `Limits::translate_terms`
         if let Some(on) = opts.format_flag("ftl.translate_terms") {
@@ -433,6 +431,7 @@ impl Filter for FtlFilter {
     /// With `stamp_target_always` the plural selects are filled for the document's `target_lang` even when nothing
     /// is translated (LocOS `build_localized`); otherwise the same as `merge`.
     fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         // plain `merge` never fills (see `merge_localized`), so only the "always" half of the stamp rule applies
         match opts.stamp_lang(doc, false) {
             Some(t) => self.merge_inner(doc, Some(t), true),

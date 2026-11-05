@@ -37,7 +37,7 @@ impl Call {
         ExtractOptions::new().with_source_lang(self.src.clone()).with_target_lang(self.locale.clone())
     }
     pub fn copts(&self) -> CsvOptions {
-        CsvOptions { columns: self.columns.clone(), target_locales: self.targets.clone() }
+        { let mut built = CsvOptions::default(); built.columns = self.columns.clone(); built.target_locales = self.targets.clone(); built }
     }
     pub fn extract(&self, data: &[u8]) -> Result<Document, Error> {
         self.extract_with(data, &self.options())

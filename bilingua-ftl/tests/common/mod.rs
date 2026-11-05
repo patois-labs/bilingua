@@ -11,7 +11,7 @@ pub fn extract(data: &[u8]) -> Result<Document, Error> {
 }
 
 pub fn extract_terms(data: &[u8]) -> Result<Document, Error> {
-    FtlFilter.extract_with(data, &opts(), &Limits { translate_terms: true, ..Limits::default() })
+    FtlFilter.extract_with(data, &opts(), &{ let mut built = Limits::default(); built.translate_terms = true; built })
 }
 
 /// Unit text the way Localization OS shows it: tags flattened to the placeable source.
@@ -53,7 +53,7 @@ pub fn to_inline(u: &Unit, text: &str) -> Vec<Inline> {
                 if !buf.is_empty() {
                     out.push(Inline::text(std::mem::take(&mut buf)));
                 }
-                out.push(Inline::Tag { id: id.clone(), kind: TagKind::Standalone, display: d.clone(), free: true });
+                out.push(Inline::free_tag(id.clone(), d.clone()));
                 rest = &rest[d.len()..];
                 continue 'outer;
             }

@@ -43,3 +43,41 @@ fn a_locked_unit_cannot_be_emptied() {
     assert!(matches!(d.set_target_empty(&id), Err(Error::Locked(_))));
     assert!(matches!(d.set_target_empty("nope"), Err(Error::UnknownSegment(_))));
 }
+
+/// rc, scc, stl and the subtitle text formats: a segment translated to nothing is written empty (it no longer
+/// reads back), the others keep their text; a format that cannot hold an empty value says so with
+/// `Error::Unwritable`, never with `Error::Write`.
+#[test]
+fn rc_scc_stl_and_subtext_write_an_empty_translation_or_refuse_it_as_unwritable() {
+    let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../oracle/corpus");
+    let mut tried = 0;
+    for fmt in ["rc", "scc", "stl", "subtext"] {
+        let Ok(rd) = std::fs::read_dir(dir.join(fmt)) else { continue };
+        for p in rd.flatten().map(|e| e.path()).filter(|p| p.is_file()) {
+            let name = p.file_name().unwrap().to_string_lossy().to_string();
+            let bytes = std::fs::read(&p).unwrap();
+            let Ok(mut d) = extract(&name, &bytes, &opts()) else { continue };
+            let texts = |d: &Document| d.units.iter().filter(|u| u.translate).map(|u| plain_text(&u.source())).collect::<Vec<_>>();
+            let before = texts(&d);
+            let Some(u) = d.units.iter().find(|u| u.translate && !plain_text(&u.source()).trim().is_empty()) else { continue };
+            let (uid, sid, text) = (u.id.clone(), u.segments[0].id.clone(), plain_text(&u.source()));
+            for s in d.units.iter().find(|u| u.id == uid).unwrap().segments.iter().map(|s| s.id.clone()).collect::<Vec<_>>() {
+                d.set_target_empty(&s).unwrap();
+            }
+            assert!(d.find(&sid).unwrap().1.has_target());
+            tried += 1;
+            match merge(&d) {
+                Ok(out) => {
+                    let back = extract(&name, &out, &opts()).unwrap_or_else(|e| panic!("{name}: the merged file does not read back: {e}"));
+                    let after = texts(&back);
+                    let n = |v: &[String]| v.iter().filter(|t| **t == text).count();
+                    assert!(n(&after) < n(&before), "{name}: {text:?} is still there");
+                    assert!(after.len() + 1 >= before.len(), "{name}: other units lost");
+                }
+                Err(Error::Unwritable { .. }) => {}
+                Err(e) => panic!("{name}: {e:?}"),
+            }
+        }
+    }
+    assert!(tried >= 10, "only {tried} files tried");
+}

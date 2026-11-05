@@ -319,7 +319,7 @@ fn old_json_without_new_fields_still_reads() {
 #[test]
 fn bilingual_fields_round_trip_in_json() {
     let mut u = Unit::new("u1", vec![Inline::text("Hola"), Inline::free_tag("2", "{n}")]);
-    u.notes.push(Note { author: Some("Ana".into()), text: "\u{6ce8}\u{91c8}".into(), kind: Some("comment".into()) });
+    u.notes.push(Note::new("\u{6ce8}\u{91c8}").with_author("Ana").with_kind("comment"));
     u.lock_reason = Some("context match".into());
     u.translate = false;
     u.segments[0].target = vec![Inline::text("\u{645}\u{631}\u{62d}\u{628}\u{627}")];

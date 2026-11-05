@@ -10,7 +10,7 @@ fn main() {
     let opts = ExtractOptions::new().with_granularity(Granularity::Paragraph);
     let txlf = path.ends_with(".txlf");
     let t = Instant::now();
-    let mut d = if txlf { Txlf { load_targets: false }.extract_with(&bytes, &opts, &limits) } else { Txml { load_targets: false }.extract_with(&bytes, &opts, &limits) }.expect("extract");
+    let mut d = if txlf { Txlf::new().with_load_targets(false).extract_with(&bytes, &opts, &limits) } else { Txml::new().with_load_targets(false).extract_with(&bytes, &opts, &limits) }.expect("extract");
     let t_extract = t.elapsed();
     let t = Instant::now();
     let same = if txlf { Txlf::default().merge(&d) } else { Txml::default().merge(&d) }.expect("merge");

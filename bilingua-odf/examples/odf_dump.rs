@@ -9,7 +9,7 @@ fn main() {
     for f in std::env::args().skip(1) {
         let bytes = std::fs::read(&f).unwrap();
         let ext = f.rsplit('.').next().unwrap_or("").to_ascii_lowercase();
-        let o = OdfOptions { translate_comments: comments };
+        let o = { let mut built = OdfOptions::default(); built.translate_comments = comments; built };
         let filter: Box<dyn Filter> = match ext.as_str() {
             "ods" | "ots" => Box::new(Ods::with_options(o)),
             "odp" | "otp" => Box::new(Odp::with_options(o)),

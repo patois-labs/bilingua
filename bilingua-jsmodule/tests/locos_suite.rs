@@ -388,10 +388,7 @@ fn printf_scan_stays_linear_on_a_run_of_zeros() {
 fn caps_nesting_segments_quotes_tokens_and_length() {
     let deep = format!("export default {}'x'{}", "{a:".repeat(40), "}".repeat(40));
     refused(&deep, "nested");
-    let lim = bilingua_jsmodule::Limits {
-        max_units: 5,
-        ..Default::default()
-    };
+    let lim = { let mut built = bilingua_jsmodule::Limits::default(); built.max_units = 5; built };
     let with = |src: &str| JsModule.extract_with(src.as_bytes(), &ExtractOptions::default(), &lim);
     let many = format!(
         "export default {{{}}}",

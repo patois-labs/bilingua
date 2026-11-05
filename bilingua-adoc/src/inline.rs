@@ -446,7 +446,7 @@ impl Tok {
     fn point(&mut self, raw: String, label: &str, out: &mut Vec<Inline>) {
         self.n += 1;
         let id = self.n.to_string();
-        self.codes.insert(id.clone(), CodeData { standalone: Some(raw.clone()), label: Some(label.into()), ..Default::default() });
+        self.codes.insert(id.clone(), CodeData::new().with_standalone(raw.clone()).with_label(label.to_string()));
         out.push(Inline::tag(id, TagKind::Standalone, raw));
     }
 
@@ -454,7 +454,7 @@ impl Tok {
         self.n += 1;
         let id = self.n.to_string();
         self.codes
-            .insert(id.clone(), CodeData { open: Some(open.clone()), close: Some(close.clone()), label: Some(label.into()), ..Default::default() });
+            .insert(id.clone(), CodeData::new().with_open(open.clone()).with_close(close.clone()).with_label(label.to_string()));
         out.push(Inline::tag(id.clone(), TagKind::Open, open));
         tokenize(inner, self, depth + 1, out);
         out.push(Inline::tag(id, TagKind::Close, close));

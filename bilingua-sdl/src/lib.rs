@@ -107,6 +107,7 @@ impl Filter for PackageFilter {
     }
 
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, bilingua_model::Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         // the B6 limits of this call (Localization OS's numbers unless the caller sets others)
         let limits = opts.limits();
         bilingua_model::guard::check_input(bytes, &limits)?;
@@ -133,12 +134,13 @@ impl Filter for PackageFilter {
         let zentries = opened
             .entries
             .iter()
-            .map(|e| ZipEntry { name: e.name.clone(), data: ZipData::Raw(e.data.clone()) })
+            .map(|e| ZipEntry::raw(e.name.clone(), e.data.clone()))
             .collect();
         Ok(Document::new(self.id.to_string(), units, Skeleton::zip(zentries, bilingua_model::parser_info!())).with_source_lang(source_lang).with_target_lang(target_lang).with_granularity(bilingua_model::Granularity::Paragraph))
     }
 
-    fn merge_with(&self, document: &Document, _opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, bilingua_model::Error> {
+    fn merge_with(&self, document: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, bilingua_model::Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         // The package files are the project's: they already name its target language, and they are written as
         // UTF-8 XML, so neither option changes anything here.
         bilingua_model::check_parser(document, &bilingua_model::parser_info!())?;

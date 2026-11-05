@@ -13,16 +13,23 @@ use xml::{Kid, Kind, Tree};
 
 /// The TTX filter. `skip_translated` gives LocOS's behaviour: a `<Tu>` whose target already holds text is not a
 /// unit (it is listed as a locked unit with `include_locked`). By default such a `<Tu>` is a unit with its
-/// translation loaded as the target.
+/// translation loaded as the target. Extracting under the LocOS profile (`ExtractOptions::with_profile("locos")`)
+/// skips them too, whatever the field says.
 #[derive(Debug, Clone, Copy, Default)]
+#[non_exhaustive]
 pub struct Ttx {
     pub skip_translated: bool,
 }
 
 impl Ttx {
-    /// The filter as Localization OS reads TTX files.
-    pub fn locos() -> Ttx {
-        Ttx { skip_translated: true }
+    /// The default filter: finished translations are loaded as targets.
+    pub const fn new() -> Ttx {
+        Ttx { skip_translated: false }
+    }
+    /// With `true`, a `<Tu>` whose target already holds text is not a unit (Localization OS's reading).
+    pub const fn with_skip_translated(mut self, skip_translated: bool) -> Ttx {
+        self.skip_translated = skip_translated;
+        self
     }
 }
 
@@ -241,7 +248,7 @@ impl Ttx {
             let src_text = tokens::has_text(&stok.inl);
             let locked_reason = if !src_text {
                 Some("no translatable text")
-            } else if tgt_text && self.skip_translated {
+            } else if tgt_text && (self.skip_translated || opts.is_profile(profile::LOCOS)) {
                 Some("already translated")
             } else {
                 None
@@ -407,10 +414,12 @@ impl Filter for Ttx {
     }
 
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         self.extract_with(bytes, opts, &opts.limits())
     }
 
     fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
         let Skeleton::Text { parts, encoding, .. } = &doc.skeleton else {
             return Err(Error::Write("ttx needs a text skeleton".into()));

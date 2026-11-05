@@ -98,7 +98,7 @@ fn point_and_paired_codes_have_display_and_labels() {
 #[test]
 fn comments_are_units_only_when_asked() {
     let data = odt();
-    let f = Odt::with_options(OdfOptions { translate_comments: true });
+    let f = Odt::with_options({ let mut built = OdfOptions::default(); built.translate_comments = true; built });
     let mut d = f.extract(&data, &opts(None)).unwrap();
     let c: Vec<&Unit> = d.units.iter().filter(|u| u.id.starts_with('c')).collect();
     assert_eq!(c.len(), 1);

@@ -334,9 +334,9 @@ fn make_unit(
 ) -> Unit {
     let mut u = Unit::new(id, built.inlines);
     u.codes = built.codes;
-    u.codes.insert(C_ORIG.into(), CodeData { standalone: Some(orig), ..Default::default() });
-    u.codes.insert(C_MODE.into(), CodeData { standalone: Some(mode.into()), ..Default::default() });
-    u.codes.insert(C_PFX.into(), CodeData { standalone: Some(pfx.into()), ..Default::default() });
+    u.codes.insert(C_ORIG.into(), CodeData::new().with_standalone(orig));
+    u.codes.insert(C_MODE.into(), CodeData::new().with_standalone(mode.to_string()));
+    u.codes.insert(C_PFX.into(), CodeData::new().with_standalone(pfx.to_string()));
     u.context = ctx;
     u
 }
@@ -511,13 +511,7 @@ impl Extractor<'_> {
                     }
                     let id = format!("is{}-{}", sh.idx, r);
                     let built = build(atoms, props_of);
-                    let mut cx = UnitContext {
-                        kind: Some("cell".into()),
-                        location: Some(loc),
-                        max_len,
-                        notes,
-                        ..Default::default()
-                    };
+                    let mut cx = UnitContext::new().with_kind("cell".to_string()).with_location(loc).with_max_len(max_len).with_notes(notes);
                     hidden_extra(&mut cx, hidden);
                     let orig = raw_children(is);
                     self.u_inline.push(make_unit(id.clone(), built, orig, "si", &ns.pfx, cx));
@@ -545,13 +539,7 @@ impl Extractor<'_> {
             let kind = if name.ends_with("Header") { "header" } else { "footer" };
             let which = name.trim_end_matches("Header").trim_end_matches("Footer");
             let built = build(atoms, props_of);
-            let mut cx = UnitContext {
-                kind: Some(kind.into()),
-                style: Some((*name).into()),
-                location: Some(format!("{} {kind} ({which})", sh.name)),
-                max_len: Some(255),
-                ..Default::default()
-            };
+            let mut cx = UnitContext::new().with_kind(kind.to_string()).with_style((*name).to_string()).with_location(format!("{} {kind} ({which})", sh.name)).with_max_len(Some(255));
             hidden_extra(&mut cx, sh.hidden.then_some("sheet"));
             let orig = raw_children(h);
             self.u_hf.push(make_unit(id.clone(), built, orig, "hf", &ns.pfx, cx));
@@ -667,12 +655,7 @@ impl Extractor<'_> {
                     if self.xo.translate_comments && body.chars().any(|c| c.is_alphabetic()) {
                         let id = format!("threaded{}-{}-{}", sh.idx, cell, k);
                         let atoms = vec![Atom::Text { fmt: String::new(), key: String::new(), text: body.clone() }];
-                        let cx = UnitContext {
-                            kind: Some("comment".into()),
-                            location: Some(self.sheet_cell(sh, &cell)),
-                            notes: vec![],
-                            ..Default::default()
-                        };
+                        let cx = UnitContext::new().with_kind("comment".to_string()).with_location(self.sheet_cell(sh, &cell));
                         self.u_comments.push(make_unit(id.clone(), build(atoms, props_of), raw_children(te), "plain", &pfx, cx));
                         te.children = vec![marker(&id)];
                     }
@@ -711,11 +694,7 @@ impl Extractor<'_> {
                     let (atoms, _) = si_atoms(&ns, &te.children);
                     if self.xo.translate_comments && has_text(&atoms) {
                         let id = format!("comment{}-{}", sh.idx, cell);
-                        let cx = UnitContext {
-                            kind: Some("comment".into()),
-                            location: Some(self.sheet_cell(sh, &cell)),
-                            ..Default::default()
-                        };
+                        let cx = UnitContext::new().with_kind("comment".to_string()).with_location(self.sheet_cell(sh, &cell));
                         self.u_comments.push(make_unit(id.clone(), build(atoms, props_of), raw_children(te), "si", &ns.pfx, cx));
                         te.children = vec![marker(&id)];
                     }
@@ -825,14 +804,9 @@ fn extract_doc_inner(bytes: &[u8], opts: &ExtractOptions, xo: &XlsxOptions) -> R
         for (idx, name, hidden) in &all_names {
             let id = format!("sheetname-{idx}");
             let mut u = Unit::new(id.clone(), vec![Inline::text(name.clone())]);
-            u.codes.insert(C_BASE.into(), CodeData { standalone: Some(String::new()), ..Default::default() });
-            u.codes.insert(C_MODE.into(), CodeData { standalone: Some("attr".into()), ..Default::default() });
-            u.context = UnitContext {
-                kind: Some("sheet-name".into()),
-                location: Some(format!("workbook, sheet {idx}")),
-                max_len: Some(31),
-                ..Default::default()
-            };
+            u.codes.insert(C_BASE.into(), CodeData::new().with_standalone(String::new()));
+            u.codes.insert(C_MODE.into(), CodeData::new().with_standalone("attr".to_string()));
+            u.context = UnitContext::new().with_kind("sheet-name".to_string()).with_location(format!("workbook, sheet {idx}")).with_max_len(Some(31));
             hidden_extra(&mut u.context, hidden.then_some("sheet"));
             u_names.push(u);
             ex.sheet_units.push((name.clone(), id));
@@ -941,13 +915,7 @@ fn extract_doc_inner(bytes: &[u8], opts: &ExtractOptions, xo: &XlsxOptions) -> R
                 if phonetic {
                     built.codes.insert("_ph".into(), CodeData::default());
                 }
-                let mut cx = UnitContext {
-                    kind: Some("cell".into()),
-                    location: Some(u.loc.clone()),
-                    max_len: u.max_len,
-                    notes: u.notes.clone(),
-                    ..Default::default()
-                };
+                let mut cx = UnitContext::new().with_kind("cell".to_string()).with_location(u.loc.clone()).with_max_len(u.max_len).with_notes(u.notes.clone());
                 cx.extra.insert("cells".into(), u.count.to_string());
                 if u.all_hidden {
                     hidden_extra(&mut cx, u.hidden_kind);
@@ -1059,11 +1027,11 @@ fn extract_doc_inner(bytes: &[u8], opts: &ExtractOptions, xo: &XlsxOptions) -> R
             }
             None => ZipData::Raw(e.keep(&mut packed)),
         };
-        zentries.push(ZipEntry { name: e.name.clone(), data });
+        zentries.push(ZipEntry::new(e.name.clone(), data));
     }
     let meta = Meta { entries: entries.iter().map(|e| e.meta.clone()).collect(), packed };
     let meta_json = serde_json::to_vec(&meta).map_err(|e| perr(e.to_string()))?;
-    zentries.push(ZipEntry { name: META_NAME.into(), data: ZipData::Raw(meta_json) });
+    zentries.push(ZipEntry::raw(META_NAME, meta_json));
 
     Ok(Document::new("xlsx", units, Skeleton::zip(zentries, bilingua_model::parser_info!())).with_source_lang(opts.source_lang.clone()).with_target_lang(opts.target_lang.clone()).with_granularity(Granularity::Paragraph))
 }

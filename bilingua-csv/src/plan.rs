@@ -10,7 +10,9 @@ fn bad(msg: impl Into<String>) -> Error {
     Error::Unsupported(msg.into())
 }
 
+/// Whether the first row is a header: decided from the file, or as the mapping says.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[non_exhaustive]
 pub enum HeaderMode {
     #[default]
     Auto,
@@ -20,6 +22,7 @@ pub enum HeaderMode {
 
 /// A parsed column-mapping spec such as `source=English, target.de=German, key=id`.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct Spec {
     pub header: HeaderMode,
     pub source: Option<String>,

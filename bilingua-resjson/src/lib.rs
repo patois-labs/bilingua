@@ -43,6 +43,7 @@ const TRAIL_KEY: &str = "$trail";
 
 /// Size limits. The defaults are the Localization OS ones.
 #[derive(Debug, Clone)]
+#[non_exhaustive]
 pub struct Limits {
     /// Most units in one file (LocOS `MAX_DOCUMENT_SEGMENTS`).
     pub max_units: usize,
@@ -194,7 +195,7 @@ fn is_translatable(v: &str) -> bool {
 }
 
 fn code(s: &str) -> CodeData {
-    CodeData { standalone: Some(s.to_string()), ..Default::default() }
+    CodeData::new().with_standalone(s.to_string())
 }
 
 impl Resjson {
@@ -361,10 +362,12 @@ impl Filter for Resjson {
     }
 
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         self.extract_with(bytes, opts, &Limits::default())
     }
 
     fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
         let Skeleton::Text { parts, encoding, .. } = &doc.skeleton else {
             return Err(Error::Write("resjson needs a text skeleton".into()));

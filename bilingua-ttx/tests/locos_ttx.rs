@@ -2,7 +2,8 @@
 //! suite's own fixtures and expected bytes. `test_registration` (the LocOS registry) has its Bilingua counterpart in
 //! `registration_counterpart`; `test_export_end_to_end` goes through the LocOS ingest and export services, so only its
 //! filter part is ported (`export_partial_translation_keeps_the_ttx`); the service layer is the adapter's gate.
-//! Cases run with `Ttx::locos()` (a finished translation is not a unit) unless the name says otherwise.
+//! Cases run with `Ttx::new().with_skip_translated(true)` (a finished translation is not a unit) unless the name says
+//! otherwise; the LocOS profile gives the same reading.
 
 mod common;
 
@@ -280,4 +281,22 @@ fn skeleton_is_stamped() {
     assert_eq!(d.skeleton.parser().unwrap().name, "bilingua-ttx");
     assert_eq!((d.source_lang.as_deref(), d.target_lang.as_deref()), (Some("EN-US"), Some("DE-DE")));
     let _: &Ttx = &LOCOS;
+}
+
+/// The LocOS profile reads TTX as Localization OS does, so the facade's default `Ttx` gives the adapter LocOS's
+/// units: a `<Tu>` with a finished translation is not a unit.
+#[test]
+fn the_locos_profile_skips_finished_translations() {
+    let profile_opts = opts().with_profile(profile::LOCOS);
+    let by_profile = DEFAULT.extract(&ttx(), &profile_opts).unwrap();
+    let by_field = LOCOS.extract(&ttx(), &opts()).unwrap();
+    let ids = |d: &Document| d.units.iter().map(|u| u.id.clone()).collect::<Vec<_>>();
+    assert_eq!(ids(&by_profile), ids(&by_field));
+    // one <Tu> finished: the profile drops it, the default keeps it
+    let done = String::from_utf8(ttx()).unwrap().replacen("<Tuv Lang=\"DE-DE\"></Tuv>", "<Tuv Lang=\"DE-DE\">x</Tuv>", 1).into_bytes();
+    assert_ne!(done, ttx());
+    let all = DEFAULT.extract(&done, &opts()).unwrap();
+    let skipped = DEFAULT.extract(&done, &profile_opts).unwrap();
+    assert_eq!(ids(&skipped), ids(&LOCOS.extract(&done, &opts()).unwrap()));
+    assert!(skipped.units.len() < by_profile.units.len() && by_profile.units.len() <= all.units.len());
 }

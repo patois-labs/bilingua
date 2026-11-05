@@ -7,6 +7,7 @@ use std::fmt;
 
 const ALPHABET: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
+/// Standard base64 with padding.
 pub fn encode(data: &[u8]) -> String {
     let mut out = String::with_capacity(data.len().div_ceil(3) * 4);
     for chunk in data.chunks(3) {
@@ -20,6 +21,7 @@ pub fn encode(data: &[u8]) -> String {
     out
 }
 
+/// Decodes standard base64 (padding optional); the error says what is wrong.
 pub fn decode(s: &str) -> Result<Vec<u8>, String> {
     let b = s.as_bytes();
     if !b.len().is_multiple_of(4) {
@@ -65,10 +67,12 @@ pub fn decode(s: &str) -> Result<Vec<u8>, String> {
     Ok(out)
 }
 
+/// Serde: bytes as a base64 string.
 pub fn serialize<S: Serializer>(data: &[u8], s: S) -> Result<S::Ok, S::Error> {
     s.serialize_str(&encode(data))
 }
 
+/// Serde: a base64 string, or the old array of integers.
 pub fn deserialize<'de, D: Deserializer<'de>>(d: D) -> Result<Vec<u8>, D::Error> {
     struct V;
     impl<'de> Visitor<'de> for V {

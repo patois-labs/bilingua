@@ -9,11 +9,11 @@ pub fn opts() -> ExtractOptions {
 }
 
 /// The filters as the LocOS adapter uses them: no confirmed segments listed.
-pub const TXML: Txml = Txml { load_targets: false };
-pub const TXLF: Txlf = Txlf { load_targets: false };
+pub const TXML: Txml = Txml::new().with_load_targets(false);
+pub const TXLF: Txlf = Txlf::new().with_load_targets(false);
 /// The defaults: confirmed translations are listed as read-only units with their targets.
-pub const TXML_T: Txml = Txml { load_targets: true };
-pub const TXLF_T: Txlf = Txlf { load_targets: true };
+pub const TXML_T: Txml = Txml::new().with_load_targets(true);
+pub const TXLF_T: Txlf = Txlf::new().with_load_targets(true);
 
 pub fn extract(f: &dyn Filter, data: &[u8]) -> Document {
     f.extract(data, &opts()).expect("extract")

@@ -20,14 +20,20 @@ use std::fmt;
 #[serde(rename_all = "snake_case")]
 #[non_exhaustive]
 pub enum LimitKind {
+    /// The file is too large.
     InputBytes,
+    /// Too many lines.
     Lines,
+    /// Too many units or segments.
     Units,
+    /// A unit is too long.
     UnitChars,
+    /// XML nested too deeply.
     XmlDepth,
     /// Nesting deeper than allowed in a format that is not XML (HTML, JSON, YAML, ...). Uses
     /// `Limits::max_xml_depth`, which is the nesting cap for every format.
     Depth,
+    /// Too many XML elements.
     XmlElements,
     /// An XML entity declaration (DTD): entity bombs and external entities.
     XmlEntities,
@@ -35,8 +41,11 @@ pub enum LimitKind {
     Paragraphs,
     /// A spreadsheet over its cell, row, characters-per-cell or total-text limit.
     Spreadsheet,
+    /// Too many zip entries.
     ZipEntries,
+    /// Too many bytes once unpacked.
     ZipBytes,
+    /// A zip entry expands too much (a zip bomb).
     ZipRatio,
     /// A zip whose declared sizes or names are unsafe or do not match its data.
     ZipMalformed,
@@ -46,7 +55,9 @@ pub enum LimitKind {
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[non_exhaustive]
 pub struct LimitError {
+    /// Which limit.
     pub kind: LimitKind,
+    /// The message, safe to show the person who uploaded the file.
     pub msg: String,
 }
 
@@ -57,6 +68,7 @@ impl fmt::Display for LimitError {
 }
 
 impl LimitError {
+    /// A limit error of this kind with this message.
     pub fn new(kind: LimitKind, msg: impl Into<String>) -> LimitError {
         LimitError { kind, msg: msg.into() }
     }

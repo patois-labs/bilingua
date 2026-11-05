@@ -205,7 +205,7 @@ pub fn read(xml: &str, doc: &Document) -> Result<Read, String> {
                                 let id = attr(e, "id").ok_or("a code has no id")?;
                                 let display = lookup(&sid, &id, TagKind::Standalone);
                                 let free = is_free(&sid, &id);
-                                cur.push(Inline::Tag { id, kind: TagKind::Standalone, display, free });
+                                cur.push(Inline::tag(id, TagKind::Standalone, display).with_free(free));
                             }
                         }
                     }

@@ -394,7 +394,7 @@ pub fn walk(c: &Ctx) -> Result<Walked, Error> {
             if ne.local == "note" {
                 let text = py_strip(&tree.text_of(c.text, nk)).to_string();
                 if !text.is_empty() {
-                    notes.push(Note { author: ne.attr("from").map(str::to_string), text, kind: None });
+                    notes.push(Note::new(text).with_author(ne.attr("from").map(str::to_string)));
                 }
             }
         }

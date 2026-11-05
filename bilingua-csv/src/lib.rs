@@ -20,6 +20,8 @@
 /// Skeleton schema number: bump only when this crate's skeleton layout changes (see `bilingua_model::check_parser`).
 pub const SKELETON_SCHEMA: u32 = 1;
 
+// the column planner, public for the parity tests and tools; not part of the semver API
+#[doc(hidden)]
 pub mod plan;
 mod rec;
 mod sniff;
@@ -30,7 +32,7 @@ use plan::{is_translatable, skip_reason, Plan};
 use rec::{blank, parse_row, rewrite, Rec, Records};
 use std::collections::HashMap;
 
-pub use plan::Spec;
+pub use plan::{HeaderMode, Spec};
 
 /// The code that carries a unit's place in its record. On the first unit of a record: `standalone` = the raw text of
 /// the record, `open` = the delimiter. On every unit: `label` = `first:write:source` (the first unit of the record,
@@ -39,6 +41,7 @@ const HIDDEN: &str = "$csv";
 
 /// What the facade cannot say: the column mapping and the project's target locales.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct CsvOptions {
     /// `source=English, target.de=German, key=id, context=notes, maxlen=limit, header=yes|no|auto,
     /// delimiter=comma|semicolon|tab|pipe`. Columns are header names (any case) or 1-based numbers.
@@ -82,12 +85,14 @@ enum Kind {
 
 /// The CSV filter (delimiter detected: comma, semicolon, TAB or pipe).
 #[derive(Debug, Clone, Default)]
+#[non_exhaustive]
 pub struct CsvFilter {
     pub options: CsvOptions,
 }
 
 /// The TSV filter (`tsv`, `tab`): the delimiter is TAB unless the mapping says `delimiter=`.
 #[derive(Debug, Clone, Default)]
+#[non_exhaustive]
 pub struct TsvFilter {
     pub options: CsvOptions,
 }
@@ -188,7 +193,7 @@ fn extract_impl(kind: Kind, bytes: &[u8], opts: &ExtractOptions, copts: &CsvOpti
                 u
             };
             let write = if plan.inplace { c } else { tcol.unwrap_or(c) };
-            let mut code = CodeData { label: Some(format!("{first_idx}:{write}:{c}")), ..Default::default() };
+            let mut code = CodeData::new().with_label(format!("{first_idx}:{write}:{c}"));
             if units.len() == first_idx {
                 code.standalone = Some(text[r.start..r.end].to_string());
                 code.open = Some((delim as char).to_string());
@@ -370,9 +375,11 @@ macro_rules! filter_impl {
                 FORMAT_OPTIONS
             }
             fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
+                bilingua_model::check_own_options(self, &opts.format_options)?;
                 extract_impl($kind, bytes, opts, &self.options.from_format_options(opts))
             }
             fn merge_with(&self, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
+                bilingua_model::check_own_options(self, &opts.format_options)?;
                 merge_impl(doc, opts)
             }
         }

@@ -320,10 +320,12 @@ impl Filter for Yaml {
     }
 
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         self.extract_with(bytes, opts, &Limits::default())
     }
 
     fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
         let Skeleton::Text { parts, encoding, .. } = &doc.skeleton else {
             return Err(Error::Write("yaml needs a text skeleton".into()));
@@ -384,7 +386,7 @@ impl Filter for Yaml {
             _ if !changed => text::encode(&out, enc),
             _ => text::encode(&out, Enc::Utf8),
         };
-        bytes.ok_or_else(|| Error::Write("the text does not fit the file's encoding".into()))
+        bytes.ok_or_else(|| Error::Unwritable { unit: None, reason: "the text does not fit the file's encoding".into() })
     }
 }
 

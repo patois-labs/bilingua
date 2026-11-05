@@ -205,10 +205,7 @@ fn deep_nesting_is_a_typed_error() {
 
 #[test]
 fn huge_and_degenerate_files_are_typed_errors_or_fine() {
-    let lim = Limits {
-        max_bytes: 1000,
-        ..Default::default()
-    };
+    let lim = { let mut built = Limits::default(); built.max_bytes = 1000; built };
     let big = vec![b' '; 1001];
     assert!(matches!(
         JsModule.extract_with(&big, &ExtractOptions::default(), &lim),

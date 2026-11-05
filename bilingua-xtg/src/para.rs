@@ -261,7 +261,7 @@ pub fn build(text: &str, items: &[Item]) -> Built {
         let raw: String = pending.iter().map(|&t| raw_of(text, items, t)).collect();
         let lab = label(raw_of(text, items, pending[0]));
         out.tag(&id, TagKind::Standalone, raw.clone());
-        codes.insert(id, CodeData { standalone: Some(raw), label: Some(lab.into()), ..Default::default() });
+        codes.insert(id, CodeData::new().with_standalone(raw).with_label(lab.to_string()));
         pending.clear();
     };
 
@@ -324,7 +324,7 @@ pub fn build(text: &str, items: &[Item]) -> Built {
                         let lab = label(raw_of(text, items, openers[o].tags[0]));
                         resets.insert(tid.clone(), reset_tags(&openers[o].keys));
                         out.tag(&tid, TagKind::Open, raw.clone());
-                        codes.insert(tid, CodeData { open: Some(raw), label: Some(lab.into()), ..Default::default() });
+                        codes.insert(tid, CodeData::new().with_open(raw).with_label(lab.to_string()));
                     }
                     done_open = true;
                 }

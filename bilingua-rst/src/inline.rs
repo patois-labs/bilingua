@@ -504,8 +504,8 @@ impl Tok {
         for (idx, c) in self.codes.iter().enumerate() {
             let id = (idx + 1).to_string();
             let cd = match c {
-                Code::Point(raw) => CodeData { standalone: Some(raw.clone()), label: Some(label_for(c, raw).into()), ..Default::default() },
-                Code::Pair(o, cl) => CodeData { open: Some(o.clone()), close: Some(cl.clone()), label: Some(label_for(c, o).into()), ..Default::default() },
+                Code::Point(raw) => CodeData::new().with_standalone(raw.clone()).with_label(label_for(c, raw).to_string()),
+                Code::Pair(o, cl) => CodeData::new().with_open(o.clone()).with_close(cl.clone()).with_label(label_for(c, o).to_string()),
             };
             codes.insert(id, cd);
         }

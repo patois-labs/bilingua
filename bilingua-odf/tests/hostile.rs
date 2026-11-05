@@ -325,7 +325,7 @@ proptest! {
         }
         let pkg = Pkg::new(parts[0].clone()).styles(parts[1].clone()).build();
         exercise(&Odt::default(), &pkg, Some("ar"));
-        exercise(&Odt::with_options(OdfOptions { translate_comments: true }), &pkg, None);
+        exercise(&Odt::with_options({ let mut built = OdfOptions::default(); built.translate_comments = true; built }), &pkg, None);
     }
 
     #[test]

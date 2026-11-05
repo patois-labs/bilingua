@@ -217,13 +217,13 @@ fn refusals() {
     assert!(matches!(extract(b"\x00\x01\x02hello = x\x00"), Err(Error::Unsupported(_))), "binary");
     let deep = format!("x = {}$a{}\n", "{ ".repeat(200), " }".repeat(200));
     assert!(matches!(extract(deep.as_bytes()), Err(Error::Unsupported(_))), "deep nesting");
-    let small = Limits { max_units: 3, ..Limits::default() };
+    let small = { let mut built = Limits::default(); built.max_units = 3; built };
     let many: String = (0..10).map(|i| format!("m{i} = Message number {i}\n")).collect();
     assert!(FtlFilter.extract_with(many.as_bytes(), &opts(), &small).is_err(), "segment cap");
     let braces = format!("x = {}\n", "{ $a } ".repeat(100));
-    let tiny = Limits { max_units: 3, ..Limits::default() };
+    let tiny = { let mut built = Limits::default(); built.max_units = 3; built };
     assert!(FtlFilter.extract_with(braces.as_bytes(), &opts(), &tiny).is_err(), "placeable budget");
-    let chars = Limits { max_value_chars: 1000, ..Limits::default() };
+    let chars = { let mut built = Limits::default(); built.max_value_chars = 1000; built };
     let long = format!("x = {}\n", "word ".repeat(400));
     assert!(FtlFilter.extract_with(long.as_bytes(), &opts(), &chars).is_err(), "segment length cap");
 }

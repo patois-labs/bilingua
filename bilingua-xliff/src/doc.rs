@@ -83,6 +83,7 @@ fn merge_raws(mut src: Vec<RawTag>, tgt: Vec<RawTag>) -> Vec<RawTag> {
 
 /// What the file says about one segment, borrowed from the open file.
 #[derive(Debug, Clone)]
+#[non_exhaustive]
 pub struct SegView<'a> {
     /// Position in the file (0-based).
     pub index: usize,
@@ -464,14 +465,14 @@ fn normalize(inlines: Vec<Inline>, source: &[Inline]) -> Vec<Inline> {
     let fixed: Vec<Inline> = inlines
         .into_iter()
         .map(|i| match i {
-            Inline::Tag { id, kind, display, free: _ } => {
+            Inline::Tag { id, kind, display, .. } => {
                 let hit = source.iter().find_map(|s| match s {
-                    Inline::Tag { id: i, kind: k, display: d, free: f } if *i == id && *k == kind => Some((d.clone(), *f)),
+                    Inline::Tag { id: i, kind: k, display: d, free: f, .. } if *i == id && *k == kind => Some((d.clone(), *f)),
                     _ => None,
                 });
                 match hit {
-                    Some((d, f)) => Inline::Tag { id, kind, display: d, free: f },
-                    None => Inline::Tag { id, kind, display, free: false },
+                    Some((d, f)) => Inline::tag(id, kind, d).with_free(f),
+                    None => Inline::tag(id, kind, display),
                 }
             }
             t => t,

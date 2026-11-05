@@ -528,7 +528,7 @@ impl<'a> Ex<'a> {
                     let id = next_id.to_string();
                     next_id += 1;
                     let close = pair[idx].map(|c| s[items[c].a..items[c].b].to_string());
-                    codes.insert(id.clone(), CodeData { open: Some(raw), close, standalone: None, label: Some(label_for(&it.name).into()) });
+                    codes.insert(id.clone(), CodeData::new().with_open(raw).with_close(close).with_label(label_for(&it.name).to_string()));
                     inlines.push(Inline::tag(id.clone(), TagKind::Open, format!("<{}>", it.name)));
                     code_of[idx] = Some((id, "open"));
                 }
@@ -542,7 +542,7 @@ impl<'a> Ex<'a> {
                     let id = next_id.to_string();
                     next_id += 1;
                     let display = if it.kind == IK::Close { format!("</{}>", it.name) } else { format!("<{}>", it.name) };
-                    codes.insert(id.clone(), CodeData { open: None, close: None, standalone: Some(raw), label: Some(label_for(&it.name).into()) });
+                    codes.insert(id.clone(), CodeData::new().with_standalone(raw).with_label(label_for(&it.name).to_string()));
                     inlines.push(Inline::tag(id.clone(), TagKind::Standalone, display));
                     code_of[idx] = Some((id, "standalone"));
                 }

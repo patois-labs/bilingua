@@ -24,6 +24,7 @@ const RAW: &str = "raw";
 /// argument is text and the command stays in the markup. It changes the units of a file, so give the same list when
 /// extracting again.
 #[derive(Debug, Clone, Default)]
+#[non_exhaustive]
 pub struct Latex {
     pub extra_inline: Vec<String>,
 }
@@ -77,6 +78,7 @@ impl Filter for Latex {
     }
 
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         let limits = opts.limits();
         let mut dec = enc::decode_text(bytes, &enc::DecodeOptions::new(opts))?;
         let text = std::mem::take(&mut dec.text);
@@ -131,6 +133,7 @@ impl Filter for Latex {
     }
 
     fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
         let Skeleton::Text { parts, encoding, .. } = &doc.skeleton else {
             return Err(Error::Write("tex needs a text skeleton".into()));

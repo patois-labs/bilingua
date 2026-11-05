@@ -266,10 +266,7 @@ impl Extractor {
         u.context.location = Some(format!("{} {}", self.part_name, e.name));
         u.codes.insert(
             C_ORIG.into(),
-            CodeData {
-                standalone: Some(inner),
-                ..Default::default()
-            },
+            CodeData::new().with_standalone(inner),
         );
         u.codes.insert(C_SIMPLE.into(), CodeData::default());
         self.add_unit(u, self.core_ord);
@@ -394,10 +391,7 @@ impl Extractor {
                     let k = unit.codes.keys().filter(|k| k.starts_with("_m")).count();
                     unit.codes.insert(
                         format!("_m{k}"),
-                        CodeData {
-                            standalone: Some(inner),
-                            ..Default::default()
-                        },
+                        CodeData::new().with_standalone(inner),
                     );
                     return format!("{shell}{M_MIRROR}{uid}:{k}{M_END}{}", e.end);
                 }
@@ -960,12 +954,7 @@ impl Extractor {
                         let (d, cd, label) = fmt_names(rpr);
                         codes.insert(
                             id.clone(),
-                            CodeData {
-                                open: Some(rpr.clone()),
-                                close: Some(String::new()),
-                                standalone: None,
-                                label: Some(label),
-                            },
+                            CodeData::new().with_open(rpr.clone()).with_close(String::new()).with_label(label),
                         );
                         inl.push(Inline::tag(id.clone(), TagKind::Open, d));
                         cur = Some((key.clone(), id, cd));
@@ -997,12 +986,7 @@ impl Extractor {
                     let id = n.to_string();
                     codes.insert(
                         id.clone(),
-                        CodeData {
-                            open: open.clone(),
-                            close: None,
-                            standalone: Some(xml.clone()),
-                            label: Some((*label).into()),
-                        },
+                        CodeData::new().with_open(open.clone()).with_standalone(xml.clone()).with_label((*label).to_string()),
                     );
                     inl.push(Inline::tag(id, TagKind::Standalone, display.clone()));
                 }
@@ -1022,12 +1006,7 @@ impl Extractor {
                         .unwrap_or_default();
                     codes.insert(
                         id.clone(),
-                        CodeData {
-                            open: Some(open.clone()),
-                            close: Some(close.clone()),
-                            standalone: Some(base),
-                            label: Some((*label).into()),
-                        },
+                        CodeData::new().with_open(open.clone()).with_close(close.clone()).with_standalone(base).with_label((*label).to_string()),
                     );
                     scope.push(next_scope);
                     next_scope += 1;
@@ -1049,27 +1028,18 @@ impl Extractor {
 
         codes.insert(
             C_BASE.into(),
-            CodeData {
-                standalone: Some(bases[0].1.clone()),
-                ..Default::default()
-            },
+            CodeData::new().with_standalone(bases[0].1.clone()),
         );
         if !lead.is_empty() {
             codes.insert(
                 C_LEAD.into(),
-                CodeData {
-                    standalone: Some(lead),
-                    ..Default::default()
-                },
+                CodeData::new().with_standalone(lead),
             );
         }
         if !tail.is_empty() {
             codes.insert(
                 C_TAIL.into(),
-                CodeData {
-                    standalone: Some(tail),
-                    ..Default::default()
-                },
+                CodeData::new().with_standalone(tail),
             );
         }
         let mut orig = String::new();
@@ -1078,10 +1048,7 @@ impl Extractor {
         }
         codes.insert(
             C_ORIG.into(),
-            CodeData {
-                standalone: Some(orig),
-                ..Default::default()
-            },
+            CodeData::new().with_standalone(orig),
         );
         if st.tracked {
             codes.insert(C_TRACKED.into(), CodeData::default());

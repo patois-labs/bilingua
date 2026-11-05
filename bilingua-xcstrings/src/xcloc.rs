@@ -154,6 +154,7 @@ impl Filter for Xcloc {
     }
 
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         let limits = opts.limits();
         guard::check_input(bytes, &limits)?;
         let entries = read_bundle(bytes, &limits)?;
@@ -181,11 +182,12 @@ impl Filter for Xcloc {
                 guard::check_unit_count(units.len(), &limits)?;
             }
         }
-        let d = Document::new(FORMAT, units, Skeleton::zip(vec![ZipEntry { name: ARCHIVE.into(), data: ZipData::Raw(bytes.to_vec()) }], bilingua_model::parser_info!())).with_source_lang(opts.source_lang.clone().or_else(|| (!contents.development_region.is_empty()).then(|| contents.development_region.clone()))).with_target_lang(opts.target_lang.clone()).with_granularity(Granularity::Paragraph);
+        let d = Document::new(FORMAT, units, Skeleton::zip(vec![ZipEntry::raw(ARCHIVE, bytes.to_vec())], bilingua_model::parser_info!())).with_source_lang(opts.source_lang.clone().or_else(|| (!contents.development_region.is_empty()).then(|| contents.development_region.clone()))).with_target_lang(opts.target_lang.clone()).with_granularity(Granularity::Paragraph);
         guard::finish(d, warnings, &limits)
     }
 
     fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
         let Skeleton::Zip { entries: skel, .. } = &doc.skeleton else {
             return Err(Error::Write("xcloc needs a zip skeleton".into()));

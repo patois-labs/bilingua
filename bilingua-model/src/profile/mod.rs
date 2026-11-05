@@ -28,7 +28,9 @@ pub const STYLE: &str = "locos.style";
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[non_exhaustive]
 pub struct Profile {
+    /// Its name (`"locos"`).
     pub name: &'static str,
+    /// Its version.
     pub version: u32,
 }
 
@@ -56,7 +58,7 @@ pub fn check(name: Option<&str>) -> Result<(), Error> {
 }
 
 /// Formats whose files Localization OS writes back in their own encoding (UTF-16 included) rather than as UTF-8.
-const LOCOS_KEEPS_ENCODING: &[&str] = &["ini", "strings"];
+const LOCOS_KEEPS_ENCODING: &[&str] = &["ini", "strings", "dxf"];
 
 impl Profile {
     /// Extraction options with this profile switched on.
@@ -65,7 +67,7 @@ impl Profile {
     }
 
     /// The merge options this profile uses for a document of `format` (a filter id). Localization OS: UTF-8 out,
-    /// except for the formats it writes in their own encoding (ini, strings: `Keep`), and the target language
+    /// except for the formats it writes in their own encoding (ini, strings and dxf: `Keep`), and the target language
     /// stamped and plurals filled even when nothing is translated (lead decision 11-04).
     pub fn merge_options(&self, format: &str) -> MergeOptions {
         let enc = if LOCOS_KEEPS_ENCODING.contains(&format) { OutputEncoding::Keep } else { OutputEncoding::Utf8 };

@@ -164,6 +164,7 @@ impl Filter for Rc {
     }
 
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         let limits = opts.limits();
         guard::check_input(bytes, &limits)?;
         let d = codec::decode(bytes)?;
@@ -207,7 +208,7 @@ impl Filter for Rc {
             };
             for (id, raw) in codes {
                 let label = if lit::is_format(&raw) { "format" } else { "escape" };
-                u.codes.insert(id, CodeData { standalone: Some(raw), label: Some(label.into()), ..Default::default() });
+                u.codes.insert(id, CodeData::new().with_standalone(raw).with_label(label.to_string()));
             }
             u.set_hidden(RAW, d.text[f.start..f.end].to_string());
             if matches!(f.style, "rc:menu" | "rc:control") && !f.locked {
@@ -233,6 +234,7 @@ impl Filter for Rc {
     /// `stamp_target_always` writes the target LANGUAGE even when nothing is translated. `output_encoding: Utf8`
     /// writes UTF-8 (a UTF-8 BOM is kept; a UTF-16 BOM or code page is not); `Keep` keeps the file's encoding.
     fn merge_with(&self, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
         let Skeleton::Text { parts, encoding, .. } = &doc.skeleton else {
             return Err(Error::Write("rc needs a text skeleton".into()));

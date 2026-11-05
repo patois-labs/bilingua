@@ -924,11 +924,7 @@ fn unit_notes(buf: &[u8], a: &Acc) -> Vec<Note> {
             let text = crate::inline::parse_inlines(&buf[r.clone()], Flavor::X12, None, None)
                 .map(|p| crate::inline::plain(&p.inlines))
                 .unwrap_or_else(|_| String::from_utf8_lossy(&buf[r.clone()]).into_owned());
-            (!text.trim().is_empty()).then(|| Note {
-                author: tag.value(buf, "from").filter(|f| !f.is_empty()),
-                text,
-                kind: tag.value(buf, "annotates").filter(|f| !f.is_empty()),
-            })
+            (!text.trim().is_empty()).then(|| Note::new(text).with_author(tag.value(buf, "from").filter(|f| !f.is_empty())).with_kind(tag.value(buf, "annotates").filter(|f| !f.is_empty())))
         })
         .collect()
 }
@@ -952,7 +948,7 @@ fn sdl_origin(buf: &[u8], d: &DefSeg) -> Option<Origin> {
         "interactive" => (OriginKind::Human, system),
         other => (OriginKind::Other, Some(other.to_owned())),
     };
-    Some(Origin { kind, name, match_pct: pct_of(tag.value(buf, "percent")) })
+    Some(Origin::new(kind).with_name(name).with_match_pct(pct_of(tag.value(buf, "percent"))))
 }
 
 /// Origin of a one-segment trans-unit: memoQ machine and pre-translation, Phrase `m:trans-origin` and
@@ -969,7 +965,7 @@ fn plain_origin(buf: &[u8], a: &Acc, mx: Option<&MxMeta>, native: Option<&str>) 
             OriginKind::Other
         };
         let match_pct = m.score.filter(|s| *s >= 0.0).map(|s| (if s <= 1.0 { s * 100.0 } else { s }).round().min(255.0) as u8);
-        return Some(Origin { kind, name: Some(t), match_pct });
+        return Some(Origin::new(kind).with_name(t).with_match_pct(match_pct));
     }
     if a.tag.attr(buf, "mq:status").is_some() {
         let kind = match native {
@@ -977,7 +973,7 @@ fn plain_origin(buf: &[u8], a: &Acc, mx: Option<&MxMeta>, native: Option<&str>) 
             Some("PreTranslated") => OriginKind::Tm,
             _ => return None,
         };
-        return Some(Origin { kind, name: None, match_pct: pct_of(a.tag.value(buf, "mq:percent")) });
+        return Some(Origin::new(kind).with_match_pct(pct_of(a.tag.value(buf, "mq:percent"))));
     }
     let q = a.target_tag.as_ref()?.value(buf, "state-qualifier")?;
     let (kind, pct) = match q.as_str() {
@@ -986,7 +982,7 @@ fn plain_origin(buf: &[u8], a: &Acc, mx: Option<&MxMeta>, native: Option<&str>) 
         "mt-suggestion" | "leveraged-mt" => (OriginKind::Mt, None),
         _ => return None,
     };
-    Some(Origin { kind, name: None, match_pct: pct })
+    Some(Origin::new(kind).with_match_pct(pct))
 }
 
 /// Patches for every edited segment.

@@ -379,7 +379,7 @@ fn tampered_documents_are_typed_errors() {
     empty.skeleton = Skeleton::Zip { entries: vec![], parser: None };
     assert!(matches!(Mo.merge(&empty), Err(Error::Write(_))));
     let mut junk = d.clone();
-    junk.skeleton = Skeleton::Zip { entries: vec![ZipEntry { name: "catalog.mo".into(), data: ZipData::Raw(b"junk".to_vec()) }], parser: None };
+    junk.skeleton = Skeleton::Zip { entries: vec![ZipEntry::raw("catalog.mo", b"junk".to_vec())], parser: None };
     assert!(Mo.merge(&junk).is_err());
     let mut other = d.clone();
     other.skeleton = Skeleton::Zip { entries: vec![], parser: Some(ParserInfo::new("bilingua-po", "0.1.0", 1)) };

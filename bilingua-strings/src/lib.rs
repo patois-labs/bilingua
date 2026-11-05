@@ -15,6 +15,7 @@ pub struct Strings;
 
 /// Size limits. The defaults match Localization OS (`MAX_DOCUMENT_SEGMENTS`, `MAX_SEGMENT_CHARS`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct Limits {
     /// Most translatable units in one file.
     pub max_units: usize,
@@ -81,7 +82,7 @@ fn source_inlines(text: &str) -> Source {
             ph::Piece::Text(t) => inl.push(Inline::text(t)),
             ph::Piece::Ph(p) => {
                 let id = (tags.len() + 1).to_string();
-                codes.insert(id.clone(), CodeData { standalone: Some(p.to_string()), label: Some("placeholder".into()), ..Default::default() });
+                codes.insert(id.clone(), CodeData::new().with_standalone(p.to_string()).with_label("placeholder".to_string()));
                 inl.push(placeholder_tag(&id, p));
                 tags.push((id, p.to_string()));
             }
@@ -111,6 +112,7 @@ fn has_target(u: &Unit) -> bool {
 
 /// One entry of the file as a key-based project sees it (translatable or not).
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct Record {
     pub key: String,
     pub value: String,
@@ -237,10 +239,12 @@ impl Filter for Strings {
     }
 
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         self.extract_with(bytes, opts, &Limits::default())
     }
 
     fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
         let Skeleton::Text { parts, encoding, .. } = &doc.skeleton else {
             return Err(Error::Write("strings needs a text skeleton".into()));

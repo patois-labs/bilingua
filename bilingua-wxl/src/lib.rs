@@ -156,7 +156,7 @@ fn inlines_of(core: &str, unit: &mut Unit) -> Vec<Inline> {
                 let shown = &core[at..at + len];
                 let id = n.to_string();
                 out.push(Inline::free_tag(id.clone(), shown));
-                unit.codes.insert(id, CodeData { standalone: Some(shown.to_string()), label: Some("placeholder".into()), ..Default::default() });
+                unit.codes.insert(id, CodeData::new().with_standalone(shown.to_string()).with_label("placeholder".to_string()));
                 last = at + len;
                 i = last;
             }
@@ -170,7 +170,7 @@ fn inlines_of(core: &str, unit: &mut Unit) -> Vec<Inline> {
 }
 
 fn code(s: &str) -> CodeData {
-    CodeData { standalone: Some(s.to_string()), ..Default::default() }
+    CodeData::new().with_standalone(s.to_string())
 }
 
 fn flatten(v: &[Inline]) -> String {
@@ -223,6 +223,7 @@ impl Filter for Wxl {
     }
 
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         let limits = opts.limits();
         guard::check_input(bytes, &limits)?;
         let dec = enc::decode_text(bytes, &DecodeOptions::new(opts).declared())?;
@@ -305,6 +306,7 @@ impl Filter for Wxl {
     }
 
     fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
         let Skeleton::Text { parts, encoding, .. } = &doc.skeleton else {
             return Err(Error::Write("wxl needs a text skeleton".into()));

@@ -178,7 +178,7 @@ fn exercise(f: &dyn Filter, data: &[u8]) {
                     assert_eq!(b.units.len(), n, "unit count after a merge for {target:?}");
                 }
             }
-            Err(e) => assert!(matches!(e, Error::Write(_)), "{e:?}"),
+            Err(e) => assert!(matches!(e, Error::Write(_) | Error::Unwritable { .. }), "{e:?}"),
         }
     }
 }

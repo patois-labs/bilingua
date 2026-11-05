@@ -52,6 +52,7 @@ impl Filter for Adoc {
     }
 
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         let limits = opts.limits();
         let mut dec = enc::decode_text(bytes, &enc::DecodeOptions::new(opts))?;
         let text = std::mem::take(&mut dec.text);
@@ -149,6 +150,7 @@ impl Filter for Adoc {
     }
 
     fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
         let Skeleton::Text { parts, encoding, .. } = &doc.skeleton else {
             return Err(Error::Write("adoc needs a text skeleton".into()));

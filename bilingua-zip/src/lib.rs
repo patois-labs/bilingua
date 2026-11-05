@@ -15,6 +15,7 @@ use std::io::{Cursor, Read, Write};
 
 /// The zip part of [`Limits`]. `Default` is Localization OS's numbers (10 000 entries, 256 MB unpacked, 200 times).
 #[derive(Debug, Clone, Copy)]
+#[non_exhaustive]
 pub struct ZipLimits {
     pub max_entries: usize,
     pub max_entry_bytes: u64,

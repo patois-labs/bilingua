@@ -245,7 +245,7 @@ fn unit_for(dom: &Dom, tok: &Tok, para: &Para, p_index: usize, story: Id) -> Uni
                 let open = open_text(dom, el);
                 let close = format!("</{}>", dom.n(el).name);
                 inl.push(Inline::tag(n.to_string(), TagKind::Open, open.clone()));
-                codes.insert(n.to_string(), CodeData { open: Some(open), close: Some(close), standalone: None, label: Some(label.into()) });
+                codes.insert(n.to_string(), CodeData::new().with_open(open).with_close(close).with_label(label.to_string()));
             }
             Part::RClose(n) | Part::WClose(n) => {
                 let el = match &tok.reg[n - 1] {
@@ -259,7 +259,7 @@ fn unit_for(dom: &Dom, tok: &Tok, para: &Para, p_index: usize, story: Id) -> Uni
                 let Entry::Point { obj, .. } = &tok.reg[n - 1] else { continue };
                 let (label, display) = point_label(dom, obj);
                 inl.push(Inline::tag(n.to_string(), TagKind::Standalone, display.clone()));
-                codes.insert(n.to_string(), CodeData { standalone: Some(display), label: Some(label.into()), ..Default::default() });
+                codes.insert(n.to_string(), CodeData::new().with_standalone(display).with_label(label.to_string()));
             }
         }
     }
@@ -401,10 +401,12 @@ impl Filter for Icml {
     }
 
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         self.extract_with(bytes, opts, &opts.limits())
     }
 
     fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         let (text, bom) = skeleton_text(doc)?;
         let finish = |s: &str| -> Vec<u8> {
             let mut v = Vec::with_capacity(s.len() + 3);

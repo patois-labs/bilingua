@@ -19,6 +19,7 @@ pub use bilingua_model::Limits;
 
 /// What a project file says about itself (the facts LocOS takes from a package manifest).
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[non_exhaustive]
 pub struct ProjectInfo {
     /// Local name of the root element (`PackageProject` or `Project`).
     pub root: String,
@@ -418,6 +419,7 @@ impl Filter for Sdlproj {
     }
 
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         self.extract_with(bytes, opts, &opts.limits())
     }
 
@@ -425,7 +427,8 @@ impl Filter for Sdlproj {
     /// so there is nothing to stamp (`stamp_target_always` changes nothing: the target languages are the project's
     /// own), and `output_encoding: Utf8` is not applied either: the file is a manifest Trados reads back as it wrote
     /// it, and LocOS keeps it byte for byte (its one edit is [`flip_package_type`]).
-    fn merge_with(&self, doc: &Document, _opts: &MergeOptions) -> Result<Vec<u8>, Error> {
+    fn merge_with(&self, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
         let Skeleton::Text { parts, encoding, .. } = &doc.skeleton else {
             return Err(Error::Write("sdlproj needs a text skeleton".into()));

@@ -207,7 +207,7 @@ pub fn walk(c: &Ctx) -> Result<Walked, Error> {
                 if ce.local == "comment" {
                     let text = py_strip(&tree.text_of(c.text, ck)).to_string();
                     if !text.is_empty() {
-                        notes.push(Note { author: ce.attr("creationid").map(str::to_string), text, kind: ce.attr("type").map(str::to_string) });
+                        notes.push(Note::new(text).with_author(ce.attr("creationid").map(str::to_string)).with_kind(ce.attr("type").map(str::to_string)));
                     }
                 }
             }

@@ -32,7 +32,7 @@ fn source_inlines(text: &str) -> Source {
             ph::Piece::Text(t) => inl.push(Inline::text(t)),
             ph::Piece::Ph(p) => {
                 let id = (tags.len() + 1).to_string();
-                codes.insert(id.clone(), CodeData { standalone: Some(p.to_string()), label: Some("placeholder".into()), ..Default::default() });
+                codes.insert(id.clone(), CodeData::new().with_standalone(p.to_string()).with_label("placeholder".to_string()));
                 inl.push(placeholder_tag(&id, p));
                 tags.push((id, p.to_string()));
             }
@@ -355,6 +355,7 @@ impl Filter for Mo {
     }
 
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         let limits = opts.limits();
         guard::check_input(bytes, &limits)?;
         let cat = read::read(bytes, &limits)?;
@@ -375,6 +376,7 @@ impl Filter for Mo {
     }
 
     fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
         let original = original_bytes(doc)?;
         // The file was checked when it was extracted; read it again under limits only the file size bounds.

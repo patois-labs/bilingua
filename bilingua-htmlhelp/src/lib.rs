@@ -143,12 +143,7 @@ fn extract_impl(kind: Kind, bytes: &[u8], opts: &ExtractOptions, hint: Option<u1
         let mut unit = Unit::new(format!("u{}", units.len() + 1), vec![Inline::text(sp.text.clone())]);
         unit.codes.insert(
             HIDDEN.into(),
-            CodeData {
-                standalone: Some(text[sp.start..sp.end].to_string()),
-                open: owned(sp.quote),
-                close: None,
-                label: fallback.then(|| FALLBACK_MARK.to_string()),
-            },
+            CodeData::new().with_open(owned(sp.quote)).with_standalone(text[sp.start..sp.end].to_string()).with_label(fallback.then(|| FALLBACK_MARK.to_string())),
         );
         unit.context.kind = Some(match sp.kind {
             "w" => "window".to_string(),
@@ -312,7 +307,7 @@ fn merge_impl(kind: Kind, doc: &Document, mo: &MergeOptions) -> Result<Vec<u8>, 
         let unit = &doc.units[i];
         let Some(new) = changed(unit, &sp.text) else { continue };
         if new.contains('\0') {
-            return Err(Error::Write(format!("the translation of {} holds a NUL character, which would make the file unreadable as text", unit.id)));
+            return Err(Error::Unwritable { unit: Some(unit.id.clone()), reason: format!("the translation of {} holds a NUL character, which would make the file unreadable as text", unit.id) });
         }
         let rendered = if kind == Kind::Hhp {
             hhp::value(&new, sp.kind)
@@ -332,7 +327,8 @@ fn merge_impl(kind: Kind, doc: &Document, mo: &MergeOptions) -> Result<Vec<u8>, 
     }
     if kind != Kind::Hhp && !edits.is_empty() {
         // #676: the translated sitemap must parse, in a browser, into the source's elements
-        browser::check_build(&orig, &apply(&orig, &edits)).map_err(Error::Write)?;
+        // a translation that a browser would read back as other elements cannot be written (the file itself is fine)
+        browser::check_build(&orig, &apply(&orig, &edits)).map_err(|reason| Error::Unwritable { unit: None, reason })?;
     }
     let (out_tag, cp, label) = out_encoding(tag, target, localized);
     let ansi = enc::is_ansi(tag);
@@ -407,10 +403,13 @@ fn merge_impl(kind: Kind, doc: &Document, mo: &MergeOptions) -> Result<Vec<u8>, 
                 }
                 return Ok(apply(&orig, &with).into_bytes());
             }
-            Err(Error::Write(format!(
+            Err(Error::Unwritable {
+                unit: None,
+                reason: format!(
                 "The translated HTML Help file cannot be written in the {label} code page: the character {ch:?} (U+{:04X}) has no representation there, and HTML Help 1.x reads Contents, Index and project files in the help language's Windows ANSI code page. Fix the text (a translation or an untranslated value), or extract with the format option htmlhelp.utf8_fallback to write UTF-8 instead (HTML Help Workshop will not show those characters correctly).",
                 ch as u32
-            )))
+            ),
+            })
         }
     }
 }
@@ -450,12 +449,14 @@ macro_rules! filter {
                 $sniff(&h)
             }
             fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
+                bilingua_model::check_own_options(self, &opts.format_options)?;
                 extract_impl($kind, bytes, opts, None)
             }
             fn format_option_keys(&self) -> &'static [FormatOptionKey] {
                 FORMAT_OPTIONS
             }
             fn merge_with(&self, doc: &Document, mo: &MergeOptions) -> Result<Vec<u8>, Error> {
+                bilingua_model::check_own_options(self, &mo.format_options)?;
                 merge_impl($kind, doc, mo)
             }
         }

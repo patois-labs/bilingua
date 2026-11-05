@@ -243,13 +243,13 @@ fn hostile_inputs() {
     assert_eq!(ex(doc.as_bytes()).unwrap().units.len(), 1);
     // limits: too many units and too large a file are typed errors (the LocOS suite lowers MAX_DOCUMENT_SEGMENTS)
     let many: String = format!("{{{}}}", (0..10).map(|i| format!("\"k{i}\": \"word {i}\"")).collect::<Vec<_>>().join(", "));
-    let small = Limits { max_units: 3, ..Limits::default() };
+    let small = { let mut built = Limits::default(); built.max_units = 3; built };
     assert!(matches!(Arb.extract_with(many.as_bytes(), &ExtractOptions::default(), &small), Err(Error::Parse { .. })));
-    let tiny = Limits { max_bytes: 20, ..Limits::default() };
+    let tiny = { let mut built = Limits::default(); built.max_bytes = 20; built };
     assert!(matches!(Arb.extract_with(many.as_bytes(), &ExtractOptions::default(), &tiny), Err(Error::Parse { .. })));
     // plural branches count as units
     let branches = format!("{{\"p\": \"{{n, plural, {}}}\"}}", (0..6).map(|i| format!("={i}{{w{i}}}")).collect::<Vec<_>>().join(" "));
-    let four = Limits { max_units: 4, ..Limits::default() };
+    let four = { let mut built = Limits::default(); built.max_units = 4; built };
     assert!(Arb.extract_with(branches.as_bytes(), &ExtractOptions::default(), &four).is_err());
 }
 

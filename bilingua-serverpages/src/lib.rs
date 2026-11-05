@@ -27,6 +27,7 @@ const S_CLOSE: char = '\u{FDD1}';
 
 /// The server-page dialects.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[non_exhaustive]
 pub enum Dialect {
     Phtml,
     Jsp,
@@ -401,12 +402,7 @@ fn body_unit(id: String, u: &html::BodyUnit, m: &Masked, orig: &str) -> Unit {
                         inl.push(Inline::tag(key.clone(), TagKind::Open, format!("<{}>", e.name)));
                         codes.insert(
                             key,
-                            CodeData {
-                                open: e.open.as_deref().map(|s| m.unmask(s, orig)),
-                                close: e.close.as_deref().map(|s| m.unmask(s, orig)),
-                                standalone: None,
-                                label: Some(label_for(&e.name)),
-                            },
+                            CodeData::new().with_open(e.open.as_deref().map(|s| m.unmask(s, orig))).with_close(e.close.as_deref().map(|s| m.unmask(s, orig))).with_label(label_for(&e.name)),
                         );
                     }
                     Piece::Close(_) => inl.push(Inline::tag(key, TagKind::Close, format!("</{}>", e.name))),
@@ -420,7 +416,7 @@ fn body_unit(id: String, u: &html::BodyUnit, m: &Masked, orig: &str) -> Unit {
                             (format!("<{}>", e.name), label_for(&e.name))
                         };
                         inl.push(Inline::tag(key.clone(), TagKind::Standalone, display));
-                        codes.insert(key, CodeData { open: None, close: None, standalone: Some(raw), label: Some(label) });
+                        codes.insert(key, CodeData::new().with_standalone(raw).with_label(label));
                     }
                 }
             }
@@ -783,9 +779,11 @@ macro_rules! dialect_filter {
                 sniff($d, bytes)
             }
             fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
+                bilingua_model::check_own_options(self, &opts.format_options)?;
                 extract_with($d, bytes, opts, &opts.limits())
             }
             fn merge_with(&self, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
+                bilingua_model::check_own_options(self, &opts.format_options)?;
                 merge_with($d, doc, opts)
             }
         }

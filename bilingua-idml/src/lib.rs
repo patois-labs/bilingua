@@ -15,7 +15,11 @@ pub const SKELETON_SCHEMA: u32 = 1;
 
 pub mod lang;
 mod package;
+// the story and XML layers, shared with other Bilingua crates and used by this crate's tests: not part of the
+// semver API (they change with the ICML move onto this tree)
+#[doc(hidden)]
 pub mod story;
+#[doc(hidden)]
 pub mod xml;
 
 use bilingua_model::*;
@@ -53,20 +57,14 @@ fn extract_doc(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
             if tok.has_text() {
                 let mut u = Unit::new(format!("p{idx}"), tok.core_inlines());
                 u.codes = tok.codes().clone();
-                u.context = UnitContext {
-                    kind: Some("paragraph".into()),
-                    style: Some(story::style(&tree, para)).filter(|s| !s.is_empty()),
-                    location: Some(format!("{member} paragraph {}", local + 1)),
-                    extra: BTreeMap::from([("story".to_string(), member.clone())]),
-                    ..Default::default()
-                };
+                u.context = UnitContext::new().with_kind("paragraph".to_string()).with_style(Some(story::style(&tree, para)).filter(|s| !s.is_empty())).with_location(format!("{member} paragraph {}", local + 1)).with_extra(BTreeMap::from([("story".to_string(), member.clone())]));
                 units.push(u);
                 guard::check_unit_count(units.len(), &l)?;
             }
             idx += 1;
         }
     }
-    let skeleton = Skeleton::zip(vec![ZipEntry { name: ORIGINAL.into(), data: ZipData::Raw(bytes.to_vec()) }], parser_info!());
+    let skeleton = Skeleton::zip(vec![ZipEntry::raw(ORIGINAL, bytes.to_vec())], parser_info!());
     let doc = Document::new("idml", units, skeleton).with_options(opts);
     guard::finish(doc, vec![], &l)
 }
@@ -181,9 +179,11 @@ impl Filter for Idml {
         bytes.starts_with(b"PK\x03\x04") && (has(b"application/vnd.adobe.indesign-idml-package") || (has(b"designmap.xml") && has(b"Stories/")))
     }
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         extract_doc(bytes, opts)
     }
     fn merge_with(&self, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         merge_doc(doc, opts)
     }
 }

@@ -256,11 +256,7 @@ pub fn unit_inlines(value: &str) -> (Vec<Inline>, BTreeMap<String, CodeData>) {
         let raw = &value[i..end];
         codes.insert(
             id.clone(),
-            CodeData {
-                standalone: Some(raw.to_string()),
-                label: Some("placeholder".into()),
-                ..Default::default()
-            },
+            CodeData::new().with_standalone(raw.to_string()).with_label("placeholder".to_string()),
         );
         inl.push(if is_free(raw) {
             Inline::free_tag(id, raw)

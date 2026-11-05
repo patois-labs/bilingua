@@ -265,6 +265,7 @@ impl Filter for Xcstrings {
     }
 
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         let limits = opts.limits();
         guard::check_input(bytes, &limits)?;
         let cat = Catalog::load(bytes, &limits, true)?;
@@ -306,7 +307,8 @@ impl Filter for Xcstrings {
         guard::finish(doc, vec![], &limits)
     }
 
-    fn merge_with(&self, doc: &Document, _opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
+    fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         // JSON is UTF-8 in and out (BOM kept); the target language names where translations go, it is not a
         // stamp, so with nothing translated there is nothing to write
         bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
@@ -661,6 +663,7 @@ fn apply(cat: &Catalog, entries: &[Entry<'_>], doc: &Document) -> Result<String,
 
 /// One catalog key as a key-based project sees it.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct Record {
     pub key: String,
     pub value: String,

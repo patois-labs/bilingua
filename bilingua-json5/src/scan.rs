@@ -12,6 +12,7 @@ use std::borrow::Cow;
 /// Caps this crate applies to a file (the model crate has none in this tree). Defaults are far above any real
 /// resource file; `Json5Filter::with_limits` changes them.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct Limits {
     /// Deepest nesting of `{` and `[`.
     pub max_depth: usize,

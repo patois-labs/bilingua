@@ -131,7 +131,7 @@ fn attrs() {
     // an attribute of an untranslated line still builds
     assert!(s(&build(src, &[(5, "Interface")])).contains("<Abbr title=\"Interface\">API</Abbr> is stable."));
     // allowlist
-    let m = MdxOptions { attrs: vec!["description".into()], ..Default::default() };
+    let m = { let mut built = MdxOptions::default(); built.attrs = vec!["description".into()]; built };
     let t: Vec<String> = extract_with(src, &m).unwrap().units.iter().map(locos_text).collect();
     assert_eq!(t, ["Body text.", "The \u{27E6}g1\u{27E7}API\u{27E6}/g1\u{27E7} is stable.", "Not on the list"]);
 }

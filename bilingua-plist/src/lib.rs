@@ -89,7 +89,7 @@ fn source_inlines(core: &str) -> Source {
                 n += 1;
                 let id = n.to_string();
                 chars += 3 + id.len();
-                codes.insert(id.clone(), CodeData { standalone: Some(p.to_string()), label: Some("format specifier".into()), ..Default::default() });
+                codes.insert(id.clone(), CodeData::new().with_standalone(p.to_string()).with_label("format specifier".to_string()));
                 inl.push(if ph::is_positional(p) { Inline::free_tag(id, p) } else { Inline::tag(id, TagKind::Standalone, p) });
             }
         }
@@ -451,9 +451,11 @@ macro_rules! filter_impl {
                 $sniff(bytes)
             }
             fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
+                bilingua_model::check_own_options(self, &opts.format_options)?;
                 extract_impl($fmt, bytes, opts, &opts.limits())
             }
             fn merge_with(&self, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
+                bilingua_model::check_own_options(self, &opts.format_options)?;
                 merge_impl($fmt, doc, opts)
             }
         }
@@ -465,6 +467,7 @@ filter_impl!(Stringsdict, Fmt::Stringsdict, "stringsdict", is_stringsdict);
 
 /// One entry of a file as a key-based project sees it.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[non_exhaustive]
 pub struct Record {
     /// A plist: the path of the value. A stringsdict: the entry key.
     pub key: String,

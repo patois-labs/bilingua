@@ -41,7 +41,7 @@ fn units_match_locos_on_every_file() {
         assert_eq!(got, want, "{name}");
         total += got.len();
         // comments on: LocOS lists them after the body units, numbered from 1,000,000
-        let o = OdfOptions { translate_comments: true };
+        let o = { let mut built = OdfOptions::default(); built.translate_comments = true; built };
         let f: Box<dyn Filter> = match ext {
             "ods" => Box::new(Ods::with_options(o)),
             "odp" => Box::new(Odp::with_options(o)),

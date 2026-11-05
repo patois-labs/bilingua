@@ -134,6 +134,7 @@ impl Filter for Pptx {
         FORMAT_OPTIONS
     }
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         let mut doc = extract::extract_doc(bytes, opts)?;
         if opts.format_flag("pptx.translate_comments") == Some(true) {
             doc.warnings.push(Warning::new(
@@ -144,7 +145,8 @@ impl Filter for Pptx {
         }
         Ok(doc)
     }
-    fn merge_with(&self, doc: &Document, _opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
+    fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         // The parts are UTF-8 XML, and the language is set on the runs this merge rewrites (translated text), so neither
         // option changes anything: an untranslated run is never rewritten.
         merge_with_report(doc).map(|(b, _)| b)

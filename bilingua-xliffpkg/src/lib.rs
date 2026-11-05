@@ -131,7 +131,7 @@ impl XliffPackage {
             }
             guard::check_unit_count(units.len(), &l)?;
         }
-        let skeleton = Skeleton::zip(vec![ZipEntry { name: ORIGINAL.into(), data: ZipData::Raw(bytes.to_vec()) }], parser_info!());
+        let skeleton = Skeleton::zip(vec![ZipEntry::raw(ORIGINAL, bytes.to_vec())], parser_info!());
         let doc = Document::new(self.id.to_string(), units, skeleton).with_source_lang(source_lang).with_target_lang(target_lang).with_granularity(Granularity::Paragraph);
         guard::finish(doc, vec![], &l)
     }
@@ -249,6 +249,7 @@ impl Filter for XliffPackage {
         true
     }
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         self.extract_doc(bytes, opts)
     }
     /// `stamp_target_always`: with a `target_lang`, every XLIFF member's `<file>` without a language is stamped even
@@ -256,6 +257,7 @@ impl Filter for XliffPackage {
     /// written as UTF-8 with its declaration saying so, as `bilingua-xliff` does; members that are not rewritten stay
     /// raw-copied in their own encoding (the package itself is a zip, not text).
     fn merge_with(&self, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         self.merge_doc(doc, opts)
     }
 }

@@ -35,6 +35,7 @@ const RAW_KEY: &str = "$raw";
 
 /// The JSON5 / JSONC filter.
 #[derive(Debug, Clone, Default)]
+#[non_exhaustive]
 pub struct Json5Filter {
     pub limits: Limits,
 }
@@ -60,6 +61,7 @@ impl Filter for Json5Filter {
     }
 
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         if bytes.len() > self.limits.max_bytes {
             return Err(Error::Parse { format: ID.into(), msg: format!("the file is larger than {} bytes", self.limits.max_bytes) });
         }
@@ -80,7 +82,7 @@ impl Filter for Json5Filter {
             pos = v.end;
             let mut unit = Unit::new(format!("u{}", units.len() + 1), inl);
             unit.codes = codes;
-            unit.codes.insert(RAW_KEY.into(), CodeData { standalone: Some(text[v.start..v.end].to_string()), ..Default::default() });
+            unit.codes.insert(RAW_KEY.into(), CodeData::new().with_standalone(text[v.start..v.end].to_string()));
             unit.context.kind = Some("string".into());
             if !v.key.is_empty() {
                 unit.context.key = Some(v.key);
@@ -100,6 +102,7 @@ impl Filter for Json5Filter {
     }
 
     fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
         let Skeleton::Text { parts, encoding, .. } = &doc.skeleton else {
             return Err(Error::Write("json5 needs a text skeleton".into()));

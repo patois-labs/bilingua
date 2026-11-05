@@ -195,7 +195,7 @@ fn unit_ids_context_and_lines_are_stable() {
 fn skeleton_from_another_parser_is_refused() {
     let mut doc = extract_str("<?php return ['a' => 'Text'];").unwrap();
     if let Skeleton::Text { parser, .. } = &mut doc.skeleton {
-        *parser = Some(ParserInfo { name: "bilingua-other".into(), version: "0.1.0".into(), schema: 1 });
+        *parser = Some(ParserInfo::new("bilingua-other", "0.1.0", 1));
     }
     assert!(matches!(Php.merge(&doc), Err(Error::ParserVersion { .. })));
 }

@@ -32,6 +32,7 @@ impl Filter for TextFilter {
     }
 
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         let mut dec = bilingua_model::enc::decode_text(bytes, &bilingua_model::enc::DecodeOptions::new(opts).lossy_after_utf8_bom())?;
         let text_owned = std::mem::take(&mut dec.text);
         let text = text_owned.as_str();
@@ -74,6 +75,7 @@ impl Filter for TextFilter {
     }
 
     fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
         let Skeleton::Text { parts, encoding, .. } = &doc.skeleton else {
             return Err(Error::Write("txt needs a text skeleton".into()));
@@ -131,7 +133,7 @@ fn build_unit(lines: &[&str], n: usize) -> (String, Unit, String) {
             let id = (codes.len() + 1).to_string();
             codes.insert(
                 id.clone(),
-                CodeData { standalone: Some(eol.to_string()), label: Some("line break".into()), ..Default::default() },
+                CodeData::new().with_standalone(eol.to_string()).with_label("line break".to_string()),
             );
             inl.push(Inline::tag(id, TagKind::Standalone, "\u{21b5}"));
         }
@@ -240,10 +242,11 @@ mod tests {
     fn translation_replaces_the_unit_and_keeps_line_breaks() {
         let mut d = extract("Hello\nworld\n\nBye.\n".as_bytes());
         let src = d.units[0].source();
-        let Inline::Tag { id, kind, display, free } = src[1].clone() else { panic!() };
+        let tag = src[1].clone();
+        assert!(matches!(tag, Inline::Tag { .. }));
         d.set_target(
             "p1",
-            vec![Inline::text("Hola"), Inline::Tag { id, kind, display, free }, Inline::text("mundo")],
+            vec![Inline::text("Hola"), tag, Inline::text("mundo")],
         )
         .unwrap();
         d.set_target("p2", vec![Inline::text("Adi\u{f3}s.")]).unwrap();

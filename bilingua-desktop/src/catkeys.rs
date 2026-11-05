@@ -196,7 +196,7 @@ impl CatkeysFilter {
             parts.push(SkelPart::Raw(text[last..e.tr_start].to_string()));
             last = e.tr_end;
             let mut unit = Unit::new(format!("u{}", units.len() + 1), vec![Inline::text(e.source.clone())]);
-            unit.codes.insert(HIDDEN.into(), CodeData { standalone: Some(e.raw_translation.to_string()), open: None, close: None, label: None });
+            unit.codes.insert(HIDDEN.into(), CodeData::new().with_standalone(e.raw_translation.to_string()));
             unit.translate = translatable;
             if !translatable {
                 unit.lock_reason = Some("no letter in the source".into());
@@ -246,10 +246,12 @@ impl Filter for CatkeysFilter {
     }
 
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         self.extract_inner(bytes, opts)
     }
 
     fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
         if doc.format != ID {
             return Err(Error::Write(format!("a {} document cannot be merged by the catkeys filter", doc.format)));

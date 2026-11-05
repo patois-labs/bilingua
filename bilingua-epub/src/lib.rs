@@ -105,11 +105,8 @@ fn extract_epub(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> 
     let lang = pkg.first_language().and_then(|i| xml::text_only(&pkg.opf.dom, &pkg.opf.t.text, i)).map(|t| t.trim().to_string()).filter(|t| !t.is_empty());
     let doc = Document::new("epub", units, Skeleton::zip(
             vec![
-                ZipEntry { name: ARCHIVE.into(), data: ZipData::Raw(bytes.to_vec()) },
-                ZipEntry {
-                    name: OPTIONS.into(),
-                    data: ZipData::Raw(serde_json::to_vec(&Opts { include_locked: opts.include_locked, limits }).map_err(|e| Error::Write(e.to_string()))?),
-                },
+                ZipEntry::raw(ARCHIVE, bytes.to_vec()),
+                ZipEntry::raw(OPTIONS, serde_json::to_vec(&Opts { include_locked: opts.include_locked, limits }).map_err(|e| Error::Write(e.to_string()))?),
             ],
             bilingua_model::parser_info!(),
         )).with_source_lang(opts.source_lang.clone().or(lang)).with_target_lang(opts.target_lang.clone()).with_granularity(Granularity::Paragraph);
@@ -300,10 +297,12 @@ impl Filter for Epub {
     }
 
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         extract_epub(bytes, opts)
     }
 
     fn merge_with(&self, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         merge_epub(doc, opts)
     }
 }

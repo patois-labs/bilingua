@@ -72,7 +72,7 @@ fn deep_and_huge() {
     let over = format!("\"k\" = \"{}\";\n", "v".repeat(100_001));
     assert!(matches!(Strings.extract(over.as_bytes(), &opts()), Err(Error::Unsupported(_))));
     // Over the byte cap.
-    let small = Limits { max_bytes: 100, ..Limits::default() };
+    let small = { let mut built = Limits::default(); built.max_bytes = 100; built };
     assert!(matches!(Strings.extract_with(&[b' '; 101], &opts(), &small), Err(Error::Unsupported(_))));
     // A newline bomb is refused before any work.
     let nl = vec![b'\n'; 20 * 50_000 + 1];

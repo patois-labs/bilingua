@@ -29,7 +29,7 @@ const TVT: &str = "v"; // + token id: braces doubled inside this paired element
 const TNEST: &str = "n"; // + token id: attribute units inside the token's opening markup
 
 fn hidden(text: impl Into<String>) -> CodeData {
-    CodeData { standalone: Some(text.into()), ..Default::default() }
+    CodeData::standalone(text)
 }
 
 fn code(u: &Unit, key: &str) -> Option<String> {
@@ -144,7 +144,7 @@ fn build_unit(text: &str, idx: usize, p: &PUnit) -> Built {
                 let id = n.to_string();
                 open_ids.insert(key, id.clone());
                 inl.push(Inline::tag(id.clone(), TagKind::Open, &text[s..e]));
-                codes.insert(id.clone(), CodeData { open: Some(text[s..e].to_string()), ..Default::default() });
+                codes.insert(id.clone(), CodeData::new().with_open(text[s..e].to_string()));
                 hidden_vals.push((format!("{TVT}{id}"), if tvt { "1" } else { "0" }));
                 tokens.push((s, e, id));
             }
@@ -356,10 +356,12 @@ impl Filter for Xslt {
     }
 
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         self.extract_with(bytes, opts, &opts.limits())
     }
 
     fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
         let Skeleton::Text { parts, encoding, .. } = &doc.skeleton else {
             return Err(Error::Write("xslt needs a text skeleton".into()));
