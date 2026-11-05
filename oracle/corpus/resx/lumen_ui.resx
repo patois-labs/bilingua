@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!--
+    Made-up Lumen Bakery resource file (not copied from anywhere).
+    A comment before the schema, with <data name="Fake"><value>not a resource</value></data> inside it.
+  -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <assembly alias="System.Windows.Forms" name="System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" />
+  <data name="Menu.Title" xml:space="preserve">
+    <value>Lumen Bakery &amp; Cafe</value>
+    <comment>Shown in the window title bar</comment>
+  </data>
+  <data name="Order.Ready" xml:space="preserve">
+    <value>Your order #{0} is ready for pickup at {1:HH:mm} on {2:D}.</value>
+    <comment>{0} order number, {1} time, {2} date</comment>
+  </data>
+  <data name="Order.Total">
+    <value>Total: {0:C2} ({1} items), {{not a placeholder}}</value>
+  </data>
+  <data name="Quote" xml:space="preserve">
+    <value>She said &quot;fresh bread&quot; and it&apos;s 5 &lt; 6 &#x2014; true&#10;Second line</value>
+  </data>
+  <data name="MultiLine" xml:space="preserve">
+    <value>First line of the story
+Second line of the story
+Third line</value>
+  </data>
+  <data name="Html.Block" xml:space="preserve">
+    <value>&lt;b&gt;Bold&lt;/b&gt; text with a &lt;a href="x"&gt;link&lt;/a&gt;</value>
+  </data>
+  <data name="Cdata.Block" xml:space="preserve">
+    <value><![CDATA[Use <b>bold</b> & "quotes" here]]></value>
+  </data>
+  <data name="Mixed.Cdata" xml:space="preserve">
+    <value>Before <![CDATA[<middle>]]> after &amp; end</value>
+  </data>
+  <data name="Padding" xml:space="preserve">
+    <value>
+      Indented paragraph with surrounding blank space
+    </value>
+  </data>
+  <data name="Only.Number" xml:space="preserve">
+    <value>12345</value>
+  </data>
+  <data name="Only.Placeholder" xml:space="preserve">
+    <value>{0}</value>
+  </data>
+  <data name="Dashes" xml:space="preserve">
+    <value>---</value>
+  </data>
+  <data name="Empty.Value" xml:space="preserve">
+    <value />
+  </data>
+  <data name="Empty.Pair" xml:space="preserve">
+    <value></value>
+  </data>
+  <data name="Commented.Value" xml:space="preserve">
+    <value>Before<!-- inner comment -->After</value>
+  </data>
+  <data name="Child.Element" xml:space="preserve">
+    <value>Text with <b>child</b> element</value>
+  </data>
+  <data name="No.Value" xml:space="preserve">
+  </data>
+  <data name="Icon.Logo" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+    <value>AAABAAEAEBAAAAEAIABoBAAAFgAAACgAAAAQAAAAIAAAAAEAIAAAAAAAAAQAAA==</value>
+    <comment>The application icon</comment>
+  </data>
+  <data name="Readme" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>Resources\readme.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;utf-8</value>
+  </data>
+  <data name="Timeout" type="System.Int32, mscorlib">
+    <value>30</value>
+  </data>
+  <data name="&gt;&gt;cancelButton.Name" xml:space="preserve">
+    <value>cancelButton</value>
+  </data>
+  <data name="cancelButton.Text" xml:space="preserve">
+    <value>Cancel order</value>
+  </data>
+  <data name='Single.Quoted' xml:space='preserve'>
+    <value>Attributes in single quotes</value>
+  </data>
+  <data name="Duplicate.Key">
+    <value>First definition</value>
+  </data>
+  <data name="Duplicate.Key">
+    <value>Second definition</value>
+  </data>
+</root>

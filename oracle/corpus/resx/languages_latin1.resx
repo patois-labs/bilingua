@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <data name="Welcome.en" xml:space="preserve">
+    <value>Welcome to Lumen Bakery. Your fresh bread is ready, {0} loaves waiting.</value>
+    <comment>Greeting, en</comment>
+  </data>
+  <data name="Welcome.de" xml:space="preserve">
+    <value>Willkommen bei Lumen Bakery. Ihr frisches Brot ist fertig, {0} Laibe warten.</value>
+    <comment>Greeting, de</comment>
+  </data>
+  <data name="Welcome.fr" xml:space="preserve">
+    <value>Bienvenue à Lumen Bakery. Votre pain frais est prêt, {0} miches vous attendent.</value>
+    <comment>Greeting, fr</comment>
+  </data>
+  <data name="Welcome.es" xml:space="preserve">
+    <value>Bienvenido a Lumen Bakery. Su pan fresco está listo, {0} hogazas esperan.</value>
+    <comment>Greeting, es</comment>
+  </data>
+</root>
