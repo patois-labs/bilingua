@@ -302,3 +302,30 @@ fn xhtml_is_left_to_the_html_filter() {
     assert!(!f.sniff(b"<!DOCTYPE html><html xmlns=\"http://www.w3.org/1999/xhtml\"><body><p>x</p></body></html>"));
     assert!(f.sniff(b"<doc><p>x</p></doc>"));
 }
+
+/// A multilingual file whose rule cannot create a missing target (no usable `lang_attr`, source nodes are not named
+/// for a language) is refused when it is read, not first when it is merged.
+#[test]
+fn uncreatable_target_is_refused_at_extract_not_merge() {
+    let f = XmlFilter::new();
+    let base = "<?xml version=\"1.0\"?>
+<?loc-multilingual mode=\"xpath\" source=\"en_US\" LANGATTR source-xpath=\"//msg/v[@loc='{lang}']\" target-xpath=\"../v[@loc='{lang}']\"?>
+<messages><msg><v loc=\"en_US\">Hello</v></msg></messages>
+";
+    // the damaged directive: the `=` of lang-attr lost
+    let bad_pi = base.replace("LANGATTR", "lang-attr \"loc\"");
+    match f.extract(bad_pi.as_bytes(), &opts(None)) {
+        Err(Error::Parse { msg, .. }) => assert!(msg.contains("cannot be created"), "{msg}"),
+        other => panic!("expected a typed refusal, got {:?}", other.map(|d| d.units.len())),
+    }
+    // intact, it extracts and merges with a created target
+    let good = base.replace("LANGATTR", "lang-attr=\"loc\"");
+    let d = f.extract(good.as_bytes(), &opts(None)).expect("extract");
+    let mut e = d.clone();
+    e.target_lang = Some("de-DE".into());
+    for u in &mut e.units {
+        u.segments[0].target = vec![Inline::text("Hallo")];
+    }
+    let out = String::from_utf8(f.merge(&e).expect("merge")).unwrap();
+    assert!(out.contains("loc=\"de_DE\">Hallo"), "{out}");
+}

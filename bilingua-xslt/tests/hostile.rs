@@ -392,3 +392,27 @@ fn the_generators_reach_the_interesting_paths() {
     }
     assert!(readable > 100, "readable {readable}");
 }
+
+/// A translation that starts or ends in text, next to a whitespace-only node the stylesheet strips, must not join
+/// that node: the units stay apart on re-read and the stripped whitespace stays stripped.
+#[test]
+fn edge_text_next_to_stripped_whitespace_keeps_units_apart() {
+    let src = b"<t:stylesheet version=\"2.0\" xmlns:t=\"http://www.w3.org/1999/XSL/Transform\"><t:template match=\"/\">
+  <b>Bold</b> <i>Italic</i>!
+  <p>Para</p>
+</t:template></t:stylesheet>";
+    check(src);
+    let o = ExtractOptions { target_lang: Some("de-DE".into()), ..opts() };
+    let d = Xslt.extract(src, &o).unwrap();
+    let mut e = d.clone();
+    for u in &mut e.units {
+        let mut t = vec![Inline::text("[")];
+        t.extend(u.source());
+        t.push(Inline::text("]"));
+        u.segments[0].target = t;
+    }
+    let out = String::from_utf8(Xslt.merge(&e).unwrap()).unwrap();
+    assert!(out.contains("</b> <t:text>[</t:text><i>Italic</i>"), "{out}");
+    assert!(out.contains("</i>!]"), "{out}");
+    assert_eq!(Xslt.extract(out.as_bytes(), &o).unwrap().units.len(), d.units.len());
+}

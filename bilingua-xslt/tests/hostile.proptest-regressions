@@ -5,3 +5,5 @@
 # It is recommended to check this file in to source control so that
 # everyone who runs the test benefits from these saved cases.
 cc 428b19f23f59f3e1f149bcc28c25aaf16fa647a7c23bbd20ec6a7fee3fa7e96d # shrinks to seed = 1, edits = [(3383159129897633822, 29, 0), (8372441891741309939, 0, 33)]
+cc f2e7d5e3ed3e7fbd9ec3227d55a04677a55f8153620160da0009a7bf09e36c4e # shrinks to seed = 2, edits = [(5331280317727555296, 78, 33)]
+cc 79e4819bb5c51abd5899d987ece171666cd474aa49f3f98b7b3320229b4af9d9 # shrinks to seed = 1, edits = [(2554092232851986139, 115, 32), (7743420253109644657, 9, 33)]

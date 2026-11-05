@@ -664,6 +664,11 @@ pub(crate) fn plan(t: &Tree, config: Option<&MlConfig>, limits: &Limits, check_b
     if check_budget {
         check_target_budget(t, &layout, limits)?;
     }
+    // Refused here, not first at merge: a file that extracts must merge. A missing target is written as a copy of
+    // the source's start tag, which needs the language attribute or a language element name to change.
+    if cfg.create && layout.sources.iter().any(|&e| !can_host_target(t, &layout, e)) {
+        return Err(bad(NO_TARGET_NODE));
+    }
     let mut props = Props::plain(t.els.len());
     for &e in &layout.sources {
         let el = &t.els[e as usize];
@@ -792,6 +797,14 @@ fn indent_before(t: &Tree, el: u32) -> String {
     }
 }
 
+const NO_TARGET_NODE: &str = "Multilingual XML: the target node is missing and cannot be created (the source node carries neither the language attribute nor a language element name); set lang_attr, or create to no.";
+
+/// Whether a target node can be made from the source element `el`: the same test `new_node` applies.
+fn can_host_target(t: &Tree, lay: &Layout, el: u32) -> bool {
+    let has_attr = lay.attr_key.as_ref().and_then(|(ns, l)| t.find_attr(el, ns, l)).is_some();
+    (has_attr && !lay.lang_attr.is_empty()) || norm(t.local(el)) == norm(&lay.source)
+}
+
 fn new_node(t: &Tree, lay: &Layout, el: u32, code: &str, body: &str) -> Result<String, Error> {
     let e = &t.els[el as usize];
     let mut stag = t.text[e.s0..e.s1].to_string();
@@ -807,7 +820,7 @@ fn new_node(t: &Tree, lay: &Layout, el: u32, code: &str, body: &str) -> Result<S
         stag = format!("<{prefix}{code}{}", &stag[1 + q.len()..]);
         etag = format!("</{prefix}{code}>");
     } else {
-        return Err(bad("Multilingual XML: the target node is missing and cannot be created (the source node carries neither the language attribute nor a language element name)."));
+        return Err(bad(NO_TARGET_NODE));
     }
     let stag = strip_ids(&stag);
     Ok(format!("{stag}{body}{etag}"))

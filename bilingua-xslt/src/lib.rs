@@ -23,6 +23,7 @@ pub struct Xslt;
 // Hidden codes (ids start with `~`, never a placeholder id).
 const RAW: &str = "~raw"; // the source span as written
 const META: &str = "~meta"; // kind (t text, a attribute), quote, crlf, braces doubled
+const EDGE: &str = "~edge"; // `ba` flags (1/0) then the `xsl:` prefix: the unit touches a stripped whitespace node
 const NEST: &str = "~nest"; // attribute units that sit inside the span: `from-to-unit;...` (offsets in the span)
 const TVT: &str = "~v"; // + token id: braces doubled inside this paired element
 const TNEST: &str = "~n"; // + token id: attribute units inside the token's opening markup
@@ -160,6 +161,9 @@ fn build_unit(text: &str, idx: usize, p: &PUnit) -> Built {
     unit.codes.insert(RAW.into(), hidden(&text[p.s..p.e]));
     let quote = if p.quote == 0 { '-' } else { p.quote as char };
     unit.codes.insert(META.into(), hidden(format!("{}{}{}{}", if attr { 'a' } else { 't' }, quote, u8::from(p.crlf), u8::from(p.tvt))));
+    if let Some((b, a, prefix)) = &p.edge {
+        unit.codes.insert(EDGE.into(), hidden(format!("{}{}{prefix}", u8::from(*b), u8::from(*a))));
+    }
     match &p.attr {
         Some(a) => {
             unit.context.kind = Some(a.clone());
@@ -557,11 +561,21 @@ fn rebuild(doc: &Document, u: &Unit, target: &[Inline], refs: CharRefs) -> Strin
         let c = u.codes.get(id)?;
         Some(c.open.is_some())
     };
-    for i in target {
+    // Text written right against a whitespace-only node the stylesheet strips would join it, so the whitespace
+    // would be kept in the output and the units would merge on the next read: such edge text goes in `xsl:text`.
+    let edge = code(u, EDGE).unwrap_or_default();
+    let (wrap_first, wrap_last, wrap_prefix) = if attr || edge.len() < 2 { (false, false, "") } else { (edge.starts_with('1'), edge[1..].starts_with('1'), &edge[2..]) };
+    let last = target.len().saturating_sub(1);
+    for (n, i) in target.iter().enumerate() {
         match i {
             Inline::Text(t) => {
                 let tvt = *tvts.last().unwrap_or(&top_tvt);
-                out.push_str(&with_char_refs(escape_lit(&xml_target_text(t), tvt, attr, quote, crlf), refs));
+                let lit = with_char_refs(escape_lit(&xml_target_text(t), tvt, attr, quote, crlf), refs);
+                if ((n == 0 && wrap_first) || (n == last && wrap_last)) && !lit.trim().is_empty() && stack.is_empty() {
+                    out.push_str(&format!("<{wrap_prefix}text>{lit}</{wrap_prefix}text>"));
+                } else {
+                    out.push_str(&lit);
+                }
             }
             Inline::Tag { id, kind, .. } => match kind {
                 TagKind::Close => {

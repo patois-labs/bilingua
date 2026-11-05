@@ -8,3 +8,4 @@ cc 345a5da7cc22f6a009094724a85f92031ba2706d6a469f08fe53988a95bc5f51 # shrinks to
 cc 39e5003dd73f4c56e3ec7204d67a125a6282242a59cf475f65ece9d905500a45 # shrinks to seed = 62, flips = [(Index(9089699978349634130), 237)], cut = None
 cc b8be104eab3e284aacfcaf17ee21c6850122bc92a24ae394b667ac0e01ca8bac # shrinks to data = [239, 187, 191, 239, 187, 191, 60, 98, 114, 47, 62]
 cc 6340babf89b7577c24c1902170d195e06f69dd9e47d1fbc86d6c22f36f1b2a3a # shrinks to seed = 7, flips = [(Index(5215597282745260130), 32)], cut = None
+cc 7883f49f43755cf7db8e7b96b2dff3100129768f6e9b028e24ee6134c169c183 # shrinks to seed = 7, flips = [(Index(5215597282745260130), 32)], cut = None
