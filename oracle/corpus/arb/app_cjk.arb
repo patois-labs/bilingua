@@ -1,0 +1,12 @@
+{
+  "@@locale": "ja",
+  "appTitle": "ルーメン・ベーカリー",
+  "greeting": "おはようございます、{name}さん。お席のご用意ができました。",
+  "@greeting": {"description": "ホーム画面のあいさつ", "placeholders": {"name": {"type": "String"}}},
+  "cartItems": "バスケットにパンが{count}個入っています",
+  "zhNote": "您有 {count} 个订单 待取，请在 {closingTime} 前到店。",
+  "koNote": "{closingTime} 전에 {count} 개의 주문을 수령해 주세요.",
+  "koWelcome": "{gender, select, female{다시 오신 것을 환영합니다, 고객님} other{다시 오신 것을 환영합니다}}",
+  "mixed": "Lumen Bakery の新作「塩バターパン」をお試しください。",
+  "emoji": "焼きたて 🍞 をどうぞ"
+}

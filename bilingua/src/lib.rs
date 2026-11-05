@@ -27,6 +27,8 @@ pub fn filters() -> Vec<Box<dyn Filter>> {
         Box::new(bilingua_subtitle::Vtt),
         Box::new(bilingua_subtitle::Srt),
         Box::new(bilingua_po::Po),
+        // ARB before JSON: a no-extension file with a string @@locale is ARB.
+        Box::new(bilingua_arb::Arb),
         Box::new(bilingua_json::JsonFilter),
         Box::new(bilingua_markdown::MarkdownFilter),
         // HTML sniffs loosely and plain text accepts any UTF-8, so they go last.

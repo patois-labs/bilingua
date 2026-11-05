@@ -1,0 +1,14 @@
+{
+  "@@locale": "ar",
+  "appTitle": "مخبز لومن",
+  "greeting": "صباح الخير يا {name}! طاولتك جاهزة.",
+  "@greeting": {
+    "description": "تحية في الصفحة الرئيسية",
+    "placeholders": {"name": {"type": "String", "example": "مارا"}}
+  },
+  "cartItems": "{count, plural, one{رغيف واحد في سلتك} many{# رغيفا في سلتك} other{# رغيف في سلتك}}",
+  "@cartItems": {"description": "Basket button"},
+  "pickupNote": "لديك {count, plural, =0{لا طلبات} one{طلب واحد} many{# طلبا} other{# طلبات}} للاستلام قبل {closingTime}.",
+  "welcomeBack": "{gender, select, female{أهلا بعودتك يا سيدتي} male{أهلا بعودتك يا سيدي} other{أهلا بعودتك}}",
+  "openingHours": "مفتوح كل يوم من الساعة 7 صباحا حتى 6 مساء. مغلق في العطلات الرسمية."
+}
