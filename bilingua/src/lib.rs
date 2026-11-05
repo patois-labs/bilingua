@@ -44,6 +44,7 @@ pub fn filters() -> Vec<Box<dyn Filter>> {
         Box::new(bilingua_yaml::Yaml),
         // properties sniffs any key=value or key: value text, so it goes after the stricter key-value formats.
         Box::new(bilingua_properties::Properties),
+        Box::new(bilingua_xaml::Xaml::default()),
         // HTML sniffs loosely and plain text accepts any UTF-8, so they go last.
         Box::new(bilingua_html::Html),
         Box::new(bilingua_text::TextFilter),

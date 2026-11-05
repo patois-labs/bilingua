@@ -1,0 +1,11 @@
+<?xml version='1.0' encoding='utf-8' standalone="yes"?>
+<?pi data?>
+<r xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml" xmlns:s="clr-namespace:System;assembly=mscorlib" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+<x:String   x:Key = "a" >  padded &#x263A; &lt;ok&gt;  </x:String>
+<s:String x:Key='b'><![CDATA[cdata skipped]]></s:String>
+<s:String x:Key="c">ab</s:String>
+<s:String x:Key="d">line1
+line2</s:String><s:String x:Key="e"/><s:String x:Key="f">{ } brace</s:String><s:String x:Key="g">{0}</s:String>
+<s:String x:Key="h">{Binding}</s:String><s:String x:Key="i">{x:Static Foo.Bar} tail</s:String><s:String x:Key="j">Use {StaticResource Key} here %s and %1$s.</s:String>
+</r>
+<!-- tail -->

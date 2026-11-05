@@ -172,6 +172,7 @@ fn crate_of(format: &str) -> &'static str {
         "resx" => "bilingua-resx",
         "js" => "bilingua-jsmodule",
         "arb" => "bilingua-arb",
+        "xaml" => "bilingua-xaml",
         "srt" | "vtt" => "bilingua-subtitle",
         "txt" | "text" => "bilingua-text",
         "xliff" | "sdlxliff" | "mqxliff" | "mxliff" => "bilingua-xliff",
