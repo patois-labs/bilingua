@@ -8,7 +8,9 @@ use proptest::prelude::*;
 use std::path::Path;
 
 fn corpus_file(name: &str) -> Vec<u8> {
-    std::fs::read(Path::new(env!("CARGO_MANIFEST_DIR")).join("../oracle/corpus/plist").join(name)).unwrap()
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let a = root.join("../oracle/corpus/plist").join(name);
+    std::fs::read(if a.exists() { a } else { root.join("tests/data/fill").join(name) }).unwrap()
 }
 
 fn fixtures() -> Vec<Vec<u8>> {

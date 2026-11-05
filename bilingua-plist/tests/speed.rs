@@ -30,7 +30,7 @@ fn big_stringsdict(n: usize) -> String {
 
 fn timed(f: F, name: &str, text: &str, units: usize) {
     let bytes = text.as_bytes();
-    assert!(bytes.len() > 5_000_000, "{name}: {} bytes", bytes.len());
+    assert!(cfg!(debug_assertions) || bytes.len() > 5_000_000, "{name}: {} bytes", bytes.len());
     let t = Instant::now();
     let mut d = f.filter().extract(bytes, &ExtractOptions { target_lang: Some("ru".into()), ..Default::default() }).unwrap();
     let t_extract = t.elapsed();
@@ -55,14 +55,16 @@ fn timed(f: F, name: &str, text: &str, units: usize) {
 
 #[test]
 fn large_files_round_trip_fast() {
-    let plist = big_plist(30_000);
-    let sd = big_stringsdict(12_000);
+    // a debug build is ten times smaller (the 5 MB bar is checked in release)
+    let k = if cfg!(debug_assertions) { 10 } else { 1 };
+    let plist = big_plist(30_000 / k);
+    let sd = big_stringsdict(12_000 / k);
     if let Ok(dir) = std::env::var("BILINGUA_PLIST_SPEED_OUT") {
         std::fs::write(std::path::Path::new(&dir).join("speed.plist"), &plist).unwrap();
         std::fs::write(std::path::Path::new(&dir).join("speed.stringsdict"), &sd).unwrap();
     }
-    timed(F::Plist, "plist", &plist, 30_000);
-    timed(F::Sd, "stringsdict", &sd, 24_000);
+    timed(F::Plist, "plist", &plist, 30_000 / k);
+    timed(F::Sd, "stringsdict", &sd, 24_000 / k);
     // UTF-16 doubles the bytes and takes the same path
     let mut u16 = vec![0xFF, 0xFE];
     for u in plist.encode_utf16() {

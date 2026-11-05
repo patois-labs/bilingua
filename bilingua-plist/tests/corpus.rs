@@ -11,9 +11,18 @@ use common::*;
 use std::path::PathBuf;
 
 fn corpus() -> Vec<(String, Vec<u8>)> {
-    let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../oracle/corpus/plist");
-    let mut v: Vec<(String, Vec<u8>)> =
-        std::fs::read_dir(dir).unwrap().flatten().map(|f| (f.file_name().to_string_lossy().to_string(), std::fs::read(f.path()).unwrap())).collect();
+    // The oracle corpus, plus the stringsdict files whose plurals the es-ES plural fill extends (the oracle's pseudo
+    // round trip merges for es-ES and wants the same number of units back; here the fill is tested on purpose).
+    let mut v: Vec<(String, Vec<u8>)> = Vec::new();
+    for sub in ["../oracle/corpus/plist", "tests/data/fill"] {
+        let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(sub);
+        for f in std::fs::read_dir(dir).unwrap().flatten() {
+            let name = f.file_name().to_string_lossy().to_string();
+            if !name.starts_with('.') {
+                v.push((name, std::fs::read(f.path()).unwrap()));
+            }
+        }
+    }
     v.sort();
     assert!(v.len() >= 30, "corpus went missing");
     v
@@ -138,7 +147,7 @@ fn names(out: &[u8], key: &str) -> Vec<String> {
 
 #[test]
 fn plural_fill_follows_each_of_eleven_target_languages() {
-    let en = std::fs::read(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../oracle/corpus/plist/lang_en.stringsdict")).unwrap();
+    let en = std::fs::read(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/data/fill/lang_en.stringsdict")).unwrap();
     let want: &[(&str, &[&str])] = &[
         ("en", &["one", "other"]),
         ("de", &["one", "other"]),
@@ -163,7 +172,8 @@ fn plural_fill_follows_each_of_eleven_target_languages() {
     }
     // a file already written for its language keeps exactly its forms
     for lang in ["en", "de", "fr", "es", "ja", "zh", "ko", "ar", "hi", "ru", "pt"] {
-        let bytes = std::fs::read(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(format!("../oracle/corpus/plist/lang_{lang}.stringsdict"))).unwrap();
+        let sub = if matches!(lang, "fr" | "es" | "pt" | "ar" | "ru") { "../oracle/corpus/plist" } else { "tests/data/fill" };
+        let bytes = std::fs::read(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(sub).join(format!("lang_{lang}.stringsdict"))).unwrap();
         let d = ex_with(F::Sd, &bytes, &ExtractOptions { target_lang: Some(lang.into()), ..Default::default() });
         let out = merged(F::Sd, &prefixed(&d, "T "));
         let before: Vec<String> = names(&bytes, "files_count");
