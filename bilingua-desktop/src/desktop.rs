@@ -304,7 +304,7 @@ fn head_has_group(bytes: &[u8]) -> bool {
 }
 
 fn translated_text(u: &Unit) -> Option<String> {
-    if !u.translate || u.segments.iter().all(|s| s.target.is_empty()) {
+    if !u.translate || u.segments.iter().all(|s| !s.has_target()) {
         return None;
     }
     Some(plain_text(&u.output()))

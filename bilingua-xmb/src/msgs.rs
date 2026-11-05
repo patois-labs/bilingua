@@ -357,7 +357,7 @@ pub fn extract(bytes: &[u8], opts: &ExtractOptions, limits: &Limits) -> Result<D
 }
 
 fn has_target(u: &Unit) -> bool {
-    u.translate && u.segments.iter().any(|s| !s.target.is_empty())
+    u.translate && u.segments.iter().any(|s| s.has_target())
 }
 
 fn raw_of(u: &Unit, key: &str) -> String {

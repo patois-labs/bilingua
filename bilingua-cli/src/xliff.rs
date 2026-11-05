@@ -106,7 +106,7 @@ pub fn write(doc: &Document, original: &str, src: &str, trg: Option<&str>) -> St
             }
             x.push_str(&format!("      <segment id=\"{}\" state=\"{}\">\n", esc(&s.id), state_name(s.state)));
             x.push_str(&format!("        <source xml:space=\"preserve\">{}</source>\n", inline_xml(&s.source)));
-            if !s.target.is_empty() {
+            if s.has_target() {
                 x.push_str(&format!("        <target xml:space=\"preserve\">{}</target>\n", inline_xml(&s.target)));
             }
             x.push_str("      </segment>\n");

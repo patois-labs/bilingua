@@ -212,7 +212,7 @@ fn same_content(a: &[Inline], b: &[Inline]) -> bool {
 
 fn write_unit(u: &Unit, out: &mut String) {
     let raw = u.hidden(para::RAW).unwrap_or("");
-    if !u.translate || u.segments.iter().all(|s| s.target.is_empty()) {
+    if !u.translate || u.segments.iter().all(|s| !s.has_target()) {
         out.push_str(raw);
         return;
     }

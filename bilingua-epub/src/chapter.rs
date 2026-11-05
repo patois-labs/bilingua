@@ -25,7 +25,7 @@ pub struct Chapter {
 }
 
 pub fn translated(u: &Unit) -> bool {
-    u.translate && u.segments.iter().any(|s| !s.target.is_empty())
+    u.translate && u.segments.iter().any(|s| s.has_target())
 }
 
 fn is_attr(u: &Unit) -> bool {

@@ -90,7 +90,7 @@ fn check_rendered(u: &Unit, target: &[Item], s: &str) -> Result<(), Error> {
 /// Writes one unit; true when it changed the literal.
 fn write_unit(u: &Unit, out: &mut String) -> Result<bool, Error> {
     let raw = u.hidden(RAW).unwrap_or("");
-    if !u.translate || u.segments.iter().all(|s| s.target.is_empty()) {
+    if !u.translate || u.segments.iter().all(|s| !s.has_target()) {
         out.push_str(raw);
         return Ok(false);
     }
@@ -253,7 +253,7 @@ impl Filter for Rc {
             }
         }
         // the target language: only when something was translated
-        let translated = doc.units.iter().any(|u| u.translate && u.segments.iter().any(|s| !s.target.is_empty()));
+        let translated = doc.units.iter().any(|u| u.translate && u.segments.iter().any(|s| s.has_target()));
         if let Some(loc) = opts.stamp_lang(doc, translated) {
             let sc = Script::new(&out, false, false, &Limits::default())?;
             let mut edits = stamp_edits(&sc, &out, loc);

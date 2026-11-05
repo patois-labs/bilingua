@@ -212,7 +212,7 @@ impl Filter for Xcloc {
                 for s in &u.segments {
                     let Some(local) = s.id.strip_prefix(&prefix) else { continue };
                     let Some(i) = x.index_of(local) else { continue };
-                    if x.seg(i).locked || s.target == x.seg(i).target || s.target.is_empty() {
+                    if x.seg(i).locked || s.target == x.seg(i).target || !s.has_target() {
                         continue;
                     }
                     let (orig_state, native) = (x.orig_state(i), x.seg(i).native_state.map(str::to_string));

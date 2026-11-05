@@ -123,7 +123,7 @@ fn collapse(unit: &mut Unit) {
     if unit.segments.len() <= 1 {
         return;
     }
-    let all_translated = unit.segments.iter().all(|s| !s.target.is_empty());
+    let all_translated = unit.segments.iter().all(|s| s.has_target());
     let source = unit.source();
     let target = if all_translated { unit.output() } else { vec![] };
     let state = unit.segments.iter().map(|s| s.state.rank()).min().map(SegState::from_rank).unwrap_or(SegState::New);
@@ -244,7 +244,7 @@ pub fn join(doc: &mut Document, seg_a: &str, seg_b: &str) -> Result<String, Erro
     let b = unit.segments.remove(i + 1);
     unit.separators.remove(i);
     let a = &mut unit.segments[i];
-    let both = !a.target.is_empty() && !b.target.is_empty();
+    let both = a.has_target() && b.has_target();
     let state = if both { SegState::from_rank(a.state.rank().min(b.state.rank())) } else { SegState::New };
     let join_with_sep = |x: &[Inline], y: &[Inline]| -> Vec<Inline> {
         let mut v = x.to_vec();

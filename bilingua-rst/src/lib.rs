@@ -43,7 +43,7 @@ fn trimmed(v: Vec<Inline>) -> Vec<Inline> {
 
 /// The unit's translation when it differs from the source (LocOS: `new.strip() == unit` leaves the original).
 fn changed(u: &Unit) -> Option<Vec<Inline>> {
-    if !u.translate || u.segments.iter().all(|s| s.target.is_empty()) {
+    if !u.translate || u.segments.iter().all(|s| !s.has_target()) {
         return None;
     }
     let new = trimmed(u.output());

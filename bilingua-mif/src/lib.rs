@@ -315,7 +315,7 @@ impl Filter for Mif {
                         .get(HIDDEN)
                         .and_then(|h| h.standalone.as_deref())
                         .ok_or_else(|| Error::Write(format!("unit {} lost its paragraph", u.id)))?;
-                    if u.segments.iter().any(|s| !s.target.is_empty()) {
+                    if u.segments.iter().any(|s| s.has_target()) {
                         translated = true;
                         let o = u.output();
                         if !same_inlines(&o, &u.source()) {

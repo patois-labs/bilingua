@@ -295,7 +295,7 @@ fn render_record(doc: &Document, first: usize, group: &[usize]) -> Result<String
         Some("|") => b'|',
         other => return Err(Error::Write(format!("unit {first} has an unknown delimiter {other:?}"))),
     };
-    let changed = |u: &Unit| u.translate && u.segments.iter().any(|s| !s.target.is_empty());
+    let changed = |u: &Unit| u.translate && u.segments.iter().any(|s| s.has_target());
     if !group.iter().any(|&ui| changed(&doc.units[ui])) {
         return Ok(raw.to_string());
     }

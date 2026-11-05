@@ -565,7 +565,7 @@ fn apply(cat: &Catalog, entries: &[Entry<'_>], doc: &Document) -> Result<String,
             continue;
         }
         if let Some(n) = u.id.strip_prefix('u').and_then(|s| s.parse::<usize>().ok()) {
-            if n >= 1 && u.segments.iter().any(|s| !s.target.is_empty()) {
+            if n >= 1 && u.segments.iter().any(|s| s.has_target()) {
                 by_idx.insert(n - 1, u);
             }
         }

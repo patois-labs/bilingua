@@ -268,7 +268,7 @@ fn with_char_refs(s: String, refs: CharRefs) -> String {
 
 fn write_unit(u: &Unit, refs: CharRefs, out: &mut String) {
     let raw = code(u, RAW).unwrap_or_default();
-    if !u.translate || u.segments.iter().all(|s| s.target.is_empty()) {
+    if !u.translate || u.segments.iter().all(|s| !s.has_target()) {
         out.push_str(&raw);
         return;
     }

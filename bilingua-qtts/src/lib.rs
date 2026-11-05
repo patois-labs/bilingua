@@ -351,7 +351,7 @@ impl Filter for QtTs {
             }
         }
         let crlf = lf > 0 && lf == crlf_n;
-        let touched = doc.units.iter().any(|u| u.translate && u.segments.iter().any(|s| !s.target.is_empty()));
+        let touched = doc.units.iter().any(|u| u.translate && u.segments.iter().any(|s| s.has_target()));
         let target = opts.stamp_lang(doc, touched).map(str::trim);
         let first_raw = parts.iter().position(|p| matches!(p, SkelPart::Raw(_)));
         let file_lang = first_raw.and_then(|i| match &parts[i] {
@@ -560,7 +560,7 @@ fn body_of(u: &Unit, crlf: bool) -> String {
 
 fn write_unit(u: &Unit, crlf: bool, fill: bool, plural_lang: &str, refs: CharRefs, out: &mut String) -> Result<(), Error> {
     let raw = code(u, RAW).ok_or_else(|| Error::Write("a unit lost its translation element".into()))?;
-    if !u.translate || u.segments.iter().all(|s| s.target.is_empty()) {
+    if !u.translate || u.segments.iter().all(|s| !s.has_target()) {
         out.push_str(&raw);
         return Ok(());
     }

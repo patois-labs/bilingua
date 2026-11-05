@@ -334,7 +334,7 @@ fn code(u: &Unit, key: &str) -> Option<String> {
 /// The token to write for a unit, and whether it differs from the original.
 fn render_unit(u: &Unit) -> (String, bool) {
     let raw = code(u, RAW).unwrap_or_default();
-    if u.segments.iter().all(|s| s.target.is_empty()) {
+    if u.segments.iter().all(|s| !s.has_target()) {
         return (raw, false);
     }
     let mut value = String::new();
@@ -376,7 +376,7 @@ fn verify(out: &str, placed: &[(usize, usize)], doc: &Document) -> Result<(), Er
         if Some(&s.key) != u.context.key.as_ref() {
             return Err(bad("key path"));
         }
-        let want = if u.segments.iter().all(|s| s.target.is_empty()) {
+        let want = if u.segments.iter().all(|s| !s.has_target()) {
             code(u, OV).unwrap_or_default()
         } else {
             let mut v = String::new();

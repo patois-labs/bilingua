@@ -257,7 +257,7 @@ impl Filter for CatkeysFilter {
         let Skeleton::Text { parts, encoding, .. } = &doc.skeleton else {
             return Err(Error::Write("catkeys needs a text skeleton".into()));
         };
-        let translated = |u: &Unit| u.translate && u.segments.iter().any(|s| !s.target.is_empty());
+        let translated = |u: &Unit| u.translate && u.segments.iter().any(|s| s.has_target());
         let any = doc.units.iter().any(translated);
         let lang = opts.stamp_lang(doc, any).map(language_name).filter(|l| !l.is_empty());
         let mut out = String::new();

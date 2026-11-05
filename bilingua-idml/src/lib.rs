@@ -88,7 +88,7 @@ fn merge_doc(doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
     // paragraph index -> the translated text; an untranslated unit keeps the original markup
     let mut wanted: HashMap<usize, Vec<Inline>> = HashMap::new();
     for u in &doc.units {
-        if !u.translate || !u.segments.iter().any(|s| !s.target.is_empty()) {
+        if !u.translate || !u.segments.iter().any(|s| s.has_target()) {
             continue;
         }
         if let Some(i) = paragraph_index(&u.id) {

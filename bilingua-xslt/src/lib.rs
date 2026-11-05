@@ -365,7 +365,7 @@ impl Filter for Xslt {
             return Err(Error::Write("xslt needs a text skeleton".into()));
         };
         let refs = char_refs(parts, encoding);
-        let any_translated = doc.units.iter().any(|u| u.translate && u.segments.iter().any(|s| !s.target.is_empty()));
+        let any_translated = doc.units.iter().any(|u| u.translate && u.segments.iter().any(|s| s.has_target()));
         let lang = opts.stamp_lang(doc, any_translated).and_then(html_lang);
         let mut out = String::new();
         for p in parts {
@@ -519,7 +519,7 @@ fn write_unit(doc: &Document, u: &Unit, refs: CharRefs) -> String {
     let (attr, ..) = meta_of(u);
     let nests = code(u, NEST).unwrap_or_default();
     let plain = |raw: &str| if attr { raw.to_string() } else { apply_nests(doc, raw, &nests, refs) };
-    if !u.translate || u.segments.iter().all(|s| s.target.is_empty()) {
+    if !u.translate || u.segments.iter().all(|s| !s.has_target()) {
         return plain(&raw);
     }
     let new = u.output();

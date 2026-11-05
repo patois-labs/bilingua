@@ -106,7 +106,7 @@ pub fn inline_html(unit: &Unit, inlines: &[Inline]) -> String {
 }
 
 fn seg_inlines(s: &Segment) -> &Vec<Inline> {
-    if s.target.is_empty() {
+    if !s.has_target() {
         &s.source
     } else {
         &s.target

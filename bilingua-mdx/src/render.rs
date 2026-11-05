@@ -212,7 +212,7 @@ fn hidden(u: &Unit) -> Option<&CodeData> {
 
 /// The plain text the unit now holds when a target was set, else None.
 fn translated(u: &Unit) -> Option<String> {
-    if u.segments.iter().all(|s| s.target.is_empty()) {
+    if u.segments.iter().all(|s| !s.has_target()) {
         return None;
     }
     Some(plain_text(&u.output()))
@@ -338,7 +338,7 @@ fn render_line(doc: &Document, u: &Unit) -> Result<String, Error> {
         }
         prev_end = a.e;
     }
-    if u.segments.iter().all(|s| s.target.is_empty()) {
+    if u.segments.iter().all(|s| !s.has_target()) {
         return Ok(splice(core, &attrs, 0, core.len()));
     }
     let src = locos_ids(&u.source());

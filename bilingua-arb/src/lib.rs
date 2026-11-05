@@ -160,7 +160,7 @@ impl Filter for Arb {
                 }
             }
         }
-        let touched = |u: &Unit| u.segments.iter().any(|s| !s.target.is_empty());
+        let touched = |u: &Unit| u.segments.iter().any(|s| s.has_target());
         let stamp = opts.stamp_lang(doc, false).is_some();
         let out = if stamp || doc.units.iter().any(touched) { splice(&orig, doc)? } else { orig };
         let mut bytes = Vec::with_capacity(out.len() + 3);
@@ -438,12 +438,12 @@ fn splice(orig: &str, doc: &Document) -> Result<String, Error> {
             return Err(Error::Write("the units no longer match the skeleton".into()));
         }
         head += k;
-        let touched = units.iter().any(|u| u.segments.iter().any(|s| !s.target.is_empty()));
+        let touched = units.iter().any(|u| u.segments.iter().any(|s| s.has_target()));
         if !touched && target.is_none() {
             continue;
         }
         let mut tr = Trans {
-            list: units.iter().map(|u| if u.segments.iter().all(|s| s.target.is_empty()) { None } else { Some(u.output()) }).collect(),
+            list: units.iter().map(|u| if u.segments.iter().all(|s| !s.has_target()) { None } else { Some(u.output()) }).collect(),
             at: 0,
         };
         let new = rebuild_message(m, &mut tr, target);

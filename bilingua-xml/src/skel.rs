@@ -353,7 +353,7 @@ fn code_str<'u>(u: &'u Unit, key: &str) -> Option<&'u str> {
 }
 
 pub(crate) fn translated(u: &Unit) -> bool {
-    u.translate && u.segments.iter().any(|s| !s.target.is_empty())
+    u.translate && u.segments.iter().any(|s| s.has_target())
 }
 
 pub(crate) struct Merger<'d> {

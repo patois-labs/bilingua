@@ -253,7 +253,7 @@ fn extract_doc(bytes: &[u8], opts: &ExtractOptions, id: &'static str, o: &OdfOpt
 
 /// A target is a translation when any segment has one.
 fn translated(u: &Unit) -> bool {
-    u.segments.iter().any(|s| !s.target.is_empty())
+    u.segments.iter().any(|s| s.has_target())
 }
 
 fn same_content(a: &[Inline], b: &[Inline]) -> bool {

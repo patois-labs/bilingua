@@ -416,7 +416,7 @@ impl Filter for Icml {
         };
         let mut wanted: HashMap<usize, Vec<TP>> = HashMap::new();
         for u in &doc.units {
-            if !u.translate || u.segments.iter().all(|s| s.target.is_empty()) {
+            if !u.translate || u.segments.iter().all(|s| !s.has_target()) {
                 continue;
             }
             let Some(p) = p_index_of(u) else { continue };

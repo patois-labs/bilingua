@@ -22,7 +22,7 @@ struct Ctx<'a> {
 }
 
 fn translated(u: &Unit) -> bool {
-    u.translate && u.segments.iter().any(|s| !s.target.is_empty())
+    u.translate && u.segments.iter().any(|s| s.has_target())
 }
 
 fn label<'a>(u: &'a Unit, key: &str) -> Option<&'a str> {
@@ -159,7 +159,7 @@ impl<'a> Ctx<'a> {
     }
 
     fn seg_inlines<'u>(&self, seg: &'u Segment) -> &'u [Inline] {
-        if seg.target.is_empty() {
+        if !seg.has_target() {
             &seg.source
         } else {
             &seg.target

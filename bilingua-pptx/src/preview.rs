@@ -21,7 +21,7 @@ fn esc(s: &str) -> String {
 
 /// Inner HTML of one segment: its target, or its source when there is none.
 fn seg_inner(u: &Unit, seg: &Segment) -> String {
-    let inl = if seg.target.is_empty() { &seg.source } else { &seg.target };
+    let inl = if !seg.has_target() { &seg.source } else { &seg.target };
     let mut s = String::new();
     let mut stack: Vec<&'static str> = vec![];
     for i in inl {

@@ -106,7 +106,7 @@ fn out_text(u: &Unit, v: &[Inline]) -> String {
 }
 
 fn has_target(u: &Unit) -> bool {
-    u.segments.iter().any(|s| !s.target.is_empty())
+    u.segments.iter().any(|s| s.has_target())
 }
 
 /// One entry of the file as a key-based project sees it (translatable or not).

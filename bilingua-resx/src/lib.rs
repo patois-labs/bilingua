@@ -263,7 +263,7 @@ impl Filter for Resx {
 
 fn write_unit(u: &Unit, out: &mut String) -> bool {
     let raw = u.hidden(RAW).unwrap_or("");
-    if !u.translate || u.segments.iter().all(|s| s.target.is_empty()) {
+    if !u.translate || u.segments.iter().all(|s| !s.has_target()) {
         out.push_str(raw);
         return false;
     }

@@ -74,7 +74,7 @@ fn target_inlines(text: &str, tags: &[(String, String)]) -> Vec<Inline> {
 
 /// The text a unit writes as its msgstr ("" when no segment has a target).
 fn unit_text(u: &Unit) -> String {
-    if !u.segments.iter().any(|s| !s.target.is_empty()) {
+    if !u.segments.iter().any(|s| s.has_target()) {
         return String::new();
     }
     let mut s = String::new();

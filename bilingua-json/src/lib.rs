@@ -103,7 +103,7 @@ impl Filter for JsonFilter {
 
 /// The string token to write for a unit.
 fn render_token(unit: &Unit) -> String {
-    let untouched = unit.segments.iter().all(|s| s.target.is_empty());
+    let untouched = unit.segments.iter().all(|s| !s.has_target());
     if untouched {
         if let Some(raw) = unit.codes.get(RAW_KEY).and_then(|c| c.standalone.as_deref()) {
             return raw.to_string();

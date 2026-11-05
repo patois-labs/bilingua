@@ -114,7 +114,7 @@ fn code(u: &Unit, key: &str) -> Option<String> {
 
 /// The text this unit writes as its msgstr ("" when no segment has a target).
 fn unit_text(u: &Unit) -> String {
-    if u.segments.iter().any(|s| !s.target.is_empty()) {
+    if u.segments.iter().any(|s| s.has_target()) {
         out_text(u, &u.output())
     } else {
         String::new()
@@ -127,7 +127,7 @@ fn changed(u: &Unit) -> bool {
 }
 
 fn done(u: &Unit) -> bool {
-    u.segments.iter().all(|s| !s.target.is_empty() && matches!(s.state, SegState::Translated | SegState::Confirmed))
+    u.segments.iter().all(|s| s.has_target() && matches!(s.state, SegState::Translated | SegState::Confirmed))
 }
 
 impl Filter for Po {

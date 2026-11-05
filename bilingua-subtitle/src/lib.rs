@@ -422,7 +422,7 @@ fn merge(k: Kind, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result
             SkelPart::Unit(i) => {
                 let u = doc.units.get(*i).ok_or_else(|| Error::Write(format!("skeleton points at missing unit {i}")))?;
                 let raw = u.hidden(RAW);
-                let translated = u.translate && u.segments.iter().any(|s| !s.target.is_empty());
+                let translated = u.translate && u.segments.iter().any(|s| s.has_target());
                 match raw {
                     Some(r) if !translated => out.push_str(r),
                     _ => out.push_str(&render(k, u, eol)),

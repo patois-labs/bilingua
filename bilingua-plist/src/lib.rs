@@ -112,7 +112,7 @@ fn out_text(u: &Unit, v: &[Inline]) -> String {
 }
 
 fn has_target(u: &Unit) -> bool {
-    u.segments.iter().any(|s| !s.target.is_empty())
+    u.segments.iter().any(|s| s.has_target())
 }
 
 /// The new full value of a translated unit, or `None` when the value stays as it is.

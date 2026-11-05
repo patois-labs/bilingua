@@ -104,7 +104,7 @@ fn split_ws(s: &str) -> (&str, &str, &str) {
 }
 
 fn has_target(u: &Unit) -> bool {
-    u.segments.iter().any(|s| !s.target.is_empty())
+    u.segments.iter().any(|s| s.has_target())
 }
 
 /// The new value of a unit (white space around it restored) when it has a translation.

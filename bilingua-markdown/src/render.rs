@@ -29,7 +29,7 @@ pub fn inlines_md(doc: &Document, unit: &Unit, inl: &[Inline]) -> String {
 /// The current text of an alt or title unit, escaped for its place. Untouched text is written as it was.
 fn side_text(doc: &Document, kind: char, idx: usize) -> String {
     let Some(u) = doc.units.get(idx) else { return String::new() };
-    let touched = u.segments.iter().any(|s| !s.target.is_empty());
+    let touched = u.segments.iter().any(|s| s.has_target());
     let text = plain_text(&u.output());
     if !touched {
         return text;
@@ -50,7 +50,7 @@ fn side_text(doc: &Document, kind: char, idx: usize) -> String {
 /// The bytes a unit writes in the skeleton.
 pub fn render_unit(doc: &Document, unit: &Unit) -> String {
     if let Some(style) = unit.codes.get(FM_KEY) {
-        let touched = unit.segments.iter().any(|s| !s.target.is_empty());
+        let touched = unit.segments.iter().any(|s| s.has_target());
         if !touched {
             if let Some(raw) = unit.codes.get(RAW_KEY).and_then(|c| c.standalone.clone()) {
                 return raw;
@@ -88,7 +88,7 @@ pub fn preview(doc: &Document) -> Option<String> {
                     if n > 0 {
                         md.push_str(&unit.separators.get(n - 1).cloned().unwrap_or_default());
                     }
-                    let inl = if seg.target.is_empty() { &seg.source } else { &seg.target };
+                    let inl = if !seg.has_target() { &seg.source } else { &seg.target };
                     md.push(SEG_OPEN);
                     md.push_str(&seg.id);
                     md.push(SEG_ID_END);
@@ -111,7 +111,7 @@ pub fn preview(doc: &Document) -> Option<String> {
 
 pub fn render_segment(doc: &Document, seg_id: &str) -> Option<String> {
     let (unit, seg) = doc.find(seg_id)?;
-    let inl = if seg.target.is_empty() { &seg.source } else { &seg.target };
+    let inl = if !seg.has_target() { &seg.source } else { &seg.target };
     let md = clean(&inlines_md(doc, unit, inl));
     let html = to_html(&md);
     let t = html.trim_end();

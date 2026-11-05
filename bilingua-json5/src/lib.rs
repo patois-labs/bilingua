@@ -147,7 +147,7 @@ fn render_token(unit: &Unit) -> Result<String, Error> {
         .get(RAW_KEY)
         .and_then(|c| c.standalone.as_deref())
         .ok_or_else(|| Error::Write(format!("unit {} lost its original string", unit.id)))?;
-    if unit.segments.iter().all(|s| s.target.is_empty()) {
+    if unit.segments.iter().all(|s| !s.has_target()) {
         return Ok(raw.to_string());
     }
     let new = expand(unit, &unit.output());

@@ -217,7 +217,7 @@ impl Filter for IniFilter {
 fn render(unit: &Unit) -> String {
     let Some(h) = unit.codes.get(HIDDEN) else { return String::new() };
     let raw = h.standalone.as_deref().unwrap_or("");
-    if !unit.translate || unit.segments.iter().all(|s| s.target.is_empty()) {
+    if !unit.translate || unit.segments.iter().all(|s| !s.has_target()) {
         return raw.to_string();
     }
     let text = plain_text(&unit.output());

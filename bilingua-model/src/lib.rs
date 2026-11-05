@@ -246,7 +246,7 @@ pub struct Segment {
     /// Unique within the document: `<unit id>` when the unit has one segment, else `<unit id>#<n>` (1-based).
     pub id: String,
     pub source: Vec<Inline>,
-    /// Empty = untranslated.
+    /// Empty = untranslated, unless `empty_target` says the translation is empty on purpose (see below).
     #[serde(default)]
     pub target: Vec<Inline>,
     #[serde(default)]
@@ -254,12 +254,39 @@ pub struct Segment {
     /// Where the target came from. `None` for monolingual files and for targets nobody labelled.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub origin: Option<Origin>,
+    /// Translated to nothing on purpose. The empty-translation rule: a segment with an empty `target` is
+    /// untranslated and the writer keeps its source text, unless `empty_target` is true; then the segment counts as
+    /// translated ([`Segment::has_target`]) and the writer writes nothing for it. [`Document::set_target_empty`]
+    /// sets it; [`Document::set_target`] with any target clears it. Left out of the JSON when false. (Localization
+    /// OS writes an empty target as an empty value or paragraph: its adapter sets this flag for an empty LocOS
+    /// target.)
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub empty_target: bool,
 }
 
 impl Segment {
     /// An untranslated segment (no target, state `New`, no origin).
     pub fn new(id: impl Into<String>, source: Vec<Inline>) -> Segment {
-        Segment { id: id.into(), source, target: vec![], state: SegState::New, origin: None }
+        Segment { id: id.into(), source, target: vec![], state: SegState::New, origin: None, empty_target: false }
+    }
+    /// True when the segment is translated: it has a target, or it was translated to nothing on purpose.
+    pub fn has_target(&self) -> bool {
+        !self.target.is_empty() || self.empty_target
+    }
+    /// The text to write: the target, nothing for an empty translation, or the source when untranslated.
+    pub fn output(&self) -> &[Inline] {
+        if self.has_target() {
+            &self.target
+        } else {
+            &self.source
+        }
+    }
+    pub fn with_empty_target(mut self, empty_target: bool) -> Segment {
+        self.empty_target = empty_target;
+        if empty_target {
+            self.target.clear();
+        }
+        self
     }
     /// Sets the target as it is (no tag check: use [`Document::set_target`] for edits).
     pub fn with_target(mut self, target: Vec<Inline>) -> Segment {
@@ -472,10 +499,15 @@ impl Unit {
         self.join(|s| &s.source)
     }
 
-    /// The text to write for this unit: each segment's target, or its source when the target is empty
-    /// (an untranslated segment is written in the source language, as every CAT tool does).
+    /// The text to write for this unit: each segment's target, or its source when the segment is untranslated
+    /// (as every CAT tool does), or nothing for a segment translated to empty ([`Segment::empty_target`]).
     pub fn output(&self) -> Vec<Inline> {
-        self.join(|s| if s.target.is_empty() { &s.source } else { &s.target })
+        self.join(|s| if s.has_target() { &s.target } else { &s.source })
+    }
+
+    /// True when some segment of a translatable unit is translated (has a target or an empty translation).
+    pub fn is_translated(&self) -> bool {
+        self.translate && self.segments.iter().any(Segment::has_target)
     }
 
     fn join<'a>(&'a self, pick: impl Fn(&'a Segment) -> &'a Vec<Inline>) -> Vec<Inline> {
@@ -845,7 +877,28 @@ impl Document {
         );
         let empty = plain_text(&target).trim().is_empty() && !target.iter().any(|i| matches!(i, Inline::Tag { .. }));
         seg.target = if empty { vec![] } else { target };
+        seg.empty_target = false;
         seg.state = if seg.target.is_empty() { SegState::New } else { SegState::Draft };
+        Ok(())
+    }
+
+    /// Marks a segment as translated to nothing on purpose (see [`Segment::empty_target`]): the writer writes an
+    /// empty value for it. State `Draft`, as for any new target. Rejects unknown segments and untranslatable units.
+    pub fn set_target_empty(&mut self, seg_id: &str) -> Result<(), Error> {
+        let (ui, si) = self
+            .units
+            .iter()
+            .enumerate()
+            .find_map(|(ui, u)| u.segments.iter().position(|s| s.id == seg_id).map(|si| (ui, si)))
+            .ok_or_else(|| Error::UnknownSegment(seg_id.to_string()))?;
+        let unit = &mut self.units[ui];
+        if !unit.translate {
+            return Err(Error::Locked(seg_id.to_string()));
+        }
+        let seg = &mut unit.segments[si];
+        seg.target.clear();
+        seg.empty_target = true;
+        seg.state = SegState::Draft;
         Ok(())
     }
 
@@ -1094,7 +1147,7 @@ impl MergeOptions {
 
     /// True when the document has at least one segment with a target.
     pub fn any_translated(doc: &Document) -> bool {
-        doc.segments().any(|(_, s)| !s.target.is_empty())
+        doc.segments().any(|(_, s)| s.has_target())
     }
 
     /// Should a format stamp the target language and fill plurals for this document? `target_lang` must be set (and
@@ -1202,8 +1255,8 @@ mod tests {
     fn output_joins_segments_and_falls_back_to_source() {
         let mut u = Unit::new("p1", vec![]);
         u.segments = vec![
-            Segment { id: "p1#1".into(), source: vec![Inline::text("One.")], target: vec![Inline::text("Uno.")], state: SegState::Draft, origin: None },
-            Segment { id: "p1#2".into(), source: vec![Inline::text("Two.")], target: vec![], state: SegState::New, origin: None },
+            Segment { id: "p1#1".into(), source: vec![Inline::text("One.")], target: vec![Inline::text("Uno.")], state: SegState::Draft, origin: None, empty_target: false },
+            Segment { id: "p1#2".into(), source: vec![Inline::text("Two.")], target: vec![], state: SegState::New, origin: None, empty_target: false },
         ];
         u.separators = vec![" ".into()];
         assert_eq!(u.output(), vec![Inline::text("Uno. Two.")]);

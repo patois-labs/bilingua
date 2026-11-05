@@ -465,7 +465,7 @@ impl FtlFilter {
                 }
             }
         }
-        let translated = doc.units.iter().any(|u| u.segments.iter().any(|s| !s.target.is_empty()));
+        let translated = doc.units.iter().any(|u| u.segments.iter().any(|s| s.has_target()));
         if let (Some(loc), true) = (fill, translated || even_untranslated) {
             check_budget(&out, &Limits::default()).map_err(|e| Error::Write(e.to_string()))?;
             out = fill_plurals(&out, loc);
@@ -495,7 +495,7 @@ fn flat(unit: &Unit, v: &[Inline]) -> String {
 fn render(unit: &Unit) -> String {
     let Some(h) = unit.codes.get(HIDDEN) else { return String::new() };
     let raw = h.standalone.as_deref().unwrap_or("");
-    if !unit.translate || unit.segments.iter().all(|s| s.target.is_empty()) {
+    if !unit.translate || unit.segments.iter().all(|s| !s.has_target()) {
         return raw.to_string();
     }
     let out = unit.output();

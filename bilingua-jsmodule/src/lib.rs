@@ -225,7 +225,7 @@ fn hidden(u: &Unit) -> Option<&CodeData> {
 
 /// The literal to write for a unit: `None` when it is unchanged (the original literal stays).
 fn new_literal(u: &Unit) -> Option<String> {
-    if u.segments.iter().all(|s| s.target.is_empty()) {
+    if u.segments.iter().all(|s| !s.has_target()) {
         return None;
     }
     let out = out_text(u, &u.output());

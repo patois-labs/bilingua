@@ -102,12 +102,12 @@ impl Xtb {
 
 /// Some unit has a target of any kind.
 fn touched(doc: &Document) -> bool {
-    doc.units.iter().any(|u| u.translate && u.segments.iter().any(|s| !s.target.is_empty()))
+    doc.units.iter().any(|u| u.translate && u.segments.iter().any(|s| s.has_target()))
 }
 
 /// Some unit's text really differs from its source.
 fn changed_text(doc: &Document) -> bool {
-    doc.units.iter().any(|u| u.translate && u.segments.iter().any(|s| !s.target.is_empty()) && u.output() != u.source())
+    doc.units.iter().any(|u| u.translate && u.segments.iter().any(|s| s.has_target()) && u.output() != u.source())
 }
 
 fn code(u: &Unit, key: &str) -> String {
