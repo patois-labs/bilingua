@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2" xmlns:gs4tr="http://www.gs4tr.org/schema/xliff-ext">
+  <file original="guide.docx" source-language="ko-KR" target-language="xx-XX" datatype="x-docx">
+    <body>
+      <trans-unit id="1"><source>계속하려면 <bpt id="1">&lt;b&gt;</bpt>설정<ept id="1">&lt;/b&gt;</ept> 메뉴를 여십시오.</source><target state="needs-translation"/></trans-unit>
+      <trans-unit id="2"><source>파일을 저장하고 닫으십시오. <ph id="2">{0}</ph> 안녕하세요 세계!</source><target state="needs-review-translation" gs4tr:score="75">파일을 저장하고 닫으십시오. (fuzzy)</target></trans-unit>
+      <trans-unit id="3"><source>메뉴를 여십시오. <g id="3"><x id="4" ctype="image"/>설정</g></source></trans-unit>
+      <trans-unit id="4" gs4tr:locked="true"><source>안녕하세요 세계!</source><target state="translated" gs4tr:score="100">안녕하세요 세계! (locked)</target></trans-unit>
+      <trans-unit id="5"><source>파일을 저장하고 닫으십시오.</source><target state="translated">파일을 저장하고 닫으십시오. (done)</target></trans-unit>
+      <trans-unit id="6" translate="no"><source>설정</source></trans-unit>
+    </body>
+  </file>
+</xliff>

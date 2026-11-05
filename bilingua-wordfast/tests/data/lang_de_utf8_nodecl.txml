@@ -1,0 +1,21 @@
+<txml locale="de_DE" version="1.0" segtype="sentence" datatype="html" targetlocale="xx_XX" createdby="bilingua test corpus">
+<skeleton>&lt;html&gt;&lt;body&gt;&lt;p&gt;</skeleton>
+<translatable blockId="1" datatype="html">
+<segment segmentId="1">
+<source>Öffnen Sie das <ut type="start" x="1">&lt;b&gt;</ut>Einstellungen<ut type="end" x="1">&lt;/b&gt;</ut> Menü, um fortzufahren.</source>
+<ws> </ws>
+</segment>
+<segment segmentId="2" gtmt="true">
+<source>Speichern und schließen Sie die Datei. <ut x="2">&lt;br/&gt;</ut>Hallo Welt! &amp; &#169;</source>
+<target>Speichern und schließen Sie die Datei. (machine)</target>
+</segment>
+</translatable>
+<skeleton>&lt;/p&gt;&lt;p&gt;</skeleton>
+<translatable blockId="2" locked="true"><segment segmentId="1"><source>Hallo Welt!</source></segment></translatable>
+<translatable blockId="3">
+<segment segmentId="1" modified="true"><source>Speichern und schließen Sie die Datei.</source><target score="100">Speichern und schließen Sie die Datei. (done)</target></segment>
+<segment segmentId="2"><source><![CDATA[Öffnen Sie das <raw> Hallo Welt!]]></source><target score="85">Öffnen Sie das (fuzzy)</target></segment>
+<segment segmentId="3"><source>Menü, um fortzufahren. <!-- inline comment -->Einstellungen</source><comments><comment creationid="pm" type="text">Hallo Welt!</comment></comments></segment>
+</translatable>
+<localizable blockId="4"><segment segmentId="1"><source>Einstellungen</source></segment></localizable>
+</txml>
