@@ -1,0 +1,18 @@
+﻿{
+  // One greeting and one note per language.
+  "en": "Welcome to Larchmoor",
+  "_en.comment": "English: shown on the start page.",
+  "es": "Bienvenido a Larchmoor",
+  "fr": "Bienvenue \u00e0 Larchmoor",
+  "it": "Benvenuti a Larchmoor",
+  "de": "Willkommen in Larchmoor, Gr\u00fc\u00df!",
+  "nl": "Welkom in Larchmoor",
+  "pt": "Bem-vindo a Larchmoor",
+  "ja": "ラーチムアへようこそ",
+  "zh": "欢迎来到拉奇莫尔",
+  "ko": "라치모어에 오신 것을 환영합니다",
+  "ar": "مرحبا بكم في لارتشمور",
+  "_ar.comment": "Arabic reads right to left.",
+  "ru": "Добро пожаловать в Ларчмур 😀",
+  "mixed": "Order #{0}: \u202bمرحبا\u202c ready"
+}
