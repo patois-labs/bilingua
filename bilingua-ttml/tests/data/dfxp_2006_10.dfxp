@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<tt xmlns="http://www.w3.org/2006/10/ttaf1" xmlns:tts="http://www.w3.org/ns/ttaf1#style" xmlns:ttm="http://www.w3.org/2006/10/ttaf1#metadata" xml:lang="en">
+  <head><metadata><ttm:title>Bakery en</ttm:title></metadata><styling><style xml:id="s1" tts:color="white"/></styling></head>
+  <body><div>
+    <p begin="1s" end="3s" style="s1">Welcome to the bakery</p>
+    <p begin="4s" end="6s" style="s1"><span tts:fontWeight="bold">You have {0} orders for {1}</span></p>
+    <p begin="7s" end="9s" style="s1">Fresh bread<br/>every morning</p>
+    <p begin="10s" end="12s" style="s1">Press %1$s to continue</p>
+    <p begin="13s" end="15s" style="s1">Thank you &amp; goodbye</p>
+  </div></body>
+</tt>

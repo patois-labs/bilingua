@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="Big5"?>
+<tt xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling" xmlns:ttm="http://www.w3.org/ns/ttml#metadata" xml:lang="zh">
+  <head><metadata><ttm:title>Bakery zh</ttm:title></metadata><styling><style xml:id="s1" tts:color="white"/></styling></head>
+  <body><div>
+    <p begin="1s" end="3s" style="s1">歡迎來到麵包店</p>
+    <p begin="4s" end="6s" style="s1"><span tts:fontWeight="bold">您有{0}個訂單,客戶{1}</span></p>
+    <p begin="7s" end="9s" style="s1">新鮮麵包<br/>每天早晨</p>
+    <p begin="10s" end="12s" style="s1">按%1$s繼續</p>
+    <p begin="13s" end="15s" style="s1">謝謝 &amp; 再見</p>
+  </div></body>
+</tt>

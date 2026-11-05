@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<tt xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling" xmlns:ttm="http://www.w3.org/ns/ttml#metadata" xml:lang="ru">
+  <head><metadata><ttm:title>Bakery ru</ttm:title></metadata><styling><style xml:id="s1" tts:color="white"/></styling></head>
+  <body><div>
+    <p begin="1s" end="3s" style="s1">Добро пожаловать в пекарню</p>
+    <p begin="4s" end="6s" style="s1"><span tts:fontWeight="bold">У вас {0} заказов для {1}</span></p>
+    <p begin="7s" end="9s" style="s1">Свежий хлеб<br/>каждое утро</p>
+    <p begin="10s" end="12s" style="s1">Нажмите %1$s для продолжения</p>
+    <p begin="13s" end="15s" style="s1">Спасибо &amp; до свидания</p>
+  </div></body>
+</tt>
