@@ -59,6 +59,10 @@ pub(crate) fn perr(msg: impl Into<String>) -> Error {
     Error::Parse { format: "vsdx".into(), msg: msg.into() }
 }
 
+/// The `format_options` keys of the Visio filter.
+pub const FORMAT_OPTIONS: &[bilingua_model::FormatOptionKey] =
+    &[bilingua_model::FormatOptionKey::bool("vsdx.translate_comments", "Make the comments of visio/comments.xml units (style \"comment\").")];
+
 /// The Visio filter. Comments are not extracted by default (LocOS: the project's "translate comments" option);
 /// use [`Vsdx::with_comments`].
 #[derive(Debug, Clone, Copy, Default)]
@@ -83,8 +87,11 @@ impl Filter for Vsdx {
         let has = |needle: &[u8]| bytes.windows(needle.len()).any(|w| w == needle);
         bytes.starts_with(b"PK\x03\x04") && has(b"[Content_Types].xml") && has(b"visio/")
     }
+    fn format_option_keys(&self) -> &'static [bilingua_model::FormatOptionKey] {
+        FORMAT_OPTIONS
+    }
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
-        extract::extract_doc(bytes, opts, false)
+        extract::extract_doc(bytes, opts, opts.format_flag("vsdx.translate_comments").unwrap_or(false))
     }
     fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
         render::merge(doc, opts)

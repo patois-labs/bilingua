@@ -31,7 +31,12 @@ const ARCHIVE: &str = "\0bilingua-odf-archive";
 const COMMENT_BASE: usize = 1_000_000;
 const PARTS: [&str; 2] = ["content.xml", "styles.xml"];
 
-/// Options that `ExtractOptions` has no field for.
+/// The `format_options` keys of the OpenDocument filters: one key for odt, ods, odp and odg.
+pub const FORMAT_OPTIONS: &[FormatOptionKey] =
+    &[FormatOptionKey::bool("odf.translate_comments", "Make the paragraphs of comments (office:annotation) units.")];
+
+/// Options that `ExtractOptions` has no field for. `format_options["odf.translate_comments"]`, when set, wins
+/// over the filter's own `translate_comments`.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct OdfOptions {
     /// Make the paragraphs of comments (`office:annotation`) units (`c0`, `c1`, ...). Off by default: the comment
@@ -389,8 +394,15 @@ macro_rules! odf_filter {
             fn sniff(&self, bytes: &[u8]) -> bool {
                 sniff_mimetype(bytes, &$mimes)
             }
+            fn format_option_keys(&self) -> &'static [FormatOptionKey] {
+                FORMAT_OPTIONS
+            }
             fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
-                extract_doc(bytes, opts, $id, &self.options)
+                let mut o = self.options;
+                if let Some(on) = opts.format_flag("odf.translate_comments") {
+                    o.translate_comments = on;
+                }
+                extract_doc(bytes, opts, $id, &o)
             }
             fn merge_with(&self, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
                 merge_doc(doc, opts)

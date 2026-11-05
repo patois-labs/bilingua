@@ -22,9 +22,20 @@ pub struct MarkdownFilter;
 
 const ID: &str = "markdown";
 
+/// The `format_options` keys of the Markdown filter: LocOS export keywords, accepted so the adapter is not refused.
+pub const FORMAT_OPTIONS: &[bilingua_model::FormatOptionKey] = &[
+    bilingua_model::FormatOptionKey::text("markdown.walk", "Accepted and ignored: LocOS's pre-#731 walk stamp; Bilingua has one walk, the current one."),
+    bilingua_model::FormatOptionKey::text("markdown.md_walk", "Accepted and ignored: the same as markdown.walk (LocOS's own keyword name)."),
+    bilingua_model::FormatOptionKey::text("markdown.fm_keys", "Accepted and ignored for now: LocOS's front matter keys stamp (Track D)."),
+];
+
 impl Filter for MarkdownFilter {
     fn id(&self) -> &'static str {
         ID
+    }
+
+    fn format_option_keys(&self) -> &'static [bilingua_model::FormatOptionKey] {
+        FORMAT_OPTIONS
     }
 
     fn extensions(&self) -> &'static [&'static str] {

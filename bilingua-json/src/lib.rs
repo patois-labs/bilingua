@@ -21,9 +21,17 @@ const BOM: &[u8] = &[0xEF, 0xBB, 0xBF];
 /// Key in `Unit::codes` that holds the original string token (a hidden code, not a tag id).
 const RAW_KEY: &str = "$raw";
 
+/// The `format_options` keys of the JSON filter.
+pub const FORMAT_OPTIONS: &[bilingua_model::FormatOptionKey] =
+    &[bilingua_model::FormatOptionKey::text("json.dialect", "Accepted and ignored for now: LocOS's JSON dialect stamp (Track D).")];
+
 impl Filter for JsonFilter {
     fn id(&self) -> &'static str {
         ID
+    }
+
+    fn format_option_keys(&self) -> &'static [bilingua_model::FormatOptionKey] {
+        FORMAT_OPTIONS
     }
 
     fn extensions(&self) -> &'static [&'static str] {

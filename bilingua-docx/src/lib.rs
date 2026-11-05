@@ -403,6 +403,12 @@ pub fn merge_with_report(doc: &Document) -> Result<(Vec<u8>, MergeReport), Error
     ))
 }
 
+/// The `format_options` keys of the DOCX filter.
+pub const FORMAT_OPTIONS: &[bilingua_model::FormatOptionKey] = &[
+    bilingua_model::FormatOptionKey::bool("docx.translate_comments", "Translate Word comments (the default); false keeps them as locked context."),
+    bilingua_model::FormatOptionKey::text("docx.walk", "Accepted and ignored: LocOS's numbering walk stamp; Bilingua has one walk, the current one."),
+];
+
 impl Filter for Docx {
     fn id(&self) -> &'static str {
         "docx"
@@ -414,8 +420,20 @@ impl Filter for Docx {
         let has = |needle: &[u8]| bytes.windows(needle.len()).any(|w| w == needle);
         bytes.starts_with(b"PK\x03\x04") && has(b"[Content_Types].xml") && has(b"word/")
     }
+    fn format_option_keys(&self) -> &'static [bilingua_model::FormatOptionKey] {
+        FORMAT_OPTIONS
+    }
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
-        extract_doc(bytes, opts)
+        let mut doc = extract_doc(bytes, opts)?;
+        // Word comments are part of the document walk (as in LocOS): with the option off they stay in the
+        // document as locked context, so unit ids and the skeleton do not change
+        if opts.format_flag("docx.translate_comments") == Some(false) {
+            for u in doc.units.iter_mut().filter(|u| u.context.kind.as_deref() == Some("comment")) {
+                u.translate = false;
+                u.lock_reason = Some("comments are not translated (docx.translate_comments)".into());
+            }
+        }
+        Ok(doc)
     }
     fn merge_with(&self, doc: &Document, _opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
         // The parts are UTF-8 XML, and the language is set on the runs this merge rewrites (translated text), so neither

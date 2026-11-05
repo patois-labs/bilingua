@@ -112,6 +112,13 @@ pub fn merge_with_report(doc: &Document) -> Result<(Vec<u8>, MergeReport), Error
     Ok((bytes, MergeReport { warnings: r.warnings }))
 }
 
+/// The `format_options` keys of the PPTX filter. `pptx.translate_comments` is accepted so one project option can
+/// be sent to every Office format, but slide comments are not extracted yet: `true` adds a warning.
+pub const FORMAT_OPTIONS: &[bilingua_model::FormatOptionKey] = &[
+    bilingua_model::FormatOptionKey::bool("pptx.translate_comments", "Translate slide comments (not supported yet: true adds a warning)."),
+    bilingua_model::FormatOptionKey::text("pptx.walk", "Accepted and ignored: LocOS's numbering walk stamp; Bilingua has one walk, the current one."),
+];
+
 impl Filter for Pptx {
     fn id(&self) -> &'static str {
         "pptx"
@@ -123,8 +130,19 @@ impl Filter for Pptx {
         let has = |needle: &[u8]| bytes.windows(needle.len()).any(|w| w == needle);
         bytes.starts_with(b"PK\x03\x04") && has(b"[Content_Types].xml") && has(b"ppt/")
     }
+    fn format_option_keys(&self) -> &'static [bilingua_model::FormatOptionKey] {
+        FORMAT_OPTIONS
+    }
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
-        extract::extract_doc(bytes, opts)
+        let mut doc = extract::extract_doc(bytes, opts)?;
+        if opts.format_flag("pptx.translate_comments") == Some(true) {
+            doc.warnings.push(Warning::new(
+                "format_option",
+                "pptx.translate_comments",
+                "Slide comments are not extracted by this version, so they stay as they are.",
+            ));
+        }
+        Ok(doc)
     }
     fn merge_with(&self, doc: &Document, _opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
         // The parts are UTF-8 XML, and the language is set on the runs this merge rewrites (translated text), so neither

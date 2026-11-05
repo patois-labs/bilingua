@@ -238,3 +238,16 @@ fn the_binary_runs_and_reports_errors_with_exit_code_1() {
     assert_eq!(bad.status.code(), Some(1));
     assert!(String::from_utf8_lossy(&bad.stderr).starts_with("bilingua: unknown command"));
 }
+
+#[test]
+fn format_options_are_listed_and_checked() {
+    let list = run(&["options"]).unwrap();
+    assert!(list.contains("csv.columns\ttext") && list.contains("odf.translate_comments\tbool"), "{list}");
+    let d = tmp("opts");
+    std::fs::write(d.join("a.txt"), TXT).unwrap();
+    let f = p(&d, "a.txt");
+    assert!(run(&["segment", &f, "--option", "docx.translate_comments=false"]).is_ok());
+    let e = run(&["segment", &f, "--option", "docx.translate_coments=false"]).unwrap_err();
+    assert!(e.contains("docx.translate_coments"), "{e}");
+    assert!(run(&["segment", &f, "--option", "novalue"]).is_err());
+}

@@ -56,6 +56,26 @@ impl Default for MdxOptions {
     }
 }
 
+/// The `format_options` keys of the MDX filter (each a comma-separated list that replaces the default).
+pub const FORMAT_OPTIONS: &[FormatOptionKey] = &[
+    FormatOptionKey::text("mdx.attrs", "JSX attribute names whose string values are units, comma separated (LOC_TMS_MDX_ATTRS)."),
+    FormatOptionKey::text("mdx.front_matter_keys", "Front matter keys whose string values are units, comma separated (LOC_TMS_FRONT_MATTER_KEYS)."),
+];
+
+impl MdxOptions {
+    /// These options with `mdx.attrs` and `mdx.front_matter_keys` from `format_options` (each replaces its list).
+    pub fn from_format_options(mut self, opts: &ExtractOptions) -> MdxOptions {
+        let list = |s: &str| s.split(',').map(str::trim).filter(|t| !t.is_empty()).map(str::to_string).collect::<Vec<_>>();
+        if let Some(a) = opts.format_option("mdx.attrs") {
+            self.attrs = list(a);
+        }
+        if let Some(k) = opts.format_option("mdx.front_matter_keys") {
+            self.front_matter_keys = list(k);
+        }
+        self
+    }
+}
+
 /// The MDX filter.
 pub struct Mdx;
 
@@ -110,8 +130,11 @@ impl Filter for Mdx {
         false
     }
 
+    fn format_option_keys(&self) -> &'static [FormatOptionKey] {
+        FORMAT_OPTIONS
+    }
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
-        self.extract_with(bytes, opts, &MdxOptions::default())
+        self.extract_with(bytes, opts, &MdxOptions::default().from_format_options(opts))
     }
 
     fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {

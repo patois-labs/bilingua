@@ -38,6 +38,8 @@ impl From<engine::Error> for Fail {
             E::Limit(_) => "limit",
             E::Encoding(_) => "encoding",
             E::Io(_) => "io",
+            // the LocOS adapter maps this code to its own invalid_argument
+            E::FormatOption { .. } => "invalid_argument",
             _ => "error",
         };
         Fail::new(code, e.to_string())
@@ -176,6 +178,24 @@ fn parse_granularity(s: &str) -> Result<Granularity, Fail> {
     }
 }
 
+/// `format_options` as text: a dict of str to str, bool or int.
+fn format_option_map(v: Value) -> Result<std::collections::BTreeMap<String, String>, Fail> {
+    let Value::Object(m) = v else {
+        return Err(Fail::new("invalid_argument", "format_options must be a dict"));
+    };
+    let mut out = std::collections::BTreeMap::new();
+    for (k, v) in m {
+        let s = match v {
+            Value::String(s) => s,
+            Value::Bool(b) => b.to_string(),
+            Value::Number(n) if n.is_i64() || n.is_u64() => n.to_string(),
+            other => return Err(Fail::new("invalid_argument", format!("format_options[{k:?}] must be str, bool or int, not {other}"))),
+        };
+        out.insert(k, s);
+    }
+    Ok(out)
+}
+
 /// Opens a file and returns the Document as dicts and lists.
 #[pyfunction]
 #[allow(clippy::too_many_arguments)] // one keyword argument per option
@@ -200,13 +220,14 @@ fn extract(
             Some(serde_json::from_value(v).map_err(|e| to_py_err(py, Fail::new("invalid_argument", format!("limits: {e}"))))?)
         }
     };
-    // Options only one format knows, e.g. {"ftl.translate_terms": "true"}; values are strings.
+    // Options only one format knows, e.g. {"ftl.translate_terms": True, "csv.columns": "source=1"}; values are
+    // str, bool or int (sent to the engine as text: true/false, decimal).
     let format_options: std::collections::BTreeMap<String, String> = match format_options {
         None => Default::default(),
         Some(o) if o.is_none() => Default::default(),
         Some(o) => {
             let v = from_py(o, 0).map_err(|f| to_py_err(py, f))?;
-            serde_json::from_value(v).map_err(|e| to_py_err(py, Fail::new("invalid_argument", format!("format_options: {e}"))))?
+            format_option_map(v).map_err(|f| to_py_err(py, f))?
         }
     };
     let (name, data) = (name.to_string(), data.to_vec());

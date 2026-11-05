@@ -48,6 +48,32 @@ pub struct CsvOptions {
     pub target_locales: Vec<String>,
 }
 
+/// The `format_options` keys of the CSV and TSV filters (the same `csv.` family for both).
+pub const FORMAT_OPTIONS: &[FormatOptionKey] = &[
+    FormatOptionKey::text("csv.columns", "The column mapping, as CsvOptions::columns: source=English, target.de=German, key=id, ..."),
+    FormatOptionKey::text("csv.target_locales", "The project's target locales, comma separated (de, fr-FR), so a header may name a language."),
+    FormatOptionKey::text("csv.table", "Accepted and ignored: LocOS's stored column plan; Bilingua plans the columns again from csv.columns."),
+];
+
+impl CsvOptions {
+    /// These options with `csv.columns` and `csv.target_locales` from `format_options` applied: the mapping is
+    /// replaced, the locales are added.
+    pub fn from_format_options(&self, opts: &ExtractOptions) -> CsvOptions {
+        let mut o = self.clone();
+        if let Some(c) = opts.format_option("csv.columns") {
+            o.columns = Some(c.to_string());
+        }
+        if let Some(l) = opts.format_option("csv.target_locales") {
+            for t in l.split(',').map(str::trim).filter(|t| !t.is_empty()) {
+                if !o.target_locales.iter().any(|x| x == t) {
+                    o.target_locales.push(t.to_string());
+                }
+            }
+        }
+        o
+    }
+}
+
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Kind {
     Csv,
@@ -340,8 +366,11 @@ macro_rules! filter_impl {
             fn sniff(&self, bytes: &[u8]) -> bool {
                 head_text(bytes).is_some_and(|t| sniff::looks_tabular(&t, $only))
             }
+            fn format_option_keys(&self) -> &'static [FormatOptionKey] {
+                FORMAT_OPTIONS
+            }
             fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
-                extract_impl($kind, bytes, opts, &self.options)
+                extract_impl($kind, bytes, opts, &self.options.from_format_options(opts))
             }
             fn merge_with(&self, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
                 merge_impl(doc, opts)

@@ -22,6 +22,8 @@ Usage:
       Words per unit and in total. Han, Hiragana and Katakana count one word per character.
   bilingua pseudo <file> [--source en] [--target xx] [--mode ...] [-o out]
       Pseudo-translate: accented letters, about 30 percent longer, in brackets, tags kept.
+  bilingua options
+      List the format options (--option key=value on extract, segment, wordcount and pseudo).
 
 Formats: .txt, .json, .md (more come with the Bilingua format crates).
 ";
@@ -35,12 +37,14 @@ struct Args {
     output: Option<PathBuf>,
     skeleton: Option<PathBuf>,
     json: bool,
+    /// `--option key=value`, repeatable: `ExtractOptions::format_options`.
+    options: Vec<(String, String)>,
 }
 
 fn parse_args(args: &[String]) -> Result<Args, String> {
     let mut it = args.iter();
     let cmd = it.next().ok_or("no command given")?.clone();
-    let mut a = Args { cmd, positional: vec![], source: None, target: None, mode: Granularity::Sentence, output: None, skeleton: None, json: false };
+    let mut a = Args { cmd, positional: vec![], source: None, target: None, mode: Granularity::Sentence, output: None, skeleton: None, json: false, options: vec![] };
     while let Some(x) = it.next() {
         let mut value = |name: &str| it.next().cloned().ok_or(format!("{name} needs a value"));
         match x.as_str() {
@@ -57,6 +61,11 @@ fn parse_args(args: &[String]) -> Result<Args, String> {
             "-o" | "--output" => a.output = Some(PathBuf::from(value("-o")?)),
             "--skeleton" => a.skeleton = Some(PathBuf::from(value("--skeleton")?)),
             "--json" => a.json = true,
+            "--option" => {
+                let kv = value("--option")?;
+                let (k, v) = kv.split_once('=').ok_or(format!("--option needs key=value, not {kv}"))?;
+                a.options.push((k.trim().to_string(), v.trim().to_string()));
+            }
             s if s.starts_with('-') && s.len() > 1 => return Err(format!("unknown option {s}")),
             _ => a.positional.push(x.clone()),
         }
@@ -76,7 +85,10 @@ fn open(a: &Args, path: &str) -> Result<(Document, String), String> {
     let bytes = std::fs::read(path).map_err(|e| format!("cannot read {path}: {e}"))?;
     let name = Path::new(path).file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_else(|| path.to_string());
     let src = a.source.clone().unwrap_or_else(|| "en".to_string());
-    let opts = ExtractOptions::new().with_source_lang(src.clone()).with_target_lang(a.target.clone()).with_granularity(a.mode);
+    let mut opts = ExtractOptions::new().with_source_lang(src.clone()).with_target_lang(a.target.clone()).with_granularity(a.mode);
+    for (k, v) in &a.options {
+        opts = opts.with_format_option(k.as_str(), v);
+    }
     let mut doc = extract(&name, &bytes, &opts).map_err(|e| format!("{path}: {e}"))?;
     doc.source_lang = Some(src);
     Ok((doc, name))
@@ -95,6 +107,17 @@ pub fn run(args: &[String], out: &mut dyn Write) -> Result<(), String> {
         "segment" => cmd_segment(&a, out),
         "wordcount" => cmd_wordcount(&a, out),
         "pseudo" => cmd_pseudo(&a, out),
+        "options" => {
+            for k in format_option_keys() {
+                let kind = match k.kind {
+                    OptionKind::Bool => "bool",
+                    OptionKind::Int => "int",
+                    _ => "text",
+                };
+                let _ = writeln!(out, "{}\t{kind}\t{}", k.key, k.help);
+            }
+            Ok(())
+        }
         other => Err(format!("unknown command '{other}'. Run 'bilingua help'.")),
     }
 }

@@ -152,6 +152,21 @@ pub fn filters() -> Vec<Box<dyn Filter>> {
     all
 }
 
+/// Every `format_options` key some filter declares, in filter order without repeats. [`extract`] refuses any
+/// other key (and a value of the wrong kind) with [`Error::FormatOption`]; a key for another format than the
+/// file's is accepted, so one set of options can be sent with every file.
+pub fn format_option_keys() -> Vec<FormatOptionKey> {
+    let mut out: Vec<FormatOptionKey> = Vec::new();
+    for f in filters() {
+        for k in f.format_option_keys() {
+            if !out.iter().any(|o| o.key == k.key) {
+                out.push(*k);
+            }
+        }
+    }
+    out
+}
+
 /// Formats whose files carry their own segmentation (XLIFF and its dialects, translation packages): sentence
 /// splitting would break the link between a segment and the file's own segment.
 fn own_segmentation(id: &str) -> bool {
@@ -196,6 +211,8 @@ pub fn detect(name: &str, bytes: &[u8]) -> Option<Box<dyn Filter>> {
 /// Extracts and segments a file. The returned document's `format` names the filter that `merge` will use.
 /// The source language comes from `opts.source_lang` (default "en"); it picks the sentence rules.
 pub fn extract(name: &str, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
+    // a misspelt option would otherwise be ignored without a word
+    check_format_options(opts, &format_option_keys())?;
     let f = detect(name, bytes).ok_or_else(|| Error::Unsupported(format!("no parser for {name}")))?;
     // the safety net for every format, also one that forgets to call the guards: input size first, the unit,
     // segment and unit-length caps at the end

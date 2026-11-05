@@ -62,6 +62,15 @@ pub(crate) struct Meta {
     pub packed: std::collections::BTreeMap<String, zipio::Packed>,
 }
 
+/// The `format_options` keys of the XLSX filter. When set they win over the filter's own `XlsxOptions`.
+pub const FORMAT_OPTIONS: &[FormatOptionKey] = &[
+    FormatOptionKey::bool("xlsx.translate_comments", "Make cell comments (notes and threaded comments) units."),
+    FormatOptionKey::bool("xlsx.translate_sheet_names", "Make sheet names units (formulas and defined names are rewritten)."),
+    FormatOptionKey::bool("xlsx.skip_hidden", "Leave out text that is only shown in hidden sheets, rows or columns."),
+    FormatOptionKey::text("xlsx.walk", "Accepted and ignored: LocOS's numbering walk stamp; Bilingua has one walk, the current one."),
+    FormatOptionKey::text("xlsx.table", "Accepted and ignored: LocOS's column plan (Bilingua has no column mode for workbooks)."),
+];
+
 #[derive(Default)]
 pub struct Xlsx {
     pub options: XlsxOptions,
@@ -152,8 +161,20 @@ impl Filter for Xlsx {
         let has = |needle: &[u8]| bytes.windows(needle.len()).any(|w| w == needle);
         bytes.starts_with(b"PK\x03\x04") && has(b"[Content_Types].xml") && has(b"xl/")
     }
+    fn format_option_keys(&self) -> &'static [FormatOptionKey] {
+        FORMAT_OPTIONS
+    }
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
-        extract::extract_doc(bytes, opts, &self.options)
+        let mut xo = self.options.clone();
+        let set = |key: &str, field: &mut bool| {
+            if let Some(on) = opts.format_flag(key) {
+                *field = on;
+            }
+        };
+        set("xlsx.translate_comments", &mut xo.translate_comments);
+        set("xlsx.translate_sheet_names", &mut xo.translate_sheet_names);
+        set("xlsx.skip_hidden", &mut xo.skip_hidden);
+        extract::extract_doc(bytes, opts, &xo)
     }
     fn merge_with(&self, doc: &Document, _opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
         // The parts are UTF-8 XML and a workbook has no language to stamp, so neither option changes anything.

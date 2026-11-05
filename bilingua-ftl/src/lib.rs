@@ -378,9 +378,17 @@ fn py_strip_end(s: &str) -> &str {
     s.trim_end_matches(py_space)
 }
 
+/// The `format_options` keys of the FTL filter.
+pub const FORMAT_OPTIONS: &[bilingua_model::FormatOptionKey] =
+    &[bilingua_model::FormatOptionKey::bool("ftl.translate_terms", "Extract term values (-term = ...) as units too (LocOS leaves them out).")];
+
 impl Filter for FtlFilter {
     fn id(&self) -> &'static str {
         ID
+    }
+
+    fn format_option_keys(&self) -> &'static [bilingua_model::FormatOptionKey] {
+        FORMAT_OPTIONS
     }
 
     fn extensions(&self) -> &'static [&'static str] {

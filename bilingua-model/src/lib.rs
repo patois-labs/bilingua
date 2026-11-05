@@ -810,8 +810,10 @@ pub struct ExtractOptions {
     /// Safety limits for this call; `None` uses [`Limits::default`] (Localization OS's numbers).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub limits: Option<Limits>,
-    /// Options only one format knows, as `"<format>.<name>"` to a string value (`"ftl.translate_terms"` to
-    /// `"true"`). Booleans are `true`/`false`/`1`/`0`/`yes`/`no`; a format ignores keys it does not know.
+    /// Options only one format knows, as `"<format>.<name>"` to a text value (`"ftl.translate_terms"` to
+    /// `"true"`). Each filter declares its keys and their kind ([`Filter::format_option_keys`]); the `bilingua`
+    /// facade refuses a key no filter declares, or a value of the wrong kind, with [`Error::FormatOption`].
+    /// Booleans are `true`/`false`/`1`/`0`/`yes`/`no`/`on`/`off`; integers are decimal.
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub format_options: BTreeMap<String, String>,
 }
@@ -868,10 +870,90 @@ impl ExtractOptions {
         }
     }
 
+    /// A format option as an integer (`None` when unset or not a decimal integer).
+    pub fn format_int(&self, key: &str) -> Option<i64> {
+        self.format_option(key)?.trim().parse().ok()
+    }
+
     /// The limits in force: the caller's, or the defaults.
     pub fn limits(&self) -> Limits {
         self.limits.unwrap_or_default()
     }
+}
+
+/// The kind of value a format option takes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum OptionKind {
+    /// `true`/`false` (also `1`/`0`, `yes`/`no`, `on`/`off`).
+    Bool,
+    /// A decimal integer.
+    Int,
+    /// Any text.
+    Text,
+}
+
+/// One option a format understands in `ExtractOptions::format_options`: its full key (`"csv.columns"`), the kind
+/// of value, and a line of help for tools that list the options.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub struct FormatOptionKey {
+    pub key: &'static str,
+    pub kind: OptionKind,
+    pub help: &'static str,
+}
+
+impl FormatOptionKey {
+    pub const fn new(key: &'static str, kind: OptionKind, help: &'static str) -> FormatOptionKey {
+        FormatOptionKey { key, kind, help }
+    }
+    pub const fn bool(key: &'static str, help: &'static str) -> FormatOptionKey {
+        FormatOptionKey::new(key, OptionKind::Bool, help)
+    }
+    pub const fn int(key: &'static str, help: &'static str) -> FormatOptionKey {
+        FormatOptionKey::new(key, OptionKind::Int, help)
+    }
+    pub const fn text(key: &'static str, help: &'static str) -> FormatOptionKey {
+        FormatOptionKey::new(key, OptionKind::Text, help)
+    }
+
+    /// Refuses a value that is not of this key's kind.
+    pub fn check(&self, value: &str) -> Result<(), Error> {
+        let v = value.trim();
+        let ok = match self.kind {
+            OptionKind::Bool => matches!(v.to_ascii_lowercase().as_str(), "true" | "1" | "yes" | "on" | "false" | "0" | "no" | "off"),
+            OptionKind::Int => v.parse::<i64>().is_ok(),
+            OptionKind::Text => true,
+        };
+        if ok {
+            Ok(())
+        } else {
+            let want = match self.kind {
+                OptionKind::Bool => "true or false",
+                OptionKind::Int => "an integer",
+                OptionKind::Text => "text",
+            };
+            Err(Error::FormatOption { key: self.key.to_string(), msg: format!("the value {value:?} is not {want}") })
+        }
+    }
+}
+
+/// Checks every `format_options` entry against the keys the filters declare: an unknown key or a value of the
+/// wrong kind is an [`Error::FormatOption`]. The `bilingua` facade calls this with every filter's keys, so an
+/// option meant for another format (the adapter sends `docx.translate_comments` with every file) is accepted.
+pub fn check_format_options(opts: &ExtractOptions, known: &[FormatOptionKey]) -> Result<(), Error> {
+    for (k, v) in &opts.format_options {
+        match known.iter().find(|f| f.key == k) {
+            Some(f) => f.check(v)?,
+            None => {
+                let family = k.split('.').next().unwrap_or("");
+                let same: Vec<&str> = known.iter().filter(|f| f.key.split('.').next() == Some(family)).map(|f| f.key).collect();
+                let msg = if same.is_empty() { "no format has this option".to_string() } else { format!("unknown option; {family} knows {}", same.join(", ")) };
+                return Err(Error::FormatOption { key: k.clone(), msg });
+            }
+        }
+    }
+    Ok(())
 }
 
 /// How a merge writes text files.
@@ -968,6 +1050,9 @@ pub enum Error {
     /// The bytes cannot be read as text in any encoding Bilingua knows.
     #[error("{0}")]
     Encoding(String),
+    /// A `format_options` key no format declares, or a value of the wrong kind.
+    #[error("format option {key}: {msg}")]
+    FormatOption { key: String, msg: String },
     #[error(transparent)]
     Io(#[from] std::io::Error),
 }
@@ -984,6 +1069,11 @@ pub trait Filter: Send + Sync {
     /// targets and states. False for source files.
     fn bilingual(&self) -> bool {
         false
+    }
+    /// The `ExtractOptions::format_options` keys this filter reads (`"csv.columns"`, ...). The facade refuses keys
+    /// no filter declares. Default: none.
+    fn format_option_keys(&self) -> &'static [FormatOptionKey] {
+        &[]
     }
     /// Source file to document. One segment per unit; no sentence splitting here.
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error>;

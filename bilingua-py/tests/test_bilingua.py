@@ -379,4 +379,10 @@ def test_format_options_reach_the_format():
     ftl = b"-brand = Firefox\nhello = Hello\n"
     assert len(bilingua.extract("a.ftl", ftl)["units"]) == 1
     assert len(bilingua.extract("a.ftl", ftl, format_options={"ftl.translate_terms": "true"})["units"]) == 2
+    # str, bool and int values; a key no format declares is a typed error
+    assert len(bilingua.extract("a.ftl", ftl, format_options={"ftl.translate_terms": True})["units"]) == 2
+    assert len(bilingua.extract("a.ftl", ftl, format_options={"ftl.translate_terms": 0})["units"]) == 1
     assert error_code(bilingua.extract, "a.ftl", ftl, format_options={"x": 1}) == "invalid_argument"
+    assert error_code(bilingua.extract, "a.ftl", ftl, format_options={"ftl.translate_terms": "maybe"}) == "invalid_argument"
+    assert error_code(bilingua.extract, "a.ftl", ftl, format_options={"ftl.translate_terms": [1]}) == "invalid_argument"
+    assert error_code(bilingua.extract, "a.ftl", ftl, format_options=["x"]) == "invalid_argument"
