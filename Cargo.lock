@@ -31,6 +31,7 @@ dependencies = [
  "bilingua-json",
  "bilingua-json5",
  "bilingua-markdown",
+ "bilingua-mo",
  "bilingua-model",
  "bilingua-po",
  "bilingua-pptx",
@@ -159,6 +160,16 @@ version = "0.1.0"
 dependencies = [
  "bilingua-model",
  "pulldown-cmark",
+]
+
+[[package]]
+name = "bilingua-mo"
+version = "0.1.0"
+dependencies = [
+ "bilingua-model",
+ "bilingua-po",
+ "proptest",
+ "serde_json",
 ]
 
 [[package]]
