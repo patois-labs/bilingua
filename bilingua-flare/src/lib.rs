@@ -136,7 +136,7 @@ fn part_units(idx: usize, path: &str, items: &[parts::Item]) -> Vec<Unit> {
             u.context.key = it.key.clone();
             u.context.location = Some(format!("{path} item {}", j + 1));
             for (id, tok) in &it.tokens {
-                u.codes.insert(id.clone(), CodeData { standalone: Some(tok.clone()), label: Some("variable".into()), open: None, close: None });
+                u.codes.insert(id.clone(), CodeData::standalone(tok.clone()).with_label("variable"));
             }
             u
         })
@@ -179,13 +179,8 @@ fn extract_flare(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error>
     }
     let skeleton = Skeleton::zip(
             vec![
-                ZipEntry { name: ARCHIVE.into(), data: ZipData::Raw(bytes.to_vec()) },
-                ZipEntry {
-                    name: OPTIONS.into(),
-                    data: ZipData::Raw(
-                        serde_json::to_vec(&Opts { include_locked: opts.include_locked, limits }).map_err(|e| Error::Write(e.to_string()))?,
-                    ),
-                },
+                ZipEntry::raw(ARCHIVE, bytes.to_vec()),
+                ZipEntry::raw(OPTIONS, serde_json::to_vec(&Opts { include_locked: opts.include_locked, limits }).map_err(|e| Error::Write(e.to_string()))?),
             ],
         bilingua_model::parser_info!(),
     );

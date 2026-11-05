@@ -172,7 +172,7 @@ fn a_code_with_a_line_break_is_refused() {
     let src = b"  0\nSECTION\n  2\nENTITIES\n  0\nMTEXT\n  1\n{\\fArial;Living} room\n  0\nENDSEC\n  0\nEOF\n";
     let mut doc = extract(src).unwrap();
     let u = &mut doc.units[0];
-    u.codes.insert("1".into(), CodeData { standalone: Some("x\n  0\nEOF".into()), ..Default::default() });
+    u.codes.insert("1".into(), CodeData::standalone("x\n  0\nEOF"));
     u.segments[0].target = vec![Inline::tag("1", TagKind::Standalone, "x"), Inline::text("Wohnzimmer")];
     assert!(matches!(Dxf.merge(&doc), Err(Error::Unwritable { .. })));
 }

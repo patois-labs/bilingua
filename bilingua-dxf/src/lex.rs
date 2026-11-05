@@ -287,13 +287,13 @@ pub fn parse_value(value: &str, kind: Kind) -> Parsed {
             Item::X(raw) => {
                 n += 1;
                 let id = n.to_string();
-                codes.insert(id.clone(), CodeData { standalone: Some(raw.clone()), label: Some(label_of(&raw).into()), ..Default::default() });
+                codes.insert(id.clone(), CodeData::standalone(raw.clone()).with_label(label_of(&raw)));
                 inlines.push(Inline::tag(id, TagKind::Standalone, raw));
             }
             Item::O => {
                 n += 1;
                 let id = n.to_string();
-                codes.insert(id.clone(), CodeData { open: Some("{".into()), close: Some("}".into()), label: Some("group".into()), ..Default::default() });
+                codes.insert(id.clone(), CodeData::paired("{", "}").with_label("group"));
                 inlines.push(Inline::tag(id.clone(), TagKind::Open, "{"));
                 open_ids.push(id);
             }
