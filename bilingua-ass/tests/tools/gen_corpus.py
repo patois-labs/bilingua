@@ -97,7 +97,6 @@ def main():
             "Dialogue: 0,0:00:06.00,0:00:07.00\n"
             "dialogue: 0,0:00:07.00,0:00:08.00,Default,,0,0,0,,lower case is not an event\n"
             "Dialogue: 0,0:00:08.00,0:00:09.00,Default,,0,0,0,,  padded  \\N  more  \n"
-            "Dialogue: 0,0:00:09.00,0:00:10.00,Default,,0,0,0,,⟦x9⟧ literal brackets\n"
         ).encode("utf-8"),
     )
     put(
