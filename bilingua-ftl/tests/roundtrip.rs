@@ -188,3 +188,14 @@ fn translations_cannot_break_where_localization_os_could() {
     assert_eq!(structure(&out).unwrap().junk, 0);
     assert_eq!(units(&out).len(), 1);
 }
+
+#[test]
+fn odd_target_locales_never_panic() {
+    let data = std::fs::read(corpus_dir().join("app_en.ftl")).unwrap();
+    let mut doc = extract(&data).unwrap();
+    pseudo(&mut doc);
+    for loc in ["en-\u{f1}ab", "pl-\u{65e5}", "-", "_", "", " ", "pl--PL", "pl_PL_", "zh-Hant-TW", "sr-Latn", "\u{e9}", "pl-x\u{301}y"] {
+        let out = FtlFilter.merge_localized(&doc, Some(loc)).unwrap();
+        assert_eq!(structure(&out).unwrap().junk, 0, "{loc}");
+    }
+}

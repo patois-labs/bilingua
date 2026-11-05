@@ -592,7 +592,8 @@ fn target_categories(locale: &str, ordinal: bool) -> Option<Vec<&'static str>> {
         return None;
     }
     parts[0] = parts[0].to_ascii_lowercase();
-    for p in parts.iter_mut().skip(1) {
+    // The table's subtags are ASCII: a non-ASCII one never matches (and must not be cut inside a character).
+    for p in parts.iter_mut().skip(1).filter(|p| p.is_ascii()) {
         if p.len() == 4 {
             *p = format!("{}{}", p[..1].to_ascii_uppercase(), p[1..].to_ascii_lowercase());
         } else {
