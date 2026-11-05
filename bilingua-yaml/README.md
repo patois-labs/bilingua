@@ -30,7 +30,7 @@ let out = Yaml.merge(&doc)?;
   quoting of every untouched value come back byte for byte. A translated value keeps its style when the new text still
   fits (plain stays plain, single stays single, literal and folded blocks keep their header and indentation, a folded
   block with a translated line break becomes literal) and is double-quoted only when YAML needs it.
-- Rails locale files: with a target language, the root key (`en:`) becomes the target (`de-DE:`; underscores kept when
+- Rails locale files: with a target language and at least one translated unit, the root key (`en:`) becomes the target (`de-DE:`; underscores kept when
   the source used them; `no` is quoted) and plural maps get the categories the target needs (Polish `few`, `many`;
   Arabic `zero`, `two`, ...) filled with the translated `other`.
 - Encodings: UTF-8 (BOM kept), UTF-16 with BOM and Windows-1252. An untouched file comes back in its own encoding; a
@@ -47,3 +47,6 @@ the timing of a 5 MB generated file.
 
 Dev tools in `examples/`: `events_dump` (events as JSON, for comparing with PyYAML) and `pseudo_dump` (unit texts and a
 pseudo-translated merge, for comparing with the LocOS filter byte for byte).
+
+Corpus (`oracle/corpus/yaml/`): the three LocOS fixtures (Apache-2.0, ours; `rails.en.yml` here also has the `many` forms Spanish needs, so the shared round-trip test sees no new plural units; `symfony.en.yaml` is LocOS
+`messages.en.yaml`), `bom-crlf.yaml` and `languages.yml` (made up; the same two strings in 11 languages).

@@ -171,15 +171,34 @@ fn rails() {
     assert!(o.contains("# Shown under a required field"));
     // plain merge never renames
     assert_eq!(s(&all(&src, None, |t| t.to_string())), s(&src));
-    // underscores kept / produced
-    let mut d = extract_to(&src, "pt_BR");
-    assert!(s(&merge(&d)).contains("\npt-BR:\n"));
-    d = extract_to(b"en_US:\n  hi: Hello\n", "de-DE");
-    assert_eq!(merge(&d), b"de_DE:\n  hi: Hello\n");
+    // underscores kept / produced (one unit translated: the root key follows the target once something is translated)
+    let one = |src: &[u8], target: &str| translate(src, Some(target), |i, t| (i == 0).then(|| t.to_string()));
+    assert!(s(&one(&src, "pt_BR")).contains("
+pt-BR:
+"));
+    assert_eq!(one(b"en_US:
+  hi: Hello
+", "de-DE"), b"de_DE:
+  hi: Hello
+");
     // Norwegian `no` is a YAML 1.1 boolean: the new key is quoted
-    assert_eq!(merge(&extract_to(b"en:\n  hi: Hello\n", "no")), b"\"no\":\n  hi: Hello\n");
+    assert_eq!(one(b"en:
+  hi: Hello
+", "no"), b"\"no\":
+  hi: Hello
+");
     // quoted source key keeps its quote style
-    assert_eq!(merge(&extract_to(b"'en':\n  hi: Hello\n", "fr")), b"'fr':\n  hi: Hello\n");
+    assert_eq!(one(b"'en':
+  hi: Hello
+", "fr"), b"'fr':
+  hi: Hello
+");
+    // nothing translated: the file comes back untouched, root key included (LocOS renames anyway)
+    assert_eq!(merge(&extract_to(b"en:
+  hi: Hello
+", "fr")), b"en:
+  hi: Hello
+");
     for not_rails in ["en:\n  a: A\nde:\n  a: B\n", "app:\n  a: A\n", "en: Hello\n", "en:\n  a: A\n---\nen:\n  a: B\n"] {
         let d = extract_to(not_rails.as_bytes(), "de");
         assert!(!d.units[0].context.extra.contains_key("rails_locale"), "{not_rails:?}");

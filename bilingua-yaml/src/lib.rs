@@ -338,7 +338,9 @@ impl Filter for Yaml {
         };
         let enc = Enc::from_label(encoding).ok_or_else(|| Error::Write(format!("unknown encoding {encoding}")))?;
         let mut changed = false;
-        let out: String = match doc.target_lang.as_deref().filter(|t| !t.trim().is_empty()) {
+        let out: String = // The root key and plural forms follow the target language only once something is translated (an untouched
+        // document comes back byte for byte, like PO).
+        match doc.target_lang.as_deref().filter(|t| !t.trim().is_empty()).filter(|_| doc.units.iter().any(has_target)) {
             None => {
                 let mut out = String::new();
                 for p in parts {

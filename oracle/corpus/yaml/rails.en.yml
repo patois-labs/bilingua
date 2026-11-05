@@ -7,11 +7,13 @@ en:
         blank: "can't be blank"
         too_long:
           one: is too long (maximum is %{count} character)
+          many: is too long (maximum is %{count} characters)
           other: is too long (maximum is %{count} characters)
   inbox:
     messages:
       zero: No messages
       one: One message
+      many: "%{count} messages"
       other: "%{count} messages"
   date:
     abbr_day_names:
