@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head><meta charset="utf-8"><title>वापसी पर स्वागत है <!--#echo var="USER" --></title><meta name="description" content="आपके ऑर्डर"></head>
+<body>
+<!--#set var="a" value="b" -->
+<h1>वापसी पर स्वागत है, <!--#echo var="USER" -->!</h1>
+<!--#include virtual="/header.html" -->
+<p>जारी रखने के लिए साइन इन करें। <b>आपके ऑर्डर</b> <!--#echo var="USER" --> <a href="<!--#echo var="URL" -->" title="इनबॉक्स खोलें">इनबॉक्स खोलें</a>.</p>
+<!--#config timefmt="%Y" -->
+<img src="logo.png" alt="कंपनी लोगो">
+<ul><li>आपके ऑर्डर</li><li><!--#echo var="USER" --> &amp; वापसी पर स्वागत है</li></ul>
+<script>var user = "<!--#echo var="USER" -->"; if (a < b) { go(); }</script>
+</body>
+</html>

@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html lang="th">
+<head><meta charset="utf-8"><title>ยินดีต้อนรับกลับ <?= $name ?></title><meta name="description" content="คำสั่งซื้อของคุณ"></head>
+<body>
+<?php // note: not text ?>
+<h1>ยินดีต้อนรับกลับ, <?= $name ?>!</h1>
+<?php if ($user): ?>
+<p>เข้าสู่ระบบเพื่อดำเนินการต่อ <b>คำสั่งซื้อของคุณ</b> <?= $name ?> <a href="<?= $url ?>" title="เปิดกล่องจดหมาย">เปิดกล่องจดหมาย</a>.</p>
+<?php endif; ?>
+<img src="logo.png" alt="โลโก้บริษัท">
+<ul><li>คำสั่งซื้อของคุณ</li><li><?= $name ?> &amp; ยินดีต้อนรับกลับ</li></ul>
+<script>var user = "<?= $name ?>"; if (a < b) { go(); }</script>
+</body>
+</html>

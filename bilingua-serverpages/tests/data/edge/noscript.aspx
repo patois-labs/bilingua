@@ -1,0 +1,1 @@
+<noscript><img alt="No script alt"></noscript><p>Hi there</p><select><option>One<option>Two</select>

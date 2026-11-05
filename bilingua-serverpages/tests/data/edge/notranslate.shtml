@@ -1,0 +1,1 @@
+<p>A <span translate="no">B <!--#echo var="X" --> C</span> D <span class="notranslate">E</span> F</p><div translate="no"><p>Skip me</p></div><p translate="yes">Back</p>

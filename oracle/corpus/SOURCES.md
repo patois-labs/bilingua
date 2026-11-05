@@ -16,6 +16,7 @@ Every file here is made up for Bilingua (Lumen Bakery is a fictional company; no
 | `latex/*.tex` (21 files: `features*`, `lumen_*` in 11 languages plus Latin-1 and UTF-16, `chapter_fragment`, `deep_braces`, `unclosed_*`) | `bilingua-latex/tests/tools/gen_corpus.py` writes the LaTeX by hand (stdlib only) | Apache-2.0, same as Bilingua |
 | `bilingua-latex/tests/data/okapi/Test01.tex`, `Test02.tex`, `Test03.tex` (test fixtures, not corpus) | Okapi Framework test resources, copied unmodified (repository line endings, LF) from https://gitlab.com/okapiframework/Okapi.git (`okapi/filters/tex/src/test/resources`, tag `v1.48.0`, commit `ce9f9edc2956da5868fcb71ae10426c7c6ae4e0b`) | Apache-2.0 (Okapi Framework) |
 | `email/*.eml` (34 messages; copies of `bilingua-email/tests/data/*.eml` minus `hard_wrapped.eml`) | `bilingua-email/tests/tools/gen_fixtures.py` writes them (stdlib only; invented people and text, `example.com` addresses) | Apache-2.0, same as Bilingua |
+| `serverpages/*` (31 pages: `.phtml`, `.jsp`, `.jspf`, `.aspx`, `.ascx`, `.erb`, `.shtml`, `.shtm`, `.stm`; 11 languages, BOM, CRLF, CR, Windows-1252, Windows-1251, Shift_JIS, UTF-16) | `bilingua-serverpages/tests/tools/gen_corpus.py` writes them by hand (stdlib only; invented Lumen Bakery text) | Apache-2.0, same as Bilingua |
 
 Files from the Localization OS tree (its `sample-docs` folder and the hand-written PPTX and XLSX generators in its
 test fixtures) are used by `python run.py --external` and read in place. Localization OS is open source under

@@ -1,0 +1,16 @@
+<%@ page contentType="text/html; charset=UTF-8" %>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
+<!DOCTYPE html>
+<html lang="de">
+<head><meta charset="windows-1252"><title>Willkommen zurück ${user.name}</title><meta name="description" content="Ihre Bestellungen"></head>
+<body>
+<%-- note: not text --%>
+<h1>Willkommen zurück, ${user.name}!</h1>
+<% if (user != null) { %>
+<p>Melden Sie sich an, um fortzufahren. Es geht schnell - und ist kostenlos. <b>Ihre Bestellungen</b> ${user.name} <a href="${url}" title="Posteingang öffnen">Posteingang öffnen</a>.</p>
+<% } %>
+<img src="logo.png" alt="Firmenlogo">
+<ul><li>Ihre Bestellungen</li><li>${user.name} &amp; Willkommen zurück</li></ul>
+<script>var user = "${user.name}"; if (a < b) { go(); }</script>
+</body>
+</html>
