@@ -545,16 +545,68 @@ impl Document {
 
     /// Sets a segment's target. Rejects unknown segments, untranslatable units, and tags the source lacks or
     /// repeats. A missing tag is allowed (the writer leaves it out), as in catcore.
+    ///
+    /// This looks the segment up by a scan of the document; for many segments use [`Document::set_targets`].
     pub fn set_target(&mut self, seg_id: &str, target: Vec<Inline>) -> Result<(), Error> {
-        let unit = self
+        let at = self
             .units
-            .iter_mut()
-            .find(|u| u.segments.iter().any(|s| s.id == seg_id))
+            .iter()
+            .enumerate()
+            .find_map(|(ui, u)| u.segments.iter().position(|s| s.id == seg_id).map(|si| (ui, si)))
             .ok_or_else(|| Error::UnknownSegment(seg_id.to_string()))?;
+        self.apply_target(at, seg_id, target)
+    }
+
+    /// Sets many targets in one pass: one id index is built for the whole call, so 100 000 segments take
+    /// milliseconds where 100 000 [`Document::set_target`] calls scan the document each time. Items are applied in
+    /// order with the same rules as `set_target`; the first error stops the call and is returned, items before it
+    /// stay applied. When an id appears more than once, the segment is set by each item in turn (the last wins).
+    pub fn set_targets<I, S>(&mut self, items: I) -> Result<(), Error>
+    where
+        I: IntoIterator<Item = (S, Vec<Inline>)>,
+        S: AsRef<str>,
+    {
+        let index = self.segment_index();
+        for (id, target) in items {
+            let id = id.as_ref();
+            let at = *index.get(id).ok_or_else(|| Error::UnknownSegment(id.to_string()))?;
+            self.apply_target(at, id, target)?;
+        }
+        Ok(())
+    }
+
+    /// Sets many states in one pass (see [`Document::set_targets`]).
+    pub fn set_states<I, S>(&mut self, items: I) -> Result<(), Error>
+    where
+        I: IntoIterator<Item = (S, SegState)>,
+        S: AsRef<str>,
+    {
+        let index = self.segment_index();
+        for (id, state) in items {
+            let id = id.as_ref();
+            let (ui, si) = *index.get(id).ok_or_else(|| Error::UnknownSegment(id.to_string()))?;
+            self.units[ui].segments[si].state = state;
+        }
+        Ok(())
+    }
+
+    /// Segment id to (unit index, segment index); the first segment with an id wins, as in `set_target`.
+    fn segment_index(&self) -> std::collections::HashMap<String, (usize, usize)> {
+        let mut m = std::collections::HashMap::with_capacity(self.segment_count());
+        for (ui, u) in self.units.iter().enumerate() {
+            for (si, s) in u.segments.iter().enumerate() {
+                m.entry(s.id.clone()).or_insert((ui, si));
+            }
+        }
+        m
+    }
+
+    fn apply_target(&mut self, (ui, si): (usize, usize), seg_id: &str, target: Vec<Inline>) -> Result<(), Error> {
+        let unit = &mut self.units[ui];
         if !unit.translate {
             return Err(Error::Locked(seg_id.to_string()));
         }
-        let seg = unit.segments.iter_mut().find(|s| s.id == seg_id).expect("found above");
+        let seg = &mut unit.segments[si];
         check_tags(&seg.source, &target)?;
         // The free flag belongs to the source code: a target tag takes it from the source tag with its id, so a
         // caller (an editor, a LocOS adapter) that does not know the flag cannot drop or invent it.
@@ -755,5 +807,66 @@ mod tests {
             Err(Error::DuplicatedTag(_))
         ));
         assert_eq!(d.find("u1").unwrap().1.state, SegState::Draft);
+    }
+
+    fn big_doc(n: usize) -> Document {
+        Document {
+            format: "test".into(),
+            units: (0..n).map(|i| Unit::new(format!("u{i}"), vec![Inline::text(format!("Source {i}"))])).collect(),
+            skeleton: Skeleton::Text { parts: vec![], encoding: "utf-8".into(), parser: None },
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn set_targets_sets_many_and_matches_set_target() {
+        let mut a = big_doc(50);
+        let mut b = big_doc(50);
+        a.units[7].translate = false;
+        b.units[7].translate = false;
+        for i in (0..50).filter(|i| *i != 7) {
+            a.set_target(&format!("u{i}"), vec![Inline::text(format!("T{i}"))]).unwrap();
+        }
+        b.set_targets((0..50).filter(|i| *i != 7).map(|i| (format!("u{i}"), vec![Inline::text(format!("T{i}"))]))).unwrap();
+        assert_eq!(a, b);
+        assert_eq!(b.find("u49").unwrap().1.state, SegState::Draft);
+    }
+
+    #[test]
+    fn set_targets_errors_like_set_target_and_keeps_earlier_items() {
+        let mut d = big_doc(3);
+        d.units[1].translate = false;
+        let r = d.set_targets(vec![("u0", vec![Inline::text("a")]), ("u1", vec![Inline::text("b")]), ("u2", vec![Inline::text("c")])]);
+        assert!(matches!(r, Err(Error::Locked(_))));
+        assert_eq!(d.units[0].segments[0].target, vec![Inline::text("a")]);
+        assert!(d.units[2].segments[0].target.is_empty());
+        assert!(matches!(d.set_targets(vec![("nope", vec![])]), Err(Error::UnknownSegment(_))));
+        let r = d.set_targets(vec![("u0", vec![Inline::tag("9", TagKind::Open, "<i>")])]);
+        assert!(matches!(r, Err(Error::InventedTag(_))));
+        // an empty target clears the segment, as set_target does
+        d.set_targets(vec![("u0", vec![Inline::text("  ")])]).unwrap();
+        assert_eq!(d.units[0].segments[0].state, SegState::New);
+    }
+
+    #[test]
+    fn set_states_batch() {
+        let mut d = big_doc(4);
+        d.set_states((0..4).map(|i| (format!("u{i}"), SegState::Confirmed))).unwrap();
+        assert!(d.segments().all(|(_, s)| s.state == SegState::Confirmed));
+        assert!(matches!(d.set_states(vec![("zzz", SegState::New)]), Err(Error::UnknownSegment(_))));
+    }
+
+    #[test]
+    fn set_targets_100k_is_fast() {
+        let n = 100_000;
+        let mut d = big_doc(n);
+        let t = std::time::Instant::now();
+        d.set_targets((0..n).map(|i| (format!("u{i}"), vec![Inline::text("x")]))).unwrap();
+        d.set_states((0..n).map(|i| (format!("u{i}"), SegState::Translated))).unwrap();
+        let took = t.elapsed();
+        // well under a second in release; a debug build gets a loose bound that still rules out a quadratic scan
+        let limit = if cfg!(debug_assertions) { 10_000 } else { 1_000 };
+        assert!(took.as_millis() < limit, "100k targets took {took:?}");
+        assert_eq!(d.units[n - 1].segments[0].state, SegState::Translated);
     }
 }
