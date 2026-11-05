@@ -15,13 +15,15 @@
 //! of the project's `Language=` (see [`hhp_code_page`] and [`HhcFilter::extract_with`]), else Windows-1252. A merge
 //! with a target language writes the target language's ANSI code page (Russian Windows-1251, Japanese Shift_JIS, ...),
 //! rewrites a declared meta charset and the charset of the site-properties `Font` to match, and refuses a character
-//! the code page cannot hold (or writes UTF-8 with [`MergeOptions::utf8_fallback`], which HTML Help Workshop shows
+//! the code page cannot hold (or writes UTF-8 with the format option [`UTF8_FALLBACK`], which HTML Help Workshop shows
 //! wrongly).
 
 /// Skeleton schema number: bump only when this crate's skeleton layout changes.
 pub const SKELETON_SCHEMA: u32 = 1;
 
+mod browser;
 mod data;
+mod decdiff;
 mod enc;
 mod encdiff;
 mod hhp;
@@ -63,20 +65,21 @@ impl Kind {
     }
 }
 
-/// How a merge behaves where the Localization OS default can be switched.
-#[derive(Debug, Clone, Copy, Default)]
-pub struct MergeOptions {
-    /// A text the ANSI code page cannot hold is written as UTF-8 (and a declared meta charset says so) instead of
-    /// refusing the merge. HTML Help Workshop does not show those characters correctly. Off by default.
-    pub utf8_fallback: bool,
-}
+/// The format option (`ExtractOptions::format_options`) for Localization OS's `HTMLHELP_UTF8_FALLBACK`: with `"true"`,
+/// a merged text the ANSI code page cannot hold is written as UTF-8 (and a declared meta charset says so) instead of
+/// the merge being refused. HTML Help Workshop does not show those characters correctly. Off by default. The extract
+/// records it in the skeleton, so the merge of that document honours it.
+pub const UTF8_FALLBACK: &str = "htmlhelp.utf8_fallback";
+const FALLBACK_MARK: &str = "utf8_fallback";
 
 /// The ANSI code page of an HTML Help project's language: `Language=0x419 Russian` in `[OPTIONS]` gives 1251. `None`
 /// when the file names no language, names one with no ANSI code page, or cannot be read. Pass it to
 /// [`HhcFilter::extract_with`] for the project's contents and index files.
 pub fn hhp_code_page(bytes: &[u8]) -> Option<u16> {
     let limits = Limits::default();
-    // A project in a code page the default decode cannot read (Shift_JIS) still has an ASCII `Language=` line.
+    // A project in a code page the default decode cannot read (a localized Shift_JIS project) still has an ASCII
+    // `Language=` line: read it (Localization OS returns None here and then cannot read its own export; see the gate
+    // report). The code page is a hint the caller passes on, never a decode of its own.
     let t = match load(bytes, &limits, None) {
         Ok((t, _)) => t,
         Err(_) if bytes.len() as u64 <= limits.max_input_bytes => bytes.iter().map(|&b| b as char).collect(),
@@ -114,6 +117,10 @@ fn extract_impl(kind: Kind, bytes: &[u8], opts: &ExtractOptions, hint: Option<u1
     // Japanese project's undeclared file is Shift_JIS, not Windows-1252). Localization OS has no second rule.
     let hint = hint.or_else(|| opts.source_lang.as_deref().and_then(target_code_page));
     let (text, tag) = load(bytes, &limits, hint)?;
+    let fallback = opts.format_flag(UTF8_FALLBACK) == Some(true);
+    // A code page whose decode is not one to one (Shift_JIS NEC and IBM duplicates) cannot give the same bytes back
+    // from the text: such a file keeps its bytes for an untouched merge.
+    let keep_raw = enc::is_ansi(&tag) && original_bytes(&text, &tag) != bytes;
     let spans = if kind == Kind::Hhp { hhp::walk(&text, &limits)?.0 } else { sitemap::walk(&text, &limits)?.units };
     if spans.is_empty() {
         let msg = if kind == Kind::Hhp {
@@ -136,13 +143,18 @@ fn extract_impl(kind: Kind, bytes: &[u8], opts: &ExtractOptions, hint: Option<u1
                 standalone: Some(text[sp.start..sp.end].to_string()),
                 open: owned(sp.quote),
                 close: None,
-                label: None,
+                label: fallback.then(|| FALLBACK_MARK.to_string()),
             },
         );
         unit.context.kind = Some(match sp.kind {
             "w" => "window".to_string(),
             k => k.to_string(),
         });
+        if keep_raw && units.is_empty() {
+            if let Some(c) = unit.codes.get_mut(HIDDEN) {
+                c.close = Some(bilingua_model::b64::encode(bytes));
+            }
+        }
         parts.push(SkelPart::Unit(units.len()));
         units.push(unit);
     }
@@ -205,11 +217,6 @@ fn out_encoding(tag: &str, target: Option<&str>, localized: bool) -> (String, Op
     }
 }
 
-fn same_charset(declared: &str, cp: u16) -> bool {
-    let n: String = declared.chars().filter(|c| !matches!(c, '-' | '_')).collect::<String>().to_lowercase();
-    n == format!("windows{cp}") || n == format!("cp{cp}")
-}
-
 fn font_edit(sp: &Span, cp: Option<u16>) -> Option<(usize, usize, String)> {
     let (_, gdi) = enc::cp_info(cp?)?;
     let mut parts: Vec<&str> = sp.text.split(',').collect();
@@ -226,6 +233,23 @@ fn font_edit(sp: &Span, cp: Option<u16>) -> Option<(usize, usize, String)> {
     }
     parts[2] = &want;
     Some((sp.start, sp.end, sitemap::escape_attr(&parts.join(","), sp.quote)))
+}
+
+/// True when no unit has a translation that differs from its source.
+fn edits_none(spans: &[Span], order: &[usize], doc: &Document) -> bool {
+    spans.iter().zip(order).all(|(sp, &i)| changed(&doc.units[i], &sp.text).is_none())
+}
+
+/// The original file: the decoded text written back in its envelope (byte-exact for every encoding this crate
+/// reads, since a decode is only accepted when the code page writes each character back).
+fn original_bytes(orig: &str, tag: &str) -> Vec<u8> {
+    if !enc::is_ansi(tag) {
+        return enc::encode_unicode(orig, tag);
+    }
+    match enc::Codec::from_tag(tag) {
+        Some(c) => enc::encode_ansi_raw(orig, c),
+        None => orig.as_bytes().to_vec(),
+    }
 }
 
 fn merge_impl(kind: Kind, doc: &Document, mo: &MergeOptions) -> Result<Vec<u8>, Error> {
@@ -264,9 +288,28 @@ fn merge_impl(kind: Kind, doc: &Document, mo: &MergeOptions) -> Result<Vec<u8>, 
     }
     let translated = order.iter().any(|&i| doc.units[i].translate && doc.units[i].segments.iter().any(|s| !s.target.is_empty()));
     let target = doc.target_lang.as_deref().filter(|t| !t.trim().is_empty());
-    let localized = translated && target.is_some();
+    // Localization OS's build_localized always stamps; Bilingua only when something is translated, unless asked.
+    let localized = target.is_some() && (translated || mo.stamp_target_always);
+    let fallback = doc.units.iter().any(|u| u.codes.get(HIDDEN).and_then(|c| c.label.as_deref()) == Some(FALLBACK_MARK));
+    if !localized && edits_none(&spans, &order, doc) && mo.output_encoding == OutputEncoding::Keep {
+        let raw = order.first().and_then(|&i| doc.units[i].codes.get(HIDDEN)).and_then(|c| c.close.as_deref());
+        return match raw {
+            Some(b) => bilingua_model::b64::decode(b).map_err(|e| Error::Write(format!("the skeleton's original bytes are damaged: {e}"))),
+            None => Ok(original_bytes(&orig, tag)),
+        };
+    }
 
-    let regions = if kind == Kind::Hhp { Vec::new() } else { sitemap::risky_regions(&orig) };
+    // #676: a value a browser does not read at this same span is written opaque to every HTML5 tag state
+    let mut agreed: Option<std::collections::HashSet<browser::ValueSpan>> = None;
+    let mut value_out = |sp: &Span, new: &str| -> String {
+        let e = sitemap::escape_attr(new, sp.quote);
+        let a = agreed.get_or_insert_with(|| browser::agreed_value_spans(&orig));
+        if a.contains(&(sp.start, sp.end, sp.quote)) {
+            e
+        } else {
+            sitemap::strict_escape(&e)
+        }
+    };
     let mut edits: Vec<(usize, usize, String)> = Vec::new();
     let mut renamed: HashMap<&str, String> = HashMap::new();
     for (sp, &i) in spans.iter().zip(&order) {
@@ -278,12 +321,7 @@ fn merge_impl(kind: Kind, doc: &Document, mo: &MergeOptions) -> Result<Vec<u8>, 
         let rendered = if kind == Kind::Hhp {
             hhp::value(&new, sp.kind)
         } else {
-            let e = sitemap::escape_attr(&new, sp.quote);
-            if sitemap::in_regions(&regions, sp.start) {
-                sitemap::strict_escape(&e)
-            } else {
-                e
-            }
+            value_out(sp, &new)
         };
         if kind != Kind::Hhp {
             renamed.entry(sp.text.as_str()).or_insert(new);
@@ -292,9 +330,13 @@ fn merge_impl(kind: Kind, doc: &Document, mo: &MergeOptions) -> Result<Vec<u8>, 
     }
     for sp in &extra_see {
         if let Some(new) = renamed.get(sp.text.as_str()) {
-            let e = sitemap::escape_attr(new, sp.quote);
-            edits.push((sp.start, sp.end, if sitemap::in_regions(&regions, sp.start) { sitemap::strict_escape(&e) } else { e }));
+            let v = value_out(sp, new);
+            edits.push((sp.start, sp.end, v));
         }
+    }
+    if kind != Kind::Hhp && !edits.is_empty() {
+        // #676: the translated sitemap must parse, in a browser, into the source's elements
+        browser::check_build(&orig, &apply(&orig, &edits)).map_err(Error::Write)?;
     }
     let (out_tag, cp, label) = out_encoding(tag, target, localized);
     let ansi = enc::is_ansi(tag);
@@ -314,6 +356,18 @@ fn merge_impl(kind: Kind, doc: &Document, mo: &MergeOptions) -> Result<Vec<u8>, 
         }
     }
     let text1 = apply(&orig, &all);
+    if mo.output_encoding == OutputEncoding::Utf8 {
+        // Always UTF-8: a declared charset says so; a UTF-8 BOM stays, a UTF-16 BOM goes.
+        let mut with = all.clone();
+        if let Some((s, en)) = enc::declared_span(&orig) {
+            let m = (s, en, "UTF-8".to_string());
+            if !enc::label_is_utf8(&orig[s..en]) && !all.iter().any(|(a, b, _)| m.0 < *b && *a < m.1) {
+                with.push(m);
+            }
+        }
+        let t = apply(&orig, &with);
+        return Ok(if tag == "utf-8-bom" { enc::encode_unicode(&t, tag) } else { t.into_bytes() });
+    }
     if !ansi {
         return Ok(enc::encode_unicode(&text1, tag));
     }
@@ -324,7 +378,7 @@ fn merge_impl(kind: Kind, doc: &Document, mo: &MergeOptions) -> Result<Vec<u8>, 
             return Some((s, en, "UTF-8".into()));
         }
         let (lab, _) = enc::cp_info(cp?)?;
-        (!same_charset(&t[s..en], cp?)).then(|| (s, en, lab.to_string()))
+        (!enc::label_is_code_page(&t[s..en], cp?)).then(|| (s, en, lab.to_string()))
     };
     let overlaps = |m: &(usize, usize, String), t: &str| -> bool {
         // positions are in `orig`; a meta match inside an edited value is left alone
@@ -348,7 +402,7 @@ fn merge_impl(kind: Kind, doc: &Document, mo: &MergeOptions) -> Result<Vec<u8>, 
             Ok(bytes)
         }
         Err(enc::Unwritable(ch)) => {
-            if mo.utf8_fallback {
+            if fallback {
                 let mut with = all.clone();
                 if let Some(m) = meta(&orig, true) {
                     if !overlaps(&m, &orig) {
@@ -358,7 +412,7 @@ fn merge_impl(kind: Kind, doc: &Document, mo: &MergeOptions) -> Result<Vec<u8>, 
                 return Ok(apply(&orig, &with).into_bytes());
             }
             Err(Error::Write(format!(
-                "The translated HTML Help file cannot be written in the {label} code page: the character {ch:?} (U+{:04X}) has no representation there, and HTML Help 1.x reads Contents, Index and project files in the help language's Windows ANSI code page. Fix the text (a translation or an untranslated value), or merge with MergeOptions::utf8_fallback to write UTF-8 instead (HTML Help Workshop will not show those characters correctly).",
+                "The translated HTML Help file cannot be written in the {label} code page: the character {ch:?} (U+{:04X}) has no representation there, and HTML Help 1.x reads Contents, Index and project files in the help language's Windows ANSI code page. Fix the text (a translation or an untranslated value), or extract with the format option htmlhelp.utf8_fallback to write UTF-8 instead (HTML Help Workshop will not show those characters correctly).",
                 ch as u32
             )))
         }
@@ -388,13 +442,6 @@ macro_rules! filter {
         #[doc = concat!("The `", $id, "` filter.")]
         pub struct $ty;
 
-        impl $ty {
-            /// `merge` with explicit options.
-            pub fn merge_with(&self, doc: &Document, mo: &MergeOptions) -> Result<Vec<u8>, Error> {
-                merge_impl($kind, doc, mo)
-            }
-        }
-
         impl Filter for $ty {
             fn id(&self) -> &'static str {
                 $id
@@ -411,6 +458,9 @@ macro_rules! filter {
             }
             fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
                 merge_impl($kind, doc, &MergeOptions::default())
+            }
+            fn merge_with(&self, doc: &Document, mo: &MergeOptions) -> Result<Vec<u8>, Error> {
+                merge_impl($kind, doc, mo)
             }
         }
     };

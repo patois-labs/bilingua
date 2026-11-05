@@ -132,8 +132,12 @@ fn translations_cannot_break_the_markup() {
     }
     // a NUL would make the file read as binary: refused, not written
     assert!(merge_with(&HhcFilter, &data, &[(0, "T\0")], None, MergeOptions::default()).is_err());
-    // the same inside a file where a browser and this scanner could disagree: values are written opaque
-    let risky = b"<html><title>x</title><OBJECT type=\"text/sitemap\"><param name=\"Name\" value=\"a b\"></OBJECT>";
+    // a value a browser does not read as an attribute value (here: inside an unclosed <title>) is written opaque;
+    // one after a closed <title> is an ordinary value (as Localization OS, which asks a browser parse which is which)
+    let closed = b"<html><title>x</title><OBJECT type=\"text/sitemap\"><param name=\"Name\" value=\"a b\"></OBJECT>";
+    let out = build(&HhcFilter, closed, &[(0, "c d=e/f")]);
+    assert!(contains(&out, b"value=\"c d=e/f\""), "{}", String::from_utf8_lossy(&out));
+    let risky = b"<html><title>x<OBJECT type=\"text/sitemap\"><param name=\"Name\" value=\"a b\"></OBJECT>";
     let out = build(&HhcFilter, risky, &[(0, "c d=e/f")]);
     assert!(contains(&out, b"value=\"c&#32;d&#61;e&#47;f\""), "{}", String::from_utf8_lossy(&out));
 }

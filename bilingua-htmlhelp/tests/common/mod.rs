@@ -1,5 +1,5 @@
 #![allow(dead_code)]
-use bilingua_htmlhelp::{HhcFilter, HhkFilter, HhpFilter, MergeOptions};
+use bilingua_htmlhelp::{HhcFilter, HhkFilter, HhpFilter};
 use bilingua_model::encoding_rs::{Encoding, WINDOWS_1252};
 use bilingua_model::*;
 
@@ -29,7 +29,16 @@ pub fn texts(f: &dyn Filter, data: &[u8]) -> Vec<String> {
 
 /// Sets targets by unit index and merges with an optional target language and options.
 pub fn merge_with(f: &dyn Filter, data: &[u8], map: &[(usize, &str)], target: Option<&str>, mo: MergeOptions) -> Result<Vec<u8>, Error> {
-    let mut doc = extract(f, data)?;
+    merge_full(f, data, map, target, false, mo)
+}
+
+/// `merge_with`, extracting with `htmlhelp.utf8_fallback` set when `fallback` is true.
+pub fn merge_full(f: &dyn Filter, data: &[u8], map: &[(usize, &str)], target: Option<&str>, fallback: bool, mo: MergeOptions) -> Result<Vec<u8>, Error> {
+    let mut opts = ExtractOptions::default();
+    if fallback {
+        opts.format_options.insert("htmlhelp.utf8_fallback".into(), "true".into());
+    }
+    let mut doc = f.extract(data, &opts)?;
     doc.target_lang = target.map(str::to_string);
     for (i, t) in map {
         let id = doc.units[*i].segments[0].id.clone();
@@ -51,7 +60,7 @@ pub fn build_loc(f: &dyn Filter, data: &[u8], map: &[(usize, &str)], target: &st
 }
 
 pub fn build_loc_utf8(f: &dyn Filter, data: &[u8], map: &[(usize, &str)], target: &str) -> Vec<u8> {
-    merge_with(f, data, map, Some(target), MergeOptions { utf8_fallback: true }).expect("merge")
+    merge_full(f, data, map, Some(target), true, MergeOptions::default()).expect("merge")
 }
 
 pub const HHC: &str = concat!(

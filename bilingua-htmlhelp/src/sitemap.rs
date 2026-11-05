@@ -104,7 +104,7 @@ fn match_tag(t: &str, lt: usize) -> Option<Tag> {
     let ns = i;
     i += 1;
     for c in t[i..].chars() {
-        if !(c.is_alphanumeric() || matches!(c, '_' | ':' | '-')) {
+        if !(bilingua_model::pytext::py_is_word_char(c) || matches!(c, ':' | '-')) {
             break;
         }
         i += c.len_utf8();
@@ -223,53 +223,6 @@ pub fn strict_escape(escaped: &str) -> String {
         }
     }
     o
-}
-
-/// The parts of the file where this walker and a browser may read the markup differently: from a raw-text or template
-/// element (`script`, `style`, `title`, `textarea`, `select`, `svg`, ...) to the end of the file, a processing
-/// instruction, CDATA section or bogus comment up to its `>`, and a comment a browser ends earlier than the walker
-/// does (`<!-->`, `<!--->`, `--!>`). A value inside such a part is written opaque (see `strict_escape`), because a
-/// browser may not read it as the attribute value the walker found. An unterminated comment swallows the rest of the
-/// file in both, so it is no risk.
-pub fn risky_regions(text: &str) -> Vec<(usize, usize)> {
-    let b = text.as_bytes();
-    let mut out: Vec<(usize, usize)> = Vec::new();
-    let mut i = 0;
-    while let Some(off) = text[i..].find('<') {
-        let p = i + off;
-        let rest = &b[p + 1..];
-        let l: Vec<u8> = rest.iter().take(12).map(|c| c.to_ascii_lowercase()).collect();
-        let rawtext = [&b"script"[..], b"style", b"textarea", b"title", b"xmp", b"iframe", b"noembed", b"noframes", b"plaintext", b"noscript", b"select", b"template", b"svg", b"math"];
-        if rawtext.iter().any(|w| l.starts_with(w)) {
-            out.push((p, text.len()));
-            return out;
-        }
-        if rest.starts_with(b"!--") {
-            let walker_end = text[p + 4..].find("-->").map(|e| p + 4 + e + 3);
-            let Some(end) = walker_end else { return out };
-            let early = rest[3..].starts_with(b">") || rest[3..].starts_with(b"->");
-            let bang = text[p + 4..end].find("--!>").map(|k| p + 4 + k);
-            if early {
-                out.push((p, end));
-            } else if let Some(k) = bang {
-                out.push((k, end));
-            }
-            i = end;
-            continue;
-        }
-        if rest.first() == Some(&b'?') || (rest.first() == Some(&b'!') && !l.starts_with(b"!doctype")) {
-            let end = text[p..].find('>').map_or(text.len(), |e| p + e + 1);
-            out.push((p, end));
-            i = end;
-            continue;
-        }
-        i = p + 1;
-    }
-    out
-}
-
-pub fn in_regions(regions: &[(usize, usize)], pos: usize) -> bool {
-    regions.iter().any(|&(s, e)| s <= pos && pos < e)
 }
 
 #[cfg(test)]

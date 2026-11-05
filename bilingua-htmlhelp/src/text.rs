@@ -5,9 +5,9 @@ use crate::data::ENTITIES;
 use regex::Regex;
 use std::sync::OnceLock;
 
-/// Python's `str.isspace` / regex `\s` for `str`: Unicode White_Space plus the four separators U+001C..U+001F.
+/// Python's `str.isspace` / regex `\s` for `str`.
 pub fn py_space(c: char) -> bool {
-    c.is_whitespace() || ('\u{1c}'..='\u{1f}').contains(&c)
+    bilingua_model::pytext::py_isspace_char(c)
 }
 
 pub fn py_trim(s: &str) -> &str {
@@ -18,18 +18,9 @@ pub fn py_trim_start(s: &str) -> &str {
     s.trim_start_matches(py_space)
 }
 
-fn alnum_re() -> &'static Regex {
-    static R: OnceLock<Regex> = OnceLock::new();
-    R.get_or_init(|| Regex::new(r"[\p{L}\p{N}]").expect("alnum pattern"))
-}
-
-/// True when `value` has a letter or digit: Python `any(c.isalnum() for c in value)`. Rust's
-/// `char::is_alphanumeric` also counts combining marks; the Unicode categories L and N do not.
+/// True when `value` has a letter or digit: Python `any(c.isalnum() for c in value)`.
 pub fn has_alnum(value: &str) -> bool {
-    if value.bytes().any(|b| b.is_ascii_alphanumeric()) {
-        return true;
-    }
-    !value.is_ascii() && alnum_re().is_match(value)
+    bilingua_model::pytext::py_has_alnum(value)
 }
 
 fn zs_re() -> &'static Regex {

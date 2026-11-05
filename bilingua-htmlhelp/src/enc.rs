@@ -4,10 +4,10 @@
 //! of an ANSI code page (`windows-1252`, ...).
 
 use crate::data::{ALIASES, CP1258};
+use crate::decdiff::{DEC_DIFF, EUCKR_CHO_BYTE, EUCKR_CHO_OF, EUCKR_JONG_BYTE, EUCKR_JONG_OF};
 use crate::encdiff::{ENC_DIFF, GB2312_OK};
 use crate::text::is_zs;
 use bilingua_model::codepage::{code_page_for_encoding, encoding_for_code_page};
-use bilingua_model::enc::decode_strict;
 use bilingua_model::encoding_rs::{self, Encoding};
 use bilingua_model::Error;
 use regex::Regex;
@@ -157,17 +157,92 @@ impl Codec {
     fn decode(self, raw: &[u8]) -> Result<String, usize> {
         match self {
             Codec::Latin1 => Ok(raw.iter().map(|&b| b as char).collect()),
-            Codec::Enc(e, _) => {
-                let text = decode_strict(e, raw)?;
-                // A byte the Python codec cannot read (cp1258 0x8D, a hanzi outside GB2312) is refused here, as
-                // Localization OS refuses it, so a file that reads is a file that writes back.
-                match text.chars().position(|c| !self.can_write(c)) {
-                    Some(at) => Err(at),
-                    None => Ok(text),
-                }
-            }
+            Codec::Enc(e, id) => py_decode(e, id, raw),
         }
     }
+}
+
+/// The one character Python's codec reads from exactly `seq` (see `tests/tools/gen_decdiff.py`).
+fn py_one(e: &'static Encoding, id: u16, seq: &[u8]) -> Option<char> {
+    let bytes = seq.iter().fold(0u64, |a, &b| (a << 8) | u64::from(b));
+    let key = (u64::from(id) << 40) | ((seq.len() as u64) << 32) | bytes;
+    if let Ok(i) = DEC_DIFF.binary_search_by_key(&key, |(k, _)| *k) {
+        return char::from_u32(DEC_DIFF[i].1);
+    }
+    if matches!(id, 3002 | 3004) && seq.len() == 2 && seq.iter().any(|&b| b < 0xA1) {
+        return None; // GB2312 and KS X 1001 in EUC form: both bytes A1..FE (GBK's and UHC's extensions are not)
+    }
+    let s = e.decode_without_bom_handling_and_without_replacement(seq)?;
+    let mut it = s.chars();
+    let c = it.next()?;
+    it.next().is_none().then_some(c)
+}
+
+/// A KS X 1001 Annex 3 make-up sequence `A4 D4 A4 cho A4 jung A4 jong` (Python's euc_kr reads one at every `A4 D4`).
+fn euckr_make_up(b: &[u8]) -> Option<char> {
+    if b.len() < 8 || b[2] != 0xA4 || b[4] != 0xA4 || b[6] != 0xA4 {
+        return None;
+    }
+    let idx = |t: &[u8; 30], c: u8| (0xA1..=0xBE).contains(&c).then(|| t[usize::from(c - 0xA1)]).filter(|&v| v != 0xFF);
+    let cho = idx(&EUCKR_CHO_OF, b[3])?;
+    let jung = (0xBF..=0xD3).contains(&b[5]).then(|| b[5] - 0xBF)?;
+    let jong = if b[7] == 0xD4 { 0 } else { idx(&EUCKR_JONG_OF, b[7])? };
+    char::from_u32(0xAC00 + u32::from(cho) * 588 + u32::from(jung) * 28 + u32::from(jong))
+}
+
+/// Python's strict decode with this codec: `Err(position)` of the first byte it cannot read.
+fn py_decode(e: &'static Encoding, id: u16, raw: &[u8]) -> Result<String, usize> {
+    const UNSET: u32 = 0xFFFF_FFFE;
+    let mut single = [UNSET; 128];
+    let mut pairs: std::collections::HashMap<u16, Option<char>> = std::collections::HashMap::new();
+    let mut out = String::with_capacity(raw.len() + raw.len() / 2);
+    let mut i = 0;
+    while i < raw.len() {
+        let b = raw[i];
+        if b < 0x80 {
+            out.push(b as char);
+            i += 1;
+            continue;
+        }
+        if id == 3004 && b == 0xA4 && raw.get(i + 1) == Some(&0xD4) {
+            out.push(euckr_make_up(&raw[i..]).ok_or(i)?);
+            i += 8;
+            continue;
+        }
+        let slot = &mut single[usize::from(b - 0x80)];
+        if *slot == UNSET {
+            *slot = py_one(e, id, &raw[i..=i]).map_or(0xFFFF_FFFF, |c| c as u32);
+        }
+        if let Some(c) = char::from_u32(*slot) {
+            out.push(c);
+            i += 1;
+            continue;
+        }
+        if i + 1 < raw.len() {
+            let k = u16::from_be_bytes([b, raw[i + 1]]);
+            if let Some(c) = *pairs.entry(k).or_insert_with(|| py_one(e, id, &raw[i..i + 2])) {
+                out.push(c);
+                i += 2;
+                continue;
+            }
+        }
+        if id == 3012 && b == 0x8F && i + 2 < raw.len() {
+            if let Some(c) = py_one(e, id, &raw[i..i + 3]) {
+                out.push(c);
+                i += 3;
+                continue;
+            }
+        }
+        if id == 3013 && i + 3 < raw.len() {
+            if let Some(c) = py_one(e, id, &raw[i..i + 4]) {
+                out.push(c);
+                i += 4;
+                continue;
+            }
+        }
+        return Err(i);
+    }
+    Ok(out)
 }
 
 /// The byte range of the declared charset name in the first 4096 characters of `text`.
@@ -318,6 +393,23 @@ impl Codec {
     fn encode_str(self, text: &str) -> Vec<u8> {
         match self {
             Codec::Latin1 => text.chars().map(|c| c as u32 as u8).collect(),
+            Codec::Enc(e, 3004) => {
+                // Python's euc_kr: KS X 1001 as encoding_rs writes it; any other Hangul syllable as a make-up sequence
+                let mut out = Vec::with_capacity(text.len());
+                let mut b = [0u8; 4];
+                for c in text.chars() {
+                    let bytes = e.encode(c.encode_utf8(&mut b)).0;
+                    let k = c as u32;
+                    if (0xAC00..=0xD7A3).contains(&k) && bytes.iter().any(|&x| x < 0xA1) {
+                        let k = (k - 0xAC00) as usize;
+                        let jung = u8::try_from((k % 588) / 28).unwrap_or(0);
+                        out.extend_from_slice(&[0xA4, 0xD4, 0xA4, EUCKR_CHO_BYTE[k / 588], 0xA4, 0xBF + jung, 0xA4, EUCKR_JONG_BYTE[k % 28]]);
+                    } else {
+                        out.extend_from_slice(&bytes);
+                    }
+                }
+                out
+            }
             Codec::Enc(e, id) => {
                 if text.is_ascii() || !text.chars().any(|c| diff(id, c).is_some()) {
                     return e.encode(text).0.into_owned();
@@ -415,4 +507,21 @@ pub fn encode_unicode(text: &str, tag: &str) -> Vec<u8> {
         }
         _ => text.as_bytes().to_vec(),
     }
+}
+
+/// The text in the code page with no fallbacks (for text that was decoded from it).
+pub fn encode_ansi_raw(text: &str, codec: Codec) -> Vec<u8> {
+    codec.encode_str(text)
+}
+
+/// True when a declared charset label names the Python codec of Windows code page `cp` (Localization OS compares
+/// `codecs.lookup` names: `GBK` is code page 936, `gb2312` is not).
+pub fn label_is_code_page(label: &str, cp: u16) -> bool {
+    let Some(name) = PY_CODECS.iter().find(|(_, id, _)| *id == cp).map(|c| c.0) else { return false };
+    source_ok(label).is_some() && source_ok(label) == py_codec(name)
+}
+
+/// True when a declared charset label is Python's UTF-8 codec.
+pub fn label_is_utf8(label: &str) -> bool {
+    matches!(py_normalize(label).as_str(), "utf_8" | "utf8" | "u8" | "utf" | "utf8_ucs2" | "utf8_ucs4" | "cp65001")
 }
