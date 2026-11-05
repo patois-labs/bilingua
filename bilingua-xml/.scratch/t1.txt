@@ -1,0 +1,31 @@
+
+running 12 tests
+test generic_localized_lang_only_when_present ... ok
+test hostile_inputs ... ok
+test its_rules_in_document ... ok
+test token_damage_stays_wellformed ... ok
+test dita_map ... ok
+test user_rules_file ... ok
+test dita_topic ... ok
+test identity_all_fixtures ... FAILED
+test docbook_5_and_45 ... ok
+test encodings ... ok
+test placeholders_and_cdata ... ok
+test registration ... ok
+
+failures:
+
+---- identity_all_fixtures stdout ----
+
+thread 'identity_all_fixtures' (81668) panicked at bilingua-xml\tests\locos_its.rs:45:9:
+assertion `left == right` failed: guide.ditamap: echo merge with a target language
+  left: "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE map PUBLIC \"-//OASIS//DTD DITA Map//EN\" \"map.dtd\">\n<map title=\"User Guide\" xml:lang=\"fr-FR\">\n  <topicmeta>\n    <navtitle>User Guide</navtitle>\n    <shortdesc>Everything about printing.</shortdesc>\n  </topicmeta>\n  <topicref href=\"task.dita\" navtitle=\"Printing a report\">\n    <topicmeta><navtitle>Printing</navtitle></topicmeta>\n  </topicref>\n  <topicref href=\"setup.dita\" navtitle='Setting up &amp; testing'/>\n</map>\n"
+ right: "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE map PUBLIC \"-//OASIS//DTD DITA Map//EN\" \"map.dtd\">\n<map title=\"User Guide\">\n  <topicmeta>\n    <navtitle>User Guide</navtitle>\n    <shortdesc>Everything about printing.</shortdesc>\n  </topicmeta>\n  <topicref href=\"task.dita\" navtitle=\"Printing a report\">\n    <topicmeta><navtitle>Printing</navtitle></topicmeta>\n  </topicref>\n  <topicref href=\"setup.dita\" navtitle='Setting up &amp; testing'/>\n</map>\n"
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    identity_all_fixtures
+
+test result: FAILED. 11 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.08s
+
