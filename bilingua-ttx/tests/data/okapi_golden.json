@@ -1,0 +1,655 @@
+{
+ "okapi_issue_164.ttx": [
+  {
+   "text": "This is the first sentence of the first paragraph. This is the second sentence of the first paragraph.",
+   "target": null,
+   "codes": 0
+  },
+  {
+   "text": "This is the first sentence of the second paragraph. This is the second sentence of the second paragraph.",
+   "target": null,
+   "codes": 0
+  },
+  {
+   "text": "This is the first sentence of the third paragraph. This is the second sentence of the third paragraph.",
+   "target": null,
+   "codes": 0
+  },
+  {
+   "text": "One two three. Four five six. Seven eight nine.",
+   "target": null,
+   "codes": 0
+  },
+  {
+   "text": "Two three four.. Five six seven. Eight nine ten.",
+   "target": null,
+   "codes": 0
+  }
+ ],
+ "okapi_test01.ttx": [
+  {
+   "text": "Text in ¤¤bold¤¤. Second ¤sentence.",
+   "target": "Texte en ¤¤gras¤¤. Seconde ¤phrase.",
+   "codes": 5
+  },
+  {
+   "text": "title text",
+   "target": "texte du titre",
+   "codes": 0
+  },
+  {
+   "text": "paragraph text.",
+   "target": "text du paragraph.",
+   "codes": 0
+  },
+  {
+   "text": "Text in line one and in line two.¤",
+   "target": "Texte sur la ligne 1 et sur la ligne 2.¤",
+   "codes": 1
+  }
+ ],
+ "okapi_test02_allseg.ttx": [
+  {
+   "text": "¤java¤¤/WEB-INF/struts-i18n.tld¤i18n¤ ¤",
+   "target": null,
+   "codes": 6
+  },
+  {
+   "text": "Jericho HTML Parser Test Document",
+   "target": "Document test du filtre HTML Jericho",
+   "codes": 0
+  },
+  {
+   "text": "Test HTML Document¤",
+   "target": "Document HTML de test¤",
+   "codes": 1
+  },
+  {
+   "text": "This document contains many elements with optional end tags, server-side tags and some common illegal HTML constructs to demonstrate how they are interpreted by the parser. ¤¤",
+   "target": null,
+   "codes": 2
+  },
+  {
+   "text": "Table Example",
+   "target": null,
+   "codes": 0
+  },
+  {
+   "text": "First Column",
+   "target": null,
+   "codes": 0
+  },
+  {
+   "text": "Second Column",
+   "target": null,
+   "codes": 0
+  },
+  {
+   "text": "Cell 1",
+   "target": null,
+   "codes": 0
+  },
+  {
+   "text": "This is a table within the table",
+   "target": null,
+   "codes": 0
+  },
+  {
+   "text": "Second row of inner table",
+   "target": null,
+   "codes": 0
+  },
+  {
+   "text": "Third row of inner table",
+   "target": null,
+   "codes": 0
+  },
+  {
+   "text": "¤ Note that the parser does not consider this text to be a part of the paragraph started before the table because according to the HTML specification a TABLE, being a block-level element, must terminate the P element. See the documentation in HTMLElementName.P for more information, including instructions on how to make this parser compatible with the default behaviour of all major browsers in HTML transitional mode.",
+   "target": null,
+   "codes": 1
+  },
+  {
+   "text": "The following text demonstrates the use of a CDATA section which has limited browser compatability",
+   "target": null,
+   "codes": 0
+  },
+  {
+   "text": "<an> example of <sgml> markup that is not <painful> to write with < and such.",
+   "target": null,
+   "codes": 0
+  },
+  {
+   "text": "Baseball",
+   "target": null,
+   "codes": 0
+  },
+  {
+   "text": "Cricket",
+   "target": null,
+   "codes": 0
+  },
+  {
+   "text": "AFL",
+   "target": null,
+   "codes": 0
+  },
+  {
+   "text": "Soccer",
+   "target": null,
+   "codes": 0
+  },
+  {
+   "text": "This is ¤¤preformatted¤¤ text whose formatting should not be altered.¤",
+   "target": null,
+   "codes": 5
+  },
+  {
+   "text": "<p>This paragraph is written using client side script.",
+   "target": null,
+   "codes": 0
+  },
+  {
+   "text": "The P element is only ignored by the parser if a full sequential parse is performed, which ignores any non-server tags inside SCRIPT elements.</p>",
+   "target": null,
+   "codes": 0
+  },
+  {
+   "text": "<p>This P element is ignored by the parser in parse-on-demand mode because of the enclosing CDATA section.</p>",
+   "target": null,
+   "codes": 0
+  },
+  {
+   "text": "<p>Both the P element and the CDATA section are ignored by the parser during a full sequental parse, which automatically treats script element content as CDATA.</p>",
+   "target": null,
+   "codes": 0
+  },
+  {
+   "text": "This paragraph contains a comment. ¤ This text is a continuation of the paragraph before the one that is commented out.",
+   "target": null,
+   "codes": 1
+  },
+  {
+   "text": "item 1",
+   "target": null,
+   "codes": 0
+  },
+  {
+   "text": "item 2",
+   "target": null,
+   "codes": 0
+  },
+  {
+   "text": "subitem 1",
+   "target": null,
+   "codes": 0
+  },
+  {
+   "text": "subitem 2",
+   "target": null,
+   "codes": 0
+  },
+  {
+   "text": "item 3",
+   "target": null,
+   "codes": 0
+  },
+  {
+   "text": "item 4",
+   "target": null,
+   "codes": 0
+  },
+  {
+   "text": "Ordered list within an unordered list",
+   "target": null,
+   "codes": 0
+  },
+  {
+   "text": "Second item of ordered list",
+   "target": null,
+   "codes": 0
+  },
+  {
+   "text": "paragraph ¤¤within a list item¤¤",
+   "target": null,
+   "codes": 4
+  },
+  {
+   "text": "This text ¤¤contains ¤¤¤incorrectly¤¤¤ nested¤¤ formatting tags¤ which is",
+   "target": null,
+   "codes": 11
+  },
+  {
+   "text": "quite commonly generated¤ by HTML editors.",
+   "target": null,
+   "codes": 1
+  },
+  {
+   "text": "This section demonstrates the consequences of illegally nesting block-level elements inside inline-level elements, which is a very common situation caused by the misuse of FONT elements by ¤¤HTML editors.¤¤",
+   "target": null,
+   "codes": 4
+  },
+  {
+   "text": "This paragraph starts inside the Arial FONT element.¤¤¤¤ This text occurs after the Arial FONT end tag, but is still considered to be part of the same paragraph.",
+   "target": null,
+   "codes": 4
+  },
+  {
+   "text": "This entire list is surrounded",
+   "target": null,
+   "codes": 0
+  },
+  {
+   "text": "by an Arial font element.",
+   "target": null,
+   "codes": 0
+  },
+  {
+   "text": "This tooltip contains a line feed",
+   "target": null,
+   "codes": 0
+  },
+  {
+   "text": "Limitations when dealing with tags located inside other tags¤",
+   "target": null,
+   "codes": 1
+  },
+  {
+   "text": "This section demonstrates the limitation of the library in distinguishing whether a tag is located inside another tag without a full sequential parse. When a full sequential parse hasn't been performed, the H2 element in the following button's onclick attribute erroneously terminates the current paragraph, and is also returned by tag search methods. See parsing rule 2(i) in the documentation of the ¤¤Tag¤¤ class for an explanation.¤",
+   "target": null,
+   "codes": 5
+  },
+  {
+   "text": "Click here to execute script",
+   "target": null,
+   "codes": 0
+  },
+  {
+   "text": "simply writes some text using document.write",
+   "target": null,
+   "codes": 0
+  },
+  {
+   "text": "This ¤anchor element¤ demonstrates that a tag ending in ¤¤/>¤¤ is not considered an empty element tag if it has a name that requires an end tag. In this case the final '/' is included in the href attribute value instead of being interpreted as the end of the tag.",
+   "target": null,
+   "codes": 6
+  },
+  {
+   "text": "The same goes for tags that have an optional end tag like this paragraph, which has a grey background despite the fact that the p element is syntactically an empty element tag.",
+   "target": null,
+   "codes": 0
+  },
+  {
+   "text": "Microsoft Conditional Comments¤",
+   "target": null,
+   "codes": 1
+  },
+  {
+   "text": "¤ ¤endif]> ¤",
+   "target": null,
+   "codes": 3
+  },
+  {
+   "text": "This is an example of a ¤¤¤¤¤validating¤¤¤ downlevel-revealed conditional comment¤¤, which hides the invalid conditional tags inside HTML comments. This form must be used if the condition can be true in some IE browsers.",
+   "target": null,
+   "codes": 10
+  },
+  {
+   "text": "This is an example of a slightly simplified validating downlevel-revealed conditional comment that can be used only for the condition !IE (to display in any browser except IE).",
+   "target": null,
+   "codes": 0
+  },
+  {
+   "text": "This demonstrates ¤the use of¤ ¤¤nested¤¤ downlevel-revealed conditional comments.",
+   "target": null,
+   "codes": 6
+  },
+  {
+   "text": "Microsoft pseudo-HTML generated by Word¤",
+   "target": null,
+   "codes": 1
+  },
+  {
+   "text": "¤This section was generated by MS-Word and contains messy and invalid HTML.¤¤¤ ¤endif]>¤¤¤¤¤",
+   "target": null,
+   "codes": 10
+  },
+  {
+   "text": "Server Tag Examples:¤",
+   "target": null,
+   "codes": 1
+  },
+  {
+   "text": "¤This paragraph is ignored during a full sequential parse",
+   "target": null,
+   "codes": 1
+  },
+  {
+   "text": "¤ ¤ ¤ ¤This is indented server code¤ ¤relativeFragment.jsp¤",
+   "target": null,
+   "codes": 7
+  },
+  {
+   "text": "This paragraph has a dynamic id attribute",
+   "target": null,
+   "codes": 0
+  },
+  {
+   "text": "These checkboxes have dynamic code determining whether they are checked:",
+   "target": null,
+   "codes": 0
+  },
+  {
+   "text": "The following is Mason server code sampled from the ¤¤Mason book, chapter 2, section 3.4.9¤¤:",
+   "target": null,
+   "codes": 4
+  },
+  {
+   "text": "<& menu &> <&| /i18n/itext, lang => $lang &> %# The bits in here will be available from $m->content in the /i18/text ¤Hello, ¤. These words are in English.¤ ¤Bonjour, ¤, ces mots sont franE<#xC3>E<#xA7>ais.¤ ¤Ellohay ¤, esethay ordsway areyay inyay Igpay Atinlay.¤ </&> ¤\">¤¤ <%args> $path %query => ( ) $text </%args> <%init> my $url = ... ... </%init> </%def> <*abc def=\"ghi\"> This is an example of an element from a hypothetical server language whose tag formats have not been registered with the TagTypeRegister class </*abc> </html>",
+   "target": null,
+   "codes": 12
+  }
+ ],
+ "okapi_test02_noseg.ttx": [
+  {
+   "text": "¤java¤¤/WEB-INF/struts-i18n.tld¤i18n¤",
+   "target": null,
+   "codes": 5
+  },
+  {
+   "text": "Jericho HTML Parser Test Document",
+   "target": null,
+   "codes": 0
+  },
+  {
+   "text": "Test HTML Document",
+   "target": null,
+   "codes": 0
+  },
+  {
+   "text": "This document contains many elements with optional end tags, server-side tags and some common illegal HTML constructs to demonstrate how they are interpreted by the parser. ¤¤",
+   "target": null,
+   "codes": 2
+  },
+  {
+   "text": "Table Example",
+   "target": null,
+   "codes": 0
+  },
+  {
+   "text": "First Column",
+   "target": null,
+   "codes": 0
+  },
+  {
+   "text": "Second Column",
+   "target": null,
+   "codes": 0
+  },
+  {
+   "text": "Cell 1",
+   "target": null,
+   "codes": 0
+  },
+  {
+   "text": "This is a table within the table",
+   "target": null,
+   "codes": 0
+  },
+  {
+   "text": "Second row of inner table",
+   "target": null,
+   "codes": 0
+  },
+  {
+   "text": "Third row of inner table",
+   "target": null,
+   "codes": 0
+  },
+  {
+   "text": "¤ Note that the parser does not consider this text to be a part of the paragraph started before the table because according to the HTML specification a TABLE, being a block-level element, must terminate the P element. See the documentation in HTMLElementName.P for more information, including instructions on how to make this parser compatible with the default behaviour of all major browsers in HTML transitional mode.",
+   "target": null,
+   "codes": 1
+  },
+  {
+   "text": "The following text demonstrates the use of a CDATA section which has limited browser compatability",
+   "target": null,
+   "codes": 0
+  },
+  {
+   "text": "<an> example of <sgml> markup that is not <painful> to write with < and such.",
+   "target": null,
+   "codes": 0
+  },
+  {
+   "text": "Baseball",
+   "target": null,
+   "codes": 0
+  },
+  {
+   "text": "Cricket",
+   "target": null,
+   "codes": 0
+  },
+  {
+   "text": "AFL",
+   "target": null,
+   "codes": 0
+  },
+  {
+   "text": "Soccer",
+   "target": null,
+   "codes": 0
+  },
+  {
+   "text": "This is ¤¤preformatted¤¤¤ text whose formatting should not be altered.¤",
+   "target": null,
+   "codes": 6
+  },
+  {
+   "text": "<p>This paragraph is written using client side script.",
+   "target": null,
+   "codes": 0
+  },
+  {
+   "text": "The P element is only ignored by the parser if a full sequential parse is performed, which ignores any non-server tags inside SCRIPT elements.</p>",
+   "target": null,
+   "codes": 0
+  },
+  {
+   "text": "<p>This P element is ignored by the parser in parse-on-demand mode because of the enclosing CDATA section.</p>",
+   "target": null,
+   "codes": 0
+  },
+  {
+   "text": "<p>Both the P element and the CDATA section are ignored by the parser during a full sequental parse, which automatically treats script element content as CDATA.</p>",
+   "target": null,
+   "codes": 0
+  },
+  {
+   "text": "This paragraph contains a comment. ¤ This text is a continuation of the paragraph before the one that is commented out.",
+   "target": null,
+   "codes": 1
+  },
+  {
+   "text": "item 1",
+   "target": null,
+   "codes": 0
+  },
+  {
+   "text": "item 2",
+   "target": null,
+   "codes": 0
+  },
+  {
+   "text": "subitem 1",
+   "target": null,
+   "codes": 0
+  },
+  {
+   "text": "subitem 2",
+   "target": null,
+   "codes": 0
+  },
+  {
+   "text": "item 3",
+   "target": null,
+   "codes": 0
+  },
+  {
+   "text": "item 4",
+   "target": null,
+   "codes": 0
+  },
+  {
+   "text": "Ordered list within an unordered list",
+   "target": null,
+   "codes": 0
+  },
+  {
+   "text": "Second item of ordered list",
+   "target": null,
+   "codes": 0
+  },
+  {
+   "text": "paragraph ¤¤within a list item¤¤",
+   "target": null,
+   "codes": 4
+  },
+  {
+   "text": "This text ¤¤contains ¤¤¤incorrectly¤¤¤ nested¤¤ formatting tags¤ which is",
+   "target": null,
+   "codes": 11
+  },
+  {
+   "text": "quite commonly generated¤ by HTML editors.",
+   "target": null,
+   "codes": 1
+  },
+  {
+   "text": "This section demonstrates the consequences of illegally nesting block-level elements inside inline-level elements, which is a very common situation caused by the misuse of FONT elements by ¤¤HTML editors.",
+   "target": null,
+   "codes": 2
+  },
+  {
+   "text": "This paragraph starts inside the Arial FONT element.¤ This text occurs after the Arial FONT end tag, but is still considered to be part of the same paragraph.",
+   "target": null,
+   "codes": 1
+  },
+  {
+   "text": "This entire list is surrounded",
+   "target": null,
+   "codes": 0
+  },
+  {
+   "text": "by an Arial font element.",
+   "target": null,
+   "codes": 0
+  },
+  {
+   "text": "This tooltip contains a line feed",
+   "target": null,
+   "codes": 0
+  },
+  {
+   "text": "Limitations when dealing with tags located inside other tags",
+   "target": null,
+   "codes": 0
+  },
+  {
+   "text": "This section demonstrates the limitation of the library in distinguishing whether a tag is located inside another tag without a full sequential parse. When a full sequential parse hasn't been performed, the H2 element in the following button's onclick attribute erroneously terminates the current paragraph, and is also returned by tag search methods. See parsing rule 2(i) in the documentation of the ¤¤Tag¤¤ class for an explanation.¤",
+   "target": null,
+   "codes": 5
+  },
+  {
+   "text": "Click here to execute script",
+   "target": null,
+   "codes": 0
+  },
+  {
+   "text": "simply writes some text using document.write",
+   "target": null,
+   "codes": 0
+  },
+  {
+   "text": "This ¤anchor element¤ demonstrates that a tag ending in ¤¤/>¤¤ is not considered an empty element tag if it has a name that requires an end tag. In this case the final '/' is included in the href attribute value instead of being interpreted as the end of the tag.",
+   "target": null,
+   "codes": 6
+  },
+  {
+   "text": "The same goes for tags that have an optional end tag like this paragraph, which has a grey background despite the fact that the p element is syntactically an empty element tag.",
+   "target": null,
+   "codes": 0
+  },
+  {
+   "text": "Microsoft Conditional Comments",
+   "target": null,
+   "codes": 0
+  },
+  {
+   "text": "¤ ¤endif]> ¤",
+   "target": null,
+   "codes": 3
+  },
+  {
+   "text": "This is an example of a ¤¤¤¤¤validating¤¤¤ downlevel-revealed conditional comment¤¤, which hides the invalid conditional tags inside HTML comments. This form must be used if the condition can be true in some IE browsers.",
+   "target": null,
+   "codes": 10
+  },
+  {
+   "text": "This is an example of a slightly simplified validating downlevel-revealed conditional comment that can be used only for the condition !IE (to display in any browser except IE).",
+   "target": null,
+   "codes": 0
+  },
+  {
+   "text": "This demonstrates ¤the use of¤ ¤¤nested¤¤ downlevel-revealed conditional comments.",
+   "target": null,
+   "codes": 6
+  },
+  {
+   "text": "Microsoft pseudo-HTML generated by Word",
+   "target": null,
+   "codes": 0
+  },
+  {
+   "text": "¤This section was generated by MS-Word and contains messy and invalid HTML.¤¤¤ ¤endif]>¤¤¤¤¤",
+   "target": null,
+   "codes": 10
+  },
+  {
+   "text": "Server Tag Examples:",
+   "target": null,
+   "codes": 0
+  },
+  {
+   "text": "This paragraph is ignored during a full sequential parse",
+   "target": null,
+   "codes": 0
+  },
+  {
+   "text": "¤ ¤ ¤ ¤This is indented server code¤ ¤relativeFragment.jsp¤",
+   "target": null,
+   "codes": 7
+  },
+  {
+   "text": "This paragraph has a dynamic id attribute",
+   "target": null,
+   "codes": 0
+  },
+  {
+   "text": "These checkboxes have dynamic code determining whether they are checked:",
+   "target": null,
+   "codes": 0
+  },
+  {
+   "text": "The following is Mason server code sampled from the ¤¤Mason book, chapter 2, section 3.4.9¤¤:",
+   "target": null,
+   "codes": 4
+  },
+  {
+   "text": "<& menu &> <&| /i18n/itext, lang => $lang &> %# The bits in here will be available from $m->content in the /i18/text ¤Hello, ¤. These words are in English.¤ ¤Bonjour, ¤, ces mots sont franE<#xC3>E<#xA7>ais.¤ ¤Ellohay ¤, esethay ordsway areyay inyay Igpay Atinlay.¤ </&> ¤\">¤¤ <%args> $path %query => ( ) $text </%args> <%init> my $url = ... ... </%init> </%def> <*abc def=\"ghi\"> This is an example of an element from a hypothetical server language whose tag formats have not been registered with the TagTypeRegister class </*abc> </html>",
+   "target": null,
+   "codes": 12
+  }
+ ]
+}
