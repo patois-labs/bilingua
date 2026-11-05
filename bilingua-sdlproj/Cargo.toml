@@ -1,0 +1,15 @@
+[package]
+name = "bilingua-sdlproj"
+description = "Bilingua: Trados Studio project files (sdlproj): project facts for a package manifest, byte-faithful merge"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+bilingua-model = { workspace = true }
+quick-xml = { workspace = true }
+
+[dev-dependencies]
+proptest = { version = "1", default-features = false, features = ["std"] }
+serde_json = { workspace = true }

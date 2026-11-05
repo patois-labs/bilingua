@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" Guid="0a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d" Version="4.0.0.0">
+  <GeneralProjectInfo Name="Lumen Bakery site" Description="Website, menus and in-store signs" StartDate="2026-10-01T00:00:00Z" DueDate="2026-12-01T00:00:00Z">
+    <ProjectOrigin>Studio</ProjectOrigin>
+  </GeneralProjectInfo>
+  <LanguageDirections>
+    <LanguageDirection Guid="11111111-2222-4333-8444-000000000001" TargetLanguageCode="de-DE" SourceLanguageCode="en-US" />
+    <LanguageDirection Guid="11111111-2222-4333-8444-000000000002" TargetLanguageCode="ja-JP" SourceLanguageCode="en-US" />
+    <LanguageDirection Guid="11111111-2222-4333-8444-000000000003" TargetLanguageCode="DE-de" SourceLanguageCode="EN-us" />
+  </LanguageDirections>
+  <ProjectFiles>
+    <ProjectFile Guid="99999999-0000-4000-8000-000000000001" Name="menu.docx" Path="" Role="Translatable"/>
+  </ProjectFiles>
+</Project>

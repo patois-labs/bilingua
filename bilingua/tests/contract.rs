@@ -197,6 +197,7 @@ fn crate_of(format: &str) -> &'static str {
         "phtml" | "jsp" | "aspx" | "erb" | "shtml" => "bilingua-serverpages",
         "arb" => "bilingua-arb",
         "xaml" => "bilingua-xaml",
+        "sdlproj" => "bilingua-sdlproj",
         "xmb" | "xtb" => "bilingua-xmb",
         "icml" | "wcml" => "bilingua-icml",
         "ts" => "bilingua-qtts",
