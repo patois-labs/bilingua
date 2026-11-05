@@ -50,7 +50,14 @@ fn label(code: &str) -> &'static str {
     }
 }
 
-/// The unit of a cue body (leading codes already outside it).
+/// True when a text piece holds words once LocOS tokens are removed. Text pieces of a unit are always separated by
+/// tags (tokens in LocOS's string), and a token never spans one, so piece by piece is the LocOS reading of the whole.
+fn piece_words(t: &str) -> bool {
+    !py_strip(&strip_placeholders(t)).is_empty()
+}
+
+/// The unit of a cue body (leading codes already outside it). Linear in the body (gate: the "words before this
+/// pair" and "words after this run" checks were quadratic in the number of codes on a line).
 pub fn build(body: &str) -> Built {
     let mut lines: Vec<Vec<Piece>> = vec![vec![]];
     let mut pos = 0;
@@ -71,10 +78,17 @@ pub fn build(body: &str) -> Built {
         }
         let mut cur: Vec<Inline> = Vec::new();
         let mut opened: Vec<usize> = Vec::new();
+        // words_after[i]: a text piece at or after i has a non-space character (LocOS: `rest.strip()`)
+        let mut words_after = vec![false; line.len() + 1];
+        for i in (0..line.len()).rev() {
+            words_after[i] = words_after[i + 1] || matches!(line[i], Piece::Text(t) if !py_strip(t).is_empty());
+        }
+        let mut words_before = false;
         let mut k = 0;
         while k < line.len() {
             if let Piece::Text(t) = line[k] {
                 push_text(&mut cur, t);
+                words_before |= piece_words(t);
                 k += 1;
                 continue;
             }
@@ -83,7 +97,7 @@ pub fn build(body: &str) -> Built {
                 j += 1;
             }
             let run: Vec<&str> = line[k..j].iter().filter_map(|p| if let Piece::Code(c) = p { Some(*c) } else { None }).collect();
-            let rest_words = line[j..].iter().any(|p| matches!(p, Piece::Text(t) if !py_strip(t).is_empty()));
+            let rest_words = words_after[j];
             let styles: Vec<&str> = if rest_words { run.iter().copied().filter(|c| c.as_bytes()[1].is_ascii_lowercase()).collect() } else { vec![] };
             for code in &run {
                 if !styles.contains(code) {
@@ -98,8 +112,7 @@ pub fn build(body: &str) -> Built {
                 let id = n.to_string();
                 let joined = styles.concat();
                 codes.insert(id.clone(), CodeData { open: Some(joined.clone()), close: Some(String::new()), label: Some(label(styles[0]).into()), ..Default::default() });
-                let before: String = cur.iter().filter_map(|i| if let Inline::Text(t) = i { Some(t.as_str()) } else { None }).collect();
-                if py_strip(&strip_placeholders(&before)).is_empty() {
+                if !words_before {
                     heads.push(id.clone());
                 }
                 cur.push(Inline::tag(id, TagKind::Open, joined));
@@ -129,7 +142,7 @@ pub fn build(body: &str) -> Built {
 
 /// True when the unit holds something to translate besides codes.
 pub fn has_words(inl: &[Inline]) -> bool {
-    !py_strip(&strip_placeholders(&plain_text(inl))).is_empty()
+    inl.iter().any(|i| matches!(i, Inline::Text(t) if piece_words(t)))
 }
 
 struct R {
@@ -137,23 +150,38 @@ struct R {
     head: usize,
     open_pairs: Vec<String>,
     emitted: usize,
+    /// Bytes written so far and the most this cue may take: every line break inside open pairs writes their codes
+    /// again, so a translation that opens many pairs and then breaks many lines would multiply them (gate).
+    size: usize,
+    cap: usize,
 }
 
 impl R {
+    fn push(&mut self, s: String) {
+        self.size += s.len();
+        self.out.push(s);
+    }
+
     fn text(&mut self, s: &str, pair_code: &dyn Fn(&str) -> String) {
         for (j, seg) in split_newlines(s).into_iter().enumerate() {
+            if self.size > self.cap {
+                return;
+            }
             if j > 0 {
-                self.out.push("\n".into());
+                self.push("\n".into());
                 self.head = self.out.len();
                 let mut codes = String::new();
                 for id in &self.open_pairs {
                     let c = pair_code(id);
                     self.emitted += count_codes(&c);
                     codes.push_str(&c);
+                    if self.size + codes.len() > self.cap {
+                        break;
+                    }
                 }
-                self.out.push(codes);
+                self.push(codes);
             }
-            self.out.push(seg.to_string());
+            self.push(seg.to_string());
         }
     }
 }
@@ -188,23 +216,33 @@ pub fn render(target: &[Inline], codes: &BTreeMap<String, CodeData>, heads: &Has
             }
         }
     }
+    // words[k]: text pieces with words before inline k, so "is this pair empty" is one subtraction (gate: nested pairs
+    // made the old per-pair scan quadratic)
+    let mut words = Vec::with_capacity(t.len() + 1);
+    words.push(0usize);
+    for i in &t {
+        let w = matches!(i, Inline::Text(s) if piece_words(s));
+        words.push(words.last().unwrap() + w as usize);
+    }
     let mut empty: HashSet<&str> = HashSet::new();
     for (id, &b) in &closes {
         let a = opens[id];
-        let between = plain_text(&t[a + 1..b]);
-        if py_strip(&strip_placeholders(&between)).is_empty() {
+        if words[b] == words[a + 1] {
             empty.insert(id);
         }
     }
     let pair_code = |id: &str| -> String { codes.get(id).and_then(|c| c.open.clone()).unwrap_or_default() };
-    let mut r = R { out: vec![String::new()], head: 0, open_pairs: vec![], emitted: 0 };
+    let input: usize = t.iter().map(|i| if let Inline::Text(s) = i { s.len() } else { 0 }).sum::<usize>()
+        + codes.iter().filter(|(k, _)| !k.starts_with('~')).map(|(_, c)| c.open.as_ref().or(c.standalone.as_ref()).map_or(0, |s| s.len())).sum::<usize>();
+    let cap = input.saturating_mul(16).saturating_add(64 * 1024);
+    let mut r = R { out: vec![String::new()], head: 0, open_pairs: vec![], emitted: 0, size: 0, cap };
     for (k, i) in t.iter().enumerate() {
         match i {
             Inline::Text(s) => r.text(s, &pair_code),
             Inline::Tag { id, kind: TagKind::Standalone, .. } => {
                 if let Some(c) = point(id) {
                     r.emitted += count_codes(c);
-                    r.out.push(c.to_string());
+                    r.push(c.to_string());
                 }
             }
             Inline::Tag { id, kind, .. } => {
@@ -218,20 +256,25 @@ pub fn render(target: &[Inline], codes: &BTreeMap<String, CodeData>, heads: &Has
                         r.emitted += count_codes(&c);
                         if heads.contains(id.as_str()) {
                             let h = r.head;
+                            r.size += c.len();
                             r.out[h].push_str(&c);
                         } else {
-                            r.out.push(c);
+                            r.push(c);
                         }
                         r.open_pairs.push(id.clone());
                     }
                     TagKind::Close if k == b => {
-                        if let Some(p) = r.open_pairs.iter().position(|x| x == id) {
+                        // pairs close mostly in reverse order: search from the end
+                        if let Some(p) = r.open_pairs.iter().rposition(|x| x == id) {
                             r.open_pairs.remove(p);
                         }
                     }
                     _ => {}
                 }
             }
+        }
+        if r.size > r.cap {
+            return Err("the translation would write its style codes again on too many lines".into());
         }
     }
     let joined = r.out.concat();

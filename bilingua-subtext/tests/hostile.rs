@@ -155,6 +155,40 @@ fn deep_and_huge_inputs() {
     check_all(&format!("[INFORMATION]\n00:00:01.00,00:00:02.00\n{}\n", "a[br]".repeat(200_000)).into_bytes());
     check_all("{1}{2}x\n".repeat(60_000).as_bytes());
     check_all(&"9".repeat(1_000_000).into_bytes());
+    // gate: many pairs on one line (nested, so a translated merge checks every pair) and many runs of codes
+    // separated by spaces before the words were quadratic in extract and merge
+    check_all(&format!("{{1}}{{2}}x{}\n", "{y:i}a".repeat(15_000)).into_bytes());
+    check_all(&format!("{{1}}{{2}}x {}word\n", "{y:i} ".repeat(15_000)).into_bytes());
+}
+
+/// Gate: every line break inside open pairs writes their codes again (LocOS), so a translation that opens many
+/// pairs and then breaks many lines would multiply the cue; it is refused instead.
+#[test]
+fn reopened_pairs_cannot_multiply_a_cue() {
+    let body: String = "{y:i}w|".repeat(2_000);
+    let src = format!("{{1}}{{2}}{body}end\n");
+    let mut doc = extract("sub", src.as_bytes()).unwrap();
+    let s = doc.units[0].source();
+    let opens: Vec<Inline> = s.iter().filter(|i| matches!(i, Inline::Tag { kind: TagKind::Open, .. })).cloned().collect();
+    let closes: Vec<Inline> = s.iter().filter(|i| matches!(i, Inline::Tag { kind: TagKind::Close, .. })).cloned().collect();
+    assert_eq!(opens.len(), 2_000);
+    let mut t = opens.clone();
+    t.push(Inline::text(format!("w{}", "\nw".repeat(2_000))));
+    t.extend(closes.into_iter().rev());
+    doc.units[0].segments[0].target = t;
+    assert!(matches!(filter("sub").merge(&doc), Err(Error::Write(m)) if m.contains("too many lines")));
+    // a few pairs over a few lines are written as LocOS writes them
+    let out = build("sub", b"{1}{2}{y:i}a {c:$FF}b c|d\n", &[(0, "\u{27e6}g1\u{27e7}A\nB \u{27e6}g2\u{27e7}C\nD\u{27e6}/g2\u{27e7}\u{27e6}/g1\u{27e7}|E")]);
+    assert_eq!(String::from_utf8(out).unwrap(), "{1}{2}{y:i}A|{y:i}B {c:$FF}C|{y:i}{c:$FF}D|E\n");
+}
+
+/// Gate: "words before this pair" reads the line as LocOS does, tokens included: a literal half token in the text
+/// is not completed by the text after a code.
+#[test]
+fn a_literal_half_token_is_words_as_in_locos() {
+    let doc = extract("sub", "{1}{2}a|\u{27e6}x{P:1}1\u{27e7}{y:i}w\n".as_bytes()).unwrap();
+    assert!(!doc.units[0].codes.contains_key("~heads"), "{:?}", doc.units[0].codes);
+    assert_eq!(units("sub", "{1}{2}a|\u{27e6}x{P:1}1\u{27e7}{y:i}w\n".as_bytes()), vec!["a\n\u{27e6}x\u{27e6}x1\u{27e7}1\u{27e7}\u{27e6}g2\u{27e7}w\u{27e6}/g2\u{27e7}"]);
 }
 
 #[test]

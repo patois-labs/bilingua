@@ -44,7 +44,9 @@ reads back:
 - a line that reads as a MicroDVD cue in a SubViewer file (the file would become ambiguous);
 - text that reads as a MicroDVD control code (`{y:i}` typed by a translator, or pieces joined once a tag is dropped);
 - a MicroDVD cue `{0}{1}` or `{1}{0}` whose text reads as a frame-rate declaration;
-- a translation with no text (only spaces, `|`, `[br]`, codes or placeholders): the cue would disappear.
+- a translation with no text (only spaces, `|`, `[br]`, codes or placeholders): the cue would disappear;
+- a MicroDVD translation that keeps so many style pairs open over so many line breaks that writing their codes
+  again on every line (as LocOS does) would make the cue more than 16 times its input plus 64 KiB.
 
 Lines of only Unicode spaces (U+3000...) are dropped where a line break is a real newline (LocOS writes them as a
 blank line that ends the cue). A new line, a blank line or a pipe never makes a new cue: line breaks collapse to the
