@@ -48,6 +48,8 @@ pub fn filters() -> Vec<Box<dyn Filter>> {
         // a stringsdict is a plist: it sniffs first; both are claimed by extension, and sniff only an XML or binary plist
         Box::new(bilingua_plist::Stringsdict),
         Box::new(bilingua_plist::Plist),
+        // rc sniffs only resource-script keywords (STRINGTABLE, DIALOG, MENU, VERSIONINFO, winres.h); strict enough to sit early.
+        Box::new(bilingua_rc::Rc),
         // TOML after INI: a valid-TOML INI file without an extension should stay INI.
         Box::new(bilingua_toml::TomlFilter),
         // Qt Linguist .ts sniffs strictly (XML with a <TS> root); `detect` decides the shared .ts extension.

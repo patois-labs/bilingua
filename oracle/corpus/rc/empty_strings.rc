@@ -1,0 +1,6 @@
+STRINGTABLE
+BEGIN
+    IDS_EMPTY ""
+    IDS_NUM "%d%%"
+    IDS_ONE "One"
+END

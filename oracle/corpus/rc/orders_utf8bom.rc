@@ -1,0 +1,69 @@
+﻿// Lumen Bakery order desk (made-up sample)
+#include "resource.h"
+#include "winres.h"
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+#pragma code_page(65001)
+
+IDR_MAINMENU MENU
+BEGIN
+    POPUP "&Order"
+    BEGIN
+        MENUITEM "&New order...\tCtrl+N",      ID_ORDER_NEW
+        MENUITEM "&Print receipt\tCtrl+P",     ID_ORDER_PRINT
+        MENUITEM SEPARATOR
+        MENUITEM "E&xit",                      ID_APP_EXIT
+    END
+    POPUP "&Help"
+    BEGIN
+        MENUITEM "&About Lumen Bakery...",     ID_APP_ABOUT
+    END
+END
+
+IDD_PICKUP DIALOGEX 0, 0, 220, 90
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Choose a pickup time"
+FONT 9, "Segoe UI", 400, 0, 0x1
+BEGIN
+    LTEXT           "Your order will be ready in 15 minutes.",IDC_STATIC,7,7,206,10
+    LTEXT           "Store &name:",IDC_STATIC,7,24,50,8
+    EDITTEXT        IDC_STORE,60,22,150,12,ES_AUTOHSCROLL
+    CONTROL         "&Send me a text when it is ready",IDC_NOTIFY,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,7,42,150,10
+    GROUPBOX        "Payment",IDC_STATIC,7,56,150,28
+    DEFPUSHBUTTON   "OK",IDOK,163,69,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,163,52,50,14
+END
+
+STRINGTABLE
+BEGIN
+    IDS_GREETING            "Welcome back, %s! You have %d orders waiting."
+    IDS_COPYING             "Copying %1 to %2!s!..."
+    IDS_QUOTE               "Say ""fresh"" to the baker\nand wait here"
+    IDS_PATH                "Saved in C:\\Bakery\\Orders"
+    IDS_PERCENT             "%d%% off today"
+    IDS_LONG                "Sourdough, rye and \
+                            seeded loaves"
+END
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION 2,4,0,1
+ PRODUCTVERSION 2,4,0,1
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904B0"
+        BEGIN
+            VALUE "CompanyName", "Lumen Bakery"
+            VALUE "FileDescription", "Order desk"
+            VALUE "FileVersion", "2.4.0.1"
+            VALUE "LegalCopyright", "Copyright (C) 2026 Lumen Bakery"
+            VALUE "ProductName", "Lumen Order Desk"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1200
+    END
+END
+#endif

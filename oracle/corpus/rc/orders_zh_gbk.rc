@@ -1,0 +1,12 @@
+#pragma code_page(936)
+STRINGTABLE
+BEGIN
+    IDS_GREETING    "欢迎回来，%s！您有 %d 个订单。"
+END
+IDR_MENU MENU
+BEGIN
+    POPUP "文件(&F)"
+    BEGIN
+        MENUITEM "退出(&X)", ID_APP_EXIT
+    END
+END
