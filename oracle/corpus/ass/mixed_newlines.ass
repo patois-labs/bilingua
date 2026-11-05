@@ -1,0 +1,4 @@
+[Script Info]
+Title: Mixed
+[Events]Dialogue: 0,0:00:01.00,0:00:02.00,Default,,0,0,0,,One
+Dialogue: 0,0:00:02.00,0:00:03.00,Default,,0,0,0,,Two

@@ -42,6 +42,8 @@ pub fn filters() -> Vec<Box<dyn Filter>> {
         Box::new(bilingua_ttx::Ttx::default()),
         Box::new(bilingua_subtitle::Vtt),
         Box::new(bilingua_subtitle::Srt),
+        // ASS and SSA sniff strictly (a [Script Info], [V4+ Styles] or [Events] section line), so they sit with the subtitles.
+        Box::new(bilingua_ass::AssFilter),
         Box::new(bilingua_po::Po),
         Box::new(bilingua_wxl::Wxl),
         Box::new(bilingua_resjson::Resjson),

@@ -1,0 +1,7 @@
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: 0,0:00:01.00,0:00:02.00,Default,,0,0,0,,Account {\i1}settings{\i0}
+Dialogue: 0,0:00:02.00,0:00:03.00,Default,,0,0,0,,{\an8}{\b1}Account{\b0} settings
+Dialogue: 0,0:00:03.00,0:00:04.00,Default,,0,0,0,,{\b1}a {\i1}b{\r} c
+Dialogue: 0,0:00:04.00,0:00:05.00,Default,,0,0,0,,Say {\i1}very {\b1}{\c&H0000FF&}loud{\r} now
+Dialogue: 0,0:00:05.00,0:00:06.00,Default,,0,0,0,,x {\b1}a{\i1}b{\b0}c{\i0} d
