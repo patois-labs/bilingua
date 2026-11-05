@@ -62,5 +62,6 @@ bilingua-email = { workspace = true }
 bilingua-serverpages = { workspace = true }
 
 [dev-dependencies]
+bilingua-zip = { workspace = true }
 zip = { workspace = true }
 serde_json = { workspace = true }

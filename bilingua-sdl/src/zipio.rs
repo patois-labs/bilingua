@@ -136,6 +136,10 @@ pub fn read_zip(bytes: &[u8], limits: &ZipLimits) -> Result<Vec<Entry>, Error> {
         return Err(bad("not a zip file (no PK signature)"));
     }
     let mut zip = zip::ZipArchive::new(Cursor::new(bytes)).map_err(|e| bad(format!("unreadable zip: {e}")))?;
+    // a name listed twice is dropped by the reader, whatever the layout: refused by the shared check
+    if let Err(bilingua_model::Error::Limit(e)) = bilingua_zip::refuse_duplicate_names(&zip) {
+        return Err(refuse(limits, e.kind, e.msg, "the package lists the same entry twice".into()));
+    }
     if zip.len() > limits.max_entries {
         return Err(refuse(
             limits,
