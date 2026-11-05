@@ -226,10 +226,10 @@ fn hostile_zips() {
     let e = Flare.extract(&with(&[("Content/Resources/big.bin", &big)]), &ExtractOptions::default()).expect_err("bomb");
     assert!(matches!(&e, Error::Limit(l) if l.kind == LimitKind::ZipRatio), "{e}");
     // too many members, too many segments
-    let o = ExtractOptions { limits: Some(Limits { max_zip_entries: 5, ..Limits::default() }), ..Default::default() };
+    let o = ExtractOptions::new().with_limits(Limits::new().with_max_zip_entries(5));
     let e = Flare.extract(&project(), &o).expect_err("members");
     assert!(matches!(&e, Error::Limit(l) if l.kind == LimitKind::ZipEntries), "{e}");
-    let o = ExtractOptions { limits: Some(Limits { max_units: 5, ..Limits::default() }), ..Default::default() };
+    let o = ExtractOptions::new().with_limits(Limits::new().with_max_units(5));
     let e = Flare.extract(&project(), &o).expect_err("segments");
     assert!(matches!(&e, Error::Limit(l) if l.kind == LimitKind::Units), "{e}");
     // __MACOSX resource forks are copied, never decoded
@@ -259,7 +259,7 @@ fn export_with_a_target_language() {
     let mut d = extract(&src);
     d.target_lang = Some("de-DE".into());
     assert_eq!(merge(&d), src);
-    let out = Flare.merge_with(&d, &MergeOptions { stamp_target_always: true, ..Default::default() }).unwrap();
+    let out = Flare.merge_with(&d, &MergeOptions::new().with_stamp_target_always(true)).unwrap();
     assert!(text_of(&members(&out).0, "Content/Topic.htm").contains(r#"lang="de-DE""#));
 }
 

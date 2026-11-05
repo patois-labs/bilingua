@@ -50,7 +50,7 @@ fn large_project_round_trips_and_is_timed() {
     if let Ok(dir) = std::env::var("FLARE_SPEED_OUT") {
         std::fs::write(format!("{dir}/big.flprjzip"), &bytes).unwrap();
     }
-    let o = ExtractOptions { target_lang: Some("ru".into()), limits: Some(Limits { max_units: 500_000, ..Limits::default() }), ..Default::default() };
+    let o = ExtractOptions::new().with_target_lang("ru").with_limits(Limits::new().with_max_units(500_000));
     let t = Instant::now();
     let mut d = Flare.extract(&bytes, &o).unwrap();
     let t_extract = t.elapsed();

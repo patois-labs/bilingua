@@ -2,7 +2,7 @@
 //! segments written back, locked units.
 mod common;
 use bilingua_flare::Flare;
-use bilingua_model::locos::{from_locos_text, to_locos_text};
+use bilingua_model::profile::tokens::{from_locos_text, to_locos_text};
 use bilingua_model::*;
 use common::*;
 use std::path::Path;
@@ -204,7 +204,7 @@ fn a_skeleton_from_another_parser_is_refused() {
 fn locked_units_keep_the_ids_consistent_between_extract_and_merge() {
     let topic = TOPIC.replace("<p>Text for", "<p translate=\"no\">Colophon text stays.</p>\n        <p>Text for");
     let src = project_with(&[("Content/Topic.htm", topic.as_bytes())], &[]);
-    let o = ExtractOptions { include_locked: true, ..Default::default() };
+    let o = ExtractOptions::new().with_include_locked(true);
     let mut d = Flare.extract(&src, &o).unwrap();
     let locked: Vec<Unit> = d.units.iter().filter(|u| !u.translate).cloned().collect();
     assert_eq!(locked.len(), 1);
@@ -239,7 +239,7 @@ fn custom_limits_travel_with_the_skeleton() {
     // a file read under raised limits can be merged again under the same ones
     let big = vec![b'a'; 3 * 1024 * 1024];
     let src = project_with(&[("Content/Resources/pad.bin", &big)], &[]);
-    let o = ExtractOptions { limits: Some(Limits { max_zip_ratio: 1_000_000, ..Limits::default() }), ..Default::default() };
+    let o = ExtractOptions::new().with_limits(Limits::new().with_max_zip_ratio(1_000_000));
     let mut d = Flare.extract(&src, &o).unwrap();
     set(&mut d, 0, "Guide");
     let (m, _) = members(&merge(&d));

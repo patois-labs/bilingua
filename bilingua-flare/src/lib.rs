@@ -34,7 +34,6 @@
 /// Skeleton schema number: bump only when this crate's skeleton layout changes (see `bilingua_model::check_parser`).
 pub const SKELETON_SCHEMA: u32 = 1;
 
-mod dup;
 mod lang;
 mod mask;
 mod parts;
@@ -100,13 +99,7 @@ struct Package {
 
 impl Package {
     fn open(bytes: &[u8], limits: &Limits) -> Result<Package, Error> {
-        if dup::has_duplicates(bytes) {
-            return Err(LimitError::new(
-                LimitKind::ZipMalformed,
-                "This Flare project lists the same file twice (duplicate names). It was not processed.",
-            )
-            .into());
-        }
+        // read_zip refuses a name listed twice (exactly, by case, or `\` against `/`), however the directory is found
         let entries = bilingua_zip::read_zip("flprjzip", bytes, &ZipLimits::from(limits))?;
         let kinds: Vec<Option<Kind>> = entries.iter().map(|e| if e.meta.dir { None } else { kind_of(&e.name) }).collect();
         let flare = entries.iter().zip(&kinds).any(|(e, k)| {
@@ -143,7 +136,7 @@ fn part_units(idx: usize, path: &str, items: &[parts::Item]) -> Vec<Unit> {
             u.context.key = it.key.clone();
             u.context.location = Some(format!("{path} item {}", j + 1));
             for (id, tok) in &it.tokens {
-                u.codes.insert(id.clone(), CodeData { standalone: Some(tok.clone()), label: Some("variable".into()), ..Default::default() });
+                u.codes.insert(id.clone(), CodeData { standalone: Some(tok.clone()), label: Some("variable".into()), open: None, close: None });
             }
             u
         })
@@ -184,13 +177,7 @@ fn extract_flare(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error>
         }
         guard::check_unit_count(units.len(), &limits)?;
     }
-    let doc = Document {
-        format: "flprjzip".into(),
-        source_lang: opts.source_lang.clone().or(first_lang),
-        target_lang: opts.target_lang.clone(),
-        granularity: Granularity::Paragraph,
-        units,
-        skeleton: Skeleton::zip(
+    let skeleton = Skeleton::zip(
             vec![
                 ZipEntry { name: ARCHIVE.into(), data: ZipData::Raw(bytes.to_vec()) },
                 ZipEntry {
@@ -200,10 +187,12 @@ fn extract_flare(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error>
                     ),
                 },
             ],
-            bilingua_model::parser_info!(),
-        ),
-        ..Default::default()
-    };
+        bilingua_model::parser_info!(),
+    );
+    let doc = Document::new("flprjzip", units, skeleton)
+        .with_options(opts)
+        .with_source_lang(opts.source_lang.clone().or(first_lang))
+        .with_granularity(Granularity::Paragraph);
     guard::finish(doc, vec![], &limits)
 }
 
@@ -220,7 +209,7 @@ fn merge_flare(doc: &Document, mopts: &MergeOptions) -> Result<Vec<u8>, Error> {
         })
         .ok_or_else(|| Error::Write("flprjzip skeleton has no archive".into()))?;
     let any = doc.units.iter().any(translated);
-    let lang = if mopts.should_stamp(doc) { doc.target_lang.as_deref().and_then(|l| topic::target(Some(l))) } else { None };
+    let lang = mopts.stamp_lang(doc, any).and_then(|l| topic::target(Some(l)));
     // Nothing translated and nothing to stamp: the original bytes, without opening the project again.
     if !any && lang.is_none() {
         return Ok(original.to_vec());
@@ -234,11 +223,12 @@ fn merge_flare(doc: &Document, mopts: &MergeOptions) -> Result<Vec<u8>, Error> {
         .transpose()
         .map_err(|e| Error::Write(format!("the flprjzip skeleton's options are unreadable: {e}")))?
         .unwrap_or(Opts { include_locked: false, limits: Limits::default() });
+    // a stored limit set from an older build may lack new fields: serde fills them from `Limits::default()`
     let limits = read_with.limits;
     let pkg = Package::open(original, &limits)?;
     let by_id: HashMap<&str, &Unit> = doc.units.iter().map(|u| (u.id.as_str(), u)).collect();
     let lang_ref = lang.as_ref().map(|(t, r)| (t.as_str(), *r));
-    let copts = ExtractOptions { include_locked: read_with.include_locked, limits: Some(limits), ..Default::default() };
+    let copts = ExtractOptions::new().with_include_locked(read_with.include_locked).with_limits(limits);
     let mut replaced: HashMap<usize, Vec<u8>> = HashMap::new();
     for (idx, e) in pkg.entries.iter().enumerate() {
         let Some(kind) = pkg.kinds[idx] else { continue };
@@ -371,10 +361,6 @@ impl Filter for Flare {
 
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
         extract_flare(bytes, opts)
-    }
-
-    fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
-        self.merge_with(doc, &MergeOptions::default())
     }
 
     fn merge_with(&self, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {

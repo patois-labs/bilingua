@@ -14,17 +14,18 @@ use bilingua_html::Html;
 use bilingua_model::*;
 use std::collections::HashMap;
 
-/// Reserved code ids of `bilingua-html` (see its `extract.rs`): the attribute marker.
-const VALUE: &str = "~v";
+/// Hidden keys of `bilingua-html` (see its `extract.rs`): the value marker and the raw source of a unit.
+const VALUE: &str = "v";
+const RAW: &str = "raw";
 
 pub const STYLE_KEYWORD: &str = "flare:index-keyword";
 
 pub fn translated(u: &Unit) -> bool {
-    u.translate && u.segments.iter().any(|s| !s.target.is_empty())
+    u.is_translated()
 }
 
 fn is_attr(u: &Unit) -> bool {
-    u.codes.get(VALUE).and_then(|c| c.label.as_deref()) == Some("attr")
+    u.hidden(VALUE) == Some("attr")
 }
 
 /// The LocOS style of an attribute unit, when LocOS offers that attribute (`a11y:img-alt` and the like).
@@ -125,7 +126,7 @@ fn check_xhtml(text: &str, l: &Limits) -> Result<(), Error> {
 /// A private-use character that is in neither the chapter nor any target; `&` is swapped for it before the HTML
 /// filter writes a target (which would keep an `&name;` that looks like an unknown entity as it is, invalid XML)
 /// and swapped back for `&amp;` afterwards.
-fn pick_sentinel(chapter: &str, picked: &[(usize, &Unit)]) -> char {
+fn pick_sentinel(chapter: &str, picked: &[(usize, &Unit)]) -> Result<char, Error> {
     let used = |c: char| {
         chapter.contains(c)
             || picked.iter().any(|(_, u)| {
@@ -133,7 +134,13 @@ fn pick_sentinel(chapter: &str, picked: &[(usize, &Unit)]) -> char {
                     || u.separators.iter().any(|x| x.contains(c))
             })
     };
-    ('\u{E000}'..='\u{F8FF}').find(|&c| !used(c)).unwrap_or('\u{F8FF}')
+    // the private-use area, then the supplementary private-use planes; a used character is never taken (it would
+    // be turned into `&amp;` in the chapter)
+    ('\u{E000}'..='\u{F8FF}')
+        .chain('\u{F0000}'..='\u{FFFFD}')
+        .chain('\u{100000}'..='\u{10FFFD}')
+        .find(|&c| !used(c))
+        .ok_or_else(|| Error::Write("a topic uses every private-use character".into()))
 }
 
 fn safe(v: &[Inline], sentinel: char) -> Vec<Inline> {
@@ -429,9 +436,14 @@ impl Topic {
         let mut attrs = Vec::new();
         for (i, u) in sub.units.iter_mut().enumerate() {
             if !is_attr(u) {
-                // the text of a <title> that holds markup cannot be offered safely: it stays as it is
-                if u.context.kind.as_deref() == Some("title") && plain_text(&u.source()).contains('<') {
+                // `bilingua-html` reads a <title> as plain text, so one that holds markup (LocOS offers it with the
+                // markup as codes) cannot be offered safely: it stays as it is, listed only with `include_locked`.
+                // `&lt;` in a title is text, not markup: the raw source decides.
+                if u.context.kind.as_deref() == Some("title") && u.hidden(RAW).is_some_and(|r| r.contains('<')) {
                     u.translate = false;
+                    if !opts.include_locked {
+                        continue;
+                    }
                 }
                 relabel(u, &masked);
                 body.push(i);
@@ -546,18 +558,19 @@ impl Topic {
         let mut rendered = if picked.is_empty() {
             self.masked.text.clone()
         } else {
-            let sentinel = pick_sentinel(&self.masked.text, &picked);
+            let sentinel = pick_sentinel(&self.masked.text, &picked)?;
             for (si, u) in picked {
                 let unit = &mut self.sub.units[si];
                 unit.segments = u
                     .segments
                     .iter()
-                    .map(|s| Segment {
-                        id: s.id.strip_prefix(&prefix).unwrap_or(&s.id).to_string(),
-                        source: safe(&s.source, sentinel),
-                        target: safe(&s.target, sentinel),
-                        state: s.state,
-                        origin: s.origin.clone(),
+                    .map(|s| {
+                        // a clone keeps every segment field (an empty translation included)
+                        let mut c = s.clone();
+                        c.id = s.id.strip_prefix(&prefix).unwrap_or(&s.id).to_string();
+                        c.source = safe(&s.source, sentinel);
+                        c.target = safe(&s.target, sentinel);
+                        c
                     })
                     .collect();
                 unit.separators = u.separators.iter().map(|x| x.replace('&', &sentinel.to_string())).collect();
@@ -595,7 +608,7 @@ mod tests {
 
     #[test]
     fn depth_ignores_void_elements() {
-        let l = Limits { max_xml_depth: 5, ..Limits::default() };
+        let l = Limits::new().with_max_xml_depth(5);
         let t = format!("<html><body>{}</body></html>", "<br>".repeat(100));
         assert!(check_xhtml(&t, &l).is_ok());
         let deep = format!("{}{}", "<div>".repeat(6), "</div>".repeat(6));

@@ -3,7 +3,7 @@
 #![allow(dead_code)]
 
 use bilingua_flare::Flare;
-use bilingua_model::locos::{from_locos_text, to_locos_text};
+use bilingua_model::profile::tokens::{from_locos_text, to_locos_text};
 use bilingua_model::*;
 use std::io::{Cursor, Read, Write};
 

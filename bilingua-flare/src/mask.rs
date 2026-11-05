@@ -51,20 +51,17 @@ pub struct Masked {
     pub keywords: Vec<KwAttr>,
 }
 
-/// An attribute name that does not occur in `text`.
-fn pick_key(text: &str) -> Result<String, Error> {
-    let mut key = String::from("mcf");
-    for _ in 0..6 {
-        if !text.contains(&key) {
-            return Ok(key);
-        }
-        key.push('x');
+/// An attribute name that does not occur in `text`: `mcf` and one `x` more than the longest run of `x` after any
+/// `mcf` in the text. One linear pass; a topic full of `mcfxxx...` only makes the name longer, it is never refused.
+fn pick_key(text: &str) -> String {
+    match text.match_indices("mcf").map(|(p, _)| text[p + 3..].bytes().take_while(|b| *b == b'x').count() + 1).max() {
+        None => "mcf".into(),
+        Some(n) => format!("mcf{}", "x".repeat(n)),
     }
-    Err(Error::Parse { format: "flprjzip".into(), msg: "a topic uses the reserved marker name mcf".into() })
 }
 
 pub fn mask(text: &str) -> Result<Masked, Error> {
-    let key = pick_key(text)?;
+    let key = pick_key(text);
     let mut out = String::with_capacity(text.len() + text.len() / 8);
     let mut table: Vec<String> = Vec::new();
     let mut keywords = Vec::new();
@@ -213,5 +210,9 @@ mod tests {
         assert_eq!(unmask(&m.text, &m.key, &m.table), t);
         let m = mask("<p>mcf <MadCap:xref>a</MadCap:xref></p>").unwrap();
         assert_eq!(m.key, "mcfx");
+        let t = "<p>mcfxxxxxxxxx mcfx <MadCap:xref>a</MadCap:xref></p>";
+        let m = mask(t).unwrap();
+        assert!(!t.contains(&m.key), "{}", m.key);
+        assert_eq!(unmask(&m.text, &m.key, &m.table), t);
     }
 }

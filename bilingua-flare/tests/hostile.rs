@@ -3,7 +3,7 @@
 //! read; none panics.
 mod common;
 use bilingua_flare::Flare;
-use bilingua_model::locos::{from_locos_text, to_locos_text};
+use bilingua_model::profile::tokens::{from_locos_text, to_locos_text};
 use bilingua_model::*;
 use common::*;
 use proptest::prelude::*;
@@ -17,7 +17,7 @@ fn kind(e: &Error) -> Option<LimitKind> {
 
 fn raised() -> ExtractOptions {
     // deep nesting compresses far past the zip ratio limit; raise it so the XML guard is what answers
-    ExtractOptions { limits: Some(Limits { max_zip_ratio: 1_000_000, ..Limits::default() }), ..Default::default() }
+    ExtractOptions::new().with_limits(Limits::new().with_max_zip_ratio(1_000_000))
 }
 
 #[test]
@@ -52,7 +52,7 @@ fn deep_nesting_is_a_typed_error() {
     let toc = FLTOC.replace("<TocEntry Title=\"Getting started\"", &format!("{}<TocEntry Title=\"Getting started\"", "<TocEntry>".repeat(n)));
     let e = Flare.extract(&project_with(&[("Project/TOCs/Master.fltoc", toc.as_bytes())], &[]), &raised()).expect_err("deep toc");
     assert_eq!(kind(&e), Some(LimitKind::XmlDepth), "{e}");
-    let o = ExtractOptions { limits: Some(Limits { max_xml_depth: 3, ..Limits::default() }), ..Default::default() };
+    let o = ExtractOptions::new().with_limits(Limits::new().with_max_xml_depth(3));
     assert_eq!(kind(&Flare.extract(&project(), &o).expect_err("depth 3")), Some(LimitKind::XmlDepth));
 }
 
@@ -186,11 +186,11 @@ fn many_unclosed_elements_stay_fast() {
 
 #[test]
 fn an_oversized_input_and_unit_text_are_limits() {
-    let o = ExtractOptions { limits: Some(Limits { max_input_bytes: 100, ..Limits::default() }), ..Default::default() };
+    let o = ExtractOptions::new().with_limits(Limits::new().with_max_input_bytes(100));
     assert_eq!(kind(&Flare.extract(&project(), &o).expect_err("big")), Some(LimitKind::InputBytes));
-    let o = ExtractOptions { limits: Some(Limits { max_unit_chars: 4, ..Limits::default() }), ..Default::default() };
+    let o = ExtractOptions::new().with_limits(Limits::new().with_max_unit_chars(4));
     assert_eq!(kind(&Flare.extract(&project(), &o).expect_err("long")), Some(LimitKind::UnitChars));
-    let o = ExtractOptions { limits: Some(Limits { max_xml_elements: 3, ..Limits::default() }), ..Default::default() };
+    let o = ExtractOptions::new().with_limits(Limits::new().with_max_xml_elements(3));
     assert!(kind(&Flare.extract(&project(), &o).expect_err("elements")).is_some());
 }
 

@@ -17,7 +17,9 @@ as in LocOS).
 - `tools/check-portable.sh` and `.ps1`: `flare` in `CRATES`.
 - Skeleton: `Skeleton::Zip` with one raw entry `flprjzip` holding the whole original file and one `flprjzip-options`
   entry (include_locked and the limits it was read with); merge opens the project again. Schema 1.
-- Options: none of its own. `target_lang` on the `Document` picks the language a merge declares (only when at least
+- Filter: implements `merge_with` only (model round 2); `merge` is the provided default. Stamping asks
+  `MergeOptions::stamp_lang`.
+- Options: none of its own (`format_option_keys` is empty). `target_lang` on the `Document` picks the language a merge declares (only when at least
   one unit is translated, or with `MergeOptions::stamp_target_always`). `include_locked` also lists
   `translate="no"` text as locked units. Output encoding: Flare is UTF-8 only, so `OutputEncoding` has no effect
   (a UTF-8 byte-order mark is kept).
