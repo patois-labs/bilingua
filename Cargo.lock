@@ -60,6 +60,7 @@ dependencies = [
  "bilingua-xmb",
  "bilingua-xml",
  "bilingua-xslt",
+ "bilingua-xtg",
  "bilingua-yaml",
  "serde_json",
  "zip",
@@ -475,6 +476,15 @@ dependencies = [
 
 [[package]]
 name = "bilingua-xslt"
+version = "0.1.0"
+dependencies = [
+ "bilingua-model",
+ "proptest",
+ "serde_json",
+]
+
+[[package]]
+name = "bilingua-xtg"
 version = "0.1.0"
 dependencies = [
  "bilingua-model",
