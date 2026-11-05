@@ -46,6 +46,7 @@ dependencies = [
  "bilingua-mo",
  "bilingua-model",
  "bilingua-odf",
+ "bilingua-pdf",
  "bilingua-php",
  "bilingua-plist",
  "bilingua-po",
@@ -360,6 +361,16 @@ dependencies = [
  "bilingua",
  "serde_json",
  "zip",
+]
+
+[[package]]
+name = "bilingua-pdf"
+version = "0.1.0"
+dependencies = [
+ "bilingua-model",
+ "flate2",
+ "proptest",
+ "serde_json",
 ]
 
 [[package]]

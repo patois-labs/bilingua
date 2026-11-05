@@ -175,6 +175,7 @@ fn crate_of(format: &str) -> &'static str {
         "stf" => "bilingua-stf",
         "hhc" | "hhk" | "hhp" => "bilingua-htmlhelp",
         "mo" => "bilingua-mo",
+        "pdf" => "bilingua-pdf",
         "eml" => "bilingua-email",
         "stl" => "bilingua-stl",
         "csv" | "tsv" => "bilingua-csv",
