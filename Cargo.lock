@@ -55,6 +55,7 @@ dependencies = [
  "bilingua-subtitle",
  "bilingua-text",
  "bilingua-toml",
+ "bilingua-vsdx",
  "bilingua-wxl",
  "bilingua-xaml",
  "bilingua-xcstrings",
@@ -428,6 +429,17 @@ dependencies = [
  "proptest",
  "serde_json",
  "toml",
+]
+
+[[package]]
+name = "bilingua-vsdx"
+version = "0.1.0"
+dependencies = [
+ "bilingua-model",
+ "bilingua-zip",
+ "proptest",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

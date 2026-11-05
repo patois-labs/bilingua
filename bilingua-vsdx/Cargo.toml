@@ -1,0 +1,16 @@
+[package]
+name = "bilingua-vsdx"
+description = "Bilingua: Microsoft Visio (vsdx, vsdm) filter. Page names, shape text with run markers as tags, shape data labels."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+bilingua-model = { workspace = true }
+bilingua-zip = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+proptest = "1"

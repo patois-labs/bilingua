@@ -10,6 +10,8 @@ Every file here is made up for Bilingua (Lumen Bakery is a fictional company; no
 | `odf/guide.odt`, `odf/sales.ods`, `odf/slides.odp`, `odf/flow.odg` | `bilingua-odf/tools/gen_corpus.py` writes the OpenDocument XML by hand (stdlib only) | Apache-2.0, same as Bilingua |
 | `bilingua-odf/tests/data/okapi/*` (15 OpenDocument packages; test fixtures, not corpus) | Copied unchanged from the Okapi Framework, https://gitlab.com/okapiframework/Okapi.git, tag `v1.48.0`, commit `ce9f9edc2956da5868fcb71ae10426c7c6ae4e0b`, folder `okapi/filters/openoffice/src/test/resources`; see the `NOTICE` there | Apache-2.0 (Okapi Framework) |
 | `icml/okapi_Test01.wcml` (and its copy `bilingua-icml/tests/data/okapi_Test01.wcml`) | Copied unchanged from Okapi: `okapi/filters/icml/src/test/resources/Test01.wcml` in https://gitlab.com/okapiframework/Okapi.git, tag `v1.48.0`, commit `ce9f9edc2956da5868fcb71ae10426c7c6ae4e0b` | Apache-2.0 (Okapi Framework) |
+| `vsdx/fixture.vsdx`, `vsdx/fixture.vsdm`, `vsdx/languages.vsdx`, `vsdx/rtl-paragraph.vsdx`, `vsdx/shiftjis.vsdx`, `vsdx/utf16.vsdx` | Written by the `write_corpus` test of `bilingua-vsdx` (hand-written XML parts, zipped in Rust) | Apache-2.0, same as Bilingua |
+| `vsdx/okapi-2-pages.vsdx` (also `bilingua-vsdx/tests/data/2-pages.vsdx`) | Okapi Framework test resource `2-pages.vsdx`, copied unmodified from https://gitlab.com/okapiframework/Okapi.git (`okapi/filters/openxml/src/test/resources`, tag `v1.48.0`, commit `ce9f9edc2956da5868fcb71ae10426c7c6ae4e0b`) | Apache-2.0 (Okapi Framework) |
 
 Files from the Localization OS tree (its `sample-docs` folder and the hand-written PPTX and XLSX generators in its
 test fixtures) are used by `python run.py --external` and read in place. Localization OS is open source under

@@ -32,6 +32,8 @@ pub fn filters() -> Vec<Box<dyn Filter>> {
         Box::new(bilingua_docx::Docx),
         Box::new(bilingua_xlsx::Xlsx::default()),
         Box::new(bilingua_pptx::Pptx),
+        // Visio sniffs a zip holding visio/ parts; docx, pptx and xlsx need word/, ppt/ and xl/, so it cannot clash.
+        Box::new(bilingua_vsdx::Vsdx),
         Box::new(bilingua_subtitle::Vtt),
         Box::new(bilingua_subtitle::Srt),
         Box::new(bilingua_po::Po),
