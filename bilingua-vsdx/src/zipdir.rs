@@ -1,6 +1,7 @@
 //! A scan of the zip central directory for two members with the same name. The zip reader keeps one entry per
 //! name, so a package that lists `visio/pages/page1.xml` twice would show this filter one part and another reader
-//! the other. Stop-gap until `bilingua-zip` checks this itself.
+//! the other. `bilingua-zip` now refuses repeated names in every layout (the reader's own count); this scan stays
+//! for its message, which names the member.
 
 use std::collections::HashSet;
 

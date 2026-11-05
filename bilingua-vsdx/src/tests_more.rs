@@ -214,9 +214,9 @@ fn hostile_zip_and_xml() {
     // a member listed twice
     let two = zip_of(vec![("visio/pages/page2.xml".into(), page2().into_bytes()), ("visio/pages/page3.xml".into(), page2().into_bytes())]);
     let dup = patched(&two, b"page3", b"page2");
-    // the zip reader keeps one entry per name (bilingua-zip's own duplicate check never sees the second): the
-    // crate's own central-directory scan refuses it, in any letter case
-    assert_eq!(members(&dup).len(), 1);
+    // the zip reader keeps one entry per name; bilingua-zip refuses it from the reader's own record count, and the
+    // crate's central-directory scan refuses it first, in any letter case
+    assert!(bilingua_zip::read_zip("vsdx", &dup, &ZipLimits::default()).is_err());
     refused(&dup, "twice");
     refused(&patched(&two, b"page3", b"PAGE2"), "twice");
     // a path that climbs out of the package

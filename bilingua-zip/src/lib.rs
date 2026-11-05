@@ -1,8 +1,12 @@
 //! Safe zip reading and writing for the Office parsers (DOCX, XLSX, PPTX). Localization OS's zip guard: no names
-//! that can escape a folder, no encrypted entries or links, caps on entry count, total unpacked size and
+//! that can escape a folder, no name listed twice (exactly, by case or by `\` against `/`, in any directory layout),
+//! no encrypted entries or links, caps on entry count, total unpacked size and
 //! expansion ratio (refused with a typed [`bilingua_model::LimitError`]), and the real size and checksum of every
 //! entry proven against what the directory claims. Nothing is extracted to disk. Compression method and time stamp of every entry are kept so a rebuilt file looks like
 //! the original.
+
+#[doc(hidden)]
+pub mod hostile;
 
 use bilingua_model::{Error, LimitError, LimitKind, Limits};
 use serde::{Deserialize, Serialize};
@@ -174,6 +178,26 @@ pub fn safe_name(raw: &str) -> Result<String, Error> {
     Ok(out)
 }
 
+fn duplicate(name: &str) -> Error {
+    limit(LimitKind::ZipMalformed, format!("This file lists the part {name:?} twice (duplicate names). It was not processed."))
+}
+
+/// Refuses an archive whose central directory lists one name more than once. The zip reader keeps one entry per
+/// exact name and drops the others without a word, so a second copy of a part would be invisible here while another
+/// reader of the same file might use it. The reader's own count of the records it read is used, so the check holds
+/// however the directory is found (a zip64 end record, bytes before the archive). Names that differ only in case or
+/// in `\` against `/` both reach the reader and are refused by [`read_zip`] itself.
+pub fn refuse_duplicate_names<R: Read + std::io::Seek>(zip: &zip::ZipArchive<R>) -> Result<(), Error> {
+    if zip.has_duplicate_names() {
+        // the reader kept one record per name, so it cannot say which name was repeated
+        return Err(limit(
+            LimitKind::ZipMalformed,
+            "This file lists the same part twice (duplicate names). It was not processed.".into(),
+        ));
+    }
+    Ok(())
+}
+
 /// Reads every entry of a zip file within `limits`. Errors name `format` ("docx", "xlsx", ...).
 pub fn read_zip(format: &str, bytes: &[u8], limits: &ZipLimits) -> Result<Vec<RawEntry>, Error> {
     read_entries(bytes, limits).map_err(|e| as_format(e, format))
@@ -185,6 +209,7 @@ fn read_entries(bytes: &[u8], limits: &ZipLimits) -> Result<Vec<RawEntry>, Error
     }
     let mut zip = zip::ZipArchive::new(Cursor::new(bytes))
         .map_err(|e| bad(format!("unreadable zip: {e}")))?;
+    refuse_duplicate_names(&zip)?;
     if zip.len() > limits.max_entries {
         return Err(limit(
             LimitKind::ZipEntries,
@@ -260,8 +285,9 @@ fn read_entries(bytes: &[u8], limits: &ZipLimits) -> Result<Vec<RawEntry>, Error
                 deflated,
             )
         };
+        // case-insensitive, `\` read as `/` (safe_name), as Windows and the Office readers see the names
         if !seen.insert(name.to_ascii_lowercase()) {
-            return Err(bad(format!("entry {name:?} appears twice")));
+            return Err(duplicate(&name));
         }
         let meta = EntryMeta {
             name: name.clone(),

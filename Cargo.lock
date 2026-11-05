@@ -74,6 +74,7 @@ dependencies = [
  "bilingua-xslt",
  "bilingua-xtg",
  "bilingua-yaml",
+ "bilingua-zip",
  "serde_json",
  "zip",
 ]
@@ -442,6 +443,7 @@ version = "0.1.0"
 dependencies = [
  "bilingua-model",
  "bilingua-xliff",
+ "bilingua-zip",
  "quick-xml",
  "serde",
  "zip",
