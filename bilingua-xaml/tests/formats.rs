@@ -102,6 +102,28 @@ fn legacy_files_translated_into_another_script_stay_readable() {
 }
 
 #[test]
+fn euro_in_a_gbk_file_is_a_character_reference() {
+    // GB18030 spells the euro A2 E3 and GBK 0x80; GBK / GB2312 readers take neither
+    for name in ["lang_zh_gbk", "lang_zh_gb2312"] {
+        let data = FILES.iter().find(|(n, _)| *n == name).unwrap().1;
+        let out = translate(data, &[(0, "价格 €5")]);
+        assert!(out.windows(7).any(|w| w == b"&#8364;"), "{name}");
+        assert!(!out.windows(2).any(|w| w == [0xA2, 0xE3]) && !out.contains(&0x80), "{name}");
+        assert_eq!(units(&out)[0], "价格 €5");
+    }
+}
+
+#[test]
+fn us_ascii_declaration_gets_character_references() {
+    let data = b"<?xml version=\"1.0\" encoding=\"us-ascii\"?>\n<ResourceDictionary xmlns:x=\"http://schemas.microsoft.com/winfx/2006/xaml\" xmlns:sys=\"clr-namespace:System;assembly=mscorlib\">\n  <sys:String x:Key=\"a\">Save</sys:String>\n</ResourceDictionary>\n";
+    assert_identity(data);
+    let out = translate(data, &[(0, "Café 日本")]);
+    assert!(out.is_ascii(), "{}", String::from_utf8_lossy(&out));
+    assert!(String::from_utf8_lossy(&out).contains(">Caf&#233; &#26085;&#26412;<"));
+    assert_eq!(units(&out), ["Café 日本"]);
+}
+
+#[test]
 fn edge_file() {
     let data = FILES.iter().find(|(n, _)| *n == "edge").unwrap().1;
     let d = extract(data);

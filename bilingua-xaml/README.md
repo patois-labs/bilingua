@@ -36,7 +36,8 @@ let out = Xaml::default().merge(&doc)?;
   charset the XML declaration names (Windows-125x, ISO-8859-x, KOI8, Shift_JIS, EUC-JP, GBK, GB18030, Big5,
   EUC-KR). The file is written in the same encoding with its declaration; characters the legacy charset cannot hold
   become `&#NNNN;` (LocOS behaviour; the engine default would switch the file to UTF-8). A legacy file whose bytes
-  would not come back unchanged (double-mapped Shift_JIS bytes) is refused, never altered.
+  would not come back unchanged (double-mapped Shift_JIS bytes) is refused, never altered. In a GBK / GB2312 file
+  a translated euro sign is always `&#8364;` (the engine's GB18030 writer spells it A2 E3, which GBK readers reject).
 - Safety (`bilingua_model::guard`): input size, `<!ENTITY` declarations (entity bombs, external entities), depth 256
   and element count come from `check_input` / `check_xml`; units and unit length from `check_unit_count` and
   `finish`. On top of that any DOCTYPE is refused, only the five predefined entities and valid character references
@@ -46,8 +47,9 @@ let out = Xaml::default().merge(&doc)?;
 ## Differences from LocOS
 
 - An empty result (nothing to translate) is an empty document, not an error.
-- `encoding="us-ascii"` is read as UTF-8 (LocOS refuses it).
+- `encoding="us-ascii"` is read as UTF-8 (LocOS refuses it); translated text outside ASCII is written as `&#NNNN;`,
+  so the file stays ASCII under its declaration.
 - A file with no declaration and bytes that are not UTF-8 is read as Windows-1252 (or the source language's code
-  page) with a garble warning, as every Bilingua text format does; LocOS refuses it.
+  page), as every Bilingua text format does (a warning only when the letters look garbled); LocOS refuses it.
 - Placeholders are tags (see above).
 - Python's `isalnum`/`isalpha` and Rust's differ for combining marks.

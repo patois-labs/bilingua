@@ -216,13 +216,14 @@ impl Filter for Xaml {
         let Skeleton::Text { parts, encoding, .. } = &doc.skeleton else {
             return Err(Error::Write("xaml needs a text skeleton".into()));
         };
+        let refs = char_refs(parts, encoding);
         let mut out = String::new();
         for p in parts {
             match p {
                 SkelPart::Raw(s) => out.push_str(s),
                 SkelPart::Unit(i) => {
                     let u = doc.units.get(*i).ok_or_else(|| Error::Write(format!("skeleton points at missing unit {i}")))?;
-                    write_unit(u, &mut out);
+                    write_unit(u, refs, &mut out);
                 }
             }
         }
@@ -230,7 +231,55 @@ impl Filter for Xaml {
     }
 }
 
-fn write_unit(u: &Unit, out: &mut String) {
+/// Characters a translated span writes as character references whatever the engine's writer would do.
+#[derive(Clone, Copy, PartialEq)]
+enum CharRefs {
+    None,
+    /// UTF-8 bytes under an `encoding="us-ascii"` declaration: everything outside ASCII (a .NET reader decodes
+    /// the declared ASCII and would turn UTF-8 bytes into `?`).
+    NonAscii,
+    /// GBK / GB2312: the euro sign (the engine writes GBK through GB18030, whose A2 E3 GBK readers cannot read).
+    Euro,
+}
+
+fn char_refs(parts: &[SkelPart], encoding: &str) -> CharRefs {
+    let base = enc::base(encoding);
+    if base == "utf-8" {
+        if let Some(SkelPart::Raw(head)) = parts.first() {
+            if let Some(decl) = head.strip_prefix("<?xml").and_then(|r| r.split("?>").next()) {
+                let d = decl.to_ascii_lowercase().replace(' ', "");
+                if ["us-ascii", "ascii"].iter().any(|l| d.contains(&format!("encoding=\"{l}\"")) || d.contains(&format!("encoding='{l}'"))) {
+                    return CharRefs::NonAscii;
+                }
+            }
+        }
+    } else if bilingua_model::encoding_rs::Encoding::for_label(base.as_bytes()) == Some(bilingua_model::encoding_rs::GBK) {
+        return CharRefs::Euro;
+    }
+    CharRefs::None
+}
+
+fn with_char_refs(s: String, refs: CharRefs) -> String {
+    let hit = |c: char| match refs {
+        CharRefs::None => false,
+        CharRefs::NonAscii => !c.is_ascii(),
+        CharRefs::Euro => c == '\u{20AC}',
+    };
+    if !s.chars().any(hit) {
+        return s;
+    }
+    let mut out = String::with_capacity(s.len() + 16);
+    for c in s.chars() {
+        if hit(c) {
+            out.push_str(&format!("&#{};", c as u32));
+        } else {
+            out.push(c);
+        }
+    }
+    out
+}
+
+fn write_unit(u: &Unit, refs: CharRefs, out: &mut String) {
     let raw = code(u, RAW).unwrap_or_default();
     if !u.translate || u.segments.iter().all(|s| s.target.is_empty()) {
         out.push_str(&raw);
@@ -250,8 +299,8 @@ fn write_unit(u: &Unit, out: &mut String) {
         if !escaped && v.trim_start().starts_with('{') {
             v.insert_str(0, "{}"); // never let a translation turn into a markup extension
         }
-        out.push_str(&escape_attr(&v, quote));
+        out.push_str(&with_char_refs(escape_attr(&v, quote), refs));
     } else {
-        out.push_str(&escape_text(&new, meta.starts_with("tc")));
+        out.push_str(&with_char_refs(escape_text(&new, meta.starts_with("tc")), refs));
     }
 }
