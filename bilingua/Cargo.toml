@@ -32,6 +32,7 @@ bilingua-wordfast = { workspace = true }
 bilingua-sdl = { workspace = true }
 bilingua-xliffpkg = { workspace = true }
 bilingua-ini = { workspace = true }
+bilingua-stf = { workspace = true }
 bilingua-sdlproj = { workspace = true }
 bilingua-htmlhelp = { workspace = true }
 bilingua-scc = { workspace = true }

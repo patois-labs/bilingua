@@ -61,6 +61,7 @@ dependencies = [
  "bilingua-sdlproj",
  "bilingua-seg",
  "bilingua-serverpages",
+ "bilingua-stf",
  "bilingua-stl",
  "bilingua-strings",
  "bilingua-subtext",
@@ -509,6 +510,15 @@ dependencies = [
 
 [[package]]
 name = "bilingua-serverpages"
+version = "0.1.0"
+dependencies = [
+ "bilingua-model",
+ "proptest",
+ "serde_json",
+]
+
+[[package]]
+name = "bilingua-stf"
 version = "0.1.0"
 dependencies = [
  "bilingua-model",

@@ -71,6 +71,8 @@ pub fn filters() -> Vec<Box<dyn Filter>> {
         Box::new(bilingua_htmlhelp::HhcFilter),
         Box::new(bilingua_htmlhelp::HhkFilter),
         Box::new(bilingua_htmlhelp::HhpFilter),
+        // STF sniffs strictly (a Language code header plus a KEY/LABEL column line or a Type header); before INI.
+        Box::new(bilingua_stf::StfFilter),
         Box::new(bilingua_ini::IniFilter),
         Box::new(bilingua_strings::Strings),
         // DTD sniffs strictly (the first declaration must be an ENTITY, ELEMENT or ATTLIST), so it can sit early.
