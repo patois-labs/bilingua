@@ -37,6 +37,11 @@ also cover this crate (they need a Python install to link against).
   dicts and lists, the same shape as its JSON. `granularity` is `sentence`, `paragraph` or `document`.
 - `merge(document: dict) -> bytes`: writes the (possibly translated) Document back in its original format. Set a
   segment's `target` to a list of inlines (`{"text": ".."}` or `{"tag": {...}}`); an empty target keeps the source.
+- `merge(document, options=None)`: `options` is an optional dict of merge options (`bilingua-model/README.md`):
+  `output_encoding` (`"keep"`, the default, or `"utf-8"` to write UTF-8 and make charset declarations say so) and
+  `stamp_target_always` (`True` stamps the target language and fills plurals even when nothing is translated, as
+  Localization OS does). Unknown names raise `invalid_argument`.
+- `extract(..., format_options=None)`: a dict of options only one format knows, e.g. `{"ftl.translate_terms": "true"}`.
 - `extract(..., limits=None)`: a dict of limit names to override (see `bilingua-model/README.md`); the rest keep the
   defaults. The Document has a `warnings` list (e.g. `text_encoding`) when a file was read but looks garbled.
 - `version() -> str`.
