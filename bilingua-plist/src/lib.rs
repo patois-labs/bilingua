@@ -359,12 +359,14 @@ fn fill_tree(tree: &mut Tree, locale: &str) {
     }
 }
 
-fn wants_fill(fmt: Fmt, doc: &Document) -> Option<&str> {
+/// Plural forms are filled for the target language when something was translated, or always with
+/// `MergeOptions::stamp_target_always`.
+fn wants_fill<'d>(fmt: Fmt, doc: &'d Document, opts: &MergeOptions) -> Option<&'d str> {
     let lang = doc.target_lang.as_deref().filter(|l| !l.trim().is_empty())?;
-    (fmt == Fmt::Stringsdict && doc.units.iter().any(|u| u.translate && has_target(u))).then_some(lang)
+    (fmt == Fmt::Stringsdict && (opts.stamp_target_always || doc.units.iter().any(|u| u.translate && has_target(u)))).then_some(lang)
 }
 
-fn merge_impl(fmt: Fmt, doc: &Document) -> Result<Vec<u8>, Error> {
+fn merge_impl(fmt: Fmt, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
     bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
     let Skeleton::Text { parts, encoding, .. } = &doc.skeleton else {
         return Err(Error::Write(format!("{} needs a text skeleton", fmt.id())));
@@ -385,7 +387,7 @@ fn merge_impl(fmt: Fmt, doc: &Document) -> Result<Vec<u8>, Error> {
             tree.nodes[leaf.node].text = xml::target_text(&v);
             changed = true;
         }
-        if let Some(lang) = wants_fill(fmt, doc) {
+        if let Some(lang) = wants_fill(fmt, doc, opts) {
             let before = tree.nodes.len();
             fill_tree(&mut tree, lang);
             changed |= tree.nodes.len() != before;
@@ -405,10 +407,10 @@ fn merge_impl(fmt: Fmt, doc: &Document) -> Result<Vec<u8>, Error> {
             }
         }
     }
-    if let Some(lang) = wants_fill(fmt, doc) {
+    if let Some(lang) = wants_fill(fmt, doc, opts) {
         out = fill_xml(&out, lang)?;
     }
-    enc::encode_text(&out, encoding)
+    enc::encode_text_with(&out, encoding, opts)
 }
 
 fn head_text(bytes: &[u8], n: usize) -> String {
@@ -466,7 +468,10 @@ macro_rules! filter_impl {
                 extract_impl($fmt, bytes, opts, &opts.limits())
             }
             fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
-                merge_impl($fmt, doc)
+                merge_impl($fmt, doc, &MergeOptions::default())
+            }
+            fn merge_with(&self, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
+                merge_impl($fmt, doc, opts)
             }
         }
     };

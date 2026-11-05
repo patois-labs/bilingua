@@ -47,7 +47,7 @@ pub struct StrVal {
 
 /// The one value-selection rule (LocOS `_is_translatable`): at least one letter or digit.
 pub fn is_translatable(s: &str) -> bool {
-    s.chars().any(|c| c.is_alphanumeric())
+    bilingua_model::py_has_alnum(s)
 }
 
 fn perr(text: &str, pos: usize, msg: &str) -> Error {
@@ -316,11 +316,11 @@ fn decode_string(text: &str, start: usize, end: usize) -> Result<Cow<'_, str>, E
 }
 
 fn is_ident_start(c: char) -> bool {
-    c.is_alphabetic() || c == '_' || c == '$'
+    bilingua_model::py_is_word_start_char(c) || c == '$'
 }
 
 fn is_ident_part(c: char) -> bool {
-    c.is_alphanumeric() || c == '_' || c == '$' || c == '\u{200c}' || c == '\u{200d}'
+    bilingua_model::py_is_word_char(c) || c == '$' || c == '\u{200c}' || c == '\u{200d}'
 }
 
 /// An unquoted key at `p`: (end, decoded name).
@@ -525,7 +525,7 @@ pub fn scan<'a>(text: &'a str, lim: &Limits) -> Result<Vec<StrVal>, Error> {
                             return Err(perr(text, pos, "expected a value"));
                         };
                         if let Some(nx) = char_at(text, e) {
-                            if nx.is_alphanumeric() || nx == '_' || nx == '$' {
+                            if bilingua_model::py_is_word_char(nx) || nx == '$' {
                                 return Err(perr(text, pos, "expected a value"));
                             }
                         }

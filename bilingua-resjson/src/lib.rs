@@ -167,7 +167,7 @@ fn check_budget(text: &str, limits: &Limits) -> Result<(), Error> {
 
 /// Python `str.isspace` (what LocOS strips): White_Space plus U+001C to U+001F.
 fn is_space(c: char) -> bool {
-    c.is_whitespace() || ('\u{1c}'..='\u{1f}').contains(&c)
+    bilingua_model::py_isspace_char(c)
 }
 
 fn split_ws(s: &str) -> (&str, &str, &str) {
@@ -187,10 +187,10 @@ fn placeholder_only() -> &'static Regex {
 
 /// A value with a letter or digit outside its placeholders (LocOS `is_translatable`).
 fn is_translatable(v: &str) -> bool {
-    if !v.chars().any(char::is_alphanumeric) {
+    if !bilingua_model::py_has_alnum(v) {
         return false;
     }
-    placeholder_only().replace_all(v, "").chars().any(char::is_alphanumeric)
+    placeholder_only().replace_all(v, "").chars().any(bilingua_model::py_isalnum_char)
 }
 
 fn code(s: &str) -> CodeData {

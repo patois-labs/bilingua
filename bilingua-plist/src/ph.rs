@@ -117,11 +117,9 @@ pub(crate) fn is_translatable(value: &str) -> bool {
     split(&stripped).into_iter().any(|p| matches!(p, Piece::Text(t) if t.chars().any(is_alnum)))
 }
 
-/// Python `str.isalnum` as closely as the standard library allows. Rust's `is_alphanumeric` is a little wider
-/// (it counts combining marks that carry the Alphabetic property); the shared helper that closes that gap is
-/// still to come.
+/// Python `str.isalnum`, exactly (`bilingua_model::py_isalnum_char`).
 pub(crate) fn is_alnum(c: char) -> bool {
-    c.is_alphanumeric()
+    bilingua_model::py_isalnum_char(c)
 }
 
 #[cfg(test)]

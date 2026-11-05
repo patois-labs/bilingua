@@ -4,7 +4,7 @@ Mozilla Project Fluent (`.ftl`, syntax 1.0) filter for Bilingua. Port of the Loc
 baseline; Okapi has no Fluent filter), with its own parser that follows `fluent.syntax` step for step.
 
 - Units: message values and message attributes, cut into runs of text and simple placeables; each select-expression
-  variant is its own unit (`ftl:emails[one]`). Terms are skipped unless `Limits::translate_terms` is set.
+  variant is its own unit (`ftl:emails[one]`). Terms are skipped unless `Limits::translate_terms` is set, or `ExtractOptions::format_options["ftl.translate_terms"] = "true"` (the generic spelling, usable through the facade and bilingua-py).
 - Placeables are free inline tags (`placeholder`); `{ "{" }` style literals read as the plain character.
 - Comments, Junk, identifiers, selectors, keys, indentation of untouched text, line endings and the BOM stay in the
   skeleton byte for byte. A translation can never change the file's structure: braces and line-start `[ * .` are

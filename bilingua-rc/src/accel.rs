@@ -67,7 +67,7 @@ pub fn fix(source: &[Item], mut target: Vec<Item>, raw_of: &dyn Fn(&str) -> Opti
         }
     }
     let plain: Vec<Option<char>> = target[..cut].iter().map(|it| if let Item::Ch(c) = it { Some(*c) } else { None }).collect();
-    let idx = if letter.is_alphanumeric() {
+    let idx = if bilingua_model::py_isalnum_char(letter) {
         let l = lower(letter);
         plain.iter().position(|c| c.is_some_and(|c| lower(c) == l))
     } else {
@@ -82,14 +82,14 @@ pub fn fix(source: &[Item], mut target: Vec<Item>, raw_of: &dyn Fn(&str) -> Opti
     if !plain.iter().any(|c| c.is_some_and(is_cjk)) {
         // alphabetic scripts mark a letter of the word itself (Windows UI convention);
         // only CJK targets append the source letter as (&X)
-        if let Some(idx) = plain.iter().position(|c| c.is_some_and(char::is_alphabetic)) {
+        if let Some(idx) = plain.iter().position(|c| c.is_some_and(bilingua_model::py_isalpha_char)) {
             target.insert(idx, Item::Ch('&'));
             return target;
         }
     }
     // CJK style: append (&X) before the tab and before trailing "..." / ":"
     let mut end = cut;
-    while end > 0 && matches!(&target[end - 1], Item::Ch(c) if c.is_whitespace()) {
+    while end > 0 && matches!(&target[end - 1], Item::Ch(c) if bilingua_model::py_isspace_char(*c)) {
         end -= 1;
     }
     for tail in ["...", "\u{2026}", ":", "\u{ff1a}"] {

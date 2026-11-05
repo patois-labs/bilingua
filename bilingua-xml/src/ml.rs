@@ -494,7 +494,7 @@ fn layout_element(t: &Tree, strict: bool) -> RawLayout {
                 }
                 let items = &t.els[p as usize].items;
                 let n_el = items.iter().filter(|i| i.kind == Kind::Elem).count();
-                g.len() == n_el && !items.iter().any(|i| matches!(i.kind, Kind::Text | Kind::Cdata) && !t.text[i.s..i.e].chars().all(char::is_whitespace))
+                g.len() == n_el && !items.iter().any(|i| matches!(i.kind, Kind::Text | Kind::Cdata) && !t.text[i.s..i.e].chars().all(bilingua_model::py_isspace_char))
             })
             .collect();
         groups = groups.into_iter().zip(keep).filter(|(_, k)| *k).map(|(g, _)| g).collect();
@@ -783,7 +783,7 @@ fn indent_before(t: &Tree, el: u32) -> String {
         return String::new();
     }
     let raw = &t.text[prev.s..prev.e];
-    if !raw.chars().all(char::is_whitespace) {
+    if !raw.chars().all(bilingua_model::py_isspace_char) {
         return String::new();
     }
     match raw.rfind('\n') {

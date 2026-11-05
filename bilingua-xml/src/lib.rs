@@ -256,6 +256,12 @@ impl Filter for XmlFilter {
     }
 
     fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
+        self.merge_with(doc, &MergeOptions::default())
+    }
+
+    /// `stamp_target_always` declares the target language even when nothing is translated; `output_encoding`
+    /// UTF-8 writes UTF-8 with the declaration saying so.
+    fn merge_with(&self, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
         check_parser(doc, &parser_info!())?;
         let Skeleton::Text { parts, encoding, .. } = &doc.skeleton else {
             return Err(Error::Write("xml needs a text skeleton".into()));
@@ -269,10 +275,10 @@ impl Filter for XmlFilter {
                 ml::merge(doc, text, blob, tag.as_deref(), &Limits::default())?
             }
             None => {
-                let any = doc.units.iter().any(skel::translated);
+                let any = opts.stamp_target_always || doc.units.iter().any(skel::translated);
                 skel::merge_parts(doc, parts, if any { tag } else { None })?
             }
         };
-        enc::encode_text(&out, encoding)
+        enc::encode_text_with(&out, encoding, opts)
     }
 }

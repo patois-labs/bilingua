@@ -3,7 +3,7 @@
 //! filters needs that project and is run by hand (`python run.py`); this part needs nothing.
 
 use bilingua::{Granularity, Inline};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::io::Read;
 use std::path::{Path, PathBuf};
 
@@ -29,6 +29,24 @@ fn parts(bytes: &[u8]) -> Option<BTreeMap<String, Vec<u8>>> {
         m.insert(String::from_utf8_lossy(f.name_raw()).into_owned(), b);
     }
     Some(m)
+}
+
+/// The plural form a unit stands for: (key, label), or `None` for a unit that is not a plural form. Formats keep it
+/// in `context.extra["plural"]` (PO index, YAML and Rails category), as `[label]` after the key (Fluent variants) or
+/// as the last `/` step of a stringsdict key path (`files_count/count/many`).
+fn plural_label(u: &bilingua::Unit) -> Option<(Option<String>, String)> {
+    if let Some(p) = u.context.extra.get("plural") {
+        return Some((u.context.key.clone(), p.clone()));
+    }
+    let key = u.context.key.as_deref()?;
+    if let Some((base, last)) = key.rsplit_once('/') {
+        if matches!(last, "zero" | "one" | "two" | "few" | "many" | "other") {
+            return Some((Some(base.to_string()), last.to_string()));
+        }
+    }
+    let (base, rest) = key.rsplit_once('[')?;
+    let label = rest.strip_suffix(']')?;
+    Some((Some(base.to_string()), label.to_string()))
 }
 
 fn pseudo(v: &[Inline]) -> Vec<Inline> {
@@ -77,8 +95,12 @@ fn every_corpus_file_round_trips() {
         }
         match bilingua::merge(&t).and_then(|b| bilingua::extract(&name, &b, &opts)) {
             Ok(again) => {
+                // A merge with a target language may fill plural forms the target needs and the source lacks
+                // (es-ES has "many", an English file does not). Those new units are not a mismatch: count only
+                // the units whose plural label the source has.
+                let labels: BTreeSet<(Option<String>, String)> = doc.units.iter().filter_map(plural_label).collect();
                 let a = doc.units.iter().filter(|u| u.translate).count();
-                let b = again.units.iter().filter(|u| u.translate).count();
+                let b = again.units.iter().filter(|u| u.translate && plural_label(u).is_none_or(|l| labels.contains(&l))).count();
                 if a != b {
                     failures.push(format!("{name}: reopened with {b} units, had {a}"));
                 }

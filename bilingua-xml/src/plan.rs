@@ -84,8 +84,9 @@ struct Flags {
     other: usize,
 }
 
+/// Python `str.isspace` (what LocOS `strip()` removes).
 pub(crate) fn py_ws(c: char) -> bool {
-    c.is_whitespace()
+    bilingua_model::py_isspace_char(c)
 }
 
 impl<'a, 'b> Planner<'a, 'b> {

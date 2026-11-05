@@ -124,7 +124,7 @@ pub fn decode(data: &[u8]) -> Result<(String, Enc), Error> {
 
 /// Python `str.strip` white space (what LocOS trims around a value).
 pub fn is_space(c: char) -> bool {
-    c.is_whitespace() || ('\u{1c}'..='\u{1f}').contains(&c)
+    bilingua_model::py_isspace_char(c)
 }
 
 /// Splits a value into (leading white space, core, trailing white space).

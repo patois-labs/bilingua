@@ -13,6 +13,7 @@ fn opts(mode: Granularity) -> ExtractOptions {
         granularity: mode,
         include_locked: false,
         limits: None,
+        ..Default::default()
     }
 }
 

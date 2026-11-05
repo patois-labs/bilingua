@@ -26,9 +26,12 @@ pub mod enc;
 pub mod garble;
 pub mod guard;
 pub mod locos;
+mod pytables;
+pub mod pytext;
 
 pub use encoding_rs;
 pub use guard::{LimitError, LimitKind, Limits};
+pub use pytext::{py_is_word_char, py_is_word_start_char, py_isdecimal_char, py_isalnum_char, py_isalpha_char, py_isspace_char, py_has_alnum, py_has_alpha, py_isalnum, py_isalpha, py_isspace, py_lstrip, py_rstrip, py_strip};
 
 /// One piece of segment content, in logical order.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -545,16 +548,68 @@ impl Document {
 
     /// Sets a segment's target. Rejects unknown segments, untranslatable units, and tags the source lacks or
     /// repeats. A missing tag is allowed (the writer leaves it out), as in catcore.
+    ///
+    /// This looks the segment up by a scan of the document; for many segments use [`Document::set_targets`].
     pub fn set_target(&mut self, seg_id: &str, target: Vec<Inline>) -> Result<(), Error> {
-        let unit = self
+        let at = self
             .units
-            .iter_mut()
-            .find(|u| u.segments.iter().any(|s| s.id == seg_id))
+            .iter()
+            .enumerate()
+            .find_map(|(ui, u)| u.segments.iter().position(|s| s.id == seg_id).map(|si| (ui, si)))
             .ok_or_else(|| Error::UnknownSegment(seg_id.to_string()))?;
+        self.apply_target(at, seg_id, target)
+    }
+
+    /// Sets many targets in one pass: one id index is built for the whole call, so 100 000 segments take
+    /// milliseconds where 100 000 [`Document::set_target`] calls scan the document each time. Items are applied in
+    /// order with the same rules as `set_target`; the first error stops the call and is returned, items before it
+    /// stay applied. When an id appears more than once, the segment is set by each item in turn (the last wins).
+    pub fn set_targets<I, S>(&mut self, items: I) -> Result<(), Error>
+    where
+        I: IntoIterator<Item = (S, Vec<Inline>)>,
+        S: AsRef<str>,
+    {
+        let index = self.segment_index();
+        for (id, target) in items {
+            let id = id.as_ref();
+            let at = *index.get(id).ok_or_else(|| Error::UnknownSegment(id.to_string()))?;
+            self.apply_target(at, id, target)?;
+        }
+        Ok(())
+    }
+
+    /// Sets many states in one pass (see [`Document::set_targets`]).
+    pub fn set_states<I, S>(&mut self, items: I) -> Result<(), Error>
+    where
+        I: IntoIterator<Item = (S, SegState)>,
+        S: AsRef<str>,
+    {
+        let index = self.segment_index();
+        for (id, state) in items {
+            let id = id.as_ref();
+            let (ui, si) = *index.get(id).ok_or_else(|| Error::UnknownSegment(id.to_string()))?;
+            self.units[ui].segments[si].state = state;
+        }
+        Ok(())
+    }
+
+    /// Segment id to (unit index, segment index); the first segment with an id wins, as in `set_target`.
+    fn segment_index(&self) -> std::collections::HashMap<String, (usize, usize)> {
+        let mut m = std::collections::HashMap::with_capacity(self.segment_count());
+        for (ui, u) in self.units.iter().enumerate() {
+            for (si, s) in u.segments.iter().enumerate() {
+                m.entry(s.id.clone()).or_insert((ui, si));
+            }
+        }
+        m
+    }
+
+    fn apply_target(&mut self, (ui, si): (usize, usize), seg_id: &str, target: Vec<Inline>) -> Result<(), Error> {
+        let unit = &mut self.units[ui];
         if !unit.translate {
             return Err(Error::Locked(seg_id.to_string()));
         }
-        let seg = unit.segments.iter_mut().find(|s| s.id == seg_id).expect("found above");
+        let seg = &mut unit.segments[si];
         check_tags(&seg.source, &target)?;
         // The free flag belongs to the source code: a target tag takes it from the source tag with its id, so a
         // caller (an editor, a LocOS adapter) that does not know the flag cannot drop or invent it.
@@ -622,12 +677,78 @@ pub struct ExtractOptions {
     /// Safety limits for this call; `None` uses [`Limits::default`] (Localization OS's numbers).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub limits: Option<Limits>,
+    /// Options only one format knows, as `"<format>.<name>"` to a string value (`"ftl.translate_terms"` to
+    /// `"true"`). Booleans are `true`/`false`/`1`/`0`/`yes`/`no`; a format ignores keys it does not know.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub format_options: BTreeMap<String, String>,
 }
 
 impl ExtractOptions {
+    /// A format option as text, if set.
+    pub fn format_option(&self, key: &str) -> Option<&str> {
+        self.format_options.get(key).map(String::as_str)
+    }
+
+    /// A format option as a boolean (`true`, `1`, `yes`, `on` are true; `false`, `0`, `no`, `off` are false; any
+    /// other text or no entry gives `None`).
+    pub fn format_flag(&self, key: &str) -> Option<bool> {
+        match self.format_option(key)?.trim().to_ascii_lowercase().as_str() {
+            "true" | "1" | "yes" | "on" => Some(true),
+            "false" | "0" | "no" | "off" => Some(false),
+            _ => None,
+        }
+    }
+
     /// The limits in force: the caller's, or the defaults.
     pub fn limits(&self) -> Limits {
         self.limits.unwrap_or_default()
+    }
+}
+
+/// How a merge writes text files.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub enum OutputEncoding {
+    /// The file's own encoding, BOM and line endings (the default; an untouched merge is byte-identical).
+    #[default]
+    #[serde(rename = "keep")]
+    Keep,
+    /// Always UTF-8 (Localization OS behaviour). An XML, HTML or PO charset declaration is rewritten to say UTF-8,
+    /// so the file stays truthful; a UTF-8 BOM the file had is kept, a UTF-16 BOM is dropped.
+    #[serde(rename = "utf-8", alias = "utf8")]
+    Utf8,
+}
+
+/// Options for [`Filter::merge_with`]. The default is what [`Filter::merge`] does. They live here, once, and
+/// every format that stamps a language, fills plurals or writes text honours them:
+///
+/// - `output_encoding`: [`OutputEncoding::Keep`] or [`OutputEncoding::Utf8`] (through `enc::encode_text_with`, so
+///   every text format that keeps its encoding in the skeleton gets it).
+/// - `stamp_target_always`: by default a merge in which nothing is translated returns the original bytes (no target
+///   language stamp, no plural fill, no format conversion). With `true` the target language is stamped and
+///   missing plural forms are filled even then, as Localization OS does. It only has an effect when
+///   `Document::target_lang` is set.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct MergeOptions {
+    pub output_encoding: OutputEncoding,
+    pub stamp_target_always: bool,
+}
+
+impl MergeOptions {
+    /// The Localization OS behaviour: UTF-8 out, stamp and fill always.
+    pub fn locos() -> MergeOptions {
+        MergeOptions { output_encoding: OutputEncoding::Utf8, stamp_target_always: true }
+    }
+
+    /// True when the document has at least one segment with a target.
+    pub fn any_translated(doc: &Document) -> bool {
+        doc.segments().any(|(_, s)| !s.target.is_empty())
+    }
+
+    /// Should a format stamp the target language and fill plurals for this document? `target_lang` must be set and
+    /// something translated, or `stamp_target_always`.
+    pub fn should_stamp(&self, doc: &Document) -> bool {
+        doc.target_lang.is_some() && (self.stamp_target_always || Self::any_translated(doc))
     }
 }
 
@@ -677,6 +798,12 @@ pub trait Filter: Send + Sync {
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error>;
     /// Document back to a file in the original format, targets in place of sources.
     fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error>;
+    /// [`Filter::merge`] with [`MergeOptions`]. The default ignores the options, which is right for a format that
+    /// neither writes text in a legacy encoding nor stamps languages; a format that does overrides this and
+    /// makes `merge` call it with `MergeOptions::default()`.
+    fn merge_with(&self, doc: &Document, _opts: &MergeOptions) -> Result<Vec<u8>, Error> {
+        self.merge(doc)
+    }
     /// For formats a browser can show: the translated document as HTML in which every segment's text sits in
     /// `<span data-bl-seg="SEGMENT_ID">..</span>`, so a live preview can patch one segment without reloading.
     /// Scripts must be stripped. `None` when the format has no preview.
@@ -755,5 +882,66 @@ mod tests {
             Err(Error::DuplicatedTag(_))
         ));
         assert_eq!(d.find("u1").unwrap().1.state, SegState::Draft);
+    }
+
+    fn big_doc(n: usize) -> Document {
+        Document {
+            format: "test".into(),
+            units: (0..n).map(|i| Unit::new(format!("u{i}"), vec![Inline::text(format!("Source {i}"))])).collect(),
+            skeleton: Skeleton::Text { parts: vec![], encoding: "utf-8".into(), parser: None },
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn set_targets_sets_many_and_matches_set_target() {
+        let mut a = big_doc(50);
+        let mut b = big_doc(50);
+        a.units[7].translate = false;
+        b.units[7].translate = false;
+        for i in (0..50).filter(|i| *i != 7) {
+            a.set_target(&format!("u{i}"), vec![Inline::text(format!("T{i}"))]).unwrap();
+        }
+        b.set_targets((0..50).filter(|i| *i != 7).map(|i| (format!("u{i}"), vec![Inline::text(format!("T{i}"))]))).unwrap();
+        assert_eq!(a, b);
+        assert_eq!(b.find("u49").unwrap().1.state, SegState::Draft);
+    }
+
+    #[test]
+    fn set_targets_errors_like_set_target_and_keeps_earlier_items() {
+        let mut d = big_doc(3);
+        d.units[1].translate = false;
+        let r = d.set_targets(vec![("u0", vec![Inline::text("a")]), ("u1", vec![Inline::text("b")]), ("u2", vec![Inline::text("c")])]);
+        assert!(matches!(r, Err(Error::Locked(_))));
+        assert_eq!(d.units[0].segments[0].target, vec![Inline::text("a")]);
+        assert!(d.units[2].segments[0].target.is_empty());
+        assert!(matches!(d.set_targets(vec![("nope", vec![])]), Err(Error::UnknownSegment(_))));
+        let r = d.set_targets(vec![("u0", vec![Inline::tag("9", TagKind::Open, "<i>")])]);
+        assert!(matches!(r, Err(Error::InventedTag(_))));
+        // an empty target clears the segment, as set_target does
+        d.set_targets(vec![("u0", vec![Inline::text("  ")])]).unwrap();
+        assert_eq!(d.units[0].segments[0].state, SegState::New);
+    }
+
+    #[test]
+    fn set_states_batch() {
+        let mut d = big_doc(4);
+        d.set_states((0..4).map(|i| (format!("u{i}"), SegState::Confirmed))).unwrap();
+        assert!(d.segments().all(|(_, s)| s.state == SegState::Confirmed));
+        assert!(matches!(d.set_states(vec![("zzz", SegState::New)]), Err(Error::UnknownSegment(_))));
+    }
+
+    #[test]
+    fn set_targets_100k_is_fast() {
+        let n = 100_000;
+        let mut d = big_doc(n);
+        let t = std::time::Instant::now();
+        d.set_targets((0..n).map(|i| (format!("u{i}"), vec![Inline::text("x")]))).unwrap();
+        d.set_states((0..n).map(|i| (format!("u{i}"), SegState::Translated))).unwrap();
+        let took = t.elapsed();
+        // well under a second in release; a debug build gets a loose bound that still rules out a quadratic scan
+        let limit = if cfg!(debug_assertions) { 10_000 } else { 1_000 };
+        assert!(took.as_millis() < limit, "100k targets took {took:?}");
+        assert_eq!(d.units[n - 1].segments[0].state, SegState::Translated);
     }
 }

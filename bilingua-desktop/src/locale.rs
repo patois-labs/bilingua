@@ -5,7 +5,7 @@ use crate::langnames::{ALIASES, NAMES};
 use crate::text::py_strip;
 
 fn alpha(s: &str) -> bool {
-    !s.is_empty() && s.chars().all(char::is_alphabetic)
+    bilingua_model::py_isalpha(s)
 }
 
 fn digits(s: &str) -> bool {

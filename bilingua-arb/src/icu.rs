@@ -47,7 +47,7 @@ type R<T> = Result<T, IcuError>;
 
 /// Python `\s` for str patterns: Unicode white space plus the four information separators.
 fn is_ws(c: char) -> bool {
-    c.is_whitespace() || ('\u{1c}'..='\u{1f}').contains(&c)
+    bilingua_model::py_isspace_char(c)
 }
 
 fn ch(s: &str, i: usize) -> Option<char> {
@@ -288,7 +288,7 @@ fn selector_end(s: &str, j: usize) -> Option<usize> {
 /// True when the level has a letter or digit in its text or simple arguments (tokens do not count).
 pub fn translatable(parts: &[Part]) -> bool {
     parts.iter().any(|p| match p {
-        Part::Text(t) | Part::Simple(t) => t.chars().any(char::is_alphanumeric),
+        Part::Text(t) | Part::Simple(t) => bilingua_model::py_has_alnum(t),
         _ => false,
     })
 }

@@ -465,7 +465,7 @@ impl<'a> Planner<'a> {
             let (s, e) = p.span();
             s < e
         });
-        let has_letter = pieces.iter().any(|p| matches!(p, Piece::Lit { s, e, .. } if lit_display(&text[*s..*e], true, false, true).chars().any(char::is_alphanumeric)));
+        let has_letter = pieces.iter().any(|p| matches!(p, Piece::Lit { s, e, .. } if bilingua_model::py_has_alnum(&lit_display(&text[*s..*e], true, false, true))));
         if !has_letter {
             return Ok(());
         }

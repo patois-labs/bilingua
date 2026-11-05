@@ -361,7 +361,7 @@ pub fn clean_target(s: &str) -> String {
 
 /// Python's `str.isspace` set: Unicode white space plus the four information separators.
 pub fn py_space(c: char) -> bool {
-    c.is_whitespace() || ('\u{1C}'..='\u{1F}').contains(&c)
+    bilingua_model::py_isspace_char(c)
 }
 
 // ----------------------------------------------------------------------------------------------------- parser

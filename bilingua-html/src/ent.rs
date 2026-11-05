@@ -227,6 +227,8 @@ impl Enc {
             "utf-8-bom" => Some(Enc::Utf8Bom),
             "iso-8859-1" => Some(Enc::Latin1),
             "windows-1252" => Some(Enc::Win1252),
+            // a GBK file that wrote its euro sign as A2 E3 keeps GB18030's spelling
+            "gbk" if n.contains(";euro=a2e3") => Some(Enc::Legacy(bilingua_model::encoding_rs::GB18030)),
             other => bilingua_model::encoding_rs::Encoding::for_label(other.as_bytes()).map(Enc::Legacy),
         }
     }
@@ -243,6 +245,8 @@ impl Enc {
 
     pub fn encode(self, s: &str) -> Vec<u8> {
         match self {
+            // GBK / GB2312: GB18030's bytes, but the euro sign is the single byte 0x80
+            Enc::Legacy(e) if e == bilingua_model::encoding_rs::GBK => bilingua_model::enc::encode_gbk(s).0,
             Enc::Legacy(e) => writer(e).encode(s).0.into_owned(),
             Enc::Utf16(be) => {
                 let mut v: Vec<u8> = if be { vec![0xFE, 0xFF] } else { vec![0xFF, 0xFE] };

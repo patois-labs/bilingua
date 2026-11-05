@@ -161,7 +161,7 @@ fn main() {
         Err(e) => json!({"status": format!("merge failed: {e}")}),
         Ok(b) => match bilingua::extract(&name, &b, &opts) {
             Err(e) => json!({"status": format!("reopen failed: {e}")}),
-            Ok(d2) if matches!(doc.format.as_str(), "po" | "xliff" | "sdlxliff" | "mqxliff" | "mxliff" | "sdlppx" | "mqxlz") => {
+            Ok(d2) if matches!(doc.format.as_str(), "po" | "xliff" | "sdlxliff" | "mqxliff" | "mxliff" | "sdlppx" | "mqxlz" | "xcloc") => {
                 // A bilingual file keeps its source; the translation comes back as the target.
                 let srcs = |d: &bilingua::Document| d.units.iter().filter(|u| u.translate).map(|u| render(u).0).collect::<Vec<_>>();
                 let (a, b2) = (srcs(&doc), srcs(&d2));
@@ -184,6 +184,17 @@ fn main() {
                     json!({"status": "targets not read back", "first": first})
                 } else {
                     json!({"status": "ok"})
+                }
+            }
+            Ok(d2) if matches!(doc.format.as_str(), "ts" | "xcstrings") => {
+                // Qt Linguist and String Catalogs write the translation into the target language and keep the
+                // source as it was; their extract reads the source only, so the source must come back unchanged.
+                let srcs = |d: &bilingua::Document| d.units.iter().filter(|u| u.translate).map(|u| render(u).0).collect::<Vec<_>>();
+                let (a, b2) = (srcs(&doc), srcs(&d2));
+                if a == b2 && set_errors == 0 {
+                    json!({"status": "ok"})
+                } else {
+                    json!({"status": format!("source changed after merge ({} units, {} set_target errors)", a.len(), set_errors)})
                 }
             }
             Ok(d2) => {

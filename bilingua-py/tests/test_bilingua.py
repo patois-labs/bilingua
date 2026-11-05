@@ -154,7 +154,7 @@ def test_options_flow_through():
 
 def test_error_is_an_exception_with_code():
     assert issubclass(bilingua.BilinguaError, Exception)
-    assert error_code(bilingua.extract, "notes.yaml", b"a: 1\n") == "unsupported"
+    assert error_code(bilingua.extract, "notes.xyz", b"a: 1\n") == "unsupported"
 
 
 def test_bad_inputs_give_parse_errors():
@@ -167,7 +167,7 @@ def test_bad_granularity():
 
 
 def test_detect_unknown_is_none():
-    assert bilingua.detect("x.yaml", b"a: 1") is None
+    assert bilingua.detect("x.xyz", b"a: 1") is None
 
 
 def test_wrong_types():
@@ -324,7 +324,7 @@ def test_bad_base64_is_an_invalid_document():
 
 
 def test_bilingual_flag_comes_from_the_formats():
-    assert {f["id"] for f in bilingua.formats() if f["bilingual"]} == {"po", "xliff", "sdlxliff", "mqxliff", "mxliff", "sdlppx", "mqxlz"}
+    assert {f["id"] for f in bilingua.formats() if f["bilingual"]} == {"po", "mo", "xliff", "sdlxliff", "mqxliff", "mxliff", "sdlppx", "mqxlz", "xcloc"}
 
 
 def test_limits_are_refused_with_the_limit_code():
@@ -355,3 +355,28 @@ def test_legacy_encoding_round_trips_and_garbled_text_warns():
     assert doc["warnings"][0]["kind"] == "text_encoding"
     assert bilingua.merge(doc) == raw
     assert error_code(bilingua.extract, "a.txt", b"a\xff\x00\x01b") == "encoding"
+
+
+def test_merge_options_output_encoding_and_stamp_target_always():
+    src = '<html><head><meta charset="windows-1252"></head><body><p>café</p></body></html>'.encode("latin-1")
+    doc = bilingua.extract("a.html", src, target_lang="es")
+    assert bilingua.merge(doc) == src
+    assert bilingua.merge(doc, None) == src
+    out = bilingua.merge(doc, {"output_encoding": "utf-8"})
+    assert "café".encode("utf-8") in out and b'charset="UTF-8"' in out
+    xliff = (
+        b'<?xml version="1.0"?><xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2"><file original="a" '
+        b'source-language="en" datatype="plaintext"><body><trans-unit id="1"><source>Hi</source></trans-unit></body></file></xliff>'
+    )
+    doc = bilingua.extract("a.xlf", xliff, target_lang="fr-FR")
+    assert bilingua.merge(doc) == xliff
+    assert b'target-language="fr-FR"' in bilingua.merge(doc, {"stamp_target_always": True})
+    assert error_code(bilingua.merge, doc, {"stamp_always": True}) == "invalid_argument"
+    assert error_code(bilingua.merge, doc, {"output_encoding": "latin-9"}) == "invalid_argument"
+
+
+def test_format_options_reach_the_format():
+    ftl = b"-brand = Firefox\nhello = Hello\n"
+    assert len(bilingua.extract("a.ftl", ftl)["units"]) == 1
+    assert len(bilingua.extract("a.ftl", ftl, format_options={"ftl.translate_terms": "true"})["units"]) == 2
+    assert error_code(bilingua.extract, "a.ftl", ftl, format_options={"x": 1}) == "invalid_argument"

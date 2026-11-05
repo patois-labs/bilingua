@@ -60,7 +60,7 @@ pub fn refuse<T>(text: &str, pos: usize, why: &str) -> Result<T, ModuleError> {
 
 /// Python's `str.isspace` (what the LocOS regex `\s` matches) plus the byte order mark.
 fn is_space(c: char) -> bool {
-    c.is_whitespace() || matches!(c, '\u{1c}'..='\u{1f}' | '\u{feff}')
+    bilingua_model::py_isspace_char(c) || c == '\u{feff}'
 }
 
 fn is_lt(c: char) -> bool {
@@ -68,11 +68,11 @@ fn is_lt(c: char) -> bool {
 }
 
 fn is_ident_start(c: char) -> bool {
-    c.is_alphabetic() || c == '_' || c == '$'
+    bilingua_model::py_is_word_start_char(c) || c == '$'
 }
 
 fn is_ident_part(c: char) -> bool {
-    c.is_alphanumeric() || c == '_' || c == '$' || c == '\u{200c}' || c == '\u{200d}'
+    bilingua_model::py_is_word_char(c) || c == '$' || c == '\u{200c}' || c == '\u{200d}'
 }
 
 /// Cooks the body of a string or template: ECMAScript escapes (modules are strict, so legacy octal escapes are

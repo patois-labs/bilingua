@@ -14,4 +14,8 @@ pub enum Error {
     /// A package (zip) was refused or is malformed: traversal, bomb, junk, encryption, missing parts.
     #[error("package refused: {0}")]
     Package(String),
+    /// A package is over one of the B6 safety limits (too many entries, too large, a zip bomb). The kind is stable;
+    /// the message is safe to show the person who uploaded the file.
+    #[error("{0}")]
+    Limit(bilingua_model::LimitError),
 }

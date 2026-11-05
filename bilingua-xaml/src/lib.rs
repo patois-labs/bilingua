@@ -100,7 +100,7 @@ impl Xaml {
         guard::check_xml(bytes, limits)?;
         let dec = enc::decode_text(bytes, &enc::DecodeOptions { declared: true, source_lang: opts.source_lang.as_deref(), limits: *limits })?;
         let text = &dec.text;
-        if !matches!(enc::base(&dec.encoding), "utf-8" | "utf-8-bom" | "utf-16le" | "utf-16be") && textenc::encode(&dec.text, &dec.encoding)? != bytes {
+        if !matches!(enc::base(&dec.encoding), "utf-8" | "utf-8-bom" | "utf-16le" | "utf-16be") && textenc::encode(&dec.text, &dec.encoding, &bilingua_model::MergeOptions::default())? != bytes {
             // double-mapped bytes of the CJK code pages read to the same character and write back as the other
             // spelling; an untouched merge must be the original bytes, so the file is refused, never altered
             return Err(Error::Encoding("This XAML file uses byte sequences of its legacy encoding that cannot be written back unchanged. Re-save the file as UTF-8.".into()));
@@ -212,6 +212,10 @@ impl Filter for Xaml {
     }
 
     fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
+        self.merge_with(doc, &bilingua_model::MergeOptions::default())
+    }
+
+    fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
         bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
         let Skeleton::Text { parts, encoding, .. } = &doc.skeleton else {
             return Err(Error::Write("xaml needs a text skeleton".into()));
@@ -227,7 +231,7 @@ impl Filter for Xaml {
                 }
             }
         }
-        textenc::encode(&out, encoding)
+        textenc::encode(&out, encoding, opts)
     }
 }
 

@@ -21,7 +21,5 @@
 - Oracle: `oracle/corpus/plist/` holds both extensions; add `plist` and `stringsdict` to `FORMATS` in `run.py`. Note that
   the oracle's pseudo-translation step merges for `es-ES`, so a stringsdict whose plural dictionary lacks Spanish
   `many` re-opens with more units than it had: that is the plural fill, not a defect.
-- Seven stringsdict corpus files (`edge`, `lang_de`, `lang_en`, `lang_hi`, `lang_ja`, `lang_ko`, `lang_zh`) live in
-  `bilingua-plist/tests/data/fill/`, not in `oracle/corpus/plist/`: `oracle/tests/corpus.rs` pseudo-translates for
-  `es-ES` and wants the same unit count back, and the plural fill adds Spanish `many` to a dictionary that lacks it.
-  The plist crate's own tests read both folders.
+- `oracle/tests/corpus.rs` counts only the plural forms the source has (the last `/` step of a stringsdict key), so
+  the Spanish `many` the fill adds is not a unit-count mismatch; all stringsdict files live in `oracle/corpus/plist/`.

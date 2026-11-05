@@ -26,7 +26,7 @@ fn err(text: &str, pos: usize, what: &str) -> Error {
 
 /// Python `str.isspace` (what the LocOS regex `\s` accepts), so the two scanners agree on the same files.
 pub fn is_ws(c: char) -> bool {
-    c.is_whitespace() || ('\u{1c}'..='\u{1f}').contains(&c)
+    bilingua_model::py_isspace_char(c)
 }
 
 fn name_start(c: char) -> bool {
@@ -305,7 +305,7 @@ fn escape(s: &str, quote: char, out: &mut String) {
 /// A value with a letter or digit outside references and markup.
 pub fn is_translatable(value: &str) -> bool {
     let no_refs = protected_ref().replace_all(value, "");
-    tag_re().replace_all(&no_refs, "").chars().any(char::is_alphanumeric)
+    tag_re().replace_all(&no_refs, "").chars().any(bilingua_model::py_isalnum_char)
 }
 
 /// Splits leading and trailing white space (Python `str.strip` semantics) from the core.

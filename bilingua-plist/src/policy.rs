@@ -117,7 +117,7 @@ pub(crate) fn wanted(stringsdict: bool, mode: Mode, leaf: &Leaf, value: &str) ->
 }
 
 fn word(c: char) -> bool {
-    c.is_alphanumeric() || c == '_'
+    bilingua_model::py_is_word_char(c)
 }
 
 /// Python `\d`: decimal digits of any script.

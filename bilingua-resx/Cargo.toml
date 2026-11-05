@@ -11,5 +11,5 @@ bilingua-model = { workspace = true }
 quick-xml = { workspace = true }
 
 [dev-dependencies]
-proptest = { version = "1", default-features = false, features = ["std"] }
+proptest = { workspace = true }
 serde_json = { workspace = true }

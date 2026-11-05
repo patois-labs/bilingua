@@ -44,5 +44,4 @@ let out = Resx.merge(&doc)?;
 
 See the report in the commit history; short list: LocOS is the default everywhere. Okapi (`okf_xml-resx`) tags `{n}`
 placeholders too (same as here) and also the escaped HTML tags inside a value (not done: LocOS keeps them as text).
-Okapi skips fewer designer entries. Unicode letter test: Rust `is_alphanumeric` is wider than Python `isalnum` for a few
-combining marks.
+Okapi skips fewer designer entries. The letter-or-digit test is Python's `isalnum` exactly (`bilingua_model::py_isalnum`).

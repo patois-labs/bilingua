@@ -147,8 +147,7 @@ finds its target nodes at merge time (the target language is only known then).
   encoding when the text fits, otherwise as UTF-8 with the declaration saying so. LocOS's own `build` writes UTF-8
   and lets a later layer restore the envelope; the golden test compares after reading our bytes in that encoding.
 - Nesting is limited by `Limits::max_xml_depth` (256) where LocOS refused more than 120 levels.
-- Unicode white space: Rust `char::is_whitespace` for "this unit has no text", Python's `str.strip` also counts
-  `\x1c`-`\x1f`.
+- Unicode white space: Python's `str.isspace`, exactly (`bilingua_model::py_isspace_char`).
 - The LocOS XML dispatcher hands Android `strings.xml` and Java XML properties to their own filters; this crate is only
   the generic filter (those formats are other crates).
 

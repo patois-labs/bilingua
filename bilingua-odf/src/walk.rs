@@ -105,7 +105,7 @@ pub struct Tok {
 
 impl Tok {
     pub fn has_letter(&self) -> bool {
-        self.parts.iter().any(|p| matches!(p, Part::Text(s) if s.chars().any(char::is_alphabetic)))
+        self.parts.iter().any(|p| matches!(p, Part::Text(s) if bilingua_model::py_has_alpha(s)))
     }
 }
 

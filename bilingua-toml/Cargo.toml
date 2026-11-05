@@ -12,4 +12,4 @@ bilingua-model = { workspace = true }
 [dev-dependencies]
 serde_json = { workspace = true }
 toml = { version = "0.8", default-features = false, features = ["parse", "display"] }
-proptest = { version = "1", default-features = false, features = ["std"] }
+proptest = { workspace = true }

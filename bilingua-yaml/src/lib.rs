@@ -337,6 +337,10 @@ impl Filter for Yaml {
     }
 
     fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
+        self.merge_with(doc, &bilingua_model::MergeOptions::default())
+    }
+
+    fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
         bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
         let Skeleton::Text { parts, encoding, .. } = &doc.skeleton else {
             return Err(Error::Write("yaml needs a text skeleton".into()));
@@ -345,7 +349,7 @@ impl Filter for Yaml {
         let mut changed = false;
         let out: String = // The root key and plural forms follow the target language only once something is translated (an untouched
         // document comes back byte for byte, like PO).
-        match doc.target_lang.as_deref().filter(|t| !t.trim().is_empty()).filter(|_| doc.units.iter().any(has_target)) {
+        match doc.target_lang.as_deref().filter(|t| !t.trim().is_empty()).filter(|_| opts.stamp_target_always || doc.units.iter().any(has_target)) {
             None => {
                 let mut out = String::new();
                 for p in parts {
@@ -393,6 +397,7 @@ impl Filter for Yaml {
         // UTF-8 when it did, like LocOS.
         let bytes = match enc {
             Enc::Utf8 | Enc::Utf8Bom => text::encode(&out, enc),
+            _ if opts.output_encoding == bilingua_model::OutputEncoding::Utf8 => text::encode(&out, Enc::Utf8),
             _ if !changed => text::encode(&out, enc),
             _ => text::encode(&out, Enc::Utf8),
         };

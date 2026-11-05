@@ -54,7 +54,7 @@ fn syntax(msg: String) -> ScanError {
 
 /// White space as Python's `\s` sees it on text (Unicode white space plus the four ASCII separators).
 pub fn is_ws(c: char) -> bool {
-    c.is_whitespace() || ('\u{1c}'..='\u{1f}').contains(&c)
+    bilingua_model::py_isspace_char(c)
 }
 
 fn is_ascii_ws(b: u8) -> bool {

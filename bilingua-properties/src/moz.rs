@@ -13,7 +13,7 @@ fn license(text: &str) -> bool {
     let mut from = 0;
     while let Some(p) = text[from..].find("Mozilla Public") {
         let rest = &text[from + p + 14..];
-        let trimmed = rest.trim_start_matches(|c: char| c.is_whitespace() || ('\u{1c}'..='\u{1f}').contains(&c));
+        let trimmed = rest.trim_start_matches(|c: char| bilingua_model::py_isspace_char(c));
         if trimmed.len() < rest.len() && trimmed.starts_with("License") {
             return true;
         }
@@ -51,7 +51,7 @@ fn plural_hash(text: &str) -> bool {
     let mut prev: Option<char> = None;
     let mut it = text.chars().peekable();
     while let Some(c) = it.next() {
-        if c == '#' && !prev.is_some_and(|p| p == '&' || p.is_alphanumeric() || p == '_') {
+        if c == '#' && !prev.is_some_and(|p| p == '&' || bilingua_model::py_isalnum_char(p) || p == '_') {
             if let Some(&d) = it.peek() {
                 if ('1'..='9').contains(&d) {
                     let mut look = it.clone();

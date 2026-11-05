@@ -146,7 +146,7 @@ pub fn unescape(s: &str) -> String {
 }
 
 fn is_word(c: char) -> bool {
-    c.is_alphanumeric() || c == '_'
+    bilingua_model::py_is_word_char(c)
 }
 
 /// `{Name ...}` or `{prefix:Name ...}`, Name starting with a letter. `{0}` and `{}`-escaped text are not.
@@ -155,7 +155,7 @@ pub fn markup_ext(v: &str) -> bool {
     if it.next() != Some('{') {
         return false;
     }
-    while it.peek().is_some_and(|c| c.is_whitespace()) {
+    while it.peek().is_some_and(|c| bilingua_model::py_isspace_char(*c)) {
         it.next();
     }
     let name = |it: &mut std::iter::Peekable<std::str::Chars>| -> bool {
@@ -177,11 +177,11 @@ pub fn markup_ext(v: &str) -> bool {
             it = probe;
         }
     }
-    it.peek().is_none_or(|c| c.is_whitespace() || *c == ',' || *c == '}')
+    it.peek().is_none_or(|c| bilingua_model::py_isspace_char(*c) || *c == ',' || *c == '}')
 }
 
 fn translatable(v: &str) -> bool {
-    v.chars().any(char::is_alphanumeric) && !markup_ext(v)
+    bilingua_model::py_has_alnum(v) && !markup_ext(v)
 }
 
 fn lex_tag<'a>(text: &'a str, s: usize, e: usize) -> Result<(&'a str, Vec<RawAttr<'a>>), Error> {
@@ -284,6 +284,11 @@ pub fn walk(text: &str, with_attrs: bool, l: &Limits) -> Result<Vec<Item>, Error
     }
     if let Some(c) = text.chars().find(|c| !xml_char(*c)) {
         return Err(perr(format!("not well-formed XML: character U+{:04X} is not allowed", c as u32)));
+    }
+    if text.starts_with('\u{feff}') {
+        // the decoder already took the file's one BOM; a second one is not XML (and quick-xml would skip it and
+        // report offsets that no longer match this text)
+        return Err(perr("not well-formed XML: a second byte-order mark at the start"));
     }
     let mut reader = Reader::from_str(text);
     {
@@ -409,7 +414,7 @@ pub fn walk(text: &str, with_attrs: bool, l: &Limits) -> Result<Vec<Item>, Error
                         } else if markup_ext(&value) || value.trim_start().starts_with('{') {
                             tr = false;
                         }
-                        if !value.chars().any(char::is_alphabetic) {
+                        if !bilingua_model::py_has_alpha(&value) {
                             tr = false;
                         }
                         if !tr && trim_xml(&value).is_empty() {

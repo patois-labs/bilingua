@@ -49,7 +49,7 @@ pub struct Entry {
 
 /// Python's `str.isspace` for one character: Unicode white space plus the four information separators.
 pub fn is_space(c: char) -> bool {
-    c.is_whitespace() || ('\u{1c}'..='\u{1f}').contains(&c)
+    bilingua_model::py_isspace_char(c)
 }
 
 pub fn trim(s: &str) -> &str {
@@ -74,10 +74,10 @@ fn placeholder_re() -> &'static Regex {
 
 /// A value with a letter or digit outside its placeholders. `{0}`, `%1$@` and `---` are not translatable.
 pub fn is_translatable(value: &str) -> bool {
-    if !value.chars().any(char::is_alphanumeric) {
+    if !value.chars().any(bilingua_model::py_isalnum_char) {
         return false;
     }
-    placeholder_re().replace_all(value, "").chars().any(char::is_alphanumeric)
+    placeholder_re().replace_all(value, "").chars().any(bilingua_model::py_isalnum_char)
 }
 
 /// Natural lines as (start, end) byte spans, terminator excluded. `\r\n`, `\r` and `\n` end a line.

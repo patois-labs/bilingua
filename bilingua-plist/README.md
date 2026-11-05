@@ -66,5 +66,4 @@ element budget is forty times the unit limit, as in LocOS.
   file); LocOS fills whenever it is asked for a locale.
 - A binary plist with a repeated dictionary key keeps the last value, like Python; a repeated key in XML is refused,
   like LocOS.
-- Rust `char::is_alphanumeric` is a little wider than Python `str.isalnum` (combining marks); a value made only of
-  specifiers and such marks may count as text here. A shared helper is coming.
+- "Has a letter or digit" is Python's `str.isalnum`, exactly (`bilingua_model::py_isalnum_char`).

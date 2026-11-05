@@ -11,5 +11,5 @@ bilingua-model = { workspace = true }
 regex = { workspace = true }
 
 [dev-dependencies]
-proptest = "1"
+proptest = { workspace = true }
 serde_json = { workspace = true }

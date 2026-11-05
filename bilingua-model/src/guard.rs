@@ -24,6 +24,9 @@ pub enum LimitKind {
     Units,
     UnitChars,
     XmlDepth,
+    /// Nesting deeper than allowed in a format that is not XML (HTML, JSON, YAML, ...). Uses
+    /// `Limits::max_xml_depth`, which is the nesting cap for every format.
+    Depth,
     XmlElements,
     /// An XML entity declaration (DTD): entity bombs and external entities.
     XmlEntities,

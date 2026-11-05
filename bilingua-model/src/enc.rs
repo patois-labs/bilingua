@@ -19,7 +19,7 @@
 use crate::codepage::{label as cp_label, source_encoding};
 use crate::garble::text_looks_garbled;
 use crate::guard::{check_lines, Limits};
-use crate::{Error, ExtractOptions, Warning};
+use crate::{Error, ExtractOptions, MergeOptions, OutputEncoding, Warning};
 use encoding_rs::{DecoderResult, Encoding};
 use regex::Regex;
 use std::sync::OnceLock;
@@ -208,6 +208,28 @@ fn rewrite_declared(text: &str) -> String {
     decl_re().replace_all(text, |c: &regex::Captures| format!("{}UTF-8", &c[1])).into_owned()
 }
 
+/// `text` with every charset declaration that names a charset other than UTF-8 (`<?xml encoding>`, `<meta
+/// charset>`, a PO `Content-Type`) rewritten to say UTF-8. For a writer that produces UTF-8 itself.
+pub fn declare_utf8(text: &str) -> String {
+    // declarations live at the top of a file; text further down that looks like one is content
+    let mut cut = text.len().min(4096);
+    while !text.is_char_boundary(cut) {
+        cut -= 1;
+    }
+    let (head, tail) = text.split_at(cut);
+    let mut out = decl_re()
+        .replace_all(head, |c: &regex::Captures| {
+            if c[2].eq_ignore_ascii_case("UTF-8") || c[2].eq_ignore_ascii_case("UTF8") {
+                c[0].to_string()
+            } else {
+                format!("{}UTF-8", &c[1])
+            }
+        })
+        .into_owned();
+    out.push_str(tail);
+    out
+}
+
 fn done(text: String, base: &str, label: Option<&str>, warnings: Vec<Warning>, l: &Limits) -> Result<Decoded, Error> {
     check_lines(&text, l)?;
     let encoding = tag(base, &text, label);
@@ -216,6 +238,36 @@ fn done(text: String, base: &str, label: Option<&str>, warnings: Vec<Warning>, l
 
 /// Reads a text file (see the module docs for the order of attempts).
 pub fn decode_text(data: &[u8], o: &DecodeOptions) -> Result<Decoded, Error> {
+    let mut d = decode_text_inner(data, o)?;
+    // GBK files from Windows write the euro sign as the single byte 0x80; the GB18030 spelling is A2 E3. A file
+    // that uses A2 E3 keeps it on merge (an untouched merge is byte-identical); the tag says so.
+    if base(&d.encoding) == "gbk" && d.text.contains('\u{20AC}') && gbk_has_a2e3(data) {
+        d.encoding.push_str(";euro=a2e3");
+    }
+    Ok(d)
+}
+
+/// True when the GBK / GB18030 bytes hold the character A2 E3 (not the two bytes straddling two characters, such as
+/// a trail byte A2 followed by a lead byte E3).
+fn gbk_has_a2e3(data: &[u8]) -> bool {
+    let mut i = 0;
+    while i < data.len() {
+        let b = data[i];
+        if !(0x81..=0xFE).contains(&b) || i + 1 >= data.len() {
+            i += 1;
+        } else if (0x30..=0x39).contains(&data[i + 1]) {
+            i += 4; // a GB18030 four-byte form
+        } else {
+            if b == 0xA2 && data[i + 1] == 0xE3 {
+                return true;
+            }
+            i += 2;
+        }
+    }
+    false
+}
+
+fn decode_text_inner(data: &[u8], o: &DecodeOptions) -> Result<Decoded, Error> {
     crate::guard::check_input(data, &o.limits)?;
     let locale = o.source_lang.unwrap_or("");
     let hint = source_encoding(locale);
@@ -242,7 +294,14 @@ pub fn decode_text(data: &[u8], o: &DecodeOptions) -> Result<Decoded, Error> {
                 }
             }
         }
-        return done(s.to_string(), if bom { "utf-8-bom" } else { "utf-8" }, None, w, &o.limits);
+        // a UTF-8 file that declares another charset keeps the label in its tag, so a merge asked for UTF-8
+        // ([`MergeOptions`]) can rewrite the false declaration; the bytes of an untouched merge do not change
+        let label = if o.declared && !s.is_ascii() {
+            declared_label(body).filter(|l| !matches!(l.to_ascii_lowercase().as_str(), "utf-8" | "utf8" | "us-ascii" | "ascii" | "charset"))
+        } else {
+            None
+        };
+        return done(s.to_string(), if bom { "utf-8-bom" } else { "utf-8" }, label.as_deref(), w, &o.limits);
     }
     if data.starts_with(&[0xFF, 0xFE]) || data.starts_with(&[0xFE, 0xFF]) {
         let (e, name) = if data[0] == 0xFF { (encoding_rs::UTF_16LE, "utf-16le") } else { (encoding_rs::UTF_16BE, "utf-16be") };
@@ -412,14 +471,17 @@ struct Envelope<'a> {
     base: &'a str,
     nl: &'static str,
     label: Option<&'a str>,
+    /// GBK file whose euro sign was the two bytes A2 E3 (GB18030's spelling)
+    euro_a2e3: bool,
 }
 
 fn parse_tag(t: &str) -> Envelope<'_> {
     let mut parts = t.split(';');
     let base = parts.next().unwrap_or("utf-8");
-    let (mut nl, mut label) = ("", None);
+    let (mut nl, mut label, mut euro_a2e3) = ("", None, false);
     for p in parts {
         match p {
+            "euro=a2e3" => euro_a2e3 = true,
             "nl=crlf" => nl = "\r\n",
             "nl=cr" => nl = "\r",
             _ => {
@@ -429,7 +491,7 @@ fn parse_tag(t: &str) -> Envelope<'_> {
             }
         }
     }
-    Envelope { base, nl, label }
+    Envelope { base, nl, label, euro_a2e3 }
 }
 
 fn with_newlines(text: &str, nl: &str) -> String {
@@ -448,6 +510,30 @@ fn with_newlines(text: &str, nl: &str) -> String {
         }
     }
     out
+}
+
+/// [`encode_text`] with [`MergeOptions`]: with `output_encoding` UTF-8 the text is written as UTF-8 whatever the
+/// original encoding was (a UTF-8 BOM is kept; a UTF-16 BOM or a legacy code page is not), the newline style of the
+/// original is kept, and an XML, HTML or PO charset declaration that still names another charset is rewritten to
+/// UTF-8, so the file says what it is.
+pub fn encode_text_with(text: &str, encoding: &str, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
+    if opts.output_encoding != OutputEncoding::Utf8 {
+        return encode_text(text, encoding);
+    }
+    let env = parse_tag(encoding);
+    let text = text.strip_prefix('\u{FEFF}').unwrap_or(text);
+    let mut out = if env.nl.is_empty() { text.to_string() } else { with_newlines(text, env.nl) };
+    if let Some(l) = env.label.filter(|l| !l.eq_ignore_ascii_case("utf-8") && !l.eq_ignore_ascii_case("utf8")) {
+        out = decl_re()
+            .replace_all(&out, |c: &regex::Captures| if c[2].eq_ignore_ascii_case(l) { format!("{}UTF-8", &c[1]) } else { c[0].to_string() })
+            .into_owned();
+    }
+    let mut v = Vec::with_capacity(out.len() + 3);
+    if env.base == "utf-8-bom" {
+        v.extend_from_slice(BOM8);
+    }
+    v.extend_from_slice(out.as_bytes());
+    Ok(v)
 }
 
 /// Writes the merged `text` in the envelope `encoding` (a skeleton tag from [`decode_text`], or plain `"utf-8"` /
@@ -525,12 +611,34 @@ pub fn encode_text(text: &str, encoding: &str) -> Result<Vec<u8>, Error> {
         return Ok(utf8(false));
     }
     // GB18030 writes everything GBK does, with the same bytes, and the four-byte forms GBK's encoder lacks
+    // (B6); only the euro sign differs: GBK and Windows code page 936 readers expect the single byte 0x80
+    if enc == encoding_rs::GBK && !env.euro_a2e3 {
+        return Ok(encode_gbk(&restored).0);
+    }
     let writer = if enc == encoding_rs::GBK { encoding_rs::GB18030 } else { enc };
     let (bytes, _, unmappable) = writer.encode(&restored);
     if unmappable {
         return Ok(utf8(false));
     }
     Ok(bytes.into_owned())
+}
+
+/// Encodes `text` for a GBK / GB2312 / code page 936 file: GB18030's bytes (it holds everything GBK does, plus
+/// four-byte forms for the rest), except that the euro sign U+20AC is the single byte 0x80, which is what GBK and
+/// Windows readers expect (GB18030's A2 E3 is read as a different character by some of them). The flag is true
+/// when a character has no mapping at all (never for GB18030; kept for the caller's fallback logic).
+pub fn encode_gbk(text: &str) -> (Vec<u8>, bool) {
+    let mut out = Vec::with_capacity(text.len() + text.len() / 2);
+    let mut bad = false;
+    for (i, piece) in text.split('\u{20AC}').enumerate() {
+        if i > 0 {
+            out.push(0x80);
+        }
+        let (b, _, unmappable) = encoding_rs::GB18030.encode(piece);
+        bad |= unmappable;
+        out.extend_from_slice(&b);
+    }
+    (out, bad)
 }
 
 /// True when `tag` names a legacy (neither UTF-8 nor UTF-16) encoding.

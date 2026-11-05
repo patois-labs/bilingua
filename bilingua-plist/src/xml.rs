@@ -28,7 +28,7 @@ pub(crate) fn too_many(max_units: usize) -> Error {
 
 /// Python `str.isspace` (what LocOS `strip()` removes).
 pub(crate) fn is_space(c: char) -> bool {
-    c.is_whitespace() || ('\u{1c}'..='\u{1f}').contains(&c)
+    bilingua_model::py_isspace_char(c)
 }
 
 fn is_xml_ws(c: u8) -> bool {

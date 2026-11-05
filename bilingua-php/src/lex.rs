@@ -68,12 +68,12 @@ pub fn refuse(text: &str, pos: usize, why: &str) -> Error {
 
 /// Python's `\s`: Unicode white space plus the four information separators.
 pub fn is_space(c: char) -> bool {
-    c.is_whitespace() || matches!(c, '\u{1c}'..='\u{1f}')
+    bilingua_model::py_isspace_char(c)
 }
 
 /// Python's `\w`.
 pub fn is_word(c: char) -> bool {
-    c == '_' || c.is_alphanumeric()
+    bilingua_model::py_is_word_char(c)
 }
 
 fn is_ident_start(c: char) -> bool {

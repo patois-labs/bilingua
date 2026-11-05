@@ -106,7 +106,7 @@ impl<'a> Script<'a> {
         }
         let t = self.toks[tok];
         let (pieces, _) = lit::pieces(&self.text[t.start..t.end]);
-        let alnum = pieces.iter().any(|p| matches!(p, Piece::Text(s) if s.chars().any(char::is_alphanumeric)));
+        let alnum = pieces.iter().any(|p| matches!(p, Piece::Text(s) if bilingua_model::py_has_alnum(s)));
         if !alnum && (!self.include_locked || pieces.is_empty()) {
             return Ok(());
         }

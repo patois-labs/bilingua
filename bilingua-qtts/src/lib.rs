@@ -41,7 +41,7 @@ fn first_child(sc: &Scan, text: &str, i: usize, name: &str) -> Option<usize> {
 /// Python's `str.isalnum` for the purpose of "has a letter or digit". Rust's test is a little wider (combining
 /// marks of some scripts count as letters), a known difference noted in the README.
 fn has_letter_or_digit(s: &str) -> bool {
-    s.chars().any(char::is_alphanumeric)
+    bilingua_model::py_has_alnum(s)
 }
 
 fn xml_target_text(s: &str) -> String {
@@ -100,7 +100,7 @@ impl QtTs {
         }
         let dec = enc::decode_text(bytes, &enc::DecodeOptions { declared: true, source_lang: opts.source_lang.as_deref(), limits: *limits })?;
         let text = dec.text.as_str();
-        if !matches!(enc::base(&dec.encoding), "utf-8" | "utf-8-bom" | "utf-16le" | "utf-16be") && textenc::encode(text, &dec.encoding)? != bytes {
+        if !matches!(enc::base(&dec.encoding), "utf-8" | "utf-8-bom" | "utf-16le" | "utf-16be") && textenc::encode(text, &dec.encoding, &bilingua_model::MergeOptions::default())? != bytes {
             // bytes of a legacy code page that read to the same character as another spelling cannot be written
             // back unchanged: refuse rather than alter the file
             return Err(Error::Encoding("This Qt Linguist .ts file uses byte sequences of its legacy encoding that cannot be written back unchanged. Re-save the file as UTF-8.".into()));
@@ -343,6 +343,10 @@ impl Filter for QtTs {
     }
 
     fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
+        self.merge_with(doc, &bilingua_model::MergeOptions::default())
+    }
+
+    fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
         bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
         let Skeleton::Text { parts, encoding, .. } = &doc.skeleton else {
             return Err(Error::Write("a Qt Linguist file needs a text skeleton".into()));
@@ -372,6 +376,8 @@ impl Filter for QtTs {
             _ => None,
         });
         // LocOS: the target's tag stamps the file and picks the plural forms; an unusable tag leaves both to the file
+        // (`stamp_target_always`: even when nothing is translated)
+        let touched = touched || opts.stamp_target_always;
         let tag = target.filter(|_| touched).and_then(lang::qt_language);
         let plural_lang = tag.clone().or(file_lang.clone()).unwrap_or_default();
         let fill = touched && target.is_some();
@@ -400,7 +406,7 @@ impl Filter for QtTs {
                 }
             }
         }
-        textenc::encode(&out, encoding)
+        textenc::encode(&out, encoding, opts)
     }
 }
 

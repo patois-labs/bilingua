@@ -243,14 +243,14 @@ impl Filter for TomlFilter {
             let v: &str = &s.value;
             for (n, (a, b)) in actions(v, &ld, &rd).into_iter().enumerate() {
                 inl.push(Inline::text(&v[p..a]));
-                bare_alnum |= v[p..a].chars().any(char::is_alphanumeric);
+                bare_alnum |= bilingua_model::py_has_alnum(&v[p..a]);
                 let id = (n + 1).to_string();
                 codes.insert(id.clone(), CodeData { standalone: Some(v[a..b].to_string()), label: Some("placeholder".into()), ..Default::default() });
                 inl.push(Inline::tag(id, TagKind::Standalone, &v[a..b]));
                 p = b;
             }
             inl.push(Inline::text(&v[p..]));
-            bare_alnum |= v[p..].chars().any(char::is_alphanumeric);
+            bare_alnum |= bilingua_model::py_has_alnum(&v[p..]);
             let inl = merge_text(inl);
             let translatable = cls.unit && bare_alnum;
             if !translatable && (!opts.include_locked || v.trim().is_empty()) {

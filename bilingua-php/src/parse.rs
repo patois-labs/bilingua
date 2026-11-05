@@ -260,7 +260,7 @@ impl<'a> Parser<'a, '_> {
                 end = nxt.end;
                 value.push_str(&nxt.value);
             }
-            let translatable = value.chars().any(char::is_alphanumeric);
+            let translatable = bilingua_model::py_has_alnum(&value);
             if translatable || !value.trim().is_empty() {
                 self.out.units.push(RawUnit {
                     start,

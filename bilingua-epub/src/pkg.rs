@@ -29,7 +29,7 @@ pub fn refuse(msg: impl std::fmt::Display) -> Error {
 }
 
 pub fn alnum(s: &str) -> bool {
-    s.chars().any(char::is_alphanumeric)
+    bilingua_model::py_has_alnum(s)
 }
 
 /// A parsed package XML part: the decoded text with its envelope, and the element table.

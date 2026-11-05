@@ -67,11 +67,11 @@ fn custom_tag(t: &Option<String>) -> bool {
 }
 
 pub fn py_space(c: char) -> bool {
-    c.is_whitespace() || ('\x1c'..='\x1f').contains(&c)
+    bilingua_model::py_isspace_char(c)
 }
 
 fn translatable(s: &str) -> bool {
-    s.chars().any(|c| c.is_alphanumeric())
+    bilingua_model::py_has_alnum(s)
 }
 
 pub struct Limits {

@@ -73,7 +73,12 @@ macro_rules! bundle_filter {
                 self.extract_with(bytes, opts, &opts.limits())
             }
             fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
-                merge(doc, false)
+                merge(doc, false, &bilingua_model::MergeOptions::default())
+            }
+            /// `stamp_target_always` writes the target language even when nothing is translated, as LocOS does
+            /// (an XMB then comes back as the XTB for its target language); `output_encoding` as everywhere.
+            fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
+                merge(doc, opts.stamp_target_always && doc.target_lang.as_deref().is_some_and(|t| !t.trim().is_empty()), opts)
             }
         }
     };
@@ -87,14 +92,14 @@ impl Xmb {
     /// text, as Angular falls back). `lang` comes from the document's target language. For an XTB document this is
     /// the same as `merge`, with the language written even when nothing changed.
     pub fn to_xtb(&self, doc: &Document) -> Result<Vec<u8>, Error> {
-        merge(doc, true)
+        merge(doc, true, &bilingua_model::MergeOptions::default())
     }
 }
 
 impl Xtb {
     /// Like `merge`, and always writes the document's target language into `lang`, even when no translation changed.
     pub fn merge_localized(&self, doc: &Document) -> Result<Vec<u8>, Error> {
-        merge(doc, true)
+        merge(doc, true, &bilingua_model::MergeOptions::default())
     }
 }
 
@@ -112,7 +117,7 @@ fn code(u: &Unit, key: &str) -> String {
     u.codes.get(key).and_then(|c| c.standalone.clone()).unwrap_or_default()
 }
 
-fn merge(doc: &Document, force: bool) -> Result<Vec<u8>, Error> {
+fn merge(doc: &Document, force: bool, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
     bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
     let Skeleton::Text { parts, encoding, .. } = &doc.skeleton else {
         return Err(Error::Write("xmb needs a text skeleton".into()));
@@ -145,7 +150,7 @@ fn merge(doc: &Document, force: bool) -> Result<Vec<u8>, Error> {
                     SkelPart::Unit(i) => out.push_str(&code(unit_of(*i)?, RAW)),
                 }
             }
-            textenc::encode(&out, encoding)
+            textenc::encode(&out, encoding, opts)
         }
         Kind::Xtb => {
             let mut out = String::new();
@@ -166,7 +171,7 @@ fn merge(doc: &Document, force: bool) -> Result<Vec<u8>, Error> {
                 }
                 first = false;
             }
-            textenc::encode(&out, encoding)
+            textenc::encode(&out, encoding, opts)
         }
     }
 }
