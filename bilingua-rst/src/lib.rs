@@ -81,6 +81,9 @@ fn write_title(raw: &str, info: &str, rendered: &str) -> Result<String, Error> {
     let mut edits: Vec<(usize, usize, String)> = vec![(ts, te, rendered.to_string())];
     for c in nums[3..].chunks(3) {
         let (a, b) = (c[0], c[1]);
+        if b < a || b > raw.len() {
+            return Err(bad());
+        }
         let ch = char::from_u32(c[2] as u32).ok_or_else(bad)?;
         let len = (new_w as isize).max((b - a) as isize + delta) as usize;
         edits.push((a, b, ch.to_string().repeat(len)));
