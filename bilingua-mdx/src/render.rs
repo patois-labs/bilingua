@@ -50,6 +50,13 @@ pub(crate) fn build_document(w: &Walk, l: &Loaded, opts: &ExtractOptions) -> Res
         }
     }
     let attr_base = fm_len + w.units.len();
+    // the attribute units of each line unit, in attribute order (one pass, not one scan per line)
+    let mut attrs_of: Vec<Vec<usize>> = vec![Vec::new(); w.units.len()];
+    for (k, a) in w.attr_units.iter().enumerate() {
+        if let Some(v) = a.line.and_then(|li| attrs_of.get_mut(li)) {
+            v.push(k);
+        }
+    }
     for lu in &w.units {
         let core = &text[lu.start..lu.end];
         if let Some(d) = lu.delim {
@@ -104,15 +111,12 @@ pub(crate) fn build_document(w: &Walk, l: &Loaded, opts: &ExtractOptions) -> Res
         let _ = this;
         let i = new_unit(&mut units, inl);
         let li = i - fm_len;
-        let mut n = 0;
-        for (k, a) in w.attr_units.iter().enumerate() {
-            if a.line == Some(li) {
-                n += 1;
-                codes.insert(
-                    format!("$a{n}"),
-                    CodeData { open: Some((attr_base + k).to_string()), standalone: Some(span_str((a.start, a.end), lu.start)), ..Default::default() },
-                );
-            }
+        for (n, &k) in attrs_of[li].iter().enumerate() {
+            let a = &w.attr_units[k];
+            codes.insert(
+                format!("$a{}", n + 1),
+                CodeData { open: Some((attr_base + k).to_string()), standalone: Some(span_str((a.start, a.end), lu.start)), ..Default::default() },
+            );
         }
         let u = &mut units[i];
         u.codes = codes;
@@ -258,14 +262,18 @@ fn escape_attr(s: &str, quote: char) -> String {
     }
 }
 
+/// A `{ } <` is already escaped only after an odd run of backslashes: after `\\` (an escaped backslash) it would
+/// open live JSX or an expression, so it is escaped too. (LocOS looks at one preceding backslash only, so a
+/// translation holding `\\{...}` or `\\<X/>` puts code into its build; this is a deliberate difference.)
 fn escape_special(seg: &str, out: &mut String) {
-    let mut prev: Option<char> = None;
+    // true right after an odd run of backslashes
+    let mut escaped = false;
     for c in seg.chars() {
-        if matches!(c, '{' | '}' | '<') && prev != Some('\\') {
+        if matches!(c, '{' | '}' | '<') && !escaped {
             out.push('\\');
         }
         out.push(c);
-        prev = Some(c);
+        escaped = c == '\\' && !escaped;
     }
 }
 
@@ -329,6 +337,16 @@ fn render_line(doc: &Document, u: &Unit) -> Result<String, Error> {
         }
     }
     attrs.sort_by_key(|a| a.s);
+    // spans come from the document's codes: a stored document that was edited must give an error, never a panic
+    let in_core = |s: Span| s.0 <= s.1 && core.get(s.0..s.1).is_some();
+    let bad = || Error::Write(format!("unit {} has inline code positions that do not fit its source text", u.id));
+    let mut prev_end = 0;
+    for a in &attrs {
+        if !in_core((a.s, a.e)) || a.s < prev_end {
+            return Err(bad());
+        }
+        prev_end = a.e;
+    }
     if u.segments.iter().all(|s| s.target.is_empty()) {
         return Ok(splice(core, &attrs, 0, core.len()));
     }
@@ -347,7 +365,11 @@ fn render_line(doc: &Document, u: &Unit) -> Result<String, Error> {
     for (k, c) in &u.codes {
         if let Some(id) = k.strip_prefix("$t") {
             if let Some(o) = c.open.as_deref().and_then(parse_span) {
-                toks.insert(id.to_string(), (o, c.close.as_deref().and_then(parse_span)));
+                let cl = c.close.as_deref().and_then(parse_span);
+                if !in_core(o) || cl.is_some_and(|c| !in_core(c)) {
+                    return Err(bad());
+                }
+                toks.insert(id.to_string(), (o, cl));
             }
         }
     }

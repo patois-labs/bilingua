@@ -137,7 +137,9 @@ fn runs(s: &str) -> Vec<(usize, usize)> {
             i += 1;
         }
         let e = i;
-        if e - a > 2 || prot.iter().any(|&(x, y)| x < e && a < y) {
+        // `prot` is sorted and disjoint: only the first region that ends after `a` can overlap `a..e`
+        let p = prot.partition_point(|&(_, y)| y <= a);
+        if e - a > 2 || prot.get(p).is_some_and(|&(x, _)| x < e) {
             continue;
         }
         let mut k = a;

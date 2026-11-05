@@ -167,6 +167,67 @@ fn quadratic_cases_stay_linear_enough() {
     }
 }
 
+/// A translation never adds a live expression or component, also behind an escaped backslash (gate).
+#[test]
+fn translation_after_escaped_backslash_adds_no_code() {
+    let data = b"Hello <Kbd>x</Kbd> world.\n";
+    for t in ["\\\\{alert(1)}", "a \\\\<Evil/> b", "\\\\\\\\{x}", "{x} <y> </Kbd>"] {
+        let out = build(data, &[(0, t)]);
+        let again = extract(&out).unwrap();
+        let codes: usize = again.units.iter().map(|u| u.source().iter().filter(|i| matches!(i, Inline::Tag { .. })).count()).sum();
+        assert_eq!(codes, 0, "{t:?} -> {:?}", String::from_utf8_lossy(&out));
+    }
+    // an escape the translator wrote stays one escape
+    assert_eq!(build(data, &[(0, "a \\{b\\} c")]), b"a \\{b\\} c\n");
+}
+
+/// A stored document whose code positions were edited gives an error, never a panic (gate).
+#[test]
+fn edited_code_spans_give_an_error() {
+    let data = "Say <Abbr title=\"T \u{e9}\">x</Abbr> {n} now.\n".as_bytes();
+    let doc = extract(data).unwrap();
+    for (key, field, val) in [("$t1", 0, "0,9999"), ("$t1", 1, "3,1"), ("$t2", 0, "0,19"), ("$a1", 2, "18,40"), ("$a1", 2, "2,6")] {
+        let mut d = doc.clone();
+        let c = d.units[0].codes.get_mut(key).unwrap();
+        match field {
+            0 => c.open = Some(val.into()),
+            1 => c.close = Some(val.into()),
+            _ => c.standalone = Some(val.into()),
+        }
+        let last = d.units.len() - 1;
+        d.units[last].segments[0].target = vec![Inline::text("Y")];
+        let _ = Mdx.merge(&d);
+        d.units[0].segments[0].target = vec![Inline::text("x")];
+        let _ = Mdx.merge(&d);
+        d.units[0].segments[0].target.clear();
+        let _ = Mdx.merge(&d);
+    }
+}
+
+/// An anchor that opens a nested block keeps the front matter readable, as PyYAML reads it; aliases are never
+/// expanded (checked against LocOS during the gate) (gate).
+#[test]
+fn front_matter_anchor_on_a_block() {
+    let src = "---\nbase: &b\n  title: Inner\nother:\n  <<: *b\nlol: &l [x, x]\nlol2: [*l, *l]\ntitle: Outer\n---\n\nBody.\n";
+    assert_eq!(texts_str(src), ["Outer", "Body."]);
+    let bad = "---\ntitle: &t \"Quoted\"\n  bad: x\ndescription: D\n---\n\nBody.\n";
+    assert_eq!(texts_str(bad), ["Body."]);
+}
+
+/// Many attribute units in tags inside lines stay linear (one scan per line was quadratic) (gate).
+#[test]
+fn many_inline_attributes_stay_fast() {
+    let small: String = (0..2_000).map(|i| format!("Say <Abbr title=\"T {i}\">x</Abbr> now.\n\n")).collect();
+    let big: String = (0..32_000).map(|i| format!("Say <Abbr title=\"T {i}\">x</Abbr> now.\n\n")).collect();
+    let t1 = Instant::now();
+    let _ = extract(small.as_bytes());
+    let a = t1.elapsed().max(Duration::from_millis(5));
+    let t2 = Instant::now();
+    let _ = extract(big.as_bytes());
+    let b = t2.elapsed();
+    assert!(b < a * 40 + Duration::from_millis(500), "{a:?} -> {b:?}");
+}
+
 fn mdx_alphabet() -> impl Strategy<Value = String> {
     proptest::collection::vec(
         prop_oneof![

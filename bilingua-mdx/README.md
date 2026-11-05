@@ -58,6 +58,8 @@ brace. Size limits are `bilingua_model::Limits` (input bytes, lines, units, char
 ## Known differences from LocOS
 
 - A Unicode space inside a JSX tag (`<a b>`) makes LocOS raise an `AttributeError`; here it is a separator.
+- A `{`, `}` or `<` a translation adds after an even run of backslashes (`\\{x}`, `\\<X/>`) is escaped here; LocOS
+  checks for one preceding backslash only, so such a translation puts a live expression or component in its output.
 - The YAML front matter reader is not PyYAML. It follows PyYAML on the shapes in the test corpus (duplicate keys and
   anchors, bad continuation lines, nesting errors, implicit numbers/dates/booleans) and treats unusual YAML as valid.
 - Letter tests use tables generated from Python 3.13 (Unicode 15.1), so `isalnum` agrees with LocOS; a newer Unicode

@@ -214,7 +214,7 @@ fn yaml_top(block: &str) -> YamlTop {
     }
     let lines: Vec<&str> = block.split('\n').collect();
     let mut entries: Vec<YamlEntry> = Vec::new();
-    let mut anchors: Vec<String> = Vec::new();
+    let mut anchors: std::collections::HashSet<String> = Default::default();
     #[derive(Clone, Copy)]
     enum Last {
         Plain,
@@ -323,16 +323,18 @@ fn yaml_top(block: &str) -> YamlTop {
             (body[..k].trim_end().to_string(), &body[k + 1..])
         };
         let v = trim(rest);
+        // what follows an anchor (`key: &a` then a nested block, `key: &a |`): it decides how the next lines read
+        let mut node = v;
         let value = if v.is_empty() || v.starts_with('#') {
             None
         } else if v.starts_with('&') || v.starts_with('*') {
             // an anchor may be defined once; an alias must name a defined anchor (PyYAML composer errors)
             let name: String = v[1..].chars().take_while(|c| !is_space(*c) && !matches!(c, ',' | '[' | ']' | '{' | '}')).collect();
             if v.starts_with('&') {
-                if anchors.contains(&name) {
+                if !anchors.insert(name.clone()) {
                     return YamlTop::NotDict;
                 }
-                anchors.push(name);
+                node = trim(&v[1 + name.len()..]);
             } else if !anchors.contains(&name) {
                 return YamlTop::NotDict;
             }
@@ -410,14 +412,14 @@ fn yaml_top(block: &str) -> YamlTop {
                 Scalar::Err => return YamlTop::NotDict,
             }
         };
-        last = if v.is_empty() || v.starts_with('#') || v.starts_with(['|', '>', '[', '{']) {
+        last = if node.is_empty() || node.starts_with('#') || node.starts_with(['|', '>', '[', '{']) {
             Last::Other
-        } else if v.starts_with(['"', '\'']) {
+        } else if node.starts_with(['"', '\'']) {
             Last::Quoted
         } else {
             Last::Plain
         };
-        empty_value = v.is_empty() || v.starts_with('#');
+        empty_value = node.is_empty() || node.starts_with('#');
         nested_ok = empty_value;
         entries.push(YamlEntry { key, value });
     }
