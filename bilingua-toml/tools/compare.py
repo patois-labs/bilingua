@@ -6,6 +6,8 @@ Builds and runs the bilingua-toml `dump` example and `oracle/locos_dump.py` (Loc
 per file: unit counts and whether every unit text is identical.
 """
 import json, os, subprocess, sys, tempfile
+
+sys.stdout.reconfigure(encoding="utf-8")  # unit texts are not all in the console code page
 from pathlib import Path
 
 CORPUS = Path(__file__).resolve().parents[2] / "oracle" / "corpus" / "toml"
@@ -48,6 +50,8 @@ for f in files:
     if "merged" not in bl[f]:
         continue
     data = open(f, "rb").read()
+    if "units" not in lo[f]:  # LocOS refused the file (already reported above)
+        continue
     r = flt.parse(data)
     out = flt.build(data, {str(u.p_index): "DE " + u.text for u in r.units}).decode("utf-8")
     ok = out == bl[f]["merged"]
