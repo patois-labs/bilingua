@@ -109,17 +109,20 @@ fn directory_has_duplicates(z: &[u8]) -> bool {
     let mut at = u32::from_le_bytes([z[i + 16], z[i + 17], z[i + 18], z[i + 19]]) as usize;
     let mut seen: std::collections::HashSet<&[u8]> = std::collections::HashSet::new();
     for _ in 0..count {
-        let Some(h) = z.get(at..at + 46) else { return false };
+        // checked: on a 32-bit target (wasm) a hostile offset near u32::MAX would overflow
+        let Some(names_at) = at.checked_add(46) else { return false };
+        let Some(h) = z.get(at..names_at) else { return false };
         if !h.starts_with(&[0x50, 0x4b, 0x01, 0x02]) {
             return false;
         }
         let n = u16::from_le_bytes([h[28], h[29]]) as usize;
         let skip = n + u16::from_le_bytes([h[30], h[31]]) as usize + u16::from_le_bytes([h[32], h[33]]) as usize;
-        let Some(name) = z.get(at + 46..at + 46 + n) else { return false };
+        let Some(name) = names_at.checked_add(n).and_then(|e| z.get(names_at..e)) else { return false };
         if !seen.insert(name) {
             return true;
         }
-        at += 46 + skip;
+        let Some(next) = names_at.checked_add(skip) else { return false };
+        at = next;
     }
     false
 }
