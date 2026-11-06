@@ -468,15 +468,15 @@ fn shift_part(s: &str, _range: bool, drow: i64, dcol: i64) -> Option<String> {
             return None;
         }
         let m = if abs { n } else { n + dcol };
-        return Some(if m < 1 || m > 16384 { "#REF!".into() } else { format!("{}{}", if abs { "$" } else { "" }, col_letters(m)) });
+        return Some(if !(1..=16384).contains(&m) { "#REF!".into() } else { format!("{}{}", if abs { "$" } else { "" }, col_letters(m)) });
     }
     if !body.is_empty() && body.bytes().all(|b| b.is_ascii_digit()) {
         let n: i64 = body.parse().ok()?;
-        if n < 1 || n > 1_048_576 {
+        if !(1..=1_048_576).contains(&n) {
             return None;
         }
         let m = if abs { n } else { n + drow };
-        return Some(if m < 1 || m > 1_048_576 { "#REF!".into() } else { format!("{}{m}", if abs { "$" } else { "" }) });
+        return Some(if !(1..=1_048_576).contains(&m) { "#REF!".into() } else { format!("{}{m}", if abs { "$" } else { "" }) });
     }
     None
 }
@@ -497,11 +497,11 @@ fn shift_cell(s: &str, drow: i64, dcol: i64) -> Option<String> {
         return None;
     }
     let (col, row): (i64, i64) = (col_number(&letters), digits.parse().ok()?);
-    if col > 16384 || row < 1 || row > 1_048_576 {
+    if col > 16384 || !(1..=1_048_576).contains(&row) {
         return None;
     }
     let (nc, nr) = (if abs_c { col } else { col + dcol }, if abs_r { row } else { row + drow });
-    if nc < 1 || nc > 16384 || nr < 1 || nr > 1_048_576 {
+    if !(1..=16384).contains(&nc) || !(1..=1_048_576).contains(&nr) {
         return Some("#REF!".into());
     }
     Some(format!("{}{}{}{nr}", if abs_c { "$" } else { "" }, col_letters(nc), if abs_r { "$" } else { "" }))

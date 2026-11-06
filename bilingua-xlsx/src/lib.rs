@@ -68,7 +68,7 @@ pub struct XlsxOptions {
 impl XlsxOptions {
     /// These options with `xlsx.columns` and `xlsx.target_locales` from `format_options` applied (the mapping is
     /// replaced, the locales are added) and the three flags.
-    fn from_format_options(&self, opts: &ExtractOptions) -> XlsxOptions {
+    fn with_format_options(&self, opts: &ExtractOptions) -> XlsxOptions {
         let mut xo = self.clone();
         let set = |key: &str, field: &mut bool| {
             if let Some(on) = opts.format_flag(key) {
@@ -215,7 +215,7 @@ impl Filter for Xlsx {
     }
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
         bilingua_model::check_own_options(self, &opts.format_options)?;
-        let xo = self.options.from_format_options(opts);
+        let xo = self.options.with_format_options(opts);
         if opts.is_profile(bilingua_model::profile::LOCOS) || locos::table_mode(&xo) {
             // LocOS's walk (cells, text boxes, comments when asked) or its column mode: see `locos`
             return locos::extract(bytes, opts, &xo);
