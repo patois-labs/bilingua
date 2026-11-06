@@ -1,0 +1,19 @@
+{
+ "parse": {
+  "columns": "header=auto",
+  "source_locale": "en-US",
+  "target_locales": [
+   "de"
+  ]
+ },
+ "units": [],
+ "error": false,
+ "builds": [
+  {
+   "name": "b",
+   "locale": "de",
+   "map": {},
+   "file": "fuzz_000.b.xlsx"
+  }
+ ]
+}

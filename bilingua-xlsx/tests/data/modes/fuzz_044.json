@@ -1,0 +1,49 @@
+{
+ "parse": {
+  "columns": "source=en-US,target.de-DE=de-DE,context=Notes",
+  "source_locale": "en-US",
+  "target_locales": [
+   "de"
+  ]
+ },
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Cancel",
+   "style": "",
+   "note": "Notes: 10000000000.0"
+  },
+  {
+   "p_index": 1,
+   "text": "Hello",
+   "style": "",
+   "note": "Notes: =A6  +  1"
+  },
+  {
+   "p_index": 2,
+   "text": "Zwei",
+   "style": "",
+   "note": "Notes: 0.25"
+  },
+  {
+   "p_index": 3,
+   "text": "Zwei",
+   "style": "",
+   "note": "Notes: =A15 + 1"
+  }
+ ],
+ "error": false,
+ "builds": [
+  {
+   "name": "b",
+   "locale": "de",
+   "map": {
+    "0": "T Cancel",
+    "1": "T Hello",
+    "2": "T Zwei",
+    "3": "T Zwei"
+   },
+   "file": "fuzz_044.b.xlsx"
+  }
+ ]
+}

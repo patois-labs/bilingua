@@ -1,0 +1,134 @@
+{
+ "parse": {
+  "comments": true
+ },
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Quarterly budget",
+   "style": "",
+   "note": ""
+  },
+  {
+   "p_index": 1,
+   "text": "Owner",
+   "style": "",
+   "note": ""
+  },
+  {
+   "p_index": 2,
+   "text": "Padded",
+   "style": "",
+   "note": ""
+  },
+  {
+   "p_index": 3,
+   "text": "Other sheet",
+   "style": "",
+   "note": ""
+  },
+  {
+   "p_index": 1000000,
+   "text": "Who owns this line?",
+   "style": "comment",
+   "note": ""
+  },
+  {
+   "p_index": 1000001,
+   "text": "Finance does.",
+   "style": "comment",
+   "note": ""
+  },
+  {
+   "p_index": 1000002,
+   "text": "12345",
+   "style": "comment",
+   "note": ""
+  },
+  {
+   "p_index": 1000003,
+   "text": "Check the total now.",
+   "style": "comment",
+   "note": ""
+  },
+  {
+   "p_index": 1000004,
+   "text": "Padded note",
+   "style": "comment",
+   "note": ""
+  },
+  {
+   "p_index": 1000005,
+   "text": "Second sheet note",
+   "style": "comment",
+   "note": ""
+  }
+ ],
+ "error": false,
+ "builds": [
+  {
+   "name": "de",
+   "locale": "de-DE",
+   "map": {
+    "0": "DE Quarterly budget",
+    "1": "DE Owner",
+    "2": "DE Padded",
+    "3": "DE Other sheet",
+    "1000000": "DE Who owns this line?",
+    "1000001": "DE Finance does.",
+    "1000002": "DE 12345",
+    "1000003": "DE Check the total now.",
+    "1000004": "DE Padded note",
+    "1000005": "DE Second sheet note"
+   },
+   "file": "comments_basic.de.xlsx"
+  },
+  {
+   "name": "comments-only",
+   "locale": null,
+   "map": {
+    "1000000": "DE Who owns this line?",
+    "1000001": "DE Finance does.",
+    "1000002": "DE 12345",
+    "1000003": "DE Check the total now.",
+    "1000004": "DE Padded note",
+    "1000005": "DE Second sheet note"
+   },
+   "file": "comments_basic.comments-only.xlsx"
+  },
+  {
+   "name": "stamp-only",
+   "locale": "de-DE",
+   "map": {},
+   "file": "comments_basic.stamp-only.xlsx"
+  },
+  {
+   "name": "cells-only",
+   "locale": "de-DE",
+   "map": {
+    "0": "DE Quarterly budget",
+    "1": "DE Owner",
+    "2": "DE Padded",
+    "3": "DE Other sheet"
+   },
+   "file": "comments_basic.cells-only.xlsx"
+  },
+  {
+   "name": "same-text",
+   "locale": null,
+   "map": {
+    "0": "Quarterly budget",
+    "1": "Owner",
+    "2": "Padded",
+    "3": "Other sheet",
+    "1000000": "Who owns this line?",
+    "1000001": "Finance does.",
+    "1000002": "12345",
+    "1000003": "Check the total now.",
+    "1000004": "Padded note",
+    "1000005": "Second sheet note"
+   },
+   "file": "comments_basic.same-text.xlsx"
+  }
+ ]
+}

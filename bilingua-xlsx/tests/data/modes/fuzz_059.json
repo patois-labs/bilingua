@@ -1,0 +1,49 @@
+{
+ "parse": {
+  "columns": "source=en,target.de=de,context=Notes",
+  "source_locale": "en",
+  "target_locales": [
+   "de-DE"
+  ]
+ },
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Total:",
+   "style": "",
+   "note": "Notes: 10000000000.0"
+  },
+  {
+   "p_index": 1,
+   "text": " Padded ",
+   "style": "",
+   "note": ""
+  },
+  {
+   "p_index": 2,
+   "text": " Padded ",
+   "style": "",
+   "note": "Notes: -1.25"
+  },
+  {
+   "p_index": 3,
+   "text": "Hello",
+   "style": "",
+   "note": "Notes: =1+2"
+  }
+ ],
+ "error": false,
+ "builds": [
+  {
+   "name": "b",
+   "locale": "de-DE",
+   "map": {
+    "0": "T Total:",
+    "1": " Padded ",
+    "2": "T  Padded ",
+    "3": "T Hello"
+   },
+   "file": "fuzz_059.b.xlsx"
+  }
+ ]
+}

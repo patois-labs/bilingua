@@ -1,0 +1,49 @@
+{
+ "parse": {
+  "columns": "header=auto",
+  "source_locale": "en",
+  "target_locales": [
+   "de"
+  ]
+ },
+ "units": [
+  {
+   "p_index": 0,
+   "text": "#N/A",
+   "style": "",
+   "note": "Notes: Padded | Key: 2024-01-05 08:00:00"
+  },
+  {
+   "p_index": 1,
+   "text": "Total:",
+   "style": "",
+   "note": "Notes: #N/A | Key: x"
+  },
+  {
+   "p_index": 2,
+   "text": "Cancel",
+   "style": "",
+   "note": "Notes: =SUM(A:A) | Key: 12:30:15.500000"
+  },
+  {
+   "p_index": 3,
+   "text": " Padded ",
+   "style": "",
+   "note": "Notes: =SUM(A:A)"
+  }
+ ],
+ "error": false,
+ "builds": [
+  {
+   "name": "b",
+   "locale": "de",
+   "map": {
+    "0": "T #N/A",
+    "1": "Total:",
+    "2": "T Cancel",
+    "3": "T  Padded "
+   },
+   "file": "fuzz_027.b.xlsx"
+  }
+ ]
+}

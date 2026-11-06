@@ -1,0 +1,35 @@
+{
+ "parse": {
+  "columns": "header=auto",
+  "source_locale": "en",
+  "target_locales": [
+   "de"
+  ]
+ },
+ "units": [
+  {
+   "p_index": 0,
+   "text": "One line",
+   "style": "",
+   "note": "Key: a | Comment: first"
+  },
+  {
+   "p_index": 1,
+   "text": "Two lines",
+   "style": "",
+   "note": "Key: b | Comment: second"
+  }
+ ],
+ "error": false,
+ "builds": [
+  {
+   "name": "de",
+   "locale": "de",
+   "map": {
+    "0": "DE One line",
+    "1": "DE Two lines"
+   },
+   "file": "table_auto.de.xlsx"
+  }
+ ]
+}

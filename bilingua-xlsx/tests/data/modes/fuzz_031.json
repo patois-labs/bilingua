@@ -1,0 +1,42 @@
+{
+ "parse": {
+  "columns": "source=1,target=6,context=3,header=yes",
+  "source_locale": "en-US",
+  "target_locales": [
+   "de-DE"
+  ]
+ },
+ "units": [
+  {
+   "p_index": 0,
+   "text": "日本語",
+   "style": "",
+   "note": ""
+  },
+  {
+   "p_index": 1,
+   "text": "日本語",
+   "style": "",
+   "note": "Notes: 日本語"
+  },
+  {
+   "p_index": 2,
+   "text": "日本語",
+   "style": "",
+   "note": ""
+  }
+ ],
+ "error": false,
+ "builds": [
+  {
+   "name": "b",
+   "locale": "de-DE",
+   "map": {
+    "0": "日本語",
+    "1": "T 日本語",
+    "2": "T 日本語"
+   },
+   "file": "fuzz_031.b.xlsx"
+  }
+ ]
+}

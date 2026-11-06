@@ -1,0 +1,52 @@
+{
+ "parse": {
+  "columns": "source=Text,target=4,key=ID,context=Notes,maxlen=3",
+  "source_locale": "en",
+  "target_locales": [
+   "de"
+  ]
+ },
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Save",
+   "style": "",
+   "note": "Key: k1 | Notes: Button label | Max length: Button label"
+  },
+  {
+   "p_index": 1,
+   "text": "Cancel & close",
+   "style": "",
+   "note": "Key: k2"
+  },
+  {
+   "p_index": 2,
+   "text": "Print",
+   "style": "",
+   "note": "Key: k4 | Notes: Menu | Max length: Menu"
+  }
+ ],
+ "error": false,
+ "builds": [
+  {
+   "name": "de",
+   "locale": "de",
+   "map": {
+    "0": "Save",
+    "1": "Cancel & close",
+    "2": "Print"
+   },
+   "file": "table_notes.de.xlsx"
+  },
+  {
+   "name": "de-x",
+   "locale": "de",
+   "map": {
+    "0": "SAVE <&>",
+    "1": "CANCEL & CLOSE <&>",
+    "2": "PRINT <&>"
+   },
+   "file": "table_notes.de-x.xlsx"
+  }
+ ]
+}

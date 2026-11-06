@@ -1,0 +1,43 @@
+{
+ "parse": {
+  "columns": "source=1,target=6,context=3,header=yes",
+  "source_locale": "en-US",
+  "target_locales": [
+   "de",
+   "fr"
+  ]
+ },
+ "units": [
+  {
+   "p_index": 0,
+   "text": "#N/A",
+   "style": "",
+   "note": "Comment: =UPPER(A3)"
+  },
+  {
+   "p_index": 1,
+   "text": "Save file",
+   "style": "",
+   "note": "Comment: =UPPER(A4)"
+  },
+  {
+   "p_index": 2,
+   "text": "Save file",
+   "style": "",
+   "note": ""
+  }
+ ],
+ "error": false,
+ "builds": [
+  {
+   "name": "b",
+   "locale": "de",
+   "map": {
+    "0": "T #N/A",
+    "1": "Save file",
+    "2": "T Save file"
+   },
+   "file": "fuzz_028.b.xlsx"
+  }
+ ]
+}

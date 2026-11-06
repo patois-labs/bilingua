@@ -1,0 +1,43 @@
+{
+ "parse": {
+  "columns": "source=1,target=6,context=3,header=yes",
+  "source_locale": "en-US",
+  "target_locales": [
+   "de",
+   "fr"
+  ]
+ },
+ "units": [
+  {
+   "p_index": 0,
+   "text": "a&b",
+   "style": "",
+   "note": "Notes: #N/A"
+  },
+  {
+   "p_index": 1,
+   "text": "Hello",
+   "style": "",
+   "note": ""
+  },
+  {
+   "p_index": 2,
+   "text": "日本語",
+   "style": "",
+   "note": "Notes: Zwei"
+  }
+ ],
+ "error": false,
+ "builds": [
+  {
+   "name": "b",
+   "locale": "fr",
+   "map": {
+    "0": "T a&b",
+    "1": "T Hello",
+    "2": "T 日本語"
+   },
+   "file": "fuzz_015.b.xlsx"
+  }
+ ]
+}

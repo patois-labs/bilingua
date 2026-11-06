@@ -54,6 +54,42 @@ pub struct XlsxOptions {
     /// Make cell comments (legacy notes and threaded comments) units. Off by default: they are notes on the
     /// cell's unit.
     pub translate_comments: bool,
+    /// Column mode (LocOS's `columns=`): `source=English, target.de=German, key=id, context=notes, maxlen=limit,
+    /// header=yes|no|auto`; columns are header names (any case) or 1-based numbers. Each sheet is planned from its
+    /// first non-empty row; the source column's text cells become units and the translation is written into the
+    /// target column of the same row (cells and rows are created where there are none). Comments, text boxes and
+    /// the other options do not apply in column mode. Off by default (every text cell is a unit, in place).
+    pub columns: Option<String>,
+    /// The project's target locales, so a header cell may name a language (`de`, `fr-FR`) as a target column.
+    /// `ExtractOptions::target_lang` is added to the list; it also picks the column this document writes into.
+    pub target_locales: Vec<String>,
+}
+
+impl XlsxOptions {
+    /// These options with `xlsx.columns` and `xlsx.target_locales` from `format_options` applied (the mapping is
+    /// replaced, the locales are added) and the three flags.
+    fn with_format_options(&self, opts: &ExtractOptions) -> XlsxOptions {
+        let mut xo = self.clone();
+        let set = |key: &str, field: &mut bool| {
+            if let Some(on) = opts.format_flag(key) {
+                *field = on;
+            }
+        };
+        set("xlsx.translate_comments", &mut xo.translate_comments);
+        set("xlsx.translate_sheet_names", &mut xo.translate_sheet_names);
+        set("xlsx.skip_hidden", &mut xo.skip_hidden);
+        if let Some(c) = opts.format_option("xlsx.columns") {
+            xo.columns = Some(c.to_string());
+        }
+        if let Some(l) = opts.format_option("xlsx.target_locales") {
+            for t in l.split(',').map(str::trim).filter(|t| !t.is_empty()) {
+                if !xo.target_locales.iter().any(|x| x == t) {
+                    xo.target_locales.push(t.to_string());
+                }
+            }
+        }
+        xo
+    }
 }
 
 #[derive(Serialize, Deserialize)]
@@ -70,7 +106,9 @@ pub const FORMAT_OPTIONS: &[FormatOptionKey] = &[
     FormatOptionKey::bool("xlsx.translate_sheet_names", "Make sheet names units (formulas and defined names are rewritten)."),
     FormatOptionKey::bool("xlsx.skip_hidden", "Leave out text that is only shown in hidden sheets, rows or columns."),
     FormatOptionKey::text("xlsx.walk", "Accepted and ignored: LocOS's numbering walk stamp; Bilingua has one walk, the current one."),
-    FormatOptionKey::text("xlsx.table", "Accepted and ignored: LocOS's column plan (Bilingua has no column mode for workbooks)."),
+    FormatOptionKey::text("xlsx.columns", "Column mode: the column mapping, as XlsxOptions::columns: source=English, target.de=German, key=id, ..."),
+    FormatOptionKey::text("xlsx.target_locales", "The project's target locales, comma separated (de, fr-FR), so a header may name a language."),
+    FormatOptionKey::text("xlsx.table", "Accepted and ignored: LocOS's stored column plan; Bilingua plans the columns again from xlsx.columns."),
 ];
 
 #[derive(Default)]
@@ -115,8 +153,8 @@ fn split_meta(doc: &Document) -> Result<Split<'_>, Error> {
 
 /// Extracts with explicit options.
 pub fn extract_with(bytes: &[u8], opts: &ExtractOptions, xo: &XlsxOptions) -> Result<Document, Error> {
-    if opts.is_profile(bilingua_model::profile::LOCOS) {
-        return locos::extract(bytes, opts);
+    if opts.is_profile(bilingua_model::profile::LOCOS) || locos::table_mode(xo) {
+        return locos::extract(bytes, opts, xo);
     }
     extract::extract_doc(bytes, opts, xo)
 }
@@ -126,7 +164,7 @@ pub fn merge_with_report(doc: &Document) -> Result<(Vec<u8>, MergeReport), Error
     bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
     if let Skeleton::Binary { .. } = &doc.skeleton {
         // a document extracted under the Localization OS profile
-        let opts = bilingua_model::profile::locos().merge_options("xlsx");
+        let opts = locos::report_options(doc);
         return locos::merge(doc, &opts).map(|b| (b, MergeReport { warnings: vec![] }));
     }
     let (meta, real) = split_meta(doc)?;
@@ -177,19 +215,11 @@ impl Filter for Xlsx {
     }
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
         bilingua_model::check_own_options(self, &opts.format_options)?;
-        if opts.is_profile(bilingua_model::profile::LOCOS) {
-            // LocOS's walk: its options do not apply (see `locos`)
-            return locos::extract(bytes, opts);
+        let xo = self.options.with_format_options(opts);
+        if opts.is_profile(bilingua_model::profile::LOCOS) || locos::table_mode(&xo) {
+            // LocOS's walk (cells, text boxes, comments when asked) or its column mode: see `locos`
+            return locos::extract(bytes, opts, &xo);
         }
-        let mut xo = self.options.clone();
-        let set = |key: &str, field: &mut bool| {
-            if let Some(on) = opts.format_flag(key) {
-                *field = on;
-            }
-        };
-        set("xlsx.translate_comments", &mut xo.translate_comments);
-        set("xlsx.translate_sheet_names", &mut xo.translate_sheet_names);
-        set("xlsx.skip_hidden", &mut xo.skip_hidden);
         extract::extract_doc(bytes, opts, &xo)
     }
     fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
