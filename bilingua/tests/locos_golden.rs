@@ -361,13 +361,7 @@ fn check(golden: &Path) -> (usize, usize, usize, Vec<String>) {
 
 /// Goldens that still differ, with the reason; their failures are printed, not fatal. Remove a line when its
 /// file matches.
-const KNOWN: &[(&str, &str)] = &[
-    ("json_dialects_filter_chrome.json", "LocOS JSON resource dialects (Chrome messages.json): not in group A"),
-    ("json_dialects_filter_formatjs.json", "LocOS JSON resource dialects (FormatJS): not in group A"),
-    ("json_dialects_filter_go.json", "LocOS JSON resource dialects (go-i18n): not in group A"),
-    ("json_dialects_filter_go_v1.json", "LocOS JSON resource dialects (go-i18n v1): not in group A"),
-    ("json_dialects_filter_structured.json", "LocOS JSON resource dialects (Structured JSON): not in group A"),
-];
+const KNOWN: &[(&str, &str)] = &[];
 
 /// Formats whose goldens do not match yet: reported, not fatal. Remove a format when all its files match. Empty:
 /// every Track D format matches.

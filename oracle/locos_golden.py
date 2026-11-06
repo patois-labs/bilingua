@@ -46,7 +46,7 @@ from app.filters.base import get_filter  # noqa: E402
 
 TOKEN = re.compile("(\u27e6/?[a-z]?\\d+\u27e7)")
 # Locales the localized builds use, per format (default: de-DE). PO also tries a CLDR plural language.
-LOCALES = {"po": ["de-DE", "pl-PL", "ar-EG", "ja-JP"], "vtt": ["de-DE", "fr"], "arb": ["de-DE", "pl-PL"], "ftl": ["de-DE", "pl-PL"]}
+LOCALES = {"po": ["de-DE", "pl-PL", "ar-EG", "ja-JP"], "vtt": ["de-DE", "fr"], "arb": ["de-DE", "pl-PL"], "ftl": ["de-DE", "pl-PL"], "json": ["de-DE", "pl-PL", "ar-EG", "ja-JP"]}
 # Track D group B: the Office formats also build for a right-to-left complex-script target (w:bCs, w:rtl,
 # rightToLeft); the XLIFF family also for a legacy underscore locale (LocOS declares `es-ES`).
 for _fmt in ("docx", "pptx", "xlsx"):

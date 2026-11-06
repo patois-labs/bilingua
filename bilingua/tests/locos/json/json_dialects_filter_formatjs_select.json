@@ -1,0 +1,8 @@
+{
+  "cart.count": {
+    "defaultMessage": "{itemCount, plural, =0{Nothing} one{# item} other{# items}} in your {where, select, cart{cart} other{bag}}",
+    "description": "Cart badge"
+  },
+  "rank": {"defaultMessage": "{n, selectordinal, one{#st} two{#nd} few{#rd} other{#th}} place"},
+  "app.welcome": {"defaultMessage": "Welcome back, {name}!"}
+}

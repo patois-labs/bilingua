@@ -1,0 +1,10 @@
+{
+  "cart": {
+    "item_one": "{{count}} item",
+    "item_other": "{{count}} items",
+    "item_zero": "No items"
+  },
+  "title": "Your cart",
+  "dup": "first",
+  "dup": "second"
+}

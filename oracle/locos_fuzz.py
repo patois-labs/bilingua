@@ -825,12 +825,224 @@ def g_xaml():
     return encode(eol.join(out) + eol, DEF_ENCS)
 
 
+# ---------------------------------------------------------------- json resource dialects (wave 12 gate)
+# Chrome messages.json, FormatJS, Structured JSON, go-i18n (object and v1 array), ARB-shaped .json and i18next
+# plural groups, each now and then bent out of its shape (an extra key, a wrong type) so detection is tested both
+# ways; `jsonfp` is ordinary JSON that happens to use the dialects' key names. All files are `.json`.
+JD_SEL = ["zero", "one", "two", "few", "many", "other", "=0", "=1", "=2", "male", "female"]
+
+
+def icu_msg(depth=0):
+    out = []
+    for _ in range(R.randint(1, 4)):
+        r = R.random()
+        if r < 0.35:
+            out.append(phrase(1, 3, 0.15))
+        elif r < 0.45:
+            out.append(R.choice(["{name}", "{ count }", "{n, number}", "{d, date, short}", "{p, number, ::percent}",
+                                 "{t, time, {HH:mm}}", "''", "'{x}'", "it''s", "'#'", "#", "⟦x⟧"]))
+        elif r < 0.75 and depth < 3:
+            kind = R.choice(["plural", "plural", "selectordinal", "select"])
+            arg = R.choice(["count", "n", "num", "g"])
+            head = "{" + arg + R.choice([", ", ","]) + kind + R.choice([", ", ","])
+            if kind != "select" and R.random() < 0.2:
+                head += "offset:1 "
+            sels = R.sample(JD_SEL[:6] if kind != "select" else ["male", "female", "x"], R.randint(1, 3))
+            if "other" not in sels and R.random() < 0.85:
+                sels.append("other")
+            if kind != "select" and R.random() < 0.3:
+                sels.insert(0, R.choice(["=0", "=1", "=2"]))
+            body = R.choice([" ", "", "  "]).join(f"{sl}{R.choice(['', ' '])}{{{icu_msg(depth + 1)}}}" for sl in sels)
+            out.append(head + body + "}")
+        elif r < 0.85:
+            out.append(R.choice(["{", "}", "{oops", "a}b", "{x,", "{x, plural, }", "{x, plural, one}"]))
+        else:
+            out.append(R.choice(PH))
+    return " ".join(out) if R.random() < 0.7 else "".join(out)
+
+
+def jd_str(x):
+    return ("str", x)
+
+
+def jd_noise():
+    return R.choice([("lit", "1"), ("lit", "true"), ("lit", "null"), ("arr", []), ("obj", []), jd_str(plain(1, 2))])
+
+
+def jd_chrome():
+    items = []
+    for _ in range(R.randint(1, 7)):
+        msg = R.choice([phrase(1, 5, 0.1), "Hello $USER$, $1 tabs", "$count$ of $2", "cost: $$5", plain(1, 3), "", "$x$"])
+        e = [("message", jd_str(msg))]
+        if R.random() < 0.6:
+            e.append(("description", jd_str(plain(1, 4))))
+        if R.random() < 0.4:
+            e.append(("placeholders", ("obj", [("user", ("obj", [("content", jd_str("$1")), ("example", jd_str("Bob"))]))])))
+        R.shuffle(e)
+        if R.random() < 0.05:
+            e.append(R.choice([("note", jd_str("x")), ("placeholders", jd_str("x")), ("message", ("lit", "1"))]))
+        items.append((ident(), ("obj", e)))
+    return ("obj", items)
+
+
+def jd_formatjs():
+    items = []
+    for _ in range(R.randint(1, 7)):
+        e = [("defaultMessage", jd_str(icu_msg()))]
+        for k in ("description", "id", "file", "line", "col", "start", "end"):
+            if R.random() < 0.15:
+                e.append((k, jd_str(plain(1, 3)) if k in ("description", "id", "file") else ("lit", str(R.randint(0, 99)))))
+        if R.random() < 0.05:
+            e.append(("extra", jd_str("x")))
+        items.append((ident(), ("obj", e)))
+    return ("obj", items)
+
+
+def jd_structured(depth=0):
+    items = []
+    for _ in range(R.randint(1, 5)):
+        if depth < 3 and R.random() < 0.3:
+            items.append((ident(), jd_structured(depth + 1)))
+            continue
+        e = [("string", jd_str(icu_msg()))]
+        for k in ("context", "developer_comment", "character_limit"):
+            if R.random() < 0.25:
+                e.append((k, ("lit", "40") if k == "character_limit" else jd_str(plain(1, 3))))
+        if R.random() < 0.04:
+            e.append(("other_key", jd_str("x")))
+        items.append((ident(), ("obj", e)))
+    if R.random() < 0.03:
+        items.append(("empty", ("obj", [])))
+    return ("obj", items)
+
+
+def go_text():
+    return R.choice([phrase(1, 4, 0.1), "{{.Count}} items", "Hi {{.Name}}!", "{{ .A }}{{.B}}", plain(1, 3), "", "{{x"])
+
+
+def jd_go_msg(v1=False):
+    e = []
+    if v1 or R.random() < 0.4:
+        e.append(("id", jd_str(ident())))
+    if R.random() < 0.3:
+        e.append(("description", jd_str(plain(1, 3))))
+    if R.random() < 0.15:
+        e.append(("hash", jd_str("sha1-abc")))
+    cats = R.sample(["one", "few", "many", "two", "zero"], R.randint(0, 2)) + ["other"]
+    case = R.choice([str.lower, str.lower, str.capitalize, str.upper])
+    if v1 or R.random() < 0.3:
+        tr = jd_str(go_text()) if R.random() < 0.4 else ("obj", [(case(c), jd_str(go_text())) for c in cats])
+        e.append(("translation", tr))
+    else:
+        e.extend((case(c), jd_str(go_text())) for c in cats)
+    if R.random() < 0.04:
+        e.append(("bogus", jd_str("x")))
+    return ("obj", e)
+
+
+def jd_go(depth=0):
+    if depth == 0 and R.random() < 0.3:
+        return ("arr", [jd_go_msg(True) for _ in range(R.randint(1, 5))])
+    items = []
+    for _ in range(R.randint(1, 6)):
+        r = R.random()
+        if r < 0.3:
+            items.append((ident(), jd_str(go_text())))
+        elif r < 0.45 and depth < 3:
+            items.append((ident(), jd_go(depth + 1)))
+        else:
+            items.append((ident(), jd_go_msg()))
+    return ("obj", items)
+
+
+def jd_arb():
+    items = []
+    if R.random() < 0.95:
+        items.append(("@@locale", jd_str(R.choice(["en", "en_US", "de"])) if R.random() < 0.95 else ("lit", "1")))
+    if R.random() < 0.2:
+        items.append(("@@last_modified", jd_str("2024-01-01")))
+    for _ in range(R.randint(0, 8)):
+        k = R.choice(["hello", "items", "title", "btnSave", "greet", "itemCount", "files"]) + str(R.randint(0, 9))
+        if R.random() < 0.25:
+            for w in R.sample(["One", "Other", "Few", "Two", "Zero", "Many"], R.randint(1, 3)) + (["Other"] if R.random() < 0.7 else []):
+                items.append((k + w, jd_str(phrase(1, 3, 0.1))))
+            continue
+        items.append((k, jd_str(icu_msg()) if R.random() < 0.7 else jd_noise()))
+        if R.random() < 0.5:
+            items.append(("@" + k, ("obj", [("description", jd_str(plain(1, 3)))])))
+    if R.random() < 0.3:
+        R.shuffle(items)
+    return ("obj", items)
+
+
+def jd_i18next(depth=0):
+    items = []
+    for _ in range(R.randint(1, 7)):
+        r = R.random()
+        stem = R.choice(["item", "file", "key", "place", "a_b", "x"]) + str(R.randint(0, 3))
+        if r < 0.45:
+            ordinal = R.random() < 0.25
+            mid = "_ordinal" if ordinal else ""
+            for c in R.sample(["zero", "one", "two", "few", "many"], R.randint(0, 2)) + (["other"] if R.random() < 0.85 else []):
+                v = jd_str(phrase(1, 3, 0.2)) if R.random() < 0.93 else ("lit", "3")
+                items.append((f"{stem}{mid}_{c}", v))
+        elif r < 0.6 and depth < 3:
+            items.append((stem, jd_i18next(depth + 1)))
+        elif r < 0.68 and depth < 3:
+            items.append((stem, ("arr", [jd_i18next(depth + 1), jd_str("x y")])))
+        elif r < 0.8:
+            items.append((stem, ("lit", R.choice(["1.0e5", "-0", "1E400", "2.50", "0.000012", "1e16", "12345678901234567890", "-0.0", "NaN", "3", "1.5E-7", "-Infinity"]))))
+        else:
+            items.append((stem, jd_str(phrase(1, 4, 0.2))))
+        if items and R.random() < 0.05:
+            items.append(R.choice(items))  # duplicate key
+    return ("obj", items)
+
+
+def jd_falsepos():
+    r = R.random()
+    if r < 0.2:
+        return ("obj", [("error", ("obj", [("message", jd_str(phrase(1, 4))), ("code", ("lit", "404"))]))])
+    if r < 0.35:
+        return ("obj", [(ident(), ("obj", [("message", jd_str(phrase(1, 4)))])) for _ in range(R.randint(1, 3))])
+    if r < 0.5:
+        return ("arr", [("obj", [("id", jd_str(ident())), ("translation", jd_str(phrase(1, 3)))]) for _ in range(R.randint(1, 3))])
+    if r < 0.6:
+        return ("obj", [(ident(), ("obj", [("string", jd_str(phrase(1, 3))), ("context", jd_str("x"))])), ("meta", ("lit", "1"))])
+    if r < 0.7:
+        return ("obj", [(ident(), ("obj", [("defaultMessage", jd_str(icu_msg()))])), ("version", jd_str("2"))])
+    if r < 0.8:
+        return ("obj", [("greeting", ("obj", [("one", jd_str("a")), ("other", jd_str("b"))])), ("title", jd_str("Hi"))])
+    if r < 0.9:
+        return ("obj", [("@@locale", jd_str("en")), ("nested", ("obj", [("a", jd_str(phrase(1, 3)))]))])
+    return ("obj", [("message", jd_str(phrase(1, 3))), ("description", jd_str("d"))])
+
+
+def jd_render(root):
+    ind = R.choice([None, "  ", "  ", "    ", "\t"])
+    s = j_render(root, "json", ind, 0)
+    eol = R.choice(["\n", "\n", "\r\n"])
+    s = s.replace("\n", eol) + (eol if R.random() < 0.7 else "")
+    return encode(s, DEF_ENCS)
+
+
+def jd_gen(f):
+    return lambda: jd_render(f())
+
+
+JSON_DIALECT_GEN = {
+    "jsonchrome": jd_chrome, "jsonformatjs": jd_formatjs, "jsonstructured": jd_structured, "jsongo": jd_go,
+    "jsonarb": jd_arb, "jsoni18next": jd_i18next, "jsonfp": jd_falsepos,
+}
+
+
 GEN = {
     "txt": (g_txt, "txt"), "md": (g_md, "md"), "srt": (g_srt, "srt"), "vtt": (g_vtt, "vtt"), "po": (g_po, "po"),
     "json": (g_json, "json"), "json5": (g_json5, "json5"), "resjson": (g_resjson, "resjson"), "arb": (g_arb, "arb"),
     "strings": (g_strings, "strings"), "properties": (g_properties, "properties"), "ftl": (g_ftl, "ftl"),
     "dtd": (g_dtd, "dtd"), "resx": (g_resx, "resx"), "wxl": (g_wxl, "wxl"), "xaml": (g_xaml, "xaml"),
 }
+GEN.update({k: (jd_gen(f), "json") for k, f in JSON_DIALECT_GEN.items()})
 
 INJECT = {
     "srt": ["one\n\n99\n00:00:01,000 --> 00:00:02,000\ninjected cue", "a\r\n\r\nb", "-->", "x\n\n"],
@@ -840,6 +1052,8 @@ INJECT = {
            "_x_y", "one\n\n# injected heading", "two\n- item", "```\ncode", "<!-- hide", "---\ntitle: x\n---", "a  \nb", "| a | b |", "1. x", "# h", "[x]: https://evil"],
     "txt": ["a\nb", "a\r\nb", "\u2028x"],
 }
+JSON_DIALECT_INJECT = ["⟦x2⟧ text", "no tokens", "{", "}", "a {b} c", "'{'",
+                       "⟦x1⟧{", "#", "$1 $USER$", "{{.X}}", "⟦x9⟧", "⟦x1⟧ and ⟦x2⟧"]
 COMMON_INJECT = ['"; evil = "x', "</value><data name=\"evil\"><value>x", "]]>", "<!--", "&amp;&lt;", "\\u0041", "}\nevil = x",
                  "{ $var } and { -brand-name }", "{", "\n.attr = x", "⟦9⟧ forged ⟦/9⟧", "⟦x1⟧", "${'$'}", "a\nb"]
 
@@ -852,7 +1066,7 @@ def golden(fmt, path):
     with open(path, "rb") as fh:
         data = fh.read()
     filt = og.get_filter(fmt)
-    pool = INJECT.get(fmt, []) + COMMON_INJECT
+    pool = INJECT.get(fmt, []) + COMMON_INJECT + (JSON_DIALECT_INJECT if fmt == "json" else [])
     mapping = {str(u["p_index"]): R.choice(pool) for u in g["units"]}
     try:
         out = filt.build_localized(data, mapping, "de-DE")
@@ -892,7 +1106,7 @@ def main():
             p = os.path.join(d, f"r{seed}_{k:04d}.{ext}")
             with open(p, "wb") as fh:
                 fh.write(gen())
-            g = golden(fmt, p)
+            g = golden("json" if fmt in JSON_DIALECT_GEN else fmt, p)
             refused += "parse_error" in g
             with open(p + ".golden.json", "w", encoding="utf-8", newline="\n") as fh:
                 json.dump(g, fh, ensure_ascii=False)
