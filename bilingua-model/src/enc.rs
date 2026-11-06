@@ -13,8 +13,10 @@
 //! that does not fit a legacy code page is written as UTF-8 instead (the declaration, if any, then says so).
 //!
 //! The envelope travels in the skeleton's `encoding` string, which stays `"utf-8"` / `"utf-8-bom"` for the common
-//! files. Grammar: `base[;nl=crlf|cr][;label=<declared charset>]`, with `base` one of `utf-8`, `utf-8-bom`,
-//! `utf-16le`, `utf-16be` (both with a BOM) or an `encoding_rs` name such as `windows-1253` or `shift_jis`.
+//! files. Grammar: `base[;nl=crlf|cr][;feff=<n>][;label=<declared charset>]`, with `base` one of `utf-8`,
+//! `utf-8-bom`, `utf-16le`, `utf-16be` (both with a BOM) or an `encoding_rs` name such as `windows-1253` or
+//! `shift_jis`. `feff=n` says the decoded text starts with n U+FEFF characters that are content (a file with two
+//! byte order marks): the writer then keeps them ([`strip_own_mark`]).
 
 use crate::codepage::{label as cp_label, source_encoding};
 use crate::garble::text_looks_garbled;
@@ -143,7 +145,7 @@ pub fn keep_newlines(tag: &str) -> String {
 /// skeleton tag, a line break, then the decoded text without its BOM. Read it back with [`locos_skeleton_parts`].
 #[doc(hidden)]
 pub fn locos_skeleton(tag: &str, text: &str) -> Vec<u8> {
-    let text = text.strip_prefix('\u{FEFF}').unwrap_or(text);
+    let text = strip_own_mark(text, tag);
     let mut v = Vec::with_capacity(tag.len() + 1 + text.len());
     v.extend_from_slice(tag.as_bytes());
     v.push(b'\n');
@@ -166,7 +168,7 @@ pub fn locos_skeleton_parts(data: &[u8]) -> Option<(&str, &str)> {
 #[doc(hidden)]
 pub fn locos_utf8_tag(tag: &str) -> String {
     let mut t = String::from(if base(tag) == "utf-8-bom" { "utf-8-bom" } else { "utf-8" });
-    for p in tag.split(';').skip(1).filter(|p| p.starts_with("nl=")) {
+    for p in tag.split(';').skip(1).filter(|p| p.starts_with("nl=") || p.starts_with("feff=")) {
         t.push(';');
         t.push_str(p);
     }
@@ -249,6 +251,10 @@ fn tag(base: &str, text: &str, label: Option<&str>) -> String {
         "\r\n" => t.push_str(";nl=crlf"),
         "\r" => t.push_str(";nl=cr"),
         _ => {}
+    }
+    let marks = leading_marks(text);
+    if marks > 0 {
+        t.push_str(&format!(";feff={marks}"));
     }
     if let Some(l) = label {
         t.push_str(";label=");
@@ -586,12 +592,30 @@ struct Envelope<'a> {
     label: Option<&'a str>,
     /// GBK file whose euro sign was the two bytes A2 E3 (GB18030's spelling)
     euro_a2e3: bool,
+    /// leading U+FEFF characters of the decoded text that are content (`feff=n`)
+    feff: usize,
+}
+
+fn leading_marks(text: &str) -> usize {
+    text.chars().take_while(|c| *c == '\u{FEFF}').count()
+}
+
+/// `text` without the one leading U+FEFF a writer may have put in front as its byte order mark, which the encoder
+/// writes itself. The decoder records how many leading U+FEFF of the file's text are content (`feff=n` in the
+/// skeleton tag, a file that starts with two marks); only a U+FEFF beyond those is taken off, so an untouched merge
+/// of such a file is exact, and a writer that adds one more U+FEFF in front (php, subtext, csv) still gets one.
+pub fn strip_own_mark<'t>(text: &'t str, encoding: &str) -> &'t str {
+    if leading_marks(text) > parse_tag(encoding).feff {
+        &text['\u{FEFF}'.len_utf8()..]
+    } else {
+        text
+    }
 }
 
 fn parse_tag(t: &str) -> Envelope<'_> {
     let mut parts = t.split(';');
     let base = parts.next().unwrap_or("utf-8");
-    let (mut nl, mut label, mut euro_a2e3) = ("", None, false);
+    let (mut nl, mut label, mut euro_a2e3, mut feff) = ("", None, false, 0);
     for p in parts {
         match p {
             "euro=a2e3" => euro_a2e3 = true,
@@ -600,11 +624,13 @@ fn parse_tag(t: &str) -> Envelope<'_> {
             _ => {
                 if let Some(l) = p.strip_prefix("label=") {
                     label = Some(l);
+                } else if let Some(n) = p.strip_prefix("feff=") {
+                    feff = n.parse().unwrap_or(0);
                 }
             }
         }
     }
-    Envelope { base, nl, label, euro_a2e3 }
+    Envelope { base, nl, label, euro_a2e3, feff }
 }
 
 fn with_newlines(text: &str, nl: &str) -> String {
@@ -647,7 +673,7 @@ pub fn utf8_output(text: &str, encoding: &str, opts: &MergeOptions) -> Option<Ve
 
 fn utf8_text(text: &str, encoding: &str, base_is_label: bool) -> Vec<u8> {
     let env = parse_tag(encoding);
-    let text = text.strip_prefix('\u{FEFF}').unwrap_or(text);
+    let text = strip_own_mark(text, encoding);
     let mut out = if env.nl.is_empty() { text.to_string() } else { with_newlines(text, env.nl) };
     let is_utf8 = |l: &str| l.eq_ignore_ascii_case("utf-8") || l.eq_ignore_ascii_case("utf8") || l.eq_ignore_ascii_case("utf-8-bom");
     let mut labels: Vec<&str> = env.label.into_iter().collect();
@@ -703,7 +729,7 @@ pub fn legacy_output_or_utf8(out: Vec<u8>, text: &str, encoding: &str) -> Result
 
 fn encode_text_as_is(text: &str, encoding: &str) -> Result<Vec<u8>, Error> {
     let env = parse_tag(encoding);
-    let text = text.strip_prefix('\u{FEFF}').unwrap_or(text);
+    let text = strip_own_mark(text, encoding);
     let normalized;
     let text = if env.nl.is_empty() {
         text
@@ -844,6 +870,39 @@ mod tests {
         let d = dec(&b, None, false).unwrap();
         assert_eq!(d.encoding, "utf-8-bom");
         assert_eq!(encode_text(&d.text, &d.encoding).unwrap(), b);
+    }
+
+    /// A file with two (or three) byte order marks: the marks after the first are text, and every envelope writes
+    /// them back; a writer that puts one more U+FEFF in front (its own mark) still gets exactly one taken off.
+    #[test]
+    fn a_second_byte_order_mark_is_content_and_kept() {
+        let utf16 = |be: bool, s: &str| {
+            let mut v = if be { vec![0xFE, 0xFF] } else { vec![0xFF, 0xFE] };
+            for u in s.encode_utf16() {
+                v.extend_from_slice(&if be { u.to_be_bytes() } else { u.to_le_bytes() });
+            }
+            v
+        };
+        for marks in 1..=2 {
+            let text = format!("{}a\r\nb\r\n", "\u{FEFF}".repeat(marks));
+            for b in [[BOM8, text.as_bytes()].concat(), utf16(false, &text), utf16(true, &text)] {
+                let d = dec(&b, None, false).unwrap();
+                assert_eq!(d.text, text);
+                assert!(d.encoding.contains(&format!(";feff={marks}")), "{}", d.encoding);
+                assert_eq!(encode_text(&d.text, &d.encoding).unwrap(), b);
+                assert_eq!(encode_text(&format!("\u{FEFF}{}", d.text), &d.encoding).unwrap(), b, "own mark taken off");
+                assert_eq!(locos_skeleton_parts(&locos_skeleton(&d.encoding, &d.text)).unwrap().1, text);
+                let utf8 = encode_text_with(&d.text, &d.encoding, &MergeOptions { output_encoding: OutputEncoding::Utf8, ..Default::default() }).unwrap();
+                assert!(utf8.ends_with(text.as_bytes()), "UTF-8 output keeps the content marks");
+            }
+        }
+        // one mark only: the tag and the writer are as before
+        let d = dec(b"\xEF\xBB\xBFa", None, false).unwrap();
+        assert_eq!(d.encoding, "utf-8-bom");
+        assert_eq!(encode_text("\u{FEFF}a", &d.encoding).unwrap(), b"\xEF\xBB\xBFa");
+        assert_eq!(strip_own_mark("\u{FEFF}a", "utf-8-bom"), "a");
+        assert_eq!(strip_own_mark("\u{FEFF}a", "utf-8-bom;feff=1"), "\u{FEFF}a");
+        assert_eq!(strip_own_mark("\u{FEFF}\u{FEFF}a", "utf-16le;nl=crlf;feff=1;label=utf-16"), "\u{FEFF}a");
     }
 
     #[test]
