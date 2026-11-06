@@ -60,6 +60,7 @@ dependencies = [
  "bilingua-rc",
  "bilingua-resjson",
  "bilingua-resx",
+ "bilingua-richtext",
  "bilingua-rst",
  "bilingua-scc",
  "bilingua-sdl",
@@ -92,6 +93,7 @@ dependencies = [
  "bilingua-yaml",
  "bilingua-zip",
  "proptest",
+ "quick-xml",
  "serde_json",
  "zip",
 ]
@@ -544,6 +546,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "bilingua-richtext"
+version = "0.9.0"
+dependencies = [
+ "bilingua-model",
+ "proptest",
+ "serde_json",
+]
+
+[[package]]
 name = "bilingua-rst"
 version = "0.9.0"
 dependencies = [
@@ -568,6 +579,7 @@ version = "0.9.0"
 dependencies = [
  "bilingua-model",
  "bilingua-xliff",
+ "bilingua-xliffpkg",
  "bilingua-zip",
  "quick-xml",
  "serde",

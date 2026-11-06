@@ -60,6 +60,7 @@ bilingua-jsmodule = { workspace = true }
 bilingua-mdx = { workspace = true }
 bilingua-xml = { workspace = true }
 bilingua-xmlres = { workspace = true }
+bilingua-richtext = { workspace = true }
 bilingua-dita = { workspace = true }
 bilingua-yaml = { workspace = true }
 bilingua-arb = { workspace = true }

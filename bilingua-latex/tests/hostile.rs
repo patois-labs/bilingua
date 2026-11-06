@@ -88,6 +88,17 @@ proptest! {
 }
 
 #[test]
+fn soup_regression_url_percent_before_begin() {
+    // the shrunk `latex_shaped_soup_never_panics` case: the `%` in `\url{a%b}` hides the `{` of the next `\begin` from
+    // the group maps, which left `{document}` at the start of a unit, and a translation was written between `\begin`
+    // and its name (the re-read found 12 units for 1)
+    let picks = [0usize, 48, 0, 42, 24, 0, 0, 45, 0, 0, 45, 0, 0, 0, 0, 0];
+    let s: String = picks.iter().map(|&i| WORDS[i]).collect::<Vec<_>>().join(" ");
+    check(s.as_bytes());
+    check(b"\\begin{document}\n\\url{a%b} \\begin{itemize} Text \\end{itemize} more\n\\url{a%b} \\end{x} words\n\\end{document}\n");
+}
+
+#[test]
 fn every_truncation_of_the_fixtures_is_safe() {
     for d in fixtures() {
         let step = if d.len() > 3000 { d.len() / 600 } else { 1 };

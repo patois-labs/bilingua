@@ -73,6 +73,8 @@ FORMATS = {
     "xsl": "XSLT", "xslt": "XSLT", "pdf": "PDF", "svg": "SVG", "png": "Image", "ttml": "TTML", "dfxp": "TTML",
     "ass": "ASS", "ssa": "ASS", "scc": "SCC", "stl": "EBU STL", "stf": "STF", "sbv": "SBV", "sub": "SUB",
     "sdlproj": "sdlproj", "mqxlz": "memoQ package", "sdlppx": "Trados package", "sdlrpx": "Trados package",
+    # Wave 12 B: rich text JSON (LocOS walks these in its connectors, not as file filters).
+    "contentful": "Contentful", "portabletext": "Portable Text", "adf": "Jira ADF", "notion": "Notion",
 }
 ORDER = ["DOCX", "XLSX", "PPTX", "HTML", "Markdown", "JSON", "PO", "SRT", "VTT", "TXT",
          "ARB", "DTD", "Fluent", "INI", "Properties", "Apple .strings", "TOML", "YAML", "RESX", "RESJSON", "JSON5", "WXL",

@@ -168,6 +168,7 @@ fn crate_of(format: &str) -> &'static str {
         "resjson" => "bilingua-resjson",
         "wxl" => "bilingua-wxl",
         "json5" => "bilingua-json5",
+        "contentful" | "sanity" | "adf" | "notion" => "bilingua-richtext",
         "yaml" | "yml" => "bilingua-yaml",
         "markdown" | "md" => "bilingua-markdown",
         "mdx" => "bilingua-mdx",

@@ -170,6 +170,13 @@ pub fn filters() -> Vec<Box<dyn Filter>> {
         // HTML sniffs loosely and plain text accepts any UTF-8, so they go last.
         Box::new(bilingua_html::Html),
         Box::new(bilingua_text::TextFilter),
+        // Rich text JSON (Contentful, Sanity, ADF, Notion) is chosen by its own extensions or by format id. Its sniffs
+        // are strict, but every file they accept is also plain JSON, which opened as `json` before these formats
+        // existed: they go after everything, so detection of any existing file does not change.
+        Box::new(bilingua_richtext::Contentful),
+        Box::new(bilingua_richtext::Sanity),
+        Box::new(bilingua_richtext::Adf),
+        Box::new(bilingua_richtext::Notion),
     ]);
     all
 }
