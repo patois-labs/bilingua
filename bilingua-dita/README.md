@@ -61,7 +61,7 @@ the crate has no file, network or clock access (it builds for `wasm32-unknown-un
 - `tests/locos_its.rs`: the 12 cases of LocOS `verify_xml_its_filter.py` through these filters (six are DITA /
   DocBook cases there; the other six are generic-XML cases run here on DITA and DocBook documents);
   `verify_xml_resource_filters.py` has no DITA or DocBook case.
-- `tests/locos_golden.rs`: 390 documents (LocOS fixtures, the oracle corpus, hand-made edge cases, 370 random DITA
+- `tests/locos_golden.rs`: 409 documents (LocOS fixtures, the oracle corpus, 27 hand-made edge cases (19 from the gate), 370 random DITA
   topics, maps, bookmaps, DocBook 4.5 / 5 and unrecognised roots) with LocOS's units, styles, notes and built bytes
   for two mappings, in place and for de-DE, ar and ja-JP (`tests/tools/gen_golden.py`).
 - `tests/rules.rs` (conref / conkeyref / keyref, `translate`, inline codes, the DocBook inline set, fixed dialect,
@@ -76,4 +76,7 @@ the crate has no file, network or clock access (it builds for `wasm32-unknown-un
   gives LocOS's stamp).
 - A changed file is written in its original encoding when the text fits (UTF-16 stays UTF-16), else UTF-8; LocOS
   always writes UTF-8 (`OutputEncoding::Utf8`).
-- Depth limit 256 (LocOS 120). A repeated `xml:id` is read (lxml refuses it as an ID error).
+- Depth limit 256 (LocOS 120); a caller may raise it to bilingua-xml's 1024-level cap, which is safe on a 1 MB stack
+  (the engine walks the tree and merges without recursion). A repeated `xml:id` is read (lxml refuses it as an ID error).
+- A DocBook 4.x root (no namespace) that only declares the DocBook 5 namespace for a prefix gets `lang`, not
+  `xml:lang` (LocOS looks for the namespace URI anywhere in the root start tag).

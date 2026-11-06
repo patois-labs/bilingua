@@ -87,10 +87,12 @@ impl Filter for Dita {
     }
 
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
+        check_own_options(self, &opts.format_options)?;
         self.engine().extract(bytes, opts)
     }
 
     fn merge_with(&self, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
+        check_own_options(self, &opts.format_options)?;
         self.engine().merge_with(doc, opts)
     }
 }
@@ -139,10 +141,12 @@ impl Filter for DocBook {
     }
 
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
+        check_own_options(self, &opts.format_options)?;
         self.engine().extract(bytes, opts)
     }
 
     fn merge_with(&self, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
+        check_own_options(self, &opts.format_options)?;
         self.engine().merge_with(doc, opts)
     }
 }

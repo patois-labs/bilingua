@@ -191,15 +191,24 @@ fn malformed_truncated_deep_and_huge_files_are_typed_errors() {
         .join()
         .unwrap();
     assert!(ok);
-    // a caller who raises the limit gets a typed error at bilingua-xml's 1024-level recursion cap. Nested inline
-    // elements use more stack per level than blocks: a debug build needs more than 2 MB for ~1000 levels (release is
-    // fine on 1 MB), so this runs on an 8 MB stack (bilingua-xml need: a lower cap or an iterative inline walk).
+    // a caller who raises the limit: 1000 nested inline elements and 1000 nested footnotes extract and merge on the
+    // same 1 MB stack (bilingua-xml walks the tree and merges with explicit stacks), and 60 000 levels are a typed
+    // error at bilingua-xml's 1024-level cap
     let raised = std::thread::Builder::new()
-        .stack_size(8 << 20)
+        .stack_size(1 << 20)
         .spawn(|| {
+            let f = Dita::new();
             let o = ExtractOptions::new().with_limits(Limits::new().with_max_xml_depth(1_000_000));
+            for (open, close) in [("<ph>", "</ph>"), ("a <fn>", "</fn>")] {
+                let src = format!("<topic><title>{}x{}</title></topic>", open.repeat(1000), close.repeat(1000));
+                let mut d = f.extract(src.as_bytes(), &o).expect("1000 levels");
+                assert_eq!(f.merge(&d).unwrap(), src.as_bytes());
+                pseudo(&mut d);
+                let n = d.units.len();
+                assert_eq!(f.extract(&f.merge(&d).unwrap(), &o).unwrap().units.len(), n);
+            }
             let deeper = format!("<topic>{}x{}</topic>", "<ph>".repeat(60_000), "</ph>".repeat(60_000));
-            matches!(Dita::new().extract(deeper.as_bytes(), &o), Err(Error::Limit(e)) if e.kind == LimitKind::XmlDepth)
+            matches!(f.extract(deeper.as_bytes(), &o), Err(Error::Limit(e)) if e.kind == LimitKind::XmlDepth)
         })
         .unwrap()
         .join()

@@ -5,8 +5,14 @@ use crate::its::Props;
 use crate::tree::{decode_refs, is_xml_ws, Item, Kind, Tree};
 use bilingua_model::{guard, Error, Limits};
 
-/// Deepest element nesting the recursive planner and emitter will follow, whatever `Limits::max_xml_depth` says.
+/// Deepest element nesting the engine accepts, whatever `Limits::max_xml_depth` says. The planner and the
+/// skeleton emitter and the merge walk the tree with explicit stacks (no recursion per level, so any depth is safe on a
+/// 1 MB debug stack, wasm's default); the cap stays as a bound on the work a caller who raises the limit can ask for.
 pub(crate) const HARD_DEPTH: usize = 1024;
+
+fn too_deep() -> Error {
+    Error::Limit(bilingua_model::LimitError::new(bilingua_model::LimitKind::XmlDepth, "This file nests XML elements too deeply. It was not processed."))
+}
 
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) enum Piece {
@@ -77,6 +83,8 @@ pub(crate) struct Planner<'a, 'b> {
     pub role: Vec<u8>,
     /// Plans entries refer to units by creation number until `finish` renumbers them.
     pub plan_attrs: bool,
+    /// Elements still to plan as containers, with their depth (a work list instead of recursion).
+    pending: Vec<(u32, usize)>,
 }
 
 struct Flags {
@@ -92,7 +100,7 @@ pub(crate) fn py_ws(c: char) -> bool {
 impl<'a, 'b> Planner<'a, 'b> {
     pub(crate) fn new(t: &'b Tree<'a>, props: &'b Props, limits: &'b Limits) -> Self {
         let n = t.els.len();
-        Planner { t, props, limits, units: Vec::new(), plans: vec![Vec::new(); n], role: vec![0; n], plan_attrs: true }
+        Planner { t, props, limits, units: Vec::new(), plans: vec![Vec::new(); n], role: vec![0; n], plan_attrs: true, pending: Vec::new() }
     }
 
     fn add(&mut self, u: PUnit) -> Result<usize, Error> {
@@ -144,9 +152,24 @@ impl<'a, 'b> Planner<'a, 'b> {
         Ok(())
     }
 
+    /// Plans `el` and everything under it. Units are created in any order (`finish` sorts them by position), and
+    /// each element's own plan only depends on its own items, so a work list replaces recursion.
     pub(crate) fn container(&mut self, el: u32, depth: usize) -> Result<(), Error> {
+        self.pending.push((el, depth));
+        self.drain()
+    }
+
+    /// Plans every element left on the work list.
+    pub(crate) fn drain(&mut self) -> Result<(), Error> {
+        while let Some((el, depth)) = self.pending.pop() {
+            self.container_one(el, depth)?;
+        }
+        Ok(())
+    }
+
+    fn container_one(&mut self, el: u32, depth: usize) -> Result<(), Error> {
         if depth > HARD_DEPTH {
-            return Err(Error::Limit(bilingua_model::LimitError::new(bilingua_model::LimitKind::XmlDepth, "This file nests XML elements too deeply. It was not processed.")));
+            return Err(too_deep());
         }
         self.role[el as usize] = ROLE_CONTAINER;
         self.attrs_of(el)?;
@@ -158,7 +181,7 @@ impl<'a, 'b> Planner<'a, 'b> {
         if !self.props.tr[el as usize] {
             for it in items {
                 if it.kind == Kind::Elem {
-                    self.container(it.el, depth + 1)?;
+                    self.pending.push((it.el, depth + 1));
                 }
                 self.plans[el as usize].push(Entry::Raw(*it));
             }
@@ -169,14 +192,15 @@ impl<'a, 'b> Planner<'a, 'b> {
             if it.kind == Kind::Elem && self.props.wt[it.el as usize] == 0 {
                 self.flush(el, lo, i, depth)?;
                 lo = i + 1;
-                self.container(it.el, depth + 1)?;
+                self.pending.push((it.el, depth + 1));
                 self.plans[el as usize].push(Entry::Raw(*it));
             }
         }
         self.flush(el, lo, items.len(), depth)
     }
 
-    /// Items `lo..hi` of `owner` as one run: a unit when it has text of its own.
+    /// Items `lo..hi` of `owner` as one run: a unit when it has text of its own. Protected and nested elements in
+    /// the run go on the work list (call [`Planner::drain`] after, as [`Planner::container`] does).
     pub(crate) fn flush(&mut self, owner: u32, lo: usize, hi: usize, depth: usize) -> Result<(), Error> {
         if lo >= hi {
             return Ok(());
@@ -250,12 +274,27 @@ impl<'a, 'b> Planner<'a, 'b> {
         Ok(())
     }
 
+    /// The run's content as pieces, inline elements as open and close tags. Iterative: an explicit stack of the
+    /// open inline elements, so deep inline nesting costs heap, not call stack.
     fn tokenize(&mut self, items: &'b [Item], pieces: &mut Vec<Piece>, refs: &mut Vec<Ref>, flags: &mut Flags, depth: usize) -> Result<(), Error> {
         if depth > HARD_DEPTH {
-            return Err(Error::Limit(bilingua_model::LimitError::new(bilingua_model::LimitKind::XmlDepth, "This file nests XML elements too deeply. It was not processed.")));
+            return Err(too_deep());
         }
         let t = self.t;
-        for it in items {
+        // (items, next index, ref number of the open tag to close when done; 0 for the run itself)
+        let mut stack: Vec<(&'b [Item], usize, usize)> = vec![(items, 0, 0)];
+        while let Some(top) = stack.last_mut() {
+            let (list, i) = (top.0, top.1);
+            if i >= list.len() {
+                let (_, _, n) = stack.pop().expect("stack is not empty");
+                if n != 0 {
+                    pieces.push(Piece::Close(n));
+                }
+                continue;
+            }
+            top.1 += 1;
+            let it = &list[i];
+            let depth = depth + stack.len() - 1;
             match it.kind {
                 Kind::Elem => {
                     flags.other += 1;
@@ -263,7 +302,7 @@ impl<'a, 'b> Planner<'a, 'b> {
                     if !self.props.tr[el as usize] || self.props.wt[el as usize] != 1 {
                         refs.push(Ref::PointEl(el));
                         pieces.push(Piece::Point(refs.len()));
-                        self.container(el, depth)?;
+                        self.pending.push((el, depth));
                         continue;
                     }
                     self.role[el as usize] = ROLE_INLINE;
@@ -273,12 +312,14 @@ impl<'a, 'b> Planner<'a, 'b> {
                         pieces.push(Piece::Point(refs.len()));
                         continue;
                     }
+                    if depth + 1 > HARD_DEPTH {
+                        return Err(too_deep());
+                    }
                     refs.push(Ref::Pair(el));
                     let n = refs.len();
                     pieces.push(Piece::Open(n));
                     let inner: &'b [Item] = &t.els[el as usize].items;
-                    self.tokenize(inner, pieces, refs, flags, depth + 1)?;
-                    pieces.push(Piece::Close(n));
+                    stack.push((inner, 0, n));
                 }
                 Kind::Text => {
                     let raw = &t.text[it.s..it.e];

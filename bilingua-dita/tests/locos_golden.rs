@@ -1,5 +1,5 @@
-//! Differential test against the LocOS `dita` and `docbook` filters: 390 documents (the LocOS fixtures, the oracle
-//! corpus, hand-written edge cases and 370 random ones: DITA topics of six types, maps, bookmaps, DocBook 4.5 and 5,
+//! Differential test against the LocOS `dita` and `docbook` filters: 409 documents (the LocOS fixtures, the oracle
+//! corpus, hand-written edge cases (19 from the gate) and 370 random ones: DITA topics of six types, maps, bookmaps, DocBook 4.5 and 5,
 //! roots neither vocabulary names), with the units, styles, notes and the bytes LocOS builds for two mappings, in
 //! place and for three target languages, recorded in `data/locos_golden.json` (made by `tools/gen_golden.py`).
 
@@ -46,7 +46,7 @@ fn build(f: &dyn Filter, data: &[u8], target: Option<&str>, kind: &str) -> Resul
 fn matches_locos_dita_and_docbook_filters() {
     let text = std::fs::read_to_string(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/data/locos_golden.json")).unwrap();
     let cases: Vec<serde_json::Value> = serde_json::from_str(&text).unwrap();
-    assert!(cases.len() >= 390);
+    assert!(cases.len() >= 409);
     let (dita, docbook) = (Dita::new(), DocBook::new());
     let (mut units_ok, mut unit_count, mut builds_ok, mut both_refuse, mut only_locos_refuses) = (0usize, 0usize, 0usize, 0usize, Vec::<String>::new());
     let mut fails = Vec::<String>::new();
@@ -88,7 +88,13 @@ fn matches_locos_dita_and_docbook_filters() {
                 Some((k, t)) => (k, Some(t)),
                 None => (key.as_str(), None),
             };
-            let want = bytes(golden);
+            let mut want = bytes(golden);
+            if name == "gate_db_prefix_decl.dbk" && target.is_some() {
+                // known difference (a LocOS bug): a DocBook 4.x root (no namespace) that merely declares the DocBook
+                // 5 namespace for a prefix gets `xml:lang` from LocOS, which tests for the namespace URI anywhere in
+                // the start tag; the root is outside the namespace, so Bilingua writes 4.x's `lang`
+                want = String::from_utf8(want).unwrap().replace(" xml:lang=\"", " lang=\"").into_bytes();
+            }
             if doc.units.is_empty() && target.is_some() {
                 // known difference: LocOS stamps the target language even when nothing was translated; a Bilingua
                 // merge with nothing translated is the original bytes (the LocOS profile stamps, see locos_its.rs)

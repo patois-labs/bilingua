@@ -217,6 +217,27 @@ HAND = [
     ("docbook", "plain.dbk", '<article><para>Hi <emphasis>there</emphasis></para></article>'),
     ("docbook", "nslang.dbk", '<article xmlns="http://docbook.org/ns/docbook" version="5.0" lang="en"><para>Hi</para></article>'),
     ("docbook", "prefixed.dbk", '<db:article xmlns:db="http://docbook.org/ns/docbook"><db:para>Hi <db:emphasis>x</db:emphasis> <db:literal>y</db:literal></db:para></db:article>'),
+    # gate cases (11-05): translate switch-back several levels deep, conref / conkeyref / keyref in every position,
+    # nested units, translatable attributes with entities and quotes, language stamping corners, DTDs and XInclude
+    ("dita", "gate_switch.dita", '<topic id="t"><title>T</title><body><p translate="no">a <ph translate="yes">b <ph>c</ph> <ph translate="no">d <b translate="yes">e</b> f</ph> g</ph> h</p><section translate="no"><title>off</title><div translate="yes"><p>on <i>i</i></p><p translate="no">off <ph translate="yes">on2</ph></p></div></section></body></topic>'),
+    ("dita", "gate_conref.dita", '<topic id="t"><title>T <ph conref="a.dita#a/b"/> x <ph conkeyref="k/v">fb</ph> <keyword keyref="kw"/> <ph keyref="v">keep</ph></title><body><p conref="a.dita#a/p">x <ph translate="yes">y</ph></p><p conref="a.dita#a/q" translate="yes">z</p><section conkeyref="s/x"><p>in</p></section><p>after <xref keyref="k" href="h.dita">xr</xref></p></body></topic>'),
+    ("dita", "gate_nested.dita", '<topic id="t"><title>T</title><body><p>Text<fn>Foot <b>b</b><fn>inner</fn> tail</fn> and <indexterm>alpha<indexterm>beta<index-see>gamma</index-see></indexterm></indexterm> end</p><p><fn>only</fn></p><p>x<draft-comment>dc</draft-comment>y</p></body></topic>'),
+    ("dita", "gate_attrs.ditamap", '<map title="Map &amp; &quot;T&quot;" xml:lang="en"><topicref href="a.dita" navtitle=\'Nav "q" &amp; it\'/><topicref navtitle="  spaced   out "/><topicref navtitle="caf&#233; &#x65E5; &lt;b&gt;"/><topicref navtitle=""/><topicref href="b.dita" navtitle="Off" translate="no"/><topicref href="c.dita" navtitle="Ref" conref="m.ditamap#m/r"/></map>'),
+    ("dita", "gate_image.dita", '<topic id="t"><title>T</title><body><p>See <image href="a.png" alt="Alt &lt;1&gt;"/> here</p><image href="b.png" alt="Block alt"><alt>Child alt</alt></image><fig><title>F</title><image href="c.png" alt="  "/></fig></body></topic>'),
+    ("dita", "gate_lang_add.dita", '<?xml version="1.0"?>\n<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">\n<concept id="c"><title>Hi</title></concept>\n'),
+    ("dita", "gate_lang_has.dita", "<concept id='c' xml:lang='en-US' translate='yes'><title>Hi</title></concept>"),
+    ("dita", "gate_dita_root.dita", '<dita><topic id="a" xml:lang="en"><title>A</title></topic><topic id="b"><title>B</title></topic></dita>'),
+    ("dita", "gate_dtd.dita", '<!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "http://127.0.0.1:9/topic.dtd"><topic id="t"><title>Hi &product; &nbsp;</title></topic>'),
+    ("dita", "gate_system.dita", '<!DOCTYPE topic SYSTEM "file:///etc/passwd"><topic id="t"><title>Hi</title></topic>'),
+    ("dita", "gate_xxe.dita", '<!DOCTYPE topic [<!ENTITY x SYSTEM "file:///etc/passwd">]><topic id="t"><title>&x;</title></topic>'),
+    ("dita", "gate_xinclude.dita", '<topic id="t" xmlns:xi="http://www.w3.org/2001/XInclude"><title>T <xi:include href="file:///etc/passwd" parse="text"/></title><body><xi:include href="other.dita"/></body></topic>'),
+    ("dita", "gate_cdata.dita", '<topic id="t"><title>T</title><body><p><![CDATA[a < b]]></p><p>x <![CDATA[y]]> z</p><codeblock><![CDATA[keep  ]]> me</codeblock></body></topic>'),
+    ("dita", "gate_comments.dita", '<topic id="t"><title>A <!-- c --> B <?pi x?> C</title><body><p>a<!--only--></p></body></topic>'),
+    ("docbook", "gate_db45.dbk", '<?xml version="1.0"?>\n<!DOCTYPE book PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN" "http://www.oasis-open.org/docbook/xml/4.5/docbookx.dtd">\n<book><chapter xreflabel="Ch &lt;1&gt;"><title>T</title><para>P <footnote><para>F <emphasis>e</emphasis></para></footnote> <indexterm><primary>idx</primary><secondary>two</secondary></indexterm> <remark>R</remark> <literal>lit</literal></para><programlisting>code  here</programlisting></chapter></book>'),
+    ("docbook", "gate_db5_both.dbk", '<book xmlns="http://docbook.org/ns/docbook" version="5.0" lang="en" xml:lang="en"><title>T</title><para>Hi</para></book>'),
+    ("docbook", "gate_db5_none.dbk", '<article xmlns="http://docbook.org/ns/docbook" version="5.0"><title>T</title><para>Hi</para></article>'),
+    ("docbook", "gate_db_prefix_decl.dbk", '<!DOCTYPE article PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN" "docbookx.dtd"><article xmlns:db="http://docbook.org/ns/docbook"><para>Hi</para></article>'),
+    ("docbook", "gate_db45_lang.dbk", '<!DOCTYPE article PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN" "docbookx.dtd"><article lang="en"><para>Hi <footnote><para>F</para></footnote></para></article>'),
 ]
 
 

@@ -27,6 +27,16 @@ pub(crate) const TRAIL: &str = "trail";
 pub(crate) const CDATA: &str = "cdata";
 pub(crate) const QUOTE: &str = "q";
 
+/// One step of [`Emit::emit`].
+enum Job {
+    /// File text `s..e` as written.
+    Text(usize, usize),
+    /// The marker of unit n.
+    Unit(usize),
+    Item(Item),
+    Node(u32),
+}
+
 pub(crate) struct Emit<'a, 'b> {
     pub t: &'b Tree<'a>,
     pub p: &'b Planned,
@@ -59,45 +69,63 @@ impl Emit<'_, '_> {
         }
     }
 
+    /// An item as the skeleton writes it: inline elements in full, planned elements with their unit markers.
     pub(crate) fn raw_item(&self, it: &Item, out: &mut String) {
-        let t = self.t;
-        if it.kind != Kind::Elem {
-            out.push_str(&t.text[it.s..it.e]);
-            return;
-        }
-        let el = it.el;
-        if self.p.role[el as usize] == ROLE_INLINE {
-            self.stag(el, out);
-            let e = &t.els[el as usize];
-            if !e.empty {
-                for c in &e.items {
-                    self.raw_item(c, out);
-                }
-                out.push_str(&t.text[e.e0..e.e1]);
-            }
-        } else {
-            self.node(el, out);
-        }
+        self.emit(Job::Item(*it), out);
     }
 
+    /// A planned element: its start tag, its plan (raw items and unit markers) and its end tag.
     pub(crate) fn node(&self, el: u32, out: &mut String) {
-        self.stag(el, out);
-        let e = &self.t.els[el as usize];
-        if e.empty {
-            return;
-        }
-        for entry in &self.p.plans[el as usize] {
-            match entry {
-                Entry::Raw(it) => self.raw_item(it, out),
-                Entry::Run { unit: Some(u), .. } => out.push_str(&format!("\0U{u}\0")),
-                Entry::Run { lo, hi, unit: None } => {
-                    for it in &e.items[*lo..*hi] {
-                        self.raw_item(it, out);
+        self.emit(Job::Node(el), out);
+    }
+
+    /// The writer behind `raw_item` and `node`: an explicit stack of jobs, so deep nesting costs heap, not call
+    /// stack.
+    fn emit(&self, first: Job, out: &mut String) {
+        let t = self.t;
+        let mut jobs: Vec<Job> = vec![first];
+        while let Some(job) = jobs.pop() {
+            match job {
+                Job::Text(s, e) => out.push_str(&t.text[s..e]),
+                Job::Unit(u) => {
+                    out.push_str("\0U");
+                    out.push_str(&u.to_string());
+                    out.push('\0');
+                }
+                Job::Item(it) => {
+                    if it.kind != Kind::Elem {
+                        out.push_str(&t.text[it.s..it.e]);
+                        continue;
+                    }
+                    let el = it.el;
+                    if self.p.role[el as usize] != ROLE_INLINE {
+                        jobs.push(Job::Node(el));
+                        continue;
+                    }
+                    self.stag(el, out);
+                    let e = &t.els[el as usize];
+                    if !e.empty {
+                        jobs.push(Job::Text(e.e0, e.e1));
+                        jobs.extend(e.items.iter().rev().map(|c| Job::Item(*c)));
+                    }
+                }
+                Job::Node(el) => {
+                    self.stag(el, out);
+                    let e = &t.els[el as usize];
+                    if e.empty {
+                        continue;
+                    }
+                    jobs.push(Job::Text(e.e0, e.e1));
+                    for entry in self.p.plans[el as usize].iter().rev() {
+                        match entry {
+                            Entry::Raw(it) => jobs.push(Job::Item(*it)),
+                            Entry::Run { unit: Some(u), .. } => jobs.push(Job::Unit(*u)),
+                            Entry::Run { lo, hi, unit: None } => jobs.extend(e.items[*lo..*hi].iter().rev().map(|c| Job::Item(*c))),
+                        }
                     }
                 }
             }
         }
-        out.push_str(&self.t.text[e.e0..e.e1]);
     }
 
     fn range(&self, owner: u32, lo: usize, hi: usize) -> String {
@@ -256,13 +284,29 @@ impl Emit<'_, '_> {
     }
 }
 
+/// Longest element path a unit key holds. Every unit carries its path, so without a cap a deep chain of long element
+/// names above many units multiplies (256 levels of 1 000-character names over 50 000 units is 12 GB from a 1 MB
+/// file); a longer path keeps its innermost elements after `/…`.
+pub(crate) const MAX_KEY_PATH: usize = 512;
+
 fn path_of(t: &Tree, mut el: u32) -> String {
     let mut names: Vec<&str> = Vec::new();
+    let mut len = 0usize;
+    let mut cut = false;
     while el != crate::tree::NONE {
-        names.push(t.local(el));
+        let n = t.local(el);
+        if len + n.len() + 1 > MAX_KEY_PATH {
+            cut = true;
+            break;
+        }
+        len += n.len() + 1;
+        names.push(n);
         el = t.els[el as usize].parent;
     }
-    let mut s = String::new();
+    let mut s = String::with_capacity(len + 4);
+    if cut {
+        s.push_str("/\u{2026}");
+    }
     for n in names.iter().rev() {
         s.push('/');
         s.push_str(n);
@@ -361,13 +405,25 @@ pub(crate) struct Merger<'d> {
     pub out: String,
     pub lang_tag: Option<String>,
     lang_start: Option<(usize, String, bool)>,
+    /// Units already written: a well-formed skeleton names each unit once, so a second use (a hand-edited or
+    /// hostile document, possibly a cycle or an exponential fan-out) is refused.
+    seen: Vec<bool>,
 }
 
-const MAX_NEST: usize = 1100;
+/// One step of the merge (an explicit stack, so nested units cost heap, not call stack).
+enum Work<'d> {
+    /// Marked-up text whose markers are still to resolve.
+    Marked(&'d str),
+    /// Text written as is.
+    Plain(&'d str),
+    /// Escaped translation text.
+    Owned(String),
+    Unit(usize),
+}
 
 impl<'d> Merger<'d> {
     pub(crate) fn new(doc: &'d Document, lang_tag: Option<String>) -> Merger<'d> {
-        Merger { doc, out: String::new(), lang_tag, lang_start: None }
+        Merger { doc, out: String::new(), lang_tag, lang_start: None, seen: vec![false; doc.units.len()] }
     }
 
     pub(crate) fn unit(&self, i: usize) -> Result<&'d Unit, Error> {
@@ -375,10 +431,45 @@ impl<'d> Merger<'d> {
     }
 
     /// Writes marked-up text, resolving its markers.
-    pub(crate) fn resolve(&mut self, s: &str, depth: usize) -> Result<(), Error> {
-        if depth > MAX_NEST {
-            return Err(Error::Write("skeleton nests units too deeply".into()));
+    pub(crate) fn resolve(&mut self, s: &'d str) -> Result<(), Error> {
+        self.run(vec![Work::Marked(s)])
+    }
+
+    pub(crate) fn render_unit(&mut self, i: usize) -> Result<(), Error> {
+        self.run(vec![Work::Unit(i)])
+    }
+
+    /// The unit's translation (leading and trailing white space included), whatever the source says.
+    pub(crate) fn render_translated(&mut self, i: usize) -> Result<(), Error> {
+        let mut work = Vec::new();
+        self.translated_work(i, &mut work)?;
+        self.run(work)
+    }
+
+    fn run(&mut self, mut work: Vec<Work<'d>>) -> Result<(), Error> {
+        while let Some(w) = work.pop() {
+            match w {
+                Work::Plain(s) => self.out.push_str(s),
+                Work::Owned(s) => self.out.push_str(&s),
+                Work::Unit(i) => {
+                    let u = self.unit(i)?;
+                    if std::mem::replace(&mut self.seen[i], true) {
+                        return Err(Error::Write(format!("skeleton uses unit {i} more than once")));
+                    }
+                    if translated(u) && u.output() != u.source() {
+                        self.translated_work(i, &mut work)?;
+                    } else {
+                        work.push(Work::Marked(code_str(u, RAW).unwrap_or("")));
+                    }
+                }
+                Work::Marked(s) => self.marked(s, &mut work)?,
+            }
         }
+        Ok(())
+    }
+
+    /// Writes `s` up to its first unit marker; the marker and the rest go back on the work list.
+    fn marked(&mut self, s: &'d str, work: &mut Vec<Work<'d>>) -> Result<(), Error> {
         let mut rest = s;
         while let Some(p) = rest.find('\0') {
             self.out.push_str(&rest[..p]);
@@ -390,23 +481,26 @@ impl<'d> Merger<'d> {
             match kind {
                 "U" => {
                     let i: usize = arg.parse().map_err(|_| Error::Write("bad unit marker".into()))?;
-                    self.render_unit(i, depth + 1)?;
+                    work.push(Work::Marked(rest));
+                    work.push(Work::Unit(i));
+                    return Ok(());
                 }
                 "A" => {
                     let i: usize = arg.parse().map_err(|_| Error::Write("bad attribute marker".into()))?;
                     self.render_attr(i)?;
                 }
                 "L" => {
-                    if let (Some(tag), Some((a, add))) = (&self.lang_tag, arg.split_once('|')) {
-                        let _ = tag;
+                    if let (Some(_), Some((a, add))) = (&self.lang_tag, arg.split_once('|')) {
                         self.lang_start = Some((self.out.len(), a.to_string(), add == "1"));
                     }
                 }
                 "l" => {
                     if let (Some((at, attr, add)), Some(tag)) = (self.lang_start.take(), self.lang_tag.clone()) {
-                        let stag = self.out.split_off(at);
-                        let edited = set_lang(&stag, &attr, &tag, add);
-                        self.out.push_str(&edited);
+                        if at <= self.out.len() && self.out.is_char_boundary(at) {
+                            let stag = self.out.split_off(at);
+                            let edited = set_lang(&stag, &attr, &tag, add);
+                            self.out.push_str(&edited);
+                        }
                     }
                 }
                 _ => return Err(Error::Write("unknown skeleton marker".into())),
@@ -433,67 +527,53 @@ impl<'d> Merger<'d> {
         Ok(())
     }
 
-    pub(crate) fn render_unit(&mut self, i: usize, depth: usize) -> Result<(), Error> {
-        let u = self.unit(i)?;
-        let changed = translated(u) && u.output() != u.source();
-        if !changed {
-            let raw = code_str(u, RAW).unwrap_or("");
-            return self.resolve(raw, depth);
-        }
-        self.render_translated(i, depth)
-    }
-
-    /// The unit's translation (leading and trailing white space included), whatever the source says.
-    pub(crate) fn render_translated(&mut self, i: usize, depth: usize) -> Result<(), Error> {
+    /// Queues the translation of unit `i`: text and tags, with the tags the translation dropped repaired (a stray
+    /// close is dropped, an unclosed pair is closed, a protected element the translation lost is kept at the end).
+    fn translated_work(&mut self, i: usize, work: &mut Vec<Work<'d>>) -> Result<(), Error> {
         let u = self.unit(i)?;
         self.out.push_str(code_str(u, LEAD).unwrap_or(""));
         let new = u.output();
+        let trail = code_str(u, TRAIL).unwrap_or("");
         if code_str(u, CDATA).is_some() {
             let body = xml_target_text(&plain_text(&new)).replace("]]>", "]]]]><![CDATA[>");
             self.out.push_str("<![CDATA[");
             self.out.push_str(&body);
             self.out.push_str("]]>");
-            self.out.push_str(code_str(u, TRAIL).unwrap_or(""));
+            self.out.push_str(trail);
             return Ok(());
         }
-        self.render_inlines(u, &new, depth)?;
-        self.out.push_str(code_str(u, TRAIL).unwrap_or(""));
-        Ok(())
-    }
-
-    /// Text and tags of a translation: tags the translation dropped are repaired (a stray close is dropped, an
-    /// unclosed pair is closed, a protected element the translation lost is kept at the end).
-    pub(crate) fn render_inlines(&mut self, u: &Unit, new: &[Inline], depth: usize) -> Result<(), Error> {
+        let mut seq: Vec<Work<'d>> = Vec::new();
         let mut used: std::collections::HashSet<&str> = std::collections::HashSet::new();
-        let mut stack: Vec<&str> = Vec::new();
-        for inl in new {
+        let mut stack: Vec<&'d str> = Vec::new();
+        for inl in &new {
             match inl {
                 Inline::Text(t) => {
-                    let t = xml_target_text(t);
-                    esc_text(&t, &mut self.out);
+                    let mut s = String::new();
+                    esc_text(&xml_target_text(t), &mut s);
+                    seq.push(Work::Owned(s));
                 }
                 Inline::Tag { id, kind, .. } => {
-                    let Some(cd) = u.codes.get(id) else { continue };
+                    let Some((key, cd)) = u.codes.get_key_value(id) else { continue };
                     match kind {
                         TagKind::Open => {
-                            if let (Some(open), false) = (&cd.open, used.contains(id.as_str())) {
-                                used.insert(id);
-                                stack.push(id);
-                                self.resolve(open, depth)?;
+                            if let (Some(open), false) = (&cd.open, used.contains(key.as_str())) {
+                                used.insert(key);
+                                stack.push(key);
+                                seq.push(Work::Marked(open));
                             }
                         }
                         TagKind::Close => {
-                            if stack.last() == Some(&id.as_str()) {
+                            if stack.last() == Some(&key.as_str()) {
                                 stack.pop();
                                 if let Some(c) = &cd.close {
-                                    self.out.push_str(c);
+                                    seq.push(Work::Plain(c));
                                 }
                             }
                         }
                         TagKind::Standalone => {
-                            if let (Some(s), false) = (&cd.standalone, used.contains(id.as_str())) {
-                                used.insert(id);
-                                self.resolve(s, depth)?;
+                            if let (Some(s), false) = (&cd.standalone, used.contains(key.as_str())) {
+                                used.insert(key);
+                                seq.push(Work::Marked(s));
                             }
                         }
                     }
@@ -502,10 +582,10 @@ impl<'d> Merger<'d> {
         }
         while let Some(id) = stack.pop() {
             if let Some(c) = u.codes.get(id).and_then(|c| c.close.as_deref()) {
-                self.out.push_str(c);
+                seq.push(Work::Plain(c));
             }
         }
-        let mut rest: Vec<(&String, &CodeData)> = u
+        let mut rest: Vec<(&'d String, &'d CodeData)> = u
             .codes
             .iter()
             .filter(|(k, c)| k.bytes().all(|b| b.is_ascii_digit()) && c.standalone.is_some() && !used.contains(k.as_str()))
@@ -513,9 +593,11 @@ impl<'d> Merger<'d> {
         rest.sort_by_key(|(k, _)| k.parse::<usize>().unwrap_or(usize::MAX));
         for (_, c) in rest {
             if let Some(s) = &c.standalone {
-                self.resolve(s, depth)?;
+                seq.push(Work::Marked(s));
             }
         }
+        seq.push(Work::Plain(trail));
+        work.extend(seq.into_iter().rev());
         Ok(())
     }
 }
@@ -571,12 +653,12 @@ pub(crate) fn set_lang(stag: &str, attr: &str, value: &str, add: bool) -> String
     stag.to_string()
 }
 
-pub(crate) fn merge_parts(doc: &Document, parts: &[SkelPart], lang_tag: Option<String>) -> Result<String, Error> {
+pub(crate) fn merge_parts<'d>(doc: &'d Document, parts: &'d [SkelPart], lang_tag: Option<String>) -> Result<String, Error> {
     let mut m = Merger::new(doc, lang_tag);
     for p in parts {
         match p {
-            SkelPart::Raw(s) => m.resolve(s, 0)?,
-            SkelPart::Unit(i) => m.render_unit(*i, 0)?,
+            SkelPart::Raw(s) => m.resolve(s)?,
+            SkelPart::Unit(i) => m.render_unit(*i)?,
         }
     }
     Ok(m.out)
