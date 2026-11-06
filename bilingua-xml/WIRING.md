@@ -13,7 +13,8 @@
 - Later XML formats do not need a new parser: `bilingua_xml::XmlFilter::with_id("dita", &["dita", "ditamap", "bookmap"]).dialect(bilingua_xml::Dialect::dita())`
   and `with_id("docbook", &["dbk"]).dialect(Dialect::docbook())` are what the LocOS DITA and DocBook filters are. A
   `.dita` or `.dbk` file also works through the generic `xml` filter, which recognises both.
-- Options: none needed. `ExtractOptions::limits` applies (units, unit chars, XML depth and elements, input bytes).
+- Options: `xml.its_rules` (an external `<its:rules>` file's content) and `xml.multilingual` (MlConfig JSON),
+  see MIGRATION.md wave 12 item D. `ExtractOptions::limits` applies (units, unit chars, XML depth and elements, input bytes).
   `target_lang` on the document decides the root language written on merge (only when something is translated).
   Multilingual layout: `XmlFilter::new().multilingual(MlConfig::from_json(..)?)`, or the in-file
   `<?loc-multilingual ...?>`; `XmlFilter::inspect(bytes)` gives the dialect and layout (the LocOS skeleton's

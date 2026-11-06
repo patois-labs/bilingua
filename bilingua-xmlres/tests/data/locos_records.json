@@ -1,0 +1,535 @@
+{
+ "ws_and_escapes": {
+  "input": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<resources xmlns:xliff=\"urn:oasis:names:tc:xliff:document:1.2\">\n<string name=\"a\">  Hello \\'x\\'  </string>\n<string name=\"b\">  @string/x</string>\n<string name=\"c\"> ?attr/y </string>\n</resources>\n",
+  "records": [
+   {
+    "key": "a",
+    "value": "  Hello 'x'  ",
+    "comment": "",
+    "plural": "",
+    "index": null,
+    "translatable": true
+   },
+   {
+    "key": "b",
+    "value": "  @string/x",
+    "comment": "",
+    "plural": "",
+    "index": null,
+    "translatable": false
+   },
+   {
+    "key": "c",
+    "value": " ?attr/y ",
+    "comment": "",
+    "plural": "",
+    "index": null,
+    "translatable": false
+   }
+  ]
+ },
+ "ref_with_child": {
+  "input": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<resources xmlns:xliff=\"urn:oasis:names:tc:xliff:document:1.2\">\n<string name=\"a\">@string/a<!-- c --></string>\n<string name=\"b\">@x <b>bold</b></string>\n<string name=\"c\"><b>@x</b></string>\n</resources>\n",
+  "records": [
+   {
+    "key": "a",
+    "value": "@string/a⟦x1⟧",
+    "comment": "",
+    "plural": "",
+    "index": null,
+    "translatable": true
+   },
+   {
+    "key": "b",
+    "value": "@x ⟦g1⟧bold⟦/g1⟧",
+    "comment": "",
+    "plural": "",
+    "index": null,
+    "translatable": true
+   },
+   {
+    "key": "c",
+    "value": "⟦g1⟧@x⟦/g1⟧",
+    "comment": "",
+    "plural": "",
+    "index": null,
+    "translatable": true
+   }
+  ]
+ },
+ "only_tokens": {
+  "input": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<resources xmlns:xliff=\"urn:oasis:names:tc:xliff:document:1.2\">\n<string name=\"a\"><xliff:g id=\"n\">%1$s</xliff:g></string>\n<string name=\"b\"><b></b></string>\n<string name=\"c\">%s</string>\n<string name=\"d\">--</string>\n<string name=\"e\">   </string>\n<string name=\"f\">\\n</string>\n</resources>\n",
+  "records": [
+   {
+    "key": "a",
+    "value": "⟦x1⟧",
+    "comment": "",
+    "plural": "",
+    "index": null,
+    "translatable": true
+   },
+   {
+    "key": "b",
+    "value": "⟦g1⟧⟦/g1⟧",
+    "comment": "",
+    "plural": "",
+    "index": null,
+    "translatable": true
+   },
+   {
+    "key": "c",
+    "value": "%s",
+    "comment": "",
+    "plural": "",
+    "index": null,
+    "translatable": true
+   },
+   {
+    "key": "d",
+    "value": "--",
+    "comment": "",
+    "plural": "",
+    "index": null,
+    "translatable": false
+   },
+   {
+    "key": "e",
+    "value": "   ",
+    "comment": "",
+    "plural": "",
+    "index": null,
+    "translatable": false
+   },
+   {
+    "key": "f",
+    "value": "\\n",
+    "comment": "",
+    "plural": "",
+    "index": null,
+    "translatable": true
+   }
+  ]
+ },
+ "comments": {
+  "input": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<resources xmlns:xliff=\"urn:oasis:names:tc:xliff:document:1.2\">\n<!-- one -->\n<!-- two -->\n<string name=\"a\">A</string>\n<string name=\"b\">B</string>\n<!--   spaced   -->\n<color name=\"c\">#fff</color>\n<string name=\"d\">D</string>\n<!-- arr -->\n<string-array name=\"e\"><item>x</item><!-- in --><item>y</item></string-array>\n<!-- pl -->\n<plurals name=\"p\" translatable=\"false\"><item quantity=\"one\">1</item><item>noq</item></plurals>\n</resources>\n",
+  "records": [
+   {
+    "key": "a",
+    "value": "A",
+    "comment": "two",
+    "plural": "",
+    "index": null,
+    "translatable": true
+   },
+   {
+    "key": "b",
+    "value": "B",
+    "comment": "",
+    "plural": "",
+    "index": null,
+    "translatable": true
+   },
+   {
+    "key": "d",
+    "value": "D",
+    "comment": "",
+    "plural": "",
+    "index": null,
+    "translatable": true
+   },
+   {
+    "key": "e",
+    "value": "x",
+    "comment": "arr",
+    "plural": "",
+    "index": 0,
+    "translatable": true
+   },
+   {
+    "key": "e",
+    "value": "y",
+    "comment": "arr",
+    "plural": "",
+    "index": 1,
+    "translatable": true
+   },
+   {
+    "key": "p",
+    "value": "1",
+    "comment": "pl",
+    "plural": "one",
+    "index": null,
+    "translatable": false
+   },
+   {
+    "key": "p",
+    "value": "noq",
+    "comment": "pl",
+    "plural": "",
+    "index": null,
+    "translatable": false
+   }
+  ]
+ },
+ "quotes_cdata": {
+  "input": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<resources xmlns:xliff=\"urn:oasis:names:tc:xliff:document:1.2\">\n<string name=\"a\">\"  quoted with \\\"inner\\\"  \"</string>\n<string name=\"b\"><![CDATA[\"cdata quoted\"]]></string>\n<string name=\"c\">a &amp; b &lt;c&gt;</string>\n<string name=\"d\">tab\\tand\\u0041</string>\n<string name=\"e\">\"a\" \"b\"</string>\n</resources>\n",
+  "records": [
+   {
+    "key": "a",
+    "value": "  quoted with \"inner\"  ",
+    "comment": "",
+    "plural": "",
+    "index": null,
+    "translatable": true
+   },
+   {
+    "key": "b",
+    "value": "cdata quoted",
+    "comment": "",
+    "plural": "",
+    "index": null,
+    "translatable": true
+   },
+   {
+    "key": "c",
+    "value": "a & b <c>",
+    "comment": "",
+    "plural": "",
+    "index": null,
+    "translatable": true
+   },
+   {
+    "key": "d",
+    "value": "tab\\tand\\u0041",
+    "comment": "",
+    "plural": "",
+    "index": null,
+    "translatable": true
+   },
+   {
+    "key": "e",
+    "value": "a\" \"b",
+    "comment": "",
+    "plural": "",
+    "index": null,
+    "translatable": true
+   }
+  ]
+ },
+ "missing_name": {
+  "input": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<resources xmlns:xliff=\"urn:oasis:names:tc:xliff:document:1.2\">\n<string>no name</string>\n<plurals><item quantity=\"other\">x</item></plurals>\n<string name=\"dup\">1</string><string name=\"dup\">2</string>\n</resources>\n",
+  "records": [
+   {
+    "key": "",
+    "value": "no name",
+    "comment": "",
+    "plural": "",
+    "index": null,
+    "translatable": true
+   },
+   {
+    "key": "",
+    "value": "x",
+    "comment": "",
+    "plural": "other",
+    "index": null,
+    "translatable": true
+   },
+   {
+    "key": "dup",
+    "value": "1",
+    "comment": "",
+    "plural": "",
+    "index": null,
+    "translatable": true
+   },
+   {
+    "key": "dup",
+    "value": "2",
+    "comment": "",
+    "plural": "",
+    "index": null,
+    "translatable": true
+   }
+  ]
+ },
+ "java": {
+  "input": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE properties SYSTEM \"http://java.sun.com/dtd/properties.dtd\">\n<properties>\n<comment>c</comment>\n<entry key=\"a\">It''s {0}</entry>\n<entry key=\"b\">  spaced  </entry>\n<entry key=\"c\"></entry>\n<entry key=\"d\">@ref</entry>\n<entry>nokey</entry>\n<entry key=\"e\"><![CDATA[<b>x</b>]]></entry>\n<entry key=\"f\">it's</entry>\n</properties>\n",
+  "records": [
+   {
+    "key": "a",
+    "value": "It's {0}",
+    "comment": "",
+    "plural": "",
+    "index": null,
+    "translatable": true
+   },
+   {
+    "key": "b",
+    "value": "  spaced  ",
+    "comment": "",
+    "plural": "",
+    "index": null,
+    "translatable": true
+   },
+   {
+    "key": "c",
+    "value": "",
+    "comment": "",
+    "plural": "",
+    "index": null,
+    "translatable": false
+   },
+   {
+    "key": "d",
+    "value": "@ref",
+    "comment": "",
+    "plural": "",
+    "index": null,
+    "translatable": true
+   },
+   {
+    "key": "",
+    "value": "nokey",
+    "comment": "",
+    "plural": "",
+    "index": null,
+    "translatable": true
+   },
+   {
+    "key": "e",
+    "value": "<b>x</b>",
+    "comment": "",
+    "plural": "",
+    "index": null,
+    "translatable": true
+   },
+   {
+    "key": "f",
+    "value": "it's",
+    "comment": "",
+    "plural": "",
+    "index": null,
+    "translatable": true
+   }
+  ]
+ },
+ "strings.xml": {
+  "file": "strings.xml",
+  "records": [
+   {
+    "key": "app_name",
+    "value": "Northwind",
+    "comment": "App name shown in the launcher",
+    "plural": "",
+    "index": null,
+    "translatable": false
+   },
+   {
+    "key": "welcome",
+    "value": "Welcome, %1$s! You have %2$d new messages.",
+    "comment": "",
+    "plural": "",
+    "index": null,
+    "translatable": true
+   },
+   {
+    "key": "cant_open",
+    "value": "Can't open the file \"%s\".",
+    "comment": "",
+    "plural": "",
+    "index": null,
+    "translatable": true
+   },
+   {
+    "key": "at_literal",
+    "value": "@home is the default tag",
+    "comment": "",
+    "plural": "",
+    "index": null,
+    "translatable": true
+   },
+   {
+    "key": "alias",
+    "value": "@string/welcome",
+    "comment": "",
+    "plural": "",
+    "index": null,
+    "translatable": false
+   },
+   {
+    "key": "theme_ref",
+    "value": "?android:attr/textColorPrimary",
+    "comment": "",
+    "plural": "",
+    "index": null,
+    "translatable": false
+   },
+   {
+    "key": "styled",
+    "value": "Tap ⟦g1⟧Save⟦/g1⟧ to keep ⟦g2⟧your⟦/g2⟧ changes.",
+    "comment": "",
+    "plural": "",
+    "index": null,
+    "translatable": true
+   },
+   {
+    "key": "placeholder",
+    "value": "Signed in as ⟦x1⟧.",
+    "comment": "",
+    "plural": "",
+    "index": null,
+    "translatable": true
+   },
+   {
+    "key": "html_cdata",
+    "value": "Read the <a href=\"https://example.com/terms\">terms</a> first.",
+    "comment": "",
+    "plural": "",
+    "index": null,
+    "translatable": true
+   },
+   {
+    "key": "quoted",
+    "value": "It's   spaced   out",
+    "comment": "",
+    "plural": "",
+    "index": null,
+    "translatable": true
+   },
+   {
+    "key": "newline",
+    "value": "First line\\nSecond line",
+    "comment": "",
+    "plural": "",
+    "index": null,
+    "translatable": true
+   },
+   {
+    "key": "percent",
+    "value": "100% sure",
+    "comment": "",
+    "plural": "",
+    "index": null,
+    "translatable": true
+   },
+   {
+    "key": "lint_ok",
+    "value": "Only in English",
+    "comment": "",
+    "plural": "",
+    "index": null,
+    "translatable": true
+   },
+   {
+    "key": "empty",
+    "value": "",
+    "comment": "",
+    "plural": "",
+    "index": null,
+    "translatable": false
+   },
+   {
+    "key": "songs",
+    "value": "%d song found.",
+    "comment": "",
+    "plural": "one",
+    "index": null,
+    "translatable": true
+   },
+   {
+    "key": "songs",
+    "value": "%d songs found.",
+    "comment": "",
+    "plural": "other",
+    "index": null,
+    "translatable": true
+   },
+   {
+    "key": "files",
+    "value": "%d file",
+    "comment": "",
+    "plural": "one",
+    "index": null,
+    "translatable": true
+   },
+   {
+    "key": "files",
+    "value": "%d files (few)",
+    "comment": "",
+    "plural": "few",
+    "index": null,
+    "translatable": true
+   },
+   {
+    "key": "files",
+    "value": "%d files (many)",
+    "comment": "",
+    "plural": "many",
+    "index": null,
+    "translatable": true
+   },
+   {
+    "key": "files",
+    "value": "%d files",
+    "comment": "",
+    "plural": "other",
+    "index": null,
+    "translatable": true
+   },
+   {
+    "key": "planets",
+    "value": "Mercury",
+    "comment": "",
+    "plural": "",
+    "index": 0,
+    "translatable": true
+   },
+   {
+    "key": "planets",
+    "value": "Venus",
+    "comment": "",
+    "plural": "",
+    "index": 1,
+    "translatable": true
+   },
+   {
+    "key": "codes",
+    "value": "MRC",
+    "comment": "",
+    "plural": "",
+    "index": 0,
+    "translatable": false
+   }
+  ]
+ },
+ "messages.xml": {
+  "file": "messages.xml",
+  "records": [
+   {
+    "key": "greeting",
+    "value": "Hello {0}, it's {1,date,long}.",
+    "comment": "",
+    "plural": "",
+    "index": null,
+    "translatable": true
+   },
+   {
+    "key": "farewell",
+    "value": "Goodbye & thanks",
+    "comment": "",
+    "plural": "",
+    "index": null,
+    "translatable": true
+   },
+   {
+    "key": "build.id",
+    "value": "4.2.0",
+    "comment": "",
+    "plural": "",
+    "index": null,
+    "translatable": true
+   }
+  ]
+ }
+}

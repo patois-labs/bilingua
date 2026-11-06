@@ -28,6 +28,10 @@ impl Xaml {
     }
 }
 
+/// The `format_options` keys of the XAML filter.
+pub const FORMAT_OPTIONS: &[FormatOptionKey] =
+    &[FormatOptionKey::bool("xaml.view_attributes", "Also translate the Content, Text, ToolTip, Header and Title attributes of plain views (LocOS XAML_VIEW_ATTRIBUTES; off by default).")];
+
 pub use bilingua_model::Limits;
 
 // Keys of the unit's hidden values (`Unit::hidden`).
@@ -199,9 +203,17 @@ impl Filter for Xaml {
                 || h.contains("schemas.microsoft.com/xaml"))
     }
 
+    fn format_option_keys(&self) -> &'static [FormatOptionKey] {
+        FORMAT_OPTIONS
+    }
+
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
         bilingua_model::check_own_options(self, &opts.format_options)?;
-        self.extract_with(bytes, opts, &opts.limits())
+        let mut me = *self;
+        if let Some(on) = opts.format_flag("xaml.view_attributes") {
+            me.view_attributes = on;
+        }
+        me.extract_with(bytes, opts, &opts.limits())
     }
 
     fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {

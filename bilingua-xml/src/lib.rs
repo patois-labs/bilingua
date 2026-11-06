@@ -224,6 +224,15 @@ fn read_xml(bytes: &[u8], opts: &ExtractOptions) -> Result<enc::Decoded, Error> 
     Ok(dec)
 }
 
+const ITS_RULES_KEY: &str = "xml.its_rules";
+const MULTILINGUAL_KEY: &str = "xml.multilingual";
+
+/// The `format_options` keys of the XML filter.
+pub const FORMAT_OPTIONS: &[FormatOptionKey] = &[
+    FormatOptionKey::text("xml.its_rules", "Content of an external ITS 2.0 rules file (<its:rules>), applied before the rules inside the document."),
+    FormatOptionKey::text("xml.multilingual", "Multilingual layout as a JSON object: mode, source, lang_attr, source_xpath, target_xpath, create, enabled (generic XML only; DITA and DocBook check it and ignore it)."),
+];
+
 /// Hidden code on the first unit of a multilingual document: the layout to replay on merge.
 const ML_CODE: &str = "ml";
 
@@ -254,9 +263,31 @@ impl Filter for XmlFilter {
         }
     }
 
+    fn format_option_keys(&self) -> &'static [FormatOptionKey] {
+        FORMAT_OPTIONS
+    }
+
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
         bilingua_model::check_own_options(self, &opts.format_options)?;
-        self.do_extract(bytes, opts)
+        let its = opts.format_option(ITS_RULES_KEY).filter(|t| !t.trim().is_empty());
+        let ml = opts.format_option(MULTILINGUAL_KEY).filter(|t| !t.trim().is_empty());
+        if its.is_none() && ml.is_none() {
+            return self.do_extract(bytes, opts);
+        }
+        let mut f = self.clone();
+        if let Some(text) = its {
+            f.rules.rules.extend(ItsRules::parse(text.as_bytes())?.rules);
+        }
+        if let Some(json) = ml {
+            // Checked everywhere (LocOS's constructor refuses a bad config for DITA and DocBook too), applied only by
+            // a filter that reads multilingual layouts at all: LocOS reads them for generic `.xml` only, and the
+            // DITA and DocBook engines (`with_id`) and `no_multilingual()` have the policy off.
+            let cfg = MlConfig::from_json(json)?;
+            if !matches!(f.ml, MlPolicy::Off) {
+                f.ml = MlPolicy::Config(cfg);
+            }
+        }
+        f.do_extract(bytes, opts)
     }
 
     /// `stamp_target_always` declares the target language even when nothing is translated; `output_encoding`
