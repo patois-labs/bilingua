@@ -472,6 +472,9 @@ impl Package {
         if self.shared.is_empty() {
             return Ok(());
         }
+        for path in self.sheets.clone() {
+            self.load(&path)?; // column mode reads only the sheets it plans
+        }
         let mut refs: HashMap<u64, usize> = HashMap::new();
         for path in &self.sheets {
             let d = &self.roots[path];
