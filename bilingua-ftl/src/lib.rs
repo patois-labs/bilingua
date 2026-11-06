@@ -514,8 +514,16 @@ fn retag_flattened(unit: &Unit, out: Vec<Inline>) -> Vec<Inline> {
             continue;
         };
         let mut pos = 0;
+        // each placeable's next occurrence at or after `pos` (None: no more), searched again only once passed, so
+        // a long translation is scanned once per placeable
+        let mut next: Vec<Option<usize>> = ph.iter().map(|(_, _, m)| t.find(m)).collect();
         while pos < t.len() {
-            let hit = ph.iter().filter_map(|(_, id, m)| t[pos..].find(m).map(|at| (pos + at, *id, *m))).min_by_key(|(at, ..)| *at);
+            for (k, (_, _, m)) in ph.iter().enumerate() {
+                if next[k].is_some_and(|at| at < pos) {
+                    next[k] = t[pos..].find(m).map(|at| pos + at);
+                }
+            }
+            let hit = ph.iter().enumerate().filter_map(|(k, (_, id, m))| next[k].map(|at| (at, *id, *m))).min_by_key(|(at, ..)| *at);
             match hit {
                 Some((at, id, m)) => {
                     if at > pos {
@@ -734,4 +742,22 @@ fn fill_plurals(text: &str, locale: &str) -> String {
     }
     out.push_str(&text[pos..]);
     out
+}
+
+#[cfg(test)]
+mod locos_tests {
+    use super::*;
+
+    #[test]
+    fn retagging_a_long_translation_stays_linear() {
+        // two placeables in the source, a translation with 200 000 of the first and none of the second: each
+        // placeable is searched once per pass over the text, not once per hit
+        let mut u = Unit::new("1", vec![Inline::text("x { $a } y { $b }")]);
+        u.codes.insert("1".into(), CodeData::standalone("{ $a }").with_label("placeholder"));
+        u.codes.insert("2".into(), CodeData::standalone("{ $b }").with_label("placeholder"));
+        let t = "{ $a }".repeat(200_000);
+        let out = retag_flattened(&u, vec![Inline::text(&t)]);
+        assert_eq!(out.len(), 200_000);
+        assert!(out.iter().all(|i| matches!(i, Inline::Tag { id, .. } if id == "1")));
+    }
 }

@@ -152,12 +152,13 @@ impl Filter for Po {
 
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
         bilingua_model::check_own_options(self, &opts.format_options)?;
+        if opts.is_profile(profile::LOCOS) {
+            let (text, tag, warnings) = locos::decode(bytes, opts)?;
+            return locos::extract(&text, &tag, opts, warnings);
+        }
         let mut dec = bilingua_model::enc::decode_text(bytes, &bilingua_model::enc::DecodeOptions::new(opts).declared())?;
         let text_owned = std::mem::take(&mut dec.text);
         let text = text_owned.as_str();
-        if opts.is_profile(profile::LOCOS) {
-            return locos::extract(text, &dec.encoding, opts, std::mem::take(&mut dec.warnings));
-        }
         let parsed = parse(text)?;
 
         // Header: the first entry with an empty msgid.

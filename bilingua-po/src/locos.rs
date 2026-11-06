@@ -680,6 +680,63 @@ fn build_localized(source: &str, texts: &BTreeMap<usize, String>, locale: &str) 
     (render(&mut entries, &out), true)
 }
 
+/// Reads a PO file as LocOS's `read_text_upload(sig=True, declared=True)` and `text_envelope(declared=True)` do:
+/// (text, skeleton tag, warnings). UTF-8, a UTF-16 BOM or a declared charset Bilingua reads; a file whose bytes
+/// do not fit the charset it declares is read as LocOS reads it (Windows-1252, or the project's code page) where
+/// Bilingua's binding declarations would refuse it. The tag then says how LocOS writes the file back: in its code
+/// page only when no charset is declared or the declaration names that code page (ISO-8859-1 and US-ASCII
+/// declarations as themselves), else UTF-8.
+pub fn decode(bytes: &[u8], opts: &ExtractOptions) -> Result<(String, String, Vec<Warning>), Error> {
+    // valid UTF-8 is UTF-8 whatever the file declares (an ASCII file declaring ISO-8859-1 included), text as is
+    let body = bytes.strip_prefix(b"\xEF\xBB\xBF").unwrap_or(bytes);
+    let declared = if std::str::from_utf8(body).is_ok() { enc::DecodeOptions::new(opts) } else { enc::DecodeOptions::new(opts).declared() };
+    let (text, tag, warnings) = match enc::decode_text(bytes, &declared) {
+        Ok(d) => (d.text, d.encoding, d.warnings),
+        Err(Error::Encoding(_)) => {
+            // LocOS: a charset that does not read the bytes is ignored and the file read as a code page
+            let d = enc::decode_text(bytes, &enc::DecodeOptions::new(opts))?;
+            let label = enc::declared_label(bytes);
+            let tag = match label {
+                Some(l) => format!("{};label={l}", d.encoding),
+                None => d.encoding,
+            };
+            (enc::rewrite_declarations(&d.text), tag, d.warnings)
+        }
+        Err(e) => return Err(e),
+    };
+    let base = enc::base(&tag).to_string();
+    if base.starts_with("utf-8") || base.starts_with("utf-16") {
+        return Ok((text, tag, warnings));
+    }
+    let Some(label) = tag.split(';').find_map(|p| p.strip_prefix("label=")).map(str::to_string) else {
+        return Ok((text, tag, warnings));
+    };
+    let nl: String = tag.split(';').filter(|p| p.starts_with("nl=")).map(|p| format!(";{p}")).collect();
+    let l = label.to_ascii_lowercase();
+    let latin1 = matches!(l.as_str(), "iso-8859-1" | "iso8859-1" | "iso88591" | "iso_8859-1" | "iso_8859-1:1987" | "latin1" | "latin-1" | "l1" | "cp819" | "ibm819" | "csisolatin1" | "iso-ir-100" | "8859");
+    let ascii = matches!(l.as_str(), "us-ascii" | "ascii" | "us" | "646" | "ansi_x3.4-1968" | "iso646-us" | "cp367" | "ibm367" | "csascii");
+    let same = |a: &str, b: &str| {
+        let e = |x: &str| bilingua_model::encoding_rs::Encoding::for_label(x.as_bytes());
+        e(a).is_some() && e(a) == e(b)
+    };
+    let tag = if latin1 && matches!(base.as_str(), "windows-1252" | "iso-8859-1") {
+        // LocOS writes ISO-8859-1 under its label (UTF-8 when the text does not fit)
+        format!("iso-8859-1{nl};label={label}")
+    } else if ascii && base == "windows-1252" {
+        if text.is_ascii() {
+            tag
+        } else {
+            format!("utf-8{nl}")
+        }
+    } else if !latin1 && !ascii && same(&label, &base) {
+        tag
+    } else {
+        // declared one charset, read as another: UTF-8, as LocOS writes it
+        format!("utf-8{nl}")
+    };
+    Ok((text, tag, warnings))
+}
+
 /// Extracts a PO file the LocOS way (see the module notes).
 pub fn extract(text: &str, encoding: &str, opts: &ExtractOptions, warnings: Vec<Warning>) -> Result<Document, Error> {
     let entries = parse_entries(&normalized(text));
@@ -729,6 +786,19 @@ mod tests {
     fn rule_keys_ignore_spacing_and_outer_parens() {
         assert_eq!(rule_key("Plural-Forms: nplurals=2; plural=(n != 1);"), rule_key("Plural-Forms: nplurals=2;plural=n!=1;"));
         assert_ne!(rule_key("Plural-Forms: nplurals=2; plural=(n > 1);"), rule_key("Plural-Forms: nplurals=2; plural=(n != 1);"));
+    }
+
+    #[test]
+    fn outer_parentheses_strip_in_one_pass() {
+        assert_eq!(strip_outer_parens("((n != 1))"), "n != 1");
+        assert_eq!(strip_outer_parens("(a)(b)"), "(a)(b)");
+        assert_eq!(strip_outer_parens("((a)"), "(a");
+        assert_eq!(strip_outer_parens("()"), "");
+        // 300 000 nested layers: LocOS rescans the rest at each one (quadratic), this is linear
+        let deep = format!("{}n{}", "(".repeat(300_000), ")".repeat(300_000));
+        assert_eq!(strip_outer_parens(&deep), "n");
+        let header = format!("Plural-Forms: nplurals=2; plural={deep};");
+        assert_eq!(rule_key(&header), ("2".to_string(), "n".to_string()));
     }
 
     #[test]

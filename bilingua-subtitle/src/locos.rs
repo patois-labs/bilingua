@@ -649,6 +649,19 @@ mod tests {
     }
 
     #[test]
+    fn a_cue_with_many_tags_stays_linear() {
+        // 50 000 nested spans around the text and 50 000 more inside it
+        let n = 50_000;
+        let cue = format!("{}{}word{}{}", "<i>".repeat(n), "<b>x</b>".repeat(n), "</i>".repeat(n), "<c>".repeat(n));
+        let (_, core, _, tokens) = vtt_tokenize(&cue);
+        assert!(!core.is_empty() && !tokens.is_empty());
+        let out = vtt_cue(&cue, &core_text(&core));
+        assert!(out.contains("word"));
+        let srt = format!("{}x{}", "{\\i1}".repeat(n), "{\\i0}".repeat(n));
+        assert!(!srt_tokenize(&srt).1.is_empty());
+    }
+
+    #[test]
     fn bare_ampersands_only() {
         assert_eq!(escape_bare_amp("a & b &amp; &#38; &#x26; &x"), "a &amp; b &amp; &#38; &#x26; &amp;x");
     }

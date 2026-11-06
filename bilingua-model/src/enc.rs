@@ -125,6 +125,13 @@ pub fn base(tag: &str) -> &str {
     tag.split(';').next().unwrap_or(tag)
 }
 
+/// Every charset declaration in `text` rewritten to say UTF-8, as LocOS's `read_text_upload(declared=True)` does
+/// to a file it converted.
+#[doc(hidden)]
+pub fn rewrite_declarations(text: &str) -> String {
+    rewrite_declared(text)
+}
+
 /// The skeleton tag without its newline part, so a merge leaves the line breaks of the text as they are (the LocOS
 /// profile's XML resource writers: LocOS does not normalise the breaks a translation brings in).
 #[doc(hidden)]
@@ -149,7 +156,9 @@ pub fn locos_skeleton(tag: &str, text: &str) -> Vec<u8> {
 pub fn locos_skeleton_parts(data: &[u8]) -> Option<(&str, &str)> {
     let s = std::str::from_utf8(data).ok()?;
     let (tag, text) = s.split_once('\n')?;
-    (!tag.is_empty() && !tag.contains(['\r', ' '])).then_some((tag, text))
+    // a tag is a charset name with `;nl=` / `;label=` parts: nothing a declaration could carry as markup
+    let ok = !tag.is_empty() && tag.len() <= 200 && tag.bytes().all(|b| b.is_ascii_alphanumeric() || b"_.:;=-".contains(&b));
+    ok.then_some((tag, text))
 }
 
 /// The tag LocOS's UTF-8 export writes a file under: UTF-8, its UTF-8 BOM and its line breaks kept (a UTF-16 BOM,
@@ -171,7 +180,9 @@ pub fn declared_encoding(data: &[u8]) -> Option<&'static Encoding> {
     Encoding::for_label(m.get(2)?.as_str().as_bytes())
 }
 
-fn declared_label(data: &[u8]) -> Option<String> {
+/// The charset name a file declares in its first 4 KB, as written.
+#[doc(hidden)]
+pub fn declared_label(data: &[u8]) -> Option<String> {
     let head = ascii_head(data, 4096);
     Some(decl_re().captures(&head)?.get(2)?.as_str().to_string())
 }
