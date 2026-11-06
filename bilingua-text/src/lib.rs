@@ -37,6 +37,11 @@ impl Filter for TextFilter {
         let text_owned = std::mem::take(&mut dec.text);
         let text = text_owned.as_str();
         let encoding = dec.encoding.as_str();
+        if opts.is_profile(profile::LOCOS) {
+            let (parts, units) = locos_parts(text);
+            let doc = Document::new(ID, units, Skeleton::text(parts, encoding, bilingua_model::parser_info!())).with_options(opts);
+            return bilingua_model::guard::finish(doc, std::mem::take(&mut dec.warnings), &opts.limits());
+        }
 
         let mut parts: Vec<SkelPart> = Vec::new();
         let mut units: Vec<Unit> = Vec::new();
@@ -92,6 +97,37 @@ impl Filter for TextFilter {
         }
         bilingua_model::enc::encode_text_with(&out, encoding, opts)
     }
+}
+
+/// The LocOS profile's text units: one per line that is not blank (Python `splitlines` breaks, `strip`ped), as
+/// LocOS's `TextFilter` makes them. The line's indentation and terminator are skeleton; its trailing spaces are
+/// dropped, as LocOS's build drops them.
+fn locos_parts(text: &str) -> (Vec<SkelPart>, Vec<Unit>) {
+    use bilingua_model::pytext::{py_split_line_end, py_splitlines_keepends};
+    let mut parts: Vec<SkelPart> = Vec::new();
+    let mut units: Vec<Unit> = Vec::new();
+    let mut raw = String::new();
+    for line in py_splitlines_keepends(text) {
+        let (body, end) = py_split_line_end(line);
+        let content = py_strip(body);
+        if content.is_empty() {
+            raw.push_str(line);
+            continue;
+        }
+        raw.push_str(&body[..body.len() - py_lstrip(body).len()]);
+        if !raw.is_empty() {
+            parts.push(SkelPart::Raw(std::mem::take(&mut raw)));
+        }
+        parts.push(SkelPart::Unit(units.len()));
+        let mut unit = Unit::new(format!("p{}", units.len() + 1), vec![Inline::text(content)]);
+        unit.context.kind = Some("paragraph".into());
+        units.push(unit);
+        raw.push_str(end);
+    }
+    if !raw.is_empty() {
+        parts.push(SkelPart::Raw(raw));
+    }
+    (parts, units)
 }
 
 /// Splits `line` into content and its line ending.

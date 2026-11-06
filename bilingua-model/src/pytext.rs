@@ -106,9 +106,58 @@ pub fn py_rstrip(s: &str) -> &str {
     s.trim_end_matches(py_isspace_char)
 }
 
+/// True for the characters Python's `str.splitlines` breaks at (`\r\n` counts as one break): `\n`, `\r`, `\x0b`,
+/// `\x0c`, `\x1c`, `\x1d`, `\x1e`, U+0085, U+2028, U+2029.
+pub fn py_is_line_break(c: char) -> bool {
+    matches!(c, '\n' | '\r' | '\u{0b}' | '\u{0c}' | '\u{1c}' | '\u{1d}' | '\u{1e}' | '\u{85}' | '\u{2028}' | '\u{2029}')
+}
+
+/// Python `s.splitlines(keepends=True)`: every line with its own terminator (`\r\n` counts as one).
+pub fn py_splitlines_keepends(s: &str) -> Vec<&str> {
+    let mut out = Vec::new();
+    let mut start = 0;
+    let mut it = s.char_indices().peekable();
+    while let Some((i, c)) = it.next() {
+        if py_is_line_break(c) {
+            let mut end = i + c.len_utf8();
+            if c == '\r' && matches!(it.peek(), Some(&(_, '\n'))) {
+                it.next();
+                end += 1;
+            }
+            out.push(&s[start..end]);
+            start = end;
+        }
+    }
+    if start < s.len() {
+        out.push(&s[start..]);
+    }
+    out
+}
+
+/// Splits one line of [`py_splitlines_keepends`] into its body and its terminator (`""`, one break, or `\r\n`).
+pub fn py_split_line_end(line: &str) -> (&str, &str) {
+    if let Some(body) = line.strip_suffix("\r\n") {
+        return (body, "\r\n");
+    }
+    match line.chars().next_back() {
+        Some(c) if py_is_line_break(c) => line.split_at(line.len() - c.len_utf8()),
+        _ => (line, ""),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn splitlines_is_pythons() {
+        assert_eq!(py_splitlines_keepends("a\r\nb\rc\u{2028}d\x0ce\n\nf"), ["a\r\n", "b\r", "c\u{2028}", "d\x0c", "e\n", "\n", "f"]);
+        assert!(py_splitlines_keepends("").is_empty());
+        assert_eq!(py_split_line_end("x\r\n"), ("x", "\r\n"));
+        assert_eq!(py_split_line_end("\n"), ("", "\n"));
+        assert_eq!(py_split_line_end("x\u{85}"), ("x", "\u{85}"));
+        assert_eq!(py_split_line_end("x"), ("x", ""));
+    }
 
     #[test]
     fn combining_marks_are_not_alphanumeric() {

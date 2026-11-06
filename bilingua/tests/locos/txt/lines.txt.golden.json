@@ -1,0 +1,66 @@
+{
+ "format": "txt",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Hello world.",
+   "style": ""
+  },
+  {
+   "p_index": 1,
+   "text": "Second line of the same paragraph.",
+   "style": ""
+  },
+  {
+   "p_index": 2,
+   "text": "Indented line",
+   "style": ""
+  },
+  {
+   "p_index": 3,
+   "text": "Tabbed",
+   "style": ""
+  },
+  {
+   "p_index": 4,
+   "text": "Last line",
+   "style": ""
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "SGVsbG8gd29ybGQuClNlY29uZCBsaW5lIG9mIHRoZSBzYW1lIHBhcmFncmFwaC4KCiAgSW5kZW50ZWQgbGluZSAgCglUYWJiZWQKCgpMYXN0IGxpbmU="
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü Hello world.",
+    "1": "Ü Second line of the same paragraph.",
+    "2": "Ü Indented line",
+    "3": "Ü Tabbed",
+    "4": "Ü Last line"
+   },
+   "out_b64": "w5wgSGVsbG8gd29ybGQuCsOcIFNlY29uZCBsaW5lIG9mIHRoZSBzYW1lIHBhcmFncmFwaC4KCiAgw5wgSW5kZW50ZWQgbGluZQoJw5wgVGFiYmVkCgoKw5wgTGFzdCBsaW5l"
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Hello world. & <\"'>",
+    "2": "Indented line & <\"'>",
+    "4": "Last line & <\"'>"
+   },
+   "out_b64": "SGVsbG8gd29ybGQuICYgPCInPgpTZWNvbmQgbGluZSBvZiB0aGUgc2FtZSBwYXJhZ3JhcGguCgogIEluZGVudGVkIGxpbmUgJiA8Iic+CglUYWJiZWQKCgpMYXN0IGxpbmUgJiA8Iic+"
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "out_b64": "SGVsbG8gd29ybGQuClNlY29uZCBsaW5lIG9mIHRoZSBzYW1lIHBhcmFncmFwaC4KCiAgSW5kZW50ZWQgbGluZQoJVGFiYmVkCgoKTGFzdCBsaW5l"
+  }
+ ]
+}
