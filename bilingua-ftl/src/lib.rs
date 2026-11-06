@@ -20,7 +20,6 @@
 pub const SKELETON_SCHEMA: u32 = 1;
 
 mod parser;
-mod plural_data;
 
 use bilingua_model::*;
 use parser::{El, Item, PKind};
@@ -637,33 +636,18 @@ fn escape_text(out: &mut String, seg: &str, at_line_start: bool) {
 // ---- plural fill ---------------------------------------------------------------------------------------------
 
 const PLURAL_ORDER: [&str; 6] = ["zero", "one", "two", "few", "many", "other"];
-const PLURAL_LETTERS: &str = "zotfmx";
 
 /// The CLDR plural (or ordinal) categories a locale uses, in CLDR order, always with `other`; `None` for no locale.
 fn target_categories(locale: &str, ordinal: bool) -> Option<Vec<&'static str>> {
     let norm = locale.trim().replace('-', "_");
-    let mut parts: Vec<String> = norm.split('_').map(str::to_string).collect();
-    if parts[0].is_empty() || !parts[0].bytes().all(|b| b.is_ascii_alphabetic()) {
+    let lang = norm.split('_').next().unwrap_or("");
+    if lang.is_empty() || !lang.bytes().all(|b| b.is_ascii_alphabetic()) {
         return None;
     }
-    parts[0] = parts[0].to_ascii_lowercase();
-    // The table's subtags are ASCII: a non-ASCII one never matches (and must not be cut inside a character).
-    for p in parts.iter_mut().skip(1).filter(|p| p.is_ascii()) {
-        if p.len() == 4 {
-            *p = format!("{}{}", p[..1].to_ascii_uppercase(), p[1..].to_ascii_lowercase());
-        } else {
-            *p = p.to_ascii_uppercase();
-        }
-    }
-    let mut letters = "x";
-    'search: for n in (1..=parts.len()).rev() {
-        let id = parts[..n].join("_");
-        if let Ok(i) = plural_data::TABLE.binary_search_by(|r| r.0.cmp(id.as_str())) {
-            letters = if ordinal { plural_data::TABLE[i].2 } else { plural_data::TABLE[i].1 };
-            break 'search;
-        }
-    }
-    Some(PLURAL_LETTERS.char_indices().filter(|(_, c)| letters.contains(*c)).map(|(i, _)| PLURAL_ORDER[i]).collect())
+    let lang = lang.to_ascii_lowercase();
+    // The table has language keys only: a region or script subtag never changes the categories.
+    let bits = if ordinal { bilingua_model::cldr::ordinal_bits(&lang) } else { bilingua_model::cldr::cardinal_bits(&lang).unwrap_or(32) };
+    Some(bilingua_model::cldr::names(bits))
 }
 
 fn select_list<'a>(els: &'a [El], out: &mut Vec<&'a parser::Select>) {

@@ -215,6 +215,7 @@ fn quoted_end(b: &[u8], pos: usize) -> Option<usize> {
     let q = b[pos];
     let mut i = pos + 1;
     while i < b.len() {
+        bilingua_model::work::tick(1);
         match b[i] {
             c if c == q => return Some(i + 1),
             b'\\' => {
@@ -314,11 +315,13 @@ pub fn lex(text: &str, limits: &Limits) -> Result<Vec<Tok>, ModuleError> {
     }
     let mut nl = false;
     while pos < n {
+        bilingua_model::work::tick(1);
         let c = b[pos];
         // Strings and templates.
         if c == b'`' {
             let mut i = pos + 1;
             let end = loop {
+                bilingua_model::work::tick(1);
                 if i >= n {
                     return refuse(text, pos, "an unterminated template literal");
                 }

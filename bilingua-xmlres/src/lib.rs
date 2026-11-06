@@ -5,7 +5,6 @@
 pub const SKELETON_SCHEMA: u32 = 1;
 
 mod cldr;
-mod cldr_table;
 mod scan;
 
 pub use bilingua_model::Limits;
@@ -371,6 +370,76 @@ fn extract(d: Dialect, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, 
     }
     let doc = Document::new(d.id(), units, Skeleton::text(parts, p.enc, bilingua_model::parser_info!())).with_options(opts);
     guard::finish(doc, p.warnings, limits)
+}
+
+/// One resource entry as a key-based project sees it (Localization OS `ResourceRecord`): every entry of the file in
+/// order, translatable or not. LocOS's `max_length` and `context` are always empty for these two dialects and are
+/// left out.
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
+pub struct Record {
+    /// The resource name (Android `name`, Java `key`).
+    pub key: String,
+    /// The text a translator sees, in LocOS's token text for inline markup, with its outer white space and without
+    /// the escapes a build puts back (Android `\'`, a value wholly in double quotes).
+    pub value: String,
+    /// The comment right before the resource (Android).
+    pub comment: String,
+    /// The CLDR quantity of an Android `<plurals>` item, else empty.
+    pub plural: String,
+    /// The position of an Android `<string-array>` item.
+    pub index: Option<usize>,
+    /// Not `translatable="false"`, not a resource reference, and the value has a letter, a digit or markup.
+    pub translatable: bool,
+}
+
+fn records_of(d: Dialect, bytes: &[u8]) -> Result<Vec<Record>, Error> {
+    let p = parse(d, bytes, &ExtractOptions::default())?;
+    let mut out = Vec::with_capacity(p.scan.slots.len());
+    for s in &p.scan.slots {
+        let reference = d == Dialect::Android
+            && !s.pieces.iter().any(|x| !matches!(x, Piece::Text(_)))
+            && first_text(&s.pieces).trim_start_matches(py_isspace_char).starts_with(['@', '?']);
+        let (pieces, _quoted) = shown(d, s);
+        let has_tag = pieces.iter().any(|x| !matches!(x, Piece::Text(_)));
+        let (inl, _codes, lead, trail) = to_inline(pieces);
+        let core_text: String = inl.iter().filter_map(|i| if let Inline::Text(t) = i { Some(t.as_str()) } else { None }).collect();
+        let translatable = !s.skip && !reference && (py_has_alnum(&core_text) || has_tag);
+        let value = format!("{lead}{}{trail}", profile::tokens::to_locos_text(&inl).0);
+        let (plural, index) = match &s.kind {
+            Kind::Plural(q) => (q.clone(), None),
+            Kind::Array(i) => (String::new(), Some(*i)),
+            _ => (String::new(), None),
+        };
+        out.push(Record { key: s.name.clone(), value, comment: s.comment.clone(), plural, index, translatable });
+    }
+    Ok(out)
+}
+
+/// Every entry of an Android `strings.xml` or a Java XML properties file, chosen by the root element as LocOS's
+/// `.xml` dispatcher does (`<resources>`, `<properties>`); any other root is `Error::Unsupported`.
+pub fn records(bytes: &[u8]) -> Result<Vec<Record>, Error> {
+    if AndroidStrings.sniff(bytes) {
+        records_of(Dialect::Android, bytes)
+    } else if JavaXmlProperties.sniff(bytes) {
+        records_of(Dialect::JavaProps, bytes)
+    } else {
+        Err(Error::Unsupported("This XML file is not a supported resource format. Supported .xml files: Android strings.xml (<resources>) and Java XML properties (<properties>).".into()))
+    }
+}
+
+impl AndroidStrings {
+    /// Every entry of the file in order (the key-based view); see [`Record`].
+    pub fn records(&self, bytes: &[u8]) -> Result<Vec<Record>, Error> {
+        records_of(Dialect::Android, bytes)
+    }
+}
+
+impl JavaXmlProperties {
+    /// Every entry of the file in order (the key-based view); see [`Record`].
+    pub fn records(&self, bytes: &[u8]) -> Result<Vec<Record>, Error> {
+        records_of(Dialect::JavaProps, bytes)
+    }
 }
 
 /// The new inner XML of a translated unit, or `None` when the original is kept.

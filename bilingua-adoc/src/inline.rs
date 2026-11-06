@@ -48,11 +48,13 @@ fn point(kind: &'static str, end: usize) -> Found {
 }
 
 fn at(s: &[char], i: usize) -> Option<char> {
+    bilingua_model::work::tick(1);
     s.get(i).copied()
 }
 
 fn starts(s: &[char], i: usize, lit: &str) -> bool {
     let mut k = i;
+    bilingua_model::work::tick(1);
     for c in lit.chars() {
         if s.get(k) != Some(&c) {
             return false;

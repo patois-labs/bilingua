@@ -239,7 +239,8 @@ pub fn locos_set_target(doc: &mut Document, seg_id: &str, target: Vec<Inline>) -
     }
     // validated as any target (unknown segment, locked unit), then kept as it is
     doc.set_target(seg_id, target.clone())?;
-    let seg = doc.units.iter_mut().flat_map(|u| u.segments.iter_mut()).find(|s| s.id == seg_id).ok_or_else(|| Error::UnknownSegment(seg_id.to_string()))?;
+    let (ui, si) = doc.locate(seg_id).ok_or_else(|| Error::UnknownSegment(seg_id.to_string()))?;
+    let seg = &mut doc.units[ui].segments[si];
     let text: String = target.iter().map(|i| if let Inline::Text(t) = i { t.as_str() } else { "" }).collect();
     seg.target = vec![Inline::Text(text)];
     seg.empty_target = false;

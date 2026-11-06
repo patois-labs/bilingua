@@ -91,6 +91,7 @@ pub fn lines(text: &str) -> Vec<(usize, usize)> {
         while e < b.len() && b[e] != b'\r' && b[e] != b'\n' {
             e += 1;
         }
+        bilingua_model::work::tick(1 + (e - pos) as u64);
         out.push((pos, e));
         if e >= b.len() {
             break;

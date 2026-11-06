@@ -1,10 +1,9 @@
 //! Locale knowledge: is a root key a locale code (Rails files), and which CLDR plural categories does a target
 //! language use. The tables in `locale_data` come from Babel's CLDR data, like LocOS.
 
-use crate::locale_data::{LANGUAGES, PLURALS, SCRIPTS, TERRITORIES};
+use crate::locale_data::{LANGUAGES, SCRIPTS, TERRITORIES};
 
 const RAILS_3_LETTER: &[&str] = &["ast", "fil", "gsw", "haw", "ckb", "dsb", "hsb", "nds", "sah", "yue"];
-pub const PLURAL_ORDER: [&str; 6] = ["zero", "one", "two", "few", "many", "other"];
 
 /// `^[A-Za-z]{2,3}(?:[-_][A-Za-z0-9]{2,8})*$`
 fn locale_shape(k: &str) -> bool {
@@ -46,30 +45,12 @@ pub fn looks_locale(key: &str) -> bool {
     true
 }
 
-fn letter_cats(code: &str) -> &'static str {
-    let key = code.trim().replace('-', "_");
-    let find = |k: &str| PLURALS.binary_search_by(|(a, _)| (*a).cmp(k)).ok().map(|i| PLURALS[i].1);
-    if let Some(c) = find(&key) {
-        return c;
-    }
-    let base = key.split('_').next().unwrap_or("");
-    find(base).unwrap_or("")
-}
-
 /// The CLDR plural categories of a language in CLDR order, always with `other`. None when unknown.
 pub fn target_categories(locale: &str) -> Option<Vec<&'static str>> {
-    let letters = letter_cats(locale);
-    if letters.is_empty() {
-        return None;
-    }
-    Some(
-        PLURAL_ORDER
-            .iter()
-            .zip(["z", "o", "t", "f", "m", "x"])
-            .filter(|(_, l)| letters.contains(l))
-            .map(|(n, _)| *n)
-            .collect(),
-    )
+    let key = locale.trim().replace('-', "_");
+    // the language part as written: the table's keys are lower case, so `PL` is unknown, as in LocOS
+    let base = key.split('_').next().unwrap_or("");
+    bilingua_model::cldr::cardinal_bits(base).map(bilingua_model::cldr::names)
 }
 
 /// The target's categories absent from `have` (CLDR order). Empty when `have` has no `other`.

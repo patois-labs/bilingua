@@ -24,6 +24,9 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
 pub mod b64;
+/// CLDR plural categories per language, shared by the format crates (not part of the semver API).
+#[doc(hidden)]
+pub mod cldr;
 pub mod codepage;
 pub mod enc;
 pub mod garble;
@@ -34,6 +37,9 @@ pub mod plural_table;
 pub mod profile;
 mod pytables;
 pub mod pytext;
+/// A scanning-step counter for tests that show a parser is linear without timing it (not part of the semver API).
+#[doc(hidden)]
+pub mod work;
 
 pub use encoding_rs;
 pub use guard::{LimitError, LimitKind, Limits};
@@ -958,7 +964,38 @@ pub struct Document {
     /// from the skeleton; left out of the JSON when unset.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub source_encoding: Option<String>,
+    /// Segment id to position, built on the first [`Document::set_target`] and checked on every use.
+    #[serde(skip)]
+    seg_index: SegIndex,
 }
+
+/// The lookup behind [`Document::set_target`]. It is a cache: it never takes part in equality, serialisation or
+/// the document's identity, and a stale entry is detected and rebuilt, never trusted.
+#[derive(Default)]
+struct SegIndex(Option<std::collections::HashMap<String, (usize, usize)>>);
+
+/// A clone starts without the cache (it is rebuilt on its first use), so cloning a document costs no more than
+/// before the index existed.
+impl Clone for SegIndex {
+    fn clone(&self) -> SegIndex {
+        SegIndex(None)
+    }
+}
+
+/// The cache never shows in a document's `Debug` output beyond its name, so the output does not change with it.
+impl std::fmt::Debug for SegIndex {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("SegIndex")
+    }
+}
+
+impl PartialEq for SegIndex {
+    fn eq(&self, _: &SegIndex) -> bool {
+        true
+    }
+}
+
+impl Eq for SegIndex {}
 
 /// A notice about a file that was read anyway: it never stops a merge. `kind` is a stable word for programs
 /// ("text_encoding"); `message` is plain text safe to show the person who uploaded the file.
@@ -985,7 +1022,7 @@ impl Document {
     /// A document of `format` (the filter id) with its units and skeleton; no name, no languages, sentence
     /// granularity, no warnings.
     pub fn new(format: impl Into<String>, units: Vec<Unit>, skeleton: Skeleton) -> Document {
-        Document { format: format.into(), name: None, source_lang: None, target_lang: None, granularity: Granularity::default(), units, skeleton, warnings: vec![], source_encoding: None }
+        Document { format: format.into(), name: None, source_lang: None, target_lang: None, granularity: Granularity::default(), units, skeleton, warnings: vec![], source_encoding: None, seg_index: SegIndex::default() }
     }
     /// Takes the languages and the granularity from the options the file was opened with (what every parser does).
     pub fn with_options(mut self, opts: &ExtractOptions) -> Document {
@@ -1046,15 +1083,30 @@ impl Document {
     /// Sets a segment's target. Rejects unknown segments, untranslatable units, and tags the source lacks or
     /// repeats. A missing tag is allowed (the writer leaves it out), as in catcore.
     ///
-    /// This looks the segment up by a scan of the document; for many segments use [`Document::set_targets`].
+    /// The first call builds an index of segment ids (one pass over the document); later calls find the segment
+    /// through it, so setting every segment of a 12 000 unit file is linear, not quadratic. The index is checked
+    /// on each use and rebuilt when the units were edited since (a segment added, removed or renamed through the
+    /// public fields); for many segments at once [`Document::set_targets`] is still the lighter call. When two
+    /// segments share an id, the first one in the document wins as long as the units are not edited between
+    /// calls.
     pub fn set_target(&mut self, seg_id: &str, target: Vec<Inline>) -> Result<(), Error> {
-        let at = self
-            .units
-            .iter()
-            .enumerate()
-            .find_map(|(ui, u)| u.segments.iter().position(|s| s.id == seg_id).map(|si| (ui, si)))
-            .ok_or_else(|| Error::UnknownSegment(seg_id.to_string()))?;
+        let at = self.locate(seg_id).ok_or_else(|| Error::UnknownSegment(seg_id.to_string()))?;
         self.apply_target(at, seg_id, target)
+    }
+
+    /// Position (unit, segment) of the segment with this id, through the cached index.
+    pub(crate) fn locate(&mut self, seg_id: &str) -> Option<(usize, usize)> {
+        let valid = |units: &[Unit], (ui, si): (usize, usize)| units.get(ui).and_then(|u| u.segments.get(si)).is_some_and(|s| s.id == seg_id);
+        if let Some(at) = self.seg_index.0.as_ref().and_then(|m| m.get(seg_id)).copied() {
+            if valid(&self.units, at) {
+                return Some(at);
+            }
+        }
+        // A miss or a stale hit: the index may be out of date, so rebuild it once and look again.
+        let fresh = self.segment_index();
+        let at = fresh.get(seg_id).copied();
+        self.seg_index = SegIndex(Some(fresh));
+        at
     }
 
     /// Sets many targets in one pass: one id index is built for the whole call, so 100 000 segments take
@@ -1659,6 +1711,7 @@ mod tests {
             skeleton: Skeleton::Text { parts: vec![SkelPart::Unit(0)], encoding: "utf-8".into(), parser: None },
             warnings: vec![],
             source_encoding: None,
+            seg_index: SegIndex::default(),
         };
         // An editor that does not know the flag sends both codes as not free, and claims the %s is free.
         let t = vec![
@@ -1683,6 +1736,7 @@ mod tests {
             skeleton: Skeleton::Text { parts: vec![SkelPart::Unit(0)], encoding: "utf-8".into(), parser: None },
             warnings: vec![],
             source_encoding: None,
+            seg_index: SegIndex::default(),
         };
         assert!(d.set_target("u1", vec![Inline::text("y")]).is_ok());
         assert!(matches!(d.set_target("u1", vec![Inline::tag("2", TagKind::Open, "<i>")]), Err(Error::InventedTag(_))));
@@ -1714,6 +1768,53 @@ mod tests {
         b.set_targets((0..50).filter(|i| *i != 7).map(|i| (format!("u{i}"), vec![Inline::text(format!("T{i}"))]))).unwrap();
         assert_eq!(a, b);
         assert_eq!(b.find("u49").unwrap().1.state, SegState::Draft);
+    }
+
+    #[test]
+    fn set_target_index_follows_edits_and_stays_out_of_equality() {
+        let mut d = big_doc(20);
+        d.set_target("u5", vec![Inline::text("a")]).unwrap();
+        // the cached index does not make two equal documents unequal, and does not reach the JSON
+        let e: Document = serde_json::from_str(&serde_json::to_string(&d).unwrap()).unwrap();
+        assert_eq!(d, e);
+        assert!(!serde_json::to_string(&d).unwrap().contains("seg_index"));
+        // units removed, inserted and renamed through the public fields since the index was built
+        let moved = d.units.remove(2);
+        d.set_target("u6", vec![Inline::text("b")]).unwrap();
+        assert_eq!(d.find("u6").unwrap().1.target, vec![Inline::text("b")]);
+        assert!(matches!(d.set_target("u2", vec![]), Err(Error::UnknownSegment(_))));
+        d.units.insert(0, moved);
+        d.set_target("u2", vec![Inline::text("c")]).unwrap();
+        assert_eq!(d.units[0].segments[0].target, vec![Inline::text("c")]);
+        d.units[3].segments[0].id = "renamed".into();
+        d.set_target("renamed", vec![Inline::text("d")]).unwrap();
+        assert!(d.find("renamed").unwrap().1.has_target());
+        // a clone and the JSON round trip set targets the same way
+        let mut c: Document = serde_json::from_str(&serde_json::to_string(&d).unwrap()).unwrap();
+        c.set_target("u9", vec![Inline::text("x")]).unwrap();
+        assert_eq!(c.find("u9").unwrap().1.target, vec![Inline::text("x")]);
+    }
+
+    #[test]
+    fn set_target_index_keeps_first_duplicate_send_sync_and_debug() {
+        fn send_sync<T: Send + Sync>() {}
+        send_sync::<Document>();
+        let mut d = big_doc(6);
+        d.units[4].segments[0].id = "u1".into();
+        let before = format!("{d:?}");
+        d.set_target("u1", vec![Inline::text("a")]).unwrap();
+        d.set_target("u1", vec![Inline::text("b")]).unwrap();
+        // the first segment with the id wins, as the old scan did; the later twin is untouched
+        assert_eq!(d.units[1].segments[0].target, vec![Inline::text("b")]);
+        assert!(!d.units[4].segments[0].has_target());
+        // the cache does not show in Debug, and a clone (which starts without it) sets targets the same way
+        let mut fresh = big_doc(6);
+        fresh.units[4].segments[0].id = "u1".into();
+        assert_eq!(before, format!("{fresh:?}"));
+        let mut c = d.clone();
+        c.set_target("u3", vec![Inline::text("z")]).unwrap();
+        assert_eq!(c.find("u3").unwrap().1.target, vec![Inline::text("z")]);
+        assert_eq!(format!("{:?}", d.clone()), format!("{d:?}"));
     }
 
     #[test]

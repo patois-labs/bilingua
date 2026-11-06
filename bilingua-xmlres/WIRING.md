@@ -11,5 +11,6 @@
   by root; `locos_dump.py` reports the dialect (`xml:android`, `xml:java-xml-properties`).
 - Options: none. Merge honours `output_encoding` and `stamp_target_always` (plural fill with nothing translated).
 - LocOS adapter: tags map one to one (Open/Close = `g`, Standalone = `x`); placeholders are text as in LocOS. LocOS's
-  `p_index` counts skipped slots; Bilingua ids count units only (`u1`...). No `records()` yet (LocOS has one for the
-  keys bridge); it is a small add when the adapter needs it.
+  `p_index` counts skipped slots; Bilingua ids count units only (`u1`...). `records(bytes)` (and `AndroidStrings::records`, `JavaXmlProperties::records`)
+  is LocOS's `records()` key view (`Record`: key, value, comment, plural, index, translatable; every entry in file
+  order); `tests/records.rs` checks it against LocOS on `tests/data/locos_records.json` (`tests/tools/gen_records.py`).

@@ -220,17 +220,13 @@ fn huge_and_degenerate_files_are_typed_errors_or_fine() {
     let long = format!("export default {{ a: '{}' }}", "word ".repeat(30_000));
     assert!(matches!(extract_str(&long), Err(Error::Unsupported(m)) if m.contains("longer than")));
     // quadratic traps
-    let zeros = format!("export default {{ a: 'x %{}z' }}", "0".repeat(100_000));
-    let t = std::time::Instant::now();
-    let _ = extract_str(&zeros);
-    let braces = format!("export default {{ a: '{}' }}", "{ ".repeat(40_000));
-    let _ = extract_str(&braces);
-    let icu = format!(
-        "export default {{ a: '{{n, plural, {}' }}",
-        "one {x} ".repeat(5_000)
-    );
-    let _ = extract_str(&icu);
-    assert!(t.elapsed().as_secs() < 20, "{:?}", t.elapsed());
+    let work = |make: &dyn Fn(usize) -> String, n: usize| {
+        let (small, big) = (bilingua_model::work::count(|| extract_str(&make(n))).1, bilingua_model::work::count(|| extract_str(&make(2 * n))).1);
+        assert!(small > 0 && big * 10 <= small * 25 + 2_000, "{small} steps for n={n}, {big} for n={}: more than linear", 2 * n);
+    };
+    work(&|k| format!("export default {{ a: 'x %{}z' }}", "0".repeat(k)), 40_000);
+    work(&|k| format!("export default {{ a: '{}' }}", "{ ".repeat(k)), 20_000);
+    work(&|k| format!("export default {{ a: '{{n, plural, {}' }}", "one {x} ".repeat(k)), 2_500);
     for s in [
         "'\\",
         "`\\",

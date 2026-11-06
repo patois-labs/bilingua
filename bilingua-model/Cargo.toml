@@ -12,6 +12,11 @@ readme = "README.md"
 keywords = ["localization", "translation", "l10n", "xliff", "segment"]
 categories.workspace = true
 
+[features]
+# Counts scanning steps in `bilingua_model::work` for the linearity tests of the format crates (their
+# dev-dependencies turn it on). Off in every release build, where `work::tick` compiles to nothing. Not semver API.
+work-count = []
+
 [dependencies]
 encoding_rs = { workspace = true }
 regex = { workspace = true }
