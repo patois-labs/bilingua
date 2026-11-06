@@ -340,6 +340,7 @@ name = "bilingua-json"
 version = "0.9.0"
 dependencies = [
  "bilingua-model",
+ "proptest",
  "regex",
  "serde_json",
 ]

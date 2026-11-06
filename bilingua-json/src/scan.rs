@@ -336,3 +336,33 @@ pub fn quote(text: &str) -> String {
     out.push('"');
     out
 }
+
+/// Like [`unescape`], with U+FFFD for a lone surrogate escape (object keys).
+pub fn unescape_lossy(inner: &str) -> String {
+    match unescape(inner) {
+        Some(s) => s,
+        None => {
+            // replace each \uD800-\uDFFF escape by U+FFFD, then decode the rest
+            let mut out = String::new();
+            let b = inner.as_bytes();
+            let mut i = 0;
+            let mut run = 0;
+            while i < b.len() {
+                if b[i] == b'\\' && b.get(i + 1) == Some(&b'u') && i + 6 <= b.len() {
+                    if let Ok(v) = u32::from_str_radix(&inner[i + 2..i + 6], 16) {
+                        if (0xD800..0xE000).contains(&v) {
+                            out.push_str(&unescape(&inner[run..i]).unwrap_or_default());
+                            out.push('\u{FFFD}');
+                            i += 6;
+                            run = i;
+                            continue;
+                        }
+                    }
+                }
+                i += if b[i] == b'\\' { 2 } else { 1 };
+            }
+            out.push_str(&unescape(&inner[run..]).unwrap_or_default());
+            out
+        }
+    }
+}
