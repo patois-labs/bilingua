@@ -11,7 +11,7 @@ The first public release.
 
 ### Formats
 
-88 filter ids in 65 format crates, all behind the `bilingua` facade (`bilingua::filters()`, `bilingua::detect`). The full
+92 filter ids in 67 format crates, all behind the `bilingua` facade (`bilingua::filters()`, `bilingua::detect`). The full
 table, with extensions, is in the README.
 
 - Office and publishing: Word, Excel, PowerPoint, Visio, OpenDocument (text, spreadsheet, presentation, drawing),

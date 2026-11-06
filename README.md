@@ -26,6 +26,7 @@ yours.
 | Adobe InCopy ICML and WoodWing WCML | `icml` | `.icml` `.wcml` |  |
 | Adobe InDesign IDML | `idml` | `.idml` |  |
 | Advanced SubStation Alpha and SSA subtitles | `ass` | `.ass` `.ssa` |  |
+| Android string resources (strings.xml) | `android` | by content |  |
 | Apple .strings | `strings` | `.strings` |  |
 | Apple .stringsdict | `stringsdict` | `.stringsdict` |  |
 | Apple property lists (XML and binary) | `plist` | `.plist` |  |
@@ -54,6 +55,7 @@ yours.
 | HTML Help table of contents | `hhc` | `.hhc` |  |
 | INI and Joomla language files | `ini` | `.ini` |  |
 | Java and Mozilla .properties | `properties` | `.properties` |  |
+| Java XML properties | `javaxml` | by content |  |
 | JavaScript and TypeScript locale modules | `js` | `.js` `.cjs` `.mjs` `.ts` `.mts` `.cts` |  |
 | JavaServer Pages | `jsp` | `.jsp` `.jspf` |  |
 | JSON | `json` | `.json` |  |
@@ -92,7 +94,7 @@ yours.
 | SVG text | `svg` | `.svg` |  |
 | TOML | `toml` | `.toml` |  |
 | Trados project and return packages | `sdlppx` | `.sdlppx` `.sdlrpx` | yes |
-| Trados SDLXLIFF | `sdlxliff` | `.sdlxliff` | yes |
+| Trados SDLXLIFF | `sdlxliff` | `.sdlxliff` `.sdlxlf` | yes |
 | Trados Studio project file | `sdlproj` | `.sdlproj` |  |
 | Trados TagEditor TTX | `ttx` | `.ttx` | yes |
 | TSV | `tsv` | `.tsv` `.tab` |  |
@@ -113,7 +115,7 @@ yours.
 | YAML (generic, Rails i18n, Symfony) | `yaml` | `.yaml` `.yml` |  |
 | YouTube SBV subtitles | `sbv` | `.sbv` |  |
 
-90 formats.
+92 formats.
 <!-- formats:end -->
 
 `bilingua::detect` picks the format by extension and then by looking at the bytes, so most files need no hint.
