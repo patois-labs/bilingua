@@ -88,7 +88,12 @@ fn every_format_writes_a_repeated_standalone_placeholder_each_time() {
         }
     }
     assert!(checked >= 100 && formats.len() >= 20, "too little covered: {checked} units in {formats:?}");
-    assert!(problems.is_empty(), "{} problem(s):\n{}", problems.len(), problems.join("\n"));
+    let mut by_format: std::collections::BTreeMap<String, usize> = Default::default();
+    for p in &problems {
+        let f = p.split('[').nth(1).and_then(|r| r.split(']').next()).unwrap_or("?").to_string();
+        *by_format.entry(f).or_default() += 1;
+    }
+    assert!(problems.is_empty(), "{} problem(s) by format {by_format:?}:\n{}", problems.len(), problems.join("\n"));
 }
 
 /// Paired tags keep the exactly-once rule under the profile; a tag the source lacks is still refused.
