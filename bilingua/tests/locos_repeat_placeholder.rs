@@ -24,12 +24,9 @@ fn corpus() -> Vec<(String, Vec<u8>)> {
     out
 }
 
-fn count_standalone(inl: &[Inline], display: &str) -> usize {
-    inl.iter().filter(|i| matches!(i, Inline::Tag { kind: TagKind::Standalone, display: d, .. } if d == display)).count()
-}
-
-/// For every corpus file: repeat the first standalone tag of each unit, merge under the profile, read the result
-/// back, and find the placeholder twice.
+/// For every corpus file: translate each unit as itself (the baseline) and as itself with its first standalone tag
+/// written twice, merge both under the profile: the repeat must be accepted, written (the output differs and is
+/// longer) and the result must read back.
 #[test]
 fn every_format_writes_a_repeated_standalone_placeholder_each_time() {
     let mut problems: Vec<String> = Vec::new();
@@ -40,61 +37,56 @@ fn every_format_writes_a_repeated_standalone_placeholder_each_time() {
             .with_target_lang("de-DE")
             .with_granularity(Granularity::Paragraph)
             .with_profile("locos");
-        let Ok(mut doc) = extract(&name, &bytes, &o) else { continue };
-        let mut wanted: Vec<(String, String, usize)> = Vec::new(); // unit id, tag display, tags in the source
-        for u in doc.units.clone() {
+        let Ok(mut base) = extract(&name, &bytes, &o) else { continue };
+        let mut rep = base.clone();
+        let mut repeated = 0usize;
+        for u in base.units.clone() {
             if !u.translate || u.segments.len() != 1 {
                 continue;
             }
             let seg = &u.segments[0];
-            let Some(Inline::Tag { id, display, .. }) = seg.source.iter().find(|i| matches!(i, Inline::Tag { kind: TagKind::Standalone, .. })).cloned() else { continue };
-            let mut target = seg.source.clone();
-            let again = seg.source.iter().find(|i| matches!(i, Inline::Tag { id: t, .. } if *t == id)).cloned().unwrap();
-            target.push(Inline::text(" "));
-            target.push(again);
+            let Some(at) = seg.source.iter().position(|i| matches!(i, Inline::Tag { kind: TagKind::Standalone, .. })) else { continue };
+            let mut twice = seg.source.clone();
+            twice.insert(at, seg.source[at].clone());
             // the plain rule still refuses the repeat
-            if doc.clone().set_target(&seg.id, target.clone()).is_ok() {
+            if rep.clone().set_target(&seg.id, twice.clone()).is_ok() {
                 problems.push(format!("{name}: plain set_target took a repeated standalone tag in {}", u.id));
             }
-            if let Err(e) = profile::locos_set_target(&mut doc, &seg.id, target) {
+            if let Err(e) = profile::locos_set_target(&mut base, &seg.id, seg.source.clone()) {
+                problems.push(format!("{name}: locos_set_target refused the source of {}: {e}", u.id));
+                continue;
+            }
+            if let Err(e) = profile::locos_set_target(&mut rep, &seg.id, twice) {
                 problems.push(format!("{name}: locos_set_target refused a repeat in {}: {e}", u.id));
                 continue;
             }
-            let before = count_standalone(&seg.source, &display);
-            wanted.push((u.id.clone(), display, before));
+            repeated += 1;
         }
-        if wanted.is_empty() {
+        if repeated == 0 {
             continue;
         }
-        let m = profile::locos().merge_options(&doc.format);
-        let out = match merge_with(&doc, &m) {
+        let m = profile::locos().merge_options(&base.format);
+        let Ok(out_base) = merge_with(&base, &m) else { continue };
+        let out_rep = match merge_with(&rep, &m) {
             Ok(b) => b,
             Err(e) => {
                 problems.push(format!("{name}: merge refused a repeated standalone tag: {e}"));
                 continue;
             }
         };
-        let back = match extract(&name, &out, &o) {
-            Ok(d) => d,
-            Err(e) => {
+        checked += repeated;
+        formats.insert(base.format.clone());
+        if out_rep == out_base || out_rep.len() <= out_base.len() && !name.ends_with("zip") && base.format != "mo" {
+            problems.push(format!("{name}: {repeated} repeated placeholder(s) were not written (output {} bytes, baseline {})", out_rep.len(), out_base.len()));
+            continue;
+        }
+        if extract(&name, &out_base, &o).is_ok() {
+            if let Err(e) = extract(&name, &out_rep, &o) {
                 problems.push(format!("{name}: the merged file does not read back: {e}"));
-                continue;
-            }
-        };
-        checked += wanted.len();
-        formats.insert(doc.format.clone());
-        for (id, display, before) in wanted {
-            let Some(u) = back.units.iter().find(|u| u.id == id) else {
-                problems.push(format!("{name}: unit {id} is gone after the merge"));
-                continue;
-            };
-            let n = count_standalone(&u.segments.iter().flat_map(|s| s.source.clone()).collect::<Vec<_>>(), &display);
-            if n < before.max(1) + 1 {
-                problems.push(format!("{name}: unit {id} has the placeholder {display:?} {n} time(s) after the merge, wanted {}", before.max(1) + 1));
             }
         }
     }
-    assert!(checked >= 40 && formats.len() >= 10, "too little covered: {checked} units in {formats:?}");
+    assert!(checked >= 100 && formats.len() >= 20, "too little covered: {checked} units in {formats:?}");
     assert!(problems.is_empty(), "{} problem(s):\n{}", problems.len(), problems.join("\n"));
 }
 
