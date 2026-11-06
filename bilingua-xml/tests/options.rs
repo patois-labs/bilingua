@@ -105,7 +105,7 @@ fn locos_user_rules_file_through_the_option() {
         (format!(r#"{ITS_OPEN}<its:translateRule selector="//a[b[c[d]]]" translate="no"/></its:rules>"#), "two deep"),
         (format!(r#"{ITS_OPEN}<its:translateRule selector="//a" translate="maybe"/></its:rules>"#), "yes or no"),
         (format!("{ITS_OPEN}{}</its:rules>", r#"<its:translateRule selector="//a" translate="no"/>"#.repeat(101)), "more than 100"),
-        (format!(r#"<!DOCTYPE x [<!ENTITY a "b">]>{ITS_OPEN}</its:rules>"#), "DTD internal subset"),
+        (format!(r#"<!DOCTYPE x [<!ENTITY a "b">]>{ITS_OPEN}</its:rules>"#), "DTD"), // refused, in the crate's own words
     ];
     for (sel, needle) in [
         ("//*/following::*", "following and preceding"),
