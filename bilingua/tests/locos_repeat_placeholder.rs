@@ -29,8 +29,8 @@ fn corpus() -> Vec<(String, Vec<u8>)> {
 /// too. Server pages also write a tag that carries code once (`<a href="<?php x() ?>">`), on purpose. Every other
 /// format writes a repeated standalone placeholder each time, as LocOS does.
 const LOCOS_KEEPS_ONCE: &[&str] = &[
-    "android", "aspx", "ass", "dita", "docbook", "docx", "erb", "icml", "idml", "jsp", "mif", "phtml", "shtml", "ttml", "ttx", "txlf", "txml", "vsdx", "vtt",
-    "xlz", "xmb", "xml", "xslt", "xtb", "xtg", "wsxz", "php", "ascx", "jspf",
+    "android", "aspx", "ass", "dita", "docbook", "docx", "erb", "icml", "idml", "jsp", "phtml", "shtml", "ttml", "ttx", "txlf", "txml", "vsdx", "vtt",
+    "xlz", "xmb", "xml", "xslt", "xtb", "xtg",
 ];
 
 /// For every corpus file: translate each unit as itself (the baseline) and as itself with its first standalone tag
@@ -123,4 +123,83 @@ fn paired_tags_and_invented_tags_are_still_refused() {
     let mut again = seg.source.clone();
     again.push(br);
     assert!(profile::locos_set_target(&mut doc, &seg.id, again).is_ok());
+}
+
+/// Cases compared with the LocOS filters (11-06, their `build` on the same translations): a repeated `#` in an ICU
+/// plural, Chrome `$NAME$` and go `{{.Count}}` are accepted and written each time.
+#[test]
+fn repeats_are_written_as_locos_writes_them() {
+    use bilingua_model::profile::tokens::{from_locos_text, to_locos_text};
+    let o = ExtractOptions::new().with_source_lang("en").with_granularity(Granularity::Paragraph).with_profile("locos");
+    for (name, src, units, translations, want) in [
+        (
+            "a.arb",
+            r##"{"@@locale": "en", "n": "{c, plural, one{# item} other{# items}}"}"##,
+            vec!["\u{27E6}x1\u{27E7} item", "\u{27E6}x1\u{27E7} items"],
+            vec!["\u{27E6}x1\u{27E7} \u{27E6}x1\u{27E7} St\u{FC}ck", "\u{27E6}x1\u{27E7} und \u{27E6}x1\u{27E7} St\u{FC}cke"],
+            r##"{"@@locale": "en", "n": "{c, plural, one{# # Stuck} other{# und # Stucke}}"}"##,
+        ),
+        (
+            "a.json",
+            r##"{"hi": {"message": "Hello $NAME$", "placeholders": {"name": {"content": "$1"}}}}"##,
+            vec!["Hello \u{27E6}x1\u{27E7}"],
+            vec!["Hallo \u{27E6}x1\u{27E7} \u{27E6}x1\u{27E7}"],
+            r##"{"hi": {"message": "Hallo $NAME$ $NAME$", "placeholders": {"name": {"content": "$1"}}}}"##,
+        ),
+        (
+            "b.json",
+            r##"[{"id": "n", "translation": {"one": "{{.Count}} file", "other": "{{.Count}} files"}}]"##,
+            vec!["\u{27E6}x1\u{27E7} file", "\u{27E6}x1\u{27E7} files"],
+            vec!["\u{27E6}x1\u{27E7} \u{27E6}x1\u{27E7} Datei", "\u{27E6}x1\u{27E7} Dateien"],
+            r##"[{"id": "n", "translation": {"one": "{{.Count}} {{.Count}} Datei", "other": "{{.Count}} Dateien"}}]"##,
+        ),
+    ] {
+        let mut doc = extract(name, src.as_bytes(), &o).unwrap();
+        let mut texts = Vec::new();
+        let mut sets = Vec::new();
+        for (u, t) in doc.units.iter().zip(&translations) {
+            let (text, map) = to_locos_text(&u.segments[0].source);
+            texts.push(text);
+            sets.push((u.segments[0].id.clone(), from_locos_text(t, &map)));
+        }
+        assert_eq!(texts, units, "{name}: unit texts");
+        for (id, inl) in sets {
+            profile::locos_set_target(&mut doc, &id, inl).unwrap_or_else(|e| panic!("{name}: {e}"));
+        }
+        let out = merge_with(&doc, &profile::locos().merge_options(&doc.format)).unwrap();
+        assert_eq!(String::from_utf8(out).unwrap(), want, "{name}");
+    }
+}
+
+/// A go-i18n file with a string `@@locale` opens as go-i18n under the LocOS profile (LocOS checks go-i18n before
+/// ARB); without the profile it keeps opening as ARB, and a real ARB file stays ARB under both.
+#[test]
+fn a_go_i18n_file_with_an_arb_locale_follows_locos_under_the_profile() {
+    let go = br#"{"@@locale": "en", "files": {"one": "{{.Count}} file", "other": "{{.Count}} files"}, "hi": "Hello"}"#;
+    let plain = ExtractOptions::new().with_source_lang("en").with_granularity(Granularity::Paragraph);
+    assert_eq!(extract("go.json", go, &plain).unwrap().format, "arb");
+    let locos = plain.clone().with_profile("locos");
+    let doc = extract("go.json", go, &locos).unwrap();
+    assert_eq!(doc.format, "json");
+    // LocOS (dump on the same bytes): the @@locale string is a message too, then the two plural forms, then hi
+    let texts: Vec<String> = doc.units.iter().map(|u| bilingua_model::profile::tokens::to_locos_text(&u.segments[0].source).0).collect();
+    assert_eq!(texts, ["en", "\u{27E6}x1\u{27E7} file", "\u{27E6}x1\u{27E7} files", "Hello"]);
+    assert!(merge(&doc).is_ok());
+    let arb = br#"{"@@locale": "en", "hi": "Hello {name}", "@hi": {"placeholders": {"name": {}}}}"#;
+    assert_eq!(extract("a.json", arb, &plain).unwrap().format, "arb");
+    assert_eq!(extract("a.json", arb, &locos).unwrap().format, "arb");
+    assert_eq!(bilingua::detect_with("go.json", go, Some("locos")).unwrap().id(), "json");
+    assert_eq!(bilingua::detect_with("go.json", go, None).unwrap().id(), "arb");
+}
+
+/// A message that is only a literal `⟦x1⟧` has no unit under the LocOS profile (LocOS strips the tokens before it
+/// looks for letters); without the profile it is text like any other.
+#[test]
+fn an_arb_message_of_only_a_token_has_no_unit_under_the_profile() {
+    let src = "{\"@@locale\": \"en\", \"a\": \"\u{27E6}x1\u{27E7}\", \"b\": \"\u{27E6}x2\u{27E7} \u{27E6}x1\u{27E7}\", \"c\": \"Hi \u{27E6}x1\u{27E7}\", \"d\": \"\u{27E6}x\u{27E7}\"}";
+    let plain = ExtractOptions::new().with_source_lang("en").with_granularity(Granularity::Paragraph);
+    let keys = |d: &Document| d.units.iter().filter_map(|u| u.context.key.clone()).collect::<Vec<_>>();
+    assert_eq!(keys(&extract("a.arb", src.as_bytes(), &plain).unwrap()), ["a", "b", "c", "d"]);
+    let doc = extract("a.arb", src.as_bytes(), &plain.with_profile("locos")).unwrap();
+    assert_eq!(keys(&doc), ["c", "d"]);
 }
