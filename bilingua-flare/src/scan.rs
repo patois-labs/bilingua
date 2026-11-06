@@ -1,6 +1,6 @@
-//! A tolerant tag scanner. It follows the tokenizer of `bilingua-html` (so both agree where a tag ends) and skips
-//! comments, CDATA, processing instructions, declarations and the raw content of `script`, `style`, `textarea`
-//! and `title`.
+//! A tolerant tag scanner. It follows the tokenizer of `bilingua-html` (LocOS `_tokenize`, so both agree where a
+//! tag ends) and skips comments, CDATA, processing instructions, declarations and the raw content of `script` and
+//! `style` (a `<title>` or `<textarea>` holds markup the HTML filter reads, as LocOS does).
 
 #[derive(Debug, Clone)]
 pub struct Attr {
@@ -146,7 +146,7 @@ pub fn next_tag(s: &str, mut i: usize) -> Option<Tag> {
         }
         let end = j;
         let mut resume = end;
-        if !self_close && matches!(name.as_str(), "script" | "style" | "textarea" | "title") {
+        if !self_close && matches!(name.as_str(), "script" | "style") {
             let close = find_close(b, end, &name);
             if close > end {
                 resume = close;
@@ -170,7 +170,7 @@ mod tests {
             names.push(format!("{}{}", if t.closing { "/" } else { "" }, t.name));
             i = t.resume;
         }
-        assert_eq!(names, ["p", "/p", "script", "/script", "title", "/title", "br"]);
+        assert_eq!(names, ["p", "/p", "script", "/script", "title", "b", "/title", "br"]);
     }
 
     #[test]

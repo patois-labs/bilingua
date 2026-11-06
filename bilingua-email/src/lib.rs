@@ -12,7 +12,12 @@ mod mime;
 mod plain;
 mod pyish;
 
-use bilingua_html::Html;
+use bilingua_html::HtmlFilter;
+
+/// LocOS `_HTML = HtmlFilter(page_meta=False)`: parts are joined into one document, so no page metadata units.
+fn html() -> HtmlFilter {
+    HtmlFilter::new().with_page_meta(false)
+}
 use bilingua_model::*;
 use codec::{Codec, CP1252, UTF8};
 use header::Edits;
@@ -152,7 +157,7 @@ fn html_doc(text: &str, source_lang: Option<&str>, limits: Limits) -> Result<Doc
     bytes.extend_from_slice(&[0xEF, 0xBB, 0xBF]);
     bytes.extend_from_slice(text.as_bytes());
     let opts = ExtractOptions::new().with_source_lang(source_lang.map(str::to_string)).with_limits(limits);
-    shielded(|| Html.extract(&bytes, &opts))
+    shielded(|| html().extract(&bytes, &opts))
 }
 
 /// Runs a call into `bilingua-html` so that a panic inside it (its entity scan slices text at a byte offset
@@ -522,7 +527,7 @@ impl Filter for Email {
                     }
                     let mut text = slot.text.clone();
                     if touched {
-                        let bytes = shielded(|| Html.merge(&sub))?;
+                        let bytes = shielded(|| html().merge(&sub))?;
                         let bytes = bytes.strip_prefix(&[0xEF, 0xBB, 0xBF][..]).unwrap_or(&bytes);
                         text = String::from_utf8(bytes.to_vec()).map_err(|_| Error::Write("the HTML part is not valid UTF-8".into()))?;
                     }

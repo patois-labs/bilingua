@@ -81,6 +81,19 @@ item below breaks code written against 0.1; after 1.0 these types grow without b
   `#[doc(hidden)]`: shared with other Bilingua crates and their tests, not part of the semver API. The rest of
   `bilingua_zip` (`EntryMeta`, `RawEntry`, `Packed`, `Body`) is plumbing for Bilingua's own zip formats and moves in
   lockstep with them.
+- **bilingua-html (D4).** The filter is now LocOS's `HtmlFilter` on the engine it shares with the server pages
+  (`bilingua-htmlcore`, plumbing, not semver API). `Html` stays; `HtmlFilter::new().with_page_meta(false)` and
+  `.with_template_pattern(re)` are the LocOS variants (`#[non_exhaustive]`). Units change: block units first, then
+  the accessibility attributes, then the page metadata (ids move); character references stay as typed in unit text
+  and a target is markup text (a bare `&`, `<`, `>` is escaped, a reference is kept); `code`/`kbd`/`samp` are paired
+  codes with their text, `pre`/`textarea`/`<title>` markup are read as LocOS reads them; `placeholder`, `value`
+  and `title` of other elements are no longer units; `translate="no"` text is never a unit (`include_locked` has no
+  effect). Block units have no `style` (LocOS's), attribute units have LocOS's (`a11y:img-alt`, ...), `key` the
+  attribute and `extra["element"]` the element; the hidden `~raw`/`~attr` values are gone (`v` = `attr` stays,
+  `bilingua_html::VALUE`). `SKELETON_SCHEMA` is 2 (the skeleton is the page); a schema 1 document with units is
+  refused at merge: open the file again. A `.html` page with closed server code is read through
+  `bilingua-serverpages`. EPUB, e-mail and Flare use `with_page_meta(false)`; for an XHTML target they write
+  `bilingua_html::xml_named_refs` (LocOS `_xml_named_refs`) instead of the old `&` sentinel.
 - **bilingua-xml / bilingua-idml.** `MlConfig`, `MlInfo`, `Inspection`, `LangStamp`, `Detect` and `MlMode` are
   `#[non_exhaustive]` (`MlConfig::new().with_source("en")`, `LangStamp::new().with_update(["xml:lang"])`,
   `Detect::new().with_root_names(["recipe"])`); idml's `story::Where`, `Point` and `Part` are private.

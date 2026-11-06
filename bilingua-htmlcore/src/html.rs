@@ -104,7 +104,7 @@ fn is_void_element(n: &str) -> bool {
     )
 }
 
-fn closes_p(n: &str) -> bool {
+pub fn closes_p(n: &str) -> bool {
     matches!(
         n,
         "address"
@@ -310,17 +310,49 @@ pub fn raw_end(b: &[u8], pos: usize, name: &str) -> usize {
     n
 }
 
-/// LocOS `_tokenize` (no template pattern): tags own their quoted attributes, comments and CDATA own their whole
-/// contents, script and style bodies are opaque text. Tokens alternate text, markup, text, markup, ...
+/// LocOS `_tokenize` with no template pattern: tags own their quoted attributes, comments and CDATA own their
+/// whole contents, script and style bodies are opaque text. Tokens alternate text, markup, text, markup, ...
 pub fn tokenize<'a>(text: &'a str, budget: &mut Option<i64>) -> Result<Vec<Tok<'a>>, BudgetExceeded> {
+    tokenize_with(text, None, budget)
+}
+
+/// The spans of `template` in `text` (LocOS `{m.start(): m.end() for m in template_pattern.finditer(text)}`).
+/// An empty match is left out: it cannot hide a `<`, and LocOS would loop on it forever.
+fn template_spans(text: &str, template: Option<&regex::Regex>) -> (HashMap<usize, usize>, Vec<usize>) {
+    let mut spans = HashMap::new();
+    let mut starts = Vec::new();
+    if let Some(re) = template {
+        for m in re.find_iter(text) {
+            if m.end() > m.start() {
+                spans.insert(m.start(), m.end());
+                starts.push(m.start());
+            }
+        }
+    }
+    (spans, starts)
+}
+
+/// LocOS `_tokenize(text, template_pattern)`: as [`tokenize`], and a template span (a `{{ ... }}` of a template
+/// language) that starts in ordinary text stays in that text, so a `<` inside it never starts a tag.
+pub fn tokenize_with<'a>(text: &'a str, template: Option<&regex::Regex>, budget: &mut Option<i64>) -> Result<Vec<Tok<'a>>, BudgetExceeded> {
     let b = text.as_bytes();
     let size = b.len();
+    let (templates, starts) = template_spans(text, template);
     let mut tokens: Vec<Tok<'a>> = Vec::new();
     let mut pos = 0;
     let mut i = 0;
     while i < size {
+        if let Some(&e) = templates.get(&i) {
+            i = e;
+            continue;
+        }
         if b[i] != b'<' || i + 1 == size {
-            i = b[i + 1..].iter().position(|&c| c == b'<').map_or(size, |p| p + i + 1);
+            let mut nxt = b[i + 1..].iter().position(|&c| c == b'<').map_or(size, |p| p + i + 1);
+            let k = starts.partition_point(|&s| s < i + 1);
+            if k < starts.len() && starts[k] < nxt {
+                nxt = starts[k];
+            }
+            i = nxt;
             continue;
         }
         let mut start = i + 1;
@@ -867,6 +899,12 @@ pub fn meta_text_style(attrs: &[(String, Option<String>)]) -> Option<&'static st
 
 /// LocOS `_iter_page_attr_units`: the accessibility attributes, then the page metadata.
 pub fn iter_page_attr_units(tokens: &[Tok]) -> Vec<AttrUnit> {
+    iter_page_attr_units_with(tokens, true)
+}
+
+/// LocOS `_iter_page_attr_units(tokens, page_meta)`: the accessibility attributes, then (with `page_meta`) the page
+/// metadata. Callers that join several pages into one document (EPUB chapters, e-mail parts) leave it off.
+pub fn iter_page_attr_units_with(tokens: &[Tok], page_meta: bool) -> Vec<AttrUnit> {
     let mut out = Vec::new();
     let tags = iter_start_tags(tokens, true);
     for (ti, name) in &tags {
@@ -883,7 +921,7 @@ pub fn iter_page_attr_units(tokens: &[Tok]) -> Vec<AttrUnit> {
         }
     }
     for (ti, name) in &tags {
-        if name != "meta" {
+        if !page_meta || name != "meta" {
             continue;
         }
         let tok = &tokens[*ti].s;

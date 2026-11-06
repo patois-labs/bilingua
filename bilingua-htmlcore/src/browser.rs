@@ -4,8 +4,8 @@
 //! is a WHATWG-style tokenizer driven by the parts of tree construction that switch tokenizer states. Three layers
 //! use it: translated attribute values are written opaque on a page where the two disagree (`strict`), the build
 //! is re-parsed and refused unless it holds only elements the source held (`check_build`), and text is always
-//! escaped. The XML cross-check LocOS runs with lxml on well-formed pages is not ported (a page that holds code is
-//! never well-formed XML, and a plain XHTML page is covered by the browser check).
+//! escaped. When both the source and the build are well-formed XML (XHTML, EPUB), `check_build` also compares
+//! them as XML, as LocOS does with lxml (see `xml.rs`).
 
 use crate::html::{self, K};
 use crate::pyx::*;
@@ -581,9 +581,34 @@ pub fn raw_quotes_safe(text: &str) -> bool {
     true
 }
 
+/// LocOS `attr_strictness`: true when a translated value written at (token, start, end) must be made opaque.
+pub type Strict = Box<dyn Fn(usize, usize, usize) -> bool>;
+
+/// LocOS `attr_strictness(tokens)`: every value on a page whose markup boundaries a browser may place elsewhere
+/// (`raw_quotes_safe` fails), and any value a browser-equivalent parse does not read as that same quoted value.
+pub fn attr_strictness(toks: &[html::Tok]) -> Strict {
+    let text: String = toks.iter().map(|t| t.s.as_ref()).collect();
+    if !raw_quotes_safe(&text) {
+        return Box::new(|_, _, _| true);
+    }
+    let mut offsets = Vec::with_capacity(toks.len());
+    let mut pos = 0;
+    for t in toks {
+        offsets.push(pos);
+        pos += t.s.len();
+    }
+    let spans = agreed_value_spans(&text);
+    let toks_s: Vec<String> = toks.iter().map(|t| t.s.to_string()).collect();
+    Box::new(move |ti, start, end| {
+        let quote = if start > 0 { toks_s[ti].as_bytes()[start - 1] } else { 0 };
+        !spans.contains(&(offsets[ti] + start, offsets[ti] + end, quote))
+    })
+}
+
 // --- the export check -----------------------------------------------------------------------------------
 
-fn free_attr(tag: &str, attr: &str, attrs: &Attrs) -> bool {
+/// LocOS `_free` (no `extra` pairs): a translated value that may differ between the source and the build.
+pub fn free_attr(tag: &str, attr: &str, attrs: &Attrs) -> bool {
     if FREE_ATTRS.contains(&attr) {
         return true;
     }
@@ -617,15 +642,39 @@ fn line_of(text: &str, pos: usize) -> usize {
     text.as_bytes()[..pos.min(text.len())].iter().filter(|&&c| c == b'\n').count() + 1
 }
 
-/// The message of the refusal and its line.
+/// The message of the refusal and its line. `xml`: the XML cross-check refused (an XML reader, not a browser,
+/// would read the build differently).
 pub struct Unsafe {
     pub what: String,
     pub line: usize,
+    pub xml: bool,
+}
+
+impl Unsafe {
+    /// Who reads the page differently: "a web browser" or "an XML reader".
+    pub fn reader(&self) -> &'static str {
+        if self.xml {
+            "an XML reader"
+        } else {
+            "a web browser"
+        }
+    }
+
+    /// LocOS's refusal text (`html_guard._REFUSAL`).
+    pub fn message(&self) -> String {
+        format!(
+            "This page cannot be exported safely: in the translated file {} would read {} at line {} differently from the source page, so a translation could add markup or an attribute the source does not have. The source page has markup that browsers and the translation filter read differently (for example an abrupt comment <!-->, a <style> or <script> inside SVG, a stray </ x>, or an unclosed <textarea> or <xmp>). Correct that markup in the source file, upload it again and export again.",
+            self.reader(),
+            self.what,
+            self.line
+        )
+    }
 }
 
 /// Refuse unless `after`, the built page, gives a browser only elements and script/style bodies `before` gives it
-/// too; translated values (alt, title, aria-label, page metadata, the language declaration) may differ.
-pub fn check_build(before: &str, after: &str, sources: &[View]) -> Result<(), Unsafe> {
+/// too; translated values (alt, title, aria-label, page metadata, the language declaration) may differ. `xml`
+/// (LocOS's default): also compare the two as XML when both are well-formed (XHTML, EPUB), see [`crate::xml`].
+pub fn check_build(before: &str, after: &str, sources: &[View], xml: bool) -> Result<(), Unsafe> {
     if before == after {
         return Ok(());
     }
@@ -634,15 +683,18 @@ pub fn check_build(before: &str, after: &str, sources: &[View]) -> Result<(), Un
         let known: HashSet<String> = vb.starts.iter().map(signature).collect();
         for st in &va.starts {
             if !known.contains(&signature(st)) {
-                return Err(Unsafe { what: format!("the <{}> tag", st.name), line: line_of(after, st.start) });
+                return Err(Unsafe { what: format!("the <{}> tag", st.name), line: line_of(after, st.start), xml: false });
             }
         }
         let bodies: HashSet<(&str, &str)> = vb.bodies.iter().map(|(n, _, b)| (n.as_str(), b.as_str())).collect();
         for (name, pos, body) in &va.bodies {
             if !bodies.contains(&(name.as_str(), body.as_str())) {
-                return Err(Unsafe { what: format!("the content of a <{name}> element"), line: line_of(after, *pos) });
+                return Err(Unsafe { what: format!("the content of a <{name}> element"), line: line_of(after, *pos), xml: false });
             }
         }
+    }
+    if xml {
+        crate::xml::check_xml(before, after)?;
     }
     Ok(())
 }
@@ -653,7 +705,7 @@ mod tests {
 
     fn refuses(before: &str, after: &str) -> bool {
         let v = browser_views(before);
-        check_build(before, after, &v).is_err()
+        check_build(before, after, &v, false).is_err()
     }
 
     #[test]

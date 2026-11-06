@@ -1,10 +1,11 @@
 # bilingua-html
 
-HTML filter for Bilingua. Extracts translatable text and attributes, writes translations back, and builds a
-live-preview page.
+HTML filter for Bilingua: the Localization OS HTML filter (`app/filters/html_filter.py`, `HtmlFilter`) unit for
+unit and byte for byte, on the engine both share with the server-page filters (`bilingua-htmlcore`), plus a live
+preview.
 
 ```rust
-use bilingua_html::Html;
+use bilingua_html::{Html, HtmlFilter};
 use bilingua_model::*;
 
 let mut doc = Html.extract(&bytes, &ExtractOptions::new().with_target_lang("es"))?;
@@ -12,57 +13,71 @@ doc.set_target("u3", vec![Inline::text("Hola.")])?;
 let out = Html.merge(&doc)?;          // bytes
 let page = Html.preview(&doc);        // HTML with data-bl-seg spans, scripts removed
 let inner = Html.render_segment(&doc, "u3"); // inner HTML for one span (live patch)
+
+// EPUB chapters, e-mail parts: no page metadata units (LocOS `HtmlFilter(page_meta=False)`)
+let chapter = HtmlFilter::new().with_page_meta(false);
+// template languages (LocOS `HtmlFilter(template_pattern=...)`): spans that stay in their text
+let hubl = HtmlFilter::new().with_template_pattern(regex::Regex::new(r"(?s)\{\{.*?\}\}|\{%.*?%\}")?);
 ```
 
-## What it does
+## What it does (LocOS's rules)
 
-- Never re-serialises the page. A small tolerant tokenizer finds byte ranges; only the text ranges that were
-  extracted are rewritten. With nothing translated, `merge` returns the input byte for byte (comments, scripts,
-  odd spacing, broken markup and all).
-- Units: text in blocks (`p`, `h1`-`h6`, `li`, `td`, `th`, `dt`, `dd`, `blockquote`, `figcaption`, `caption`,
-  `button`, `label`, `option`, `summary`, `title`, plain `div` text, block-level links). Attributes: `alt`,
-  `title`, `placeholder`, `aria-label`, `aria-description`, `value` of button inputs, and `content` of
-  `meta` description, keywords, `og:` and `twitter:` title and description.
-- Context: `kind` (heading, paragraph, button, link, alt, title, cell, list-item, label, option, caption,
-  summary, meta), `style` (element name), `key` (attribute name, for attributes), `location` (CSS-like path),
-  `heading` (nearest heading above).
-- Inline tags (`b`, `strong`, `i`, `em`, `a`, `span`, `sup`, `sub`, `small`, `br`, `img`, `abbr`, `mark`, `u`,
-  `s`, `ruby`, `rt` and more) become paired or standalone tags. The full original markup is kept in `Unit::codes`.
-  Unpaired or crossed tags become standalone tags so tag ids stay unique.
-- Not translated: `script`, `style`, `template`, `pre`, `svg`, `math`, `textarea` content, `code`/`kbd`/`samp`
-  (kept as a standalone tag), `translate="no"` and `class="notranslate"` subtrees. With
-  `include_locked`, locked block text is extracted with `translate = false`.
-- Entities are decoded for the editor and encoded again on merge (`&`, `<`, `>`, and `"` in attributes).
-  Unknown entities such as `&foo;` stay as they are. UTF-8 (with or without BOM), ISO-8859-1 and
-  Windows-1252 are read and written; characters a legacy charset cannot hold become numeric references.
-  Other charsets return `Error::Unsupported`.
-- On merge, when the target language is set and at least one segment is translated, `lang` (and `xml:lang`)
-  on `<html>` are set to it if present, and `dir="rtl"` is set for right-to-left targets.
+- Never re-serialises the page. With nothing translated, `merge` returns the input byte for byte.
+- Units, in this order: the block units (text of `p`, `li`, `h1`, `td`, `div`, `title`, `pre`, `option`, ... with
+  inline tags kept inside as codes), then the accessibility attributes (quoted `alt`, `title`, `aria-label` of
+  `img` and `area`; `title`, `aria-label` of `a`; the value needs a letter), then, with `page_meta` (default on),
+  the page metadata (`<meta>` description, keywords, `og:` and `twitter:` title and description).
+- Inline tags (`a b i em strong span code kbd samp label q small sub sup u s ruby rt ...`, `br img wbr` as points)
+  are codes; an orphan end tag is dropped from the unit (as LocOS), an unclosed start tag is an open code with no
+  close. Comments, unknown and block tags end a unit. `script` and `style` bodies are never text.
+- `translate="no"` and `class="notranslate"` (`translate="yes"` re-enables a subtree): a block holding only such
+  content is no unit; a run inside a block is one point code written back verbatim. `include_locked` has no
+  effect (LocOS has no locked units).
+- Unit text is the page's text with character references as typed (`&amp;`, `&eacute;`). A translation is
+  written with a bare `&`, `<` and `>` escaped (and `"` `'` too where the page's markup is one a browser could
+  read differently, or with a template pattern); attribute values are escaped in full, and made opaque to every
+  HTML5 tag state where a browser may read the value's surroundings differently.
+- Every build is re-parsed the way a browser does (scripting on and off, legacy and new `<select>` parsing) and,
+  when the source and the build are both well-formed XML, as XML; a build that would show the reader an element,
+  attribute or script/style body the source does not have is refused (`Error::Write`, LocOS's message).
+- Unit context: `kind` (heading, paragraph, cell, list-item, title, option, caption, summary, button, label, and
+  alt / title / label / meta for attributes), `style` (LocOS's: `a11y:img-alt`, `meta:description`, ...; none for
+  block units), `key` (the attribute), `extra["element"]` (the attribute's element), `location` (CSS-like path),
+  `heading` (nearest heading above). Attribute units carry the hidden marker `v` = `attr` ([`VALUE`]).
+- Encodings: UTF-8 (BOM kept), UTF-16, a declared legacy charset, else Windows-1252, as LocOS reads them. Merge
+  keeps the file's encoding when every character fits, else writes UTF-8 and rewrites the charset declaration;
+  `OutputEncoding::Utf8` always writes UTF-8. A page read in another code page than the one it declares is written
+  as UTF-8 when translated (LocOS).
+- With a target language, a merge with a translation (or `stamp_target_always`) sets `lang` on `<html>` (added if
+  missing), `xml:lang` where present, `dir="rtl"` for a right-to-left target (an existing `dir` becomes `ltr` for
+  a left-to-right one) and `<meta http-equiv="content-language">`.
+- A plain `.html` page with closed PHP (`<?php ... ?>`, `<?= ... ?>`) or `<% ... %>` islands is read through
+  `bilingua-serverpages` (LocOS `server_page_for_html`); the document says `html` and merges back through the same
+  dialect. A page that mixes PHP and `<% %>` is refused. Not with a template pattern.
+- Limits: ten `<` per allowed unit and a tag-scan budget (LocOS #571), plus Bilingua's own nesting cap
+  (`Limits::max_xml_depth`, 256 by default).
+
+## Differences from LocOS (kept on purpose)
+
+- A UTF-8 byte order mark is the envelope (kept on merge); LocOS reads it as a text character.
+- Nesting deeper than `max_xml_depth` is refused (LocOS has no cap).
+- A legacy-encoded page whose bytes would not be written back the same is refused (an untouched merge must give
+  the input back).
+- The encoding of the file is kept (B6) where LocOS writes UTF-8 for a page it read with its Windows-1252
+  fallback; the LocOS profile (`OutputEncoding::Utf8`) writes what LocOS writes.
+- JSP pages routed from `.html` get the server-page difference (a backslash before `${` written as `&#92;`).
+- LocOS's missing-alt findings (`a11y_images`) are not reported.
+
+The differential test `tests/locos_golden.rs` holds 636 LocOS cases (`tests/tools/gen_golden.py`).
 
 ## Preview
 
-`preview()` returns the translated document (target where present, else source). Each segment is wrapped in
-`<span data-bl-seg="SEGMENT_ID">` inside its element, inline tags inside the span. An attribute unit (or the
-text of `<title>` and `<option>`, which cannot hold spans) puts `data-bl-attr-seg="ID"` and `data-bl-attr="alt"`
-(or `#text`) on the element. When an element has several, both lists are space separated, and the segment ids
-of one unit are comma separated. `render_segment()` returns the inner HTML of a span, or the escaped attribute
-or text value for attribute units (for those it returns the whole unit's value, even if the unit was split).
+`preview()` returns the translated document (target where present, else source). Each segment of a block unit is
+wrapped in `<span data-bl-seg="SEGMENT_ID">`, inline tags inside the span. An attribute unit, and the text of a
+`<title>`, `<option>` or `<textarea>` (which cannot hold spans), puts `data-bl-attr-seg="ID"` and
+`data-bl-attr="alt"` (or `#text`) on its element; several are space separated, and the segment ids of one unit
+comma separated. `render_segment()` returns the inner HTML of a span, or the escaped value for attribute units.
 
 The preview removes `<script>` elements, `on*` attributes, `srcdoc`, `javascript:` URLs, `<base>` and meta
 refresh, and adds `<style>[data-bl-seg]{outline:none}...</style>` (with a `.bl-active` highlight hook).
-`sanitize_html` is exported for other callers.
-
-## Hidden codes
-
-`Unit::codes` carries three reserved ids that start with `~`: `~raw` (the original bytes of the unit, used
-when nothing is translated), `~v` (marks an attribute or plain-text unit) and `~attr` (links an attribute
-inside an inline tag to its paragraph). They are never referenced by a segment, so editors can ignore them.
-Attribute units inside a paragraph's inline tags are in `Document::units` but not in the skeleton; merge
-writes them through their paragraph.
-
-## Not done
-
-- Conditional comments, `<noscript>` and `iframe srcdoc` are treated as ordinary markup.
-- A comment in the middle of a paragraph splits it into two units.
-- No sentence splitting (that is `bilingua-seg`), no CSS `content:` strings, no inline SVG text.
-- Stronger preview sandboxing (CSP, iframe `sandbox`) is up to the caller.
+`sanitize_html` is exported for other callers. A page read through server-page routing has no preview.

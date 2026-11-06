@@ -59,11 +59,10 @@ fn madcap_inline_elements_match_locos_and_round_trip() {
         (t("<p>A <MadCap:xref href=\"x\" /> B</p>"), vec!["A \u{27E6}x1\u{27E7} B"], true),
         (t("<p>K<MadCap:keyword term=\"A &amp; B;C\\:D\" /></p>"), vec!["K\u{27E6}x1\u{27E7}", "A & B", "C:D"], true),
         // text that looks like a mask, and the marker name in the text
-        (t("<p>Use &lt;span mcf=\"0\"&gt; and mcfxxxxxxx here <MadCap:xref href=\"x\">B</MadCap:xref></p>"), vec!["Use <span mcf=\"0\"> and mcfxxxxxxx here \u{27E6}g1\u{27E7}B\u{27E6}/g1\u{27E7}"], true),
-        // unclosed (LocOS: an open token with no close, `⟦g1⟧B`) and orphan end tags (LocOS drops it from the
-        // text): Bilingua keeps both as a point code, so the markup stays where it was
+        (t("<p>Use &lt;span mcf=\"0\"&gt; and mcfxxxxxxx here <MadCap:xref href=\"x\">B</MadCap:xref></p>"), vec!["Use &lt;span mcf=\"0\"&gt; and mcfxxxxxxx here \u{27E6}g1\u{27E7}B\u{27E6}/g1\u{27E7}"], true),
+        // unclosed (LocOS: an open token with no close, `⟦g1⟧B`; the mask makes it a point, so the markup stays
+        // where it was)
         (t("<p>A <MadCap:xref href=\"x\">B</p><p>C</p>"), vec!["A \u{27E6}x1\u{27E7}B", "C"], false),
-        (t("<p>A </MadCap:xref> B</p>"), vec!["A \u{27E6}x1\u{27E7} B"], false),
     ];
     for (src_topic, want, wf) in cases {
         let src = proj(&src_topic);
@@ -85,6 +84,15 @@ fn madcap_inline_elements_match_locos_and_round_trip() {
         let again = extract(&merge(&d));
         assert_eq!(again.units.len(), d.units.len(), "{out}");
     }
+    // an orphan end tag: LocOS drops it from the unit text and from a translated build (the HTML filter does the
+    // same since D4); an untouched merge keeps it
+    let src_topic = t("<p>A </MadCap:xref> B</p>");
+    let src = proj(&src_topic);
+    let mut d = extract(&src);
+    assert_eq!(&loc_texts(&d)[1..], ["A  B"]);
+    assert_eq!(merge(&d), src);
+    translate_all(&mut d);
+    assert_eq!(count(&out_topic(&merge(&d)), "</MadCap:"), 0);
 }
 
 #[test]
@@ -108,29 +116,26 @@ fn marker_look_alikes_in_translations_stay_text_in_every_slot() {
     assert_eq!(count(&out, "<MadCap:xref href=\"x\">"), 1, "{out}");
     assert_eq!(count(&out, "<MadCap:xref"), 1, "{out}");
     assert_eq!(count(&out, "<MadCap:variable name=\"v\" />"), 1, "{out}");
-    assert!(out.contains("alt=\"&lt;span mcf=&quot;0&quot;&gt;"), "{out}");
+    // the value is written inside the source's own quotes (LocOS `_apply_attr_units`)
+    assert!(out.contains("alt='&lt;span mcf=&quot;0&quot;&gt;"), "{out}");
     assert!(out.contains("<MadCap:keyword term=\"&lt;span mcf=&quot;0&quot;&gt;"), "{out}");
     assert!(!out.contains("<!--"), "{out}");
 }
 
 #[test]
-fn a_title_with_markup_is_kept_and_a_title_with_a_reference_is_offered() {
-    // LocOS offers `Guide ⟦x1⟧ now`; bilingua-html reads <title> as plain text, so the title is kept as it is
-    // (listed, locked, only with include_locked)
+fn a_title_with_markup_is_offered_with_codes_as_locos_does() {
+    // LocOS offers `Guide ⟦x1⟧ now` (since D4 the HTML filter reads <title> as LocOS does, markup as codes)
     let t = topic("<p>x</p>", "<title>Guide <MadCap:variable name=\"a.b\" /> now</title>");
     let src = proj(&t);
     let mut d = extract(&src);
-    assert_eq!(loc_texts(&d), ["x"]);
+    assert_eq!(loc_texts(&d), ["Guide \u{27E6}x1\u{27E7} now", "x"]);
     assert_eq!(merge(&d), src);
-    translate_all(&mut d);
-    assert!(out_topic(&merge(&d)).contains("<title>Guide <MadCap:variable name=\"a.b\" /> now</title><"));
-    let locked = Flare.extract(&src, &ExtractOptions::new().with_include_locked(true)).unwrap();
-    assert_eq!(locked.units.len(), 2);
-    assert!(!locked.units[0].translate);
+    set(&mut d, 0, "Leitfaden \u{27E6}x1\u{27E7} jetzt");
+    assert!(out_topic(&merge(&d)).contains("<title>Leitfaden <MadCap:variable name=\"a.b\" /> jetzt</title><"));
     // `&lt;` is text: the title is offered (LocOS: `A &lt; B`, the reference as typed) and written escaped
     let t = topic("<p>x</p>", "<title>A &lt; B</title>");
     let mut d = extract(&proj(&t));
-    assert_eq!(loc_texts(&d), ["A < B", "x"]);
+    assert_eq!(loc_texts(&d), ["A &lt; B", "x"]);
     assert!(d.units[0].translate);
     set(&mut d, 0, "B < A & C");
     assert!(out_topic(&merge(&d)).contains("<title>B &lt; A &amp; C</title>"));
@@ -138,16 +143,17 @@ fn a_title_with_markup_is_kept_and_a_title_with_a_reference_is_offered() {
 
 #[test]
 fn private_use_characters_in_the_topic_survive_a_merge() {
-    // the `&` sentinel is a private-use character that is not in the topic; a topic that holds the whole BMP
-    // private-use area still merges without turning any of them into `&amp;`
+    // a topic that holds the whole BMP private-use area merges without touching any of them (the `&` sentinel of
+    // the old HTML filter is gone since D4)
     let pua: String = ('\u{E000}'..='\u{F8FF}').collect();
     let t = topic(&format!("<p>{pua}</p><p>Fish &amp; chips</p>"), "<title>T</title>");
     let mut d = extract(&proj(&t));
-    let i = index_of(&d, "Fish & chips");
+    let i = index_of(&d, "Fish &amp; chips");
     set(&mut d, i, "Poisson & frites &nbsp;");
     let out = out_topic(&merge(&d));
     assert!(out.contains(&pua), "a private-use character was rewritten");
-    assert!(out.contains("Poisson &amp; frites &amp;nbsp;"), "{out}");
+    // LocOS: a body target is markup text, `&nbsp;` written XML-safe
+    assert!(out.contains("Poisson &amp; frites &#160;"), "{out}");
 }
 
 #[test]

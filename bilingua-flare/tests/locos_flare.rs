@@ -159,8 +159,8 @@ fn translated_build() {
 
 #[test]
 fn xhtml_safe_targets() {
-    // Plain-text targets: a reference-looking text, an unknown entity or a control character still gives
-    // well-formed XHTML (LocOS reads the target as markup, Bilingua as text: `&nbsp;` is the five characters).
+    // A reference-looking text, an unknown entity or a control character still gives well-formed XHTML. The target
+    // is markup text, as in LocOS (`_xml_named_refs`): `&nbsp;` is a no-break space, written `&#160;`.
     let src = project();
     let mut d = extract(&src);
     let i = index_of(&d, "More details");
@@ -170,9 +170,9 @@ fn xhtml_safe_targets() {
     let (m, _) = members(&merge(&d));
     well_formed(&m);
     let text = text_of(&m, "Content/Topic.htm");
-    assert!(text.contains("Plus&amp;nbsp;de d&amp;eacute;tails &amp;bogus; A&amp;amp;B</MadCap:dropDownHotspot>"), "{text}");
+    assert!(text.contains("Plus&#160;de d&#233;tails &amp;bogus; A&amp;B</MadCap:dropDownHotspot>"), "{text}");
     assert!(!text.contains('\u{1}') && !text.contains('\u{2}'));
-    assert!(text.contains("alt=\"Logo de l&#39;entreprise\"") || text.contains("alt=\"Logo de l'entreprise\""), "{text}");
+    assert!(text.contains("alt=\"Logo de l&#x27;entreprise\""), "{text}");
     // markup typed into a target is text, never an element
     let k = index_of(&d, "Hidden body text.");
     set(&mut d, k, "<script>alert(1)</script> <MadCap:variable name=\"x\"/>");

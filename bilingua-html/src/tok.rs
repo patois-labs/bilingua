@@ -1,5 +1,5 @@
-//! A tolerant HTML tokenizer. It never fails and never copies: every token is a byte range of the input, and
-//! the ranges cover the input completely, so the original can always be rebuilt byte for byte.
+//! A tolerant HTML tokenizer for `sanitize_html`. It never fails and never copies: every token is a byte range of
+//! the input, and the ranges cover the input completely.
 
 #[derive(Debug, Clone)]
 pub struct Attr {
@@ -21,7 +21,7 @@ pub enum Tok {
     Decl(usize, usize),
     /// Content of script, style and textarea.
     Raw(usize, usize),
-    Start { start: usize, end: usize, name: String, attrs: Vec<Attr>, self_close: bool },
+    Start { start: usize, end: usize, name: String, attrs: Vec<Attr> },
     End { start: usize, end: usize, name: String },
 }
 
@@ -32,15 +32,6 @@ impl Tok {
             Tok::Start { start, end, .. } | Tok::End { start, end, .. } => (*start, *end),
         }
     }
-}
-
-pub const VOID: &[&str] = &[
-    "area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source", "track", "wbr",
-    "basefont", "frame", "keygen",
-];
-
-pub fn is_void(name: &str) -> bool {
-    VOID.contains(&name)
 }
 
 fn is_ws(b: u8) -> bool {
@@ -163,10 +154,8 @@ fn markup(s: &str, i: usize) -> Option<Tok> {
     }
     let name = s[i + 1..j].to_ascii_lowercase();
     let mut attrs = Vec::new();
-    let mut self_close = false;
     loop {
         while j < n && (is_ws(b[j]) || b[j] == b'/') {
-            self_close = b[j] == b'/';
             j += 1;
         }
         if j >= n {
@@ -176,7 +165,6 @@ fn markup(s: &str, i: usize) -> Option<Tok> {
             j += 1;
             break;
         }
-        self_close = false;
         let ns = j;
         // An attribute name may start with '=' in broken markup; take at least one byte.
         j += 1;
@@ -217,20 +205,9 @@ fn markup(s: &str, i: usize) -> Option<Tok> {
             attrs.push(Attr { name: aname, name_start: ns, name_end: j0, val: None, full: None });
         }
     }
-    Some(Tok::Start { start: i, end: j, name, attrs, self_close })
+    Some(Tok::Start { start: i, end: j, name, attrs })
 }
 
-/// Parses one start tag held in its own string, e.g. a stored code. Returns the attributes with offsets
-/// relative to the string.
-pub fn parse_tag_str(tag: &str) -> Option<(String, Vec<Attr>)> {
-    if !tag.starts_with('<') {
-        return None;
-    }
-    match markup(tag, 0)? {
-        Tok::Start { name, attrs, .. } => Some((name, attrs)),
-        _ => None,
-    }
-}
 
 pub fn attr_value<'a>(s: &'a str, attrs: &[Attr], name: &str) -> Option<&'a str> {
     attrs.iter().find(|a| a.name == name).and_then(|a| a.val.map(|(x, y)| &s[x..y]))

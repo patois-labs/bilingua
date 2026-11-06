@@ -308,14 +308,15 @@ fn xhtml_safe_targets() {
     let (m, _) = members(&merge(&d));
     well_formed(&m);
     let ch2 = member_text(&m, "OEBPS/text/chapter 2.xhtml");
-    assert!(ch2.contains("Deuxi\u{e8}me\u{a0}texte &amp;bogus; A&amp;amp;B."), "{ch2}");
+    // LocOS `_xhtml_safe`: the target is markup text; an unknown named reference becomes text, a typed `&amp;` stays
+    assert!(ch2.contains("Deuxi\u{e8}me\u{a0}texte &amp;bogus; A&amp;B."), "{ch2}");
     let ch1 = member_text(&m, "OEBPS/text/ch1.xhtml");
     assert!(ch1.contains("alt=\"Une couverture &amp;nbsp;rouge\""), "{ch1}");
     let opf = member_text(&m, "OEBPS/content.opf");
     assert!(opf.contains("<dc:title") && opf.contains("Titre du livre"), "{opf}");
-    // the text reads back exactly as the translator wrote it (minus the forbidden characters)
+    // the text reads back as LocOS reads its own output (minus the forbidden characters)
     let again = extract(&merge(&d));
-    assert_eq!(loc_text(&again.units[7]), "Deuxi\u{e8}me\u{a0}texte &bogus; A&amp;B.");
+    assert_eq!(loc_text(&again.units[7]), "Deuxi\u{e8}me\u{a0}texte &amp;bogus; A&amp;B.");
 }
 
 #[test]

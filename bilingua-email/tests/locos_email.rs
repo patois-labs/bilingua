@@ -56,7 +56,7 @@ fn mixed_units_and_identity() {
         ]
     );
     let d = ex(&m);
-    let kinds: Vec<_> = d.units.iter().map(|u| u.context.style.clone().unwrap()).collect();
+    let kinds: Vec<_> = d.units.iter().map(|u| u.context.style.clone().unwrap_or_default()).collect();
     assert_eq!(kinds[..4], ["Subject", "text/plain", "text/plain", "text/plain"]);
     assert_eq!(merged(&d), m);
     assert_eq!(identity(&m), m);

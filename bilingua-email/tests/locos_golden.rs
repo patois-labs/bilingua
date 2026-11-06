@@ -13,7 +13,7 @@ fn hex(s: &str) -> Vec<u8> {
 /// What LocOS wrote, with its two invalid charset labels corrected: Python's `Header` names the codec, not the
 /// charset, for gb2312 (`eucgb2312_cn`) and big5 (`big5-tw`), and no mail reader knows those names.
 fn want_bytes(h: &str) -> Vec<u8> {
-    let mut v = apostrophe(hex(h));
+    let mut v = hex(h);
     for (from, to) in [(&b"=?eucgb2312_cn?"[..], &b"=?gb2312?"[..]), (&b"=?big5-tw?"[..], &b"=?big5?"[..])] {
         let mut out = Vec::with_capacity(v.len());
         let mut i = 0;
@@ -29,23 +29,6 @@ fn want_bytes(h: &str) -> Vec<u8> {
         v = out;
     }
     v
-}
-
-/// bilingua-html leaves `'` unescaped in an attribute value; LocOS writes `&#x27;` (the same text for a reader).
-fn apostrophe(v: Vec<u8>) -> Vec<u8> {
-    let from = b"&#x27;";
-    let mut out = Vec::with_capacity(v.len());
-    let mut i = 0;
-    while i < v.len() {
-        if v[i..].starts_with(from) {
-            out.push(b'\'');
-            i += from.len();
-        } else {
-            out.push(v[i]);
-            i += 1;
-        }
-    }
-    out
 }
 
 fn has_bad_label(h: &str) -> bool {
@@ -123,7 +106,8 @@ fn matches_locos_on_generated_messages() {
                         // the label is LocOS's bug and moves the line breaks of a long Subject
                         return;
                     }
-                    if apostrophe(g.clone()) != want_bytes(w) {
+                    // since D4 the HTML parts are LocOS's byte for byte (`'` in an attribute is `&#x27;`, as LocOS writes it)
+                    if g != want_bytes(w) {
                         if let Ok(dir) = std::env::var("EMAIL_GOLDEN_DUMP") {
                             std::fs::write(format!("{dir}/{name}.{}.got.eml", what.replace(':', "_")), &g).unwrap();
                             std::fs::write(format!("{dir}/{name}.{}.want.eml", what.replace(':', "_")), want_bytes(w)).unwrap();

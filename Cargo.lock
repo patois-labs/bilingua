@@ -250,7 +250,12 @@ dependencies = [
 name = "bilingua-html"
 version = "0.9.0"
 dependencies = [
+ "bilingua-htmlcore",
  "bilingua-model",
+ "bilingua-serverpages",
+ "proptest",
+ "regex",
+ "serde_json",
 ]
 
 [[package]]
@@ -258,6 +263,8 @@ name = "bilingua-htmlcore"
 version = "0.1.0"
 dependencies = [
  "bilingua-model",
+ "quick-xml",
+ "regex",
 ]
 
 [[package]]

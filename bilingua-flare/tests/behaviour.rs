@@ -58,6 +58,8 @@ fn every_corpus_file_round_trips() {
             assert_eq!(a.id, b.id, "{name}");
             let (ta, _) = to_locos_text(&a.source());
             let (tb, _) = to_locos_text(&b.output());
+            // a body target is markup text written XML-safe (LocOS `_xml_named_refs`: `&eacute;` -> `&#233;`)
+            let tb = if a.hidden("v").is_some() { tb } else { bilingua_html::xml_named_refs(&tb) };
             assert_eq!(ta, tb, "{name} {}", a.id);
         }
         // same members in the same order
@@ -201,18 +203,16 @@ fn a_skeleton_from_another_parser_is_refused() {
 }
 
 #[test]
-fn locked_units_keep_the_ids_consistent_between_extract_and_merge() {
+fn translate_no_text_is_not_offered_and_the_ids_stay_consistent() {
+    // LocOS #734 (the HTML filter since D4): translate="no" text is never a unit, with or without include_locked
     let topic = TOPIC.replace("<p>Text for", "<p translate=\"no\">Colophon text stays.</p>\n        <p>Text for");
     let src = project_with(&[("Content/Topic.htm", topic.as_bytes())], &[]);
     let o = ExtractOptions::new().with_include_locked(true);
     let mut d = Flare.extract(&src, &o).unwrap();
-    let locked: Vec<Unit> = d.units.iter().filter(|u| !u.translate).cloned().collect();
-    assert_eq!(locked.len(), 1);
-    assert!(loc_text(&locked[0]).starts_with("Colophon"));
+    assert!(d.units.iter().all(|u| !loc_text(u).starts_with("Colophon")));
+    assert_eq!(d.units.len(), extract(&src).units.len());
     let i = d.units.iter().position(|u| loc_text(u).starts_with("Brand line")).unwrap();
     set(&mut d, i, "Marque : \u{27E6}x1\u{27E7} fin.");
-    let id = locked[0].segments[0].id.clone();
-    assert!(matches!(d.set_target(&id, vec![Inline::text("x")]), Err(Error::Locked(_))));
     let (m, _) = members(&merge(&d));
     let t = text_of(&m, "Content/Topic.htm");
     assert!(t.contains("<p translate=\"no\">Colophon text stays.</p>") && t.contains(r#"<p>Marque : <MadCap:snippetText src="../Resources/Snippets/Brand.flsnp" /> fin.</p>"#), "{t}");

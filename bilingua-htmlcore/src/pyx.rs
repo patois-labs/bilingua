@@ -160,6 +160,50 @@ fn lookup(name: &str) -> Option<&'static str> {
     HTML5.binary_search_by(|(k, _)| k.as_bytes().cmp(name.as_bytes())).ok().map(|i| HTML5[i].1)
 }
 
+/// LocOS `_xml_named_refs` (EPUB, Flare): every `&name;` (`&([A-Za-z][A-Za-z0-9]*);`) that is not one of XML's
+/// five becomes numeric character references, or literal text (`&amp;name;`) for an unknown name, so a target
+/// written into an XHTML page read without a DTD stays XML.
+pub fn xml_named_refs(s: &str) -> String {
+    if !s.contains('&') {
+        return s.to_string();
+    }
+    let b = s.as_bytes();
+    let mut out = String::with_capacity(s.len());
+    let mut last = 0;
+    let mut i = 0;
+    while i < b.len() {
+        if b[i] == b'&' && b.get(i + 1).is_some_and(u8::is_ascii_alphabetic) {
+            let n = b[i + 1..].iter().take_while(|c| c.is_ascii_alphanumeric()).count();
+            if b.get(i + 1 + n) == Some(&b';') {
+                let name = &s[i + 1..i + 1 + n];
+                out.push_str(&s[last..i]);
+                if matches!(name, "amp" | "lt" | "gt" | "quot" | "apos") {
+                    out.push_str(&s[i..i + n + 2]);
+                } else {
+                    match lookup(&format!("{name};")) {
+                        Some(chars) => {
+                            for c in chars.chars() {
+                                out.push_str(&format!("&#{};", c as u32));
+                            }
+                        }
+                        None => {
+                            out.push_str("&amp;");
+                            out.push_str(name);
+                            out.push(';');
+                        }
+                    }
+                }
+                i += n + 2;
+                last = i;
+                continue;
+            }
+        }
+        i += 1;
+    }
+    out.push_str(&s[last..]);
+    out
+}
+
 fn numeric(num: u32) -> String {
     if let Some((_, v)) = INVALID_CHARREFS.iter().find(|(k, _)| *k == num) {
         return (*v).to_string();
@@ -192,14 +236,20 @@ pub fn html_escape(s: &str) -> String {
 /// LocOS `_escape_text(text, quotes=True)`: a bare `&` (one that does not start a character reference) and every
 /// `<`, `>`, `"` and `'`.
 pub fn escape_text(s: &str, out: &mut String) {
+    escape_text_with(s, true, out)
+}
+
+/// LocOS `_escape_text(text, quotes=quotes)`: a bare `&` and every `<` and `>`; with `quotes` also `"` and `'`
+/// (a text node needs only the first three, #672).
+pub fn escape_text_with(s: &str, quotes: bool, out: &mut String) {
     let b = s.as_bytes();
     let mut last = 0;
     for (i, &c) in b.iter().enumerate() {
         let rep = match c {
             b'<' => "&lt;",
             b'>' => "&gt;",
-            b'"' => "&quot;",
-            b'\'' => "&#x27;",
+            b'"' if quotes => "&quot;",
+            b'\'' if quotes => "&#x27;",
             b'&' if !entity_follows(&b[i + 1..]) => "&amp;",
             _ => continue,
         };
@@ -243,6 +293,29 @@ pub fn strict_escape(s: &str) -> String {
         }
     }
     out
+}
+
+/// LocOS `_escape_text(text, protected, quotes)`: the pieces of `s` that are one of the `protected` strings (the
+/// template spans of the unit, tried in order at each position as Python's `re.split` alternation does) are kept
+/// as they are; the rest is escaped piece by piece.
+pub fn escape_protected(s: &str, protected: &[String], quotes: bool, out: &mut String) {
+    let prot: Vec<&str> = protected.iter().map(String::as_str).filter(|p| !p.is_empty()).collect();
+    if prot.is_empty() {
+        return escape_text_with(s, quotes, out);
+    }
+    let mut last = 0;
+    let mut i = 0;
+    while i < s.len() {
+        if let Some(p) = prot.iter().find(|p| s[i..].starts_with(**p)) {
+            escape_text_with(&s[last..i], quotes, out);
+            out.push_str(p);
+            i += p.len();
+            last = i;
+            continue;
+        }
+        i += s[i..].chars().next().map_or(1, char::len_utf8);
+    }
+    escape_text_with(&s[last..], quotes, out);
 }
 
 /// ASCII case-insensitive substring search.

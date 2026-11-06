@@ -14,3 +14,10 @@ categories.workspace = true
 
 [dependencies]
 bilingua-model = { workspace = true }
+bilingua-htmlcore = { workspace = true }
+bilingua-serverpages = { workspace = true }
+regex = { workspace = true }
+
+[dev-dependencies]
+proptest = { workspace = true }
+serde_json = { workspace = true }

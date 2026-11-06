@@ -14,3 +14,5 @@ pub mod entities;
 pub mod html;
 #[doc(hidden)]
 pub mod pyx;
+#[doc(hidden)]
+pub mod xml;

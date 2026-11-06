@@ -7,20 +7,11 @@ fn corpus() -> std::path::PathBuf {
     std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../oracle/corpus/epub")
 }
 
-/// The differences between LocOS and Bilingua that come from `bilingua-html`, not from this crate, each written
-/// down: `None` drops a LocOS unit Bilingua does not extract, `Some(text)` is the Bilingua form of a LocOS unit.
-///
-/// * LocOS keeps character references as typed in the source (`&amp;`, `&#233;`); Bilingua units hold the decoded
-///   characters, and write them back escaped.
-/// * LocOS reads `<code>` as a paired code with its text inside; Bilingua keeps the whole element as one
-///   standalone code (protected text, never translated).
-/// * LocOS extracts the text of `<pre>`; the Bilingua HTML filter skips it (it is preformatted).
+/// The differences between LocOS and Bilingua that come from `bilingua-html`: none since D4 (the HTML filter is
+/// LocOS's on the shared engine). Before D4 three kinds were listed here: character references decoded in Bilingua
+/// units, `<code>` as one standalone code, and `<pre>` text not extracted.
 fn known(locos: &str) -> Option<String> {
-    match locos {
-        "keep   this\nas is" => None,
-        t if t.starts_with("Fish &amp; chips") => Some("Fish & chips, caf\u{e9} \u{2014} <tags> and \u{27E6}x1\u{27E7} inline.".into()),
-        t => Some(t.to_string()),
-    }
+    Some(locos.to_string())
 }
 
 #[test]

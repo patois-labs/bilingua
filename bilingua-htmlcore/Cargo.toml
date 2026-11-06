@@ -8,3 +8,5 @@ repository.workspace = true
 
 [dependencies]
 bilingua-model = { workspace = true }
+regex = { workspace = true }
+quick-xml = { workspace = true }

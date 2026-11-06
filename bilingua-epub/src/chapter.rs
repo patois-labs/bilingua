@@ -8,12 +8,14 @@
 
 use crate::lang;
 use crate::text::{self, Text};
-use bilingua_html::Html;
+use bilingua_html::{HtmlFilter, VALUE};
 use bilingua_model::*;
 use std::collections::HashMap;
 
-/// Reserved code ids of `bilingua-html` (see its `extract.rs`): the attribute marker.
-const VALUE: &str = "v";
+/// LocOS `_html()`: the HTML filter without page metadata units (chapters are joined into one document).
+fn html() -> HtmlFilter {
+    HtmlFilter::new().with_page_meta(false)
+}
 
 pub struct Chapter {
     pub path: String,
@@ -32,22 +34,9 @@ fn is_attr(u: &Unit) -> bool {
     u.hidden(VALUE) == Some("attr")
 }
 
-/// The LocOS style of an attribute unit, when LocOS offers that attribute (`a11y:img-alt` and the like).
-fn a11y_style(u: &Unit) -> Option<&'static str> {
-    let elem = u.context.style.as_deref()?;
-    let key = u.context.key.as_deref()?.to_ascii_lowercase();
-    // LocOS needs a letter in the value (the HTML crate wants a letter or a digit)
-    if !bilingua_model::py_has_alpha(&plain_text(&u.segments.first()?.source)) {
-        return None;
-    }
-    match (elem, key.as_str()) {
-        ("img" | "area", "alt") => Some("a11y:img-alt"),
-        ("img" | "area", "title") => Some("a11y:img-title"),
-        ("img" | "area", "aria-label") => Some("a11y:img-aria-label"),
-        ("a", "title") => Some("a11y:link-title"),
-        ("a", "aria-label") => Some("a11y:link-aria-label"),
-        _ => None,
-    }
+/// The LocOS style of an attribute unit (`a11y:img-alt` and the like): the HTML filter gives it.
+fn a11y_style(u: &Unit) -> Option<&str> {
+    u.context.style.as_deref().filter(|s| s.starts_with("a11y:"))
 }
 
 const VOID: &[&str] = &["area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source", "track", "wbr", "command", "keygen"];
@@ -135,21 +124,13 @@ impl Chapter {
         let mut o = opts.clone();
         o.target_lang = None;
         o.granularity = Granularity::Paragraph;
-        let sub = Html.extract(text.text.as_bytes(), &o).map_err(|e| match e {
+        let sub = html().extract(text.text.as_bytes(), &o).map_err(|e| match e {
             Error::Parse { msg, .. } => Error::Parse { format: "epub".into(), msg: format!("{path}: {msg}") },
             e => e,
         })?;
-        let mut body = Vec::new();
-        let mut attrs = Vec::new();
-        for (i, u) in sub.units.iter().enumerate() {
-            if !is_attr(u) {
-                body.push(i);
-            } else if a11y_style(u).is_some() {
-                attrs.push(i);
-            }
-        }
-        body.extend(attrs);
-        Ok(Chapter { path: path.to_string(), text, sub, order: body })
+        // body units, then the accessibility attributes (the filter's own order)
+        let order = (0..sub.units.len()).filter(|&i| !is_attr(&sub.units[i]) || a11y_style(&sub.units[i]).is_some()).collect();
+        Ok(Chapter { path: path.to_string(), text, sub, order })
     }
 
     pub fn prefix(c: usize) -> String {
@@ -172,8 +153,8 @@ impl Chapter {
                     Some(l) => format!("{} {l}", self.path),
                     None => self.path.clone(),
                 });
-                if let Some(st) = a11y_style(&u) {
-                    u.context.extra.insert("locos-style".into(), st.into());
+                if let Some(st) = a11y_style(&u).map(str::to_string) {
+                    u.context.extra.insert("locos-style".into(), st);
                 }
                 u
             })
@@ -197,19 +178,25 @@ impl Chapter {
         if picked.is_empty() && lang.is_none() {
             return Ok(None);
         }
-        let sentinel = pick_sentinel(&self.text.text, &picked);
         for (si, u) in picked {
             let unit = &mut self.sub.units[si];
+            // LocOS `_xhtml_safe`: XML 1.0 characters only; body text (entities as typed) also gets XML-safe
+            // character references, attribute values are escaped in full by the HTML filter
+            let body = !is_attr(unit);
             unit.segments = u
                 .segments
                 .iter()
-                .map(|s| Segment::new(s.id.strip_prefix(&prefix).unwrap_or(&s.id).to_string(), safe(&s.source, sentinel)).with_target(safe(&s.target, sentinel)).with_state(s.state).with_origin(s.origin.clone()))
+                .map(|s| {
+                    let mut c = s.clone();
+                    c.id = s.id.strip_prefix(&prefix).unwrap_or(&s.id).to_string();
+                    c.target = safe(&s.target, body);
+                    c
+                })
                 .collect();
-            unit.separators = u.separators.iter().map(|x| x.replace('&', &sentinel.to_string())).collect();
+            unit.separators = u.separators.iter().map(|x| if body { bilingua_html::xml_named_refs(&text::xml_target_text(x)) } else { text::xml_target_text(x) }).collect();
         }
-        let merged = Html.merge(&self.sub)?;
-        let merged = String::from_utf8(merged).map_err(|_| Error::Write(format!("{}: the merged chapter is not UTF-8", self.path)))?;
-        let mut merged = merged.replace(sentinel, "&amp;");
+        let merged = html().merge(&self.sub)?;
+        let mut merged = String::from_utf8(merged).map_err(|_| Error::Write(format!("{}: the merged chapter is not UTF-8", self.path)))?;
         if let Some((tag, rtl)) = lang {
             merged = stamp(&merged, tag, rtl);
         }
@@ -217,24 +204,13 @@ impl Chapter {
     }
 }
 
-/// A private-use character that is in neither the chapter nor any target; `&` is swapped for it before the HTML
-/// filter writes a target (which would keep an `&name;` that looks like an unknown entity as it is, invalid XML)
-/// and swapped back for `&amp;` afterwards.
-fn pick_sentinel(chapter: &str, picked: &[(usize, &Unit)]) -> char {
-    let used = |c: char| {
-        chapter.contains(c)
-            || picked.iter().any(|(_, u)| {
-                u.segments.iter().any(|s| s.source.iter().chain(&s.target).any(|i| matches!(i, Inline::Text(t) if t.contains(c))))
-                    || u.separators.iter().any(|x| x.contains(c))
-            })
-    };
-    ('\u{E000}'..='\u{F8FF}').find(|&c| !used(c)).unwrap_or('\u{F8FF}')
-}
-
-fn safe(v: &[Inline], sentinel: char) -> Vec<Inline> {
+/// A target for an XHTML chapter (LocOS `_xhtml_safe`): XML 1.0 characters only, and in body text the HTML-only
+/// named references as numeric ones.
+fn safe(v: &[Inline], body: bool) -> Vec<Inline> {
     v.iter()
         .map(|i| match i {
-            Inline::Text(t) => Inline::Text(text::xml_target_text(t).replace('&', &sentinel.to_string())),
+            Inline::Text(t) if body => Inline::Text(bilingua_html::xml_named_refs(&text::xml_target_text(t))),
+            Inline::Text(t) => Inline::Text(text::xml_target_text(t)),
             t => t.clone(),
         })
         .collect()

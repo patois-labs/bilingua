@@ -14,6 +14,7 @@ pub const SKELETON_SCHEMA: u32 = 1;
 mod lex;
 
 use bilingua_htmlcore::{browser, html, pyx};
+use browser::{attr_strictness, Strict};
 
 use bilingua_model::*;
 use html::{Entry, Piece, Tok, K};
@@ -218,7 +219,7 @@ fn mask(d: Dialect, text: &str, limits: &Limits) -> Result<Masked, Error> {
         return Err(refused(d, text, p, "the file contains reserved characters U+FDD0/U+FDD1", "Remove those characters, then upload again."));
     }
     let islands = d.islands(text).map_err(|r| refused_lex(d, text, r))?;
-    if islands.len() > 10 * limits.max_units {
+    if islands.len() > limits.max_units.saturating_mul(10) {
         return Err(LimitError::new(
             LimitKind::Units,
             format!(
@@ -461,7 +462,7 @@ fn extract_with(d: Dialect, bytes: &[u8], opts: &ExtractOptions, limits: &Limits
     let dec = load(bytes, opts, limits)?;
     let text = dec.text.as_str();
     // LocOS: ten markup characters per allowed segment, and a hundred scan steps per allowed segment
-    if text.bytes().filter(|&c| c == b'<').count() > 10 * limits.max_units {
+    if text.bytes().filter(|&c| c == b'<').count() > limits.max_units.saturating_mul(10) {
         return Err(LimitError::new(
             LimitKind::Units,
             format!("This {} file has far more tags than {} segments allow. Split it into smaller files.", d.label(), limits.max_units),
@@ -470,7 +471,7 @@ fn extract_with(d: Dialect, bytes: &[u8], opts: &ExtractOptions, limits: &Limits
     }
     guard::check_markup(text, limits)?;
     let m = mask(d, text, limits)?;
-    let mut budget = Some(100 * limits.max_units as i64);
+    let mut budget = Some(i64::try_from(limits.max_units).unwrap_or(i64::MAX).saturating_mul(100));
     let toks = tokens(d, &m, text, &mut budget, limits)?;
     let body = match html::iter_units(&toks, Some(limits.max_units)) {
         Ok(b) => b,
@@ -698,36 +699,12 @@ fn merge_with(d: Dialect, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>
     // a browser-equivalent re-parse must find only the source's elements and attributes
     if before != out {
         let sources = browser::browser_views(&before);
-        if let Err(u) = browser::check_build(&before, &out, &sources) {
-            return Err(Error::Write(format!(
-                "This page cannot be exported safely: in the translated file a web browser would read {} at line {} differently from the source page, so a translation could add markup or an attribute the source does not have. Correct the markup in the source file, upload it again and export again.",
-                u.what, u.line
-            )));
+        // LocOS `check_build(before, out)`: the browser views, then the XML cross-check
+        if let Err(u) = browser::check_build(&before, &out, &sources, true) {
+            return Err(Error::Write(u.message()));
         }
     }
     enc::encode_text_with(&m.unmask(&out, &text), encoding, opts)
-}
-
-/// LocOS `attr_strictness`: true when a translated value written at (token, start, end) must be made opaque.
-type Strict = Box<dyn Fn(usize, usize, usize) -> bool>;
-
-fn attr_strictness(toks: &[Tok]) -> Strict {
-    let text: String = toks.iter().map(|t| t.s.as_ref()).collect();
-    if !browser::raw_quotes_safe(&text) {
-        return Box::new(|_, _, _| true);
-    }
-    let mut offsets = Vec::with_capacity(toks.len());
-    let mut pos = 0;
-    for t in toks {
-        offsets.push(pos);
-        pos += t.s.len();
-    }
-    let spans = browser::agreed_value_spans(&text);
-    let toks_s: Vec<String> = toks.iter().map(|t| t.s.to_string()).collect();
-    Box::new(move |ti, start, end| {
-        let quote = if start > 0 { toks_s[ti].as_bytes()[start - 1] } else { 0 };
-        !spans.contains(&(offsets[ti] + start, offsets[ti] + end, quote))
-    })
 }
 
 // --- the filters --------------------------------------------------------------------------------------------

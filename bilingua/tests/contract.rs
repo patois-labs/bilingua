@@ -375,7 +375,7 @@ fn fingerprint(d: &Document) -> String {
 fn unit_ids_are_pinned_per_format() {
     let snapshots: &[(&str, &str)] = &[
         ("edge.docx", "18 p1 footnotes-p1 02aae0df09ac5bb9"),
-        ("edge.html", "33 u1 u33 bf3041ad14ff0e2c"),
+        ("edge.html", "29 u1 u29 7f320a7cfe9205c4"), // D4: LocOS units (was "33 u1 u33 bf3041ad14ff0e2c")
         ("strings.json", "20 u1 u20 54c1ad5a27488507"),
         ("edge.md", "27 u1 u27 8b3892ac25e501c8"),
         ("edge.po", "9 e2.0 e9 ad2c6e2b97586bd6"),

@@ -257,19 +257,16 @@ fn libreoffice_opens_the_merged_chapters_when_installed() {
 }
 
 #[test]
-fn locked_units_keep_the_ids_consistent_between_extract_and_merge() {
-    // With include_locked the translate="no" text is a locked unit and is numbered; merge must number the same way.
+fn translate_no_text_is_not_offered_and_the_ids_stay_consistent() {
+    // LocOS #734 (the HTML filter since D4): translate="no" text is never a unit, with or without include_locked
     let ch = CH1.replace("<p>Hello <b>bold</b>", "<p translate=\"no\">Colophon text stays.</p>\n<p>Hello <b>bold</b>");
     let src = epub_with(&[("OEBPS/text/ch1.xhtml", ch.as_bytes())]);
     let o = ExtractOptions::new().with_include_locked(true);
     let mut d = Epub.extract(&src, &o).unwrap();
-    let locked: Vec<Unit> = d.units.iter().filter(|u| !u.translate).cloned().collect();
-    assert_eq!(locked.len(), 1);
-    assert!(loc_text(&locked[0]).starts_with("Colophon"));
+    assert!(d.units.iter().all(|u| !loc_text(u).starts_with("Colophon")));
+    assert_eq!(d.units.len(), extract(&src).units.len());
     let i = d.units.iter().position(|u| loc_text(u).starts_with("Hello")).unwrap();
     set(&mut d, i, "Bonjour \u{27E6}g1\u{27E7}gras\u{27E6}/g1\u{27E7}");
-    let id = locked[0].segments[0].id.clone();
-    assert!(matches!(d.set_target(&id, vec![Inline::text("x")]), Err(Error::Locked(_))));
     let (m, _) = members(&merge(&d));
     let c = member_text(&m, "OEBPS/text/ch1.xhtml");
     assert!(c.contains("<p translate=\"no\">Colophon text stays.</p>") && c.contains("<p>Bonjour <b>gras</b></p>"), "{c}");

@@ -7,54 +7,11 @@ fn corpus() -> std::path::PathBuf {
     std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../oracle/corpus/flprjzip")
 }
 
-/// LocOS keeps character references in topic text as typed (`&#160;`, `&eacute;`); Bilingua units hold the decoded
-/// characters and write them back escaped. This decodes the references the corpus uses.
-fn decode_refs(s: &str) -> String {
-    let mut out = String::new();
-    let mut rest = s;
-    while let Some(p) = rest.find('&') {
-        out.push_str(&rest[..p]);
-        rest = &rest[p..];
-        let Some(semi) = rest.find(';').filter(|s| *s <= 10) else {
-            out.push('&');
-            rest = &rest[1..];
-            continue;
-        };
-        let body = &rest[1..semi];
-        let c = match body {
-            "amp" => Some('&'),
-            "lt" => Some('<'),
-            "gt" => Some('>'),
-            "quot" => Some('"'),
-            "eacute" => Some('\u{e9}'),
-            b if b.starts_with('#') => b[1..].parse::<u32>().ok().and_then(char::from_u32),
-            _ => None,
-        };
-        match c {
-            Some(c) => {
-                out.push(c);
-                rest = &rest[semi + 1..];
-            }
-            None => {
-                out.push('&');
-                rest = &rest[1..];
-            }
-        }
-    }
-    out.push_str(rest);
-    out
-}
-
-/// Differences between LocOS and Bilingua that come from `bilingua-html`, each written down: `None` drops a LocOS
-/// unit Bilingua does not extract, `Some(text)` is the Bilingua form of a LocOS unit.
-///
-/// * character references (see [`decode_refs`]);
-/// * LocOS reads `<code>` as a paired code with its text inside; Bilingua keeps the whole element as one
-///   standalone code (protected text, never translated);
-/// * LocOS reads `<span translate="no">` runs as one point; so does Bilingua, the same text.
-fn known(locos: &str, style: &str) -> Option<String> {
-    let t = if style.is_empty() { decode_refs(locos) } else { locos.to_string() };
-    Some(t.replace("\u{27E6}g1\u{27E7}code_sample()\u{27E6}/g1\u{27E7}", "\u{27E6}x1\u{27E7}"))
+/// Differences between LocOS and Bilingua that come from `bilingua-html`: none since D4 (the HTML filter is LocOS's
+/// on the shared engine). Before D4: character references were decoded in Bilingua units and `<code>` was one
+/// standalone code.
+fn known(locos: &str, _style: &str) -> Option<String> {
+    Some(locos.to_string())
 }
 
 #[test]
