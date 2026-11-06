@@ -2,29 +2,24 @@
 
 TEXT = """## What this means
 
-Written by hand after reading the tables above; `python run.py --scoreboard` copies it in unchanged.
+Written by hand after reading the tables above (wave 12, 2026-11-05); `python run.py --scoreboard` copies it in
+unchanged. The reconciliation with every LocOS dialect, connector shape and option, and the classification of each
+`differs` row, is `docs/status/BILINGUA-SCOREBOARD-2026-11-05.md`.
 
-- **Coverage is the real gap, not quality.** Of 87 LocOS formats Bilingua opens 15 (10 source parsers plus the
-  XLIFF family, SDLXLIFF, MQXLIFF, MXLIFF and the three package types, all now Bilingua crates). 73 have no parser. On the
-  formats Bilingua does read, nothing fails: every file opens, an unchanged merge gives the same file, and a
-  pseudo-translated merge reads back.
-- **No format can switch yet**, but the switch list is short for the formats LocOS fixtures already cover: TXT, SDLXLIFF,
-  MQXLIFF and MXLIFF are `same`. The rest of the `differs` rows are mostly the deliberate choices listed in
-  `REPORT.md` (more attributes extracted, master placeholders and URLs left out, shared strings once). Before DOCX,
-  HTML, JSON, PO, SRT, Markdown, PPTX or XLSX move over, each row needs one pass through its reasons to separate
-  those choices from real gaps.
-- **Known gaps seen again here** (features, not crashes): PPTX picture alt text, chart text and SmartArt-style shape text
-  (the generated and Strict PPTX packages); XLSX text boxes in drawings and `t="str"` cells without a formula; the
-  XLIFF 1.2 vendor extension of GlobalLink (`iws:status` finished or locked) that LocOS reads and Bilingua now reads too:
-  a finished segment is translated, a locked one is locked.
-- **Bilingual formats compare differently.** LocOS leaves finished segments (translated, confirmed) out of its unit
-  list; Bilingua lists every segment with a state. The scoreboard marks finished segments as locked on the
-  Bilingua side so the two lists line up. The pseudo-translated merge is checked on the target.
-- **Unit size.** TXT and Markdown are paragraphs in Bilingua and lines in LocOS: the match column compares words and
-  the unit counts are not compared.
-- **Nothing here is a verdict on LocOS being right.** Where the two disagree the row says so; the notes in
-  `REPORT.md` say which side looks wrong.
-- **Fixture coverage is thin** for some rows (one file each for most software resource formats), so a `same` is a
-  floor, not proof. Formats with no fixture show a dash.
-- Sorting of the missing list is a guess at customer usage, not data.
+- **Coverage is complete for the registry.** Every one of the 87 LocOS registry formats has a Bilingua filter; none is
+  `missing`. The dialects LocOS picks by content that the fixtures show (Android strings and Java XML properties in
+  `.xml`, Storyline tables in `.docx`, DITA, DocBook, multilingual XML) are `same`, except Mozilla `.properties`.
+- **The `differs` rows are mostly the LocOS-profile work of Track D** (placeholders LocOS keeps as text, its extra
+  units such as document properties, alt text and comments, one unit per line, entities kept as typed), listed in
+  local-tms `docs/reports/bilingua-differences.md`. A few are deliberate Bilingua choices (PNG text chunks and UTF-16
+  SVG read, URLs not extracted, SCC re-wrapped to 32 columns) and a few are small Bilingua bugs found by the pseudo
+  round trip (Fluent re-indent, ICML hidden range, DXF trailing backslash).
+- **Bilingual formats compare differently.** LocOS leaves finished segments out of its unit list; Bilingua lists every
+  segment with a state, so finished segments count as locked on the Bilingua side.
+- **Pseudo round trip.** Units are wrapped in letters (`Zq...qZ`) and tag markers are ignored; formats that write the
+  translation beside the source (MO, desktop, catkeys, CSV and STF target columns, TTX, TXML, TXLF, XLZ, multilingual
+  XML) pass when the source reads back unchanged. Letters typed right after a placeholder can still join it (Vue
+  `@:key`, Mozilla `#1`), which shows as a round-trip failure that a real translation with a space would not have.
+- **Fixture coverage is thin** for some rows, so a `same` is a floor, not proof. The LocOS side of PDF fails its OCR
+  fallback in the throwaway data folder (no database), which shows as missing units.
 """
