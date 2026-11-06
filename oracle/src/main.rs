@@ -234,7 +234,7 @@ fn main() {
                 let a: Vec<String> = doc
                     .units
                     .iter()
-                    .filter(|u| u.translate && !(doc.format == "android" && plural_label(u).is_some_and(|l| !kept.contains(&l))))
+                    .filter(|u| u.translate && (doc.format != "android" || plural_label(u).is_none_or(|l| kept.contains(&l))))
                     .map(|u| no_tags(&render(u).0))
                     .collect();
                 let b2: Vec<String> = d2
@@ -255,13 +255,13 @@ fn main() {
                     let want = |x: &String| format!("{PRE}{x}{POST}");
                     let same = |x: &String, y: &String| if md { want(x).replace('\\', "") == y.replace('\\', "") } else { want(x) == *y };
                     let beside = a.iter().zip(&b2).filter(|(x, y)| !same(x, y) && beside_ok && x == y).count();
-                    let bad = a.iter().zip(&b2).filter(|(x, y)| !same(x, y) && !(beside_ok && x == y)).count();
+                    let bad = a.iter().zip(&b2).filter(|(x, y)| !same(x, y) && (!beside_ok || x != y)).count();
                     if bad == 0 && set_errors == 0 && beside > 0 {
                         json!({"status": format!("ok ({beside} units keep the source; the translation is written beside it)")})
                     } else if bad == 0 && set_errors == 0 {
                         json!({"status": "ok"})
                     } else {
-                        let first = a.iter().zip(&b2).find(|(x, y)| !same(x, y) && !(beside_ok && x == y)).map(|(x, y)| format!("{x:?} -> {y:?}"));
+                        let first = a.iter().zip(&b2).find(|(x, y)| !same(x, y) && (!beside_ok || x != y)).map(|(x, y)| format!("{x:?} -> {y:?}"));
                         json!({"status": format!("{bad} units differ, {set_errors} set_target errors"), "first": first})
                     }
                 }
