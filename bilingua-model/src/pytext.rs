@@ -67,6 +67,7 @@ pub fn py_isspace_char(c: char) -> bool {
 
 /// `unicodedata.category(c)[0] in "PS"`: a punctuation or symbol character (CommonMark's Unicode punctuation, as
 /// Localization OS's Markdown emphasis repair tests it).
+#[doc(hidden)]
 pub fn py_is_punct_or_symbol_char(c: char) -> bool {
     if c.is_ascii() {
         return c.is_ascii_punctuation();
@@ -117,11 +118,13 @@ pub fn py_rstrip(s: &str) -> &str {
 
 /// True for the characters Python's `str.splitlines` breaks at (`\r\n` counts as one break): `\n`, `\r`, `\x0b`,
 /// `\x0c`, `\x1c`, `\x1d`, `\x1e`, U+0085, U+2028, U+2029.
+#[doc(hidden)]
 pub fn py_is_line_break(c: char) -> bool {
     matches!(c, '\n' | '\r' | '\u{0b}' | '\u{0c}' | '\u{1c}' | '\u{1d}' | '\u{1e}' | '\u{85}' | '\u{2028}' | '\u{2029}')
 }
 
 /// Python `s.splitlines(keepends=True)`: every line with its own terminator (`\r\n` counts as one).
+#[doc(hidden)]
 pub fn py_splitlines_keepends(s: &str) -> Vec<&str> {
     let mut out = Vec::new();
     let mut start = 0;
@@ -144,6 +147,7 @@ pub fn py_splitlines_keepends(s: &str) -> Vec<&str> {
 }
 
 /// Splits one line of [`py_splitlines_keepends`] into its body and its terminator (`""`, one break, or `\r\n`).
+#[doc(hidden)]
 pub fn py_split_line_end(line: &str) -> (&str, &str) {
     if let Some(body) = line.strip_suffix("\r\n") {
         return (body, "\r\n");
