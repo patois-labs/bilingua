@@ -151,10 +151,8 @@ fn column_mode_random_workbooks_match_locos() {
         .collect();
     names.sort();
     assert!(names.len() >= 40, "the fuzz cases are missing");
-    for n in &names {
-        check(n, true);
-        check(n, false);
-    }
+    let failed: Vec<&String> = names.iter().filter(|n| std::panic::catch_unwind(|| (check(n, true), check(n, false))).is_err()).collect();
+    assert!(failed.is_empty(), "{} of {} differ from LocOS: {failed:?}", failed.len(), names.len());
 }
 
 #[test]

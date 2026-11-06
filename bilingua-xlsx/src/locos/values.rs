@@ -247,11 +247,15 @@ impl Formats {
     }
 
     /// `str(value)` of a number cell with this style: a date, time or duration when the style is one, else the
-    /// number; `#VALUE!` for a date out of range (openpyxl's own fallback).
-    pub(super) fn number_str(&self, n: Num, raw: &str, style: Option<usize>) -> String {
+    /// number. A date out of range is openpyxl's error cell `#VALUE!`, a string (so, like any error cell, a unit
+    /// when it stands in the source column): the bool says so.
+    pub(super) fn number_str(&self, n: Num, raw: &str, style: Option<usize>) -> (String, bool) {
         match style.filter(|s| self.dates.contains(s)) {
-            Some(s) => from_excel(n, self.mac, self.deltas.contains(&s)).unwrap_or_else(|| "#VALUE!".into()),
-            None => num_str(n, raw),
+            Some(s) => match from_excel(n, self.mac, self.deltas.contains(&s)) {
+                Some(v) => (v, false),
+                None => ("#VALUE!".into(), true),
+            },
+            None => (num_str(n, raw), false),
         }
     }
 }

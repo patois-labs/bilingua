@@ -116,7 +116,7 @@ fn parse_cell(d: &Dom, c: usize, key: (i64, i64), ctx: &Ctx, shared: &mut HashMa
     Ok(match t {
         "n" => {
             let n = values::cast_number(&v).ok_or_else(|| invalid(name))?;
-            (ctx.formats.number_str(n, &v, style), false)
+            ctx.formats.number_str(n, &v, style)
         }
         "s" => {
             // Python indexing: a negative index counts from the end
