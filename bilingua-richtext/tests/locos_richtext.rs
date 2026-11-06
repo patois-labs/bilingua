@@ -337,15 +337,16 @@ fn adf_leaf_mode_cases() {
 fn adf_inline_container_typed_text_is_not_a_leaf() {
     // a malformed leaf that also has content: inline mode takes its content (LocOS `_walk_inline`), leaf mode its text
     let f = Adf;
-    let src = adf_doc(json!([{"type": "text", "text": "outer", "content": [at("inner words")]}]));
+    // (a block sibling keeps the doc itself from being the inline container)
+    let src = adf_doc(json!([{"type": "text", "text": "outer", "content": [at("inner words")]}, {"type": "paragraph", "content": [at("Next")]}]));
     let mut d = open(&f, &src);
-    assert_eq!(texts(&d), ["inner words"]);
+    assert_eq!(texts(&d), ["inner words", "Next"]);
     set(&mut d, 0, "innere Worte").unwrap();
     let out = json(&f.merge(&d).unwrap());
     assert_eq!(out["content"][0]["text"], "outer");
     assert_eq!(out["content"][0]["content"][0]["text"], "innere Worte");
     let mut d = f.extract(&src, &leaf_opts()).unwrap();
-    assert_eq!(texts(&d), ["outer"]);
+    assert_eq!(texts(&d), ["outer", "Next"]);
     set(&mut d, 0, "aussen").unwrap();
     let out = json(&f.merge(&d).unwrap());
     assert_eq!(out["content"][0]["text"], "aussen");
