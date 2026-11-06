@@ -210,6 +210,12 @@ def has_letters(s: str) -> bool:
     return any(c.isalpha() for c in s)
 
 
+def pseudo_ok(status: str) -> bool:
+    """bl-dump's pseudo round trip passed: "ok", "ok (n units keep the source ...)", or "n/a..." (a translated
+    merge refused by design, PDF)."""
+    return status == "ok" or status.startswith("ok (") or status.startswith("n/a")
+
+
 def compare(path: Path, bl: dict, lo: dict) -> dict:
     r = {"file": path.name, "bl_error": bl.get("error"), "lo_error": lo.get("error"), "issues": [], "notes": []}
     r["unchanged"] = bl.get("unchanged", "n/a")
@@ -358,7 +364,7 @@ def report(results, locos_ok) -> str:
                 L.append(f"| {r['file']} | {r['bl_n']} | {r['lo_n']} | {r['pairs']} | {len(r['issues'])} | {len(r['notes'])} | {r['codes'][0]}/{r['codes'][1]} | {short(r['unchanged'], 60)} | {short(r['pseudo'], 60)} | {short(r.get('reread', '-'), 60)} |")
             tot["files"] += 1
             tot["issues"] += len(r["issues"])
-            tot["rt_bad"] += (r["unchanged"] not in ("identical", "identical-parts")) + (r["pseudo"] != "ok") + (r.get("reread", "ok") != "ok")
+            tot["rt_bad"] += (r["unchanged"] not in ("identical", "identical-parts")) + (not pseudo_ok(r["pseudo"])) + (r.get("reread", "ok") != "ok")
         L.append("")
         for r in rs:
             if r["issues"] or r.get("pseudo_first"):

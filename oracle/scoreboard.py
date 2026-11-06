@@ -231,7 +231,7 @@ def score(inv, bl_filters, files, lo, get_bl):
             for k, _, _ in r["notes"]:
                 row["notes"][k] += 1
         row["rt_checked"] += 1
-        if r["unchanged"] not in ("identical", "identical-parts", "n/a") or r["pseudo"] not in ("ok", "n/a"):
+        if r["unchanged"] not in ("identical", "identical-parts", "n/a") or not R.pseudo_ok(r["pseudo"]):
             row["rt_bad"].append(f"{p.name}: {R.short(r['unchanged'] if r['unchanged'] not in ('identical', 'identical-parts') else r['pseudo'], 70)}")
 
     return rows
