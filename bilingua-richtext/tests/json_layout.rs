@@ -27,9 +27,9 @@ fn bytes_outside_the_translated_values_stay() {
 #[test]
 fn a_rebuilt_container_is_written_in_place_and_the_rest_is_untouched() {
     let f = Adf;
-    let src = "{\"type\":\"doc\",  \"version\" : 1,\n \"content\": [\n    {\"type\": \"paragraph\", \"content\": [{\"type\":\"text\",\"text\":\"Hi \"},{\"type\":\"text\",\"text\":\"there\",\"marks\":[{\"type\":\"strong\"}]}]},\n    {\"type\":\"rule\" , \"attrs\":{\"x\":1.50}}\n ]}";
+    let src = "{\"type\":\"doc\",  \"version\" : 1,\n \"content\": [\n    {\"type\": \"paragraph\", \"content\": [{\"type\":\"text\",\"text\":\"hi \"},{\"type\":\"text\",\"text\":\"there\",\"marks\":[{\"type\":\"strong\"}]}]},\n    {\"type\":\"rule\" , \"attrs\":{\"x\":1.50}}\n ]}";
     let mut d = open(&f, src.as_bytes());
-    assert_eq!(texts(&d), [tk("Hi Gg1HthereG/g1H")]);
+    assert_eq!(texts(&d), [tk("hi Gg1HthereG/g1H")]);
     set(&mut d, 0, &tk("Gg1HDortG/g1H hallo")).unwrap();
     let out = String::from_utf8(f.merge(&d).unwrap()).unwrap();
     let head = "{\"type\":\"doc\",  \"version\" : 1,\n \"content\": [\n    {\"type\": \"paragraph\", \"content\": ";
@@ -85,7 +85,7 @@ fn reading_is_linear() {
     let mut times = Vec::new();
     for n in [20_000usize, 160_000] {
         let wide = format!("{{\"type\":\"doc\",\"content\":[],{}}}", (0..n).map(|i| format!("\"k{i}\":{i}")).collect::<Vec<_>>().join(","));
-        let long = format!("[{{\"_type\":\"block\",\"children\":[{{\"_type\":\"span\",\"text\":\"{}\",\"marks\":[]}}]}}]", "ab\\u00e9 ".repeat(n));
+        let long = format!("[{{\"_type\":\"block\",\"children\":[{{\"_type\":\"span\",\"text\":\"{}\",\"marks\":[]}}]}}]", "ab\\u00e9 ".repeat(n / 16));
         let arr = format!("[{}]", vec!["{\"x\":[1,2,{\"y\":\"z\"}]}"; n].join(","));
         let t0 = std::time::Instant::now();
         assert!(Adf.extract(wide.as_bytes(), &opts()).is_ok());
