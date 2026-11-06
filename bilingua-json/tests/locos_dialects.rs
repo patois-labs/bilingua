@@ -532,3 +532,25 @@ fn mutated_files_never_panic() {
         }
     }
 }
+
+#[test]
+fn gate_crlf_file_gets_lf_lines_where_locos_splices_them() {
+    // LocOS writes the go-i18n object it rebuilds with LF breaks inside a CRLF file (no newline normalising)
+    let src = "{\r\n  \"files\": {\r\n    \"one\": \"{{.N}} file\",\r\n    \"other\": \"{{.N}} files\"\r\n  }\r\n}\r\n";
+    let want = "{\r\n  \"files\": {\n    \"one\": \"{{.N}} file\",\n    \"few\": \"{{.N}} files\",\n    \"many\": \"{{.N}} files\",\n    \"other\": \"{{.N}} files\"\n  }\r\n}\r\n";
+    assert_eq!(build(src, &[], Some("pl-PL")), want);
+}
+
+#[test]
+fn gate_non_token_brackets_are_words_and_hand_built_units_merge() {
+    // `⟦x⟧` is not a LocOS token, so its `x` is a letter (LocOS `_translatable`); `⟦x1⟧` alone is a token
+    let src = "{\"@@locale\": \"en\", \"a\": \"\u{27e6}x\u{27e7}\", \"b\": \"\u{27e6}x1\u{27e7}\"}";
+    assert_eq!(units(src), vec!["\u{27e6}x\u{27e7}".to_string()]);
+    // a plain document whose units lost their original token still merges (as before the dialects)
+    let mut d = JsonFilter.extract(b"{\"t\": \"Hello there\"}", &ExtractOptions::new()).unwrap();
+    for u in &mut d.units {
+        u.codes.clear();
+    }
+    let out = bilingua_model::Filter::merge_with(&JsonFilter, &d, &MergeOptions::default()).unwrap();
+    assert_eq!(out, b"{\"t\": \"Hello there\"}");
+}

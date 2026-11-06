@@ -313,7 +313,7 @@ keeps the encoding:
     category the target uses that it lacks, holding the `_other` value, before `_other`. Without the profile the
     keys are spliced into the text and the layout stays; under the profile the file is written as LocOS writes it
     (parsed and dumped with two-space indentation, Python's number spelling, the original line endings), and only
-    when a key was added. The CLDR table is private to the crate (Babel 2.18.0) until the shared one lands.
+    when a key was added. The categories come from the shared CLDR table (`bilingua_model::cldr`); babel's old and three-letter language codes (`deu`, `iw`, `und`) resolve as LocOS resolves them.
   - Known difference: a message with a lone surrogate escape is left alone (no unit), since a Rust string cannot
     hold it.
 

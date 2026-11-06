@@ -24,7 +24,6 @@ mod rebuild;
 mod scan;
 mod tree;
 
-pub use cldr::{categories as plural_categories, BABEL_VERSION};
 
 use bilingua_model::*;
 use dialect::Dialect;
@@ -203,8 +202,7 @@ impl Filter for JsonFilter {
         }
         if let Some(d) = doc_dialect(doc, &orig, locos) {
             let out = if !translated && target.is_none() { orig } else { rebuild::splice(&orig, doc, d, target, locos)? };
-            // LocOS splices `
-` lines (a new `@@locale`, plural keys) into a CRLF file as they are: keep the text's breaks
+            // LocOS splices LF lines (a new `@@locale`, plural keys) into a CRLF file as they are: keep the text's breaks
             let enc = if locos { bilingua_model::enc::keep_newlines(encoding) } else { encoding.to_string() };
             return bilingua_model::enc::encode_text_with(&out, &enc, opts);
         }
