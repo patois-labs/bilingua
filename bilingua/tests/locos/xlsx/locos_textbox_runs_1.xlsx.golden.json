@@ -1,0 +1,258 @@
+{
+ "format": "xlsx",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Cell",
+   "style": ""
+  },
+  {
+   "p_index": 1,
+   "text": "⟦r1⟧Hello ⟦/r1⟧⟦r2⟧world⟦/r2⟧⟦x4⟧⟦r3⟧again⟦/r3⟧",
+   "style": "text box"
+  },
+  {
+   "p_index": 2,
+   "text": "⟦r1⟧Page ⟦/r1⟧⟦x2⟧",
+   "style": "text box"
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "zip": [
+    {
+     "name": "[Content_Types].xml",
+     "same": true
+    },
+    {
+     "name": "_rels/.rels",
+     "same": true
+    },
+    {
+     "name": "xl/workbook.xml",
+     "same": true
+    },
+    {
+     "name": "xl/_rels/workbook.xml.rels",
+     "same": true
+    },
+    {
+     "name": "xl/worksheets/sheet1.xml",
+     "same": true
+    },
+    {
+     "name": "xl/worksheets/_rels/sheet1.xml.rels",
+     "same": true
+    },
+    {
+     "name": "xl/drawings/drawing1.xml",
+     "same": true
+    }
+   ]
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü Cell",
+    "1": "⟦r1⟧Ü Hello ⟦/r1⟧⟦r2⟧Ü world⟦/r2⟧⟦x4⟧⟦r3⟧Ü again⟦/r3⟧",
+    "2": "⟦r1⟧Ü Page ⟦/r1⟧⟦x2⟧"
+   },
+   "zip": [
+    {
+     "name": "[Content_Types].xml",
+     "same": true
+    },
+    {
+     "name": "_rels/.rels",
+     "same": true
+    },
+    {
+     "name": "xl/workbook.xml",
+     "same": true
+    },
+    {
+     "name": "xl/_rels/workbook.xml.rels",
+     "same": true
+    },
+    {
+     "name": "xl/worksheets/sheet1.xml",
+     "sha1": "f3957a9d6bcd7020cba4fbf3993f18dc0c838bc6"
+    },
+    {
+     "name": "xl/worksheets/_rels/sheet1.xml.rels",
+     "same": true
+    },
+    {
+     "name": "xl/drawings/drawing1.xml",
+     "sha1": "b99d9447e76f7b1ef60fba22c0521ad3983ee78e"
+    }
+   ]
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Cell & <\"'>",
+    "2": "⟦r1⟧Page  & <\"'>⟦/r1⟧⟦x2⟧"
+   },
+   "zip": [
+    {
+     "name": "[Content_Types].xml",
+     "sha1": "16220690a6bf963b78659a93e60dbc1028563bf9"
+    },
+    {
+     "name": "_rels/.rels",
+     "sha1": "6749a206a3f124214d7fc75e4fcb0184e9ad552c"
+    },
+    {
+     "name": "xl/workbook.xml",
+     "same": true
+    },
+    {
+     "name": "xl/_rels/workbook.xml.rels",
+     "same": true
+    },
+    {
+     "name": "xl/worksheets/sheet1.xml",
+     "sha1": "e43fe497154dd046a7343d193b97048ff735be8f"
+    },
+    {
+     "name": "xl/worksheets/_rels/sheet1.xml.rels",
+     "same": true
+    },
+    {
+     "name": "xl/drawings/drawing1.xml",
+     "sha1": "422cddbdca25092642546417b80d5b3f726adf3d"
+    },
+    {
+     "name": "docProps/core.xml",
+     "sha1": "e3456a9c0e47ba59de9a8d729a2b15ae38ce4832"
+    }
+   ]
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "zip": [
+    {
+     "name": "[Content_Types].xml",
+     "sha1": "16220690a6bf963b78659a93e60dbc1028563bf9"
+    },
+    {
+     "name": "_rels/.rels",
+     "sha1": "6749a206a3f124214d7fc75e4fcb0184e9ad552c"
+    },
+    {
+     "name": "xl/workbook.xml",
+     "same": true
+    },
+    {
+     "name": "xl/_rels/workbook.xml.rels",
+     "same": true
+    },
+    {
+     "name": "xl/worksheets/sheet1.xml",
+     "same": true
+    },
+    {
+     "name": "xl/worksheets/_rels/sheet1.xml.rels",
+     "same": true
+    },
+    {
+     "name": "xl/drawings/drawing1.xml",
+     "same": true
+    },
+    {
+     "name": "docProps/core.xml",
+     "sha1": "e3456a9c0e47ba59de9a8d729a2b15ae38ce4832"
+    }
+   ]
+  },
+  {
+   "name": "escape-ar-SA",
+   "locale": "ar-SA",
+   "map": {
+    "0": "Cell & <\"'>",
+    "2": "⟦r1⟧Page  & <\"'>⟦/r1⟧⟦x2⟧"
+   },
+   "zip": [
+    {
+     "name": "[Content_Types].xml",
+     "sha1": "16220690a6bf963b78659a93e60dbc1028563bf9"
+    },
+    {
+     "name": "_rels/.rels",
+     "sha1": "6749a206a3f124214d7fc75e4fcb0184e9ad552c"
+    },
+    {
+     "name": "xl/workbook.xml",
+     "same": true
+    },
+    {
+     "name": "xl/_rels/workbook.xml.rels",
+     "same": true
+    },
+    {
+     "name": "xl/worksheets/sheet1.xml",
+     "sha1": "f09fb1c6e89a6f906c4e1739d55c75eadaba29a8"
+    },
+    {
+     "name": "xl/worksheets/_rels/sheet1.xml.rels",
+     "same": true
+    },
+    {
+     "name": "xl/drawings/drawing1.xml",
+     "sha1": "c3e74d5c891cec5c6e9136ceee4b17437873b23d"
+    },
+    {
+     "name": "docProps/core.xml",
+     "sha1": "876cbd99e9e1ae90359934057023188208905cf9"
+    }
+   ]
+  },
+  {
+   "name": "none-ar-SA",
+   "locale": "ar-SA",
+   "map": {},
+   "zip": [
+    {
+     "name": "[Content_Types].xml",
+     "sha1": "16220690a6bf963b78659a93e60dbc1028563bf9"
+    },
+    {
+     "name": "_rels/.rels",
+     "sha1": "6749a206a3f124214d7fc75e4fcb0184e9ad552c"
+    },
+    {
+     "name": "xl/workbook.xml",
+     "same": true
+    },
+    {
+     "name": "xl/_rels/workbook.xml.rels",
+     "same": true
+    },
+    {
+     "name": "xl/worksheets/sheet1.xml",
+     "sha1": "9c216079263f2a838e3b64748483274e2040b55e"
+    },
+    {
+     "name": "xl/worksheets/_rels/sheet1.xml.rels",
+     "same": true
+    },
+    {
+     "name": "xl/drawings/drawing1.xml",
+     "same": true
+    },
+    {
+     "name": "docProps/core.xml",
+     "sha1": "876cbd99e9e1ae90359934057023188208905cf9"
+    }
+   ]
+  }
+ ]
+}

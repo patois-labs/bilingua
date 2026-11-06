@@ -71,10 +71,10 @@ pub fn to_locos_text_as(inl: &[Inline], pair_letter: char) -> (String, LocosMap)
     convert(inl, pair_letter, pairs(inl))
 }
 
-/// The pair-token letter a format's LocOS filter uses (the adapter's `_PAIR_LETTER`): `r` for docx and pptx runs,
-/// else [`PAIR_LETTER`].
+/// The pair-token letter a format's LocOS filter uses (the adapter's `_PAIR_LETTER`): `r` for docx and pptx runs
+/// and for the runs of an xlsx text box (LocOS tokenizes those with its PowerPoint filter), else [`PAIR_LETTER`].
 pub fn locos_pair_letter(format: &str) -> char {
-    if matches!(format, "docx" | "pptx") {
+    if matches!(format, "docx" | "pptx" | "xlsx") {
         'r'
     } else {
         PAIR_LETTER

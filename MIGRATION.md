@@ -197,6 +197,27 @@ keeps the encoding:
   documents carry the original as a `Skeleton::Binary`. Known gap: an MXLIFF segment mixing element codes and
   `{1}` text marks numbers its tokens in LocOS's order (elements first), which `profile::tokens` renumbers by
   position.
+- Track D group B, xlsx: under the profile this is a port of LocOS's `xlsx_filter.py` (cell mode, walk 2) and
+  `xlsx_package.py`. Units are openpyxl's: every worksheet in workbook order (hidden and very hidden ones too,
+  chartsheets left out), cells by row then column (a later duplicate address wins), a cell whose value is a string
+  that is not a formula and has a letter or digit; shared and inline rich strings are their plain text (runs
+  joined, phonetic runs left out, `x005F_` removed from shared strings as openpyxl does). Then the text-box and
+  shape paragraphs of each worksheet's drawing (`locos.style` `text box`, `mc:Fallback` copies skipped), numbered
+  after the last cell. Sheet, workbook and cell protection and hidden rows and columns do not change the walk, and
+  the Bilingua options (`skip_hidden`, comments, sheet names) do not apply. `locos.p_index` is the unit's position.
+  The export patches the original package as LocOS does: a translated shared-string cell keeps its `si` (rewritten
+  in place when every cell using it gets the same text, else a new `si` appended and the cell repointed, and
+  `uniqueCount` grown), any other translated cell becomes an inline string, a rich string keeps its run format
+  only when all its text runs have the same `rPr`; the target language goes into `docProps/core.xml` (made, with
+  its relationship and content type, when the package has none) and onto the runs of each translated text-box
+  paragraph; a right-to-left target sets `rightToLeft="1"` on every worksheet view (a `sheetViews` added where a
+  sheet has none). Untouched parts keep their bytes; a Strict Open XML workbook comes back Strict. Copied from
+  LocOS on purpose: an error literal (`t="e"`, such as `#N/A`) and a `t="str"` cell without a formula are units,
+  and a negative shared-string index counts from the end of the table. Known gap: a text-box paragraph with
+  several runs and a break or field numbers the break or field after the runs in LocOS, by position in
+  `profile::tokens` (the builds still match); `profile::tokens::locos_pair_letter("xlsx")` is `r`, as LocOS's run
+  tokens are (the adapter's `_PAIR_LETTER` needs `xlsx` too). Not ported:
+  LocOS's comment units (`comments=True`) and column mode (`xlsx.table`).
 - `profile::lang_tag` and `profile::is_rtl` are LocOS's `html_lang` and `text_direction`.
 - LocOS export keywords are accepted and ignored for now: `docx.walk`, `xlsx.walk`, `pptx.walk`, `xlsx.table`,
   `csv.table`, `markdown.walk`, `markdown.md_walk`, `markdown.fm_keys`, `json.dialect`.

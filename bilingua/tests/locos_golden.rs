@@ -362,11 +362,15 @@ const KNOWN: &[(&str, &str)] = &[
     ("json_dialects_filter_go.json", "LocOS JSON resource dialects (go-i18n): not in group A"),
     ("json_dialects_filter_go_v1.json", "LocOS JSON resource dialects (go-i18n v1): not in group A"),
     ("json_dialects_filter_structured.json", "LocOS JSON resource dialects (Structured JSON): not in group A"),
+    (
+        "locos_textbox_runs_1.xlsx",
+        "text boxes with several runs: LocOS numbers a break or field after the paragraph's runs (its PowerPoint tokens), `profile::tokens` numbers every token by position; the builds match",
+    ),
 ];
 
 /// Formats whose goldens do not match yet: reported, not fatal. Remove a format when all its files match. docx,
-/// pptx, xlsx: Track D group B, not ported yet.
-const PENDING: &[&str] = &["docx", "pptx", "xlsx"];
+/// pptx: Track D group B, not ported yet.
+const PENDING: &[&str] = &["docx", "pptx"];
 
 #[test]
 fn locos_profile_goldens() {
