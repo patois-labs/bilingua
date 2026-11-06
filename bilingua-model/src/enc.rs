@@ -125,6 +125,54 @@ pub fn base(tag: &str) -> &str {
     tag.split(';').next().unwrap_or(tag)
 }
 
+/// Every charset declaration in `text` rewritten to say UTF-8, as LocOS's `read_text_upload(declared=True)` does
+/// to a file it converted.
+#[doc(hidden)]
+pub fn rewrite_declarations(text: &str) -> String {
+    rewrite_declared(text)
+}
+
+/// The skeleton tag without its newline part, so a merge leaves the line breaks of the text as they are (the LocOS
+/// profile's XML resource writers: LocOS does not normalise the breaks a translation brings in).
+#[doc(hidden)]
+pub fn keep_newlines(tag: &str) -> String {
+    tag.split(';').filter(|p| !p.starts_with("nl=")).collect::<Vec<_>>().join(";")
+}
+
+/// The skeleton of a LocOS-profile document whose writer works on the decoded file (po, srt and vtt): the file's
+/// skeleton tag, a line break, then the decoded text without its BOM. Read it back with [`locos_skeleton_parts`].
+#[doc(hidden)]
+pub fn locos_skeleton(tag: &str, text: &str) -> Vec<u8> {
+    let text = text.strip_prefix('\u{FEFF}').unwrap_or(text);
+    let mut v = Vec::with_capacity(tag.len() + 1 + text.len());
+    v.extend_from_slice(tag.as_bytes());
+    v.push(b'\n');
+    v.extend_from_slice(text.as_bytes());
+    v
+}
+
+/// (skeleton tag, decoded text) of a [`locos_skeleton`]; `None` when `data` is not one.
+#[doc(hidden)]
+pub fn locos_skeleton_parts(data: &[u8]) -> Option<(&str, &str)> {
+    let s = std::str::from_utf8(data).ok()?;
+    let (tag, text) = s.split_once('\n')?;
+    // a tag is a charset name with `;nl=` / `;label=` parts: nothing a declaration could carry as markup
+    let ok = !tag.is_empty() && tag.len() <= 200 && tag.bytes().all(|b| b.is_ascii_alphanumeric() || b"_.:;=-".contains(&b));
+    ok.then_some((tag, text))
+}
+
+/// The tag LocOS's UTF-8 export writes a file under: UTF-8, its UTF-8 BOM and its line breaks kept (a UTF-16 BOM,
+/// a code page and its label are not).
+#[doc(hidden)]
+pub fn locos_utf8_tag(tag: &str) -> String {
+    let mut t = String::from(if base(tag) == "utf-8-bom" { "utf-8-bom" } else { "utf-8" });
+    for p in tag.split(';').skip(1).filter(|p| p.starts_with("nl=")) {
+        t.push(';');
+        t.push_str(p);
+    }
+    t
+}
+
 /// The charset a file declares in its first 4 KB, as a decoder.
 pub fn declared_encoding(data: &[u8]) -> Option<&'static Encoding> {
     let head = ascii_head(data, 4096);
@@ -132,7 +180,9 @@ pub fn declared_encoding(data: &[u8]) -> Option<&'static Encoding> {
     Encoding::for_label(m.get(2)?.as_str().as_bytes())
 }
 
-fn declared_label(data: &[u8]) -> Option<String> {
+/// The charset name a file declares in its first 4 KB, as written.
+#[doc(hidden)]
+pub fn declared_label(data: &[u8]) -> Option<String> {
     let head = ascii_head(data, 4096);
     Some(decl_re().captures(&head)?.get(2)?.as_str().to_string())
 }

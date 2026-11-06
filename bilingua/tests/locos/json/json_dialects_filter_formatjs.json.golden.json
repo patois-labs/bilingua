@@ -1,0 +1,59 @@
+{
+ "format": "json",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "⟦x1⟧ in your cart",
+   "style": ""
+  },
+  {
+   "p_index": 1,
+   "text": "⟦x1⟧ item",
+   "style": ""
+  },
+  {
+   "p_index": 2,
+   "text": "⟦x1⟧ items",
+   "style": ""
+  },
+  {
+   "p_index": 3,
+   "text": "Welcome back, {name}!",
+   "style": ""
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "ewogICJjYXJ0LmNvdW50IjogewogICAgImRlZmF1bHRNZXNzYWdlIjogIntpdGVtQ291bnQsIHBsdXJhbCwgb25leyMgaXRlbX0gb3RoZXJ7IyBpdGVtc319IGluIHlvdXIgY2FydCIsCiAgICAiZGVzY3JpcHRpb24iOiAiQ2FydCBiYWRnZSIKICB9LAogICJhcHAud2VsY29tZSI6IHsKICAgICJkZWZhdWx0TWVzc2FnZSI6ICJXZWxjb21lIGJhY2ssIHtuYW1lfSEiLAogICAgImRlc2NyaXB0aW9uIjogeyJjb250ZXh0IjogImhvbWUiLCAibm90ZSI6ICJrZWVwIGl0IHNob3J0In0KICB9Cn0K"
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "⟦x1⟧Ü  in your cart",
+    "1": "⟦x1⟧Ü  item",
+    "2": "⟦x1⟧Ü  items",
+    "3": "Ü Welcome back, {name}!"
+   },
+   "out_b64": "ewogICJjYXJ0LmNvdW50IjogewogICAgImRlZmF1bHRNZXNzYWdlIjogIntpdGVtQ291bnQsIHBsdXJhbCwgb25leyPDnCAgaXRlbX0gb3RoZXJ7I8OcICBpdGVtc319w5wgIGluIHlvdXIgY2FydCIsCiAgICAiZGVzY3JpcHRpb24iOiAiQ2FydCBiYWRnZSIKICB9LAogICJhcHAud2VsY29tZSI6IHsKICAgICJkZWZhdWx0TWVzc2FnZSI6ICLDnCBXZWxjb21lIGJhY2ssIHtuYW1lfSEiLAogICAgImRlc2NyaXB0aW9uIjogeyJjb250ZXh0IjogImhvbWUiLCAibm90ZSI6ICJrZWVwIGl0IHNob3J0In0KICB9Cn0K"
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "⟦x1⟧ in your cart & <\"'>",
+    "2": "⟦x1⟧ items & <\"'>"
+   },
+   "out_b64": "ewogICJjYXJ0LmNvdW50IjogewogICAgImRlZmF1bHRNZXNzYWdlIjogIntpdGVtQ291bnQsIHBsdXJhbCwgb25leyMgaXRlbX0gb3RoZXJ7IyBpdGVtcyAmIDxcIic+fX0gaW4geW91ciBjYXJ0ICYgPFwiJz4iLAogICAgImRlc2NyaXB0aW9uIjogIkNhcnQgYmFkZ2UiCiAgfSwKICAiYXBwLndlbGNvbWUiOiB7CiAgICAiZGVmYXVsdE1lc3NhZ2UiOiAiV2VsY29tZSBiYWNrLCB7bmFtZX0hIiwKICAgICJkZXNjcmlwdGlvbiI6IHsiY29udGV4dCI6ICJob21lIiwgIm5vdGUiOiAia2VlcCBpdCBzaG9ydCJ9CiAgfQp9Cg=="
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "out_b64": "ewogICJjYXJ0LmNvdW50IjogewogICAgImRlZmF1bHRNZXNzYWdlIjogIntpdGVtQ291bnQsIHBsdXJhbCwgb25leyMgaXRlbX0gb3RoZXJ7IyBpdGVtc319IGluIHlvdXIgY2FydCIsCiAgICAiZGVzY3JpcHRpb24iOiAiQ2FydCBiYWRnZSIKICB9LAogICJhcHAud2VsY29tZSI6IHsKICAgICJkZWZhdWx0TWVzc2FnZSI6ICJXZWxjb21lIGJhY2ssIHtuYW1lfSEiLAogICAgImRlc2NyaXB0aW9uIjogeyJjb250ZXh0IjogImhvbWUiLCAibm90ZSI6ICJrZWVwIGl0IHNob3J0In0KICB9Cn0K"
+  }
+ ]
+}

@@ -130,8 +130,8 @@ def merge(
     """Writes a Document back to file bytes. Every option is keyword-only. `output_encoding="utf-8"` writes UTF-8
     whatever the file's own encoding ("keep" is the default); `stamp_target_always` stamps the target language and
     fills plurals even when nothing is translated (default False). `profile="locos"` starts from Localization OS's
-    options (UTF-8 out except ini, strings and dxf, stamp always); `output_encoding` and `stamp_target_always` given
-    here override the profile's. An unknown profile or format option raises BilinguaError with code
+    options (UTF-8 out except ini, strings, dxf, txt and properties, stamp always); `output_encoding` and
+    `stamp_target_always` given here override the profile's. An unknown profile or format option raises BilinguaError with code
     "invalid_argument"."""
 
 def profiles() -> dict[str, int]:

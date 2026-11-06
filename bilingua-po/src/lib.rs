@@ -3,6 +3,7 @@
 /// Skeleton schema number: bump only when this crate's skeleton layout changes (see `bilingua_model::check_parser`).
 pub const SKELETON_SCHEMA: u32 = 1;
 
+mod locos;
 mod parse;
 mod ph;
 
@@ -151,6 +152,10 @@ impl Filter for Po {
 
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
         bilingua_model::check_own_options(self, &opts.format_options)?;
+        if opts.is_profile(profile::LOCOS) {
+            let (text, tag, warnings) = locos::decode(bytes, opts)?;
+            return locos::extract(&text, &tag, opts, warnings);
+        }
         let mut dec = bilingua_model::enc::decode_text(bytes, &bilingua_model::enc::DecodeOptions::new(opts).declared())?;
         let text_owned = std::mem::take(&mut dec.text);
         let text = text_owned.as_str();
@@ -234,6 +239,10 @@ impl Filter for Po {
     fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
         bilingua_model::check_own_options(self, &opts.format_options)?;
         bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
+        // a document extracted under the LocOS profile carries the decoded file and is written the LocOS way
+        if let Skeleton::Binary { data, .. } = &doc.skeleton {
+            return locos::merge(doc, data, opts);
+        }
         let Skeleton::Text { parts, encoding, .. } = &doc.skeleton else {
             return Err(Error::Write("po needs a text skeleton".into()));
         };

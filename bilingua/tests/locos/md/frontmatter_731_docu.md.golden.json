@@ -1,0 +1,66 @@
+{
+ "format": "md",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Architecture overview",
+   "style": ""
+  },
+  {
+   "p_index": 1,
+   "text": "How the build pipeline turns your files into a website.",
+   "style": ""
+  },
+  {
+   "p_index": 2,
+   "text": "Architecture",
+   "style": ""
+  },
+  {
+   "p_index": 3,
+   "text": "<Figure title=\"Pipeline diagram\" src=\"/img/p.png\" />",
+   "style": ""
+  },
+  {
+   "p_index": 4,
+   "text": "The build pipeline reads every page and writes static HTML files.",
+   "style": ""
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "LS0tCmlkOiBhcmNoaXRlY3R1cmUKc2x1ZzogL2FkdmFuY2VkL2FyY2hpdGVjdHVyZQpzaWRlYmFyX2xhYmVsOiBBcmNoaXRlY3R1cmUgb3ZlcnZpZXcKc2lkZWJhcl9wb3NpdGlvbjogMgpkZXNjcmlwdGlvbjogSG93IHRoZSBidWlsZCBwaXBlbGluZSB0dXJucyB5b3VyIGZpbGVzIGludG8gYSB3ZWJzaXRlLgotLS0KCiMgQXJjaGl0ZWN0dXJlCgo8RmlndXJlIHRpdGxlPSJQaXBlbGluZSBkaWFncmFtIiBzcmM9Ii9pbWcvcC5wbmciIC8+CgpUaGUgYnVpbGQgcGlwZWxpbmUgcmVhZHMgZXZlcnkgcGFnZSBhbmQgd3JpdGVzIHN0YXRpYyBIVE1MIGZpbGVzLgo="
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü Architecture overview",
+    "1": "Ü How the build pipeline turns your files into a website.",
+    "2": "Ü Architecture",
+    "3": "Ü <Figure title=\"Pipeline diagram\" src=\"/img/p.png\" />",
+    "4": "Ü The build pipeline reads every page and writes static HTML files."
+   },
+   "out_b64": "LS0tCmlkOiBhcmNoaXRlY3R1cmUKc2x1ZzogL2FkdmFuY2VkL2FyY2hpdGVjdHVyZQpzaWRlYmFyX2xhYmVsOiDDnCBBcmNoaXRlY3R1cmUgb3ZlcnZpZXcKc2lkZWJhcl9wb3NpdGlvbjogMgpkZXNjcmlwdGlvbjogw5wgSG93IHRoZSBidWlsZCBwaXBlbGluZSB0dXJucyB5b3VyIGZpbGVzIGludG8gYSB3ZWJzaXRlLgotLS0KCiMgw5wgQXJjaGl0ZWN0dXJlCgrDnCA8RmlndXJlIHRpdGxlPSJQaXBlbGluZSBkaWFncmFtIiBzcmM9Ii9pbWcvcC5wbmciIC8+CgrDnCBUaGUgYnVpbGQgcGlwZWxpbmUgcmVhZHMgZXZlcnkgcGFnZSBhbmQgd3JpdGVzIHN0YXRpYyBIVE1MIGZpbGVzLgo="
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Architecture overview & <\"'>",
+    "2": "Architecture & <\"'>",
+    "4": "The build pipeline reads every page and writes static HTML files. & <\"'>"
+   },
+   "out_b64": "LS0tCmlkOiBhcmNoaXRlY3R1cmUKc2x1ZzogL2FkdmFuY2VkL2FyY2hpdGVjdHVyZQpzaWRlYmFyX2xhYmVsOiBBcmNoaXRlY3R1cmUgb3ZlcnZpZXcgJiA8Iic+CnNpZGViYXJfcG9zaXRpb246IDIKZGVzY3JpcHRpb246IEhvdyB0aGUgYnVpbGQgcGlwZWxpbmUgdHVybnMgeW91ciBmaWxlcyBpbnRvIGEgd2Vic2l0ZS4KLS0tCgojIEFyY2hpdGVjdHVyZSAmIDwiJz4KCjxGaWd1cmUgdGl0bGU9IlBpcGVsaW5lIGRpYWdyYW0iIHNyYz0iL2ltZy9wLnBuZyIgLz4KClRoZSBidWlsZCBwaXBlbGluZSByZWFkcyBldmVyeSBwYWdlIGFuZCB3cml0ZXMgc3RhdGljIEhUTUwgZmlsZXMuICYgPCInPgo="
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "out_b64": "LS0tCmlkOiBhcmNoaXRlY3R1cmUKc2x1ZzogL2FkdmFuY2VkL2FyY2hpdGVjdHVyZQpzaWRlYmFyX2xhYmVsOiBBcmNoaXRlY3R1cmUgb3ZlcnZpZXcKc2lkZWJhcl9wb3NpdGlvbjogMgpkZXNjcmlwdGlvbjogSG93IHRoZSBidWlsZCBwaXBlbGluZSB0dXJucyB5b3VyIGZpbGVzIGludG8gYSB3ZWJzaXRlLgotLS0KCiMgQXJjaGl0ZWN0dXJlCgo8RmlndXJlIHRpdGxlPSJQaXBlbGluZSBkaWFncmFtIiBzcmM9Ii9pbWcvcC5wbmciIC8+CgpUaGUgYnVpbGQgcGlwZWxpbmUgcmVhZHMgZXZlcnkgcGFnZSBhbmQgd3JpdGVzIHN0YXRpYyBIVE1MIGZpbGVzLgo="
+  }
+ ]
+}

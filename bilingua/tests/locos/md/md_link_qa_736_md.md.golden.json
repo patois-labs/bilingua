@@ -1,0 +1,53 @@
+{
+ "format": "md",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Install the tools",
+   "style": ""
+  },
+  {
+   "p_index": 1,
+   "text": "Read the [setup steps](#install-tools) first.",
+   "style": ""
+  },
+  {
+   "p_index": 2,
+   "text": "Click Save.",
+   "style": ""
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "IyBJbnN0YWxsIHRoZSB0b29scwoKUmVhZCB0aGUgW3NldHVwIHN0ZXBzXSgjaW5zdGFsbC10b29scykgZmlyc3QuCgpDbGljayBTYXZlLgo="
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü Install the tools",
+    "1": "Ü Read the [setup steps](#install-tools) first.",
+    "2": "Ü Click Save."
+   },
+   "out_b64": "IyDDnCBJbnN0YWxsIHRoZSB0b29scwoKw5wgUmVhZCB0aGUgW3NldHVwIHN0ZXBzXSgjaW5zdGFsbC10b29scykgZmlyc3QuCgrDnCBDbGljayBTYXZlLgo="
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Install the tools & <\"'>",
+    "2": "Click Save. & <\"'>"
+   },
+   "out_b64": "IyBJbnN0YWxsIHRoZSB0b29scyAmIDwiJz4KClJlYWQgdGhlIFtzZXR1cCBzdGVwc10oI2luc3RhbGwtdG9vbHMpIGZpcnN0LgoKQ2xpY2sgU2F2ZS4gJiA8Iic+Cg=="
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "out_b64": "IyBJbnN0YWxsIHRoZSB0b29scwoKUmVhZCB0aGUgW3NldHVwIHN0ZXBzXSgjaW5zdGFsbC10b29scykgZmlyc3QuCgpDbGljayBTYXZlLgo="
+  }
+ ]
+}

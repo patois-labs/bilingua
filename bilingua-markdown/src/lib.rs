@@ -14,6 +14,8 @@ pub const SKELETON_SCHEMA: u32 = 1;
 
 mod extract;
 mod frontmatter;
+mod locos;
+mod locos_emphasis;
 mod render;
 
 use bilingua_model::*;
@@ -52,6 +54,9 @@ impl Filter for MarkdownFilter {
         let text_owned = std::mem::take(&mut dec.text);
         let text = text_owned.as_str();
         let encoding = dec.encoding.as_str();
+        if opts.is_profile(profile::LOCOS) {
+            return locos::extract(text, encoding, opts, std::mem::take(&mut dec.warnings));
+        }
         let ex = extract::extract(text, opts.include_locked);
         let doc = Document::new(ID, ex.units, Skeleton::text(ex.parts, encoding, bilingua_model::parser_info!())).with_options(opts);
         // Safety net: nothing translated must mean nothing changed.
@@ -64,6 +69,10 @@ impl Filter for MarkdownFilter {
     fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
         bilingua_model::check_own_options(self, &opts.format_options)?;
         bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
+        // a document extracted under the LocOS profile carries the decoded file and is written the LocOS way
+        if let Skeleton::Binary { data, .. } = &doc.skeleton {
+            return locos::merge(doc, data);
+        }
         let Skeleton::Text { parts, encoding, .. } = &doc.skeleton else {
             return Err(Error::Write("markdown needs a text skeleton".into()));
         };

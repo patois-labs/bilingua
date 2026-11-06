@@ -1,0 +1,124 @@
+{
+ "format": "properties",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Welcome to Northwind",
+   "style": ""
+  },
+  {
+   "p_index": 1,
+   "text": "Sign in",
+   "style": ""
+  },
+  {
+   "p_index": 2,
+   "text": "Sign out",
+   "style": ""
+  },
+  {
+   "p_index": 3,
+   "text": "First part, second part",
+   "style": ""
+  },
+  {
+   "p_index": 4,
+   "text": "Café au lait",
+   "style": ""
+  },
+  {
+   "p_index": 5,
+   "text": "First",
+   "style": ""
+  },
+  {
+   "p_index": 6,
+   "text": "Second",
+   "style": ""
+  },
+  {
+   "p_index": 7,
+   "text": "Hello {0}, you have {1} messages",
+   "style": ""
+  },
+  {
+   "p_index": 8,
+   "text": "Don't delete {0}",
+   "style": ""
+  },
+  {
+   "p_index": 9,
+   "text": "Use '{0}' literally",
+   "style": ""
+  },
+  {
+   "p_index": 10,
+   "text": "Don't panic",
+   "style": ""
+  },
+  {
+   "p_index": 11,
+   "text": "leading space",
+   "style": ""
+  },
+  {
+   "p_index": 12,
+   "text": "Spaced key value",
+   "style": ""
+  },
+  {
+   "p_index": 13,
+   "text": "https://example.com",
+   "style": ""
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "IyBHcmVldGluZyBzaG93biBvbiB0aGUgaG9tZSBwYWdlDQohIHNlY29uZCBjb21tZW50IHN0eWxlDQphcHAudGl0bGUgPSBXZWxjb21lIHRvIE5vcnRod2luZA0KYXBwLmNvbG9uOlNpZ24gaW4NCmFwcC5zcGFjZSBTaWduIG91dA0KbG9uZy50ZXh0ID0gRmlyc3QgcGFydCwgXA0KICAgIHNlY29uZCBwYXJ0DQpsYXRpbiA9IENhZlx1MDBlOSBhdSBsYWl0DQplbXB0eSA9DQpkdXAgPSBGaXJzdA0KZHVwID0gU2Vjb25kDQptZi5hcmdzID0gSGVsbG8gezB9LCB5b3UgaGF2ZSB7MX0gbWVzc2FnZXMNCm1mLmFwb3MgPSBEb24nJ3QgZGVsZXRlIHswfQ0KbWYubG9uZXF1b3RlID0gVXNlICd7MH0nIGxpdGVyYWxseQ0KcGxhaW4uYXBvcyA9IERvbid0IHBhbmljDQppZC5vbmx5ID0gezB9DQpwYWQgPSBcIGxlYWRpbmcgc3BhY2UNCmtleVwgd2l0aFwgc3BhY2UgPSBTcGFjZWQga2V5IHZhbHVlDQp1cmwgPSBodHRwc1w6Ly9leGFtcGxlLmNvbQ0K"
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü Welcome to Northwind",
+    "1": "Ü Sign in",
+    "2": "Ü Sign out",
+    "3": "Ü First part, second part",
+    "4": "Ü Café au lait",
+    "5": "Ü First",
+    "6": "Ü Second",
+    "7": "Ü Hello {0}, you have {1} messages",
+    "8": "Ü Don't delete {0}",
+    "9": "Ü Use '{0}' literally",
+    "10": "Ü Don't panic",
+    "11": "Ü leading space",
+    "12": "Ü Spaced key value",
+    "13": "Ü https://example.com"
+   },
+   "out_b64": "IyBHcmVldGluZyBzaG93biBvbiB0aGUgaG9tZSBwYWdlDQohIHNlY29uZCBjb21tZW50IHN0eWxlDQphcHAudGl0bGUgPSBcdTAwREMgV2VsY29tZSB0byBOb3J0aHdpbmQNCmFwcC5jb2xvbjpcdTAwREMgU2lnbiBpbg0KYXBwLnNwYWNlIFx1MDBEQyBTaWduIG91dA0KbG9uZy50ZXh0ID0gXHUwMERDIEZpcnN0IHBhcnQsIHNlY29uZCBwYXJ0DQpsYXRpbiA9IFx1MDBEQyBDYWZcdTAwRTkgYXUgbGFpdA0KZW1wdHkgPQ0KZHVwID0gXHUwMERDIEZpcnN0DQpkdXAgPSBcdTAwREMgU2Vjb25kDQptZi5hcmdzID0gXHUwMERDIEhlbGxvIHswfSwgeW91IGhhdmUgezF9IG1lc3NhZ2VzDQptZi5hcG9zID0gXHUwMERDIERvbicndCBkZWxldGUgezB9DQptZi5sb25lcXVvdGUgPSBcdTAwREMgVXNlICd7MH0nIGxpdGVyYWxseQ0KcGxhaW4uYXBvcyA9IFx1MDBEQyBEb24ndCBwYW5pYw0KaWQub25seSA9IHswfQ0KcGFkID0gXCBcdTAwREMgbGVhZGluZyBzcGFjZQ0Ka2V5XCB3aXRoXCBzcGFjZSA9IFx1MDBEQyBTcGFjZWQga2V5IHZhbHVlDQp1cmwgPSBcdTAwREMgaHR0cHM6Ly9leGFtcGxlLmNvbQ0K"
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Welcome to Northwind & <\"'>",
+    "2": "Sign out & <\"'>",
+    "4": "Café au lait & <\"'>",
+    "6": "Second & <\"'>",
+    "8": "Don't delete {0} & <\"'>",
+    "10": "Don't panic & <\"'>",
+    "12": "Spaced key value & <\"'>"
+   },
+   "out_b64": "IyBHcmVldGluZyBzaG93biBvbiB0aGUgaG9tZSBwYWdlDQohIHNlY29uZCBjb21tZW50IHN0eWxlDQphcHAudGl0bGUgPSBXZWxjb21lIHRvIE5vcnRod2luZCAmIDwiJz4NCmFwcC5jb2xvbjpTaWduIGluDQphcHAuc3BhY2UgU2lnbiBvdXQgJiA8Iic+DQpsb25nLnRleHQgPSBGaXJzdCBwYXJ0LCBcDQogICAgc2Vjb25kIHBhcnQNCmxhdGluID0gQ2FmXHUwMEU5IGF1IGxhaXQgJiA8Iic+DQplbXB0eSA9DQpkdXAgPSBGaXJzdA0KZHVwID0gU2Vjb25kICYgPCInPg0KbWYuYXJncyA9IEhlbGxvIHswfSwgeW91IGhhdmUgezF9IG1lc3NhZ2VzDQptZi5hcG9zID0gRG9uJyd0IGRlbGV0ZSB7MH0gJiA8IicnPg0KbWYubG9uZXF1b3RlID0gVXNlICd7MH0nIGxpdGVyYWxseQ0KcGxhaW4uYXBvcyA9IERvbid0IHBhbmljICYgPCInPg0KaWQub25seSA9IHswfQ0KcGFkID0gXCBsZWFkaW5nIHNwYWNlDQprZXlcIHdpdGhcIHNwYWNlID0gU3BhY2VkIGtleSB2YWx1ZSAmIDwiJz4NCnVybCA9IGh0dHBzXDovL2V4YW1wbGUuY29tDQo="
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "out_b64": "IyBHcmVldGluZyBzaG93biBvbiB0aGUgaG9tZSBwYWdlDQohIHNlY29uZCBjb21tZW50IHN0eWxlDQphcHAudGl0bGUgPSBXZWxjb21lIHRvIE5vcnRod2luZA0KYXBwLmNvbG9uOlNpZ24gaW4NCmFwcC5zcGFjZSBTaWduIG91dA0KbG9uZy50ZXh0ID0gRmlyc3QgcGFydCwgXA0KICAgIHNlY29uZCBwYXJ0DQpsYXRpbiA9IENhZlx1MDBlOSBhdSBsYWl0DQplbXB0eSA9DQpkdXAgPSBGaXJzdA0KZHVwID0gU2Vjb25kDQptZi5hcmdzID0gSGVsbG8gezB9LCB5b3UgaGF2ZSB7MX0gbWVzc2FnZXMNCm1mLmFwb3MgPSBEb24nJ3QgZGVsZXRlIHswfQ0KbWYubG9uZXF1b3RlID0gVXNlICd7MH0nIGxpdGVyYWxseQ0KcGxhaW4uYXBvcyA9IERvbid0IHBhbmljDQppZC5vbmx5ID0gezB9DQpwYWQgPSBcIGxlYWRpbmcgc3BhY2UNCmtleVwgd2l0aFwgc3BhY2UgPSBTcGFjZWQga2V5IHZhbHVlDQp1cmwgPSBodHRwc1w6Ly9leGFtcGxlLmNvbQ0K"
+  }
+ ]
+}

@@ -1,0 +1,59 @@
+{
+ "format": "md",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Getting started with the dashboard",
+   "style": ""
+  },
+  {
+   "p_index": 1,
+   "text": "A literal summary string",
+   "style": ""
+  },
+  {
+   "p_index": 2,
+   "text": "Learn how to set up your first project in five minutes.",
+   "style": ""
+  },
+  {
+   "p_index": 3,
+   "text": "Open the dashboard and click **New project** to create your first project.",
+   "style": ""
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "KysrCnRpdGxlID0gIkdldHRpbmcgc3RhcnRlZCB3aXRoIHRoZSBkYXNoYm9hcmQiCmRyYWZ0ID0gZmFsc2UKc2x1ZyA9ICJnZXR0aW5nLXN0YXJ0ZWQiCnN1bW1hcnkgPSAnQSBsaXRlcmFsIHN1bW1hcnkgc3RyaW5nJwpkZXNjcmlwdGlvbiA9ICJMZWFybiBob3cgdG8gc2V0IHVwIHlvdXIgZmlyc3QgcHJvamVjdCBpbiBmaXZlIG1pbnV0ZXMuIgp3ZWlnaHQgPSAxMAoKW3BhcmFtc10KdGl0bGUgPSAiTmVzdGVkIHRhYmxlIHRpdGxlIgorKysKCk9wZW4gdGhlIGRhc2hib2FyZCBhbmQgY2xpY2sgKipOZXcgcHJvamVjdCoqIHRvIGNyZWF0ZSB5b3VyIGZpcnN0IHByb2plY3QuCg=="
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü Getting started with the dashboard",
+    "1": "Ü A literal summary string",
+    "2": "Ü Learn how to set up your first project in five minutes.",
+    "3": "Ü Open the dashboard and click **New project** to create your first project."
+   },
+   "out_b64": "KysrCnRpdGxlID0gIsOcIEdldHRpbmcgc3RhcnRlZCB3aXRoIHRoZSBkYXNoYm9hcmQiCmRyYWZ0ID0gZmFsc2UKc2x1ZyA9ICJnZXR0aW5nLXN0YXJ0ZWQiCnN1bW1hcnkgPSAnw5wgQSBsaXRlcmFsIHN1bW1hcnkgc3RyaW5nJwpkZXNjcmlwdGlvbiA9ICLDnCBMZWFybiBob3cgdG8gc2V0IHVwIHlvdXIgZmlyc3QgcHJvamVjdCBpbiBmaXZlIG1pbnV0ZXMuIgp3ZWlnaHQgPSAxMAoKW3BhcmFtc10KdGl0bGUgPSAiTmVzdGVkIHRhYmxlIHRpdGxlIgorKysKCsOcIE9wZW4gdGhlIGRhc2hib2FyZCBhbmQgY2xpY2sgKipOZXcgcHJvamVjdCoqIHRvIGNyZWF0ZSB5b3VyIGZpcnN0IHByb2plY3QuCg=="
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Getting started with the dashboard & <\"'>",
+    "2": "Learn how to set up your first project in five minutes. & <\"'>"
+   },
+   "out_b64": "KysrCnRpdGxlID0gIkdldHRpbmcgc3RhcnRlZCB3aXRoIHRoZSBkYXNoYm9hcmQgJiA8XCInPiIKZHJhZnQgPSBmYWxzZQpzbHVnID0gImdldHRpbmctc3RhcnRlZCIKc3VtbWFyeSA9ICdBIGxpdGVyYWwgc3VtbWFyeSBzdHJpbmcnCmRlc2NyaXB0aW9uID0gIkxlYXJuIGhvdyB0byBzZXQgdXAgeW91ciBmaXJzdCBwcm9qZWN0IGluIGZpdmUgbWludXRlcy4gJiA8XCInPiIKd2VpZ2h0ID0gMTAKCltwYXJhbXNdCnRpdGxlID0gIk5lc3RlZCB0YWJsZSB0aXRsZSIKKysrCgpPcGVuIHRoZSBkYXNoYm9hcmQgYW5kIGNsaWNrICoqTmV3IHByb2plY3QqKiB0byBjcmVhdGUgeW91ciBmaXJzdCBwcm9qZWN0Lgo="
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "out_b64": "KysrCnRpdGxlID0gIkdldHRpbmcgc3RhcnRlZCB3aXRoIHRoZSBkYXNoYm9hcmQiCmRyYWZ0ID0gZmFsc2UKc2x1ZyA9ICJnZXR0aW5nLXN0YXJ0ZWQiCnN1bW1hcnkgPSAnQSBsaXRlcmFsIHN1bW1hcnkgc3RyaW5nJwpkZXNjcmlwdGlvbiA9ICJMZWFybiBob3cgdG8gc2V0IHVwIHlvdXIgZmlyc3QgcHJvamVjdCBpbiBmaXZlIG1pbnV0ZXMuIgp3ZWlnaHQgPSAxMAoKW3BhcmFtc10KdGl0bGUgPSAiTmVzdGVkIHRhYmxlIHRpdGxlIgorKysKCk9wZW4gdGhlIGRhc2hib2FyZCBhbmQgY2xpY2sgKipOZXcgcHJvamVjdCoqIHRvIGNyZWF0ZSB5b3VyIGZpcnN0IHByb2plY3QuCg=="
+  }
+ ]
+}

@@ -6,6 +6,8 @@ pub const SKELETON_SCHEMA: u32 = 1;
 use bilingua_model::*;
 use std::collections::BTreeMap;
 
+mod locos;
+
 /// Default characters per line stored in `context.extra["max_cpl"]`. A unit's QA can check against it.
 pub const DEFAULT_MAX_CPL: &str = "42";
 
@@ -100,6 +102,9 @@ fn extract(k: Kind, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Err
     let mut dec = bilingua_model::enc::decode_text(bytes, &bilingua_model::enc::DecodeOptions::new(opts).lossy_after_utf8_bom())?;
     let text_owned = std::mem::take(&mut dec.text);
     let text = text_owned.as_str();
+    if opts.is_profile(profile::LOCOS) {
+        return locos::extract(fmt_name(k), text, &dec.encoding, opts, std::mem::take(&mut dec.warnings));
+    }
     let ls = lines(text);
     if k == Kind::Vtt && !ls.first().is_some_and(|l| l.text.starts_with("WEBVTT")) {
         return Err(perr(k, "a WebVTT file must start with WEBVTT"));
@@ -415,6 +420,10 @@ fn cue_inlines(k: Kind, raw: &str) -> (Vec<Inline>, BTreeMap<String, CodeData>) 
 
 fn merge(k: Kind, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
     bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
+    // a document extracted under the LocOS profile carries the decoded file and is written the LocOS way
+    if let Skeleton::Binary { data, .. } = &doc.skeleton {
+        return locos::merge(doc, data, opts);
+    }
     let Skeleton::Text { parts, encoding, .. } = &doc.skeleton else {
         return Err(Error::Write(format!("{} needs a text skeleton", fmt_name(k))));
     };

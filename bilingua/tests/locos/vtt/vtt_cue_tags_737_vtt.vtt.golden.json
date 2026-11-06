@@ -1,0 +1,96 @@
+{
+ "format": "vtt",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Welcome to the trail.",
+   "style": ""
+  },
+  {
+   "p_index": 1,
+   "text": "⟦g1⟧Watch⟦/g1⟧ your step on the ⟦g2⟧wet⟦/g2⟧ rocks.",
+   "style": ""
+  },
+  {
+   "p_index": 2,
+   "text": "See you at ⟦x1⟧the top of the hill.",
+   "style": ""
+  },
+  {
+   "p_index": 3,
+   "text": "It is getting dark.",
+   "style": ""
+  },
+  {
+   "p_index": 4,
+   "text": "⟦g1⟧Trail⟦g2⟧path⟦/g2⟧⟦/g1⟧ markers are ⟦g3⟧orange⟦/g3⟧.",
+   "style": ""
+  },
+  {
+   "p_index": 5,
+   "text": "⟦g1⟧Bonjour⟦/g1⟧, said ⟦g2⟧Roger⟦/g2⟧, ⟦g3⟧loudly⟦/g3⟧.",
+   "style": ""
+  },
+  {
+   "p_index": 6,
+   "text": "No close tag here\nand a ⟦g1⟧second⟦/g1⟧ line",
+   "style": ""
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "V0VCVlRUCkxhbmd1YWdlOiBlbgoKMDA6MDA6MDEuMDAwIC0tPiAwMDowMDowMy4wMDAKPHYgUm9nZXI+V2VsY29tZSB0byB0aGUgdHJhaWwuPC92PgoKMDA6MDA6MDQuMDAwIC0tPiAwMDowMDowNi4wMDAKPGMubG91ZD5XYXRjaDwvYz4geW91ciBzdGVwIG9uIHRoZSA8aT53ZXQ8L2k+IHJvY2tzLgoKMDA6MDA6MDcuMDAwIC0tPiAwMDowMDowOS4wMDAKU2VlIHlvdSBhdCA8MDA6MDA6MDguMDAwPnRoZSB0b3Agb2YgdGhlIGhpbGwuCgowMDowMDoxMC4wMDAgLS0+IDAwOjAwOjEyLjAwMAo8di5maXJzdC5sb3VkIEVzbWU+SXQgaXMgZ2V0dGluZyBkYXJrLjwvdj4KCjAwOjAwOjEzLjAwMCAtLT4gMDA6MDA6MTUuMDAwCjxydWJ5PlRyYWlsPHJ0PnBhdGg8L3J0PjwvcnVieT4gbWFya2VycyBhcmUgPGI+b3JhbmdlPC9iPi4KCjAwOjAwOjE2LjAwMCAtLT4gMDA6MDA6MTguMDAwCjxsYW5nIGZyPkJvbmpvdXI8L2xhbmc+LCBzYWlkIDx2IFJvZ2VyPlJvZ2VyPC92PiwgPHU+bG91ZGx5PC91Pi4KCmN1ZS03CjAwOjAwOjE5LjAwMCAtLT4gMDA6MDA6MjEuMDAwCjx2IEVzbWU+Tm8gY2xvc2UgdGFnIGhlcmUKYW5kIGEgPGk+c2Vjb25kPC9pPiBsaW5lCg=="
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü Welcome to the trail.",
+    "1": "⟦g1⟧Ü Watch⟦/g1⟧Ü  your step on the ⟦g2⟧Ü wet⟦/g2⟧Ü  rocks.",
+    "2": "Ü See you at ⟦x1⟧Ü the top of the hill.",
+    "3": "Ü It is getting dark.",
+    "4": "⟦g1⟧Ü Trail⟦g2⟧Ü path⟦/g2⟧⟦/g1⟧Ü  markers are ⟦g3⟧Ü orange⟦/g3⟧Ü .",
+    "5": "⟦g1⟧Ü Bonjour⟦/g1⟧Ü , said ⟦g2⟧Ü Roger⟦/g2⟧Ü , ⟦g3⟧Ü loudly⟦/g3⟧Ü .",
+    "6": "Ü No close tag here\nand a ⟦g1⟧Ü second⟦/g1⟧Ü  line"
+   },
+   "out_b64": "V0VCVlRUCkxhbmd1YWdlOiBlbgoKMDA6MDA6MDEuMDAwIC0tPiAwMDowMDowMy4wMDAKPHYgUm9nZXI+w5wgV2VsY29tZSB0byB0aGUgdHJhaWwuPC92PgoKMDA6MDA6MDQuMDAwIC0tPiAwMDowMDowNi4wMDAKPGMubG91ZD7DnCBXYXRjaDwvYz7DnCAgeW91ciBzdGVwIG9uIHRoZSA8aT7DnCB3ZXQ8L2k+w5wgIHJvY2tzLgoKMDA6MDA6MDcuMDAwIC0tPiAwMDowMDowOS4wMDAKw5wgU2VlIHlvdSBhdCA8MDA6MDA6MDguMDAwPsOcIHRoZSB0b3Agb2YgdGhlIGhpbGwuCgowMDowMDoxMC4wMDAgLS0+IDAwOjAwOjEyLjAwMAo8di5maXJzdC5sb3VkIEVzbWU+w5wgSXQgaXMgZ2V0dGluZyBkYXJrLjwvdj4KCjAwOjAwOjEzLjAwMCAtLT4gMDA6MDA6MTUuMDAwCjxydWJ5PsOcIFRyYWlsPHJ0PsOcIHBhdGg8L3J0PjwvcnVieT7DnCAgbWFya2VycyBhcmUgPGI+w5wgb3JhbmdlPC9iPsOcIC4KCjAwOjAwOjE2LjAwMCAtLT4gMDA6MDA6MTguMDAwCjxsYW5nIGZyPsOcIEJvbmpvdXI8L2xhbmc+w5wgLCBzYWlkIDx2IFJvZ2VyPsOcIFJvZ2VyPC92PsOcICwgPHU+w5wgbG91ZGx5PC91PsOcIC4KCmN1ZS03CjAwOjAwOjE5LjAwMCAtLT4gMDA6MDA6MjEuMDAwCjx2IEVzbWU+w5wgTm8gY2xvc2UgdGFnIGhlcmUKYW5kIGEgPGk+w5wgc2Vjb25kPC9pPsOcICBsaW5lCg=="
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Welcome to the trail. & <\"'>",
+    "2": "See you at  & <\"'>⟦x1⟧the top of the hill. & <\"'>",
+    "4": "⟦g1⟧Trail & <\"'>⟦g2⟧path & <\"'>⟦/g2⟧⟦/g1⟧ markers are  & <\"'>⟦g3⟧orange & <\"'>⟦/g3⟧. & <\"'>",
+    "6": "No close tag here\nand a  & <\"'>⟦g1⟧second & <\"'>⟦/g1⟧ line & <\"'>"
+   },
+   "out_b64": "V0VCVlRUCkxhbmd1YWdlOiBkZS1ERQoKMDA6MDA6MDEuMDAwIC0tPiAwMDowMDowMy4wMDAKPHYgUm9nZXI+V2VsY29tZSB0byB0aGUgdHJhaWwuICZhbXA7ICZsdDsiJz48L3Y+CgowMDowMDowNC4wMDAgLS0+IDAwOjAwOjA2LjAwMAo8Yy5sb3VkPldhdGNoPC9jPiB5b3VyIHN0ZXAgb24gdGhlIDxpPndldDwvaT4gcm9ja3MuCgowMDowMDowNy4wMDAgLS0+IDAwOjAwOjA5LjAwMApTZWUgeW91IGF0ICAmYW1wOyAmbHQ7Iic+PDAwOjAwOjA4LjAwMD50aGUgdG9wIG9mIHRoZSBoaWxsLiAmYW1wOyAmbHQ7Iic+CgowMDowMDoxMC4wMDAgLS0+IDAwOjAwOjEyLjAwMAo8di5maXJzdC5sb3VkIEVzbWU+SXQgaXMgZ2V0dGluZyBkYXJrLjwvdj4KCjAwOjAwOjEzLjAwMCAtLT4gMDA6MDA6MTUuMDAwCjxydWJ5PlRyYWlsICZhbXA7ICZsdDsiJz48cnQ+cGF0aCAmYW1wOyAmbHQ7Iic+PC9ydD48L3J1Ynk+IG1hcmtlcnMgYXJlICAmYW1wOyAmbHQ7Iic+PGI+b3JhbmdlICZhbXA7ICZsdDsiJz48L2I+LiAmYW1wOyAmbHQ7Iic+CgowMDowMDoxNi4wMDAgLS0+IDAwOjAwOjE4LjAwMAo8bGFuZyBmcj5Cb25qb3VyPC9sYW5nPiwgc2FpZCA8diBSb2dlcj5Sb2dlcjwvdj4sIDx1PmxvdWRseTwvdT4uCgpjdWUtNwowMDowMDoxOS4wMDAgLS0+IDAwOjAwOjIxLjAwMAo8diBFc21lPk5vIGNsb3NlIHRhZyBoZXJlCmFuZCBhICAmYW1wOyAmbHQ7Iic+PGk+c2Vjb25kICZhbXA7ICZsdDsiJz48L2k+IGxpbmUgJmFtcDsgJmx0OyInPgo="
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "out_b64": "V0VCVlRUCkxhbmd1YWdlOiBkZS1ERQoKMDA6MDA6MDEuMDAwIC0tPiAwMDowMDowMy4wMDAKPHYgUm9nZXI+V2VsY29tZSB0byB0aGUgdHJhaWwuPC92PgoKMDA6MDA6MDQuMDAwIC0tPiAwMDowMDowNi4wMDAKPGMubG91ZD5XYXRjaDwvYz4geW91ciBzdGVwIG9uIHRoZSA8aT53ZXQ8L2k+IHJvY2tzLgoKMDA6MDA6MDcuMDAwIC0tPiAwMDowMDowOS4wMDAKU2VlIHlvdSBhdCA8MDA6MDA6MDguMDAwPnRoZSB0b3Agb2YgdGhlIGhpbGwuCgowMDowMDoxMC4wMDAgLS0+IDAwOjAwOjEyLjAwMAo8di5maXJzdC5sb3VkIEVzbWU+SXQgaXMgZ2V0dGluZyBkYXJrLjwvdj4KCjAwOjAwOjEzLjAwMCAtLT4gMDA6MDA6MTUuMDAwCjxydWJ5PlRyYWlsPHJ0PnBhdGg8L3J0PjwvcnVieT4gbWFya2VycyBhcmUgPGI+b3JhbmdlPC9iPi4KCjAwOjAwOjE2LjAwMCAtLT4gMDA6MDA6MTguMDAwCjxsYW5nIGZyPkJvbmpvdXI8L2xhbmc+LCBzYWlkIDx2IFJvZ2VyPlJvZ2VyPC92PiwgPHU+bG91ZGx5PC91Pi4KCmN1ZS03CjAwOjAwOjE5LjAwMCAtLT4gMDA6MDA6MjEuMDAwCjx2IEVzbWU+Tm8gY2xvc2UgdGFnIGhlcmUKYW5kIGEgPGk+c2Vjb25kPC9pPiBsaW5lCg=="
+  },
+  {
+   "name": "escape-fr",
+   "locale": "fr",
+   "map": {
+    "0": "Welcome to the trail. & <\"'>",
+    "2": "See you at  & <\"'>⟦x1⟧the top of the hill. & <\"'>",
+    "4": "⟦g1⟧Trail & <\"'>⟦g2⟧path & <\"'>⟦/g2⟧⟦/g1⟧ markers are  & <\"'>⟦g3⟧orange & <\"'>⟦/g3⟧. & <\"'>",
+    "6": "No close tag here\nand a  & <\"'>⟦g1⟧second & <\"'>⟦/g1⟧ line & <\"'>"
+   },
+   "out_b64": "V0VCVlRUCkxhbmd1YWdlOiBmcgoKMDA6MDA6MDEuMDAwIC0tPiAwMDowMDowMy4wMDAKPHYgUm9nZXI+V2VsY29tZSB0byB0aGUgdHJhaWwuICZhbXA7ICZsdDsiJz48L3Y+CgowMDowMDowNC4wMDAgLS0+IDAwOjAwOjA2LjAwMAo8Yy5sb3VkPldhdGNoPC9jPiB5b3VyIHN0ZXAgb24gdGhlIDxpPndldDwvaT4gcm9ja3MuCgowMDowMDowNy4wMDAgLS0+IDAwOjAwOjA5LjAwMApTZWUgeW91IGF0ICAmYW1wOyAmbHQ7Iic+PDAwOjAwOjA4LjAwMD50aGUgdG9wIG9mIHRoZSBoaWxsLiAmYW1wOyAmbHQ7Iic+CgowMDowMDoxMC4wMDAgLS0+IDAwOjAwOjEyLjAwMAo8di5maXJzdC5sb3VkIEVzbWU+SXQgaXMgZ2V0dGluZyBkYXJrLjwvdj4KCjAwOjAwOjEzLjAwMCAtLT4gMDA6MDA6MTUuMDAwCjxydWJ5PlRyYWlsICZhbXA7ICZsdDsiJz48cnQ+cGF0aCAmYW1wOyAmbHQ7Iic+PC9ydD48L3J1Ynk+IG1hcmtlcnMgYXJlICAmYW1wOyAmbHQ7Iic+PGI+b3JhbmdlICZhbXA7ICZsdDsiJz48L2I+LiAmYW1wOyAmbHQ7Iic+CgowMDowMDoxNi4wMDAgLS0+IDAwOjAwOjE4LjAwMAo8bGFuZyBmcj5Cb25qb3VyPC9sYW5nPiwgc2FpZCA8diBSb2dlcj5Sb2dlcjwvdj4sIDx1PmxvdWRseTwvdT4uCgpjdWUtNwowMDowMDoxOS4wMDAgLS0+IDAwOjAwOjIxLjAwMAo8diBFc21lPk5vIGNsb3NlIHRhZyBoZXJlCmFuZCBhICAmYW1wOyAmbHQ7Iic+PGk+c2Vjb25kICZhbXA7ICZsdDsiJz48L2k+IGxpbmUgJmFtcDsgJmx0OyInPgo="
+  },
+  {
+   "name": "none-fr",
+   "locale": "fr",
+   "map": {},
+   "out_b64": "V0VCVlRUCkxhbmd1YWdlOiBmcgoKMDA6MDA6MDEuMDAwIC0tPiAwMDowMDowMy4wMDAKPHYgUm9nZXI+V2VsY29tZSB0byB0aGUgdHJhaWwuPC92PgoKMDA6MDA6MDQuMDAwIC0tPiAwMDowMDowNi4wMDAKPGMubG91ZD5XYXRjaDwvYz4geW91ciBzdGVwIG9uIHRoZSA8aT53ZXQ8L2k+IHJvY2tzLgoKMDA6MDA6MDcuMDAwIC0tPiAwMDowMDowOS4wMDAKU2VlIHlvdSBhdCA8MDA6MDA6MDguMDAwPnRoZSB0b3Agb2YgdGhlIGhpbGwuCgowMDowMDoxMC4wMDAgLS0+IDAwOjAwOjEyLjAwMAo8di5maXJzdC5sb3VkIEVzbWU+SXQgaXMgZ2V0dGluZyBkYXJrLjwvdj4KCjAwOjAwOjEzLjAwMCAtLT4gMDA6MDA6MTUuMDAwCjxydWJ5PlRyYWlsPHJ0PnBhdGg8L3J0PjwvcnVieT4gbWFya2VycyBhcmUgPGI+b3JhbmdlPC9iPi4KCjAwOjAwOjE2LjAwMCAtLT4gMDA6MDA6MTguMDAwCjxsYW5nIGZyPkJvbmpvdXI8L2xhbmc+LCBzYWlkIDx2IFJvZ2VyPlJvZ2VyPC92PiwgPHU+bG91ZGx5PC91Pi4KCmN1ZS03CjAwOjAwOjE5LjAwMCAtLT4gMDA6MDA6MjEuMDAwCjx2IEVzbWU+Tm8gY2xvc2UgdGFnIGhlcmUKYW5kIGEgPGk+c2Vjb25kPC9pPiBsaW5lCg=="
+  }
+ ]
+}

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <data name="Greeting" xml:space="preserve">
+    <value>Hello, {0}! You have {1} new messages.</value>
+    <comment>Shown on the home page</comment>
+  </data>
+  <data name="Save" xml:space="preserve"><value>Save &amp; close</value></data>
+  <data name="Ok"><value>OK, continue</value></data>
+  <data name="Icon" type="System.Resources.ResXFileRef, System.Windows.Forms"><value>icon.png;System.Drawing.Bitmap</value></data>
+  <data name="Empty"><value></value></data>
+  <data name="Fmt"><value>%s and {name}</value></data>
+</root>

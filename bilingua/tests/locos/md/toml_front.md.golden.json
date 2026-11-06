@@ -1,0 +1,59 @@
+{
+ "format": "md",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "TOML title",
+   "style": ""
+  },
+  {
+   "p_index": 1,
+   "text": "Literal title",
+   "style": ""
+  },
+  {
+   "p_index": 2,
+   "text": "Body text.",
+   "style": ""
+  },
+  {
+   "p_index": 3,
+   "text": "Second line.",
+   "style": ""
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "KysrCnRpdGxlID0gIlRPTUwgdGl0bGUiCmxpbmtUaXRsZSA9ICdMaXRlcmFsIHRpdGxlJwpkcmFmdCA9IHRydWUKW3BhcmFtc10KZGVzY3JpcHRpb24gPSAibmVzdGVkLCBub3QgdG9wIGxldmVsIgorKysKCkJvZHkgdGV4dC4NClNlY29uZCBsaW5lLg0K"
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü TOML title",
+    "1": "Ü Literal title",
+    "2": "Ü Body text.",
+    "3": "Ü Second line."
+   },
+   "out_b64": "KysrCnRpdGxlID0gIsOcIFRPTUwgdGl0bGUiCmxpbmtUaXRsZSA9ICfDnCBMaXRlcmFsIHRpdGxlJwpkcmFmdCA9IHRydWUKW3BhcmFtc10KZGVzY3JpcHRpb24gPSAibmVzdGVkLCBub3QgdG9wIGxldmVsIgorKysKCsOcIEJvZHkgdGV4dC4NCsOcIFNlY29uZCBsaW5lLg0K"
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "TOML title & <\"'>",
+    "2": "Body text. & <\"'>"
+   },
+   "out_b64": "KysrCnRpdGxlID0gIlRPTUwgdGl0bGUgJiA8XCInPiIKbGlua1RpdGxlID0gJ0xpdGVyYWwgdGl0bGUnCmRyYWZ0ID0gdHJ1ZQpbcGFyYW1zXQpkZXNjcmlwdGlvbiA9ICJuZXN0ZWQsIG5vdCB0b3AgbGV2ZWwiCisrKwoKQm9keSB0ZXh0LiAmIDwiJz4NClNlY29uZCBsaW5lLg0K"
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "out_b64": "KysrCnRpdGxlID0gIlRPTUwgdGl0bGUiCmxpbmtUaXRsZSA9ICdMaXRlcmFsIHRpdGxlJwpkcmFmdCA9IHRydWUKW3BhcmFtc10KZGVzY3JpcHRpb24gPSAibmVzdGVkLCBub3QgdG9wIGxldmVsIgorKysKCkJvZHkgdGV4dC4NClNlY29uZCBsaW5lLg0K"
+  }
+ ]
+}

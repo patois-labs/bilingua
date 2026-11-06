@@ -1,0 +1,146 @@
+{
+ "format": "po",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Hello",
+   "style": ""
+  },
+  {
+   "p_index": 1,
+   "text": "%d file",
+   "style": ""
+  },
+  {
+   "p_index": 2,
+   "text": "%d files",
+   "style": ""
+  },
+  {
+   "p_index": 3,
+   "text": "Hello %(name)s, you have {0} messages",
+   "style": ""
+  },
+  {
+   "p_index": 4,
+   "text": "Open",
+   "style": ""
+  },
+  {
+   "p_index": 5,
+   "text": "Open",
+   "style": ""
+  },
+  {
+   "p_index": 6,
+   "text": "Fuzzy entry",
+   "style": ""
+  },
+  {
+   "p_index": 7,
+   "text": "A long message that spans lines.\nSecond line.",
+   "style": ""
+  },
+  {
+   "p_index": 8,
+   "text": "No blank line before me",
+   "style": ""
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "IyBUcmFuc2xhdG9yIGNvbW1lbnQKbXNnaWQgIiIKbXNnc3RyICIiCiJQcm9qZWN0LUlkLVZlcnNpb246IGRlbW8gMS4wXG4iCiJMYW5ndWFnZTogXG4iCiJNSU1FLVZlcnNpb246IDEuMFxuIgoiQ29udGVudC1UeXBlOiB0ZXh0L3BsYWluOyBjaGFyc2V0PVVURi04XG4iCiJDb250ZW50LVRyYW5zZmVyLUVuY29kaW5nOiA4Yml0XG4iCiJQbHVyYWwtRm9ybXM6IG5wbHVyYWxzPTI7IHBsdXJhbD0obiAhPSAxKTtcbiIKCiM6IHNyYy9hcHAucHk6MTAKbXNnaWQgIkhlbGxvIgptc2dzdHIgIiIKCiMuIEV4dHJhY3RlZCBjb21tZW50CiM6IHNyYy9hcHAucHk6MTIKIywgcHl0aG9uLWZvcm1hdAptc2dpZCAiJWQgZmlsZSIKbXNnaWRfcGx1cmFsICIlZCBmaWxlcyIKbXNnc3RyWzBdICIiCm1zZ3N0clsxXSAiIgoKbXNnaWQgIkhlbGxvICUobmFtZSlzLCB5b3UgaGF2ZSB7MH0gbWVzc2FnZXMiCm1zZ3N0ciAiIgoKbXNnY3R4dCAibWVudSIKbXNnaWQgIk9wZW4iCm1zZ3N0ciAiIgoKbXNnY3R4dCAidmVyYiIKbXNnaWQgIk9wZW4iCm1zZ3N0ciAiIgoKIywgZnV6enkKbXNnaWQgIkZ1enp5IGVudHJ5Igptc2dzdHIgIkVudHJhZGEgZGlmdXNhIgoKbXNnaWQgIiIKIkEgbG9uZyBtZXNzYWdlIHRoYXQgIgoic3BhbnMgbGluZXMuXG4iCiJTZWNvbmQgbGluZS4iCm1zZ3N0ciAiIgptc2dpZCAiTm8gYmxhbmsgbGluZSBiZWZvcmUgbWUiCm1zZ3N0ciAiIgoKI34gbXNnaWQgIk9ic29sZXRlIgojfiBtc2dzdHIgIk9ic29sZXRvIgo="
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü Hello",
+    "1": "Ü %d file",
+    "2": "Ü %d files",
+    "3": "Ü Hello %(name)s, you have {0} messages",
+    "4": "Ü Open",
+    "5": "Ü Open",
+    "6": "Ü Fuzzy entry",
+    "7": "Ü A long message that spans lines.\nSecond line.",
+    "8": "Ü No blank line before me"
+   },
+   "out_b64": "IyBUcmFuc2xhdG9yIGNvbW1lbnQKbXNnaWQgIiIKbXNnc3RyICIiCiJQcm9qZWN0LUlkLVZlcnNpb246IGRlbW8gMS4wXG4iCiJMYW5ndWFnZTogXG4iCiJNSU1FLVZlcnNpb246IDEuMFxuIgoiQ29udGVudC1UeXBlOiB0ZXh0L3BsYWluOyBjaGFyc2V0PVVURi04XG4iCiJDb250ZW50LVRyYW5zZmVyLUVuY29kaW5nOiA4Yml0XG4iCiJQbHVyYWwtRm9ybXM6IG5wbHVyYWxzPTI7IHBsdXJhbD0obiAhPSAxKTtcbiIKCiM6IHNyYy9hcHAucHk6MTAKbXNnaWQgIkhlbGxvIgptc2dzdHIgIsOcIEhlbGxvIgoKIy4gRXh0cmFjdGVkIGNvbW1lbnQKIzogc3JjL2FwcC5weToxMgojLCBweXRob24tZm9ybWF0Cm1zZ2lkICIlZCBmaWxlIgptc2dpZF9wbHVyYWwgIiVkIGZpbGVzIgptc2dzdHJbMF0gIsOcICVkIGZpbGUiCm1zZ3N0clsxXSAiw5wgJWQgZmlsZXMiCgptc2dpZCAiSGVsbG8gJShuYW1lKXMsIHlvdSBoYXZlIHswfSBtZXNzYWdlcyIKbXNnc3RyICLDnCBIZWxsbyAlKG5hbWUpcywgeW91IGhhdmUgezB9IG1lc3NhZ2VzIgoKbXNnY3R4dCAibWVudSIKbXNnaWQgIk9wZW4iCm1zZ3N0ciAiw5wgT3BlbiIKCm1zZ2N0eHQgInZlcmIiCm1zZ2lkICJPcGVuIgptc2dzdHIgIsOcIE9wZW4iCgptc2dpZCAiRnV6enkgZW50cnkiCm1zZ3N0ciAiw5wgRnV6enkgZW50cnkiCgptc2dpZCAiIgoiQSBsb25nIG1lc3NhZ2UgdGhhdCBzcGFucyBsaW5lcy5cbiIKIlNlY29uZCBsaW5lLiIKbXNnc3RyICIiCiLDnCBBIGxvbmcgbWVzc2FnZSB0aGF0IHNwYW5zIGxpbmVzLlxuIgoiU2Vjb25kIGxpbmUuIgptc2dpZCAiTm8gYmxhbmsgbGluZSBiZWZvcmUgbWUiCm1zZ3N0ciAiw5wgTm8gYmxhbmsgbGluZSBiZWZvcmUgbWUiCgojfiBtc2dpZCAiT2Jzb2xldGUiCiN+IG1zZ3N0ciAiT2Jzb2xldG8iCg=="
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Hello & <\"'>",
+    "2": "%d files & <\"'>",
+    "4": "Open & <\"'>",
+    "6": "Fuzzy entry & <\"'>",
+    "8": "No blank line before me & <\"'>"
+   },
+   "out_b64": "IyBUcmFuc2xhdG9yIGNvbW1lbnQKbXNnaWQgIiIKbXNnc3RyICIiCiJQcm9qZWN0LUlkLVZlcnNpb246IGRlbW8gMS4wXG4iCiJMYW5ndWFnZTogZGVfREVcbiIKIk1JTUUtVmVyc2lvbjogMS4wXG4iCiJDb250ZW50LVR5cGU6IHRleHQvcGxhaW47IGNoYXJzZXQ9VVRGLThcbiIKIkNvbnRlbnQtVHJhbnNmZXItRW5jb2Rpbmc6IDhiaXRcbiIKIlBsdXJhbC1Gb3JtczogbnBsdXJhbHM9MjsgcGx1cmFsPShuICE9IDEpO1xuIgoKIzogc3JjL2FwcC5weToxMAptc2dpZCAiSGVsbG8iCm1zZ3N0ciAiSGVsbG8gJiA8XCInPiIKCiMuIEV4dHJhY3RlZCBjb21tZW50CiM6IHNyYy9hcHAucHk6MTIKIywgcHl0aG9uLWZvcm1hdAptc2dpZCAiJWQgZmlsZSIKbXNnaWRfcGx1cmFsICIlZCBmaWxlcyIKbXNnc3RyWzBdICIiCm1zZ3N0clsxXSAiJWQgZmlsZXMgJiA8XCInPiIKCm1zZ2lkICJIZWxsbyAlKG5hbWUpcywgeW91IGhhdmUgezB9IG1lc3NhZ2VzIgptc2dzdHIgIiIKCm1zZ2N0eHQgIm1lbnUiCm1zZ2lkICJPcGVuIgptc2dzdHIgIk9wZW4gJiA8XCInPiIKCm1zZ2N0eHQgInZlcmIiCm1zZ2lkICJPcGVuIgptc2dzdHIgIiIKCm1zZ2lkICJGdXp6eSBlbnRyeSIKbXNnc3RyICJGdXp6eSBlbnRyeSAmIDxcIic+IgoKbXNnaWQgIiIKIkEgbG9uZyBtZXNzYWdlIHRoYXQgIgoic3BhbnMgbGluZXMuXG4iCiJTZWNvbmQgbGluZS4iCm1zZ3N0ciAiIgptc2dpZCAiTm8gYmxhbmsgbGluZSBiZWZvcmUgbWUiCm1zZ3N0ciAiTm8gYmxhbmsgbGluZSBiZWZvcmUgbWUgJiA8XCInPiIKCiN+IG1zZ2lkICJPYnNvbGV0ZSIKI34gbXNnc3RyICJPYnNvbGV0byIK"
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "out_b64": "IyBUcmFuc2xhdG9yIGNvbW1lbnQKbXNnaWQgIiIKbXNnc3RyICIiCiJQcm9qZWN0LUlkLVZlcnNpb246IGRlbW8gMS4wXG4iCiJMYW5ndWFnZTogZGVfREVcbiIKIk1JTUUtVmVyc2lvbjogMS4wXG4iCiJDb250ZW50LVR5cGU6IHRleHQvcGxhaW47IGNoYXJzZXQ9VVRGLThcbiIKIkNvbnRlbnQtVHJhbnNmZXItRW5jb2Rpbmc6IDhiaXRcbiIKIlBsdXJhbC1Gb3JtczogbnBsdXJhbHM9MjsgcGx1cmFsPShuICE9IDEpO1xuIgoKIzogc3JjL2FwcC5weToxMAptc2dpZCAiSGVsbG8iCm1zZ3N0ciAiIgoKIy4gRXh0cmFjdGVkIGNvbW1lbnQKIzogc3JjL2FwcC5weToxMgojLCBweXRob24tZm9ybWF0Cm1zZ2lkICIlZCBmaWxlIgptc2dpZF9wbHVyYWwgIiVkIGZpbGVzIgptc2dzdHJbMF0gIiIKbXNnc3RyWzFdICIiCgptc2dpZCAiSGVsbG8gJShuYW1lKXMsIHlvdSBoYXZlIHswfSBtZXNzYWdlcyIKbXNnc3RyICIiCgptc2djdHh0ICJtZW51Igptc2dpZCAiT3BlbiIKbXNnc3RyICIiCgptc2djdHh0ICJ2ZXJiIgptc2dpZCAiT3BlbiIKbXNnc3RyICIiCgojLCBmdXp6eQptc2dpZCAiRnV6enkgZW50cnkiCm1zZ3N0ciAiRW50cmFkYSBkaWZ1c2EiCgptc2dpZCAiIgoiQSBsb25nIG1lc3NhZ2UgdGhhdCAiCiJzcGFucyBsaW5lcy5cbiIKIlNlY29uZCBsaW5lLiIKbXNnc3RyICIiCm1zZ2lkICJObyBibGFuayBsaW5lIGJlZm9yZSBtZSIKbXNnc3RyICIiCgojfiBtc2dpZCAiT2Jzb2xldGUiCiN+IG1zZ3N0ciAiT2Jzb2xldG8iCg=="
+  },
+  {
+   "name": "escape-pl-PL",
+   "locale": "pl-PL",
+   "map": {
+    "0": "Hello & <\"'>",
+    "2": "%d files & <\"'>",
+    "4": "Open & <\"'>",
+    "6": "Fuzzy entry & <\"'>",
+    "8": "No blank line before me & <\"'>"
+   },
+   "out_b64": "IyBUcmFuc2xhdG9yIGNvbW1lbnQKbXNnaWQgIiIKbXNnc3RyICIiCiJQcm9qZWN0LUlkLVZlcnNpb246IGRlbW8gMS4wXG4iCiJMYW5ndWFnZTogcGxfUExcbiIKIk1JTUUtVmVyc2lvbjogMS4wXG4iCiJDb250ZW50LVR5cGU6IHRleHQvcGxhaW47IGNoYXJzZXQ9VVRGLThcbiIKIkNvbnRlbnQtVHJhbnNmZXItRW5jb2Rpbmc6IDhiaXRcbiIKIlBsdXJhbC1Gb3JtczogbnBsdXJhbHM9MzsgcGx1cmFsPShuPT0xID8gMCA6IG4lMTA+PTIgJiYgbiUxMDw9NCAmJiAobiUxMDA8MTAgfHwgbiUxMDA+PTIwKSA/IDEgOiAyKTtcbiIKCiM6IHNyYy9hcHAucHk6MTAKbXNnaWQgIkhlbGxvIgptc2dzdHIgIkhlbGxvICYgPFwiJz4iCgojLiBFeHRyYWN0ZWQgY29tbWVudAojOiBzcmMvYXBwLnB5OjEyCiMsIHB5dGhvbi1mb3JtYXQKbXNnaWQgIiVkIGZpbGUiCm1zZ2lkX3BsdXJhbCAiJWQgZmlsZXMiCm1zZ3N0clswXSAiIgptc2dzdHJbMV0gIiVkIGZpbGVzICYgPFwiJz4iCm1zZ3N0clsyXSAiJWQgZmlsZXMgJiA8XCInPiIKCm1zZ2lkICJIZWxsbyAlKG5hbWUpcywgeW91IGhhdmUgezB9IG1lc3NhZ2VzIgptc2dzdHIgIiIKCm1zZ2N0eHQgIm1lbnUiCm1zZ2lkICJPcGVuIgptc2dzdHIgIk9wZW4gJiA8XCInPiIKCm1zZ2N0eHQgInZlcmIiCm1zZ2lkICJPcGVuIgptc2dzdHIgIiIKCm1zZ2lkICJGdXp6eSBlbnRyeSIKbXNnc3RyICJGdXp6eSBlbnRyeSAmIDxcIic+IgoKbXNnaWQgIiIKIkEgbG9uZyBtZXNzYWdlIHRoYXQgIgoic3BhbnMgbGluZXMuXG4iCiJTZWNvbmQgbGluZS4iCm1zZ3N0ciAiIgptc2dpZCAiTm8gYmxhbmsgbGluZSBiZWZvcmUgbWUiCm1zZ3N0ciAiTm8gYmxhbmsgbGluZSBiZWZvcmUgbWUgJiA8XCInPiIKCiN+IG1zZ2lkICJPYnNvbGV0ZSIKI34gbXNnc3RyICJPYnNvbGV0byIK"
+  },
+  {
+   "name": "none-pl-PL",
+   "locale": "pl-PL",
+   "map": {},
+   "out_b64": "IyBUcmFuc2xhdG9yIGNvbW1lbnQKbXNnaWQgIiIKbXNnc3RyICIiCiJQcm9qZWN0LUlkLVZlcnNpb246IGRlbW8gMS4wXG4iCiJMYW5ndWFnZTogcGxfUExcbiIKIk1JTUUtVmVyc2lvbjogMS4wXG4iCiJDb250ZW50LVR5cGU6IHRleHQvcGxhaW47IGNoYXJzZXQ9VVRGLThcbiIKIkNvbnRlbnQtVHJhbnNmZXItRW5jb2Rpbmc6IDhiaXRcbiIKIlBsdXJhbC1Gb3JtczogbnBsdXJhbHM9MzsgcGx1cmFsPShuPT0xID8gMCA6IG4lMTA+PTIgJiYgbiUxMDw9NCAmJiAobiUxMDA8MTAgfHwgbiUxMDA+PTIwKSA/IDEgOiAyKTtcbiIKCiM6IHNyYy9hcHAucHk6MTAKbXNnaWQgIkhlbGxvIgptc2dzdHIgIiIKCiMuIEV4dHJhY3RlZCBjb21tZW50CiM6IHNyYy9hcHAucHk6MTIKIywgcHl0aG9uLWZvcm1hdAptc2dpZCAiJWQgZmlsZSIKbXNnaWRfcGx1cmFsICIlZCBmaWxlcyIKbXNnc3RyWzBdICIiCm1zZ3N0clsxXSAiIgptc2dzdHJbMl0gIiIKCm1zZ2lkICJIZWxsbyAlKG5hbWUpcywgeW91IGhhdmUgezB9IG1lc3NhZ2VzIgptc2dzdHIgIiIKCm1zZ2N0eHQgIm1lbnUiCm1zZ2lkICJPcGVuIgptc2dzdHIgIiIKCm1zZ2N0eHQgInZlcmIiCm1zZ2lkICJPcGVuIgptc2dzdHIgIiIKCiMsIGZ1enp5Cm1zZ2lkICJGdXp6eSBlbnRyeSIKbXNnc3RyICJFbnRyYWRhIGRpZnVzYSIKCm1zZ2lkICIiCiJBIGxvbmcgbWVzc2FnZSB0aGF0ICIKInNwYW5zIGxpbmVzLlxuIgoiU2Vjb25kIGxpbmUuIgptc2dzdHIgIiIKbXNnaWQgIk5vIGJsYW5rIGxpbmUgYmVmb3JlIG1lIgptc2dzdHIgIiIKCiN+IG1zZ2lkICJPYnNvbGV0ZSIKI34gbXNnc3RyICJPYnNvbGV0byIK"
+  },
+  {
+   "name": "escape-ar-EG",
+   "locale": "ar-EG",
+   "map": {
+    "0": "Hello & <\"'>",
+    "2": "%d files & <\"'>",
+    "4": "Open & <\"'>",
+    "6": "Fuzzy entry & <\"'>",
+    "8": "No blank line before me & <\"'>"
+   },
+   "out_b64": "IyBUcmFuc2xhdG9yIGNvbW1lbnQKbXNnaWQgIiIKbXNnc3RyICIiCiJQcm9qZWN0LUlkLVZlcnNpb246IGRlbW8gMS4wXG4iCiJMYW5ndWFnZTogYXJfRUdcbiIKIk1JTUUtVmVyc2lvbjogMS4wXG4iCiJDb250ZW50LVR5cGU6IHRleHQvcGxhaW47IGNoYXJzZXQ9VVRGLThcbiIKIkNvbnRlbnQtVHJhbnNmZXItRW5jb2Rpbmc6IDhiaXRcbiIKIlBsdXJhbC1Gb3JtczogbnBsdXJhbHM9NjsgcGx1cmFsPShuPT0wID8gMCA6IG49PTEgPyAxIDogbj09MiA/IDIgOiBuJTEwMD49MyAmJiBuJTEwMDw9MTAgPyAzIDogbiUxMDA+PTAgJiYgbiUxMDA8PTIgPyA0IDogNSk7XG4iCgojOiBzcmMvYXBwLnB5OjEwCm1zZ2lkICJIZWxsbyIKbXNnc3RyICJIZWxsbyAmIDxcIic+IgoKIy4gRXh0cmFjdGVkIGNvbW1lbnQKIzogc3JjL2FwcC5weToxMgojLCBweXRob24tZm9ybWF0Cm1zZ2lkICIlZCBmaWxlIgptc2dpZF9wbHVyYWwgIiVkIGZpbGVzIgptc2dzdHJbMF0gIiVkIGZpbGVzICYgPFwiJz4iCm1zZ3N0clsxXSAiIgptc2dzdHJbMl0gIiVkIGZpbGVzICYgPFwiJz4iCm1zZ3N0clszXSAiJWQgZmlsZXMgJiA8XCInPiIKbXNnc3RyWzRdICIlZCBmaWxlcyAmIDxcIic+Igptc2dzdHJbNV0gIiVkIGZpbGVzICYgPFwiJz4iCgptc2dpZCAiSGVsbG8gJShuYW1lKXMsIHlvdSBoYXZlIHswfSBtZXNzYWdlcyIKbXNnc3RyICIiCgptc2djdHh0ICJtZW51Igptc2dpZCAiT3BlbiIKbXNnc3RyICJPcGVuICYgPFwiJz4iCgptc2djdHh0ICJ2ZXJiIgptc2dpZCAiT3BlbiIKbXNnc3RyICIiCgptc2dpZCAiRnV6enkgZW50cnkiCm1zZ3N0ciAiRnV6enkgZW50cnkgJiA8XCInPiIKCm1zZ2lkICIiCiJBIGxvbmcgbWVzc2FnZSB0aGF0ICIKInNwYW5zIGxpbmVzLlxuIgoiU2Vjb25kIGxpbmUuIgptc2dzdHIgIiIKbXNnaWQgIk5vIGJsYW5rIGxpbmUgYmVmb3JlIG1lIgptc2dzdHIgIk5vIGJsYW5rIGxpbmUgYmVmb3JlIG1lICYgPFwiJz4iCgojfiBtc2dpZCAiT2Jzb2xldGUiCiN+IG1zZ3N0ciAiT2Jzb2xldG8iCg=="
+  },
+  {
+   "name": "none-ar-EG",
+   "locale": "ar-EG",
+   "map": {},
+   "out_b64": "IyBUcmFuc2xhdG9yIGNvbW1lbnQKbXNnaWQgIiIKbXNnc3RyICIiCiJQcm9qZWN0LUlkLVZlcnNpb246IGRlbW8gMS4wXG4iCiJMYW5ndWFnZTogYXJfRUdcbiIKIk1JTUUtVmVyc2lvbjogMS4wXG4iCiJDb250ZW50LVR5cGU6IHRleHQvcGxhaW47IGNoYXJzZXQ9VVRGLThcbiIKIkNvbnRlbnQtVHJhbnNmZXItRW5jb2Rpbmc6IDhiaXRcbiIKIlBsdXJhbC1Gb3JtczogbnBsdXJhbHM9NjsgcGx1cmFsPShuPT0wID8gMCA6IG49PTEgPyAxIDogbj09MiA/IDIgOiBuJTEwMD49MyAmJiBuJTEwMDw9MTAgPyAzIDogbiUxMDA+PTAgJiYgbiUxMDA8PTIgPyA0IDogNSk7XG4iCgojOiBzcmMvYXBwLnB5OjEwCm1zZ2lkICJIZWxsbyIKbXNnc3RyICIiCgojLiBFeHRyYWN0ZWQgY29tbWVudAojOiBzcmMvYXBwLnB5OjEyCiMsIHB5dGhvbi1mb3JtYXQKbXNnaWQgIiVkIGZpbGUiCm1zZ2lkX3BsdXJhbCAiJWQgZmlsZXMiCm1zZ3N0clswXSAiIgptc2dzdHJbMV0gIiIKbXNnc3RyWzJdICIiCm1zZ3N0clszXSAiIgptc2dzdHJbNF0gIiIKbXNnc3RyWzVdICIiCgptc2dpZCAiSGVsbG8gJShuYW1lKXMsIHlvdSBoYXZlIHswfSBtZXNzYWdlcyIKbXNnc3RyICIiCgptc2djdHh0ICJtZW51Igptc2dpZCAiT3BlbiIKbXNnc3RyICIiCgptc2djdHh0ICJ2ZXJiIgptc2dpZCAiT3BlbiIKbXNnc3RyICIiCgojLCBmdXp6eQptc2dpZCAiRnV6enkgZW50cnkiCm1zZ3N0ciAiRW50cmFkYSBkaWZ1c2EiCgptc2dpZCAiIgoiQSBsb25nIG1lc3NhZ2UgdGhhdCAiCiJzcGFucyBsaW5lcy5cbiIKIlNlY29uZCBsaW5lLiIKbXNnc3RyICIiCm1zZ2lkICJObyBibGFuayBsaW5lIGJlZm9yZSBtZSIKbXNnc3RyICIiCgojfiBtc2dpZCAiT2Jzb2xldGUiCiN+IG1zZ3N0ciAiT2Jzb2xldG8iCg=="
+  },
+  {
+   "name": "escape-ja-JP",
+   "locale": "ja-JP",
+   "map": {
+    "0": "Hello & <\"'>",
+    "2": "%d files & <\"'>",
+    "4": "Open & <\"'>",
+    "6": "Fuzzy entry & <\"'>",
+    "8": "No blank line before me & <\"'>"
+   },
+   "out_b64": "IyBUcmFuc2xhdG9yIGNvbW1lbnQKbXNnaWQgIiIKbXNnc3RyICIiCiJQcm9qZWN0LUlkLVZlcnNpb246IGRlbW8gMS4wXG4iCiJMYW5ndWFnZTogamFfSlBcbiIKIk1JTUUtVmVyc2lvbjogMS4wXG4iCiJDb250ZW50LVR5cGU6IHRleHQvcGxhaW47IGNoYXJzZXQ9VVRGLThcbiIKIkNvbnRlbnQtVHJhbnNmZXItRW5jb2Rpbmc6IDhiaXRcbiIKIlBsdXJhbC1Gb3JtczogbnBsdXJhbHM9MTsgcGx1cmFsPTA7XG4iCgojOiBzcmMvYXBwLnB5OjEwCm1zZ2lkICJIZWxsbyIKbXNnc3RyICJIZWxsbyAmIDxcIic+IgoKIy4gRXh0cmFjdGVkIGNvbW1lbnQKIzogc3JjL2FwcC5weToxMgojLCBweXRob24tZm9ybWF0Cm1zZ2lkICIlZCBmaWxlIgptc2dpZF9wbHVyYWwgIiVkIGZpbGVzIgptc2dzdHJbMF0gIiVkIGZpbGVzICYgPFwiJz4iCgptc2dpZCAiSGVsbG8gJShuYW1lKXMsIHlvdSBoYXZlIHswfSBtZXNzYWdlcyIKbXNnc3RyICIiCgptc2djdHh0ICJtZW51Igptc2dpZCAiT3BlbiIKbXNnc3RyICJPcGVuICYgPFwiJz4iCgptc2djdHh0ICJ2ZXJiIgptc2dpZCAiT3BlbiIKbXNnc3RyICIiCgptc2dpZCAiRnV6enkgZW50cnkiCm1zZ3N0ciAiRnV6enkgZW50cnkgJiA8XCInPiIKCm1zZ2lkICIiCiJBIGxvbmcgbWVzc2FnZSB0aGF0ICIKInNwYW5zIGxpbmVzLlxuIgoiU2Vjb25kIGxpbmUuIgptc2dzdHIgIiIKbXNnaWQgIk5vIGJsYW5rIGxpbmUgYmVmb3JlIG1lIgptc2dzdHIgIk5vIGJsYW5rIGxpbmUgYmVmb3JlIG1lICYgPFwiJz4iCgojfiBtc2dpZCAiT2Jzb2xldGUiCiN+IG1zZ3N0ciAiT2Jzb2xldG8iCg=="
+  },
+  {
+   "name": "none-ja-JP",
+   "locale": "ja-JP",
+   "map": {},
+   "out_b64": "IyBUcmFuc2xhdG9yIGNvbW1lbnQKbXNnaWQgIiIKbXNnc3RyICIiCiJQcm9qZWN0LUlkLVZlcnNpb246IGRlbW8gMS4wXG4iCiJMYW5ndWFnZTogamFfSlBcbiIKIk1JTUUtVmVyc2lvbjogMS4wXG4iCiJDb250ZW50LVR5cGU6IHRleHQvcGxhaW47IGNoYXJzZXQ9VVRGLThcbiIKIkNvbnRlbnQtVHJhbnNmZXItRW5jb2Rpbmc6IDhiaXRcbiIKIlBsdXJhbC1Gb3JtczogbnBsdXJhbHM9MTsgcGx1cmFsPTA7XG4iCgojOiBzcmMvYXBwLnB5OjEwCm1zZ2lkICJIZWxsbyIKbXNnc3RyICIiCgojLiBFeHRyYWN0ZWQgY29tbWVudAojOiBzcmMvYXBwLnB5OjEyCiMsIHB5dGhvbi1mb3JtYXQKbXNnaWQgIiVkIGZpbGUiCm1zZ2lkX3BsdXJhbCAiJWQgZmlsZXMiCm1zZ3N0clswXSAiIgoKbXNnaWQgIkhlbGxvICUobmFtZSlzLCB5b3UgaGF2ZSB7MH0gbWVzc2FnZXMiCm1zZ3N0ciAiIgoKbXNnY3R4dCAibWVudSIKbXNnaWQgIk9wZW4iCm1zZ3N0ciAiIgoKbXNnY3R4dCAidmVyYiIKbXNnaWQgIk9wZW4iCm1zZ3N0ciAiIgoKIywgZnV6enkKbXNnaWQgIkZ1enp5IGVudHJ5Igptc2dzdHIgIkVudHJhZGEgZGlmdXNhIgoKbXNnaWQgIiIKIkEgbG9uZyBtZXNzYWdlIHRoYXQgIgoic3BhbnMgbGluZXMuXG4iCiJTZWNvbmQgbGluZS4iCm1zZ3N0ciAiIgptc2dpZCAiTm8gYmxhbmsgbGluZSBiZWZvcmUgbWUiCm1zZ3N0ciAiIgoKI34gbXNnaWQgIk9ic29sZXRlIgojfiBtc2dzdHIgIk9ic29sZXRvIgo="
+  }
+ ]
+}

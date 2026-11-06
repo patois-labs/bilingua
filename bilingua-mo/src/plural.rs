@@ -1,6 +1,6 @@
 //! Plural-Forms rules for a target language (the table is generated from Localization OS's rules).
 
-use crate::plural_table::RULES;
+use bilingua_model::plural_table::RULES;
 
 /// The gettext plural rule of one language.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

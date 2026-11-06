@@ -165,7 +165,10 @@ impl Filter for Arb {
         }
         let touched = |u: &Unit| u.segments.iter().any(|s| s.has_target());
         let stamp = opts.stamp_lang(doc, false).is_some();
-        let out = if stamp || doc.units.iter().any(touched) { splice(&orig, doc)? } else { orig };
+        // the LocOS profile: an entry added on its own line ends with `\n` whatever the file uses, and a
+        // translation with a LocOS token its unit does not have keeps the source (LocOS `_tokens_ok`)
+        let locos = opts.is_profile(profile::LOCOS);
+        let out = if stamp || doc.units.iter().any(touched) { splice(&orig, doc, locos)? } else { orig };
         let mut bytes = Vec::with_capacity(out.len() + 3);
         if encoding == "utf-8-bom" {
             bytes.extend_from_slice(BOM);
@@ -420,7 +423,7 @@ impl Trans {
     }
 }
 
-fn splice(orig: &str, doc: &Document) -> Result<String, Error> {
+fn splice(orig: &str, doc: &Document, locos: bool) -> Result<String, Error> {
     let limits = Limits::default();
     let root = scan_root(orig, &limits).map_err(|e| Error::Write(format!("the skeleton is not an ARB file any more: {e}")))?;
     let Node::Obj { pairs, start: root_start, end: root_end } = &root else { return Err(Error::Write("not an object".into())) };
@@ -430,7 +433,7 @@ fn splice(orig: &str, doc: &Document) -> Result<String, Error> {
     let mut edits: Vec<(usize, usize, String)> = Vec::new();
     // Added first so that, at the same position, @@locale comes before added plural keys.
     if let Some(t) = target {
-        edits.push(locale_edit(orig, &root, t));
+        edits.push(locale_edit(orig, &root, t, locos));
     }
     let mut changed: HashMap<usize, String> = HashMap::new(); // value start -> new token
     let mut head = 0usize;
@@ -449,7 +452,7 @@ fn splice(orig: &str, doc: &Document) -> Result<String, Error> {
             list: units.iter().map(|u| if u.segments.iter().all(|s| !s.has_target()) { None } else { Some(u.output()) }).collect(),
             at: 0,
         };
-        let new = rebuild_message(m, &mut tr, target);
+        let new = rebuild_message(m, &mut tr, target, locos);
         if new != m.value {
             let token = scan::quote(&new);
             changed.insert(m.start, token.clone());
@@ -457,7 +460,7 @@ fn splice(orig: &str, doc: &Document) -> Result<String, Error> {
         }
     }
     if let Some(t) = target {
-        suffix_plural_edits(orig, pairs, *root_start, t, &changed, &mut edits);
+        suffix_plural_edits(orig, pairs, *root_start, t, &changed, &mut edits, locos);
     }
     let _ = root_end;
     edits.sort_by_key(|e| e.0);
@@ -475,7 +478,7 @@ fn splice(orig: &str, doc: &Document) -> Result<String, Error> {
     Ok(out)
 }
 
-fn rebuild_message(m: &Msg, tr: &mut Trans, target: Option<&str>) -> String {
+fn rebuild_message(m: &Msg, tr: &mut Trans, target: Option<&str>, locos: bool) -> String {
     if m.plan.fallback {
         let Some(t) = tr.next() else { return m.value.clone() };
         let roles = &m.plan.units[0].roles;
@@ -493,12 +496,12 @@ fn rebuild_message(m: &Msg, tr: &mut Trans, target: Option<&str>) -> String {
         return s;
     }
     match icu::parse(&m.value) {
-        Ok(parts) => rebuild_level(&parts, tr, target),
+        Ok(parts) => rebuild_level(&parts, tr, target, locos),
         Err(_) => m.value.clone(),
     }
 }
 
-fn rebuild_level(parts: &[Part], tr: &mut Trans, target: Option<&str>) -> String {
+fn rebuild_level(parts: &[Part], tr: &mut Trans, target: Option<&str>, locos: bool) -> String {
     let translatable = icu::translatable(parts);
     let mine = if translatable { tr.next() } else { None };
     let mut pieces: Vec<String> = Vec::new();
@@ -506,7 +509,7 @@ fn rebuild_level(parts: &[Part], tr: &mut Trans, target: Option<&str>) -> String
         match p {
             Part::Pound => pieces.push("#".into()),
             Part::Complex(cx) => {
-                let rendered: Vec<String> = cx.branches.iter().map(|b| rebuild_level(&b.msg, tr, target)).collect();
+                let rendered: Vec<String> = cx.branches.iter().map(|b| rebuild_level(&b.msg, tr, target, locos)).collect();
                 pieces.push(render_branches(cx, rendered, target));
             }
             _ => {}
@@ -514,7 +517,7 @@ fn rebuild_level(parts: &[Part], tr: &mut Trans, target: Option<&str>) -> String
     }
     if let Some(inl) = mine {
         let roles = level_unit(parts, "").roles;
-        if let Some(text) = render_translation(&inl, &roles, &pieces) {
+        if let Some(text) = render_translation(&inl, &roles, &pieces, locos) {
             return text;
         }
     }
@@ -532,15 +535,28 @@ fn rebuild_level(parts: &[Part], tr: &mut Trans, target: Option<&str>) -> String
     out
 }
 
+/// `⟦x<digits>⟧` somewhere in `t`: a LocOS argument token (`_TOKEN_RE`).
+fn has_locos_token(t: &str) -> bool {
+    t.match_indices("\u{27E6}x").any(|(at, m)| {
+        let rest = &t[at + m.len()..];
+        let d = rest.chars().take_while(|c| bilingua_model::py_isdecimal_char(*c)).map(char::len_utf8).sum::<usize>();
+        d > 0 && rest[d..].starts_with('\u{27E7}')
+    })
+}
+
 /// The text of a translated level, or `None` when it must fall back to the source: an unknown tag, a complex
-/// argument missing or repeated, or text that would break the ICU structure it is written into.
-fn render_translation(inl: &[Inline], roles: &[Role], pieces: &[String]) -> Option<String> {
+/// argument missing or repeated, or text that would break the ICU structure it is written into. Under the LocOS
+/// profile also a token its unit does not have, left as text (LocOS `_tokens_ok`).
+fn render_translation(inl: &[Inline], roles: &[Role], pieces: &[String], locos: bool) -> Option<String> {
     let mut text = String::new();
     let mut safe = String::new();
     let mut uses = vec![0usize; pieces.len()];
     for i in inl {
         match i {
             Inline::Text(t) => {
+                if locos && has_locos_token(t) {
+                    return None;
+                }
                 text.push_str(t);
                 safe.push_str(t);
             }
@@ -618,9 +634,9 @@ fn render_branches(cx: &Complex, rendered: Vec<String>, target: Option<&str>) ->
     out
 }
 
-/// `\n` or `\r\n`, whichever line ending the newline at `nl` ends.
-fn newline_at(text: &str, nl: usize) -> &'static str {
-    if nl > 0 && text.as_bytes()[nl - 1] == b'\r' {
+/// `\n` or `\r\n`, whichever line ending the newline at `nl` ends; always `\n` with `lf` (LocOS).
+fn newline_at(text: &str, nl: usize, lf: bool) -> &'static str {
+    if !lf && nl > 0 && text.as_bytes()[nl - 1] == b'\r' {
         "\r\n"
     } else {
         "\n"
@@ -628,7 +644,7 @@ fn newline_at(text: &str, nl: usize) -> &'static str {
 }
 
 /// Sets `@@locale` to the target, or adds it as the first entry, indented like the first key.
-fn locale_edit(text: &str, root: &Node, target: &str) -> (usize, usize, String) {
+fn locale_edit(text: &str, root: &Node, target: &str, lf: bool) -> (usize, usize, String) {
     let loc = scan::quote(&target.trim().replace('-', "_"));
     let Node::Obj { pairs, start, end } = root else { return (0, 0, String::new()) };
     if let Some(p) = pairs.iter().rev().find(|p| p.key == "@@locale") {
@@ -639,7 +655,7 @@ fn locale_edit(text: &str, root: &Node, target: &str) -> (usize, usize, String) 
         let sep = match text[*start..key_start].rfind('\n') {
             Some(rel) => {
                 let nl = start + rel;
-                format!("{}{}", newline_at(text, nl), &text[nl + 1..key_start])
+                format!("{}{}", newline_at(text, nl, lf), &text[nl + 1..key_start])
             }
             None => " ".to_string(),
         };
@@ -650,7 +666,15 @@ fn locale_edit(text: &str, root: &Node, target: &str) -> (usize, usize, String) 
 
 /// Suffix-style plurals (`itemCountOne`, `itemCountOther`): a message for each category the target uses that the
 /// group lacks, holding the `Other` message, placed before it.
-fn suffix_plural_edits(text: &str, pairs: &[scan::Pair], root_start: usize, target: &str, changed: &HashMap<usize, String>, edits: &mut Vec<(usize, usize, String)>) {
+fn suffix_plural_edits(
+    text: &str,
+    pairs: &[scan::Pair],
+    root_start: usize,
+    target: &str,
+    changed: &HashMap<usize, String>,
+    edits: &mut Vec<(usize, usize, String)>,
+    lf: bool,
+) {
     const WORDS: [&str; 6] = ["Zero", "One", "Two", "Few", "Many", "Other"];
     let all_keys: std::collections::HashSet<&str> = pairs.iter().map(|p| p.key.as_str()).collect();
     let mut order: Vec<&str> = Vec::new();
@@ -696,7 +720,7 @@ fn suffix_plural_edits(text: &str, pairs: &[scan::Pair], root_start: usize, targ
                 let nl = root_start + rel;
                 let indent = &text[nl + 1..key_at];
                 if indent.trim().is_empty() {
-                    format!("{}{indent}", newline_at(text, nl))
+                    format!("{}{indent}", newline_at(text, nl, lf))
                 } else {
                     " ".to_string()
                 }

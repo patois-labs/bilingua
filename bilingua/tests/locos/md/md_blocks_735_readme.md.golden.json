@@ -1,0 +1,79 @@
+{
+ "format": "md",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Quick start",
+   "style": ""
+  },
+  {
+   "p_index": 1,
+   "text": "Install the package and run the setup command.",
+   "style": ""
+  },
+  {
+   "p_index": 2,
+   "text": "Read the [installation guide][install] and the [FAQ][faq] before you start.",
+   "style": ""
+  },
+  {
+   "p_index": 3,
+   "text": "Installation guide",
+   "style": ""
+  },
+  {
+   "p_index": 4,
+   "text": "Frequently asked questions",
+   "style": ""
+  },
+  {
+   "p_index": 5,
+   "text": "The footnote explains the licence[^lic].",
+   "style": ""
+  },
+  {
+   "p_index": 6,
+   "text": "The tools are free for personal use.",
+   "style": ""
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "IyBRdWljayBzdGFydAoKSW5zdGFsbCB0aGUgcGFja2FnZSBhbmQgcnVuIHRoZSBzZXR1cCBjb21tYW5kLgoKICAgIHBpcCBpbnN0YWxsIG5vcnRod2luZC10b29scwogICAgbm9ydGh3aW5kIGluaXQgLS1yZWdpb24gdXMtZWFzdAoKPCEtLSBLZWVwIHRoaXMgc2VjdGlvbiBzaG9ydC4gVHJhbnNsYXRvcnM6IGRvIG5vdCBjaGFuZ2UgdGhlIGFuY2hvciBuYW1lcy4gLS0+CgpSZWFkIHRoZSBbaW5zdGFsbGF0aW9uIGd1aWRlXVtpbnN0YWxsXSBhbmQgdGhlIFtGQVFdW2ZhcV0gYmVmb3JlIHlvdSBzdGFydC4KCltpbnN0YWxsXTogaHR0cHM6Ly9leGFtcGxlLmNvbS9kb2NzL2luc3RhbGwgIkluc3RhbGxhdGlvbiBndWlkZSIKW2ZhcV06IGh0dHBzOi8vZXhhbXBsZS5jb20vZmFxICJGcmVxdWVudGx5IGFza2VkIHF1ZXN0aW9ucyIKClRoZSBmb290bm90ZSBleHBsYWlucyB0aGUgbGljZW5jZVtebGljXS4KCltebGljXTogVGhlIHRvb2xzIGFyZSBmcmVlIGZvciBwZXJzb25hbCB1c2Uu"
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü Quick start",
+    "1": "Ü Install the package and run the setup command.",
+    "2": "Ü Read the [installation guide][install] and the [FAQ][faq] before you start.",
+    "3": "Ü Installation guide",
+    "4": "Ü Frequently asked questions",
+    "5": "Ü The footnote explains the licence[^lic].",
+    "6": "Ü The tools are free for personal use."
+   },
+   "out_b64": "IyDDnCBRdWljayBzdGFydAoKw5wgSW5zdGFsbCB0aGUgcGFja2FnZSBhbmQgcnVuIHRoZSBzZXR1cCBjb21tYW5kLgoKICAgIHBpcCBpbnN0YWxsIG5vcnRod2luZC10b29scwogICAgbm9ydGh3aW5kIGluaXQgLS1yZWdpb24gdXMtZWFzdAoKPCEtLSBLZWVwIHRoaXMgc2VjdGlvbiBzaG9ydC4gVHJhbnNsYXRvcnM6IGRvIG5vdCBjaGFuZ2UgdGhlIGFuY2hvciBuYW1lcy4gLS0+CgrDnCBSZWFkIHRoZSBbaW5zdGFsbGF0aW9uIGd1aWRlXVtpbnN0YWxsXSBhbmQgdGhlIFtGQVFdW2ZhcV0gYmVmb3JlIHlvdSBzdGFydC4KCltpbnN0YWxsXTogaHR0cHM6Ly9leGFtcGxlLmNvbS9kb2NzL2luc3RhbGwgIsOcIEluc3RhbGxhdGlvbiBndWlkZSIKW2ZhcV06IGh0dHBzOi8vZXhhbXBsZS5jb20vZmFxICLDnCBGcmVxdWVudGx5IGFza2VkIHF1ZXN0aW9ucyIKCsOcIFRoZSBmb290bm90ZSBleHBsYWlucyB0aGUgbGljZW5jZVtebGljXS4KCltebGljXTogw5wgVGhlIHRvb2xzIGFyZSBmcmVlIGZvciBwZXJzb25hbCB1c2Uu"
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Quick start & <\"'>",
+    "2": "Read the [installation guide][install] and the [FAQ][faq] before you start. & <\"'>",
+    "4": "Frequently asked questions & <\"'>",
+    "6": "The tools are free for personal use. & <\"'>"
+   },
+   "out_b64": "IyBRdWljayBzdGFydCAmIDwiJz4KCkluc3RhbGwgdGhlIHBhY2thZ2UgYW5kIHJ1biB0aGUgc2V0dXAgY29tbWFuZC4KCiAgICBwaXAgaW5zdGFsbCBub3J0aHdpbmQtdG9vbHMKICAgIG5vcnRod2luZCBpbml0IC0tcmVnaW9uIHVzLWVhc3QKCjwhLS0gS2VlcCB0aGlzIHNlY3Rpb24gc2hvcnQuIFRyYW5zbGF0b3JzOiBkbyBub3QgY2hhbmdlIHRoZSBhbmNob3IgbmFtZXMuIC0tPgoKUmVhZCB0aGUgW2luc3RhbGxhdGlvbiBndWlkZV1baW5zdGFsbF0gYW5kIHRoZSBbRkFRXVtmYXFdIGJlZm9yZSB5b3Ugc3RhcnQuICYgPCInPgoKW2luc3RhbGxdOiBodHRwczovL2V4YW1wbGUuY29tL2RvY3MvaW5zdGFsbCAiSW5zdGFsbGF0aW9uIGd1aWRlIgpbZmFxXTogaHR0cHM6Ly9leGFtcGxlLmNvbS9mYXEgIkZyZXF1ZW50bHkgYXNrZWQgcXVlc3Rpb25zICYgPFwiJz4iCgpUaGUgZm9vdG5vdGUgZXhwbGFpbnMgdGhlIGxpY2VuY2VbXmxpY10uCgpbXmxpY106IFRoZSB0b29scyBhcmUgZnJlZSBmb3IgcGVyc29uYWwgdXNlLiAmIDwiJz4="
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "out_b64": "IyBRdWljayBzdGFydAoKSW5zdGFsbCB0aGUgcGFja2FnZSBhbmQgcnVuIHRoZSBzZXR1cCBjb21tYW5kLgoKICAgIHBpcCBpbnN0YWxsIG5vcnRod2luZC10b29scwogICAgbm9ydGh3aW5kIGluaXQgLS1yZWdpb24gdXMtZWFzdAoKPCEtLSBLZWVwIHRoaXMgc2VjdGlvbiBzaG9ydC4gVHJhbnNsYXRvcnM6IGRvIG5vdCBjaGFuZ2UgdGhlIGFuY2hvciBuYW1lcy4gLS0+CgpSZWFkIHRoZSBbaW5zdGFsbGF0aW9uIGd1aWRlXVtpbnN0YWxsXSBhbmQgdGhlIFtGQVFdW2ZhcV0gYmVmb3JlIHlvdSBzdGFydC4KCltpbnN0YWxsXTogaHR0cHM6Ly9leGFtcGxlLmNvbS9kb2NzL2luc3RhbGwgIkluc3RhbGxhdGlvbiBndWlkZSIKW2ZhcV06IGh0dHBzOi8vZXhhbXBsZS5jb20vZmFxICJGcmVxdWVudGx5IGFza2VkIHF1ZXN0aW9ucyIKClRoZSBmb290bm90ZSBleHBsYWlucyB0aGUgbGljZW5jZVtebGljXS4KCltebGljXTogVGhlIHRvb2xzIGFyZSBmcmVlIGZvciBwZXJzb25hbCB1c2Uu"
+  }
+ ]
+}

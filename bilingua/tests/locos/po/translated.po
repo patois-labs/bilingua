@@ -1,0 +1,16 @@
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: fr_FR\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+
+msgid "Save"
+msgstr "Enregistrer"
+
+msgid "One item"
+msgid_plural "%s items"
+msgstr[0] "Un article"
+msgstr[1] "%s articles"
+
+msgid "Tab\there and \"quotes\""
+msgstr ""

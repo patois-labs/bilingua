@@ -1,0 +1,92 @@
+{
+ "format": "md",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Quick start",
+   "style": ""
+  },
+  {
+   "p_index": 1,
+   "text": "Install the package",
+   "style": ""
+  },
+  {
+   "p_index": 2,
+   "text": "and run the *setup* command.",
+   "style": ""
+  },
+  {
+   "p_index": 3,
+   "text": "First item with `code`",
+   "style": ""
+  },
+  {
+   "p_index": 4,
+   "text": "Second [link](https://example.com \"Title\") item",
+   "style": ""
+  },
+  {
+   "p_index": 5,
+   "text": "![A diagram](d.png)",
+   "style": "a11y:md-image"
+  },
+  {
+   "p_index": 6,
+   "text": "Quoted text",
+   "style": ""
+  },
+  {
+   "p_index": 7,
+   "text": "| A | B |",
+   "style": ""
+  },
+  {
+   "p_index": 8,
+   "text": "| one | two |",
+   "style": ""
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "IyBRdWljayBzdGFydAoKSW5zdGFsbCB0aGUgcGFja2FnZQphbmQgcnVuIHRoZSAqc2V0dXAqIGNvbW1hbmQuCgotIEZpcnN0IGl0ZW0gd2l0aCBgY29kZWAKLSBTZWNvbmQgW2xpbmtdKGh0dHBzOi8vZXhhbXBsZS5jb20gIlRpdGxlIikgaXRlbQoKIVtBIGRpYWdyYW1dKGQucG5nKQoKPiBRdW90ZWQgdGV4dAoKfCBBIHwgQiB8CnwtLS18LS0tfAp8IG9uZSB8IHR3byB8CgpgYGAKbm90IHRyYW5zbGF0ZWQKYGBgCg=="
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü Quick start",
+    "1": "Ü Install the package",
+    "2": "Ü and run the *setup* command.",
+    "3": "Ü First item with `code`",
+    "4": "Ü Second [link](https://example.com \"Title\") item",
+    "5": "Ü ![A diagram](d.png)",
+    "6": "Ü Quoted text",
+    "7": "Ü | A | B |",
+    "8": "Ü | one | two |"
+   },
+   "out_b64": "IyDDnCBRdWljayBzdGFydAoKw5wgSW5zdGFsbCB0aGUgcGFja2FnZQrDnCBhbmQgcnVuIHRoZSAqc2V0dXAqIGNvbW1hbmQuCgotIMOcIEZpcnN0IGl0ZW0gd2l0aCBgY29kZWAKLSDDnCBTZWNvbmQgW2xpbmtdKGh0dHBzOi8vZXhhbXBsZS5jb20gIlRpdGxlIikgaXRlbQoKw5wgIVtBIGRpYWdyYW1dKGQucG5nKQoKPiDDnCBRdW90ZWQgdGV4dAoKw5wgfCBBIHwgQiB8CnwtLS18LS0tfArDnCB8IG9uZSB8IHR3byB8CgpgYGAKbm90IHRyYW5zbGF0ZWQKYGBgCg=="
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Quick start & <\"'>",
+    "2": "and run the *setup* command. & <\"'>",
+    "4": "Second [link](https://example.com \"Title\") item & <\"'>",
+    "6": "Quoted text & <\"'>",
+    "8": "| one | two | & <\"'>"
+   },
+   "out_b64": "IyBRdWljayBzdGFydCAmIDwiJz4KCkluc3RhbGwgdGhlIHBhY2thZ2UKYW5kIHJ1biB0aGUgKnNldHVwKiBjb21tYW5kLiAmIDwiJz4KCi0gRmlyc3QgaXRlbSB3aXRoIGBjb2RlYAotIFNlY29uZCBbbGlua10oaHR0cHM6Ly9leGFtcGxlLmNvbSAiVGl0bGUiKSBpdGVtICYgPCInPgoKIVtBIGRpYWdyYW1dKGQucG5nKQoKPiBRdW90ZWQgdGV4dCAmIDwiJz4KCnwgQSB8IEIgfAp8LS0tfC0tLXwKfCBvbmUgfCB0d28gfCAmIDwiJz4KCmBgYApub3QgdHJhbnNsYXRlZApgYGAK"
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "out_b64": "IyBRdWljayBzdGFydAoKSW5zdGFsbCB0aGUgcGFja2FnZQphbmQgcnVuIHRoZSAqc2V0dXAqIGNvbW1hbmQuCgotIEZpcnN0IGl0ZW0gd2l0aCBgY29kZWAKLSBTZWNvbmQgW2xpbmtdKGh0dHBzOi8vZXhhbXBsZS5jb20gIlRpdGxlIikgaXRlbQoKIVtBIGRpYWdyYW1dKGQucG5nKQoKPiBRdW90ZWQgdGV4dAoKfCBBIHwgQiB8CnwtLS18LS0tfAp8IG9uZSB8IHR3byB8CgpgYGAKbm90IHRyYW5zbGF0ZWQKYGBgCg=="
+  }
+ ]
+}

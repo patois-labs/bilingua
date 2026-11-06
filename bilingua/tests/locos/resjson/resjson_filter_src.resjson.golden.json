@@ -1,0 +1,66 @@
+{
+ "format": "resjson",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Hello",
+   "style": ""
+  },
+  {
+   "p_index": 1,
+   "text": "Goodbye",
+   "style": ""
+  },
+  {
+   "p_index": 2,
+   "text": "Say \"cheese\" é",
+   "style": ""
+  },
+  {
+   "p_index": 3,
+   "text": "{0} new messages",
+   "style": ""
+  },
+  {
+   "p_index": 4,
+   "text": "Open file",
+   "style": ""
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "77u/ew0KICAgIC8vIFNob3duIG9uIHRoZSBzdGFydCBwYWdlDQogICAgImdyZWV0aW5nIiAgICAgICAgICAgICAgOiAiSGVsbG8iLA0KICAgICJfZ3JlZXRpbmcuY29tbWVudCIgICAgIDogIkEgd2VsY29tZSBncmVldGluZy4iLA0KDQogICAgImZhcmV3ZWxsIiAgICAgICAgICAgICAgOiAiR29vZGJ5ZSIsDQogICAgIl9mYXJld2VsbC5jb21tZW50IiAgICAgOiAiQSBnb29kYnllLiIsDQogICAgInF1b3RlIiAgICAgICAgICAgICAgICAgOiAiU2F5IFwiY2hlZXNlXCIgXHUwMGU5IiwNCiAgICAiY291bnQiICAgICAgICAgICAgICAgICA6ICJ7MH0gbmV3IG1lc3NhZ2VzIiwNCiAgICAiaWQiICAgICAgICAgICAgICAgICAgICA6ICJ7MH0iLA0KICAgICJfY291bnQubWF4TGVuZ3RoIiAgICAgIDogNDAsDQogICAgLyogZ3JvdXBlZCBzdHJpbmdzICovDQogICAgIm1lbnUiICAgICAgICAgICAgICAgICAgOiB7ICJvcGVuIjogIk9wZW4gZmlsZSIsICJmbGFnIjogdHJ1ZSB9DQp9DQo="
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü Hello",
+    "1": "Ü Goodbye",
+    "2": "Ü Say \"cheese\" é",
+    "3": "Ü {0} new messages",
+    "4": "Ü Open file"
+   },
+   "out_b64": "77u/ew0KICAgIC8vIFNob3duIG9uIHRoZSBzdGFydCBwYWdlDQogICAgImdyZWV0aW5nIiAgICAgICAgICAgICAgOiAiw5wgSGVsbG8iLA0KICAgICJfZ3JlZXRpbmcuY29tbWVudCIgICAgIDogIkEgd2VsY29tZSBncmVldGluZy4iLA0KDQogICAgImZhcmV3ZWxsIiAgICAgICAgICAgICAgOiAiw5wgR29vZGJ5ZSIsDQogICAgIl9mYXJld2VsbC5jb21tZW50IiAgICAgOiAiQSBnb29kYnllLiIsDQogICAgInF1b3RlIiAgICAgICAgICAgICAgICAgOiAiw5wgU2F5IFwiY2hlZXNlXCIgw6kiLA0KICAgICJjb3VudCIgICAgICAgICAgICAgICAgIDogIsOcIHswfSBuZXcgbWVzc2FnZXMiLA0KICAgICJpZCIgICAgICAgICAgICAgICAgICAgIDogInswfSIsDQogICAgIl9jb3VudC5tYXhMZW5ndGgiICAgICAgOiA0MCwNCiAgICAvKiBncm91cGVkIHN0cmluZ3MgKi8NCiAgICAibWVudSIgICAgICAgICAgICAgICAgICA6IHsgIm9wZW4iOiAiw5wgT3BlbiBmaWxlIiwgImZsYWciOiB0cnVlIH0NCn0NCg=="
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Hello & <\"'>",
+    "2": "Say \"cheese\" é & <\"'>",
+    "4": "Open file & <\"'>"
+   },
+   "out_b64": "77u/ew0KICAgIC8vIFNob3duIG9uIHRoZSBzdGFydCBwYWdlDQogICAgImdyZWV0aW5nIiAgICAgICAgICAgICAgOiAiSGVsbG8gJiA8XCInPiIsDQogICAgIl9ncmVldGluZy5jb21tZW50IiAgICAgOiAiQSB3ZWxjb21lIGdyZWV0aW5nLiIsDQoNCiAgICAiZmFyZXdlbGwiICAgICAgICAgICAgICA6ICJHb29kYnllIiwNCiAgICAiX2ZhcmV3ZWxsLmNvbW1lbnQiICAgICA6ICJBIGdvb2RieWUuIiwNCiAgICAicXVvdGUiICAgICAgICAgICAgICAgICA6ICJTYXkgXCJjaGVlc2VcIiDDqSAmIDxcIic+IiwNCiAgICAiY291bnQiICAgICAgICAgICAgICAgICA6ICJ7MH0gbmV3IG1lc3NhZ2VzIiwNCiAgICAiaWQiICAgICAgICAgICAgICAgICAgICA6ICJ7MH0iLA0KICAgICJfY291bnQubWF4TGVuZ3RoIiAgICAgIDogNDAsDQogICAgLyogZ3JvdXBlZCBzdHJpbmdzICovDQogICAgIm1lbnUiICAgICAgICAgICAgICAgICAgOiB7ICJvcGVuIjogIk9wZW4gZmlsZSAmIDxcIic+IiwgImZsYWciOiB0cnVlIH0NCn0NCg=="
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "out_b64": "77u/ew0KICAgIC8vIFNob3duIG9uIHRoZSBzdGFydCBwYWdlDQogICAgImdyZWV0aW5nIiAgICAgICAgICAgICAgOiAiSGVsbG8iLA0KICAgICJfZ3JlZXRpbmcuY29tbWVudCIgICAgIDogIkEgd2VsY29tZSBncmVldGluZy4iLA0KDQogICAgImZhcmV3ZWxsIiAgICAgICAgICAgICAgOiAiR29vZGJ5ZSIsDQogICAgIl9mYXJld2VsbC5jb21tZW50IiAgICAgOiAiQSBnb29kYnllLiIsDQogICAgInF1b3RlIiAgICAgICAgICAgICAgICAgOiAiU2F5IFwiY2hlZXNlXCIgXHUwMGU5IiwNCiAgICAiY291bnQiICAgICAgICAgICAgICAgICA6ICJ7MH0gbmV3IG1lc3NhZ2VzIiwNCiAgICAiaWQiICAgICAgICAgICAgICAgICAgICA6ICJ7MH0iLA0KICAgICJfY291bnQubWF4TGVuZ3RoIiAgICAgIDogNDAsDQogICAgLyogZ3JvdXBlZCBzdHJpbmdzICovDQogICAgIm1lbnUiICAgICAgICAgICAgICAgICAgOiB7ICJvcGVuIjogIk9wZW4gZmlsZSIsICJmbGFnIjogdHJ1ZSB9DQp9DQo="
+  }
+ ]
+}

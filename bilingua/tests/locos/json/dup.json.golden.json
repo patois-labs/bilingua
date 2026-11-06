@@ -1,0 +1,46 @@
+{
+ "format": "json",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Second",
+   "style": ""
+  },
+  {
+   "p_index": 1,
+   "text": "%s",
+   "style": ""
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "eyJhIjogIkZpcnN0IiwgImEiOiAiU2Vjb25kIiwgImIiOiAiJXMifQo="
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü Second",
+    "1": "Ü %s"
+   },
+   "out_b64": "eyJhIjogIkZpcnN0IiwgImEiOiAiw5wgU2Vjb25kIiwgImIiOiAiw5wgJXMifQo="
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Second & <\"'>"
+   },
+   "out_b64": "eyJhIjogIkZpcnN0IiwgImEiOiAiU2Vjb25kICYgPFwiJz4iLCAiYiI6ICIlcyJ9Cg=="
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "out_b64": "eyJhIjogIkZpcnN0IiwgImEiOiAiU2Vjb25kIiwgImIiOiAiJXMifQo="
+  }
+ ]
+}
