@@ -173,9 +173,8 @@ pub fn to_document_in(
     let mut units: Vec<Unit> = Vec::new();
     let mut unit_of: Vec<Option<usize>> = vec![None; doc.unit_count()];
     let (unit_ids, seg_ids) = segment_ids(doc);
-    for i in 0..doc.len() {
+    for (i, sid) in seg_ids.iter().enumerate() {
         let v = doc.seg(i);
-        let sid = &seg_ids[i];
         let ui = match unit_of[v.unit_ix] {
             Some(ui) => ui,
             None => {
