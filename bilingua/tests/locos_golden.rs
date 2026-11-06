@@ -43,8 +43,16 @@ fn numbered(doc: &Document) -> Vec<Numbered> {
         .collect()
 }
 
+/// The goldens' root: `tests/locos`, or `BILI_LOCOS_ROOT` (a corpus from `oracle/locos_fuzz.py`).
+fn root() -> PathBuf {
+    match std::env::var_os("BILI_LOCOS_ROOT") {
+        Some(r) if !r.is_empty() => PathBuf::from(r),
+        _ => Path::new(env!("CARGO_MANIFEST_DIR")).join("tests").join("locos"),
+    }
+}
+
 fn goldens() -> Vec<PathBuf> {
-    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests").join("locos");
+    let root = root();
     let mut out = Vec::new();
     for fmt in std::fs::read_dir(&root).unwrap() {
         let fmt = fmt.unwrap().path();
@@ -69,6 +77,13 @@ fn check(golden: &Path) -> (usize, usize, usize, Vec<String>) {
     let name = input.file_name().unwrap().to_string_lossy().to_string();
     let data = std::fs::read(&input).unwrap();
     let mut fails = Vec::new();
+    // LocOS refused the file (fuzz corpus): Bilingua must refuse it too, or say so
+    if let Some(e) = g["parse_error"].as_str() {
+        return match extract(&name, &data, &opts(None)) {
+            Err(_) => (1, 0, 0, Vec::new()),
+            Ok(_) => (0, 0, 0, vec![format!("{name}: LocOS refuses ({e}), Bilingua extracts")]),
+        };
+    }
     let doc = match extract(&name, &data, &opts(None)) {
         Ok(d) => d,
         Err(e) => return (0, 0, 0, vec![format!("{name}: extract failed: {e}")]),
