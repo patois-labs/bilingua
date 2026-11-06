@@ -102,6 +102,10 @@ fn name(id: &str) -> Option<&'static str> {
         "xtb" => "Google and Angular XTB",
         "xtg" => "QuarkXPress Tags",
         "yaml" => "YAML (generic, Rails i18n, Symfony)",
+        "contentful" => "Contentful Rich Text (JSON)",
+        "sanity" => "Sanity Portable Text (JSON)",
+        "adf" => "Atlassian Document Format (Jira, Confluence)",
+        "notion" => "Notion blocks (JSON)",
         _ => return None,
     })
 }
