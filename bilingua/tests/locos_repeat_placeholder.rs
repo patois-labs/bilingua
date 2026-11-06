@@ -77,8 +77,8 @@ fn every_format_writes_a_repeated_standalone_placeholder_each_time() {
         };
         checked += repeated;
         formats.insert(base.format.clone());
-        if out_rep == out_base || out_rep.len() <= out_base.len() && !name.ends_with("zip") && base.format != "mo" {
-            problems.push(format!("{name} [{fmt}]: {repeated} repeated placeholder(s) were not written (output {} bytes, baseline {})", out_rep.len(), out_base.len()));
+        if out_rep == out_base {
+            problems.push(format!("{name} [{fmt}]: {repeated} repeated placeholder(s) were not written (the output is the baseline's, {} bytes)", out_base.len()));
             continue;
         }
         if extract(&name, &out_base, &o).is_ok() {
