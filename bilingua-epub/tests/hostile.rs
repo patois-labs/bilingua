@@ -257,3 +257,30 @@ proptest! {
         }
     }
 }
+
+/// Shrunk from `mutated_members_never_panic` (seed a9c472d6...): chapter 2 with bytes 1 and 2 set to 0x00 and 0x80, so
+/// it begins `<\0` and reads as UTF-16LE without a mark. Translating it must give a file that reads back.
+#[test]
+fn a_chapter_sniffed_as_markless_utf16_round_trips() {
+    let mut part = CH2.as_bytes().to_vec();
+    part[1] = 0;
+    part[2] = 0x80;
+    let bytes = epub_with(&[("OEBPS/text/chapter 2.xhtml", &part)]);
+    let Ok(mut d) = Epub.extract(&bytes, &ExtractOptions::default()) else { return };
+    // the untouched merge is the input, byte for byte
+    assert_eq!(Epub.merge(&d).expect("untouched merge"), bytes);
+    d.target_lang = Some("ar".into());
+    for i in 0..d.units.len() {
+        let t = format!("FR {}", loc_text(&d.units[i]));
+        let (_, map) = bilingua_model::profile::tokens::to_locos_text(&d.units[i].source());
+        let id = d.units[i].segments[0].id.clone();
+        let _ = d.set_target(&id, bilingua_model::profile::tokens::from_locos_text(&t, &map));
+    }
+    if let Ok(out) = Epub.merge(&d) {
+        let (m, _) = members(&out);
+        let ch = &m["OEBPS/text/chapter 2.xhtml"];
+        if let Err(e) = Epub.extract(&out, &ExtractOptions::default()) {
+            panic!("the merged file does not read back: {e}\nchapter bytes: {:?}", &ch[..ch.len().min(64)]);
+        }
+    }
+}

@@ -5,3 +5,4 @@
 # It is recommended to check this file in to source control so that
 # everyone who runs the test benefits from these saved cases.
 cc 8ae78dd5c6abfe96acc292102d098cf1c36b6337f611dfc15a410c740edf95c7 # shrinks to which = 1, edits = [(Index(4567765199204269924), 0)], cut = Some(Index(1796476263710431393))
+cc a9c472d69aafbd4232a12c08599580aa329fdb49e428545ea163305f0740d6c1 # shrinks to which = 5, edits = [(Index(101355736668733801), 0), (Index(202711473337467601), 128)], cut = None

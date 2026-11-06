@@ -155,6 +155,9 @@ impl Text {
                 v
             }
             Env::Utf16(be, bom) => {
+                // without a mark, UTF-16 is only recognised by a leading `<` (see `read`): text that does not start
+                // with one (a translated text-only member) gets a mark, or it would not read back
+                let bom = bom || !s.starts_with('<');
                 let mut v: Vec<u8> = if !bom {
                     vec![]
                 } else if be {
@@ -202,5 +205,18 @@ mod tests {
         let back = t.encode(&t.text);
         assert_eq!(back, b"<?xml version=\"1.0\" encoding=\"ISO-8859-1\"?><a>caf\xe9</a>");
         assert!(read(b"<a>caf\xe9</a>", "x", false).is_err());
+    }
+
+    #[test]
+    fn markless_utf16_that_no_longer_starts_with_a_tag_gets_a_mark() {
+        for be in [false, true] {
+            let t = Text { text: String::new(), env: Env::Utf16(be, false), labels: vec![] };
+            let same = t.encode("<a/>");
+            assert_eq!(read(&same, "x", false).unwrap().env, Env::Utf16(be, false));
+            for s in ["FR &lt;x", " <a/>", "\u{feff}<a/>"] {
+                let back = read(&t.encode(s), "x", false).unwrap();
+                assert_eq!((back.text.as_str(), back.env), (s, Env::Utf16(be, true)));
+            }
+        }
     }
 }
