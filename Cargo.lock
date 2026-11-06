@@ -93,6 +93,7 @@ dependencies = [
  "bilingua-yaml",
  "bilingua-zip",
  "proptest",
+ "quick-xml",
  "serde_json",
  "zip",
 ]
@@ -576,6 +577,7 @@ version = "0.9.0"
 dependencies = [
  "bilingua-model",
  "bilingua-xliff",
+ "bilingua-xliffpkg",
  "bilingua-zip",
  "quick-xml",
  "serde",
