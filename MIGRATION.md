@@ -154,8 +154,19 @@ keeps the encoding:
   encoding, as LocOS does) and the target language stamped even when nothing is translated. TTX under the profile
   skips `<Tu>`s with a finished translation, as LocOS does.
 - Under the profile, units carry `context.extra["locos.p_index"]` where the format knows LocOS's number (odf, Qt ts,
-  wxl, icml, idml today) and `["locos.style"]` where it knows LocOS's style (none yet); unset means "fall back to
+  wxl, icml, idml, resx, json) and `["locos.style"]` where it knows LocOS's style (md, dtd); unset means "fall back to
   position".
+- Track D group A (txt, md, srt, vtt, po, json, strings, properties, ftl, dtd, resx, wxl, xaml, json5, arb,
+  resjson): under the profile these give LocOS's units, ids, styles and builds. txt, md, srt/vtt and po are ports
+  of the LocOS filters (one unit per line for txt and md, LocOS's cue tokens for subtitles, LocOS's PO build with
+  CLDR plural slots and a Language header); their profile documents carry the decoded file as a
+  `Skeleton::Binary`. In the key/value formats the placeholder codes are plain text again (ARB keeps its ICU
+  arguments as codes, FTL finds its placeables in the translation again); JSON walks like `json.loads` (the
+  last of a duplicate key, every string with a letter or digit, `NaN`/`Infinity` read). `locos.style` is set for
+  md images (`a11y:md-image`) and dtd (`dtd:<name>`), and `locos.p_index` for resx and json. The goldens are in
+  `bilingua/tests/locos/` (made by `oracle/locos_golden.py` with the LocOS venv) and checked by
+  `bilingua/tests/locos_golden.rs`. Not ported: Markdown's CJK emphasis and autolink repairs, LocOS's JSON
+  resource dialects (Chrome, FormatJS, Structured, go-i18n) and i18next plural fill.
 - `Document::source_encoding` names the encoding Bilingua decoded a non-UTF-8 text file from (`utf-16le`,
   `windows-1252`, ...).
 - A document stored before D4 for `html`, `epub`, `eml` or `flprjzip` (skeleton schema 1, with units) is refused at
