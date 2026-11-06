@@ -81,7 +81,9 @@ fn check(golden: &Path) -> (usize, usize, usize, Vec<String>) {
     if let Some(e) = g["parse_error"].as_str() {
         return match extract(&name, &data, &opts(None)) {
             Err(_) => (1, 0, 0, Vec::new()),
-            Ok(_) => (0, 0, 0, vec![format!("{name}: LocOS refuses ({e}), Bilingua extracts")]),
+            // LocOS refuses a file with nothing to translate; a document without units says the same
+            Ok(d) if e.starts_with("EmptyDocumentError") && numbered(&d).is_empty() => (1, 0, 0, Vec::new()),
+            Ok(d) => (0, 0, 0, vec![format!("{name}: LocOS refuses ({e}), Bilingua extracts {} units", numbered(&d).len())]),
         };
     }
     let doc = match extract(&name, &data, &opts(None)) {

@@ -7,7 +7,6 @@ pub const SKELETON_SCHEMA: u32 = 2;
 mod header;
 mod ph;
 mod plural;
-mod plural_table;
 mod read;
 mod write;
 

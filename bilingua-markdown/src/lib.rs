@@ -15,6 +15,7 @@ pub const SKELETON_SCHEMA: u32 = 1;
 mod extract;
 mod frontmatter;
 mod locos;
+mod locos_emphasis;
 mod render;
 
 use bilingua_model::*;

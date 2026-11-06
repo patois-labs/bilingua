@@ -7,8 +7,9 @@
 //! code, horizontal rules and table separators, HTML comment blocks and link reference definitions are skipped
 //! (a definition's one-line title is a unit). A line with an image has the style `a11y:md-image`.
 //! Build replaces only the unit's span of its line and applies LocOS's repairs: a line break in a one-line unit
-//! becomes a space, a table row gets back the `\|` escapes it lost, a line never opens a block its source did not.
-//! The CJK emphasis and autolink repairs (`fix_cjk_emphasis`, `fix_cjk_autolinks`) are not ported.
+//! becomes a space, emphasis CommonMark would not read is rewritten and a URL glued to the text around it becomes
+//! an explicit autolink (`locos_emphasis`), a table row gets back the `\|` escapes it lost, a line never opens a
+//! block its source did not.
 //! The skeleton is the decoded file (`Skeleton::Binary`, UTF-8), which marks a profile document.
 
 use bilingua_model::pytext::{py_split_line_end, py_splitlines_keepends};
@@ -481,8 +482,479 @@ fn offerable(v: &str) -> bool {
     py_has_alnum(v) && !v.chars().any(line_break_char)
 }
 
-/// LocOS `find_front_matter` with the default keys. The whole block is not parsed: a key's last top-level
-/// one-line value stands for what the block gives it (YAML keeps the last of a repeated key), and TOML keys after
+// ---- whole-block readability (LocOS parses the block with yaml.safe_load / tomllib first) ----------------
+
+/// What a YAML line's value leaves open for the lines after it.
+#[derive(Clone, Copy, PartialEq)]
+enum YamlAfter {
+    /// An empty value: a nested block (more indented lines, or `- ` items at the key's own column) may follow.
+    Nested(usize),
+    /// A plain scalar, which more indented lines continue.
+    Plain(usize),
+    /// A block scalar (`|`, `>`): more indented lines are its text.
+    Block(usize),
+    /// A quoted or flow value closed on its line, or a comment after a scalar: nothing may continue it.
+    Closed,
+    /// `- ` items of a sequence at the column of the key above it.
+    Items(usize),
+}
+
+/// The `(#.*)` comment of a value: where `[ \t]#` starts one in `v`, else `v.len()`.
+fn comment_at(v: &[char]) -> usize {
+    (0..v.len()).find(|&k| v[k] == '#' && k > 0 && (v[k - 1] == ' ' || v[k - 1] == '\t')).unwrap_or(v.len())
+}
+
+/// True when `rest` (after a closed scalar) is empty, blanks, or blanks and a comment.
+fn only_comment(rest: &[char]) -> bool {
+    let b = rest.iter().take_while(|c| **c == ' ' || **c == '\t').count();
+    b == rest.len() || (b > 0 && rest[b] == '#')
+}
+
+/// A flow collection (`[..]`, `{..}`) at the start of `v`: `Some(end)` when it closes on the line (quotes
+/// skipped), `None` when it goes on.
+fn flow_end(v: &[char]) -> Option<usize> {
+    let mut depth = 0i32;
+    let mut i = 0;
+    while i < v.len() {
+        match v[i] {
+            '"' => {
+                i += 1;
+                while i < v.len() && v[i] != '"' {
+                    i += if v[i] == '\\' { 2 } else { 1 };
+                }
+            }
+            '\'' => {
+                i += 1;
+                while i < v.len() && v[i] != '\'' {
+                    i += 1;
+                }
+            }
+            '[' | '{' => depth += 1,
+            ']' | '}' => {
+                depth -= 1;
+                if depth == 0 {
+                    return Some(i + 1);
+                }
+            }
+            _ => {}
+        }
+        i += 1;
+    }
+    None
+}
+
+/// The state after a YAML value `v` (the text after `key:` and its blanks) on a line at column `ind`; `Err(())`
+/// when PyYAML refuses it, `Ok(None)` when the value goes on in a way this check does not follow (the block is
+/// then taken as readable).
+fn yaml_value(v: &[char], ind: usize, anchors: &mut std::collections::HashSet<String>) -> Result<Option<YamlAfter>, ()> {
+    let name_end = |v: &[char], from: usize| (from..v.len()).find(|&k| sp(v[k]) || matches!(v[k], ',' | '[' | ']' | '{' | '}')).unwrap_or(v.len());
+    // the node's properties first: one anchor `&name` and one tag at most, in either order
+    let mut v = v;
+    let (mut anchored, mut tagged) = (false, false);
+    loop {
+        let e = match v.first() {
+            Some('&') if !anchored => {
+                anchored = true;
+                let e = name_end(v, 1);
+                anchors.insert(cs(v, 1, e));
+                e
+            }
+            Some('!') if !tagged => {
+                tagged = true;
+                let e = name_end(v, 1);
+                const KNOWN: &[&str] = &["!", "!!str", "!!int", "!!float", "!!bool", "!!null", "!!binary", "!!timestamp", "!!map", "!!seq", "!!set", "!!omap", "!!pairs"];
+                if !KNOWN.contains(&cs(v, 0, e).as_str()) {
+                    return Err(());
+                }
+                e
+            }
+            Some('&' | '!') => return Err(()),
+            _ => break,
+        };
+        let rest = &v[e..];
+        v = &rest[rest.iter().take_while(|c| **c == ' ' || **c == '\t').count()..];
+    }
+    let Some(&c) = v.first() else { return Ok(Some(YamlAfter::Nested(ind))) };
+    let name_end = |from: usize| name_end(v, from);
+    match c {
+        '#' => Ok(Some(YamlAfter::Nested(ind))),
+        '"' => {
+            let mut j = 1;
+            while j < v.len() && v[j] != '"' {
+                j += if v[j] == '\\' { 2 } else { 1 };
+            }
+            if j >= v.len() {
+                return Ok(None);
+            }
+            if yaml_double(&cs(v, 1, j)).is_none() || !only_comment(&v[j + 1..]) {
+                return Err(());
+            }
+            Ok(Some(YamlAfter::Closed))
+        }
+        '\'' => {
+            let mut j = 1;
+            loop {
+                match (j..v.len()).find(|&k| v[k] == '\'') {
+                    None => return Ok(None),
+                    Some(k) if v.get(k + 1) == Some(&'\'') => j = k + 2,
+                    Some(k) => {
+                        j = k;
+                        break;
+                    }
+                }
+            }
+            if !only_comment(&v[j + 1..]) {
+                return Err(());
+            }
+            Ok(Some(YamlAfter::Closed))
+        }
+        '|' | '>' => {
+            // [+-]?[1-9]? or [1-9][+-]?, then blanks and a comment at most
+            let mut j = 1;
+            let sign = |c: Option<&char>| matches!(c, Some('+' | '-'));
+            let digit = |c: Option<&char>| c.is_some_and(|c| ('1'..='9').contains(c));
+            if sign(v.get(j)) {
+                j += 1;
+                if digit(v.get(j)) {
+                    j += 1;
+                }
+            } else if digit(v.get(j)) {
+                j += 1;
+                if sign(v.get(j)) {
+                    j += 1;
+                }
+            }
+            if !only_comment(&v[j..]) {
+                return Err(());
+            }
+            Ok(Some(YamlAfter::Block(ind)))
+        }
+        '[' | '{' => match flow_end(v) {
+            Some(e) if only_comment(&v[e..]) => Ok(Some(YamlAfter::Closed)),
+            Some(_) => Err(()),
+            None => Ok(None),
+        },
+        '*' => {
+            let e = name_end(1);
+            if !anchors.contains(&cs(v, 1, e)) || !only_comment(&v[e..]) {
+                return Err(());
+            }
+            Ok(Some(YamlAfter::Closed))
+        }
+        '@' | '`' | '%' | ']' | '}' | ',' => Err(()),
+        '-' | '?' | ':' if v.get(1).is_none_or(|c| sp(*c)) => Err(()),
+        _ => {
+            let end = comment_at(v);
+            // PyYAML refuses a comment that a tab separates from a plain scalar
+            if end < v.len() && v[end - 1] == '\t' {
+                return Err(());
+            }
+            let body = &v[..end];
+            let mut stop = body.len();
+            while stop > 0 && sp(body[stop - 1]) {
+                stop -= 1;
+            }
+            let body = &body[..stop];
+            if (0..body.len()).any(|k| body[k] == ':' && body.get(k + 1).is_none_or(|c| sp(*c))) {
+                return Err(());
+            }
+            Ok(Some(if end < v.len() { YamlAfter::Closed } else { YamlAfter::Plain(ind) }))
+        }
+    }
+}
+
+/// `key:` at the start of `v` (after `ind` blanks): the char offset of the value (after the blanks that follow the
+/// colon). `None` when the line is not a key line; `Some(None)` for a key this check does not follow.
+fn yaml_key_line(v: &[char], ind: usize) -> Option<Option<usize>> {
+    let first = *v.get(ind)?;
+    if matches!(first, '[' | '{' | '*' | '&' | '!' | '|' | '>' | '%' | '@' | '`' | ',' | '?') {
+        return Some(None);
+    }
+    let mut k = ind;
+    if first == '"' || first == '\'' {
+        k += 1;
+        while k < v.len() && v[k] != first {
+            k += if first == '"' && v[k] == '\\' { 2 } else { 1 };
+        }
+        k += 1;
+        while k < v.len() && (v[k] == ' ' || v[k] == '\t') {
+            k += 1;
+        }
+        if v.get(k) != Some(&':') {
+            return None;
+        }
+    } else {
+        loop {
+            let c = *v.get(k)?;
+            if c == ':' && v.get(k + 1).is_none_or(|c| sp(*c)) {
+                break;
+            }
+            if c == '#' && k > ind && sp(v[k - 1]) {
+                return None;
+            }
+            k += 1;
+        }
+    }
+    let mut j = k + 1;
+    while j < v.len() && (v[j] == ' ' || v[j] == '\t') {
+        j += 1;
+    }
+    Some(Some(j))
+}
+
+/// Whether `yaml.safe_load` reads the front matter block: a check of the mistakes PyYAML refuses (a `: ` or a
+/// bad start in a plain value, text after a quoted one, a block scalar header with text, an unknown alias or local
+/// tag, a line that is not a key, more indented text after a closed value, tab indentation). Constructs it does
+/// not follow (multi-line quoted and flow values, nested blocks) are taken as readable.
+fn yaml_block_ok(body: &[&str]) -> bool {
+    let mut anchors = std::collections::HashSet::new();
+    let mut after = YamlAfter::Closed;
+    // a block scalar's text column: its first line's
+    let mut block_col: Option<usize> = None;
+    for line in body {
+        let v = chars(line);
+        if py_strip(line).is_empty() {
+            continue;
+        }
+        let ind = v.iter().take_while(|c| **c == ' ').count();
+        if let YamlAfter::Block(p) = after {
+            if ind > p {
+                match block_col {
+                    None => block_col = Some(ind),
+                    Some(c) if ind < c => return false,
+                    Some(_) => {}
+                }
+                continue;
+            }
+        }
+        block_col = None;
+        if v.get(ind) == Some(&'\t') {
+            return false;
+        }
+        if v.get(ind) == Some(&'#') {
+            if let YamlAfter::Plain(_) = after {
+                after = YamlAfter::Closed;
+            }
+            continue;
+        }
+        if ind > 0 {
+            match after {
+                YamlAfter::Plain(p) if ind > p => {
+                    let end = comment_at(&v);
+                    let body = &v[ind..end];
+                    if (0..body.len()).any(|k| body[k] == ':' && body.get(k + 1).is_none_or(|c| sp(*c))) {
+                        return false;
+                    }
+                    if end < v.len() {
+                        after = YamlAfter::Closed;
+                    }
+                    continue;
+                }
+                // a nested block or sequence: not followed further
+                YamlAfter::Nested(p) | YamlAfter::Items(p) if ind > p => return true,
+                _ => return false,
+            }
+        }
+        let is_item = v[0] == '-' && v.get(1).is_none_or(|c| sp(*c));
+        if is_item {
+            match after {
+                YamlAfter::Nested(0) | YamlAfter::Items(0) => {
+                    after = YamlAfter::Items(0);
+                    continue;
+                }
+                _ => return false,
+            }
+        }
+        match yaml_key_line(&v, 0) {
+            None => return false,
+            Some(None) => return true,
+            Some(Some(at)) => match yaml_value(&v[at..], 0, &mut anchors) {
+                Err(()) => return false,
+                Ok(None) => return true,
+                Ok(Some(a)) => after = a,
+            },
+        }
+    }
+    true
+}
+
+/// A TOML value that is not a string, array or table: a boolean, a number or a date/time (one token, or a date
+/// and a time with one space between them).
+fn toml_scalar(t: &str) -> bool {
+    if matches!(t, "true" | "false") {
+        return true;
+    }
+    let digits = |s: &str, ok: fn(char) -> bool| -> bool {
+        // digits with single underscores between them
+        !s.is_empty() && !s.starts_with('_') && !s.ends_with('_') && !s.contains("__") && s.chars().all(|c| c == '_' || ok(c))
+    };
+    let unsigned = t.strip_prefix(['+', '-']).unwrap_or(t);
+    if matches!(unsigned, "inf" | "nan") {
+        return true;
+    }
+    if t == unsigned {
+        if let Some(h) = t.strip_prefix("0x") {
+            return digits(h, |c| c.is_ascii_hexdigit());
+        }
+        if let Some(o) = t.strip_prefix("0o") {
+            return digits(o, |c| ('0'..='7').contains(&c));
+        }
+        if let Some(b) = t.strip_prefix("0b") {
+            return digits(b, |c| c == '0' || c == '1');
+        }
+    }
+    let dec = |s: &str| digits(s, |c| c.is_ascii_digit()) && (s == "0" || !s.starts_with('0'));
+    // integer or float: int part, optional .frac, optional exponent
+    let (mant, exp) = match unsigned.find(['e', 'E']) {
+        Some(i) => (&unsigned[..i], Some(&unsigned[i + 1..])),
+        None => (unsigned, None),
+    };
+    let (int, frac) = match mant.split_once('.') {
+        Some((a, b)) => (a, Some(b)),
+        None => (mant, None),
+    };
+    let exp_ok = exp.is_none_or(|e| digits(e.strip_prefix(['+', '-']).unwrap_or(e), |c| c.is_ascii_digit()));
+    if dec(int) && frac.is_none_or(|f| digits(f, |c| c.is_ascii_digit())) && exp_ok {
+        return true;
+    }
+    // date, time or date-time
+    let b = t.as_bytes();
+    let n = |s: &[u8]| s.iter().all(|c| c.is_ascii_digit());
+    let date = |s: &[u8]| s.len() == 10 && n(&s[..4]) && s[4] == b'-' && n(&s[5..7]) && s[7] == b'-' && n(&s[8..10]);
+    let time = |s: &[u8]| -> bool {
+        if s.len() < 8 || !(n(&s[..2]) && s[2] == b':' && n(&s[3..5]) && s[5] == b':' && n(&s[6..8])) {
+            return false;
+        }
+        let mut r = &s[8..];
+        if let Some(f) = r.strip_prefix(b".") {
+            let d = f.iter().take_while(|c| c.is_ascii_digit()).count();
+            if d == 0 {
+                return false;
+            }
+            r = &f[d..];
+        }
+        r.is_empty() || r == b"Z" || r == b"z" || (r.len() == 6 && matches!(r[0], b'+' | b'-') && n(&r[1..3]) && r[3] == b':' && n(&r[4..6]))
+    };
+    if date(b) || time(b) {
+        return true;
+    }
+    b.len() > 11 && date(&b[..10]) && matches!(b[10], b'T' | b't' | b' ') && time(&b[11..])
+}
+
+/// Whether `tomllib.loads` reads the front matter block: every line a comment, a table header declared once, or
+/// `key = value` with a key its table has not set yet and a value TOML reads (with nothing but a comment after
+/// it). A multi-line string or array is taken as readable.
+fn toml_block_ok(body: &[&str]) -> bool {
+    use std::collections::HashSet;
+    let mut tables: HashSet<String> = HashSet::new();
+    let mut scope = String::new();
+    let mut keys: HashSet<(String, String)> = HashSet::new();
+    let mut arrays = 0usize;
+    for line in body {
+        let t = py_strip(line);
+        if t.is_empty() || t.starts_with('#') {
+            continue;
+        }
+        let v = chars(t);
+        if t.starts_with("[[") {
+            let Some(e) = t.find("]]") else { return false };
+            if !only_comment(&chars(&t[e + 2..])) {
+                return false;
+            }
+            arrays += 1;
+            scope = format!("[[{}]]#{arrays}", t[2..e].trim());
+            continue;
+        }
+        if t.starts_with('[') {
+            let Some(e) = t.find(']') else { return false };
+            let name = t[1..e].trim().to_string();
+            if !only_comment(&chars(&t[e + 1..])) || !tables.insert(name.clone()) {
+                return false;
+            }
+            scope = name;
+            continue;
+        }
+        // the key: up to the first `=` outside quotes
+        let mut k = 0;
+        while k < v.len() && v[k] != '=' {
+            if v[k] == '"' || v[k] == '\'' {
+                let q = v[k];
+                k += 1;
+                while k < v.len() && v[k] != q {
+                    k += if q == '"' && v[k] == '\\' { 2 } else { 1 };
+                }
+            }
+            k += 1;
+        }
+        if k >= v.len() {
+            return false;
+        }
+        let key: String = cs(&v, 0, k).trim().to_string();
+        let bare = |s: &str| !s.is_empty() && s.chars().all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-');
+        let key_ok = key.split('.').all(|p| {
+            let p = p.trim();
+            bare(p) || (p.len() >= 2 && ((p.starts_with('"') && p.ends_with('"')) || (p.starts_with('\'') && p.ends_with('\''))))
+        });
+        if !key_ok || !keys.insert((scope.clone(), key)) {
+            return false;
+        }
+        let mut j = k + 1;
+        while j < v.len() && (v[j] == ' ' || v[j] == '\t') {
+            j += 1;
+        }
+        let val = &v[j..];
+        let Some(&q) = val.first() else { return false };
+        let tail_from = match q {
+            '"' | '\'' if val.get(1) == Some(&q) && val.get(2) == Some(&q) => {
+                match (3..val.len().saturating_sub(2)).find(|&e| val[e] == q && val[e + 1] == q && val[e + 2] == q) {
+                    // the closing run may be one or two quotes longer (they belong to the string)
+                    Some(e) => {
+                        let mut end = e + 3;
+                        while end < e + 5 && val.get(end) == Some(&q) {
+                            end += 1;
+                        }
+                        end
+                    }
+                    None => return true,
+                }
+            }
+            '"' => {
+                let mut e = 1;
+                while e < val.len() && val[e] != '"' {
+                    e += if val[e] == '\\' { 2 } else { 1 };
+                }
+                if e >= val.len() || toml_string(&cs(val, 1, e), true).is_none() {
+                    return false;
+                }
+                e + 1
+            }
+            '\'' => match (1..val.len()).find(|&e| val[e] == '\'') {
+                Some(e) => e + 1,
+                None => return false,
+            },
+            '[' | '{' => match flow_end(val) {
+                Some(e) => e,
+                None => return true,
+            },
+            _ => {
+                let end = (0..val.len()).find(|&e| val[e] == '#').unwrap_or(val.len());
+                let token: String = cs(val, 0, end).trim_end().to_string();
+                if !toml_scalar(&token) {
+                    return false;
+                }
+                end
+            }
+        };
+        if !only_comment(&val[tail_from.min(val.len())..]) {
+            return false;
+        }
+    }
+    true
+}
+
+/// LocOS `find_front_matter` with the default keys. The whole block is checked for what PyYAML / tomllib refuse
+/// (`yaml_block_ok`, `toml_block_ok`), not parsed: a key's last top-level one-line value stands for what the block
+/// gives it (YAML keeps the last of a repeated key), and TOML keys after
 /// the first table header are not top-level. A repeated TOML key makes the block unreadable (no fields).
 fn find_front_matter(lines: &[&str]) -> Option<FrontMatter> {
     let first = lines.first()?.trim_start_matches('\u{FEFF}').trim_end_matches([' ', '\t']);
@@ -506,6 +978,10 @@ fn find_front_matter(lines: &[&str]) -> Option<FrontMatter> {
     }
     if !looks_like {
         return None;
+    }
+    // a block yaml.safe_load / tomllib refuses is front matter left untouched
+    if !(if toml { toml_block_ok(body) } else { yaml_block_ok(body) }) {
+        return Some(fm);
     }
     // the last top-level value of every key (TOML: before the first table)
     let mut last: HashMap<String, Option<String>> = HashMap::new();
@@ -1299,6 +1775,8 @@ pub fn merge(doc: &Document, data: &[u8]) -> Result<Vec<u8>, Error> {
         let mut new = new.clone();
         if new != it.text {
             new = fold_line_breaks(&it.text, &new);
+            new = crate::locos_emphasis::fix_cjk_emphasis(&it.text, &new);
+            new = crate::locos_emphasis::fix_cjk_autolinks(&it.text, &new);
             new = restore_cell_escapes(&it.text, &new);
             if !it.prefix.contains('#') {
                 new = escape_block_start(&it.text, &new);
@@ -1330,6 +1808,83 @@ mod tests {
         assert_eq!(yaml_double("a\\tb \\u00e9").as_deref(), Some("a\tb \u{e9}"));
         assert_eq!(yaml_single("it''s").as_deref(), Some("it's"));
         assert_eq!(encode_fm_value(false, "plain", "Hello: world").as_deref(), Some("'Hello: world'"));
+    }
+
+    #[test]
+    fn front_matter_blocks_read_like_pyyaml_and_tomllib() {
+        // each case checked with PyYAML 6 / tomllib of the LocOS venv (refused: false)
+        let yaml = |s: &str| yaml_block_ok(&s.split('\n').collect::<Vec<_>>());
+        for bad in [
+            "a: b: c",
+            "a: x\nb",
+            "a: x\n  y: z",
+            "a: \"q\" x",
+            "a: > folded",
+            "a: *x",
+            "a: !foo x",
+            "a: @x",
+            "a: - x",
+            "a: \"\\q\"",
+            "a: x\n- y",
+            "a: b\n\tc: d",
+            "a: 'x' \n  y",
+            "a: |\n  y\n x",
+            "a: c\n# x\n  d",
+            "a: [b]c",
+            "k: *star* (parens): colon",
+            "a: x\t#c",
+        ] {
+            assert!(!yaml(bad), "{bad:?}");
+        }
+        for good in [
+            "a: x\n  y",
+            "a:\n  y: z",
+            "a: \"q\" # c",
+            "a: |",
+            "a: |-",
+            "a: | # c",
+            "a: &x v\nb: *x",
+            "a: !!str x",
+            "a: [a, b]",
+            "a: x #c: d",
+            "a:\n- y",
+            "a: x\n\n  y",
+            "a: |\n  t: z\nb: c",
+            "a: 1\na: 2",
+            "a: x:y",
+            "a: 12:30",
+            "a: x\n  - y",
+            "a: ! x",
+            "a: &x\n  b: c",
+            "a: x\n   y\n  z",
+        ] {
+            assert!(yaml(good), "{good:?}");
+        }
+        let toml = |s: &str| toml_block_ok(&s.split('\n').collect::<Vec<_>>());
+        for bad in ["a = 1\na = 2", "a = x", "a = \"x\" y", "[t]\na = 1\n[t]\nb = 2", "[t]\na = 1\na = 2", "a = 07", "a = 1.", "a = .5", "a = \"\\q\"", "a = 'x' y", "a = 1\nb"] {
+            assert!(!toml(bad), "{bad:?}");
+        }
+        for good in [
+            "a = \"x\"",
+            "a = 'x'",
+            "a = \"\"\"m\"\"\"",
+            "a = [1, 2]",
+            "a = 1979-05-27",
+            "a = true",
+            "a = 1_000",
+            "a = 0x1F",
+            "a = inf",
+            "a = +1.5e3",
+            "a = \"x\" # c",
+            "a = 1\n[t]\na = 2",
+            "a.b = 1",
+            "\"a b\" = 1",
+            "a = {x = 1}",
+            "a = 12:30:00",
+            "a = 10",
+        ] {
+            assert!(toml(good), "{good:?}");
+        }
     }
 
     #[test]

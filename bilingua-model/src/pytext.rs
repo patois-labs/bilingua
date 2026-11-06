@@ -6,7 +6,7 @@
 //! out U+001C..U+001F, which Python treats as whitespace. A format crate that must skip or keep the same values as
 //! Localization OS calls these instead. The tables come from `tools/gen_pytables.py`.
 
-use crate::pytables::{ALNUM, ALPHA, DECIMAL, SPACE};
+use crate::pytables::{ALNUM, ALPHA, DECIMAL, PUNCT_SYMBOL, SPACE};
 
 fn in_table(t: &[(u32, u32)], c: char) -> bool {
     let c = c as u32;
@@ -63,6 +63,15 @@ pub fn py_isspace_char(c: char) -> bool {
         return matches!(c, '\t'..='\r' | '\x1c'..='\x1f' | ' ');
     }
     in_table(SPACE, c)
+}
+
+/// `unicodedata.category(c)[0] in "PS"`: a punctuation or symbol character (CommonMark's Unicode punctuation, as
+/// Localization OS's Markdown emphasis repair tests it).
+pub fn py_is_punct_or_symbol_char(c: char) -> bool {
+    if c.is_ascii() {
+        return c.is_ascii_punctuation();
+    }
+    in_table(PUNCT_SYMBOL, c)
 }
 
 /// Python `s.isalpha()`: not empty and every character a letter.

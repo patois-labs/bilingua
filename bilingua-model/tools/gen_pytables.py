@@ -52,6 +52,11 @@ def main():
     emit("ALNUM", "`str.isalnum`: `isalpha` or `isdecimal` or `isdigit` or `isnumeric`.", ranges(str.isalnum))
     emit("DECIMAL", "`str.isdecimal`: category Nd (what `\\d` matches in a Python `re` pattern).", ranges(str.isdecimal))
     emit("SPACE", "`str.isspace`: bidirectional class WS, B or S, or category Zs.", ranges(str.isspace))
+    emit(
+        "PUNCT_SYMBOL",
+        "`unicodedata.category(c)[0] in \"PS\"`: general category P* or S* (CommonMark's Unicode punctuation).",
+        ranges(lambda c: unicodedata.category(c)[0] in "PS"),
+    )
 
 
 if __name__ == "__main__":

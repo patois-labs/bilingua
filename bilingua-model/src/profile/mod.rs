@@ -57,8 +57,11 @@ pub fn check(name: Option<&str>) -> Result<(), Error> {
     }
 }
 
-/// Formats whose files Localization OS writes back in their own encoding (UTF-16 included) rather than as UTF-8.
-const LOCOS_KEEPS_ENCODING: &[&str] = &["ini", "strings", "dxf"];
+/// Formats whose files Localization OS writes back in their own encoding (UTF-16 included) rather than as UTF-8:
+/// ini, strings and dxf; plain text (LocOS `encode_like`: its BOM, UTF-16, or Windows-1252 when the text fits);
+/// properties (an ISO-8859-1 file stays ISO-8859-1, `\uXXXX` for the rest). The LocOS PO and subtitle writers keep
+/// the file's encoding themselves.
+const LOCOS_KEEPS_ENCODING: &[&str] = &["ini", "strings", "dxf", "txt", "properties"];
 
 impl Profile {
     /// Extraction options with this profile switched on.
@@ -67,7 +70,7 @@ impl Profile {
     }
 
     /// The merge options this profile uses for a document of `format` (a filter id). Localization OS: UTF-8 out,
-    /// except for the formats it writes in their own encoding (ini, strings and dxf: `Keep`), and the target language
+    /// except for the formats it writes in their own encoding (ini, strings, dxf, txt and properties: `Keep`), and the target language
     /// stamped and plurals filled even when nothing is translated (lead decision 11-04).
     pub fn merge_options(&self, format: &str) -> MergeOptions {
         let enc = if LOCOS_KEEPS_ENCODING.contains(&format) { OutputEncoding::Keep } else { OutputEncoding::Utf8 };

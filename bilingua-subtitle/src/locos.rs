@@ -560,17 +560,16 @@ fn rebuild(s: &str, texts: &BTreeMap<usize, String>, locale: Option<&str>) -> St
     out
 }
 
-/// The decoded text with `\n` breaks, whether it had a BOM, and its newline style.
-fn envelope(text: &str) -> (String, bool, &'static str) {
-    let bom = text.starts_with('\u{FEFF}');
+/// The decoded text with `\n` breaks and no BOM (the file's BOM, line breaks and encoding are in its skeleton tag,
+/// and `enc::encode_text` writes them back as LocOS's `encode_like` does).
+fn normalized(text: &str) -> String {
     let body = text.strip_prefix('\u{FEFF}').unwrap_or(text);
-    (body.replace("\r\n", "\n").replace('\r', "\n"), bom, enc::newline_style(body))
+    body.replace("\r\n", "\n").replace('\r', "\n")
 }
 
 /// Extracts a subtitle file the LocOS way (see the module notes).
 pub fn extract(format: &'static str, text: &str, encoding: &str, opts: &ExtractOptions, warnings: Vec<Warning>) -> Result<Document, Error> {
-    let (norm, ..) = envelope(text);
-    let (cues, _) = parse_cues(&norm);
+    let (cues, _) = parse_cues(&normalized(text));
     let mut units = Vec::new();
     for cue in &cues {
         let text = py_strip(&cue.text.join("\n")).to_string();
@@ -603,11 +602,7 @@ pub fn extract(format: &'static str, text: &str, encoding: &str, opts: &ExtractO
         u.context.kind = Some("subtitle".into());
         units.push(u);
     }
-    let mut data = Vec::with_capacity(text.len() + 3);
-    if encoding.starts_with("utf-8-bom") && !text.starts_with('\u{FEFF}') {
-        data.extend_from_slice("\u{FEFF}".as_bytes());
-    }
-    data.extend_from_slice(text.as_bytes());
+    let data = enc::locos_skeleton(encoding, text);
     let doc = Document::new(format, units, Skeleton::binary(data, bilingua_model::parser_info!())).with_options(opts);
     bilingua_model::guard::finish(doc, warnings, &opts.limits())
 }
@@ -628,22 +623,16 @@ fn locos_text(v: &[Inline]) -> String {
 /// Writes a profile document: LocOS's `build`, or `build_localized` when the document has a target language and
 /// the merge stamps it.
 pub fn merge(doc: &Document, data: &[u8], opts: &MergeOptions) -> Result<Vec<u8>, Error> {
-    let source = std::str::from_utf8(data).map_err(|_| Error::Write("subtitle: the LocOS skeleton is not UTF-8".into()))?;
+    let (tag, source) = enc::locos_skeleton_parts(data).ok_or_else(|| Error::Write("subtitle: not a LocOS profile skeleton".into()))?;
     let mut texts = BTreeMap::new();
     for (k, u) in doc.units.iter().enumerate() {
         if u.segments.iter().any(Segment::has_target) {
             texts.insert(k, locos_text(&u.output()));
         }
     }
-    let (norm, bom, nl) = envelope(source);
-    let out = rebuild(&norm, &texts, opts.stamp_lang(doc, !texts.is_empty()));
-    let out = if nl.is_empty() || nl == "\n" { out } else { out.replace('\n', nl) };
-    let mut v = Vec::with_capacity(out.len() + 3);
-    if bom {
-        v.extend_from_slice(b"\xEF\xBB\xBF");
-    }
-    v.extend_from_slice(out.as_bytes());
-    Ok(v)
+    let out = rebuild(&normalized(source), &texts, opts.stamp_lang(doc, !texts.is_empty()));
+    // LocOS `encode_like`: the BOM, the line breaks when the file used one kind, the encoding when the text fits
+    enc::encode_text(&out, tag)
 }
 
 #[cfg(test)]

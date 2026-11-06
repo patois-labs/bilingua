@@ -28,6 +28,9 @@ pub mod codepage;
 pub mod enc;
 pub mod garble;
 pub mod guard;
+/// The gettext plural rules of Localization OS, shared by the mo and po crates (not part of the semver API).
+#[doc(hidden)]
+pub mod plural_table;
 pub mod profile;
 mod pytables;
 pub mod pytext;

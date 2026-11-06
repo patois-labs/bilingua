@@ -6,7 +6,6 @@ pub const SKELETON_SCHEMA: u32 = 1;
 mod locos;
 mod parse;
 mod ph;
-mod plural_table;
 
 use bilingua_model::*;
 use parse::{escape, parse, Entry, Field};

@@ -97,6 +97,10 @@ impl Filter for JsonFilter {
         if pos < text.len() {
             parts.push(SkelPart::Raw(text[pos..].to_string()));
         }
+        if locos {
+            // LocOS lists its units in walk order: a key repeated later stands at its first place
+            in_walk_order(&mut units, &mut parts);
+        }
 
         bilingua_model::guard::finish(Document::new(ID, units, Skeleton::text(parts, encoding, bilingua_model::parser_info!())).with_options(opts), std::mem::take(&mut dec.warnings), &opts.limits())
     }
@@ -118,6 +122,35 @@ impl Filter for JsonFilter {
             }
         }
         bilingua_model::enc::encode_text_with(&out, encoding, opts)
+    }
+}
+
+/// Sorts the units by their `locos.p_index` (stable), renumbers their ids and points the skeleton at the new
+/// places.
+fn in_walk_order(units: &mut Vec<Unit>, parts: &mut [SkelPart]) {
+    let walk = |u: &Unit| u.context.extra.get(profile::P_INDEX).and_then(|p| p.parse::<usize>().ok()).unwrap_or(usize::MAX);
+    let mut order: Vec<usize> = (0..units.len()).collect();
+    order.sort_by_key(|&i| walk(&units[i]));
+    if order.iter().enumerate().all(|(k, &i)| k == i) {
+        return;
+    }
+    let mut new_at = vec![0usize; units.len()];
+    for (k, &i) in order.iter().enumerate() {
+        new_at[i] = k;
+    }
+    for p in parts.iter_mut() {
+        if let SkelPart::Unit(i) = p {
+            *i = new_at[*i];
+        }
+    }
+    let mut old: Vec<Option<Unit>> = std::mem::take(units).into_iter().map(Some).collect();
+    for (k, &i) in order.iter().enumerate() {
+        let mut u = old[i].take().expect("each unit once");
+        let was = std::mem::replace(&mut u.id, format!("u{}", k + 1));
+        for s in u.segments.iter_mut().filter(|s| s.id == was) {
+            s.id = u.id.clone();
+        }
+        units.push(u);
     }
 }
 

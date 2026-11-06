@@ -9,7 +9,7 @@
 //! charset in the header (a header is added when the file has none), and fills every plural slot of the target's
 //! rule. The skeleton is the decoded file itself (`Skeleton::Binary`, UTF-8), which marks a profile document.
 
-use crate::plural_table::RULES;
+use bilingua_model::plural_table::RULES;
 use bilingua_model::*;
 use std::collections::BTreeMap;
 
@@ -255,31 +255,11 @@ fn has_header_field(h: &str) -> bool {
     })
 }
 
-/// The decoded text of a profile document and how to write it back: (text with `\n` breaks, BOM, newline style).
-struct Envelope {
-    bom: bool,
-    newline: &'static str,
-}
-
-fn envelope(text: &str) -> (String, Envelope) {
-    let bom = text.starts_with('\u{FEFF}');
+/// The decoded text with `\n` breaks and no BOM (the file's BOM, line breaks and encoding are in its skeleton tag,
+/// and `enc::encode_text` writes them back as LocOS's `encode_like` does).
+fn normalized(text: &str) -> String {
     let body = text.strip_prefix('\u{FEFF}').unwrap_or(text);
-    let newline = bilingua_model::enc::newline_style(body);
-    (body.replace("\r\n", "\n").replace('\r', "\n"), Envelope { bom, newline })
-}
-
-fn encode_like(text: &str, env: &Envelope) -> String {
-    let text = text.strip_prefix('\u{FEFF}').unwrap_or(text);
-    let mut out = String::with_capacity(text.len() + 3);
-    if env.bom {
-        out.push('\u{FEFF}');
-    }
-    if env.newline.is_empty() || env.newline == "\n" {
-        out.push_str(&text.replace("\r\n", "\n").replace('\r', "\n"));
-    } else {
-        out.push_str(&text.replace("\r\n", "\n").replace('\r', "\n").replace('\n', env.newline));
-    }
-    out
+    body.replace("\r\n", "\n").replace('\r', "\n")
 }
 
 /// LocOS `_render` + `_render_over`: `entries` (parsed from `source`) written over the source's lines.
@@ -292,7 +272,7 @@ fn render(entries: &mut [PEntry], source: &str) -> String {
             entries[i].f.has_kw = false;
         }
     }
-    let (text, env) = envelope(source);
+    let text = normalized(source);
     let lines: Vec<&str> = text.split('\n').collect();
     let mut out: Vec<String> = Vec::new();
     let mut pos = 0usize;
@@ -320,7 +300,7 @@ fn render(entries: &mut [PEntry], source: &str) -> String {
         pos = span.1 + 1;
     }
     out.extend(lines[pos.min(lines.len())..].iter().map(|s| s.to_string()));
-    encode_like(&out.join("\n"), &env)
+    out.join("\n")
 }
 
 /// LocOS `_edge_newlines`.
@@ -359,7 +339,7 @@ fn unit_texts(entries: &[PEntry]) -> Vec<String> {
 
 /// LocOS `build`.
 fn build(source: &str, texts: &BTreeMap<usize, String>) -> String {
-    let (norm, _) = envelope(source);
+    let norm = normalized(source);
     let mut entries = parse_entries(&norm);
     let mut k = 0usize;
     for e in entries.iter_mut() {
@@ -456,27 +436,53 @@ fn rule_key(field: &str) -> (String, String) {
             parts.insert(a, b);
         }
     }
-    let mut expr = parts.get("plural").copied().unwrap_or("").to_string();
-    while expr.starts_with('(') && expr.ends_with(')') {
-        let mut depth = 0i32;
-        let mut closes_early = false;
-        for (i, ch) in expr.char_indices() {
-            depth += match ch {
-                '(' => 1,
-                ')' => -1,
-                _ => 0,
-            };
-            if depth == 0 && i < expr.len() - 1 {
-                closes_early = true;
-                break;
-            }
-        }
-        if closes_early {
+    let expr = strip_outer_parens(parts.get("plural").copied().unwrap_or(""));
+    (parts.get("nplurals").copied().unwrap_or("").to_string(), expr.to_string())
+}
+
+/// LocOS's loop `while expr.startswith("(") and expr.endswith(")")`: strip one pair of outer parentheses unless
+/// the depth, counted from the first one, comes back to zero before the last character. LocOS rescans the rest at
+/// every layer; this does it in one pass: layer `t` (the `t` outer `(` already gone, so the depth before it is `t`)
+/// is stripped when the depth over the bytes `t..=len-2-t` never falls to `t`, that is when their minimum stays
+/// above `t`, found from a suffix minimum on the left of the middle and a prefix minimum on its right.
+fn strip_outer_parens(expr: &str) -> &str {
+    let b = expr.as_bytes();
+    let l = b.len();
+    if l < 2 {
+        return expr;
+    }
+    let mut depth = Vec::with_capacity(l);
+    let mut d = 0i64;
+    for c in b {
+        d += match c {
+            b'(' => 1,
+            b')' => -1,
+            _ => 0,
+        };
+        depth.push(d);
+    }
+    let mid = (l - 2) / 2;
+    let mut left = vec![i64::MAX; mid + 1];
+    let mut m = i64::MAX;
+    for t in (0..=mid).rev() {
+        m = m.min(depth[t]);
+        left[t] = m;
+    }
+    let mut right = vec![i64::MAX; l];
+    let mut m = i64::MAX;
+    for j in mid..l {
+        m = m.min(depth[j]);
+        right[j] = m;
+    }
+    let mut t = 0usize;
+    // layer t is the text t..l-t, two characters at least; its window is t..=l-2-t (t <= mid <= l-2-t)
+    while 2 * t + 2 <= l && b[t] == b'(' && b[l - 1 - t] == b')' {
+        if left[t].min(right[l - 2 - t]) <= t as i64 {
             break;
         }
-        expr = expr[1..expr.len() - 1].to_string();
+        t += 1;
     }
-    (parts.get("nplurals").copied().unwrap_or("").to_string(), expr)
+    &expr[t..l - t]
 }
 
 /// The first line of `h` that starts with `prefix`: its byte range without the line break.
@@ -611,18 +617,18 @@ fn fill_plural_slots(entries: &mut [PEntry], original: &[PEntry], texts: &BTreeM
     }
 }
 
-/// LocOS `build_localized`.
-fn build_localized(source: &str, texts: &BTreeMap<usize, String>, locale: &str) -> String {
+/// LocOS `build_localized`: the text, and whether it is written as UTF-8 (LocOS's localized export, `_render(..,
+/// utf8=True)`) rather than in the file's own encoding (the plain build it falls back to).
+fn build_localized(source: &str, texts: &BTreeMap<usize, String>, locale: &str) -> (String, bool) {
     let out = build(source, texts);
-    let Some(tag) = canonical_tag(locale) else { return out };
+    let Some(tag) = canonical_tag(locale) else { return (out, false) };
     let parts: Vec<&str> = tag.split('-').collect();
     let region = parts[1..].iter().find(|p| p.len() == 2 && p.chars().all(bilingua_model::py_isalpha_char));
     let value = match region {
         Some(r) => format!("{}_{r}", parts[0]),
         None => parts[0].to_string(),
     };
-    let (norm, _) = envelope(&out);
-    let mut entries = parse_entries(&norm);
+    let mut entries = parse_entries(&out);
     let created = !entries.iter().any(is_header);
     if created {
         let at = entries.iter().position(|e| e.f.has_kw).unwrap_or(entries.len());
@@ -632,9 +638,9 @@ fn build_localized(source: &str, texts: &BTreeMap<usize, String>, locale: &str) 
     let Some(rule) = Rule::lookup(&value) else {
         if created {
             entries[hi].f.msgstr.get_or_insert_with(String::new).push_str(&format!("Language: {value}\n"));
-            return render(&mut entries, &out);
+            return (render(&mut entries, &out), true);
         }
-        return out;
+        return (out, false);
     };
     let h = entries[hi].f.msgstr.get_or_insert_with(String::new);
     *h = utf8_charset(h);
@@ -669,26 +675,21 @@ fn build_localized(source: &str, texts: &BTreeMap<usize, String>, locale: &str) 
         *h = format!("{}\n{declaration}\n", h.trim_end_matches('\n'));
     }
     let keep_extra = source_language.replace('-', "_").split('_').next() == Some(parts[0]);
-    let original = parse_entries(&envelope(source).0);
+    let original = parse_entries(&normalized(source));
     fill_plural_slots(&mut entries, &original, texts, rule, keep_extra);
-    render(&mut entries, &out)
+    (render(&mut entries, &out), true)
 }
 
 /// Extracts a PO file the LocOS way (see the module notes).
 pub fn extract(text: &str, encoding: &str, opts: &ExtractOptions, warnings: Vec<Warning>) -> Result<Document, Error> {
-    let (norm, _) = envelope(text);
-    let entries = parse_entries(&norm);
+    let entries = parse_entries(&normalized(text));
     let mut units = Vec::new();
     for (n, t) in unit_texts(&entries).into_iter().enumerate() {
         let mut u = Unit::new(format!("u{}", n + 1), vec![Inline::text(t)]);
         u.context.kind = Some("string".into());
         units.push(u);
     }
-    let mut data = Vec::with_capacity(text.len() + 3);
-    if encoding.starts_with("utf-8-bom") && !text.starts_with('\u{FEFF}') {
-        data.extend_from_slice("\u{FEFF}".as_bytes());
-    }
-    data.extend_from_slice(text.as_bytes());
+    let data = enc::locos_skeleton(encoding, text);
     let doc = Document::new("po", units, Skeleton::binary(data, bilingua_model::parser_info!())).with_options(opts);
     bilingua_model::guard::finish(doc, warnings, &opts.limits())
 }
@@ -696,18 +697,20 @@ pub fn extract(text: &str, encoding: &str, opts: &ExtractOptions, warnings: Vec<
 /// Writes a profile document: LocOS's `build`, or `build_localized` when the document has a target language and
 /// `stamp_target_always` is set or something is translated (LocOS's localized export).
 pub fn merge(doc: &Document, data: &[u8], opts: &MergeOptions) -> Result<Vec<u8>, Error> {
-    let source = std::str::from_utf8(data).map_err(|_| Error::Write("po: the LocOS skeleton is not UTF-8".into()))?;
+    let (tag, source) = enc::locos_skeleton_parts(data).ok_or_else(|| Error::Write("po: not a LocOS profile skeleton".into()))?;
     let mut texts = BTreeMap::new();
     for (k, u) in doc.units.iter().enumerate() {
         if u.segments.iter().any(Segment::has_target) {
             texts.insert(k, plain_text(&u.output()));
         }
     }
-    let out = match opts.stamp_lang(doc, !texts.is_empty()) {
+    let (out, utf8) = match opts.stamp_lang(doc, !texts.is_empty()) {
         Some(lang) => build_localized(source, &texts, lang),
-        None => build(source, &texts),
+        None => (build(source, &texts), false),
     };
-    Ok(out.into_bytes())
+    // the plain build keeps the file's encoding; the localized export is UTF-8 (a UTF-8 BOM and the line breaks
+    // kept), as LocOS writes them
+    enc::encode_text(&out, &if utf8 { enc::locos_utf8_tag(tag) } else { tag.to_string() })
 }
 
 #[cfg(test)]

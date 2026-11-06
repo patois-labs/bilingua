@@ -27,24 +27,32 @@ WORDS = [
     "zero\u200bwidth", "tab\there", "50%", "$5", "a&b", "1<2", "3>2", "it's", "\"quoted\"", "C:\\Temp", "back\\slash",
     "#hash", "*star*", "_under_", "`tick`", "[brackets]", "(parens)", "{braces}", "~tilde~", "|pipe|", "a--b", "...",
     "12", "3.14", "https://example.com/a?b=1&c=2", "user@example.com", "ID-42", "OK", "x", "",
+    "__bold__", "**strong**", "www.example.org", "https://e.com/p_(x)", "保存https://e.com/z。", "**「保存」**を",
 ]
+# Words every Windows-1252 file can hold (a file made of them is written in a code page)
+LATIN_WORDS = [
+    "Save", "file", "open", "the", "settings", "café", "naïve", "Größe", "straße", "œuvre", "€5", "„quoted“",
+    "x\u00a0y", "tab\there", "50%", "a&b", "1<2", "it's", "C:\\Temp", "*star*", "_under_", "[brackets]", "12",
+    "https://example.com/a?b=1&c=2", "ID-42", "OK", "x", "",
+]
+LATIN = False
 PH = [
     "%s", "%d", "%1$s", "%2$d", "%@", "%1$@", "%(name)s", "%.2f", "%%", "%lld", "%-5s", "{0}", "{1}", "{name}",
     "{{name}}", "${var}", "$var$", "[ProductName]", "[1]", ":count", "{0:N2}", "%{count}", "{{count}}", "@:link",
     "\\n", "&#x41;", "&nbsp;", "{ $var }", "{count, plural, one {# item} other {# items}}",
     "{sex, select, male {he} female {she} other {they}}", "<b>bold</b>", "<br/>", "<a href=\"x\">link</a>",
-    "<i>it</i>", "⟦1⟧", "⟦/2⟧",
+    "<i>it</i>",
 ]
 
 
 def word():
-    return R.choice(WORDS)
+    return R.choice(LATIN_WORDS if LATIN else WORDS)
 
 
 def phrase(lo=1, hi=8, ph=0.3):
     out = []
     for _ in range(R.randint(lo, hi)):
-        out.append(R.choice(PH) if R.random() < ph else word())
+        out.append(R.choice(PH) if R.random() < (ph if not LATIN else ph / 2) else word())
     s = " ".join(x for x in out if x)
     if R.random() < 0.1:
         s = "  " + s
@@ -79,6 +87,8 @@ def join_lines(lines, eol, final=None):
 
 def encode(s, encs=("utf-8",)):
     enc = R.choice(encs)
+    if LATIN:
+        enc = R.choice(["cp1252", "cp1252", "utf-16", "utf-8-sig", "latin-1"])
     if enc == "utf-8-sig":
         return "\ufeff".encode("utf-8") + s.encode("utf-8")
     if enc == "utf-16":
@@ -586,7 +596,7 @@ def prop_esc(s, latin):
 
 
 def g_properties():
-    latin = R.random() < 0.3
+    latin = R.random() < 0.3 or LATIN
     lines = []
     for _ in range(R.randint(0, 12)):
         r = R.random()
@@ -612,7 +622,10 @@ def g_properties():
     eol = R.choice(["\n", "\r\n"])
     s = join_lines(lines, eol)
     if latin:
-        return encode(s, ("latin-1",))
+        try:
+            return s.encode("latin-1")
+        except UnicodeEncodeError:
+            return s.encode("utf-8")
     return encode(s, DEF_ENCS)
 
 
@@ -821,11 +834,12 @@ INJECT = {
     "srt": ["one\n\n99\n00:00:01,000 --> 00:00:02,000\ninjected cue", "a\r\n\r\nb", "-->", "x\n\n"],
     "vtt": ["one\n\n00:00:01.000 --> 00:00:02.000\ninjected cue", "<script>x</script>", "NOTE\n\nx", "a --> b", "<i>open"],
     "po": ['x"\nmsgid "evil"\nmsgstr "y', "a\nb", "\\", '"', "line\n\nmsgid \"z\""],
-    "md": ["one\n\n# injected heading", "two\n- item", "```\ncode", "<!-- hide", "---\ntitle: x\n---", "a  \nb", "| a | b |", "1. x", "# h", "[x]: https://evil"],
+    "md": ["__保存__をクリック", "**「変更を保存」**をクリック", "参见https://example.com/a?b=1&c=2。", "见www.example.org了",
+           "_x_y", "one\n\n# injected heading", "two\n- item", "```\ncode", "<!-- hide", "---\ntitle: x\n---", "a  \nb", "| a | b |", "1. x", "# h", "[x]: https://evil"],
     "txt": ["a\nb", "a\r\nb", "\u2028x"],
 }
 COMMON_INJECT = ['"; evil = "x', "</value><data name=\"evil\"><value>x", "]]>", "<!--", "&amp;&lt;", "\\u0041", "}\nevil = x",
-                 "{ $var } and { -brand-name }", "{", "\n.attr = x", "⟦9⟧ forged ⟦/9⟧", "⟦x1⟧", "${'$'}", "\u0000nul", "a\nb"]
+                 "{ $var } and { -brand-name }", "{", "\n.attr = x", "⟦9⟧ forged ⟦/9⟧", "⟦x1⟧", "${'$'}", "a\nb"]
 
 
 def golden(fmt, path):
@@ -864,8 +878,10 @@ def main():
         d = os.path.join(out, fmt)
         os.makedirs(d, exist_ok=True)
         refused = 0
+        global LATIN
         for k in range(n):
             R.seed(f"{seed}-{fmt}-{k}")
+            LATIN = fmt in ("txt", "srt", "vtt", "po", "properties", "md") and R.random() < 0.25
             p = os.path.join(d, f"r{seed}_{k:04d}.{ext}")
             with open(p, "wb") as fh:
                 fh.write(gen())

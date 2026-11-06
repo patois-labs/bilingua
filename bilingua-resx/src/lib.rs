@@ -325,5 +325,7 @@ fn finish_bytes(mut out: String, encoding: &str, changed: bool, opts: &bilingua_
             }
         }
     }
-    enc::encode_text_with(&out, encoding, opts)
+    // LocOS writes the line breaks a translation brings in as they are
+    let tag = if opts.is_profile(profile::LOCOS) { enc::keep_newlines(encoding) } else { encoding.to_string() };
+    enc::encode_text_with(&out, &tag, opts)
 }
