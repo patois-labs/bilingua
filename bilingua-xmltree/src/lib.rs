@@ -912,6 +912,26 @@ mod tests {
     }
 
     #[test]
+    fn tail_carrying_edits_like_lxml() {
+        // lxml index 0 is after the text that leads the element
+        let mut d = parse("<a xmlns:p='P'>lead<p:b>x</p:b> tail <c/></a>").unwrap();
+        let root = d.root;
+        assert_eq!(d.first_slot(root), 1);
+        let b = d.find(root, "P", "b").unwrap();
+        assert_eq!(d.local_exact(b), "b");
+        assert_eq!(d.inner_prefix(b, "P").as_deref(), Some("p"));
+        // deepcopy takes the tail (here `p` is bound where the copy goes, so nothing is declared)
+        let c = d.find(root, "", "c").unwrap();
+        let copies = d.copy_with_tail(b, c);
+        assert_eq!(copies.len(), 2);
+        d.insert_at(c, 0, &copies);
+        assert_eq!(d.serialize(), "<a xmlns:p=\"P\">lead<p:b>x</p:b> tail <c><p:b>x</p:b> tail </c></a>");
+        // remove takes the tail with it
+        d.remove_with_tail(b);
+        assert_eq!(d.serialize(), "<a xmlns:p=\"P\">lead<c><p:b>x</p:b> tail </c></a>");
+    }
+
+    #[test]
     fn refuses_broken_xml() {
         let deep = "<a>".repeat(MAX_DEPTH + 1);
         for bad in ["<a>", "<a></b>", "<a x='1' x='2'/>", "<p:a/>", "<a>&nope;</a>", "<!DOCTYPE a><a/>", "<a/><b/>", deep.as_str()] {

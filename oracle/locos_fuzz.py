@@ -8,6 +8,8 @@ blank and whitespace lines, nesting, plural forms and placeholders of every kind
 the format's own structure (new cues, new PO entries, new Markdown blocks, quotes, closing tags, forged tokens).
 A file LocOS refuses gets `{"format": .., "parse_error": ..}` instead. Point the golden test at the corpus with
 `BILI_LOCOS_ROOT=OUT_DIR` (cargo: `--config env.BILI_LOCOS_ROOT="OUT_DIR"`). Nothing in the LocOS tree is written.
+The group B formats (xliff, sdlxliff, mxliff, mqxliff, xlz, mqxlz, sdlrpx, html, docx, pptx, xlsx) come from
+`locos_fuzz_office.py`: mutations of the golden corpus's inputs, with zip goldens and their sidecars.
 """
 
 import base64
@@ -873,7 +875,12 @@ def main():
             seed = int(args.pop(0))
         else:
             fmts.append(a)
-    for fmt in fmts or sorted(GEN):
+    import locos_fuzz_office as office  # Track D group B: XLIFF family, HTML, DOCX, PPTX, XLSX (mutations)
+
+    office_fmts = [f for f in fmts if f in office.FORMATS]
+    if office_fmts:
+        office.write_corpus(og, out, office_fmts, n, seed)
+    for fmt in [f for f in fmts if f not in office.FORMATS] if fmts else sorted(GEN):
         gen, ext = GEN[fmt]
         d = os.path.join(out, fmt)
         os.makedirs(d, exist_ok=True)

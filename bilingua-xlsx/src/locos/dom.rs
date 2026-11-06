@@ -1,3 +1,8 @@
+//! Not `bilingua-xmltree` on purpose (Track D group B): this tree's edit calls treat an element and its tail as
+//! one group (remove, insert, copy), a new element declares the lxml default prefix (`dc`, `ns0`) when its
+//! namespace has none in scope, and parsing refuses an attribute whose prefix is unbound, which the shared tree
+//! accepts; the XLSX port's 30-odd call sites rely on those meanings, so moving would be a rewrite, not a dedupe.
+//!
 //! A small XML tree for the Localization OS port: what lxml gives LocOS's `xlsx_package` (elements with their
 //! resolved namespace, attributes, text, comments and processing instructions) and the edits it makes. Text and
 //! attribute values are read as an XML parser reports them (line ends normalised, references resolved, attribute

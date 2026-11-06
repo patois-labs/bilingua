@@ -71,7 +71,10 @@ fn get_or_add_first(d: &mut Dom, parent: usize, local: &str) -> usize {
         return x;
     }
     let x = new_w(d, parent, local);
-    d.insert(parent, 0, x);
+    // lxml's `insert(0, ..)`: the first element slot, after any text that leads the parent (a run holding bare
+    // text keeps that text before its new rPr, as LocOS writes it)
+    let at = d.first_slot(parent);
+    d.insert(parent, at, x);
     x
 }
 

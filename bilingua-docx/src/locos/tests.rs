@@ -140,6 +140,17 @@ fn declares_the_target_language() {
 }
 
 #[test]
+fn a_new_rpr_goes_after_the_text_that_leads_a_run() {
+    // a run holding bare text (no w:t, found by the random differential): lxml's insert(0, rPr) keeps the run's
+    // text before the new rPr, so LocOS writes `<w:r>text<w:rPr>..`
+    let body = "<w:p><w:r>bare</w:r></w:p><w:p><w:r><w:t>Kept</w:t></w:r></w:p>";
+    let d = docx(body, NORMAL, &[]);
+    let out = build(&d, Some("de-DE"), &[(1, "Behalten")]);
+    let xml = entry(&out, "word/document.xml");
+    assert!(xml.contains("<w:r>bare<w:rPr><w:lang w:val=\"en-US\"/></w:rPr></w:r>"), "{xml}");
+}
+
+#[test]
 fn nothing_written_returns_the_upload() {
     let d = docx("<w:p><w:r><w:t>Same</w:t></w:r></w:p>", NORMAL, &[]);
     assert_eq!(build(&d, None, &[]), d);
