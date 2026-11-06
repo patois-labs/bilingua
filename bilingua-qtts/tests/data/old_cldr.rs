@@ -1,3 +1,48 @@
+// The crate's own CLDR table and lookup as they were before the switch to bilingua_model::cldr (item G),
+// kept only so a test can compare old and new over every language code. Not compiled outside that test.
+
+
+/// Number of plural forms for `locale`, or 2 (`one`, `other`) for an unknown or empty locale, as LocOS.
+pub fn forms(locale: &str) -> usize {
+    lookup(locale).map(|m| m.count_ones() as usize).unwrap_or(2)
+}
+
+fn lookup(locale: &str) -> Option<u8> {
+    let code = locale.trim().replace('-', "_");
+    let mut parts = code.split('_');
+    let lang = parts.next()?.to_ascii_lowercase();
+    if lang.is_empty() || !lang.bytes().all(|b| b.is_ascii_alphabetic()) {
+        return None;
+    }
+    let (mut script, mut terr) = (None, None);
+    for p in parts {
+        if p.len() == 4 && p.bytes().all(|b| b.is_ascii_alphabetic()) {
+            let mut c = p.to_ascii_lowercase();
+            c[..1].make_ascii_uppercase();
+            script = Some(c);
+        } else if (p.len() == 2 && p.bytes().all(|b| b.is_ascii_alphabetic())) || (p.len() == 3 && p.bytes().all(|b| b.is_ascii_digit())) {
+            terr = Some(p.to_ascii_uppercase());
+        }
+    }
+    let mut cands = Vec::new();
+    if let (Some(s), Some(t)) = (&script, &terr) {
+        cands.push(format!("{lang}_{s}_{t}"));
+    }
+    if let Some(t) = &terr {
+        cands.push(format!("{lang}_{t}"));
+    }
+    if let Some(s) = &script {
+        cands.push(format!("{lang}_{s}"));
+    }
+    cands.push(lang.clone());
+    for c in cands {
+        if let Ok(i) = TABLE.binary_search_by(|(k, _)| (*k).cmp(c.as_str())) {
+            return Some(TABLE[i].1);
+        }
+    }
+    let i = ALIASES.binary_search_by(|(k, _)| (*k).cmp(lang.as_str())).ok()?;
+    Some(ALIASES[i].1)
+}
 // Generated from Babel 2.18.0 by tests/tools/gen_cldr.py.
 // (language or language_Script_TERRITORY, categories whole numbers 0..=1000 reach); bit 0 zero, 1 one, 2 two, 3 few, 4 many, 5 other.
 pub const BABEL_VERSION: &str = "2.18.0";

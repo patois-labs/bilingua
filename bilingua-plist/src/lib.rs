@@ -6,7 +6,6 @@ pub const SKELETON_SCHEMA: u32 = 1;
 
 mod bin;
 mod cldr;
-mod cldr_table;
 mod ph;
 mod policy;
 mod tree;

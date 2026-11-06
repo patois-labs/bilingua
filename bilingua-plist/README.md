@@ -41,7 +41,7 @@ Two filters: `Plist` (id `plist`, extension `plist`) and `Stringsdict` (id `stri
   the CLDR cardinal categories of the target language that it lacks (`zero one two few many other`), inserted before
   `other` in CLDR order and filled with the (translated) `other` text. Device and width rules are not touched. An
   unknown language adds nothing. An untouched merge, or a merge without a target language, is the original file.
-  The category table is generated from the CLDR data LocOS reads through babel (`src/cldr_table.rs`).
+  The category table is generated from the CLDR data LocOS reads through babel (the shared `bilingua_model::cldr` table).
 - **Records**: `plist_records(bytes)` (every string with its path as the key) and `stringsdict_records(bytes)` (one
   record per entry, plural forms and which unit carries each) are the key-based views LocOS has.
 - `context.key` is the path (`PreferenceSpecifiers/1/Titles/0`), `context.style` the nearest dictionary key,

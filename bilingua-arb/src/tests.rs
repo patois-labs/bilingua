@@ -49,7 +49,7 @@ fn icu_rejects_what_localization_os_rejects() {
 
 #[test]
 fn unit_order_is_pre_order() {
-    let plan = plan_message("A {n, plural, one{# b {g, select, x{X} other{Y}}} other{# c}} z");
+    let plan = plan_message("A {n, plural, one{# b {g, select, x{X} other{Y}}} other{# c}} z", false);
     let paths: Vec<&str> = plan.units.iter().map(|u| u.path.as_str()).collect();
     assert_eq!(paths, ["", "n: plural one", "n: plural one / g: select x", "n: plural one / g: select other", "n: plural other"]);
 }
@@ -69,10 +69,6 @@ fn cldr_lookup_reduces_like_babel() {
     assert_eq!(plural_categories("und", false).unwrap(), ["one", "other"]);
     assert_eq!(plural_categories("root", false).unwrap(), ["other"]);
     assert!(plural_categories("zz", false).is_none());
-    // both tables must stay sorted for the binary search
-    for t in [cldr::TABLE, cldr::ALIASES] {
-        assert!(t.windows(2).all(|w| w[0].0 < w[1].0));
-    }
 }
 
 #[test]

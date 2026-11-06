@@ -1,3 +1,18 @@
+// plist's own CLDR table and lookup before the switch to bilingua_model::cldr (item G); test fixture only.
+
+
+pub(crate) const ORDER: [&str; 6] = ["zero", "one", "two", "few", "many", "other"];
+
+/// The plural categories a language uses, always with `other`, in CLDR order. The full tag is tried first, then
+/// its base language; `None` when the language is unknown (the forms then stay as they are).
+pub(crate) fn categories(locale: &str) -> Option<Vec<&'static str>> {
+    let norm = locale.trim().replace('-', "_");
+    let base = norm.split('_').next().unwrap_or("").to_ascii_lowercase();
+    let i = TABLE.binary_search_by(|(code, _)| (*code).cmp(base.as_str())).ok()?;
+    let bits = TABLE[i].1;
+    Some(ORDER.iter().enumerate().filter(|(n, _)| bits & (1 << n) != 0).map(|(_, c)| *c).collect())
+}
+
 // Generated from CLDR cardinal plural categories via babel 2.18.0 (the data LocOS uses). Sorted by code.
 // Bit set: zero=1 one=2 two=4 few=8 many=16 other=32.
 // Also the old codes babel still resolves (in, iw, ji, mo, tl), so they fill like id, he, yi, ro, fil.

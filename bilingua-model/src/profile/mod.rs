@@ -228,17 +228,19 @@ pub fn is_rtl(code: &str) -> bool {
 /// Sets a target the way Localization OS means it: an empty LocOS target is a translation to nothing (written as
 /// an empty value, [`Document::set_target_empty`]); one of white space only is written as that white space (LocOS
 /// writes it, and the adapter's JSON document carries it, where [`Document::set_target`] would read it as no
-/// translation); anything else is [`Document::set_target`].
+/// translation); anything else is [`Document::set_target`], except that a translation may repeat a standalone
+/// placeholder tag (`#` in ICU, Chrome `$x$`, go `{{..}}`: LocOS accepts it, where `set_target` refuses it as
+/// "tag appears more often"); paired tags keep the exactly-once rule and a tag the source lacks is still refused.
 pub fn locos_set_target(doc: &mut Document, seg_id: &str, target: Vec<Inline>) -> Result<(), Error> {
     if target.iter().all(|i| matches!(i, Inline::Text(t) if t.is_empty())) {
         return doc.set_target_empty(seg_id);
     }
     let blank = target.iter().all(|i| matches!(i, Inline::Text(t) if t.trim().is_empty()));
     if !blank {
-        return doc.set_target(seg_id, target);
+        return doc.set_target_repeating(seg_id, target);
     }
     // validated as any target (unknown segment, locked unit), then kept as it is
-    doc.set_target(seg_id, target.clone())?;
+    doc.set_target_repeating(seg_id, target.clone())?;
     let (ui, si) = doc.locate(seg_id).ok_or_else(|| Error::UnknownSegment(seg_id.to_string()))?;
     let seg = &mut doc.units[ui].segments[si];
     let text: String = target.iter().map(|i| if let Inline::Text(t) = i { t.as_str() } else { "" }).collect();

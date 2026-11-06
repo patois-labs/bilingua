@@ -204,6 +204,13 @@ fn own_segmentation(id: &str) -> bool {
 
 /// The filter for a file: by extension first, then by sniffing the bytes.
 pub fn detect(name: &str, bytes: &[u8]) -> Option<Box<dyn Filter>> {
+    detect_with(name, bytes, None)
+}
+
+/// [`detect`] under a profile. With `profile::LOCOS` a `.json` file in ARB shape that is really another resource
+/// dialect (a go-i18n file with a string `@@locale`) goes to the JSON filter, as LocOS checks go-i18n before ARB;
+/// without the profile every such file keeps opening as ARB.
+pub fn detect_with(name: &str, bytes: &[u8], prof: Option<&str>) -> Option<Box<dyn Filter>> {
     let ext = name.rsplit_once('.').map(|(_, e)| e.to_ascii_lowercase()).unwrap_or_default();
     // `.ts` is shared by Qt Linguist (XML) and TypeScript: the bytes decide, as in LocOS.
     if ext == "ts" {
@@ -211,7 +218,10 @@ pub fn detect(name: &str, bytes: &[u8]) -> Option<Box<dyn Filter>> {
     }
     // LocOS sends a .json file in ARB shape (a string @@locale) to its ARB dialect; so do we.
     if ext == "json" && bilingua_arb::Arb.sniff(bytes) {
-        return Some(Box::new(bilingua_arb::Arb));
+        let other_dialect = prof == Some(profile::LOCOS) && bilingua_json::dialect_of(bytes).is_some_and(|d| d != "arb");
+        if !other_dialect {
+            return Some(Box::new(bilingua_arb::Arb));
+        }
     }
     // LocOS routes a .xml file by its root element: Android strings (<resources>) and Java XML properties
     // (<properties>) have their own filters, any other root is generic XML (ITS, DITA, DocBook, multilingual).
@@ -253,7 +263,7 @@ pub fn extract(name: &str, bytes: &[u8], opts: &ExtractOptions) -> Result<Docume
     // a misspelt option or profile would otherwise be ignored without a word
     profile::check(opts.profile.as_deref())?;
     check_format_options(opts, &format_option_keys())?;
-    let f = detect(name, bytes).ok_or_else(|| Error::Unsupported(format!("no parser for {name}")))?;
+    let f = detect_with(name, bytes, opts.profile.as_deref()).ok_or_else(|| Error::Unsupported(format!("no parser for {name}")))?;
     // the safety net for every format, also one that forgets to call the guards: input size first, the unit,
     // segment and unit-length caps at the end
     bilingua_model::guard::check_input(bytes, &opts.limits())?;

@@ -6,7 +6,7 @@
 #[path = "cldr_data.rs"]
 mod data;
 
-use data::{CARDINAL, ORDINAL};
+use data::{BABEL_ALIASES, CARDINAL, ORDINAL};
 
 /// The six categories in CLDR order; bit `n` of a category set is `ORDER[n]`.
 pub const ORDER: [&str; 6] = ["zero", "one", "two", "few", "many", "other"];
@@ -53,6 +53,30 @@ pub fn cardinal(locale: &str) -> Option<Vec<&'static str>> {
     cardinal_bits(&language(locale)).map(names)
 }
 
+/// The row of Babel's alias table for a code (`deu`, `ara`, `iw`, `root`, `und`, ...): (language, cardinal, ordinal).
+fn babel_alias(lang: &str) -> Option<(&'static str, u8, u8)> {
+    BABEL_ALIASES.binary_search_by(|(c, _, _, _)| (*c).cmp(lang)).ok().map(|i| (BABEL_ALIASES[i].1, BABEL_ALIASES[i].2, BABEL_ALIASES[i].3))
+}
+
+/// The language Babel resolves a code to: `deu` is `de`, `iw` is `he`, `und` is `en`; a code with a row of its
+/// own (and one Babel does not know) comes back as it is.
+pub fn babel_language(lang: &str) -> &str {
+    if cardinal_bits(lang).is_some() {
+        return lang;
+    }
+    babel_alias(lang).map_or(lang, |(l, _, _)| l)
+}
+
+/// The category set Babel gives a language code (lower case, no region): the language's own row, else the row of
+/// the alias Babel resolves it to (`deu`, `ara`, `iw`, `root`, `und`, ...). `ordinal` asks for the ordinal set,
+/// which is `other` (32) for a known language with no ordinal rule. `None` for a code Babel does not know.
+pub fn bits_babel(lang: &str, ordinal: bool) -> Option<u8> {
+    if let Some(card) = cardinal_bits(lang) {
+        return Some(if ordinal { ordinal_bits(lang) } else { card });
+    }
+    babel_alias(lang).map(|(_, card, ord)| if ordinal { ord } else { card })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -77,5 +101,27 @@ mod tests {
         assert_eq!(cardinal_bits_aliased("iw"), cardinal_bits("he"));
         assert_eq!(cardinal_bits_aliased("tl"), cardinal_bits("fil"));
         assert_eq!(cardinal_bits_aliased("de"), cardinal_bits("de"));
+    }
+
+    #[test]
+    fn babel_aliases_resolve_to_their_language() {
+        assert_eq!(babel_language("deu"), "de");
+        assert_eq!(babel_language("iw"), "he");
+        assert_eq!(babel_language("und"), "en");
+        assert_eq!(babel_language("ru"), "ru");
+        assert_eq!(babel_language("xx"), "xx");
+        assert!(BABEL_ALIASES.windows(2).all(|w| w[0].0 < w[1].0));
+        assert_eq!(names(bits_babel("rus", false).unwrap()), ["one", "few", "many", "other"]);
+        assert_eq!(names(bits_babel("eng", true).unwrap()), ["one", "two", "few", "other"]);
+        assert_eq!(names(bits_babel("tl", true).unwrap()), ["one", "other"]);
+        assert_eq!(names(bits_babel("de", true).unwrap()), ["other"]);
+        assert_eq!(names(bits_babel("root", false).unwrap()), ["other"]);
+        assert!(bits_babel("xx", false).is_none() && bits_babel("", true).is_none());
+        // an alias row agrees with the row of the language it names, except where Babel's ordinal data differs
+        for (a, t, card, _) in BABEL_ALIASES {
+            if let Some(c) = cardinal_bits(t) {
+                assert_eq!(*card, c, "{a}");
+            }
+        }
     }
 }

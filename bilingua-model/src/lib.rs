@@ -1091,7 +1091,14 @@ impl Document {
     /// calls.
     pub fn set_target(&mut self, seg_id: &str, target: Vec<Inline>) -> Result<(), Error> {
         let at = self.locate(seg_id).ok_or_else(|| Error::UnknownSegment(seg_id.to_string()))?;
-        self.apply_target(at, seg_id, target)
+        self.apply_target(at, seg_id, target, false)
+    }
+
+    /// [`Document::set_target`] that lets a translation repeat a standalone placeholder tag (the `#` of an ICU
+    /// plural, Chrome `$x$`, go `{{..}}`), as Localization OS does; paired tags still keep the exactly-once rule.
+    pub fn set_target_repeating(&mut self, seg_id: &str, target: Vec<Inline>) -> Result<(), Error> {
+        let at = self.locate(seg_id).ok_or_else(|| Error::UnknownSegment(seg_id.to_string()))?;
+        self.apply_target(at, seg_id, target, true)
     }
 
     /// Position (unit, segment) of the segment with this id, through the cached index.
@@ -1122,7 +1129,7 @@ impl Document {
         for (id, target) in items {
             let id = id.as_ref();
             let at = *index.get(id).ok_or_else(|| Error::UnknownSegment(id.to_string()))?;
-            self.apply_target(at, id, target)?;
+            self.apply_target(at, id, target, false)?;
         }
         Ok(())
     }
@@ -1153,13 +1160,13 @@ impl Document {
         m
     }
 
-    fn apply_target(&mut self, (ui, si): (usize, usize), seg_id: &str, target: Vec<Inline>) -> Result<(), Error> {
+    fn apply_target(&mut self, (ui, si): (usize, usize), seg_id: &str, target: Vec<Inline>, repeat_standalone: bool) -> Result<(), Error> {
         let unit = &mut self.units[ui];
         if !unit.translate {
             return Err(Error::Locked(seg_id.to_string()));
         }
         let seg = &mut unit.segments[si];
-        check_tags(&seg.source, &target)?;
+        check_tags(&seg.source, &target, repeat_standalone)?;
         // The free flag belongs to the source code: a target tag takes it from the source tag with its id, so a
         // caller (an editor, a LocOS adapter) that does not know the flag cannot drop or invent it.
         let target = merge_text(
@@ -1215,7 +1222,7 @@ impl Document {
     }
 }
 
-fn check_tags(source: &[Inline], target: &[Inline]) -> Result<(), Error> {
+fn check_tags(source: &[Inline], target: &[Inline], repeat_standalone: bool) -> Result<(), Error> {
     let mut allowed: BTreeMap<(&str, TagKind), usize> = BTreeMap::new();
     for i in source {
         if let Inline::Tag { id, kind, .. } = i {
@@ -1229,7 +1236,7 @@ fn check_tags(source: &[Inline], target: &[Inline]) -> Result<(), Error> {
             *n += 1;
             match allowed.get(&(id.as_str(), *kind)) {
                 None => return Err(Error::InventedTag(id.clone())),
-                Some(max) if *n > *max => return Err(Error::DuplicatedTag(id.clone())),
+                Some(max) if *n > *max && !(repeat_standalone && *kind == TagKind::Standalone) => return Err(Error::DuplicatedTag(id.clone())),
                 _ => {}
             }
         }
