@@ -33,6 +33,8 @@ yours.
 | ASP.NET pages and controls | `aspx` | `.aspx` `.ascx` |  |
 | AutoCAD DXF (ASCII) | `dxf` | `.dxf` |  |
 | CSV | `csv` | `.csv` |  |
+| DITA topics, maps and bookmaps | `dita` | `.dita` `.ditamap` `.bookmap` |  |
+| DocBook 4.x and 5 | `docbook` | `.dbk` `.docbook` |  |
 | DokuWiki markup | `dokuwiki` | `.dokuwiki` |  |
 | DTD entity files (Mozilla) | `dtd` | `.dtd` |  |
 | EBU STL subtitles | `stl` | `.stl` |  |
@@ -111,7 +113,7 @@ yours.
 | YAML (generic, Rails i18n, Symfony) | `yaml` | `.yaml` `.yml` |  |
 | YouTube SBV subtitles | `sbv` | `.sbv` |  |
 
-88 formats.
+90 formats.
 <!-- formats:end -->
 
 `bilingua::detect` picks the format by extension and then by looking at the bytes, so most files need no hint.
