@@ -22,7 +22,7 @@
 //!
 //! Documents made under the profile carry the original as a `Skeleton::Binary`; `merge` picks this writer by that.
 
-mod dom;
+use bilingua_xmltree as dom;
 
 use bilingua_model::pytext::py_strip;
 use bilingua_model::{profile, CodeData, Document, Error, ExtractOptions, Granularity, Inline, MergeOptions, Skeleton, TagKind, Unit, UnitContext};

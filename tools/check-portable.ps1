@@ -2,7 +2,7 @@
 $ErrorActionPreference = 'Continue'
 $root = Split-Path -Parent $PSScriptRoot
 Set-Location $root
-$crates = 'model','zip','seg','text','json','markdown','html','htmlcore','po','subtitle','docx','xlsx','pptx','xliff','sdl','ini','strings','toml','properties','resjson','json5','jsmodule','yaml','arb','resx','xaml','dtd','wxl','ftl','xcstrings','xmb','qtts','php','plist','xml','rc','mo','csv','xslt','desktop','epub','idml','odf','icml','mif','vsdx','xtg','adoc','mdx','latex','rst','email','ttx','serverpages','wordfast','xliffpkg','sdlproj','htmlhelp','image','stl','subtext','ass','ttml','wiki','scc','stf','dxf','flare','pdf','dita'
+$crates = 'model','zip','seg','text','json','markdown','html','htmlcore','po','subtitle','docx','xlsx','pptx','xliff','xmltree','sdl','ini','strings','toml','properties','resjson','json5','jsmodule','yaml','arb','resx','xaml','dtd','wxl','ftl','xcstrings','xmb','qtts','php','plist','xml','rc','mo','csv','xslt','desktop','epub','idml','odf','icml','mif','vsdx','xtg','adoc','mdx','latex','rst','email','ttx','serverpages','wordfast','xliffpkg','sdlproj','htmlhelp','image','stl','subtext','ass','ttml','wiki','scc','stf','dxf','flare','pdf','dita'
 $pkgs = @(); foreach ($c in $crates) { $pkgs += '-p'; $pkgs += "bilingua-$c" }
 $fail = $false
 

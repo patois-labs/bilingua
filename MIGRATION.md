@@ -219,10 +219,10 @@ keeps the encoding:
   paragraph; a right-to-left target sets `rightToLeft="1"` on every worksheet view (a `sheetViews` added where a
   sheet has none). Untouched parts keep their bytes; a Strict Open XML workbook comes back Strict. Copied from
   LocOS on purpose: an error literal (`t="e"`, such as `#N/A`) and a `t="str"` cell without a formula are units,
-  and a negative shared-string index counts from the end of the table. Known gap: a text-box paragraph with
-  several runs and a break or field numbers the break or field after the runs in LocOS, by position in
-  `profile::tokens` (the builds still match); `profile::tokens::locos_pair_letter("xlsx")` is `r`, as LocOS's run
-  tokens are (the adapter's `_PAIR_LETTER` needs `xlsx` too). Not ported:
+  and a negative shared-string index counts from the end of the table. A text-box paragraph's tokens are LocOS's
+  PowerPoint tokens: `profile::tokens::to_locos_text_for("xlsx", ..)` gives `r` run pairs and numbers each token by
+  its tag id, so a break or field after two runs is `x3`, as LocOS writes it (the adapter's `_PAIR_LETTER` needs
+  `xlsx` too). Not ported:
   LocOS's comment units (`comments=True`) and column mode (`xlsx.table`).
 - Track D group B, PPTX (and pptm, potx, potm, ppsx, ppsm): under the profile this is a port of LocOS's
   `pptx_filter.py` (`bilingua_pptx::locos`). The walk is LocOS's: per slide in `p:sldIdLst` order the slide's
@@ -233,14 +233,34 @@ keeps the encoding:
   `slide 1 notes`, `slide 2 hidden`, `a11y:img-alt`, `a11y:img-title`). A paragraph with one run is plain text;
   otherwise every run is a pair whose tag id is LocOS's run number and every `a:br` / `a:fld` a standalone code
   numbered after the runs. LocOS does not number those tokens in reading order, so the adapter must turn them into
-  text with `profile::tokens::to_locos_text_for("pptx", ..)`, which for pptx is the new `to_locos_text_numbered`
-  (tag ids as token numbers; it falls back to `to_locos_text_as` when the ids are not usable numbers), to get
+  text with `profile::tokens::to_locos_text_for("pptx", ..)`, which for docx, pptx and xlsx is
+  `to_locos_text_numbered` (tag ids as token numbers; it falls back to `to_locos_text_as` when the ids are not
+  distinct positive numbers), to get
   LocOS's `⟦r1⟧a⟦/r1⟧⟦x3⟧⟦r2⟧b⟦/r2⟧`. Writing is
   LocOS's `_rebuild` (its token rules on the target text, run properties copied, a dropped break or field put back
   at the end, new lines as `a:br`, `lang` on every run of a written paragraph and `rtl="1"` for a right-to-left
   target, the SmartArt drawing cache mirrored), re-serialising only the parts that changed; Strict Open XML goes
   through LocOS's namespace swap. The profile's documents carry the original as a `Skeleton::Binary`. Not ported:
   slide comments (LocOS's `comments=True`), LocOS's markup budget, XML parts in a legacy code page.
+- Track D group B, DOCX (docx, docm, dotx, dotm): under the profile a port of LocOS's `docx_filter.py`, walk stamp 6
+  (`bilingua_docx::locos`). Units are every paragraph with text in LocOS's numbering (the body in reading order
+  with tables, content controls and text boxes, then headers, footers, footnotes, endnotes and comments), then the
+  alt text and title of each drawing (`a11y:img-alt`, `a11y:img-title`); `locos.p_index` is LocOS's `p_index`, the
+  style is the paragraph style's name ("Normal", "Heading 1"). A paragraph with more than one content run gives one
+  `r` pair per run, plain runs included; object-mode paragraphs (pictures, fields, note and comment references,
+  breaks, tracked changes, wrappers) give one `x` code per object group, numbered after the runs as LocOS numbers
+  them; `profile::tokens::to_locos_text_for("docx", ..)` numbers docx tokens by tag id (LocOS's numbers) through the
+  same `to_locos_text_numbered` path as pptx and xlsx, so `⟦x3⟧` after two runs stays `x3`. A Storyline "Export to Word" file
+  gives its Translation column only; `docx.translate_comments=false` leaves the comments out, as LocOS does.
+  Merging rebuilds each translated paragraph as LocOS does and, for a target language, declares it (docDefaults
+  and the styles that had the old default get the target, untranslated runs that inherited the old default get it
+  written on them, `w:bidi` on translated paragraphs for an RTL target, `dc:language` in core.xml, `w:bCs` /
+  `w:iCs` / `w:szCs` twins on translated runs for a complex-script target); the package is saved the way
+  python-docx saves it (new `[Content_Types].xml` and relationship files, unreachable parts dropped), Strict Open
+  XML mapped back to Strict. A plain build that writes nothing, or only each unit's own text, is the upload. The
+  XML tree the XLIFF and DOCX ports share is the internal crate `bilingua-xmltree`. Approximations: the bidi
+  direction a re-created `w:bdo`/`w:dir` follows uses script blocks rather than Unicode's bidi table; tokens with
+  non-ASCII digits are not read as tokens; a part in UTF-16 or UTF-8 only.
 - `profile::lang_tag` and `profile::is_rtl` are LocOS's `html_lang` and `text_direction`.
 - LocOS export keywords are accepted and ignored for now: `docx.walk`, `xlsx.walk`, `pptx.walk`, `xlsx.table`,
   `csv.table`, `markdown.walk`, `markdown.md_walk`, `markdown.fm_keys`, `json.dialect`.

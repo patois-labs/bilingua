@@ -21,11 +21,11 @@
 //! Not ported: slide comments (LocOS's `comments=True` option, off by default), LocOS's segment and markup
 //! budgets (the facade's limits apply instead), XML parts in an encoding other than UTF-8 or UTF-16.
 //!
-//! The XML tree in `dom` is a copy of `bilingua-xliff`'s (see there).
+//! The XML tree is the internal crate `bilingua-xmltree` the XLIFF and DOCX ports share (`dom` here).
 
 #![allow(dead_code)]
 
-mod dom;
+use bilingua_xmltree as dom;
 #[cfg(test)]
 mod tests;
 

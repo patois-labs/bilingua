@@ -1,0 +1,210 @@
+{
+ "format": "docx",
+ "units": [
+  {
+   "p_index": 6,
+   "text": "Welcome to the course",
+   "style": "Normal"
+  },
+  {
+   "p_index": 9,
+   "text": "Click next",
+   "style": "Normal"
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "zip": [
+    {
+     "name": "[Content_Types].xml",
+     "same": true
+    },
+    {
+     "name": "_rels/.rels",
+     "same": true
+    },
+    {
+     "name": "word/document.xml",
+     "same": true
+    },
+    {
+     "name": "word/_rels/document.xml.rels",
+     "same": true
+    },
+    {
+     "name": "word/styles.xml",
+     "same": true
+    },
+    {
+     "name": "docProps/core.xml",
+     "same": true
+    }
+   ]
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "6": "Ü Welcome to the course",
+    "9": "Ü Click next"
+   },
+   "zip": [
+    {
+     "name": "[Content_Types].xml",
+     "sha1": "18f6cfc0ce9e03ca60fc059f74ec86c6a9635389"
+    },
+    {
+     "name": "_rels/.rels",
+     "sha1": "523141fee7d88d5720f09b41f1b0c8ac110fed63"
+    },
+    {
+     "name": "word/document.xml",
+     "sha1": "ea00b41c721e108b661ec2a7defde161ce6236cc"
+    },
+    {
+     "name": "word/_rels/document.xml.rels",
+     "sha1": "4f964b27d27764ba58b9d08935008a72576728d2"
+    },
+    {
+     "name": "word/styles.xml",
+     "sha1": "7df767d5d631acb187588bae041cb088d7ba4db6"
+    },
+    {
+     "name": "docProps/core.xml",
+     "sha1": "e755b870f452c5134cadea3c1bbe878d67c90b16"
+    }
+   ]
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "6": "Welcome to the course & <\"'>"
+   },
+   "zip": [
+    {
+     "name": "[Content_Types].xml",
+     "sha1": "18f6cfc0ce9e03ca60fc059f74ec86c6a9635389"
+    },
+    {
+     "name": "_rels/.rels",
+     "sha1": "523141fee7d88d5720f09b41f1b0c8ac110fed63"
+    },
+    {
+     "name": "word/document.xml",
+     "sha1": "3e42f1f496e6d477fe139b8b539d046733ac5f7b"
+    },
+    {
+     "name": "word/_rels/document.xml.rels",
+     "sha1": "4f964b27d27764ba58b9d08935008a72576728d2"
+    },
+    {
+     "name": "word/styles.xml",
+     "sha1": "a3fb25d63e3d15b1d6c65aada2d67d737607c722"
+    },
+    {
+     "name": "docProps/core.xml",
+     "sha1": "63aadacf5384eb6b3c77104ca37ba139affe8b3c"
+    }
+   ]
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "zip": [
+    {
+     "name": "[Content_Types].xml",
+     "sha1": "18f6cfc0ce9e03ca60fc059f74ec86c6a9635389"
+    },
+    {
+     "name": "_rels/.rels",
+     "sha1": "523141fee7d88d5720f09b41f1b0c8ac110fed63"
+    },
+    {
+     "name": "word/document.xml",
+     "sha1": "94322abcd283bcb464bc3283474af6b6ff707d86"
+    },
+    {
+     "name": "word/_rels/document.xml.rels",
+     "sha1": "4f964b27d27764ba58b9d08935008a72576728d2"
+    },
+    {
+     "name": "word/styles.xml",
+     "sha1": "a3fb25d63e3d15b1d6c65aada2d67d737607c722"
+    },
+    {
+     "name": "docProps/core.xml",
+     "sha1": "63aadacf5384eb6b3c77104ca37ba139affe8b3c"
+    }
+   ]
+  },
+  {
+   "name": "escape-ar-SA",
+   "locale": "ar-SA",
+   "map": {
+    "6": "Welcome to the course & <\"'>"
+   },
+   "zip": [
+    {
+     "name": "[Content_Types].xml",
+     "sha1": "18f6cfc0ce9e03ca60fc059f74ec86c6a9635389"
+    },
+    {
+     "name": "_rels/.rels",
+     "sha1": "523141fee7d88d5720f09b41f1b0c8ac110fed63"
+    },
+    {
+     "name": "word/document.xml",
+     "sha1": "549354da283dd7da9d255bedd8e26cbf2cbc570b"
+    },
+    {
+     "name": "word/_rels/document.xml.rels",
+     "sha1": "4f964b27d27764ba58b9d08935008a72576728d2"
+    },
+    {
+     "name": "word/styles.xml",
+     "sha1": "7df767d5d631acb187588bae041cb088d7ba4db6"
+    },
+    {
+     "name": "docProps/core.xml",
+     "sha1": "211cc4851dee74bb968358bcdb651aac3a6ced9f"
+    }
+   ]
+  },
+  {
+   "name": "none-ar-SA",
+   "locale": "ar-SA",
+   "map": {},
+   "zip": [
+    {
+     "name": "[Content_Types].xml",
+     "sha1": "18f6cfc0ce9e03ca60fc059f74ec86c6a9635389"
+    },
+    {
+     "name": "_rels/.rels",
+     "sha1": "523141fee7d88d5720f09b41f1b0c8ac110fed63"
+    },
+    {
+     "name": "word/document.xml",
+     "sha1": "c9cbfe24ed725a1a3b455606d0e817fce60ba314"
+    },
+    {
+     "name": "word/_rels/document.xml.rels",
+     "sha1": "4f964b27d27764ba58b9d08935008a72576728d2"
+    },
+    {
+     "name": "word/styles.xml",
+     "sha1": "7df767d5d631acb187588bae041cb088d7ba4db6"
+    },
+    {
+     "name": "docProps/core.xml",
+     "sha1": "211cc4851dee74bb968358bcdb651aac3a6ced9f"
+    }
+   ]
+  }
+ ]
+}

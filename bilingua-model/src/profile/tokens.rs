@@ -88,14 +88,18 @@ pub fn locos_pair_letter(format: &str) -> char {
 const LOCOS_PAIRS_BY_ID: &[&str] = &["html"];
 
 /// Formats whose LocOS filter does not number its tokens in reading order, so the tag ids carry LocOS's numbers
-/// ([`to_locos_text_numbered`]): PPTX numbers the runs first, the breaks and fields after them.
-const LOCOS_NUMBERED_BY_ID: &[&str] = &["pptx"];
+/// ([`to_locos_text_numbered`], the one id-numbering path): DOCX numbers the runs `r1..rN` first and the object
+/// groups from `x<N+1>`; PPTX, and the text boxes of an XLSX workbook (LocOS tokenizes those with its PowerPoint
+/// filter), number the runs first and the breaks and fields after them. XLSX cells carry no tags, so the rule
+/// changes nothing for them. Every other format is numbered by position.
+const LOCOS_NUMBERED_BY_ID: &[&str] = &["docx", "pptx", "xlsx"];
 
 /// A unit's inline codes as the LocOS filter of `format` writes them: the format's pair letter
 /// ([`locos_pair_letter`]), and for the formats whose filter keeps its own tag tokens (`html`) every `Open` a
 /// pair token and every `Close` the closing token of the latest open of its id, crossing or not, an `Open` with
 /// no close a pair token with no closing one; a `Close` with no open stays an `x` token. For the formats whose
-/// tag ids are LocOS's token numbers (`pptx`): [`to_locos_text_numbered`]. Other formats: [`to_locos_text_as`].
+/// tag ids are LocOS's token numbers (`docx`, `pptx`, `xlsx`): [`to_locos_text_numbered`]. Other formats:
+/// [`to_locos_text_as`].
 /// [`from_locos_text`] reads them all back.
 pub fn to_locos_text_for(format: &str, inl: &[Inline]) -> (String, LocosMap) {
     let letter = locos_pair_letter(format);
@@ -109,9 +113,9 @@ pub fn to_locos_text_for(format: &str, inl: &[Inline]) -> (String, LocosMap) {
 }
 
 /// Like [`to_locos_text_as`], but each token takes its number from its tag's id when the ids are LocOS's own token
-/// numbers: the formats whose LocOS filter does not number its tokens in reading order (PPTX under the profile,
-/// where LocOS numbers the runs `r1..rN` first and the breaks and fields after them, so a paragraph reads
-/// `⟦r1⟧a⟦/r1⟧⟦x3⟧⟦r2⟧b⟦/r2⟧`). The ids are used only when every tag id is a positive decimal number (no sign, no
+/// numbers: the formats whose LocOS filter does not number its tokens in reading order (DOCX, PPTX and XLSX text
+/// boxes under the profile, where LocOS numbers the runs `r1..rN` first and the breaks, fields and objects after
+/// them, so a paragraph reads `⟦r1⟧a⟦/r1⟧⟦x3⟧⟦r2⟧b⟦/r2⟧`). The ids are used only when every tag id is a positive decimal number (no sign, no
 /// leading zero) and no number would stand for two tokens; otherwise this is exactly [`to_locos_text_as`]. The
 /// map is keyed by those numbers, so [`from_locos_text`] reads the text back as usual.
 pub fn to_locos_text_numbered(inl: &[Inline], pair_letter: char) -> (String, LocosMap) {
@@ -424,6 +428,37 @@ pub fn is_named_placeholder(s: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn docx_tokens_carry_locos_numbers() {
+        let inl = vec![
+            Inline::tag("1", TagKind::Open, "<w:r>"),
+            Inline::text("a"),
+            Inline::tag("1", TagKind::Close, "</w:r>"),
+            Inline::tag("3", TagKind::Standalone, "object"),
+            Inline::tag("2", TagKind::Open, "<w:r>"),
+            Inline::text("b"),
+            Inline::tag("2", TagKind::Close, "</w:r>"),
+        ];
+        let (t, map) = to_locos_text_for("docx", &inl);
+        assert_eq!(t, "\u{27e6}r1\u{27e7}a\u{27e6}/r1\u{27e7}\u{27e6}x3\u{27e7}\u{27e6}r2\u{27e7}b\u{27e6}/r2\u{27e7}");
+        assert_eq!(from_locos_text(&t, &map), inl);
+        // one id-numbering path for docx, pptx and xlsx text boxes; every other format keeps the positional numbering
+        for f in ["docx", "pptx", "xlsx"] {
+            assert_eq!(to_locos_text_for(f, &inl), to_locos_text_numbered(&inl, 'r'), "{f}");
+        }
+        for f in ["xliff", "html", "po", "markdown", "json", "odt", ""] {
+            assert_eq!(to_locos_text_for(f, &inl).0.matches("\u{27e6}x2\u{27e7}").count(), 1, "{f}");
+        }
+        assert_eq!(to_locos_text_for("xliff", &inl).0, "\u{27e6}g1\u{27e7}a\u{27e6}/g1\u{27e7}\u{27e6}x2\u{27e7}\u{27e6}g3\u{27e7}b\u{27e6}/g3\u{27e7}");
+        // a bare xlsx cell has no tags: the rule changes nothing
+        let cell = vec![Inline::text("Total")];
+        assert_eq!(to_locos_text_for("xlsx", &cell), to_locos_text_as(&cell, 'r'));
+        let dup = vec![Inline::tag("1", TagKind::Standalone, "o"), Inline::tag("1", TagKind::Standalone, "o")];
+        assert_eq!(to_locos_text_for("docx", &dup).0, "\u{27e6}x1\u{27e7}\u{27e6}x2\u{27e7}");
+        let odd = vec![Inline::tag("x", TagKind::Standalone, "o"), Inline::tag("07", TagKind::Standalone, "o")];
+        assert_eq!(to_locos_text_for("docx", &odd).0, "\u{27e6}x1\u{27e7}\u{27e6}x2\u{27e7}");
+    }
 
     fn sample() -> Vec<Inline> {
         vec![

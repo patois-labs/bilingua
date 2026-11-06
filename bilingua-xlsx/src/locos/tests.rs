@@ -312,15 +312,11 @@ proptest! {
         }
         let out = merged(&doc);
         let again = extract(&out, &opts(None)).unwrap();
-        // each cell holds its translation (XML-illegal characters dropped); one with no letter or digit is no unit;
-        // a target of white space only is no translation to the model (`Document::set_target`): the source stays
-        let sources = ["Shared", "Shared", "Inline", "Rich"];
-        let want: Vec<String> = targets
-            .iter()
-            .zip(sources)
-            .map(|(t, s)| if !t.is_empty() && t.trim().is_empty() { s.to_string() } else { xml_target_text(t) })
-            .filter(|t| bilingua_model::py_has_alnum(t))
-            .collect();
+        // each cell holds its translation (XML-illegal characters dropped); one with no letter or digit is no unit.
+        // A target of white space only is a translation under the profile (`profile::locos_set_target`): LocOS
+        // writes `xml_target_text(tr)` for every target it has (`XlsxFilter._rebuild`), so a lone vertical tab
+        // becomes a new line, and a cell of white space is no unit when read back
+        let want: Vec<String> = targets.iter().map(|t| xml_target_text(t)).filter(|t| bilingua_model::py_has_alnum(t)).collect();
         prop_assert_eq!(unit_texts(&again), want);
     }
 

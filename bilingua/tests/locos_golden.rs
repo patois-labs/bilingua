@@ -3,8 +3,8 @@
 //! tokens, style) and its builds under a few mappings. This test does what the LocOS adapter does: extract under
 //! the `locos` profile at paragraph granularity, number the translatable segments (`locos.p_index` when every unit
 //! has a distinct one, else the position), turn each segment into LocOS text with `profile::tokens::to_locos_text_for`
-//! (pair letter `r` for docx and pptx, as the adapter does; html keeps LocOS's own tag tokens), then set each mapping as targets and merge with the profile's merge
-//! options. Units and bytes must be equal.
+//! (pair letter `r` for docx, pptx and xlsx text boxes, whose tokens carry LocOS's numbers, as the adapter does; html
+//! keeps LocOS's own tag tokens), then set each mapping as targets and merge with the profile's merge options. Units and bytes must be equal.
 //!
 //! Zip packages (docx, pptx, xlsx, the XLIFF packages) are compared entry by entry, by name: an entry LocOS left as
 //! it was must be byte for byte the input's, a rewritten entry must be the same canonical XML as LocOS's
@@ -367,15 +367,11 @@ const KNOWN: &[(&str, &str)] = &[
     ("json_dialects_filter_go.json", "LocOS JSON resource dialects (go-i18n): not in group A"),
     ("json_dialects_filter_go_v1.json", "LocOS JSON resource dialects (go-i18n v1): not in group A"),
     ("json_dialects_filter_structured.json", "LocOS JSON resource dialects (Structured JSON): not in group A"),
-    (
-        "locos_textbox_runs_1.xlsx",
-        "text boxes with several runs: LocOS numbers a break or field after the paragraph's runs (its PowerPoint tokens), `profile::tokens` numbers every token by position; the builds match",
-    ),
 ];
 
-/// Formats whose goldens do not match yet: reported, not fatal. Remove a format when all its files match. docx,
-/// Track D group B, not ported yet (xlsx and pptx match since their ports).
-const PENDING: &[&str] = &["docx"];
+/// Formats whose goldens do not match yet: reported, not fatal. Remove a format when all its files match. Empty:
+/// every Track D format matches.
+const PENDING: &[&str] = &[];
 
 #[test]
 fn locos_profile_goldens() {
