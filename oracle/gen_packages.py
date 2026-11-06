@@ -124,11 +124,11 @@ def main():
 
     # Trados: one target SDLXLIFF per package, with the source file and a report beside it.
     de_rows = [
-        ("lum-0001", 'Open the <g id="pt1">Orders</g> page. Then click Save.', None, ""),
-        ("lum-0002", 'Line one<x id="ph2"/>line two &amp; more.', None, ""),
-        ("lum-0003", "Locked legal notice.", "Gesperrter Hinweis.", ' locked="true" conf="Translated"'),
-        ("lum-0004", "Approved tagline.", "Genehmigter Slogan.", ' conf="ApprovedTranslation" origin="interactive"'),
-        ("lum-0005", "Gluten free options are marked.", None, ""),
+        ("1", 'Open the <g id="pt1">Orders</g> page. Then click Save.', None, ""),
+        ("2", 'Line one<x id="ph2"/>line two &amp; more.', None, ""),
+        ("3", "Locked legal notice.", "Gesperrter Hinweis.", ' locked="true" conf="Translated"'),
+        ("4", "Approved tagline.", "Genehmigter Slogan.", ' conf="ApprovedTranslation" origin="interactive"'),
+        ("5", "Gluten free options are marked.", None, ""),
     ]
     w("sdlppx/trados_demo.sdlppx", zip_of([
         ("lumen.sdlproj", sdlproj("lumen", "5c0de000-0000-4000-8000-0123456789ab", "en-US", "de-DE", "de-DE/menu.docx.sdlxliff", "menu.docx")),
@@ -137,9 +137,9 @@ def main():
         ("Reports/analysis.txt", "Analysis report\n"),
     ]))
     ja_rows = [
-        ("lum-0001", "Welcome to Lumen Bakery.", "ルーメン・ベーカリーへようこそ。", ' conf="Translated"'),
-        ("lum-0002", "Fresh bread is ready at six every morning.", None, ""),
-        ("lum-0003", 'Order from the <g id="pt1">menu</g> today.', None, ""),
+        ("1", "Welcome to Lumen Bakery.", "ルーメン・ベーカリーへようこそ。", ' conf="Translated"'),
+        ("2", "Fresh bread is ready at six every morning.", None, ""),
+        ("3", 'Order from the <g id="pt1">menu</g> today.', None, ""),
     ]
     w("sdlppx/trados_ja.sdlppx", zip_of([
         ("lumen-ja.sdlproj", sdlproj("lumen-ja", "5c0de000-0000-4000-8000-0123456789cd", "en-US", "ja-JP", "ja-JP/hours.docx.sdlxliff")),
