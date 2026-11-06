@@ -17,9 +17,9 @@ text field.
 - Everything that is not translated is copied from the source tree: unknown block types, embedded entries and assets,
   `data` payloads, `markDefs`, annotations, code block text (Notion: also its children), ids and key order.
 - Text holding the placeholder brackets `⟦` `⟧` is never a unit (Contentful and Sanity, as LocOS).
-- An untouched merge, or one whose targets equal their sources, is the original bytes. A real merge rewrites the
-  translated containers only and writes the tree in the file's layout (indent, separators, CRLF, trailing newline,
-  `\uXXXX` escapes), keeping number spellings.
+- An untouched merge, or one whose targets equal their sources, is the original bytes. A real merge splices only the
+  values that changed into the original text, written in the layout of the bytes they replace (indent, one line or
+  pretty, CRLF, `\uXXXX` escapes); every other byte, number spelling and duplicate key stays.
 - Notion writes a run over 2000 characters as several runs with the same annotations and link.
 - Option `adf.units` (`inline` default, `leaf`), remembered by the document.
 - Limits: nesting 256, the shared `Limits` for bytes and units. Malformed or hostile input is `Error::Parse`.

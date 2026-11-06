@@ -106,7 +106,20 @@ item below breaks code written against 0.1; after 1.0 these types grow without b
   (`contentful`, `sanity`, `adf`, `notion`). New option `adf.units` (text, `inline` default | `leaf`): `inline` is one
   unit per paragraph with marks as tag pairs (the Jira connector's walker), `leaf` one unit per text leaf with no tags
   (LocOS's older `adf.extract`). A document remembers its mode, so merge needs no option. Behaviour without the option
-  is the default (`inline`); no existing format changes.
+  is the default (`inline`); no existing format changes. The four filters sit last in `filters()`: a file is opened
+  with them by extension (`.contentful`, `.portabletext`, `.adf`, `.notion`) or format id, never by sniffing, so no file
+  that opened as `json` before changes format. Differences from the LocOS walkers, on purpose:
+  - Outside `profile::locos()` a translation may hold the bracket characters `⟦` `⟧` as text (Bilingua's tags
+    are structural). Under the profile, as in LocOS, such a translation is `Error::Unwritable`, and so is an ADF inline
+    merge that moves a mention, emoji or other inline node (the Jira connector's `structure_ok_inline`).
+  - A Contentful hyperlink with no content is a standalone tag kept verbatim; LocOS makes it an empty pair it can
+    never write back (its rebuild refuses an empty link), so there such a field could not be translated at all.
+  - A merge is per unit: an untranslated unit keeps its source (LocOS's Contentful and Sanity rebuilds are all or
+    nothing), and a whitespace-only target counts as untranslated (`set_target`), where LocOS refuses it (Contentful,
+    Sanity) or writes it (ADF).
+  - The merged file is the original bytes with only the changed values rewritten (LocOS re-serialises the field).
+  - JSON that Python's `json.loads` reads but that is not JSON or not Unicode text is `Error::Parse`: lone surrogates
+    (`"\ud800"`), `NaN`, `Infinity`; so is nesting deeper than 256 levels.
 
 ## Format-crate builders (and the branches still on the old API: Flare, DXF, PDF, SVG and images)
 
