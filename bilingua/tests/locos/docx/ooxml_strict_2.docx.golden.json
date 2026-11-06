@@ -1,0 +1,242 @@
+{
+ "format": "docx",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Willkommen",
+   "style": "Heading 1"
+  },
+  {
+   "p_index": 1,
+   "text": "⟦r1⟧Read the ⟦/r1⟧⟦r2⟧safety card⟦/r2⟧⟦r3⟧ before takeoff.⟦/r3⟧",
+   "style": "Normal"
+  },
+  {
+   "p_index": 2,
+   "text": "Notausgang",
+   "style": "Normal"
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "zip": [
+    {
+     "name": "[Content_Types].xml",
+     "same": true
+    },
+    {
+     "name": "_rels/.rels",
+     "same": true
+    },
+    {
+     "name": "word/document.xml",
+     "same": true
+    },
+    {
+     "name": "word/_rels/document.xml.rels",
+     "same": true
+    },
+    {
+     "name": "word/styles.xml",
+     "same": true
+    },
+    {
+     "name": "docProps/core.xml",
+     "same": true
+    },
+    {
+     "name": "docProps/app.xml",
+     "same": true
+    }
+   ]
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü Willkommen",
+    "1": "⟦r1⟧Ü Read the ⟦/r1⟧⟦r2⟧Ü safety card⟦/r2⟧⟦r3⟧Ü  before takeoff.⟦/r3⟧",
+    "2": "Ü Notausgang"
+   },
+   "zip": [
+    {
+     "name": "[Content_Types].xml",
+     "same": true
+    },
+    {
+     "name": "_rels/.rels",
+     "same": true
+    },
+    {
+     "name": "word/document.xml",
+     "sha1": "37df008eebd6b30b8d81a16412ea106f2ed56e09"
+    },
+    {
+     "name": "word/_rels/document.xml.rels",
+     "same": true
+    },
+    {
+     "name": "word/styles.xml",
+     "same": true
+    },
+    {
+     "name": "docProps/core.xml",
+     "same": true
+    },
+    {
+     "name": "docProps/app.xml",
+     "same": true
+    }
+   ]
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Willkommen & <\"'>",
+    "2": "Notausgang & <\"'>"
+   },
+   "zip": [
+    {
+     "name": "[Content_Types].xml",
+     "same": true
+    },
+    {
+     "name": "_rels/.rels",
+     "same": true
+    },
+    {
+     "name": "word/document.xml",
+     "sha1": "092d40a901570ff487d56701e1f4033b19104fd3"
+    },
+    {
+     "name": "word/_rels/document.xml.rels",
+     "same": true
+    },
+    {
+     "name": "word/styles.xml",
+     "same": true
+    },
+    {
+     "name": "docProps/core.xml",
+     "same": true
+    },
+    {
+     "name": "docProps/app.xml",
+     "same": true
+    }
+   ]
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "zip": [
+    {
+     "name": "[Content_Types].xml",
+     "same": true
+    },
+    {
+     "name": "_rels/.rels",
+     "same": true
+    },
+    {
+     "name": "word/document.xml",
+     "sha1": "80281666508f95dd7d7895d92ef06a7e9c3756cc"
+    },
+    {
+     "name": "word/_rels/document.xml.rels",
+     "same": true
+    },
+    {
+     "name": "word/styles.xml",
+     "same": true
+    },
+    {
+     "name": "docProps/core.xml",
+     "same": true
+    },
+    {
+     "name": "docProps/app.xml",
+     "same": true
+    }
+   ]
+  },
+  {
+   "name": "escape-ar-SA",
+   "locale": "ar-SA",
+   "map": {
+    "0": "Willkommen & <\"'>",
+    "2": "Notausgang & <\"'>"
+   },
+   "zip": [
+    {
+     "name": "[Content_Types].xml",
+     "same": true
+    },
+    {
+     "name": "_rels/.rels",
+     "same": true
+    },
+    {
+     "name": "word/document.xml",
+     "sha1": "ed84c6f18cb38b436dc06cdff84848870dff51ef"
+    },
+    {
+     "name": "word/_rels/document.xml.rels",
+     "same": true
+    },
+    {
+     "name": "word/styles.xml",
+     "sha1": "b355015b9132314e749299532de0665b2bb62220"
+    },
+    {
+     "name": "docProps/core.xml",
+     "sha1": "7df520c3d91f6dfd62ca749c81d89e62edf2b61c"
+    },
+    {
+     "name": "docProps/app.xml",
+     "same": true
+    }
+   ]
+  },
+  {
+   "name": "none-ar-SA",
+   "locale": "ar-SA",
+   "map": {},
+   "zip": [
+    {
+     "name": "[Content_Types].xml",
+     "same": true
+    },
+    {
+     "name": "_rels/.rels",
+     "same": true
+    },
+    {
+     "name": "word/document.xml",
+     "same": true
+    },
+    {
+     "name": "word/_rels/document.xml.rels",
+     "same": true
+    },
+    {
+     "name": "word/styles.xml",
+     "sha1": "b355015b9132314e749299532de0665b2bb62220"
+    },
+    {
+     "name": "docProps/core.xml",
+     "sha1": "7df520c3d91f6dfd62ca749c81d89e62edf2b61c"
+    },
+    {
+     "name": "docProps/app.xml",
+     "same": true
+    }
+   ]
+  }
+ ]
+}

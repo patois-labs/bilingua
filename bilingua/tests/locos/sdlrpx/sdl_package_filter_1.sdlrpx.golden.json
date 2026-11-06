@@ -1,0 +1,95 @@
+{
+ "format": "sdlrpx",
+ "units": [
+  {
+   "p_index": 1000000000,
+   "text": "Open the ⟦g1⟧Settings⟦/g1⟧ menu.",
+   "style": ""
+  },
+  {
+   "p_index": 1000000001,
+   "text": "Then click Save.",
+   "style": ""
+  },
+  {
+   "p_index": 1000000002,
+   "text": "Line one⟦p1⟧line two & more text.",
+   "style": ""
+  },
+  {
+   "p_index": 1000000006,
+   "text": "Wrapped segment.",
+   "style": ""
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "zip": [
+    {
+     "name": "demo.sdlproj",
+     "sha1": "ad9fbeb7c3a27f8b1b2e29d12828c2d364442867"
+    },
+    {
+     "name": "de-DE/guide.docx.sdlxliff",
+     "same": true
+    }
+   ]
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "1000000000": "Ü Open the ⟦g1⟧Ü Settings⟦/g1⟧Ü  menu.",
+    "1000000001": "Ü Then click Save.",
+    "1000000002": "Ü Line one⟦p1⟧Ü line two & more text.",
+    "1000000006": "Ü Wrapped segment."
+   },
+   "zip": [
+    {
+     "name": "demo.sdlproj",
+     "sha1": "ad9fbeb7c3a27f8b1b2e29d12828c2d364442867"
+    },
+    {
+     "name": "de-DE/guide.docx.sdlxliff",
+     "sha1": "bd89bfdf1cf3125a97b74d80fc663e8e80baa480"
+    }
+   ]
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "1000000000": "Open the  & <\"'>⟦g1⟧Settings & <\"'>⟦/g1⟧ menu. & <\"'>",
+    "1000000002": "Line one & <\"'>⟦p1⟧line two & more text. & <\"'>"
+   },
+   "zip": [
+    {
+     "name": "demo.sdlproj",
+     "sha1": "ad9fbeb7c3a27f8b1b2e29d12828c2d364442867"
+    },
+    {
+     "name": "de-DE/guide.docx.sdlxliff",
+     "sha1": "c8661f01c7d591f80929e40181ea39a4fa5552a3"
+    }
+   ]
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "zip": [
+    {
+     "name": "demo.sdlproj",
+     "sha1": "ad9fbeb7c3a27f8b1b2e29d12828c2d364442867"
+    },
+    {
+     "name": "de-DE/guide.docx.sdlxliff",
+     "same": true
+    }
+   ]
+  }
+ ]
+}

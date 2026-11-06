@@ -1,0 +1,98 @@
+{
+ "format": "mqxlz",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Press ⟦x1⟧Start⟦x2⟧ to begin.",
+   "style": ""
+  },
+  {
+   "p_index": 4,
+   "text": "Use {0} files & ⟦p1⟧more.",
+   "style": ""
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "zip": [
+    {
+     "name": "document.mqxliff",
+     "same": true
+    },
+    {
+     "name": "skeleton",
+     "same": true
+    },
+    {
+     "name": "preview.html",
+     "same": true
+    }
+   ]
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü Press ⟦x1⟧Ü Start⟦x2⟧Ü  to begin.",
+    "4": "Ü Use {0} files & ⟦p1⟧Ü more."
+   },
+   "zip": [
+    {
+     "name": "document.mqxliff",
+     "sha1": "ab01e55ce250decbb33699c61933d32d41850fa3"
+    },
+    {
+     "name": "skeleton",
+     "same": true
+    },
+    {
+     "name": "preview.html",
+     "same": true
+    }
+   ]
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Press  & <\"'>⟦x1⟧Start & <\"'>⟦x2⟧ to begin. & <\"'>"
+   },
+   "zip": [
+    {
+     "name": "document.mqxliff",
+     "sha1": "82921503f02458cbb93d4ecd5071f58900d9cda4"
+    },
+    {
+     "name": "skeleton",
+     "same": true
+    },
+    {
+     "name": "preview.html",
+     "same": true
+    }
+   ]
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "zip": [
+    {
+     "name": "document.mqxliff",
+     "same": true
+    },
+    {
+     "name": "skeleton",
+     "same": true
+    },
+    {
+     "name": "preview.html",
+     "same": true
+    }
+   ]
+  }
+ ]
+}

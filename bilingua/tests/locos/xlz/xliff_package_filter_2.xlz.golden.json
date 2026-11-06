@@ -1,0 +1,147 @@
+{
+ "format": "xlz",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Open the ⟦g1⟧Settings⟦/g1⟧ menu.",
+   "style": ""
+  },
+  {
+   "p_index": 1,
+   "text": "Then click Save.",
+   "style": ""
+  },
+  {
+   "p_index": 2,
+   "text": "Line one⟦p1⟧line two & more text.",
+   "style": ""
+  },
+  {
+   "p_index": 7,
+   "text": "Wrapped segment.",
+   "style": ""
+  },
+  {
+   "p_index": 8,
+   "text": "Open the ⟦g1⟧Settings⟦/g1⟧ page.",
+   "style": ""
+  },
+  {
+   "p_index": 11,
+   "text": "Use {0} items & ⟦p1⟧more.",
+   "style": ""
+  },
+  {
+   "p_index": 12,
+   "text": "Left untranslated.",
+   "style": ""
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "zip": [
+    {
+     "name": "tm/project.tmx",
+     "same": true
+    },
+    {
+     "name": "fr-FR/guide.docx.sdlxliff",
+     "same": true
+    },
+    {
+     "name": "tb/terms.tbx",
+     "same": true
+    },
+    {
+     "name": "fr-FR/help.html.xlf",
+     "same": true
+    }
+   ]
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü Open the ⟦g1⟧Ü Settings⟦/g1⟧Ü  menu.",
+    "1": "Ü Then click Save.",
+    "2": "Ü Line one⟦p1⟧Ü line two & more text.",
+    "7": "Ü Wrapped segment.",
+    "8": "Ü Open the ⟦g1⟧Ü Settings⟦/g1⟧Ü  page.",
+    "11": "Ü Use {0} items & ⟦p1⟧Ü more.",
+    "12": "Ü Left untranslated."
+   },
+   "zip": [
+    {
+     "name": "tm/project.tmx",
+     "same": true
+    },
+    {
+     "name": "fr-FR/guide.docx.sdlxliff",
+     "sha1": "bd89bfdf1cf3125a97b74d80fc663e8e80baa480"
+    },
+    {
+     "name": "tb/terms.tbx",
+     "same": true
+    },
+    {
+     "name": "fr-FR/help.html.xlf",
+     "sha1": "cd325722ccaa4f38ebab9baf2d0073bcbc0c0393"
+    }
+   ]
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Open the  & <\"'>⟦g1⟧Settings & <\"'>⟦/g1⟧ menu. & <\"'>",
+    "2": "Line one & <\"'>⟦p1⟧line two & more text. & <\"'>",
+    "8": "Open the  & <\"'>⟦g1⟧Settings & <\"'>⟦/g1⟧ page. & <\"'>",
+    "12": "Left untranslated. & <\"'>"
+   },
+   "zip": [
+    {
+     "name": "tm/project.tmx",
+     "same": true
+    },
+    {
+     "name": "fr-FR/guide.docx.sdlxliff",
+     "sha1": "c8661f01c7d591f80929e40181ea39a4fa5552a3"
+    },
+    {
+     "name": "tb/terms.tbx",
+     "same": true
+    },
+    {
+     "name": "fr-FR/help.html.xlf",
+     "sha1": "38093d9ff1c40e43a3350a1b55756a68982abbe6"
+    }
+   ]
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "zip": [
+    {
+     "name": "tm/project.tmx",
+     "same": true
+    },
+    {
+     "name": "fr-FR/guide.docx.sdlxliff",
+     "same": true
+    },
+    {
+     "name": "tb/terms.tbx",
+     "same": true
+    },
+    {
+     "name": "fr-FR/help.html.xlf",
+     "same": true
+    }
+   ]
+  }
+ ]
+}

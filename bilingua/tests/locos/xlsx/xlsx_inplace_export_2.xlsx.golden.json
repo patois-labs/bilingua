@@ -1,0 +1,520 @@
+{
+ "format": "xlsx",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "en-US",
+   "style": ""
+  },
+  {
+   "p_index": 1,
+   "text": "de-DE",
+   "style": ""
+  },
+  {
+   "p_index": 2,
+   "text": "Hello",
+   "style": ""
+  },
+  {
+   "p_index": 3,
+   "text": "Bye",
+   "style": ""
+  },
+  {
+   "p_index": 4,
+   "text": "Second sheet text",
+   "style": ""
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "zip": [
+    {
+     "name": "[Content_Types].xml",
+     "same": true
+    },
+    {
+     "name": "_rels/.rels",
+     "same": true
+    },
+    {
+     "name": "xl/workbook.xml",
+     "same": true
+    },
+    {
+     "name": "xl/_rels/workbook.xml.rels",
+     "same": true
+    },
+    {
+     "name": "xl/worksheets/sheet1.xml",
+     "same": true
+    },
+    {
+     "name": "xl/worksheets/_rels/sheet1.xml.rels",
+     "same": true
+    },
+    {
+     "name": "xl/worksheets/sheet2.xml",
+     "same": true
+    },
+    {
+     "name": "xl/sharedStrings.xml",
+     "same": true
+    },
+    {
+     "name": "xl/styles.xml",
+     "same": true
+    },
+    {
+     "name": "xl/calcChain.xml",
+     "same": true
+    },
+    {
+     "name": "xl/comments1.xml",
+     "same": true
+    },
+    {
+     "name": "xl/drawings/vmlDrawing1.vml",
+     "same": true
+    },
+    {
+     "name": "xl/drawings/drawing1.xml",
+     "same": true
+    },
+    {
+     "name": "xl/drawings/_rels/drawing1.xml.rels",
+     "same": true
+    },
+    {
+     "name": "xl/media/image1.emf",
+     "same": true
+    },
+    {
+     "name": "xl/charts/chart1.xml",
+     "same": true
+    },
+    {
+     "name": "xl/printerSettings/printerSettings1.bin",
+     "same": true
+    },
+    {
+     "name": "docProps/core.xml",
+     "same": true
+    }
+   ]
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü en-US",
+    "1": "Ü de-DE",
+    "2": "Ü Hello",
+    "3": "Ü Bye",
+    "4": "Ü Second sheet text"
+   },
+   "zip": [
+    {
+     "name": "[Content_Types].xml",
+     "same": true
+    },
+    {
+     "name": "_rels/.rels",
+     "same": true
+    },
+    {
+     "name": "xl/workbook.xml",
+     "same": true
+    },
+    {
+     "name": "xl/_rels/workbook.xml.rels",
+     "same": true
+    },
+    {
+     "name": "xl/worksheets/sheet1.xml",
+     "sha1": "82f1b8015b03c2ce9e519378ac38d4060acfb5f5"
+    },
+    {
+     "name": "xl/worksheets/_rels/sheet1.xml.rels",
+     "same": true
+    },
+    {
+     "name": "xl/worksheets/sheet2.xml",
+     "sha1": "318d05c23d472ac7976acfd84da505d319660f89"
+    },
+    {
+     "name": "xl/sharedStrings.xml",
+     "sha1": "04ae30dbe12bd7342532e8731b0b3796d294aac2"
+    },
+    {
+     "name": "xl/styles.xml",
+     "same": true
+    },
+    {
+     "name": "xl/calcChain.xml",
+     "same": true
+    },
+    {
+     "name": "xl/comments1.xml",
+     "same": true
+    },
+    {
+     "name": "xl/drawings/vmlDrawing1.vml",
+     "same": true
+    },
+    {
+     "name": "xl/drawings/drawing1.xml",
+     "same": true
+    },
+    {
+     "name": "xl/drawings/_rels/drawing1.xml.rels",
+     "same": true
+    },
+    {
+     "name": "xl/media/image1.emf",
+     "same": true
+    },
+    {
+     "name": "xl/charts/chart1.xml",
+     "same": true
+    },
+    {
+     "name": "xl/printerSettings/printerSettings1.bin",
+     "same": true
+    },
+    {
+     "name": "docProps/core.xml",
+     "same": true
+    }
+   ]
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "en-US & <\"'>",
+    "2": "Hello & <\"'>",
+    "4": "Second sheet text & <\"'>"
+   },
+   "zip": [
+    {
+     "name": "[Content_Types].xml",
+     "same": true
+    },
+    {
+     "name": "_rels/.rels",
+     "same": true
+    },
+    {
+     "name": "xl/workbook.xml",
+     "same": true
+    },
+    {
+     "name": "xl/_rels/workbook.xml.rels",
+     "same": true
+    },
+    {
+     "name": "xl/worksheets/sheet1.xml",
+     "sha1": "146958cf8f285de1ef2e07016b57010d26551077"
+    },
+    {
+     "name": "xl/worksheets/_rels/sheet1.xml.rels",
+     "same": true
+    },
+    {
+     "name": "xl/worksheets/sheet2.xml",
+     "sha1": "318d05c23d472ac7976acfd84da505d319660f89"
+    },
+    {
+     "name": "xl/sharedStrings.xml",
+     "sha1": "cf6650722fbcf8bcc4e774634f255d8e26761258"
+    },
+    {
+     "name": "xl/styles.xml",
+     "same": true
+    },
+    {
+     "name": "xl/calcChain.xml",
+     "same": true
+    },
+    {
+     "name": "xl/comments1.xml",
+     "same": true
+    },
+    {
+     "name": "xl/drawings/vmlDrawing1.vml",
+     "same": true
+    },
+    {
+     "name": "xl/drawings/drawing1.xml",
+     "same": true
+    },
+    {
+     "name": "xl/drawings/_rels/drawing1.xml.rels",
+     "same": true
+    },
+    {
+     "name": "xl/media/image1.emf",
+     "same": true
+    },
+    {
+     "name": "xl/charts/chart1.xml",
+     "same": true
+    },
+    {
+     "name": "xl/printerSettings/printerSettings1.bin",
+     "same": true
+    },
+    {
+     "name": "docProps/core.xml",
+     "sha1": "0946500c127e13af655022401a3c935cd13fe2f4"
+    }
+   ]
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "zip": [
+    {
+     "name": "[Content_Types].xml",
+     "same": true
+    },
+    {
+     "name": "_rels/.rels",
+     "same": true
+    },
+    {
+     "name": "xl/workbook.xml",
+     "same": true
+    },
+    {
+     "name": "xl/_rels/workbook.xml.rels",
+     "same": true
+    },
+    {
+     "name": "xl/worksheets/sheet1.xml",
+     "same": true
+    },
+    {
+     "name": "xl/worksheets/_rels/sheet1.xml.rels",
+     "same": true
+    },
+    {
+     "name": "xl/worksheets/sheet2.xml",
+     "same": true
+    },
+    {
+     "name": "xl/sharedStrings.xml",
+     "same": true
+    },
+    {
+     "name": "xl/styles.xml",
+     "same": true
+    },
+    {
+     "name": "xl/calcChain.xml",
+     "same": true
+    },
+    {
+     "name": "xl/comments1.xml",
+     "same": true
+    },
+    {
+     "name": "xl/drawings/vmlDrawing1.vml",
+     "same": true
+    },
+    {
+     "name": "xl/drawings/drawing1.xml",
+     "same": true
+    },
+    {
+     "name": "xl/drawings/_rels/drawing1.xml.rels",
+     "same": true
+    },
+    {
+     "name": "xl/media/image1.emf",
+     "same": true
+    },
+    {
+     "name": "xl/charts/chart1.xml",
+     "same": true
+    },
+    {
+     "name": "xl/printerSettings/printerSettings1.bin",
+     "same": true
+    },
+    {
+     "name": "docProps/core.xml",
+     "sha1": "0946500c127e13af655022401a3c935cd13fe2f4"
+    }
+   ]
+  },
+  {
+   "name": "escape-ar-SA",
+   "locale": "ar-SA",
+   "map": {
+    "0": "en-US & <\"'>",
+    "2": "Hello & <\"'>",
+    "4": "Second sheet text & <\"'>"
+   },
+   "zip": [
+    {
+     "name": "[Content_Types].xml",
+     "same": true
+    },
+    {
+     "name": "_rels/.rels",
+     "same": true
+    },
+    {
+     "name": "xl/workbook.xml",
+     "same": true
+    },
+    {
+     "name": "xl/_rels/workbook.xml.rels",
+     "same": true
+    },
+    {
+     "name": "xl/worksheets/sheet1.xml",
+     "sha1": "4aac8f592d3f69303c2dcf19ef5dada5626b5068"
+    },
+    {
+     "name": "xl/worksheets/_rels/sheet1.xml.rels",
+     "same": true
+    },
+    {
+     "name": "xl/worksheets/sheet2.xml",
+     "sha1": "5d3e81734de10b6c9f194ebdb51b75319de3216d"
+    },
+    {
+     "name": "xl/sharedStrings.xml",
+     "sha1": "cf6650722fbcf8bcc4e774634f255d8e26761258"
+    },
+    {
+     "name": "xl/styles.xml",
+     "same": true
+    },
+    {
+     "name": "xl/calcChain.xml",
+     "same": true
+    },
+    {
+     "name": "xl/comments1.xml",
+     "same": true
+    },
+    {
+     "name": "xl/drawings/vmlDrawing1.vml",
+     "same": true
+    },
+    {
+     "name": "xl/drawings/drawing1.xml",
+     "same": true
+    },
+    {
+     "name": "xl/drawings/_rels/drawing1.xml.rels",
+     "same": true
+    },
+    {
+     "name": "xl/media/image1.emf",
+     "same": true
+    },
+    {
+     "name": "xl/charts/chart1.xml",
+     "same": true
+    },
+    {
+     "name": "xl/printerSettings/printerSettings1.bin",
+     "same": true
+    },
+    {
+     "name": "docProps/core.xml",
+     "sha1": "85236976b8af926fd9a6f91ac93a77642280da55"
+    }
+   ]
+  },
+  {
+   "name": "none-ar-SA",
+   "locale": "ar-SA",
+   "map": {},
+   "zip": [
+    {
+     "name": "[Content_Types].xml",
+     "same": true
+    },
+    {
+     "name": "_rels/.rels",
+     "same": true
+    },
+    {
+     "name": "xl/workbook.xml",
+     "same": true
+    },
+    {
+     "name": "xl/_rels/workbook.xml.rels",
+     "same": true
+    },
+    {
+     "name": "xl/worksheets/sheet1.xml",
+     "sha1": "154e7f9ec8bead82c687fc9f7db9b96f2f94dcd6"
+    },
+    {
+     "name": "xl/worksheets/_rels/sheet1.xml.rels",
+     "same": true
+    },
+    {
+     "name": "xl/worksheets/sheet2.xml",
+     "sha1": "5d3e81734de10b6c9f194ebdb51b75319de3216d"
+    },
+    {
+     "name": "xl/sharedStrings.xml",
+     "same": true
+    },
+    {
+     "name": "xl/styles.xml",
+     "same": true
+    },
+    {
+     "name": "xl/calcChain.xml",
+     "same": true
+    },
+    {
+     "name": "xl/comments1.xml",
+     "same": true
+    },
+    {
+     "name": "xl/drawings/vmlDrawing1.vml",
+     "same": true
+    },
+    {
+     "name": "xl/drawings/drawing1.xml",
+     "same": true
+    },
+    {
+     "name": "xl/drawings/_rels/drawing1.xml.rels",
+     "same": true
+    },
+    {
+     "name": "xl/media/image1.emf",
+     "same": true
+    },
+    {
+     "name": "xl/charts/chart1.xml",
+     "same": true
+    },
+    {
+     "name": "xl/printerSettings/printerSettings1.bin",
+     "same": true
+    },
+    {
+     "name": "docProps/core.xml",
+     "sha1": "85236976b8af926fd9a6f91ac93a77642280da55"
+    }
+   ]
+  }
+ ]
+}

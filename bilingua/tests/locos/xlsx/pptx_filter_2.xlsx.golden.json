@@ -1,0 +1,276 @@
+{
+ "format": "xlsx",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Bonjour",
+   "style": ""
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "zip": [
+    {
+     "name": "docProps/app.xml",
+     "same": true
+    },
+    {
+     "name": "docProps/core.xml",
+     "same": true
+    },
+    {
+     "name": "xl/theme/theme1.xml",
+     "same": true
+    },
+    {
+     "name": "xl/worksheets/sheet1.xml",
+     "same": true
+    },
+    {
+     "name": "xl/styles.xml",
+     "same": true
+    },
+    {
+     "name": "_rels/.rels",
+     "same": true
+    },
+    {
+     "name": "xl/workbook.xml",
+     "same": true
+    },
+    {
+     "name": "xl/_rels/workbook.xml.rels",
+     "same": true
+    },
+    {
+     "name": "[Content_Types].xml",
+     "same": true
+    }
+   ]
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü Bonjour"
+   },
+   "zip": [
+    {
+     "name": "docProps/app.xml",
+     "same": true
+    },
+    {
+     "name": "docProps/core.xml",
+     "same": true
+    },
+    {
+     "name": "xl/theme/theme1.xml",
+     "same": true
+    },
+    {
+     "name": "xl/worksheets/sheet1.xml",
+     "sha1": "7f194518678f13eba721552de8ff221058377eaf"
+    },
+    {
+     "name": "xl/styles.xml",
+     "same": true
+    },
+    {
+     "name": "_rels/.rels",
+     "same": true
+    },
+    {
+     "name": "xl/workbook.xml",
+     "same": true
+    },
+    {
+     "name": "xl/_rels/workbook.xml.rels",
+     "same": true
+    },
+    {
+     "name": "[Content_Types].xml",
+     "same": true
+    }
+   ]
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Bonjour & <\"'>"
+   },
+   "zip": [
+    {
+     "name": "docProps/app.xml",
+     "same": true
+    },
+    {
+     "name": "docProps/core.xml",
+     "sha1": "965c9bc57fc0055662871b81454f96b8900e702a"
+    },
+    {
+     "name": "xl/theme/theme1.xml",
+     "same": true
+    },
+    {
+     "name": "xl/worksheets/sheet1.xml",
+     "sha1": "705fab568d0cb2095aa2933c2b9e7bcbaf0e4c6c"
+    },
+    {
+     "name": "xl/styles.xml",
+     "same": true
+    },
+    {
+     "name": "_rels/.rels",
+     "same": true
+    },
+    {
+     "name": "xl/workbook.xml",
+     "same": true
+    },
+    {
+     "name": "xl/_rels/workbook.xml.rels",
+     "same": true
+    },
+    {
+     "name": "[Content_Types].xml",
+     "same": true
+    }
+   ]
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "zip": [
+    {
+     "name": "docProps/app.xml",
+     "same": true
+    },
+    {
+     "name": "docProps/core.xml",
+     "sha1": "965c9bc57fc0055662871b81454f96b8900e702a"
+    },
+    {
+     "name": "xl/theme/theme1.xml",
+     "same": true
+    },
+    {
+     "name": "xl/worksheets/sheet1.xml",
+     "same": true
+    },
+    {
+     "name": "xl/styles.xml",
+     "same": true
+    },
+    {
+     "name": "_rels/.rels",
+     "same": true
+    },
+    {
+     "name": "xl/workbook.xml",
+     "same": true
+    },
+    {
+     "name": "xl/_rels/workbook.xml.rels",
+     "same": true
+    },
+    {
+     "name": "[Content_Types].xml",
+     "same": true
+    }
+   ]
+  },
+  {
+   "name": "escape-ar-SA",
+   "locale": "ar-SA",
+   "map": {
+    "0": "Bonjour & <\"'>"
+   },
+   "zip": [
+    {
+     "name": "docProps/app.xml",
+     "same": true
+    },
+    {
+     "name": "docProps/core.xml",
+     "sha1": "06485f56cfede0d5e8cfb4d3540aed29069a3e42"
+    },
+    {
+     "name": "xl/theme/theme1.xml",
+     "same": true
+    },
+    {
+     "name": "xl/worksheets/sheet1.xml",
+     "sha1": "152fdb2d5801010fb492a61cab7dd5d2e03f00b2"
+    },
+    {
+     "name": "xl/styles.xml",
+     "same": true
+    },
+    {
+     "name": "_rels/.rels",
+     "same": true
+    },
+    {
+     "name": "xl/workbook.xml",
+     "same": true
+    },
+    {
+     "name": "xl/_rels/workbook.xml.rels",
+     "same": true
+    },
+    {
+     "name": "[Content_Types].xml",
+     "same": true
+    }
+   ]
+  },
+  {
+   "name": "none-ar-SA",
+   "locale": "ar-SA",
+   "map": {},
+   "zip": [
+    {
+     "name": "docProps/app.xml",
+     "same": true
+    },
+    {
+     "name": "docProps/core.xml",
+     "sha1": "06485f56cfede0d5e8cfb4d3540aed29069a3e42"
+    },
+    {
+     "name": "xl/theme/theme1.xml",
+     "same": true
+    },
+    {
+     "name": "xl/worksheets/sheet1.xml",
+     "sha1": "bd7d7cdbccd3d8e8d237d0d6cc21023a937ef76e"
+    },
+    {
+     "name": "xl/styles.xml",
+     "same": true
+    },
+    {
+     "name": "_rels/.rels",
+     "same": true
+    },
+    {
+     "name": "xl/workbook.xml",
+     "same": true
+    },
+    {
+     "name": "xl/_rels/workbook.xml.rels",
+     "same": true
+    },
+    {
+     "name": "[Content_Types].xml",
+     "same": true
+    }
+   ]
+  }
+ ]
+}

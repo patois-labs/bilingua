@@ -1,0 +1,242 @@
+{
+ "format": "pptx",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Spring launch",
+   "style": "slide 1"
+  },
+  {
+   "p_index": 1,
+   "text": "Three new routes",
+   "style": "slide 1"
+  },
+  {
+   "p_index": 2,
+   "text": "Route map",
+   "style": "a11y:img-alt"
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "zip": [
+    {
+     "name": "[Content_Types].xml",
+     "same": true
+    },
+    {
+     "name": "_rels/.rels",
+     "same": true
+    },
+    {
+     "name": "docProps/core.xml",
+     "same": true
+    },
+    {
+     "name": "docProps/app.xml",
+     "same": true
+    },
+    {
+     "name": "ppt/presentation.xml",
+     "same": true
+    },
+    {
+     "name": "ppt/_rels/presentation.xml.rels",
+     "same": true
+    },
+    {
+     "name": "ppt/slides/slide1.xml",
+     "same": true
+    }
+   ]
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü Spring launch",
+    "1": "Ü Three new routes",
+    "2": "Ü Route map"
+   },
+   "zip": [
+    {
+     "name": "[Content_Types].xml",
+     "same": true
+    },
+    {
+     "name": "_rels/.rels",
+     "same": true
+    },
+    {
+     "name": "docProps/core.xml",
+     "same": true
+    },
+    {
+     "name": "docProps/app.xml",
+     "same": true
+    },
+    {
+     "name": "ppt/presentation.xml",
+     "same": true
+    },
+    {
+     "name": "ppt/_rels/presentation.xml.rels",
+     "same": true
+    },
+    {
+     "name": "ppt/slides/slide1.xml",
+     "sha1": "0c98f1548c79111d137495a9e00314a2d71fb710"
+    }
+   ]
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Spring launch & <\"'>",
+    "2": "Route map & <\"'>"
+   },
+   "zip": [
+    {
+     "name": "[Content_Types].xml",
+     "same": true
+    },
+    {
+     "name": "_rels/.rels",
+     "same": true
+    },
+    {
+     "name": "docProps/core.xml",
+     "same": true
+    },
+    {
+     "name": "docProps/app.xml",
+     "same": true
+    },
+    {
+     "name": "ppt/presentation.xml",
+     "same": true
+    },
+    {
+     "name": "ppt/_rels/presentation.xml.rels",
+     "same": true
+    },
+    {
+     "name": "ppt/slides/slide1.xml",
+     "sha1": "9ae8400fa35cd7822123f130258557399df5a2e5"
+    }
+   ]
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "zip": [
+    {
+     "name": "[Content_Types].xml",
+     "same": true
+    },
+    {
+     "name": "_rels/.rels",
+     "same": true
+    },
+    {
+     "name": "docProps/core.xml",
+     "same": true
+    },
+    {
+     "name": "docProps/app.xml",
+     "same": true
+    },
+    {
+     "name": "ppt/presentation.xml",
+     "same": true
+    },
+    {
+     "name": "ppt/_rels/presentation.xml.rels",
+     "same": true
+    },
+    {
+     "name": "ppt/slides/slide1.xml",
+     "same": true
+    }
+   ]
+  },
+  {
+   "name": "escape-ar-SA",
+   "locale": "ar-SA",
+   "map": {
+    "0": "Spring launch & <\"'>",
+    "2": "Route map & <\"'>"
+   },
+   "zip": [
+    {
+     "name": "[Content_Types].xml",
+     "same": true
+    },
+    {
+     "name": "_rels/.rels",
+     "same": true
+    },
+    {
+     "name": "docProps/core.xml",
+     "same": true
+    },
+    {
+     "name": "docProps/app.xml",
+     "same": true
+    },
+    {
+     "name": "ppt/presentation.xml",
+     "same": true
+    },
+    {
+     "name": "ppt/_rels/presentation.xml.rels",
+     "same": true
+    },
+    {
+     "name": "ppt/slides/slide1.xml",
+     "sha1": "029871b8ff237bf559aa7ba6ce1e620117eb954c"
+    }
+   ]
+  },
+  {
+   "name": "none-ar-SA",
+   "locale": "ar-SA",
+   "map": {},
+   "zip": [
+    {
+     "name": "[Content_Types].xml",
+     "same": true
+    },
+    {
+     "name": "_rels/.rels",
+     "same": true
+    },
+    {
+     "name": "docProps/core.xml",
+     "same": true
+    },
+    {
+     "name": "docProps/app.xml",
+     "same": true
+    },
+    {
+     "name": "ppt/presentation.xml",
+     "same": true
+    },
+    {
+     "name": "ppt/_rels/presentation.xml.rels",
+     "same": true
+    },
+    {
+     "name": "ppt/slides/slide1.xml",
+     "same": true
+    }
+   ]
+  }
+ ]
+}

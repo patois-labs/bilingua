@@ -1,0 +1,242 @@
+{
+ "format": "docx",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Welcome aboard",
+   "style": "Heading 1"
+  },
+  {
+   "p_index": 1,
+   "text": "⟦r1⟧Read the ⟦/r1⟧⟦r2⟧safety card⟦/r2⟧⟦r3⟧ before takeoff.⟦/r3⟧",
+   "style": "Normal"
+  },
+  {
+   "p_index": 2,
+   "text": "Exit row",
+   "style": "Normal"
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "zip": [
+    {
+     "name": "[Content_Types].xml",
+     "same": true
+    },
+    {
+     "name": "_rels/.rels",
+     "same": true
+    },
+    {
+     "name": "docProps/core.xml",
+     "same": true
+    },
+    {
+     "name": "docProps/app.xml",
+     "same": true
+    },
+    {
+     "name": "word/document.xml",
+     "same": true
+    },
+    {
+     "name": "word/_rels/document.xml.rels",
+     "same": true
+    },
+    {
+     "name": "word/styles.xml",
+     "same": true
+    }
+   ]
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü Welcome aboard",
+    "1": "⟦r1⟧Ü Read the ⟦/r1⟧⟦r2⟧Ü safety card⟦/r2⟧⟦r3⟧Ü  before takeoff.⟦/r3⟧",
+    "2": "Ü Exit row"
+   },
+   "zip": [
+    {
+     "name": "[Content_Types].xml",
+     "sha1": "3ec3e2b32a15742cc1a1ee37bb987419916692e4"
+    },
+    {
+     "name": "_rels/.rels",
+     "sha1": "8f37dc3d680235eb1302bdeaaee12147d94ef325"
+    },
+    {
+     "name": "word/document.xml",
+     "sha1": "879f34ecb3177b2a05a64d7a1f18d84fe6f71030"
+    },
+    {
+     "name": "word/_rels/document.xml.rels",
+     "sha1": "970a4cc488cf6d914a49d5dc0aab6d2543022487"
+    },
+    {
+     "name": "word/styles.xml",
+     "sha1": "549cfb08cb0eb796d61860e4fcf6928c0c0498bd"
+    },
+    {
+     "name": "docProps/core.xml",
+     "sha1": "d566e1217b2b572865aed91cc80619f53023d7d9"
+    },
+    {
+     "name": "docProps/app.xml",
+     "same": true
+    }
+   ]
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Welcome aboard & <\"'>",
+    "2": "Exit row & <\"'>"
+   },
+   "zip": [
+    {
+     "name": "[Content_Types].xml",
+     "sha1": "3ec3e2b32a15742cc1a1ee37bb987419916692e4"
+    },
+    {
+     "name": "_rels/.rels",
+     "sha1": "8f37dc3d680235eb1302bdeaaee12147d94ef325"
+    },
+    {
+     "name": "word/document.xml",
+     "sha1": "3c9e5a257803454b39dfbc2ac199730d5bee0359"
+    },
+    {
+     "name": "word/_rels/document.xml.rels",
+     "sha1": "970a4cc488cf6d914a49d5dc0aab6d2543022487"
+    },
+    {
+     "name": "word/styles.xml",
+     "sha1": "10f9bd282e2fe405763fa38a0d4433259562fa60"
+    },
+    {
+     "name": "docProps/core.xml",
+     "sha1": "468a73ebee4c56835d695b7d030e3defc9cd8105"
+    },
+    {
+     "name": "docProps/app.xml",
+     "same": true
+    }
+   ]
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "zip": [
+    {
+     "name": "[Content_Types].xml",
+     "sha1": "3ec3e2b32a15742cc1a1ee37bb987419916692e4"
+    },
+    {
+     "name": "_rels/.rels",
+     "sha1": "8f37dc3d680235eb1302bdeaaee12147d94ef325"
+    },
+    {
+     "name": "word/document.xml",
+     "sha1": "9e8db1419b4c2c98cbb9e61ed73af7ef87388cc0"
+    },
+    {
+     "name": "word/_rels/document.xml.rels",
+     "sha1": "970a4cc488cf6d914a49d5dc0aab6d2543022487"
+    },
+    {
+     "name": "word/styles.xml",
+     "sha1": "10f9bd282e2fe405763fa38a0d4433259562fa60"
+    },
+    {
+     "name": "docProps/core.xml",
+     "sha1": "468a73ebee4c56835d695b7d030e3defc9cd8105"
+    },
+    {
+     "name": "docProps/app.xml",
+     "same": true
+    }
+   ]
+  },
+  {
+   "name": "escape-ar-SA",
+   "locale": "ar-SA",
+   "map": {
+    "0": "Welcome aboard & <\"'>",
+    "2": "Exit row & <\"'>"
+   },
+   "zip": [
+    {
+     "name": "[Content_Types].xml",
+     "sha1": "3ec3e2b32a15742cc1a1ee37bb987419916692e4"
+    },
+    {
+     "name": "_rels/.rels",
+     "sha1": "8f37dc3d680235eb1302bdeaaee12147d94ef325"
+    },
+    {
+     "name": "word/document.xml",
+     "sha1": "aa89243464537ba27edf7880b0c29e33ea802fa8"
+    },
+    {
+     "name": "word/_rels/document.xml.rels",
+     "sha1": "970a4cc488cf6d914a49d5dc0aab6d2543022487"
+    },
+    {
+     "name": "word/styles.xml",
+     "sha1": "59c3c45c424c49c69e1036d1ab761df34ba5c8dc"
+    },
+    {
+     "name": "docProps/core.xml",
+     "sha1": "7df520c3d91f6dfd62ca749c81d89e62edf2b61c"
+    },
+    {
+     "name": "docProps/app.xml",
+     "same": true
+    }
+   ]
+  },
+  {
+   "name": "none-ar-SA",
+   "locale": "ar-SA",
+   "map": {},
+   "zip": [
+    {
+     "name": "[Content_Types].xml",
+     "sha1": "3ec3e2b32a15742cc1a1ee37bb987419916692e4"
+    },
+    {
+     "name": "_rels/.rels",
+     "sha1": "8f37dc3d680235eb1302bdeaaee12147d94ef325"
+    },
+    {
+     "name": "word/document.xml",
+     "sha1": "9e8db1419b4c2c98cbb9e61ed73af7ef87388cc0"
+    },
+    {
+     "name": "word/_rels/document.xml.rels",
+     "sha1": "970a4cc488cf6d914a49d5dc0aab6d2543022487"
+    },
+    {
+     "name": "word/styles.xml",
+     "sha1": "59c3c45c424c49c69e1036d1ab761df34ba5c8dc"
+    },
+    {
+     "name": "docProps/core.xml",
+     "sha1": "7df520c3d91f6dfd62ca749c81d89e62edf2b61c"
+    },
+    {
+     "name": "docProps/app.xml",
+     "same": true
+    }
+   ]
+  }
+ ]
+}

@@ -86,3 +86,4 @@ bilingua-wiki = { workspace = true }
 bilingua-zip = { workspace = true }
 zip = { workspace = true }
 serde_json = { workspace = true }
+quick-xml = { workspace = true }

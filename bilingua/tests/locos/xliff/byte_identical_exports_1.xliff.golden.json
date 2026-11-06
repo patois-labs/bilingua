@@ -1,0 +1,60 @@
+{
+ "format": "xliff",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Hello world",
+   "style": ""
+  },
+  {
+   "p_index": 1,
+   "text": "Good night",
+   "style": ""
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4NCjx4bGlmZiB2ZXJzaW9uPSIxLjIiIHhtbG5zPSJ1cm46b2FzaXM6bmFtZXM6dGM6eGxpZmY6ZG9jdW1lbnQ6MS4yIj4NCiAgPGZpbGUgb3JpZ2luYWw9ImEudHh0IiBzb3VyY2UtbGFuZ3VhZ2U9ImVuLVVTIiBkYXRhdHlwZT0icGxhaW50ZXh0Ij4NCiAgICA8Ym9keT4NCiAgICAgIDx0cmFucy11bml0IGlkPSIxIj4NCiAgICAgICAgPHNvdXJjZT5IZWxsbyB3b3JsZDwvc291cmNlPg0KICAgICAgPC90cmFucy11bml0Pg0KICAgICAgPHRyYW5zLXVuaXQgaWQ9IjIiPg0KICAgICAgICA8c291cmNlPkdvb2QgbmlnaHQ8L3NvdXJjZT4NCiAgICAgIDwvdHJhbnMtdW5pdD4NCiAgICA8L2JvZHk+DQogIDwvZmlsZT4NCjwveGxpZmY+DQo="
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü Hello world",
+    "1": "Ü Good night"
+   },
+   "out_b64": "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4NCjx4bGlmZiB4bWxucz0idXJuOm9hc2lzOm5hbWVzOnRjOnhsaWZmOmRvY3VtZW50OjEuMiIgdmVyc2lvbj0iMS4yIj4NCiAgPGZpbGUgb3JpZ2luYWw9ImEudHh0IiBzb3VyY2UtbGFuZ3VhZ2U9ImVuLVVTIiBkYXRhdHlwZT0icGxhaW50ZXh0Ij4NCiAgICA8Ym9keT4NCiAgICAgIDx0cmFucy11bml0IGlkPSIxIj4NCiAgICAgICAgPHNvdXJjZT5IZWxsbyB3b3JsZDwvc291cmNlPg0KICAgICAgPHRhcmdldD7DnCBIZWxsbyB3b3JsZDwvdGFyZ2V0PjwvdHJhbnMtdW5pdD4NCiAgICAgIDx0cmFucy11bml0IGlkPSIyIj4NCiAgICAgICAgPHNvdXJjZT5Hb29kIG5pZ2h0PC9zb3VyY2U+DQogICAgICA8dGFyZ2V0PsOcIEdvb2QgbmlnaHQ8L3RhcmdldD48L3RyYW5zLXVuaXQ+DQogICAgPC9ib2R5Pg0KICA8L2ZpbGU+DQo8L3hsaWZmPg0K"
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Hello world & <\"'>"
+   },
+   "out_b64": "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4NCjx4bGlmZiB4bWxucz0idXJuOm9hc2lzOm5hbWVzOnRjOnhsaWZmOmRvY3VtZW50OjEuMiIgdmVyc2lvbj0iMS4yIj4NCiAgPGZpbGUgb3JpZ2luYWw9ImEudHh0IiBzb3VyY2UtbGFuZ3VhZ2U9ImVuLVVTIiBkYXRhdHlwZT0icGxhaW50ZXh0IiB0YXJnZXQtbGFuZ3VhZ2U9ImRlLURFIj4NCiAgICA8Ym9keT4NCiAgICAgIDx0cmFucy11bml0IGlkPSIxIj4NCiAgICAgICAgPHNvdXJjZT5IZWxsbyB3b3JsZDwvc291cmNlPg0KICAgICAgPHRhcmdldD5IZWxsbyB3b3JsZCAmYW1wOyAmbHQ7IicmZ3Q7PC90YXJnZXQ+PC90cmFucy11bml0Pg0KICAgICAgPHRyYW5zLXVuaXQgaWQ9IjIiPg0KICAgICAgICA8c291cmNlPkdvb2QgbmlnaHQ8L3NvdXJjZT4NCiAgICAgIDwvdHJhbnMtdW5pdD4NCiAgICA8L2JvZHk+DQogIDwvZmlsZT4NCjwveGxpZmY+DQo="
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "out_b64": "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4NCjx4bGlmZiB4bWxucz0idXJuOm9hc2lzOm5hbWVzOnRjOnhsaWZmOmRvY3VtZW50OjEuMiIgdmVyc2lvbj0iMS4yIj4NCiAgPGZpbGUgb3JpZ2luYWw9ImEudHh0IiBzb3VyY2UtbGFuZ3VhZ2U9ImVuLVVTIiBkYXRhdHlwZT0icGxhaW50ZXh0IiB0YXJnZXQtbGFuZ3VhZ2U9ImRlLURFIj4NCiAgICA8Ym9keT4NCiAgICAgIDx0cmFucy11bml0IGlkPSIxIj4NCiAgICAgICAgPHNvdXJjZT5IZWxsbyB3b3JsZDwvc291cmNlPg0KICAgICAgPC90cmFucy11bml0Pg0KICAgICAgPHRyYW5zLXVuaXQgaWQ9IjIiPg0KICAgICAgICA8c291cmNlPkdvb2QgbmlnaHQ8L3NvdXJjZT4NCiAgICAgIDwvdHJhbnMtdW5pdD4NCiAgICA8L2JvZHk+DQogIDwvZmlsZT4NCjwveGxpZmY+DQo="
+  },
+  {
+   "name": "escape-es_ES",
+   "locale": "es_ES",
+   "map": {
+    "0": "Hello world & <\"'>"
+   },
+   "out_b64": "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4NCjx4bGlmZiB4bWxucz0idXJuOm9hc2lzOm5hbWVzOnRjOnhsaWZmOmRvY3VtZW50OjEuMiIgdmVyc2lvbj0iMS4yIj4NCiAgPGZpbGUgb3JpZ2luYWw9ImEudHh0IiBzb3VyY2UtbGFuZ3VhZ2U9ImVuLVVTIiBkYXRhdHlwZT0icGxhaW50ZXh0IiB0YXJnZXQtbGFuZ3VhZ2U9ImVzLUVTIj4NCiAgICA8Ym9keT4NCiAgICAgIDx0cmFucy11bml0IGlkPSIxIj4NCiAgICAgICAgPHNvdXJjZT5IZWxsbyB3b3JsZDwvc291cmNlPg0KICAgICAgPHRhcmdldD5IZWxsbyB3b3JsZCAmYW1wOyAmbHQ7IicmZ3Q7PC90YXJnZXQ+PC90cmFucy11bml0Pg0KICAgICAgPHRyYW5zLXVuaXQgaWQ9IjIiPg0KICAgICAgICA8c291cmNlPkdvb2QgbmlnaHQ8L3NvdXJjZT4NCiAgICAgIDwvdHJhbnMtdW5pdD4NCiAgICA8L2JvZHk+DQogIDwvZmlsZT4NCjwveGxpZmY+DQo="
+  },
+  {
+   "name": "none-es_ES",
+   "locale": "es_ES",
+   "map": {},
+   "out_b64": "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4NCjx4bGlmZiB4bWxucz0idXJuOm9hc2lzOm5hbWVzOnRjOnhsaWZmOmRvY3VtZW50OjEuMiIgdmVyc2lvbj0iMS4yIj4NCiAgPGZpbGUgb3JpZ2luYWw9ImEudHh0IiBzb3VyY2UtbGFuZ3VhZ2U9ImVuLVVTIiBkYXRhdHlwZT0icGxhaW50ZXh0IiB0YXJnZXQtbGFuZ3VhZ2U9ImVzLUVTIj4NCiAgICA8Ym9keT4NCiAgICAgIDx0cmFucy11bml0IGlkPSIxIj4NCiAgICAgICAgPHNvdXJjZT5IZWxsbyB3b3JsZDwvc291cmNlPg0KICAgICAgPC90cmFucy11bml0Pg0KICAgICAgPHRyYW5zLXVuaXQgaWQ9IjIiPg0KICAgICAgICA8c291cmNlPkdvb2QgbmlnaHQ8L3NvdXJjZT4NCiAgICAgIDwvdHJhbnMtdW5pdD4NCiAgICA8L2JvZHk+DQogIDwvZmlsZT4NCjwveGxpZmY+DQo="
+  }
+ ]
+}

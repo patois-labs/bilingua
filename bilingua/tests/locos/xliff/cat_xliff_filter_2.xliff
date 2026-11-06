@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?><xliff xmlns="urn:oasis:names:tc:xliff:document:1.2" version="1.2">
+<file original="C:\Projects\demo\en-US\guide.docx" datatype="x-sdlfilterframework2" source-language="en-US" target-language="de-DE">
+  <header>
+    
+    <tag-defs><tag id="pt1"><bpt name="b" word-end="false" can-hide="true">&lt;b&gt;</bpt><ept name="b" word-end="false">&lt;/b&gt;</ept><fmt id="1"/></tag><tag id="ph2"><ph name="br" word-end="false">&lt;br/&gt;</ph></tag></tag-defs>
+  </header>
+  <body>
+    <trans-unit id="a1b2c3d4-0001"><source>Open the <g id="pt1">Settings</g> menu. Then click Save.</source><seg-source><mrk mtype="seg" mid="1">Open the <g id="pt1">Settings</g> menu.</mrk> <mrk mtype="seg" mid="2">Then click Save.</mrk></seg-source><target><mrk mtype="seg" mid="1"/> <mrk mtype="seg" mid="2"></mrk></target></trans-unit>
+    <trans-unit id='a1b2c3d4-0002'><source>Line one<x id="ph2"/>line two &amp; more&#xA0;text.</source><seg-source><mrk mtype="seg" mid="3">Line one<x id="ph2"/>line two &amp; more&#xA0;text.</mrk></seg-source></trans-unit>
+    <trans-unit id="a1b2c3d4-0003"><source>Locked legal notice. Approved tagline.</source><seg-source><mrk mtype="seg" mid="4">Locked legal notice.</mrk> <mrk mtype="seg" mid="5">Approved tagline.</mrk></seg-source><target><mrk mtype="seg" mid="4">Locked legal notice.</mrk> <mrk mtype="seg" mid="5">Genehmigter Slogan.</mrk></target></trans-unit>
+    <trans-unit id="a1b2c3d4-0004"><source><g id="pt1"><mrk mtype="x-sdl-comment">Already</mrk> done.</g></source><seg-source><g id="pt1"><mrk mtype="seg" mid="6">Already done.</mrk></g></seg-source><target><g id="pt1"><mrk mtype="seg" mid="6">Bereits erledigt.</mrk></g></target></trans-unit>
+    <trans-unit id="a1b2c3d4-0005" translate="no"><source><x id="ph2"/></source></trans-unit>
+    <trans-unit id="a1b2c3d4-0006"><source>Wrapped segment.</source><seg-source><g id="pt1"><mrk mtype="seg" mid="7">Wrapped segment.</mrk></g></seg-source></trans-unit>
+  </body>
+</file>
+</xliff>

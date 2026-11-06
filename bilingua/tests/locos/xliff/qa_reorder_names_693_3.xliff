@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">
+ <file original="a" source-language="en" target-language="ja" datatype="plaintext"><body>
+  <trans-unit id="u1"><source>Delete <x id="1" ctype="x-file"/> from <ph id="2">{0}</ph> now <bpt id="3">&lt;b&gt;</bpt>bold<ept id="3">&lt;/b&gt;</ept></source></trans-unit>
+ </body></file></xliff>

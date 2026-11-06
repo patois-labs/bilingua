@@ -1,0 +1,630 @@
+{
+ "format": "pptx",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "FR Quarterly results",
+   "style": "slide 1"
+  },
+  {
+   "p_index": 1,
+   "text": "⟦r1⟧FR Sales grew ⟦/r1⟧⟦r2⟧FR twelve percent⟦/r2⟧⟦r3⟧FR  see ⟦/r3⟧⟦r4⟧FR the report⟦/r4⟧⟦x6⟧⟦r5⟧FR Page ⟦/r5⟧⟦x7⟧",
+   "style": "slide 1"
+  },
+  {
+   "p_index": 4,
+   "text": "FR Grouped caption",
+   "style": "slide 1"
+  },
+  {
+   "p_index": 5,
+   "text": "FR Region",
+   "style": "slide 1"
+  },
+  {
+   "p_index": 6,
+   "text": "FR North",
+   "style": "slide 1"
+  },
+  {
+   "p_index": 7,
+   "text": "FR 42",
+   "style": "slide 1"
+  },
+  {
+   "p_index": 8,
+   "text": "FR Choice text",
+   "style": "slide 1"
+  },
+  {
+   "p_index": 10,
+   "text": "FR Plan",
+   "style": "slide 1 SmartArt"
+  },
+  {
+   "p_index": 11,
+   "text": "FR Build",
+   "style": "slide 1 SmartArt"
+  },
+  {
+   "p_index": 12,
+   "text": "FR Revenue by region",
+   "style": "slide 1 chart"
+  },
+  {
+   "p_index": 13,
+   "text": "FR Mention the new office.",
+   "style": "slide 1 notes"
+  },
+  {
+   "p_index": 15,
+   "text": "FR Backup slide",
+   "style": "slide 2 hidden"
+  },
+  {
+   "p_index": 16,
+   "text": "FR A rising bar chart",
+   "style": "a11y:img-alt"
+  },
+  {
+   "p_index": 17,
+   "text": "FR Growth",
+   "style": "a11y:img-title"
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "zip": [
+    {
+     "name": "[Content_Types].xml",
+     "same": true
+    },
+    {
+     "name": "_rels/.rels",
+     "same": true
+    },
+    {
+     "name": "ppt/presentation.xml",
+     "same": true
+    },
+    {
+     "name": "ppt/_rels/presentation.xml.rels",
+     "same": true
+    },
+    {
+     "name": "ppt/slides/slide1.xml",
+     "same": true
+    },
+    {
+     "name": "ppt/slides/_rels/slide1.xml.rels",
+     "same": true
+    },
+    {
+     "name": "ppt/slides/slide2.xml",
+     "same": true
+    },
+    {
+     "name": "ppt/slides/_rels/slide2.xml.rels",
+     "same": true
+    },
+    {
+     "name": "ppt/notesSlides/notesSlide1.xml",
+     "same": true
+    },
+    {
+     "name": "ppt/notesSlides/_rels/notesSlide1.xml.rels",
+     "same": true
+    },
+    {
+     "name": "ppt/slideLayouts/slideLayout1.xml",
+     "same": true
+    },
+    {
+     "name": "ppt/slideLayouts/_rels/slideLayout1.xml.rels",
+     "same": true
+    },
+    {
+     "name": "ppt/slideMasters/slideMaster1.xml",
+     "same": true
+    },
+    {
+     "name": "ppt/slideMasters/_rels/slideMaster1.xml.rels",
+     "same": true
+    },
+    {
+     "name": "ppt/diagrams/data1.xml",
+     "same": true
+    },
+    {
+     "name": "ppt/diagrams/drawing1.xml",
+     "same": true
+    },
+    {
+     "name": "ppt/charts/chart1.xml",
+     "same": true
+    },
+    {
+     "name": "ppt/diagrams/layout1.xml",
+     "same": true
+    },
+    {
+     "name": "ppt/diagrams/quickStyle1.xml",
+     "same": true
+    },
+    {
+     "name": "ppt/diagrams/colors1.xml",
+     "same": true
+    }
+   ]
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü FR Quarterly results",
+    "1": "⟦r1⟧Ü FR Sales grew ⟦/r1⟧⟦r2⟧Ü FR twelve percent⟦/r2⟧⟦r3⟧Ü FR  see ⟦/r3⟧⟦r4⟧Ü FR the report⟦/r4⟧⟦x6⟧⟦r5⟧Ü FR Page ⟦/r5⟧⟦x7⟧",
+    "4": "Ü FR Grouped caption",
+    "5": "Ü FR Region",
+    "6": "Ü FR North",
+    "7": "Ü FR 42",
+    "8": "Ü FR Choice text",
+    "10": "Ü FR Plan",
+    "11": "Ü FR Build",
+    "12": "Ü FR Revenue by region",
+    "13": "Ü FR Mention the new office.",
+    "15": "Ü FR Backup slide",
+    "16": "Ü FR A rising bar chart",
+    "17": "Ü FR Growth"
+   },
+   "zip": [
+    {
+     "name": "[Content_Types].xml",
+     "same": true
+    },
+    {
+     "name": "_rels/.rels",
+     "same": true
+    },
+    {
+     "name": "ppt/presentation.xml",
+     "same": true
+    },
+    {
+     "name": "ppt/_rels/presentation.xml.rels",
+     "same": true
+    },
+    {
+     "name": "ppt/slides/slide1.xml",
+     "sha1": "db20d21aa4353573ae1c61b61f6b3990eb1bb8f7"
+    },
+    {
+     "name": "ppt/slides/_rels/slide1.xml.rels",
+     "same": true
+    },
+    {
+     "name": "ppt/slides/slide2.xml",
+     "sha1": "398e406f116e7145577c55f9023ff31a79d7cd5b"
+    },
+    {
+     "name": "ppt/slides/_rels/slide2.xml.rels",
+     "same": true
+    },
+    {
+     "name": "ppt/notesSlides/notesSlide1.xml",
+     "sha1": "625b08eb3984187674bd5409c517e52e4948bf64"
+    },
+    {
+     "name": "ppt/notesSlides/_rels/notesSlide1.xml.rels",
+     "same": true
+    },
+    {
+     "name": "ppt/slideLayouts/slideLayout1.xml",
+     "same": true
+    },
+    {
+     "name": "ppt/slideLayouts/_rels/slideLayout1.xml.rels",
+     "same": true
+    },
+    {
+     "name": "ppt/slideMasters/slideMaster1.xml",
+     "same": true
+    },
+    {
+     "name": "ppt/slideMasters/_rels/slideMaster1.xml.rels",
+     "same": true
+    },
+    {
+     "name": "ppt/diagrams/data1.xml",
+     "sha1": "4f8aa5efccd3885e1d54cba70bd01bc99b32f795"
+    },
+    {
+     "name": "ppt/diagrams/drawing1.xml",
+     "sha1": "f9df9f14a2fee634b407c2e7df3ad5113aaf7f34"
+    },
+    {
+     "name": "ppt/charts/chart1.xml",
+     "sha1": "4fcf8992cb95192b84260469c67b2038ad289f44"
+    },
+    {
+     "name": "ppt/diagrams/layout1.xml",
+     "same": true
+    },
+    {
+     "name": "ppt/diagrams/quickStyle1.xml",
+     "same": true
+    },
+    {
+     "name": "ppt/diagrams/colors1.xml",
+     "same": true
+    }
+   ]
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "FR Quarterly results & <\"'>",
+    "4": "FR Grouped caption & <\"'>",
+    "6": "FR North & <\"'>",
+    "8": "FR Choice text & <\"'>",
+    "11": "FR Build & <\"'>",
+    "13": "FR Mention the new office. & <\"'>",
+    "16": "FR A rising bar chart & <\"'>"
+   },
+   "zip": [
+    {
+     "name": "[Content_Types].xml",
+     "same": true
+    },
+    {
+     "name": "_rels/.rels",
+     "same": true
+    },
+    {
+     "name": "ppt/presentation.xml",
+     "same": true
+    },
+    {
+     "name": "ppt/_rels/presentation.xml.rels",
+     "same": true
+    },
+    {
+     "name": "ppt/slides/slide1.xml",
+     "sha1": "acfcd955bed704d97ed3d2ebbf3092c1f16fa0d1"
+    },
+    {
+     "name": "ppt/slides/_rels/slide1.xml.rels",
+     "same": true
+    },
+    {
+     "name": "ppt/slides/slide2.xml",
+     "same": true
+    },
+    {
+     "name": "ppt/slides/_rels/slide2.xml.rels",
+     "same": true
+    },
+    {
+     "name": "ppt/notesSlides/notesSlide1.xml",
+     "sha1": "fff90ef7bcbd333a6d56c12057934e2e9fa8b5f5"
+    },
+    {
+     "name": "ppt/notesSlides/_rels/notesSlide1.xml.rels",
+     "same": true
+    },
+    {
+     "name": "ppt/slideLayouts/slideLayout1.xml",
+     "same": true
+    },
+    {
+     "name": "ppt/slideLayouts/_rels/slideLayout1.xml.rels",
+     "same": true
+    },
+    {
+     "name": "ppt/slideMasters/slideMaster1.xml",
+     "same": true
+    },
+    {
+     "name": "ppt/slideMasters/_rels/slideMaster1.xml.rels",
+     "same": true
+    },
+    {
+     "name": "ppt/diagrams/data1.xml",
+     "sha1": "f4e5290402253107be6f5af927b02607e6613239"
+    },
+    {
+     "name": "ppt/diagrams/drawing1.xml",
+     "sha1": "129e431dc820a531eacf2a4926f7158586e5c74d"
+    },
+    {
+     "name": "ppt/charts/chart1.xml",
+     "same": true
+    },
+    {
+     "name": "ppt/diagrams/layout1.xml",
+     "same": true
+    },
+    {
+     "name": "ppt/diagrams/quickStyle1.xml",
+     "same": true
+    },
+    {
+     "name": "ppt/diagrams/colors1.xml",
+     "same": true
+    }
+   ]
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "zip": [
+    {
+     "name": "[Content_Types].xml",
+     "same": true
+    },
+    {
+     "name": "_rels/.rels",
+     "same": true
+    },
+    {
+     "name": "ppt/presentation.xml",
+     "same": true
+    },
+    {
+     "name": "ppt/_rels/presentation.xml.rels",
+     "same": true
+    },
+    {
+     "name": "ppt/slides/slide1.xml",
+     "same": true
+    },
+    {
+     "name": "ppt/slides/_rels/slide1.xml.rels",
+     "same": true
+    },
+    {
+     "name": "ppt/slides/slide2.xml",
+     "same": true
+    },
+    {
+     "name": "ppt/slides/_rels/slide2.xml.rels",
+     "same": true
+    },
+    {
+     "name": "ppt/notesSlides/notesSlide1.xml",
+     "same": true
+    },
+    {
+     "name": "ppt/notesSlides/_rels/notesSlide1.xml.rels",
+     "same": true
+    },
+    {
+     "name": "ppt/slideLayouts/slideLayout1.xml",
+     "same": true
+    },
+    {
+     "name": "ppt/slideLayouts/_rels/slideLayout1.xml.rels",
+     "same": true
+    },
+    {
+     "name": "ppt/slideMasters/slideMaster1.xml",
+     "same": true
+    },
+    {
+     "name": "ppt/slideMasters/_rels/slideMaster1.xml.rels",
+     "same": true
+    },
+    {
+     "name": "ppt/diagrams/data1.xml",
+     "same": true
+    },
+    {
+     "name": "ppt/diagrams/drawing1.xml",
+     "same": true
+    },
+    {
+     "name": "ppt/charts/chart1.xml",
+     "same": true
+    },
+    {
+     "name": "ppt/diagrams/layout1.xml",
+     "same": true
+    },
+    {
+     "name": "ppt/diagrams/quickStyle1.xml",
+     "same": true
+    },
+    {
+     "name": "ppt/diagrams/colors1.xml",
+     "same": true
+    }
+   ]
+  },
+  {
+   "name": "escape-ar-SA",
+   "locale": "ar-SA",
+   "map": {
+    "0": "FR Quarterly results & <\"'>",
+    "4": "FR Grouped caption & <\"'>",
+    "6": "FR North & <\"'>",
+    "8": "FR Choice text & <\"'>",
+    "11": "FR Build & <\"'>",
+    "13": "FR Mention the new office. & <\"'>",
+    "16": "FR A rising bar chart & <\"'>"
+   },
+   "zip": [
+    {
+     "name": "[Content_Types].xml",
+     "same": true
+    },
+    {
+     "name": "_rels/.rels",
+     "same": true
+    },
+    {
+     "name": "ppt/presentation.xml",
+     "same": true
+    },
+    {
+     "name": "ppt/_rels/presentation.xml.rels",
+     "same": true
+    },
+    {
+     "name": "ppt/slides/slide1.xml",
+     "sha1": "c167dd24e52011fb0f5cb8415ebf66489a07066b"
+    },
+    {
+     "name": "ppt/slides/_rels/slide1.xml.rels",
+     "same": true
+    },
+    {
+     "name": "ppt/slides/slide2.xml",
+     "same": true
+    },
+    {
+     "name": "ppt/slides/_rels/slide2.xml.rels",
+     "same": true
+    },
+    {
+     "name": "ppt/notesSlides/notesSlide1.xml",
+     "sha1": "893a885b9c58e97190e21877fd49efd714e68bd1"
+    },
+    {
+     "name": "ppt/notesSlides/_rels/notesSlide1.xml.rels",
+     "same": true
+    },
+    {
+     "name": "ppt/slideLayouts/slideLayout1.xml",
+     "same": true
+    },
+    {
+     "name": "ppt/slideLayouts/_rels/slideLayout1.xml.rels",
+     "same": true
+    },
+    {
+     "name": "ppt/slideMasters/slideMaster1.xml",
+     "same": true
+    },
+    {
+     "name": "ppt/slideMasters/_rels/slideMaster1.xml.rels",
+     "same": true
+    },
+    {
+     "name": "ppt/diagrams/data1.xml",
+     "sha1": "48f6c93dcc8f08bc4e5ef5ec57bd9b650cf18e0a"
+    },
+    {
+     "name": "ppt/diagrams/drawing1.xml",
+     "sha1": "c8d99e84cb72c3fcd3c470a6bb7f687f810a6dfd"
+    },
+    {
+     "name": "ppt/charts/chart1.xml",
+     "same": true
+    },
+    {
+     "name": "ppt/diagrams/layout1.xml",
+     "same": true
+    },
+    {
+     "name": "ppt/diagrams/quickStyle1.xml",
+     "same": true
+    },
+    {
+     "name": "ppt/diagrams/colors1.xml",
+     "same": true
+    }
+   ]
+  },
+  {
+   "name": "none-ar-SA",
+   "locale": "ar-SA",
+   "map": {},
+   "zip": [
+    {
+     "name": "[Content_Types].xml",
+     "same": true
+    },
+    {
+     "name": "_rels/.rels",
+     "same": true
+    },
+    {
+     "name": "ppt/presentation.xml",
+     "same": true
+    },
+    {
+     "name": "ppt/_rels/presentation.xml.rels",
+     "same": true
+    },
+    {
+     "name": "ppt/slides/slide1.xml",
+     "same": true
+    },
+    {
+     "name": "ppt/slides/_rels/slide1.xml.rels",
+     "same": true
+    },
+    {
+     "name": "ppt/slides/slide2.xml",
+     "same": true
+    },
+    {
+     "name": "ppt/slides/_rels/slide2.xml.rels",
+     "same": true
+    },
+    {
+     "name": "ppt/notesSlides/notesSlide1.xml",
+     "same": true
+    },
+    {
+     "name": "ppt/notesSlides/_rels/notesSlide1.xml.rels",
+     "same": true
+    },
+    {
+     "name": "ppt/slideLayouts/slideLayout1.xml",
+     "same": true
+    },
+    {
+     "name": "ppt/slideLayouts/_rels/slideLayout1.xml.rels",
+     "same": true
+    },
+    {
+     "name": "ppt/slideMasters/slideMaster1.xml",
+     "same": true
+    },
+    {
+     "name": "ppt/slideMasters/_rels/slideMaster1.xml.rels",
+     "same": true
+    },
+    {
+     "name": "ppt/diagrams/data1.xml",
+     "same": true
+    },
+    {
+     "name": "ppt/diagrams/drawing1.xml",
+     "same": true
+    },
+    {
+     "name": "ppt/charts/chart1.xml",
+     "same": true
+    },
+    {
+     "name": "ppt/diagrams/layout1.xml",
+     "same": true
+    },
+    {
+     "name": "ppt/diagrams/quickStyle1.xml",
+     "same": true
+    },
+    {
+     "name": "ppt/diagrams/colors1.xml",
+     "same": true
+    }
+   ]
+  }
+ ]
+}
