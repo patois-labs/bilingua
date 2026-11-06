@@ -55,10 +55,33 @@ FORMATS = {
     "js": "JS module", "mjs": "JS module", "cjs": "JS module", "ts": "TS (Qt or JS module)", "mts": "JS module", "cts": "JS module",
     "php": "PHP array", "xmb": "XMB", "xtb": "XTB",
     "xlf": "XLIFF", "xliff": "XLIFF", "sdlxliff": "XLIFF", "mqxliff": "XLIFF", "mxliff": "XLIFF",
+    # Waves 3 to 11 (wired in wave 12 from each crate's WIRING.md).
+    "dotm": "DOCX", "xltx": "XLSX", "xltm": "XLSX", "pptm": "PPTX", "potx": "PPTX", "potm": "PPTX", "ppsx": "PPTX",
+    "ppsm": "PPTX", "xhtml": "HTML", "mdown": "Markdown", "mkd": "Markdown", "text": "TXT", "sdlxlf": "XLIFF",
+    "xml": "XML", "dita": "DITA", "ditamap": "DITA", "bookmap": "DITA", "dbk": "DocBook", "docbook": "DocBook",
+    "plist": "plist", "stringsdict": "stringsdict", "mo": "MO", "gmo": "MO", "rc": "RC", "desktop": "desktop",
+    "catkeys": "catkeys", "csv": "CSV", "tsv": "TSV", "tab": "TSV",
+    "odt": "ODF", "ott": "ODF", "ods": "ODF", "ots": "ODF", "odp": "ODF", "otp": "ODF", "odg": "ODF", "otg": "ODF",
+    "idml": "IDML", "icml": "ICML", "wcml": "ICML", "mif": "MIF", "epub": "EPUB", "vsdx": "Visio", "vsdm": "Visio",
+    "xtg": "XPress Tags", "tag": "XPress Tags", "adoc": "AsciiDoc", "asciidoc": "AsciiDoc", "asc": "AsciiDoc",
+    "rst": "reStructuredText", "rest": "reStructuredText", "mdx": "MDX", "tex": "LaTeX", "latex": "LaTeX", "ltx": "LaTeX",
+    "wiki": "MediaWiki", "mediawiki": "MediaWiki", "wikitext": "MediaWiki", "dokuwiki": "DokuWiki",
+    "txml": "Wordfast TXML", "txlf": "Wordfast TXLF", "ttx": "TTX", "xlz": "XLIFF package", "wsxz": "XLIFF package",
+    "dxf": "DXF", "eml": "Email", "flprjzip": "Flare", "hhc": "HTML Help", "hhk": "HTML Help", "hhp": "HTML Help",
+    "aspx": "Server pages", "ascx": "Server pages", "jsp": "Server pages", "jspf": "Server pages",
+    "phtml": "Server pages", "shtml": "Server pages", "shtm": "Server pages", "stm": "Server pages", "erb": "Server pages",
+    "xsl": "XSLT", "xslt": "XSLT", "pdf": "PDF", "svg": "SVG", "png": "Image", "ttml": "TTML", "dfxp": "TTML",
+    "ass": "ASS", "ssa": "ASS", "scc": "SCC", "stl": "EBU STL", "stf": "STF", "sbv": "SBV", "sub": "SUB",
+    "sdlproj": "sdlproj",
 }
 ORDER = ["DOCX", "XLSX", "PPTX", "HTML", "Markdown", "JSON", "PO", "SRT", "VTT", "TXT",
          "ARB", "DTD", "Fluent", "INI", "Properties", "Apple .strings", "TOML", "YAML", "RESX", "RESJSON", "JSON5", "WXL",
-         "XAML", "xcstrings", "xcloc", "JS module", "TS (Qt or JS module)", "PHP array", "XMB", "XTB", "XLIFF"]
+         "XAML", "xcstrings", "xcloc", "JS module", "TS (Qt or JS module)", "PHP array", "XMB", "XTB", "XLIFF",
+         "XML", "DITA", "DocBook", "plist", "stringsdict", "MO", "RC", "desktop", "catkeys", "CSV", "TSV",
+         "ODF", "IDML", "ICML", "MIF", "EPUB", "Visio", "XPress Tags", "AsciiDoc", "reStructuredText", "MDX", "LaTeX",
+         "MediaWiki", "DokuWiki", "Wordfast TXML", "Wordfast TXLF", "TTX", "XLIFF package", "DXF", "Email", "Flare",
+         "HTML Help", "Server pages", "XSLT", "PDF", "SVG", "Image", "TTML", "ASS", "SCC", "EBU STL", "STF", "SBV", "SUB",
+         "sdlproj"]
 CODE = "\u00a4"
 LINE_BASED = {"txt": True, "md": True, "markdown": True}
 LOCOS_TOKEN = re.compile("\u27e6/?[a-z]?\\d+\u27e7")
@@ -112,9 +135,12 @@ def run_bl(path: Path, merged: Path) -> dict:
 
 
 def run_locos(paths) -> dict:
-    out = Path(tempfile.mkdtemp(prefix="oracle-")) / "locos.json"
-    subprocess.run([str(LOCOS_PY), str(HERE / "locos_dump.py"), str(out), *map(str, paths)], check=True,
-                   capture_output=True, timeout=1200)
+    tmp = Path(tempfile.mkdtemp(prefix="oracle-"))
+    out = tmp / "locos.json"
+    # The file list goes in a list file: a thousand paths are longer than a Windows command line.
+    (tmp / "files.txt").write_text("\n".join(map(str, paths)), encoding="utf-8")
+    subprocess.run([str(LOCOS_PY), str(HERE / "locos_dump.py"), str(out), "@" + str(tmp / "files.txt")], check=True,
+                   capture_output=True, timeout=3600)
     return json.loads(out.read_text(encoding="utf-8"))
 
 

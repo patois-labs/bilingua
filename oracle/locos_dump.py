@@ -1,6 +1,6 @@
 """Run with the Localization OS venv Python (read-only use of its filters).
 
-    python locos_dump.py OUT.json FILE [FILE ...]
+    python locos_dump.py OUT.json FILE [FILE ...]   (or @LIST: a file naming one path per line)
 
 Writes {file: {"units": [text, ...]} or {"error": ...}} where text is the unit text as LocOS makes it, with
 inline-code tokens left in place. Nothing in the LocOS tree is written; the data dir is a throwaway.
@@ -45,6 +45,9 @@ def main() -> None:
         inventory(sys.argv[2])
         return
     out_path, files = sys.argv[1], sys.argv[2:]
+    if len(files) == 1 and files[0].startswith("@"):  # a list file, one path per line
+        with open(files[0][1:], encoding="utf-8") as fh:
+            files = [ln for ln in fh.read().splitlines() if ln]
     res = {}
     for f in files:
         ext = f.rsplit(".", 1)[-1].lower()
