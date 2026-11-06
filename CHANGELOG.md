@@ -5,7 +5,7 @@ All notable changes to Bilingua. Every crate shares one version number, so one e
 versions follow [semantic versioning](https://semver.org/) (before 1.0, a minor release may break the API; each break
 is listed here).
 
-## [0.9.0] - unreleased
+## [0.9.0] - 2026-11-06
 
 The first public release.
 
