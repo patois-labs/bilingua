@@ -39,6 +39,7 @@ fn every_format_writes_a_repeated_standalone_placeholder_each_time() {
             .with_profile("locos");
         let Ok(mut base) = extract(&name, &bytes, &o) else { continue };
         let mut rep = base.clone();
+        let fmt = base.format.clone();
         let mut repeated = 0usize;
         for u in base.units.clone() {
             if !u.translate || u.segments.len() != 1 {
@@ -50,14 +51,14 @@ fn every_format_writes_a_repeated_standalone_placeholder_each_time() {
             twice.insert(at, seg.source[at].clone());
             // the plain rule still refuses the repeat
             if rep.clone().set_target(&seg.id, twice.clone()).is_ok() {
-                problems.push(format!("{name}: plain set_target took a repeated standalone tag in {}", u.id));
+                problems.push(format!("{name} [{fmt}]: plain set_target took a repeated standalone tag in {}", u.id));
             }
             if let Err(e) = profile::locos_set_target(&mut base, &seg.id, seg.source.clone()) {
-                problems.push(format!("{name}: locos_set_target refused the source of {}: {e}", u.id));
+                problems.push(format!("{name} [{fmt}]: locos_set_target refused the source of {}: {e}", u.id));
                 continue;
             }
             if let Err(e) = profile::locos_set_target(&mut rep, &seg.id, twice) {
-                problems.push(format!("{name}: locos_set_target refused a repeat in {}: {e}", u.id));
+                problems.push(format!("{name} [{fmt}]: locos_set_target refused a repeat in {}: {e}", u.id));
                 continue;
             }
             repeated += 1;
@@ -70,19 +71,19 @@ fn every_format_writes_a_repeated_standalone_placeholder_each_time() {
         let out_rep = match merge_with(&rep, &m) {
             Ok(b) => b,
             Err(e) => {
-                problems.push(format!("{name}: merge refused a repeated standalone tag: {e}"));
+                problems.push(format!("{name} [{fmt}]: merge refused a repeated standalone tag: {e}"));
                 continue;
             }
         };
         checked += repeated;
         formats.insert(base.format.clone());
         if out_rep == out_base || out_rep.len() <= out_base.len() && !name.ends_with("zip") && base.format != "mo" {
-            problems.push(format!("{name}: {repeated} repeated placeholder(s) were not written (output {} bytes, baseline {})", out_rep.len(), out_base.len()));
+            problems.push(format!("{name} [{fmt}]: {repeated} repeated placeholder(s) were not written (output {} bytes, baseline {})", out_rep.len(), out_base.len()));
             continue;
         }
         if extract(&name, &out_base, &o).is_ok() {
             if let Err(e) = extract(&name, &out_rep, &o) {
-                problems.push(format!("{name}: the merged file does not read back: {e}"));
+                problems.push(format!("{name} [{fmt}]: the merged file does not read back: {e}"));
             }
         }
     }
