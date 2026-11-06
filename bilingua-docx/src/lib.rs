@@ -11,6 +11,8 @@
 pub const SKELETON_SCHEMA: u32 = 2;
 
 mod extract;
+#[doc(hidden)]
+pub mod locos;
 mod preview;
 mod render;
 mod xml;
@@ -419,6 +421,12 @@ impl Filter for Docx {
     }
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
         bilingua_model::check_own_options(self, &opts.format_options)?;
+        if opts.is_profile(bilingua_model::profile::LOCOS) {
+            // Track D: LocOS's units and numbering (comments left out with the option off, as LocOS does)
+            let l = opts.limits();
+            bilingua_model::guard::check_input(bytes, &l)?;
+            return bilingua_model::guard::finish(locos::extract(bytes, opts)?, vec![], &l);
+        }
         let mut doc = extract_doc(bytes, opts)?;
         // Word comments are part of the document walk (as in LocOS): with the option off they stay in the
         // document as locked context, so unit ids and the skeleton do not change
@@ -432,6 +440,11 @@ impl Filter for Docx {
     }
     fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
         bilingua_model::check_own_options(self, &opts.format_options)?;
+        if let Skeleton::Binary { .. } = &doc.skeleton {
+            // a document extracted under the Localization OS profile
+            bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
+            return locos::merge(doc, opts);
+        }
         // The parts are UTF-8 XML, and the language is set on the runs this merge rewrites (translated text), so neither
         // option changes anything: an untranslated run is never rewritten.
         merge_with_report(doc).map(|(b, _)| b)

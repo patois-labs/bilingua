@@ -197,6 +197,25 @@ keeps the encoding:
   documents carry the original as a `Skeleton::Binary`. Known gap: an MXLIFF segment mixing element codes and
   `{1}` text marks numbers its tokens in LocOS's order (elements first), which `profile::tokens` renumbers by
   position.
+- Track D group B, DOCX (docx, docm, dotx, dotm): under the profile a port of LocOS's `docx_filter.py`, walk stamp 6
+  (`bilingua_docx::locos`). Units are every paragraph with text in LocOS's numbering (the body in reading order
+  with tables, content controls and text boxes, then headers, footers, footnotes, endnotes and comments), then the
+  alt text and title of each drawing (`a11y:img-alt`, `a11y:img-title`); `locos.p_index` is LocOS's `p_index`, the
+  style is the paragraph style's name ("Normal", "Heading 1"). A paragraph with more than one content run gives one
+  `r` pair per run, plain runs included; object-mode paragraphs (pictures, fields, note and comment references,
+  breaks, tracked changes, wrappers) give one `x` code per object group, numbered after the runs as LocOS numbers
+  them; `profile::tokens::to_locos_text_for("docx", ..)` now numbers docx tokens by tag id (LocOS's numbers) when
+  every id is a distinct positive number, so `⟦x3⟧` after two runs stays `x3`. A Storyline "Export to Word" file
+  gives its Translation column only; `docx.translate_comments=false` leaves the comments out, as LocOS does.
+  Merging rebuilds each translated paragraph as LocOS does and, for a target language, declares it (docDefaults
+  and the styles that had the old default get the target, untranslated runs that inherited the old default get it
+  written on them, `w:bidi` on translated paragraphs for an RTL target, `dc:language` in core.xml, `w:bCs` /
+  `w:iCs` / `w:szCs` twins on translated runs for a complex-script target); the package is saved the way
+  python-docx saves it (new `[Content_Types].xml` and relationship files, unreachable parts dropped), Strict Open
+  XML mapped back to Strict. A plain build that writes nothing, or only each unit's own text, is the upload. The
+  XML tree the XLIFF and DOCX ports share is the internal crate `bilingua-xmltree`. Approximations: the bidi
+  direction a re-created `w:bdo`/`w:dir` follows uses script blocks rather than Unicode's bidi table; tokens with
+  non-ASCII digits are not read as tokens; a part in UTF-16 or UTF-8 only.
 - `profile::lang_tag` and `profile::is_rtl` are LocOS's `html_lang` and `text_direction`.
 - LocOS export keywords are accepted and ignored for now: `docx.walk`, `xlsx.walk`, `pptx.walk`, `xlsx.table`,
   `csv.table`, `markdown.walk`, `markdown.md_walk`, `markdown.fm_keys`, `json.dialect`.

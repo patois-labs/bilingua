@@ -68,7 +68,7 @@ pub fn to_locos_text(inl: &[Inline]) -> (String, LocosMap) {
 /// Like [`to_locos_text`] with another kind letter for pairs (`r` for DOCX runs). `pair_letter` must be a
 /// lower-case ASCII letter other than `x` and `p`; anything else falls back to `g`.
 pub fn to_locos_text_as(inl: &[Inline], pair_letter: char) -> (String, LocosMap) {
-    convert(inl, pair_letter, pairs(inl))
+    convert(inl, pair_letter, pairs(inl), false)
 }
 
 /// The pair-token letter a format's LocOS filter uses (the adapter's `_PAIR_LETTER`): `r` for docx and pptx runs,
@@ -87,21 +87,48 @@ pub fn locos_pair_letter(format: &str) -> char {
 /// `placeholders_well_formed`; it is what LocOS stores.
 const LOCOS_PAIRS_BY_ID: &[&str] = &["html"];
 
+/// Formats whose tag ids are LocOS's own token numbers, which do not always follow the order of the text (DOCX:
+/// runs `r1`..`rN` first, then the object groups from `x<N+1>`): their tokens carry the id as the number.
+const LOCOS_NUMBERED_BY_ID: &[&str] = &["docx"];
+
 /// A unit's inline codes as the LocOS filter of `format` writes them: the format's pair letter
 /// ([`locos_pair_letter`]), and for the formats whose filter keeps its own tag tokens (`html`) every `Open` a
 /// pair token and every `Close` the closing token of the latest open of its id, crossing or not, an `Open` with
-/// no close a pair token with no closing one; a `Close` with no open stays an `x` token. Other formats:
-/// [`to_locos_text_as`]. [`from_locos_text`] reads both back.
+/// no close a pair token with no closing one; a `Close` with no open stays an `x` token. For the formats whose tag
+/// ids are LocOS's token numbers (`docx`) each token is numbered by its tag id when every id is a distinct
+/// positive number, else by position. Other formats: [`to_locos_text_as`]. [`from_locos_text`] reads both back.
 pub fn to_locos_text_for(format: &str, inl: &[Inline]) -> (String, LocosMap) {
     let letter = locos_pair_letter(format);
     if LOCOS_PAIRS_BY_ID.contains(&format) {
-        convert(inl, letter, pairs_by_id(inl))
+        convert(inl, letter, pairs_by_id(inl), false)
+    } else if LOCOS_NUMBERED_BY_ID.contains(&format) {
+        let partner = pairs(inl);
+        let by_id = numbered_by_id(inl, &partner);
+        convert(inl, letter, partner, by_id)
     } else {
         to_locos_text_as(inl, letter)
     }
 }
 
-fn convert(inl: &[Inline], pair_letter: char, partner: Vec<Option<usize>>) -> (String, LocosMap) {
+/// True when every token of `inl` can carry its tag id as its number: each id that starts a token (a paired
+/// `Open`, an unpaired side, a standalone code) is a positive number written without leading zeros, and no two
+/// tokens share one.
+fn numbered_by_id(inl: &[Inline], partner: &[Option<usize>]) -> bool {
+    let mut seen = std::collections::BTreeSet::new();
+    for (pos, i) in inl.iter().enumerate() {
+        let Inline::Tag { id, kind, .. } = i else { continue };
+        if *kind == TagKind::Close && partner[pos].is_some() {
+            continue;
+        }
+        let ok = !id.is_empty() && !id.starts_with('0') && id.len() <= 18 && id.bytes().all(|b| b.is_ascii_digit());
+        if !ok || !seen.insert(id.as_str()) {
+            return false;
+        }
+    }
+    true
+}
+
+fn convert(inl: &[Inline], pair_letter: char, partner: Vec<Option<usize>>, by_id: bool) -> (String, LocosMap) {
     let pair = if pair_letter.is_ascii_lowercase() && pair_letter != POINT_LETTER && pair_letter != FREE_LETTER {
         pair_letter
     } else {
@@ -130,7 +157,7 @@ fn convert(inl: &[Inline], pair_letter: char, partner: Vec<Option<usize>>) -> (S
         };
         match (kind, partner[pos]) {
             (TagKind::Open, Some(_)) => {
-                n += 1;
+                n = if by_id { id.parse().unwrap_or(n + 1) } else { n + 1 };
                 open_num.insert(pos, n);
                 map.insert(n.to_string(), code(pair, Some(display), None, false, None));
                 text.push_str(&format!("{OPEN}{pair}{n}{CLOSE}"));
@@ -143,17 +170,17 @@ fn convert(inl: &[Inline], pair_letter: char, partner: Vec<Option<usize>>) -> (S
                 text.push_str(&format!("{OPEN}/{pair}{num}{CLOSE}"));
             }
             (TagKind::Open, None) => {
-                n += 1;
+                n = if by_id { id.parse().unwrap_or(n + 1) } else { n + 1 };
                 map.insert(n.to_string(), code(POINT_LETTER, Some(display), None, false, Some(TagKind::Open)));
                 text.push_str(&format!("{OPEN}{POINT_LETTER}{n}{CLOSE}"));
             }
             (TagKind::Close, None) => {
-                n += 1;
+                n = if by_id { id.parse().unwrap_or(n + 1) } else { n + 1 };
                 map.insert(n.to_string(), code(POINT_LETTER, None, Some(display), false, Some(TagKind::Close)));
                 text.push_str(&format!("{OPEN}{POINT_LETTER}{n}{CLOSE}"));
             }
             (TagKind::Standalone, _) => {
-                n += 1;
+                n = if by_id { id.parse().unwrap_or(n + 1) } else { n + 1 };
                 let letter = if *free { FREE_LETTER } else { POINT_LETTER };
                 map.insert(n.to_string(), code(letter, Some(display), None, *free, None));
                 text.push_str(&format!("{OPEN}{letter}{n}{CLOSE}"));
@@ -386,6 +413,28 @@ pub fn is_named_placeholder(s: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn docx_tokens_carry_locos_numbers() {
+        let inl = vec![
+            Inline::tag("1", TagKind::Open, "<w:r>"),
+            Inline::text("a"),
+            Inline::tag("1", TagKind::Close, "</w:r>"),
+            Inline::tag("3", TagKind::Standalone, "object"),
+            Inline::tag("2", TagKind::Open, "<w:r>"),
+            Inline::text("b"),
+            Inline::tag("2", TagKind::Close, "</w:r>"),
+        ];
+        let (t, map) = to_locos_text_for("docx", &inl);
+        assert_eq!(t, "\u{27e6}r1\u{27e7}a\u{27e6}/r1\u{27e7}\u{27e6}x3\u{27e7}\u{27e6}r2\u{27e7}b\u{27e6}/r2\u{27e7}");
+        assert_eq!(from_locos_text(&t, &map), inl);
+        // other formats, and ids that cannot be numbers, keep the positional numbering
+        assert_eq!(to_locos_text_for("pptx", &inl).0, "\u{27e6}r1\u{27e7}a\u{27e6}/r1\u{27e7}\u{27e6}x2\u{27e7}\u{27e6}r3\u{27e7}b\u{27e6}/r3\u{27e7}");
+        let dup = vec![Inline::tag("1", TagKind::Standalone, "o"), Inline::tag("1", TagKind::Standalone, "o")];
+        assert_eq!(to_locos_text_for("docx", &dup).0, "\u{27e6}x1\u{27e7}\u{27e6}x2\u{27e7}");
+        let odd = vec![Inline::tag("x", TagKind::Standalone, "o"), Inline::tag("07", TagKind::Standalone, "o")];
+        assert_eq!(to_locos_text_for("docx", &odd).0, "\u{27e6}x1\u{27e7}\u{27e6}x2\u{27e7}");
+    }
 
     fn sample() -> Vec<Inline> {
         vec![
