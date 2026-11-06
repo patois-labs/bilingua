@@ -1,0 +1,77 @@
+{
+ "parse": {
+  "columns": "source=en,target.de=de,context=Notes",
+  "source_locale": "en",
+  "target_locales": [
+   "de"
+  ]
+ },
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Total:",
+   "style": "",
+   "note": ""
+  },
+  {
+   "p_index": 1,
+   "text": "#VALUE!",
+   "style": "",
+   "note": ""
+  },
+  {
+   "p_index": 2,
+   "text": "Open the door",
+   "style": "",
+   "note": ""
+  },
+  {
+   "p_index": 3,
+   "text": "Save file",
+   "style": "",
+   "note": ""
+  },
+  {
+   "p_index": 4,
+   "text": "Hello",
+   "style": "",
+   "note": "Notes: 2958466"
+  },
+  {
+   "p_index": 5,
+   "text": "Zwei",
+   "style": "",
+   "note": "Notes: =UPPER(A2)"
+  },
+  {
+   "p_index": 6,
+   "text": "Save file",
+   "style": "",
+   "note": "Notes: Cancel"
+  },
+  {
+   "p_index": 7,
+   "text": "Total:",
+   "style": "",
+   "note": "Notes: Save file"
+  }
+ ],
+ "error": false,
+ "builds": [
+  {
+   "name": "b",
+   "locale": "de",
+   "map": {
+    "0": "T Total:",
+    "1": "T #VALUE!",
+    "2": "T Open the door",
+    "3": "T Save file",
+    "4": "T Hello",
+    "5": "Zwei",
+    "6": "T Save file",
+    "7": "T Total:"
+   },
+   "file": "fuzz_010.b.xlsx"
+  }
+ ]
+}

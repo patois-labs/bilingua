@@ -1,0 +1,56 @@
+{
+ "parse": {
+  "columns": "source=1,target=2,context=3,key=4",
+  "source_locale": "en-US",
+  "target_locales": [
+   "de-DE"
+  ]
+ },
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Open the door",
+   "style": "",
+   "note": ""
+  },
+  {
+   "p_index": 1,
+   "text": "x",
+   "style": "",
+   "note": ""
+  },
+  {
+   "p_index": 2,
+   "text": "x",
+   "style": "",
+   "note": "Key: a&b | Comment: 60"
+  },
+  {
+   "p_index": 3,
+   "text": " Padded ",
+   "style": "",
+   "note": ""
+  },
+  {
+   "p_index": 4,
+   "text": "Ünïcödé",
+   "style": "",
+   "note": ""
+  }
+ ],
+ "error": false,
+ "builds": [
+  {
+   "name": "b",
+   "locale": "de-DE",
+   "map": {
+    "0": "Open the door",
+    "1": "T x",
+    "2": "T x",
+    "3": "T  Padded ",
+    "4": "T Ünïcödé"
+   },
+   "file": "fuzz_047.b.xlsx"
+  }
+ ]
+}

@@ -1,0 +1,63 @@
+{
+ "parse": {
+  "columns": "source=1,target=2,context=3,key=4",
+  "source_locale": "en",
+  "target_locales": [
+   "de"
+  ]
+ },
+ "units": [
+  {
+   "p_index": 0,
+   "text": "x",
+   "style": "",
+   "note": "Key: Save file | Notes: 2 days, 12:00:00"
+  },
+  {
+   "p_index": 1,
+   "text": "Cancel",
+   "style": "",
+   "note": ""
+  },
+  {
+   "p_index": 2,
+   "text": "a&b",
+   "style": "",
+   "note": ""
+  },
+  {
+   "p_index": 3,
+   "text": " Padded ",
+   "style": "",
+   "note": ""
+  },
+  {
+   "p_index": 4,
+   "text": "a&b",
+   "style": "",
+   "note": "Key: False | Notes: 1.5e+16"
+  },
+  {
+   "p_index": 5,
+   "text": "Hello",
+   "style": "",
+   "note": "Notes: Cancel"
+  }
+ ],
+ "error": false,
+ "builds": [
+  {
+   "name": "b",
+   "locale": "de",
+   "map": {
+    "0": "T x",
+    "1": "T Cancel",
+    "2": "T a&b",
+    "3": "T  Padded ",
+    "4": "T a&b",
+    "5": "T Hello"
+   },
+   "file": "fuzz_026.b.xlsx"
+  }
+ ]
+}

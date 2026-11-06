@@ -1,0 +1,35 @@
+{
+ "parse": {
+  "columns": "header=auto",
+  "source_locale": "en",
+  "target_locales": [
+   "de-DE"
+  ]
+ },
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Zwei",
+   "style": "",
+   "note": ""
+  },
+  {
+   "p_index": 1,
+   "text": "Total:",
+   "style": "",
+   "note": ""
+  }
+ ],
+ "error": false,
+ "builds": [
+  {
+   "name": "b",
+   "locale": "de-DE",
+   "map": {
+    "0": "Zwei",
+    "1": "T Total:"
+   },
+   "file": "fuzz_046.b.xlsx"
+  }
+ ]
+}

@@ -21,8 +21,10 @@
 
 mod comments;
 mod dom;
+mod formula;
 mod strict;
 mod table;
+mod values;
 #[cfg(test)]
 mod tests;
 #[cfg(test)]
@@ -194,7 +196,11 @@ struct Package {
     /// Members dropped from the package (the calc chain), and whether a formula was overwritten.
     removed: BTreeSet<String>,
     formula_removed: bool,
+    /// Per sheet, for `unshare`: the cells by element and the shared formulas by group.
+    formula_index: HashMap<String, FormulaIndex>,
 }
+
+type FormulaIndex = (HashMap<usize, (i64, i64)>, HashMap<String, Vec<usize>>);
 
 /// (id, type suffix, resolved path) of each internal relationship, in document order (a later duplicate id
 /// replaces the value, as in a Python dict).
@@ -236,6 +242,7 @@ impl Package {
             rows: HashMap::new(),
             removed: BTreeSet::new(),
             formula_removed: false,
+            formula_index: HashMap::new(),
         };
         let wb = pkg.main_part()?;
         pkg.workbook = wb.clone();
@@ -440,7 +447,7 @@ impl Package {
         self.dirty.insert(path.clone());
         if let Some(f) = self.roots[&path].find(c, M, "f") {
             // a formula overwritten by text (a column-mode target cell): see `unshare`
-            self.unshare(&path, c, f);
+            self.unshare(&path, c, f)?;
             self.formula_removed = true;
         }
         let d = self.roots.get_mut(&path).expect("sheet part");

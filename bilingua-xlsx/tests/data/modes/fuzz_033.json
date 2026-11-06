@@ -1,0 +1,49 @@
+{
+ "parse": {
+  "columns": "source=en,target.de=de,context=Notes",
+  "source_locale": "en",
+  "target_locales": [
+   "de"
+  ]
+ },
+ "units": [
+  {
+   "p_index": 0,
+   "text": "x",
+   "style": "",
+   "note": "Notes: =A4  +  1"
+  },
+  {
+   "p_index": 1,
+   "text": "Save file",
+   "style": "",
+   "note": ""
+  },
+  {
+   "p_index": 2,
+   "text": "Cancel",
+   "style": "",
+   "note": "Notes: 1"
+  },
+  {
+   "p_index": 3,
+   "text": "Open the door",
+   "style": "",
+   "note": "Notes: 7"
+  }
+ ],
+ "error": false,
+ "builds": [
+  {
+   "name": "b",
+   "locale": "de",
+   "map": {
+    "0": "T x",
+    "1": "T Save file",
+    "2": "T Cancel",
+    "3": "T Open the door"
+   },
+   "file": "fuzz_033.b.xlsx"
+  }
+ ]
+}

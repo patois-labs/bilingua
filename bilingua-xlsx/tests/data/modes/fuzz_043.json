@@ -1,0 +1,35 @@
+{
+ "parse": {
+  "columns": "source=1,target=2,context=3,key=4",
+  "source_locale": "en-US",
+  "target_locales": [
+   "de"
+  ]
+ },
+ "units": [
+  {
+   "p_index": 0,
+   "text": "#N/A",
+   "style": "",
+   "note": ""
+  },
+  {
+   "p_index": 1,
+   "text": "#N/A",
+   "style": "",
+   "note": ""
+  }
+ ],
+ "error": false,
+ "builds": [
+  {
+   "name": "b",
+   "locale": "de",
+   "map": {
+    "0": "T #N/A",
+    "1": "T #N/A"
+   },
+   "file": "fuzz_043.b.xlsx"
+  }
+ ]
+}

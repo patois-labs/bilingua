@@ -1,0 +1,50 @@
+{
+ "parse": {
+  "columns": "header=auto",
+  "source_locale": "en",
+  "target_locales": [
+   "de",
+   "fr"
+  ]
+ },
+ "units": [
+  {
+   "p_index": 0,
+   "text": "日本語",
+   "style": "",
+   "note": ""
+  },
+  {
+   "p_index": 1,
+   "text": " Padded ",
+   "style": "",
+   "note": "Notes: =UPPER(A8) | Key: #N/A"
+  },
+  {
+   "p_index": 2,
+   "text": "Ünïcödé",
+   "style": "",
+   "note": ""
+  },
+  {
+   "p_index": 3,
+   "text": "Open the door",
+   "style": "",
+   "note": ""
+  }
+ ],
+ "error": false,
+ "builds": [
+  {
+   "name": "b",
+   "locale": "de",
+   "map": {
+    "0": "T 日本語",
+    "1": "T  Padded ",
+    "2": "T Ünïcödé",
+    "3": "T Open the door"
+   },
+   "file": "fuzz_004.b.xlsx"
+  }
+ ]
+}

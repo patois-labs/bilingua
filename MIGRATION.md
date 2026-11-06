@@ -240,9 +240,11 @@ keeps the encoding:
   Column mode needs no profile: it uses this same engine either way (the document carries the original package),
   the profile only decides the merge options (`merge_with_report` uses the plain ones for a document read without
   it). Text boxes and comments are not units in column mode, as in LocOS. `xlsx.table` (LocOS's stored plan) is still
-  accepted and ignored: the plan is made again from `xlsx.columns` and kept on the units. Known small differences:
-  header detection and notes see a date cell as its serial number, a float as Rust prints it, and a shared-formula
-  dependent as `=` (LocOS shows the translated formula). Comment units: under the profile `xlsx.translate_comments`
+  accepted and ignored: the plan is made again from `xlsx.columns` and kept on the units. Header detection, notes
+  and the filled-target check read cells as openpyxl does: numbers as Python prints them, dates, times and durations
+  from the number format and the workbook's epoch, ISO dates, shared-formula dependents moved from their master (a
+  port of openpyxl's formula tokenizer and translator), merged cells empty; a workbook openpyxl cannot load (an
+  unknown style index, a bad number, a shared formula that cannot be moved) is refused, as in LocOS. Comment units: under the profile `xlsx.translate_comments`
   now adds LocOS's comment units after the text boxes, numbered `1000000 + place in the comment walk` (threaded
   comments of a sheet, then its notes; style `comment`, text trimmed, a classic note without Excel's bold `Author:`
   run, the `[Threaded comment]` placeholder note skipped). The merge patches the comment parts in place (a threaded

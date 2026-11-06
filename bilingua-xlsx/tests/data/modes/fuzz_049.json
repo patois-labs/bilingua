@@ -1,0 +1,35 @@
+{
+ "parse": {
+  "columns": "source=en,target.de=de,context=Notes",
+  "source_locale": "en-US",
+  "target_locales": [
+   "de"
+  ]
+ },
+ "units": [
+  {
+   "p_index": 0,
+   "text": "日本語",
+   "style": "",
+   "note": "Notes: True"
+  },
+  {
+   "p_index": 1,
+   "text": "x",
+   "style": "",
+   "note": "Notes: 2024-02-29"
+  }
+ ],
+ "error": false,
+ "builds": [
+  {
+   "name": "b",
+   "locale": "de",
+   "map": {
+    "0": "T 日本語",
+    "1": "x"
+   },
+   "file": "fuzz_049.b.xlsx"
+  }
+ ]
+}

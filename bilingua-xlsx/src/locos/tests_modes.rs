@@ -139,6 +139,79 @@ fn column_mode_without_the_profile_writes_the_same_cells() {
     }
 }
 
+/// The random workbooks of `oracle/locos_xlsx_columns_fuzz.py` (seed 1206): dates, durations, floats, shared
+/// formulas, merged areas, cells without an address; units, notes, refusals and builds as LocOS has them.
+#[test]
+fn column_mode_random_workbooks_match_locos() {
+    let mut names: Vec<String> = std::fs::read_dir(dir())
+        .unwrap()
+        .filter_map(|e| e.ok()?.file_name().into_string().ok())
+        .filter(|n| n.starts_with("fuzz_") && n.ends_with(".json"))
+        .map(|n| n.trim_end_matches(".json").to_string())
+        .collect();
+    names.sort();
+    assert!(names.len() >= 40, "the fuzz cases are missing");
+    for n in &names {
+        check(n, true);
+        check(n, false);
+    }
+}
+
+#[test]
+fn column_mode_survives_hostile_workbooks() {
+    let base = data("table_basic.xlsx");
+    let run = |bytes: &[u8], cols: &str, lang: &str| -> Result<Vec<u8>, Error> {
+        let o = ExtractOptions::new().with_format_option("xlsx.columns", cols).with_target_lang(Some(lang.to_string()));
+        let mut d = Filter::extract(&crate::Xlsx::default(), bytes, &o)?;
+        for i in 0..d.units.len() {
+            let id = d.units[i].segments[0].id.clone();
+            d.set_target(&id, vec![Inline::text("T")]).unwrap();
+        }
+        crate::merge_with_report(&d).map(|r| r.0)
+    };
+    // garbage mappings: an error or a plan, never a panic
+    for cols in ["source=", "target.=x", "source=1,target=999", "source=1,target=1000", "source=0", "source=99999999999999999999", "source=en,target.d;e=de-DE,target.%3B=2", "=,=,=", "source=\u{0}", "header=maybe"] {
+        let _ = run(&base, cols, "de-DE");
+    }
+    // a target column far right, a row far down: the dimension grows, nothing else
+    let out = run(&base, "source=1,target=1000", "de-DE").unwrap();
+    let xml = entry(&out, "xl/worksheets/sheet1.xml").unwrap();
+    assert!(xml.contains("ALL2") && xml.contains("<dimension ref=\"A1:ALL8\""), "{xml}");
+    let wide = |rows: &str| {
+        let sheet = format!("<worksheet xmlns=\"{M}\"><dimension ref=\"A1\"/><sheetData>{rows}</sheetData></worksheet>");
+        let e: Vec<(String, String)> = entries(&base)
+            .into_iter()
+            .map(|(n, b)| {
+                let body = if n == "xl/worksheets/sheet1.xml" { sheet.clone() } else { String::from_utf8(b).unwrap() };
+                (n, body)
+            })
+            .collect();
+        crate::fixtures::zip(&e.iter().map(|(n, b)| (n.as_str(), b.clone())).collect::<Vec<_>>())
+    };
+    let far = wide("<row r=\"1\"><c r=\"A1\" t=\"inlineStr\"><is><t>en-US</t></is></c><c r=\"ZZZ1\" t=\"inlineStr\"><is><t>de-DE</t></is></c></row><row r=\"1048576\"><c r=\"A1048576\" t=\"inlineStr\"><is><t>Last</t></is></c></row><row r=\"99999999\"><c r=\"A99999999\" t=\"inlineStr\"><is><t>Past</t></is></c></row>");
+    let out = run(&far, "source=en-US,target.de-DE=de-DE", "de-DE").unwrap();
+    assert!(entry(&out, "xl/worksheets/sheet1.xml").unwrap().contains("ZZZ99999999"));
+    // many rows over a sheet 18,278 columns wide stay linear (one wide row is read, the rest by their notes)
+    let mut rows = String::from("<row r=\"1\"><c r=\"A1\" t=\"inlineStr\"><is><t>en-US</t></is></c><c r=\"ZZZ1\" t=\"inlineStr\"><is><t>de-DE</t></is></c></row>");
+    for r in 2..20_000 {
+        rows.push_str(&format!("<row r=\"{r}\"><c r=\"A{r}\" t=\"inlineStr\"><is><t>Row {r}</t></is></c></row>"));
+    }
+    let t = std::time::Instant::now();
+    run(&wide(&rows), "source=en-US,target.de-DE=de-DE", "de-DE").unwrap();
+    assert!(t.elapsed().as_secs() < 20, "{:?}", t.elapsed());
+    // a huge merged area is refused, pathological formulas are errors or text, never a panic
+    let merged = wide("<row r=\"1\"><c r=\"A1\" t=\"inlineStr\"><is><t>en-US</t></is></c></row></sheetData><mergeCells><mergeCell ref=\"B2:ZZZ1048576\"/></mergeCells><sheetData>");
+    assert!(run(&merged, "source=en-US,target=2", "de-DE").is_err());
+    for f in ["(((((((((((((((((((", "\"\"\"\"\"\"\"\"\"", "[[[[[[[[[[[", "'''''''", "#", "A1:B2:C3:$D$4:Z", "{1,2;3,4}", "1E+1E+1E-", "A1\n\n  B2", "ZZZZ9999999:A0"] {
+        let body = format!("<row r=\"1\"><c r=\"A1\" t=\"inlineStr\"><is><t>en-US</t></is></c><c r=\"B1\" t=\"inlineStr\"><is><t>de-DE</t></is></c></row><row r=\"2\"><c r=\"A2\" t=\"inlineStr\"><is><t>Hi</t></is></c><c r=\"B2\"><f t=\"shared\" ref=\"B2:B3\" si=\"0\">{f}</f></c></row><row r=\"3\"><c r=\"A3\" t=\"inlineStr\"><is><t>Ho</t></is></c><c r=\"B3\"><f t=\"shared\" si=\"0\"/></c></row>", f = f.replace('&', "&amp;").replace('<', "&lt;"));
+        let _ = run(&wide(&body), "source=en-US,target.de-DE=de-DE", "de-DE");
+    }
+    let long = format!("<row r=\"1\"><c r=\"A1\" t=\"inlineStr\"><is><t>en-US</t></is></c><c r=\"B1\" t=\"inlineStr\"><is><t>de-DE</t></is></c></row><row r=\"2\"><c r=\"A2\" t=\"inlineStr\"><is><t>Hi</t></is></c><c r=\"B2\"><f t=\"shared\" ref=\"B2:B3\" si=\"0\">{}</f></c></row><row r=\"3\"><c r=\"A3\" t=\"inlineStr\"><is><t>Ho</t></is></c><c r=\"B3\"><f t=\"shared\" si=\"0\"/></c></row>", "A1+[x]+'s'!B2+ ".repeat(20_000));
+    let t = std::time::Instant::now();
+    run(&wide(&long), "source=en-US,target.de-DE=de-DE", "de-DE").unwrap();
+    assert!(t.elapsed().as_secs() < 20, "{:?}", t.elapsed());
+}
+
 #[test]
 fn column_mode_documents_carry_the_original_and_merge_through_the_report_function() {
     let info = case("table_basic");

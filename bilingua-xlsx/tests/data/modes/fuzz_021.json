@@ -1,0 +1,13 @@
+{
+ "parse": {
+  "columns": "header=auto",
+  "source_locale": "en",
+  "target_locales": [
+   "de-DE"
+  ]
+ },
+ "units": [],
+ "error": true,
+ "builds": [],
+ "message": "ColumnMappingError: The column mapping matches no sheet in this workbook (check the source= column)."
+}

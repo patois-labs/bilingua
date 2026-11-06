@@ -1,0 +1,13 @@
+{
+ "parse": {
+  "columns": "source=1,target=6,context=3,header=yes",
+  "source_locale": "en-US",
+  "target_locales": [
+   "de-DE"
+  ]
+ },
+ "units": [],
+ "error": true,
+ "builds": [],
+ "message": "InputLimitError: This XLSX file has invalid spreadsheet XML. Save it again in Excel."
+}

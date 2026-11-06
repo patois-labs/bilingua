@@ -12,6 +12,7 @@
 //! plan. Text boxes and comments are not units in column mode.
 
 use super::*;
+use super::{formula, values};
 use bilingua_csv::plan::{self, Plan};
 
 /// `Unit::hidden` key: `sheet,row,col` of the source cell.
@@ -42,71 +43,187 @@ pub fn report_options(doc: &Document) -> MergeOptions {
     }
 }
 
+/// The sheet's target columns, `locale=column` pairs; a locale is percent-escaped so `;`, `=` and `%` in it survive.
 fn encode_targets(p: &Plan) -> String {
-    p.targets.iter().map(|(l, c)| format!("{l}={c}")).collect::<Vec<_>>().join(";")
+    let esc = |l: &str| l.replace('%', "%25").replace(';', "%3B").replace('=', "%3D");
+    p.targets.iter().map(|(l, c)| format!("{}={c}", esc(l))).collect::<Vec<_>>().join(";")
 }
 
 fn decode_targets(s: &str) -> Vec<(String, usize)> {
-    s.split(';').filter_map(|part| part.rsplit_once('=')).filter_map(|(l, c)| Some((l.to_string(), c.parse().ok()?))).collect()
+    let unesc = |l: &str| l.replace("%3D", "=").replace("%3B", ";").replace("%25", "%");
+    s.split(';').filter_map(|part| part.rsplit_once('=')).filter_map(|(l, c)| Some((unesc(l), c.parse().ok()?))).collect()
 }
 
-/// The text of a cell as openpyxl's `str(value)` has it, for header detection and notes: a number or a formula is
-/// its text, a boolean `True` / `False`. Also whether the value is a string (not a formula).
-fn cell_str(d: &Dom, c: usize, sst: &[String], name: &str) -> Result<(String, bool), Error> {
-    if let Some(v) = cell_value(d, c, sst, name)? {
-        return Ok((v, true));
+/// Merged areas larger than this are refused (LocOS's guard refuses a workbook whose cells and merged areas pass
+/// 500,000).
+const MAX_MERGED_CELLS: i64 = 1_000_000;
+
+/// What column mode reads in the workbook once: the shared strings and the number formats.
+pub(super) struct Ctx {
+    sst: Vec<String>,
+    formats: values::Formats,
+}
+
+impl Ctx {
+    pub(super) fn load(pkg: &mut Package) -> Result<Ctx, Error> {
+        Ok(Ctx { sst: pkg.string_table()?, formats: values::Formats::load(pkg)? })
     }
+}
+
+/// A worksheet as openpyxl loads it, for column mode: `str(cell.value)` of every cell (merged cells other than an
+/// area's first are empty), whether the value is a string, how wide the sheet is and which rows have cells.
+pub(super) struct View {
+    vals: HashMap<(i64, i64), (String, bool)>,
+    width: i64,
+    rows: Vec<i64>,
+}
+
+/// One cell's value (`WorkSheetParser.parse_cell`), `shared` holding the sheet's shared-formula masters so far.
+fn parse_cell(d: &Dom, c: usize, key: (i64, i64), ctx: &Ctx, shared: &mut HashMap<Option<String>, (String, (i64, i64))>, name: &str) -> Result<(String, bool), Error> {
+    let style = ctx.formats.style_of(d.get(c, "s"), name)?;
+    let has_r = d.get(c, "r").is_some_and(|r| !r.is_empty());
+    let t = d.get(c, "t").unwrap_or("n");
     if let Some(f) = d.find(c, M, "f") {
-        return Ok((format!("={}", d.text(f).unwrap_or_default()), false));
-    }
-    let v = d.findtext(c, M, "v").unwrap_or_default();
-    if v.is_empty() {
-        return Ok((String::new(), false));
-    }
-    let out = match d.get(c, "t").unwrap_or("n") {
-        "n" => {
-            if v.contains(['.', 'E', 'e']) {
-                match bilingua_model::py_strip(&v).replace('_', "").parse::<f64>() {
-                    Ok(f) if f.is_finite() && f.fract() == 0.0 && f.abs() < 1e16 => format!("{f:.1}"),
-                    Ok(f) => format!("{f}"),
-                    Err(_) => v,
-                }
-            } else {
-                match py_int_parts(&v) {
-                    Some((neg, digits)) => {
-                        let t = digits.trim_start_matches('0');
-                        if t.is_empty() {
-                            "0".to_string()
-                        } else if neg {
-                            format!("-{t}")
-                        } else {
-                            t.to_string()
+        let value = format!("={}", d.text(f).unwrap_or_default());
+        return Ok(match d.get(f, "t") {
+            // openpyxl makes these an ArrayFormula / DataTableFormula object, not a string
+            Some("array") | Some("dataTable") => (value, false),
+            Some("shared") => {
+                let si = d.get(f, "si").map(str::to_string);
+                if let Some((master, origin)) = shared.get(&si) {
+                    let moved = formula::translate(master, *origin, has_r.then_some(key)).map_err(|_| invalid(name))?;
+                    (moved, true)
+                } else {
+                    if value != "=" {
+                        if !has_r || !formula::parses(&value) {
+                            return Err(invalid(name));
                         }
+                        shared.insert(si, (value.clone(), key));
                     }
-                    None => v,
+                    (value, true)
                 }
             }
+            _ => (value, true),
+        });
+    }
+    if t == "inlineStr" {
+        return Ok(match d.find(c, M, "is") {
+            Some(is) => (rich_content(d, is), true),
+            None => (String::new(), false),
+        });
+    }
+    let Some(v) = d.findtext(c, M, "v").filter(|v| !v.is_empty()) else { return Ok((String::new(), false)) };
+    Ok(match t {
+        "n" => {
+            let n = values::cast_number(&v).ok_or_else(|| invalid(name))?;
+            (ctx.formats.number_str(n, &v, style), false)
+        }
+        "s" => {
+            // Python indexing: a negative index counts from the end
+            let i = py_int(&v).ok_or_else(|| invalid(name))?;
+            let at = if i < 0 { ctx.sst.len() as i64 + i } else { i };
+            if at < 0 || at as usize >= ctx.sst.len() {
+                return Err(invalid(name));
+            }
+            (ctx.sst[at as usize].clone(), true)
         }
         "b" => {
-            if py_int_parts(&v).is_some_and(|(_, dg)| dg.trim_start_matches('0').is_empty()) {
-                "False".into()
-            } else {
-                "True".into()
-            }
+            let (_, digits) = py_int_parts(&v).ok_or_else(|| invalid(name))?;
+            let zero = values::ascii_digits(&digits).trim_start_matches('0').is_empty();
+            ((if zero { "False" } else { "True" }).to_string(), false)
         }
-        _ => v,
-    };
-    Ok((out, false))
+        "d" => (values::from_iso(&v, name)?, false),
+        // "str", an error value ("#N/A") and any type openpyxl does not know: the text as it is
+        _ => (v, true),
+    })
 }
 
-/// One row as strings, as wide as the sheet (`[_cell_str(c.value) for c in row]`).
-fn row_values(pkg: &Package, path: &str, row: i64, width: i64, sst: &[String]) -> Result<Vec<String>, Error> {
-    let d = &pkg.roots[path];
-    let mut out = vec![String::new(); width as usize];
-    for (&(_, col), &c) in pkg.cells[path].range((row, 0)..=(row, i64::MAX)) {
-        out[(col - 1) as usize] = cell_str(d, c, sst, path)?.0;
+/// `(row, column)` of a merged area's corner (`$` allowed).
+fn merge_corner(r: &str, name: &str) -> Result<(i64, i64), Error> {
+    let k = coord(r, name)?;
+    if k.0 < 1 {
+        return Err(invalid(name));
     }
-    Ok(out)
+    Ok(k)
+}
+
+impl View {
+    /// Reads every cell of the sheet in document order, as openpyxl does (an error where openpyxl fails to load).
+    pub(super) fn build(pkg: &mut Package, path: &str, ctx: &Ctx) -> Result<View, Error> {
+        pkg.ensure_index(path)?;
+        let d = &pkg.roots[path];
+        let mut vals: HashMap<(i64, i64), (String, bool)> = HashMap::new();
+        let mut shared = HashMap::new();
+        let mut row_n = 0i64;
+        for row in d.iter_tag(d.root, M, "row") {
+            row_n = match d.get(row, "r") {
+                Some(r) => row_number(r, path)?,
+                None => row_n + 1,
+            };
+            let mut col_n = 0i64;
+            for c in d.element_children(row) {
+                let key = match d.get(c, "r").filter(|r| !r.is_empty()) {
+                    Some(r) => {
+                        let k = coord(r, path)?;
+                        col_n = k.1;
+                        k
+                    }
+                    None => {
+                        col_n += 1;
+                        (row_n, col_n)
+                    }
+                };
+                let v = parse_cell(d, c, key, ctx, &mut shared, path)?;
+                vals.insert(key, v);
+            }
+        }
+        let mut width = vals.keys().map(|k| k.1).max().unwrap_or(0);
+        // merged areas: every cell but the first is an empty MergedCell (`_clean_merge_range`); the last
+        // mergeCells element is the one openpyxl keeps
+        if let Some(list) = d.findall(d.root, M, "mergeCells").last().copied() {
+            let mut area = 0i64;
+            for m in d.findall(list, M, "mergeCell") {
+                let r = d.get(m, "ref").ok_or_else(|| invalid(path))?;
+                let (a, b) = match r.split_once(':') {
+                    Some((a, b)) => (merge_corner(a, path)?, merge_corner(b, path)?),
+                    None => {
+                        let k = merge_corner(r, path)?;
+                        (k, k)
+                    }
+                };
+                if a.0 > b.0 || a.1 > b.1 {
+                    return Err(invalid(path));
+                }
+                let n = (b.0 - a.0 + 1) * (b.1 - a.1 + 1);
+                area += n;
+                if area > MAX_MERGED_CELLS {
+                    return Err(bad(format!("This XLSX file merges more than {MAX_MERGED_CELLS} cells. Split it into smaller files.")));
+                }
+                if n > 1 {
+                    width = width.max(b.1);
+                }
+                for row in a.0..=b.0 {
+                    for col in a.1..=b.1 {
+                        if (row, col) != a {
+                            vals.insert((row, col), (String::new(), false));
+                        }
+                    }
+                }
+            }
+        }
+        let mut rows: Vec<i64> = pkg.cells[path].keys().map(|k| k.0).collect();
+        rows.dedup();
+        Ok(View { vals, width, rows })
+    }
+
+    fn str_at(&self, row: i64, col: i64) -> &str {
+        self.vals.get(&(row, col)).map_or("", |v| v.0.as_str())
+    }
+
+    /// The row as wide as `len` (`[_cell_str(c.value) for c in row]`, cut).
+    fn row(&self, row: i64, len: i64) -> Vec<String> {
+        (1..=len.min(self.width)).map(|c| self.str_at(row, c).to_string()).collect()
+    }
 }
 
 /// Extracts a workbook in column mode.
@@ -127,31 +244,30 @@ pub(super) fn extract(bytes: &[u8], opts: &ExtractOptions, xo: &crate::XlsxOptio
         }
     }
     let locos_profile = opts.is_profile(profile::LOCOS);
-    let sst = pkg.string_table()?;
+    let ctx = Ctx::load(&mut pkg)?;
+    // openpyxl loads every worksheet before the walk: a sheet it cannot read refuses the workbook
+    let mut views = Vec::new();
+    for path in pkg.sheets.clone() {
+        views.push(View::build(&mut pkg, &path, &ctx)?);
+    }
     let mut units: Vec<Unit> = Vec::new();
     let mut fits = false;
-    for (n, path) in pkg.sheets.clone().iter().enumerate() {
-        pkg.ensure_index(path)?;
-        let (width, rows) = {
-            let cells = &pkg.cells[path];
-            let Some(width) = cells.keys().map(|k| k.1).max() else { continue };
-            let mut rows: Vec<i64> = cells.keys().map(|k| k.0).collect();
-            rows.dedup();
-            (width, rows)
-        };
+    for (n, (path, view)) in pkg.sheets.clone().iter().zip(&views).enumerate() {
         let mut plan: Option<Plan> = None;
-        let mut planned = false;
         let mut header_seen = false;
-        for row in rows {
-            let values = row_values(&pkg, path, row, width, &sst)?;
-            if !planned {
-                if values.iter().all(|v| bilingua_model::py_strip(v).is_empty()) {
+        let note_len = |p: &Plan| p.notes.iter().map(|(_, i)| *i as i64 + 1).max().unwrap_or(0);
+        for &row in &view.rows {
+            if plan.is_none() {
+                let blank = pkg.cells[path].range((row, 0)..=(row, i64::MAX)).all(|(k, _)| bilingua_model::py_strip(view.str_at(k.0, k.1)).is_empty());
+                if blank {
                     continue;
                 }
-                planned = true;
-                plan = plan::resolve(&spec, &values, values.len(), &source_locale, &targets).ok();
-                match &plan {
-                    Some(p) if !p.inplace => fits = true,
+                let first = view.row(row, view.width);
+                match plan::resolve(&spec, &first, first.len(), &source_locale, &targets) {
+                    Ok(p) if !p.inplace => {
+                        fits = true;
+                        plan = Some(p);
+                    }
                     _ => break,
                 }
             }
@@ -160,14 +276,16 @@ pub(super) fn extract(bytes: &[u8], opts: &ExtractOptions, xo: &crate::XlsxOptio
                 header_seen = true;
                 continue;
             }
-            let Some(s) = p.source.filter(|&s| (s as i64) < width) else { continue };
-            let Some(&c) = pkg.cells[path].get(&(row, s as i64 + 1)) else { continue };
-            let Some(value) = cell_value(&pkg.roots[path], c, &sst, path)?.filter(|v| plan::is_translatable(v)) else { continue };
+            let Some(s) = p.source.filter(|&s| (s as i64) < view.width) else { continue };
+            let Some((value, true)) = view.vals.get(&(row, s as i64 + 1)).cloned() else { continue };
+            if !plan::is_translatable(&value) {
+                continue;
+            }
             let idx = units.len();
             guard::check_unit_count(idx + 1, &l)?;
             let mut u = Unit::new(idx.to_string(), vec![Inline::text(value)]);
             u.context = UnitContext::new().with_kind("cell").with_key(format!("{}{row}", col_letters(s as i64 + 1))).with_location(path.clone());
-            u.context.notes = plan::note_parts(p, &values);
+            u.context.notes = plan::note_parts(p, &view.row(row, note_len(p)));
             u.context.extra.insert(profile::P_INDEX.to_string(), idx.to_string());
             u.hidden.insert(KEY.to_string(), idx.to_string());
             u.hidden.insert(XC.to_string(), format!("{n},{row},{}", s + 1));
@@ -188,22 +306,25 @@ pub(super) fn extract(bytes: &[u8], opts: &ExtractOptions, xo: &crate::XlsxOptio
     guard::finish(doc, vec![], &l)
 }
 
-/// Writes the translations of a column-mode document (`_rebuild_table`).
+/// Writes the translations of a column-mode document (`_rebuild_table`). Values are read as openpyxl read the
+/// original (each sheet's view is taken before its first write).
 pub(super) fn apply(pkg: &mut Package, doc: &Document, texts: &BTreeMap<usize, String>) -> Result<(), Error> {
-    let sst = pkg.string_table()?;
+    let ctx = Ctx::load(pkg)?;
+    let mut views: HashMap<usize, View> = HashMap::new();
     for u in &doc.units {
         let Some(xc) = u.hidden(XC) else { continue };
         let Some(tr) = u.hidden(KEY).and_then(|k| k.parse::<usize>().ok()).and_then(|k| texts.get(&k)) else { continue };
         let mut it = xc.split(',').map(|x| x.parse::<i64>().ok());
         let (Some(Some(sheet)), Some(Some(row)), Some(Some(col))) = (it.next(), it.next(), it.next()) else { continue };
-        let tr = xml_target_text(tr);
+        let Some(path) = usize::try_from(sheet).ok().and_then(|s| pkg.sheets.get(s)).cloned() else { continue };
         let sheet = sheet as usize;
-        let path = pkg.sheets[sheet].clone();
-        pkg.ensure_index(&path)?;
-        let value = match pkg.cells[&path].get(&(row, col)) {
-            Some(&c) => cell_str(&pkg.roots[&path], c, &sst, &path)?.0,
-            None => String::new(),
-        };
+        let tr = xml_target_text(tr);
+        if !views.contains_key(&sheet) {
+            let v = View::build(pkg, &path, &ctx)?;
+            views.insert(sheet, v);
+        }
+        let view = &views[&sheet];
+        let value = view.str_at(row, col).to_string();
         let p = Plan { targets: decode_targets(u.hidden(XT).unwrap_or("")), ..Plan::default() };
         match plan::target_col(&p, doc.target_lang.as_deref()) {
             None => {
@@ -212,10 +333,7 @@ pub(super) fn apply(pkg: &mut Package, doc: &Document, texts: &BTreeMap<usize, S
                 }
             }
             Some(tcol) => {
-                let existing = match pkg.cells[&path].get(&(row, tcol as i64 + 1)) {
-                    Some(&c) => cell_str(&pkg.roots[&path], c, &sst, &path)?.0,
-                    None => String::new(),
-                };
+                let existing = view.str_at(row, tcol as i64 + 1).to_string();
                 if tr == value && !bilingua_model::py_strip(&existing).is_empty() {
                     continue; // untranslated: keep a target someone already filled
                 }
@@ -229,10 +347,6 @@ pub(super) fn apply(pkg: &mut Package, doc: &Document, texts: &BTreeMap<usize, S
 }
 
 // ------------------------------------------------------------------------------------------- cells and rows
-
-fn col_number(letters: &str) -> i64 {
-    letters.to_ascii_uppercase().bytes().fold(0, |n, b| n * 26 + (b - b'A' + 1) as i64)
-}
 
 impl Package {
     /// Gives every row and cell of the sheet its address, so inserting one cannot shift the position of a later
@@ -311,28 +425,44 @@ impl Package {
         Ok(c)
     }
 
-    /// Before the shared-formula master `c` loses its formula, every dependent of the same group gets its own
-    /// formula, translated from the master's place (`_unshare`).
-    pub(super) fn unshare(&mut self, path: &str, c: usize, f: usize) {
+    /// Before the shared-formula master `c` loses its formula, every dependent of the same group (no text of its
+    /// own) gets its own formula, translated from the master's place (`_unshare`); an error where openpyxl's
+    /// translator raises.
+    pub(super) fn unshare(&mut self, path: &str, c: usize, f: usize) -> Result<(), Error> {
         let d = &self.roots[path];
         let master = d.text(f).unwrap_or_default();
         if d.get(f, "t") != Some("shared") || bilingua_model::py_strip(&master).is_empty() {
-            return;
+            return Ok(());
         }
-        let Some(si) = d.get(f, "si").map(str::to_string) else { return };
-        let where_: HashMap<usize, (i64, i64)> = self.cells[path].iter().map(|(k, v)| (*v, *k)).collect();
-        let Some(&origin) = where_.get(&c) else { return };
-        let formula = bilingua_model::py_strip(&master).to_string();
+        let Some(si) = d.get(f, "si").map(str::to_string) else { return Ok(()) };
+        if !self.formula_index.contains_key(path) {
+            // the cells by element and the shared formulas by group, once per sheet (writes keep both valid)
+            let at: HashMap<usize, (i64, i64)> = self.cells[path].iter().map(|(k, v)| (*v, *k)).collect();
+            let mut groups: HashMap<String, Vec<usize>> = HashMap::new();
+            for other in d.iter_tag(d.root, M, "f") {
+                if let (Some("shared"), Some(s)) = (d.get(other, "t"), d.get(other, "si")) {
+                    groups.entry(s.to_string()).or_default().push(other);
+                }
+            }
+            self.formula_index.insert(path.to_string(), (at, groups));
+        }
+        let (at, groups) = &self.formula_index[path];
+        let d = &self.roots[path];
+        let Some(&origin) = at.get(&c) else { return Ok(()) };
+        let formula = format!("={}", bilingua_model::py_strip(&master));
         let mut edits: Vec<(usize, String)> = Vec::new();
-        for other in d.iter_tag(d.root, M, "f") {
+        for &other in groups.get(&si).map(Vec::as_slice).unwrap_or(&[]) {
             if other == f || d.get(other, "t") != Some("shared") || d.get(other, "si") != Some(si.as_str()) {
                 continue;
             }
-            let Some(&key) = d.nodes[other].parent.and_then(|p| where_.get(&p)) else { continue };
+            let Some(&key) = d.nodes[other].parent.and_then(|p| at.get(&p)) else { continue };
             if !bilingua_model::py_strip(&d.text(other).unwrap_or_default()).is_empty() {
                 continue;
             }
-            edits.push((other, translate_formula(&formula, key.0 - origin.0, key.1 - origin.1)));
+            let moved = formula::translate(&formula, origin, Some(key)).map_err(|_| {
+                Error::Write(format!("xlsx: the shared formula of {}{} cannot be moved to {}{}", col_letters(origin.1), origin.0, col_letters(key.1), key.0))
+            })?;
+            edits.push((other, moved.strip_prefix('=').unwrap_or("").to_string()));
         }
         let d = self.roots.get_mut(path).expect("sheet part");
         for (other, text) in edits {
@@ -341,6 +471,7 @@ impl Package {
                 d.remove_attr(other, a);
             }
         }
+        Ok(())
     }
 
     /// Removes `xl/calcChain.xml` (its member, content-type override and workbook relationship); Excel rebuilds it
@@ -375,151 +506,5 @@ impl Package {
             }
         }
         Ok(())
-    }
-}
-
-// ------------------------------------------------------------------------------------------- formulas
-
-/// Moves the relative references of a formula by (rows, columns), as openpyxl's `Translator` does for a shared
-/// formula's dependents: cell references (`A1`, `$A1`, `A$1`), column ranges (`A:B`) and row ranges (`1:3`)
-/// outside strings, quoted sheet names and structured references. A reference moved off the sheet becomes
-/// `#REF!`.
-fn translate_formula(formula: &str, drow: i64, dcol: i64) -> String {
-    let ch: Vec<char> = formula.chars().collect();
-    let mut out = String::new();
-    let mut i = 0;
-    let word = |c: char| c.is_alphanumeric() || c == '_' || c == '.' || c == '$';
-    while i < ch.len() {
-        let c = ch[i];
-        if c == '"' || c == '\'' {
-            // a string or a quoted sheet name, a doubled quote inside is one quote
-            out.push(c);
-            i += 1;
-            while i < ch.len() {
-                out.push(ch[i]);
-                if ch[i] == c {
-                    if ch.get(i + 1) == Some(&c) {
-                        out.push(c);
-                        i += 2;
-                        continue;
-                    }
-                    i += 1;
-                    break;
-                }
-                i += 1;
-            }
-        } else if c == '[' {
-            let mut depth = 0;
-            while i < ch.len() {
-                out.push(ch[i]);
-                if ch[i] == '[' {
-                    depth += 1;
-                } else if ch[i] == ']' {
-                    depth -= 1;
-                    if depth == 0 {
-                        i += 1;
-                        break;
-                    }
-                }
-                i += 1;
-            }
-        } else if word(c) {
-            let start = i;
-            while i < ch.len() && word(ch[i]) {
-                i += 1;
-            }
-            let run: String = ch[start..i].iter().collect();
-            let next = ch.get(i).copied();
-            if next == Some('(') || next == Some('!') {
-                out.push_str(&run); // a function or an unquoted sheet name
-                continue;
-            }
-            // a range `X:Y` of columns or of rows
-            if next == Some(':') {
-                let mut j = i + 1;
-                while j < ch.len() && word(ch[j]) {
-                    j += 1;
-                }
-                let second: String = ch[i + 1..j].iter().collect();
-                if let (Some(a), Some(b)) = (shift_part(&run, true, drow, dcol), shift_part(&second, true, drow, dcol)) {
-                    out.push_str(&format!("{a}:{b}"));
-                    i = j;
-                    continue;
-                }
-            }
-            out.push_str(&shift_cell(&run, drow, dcol).unwrap_or(run));
-        } else {
-            out.push(c);
-            i += 1;
-        }
-    }
-    out
-}
-
-/// A whole column (`$A`, `B`) or whole row (`$1`, `3`) reference moved; `None` when `s` is neither.
-fn shift_part(s: &str, _range: bool, drow: i64, dcol: i64) -> Option<String> {
-    let (abs, body) = match s.strip_prefix('$') {
-        Some(b) => (true, b),
-        None => (false, s),
-    };
-    if !body.is_empty() && body.len() <= 3 && body.bytes().all(|b| b.is_ascii_alphabetic()) {
-        let n = col_number(body);
-        if n > 16384 {
-            return None;
-        }
-        let m = if abs { n } else { n + dcol };
-        return Some(if !(1..=16384).contains(&m) { "#REF!".into() } else { format!("{}{}", if abs { "$" } else { "" }, col_letters(m)) });
-    }
-    if !body.is_empty() && body.bytes().all(|b| b.is_ascii_digit()) {
-        let n: i64 = body.parse().ok()?;
-        if !(1..=1_048_576).contains(&n) {
-            return None;
-        }
-        let m = if abs { n } else { n + drow };
-        return Some(if !(1..=1_048_576).contains(&m) { "#REF!".into() } else { format!("{}{m}", if abs { "$" } else { "" }) });
-    }
-    None
-}
-
-/// A cell reference (`A1`, `$A$1`) moved; `None` when `s` is not one.
-fn shift_cell(s: &str, drow: i64, dcol: i64) -> Option<String> {
-    let (abs_c, rest) = match s.strip_prefix('$') {
-        Some(r) => (true, r),
-        None => (false, s),
-    };
-    let letters: String = rest.chars().take_while(char::is_ascii_alphabetic).collect();
-    let rest = &rest[letters.len()..];
-    let (abs_r, digits) = match rest.strip_prefix('$') {
-        Some(r) => (true, r),
-        None => (false, rest),
-    };
-    if letters.is_empty() || letters.len() > 3 || digits.is_empty() || !digits.bytes().all(|b| b.is_ascii_digit()) {
-        return None;
-    }
-    let (col, row): (i64, i64) = (col_number(&letters), digits.parse().ok()?);
-    if col > 16384 || !(1..=1_048_576).contains(&row) {
-        return None;
-    }
-    let (nc, nr) = (if abs_c { col } else { col + dcol }, if abs_r { row } else { row + drow });
-    if !(1..=16384).contains(&nc) || !(1..=1_048_576).contains(&nr) {
-        return Some("#REF!".into());
-    }
-    Some(format!("{}{}{}{nr}", if abs_c { "$" } else { "" }, col_letters(nc), if abs_r { "$" } else { "" }))
-}
-
-#[cfg(test)]
-mod formula_tests {
-    use super::translate_formula;
-
-    #[test]
-    fn moves_relative_references_only() {
-        assert_eq!(translate_formula("UPPER(A2)", 1, 0), "UPPER(A3)");
-        assert_eq!(translate_formula("$A$1+B$2+$C3", 2, 1), "$A$1+C$2+$C5");
-        assert_eq!(translate_formula("SUM(A1:B2,\"A1\")", 1, 1), "SUM(B2:C3,\"A1\")");
-        assert_eq!(translate_formula("'My Sheet'!A1+Other!B1", 1, 0), "'My Sheet'!A2+Other!B2");
-        assert_eq!(translate_formula("SUM(A:B)+SUM(1:2)", 3, 1), "SUM(B:C)+SUM(4:5)");
-        assert_eq!(translate_formula("LOG10(A1)*1.5", 1, 0), "LOG10(A2)*1.5");
-        assert_eq!(translate_formula("T[Col1]+A1", 1, 0), "T[Col1]+A2");
-        assert_eq!(translate_formula("A1", -1, 0), "#REF!");
     }
 }
