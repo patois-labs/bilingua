@@ -789,6 +789,19 @@ mod tests {
     }
 
     #[test]
+    fn outer_parentheses_strip_in_one_pass() {
+        assert_eq!(strip_outer_parens("((n != 1))"), "n != 1");
+        assert_eq!(strip_outer_parens("(a)(b)"), "(a)(b)");
+        assert_eq!(strip_outer_parens("((a)"), "(a");
+        assert_eq!(strip_outer_parens("()"), "");
+        // 300 000 nested layers: LocOS rescans the rest at each one (quadratic), this is linear
+        let deep = format!("{}n{}", "(".repeat(300_000), ")".repeat(300_000));
+        assert_eq!(strip_outer_parens(&deep), "n");
+        let header = format!("Plural-Forms: nplurals=2; plural={deep};");
+        assert_eq!(rule_key(&header), ("2".to_string(), "n".to_string()));
+    }
+
+    #[test]
     fn multiline_splits_after_line_breaks() {
         assert_eq!(multiline(vec!["msgstr \"a\\nb\"".into()]), ["msgstr \"\"", "\"a\\n\"", "\"b\""]);
         assert_eq!(multiline(vec!["msgstr \"a\\n\"".into()]), ["msgstr \"a\\n\""]);

@@ -156,7 +156,9 @@ pub fn locos_skeleton(tag: &str, text: &str) -> Vec<u8> {
 pub fn locos_skeleton_parts(data: &[u8]) -> Option<(&str, &str)> {
     let s = std::str::from_utf8(data).ok()?;
     let (tag, text) = s.split_once('\n')?;
-    (!tag.is_empty() && !tag.contains(['\r', ' '])).then_some((tag, text))
+    // a tag is a charset name with `;nl=` / `;label=` parts: nothing a declaration could carry as markup
+    let ok = !tag.is_empty() && tag.len() <= 200 && tag.bytes().all(|b| b.is_ascii_alphanumeric() || b"_.:;=-".contains(&b));
+    ok.then_some((tag, text))
 }
 
 /// The tag LocOS's UTF-8 export writes a file under: UTF-8, its UTF-8 BOM and its line breaks kept (a UTF-16 BOM,
