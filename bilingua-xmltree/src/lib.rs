@@ -253,6 +253,13 @@ fn parse_with(text: &str, noblanks: bool) -> Result<Dom, XmlError> {
                 if !prefix.is_empty() && ns.is_none() {
                     return Err(err(format!("undeclared namespace prefix {prefix}")));
                 }
+                // an attribute's prefix must be bound too (libxml2's namespace error, which lxml raises)
+                for (k, _) in &attrs {
+                    let (p, _) = split_qname(k);
+                    if !p.is_empty() && p != "xmlns" && p != "xml" && !dom.scopes[scope].iter().any(|(x, u)| x == p && !u.is_empty()) {
+                        return Err(err(format!("undeclared namespace prefix {p}")));
+                    }
+                }
                 let keep_space = match attrs.iter().find(|(k, _)| k == "xml:space").map(|(_, v)| v.as_str()) {
                     Some("preserve") => true,
                     Some("default") => false,
@@ -934,8 +941,9 @@ mod tests {
     #[test]
     fn refuses_broken_xml() {
         let deep = "<a>".repeat(MAX_DEPTH + 1);
-        for bad in ["<a>", "<a></b>", "<a x='1' x='2'/>", "<p:a/>", "<a>&nope;</a>", "<!DOCTYPE a><a/>", "<a/><b/>", deep.as_str()] {
+        for bad in ["<a>", "<a></b>", "<a x='1' x='2'/>", "<p:a/>", "<a p:x='1'/>", "<a xmlns:p=''><b p:x='1'/></a>", "<a>&nope;</a>", "<!DOCTYPE a><a/>", "<a/><b/>", deep.as_str()] {
             assert!(parse(bad).is_err(), "{bad}");
         }
+        assert!(parse("<a xml:space='preserve' xml:lang='de' xmlns:p='P' p:x='1'/>").is_ok());
     }
 }
