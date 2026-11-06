@@ -1,8 +1,12 @@
-//! A small XML tree for the Localization OS port: what lxml gives LocOS's XLIFF filters (elements with their
-//! resolved namespace, attributes, text, comments and processing instructions), plus the byte span of every
-//! element in the decoded text, which LocOS's `cat_xliff.scan` finds for its byte splice. Text and attribute
-//! values are read as an XML parser reports them (line ends normalised, references resolved, attribute white
-//! space normalised, CDATA as text), so the tree serialises the way lxml writes it ([`Dom::serialize`]).
+//! Bilingua internal: a small XML tree for the Localization OS ports (the XLIFF family, DOCX). It holds what lxml
+//! gives LocOS's filters (elements with their resolved namespace, attributes, text, comments and processing
+//! instructions), plus the byte span of every element in the decoded text, which LocOS's `cat_xliff.scan` finds for
+//! its byte splice. Text and attribute values are read as an XML parser reports them (line ends normalised,
+//! references resolved, attribute white space normalised, CDATA as text), so the tree serialises the way lxml
+//! writes it ([`Dom::serialize`]). [`parse_noblanks`] drops ignorable white space the way python-docx's parser
+//! (`remove_blank_text=True`) does.
+//!
+//! Not a public API: it may change in any release.
 
 use quick_xml::events::Event;
 
@@ -142,26 +146,64 @@ fn split_qname(q: &str) -> (&str, &str) {
 
 /// Parses decoded XML text. DOCTYPEs are refused by the caller's guard first; one here is an error too.
 pub fn parse(text: &str) -> Result<Dom, XmlError> {
+    parse_with(text, false)
+}
+
+/// Like [`parse`], dropping ignorable white space the way libxml2 does with `XML_PARSE_NOBLANKS` (lxml's
+/// `remove_blank_text=True`, which python-docx parses every part with): character data of XML white space only that
+/// is followed by markup is dropped unless `xml:space="preserve"` is in effect, it is the whole content of its
+/// element, or its element already holds text.
+pub fn parse_noblanks(text: &str) -> Result<Dom, XmlError> {
+    parse_with(text, true)
+}
+
+/// The markup that ends a run of character data.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Next {
+    End,
+    Other,
+}
+
+struct Pending {
+    text: String,
+    /// Only character data so far (no reference, no CDATA): libxml2 judges blanks on such runs only.
+    plain: bool,
+}
+
+fn flush(dom: &mut Dom, stack: &[usize], preserve: &[bool], pending: &mut Pending, noblanks: bool, next: Next) {
+    let plain = std::mem::replace(&mut pending.plain, true);
+    if pending.text.is_empty() {
+        return;
+    }
+    let Some(&p) = stack.last() else {
+        pending.text.clear();
+        return;
+    };
+    if noblanks && plain && !preserve.last().copied().unwrap_or(false) && pending.text.bytes().all(|b| matches!(b, b' ' | b'\t' | b'\n' | b'\r')) {
+        let kids = &dom.nodes[p].children;
+        let text_at = |c: Option<&usize>| c.is_some_and(|&c| dom.nodes[c].kind == Kind::Text);
+        let keep = (kids.is_empty() && next == Next::End) || text_at(kids.first()) || text_at(kids.last());
+        if !keep {
+            pending.text.clear();
+            return;
+        }
+    }
+    let mut n = Node::new(Kind::Text);
+    n.value = std::mem::take(&mut pending.text);
+    n.parent = Some(p);
+    dom.nodes.push(n);
+    let id = dom.nodes.len() - 1;
+    dom.nodes[p].children.push(id);
+}
+
+fn parse_with(text: &str, noblanks: bool) -> Result<Dom, XmlError> {
     let mut r = quick_xml::Reader::from_str(text);
     r.config_mut().check_end_names = true;
     let mut dom = Dom { nodes: Vec::new(), scopes: vec![vec![("xml".into(), "http://www.w3.org/XML/1998/namespace".into())]], root: usize::MAX };
     let mut stack: Vec<usize> = Vec::new();
-    let mut pending = String::new();
-    let flush = |dom: &mut Dom, stack: &[usize], pending: &mut String| {
-        if pending.is_empty() {
-            return;
-        }
-        if let Some(&p) = stack.last() {
-            let mut n = Node::new(Kind::Text);
-            n.value = std::mem::take(pending);
-            n.parent = Some(p);
-            dom.nodes.push(n);
-            let id = dom.nodes.len() - 1;
-            dom.nodes[p].children.push(id);
-        } else {
-            pending.clear();
-        }
-    };
+    // xml:space="preserve" in effect, per open element
+    let mut preserve: Vec<bool> = Vec::new();
+    let mut pending = Pending { text: String::new(), plain: true };
     loop {
         let before = r.buffer_position() as usize;
         let ev = r.read_event().map_err(|e| err(format!("not well-formed XML: {e}")))?;
@@ -171,7 +213,7 @@ pub fn parse(text: &str) -> Result<Dom, XmlError> {
             Event::DocType(_) => return Err(err("the file declares a DOCTYPE")),
             Event::Decl(_) => {}
             Event::Start(ref e) | Event::Empty(ref e) => {
-                flush(&mut dom, &stack, &mut pending);
+                flush(&mut dom, &stack, &preserve, &mut pending, noblanks, Next::Other);
                 if stack.is_empty() && dom.root != usize::MAX {
                     return Err(err("more than one root element"));
                 }
@@ -211,17 +253,18 @@ pub fn parse(text: &str) -> Result<Dom, XmlError> {
                 if !prefix.is_empty() && ns.is_none() {
                     return Err(err(format!("undeclared namespace prefix {prefix}")));
                 }
+                let keep_space = match attrs.iter().find(|(k, _)| k == "xml:space").map(|(_, v)| v.as_str()) {
+                    Some("preserve") => true,
+                    Some("default") => false,
+                    _ => preserve.last().copied().unwrap_or(false),
+                };
                 let mut n = Node::new(Kind::Element);
                 n.name = name;
                 n.attrs = attrs;
                 n.ns = ns;
                 n.scope = scope;
                 n.parent = stack.last().copied();
-                n.span = Some(if empty {
-                    Span { start: before, start_end: after, end_start: after, end: after, empty: true }
-                } else {
-                    Span { start: before, start_end: after, end_start: after, end: after, empty: false }
-                });
+                n.span = Some(Span { start: before, start_end: after, end_start: after, end: after, empty });
                 dom.nodes.push(n);
                 let id = dom.nodes.len() - 1;
                 match stack.last() {
@@ -230,14 +273,16 @@ pub fn parse(text: &str) -> Result<Dom, XmlError> {
                 }
                 if !empty {
                     stack.push(id);
+                    preserve.push(keep_space);
                     if stack.len() > MAX_DEPTH {
                         return Err(err("the XML is nested too deeply"));
                     }
                 }
             }
             Event::End(_) => {
-                flush(&mut dom, &stack, &mut pending);
+                flush(&mut dom, &stack, &preserve, &mut pending, noblanks, Next::End);
                 let id = stack.pop().ok_or_else(|| err("unexpected end tag"))?;
+                preserve.pop();
                 if let Some(sp) = dom.nodes[id].span.as_mut() {
                     sp.end_start = before;
                     sp.end = after;
@@ -246,26 +291,32 @@ pub fn parse(text: &str) -> Result<Dom, XmlError> {
             Event::Text(t) => {
                 let s = std::str::from_utf8(&t).map_err(|_| err("bad text"))?;
                 if !stack.is_empty() {
-                    pending.push_str(&line_ends(s));
+                    pending.text.push_str(&line_ends(s));
                 } else if !s.trim().is_empty() {
                     return Err(err("text outside the root element"));
                 }
             }
             Event::CData(t) => {
                 let s = std::str::from_utf8(&t).map_err(|_| err("bad CDATA"))?;
-                pending.push_str(&line_ends(s));
+                if noblanks {
+                    // libxml2 judges the character data before a CDATA section on its own
+                    flush(&mut dom, &stack, &preserve, &mut pending, noblanks, Next::Other);
+                }
+                pending.text.push_str(&line_ends(s));
+                pending.plain = false;
             }
             Event::GeneralRef(g) => {
                 let name = std::str::from_utf8(&g).map_err(|_| err("bad reference"))?;
                 let c = reference(name)?;
                 if !stack.is_empty() {
-                    pending.push(c);
+                    pending.text.push(c);
+                    pending.plain = false;
                 }
             }
             // before or after the root: lxml's tostring(root) does not write these
             Event::Comment(_) | Event::PI(_) if stack.is_empty() => {}
             Event::Comment(c) => {
-                flush(&mut dom, &stack, &mut pending);
+                flush(&mut dom, &stack, &preserve, &mut pending, noblanks, Next::Other);
                 let mut n = Node::new(Kind::Comment);
                 n.value = line_ends(std::str::from_utf8(&c).map_err(|_| err("bad comment"))?);
                 n.parent = stack.last().copied();
@@ -274,7 +325,7 @@ pub fn parse(text: &str) -> Result<Dom, XmlError> {
                 dom.nodes[*stack.last().unwrap()].children.push(id);
             }
             Event::PI(p) => {
-                flush(&mut dom, &stack, &mut pending);
+                flush(&mut dom, &stack, &preserve, &mut pending, noblanks, Next::Other);
                 let raw = line_ends(std::str::from_utf8(&p).map_err(|_| err("bad processing instruction"))?);
                 let (target, data) = match raw.find(|c: char| c.is_whitespace()) {
                     Some(i) => (raw[..i].to_string(), raw[i..].trim_start().to_string()),
@@ -427,9 +478,94 @@ impl Dom {
         new
     }
 
+    /// Appends `child` as the last child of `parent`, moving it out of its old place first (lxml `append`).
     pub fn append(&mut self, parent: usize, child: usize) {
+        self.detach(child);
         self.nodes[child].parent = Some(parent);
         self.nodes[parent].children.push(child);
+    }
+
+    /// Takes a node out of its parent (lxml `remove`); it stays in the arena and may be put back elsewhere.
+    pub fn detach(&mut self, id: usize) {
+        if let Some(p) = self.nodes[id].parent.take() {
+            self.nodes[p].children.retain(|&c| c != id);
+        }
+    }
+
+    /// Inserts `child` at position `at` among the children of `parent` (lxml `insert`), moving it first.
+    pub fn insert(&mut self, parent: usize, at: usize, child: usize) {
+        self.detach(child);
+        let at = at.min(self.nodes[parent].children.len());
+        self.nodes[child].parent = Some(parent);
+        self.nodes[parent].children.insert(at, child);
+    }
+
+    /// Inserts `child` just before `before` (lxml `addprevious`), moving it first.
+    pub fn add_previous(&mut self, before: usize, child: usize) {
+        if before == child {
+            return;
+        }
+        self.detach(child);
+        let parent = self.nodes[before].parent.expect("addprevious needs a parent");
+        let at = self.nodes[parent].children.iter().position(|&k| k == before).unwrap();
+        self.nodes[child].parent = Some(parent);
+        self.nodes[parent].children.insert(at, child);
+    }
+
+    /// The local name of an element as written (case kept; "" for anything else).
+    pub fn local_name(&self, id: usize) -> &str {
+        let n = &self.nodes[id];
+        if n.kind != Kind::Element {
+            return "";
+        }
+        split_qname(&n.name).1
+    }
+
+    /// True for an element in namespace `ns` with this local name (lxml's Clark-name test).
+    pub fn is(&self, id: usize, ns: &str, local: &str) -> bool {
+        let n = &self.nodes[id];
+        n.kind == Kind::Element && n.ns.as_deref() == Some(ns) && split_qname(&n.name).1 == local
+    }
+
+    /// The first element child in `ns` with this local name (`el.find("{ns}local")`).
+    pub fn find(&self, id: usize, ns: &str, local: &str) -> Option<usize> {
+        self.element_children(id).find(|&c| self.is(c, ns, local))
+    }
+
+    /// The tree with attributes sorted, every element written with a start and an end tag and adjacent text
+    /// joined: two trees with the same canonical form are the same XML for any reader.
+    pub fn canonical(&self) -> String {
+        let mut out = String::new();
+        self.write_canonical(self.root, &mut out);
+        out
+    }
+
+    fn write_canonical(&self, id: usize, out: &mut String) {
+        let n = &self.nodes[id];
+        match n.kind {
+            Kind::Text => out.push_str(&esc_text(&n.value)),
+            Kind::Comment | Kind::Pi => self.write(id, out),
+            Kind::Element => {
+                out.push('<');
+                out.push_str(&n.name);
+                let mut attrs: Vec<&(String, String)> = n.attrs.iter().collect();
+                attrs.sort();
+                for (k, v) in attrs {
+                    out.push(' ');
+                    out.push_str(k);
+                    out.push_str("=\"");
+                    out.push_str(&esc_attr(v));
+                    out.push('"');
+                }
+                out.push('>');
+                for &c in &n.children {
+                    self.write_canonical(c, out);
+                }
+                out.push_str("</");
+                out.push_str(&n.name);
+                out.push('>');
+            }
+        }
     }
 
     /// Appends text at the end of an element (joined to a text node already there).
@@ -448,6 +584,14 @@ impl Dom {
         self.nodes.push(n);
         let id = self.nodes.len() - 1;
         self.append(parent, id);
+    }
+
+    /// A new text node in the arena (not attached).
+    pub fn new_text(&mut self, text: &str) -> usize {
+        let mut n = Node::new(Kind::Text);
+        n.value = text.to_string();
+        self.nodes.push(n);
+        self.nodes.len() - 1
     }
 
     /// A new element in the arena.
@@ -472,6 +616,10 @@ impl Dom {
     /// Inserts `child` as the next sibling of `after` (lxml `addnext`): lxml keeps the text that follows `after` (its
     /// tail) with it, so the new element goes after that text, before the next non-text sibling.
     pub fn add_next(&mut self, after: usize, child: usize) {
+        if after == child {
+            return;
+        }
+        self.detach(child);
         let parent = self.nodes[after].parent.expect("addnext needs a parent");
         let kids = &self.nodes[parent].children;
         let mut at = kids.iter().position(|&k| k == after).unwrap() + 1;
@@ -497,6 +645,14 @@ impl Dom {
     pub fn serialize(&self) -> String {
         let mut out = String::new();
         self.write(self.root, &mut out);
+        out
+    }
+
+    /// One node and its content as lxml's `etree.tostring(el)` writes it (without the declarations an ancestor
+    /// makes).
+    pub fn serialize_node(&self, id: usize) -> String {
+        let mut out = String::new();
+        self.write(id, &mut out);
         out
     }
 
@@ -606,6 +762,35 @@ mod tests {
         let sp = d.nodes[c].span.unwrap();
         assert_eq!(&src[sp.start_end..sp.end_start], "t");
         assert_eq!(d.prefix_for(c, "S").as_deref(), Some("s"));
+    }
+
+    #[test]
+    fn drops_blanks_like_libxml2() {
+        let src = "<a>
+  <b> </b>
+  <c xml:space=\"preserve\">
+ <d/> </c><e>x <f/> </e><g>&#32;<h/></g>
+</a>";
+        let d = parse_noblanks(src).unwrap();
+        assert_eq!(d.serialize(), "<a><b> </b><c xml:space=\"preserve\">
+ <d/> </c><e>x <f/> </e><g> <h/></g></a>");
+        // the plain parser keeps every text node
+        assert_eq!(parse(src).unwrap().serialize(), src.replace("&#32;", " "));
+    }
+
+    #[test]
+    fn edits_and_canonical_form() {
+        let mut d = parse("<a y='2' x='1'><b/><c/></a>").unwrap();
+        let (b, c) = (d.nodes[d.root].children[0], d.nodes[d.root].children[1]);
+        d.add_previous(b, c);
+        assert_eq!(d.serialize(), "<a y=\"2\" x=\"1\"><c/><b/></a>");
+        d.add_next(c, b);
+        d.insert(d.root, 0, b);
+        assert_eq!(d.canonical(), "<a x=\"1\" y=\"2\"><b></b><c></c></a>");
+        d.detach(b);
+        d.append(c, b);
+        assert_eq!(d.serialize(), "<a y=\"2\" x=\"1\"><c><b/></c></a>");
+        assert!(!d.is(c, "", "c") && d.local_name(c) == "c" && d.find(d.root, "u", "c").is_none());
     }
 
     #[test]
