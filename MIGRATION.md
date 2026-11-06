@@ -169,8 +169,7 @@ keeps the encoding:
   and json. `profile::locos_set_target` writes a translation of white space only as that white space (as the
   adapter's JSON target does). The goldens are in `bilingua/tests/locos/` (made by `oracle/locos_golden.py` with
   the LocOS venv) and checked by `bilingua/tests/locos_golden.rs`; `oracle/locos_fuzz.py` writes a random corpus
-  with LocOS's goldens that the same test reads from `BILI_LOCOS_ROOT`. Not ported: LocOS's JSON resource dialects
-  (Chrome, FormatJS, Structured, go-i18n) and i18next plural fill. Known differences on purpose: a NUL in a
+  with LocOS's goldens that the same test reads from `BILI_LOCOS_ROOT`. JSON resource dialects and i18next plural fill are in (see "JSON dialects" below). Known differences on purpose: a NUL in a
   translation is refused (strings, `Error::Unwritable`) or dropped (wxl, resx, xaml), where LocOS writes it into
   the file; a Markdown line with thousands of source URLs skips the autolink repair (LocOS's takes minutes).
 - `Document::source_encoding` names the encoding Bilingua decoded a non-UTF-8 text file from (`utf-16le`,
@@ -269,7 +268,33 @@ keeps the encoding:
   profile keeps them as text, so such a unit's build differs.
 - `profile::lang_tag` and `profile::is_rtl` are LocOS's `html_lang` and `text_direction`.
 - LocOS export keywords are accepted and ignored for now: `docx.walk`, `xlsx.walk`, `pptx.walk`, `xlsx.table`,
-  `csv.table`, `markdown.walk`, `markdown.md_walk`, `markdown.fm_keys`, `json.dialect`.
+  `csv.table`, `markdown.walk`, `markdown.md_walk`, `markdown.fm_keys`.
+
+- **JSON dialects and i18next plural fill (bilingua-json).** Two format options; both are off outside the LocOS
+  profile, so existing behaviour does not change.
+  - `json.dialect` (text; it used to be accepted and ignored). At extract: `plain` (every string is a unit; the
+    default without the profile), `auto` (read the dialect from the file's shape; the default under the LocOS
+    profile), or `chrome`, `formatjs`, `structured`, `go`, `arb` (the file must have that shape, else
+    `Error::FormatOption`). The shapes are LocOS's and strict: a file with one entry outside the dialect stays
+    generic JSON. Only the message strings are units (Chrome `message`, FormatJS `defaultMessage`, Structured
+    `string`, go-i18n category and `translation` strings, ARB plain keys); descriptions and comments become unit
+    notes. ICU messages (ARB, FormatJS, Structured) give one unit per plural, selectordinal and select branch and
+    one for the text around it; the argument and `#` are standalone tags without a code (LocOS's `⟦xN⟧`), simple
+    arguments are free `placeholder` tags (LocOS keeps them as text). Chrome `$name$` / `$1` and go-i18n `{{ ... }}`
+    are standalone tags. `UnitContext::extra["json.dialect"]` names the dialect (a merge reads it from there and
+    only checks the option), `context.key` is the JSON pointer of the message. Merge: a translation that loses a
+    structural token or breaks the ICU braces keeps the source message; for a target language plural branches,
+    go-i18n plural objects and suffix-style ARB plurals (`itemCountOne`) follow the target's CLDR categories and an
+    ARB `@@locale` names the target (added first when absent). Under the profile a `⟦xN⟧` left in a translation
+    keeps the source (LocOS `_restore`). A document without units is read again by shape at merge under the profile.
+  - `json.i18next_plurals` (bool; default off, on under the LocOS profile). At merge for a target language, an
+    i18next-style group of generic JSON (`item_one`, `item_other`, ordinals `place_ordinal_one`) gets every CLDR
+    category the target uses that it lacks, holding the `_other` value, before `_other`. Without the profile the
+    keys are spliced into the text and the layout stays; under the profile the file is written as LocOS writes it
+    (parsed and dumped with two-space indentation, Python's number spelling, the original line endings), and only
+    when a key was added. The CLDR table is private to the crate (Babel 2.18.0) until the shared one lands.
+  - Known difference: a message with a lone surrogate escape is left alone (no unit), since a Rust string cannot
+    hold it.
 
 ## CAT OS core (note for the lead)
 
