@@ -285,10 +285,37 @@ fn selector_end(s: &str, j: usize) -> Option<usize> {
     (k > j).then_some(k)
 }
 
-/// True when the level has a letter or digit in its text or simple arguments (tokens do not count).
-pub fn translatable(parts: &[Part]) -> bool {
+/// True when the level has a letter or digit in its text or simple arguments (tokens do not count). With `locos`
+/// a literal `⟦x<digits>⟧` in the text is a token too and does not count (LocOS `_translatable`), so a message
+/// that is only such a token has no unit.
+pub fn translatable(parts: &[Part], locos: bool) -> bool {
     parts.iter().any(|p| match p {
-        Part::Text(t) | Part::Simple(t) => bilingua_model::py_has_alnum(t),
+        Part::Text(t) | Part::Simple(t) => has_words(t, locos),
         _ => false,
     })
+}
+
+/// A letter or digit in `t`, after removing LocOS argument tokens when `locos`.
+pub fn has_words(t: &str, locos: bool) -> bool {
+    const OPEN: &str = "\u{27E6}x";
+    const CLOSE: char = '\u{27E7}';
+    if !locos || !t.contains(OPEN) {
+        return bilingua_model::py_has_alnum(t);
+    }
+    let mut rest = t;
+    let mut kept = String::new();
+    while let Some(at) = rest.find(OPEN) {
+        let after = &rest[at + OPEN.len()..];
+        let d = after.chars().take_while(|c| bilingua_model::py_isdecimal_char(*c)).map(char::len_utf8).sum::<usize>();
+        if d > 0 && after[d..].starts_with(CLOSE) {
+            kept.push_str(&rest[..at]);
+            rest = &after[d + CLOSE.len_utf8()..];
+        } else {
+            let skip = at + '\u{27E6}'.len_utf8();
+            kept.push_str(&rest[..skip]);
+            rest = &rest[skip..];
+        }
+    }
+    kept.push_str(rest);
+    bilingua_model::py_has_alnum(&kept)
 }

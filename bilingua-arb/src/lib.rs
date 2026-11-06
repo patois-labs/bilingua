@@ -65,7 +65,7 @@ impl Arb {
         let text = std::str::from_utf8(body)
             .map_err(|e| parse_err(format!("the file is not valid UTF-8 (at byte {}); re-save it as UTF-8", e.valid_up_to())))?;
         let root = scan_root(text, limits)?;
-        let msgs = messages(text, &root);
+        let msgs = messages(text, &root, opts.is_profile(profile::LOCOS));
 
         let mut parts: Vec<SkelPart> = Vec::new();
         let mut units: Vec<Unit> = Vec::new();
@@ -221,7 +221,7 @@ struct Msg<'a> {
 
 /// The messages of the root object (plain keys with a string value), in file order. A message may have no unit
 /// (nothing to translate) and still be rewritten on a target-language merge: its plurals follow the target.
-fn messages<'a>(text: &str, root: &'a Node) -> Vec<Msg<'a>> {
+fn messages<'a>(text: &str, root: &'a Node, locos: bool) -> Vec<Msg<'a>> {
     let Node::Obj { pairs, .. } = root else { return vec![] };
     let mut meta: HashMap<&str, &Node> = HashMap::new();
     for p in pairs {
@@ -238,29 +238,29 @@ fn messages<'a>(text: &str, root: &'a Node) -> Vec<Msg<'a>> {
         }
         let Node::Str { start, end } = p.value else { continue };
         let Some(value) = scan::unescape(&text[start + 1..end - 1]) else { continue };
-        let plan = plan_message(&value);
+        let plan = plan_message(&value, locos);
         out.push(Msg { key: p.key.clone(), start, end, value, plan, meta: meta.get(p.key.as_str()).copied() });
     }
     out
 }
 
-fn plan_message(value: &str) -> Plan {
+fn plan_message(value: &str, locos: bool) -> Plan {
     match icu::parse(value) {
         Ok(parts) => {
             let mut units = Vec::new();
-            collect(&parts, String::new(), &mut units);
+            collect(&parts, String::new(), &mut units, locos);
             Plan { units, fallback: false }
         }
         Err(_) => {
-            let units = if bilingua_model::py_has_alnum(value) { vec![fallback_unit(value)] } else { vec![] };
+            let units = if icu::has_words(value, locos) { vec![fallback_unit(value)] } else { vec![] };
             Plan { units, fallback: true }
         }
     }
 }
 
 /// Pre-order: this level's text if it has words, then each complex argument's branches.
-fn collect(parts: &[Part], path: String, out: &mut Vec<UnitPlan>) {
-    if icu::translatable(parts) {
+fn collect(parts: &[Part], path: String, out: &mut Vec<UnitPlan>, locos: bool) {
+    if icu::translatable(parts, locos) {
         out.push(level_unit(parts, &path));
     }
     for p in parts {
@@ -273,7 +273,7 @@ fn collect(parts: &[Part], path: String, out: &mut Vec<UnitPlan>) {
             };
             for b in &cx.branches {
                 let here = if path.is_empty() { String::new() } else { format!("{path} / ") };
-                collect(&b.msg, format!("{here}{arg}: {kind} {}", b.selector), out);
+                collect(&b.msg, format!("{here}{arg}: {kind} {}", b.selector), out, locos);
             }
         }
     }
@@ -428,7 +428,7 @@ fn splice(orig: &str, doc: &Document, locos: bool) -> Result<String, Error> {
     let root = scan_root(orig, &limits).map_err(|e| Error::Write(format!("the skeleton is not an ARB file any more: {e}")))?;
     let Node::Obj { pairs, start: root_start, end: root_end } = &root else { return Err(Error::Write("not an object".into())) };
     let target = doc.target_lang.as_deref().map(str::trim).filter(|t| !t.is_empty());
-    let msgs = messages(orig, &root);
+    let msgs = messages(orig, &root, locos);
 
     let mut edits: Vec<(usize, usize, String)> = Vec::new();
     // Added first so that, at the same position, @@locale comes before added plural keys.
@@ -502,7 +502,7 @@ fn rebuild_message(m: &Msg, tr: &mut Trans, target: Option<&str>, locos: bool) -
 }
 
 fn rebuild_level(parts: &[Part], tr: &mut Trans, target: Option<&str>, locos: bool) -> String {
-    let translatable = icu::translatable(parts);
+    let translatable = icu::translatable(parts, locos);
     let mine = if translatable { tr.next() } else { None };
     let mut pieces: Vec<String> = Vec::new();
     for p in parts {

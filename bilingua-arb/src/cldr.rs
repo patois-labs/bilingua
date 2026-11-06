@@ -1,53 +1,57 @@
-//! CLDR plural and ordinal categories per language, from a table generated from Babel (the data Localization OS
-//! uses), so a target language gets exactly the categories LocOS would give it.
+//! CLDR plural and ordinal categories per language, from the shared table in `bilingua_model::cldr` (the data
+//! Localization OS reads through Babel), so a target language gets exactly the categories LocOS would give it.
 
-include!("cldr_table.rs");
+/// The Babel version the shared table was generated from.
+pub const BABEL_VERSION: &str = "2.18.0";
 
-pub const ORDER: [&str; 6] = ["zero", "one", "two", "few", "many", "other"];
+pub const ORDER: [&str; 6] = bilingua_model::cldr::ORDER;
 
 /// The categories the language uses, in CLDR order, always with `other`. `None` for a language the table does
-/// not know (callers then leave the plural forms as they are).
+/// not know (callers then leave the plural forms as they are). Babel's aliases (`deu`, `iw`, `tl`, `und`) resolve,
+/// as in LocOS.
 pub fn categories(locale: &str, ordinal: bool) -> Option<Vec<&'static str>> {
-    let mask = lookup(locale, ordinal)?;
-    Some(ORDER.iter().enumerate().filter(|(i, _)| mask & (1 << i) != 0).map(|(_, c)| *c).collect())
+    let lang = bilingua_model::cldr::language(locale);
+    bilingua_model::cldr::bits_babel(&lang, ordinal).map(bilingua_model::cldr::names)
 }
 
-fn lookup(locale: &str, ordinal: bool) -> Option<u8> {
-    let code = locale.trim().replace('-', "_");
-    let mut parts = code.split('_');
-    let lang = parts.next()?.to_ascii_lowercase();
-    if lang.is_empty() || !lang.bytes().all(|b| b.is_ascii_alphabetic()) {
-        return None;
-    }
-    let (mut script, mut terr) = (None, None);
-    for p in parts {
-        if p.len() == 4 && p.bytes().all(|b| b.is_ascii_alphabetic()) {
-            let mut c = p.to_ascii_lowercase();
-            c[..1].make_ascii_uppercase();
-            script = Some(c);
-        } else if (p.len() == 2 && p.bytes().all(|b| b.is_ascii_alphabetic())) || (p.len() == 3 && p.bytes().all(|b| b.is_ascii_digit())) {
-            terr = Some(p.to_ascii_uppercase());
+#[cfg(test)]
+#[allow(dead_code)]
+mod old {
+    include!("../tests/data/old_cldr.rs");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Every language code of two or three letters, `root`, `und` and some malformed ones, each bare and with a
+    /// script or territory, in both modes: the shared table answers exactly as the crate's own table did.
+    #[test]
+    fn shared_table_answers_like_the_old_private_one() {
+        let mut langs: Vec<String> = vec!["root".into(), "und".into(), "".into(), " ".into(), "x1".into(), "e".into(), "abcd".into(), "pt".into()];
+        for a in b'a'..=b'z' {
+            for b in b'a'..=b'z' {
+                langs.push(format!("{}{}", a as char, b as char));
+                for c in b'a'..=b'z' {
+                    langs.push(format!("{}{}{}", a as char, b as char, c as char));
+                }
+            }
         }
-    }
-    let mut cands = Vec::new();
-    if let (Some(s), Some(t)) = (&script, &terr) {
-        cands.push(format!("{lang}_{s}_{t}"));
-    }
-    if let Some(t) = &terr {
-        cands.push(format!("{lang}_{t}"));
-    }
-    if let Some(s) = &script {
-        cands.push(format!("{lang}_{s}"));
-    }
-    cands.push(lang.clone());
-    for c in cands {
-        if let Ok(i) = TABLE.binary_search_by(|(k, _, _)| (*k).cmp(c.as_str())) {
-            let (_, card, ord) = TABLE[i];
-            return Some(if ordinal { ord } else { card });
+        let suffixes = ["", "-DE", "_Latn", "-Hant-TW", "-419", "_x", "-"];
+        let mut n = 0usize;
+        let mut known = 0usize;
+        for l in &langs {
+            for s in suffixes {
+                for tag in [format!("{l}{s}"), format!("{}{s}", l.to_uppercase()), format!(" {l}{s} ")] {
+                    for ord in [false, true] {
+                        let (o, w) = (old::categories(&tag, ord), categories(&tag, ord));
+                        assert_eq!(o, w, "{tag:?} ordinal={ord}");
+                        n += 1;
+                        known += usize::from(o.is_some());
+                    }
+                }
+            }
         }
+        assert!(n > 700_000 && known > 5000, "n={n} known={known}");
     }
-    // Babel also resolves aliases (`deu`, `iw`, `tl`, `und`): LocOS fills plurals for them, so this crate does too.
-    let i = ALIASES.binary_search_by(|(k, _, _)| (*k).cmp(lang.as_str())).ok()?;
-    let (_, card, ord) = ALIASES[i];
-    Some(if ordinal { ord } else { card })
 }

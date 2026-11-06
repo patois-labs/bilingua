@@ -342,6 +342,15 @@ fn render_inlines(unit: &Unit, inl: Vec<Inline>) -> String {
     scan::quote(&text)
 }
 
+/// The resource dialect a UTF-8 JSON file has by its shape (`chrome`, `formatjs`, `structured`, `go`, `arb`), the
+/// one `json.dialect=auto` would read it as; `None` for a file that is not JSON or has no dialect shape. The facade
+/// uses it to route an ARB-looking `.json` the way LocOS does (a go-i18n file with `@@locale` is go-i18n).
+pub fn dialect_of(bytes: &[u8]) -> Option<&'static str> {
+    let body = bytes.strip_prefix(BOM).unwrap_or(bytes);
+    let text = std::str::from_utf8(body).ok()?;
+    tree::scan(text).ok().and_then(|root| dialect::detect(&root)).map(Dialect::name)
+}
+
 /// Exposed for tests and tools: the JSON pointers of all units, in order.
 pub fn pointers(doc: &Document) -> Vec<String> {
     doc.units.iter().filter_map(|u| u.context.key.clone()).collect()

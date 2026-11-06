@@ -65,5 +65,5 @@ let out = QtTs.merge(&doc)?;
 merges, LocOS golden file, Okapi resources), `tests/hostile.rs` (malformed input, limits, proptest), `tests/speed.rs`
 (over 5 MB, timed; `tests/tools/speed_locos.py` times LocOS on the same bytes). Fixtures are made by
 `tests/tools/gen_fixtures.py`; the golden files by `gen_golden.py` (LocOS, read only) and `gen_okapi.py` (Okapi
-oracle); `gen_cldr.py` makes the plural table. `cargo run -p bilingua-qtts --example qtts_dump` and `--example qtts_pseudo`
+oracle). `cargo run -p bilingua-qtts --example qtts_dump` and `--example qtts_pseudo`
 are the tools behind the differential check.

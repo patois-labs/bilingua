@@ -49,7 +49,7 @@ fn icu_rejects_what_localization_os_rejects() {
 
 #[test]
 fn unit_order_is_pre_order() {
-    let plan = plan_message("A {n, plural, one{# b {g, select, x{X} other{Y}}} other{# c}} z");
+    let plan = plan_message("A {n, plural, one{# b {g, select, x{X} other{Y}}} other{# c}} z", false);
     let paths: Vec<&str> = plan.units.iter().map(|u| u.path.as_str()).collect();
     assert_eq!(paths, ["", "n: plural one", "n: plural one / g: select x", "n: plural one / g: select other", "n: plural other"]);
 }
