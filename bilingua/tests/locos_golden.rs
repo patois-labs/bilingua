@@ -365,8 +365,8 @@ const KNOWN: &[(&str, &str)] = &[
 ];
 
 /// Formats whose goldens do not match yet: reported, not fatal. Remove a format when all its files match. docx,
-/// pptx, xlsx: Track D group B, not ported yet.
-const PENDING: &[&str] = &["docx", "pptx", "xlsx"];
+/// xlsx: Track D group B, not ported yet (pptx matches since its port).
+const PENDING: &[&str] = &["docx", "xlsx"];
 
 #[test]
 fn locos_profile_goldens() {

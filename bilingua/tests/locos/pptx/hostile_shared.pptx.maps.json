@@ -1,0 +1,35 @@
+[
+ {
+  "name": "hostile",
+  "locale": null,
+  "map": {
+   "1": "⟦r2⟧Two⟦/r2⟧⟦r1⟧One⟦/r1⟧",
+   "2": "Data",
+   "3": "Drei",
+   "4": "Titel",
+   "6": "Notizen"
+  }
+ },
+ {
+  "name": "hostile-ar-SA",
+  "locale": "ar-SA",
+  "map": {
+   "1": "⟦r2⟧Two⟦/r2⟧⟦r1⟧One⟦/r1⟧",
+   "2": "Data",
+   "3": "Drei",
+   "4": "Titel",
+   "6": "Notizen"
+  }
+ },
+ {
+  "name": "hostile-de-DE",
+  "locale": "de-DE",
+  "map": {
+   "1": "⟦r2⟧Two⟦/r2⟧⟦r1⟧One⟦/r1⟧",
+   "2": "Data",
+   "3": "Drei",
+   "4": "Titel",
+   "6": "Notizen"
+  }
+ }
+]

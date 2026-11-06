@@ -197,6 +197,23 @@ keeps the encoding:
   documents carry the original as a `Skeleton::Binary`. Known gap: an MXLIFF segment mixing element codes and
   `{1}` text marks numbers its tokens in LocOS's order (elements first), which `profile::tokens` renumbers by
   position.
+- Track D group B, PPTX (and pptm, potx, potm, ppsx, ppsm): under the profile this is a port of LocOS's
+  `pptx_filter.py` (`bilingua_pptx::locos`). The walk is LocOS's: per slide in `p:sldIdLst` order the slide's
+  paragraphs (outside `mc:Fallback` and merged table cells), its SmartArt data and charts in reference order, its
+  first notes slide, then the slide's alt text (`descr`, `title`); slide layouts and masters are not units.
+  `locos.p_index` is the paragraph's slot in that walk (empty paragraphs counted, so there are gaps; alt text after
+  the last paragraph) and `locos.style` LocOS's style (`slide 1`, `slide 1 SmartArt`, `slide 1 chart`,
+  `slide 1 notes`, `slide 2 hidden`, `a11y:img-alt`, `a11y:img-title`). A paragraph with one run is plain text;
+  otherwise every run is a pair whose tag id is LocOS's run number and every `a:br` / `a:fld` a standalone code
+  numbered after the runs. LocOS does not number those tokens in reading order, so the adapter must turn them into
+  text with `profile::tokens::to_locos_text_for("pptx", ..)`, which for pptx is the new `to_locos_text_numbered`
+  (tag ids as token numbers; it falls back to `to_locos_text_as` when the ids are not usable numbers), to get
+  LocOS's `⟦r1⟧a⟦/r1⟧⟦x3⟧⟦r2⟧b⟦/r2⟧`. Writing is
+  LocOS's `_rebuild` (its token rules on the target text, run properties copied, a dropped break or field put back
+  at the end, new lines as `a:br`, `lang` on every run of a written paragraph and `rtl="1"` for a right-to-left
+  target, the SmartArt drawing cache mirrored), re-serialising only the parts that changed; Strict Open XML goes
+  through LocOS's namespace swap. The profile's documents carry the original as a `Skeleton::Binary`. Not ported:
+  slide comments (LocOS's `comments=True`), LocOS's markup budget, XML parts in a legacy code page.
 - `profile::lang_tag` and `profile::is_rtl` are LocOS's `html_lang` and `text_direction`.
 - LocOS export keywords are accepted and ignored for now: `docx.walk`, `xlsx.walk`, `pptx.walk`, `xlsx.table`,
   `csv.table`, `markdown.walk`, `markdown.md_walk`, `markdown.fm_keys`, `json.dialect`.
