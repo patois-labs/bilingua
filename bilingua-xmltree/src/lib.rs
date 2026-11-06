@@ -928,7 +928,7 @@ mod tests {
         assert_eq!(d.local_exact(b), "b");
         assert_eq!(d.inner_prefix(b, "P").as_deref(), Some("p"));
         // deepcopy takes the tail (here `p` is bound where the copy goes, so nothing is declared)
-        let c = d.find(root, "", "c").unwrap();
+        let c = d.element_children(root).last().unwrap();
         let copies = d.copy_with_tail(b, c);
         assert_eq!(copies.len(), 2);
         d.insert_at(c, 0, &copies);
@@ -936,6 +936,12 @@ mod tests {
         // remove takes the tail with it
         d.remove_with_tail(b);
         assert_eq!(d.serialize(), "<a xmlns:p=\"P\">lead<c><p:b>x</p:b> tail </c></a>");
+        // a copy put where `p` means another namespace declares its own
+        let mut d = parse("<a xmlns:p='P'><p:b/><d xmlns:p='Q'/></a>").unwrap();
+        let (b, dd) = (d.nodes[d.root].children[0], d.nodes[d.root].children[1]);
+        let copies = d.copy_with_tail(b, dd);
+        d.insert_at(dd, 0, &copies);
+        assert_eq!(d.serialize(), "<a xmlns:p=\"P\"><p:b/><d xmlns:p=\"Q\"><p:b xmlns:p=\"P\"/></d></a>");
     }
 
     #[test]
