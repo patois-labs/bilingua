@@ -738,6 +738,7 @@ pub(crate) fn plan(t: &Tree, config: Option<&MlConfig>, limits: &Limits, check_b
         let n = t.els[e as usize].items.len();
         if !t.els[e as usize].empty {
             pl.flush(e, 0, n, 0)?;
+            pl.drain()?;
         }
         if pl.units.len() > before {
             unit_src.push(e);
@@ -936,7 +937,7 @@ pub(crate) fn merge(doc: &Document, text: &str, cfg_blob: &str, target: Option<&
         }
         let nd = &t.els[el as usize];
         let mut m = crate::skel::Merger::new(doc, None);
-        m.render_translated(k, 0)?;
+        m.render_translated(k)?;
         let body = m.out;
         let Some(code) = &code else {
             if u.output() == u.source() {

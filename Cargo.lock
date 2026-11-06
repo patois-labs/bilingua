@@ -26,6 +26,7 @@ dependencies = [
  "bilingua-ass",
  "bilingua-csv",
  "bilingua-desktop",
+ "bilingua-dita",
  "bilingua-docx",
  "bilingua-dtd",
  "bilingua-dxf",
@@ -149,6 +150,16 @@ version = "0.9.0"
 dependencies = [
  "bilingua-model",
  "bilingua-seg",
+ "proptest",
+ "serde_json",
+]
+
+[[package]]
+name = "bilingua-dita"
+version = "0.9.0"
+dependencies = [
+ "bilingua-model",
+ "bilingua-xml",
  "proptest",
  "serde_json",
 ]

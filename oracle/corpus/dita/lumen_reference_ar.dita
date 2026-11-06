@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE reference PUBLIC "-//OASIS//DTD DITA Reference//EN" "reference.dtd">
+<reference id="ovens" xml:lang="ar">
+  <title>أفران مخبز لومن</title>
+  <refbody>
+    <properties>
+      <prophead><proptypehd>الفرن</proptypehd><propvaluehd>الحرارة</propvaluehd></prophead>
+      <property><proptype>فرن الحجر</proptype><propvalue><ph>250</ph> درجة</propvalue></property>
+      <property><proptype>فرن <b>البخار</b></proptype><propvalue><codeph>STEAM-2</codeph></propvalue></property>
+    </properties>
+    <section><title>السلامة</title><p>ارتد <term>القفازات</term> دائما.</p></section>
+  </refbody>
+</reference>

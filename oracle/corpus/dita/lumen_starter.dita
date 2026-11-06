@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE task PUBLIC "-//OASIS//DTD DITA Task//EN" "task.dtd">
+<task id="feed-starter" xml:lang="en-US">
+  <title>Feeding the <ph>sourdough</ph> starter</title>
+  <shortdesc>Feed the starter <b>twice</b> a day, at <i>eight</i> and at <i>eight</i>.</shortdesc>
+  <!-- writer: keep the times in words -->
+  <prolog><metadata><keywords><indexterm>starter<indexterm>feeding</indexterm></indexterm></keywords></metadata></prolog>
+  <taskbody>
+    <prereq><p conref="shared.dita#shared/hygiene"/><p conkeyref="safety/gloves"/></prereq>
+    <context><p>Use the <codeph>feed --grams {0}</codeph> script on the <keyword keyref="mixer"/> or see <xref href="mixing.dita">Mixing</xref>.<fn>Any scale works.</fn></p>
+      <p translate="no">Batch code LB-2026-11</p>
+      <draft-comment>Ask the head baker about rye.</draft-comment>
+      <p>Press <uicontrol>Start</uicontrol> &amp; wait &lt;10&gt; minutes for &product;.</p>
+    </context>
+    <steps>
+      <step><cmd>Discard half of the <term>starter</term>.</cmd></step>
+      <step><cmd>Add 100 g of flour and 100 g of water.</cmd><info><note type="tip">Use water at <ph keyref="temp">27 °C</ph>.</note></info></step>
+      <step><cmd>Stir, cover and leave it at room temperature.</cmd></step>
+    </steps>
+    <example><codeblock xml:space="preserve">feed --grams 100
+  --water 100</codeblock><image href="starter.png" alt="A jar of bubbly starter"/></example>
+  </taskbody>
+</task>

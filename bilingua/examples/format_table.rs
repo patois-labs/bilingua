@@ -93,6 +93,8 @@ fn name(id: &str) -> Option<&'static str> {
         "xlsx" => "Microsoft Excel",
         "xlz" => "WorldServer and Idiom XLIFF packages",
         "xmb" => "Google and Angular XMB",
+        "dita" => "DITA topics, maps and bookmaps",
+        "docbook" => "DocBook 4.x and 5",
         "xml" => "XML with ITS 2.0 rules",
         "xslt" => "XSLT stylesheets",
         "xtb" => "Google and Angular XTB",
