@@ -1,0 +1,64 @@
+{
+ "parse": {
+  "columns": "source=en-US,target.de-DE=de-DE",
+  "source_locale": "en-US",
+  "target_locales": [
+   "de-DE"
+  ]
+ },
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Hello",
+   "style": "",
+   "note": ""
+  },
+  {
+   "p_index": 1,
+   "text": "Bye",
+   "style": "",
+   "note": ""
+  },
+  {
+   "p_index": 2,
+   "text": "Yes",
+   "style": "",
+   "note": ""
+  },
+  {
+   "p_index": 3,
+   "text": "Number",
+   "style": "",
+   "note": ""
+  },
+  {
+   "p_index": 4,
+   "text": "Bool",
+   "style": "",
+   "note": ""
+  }
+ ],
+ "error": false,
+ "builds": [
+  {
+   "name": "de",
+   "locale": "de-DE",
+   "map": {
+    "0": "DE Hello",
+    "1": "DE Bye",
+    "2": "DE Yes",
+    "3": "DE Number",
+    "4": "DE Bool"
+   },
+   "file": "table_formula.de.xlsx"
+  },
+  {
+   "name": "one",
+   "locale": "de-DE",
+   "map": {
+    "1": "Tschuess"
+   },
+   "file": "table_formula.one.xlsx"
+  }
+ ]
+}

@@ -19,10 +19,16 @@
 //!
 //! The document carries the original package as a `Skeleton::Binary`.
 
+mod comments;
 mod dom;
 mod strict;
+mod table;
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod tests_modes;
+
+pub use table::{report_options, table_mode};
 
 use bilingua_model::{guard, parser_info, profile, CodeData, Document, Error, ExtractOptions, Granularity, Inline, MergeOptions, Skeleton, TagKind, Unit, UnitContext};
 use dom::Dom;
@@ -180,6 +186,14 @@ struct Package {
     shared_strings: Option<String>,
     sheets: Vec<String>,
     strict: bool,
+    /// The workbook part's name.
+    workbook: String,
+    /// Sheets whose rows and cells all carry their address (column mode inserts cells), and their rows by number.
+    explicit: HashSet<String>,
+    rows: HashMap<String, BTreeMap<i64, usize>>,
+    /// Members dropped from the package (the calc chain), and whether a formula was overwritten.
+    removed: BTreeSet<String>,
+    formula_removed: bool,
 }
 
 /// (id, type suffix, resolved path) of each internal relationship, in document order (a later duplicate id
@@ -217,8 +231,14 @@ impl Package {
             shared_strings: None,
             sheets: Vec::new(),
             strict,
+            workbook: String::new(),
+            explicit: HashSet::new(),
+            rows: HashMap::new(),
+            removed: BTreeSet::new(),
+            formula_removed: false,
         };
         let wb = pkg.main_part()?;
+        pkg.workbook = wb.clone();
         let wrels = pkg.rels(&wb)?;
         pkg.shared_strings = wrels.iter().find(|(_, k, _)| k == "sharedStrings").map(|(_, _, p)| p.clone());
         let d = &pkg.roots[&wb];
@@ -404,10 +424,25 @@ impl Package {
 
     /// Writes `text` into the cell as a literal string (`set_cell_text`).
     fn set_cell_text(&mut self, sheet: usize, row: i64, col: i64, text: &str) -> Result<(), Error> {
+        self.set_cell_text_with(sheet, row, col, text, false)
+    }
+
+    /// `set_cell_text(.., create)`: with `create` a cell that is not there is made (column mode's target cells).
+    fn set_cell_text_with(&mut self, sheet: usize, row: i64, col: i64, text: &str, create: bool) -> Result<(), Error> {
         let path = self.sheets[sheet].clone();
         self.ensure_index(&path)?;
-        let c = *self.cells[&path].get(&(row, col)).ok_or_else(|| bad(format!("Excel cell {}{row} was not found.", col_letters(col))))?;
+        let found = self.cells[&path].get(&(row, col)).copied();
+        let c = match found {
+            Some(c) => c,
+            None if create => self.create_cell(&path, row, col)?,
+            None => return Err(bad(format!("Excel cell {}{row} was not found.", col_letters(col)))),
+        };
         self.dirty.insert(path.clone());
+        if let Some(f) = self.roots[&path].find(c, M, "f") {
+            // a formula overwritten by text (a column-mode target cell): see `unshare`
+            self.unshare(&path, c, f);
+            self.formula_removed = true;
+        }
         let d = self.roots.get_mut(&path).expect("sheet part");
         let digits = d.find(c, M, "v").and_then(|v| d.text(v)).map(|t| bilingua_model::py_strip(&t).to_string()).filter(|t| !t.is_empty() && t.bytes().all(|b| b.is_ascii_digit()));
         if d.get(c, "t") == Some("s") && d.find(c, M, "f").is_none() {
@@ -418,7 +453,6 @@ impl Package {
         }
         let template = if d.get(c, "t") == Some("inlineStr") { d.find(c, M, "is") } else { None };
         let new = string_item(d, c, "is", text, template);
-        // a unit cell never holds a formula (openpyxl gives it a formula value), so there is none to unshare
         for child in d.element_children(c) {
             if d.is(child, M, "f") || d.is(child, M, "v") || d.is(child, M, "is") {
                 d.remove(child);
@@ -616,6 +650,9 @@ impl Package {
     fn save(&mut self, entries: &[bilingua_zip::RawEntry]) -> Result<Vec<u8>, Error> {
         use bilingua_zip::{Body, EntryMeta};
         self.resolve_shared()?;
+        if self.formula_removed {
+            self.drop_calc_chain()?;
+        }
         let mut changed: HashMap<String, Vec<u8>> = HashMap::new();
         for name in &self.dirty {
             let standalone = self.parts.get(name).is_some_and(|raw| strict::contains(&raw[..raw.len().min(200)], b"standalone=\"yes\""));
@@ -629,6 +666,9 @@ impl Package {
         }
         let mut out: Vec<(EntryMeta, Body)> = Vec::with_capacity(entries.len() + self.added.len());
         for e in entries {
+            if self.removed.contains(&e.name) {
+                continue;
+            }
             match changed.remove(&e.name) {
                 Some(b) => {
                     let mut m = e.meta.clone();
@@ -1040,8 +1080,12 @@ fn read(bytes: &[u8], l: &bilingua_model::Limits) -> Result<Vec<bilingua_zip::Ra
     Ok(entries)
 }
 
-/// Extracts a workbook the way LocOS parses it (cell mode, walk 2, no comments).
-pub fn extract(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
+/// Extracts a workbook the way LocOS parses it: cell mode (walk 2, comments when `xo.translate_comments`) or, with
+/// a column mapping, column mode.
+pub fn extract(bytes: &[u8], opts: &ExtractOptions, xo: &crate::XlsxOptions) -> Result<Document, Error> {
+    if table_mode(xo) {
+        return table::extract(bytes, opts, xo);
+    }
     let l = opts.limits();
     guard::check_input(bytes, &l)?;
     let entries = read(bytes, &l)?;
@@ -1070,6 +1114,12 @@ pub fn extract(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
         u.context.extra.insert(profile::STYLE.to_string(), TEXT_BOX.to_string());
         u.hidden.insert(KEY.to_string(), idx.to_string());
         units.push(u);
+    }
+    if xo.translate_comments {
+        // #690: the comment units, appended at COMMENT_BASE + their place in the comment walk
+        let found = comments::units(&mut pkg)?;
+        guard::check_unit_count(units.len() + found.len(), &l)?;
+        units.extend(found);
     }
     let doc = Document::new("xlsx", units, Skeleton::binary(bytes.to_vec(), parser_info!()))
         .with_source_lang(opts.source_lang.clone())
@@ -1130,6 +1180,7 @@ pub fn merge(doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
         return Err(Error::Write("xlsx: a LocOS-profile document needs its original file".into()));
     };
     let texts = written_texts(doc);
+    let table = table::is_table(doc);
     let tag = opts.stamp_lang(doc, !texts.is_empty()).and_then(profile::lang_tag);
     if texts.is_empty() && tag.is_none() {
         return Ok(data.clone());
@@ -1137,26 +1188,32 @@ pub fn merge(doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
     let l = bilingua_model::Limits::default();
     let entries = read(data, &l)?;
     let mut pkg = Package::open(&entries)?;
-    let cells = pkg.unit_cells()?;
-    for (idx, (sheet, row, col, value)) in cells.iter().enumerate() {
-        let Some(tr) = texts.get(&idx) else { continue };
-        let tr = xml_target_text(tr);
-        if tr != *value {
-            pkg.set_cell_text(*sheet, *row, *col, &tr)?;
-        }
-    }
     let rtl = tag.as_deref().is_some_and(profile::is_rtl);
-    let base = cells.len();
-    for (j, (_, part, p)) in pkg.drawing_paragraphs()?.into_iter().enumerate() {
-        let Some(tr) = texts.get(&(base + j)) else { continue };
-        let tr = xml_target_text(tr);
-        pkg.load(&part)?;
-        let d = pkg.dom(&part);
-        write_paragraph(d, p, &tr);
-        if let Some(t) = &tag {
-            stamp_paragraph(d, p, t, rtl);
+    if table {
+        table::apply(&mut pkg, doc, &texts)?;
+    } else {
+        let cells = pkg.unit_cells()?;
+        for (idx, (sheet, row, col, value)) in cells.iter().enumerate() {
+            let Some(tr) = texts.get(&idx) else { continue };
+            let tr = xml_target_text(tr);
+            if tr != *value {
+                pkg.set_cell_text(*sheet, *row, *col, &tr)?;
+            }
         }
-        pkg.dirty.insert(part);
+        let base = cells.len();
+        for (j, (_, part, p)) in pkg.drawing_paragraphs()?.into_iter().enumerate() {
+            let Some(tr) = texts.get(&(base + j)) else { continue };
+            let tr = xml_target_text(tr);
+            pkg.load(&part)?;
+            let d = pkg.dom(&part);
+            write_paragraph(d, p, &tr);
+            if let Some(t) = &tag {
+                stamp_paragraph(d, p, t, rtl);
+            }
+            pkg.dirty.insert(part);
+        }
+        // comment units (keys from COMMENT_BASE up): the original's comments are patched in place
+        comments::apply(&mut pkg, &texts)?;
     }
     if let Some(t) = &tag {
         pkg.stamp_language(t)?;

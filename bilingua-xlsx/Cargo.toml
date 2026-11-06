@@ -13,6 +13,7 @@ keywords = ["localization", "translation", "l10n", "xlsx", "parser"]
 categories.workspace = true
 
 [dependencies]
+bilingua-csv = { workspace = true }
 bilingua-model = { workspace = true }
 bilingua-zip = { workspace = true }
 quick-xml = { workspace = true }
