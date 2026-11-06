@@ -2,8 +2,8 @@
 //! `oracle/locos_golden.py` with the Localization OS venv: the units LocOS's filter gives (p_index, text with its
 //! tokens, style) and its builds under a few mappings. This test does what the LocOS adapter does: extract under
 //! the `locos` profile at paragraph granularity, number the translatable segments (`locos.p_index` when every unit
-//! has a distinct one, else the position), turn each segment into LocOS text with `profile::tokens` (pair letter
-//! `r` for docx and pptx, as the adapter does), then set each mapping as targets and merge with the profile's merge
+//! has a distinct one, else the position), turn each segment into LocOS text with `profile::tokens::to_locos_text_for`
+//! (pair letter `r` for docx and pptx, as the adapter does; html keeps LocOS's own tag tokens), then set each mapping as targets and merge with the profile's merge
 //! options. Units and bytes must be equal.
 //!
 //! Zip packages (docx, pptx, xlsx, the XLIFF packages) are compared entry by entry, by name: an entry LocOS left as
@@ -29,25 +29,15 @@ fn opts(locale: Option<&str>) -> ExtractOptions {
     profile::locos().extract_options().with_granularity(Granularity::Paragraph).with_target_lang(locale.map(|l| l.replace('_', "-")))
 }
 
-/// The pair-token letter LocOS uses for a format's inline runs (the adapter's `_PAIR_LETTER`).
-fn pair_letter(format: &str) -> char {
-    if matches!(format, "docx" | "pptx") {
-        'r'
-    } else {
-        tokens::PAIR_LETTER
-    }
-}
-
 fn numbered(doc: &Document) -> Vec<Numbered> {
     let segs: Vec<(&Unit, &Segment)> = doc.units.iter().filter(|u| u.translate).flat_map(|u| u.segments.iter().map(move |s| (u, s))).collect();
     let metas: Vec<Option<i64>> = segs.iter().map(|(u, _)| u.context.extra.get(profile::P_INDEX).and_then(|p| p.parse().ok())).collect();
     let distinct = metas.iter().flatten().collect::<BTreeSet<_>>().len() == metas.len();
     let use_meta = !segs.is_empty() && metas.iter().all(Option::is_some) && distinct;
-    let letter = pair_letter(&doc.format);
     segs.iter()
         .enumerate()
         .map(|(i, (u, s))| {
-            let (text, map) = tokens::to_locos_text_as(&s.source, letter);
+            let (text, map) = tokens::to_locos_text_for(&doc.format, &s.source);
             let style = u
                 .context
                 .extra
@@ -375,10 +365,8 @@ const KNOWN: &[(&str, &str)] = &[
 ];
 
 /// Formats whose goldens do not match yet: reported, not fatal. Remove a format when all its files match. docx,
-/// pptx, xlsx: Track D group B, not ported yet. html: the shared core (htmlcore) under the profile still sets
-/// `context.style` (`p`, LocOS ""), gives entity text resolved where LocOS keeps `&amp;` in the unit text, and
-/// writes `"` and `'` of a translation bare where LocOS writes `&quot;` and `&#x27;`.
-const PENDING: &[&str] = &["docx", "pptx", "xlsx", "html"];
+/// pptx, xlsx: Track D group B, not ported yet.
+const PENDING: &[&str] = &["docx", "pptx", "xlsx"];
 
 #[test]
 fn locos_profile_goldens() {

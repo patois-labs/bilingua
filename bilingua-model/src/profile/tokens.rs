@@ -68,12 +68,45 @@ pub fn to_locos_text(inl: &[Inline]) -> (String, LocosMap) {
 /// Like [`to_locos_text`] with another kind letter for pairs (`r` for DOCX runs). `pair_letter` must be a
 /// lower-case ASCII letter other than `x` and `p`; anything else falls back to `g`.
 pub fn to_locos_text_as(inl: &[Inline], pair_letter: char) -> (String, LocosMap) {
+    convert(inl, pair_letter, pairs(inl))
+}
+
+/// The pair-token letter a format's LocOS filter uses (the adapter's `_PAIR_LETTER`): `r` for docx and pptx runs,
+/// else [`PAIR_LETTER`].
+pub fn locos_pair_letter(format: &str) -> char {
+    if matches!(format, "docx" | "pptx") {
+        'r'
+    } else {
+        PAIR_LETTER
+    }
+}
+
+/// Formats whose LocOS filter writes its own tag tokens into the unit text: every open tag a pair token, every
+/// close the pair token of the nearest open of its id even when pairs cross, and an open with no close a pair
+/// token too (LocOS `html_filter._iter_units`). Their LocOS text is not always well formed for
+/// `placeholders_well_formed`; it is what LocOS stores.
+const LOCOS_PAIRS_BY_ID: &[&str] = &["html"];
+
+/// A unit's inline codes as the LocOS filter of `format` writes them: the format's pair letter
+/// ([`locos_pair_letter`]), and for the formats whose filter keeps its own tag tokens (`html`) every `Open` a
+/// pair token and every `Close` the closing token of the latest open of its id, crossing or not, an `Open` with
+/// no close a pair token with no closing one; a `Close` with no open stays an `x` token. Other formats:
+/// [`to_locos_text_as`]. [`from_locos_text`] reads both back.
+pub fn to_locos_text_for(format: &str, inl: &[Inline]) -> (String, LocosMap) {
+    let letter = locos_pair_letter(format);
+    if LOCOS_PAIRS_BY_ID.contains(&format) {
+        convert(inl, letter, pairs_by_id(inl))
+    } else {
+        to_locos_text_as(inl, letter)
+    }
+}
+
+fn convert(inl: &[Inline], pair_letter: char, partner: Vec<Option<usize>>) -> (String, LocosMap) {
     let pair = if pair_letter.is_ascii_lowercase() && pair_letter != POINT_LETTER && pair_letter != FREE_LETTER {
         pair_letter
     } else {
         PAIR_LETTER
     };
-    let partner = pairs(inl);
     let mut text = String::new();
     let mut map = LocosMap::new();
     // token number of each paired Open, by its position in `inl`
@@ -143,6 +176,31 @@ fn pairs(inl: &[Inline]) -> Vec<Option<usize>> {
                 if let Some(at) = stack.iter().rposition(|(oid, _)| oid == id) {
                     let (_, o) = stack[at];
                     stack.truncate(at);
+                    partner[o] = Some(pos);
+                    partner[pos] = Some(o);
+                }
+            }
+            _ => {}
+        }
+    }
+    partner
+}
+
+/// Like [`pairs`], the way LocOS's HTML filter pairs its tags: a close pairs with the latest open of its id still
+/// open, wherever it is on the stack (pairs may cross); an open never closed is its own partner (a pair token with
+/// no closing one). A close with no open is unpaired.
+fn pairs_by_id(inl: &[Inline]) -> Vec<Option<usize>> {
+    let mut partner = vec![None; inl.len()];
+    // the opens still open, per id: one pass whatever the nesting
+    let mut open: BTreeMap<&str, Vec<usize>> = BTreeMap::new();
+    for (pos, i) in inl.iter().enumerate() {
+        match i {
+            Inline::Tag { id, kind: TagKind::Open, .. } => {
+                partner[pos] = Some(pos);
+                open.entry(id.as_str()).or_default().push(pos);
+            }
+            Inline::Tag { id, kind: TagKind::Close, .. } => {
+                if let Some(o) = open.get_mut(id.as_str()).and_then(Vec::pop) {
                     partner[o] = Some(pos);
                     partner[pos] = Some(o);
                 }
@@ -429,6 +487,35 @@ mod tests {
         assert_eq!(t, "\u{27E6}g1\u{27E7}1\u{27E6}x2\u{27E7}2\u{27E6}/g1\u{27E7}3\u{27E6}x3\u{27E7}");
         assert!(well_formed(&t));
         assert_eq!(from_locos_text(&t, &map), s);
+    }
+
+    #[test]
+    fn html_keeps_its_own_tokens() {
+        // LocOS html_filter: an open with no close is a pair token, crossed pairs keep their numbers
+        let s = vec![
+            Inline::tag("1", TagKind::Open, "<a>"),
+            Inline::text("Hi "),
+            Inline::tag("2", TagKind::Open, "<b>"),
+            Inline::text("1"),
+            Inline::tag("3", TagKind::Open, "<i>"),
+            Inline::text("2"),
+            Inline::tag("2", TagKind::Close, "</b>"),
+            Inline::text("3"),
+            Inline::tag("3", TagKind::Close, "</i>"),
+            Inline::tag("4", TagKind::Standalone, "<br>"),
+            Inline::tag("9", TagKind::Close, "</u>"),
+        ];
+        let (t, map) = to_locos_text_for("html", &s);
+        assert_eq!(
+            t,
+            "\u{27E6}g1\u{27E7}Hi \u{27E6}g2\u{27E7}1\u{27E6}g3\u{27E7}2\u{27E6}/g2\u{27E7}3\u{27E6}/g3\u{27E7}\u{27E6}x4\u{27E7}\u{27E6}x5\u{27E7}"
+        );
+        assert_eq!(map["1"].letter, 'g');
+        assert_eq!(map["1"].close, None);
+        assert_eq!(from_locos_text(&t, &map), s);
+        // the other formats keep the well-formed conversion, with their pair letter
+        assert_eq!(to_locos_text_for("md", &s), to_locos_text_as(&s, 'g'));
+        assert_eq!(to_locos_text_for("docx", &s), to_locos_text_as(&s, 'r'));
     }
 
     #[test]
