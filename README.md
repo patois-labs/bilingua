@@ -73,6 +73,7 @@ yours.
 | OpenDocument presentation | `odp` | `.odp` `.otp` |  |
 | OpenDocument spreadsheet | `ods` | `.ods` `.ots` |  |
 | OpenDocument text | `odt` | `.odt` `.ott` |  |
+| PDF (text layer, extract only) | `pdf` | `.pdf` |  |
 | PHP array language files (Laravel, CodeIgniter) | `php` | `.php` |  |
 | PHP templates | `phtml` | `.phtml` |  |
 | Phrase MXLIFF | `mxliff` | `.mxliff` | yes |
@@ -110,7 +111,7 @@ yours.
 | YAML (generic, Rails i18n, Symfony) | `yaml` | `.yaml` `.yml` |  |
 | YouTube SBV subtitles | `sbv` | `.sbv` |  |
 
-87 formats.
+88 formats.
 <!-- formats:end -->
 
 `bilingua::detect` picks the format by extension and then by looking at the bytes, so most files need no hint.
@@ -245,4 +246,5 @@ harness; it is a test aid, never a dependency, and is not published.
 ## Licence
 
 Apache License 2.0; see [LICENSE](LICENSE) and [NOTICE](NOTICE). Some generated tables come from Unicode data
-(the Unicode Character Database and CLDR) and carry the Unicode License v3, reproduced in NOTICE.
+(the Unicode Character Database and CLDR) and carry the Unicode License v3; the PDF crate holds data from
+PDFium and Adobe's glyph list and font metrics (BSD 3-Clause and Adobe's AFM notice). NOTICE reproduces these.

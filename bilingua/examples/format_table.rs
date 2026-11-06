@@ -53,6 +53,7 @@ fn name(id: &str) -> Option<&'static str> {
         "phtml" => "PHP templates",
         "plist" => "Apple property lists (XML and binary)",
         "po" => "gettext PO and POT",
+        "pdf" => "PDF (text layer, extract only)",
         "pptx" => "Microsoft PowerPoint",
         "properties" => "Java and Mozilla .properties",
         "rc" => "Windows resource scripts",

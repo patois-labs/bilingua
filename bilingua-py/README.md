@@ -1,7 +1,7 @@
 # bilingua (Python)
 
 Python bindings for [Bilingua](https://github.com/patois-labs/bilingua), the file parsers for translation: open a
-source file in any of 87 formats (Word, Excel, PowerPoint, PO, XLIFF, subtitles, software strings and more), get its
+source file in any of 88 formats (Word, Excel, PowerPoint, PO, XLIFF, subtitles, software strings and more), get its
 translatable text as segments with the formatting kept as inline tags, set the translations, and get the file back
 in its original format. Bytes in, bytes out: it never touches the file system.
 

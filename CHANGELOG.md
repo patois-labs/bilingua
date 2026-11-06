@@ -11,11 +11,11 @@ The first public release.
 
 ### Formats
 
-87 filter ids in 64 format crates, all behind the `bilingua` facade (`bilingua::filters()`, `bilingua::detect`). The full
+88 filter ids in 65 format crates, all behind the `bilingua` facade (`bilingua::filters()`, `bilingua::detect`). The full
 table, with extensions, is in the README.
 
 - Office and publishing: Word, Excel, PowerPoint, Visio, OpenDocument (text, spreadsheet, presentation, drawing),
-  InDesign IDML, InCopy ICML and WCML, FrameMaker MIF, QuarkXPress Tags, EPUB 2 and 3, AutoCAD DXF.
+  PDF (text layer, extract only), InDesign IDML, InCopy ICML and WCML, FrameMaker MIF, QuarkXPress Tags, EPUB 2 and 3, AutoCAD DXF.
 - Web, documentation and help: HTML and XHTML, Markdown, MDX, AsciiDoc, reStructuredText, LaTeX, MediaWiki and
   DokuWiki, XML with ITS 2.0 rules, XSLT, server pages (ASP.NET, JSP, PHP templates, SSI, ERB), HTML Help, MadCap
   Flare projects, email messages, SVG text and the text layer of raster images.
