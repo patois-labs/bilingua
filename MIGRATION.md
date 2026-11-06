@@ -267,6 +267,19 @@ keeps the encoding:
   refuse it), and a DTD in a DOCX part (LocOS's DOCX reader takes one; its PPTX and XLSX readers refuse it). LocOS
   also reads LocOS-token look-alikes (`⟦x2⟧`) in source text as tokens and drops or moves them on export; the
   profile keeps them as text, so such a unit's build differs.
+- Wave 12, item D (facade options and xmlres records): three new `format_options` keys. `xaml.view_attributes`
+  (bool, default unset: the filter's own setting, which is off for `Xaml::new()`; LocOS's `XAML_VIEW_ATTRIBUTES`;
+  an explicit `false` also beats `Xaml::with_view_attributes()`). `xml.its_rules` (text, default none: the content
+  of an external ITS 2.0 `<its:rules>` file, applied before the rules inside the document and after any set with
+  `XmlFilter::its_rules`; malformed or unsafe rules are `Error::Parse`/`Error::Unsupported`, never ignored).
+  `xml.multilingual` (text, default none: a JSON object with `mode`, `source`, `lang_attr`, `source_xpath`,
+  `target_xpath`, `create`, `enabled`, as `MlConfig::from_json` reads it; replaces the filter's multilingual
+  policy for that extract, `{"enabled": false}` turns the layout detection off). An empty value is the same as no
+  option. `bilingua-dita` and `bilingua-docbook` run an `XmlFilter` engine, so they pass these two keys through.
+  `bilingua_xmlres::records(bytes)` (root `<resources>` or `<properties>`, else `Error::Unsupported`),
+  `AndroidStrings::records` and `JavaXmlProperties::records` give LocOS's `records()` as `bilingua_xmlres::Record`
+  (`key`, `value` in LocOS token text with its outer white space, `comment`, `plural`, `index`, `max_length`,
+  `context`, `translatable`): every entry in file order, translatable or not.
 - `profile::lang_tag` and `profile::is_rtl` are LocOS's `html_lang` and `text_direction`.
 - LocOS export keywords are accepted and ignored for now: `docx.walk`, `xlsx.walk`, `pptx.walk`, `xlsx.table`,
   `csv.table`, `markdown.walk`, `markdown.md_walk`, `markdown.fm_keys`, `json.dialect`.

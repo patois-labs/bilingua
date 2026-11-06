@@ -20,7 +20,7 @@ const ANDROID: &[Row] = &[
     ("placeholder", "Signed in as \u{27e6}x1\u{27e7}.", "", "", None, true),
     ("html_cdata", "Read the <a href=\"https://example.com/terms\">terms</a> first.", "", "", None, true),
     ("quoted", "It's   spaced   out", "", "", None, true),
-    ("newline", "First line\nSecond line", "", "", None, true),
+    ("newline", "First line\\nSecond line", "", "", None, true),
     ("percent", "100% sure", "", "", None, true),
     ("lint_ok", "Only in English", "", "", None, true),
     ("empty", "", "", "", None, false),
@@ -84,7 +84,7 @@ fn records_count_the_units_and_agree_with_extract() {
 
 #[test]
 fn records_keep_outer_white_space_and_unescape_like_the_translator_view() {
-    let x = b"<?xml version=\"1.0\"?><resources><string name=\"a\">  Hello \'x\'  </string></resources>";
+    let x = b"<?xml version=\"1.0\"?><resources><string name=\"a\">  Hello \\'x\\'  </string></resources>";
     let r = AndroidStrings.records(x).unwrap();
     assert_eq!(r[0].value, "  Hello 'x'  ");
 }
