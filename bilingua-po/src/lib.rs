@@ -3,8 +3,10 @@
 /// Skeleton schema number: bump only when this crate's skeleton layout changes (see `bilingua_model::check_parser`).
 pub const SKELETON_SCHEMA: u32 = 1;
 
+mod locos;
 mod parse;
 mod ph;
+mod plural_table;
 
 use bilingua_model::*;
 use parse::{escape, parse, Entry, Field};
@@ -154,6 +156,9 @@ impl Filter for Po {
         let mut dec = bilingua_model::enc::decode_text(bytes, &bilingua_model::enc::DecodeOptions::new(opts).declared())?;
         let text_owned = std::mem::take(&mut dec.text);
         let text = text_owned.as_str();
+        if opts.is_profile(profile::LOCOS) {
+            return locos::extract(text, &dec.encoding, opts, std::mem::take(&mut dec.warnings));
+        }
         let parsed = parse(text)?;
 
         // Header: the first entry with an empty msgid.
@@ -234,6 +239,10 @@ impl Filter for Po {
     fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
         bilingua_model::check_own_options(self, &opts.format_options)?;
         bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
+        // a document extracted under the LocOS profile carries the decoded file and is written the LocOS way
+        if let Skeleton::Binary { data, .. } = &doc.skeleton {
+            return locos::merge(doc, data, opts);
+        }
         let Skeleton::Text { parts, encoding, .. } = &doc.skeleton else {
             return Err(Error::Write("po needs a text skeleton".into()));
         };

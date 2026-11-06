@@ -1,0 +1,5 @@
+msgid "Only one"
+msgstr ""
+
+msgid "%1$s of %2$s"
+msgstr ""
