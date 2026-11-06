@@ -229,7 +229,14 @@ fn main() {
             }
             Ok(d2) => {
                 let labels: std::collections::BTreeSet<(Option<String>, String)> = doc.units.iter().filter_map(plural_label).collect();
-                let a: Vec<String> = doc.units.iter().filter(|u| u.translate).map(|u| no_tags(&render(u).0)).collect();
+                // Android drops the plural forms the target never uses (es-ES has no "two"), as LocOS
+                let kept: std::collections::BTreeSet<(Option<String>, String)> = d2.units.iter().filter_map(plural_label).collect();
+                let a: Vec<String> = doc
+                    .units
+                    .iter()
+                    .filter(|u| u.translate && !(doc.format == "android" && plural_label(u).is_some_and(|l| !kept.contains(&l))))
+                    .map(|u| no_tags(&render(u).0))
+                    .collect();
                 let b2: Vec<String> = d2
                     .units
                     .iter()
