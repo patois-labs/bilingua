@@ -223,7 +223,33 @@ keeps the encoding:
   PowerPoint tokens: `profile::tokens::to_locos_text_for("xlsx", ..)` gives `r` run pairs and numbers each token by
   its tag id, so a break or field after two runs is `x3`, as LocOS writes it (the adapter's `_PAIR_LETTER` needs
   `xlsx` too). XML parts are read in UTF-8 or UTF-16 (with its BOM), as lxml reads them, and a rewritten part is
-  written as UTF-8. Not ported: LocOS's comment units (`comments=True`) and column mode (`xlsx.table`).
+  written as UTF-8.
+  Wave 12: column mode and comment units are ported (below).
+- Wave 12, xlsx column mode and comment units (`xlsx.columns`, `xlsx.target_locales`, `xlsx.translate_comments`):
+  new `XlsxOptions::columns` (key `xlsx.columns`, default none) and `XlsxOptions::target_locales` (key
+  `xlsx.target_locales`, comma separated, default none). With a column mapping (any non-empty string, as in LocOS;
+  the CSV filter's `source=`, `target=`, `target.<locale>=`, `key=`, `context=`, `maxlen=`, `header=`) each sheet is
+  planned from its first non-empty row (`bilingua_csv::plan`, so CSV and XLSX read a mapping the same way) and the
+  source column's text cells (a letter, not a formula) are the units, in sheet and row order, numbered 0.. with
+  `locos.p_index`; the note columns are `context.notes`. The merge writes the translation into the target column of
+  the same row for `ExtractOptions::target_lang` (`target.<locale>` first, then `target=`), making the row and cell
+  where there are none (rows and cells get explicit addresses, `dimension` grows) or over the source cell when the
+  plan has no target column; a filled target is kept when the translation equals the source. A target cell that
+  held a formula becomes text: dependents of a shared formula get their own formula and `calcChain.xml` is dropped
+  (Excel rebuilds it). A sheet the mapping does not fit is left alone; a mapping that fits no sheet is refused.
+  Column mode needs no profile: it uses this same engine either way (the document carries the original package),
+  the profile only decides the merge options (`merge_with_report` uses the plain ones for a document read without
+  it). Text boxes and comments are not units in column mode, as in LocOS. `xlsx.table` (LocOS's stored plan) is still
+  accepted and ignored: the plan is made again from `xlsx.columns` and kept on the units. Known small differences:
+  header detection and notes see a date cell as its serial number, a float as Rust prints it, and a shared-formula
+  dependent as `=` (LocOS shows the translated formula). Comment units: under the profile `xlsx.translate_comments`
+  now adds LocOS's comment units after the text boxes, numbered `1000000 + place in the comment walk` (threaded
+  comments of a sheet, then its notes; style `comment`, text trimmed, a classic note without Excel's bold `Author:`
+  run, the `[Threaded comment]` placeholder note skipped). The merge patches the comment parts in place (a threaded
+  comment keeps its outer white space, a note's source text is replaced across its runs). Without the profile the
+  option keeps its older meaning (units `comment<sheet>-<cell>` in the generic path). Goldens: LocOS output for
+  both modes is in `bilingua-xlsx/tests/data/modes/`, made by `oracle/locos_xlsx_modes.py` (the generic golden
+  harness has no way to pass `columns=` or `comments=`, so it is not changed).
 - Track D group B, PPTX (and pptm, potx, potm, ppsx, ppsm): under the profile this is a port of LocOS's
   `pptx_filter.py` (`bilingua_pptx::locos`). The walk is LocOS's: per slide in `p:sldIdLst` order the slide's
   paragraphs (outside `mc:Fallback` and merged table cells), its SmartArt data and charts in reference order, its

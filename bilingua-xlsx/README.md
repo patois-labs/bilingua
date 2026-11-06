@@ -23,6 +23,7 @@ For the facade (`bilingua/src/lib.rs`, `filters()`): `Box::new(bilingua_xlsx::Xl
 | `translate_sheet_names` | Sheet names become units (`sheetname-N`, kind `sheet-name`, `max_len` 31). Formulas and defined names that mention a sheet are rewritten to the new name. |
 | `skip_hidden` | Text that is only used in hidden sheets, rows or columns is not extracted. |
 | `translate_comments` | Cell comments become units (`comment<sheet>-<cell>`, `threaded<sheet>-<cell>-<n>`, kind `comment`). |
+| `columns` | Column mode: `source=English, target.de=German, key=id, ...`. The source column's text cells are the units and the translation goes into the target column of the same row (made when missing). Works with the Localization OS profile or without it; text boxes and comments are not units. Key `xlsx.columns`; `xlsx.target_locales` lists the project's languages for header matching. |
 
 ## How it works
 
