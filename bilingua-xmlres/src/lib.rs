@@ -165,7 +165,7 @@ fn clean(s: &str) -> String {
     s.chars()
         .filter_map(|c| match c {
             '\u{0B}' | '\u{0C}' => Some('\n'),
-            '\u{0}'..='\u{8}' | '\u{0E}'..='\u{1F}' | '\u{D800}'..='\u{DFFF}' | '\u{FFFE}' | '\u{FFFF}' => None,
+            '\u{0}'..='\u{8}' | '\u{0E}'..='\u{1F}' | '\u{FFFE}' | '\u{FFFF}' => None,
             c => Some(c),
         })
         .collect()
