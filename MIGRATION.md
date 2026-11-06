@@ -102,6 +102,12 @@ item below breaks code written against 0.1; after 1.0 these types grow without b
   `MqPackage::from_bytes_with_limits` take `bilingua_model::Limits` (LocOS's numbers by default: 10 000 entries,
   256 MB unpacked; raise them for desktop use with `Limits::new().with_max_zip_bytes(..).with_max_zip_entries(..)`).
 
+- **bilingua-richtext (new).** Contentful Rich Text, Sanity Portable Text, Jira ADF and Notion blocks as JSON files
+  (`contentful`, `sanity`, `adf`, `notion`). New option `adf.units` (text, `inline` default | `leaf`): `inline` is one
+  unit per paragraph with marks as tag pairs (the Jira connector's walker), `leaf` one unit per text leaf with no tags
+  (LocOS's older `adf.extract`). A document remembers its mode, so merge needs no option. Behaviour without the option
+  is the default (`inline`); no existing format changes.
+
 ## Format-crate builders (and the branches still on the old API: Flare, DXF, PDF, SVG and images)
 
 A checklist for a rebase onto this round, in the order the compiler will ask for it:
