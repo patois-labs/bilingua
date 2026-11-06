@@ -111,7 +111,12 @@ fn check(golden: &Path) -> (usize, usize, usize, Vec<String>) {
         let map = b["map"].as_object().unwrap();
         // LocOS's B-bytes guard (base.py `_byte_guard`) wraps every filter class, the adapter's included: a plain
         // build that writes nothing returns the upload without calling the parser
-        if locale.is_none() && map.is_empty() {
+        // ... and so does one whose every text is its unit's own (the identity mapping), in a monolingual format
+        let units = g["units"].as_array().unwrap();
+        let identity = !map.is_empty()
+            && g["format"].as_str() != Some("po")
+            && map.iter().all(|(k, v)| units.iter().any(|u| u["p_index"].as_i64().map(|p| p.to_string()).as_deref() == Some(k.as_str()) && u["text"] == *v));
+        if locale.is_none() && (map.is_empty() || identity) {
             if want == data {
                 built += 1;
             } else {

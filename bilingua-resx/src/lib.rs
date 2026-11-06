@@ -114,24 +114,32 @@ fn clean(s: &str) -> String {
         .collect()
 }
 
-/// A translated value as inner XML.
-fn encode_value(new: &str, cdata: bool, crlf: bool) -> String {
-    let new = clean(new);
-    let nl = |s: String| if crlf { s.replace('\n', "\r\n") } else { s };
-    if cdata && !new.contains("]]>") && !new.contains('\r') {
-        return format!("<![CDATA[{}]]>", nl(new));
+/// A translated value as inner XML: `lead`, `new` and `trail` (the value's own white space around the
+/// translation). In a CRLF file the line breaks become CRLF: all of them, or under the LocOS profile only those of
+/// the value's own white space (LocOS writes the breaks of a translation as they are).
+fn encode_value(lead: &str, new: &str, trail: &str, cdata: bool, crlf: bool, locos: bool) -> String {
+    let parts = [clean(lead), clean(new), clean(trail)];
+    let nl = |k: usize, s: String| if crlf && (!locos || k != 1) { s.replace('\n', "\r\n") } else { s };
+    let all = parts.concat();
+    if cdata && !all.contains("]]>") && !all.contains('\r') {
+        let body: String = parts.into_iter().enumerate().map(|(k, p)| nl(k, p)).collect();
+        return format!("<![CDATA[{body}]]>");
     }
-    let mut out = String::with_capacity(new.len() + 8);
-    for c in new.chars() {
-        match c {
-            '&' => out.push_str("&amp;"),
-            '<' => out.push_str("&lt;"),
-            '>' => out.push_str("&gt;"),
-            '\r' => out.push_str("&#13;"),
-            c => out.push(c),
+    let mut body = String::with_capacity(new.len() + 8);
+    for (k, p) in parts.into_iter().enumerate() {
+        let mut out = String::with_capacity(p.len() + 8);
+        for c in p.chars() {
+            match c {
+                '&' => out.push_str("&amp;"),
+                '<' => out.push_str("&lt;"),
+                '>' => out.push_str("&gt;"),
+                '\r' => out.push_str("&#13;"),
+                c => out.push(c),
+            }
         }
+        body.push_str(&nl(k, out));
     }
-    nl(out)
+    body
 }
 
 impl Resx {
@@ -261,7 +269,7 @@ impl Filter for Resx {
                 SkelPart::Raw(s) => out.push_str(s),
                 SkelPart::Unit(i) => {
                     let u = doc.units.get(*i).ok_or_else(|| Error::Write(format!("skeleton points at missing unit {i}")))?;
-                    changed |= write_unit(u, &mut out);
+                    changed |= write_unit(u, &mut out, opts.is_profile(profile::LOCOS));
                 }
             }
         }
@@ -269,7 +277,7 @@ impl Filter for Resx {
     }
 }
 
-fn write_unit(u: &Unit, out: &mut String) -> bool {
+fn write_unit(u: &Unit, out: &mut String, locos: bool) -> bool {
     let raw = u.hidden(RAW).unwrap_or("");
     if !u.translate || u.segments.iter().all(|s| !s.has_target()) {
         out.push_str(raw);
@@ -280,8 +288,8 @@ fn write_unit(u: &Unit, out: &mut String) -> bool {
         out.push_str(raw);
         return false;
     }
-    let full = format!("{}{}{}", code(u, LEAD).unwrap_or_default(), new, code(u, TRAIL).unwrap_or_default());
-    out.push_str(&encode_value(&full, code(u, CDATA).is_some(), code(u, NL).as_deref() == Some("crlf")));
+    let (lead, trail) = (code(u, LEAD).unwrap_or_default(), code(u, TRAIL).unwrap_or_default());
+    out.push_str(&encode_value(&lead, &new, &trail, code(u, CDATA).is_some(), code(u, NL).as_deref() == Some("crlf"), locos));
     true
 }
 

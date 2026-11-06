@@ -125,6 +125,13 @@ pub fn base(tag: &str) -> &str {
     tag.split(';').next().unwrap_or(tag)
 }
 
+/// Every charset declaration in `text` rewritten to say UTF-8, as LocOS's `read_text_upload(declared=True)` does
+/// to a file it converted.
+#[doc(hidden)]
+pub fn rewrite_declarations(text: &str) -> String {
+    rewrite_declared(text)
+}
+
 /// The skeleton tag without its newline part, so a merge leaves the line breaks of the text as they are (the LocOS
 /// profile's XML resource writers: LocOS does not normalise the breaks a translation brings in).
 #[doc(hidden)]
@@ -171,7 +178,9 @@ pub fn declared_encoding(data: &[u8]) -> Option<&'static Encoding> {
     Encoding::for_label(m.get(2)?.as_str().as_bytes())
 }
 
-fn declared_label(data: &[u8]) -> Option<String> {
+/// The charset name a file declares in its first 4 KB, as written.
+#[doc(hidden)]
+pub fn declared_label(data: &[u8]) -> Option<String> {
     let head = ascii_head(data, 4096);
     Some(decl_re().captures(&head)?.get(2)?.as_str().to_string())
 }
