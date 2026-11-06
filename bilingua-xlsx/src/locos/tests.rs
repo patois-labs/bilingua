@@ -4,6 +4,11 @@ use proptest::prelude::*;
 
 const NS_DECL: &str = "xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"";
 
+/// The cell-mode extract (no column mapping, no comments).
+fn extract(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
+    super::extract(bytes, opts, &crate::XlsxOptions::default())
+}
+
 fn opts(lang: Option<&str>) -> ExtractOptions {
     profile::locos().extract_options().with_granularity(Granularity::Paragraph).with_target_lang(lang.map(str::to_string))
 }

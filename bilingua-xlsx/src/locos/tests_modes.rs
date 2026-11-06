@@ -52,6 +52,10 @@ fn plain(inl: &[Inline]) -> String {
     inl.iter().map(|i| if let Inline::Text(t) = i { t.as_str() } else { "" }).collect()
 }
 
+fn entry(zip: &[u8], name: &str) -> Option<String> {
+    entries(zip).into_iter().find(|e| e.0 == name).map(|e| String::from_utf8(e.1).unwrap())
+}
+
 fn canon(raw: &[u8]) -> Option<String> {
     let t = decode_part(raw)?;
     Some(dom::parse(&t).ok()?.serialize())
