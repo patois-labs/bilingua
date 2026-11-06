@@ -524,7 +524,12 @@ impl Filter for Email {
                         }
                     }
                     for (seg, out) in sets {
-                        sub.set_target(&seg, out)?;
+                        // the outer document was checked by the caller; under the LocOS profile it may repeat a standalone tag
+                        if opts.is_profile(bilingua_model::profile::LOCOS) {
+                            sub.set_target_repeating(&seg, out)?;
+                        } else {
+                            sub.set_target(&seg, out)?;
+                        }
                         touched = true;
                     }
                     let mut text = slot.text.clone();

@@ -1096,7 +1096,7 @@ impl Document {
 
     /// [`Document::set_target`] that lets a translation repeat a standalone placeholder tag (the `#` of an ICU
     /// plural, Chrome `$x$`, go `{{..}}`), as Localization OS does; paired tags still keep the exactly-once rule.
-    pub(crate) fn set_target_repeating(&mut self, seg_id: &str, target: Vec<Inline>) -> Result<(), Error> {
+    pub fn set_target_repeating(&mut self, seg_id: &str, target: Vec<Inline>) -> Result<(), Error> {
         let at = self.locate(seg_id).ok_or_else(|| Error::UnknownSegment(seg_id.to_string()))?;
         self.apply_target(at, seg_id, target, true)
     }
