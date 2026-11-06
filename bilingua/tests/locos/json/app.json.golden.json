@@ -1,0 +1,92 @@
+{
+ "format": "json",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Welcome",
+   "style": ""
+  },
+  {
+   "p_index": 1,
+   "text": "Home page",
+   "style": ""
+  },
+  {
+   "p_index": 2,
+   "text": "{count}",
+   "style": ""
+  },
+  {
+   "p_index": 3,
+   "text": "First",
+   "style": ""
+  },
+  {
+   "p_index": 4,
+   "text": "Second {0}",
+   "style": ""
+  },
+  {
+   "p_index": 5,
+   "text": "Hello %s, you have %d items",
+   "style": ""
+  },
+  {
+   "p_index": 6,
+   "text": "https://example.com",
+   "style": ""
+  },
+  {
+   "p_index": 7,
+   "text": "Click <b>here</b>",
+   "style": ""
+  },
+  {
+   "p_index": 8,
+   "text": "Line\nTwo é \"q\"",
+   "style": ""
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "ewogICJ0aXRsZSI6ICJXZWxjb21lIiwKICAibmF2IjogeyJob21lIjogIkhvbWUgcGFnZSIsICJjb3VudCI6ICJ7Y291bnR9IiwgIml0ZW1zIjogWyJGaXJzdCIsICJTZWNvbmQgezB9Il19LAogICJncmVldGluZyI6ICJIZWxsbyAlcywgeW91IGhhdmUgJWQgaXRlbXMiLAogICJudW0iOiAzLAogICJmbGFnIjogdHJ1ZSwKICAiZW1wdHkiOiAiIiwKICAidXJsIjogImh0dHBzOi8vZXhhbXBsZS5jb20iLAogICJodG1sIjogIkNsaWNrIDxiPmhlcmU8L2I+IiwKICAiZXNjIjogIkxpbmVcblR3byBcdTAwZTkgXCJxXCIiCn0K"
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü Welcome",
+    "1": "Ü Home page",
+    "2": "Ü {count}",
+    "3": "Ü First",
+    "4": "Ü Second {0}",
+    "5": "Ü Hello %s, you have %d items",
+    "6": "Ü https://example.com",
+    "7": "Ü Click <b>here</b>",
+    "8": "Ü Line\nTwo é \"q\""
+   },
+   "out_b64": "ewogICJ0aXRsZSI6ICLDnCBXZWxjb21lIiwKICAibmF2IjogeyJob21lIjogIsOcIEhvbWUgcGFnZSIsICJjb3VudCI6ICLDnCB7Y291bnR9IiwgIml0ZW1zIjogWyLDnCBGaXJzdCIsICLDnCBTZWNvbmQgezB9Il19LAogICJncmVldGluZyI6ICLDnCBIZWxsbyAlcywgeW91IGhhdmUgJWQgaXRlbXMiLAogICJudW0iOiAzLAogICJmbGFnIjogdHJ1ZSwKICAiZW1wdHkiOiAiIiwKICAidXJsIjogIsOcIGh0dHBzOi8vZXhhbXBsZS5jb20iLAogICJodG1sIjogIsOcIENsaWNrIDxiPmhlcmU8L2I+IiwKICAiZXNjIjogIsOcIExpbmVcblR3byDDqSBcInFcIiIKfQo="
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Welcome & <\"'>",
+    "2": "{count} & <\"'>",
+    "4": "Second {0} & <\"'>",
+    "6": "https://example.com & <\"'>",
+    "8": "Line\nTwo é \"q\" & <\"'>"
+   },
+   "out_b64": "ewogICJ0aXRsZSI6ICJXZWxjb21lICYgPFwiJz4iLAogICJuYXYiOiB7ImhvbWUiOiAiSG9tZSBwYWdlIiwgImNvdW50IjogIntjb3VudH0gJiA8XCInPiIsICJpdGVtcyI6IFsiRmlyc3QiLCAiU2Vjb25kIHswfSAmIDxcIic+Il19LAogICJncmVldGluZyI6ICJIZWxsbyAlcywgeW91IGhhdmUgJWQgaXRlbXMiLAogICJudW0iOiAzLAogICJmbGFnIjogdHJ1ZSwKICAiZW1wdHkiOiAiIiwKICAidXJsIjogImh0dHBzOi8vZXhhbXBsZS5jb20gJiA8XCInPiIsCiAgImh0bWwiOiAiQ2xpY2sgPGI+aGVyZTwvYj4iLAogICJlc2MiOiAiTGluZVxuVHdvIMOpIFwicVwiICYgPFwiJz4iCn0K"
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "out_b64": "ewogICJ0aXRsZSI6ICJXZWxjb21lIiwKICAibmF2IjogeyJob21lIjogIkhvbWUgcGFnZSIsICJjb3VudCI6ICJ7Y291bnR9IiwgIml0ZW1zIjogWyJGaXJzdCIsICJTZWNvbmQgezB9Il19LAogICJncmVldGluZyI6ICJIZWxsbyAlcywgeW91IGhhdmUgJWQgaXRlbXMiLAogICJudW0iOiAzLAogICJmbGFnIjogdHJ1ZSwKICAiZW1wdHkiOiAiIiwKICAidXJsIjogImh0dHBzOi8vZXhhbXBsZS5jb20iLAogICJodG1sIjogIkNsaWNrIDxiPmhlcmU8L2I+IiwKICAiZXNjIjogIkxpbmVcblR3byBcdTAwZTkgXCJxXCIiCn0K"
+  }
+ ]
+}

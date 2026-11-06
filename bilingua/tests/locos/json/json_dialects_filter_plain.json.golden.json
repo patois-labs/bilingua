@@ -1,0 +1,53 @@
+{
+ "format": "json",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Hello",
+   "style": ""
+  },
+  {
+   "p_index": 1,
+   "text": "A description",
+   "style": ""
+  },
+  {
+   "p_index": 2,
+   "text": "{count}",
+   "style": ""
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "eyJ0aXRsZSI6ICJIZWxsbyIsICJtZXRhIjogeyJkZXNjcmlwdGlvbiI6ICJBIGRlc2NyaXB0aW9uIiwgImNvdW50IjogIntjb3VudH0ifX0="
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü Hello",
+    "1": "Ü A description",
+    "2": "Ü {count}"
+   },
+   "out_b64": "eyJ0aXRsZSI6ICLDnCBIZWxsbyIsICJtZXRhIjogeyJkZXNjcmlwdGlvbiI6ICLDnCBBIGRlc2NyaXB0aW9uIiwgImNvdW50IjogIsOcIHtjb3VudH0ifX0="
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Hello & <\"'>",
+    "2": "{count} & <\"'>"
+   },
+   "out_b64": "eyJ0aXRsZSI6ICJIZWxsbyAmIDxcIic+IiwgIm1ldGEiOiB7ImRlc2NyaXB0aW9uIjogIkEgZGVzY3JpcHRpb24iLCAiY291bnQiOiAie2NvdW50fSAmIDxcIic+In19"
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "out_b64": "eyJ0aXRsZSI6ICJIZWxsbyIsICJtZXRhIjogeyJkZXNjcmlwdGlvbiI6ICJBIGRlc2NyaXB0aW9uIiwgImNvdW50IjogIntjb3VudH0ifX0="
+  }
+ ]
+}

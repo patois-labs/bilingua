@@ -1,0 +1,53 @@
+{
+ "format": "json",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "⟦x1⟧ has ⟦x2⟧ cat.",
+   "style": ""
+  },
+  {
+   "p_index": 1,
+   "text": "⟦x1⟧ has ⟦x2⟧ cats.",
+   "style": ""
+  },
+  {
+   "p_index": 2,
+   "text": "Hello ⟦x1⟧",
+   "style": ""
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "ewogICJQZXJzb25DYXRzIjogewogICAgImRlc2NyaXB0aW9uIjogIlRoZSBudW1iZXIgb2YgY2F0cyBhIHBlcnNvbiBoYXMiLAogICAgImhhc2giOiAic2hhMS1hYmMiLAogICAgIm9uZSI6ICJ7ey5OYW1lfX0gaGFzIHt7LkNvdW50fX0gY2F0LiIsCiAgICAib3RoZXIiOiAie3suTmFtZX19IGhhcyB7ey5Db3VudH19IGNhdHMuIgogIH0sCiAgIkhlbGxvUGVyc29uIjogIkhlbGxvIHt7Lk5hbWV9fSIKfQo="
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "⟦x1⟧Ü  has ⟦x2⟧Ü  cat.",
+    "1": "⟦x1⟧Ü  has ⟦x2⟧Ü  cats.",
+    "2": "Ü Hello ⟦x1⟧"
+   },
+   "out_b64": "ewogICJQZXJzb25DYXRzIjogewogICAgImRlc2NyaXB0aW9uIjogIlRoZSBudW1iZXIgb2YgY2F0cyBhIHBlcnNvbiBoYXMiLAogICAgImhhc2giOiAic2hhMS1hYmMiLAogICAgIm9uZSI6ICJ7ey5OYW1lfX3DnCAgaGFzIHt7LkNvdW50fX3DnCAgY2F0LiIsCiAgICAib3RoZXIiOiAie3suTmFtZX19w5wgIGhhcyB7ey5Db3VudH19w5wgIGNhdHMuIgogIH0sCiAgIkhlbGxvUGVyc29uIjogIsOcIEhlbGxvIHt7Lk5hbWV9fSIKfQo="
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "⟦x1⟧ has  & <\"'>⟦x2⟧ cat. & <\"'>",
+    "2": "Hello  & <\"'>⟦x1⟧"
+   },
+   "out_b64": "ewogICJQZXJzb25DYXRzIjogewogICAgImRlc2NyaXB0aW9uIjogIlRoZSBudW1iZXIgb2YgY2F0cyBhIHBlcnNvbiBoYXMiLAogICAgImhhc2giOiAic2hhMS1hYmMiLAogICAgIm9uZSI6ICJ7ey5OYW1lfX0gaGFzICAmIDxcIic+e3suQ291bnR9fSBjYXQuICYgPFwiJz4iLAogICAgIm90aGVyIjogInt7Lk5hbWV9fSBoYXMge3suQ291bnR9fSBjYXRzLiIKICB9LAogICJIZWxsb1BlcnNvbiI6ICJIZWxsbyAgJiA8XCInPnt7Lk5hbWV9fSIKfQo="
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "out_b64": "ewogICJQZXJzb25DYXRzIjogewogICAgImRlc2NyaXB0aW9uIjogIlRoZSBudW1iZXIgb2YgY2F0cyBhIHBlcnNvbiBoYXMiLAogICAgImhhc2giOiAic2hhMS1hYmMiLAogICAgIm9uZSI6ICJ7ey5OYW1lfX0gaGFzIHt7LkNvdW50fX0gY2F0LiIsCiAgICAib3RoZXIiOiAie3suTmFtZX19IGhhcyB7ey5Db3VudH19IGNhdHMuIgogIH0sCiAgIkhlbGxvUGVyc29uIjogIkhlbGxvIHt7Lk5hbWV9fSIKfQo="
+  }
+ ]
+}

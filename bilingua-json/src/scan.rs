@@ -9,12 +9,22 @@ pub struct StrVal {
     pub start: usize,
     pub end: usize,
     pub pointer: String,
+    /// Python's walk order of the value: per level, the position of its key among the object's distinct keys
+    /// (first occurrence) or its array index. What `json.loads` iterates (the LocOS profile).
+    pub ord: Vec<usize>,
+    /// Under a key that the same object repeats later: `json.loads` keeps the last value only.
+    pub dead: bool,
 }
 
 const MAX_DEPTH: usize = 200;
 
 pub fn scan(text: &str) -> Result<Vec<StrVal>, Error> {
-    let mut s = Scan { text, b: text.as_bytes(), i: 0, depth: 0, vals: Vec::new() };
+    scan_with(text, false)
+}
+
+/// [`scan`]; with `python` also the `NaN`, `Infinity` and `-Infinity` that Python's `json.loads` reads (LocOS).
+pub fn scan_with(text: &str, python: bool) -> Result<Vec<StrVal>, Error> {
+    let mut s = Scan { text, b: text.as_bytes(), i: 0, depth: 0, vals: Vec::new(), ord: Vec::new(), python };
     s.ws();
     let mut path = Vec::new();
     s.value(&mut path)?;
@@ -31,6 +41,8 @@ struct Scan<'a> {
     i: usize,
     depth: usize,
     vals: Vec<StrVal>,
+    ord: Vec<usize>,
+    python: bool,
 }
 
 impl Scan<'_> {
@@ -58,12 +70,15 @@ impl Scan<'_> {
             Some(b'[') => self.array(path),
             Some(b'"') => {
                 let (start, end) = self.string()?;
-                self.vals.push(StrVal { start, end, pointer: pointer(path) });
+                self.vals.push(StrVal { start, end, pointer: pointer(path), ord: self.ord.clone(), dead: false });
                 Ok(())
             }
             Some(b't') => self.literal("true"),
             Some(b'f') => self.literal("false"),
             Some(b'n') => self.literal("null"),
+            Some(b'N') if self.python => self.literal("NaN"),
+            Some(b'I') if self.python => self.literal("Infinity"),
+            Some(b'-') if self.python && self.b[self.i..].starts_with(b"-Infinity") => self.literal("-Infinity"),
             Some(b'-' | b'0'..=b'9') => self.number(),
             Some(_) => Err(self.err("unexpected character")),
         }
@@ -162,6 +177,9 @@ impl Scan<'_> {
             self.depth -= 1;
             return Ok(());
         }
+        // key -> (its position among the distinct keys, the range of `vals` its latest value produced)
+        let mut keys: Vec<(usize, usize, usize)> = Vec::new();
+        let mut seen: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
         loop {
             self.ws();
             if self.peek() != Some(b'"') {
@@ -177,8 +195,28 @@ impl Scan<'_> {
             self.i += 1;
             self.ws();
             path.push(key.replace('~', "~0").replace('/', "~1"));
+            let at = seen.get(&key).copied();
+            let o = at.map(|k| keys[k].0).unwrap_or(keys.len());
+            self.ord.push(o);
+            let first = self.vals.len();
             self.value(path)?;
+            self.ord.pop();
             path.pop();
+            let last = self.vals.len();
+            match at {
+                Some(k) => {
+                    let (_, a, b) = keys[k];
+                    for v in &mut self.vals[a..b] {
+                        v.dead = true;
+                    }
+                    keys[k].1 = first;
+                    keys[k].2 = last;
+                }
+                None => {
+                    seen.insert(key, keys.len());
+                    keys.push((o, first, last));
+                }
+            }
             self.ws();
             match self.peek() {
                 Some(b',') => self.i += 1,
@@ -205,7 +243,9 @@ impl Scan<'_> {
         loop {
             self.ws();
             path.push(n.to_string());
+            self.ord.push(n);
             self.value(path)?;
+            self.ord.pop();
             path.pop();
             n += 1;
             self.ws();

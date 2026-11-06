@@ -1,0 +1,8 @@
+{
+  "@@locale": "en",
+  "hello": "Hello {name}",
+  "@hello": {"description": "Greeting", "placeholders": {"name": {"type": "String"}}},
+  "items": "{count, plural, =0{No items} =1{{count} item} other{{count} items}}",
+  "@items": {"placeholders": {"count": {"type": "int"}}},
+  "plain": "Just text"
+}

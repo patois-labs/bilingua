@@ -1,0 +1,9 @@
+// comment
+{
+  title: 'Welcome',
+  "nav": {home: "Home page", count: '{count}'},
+  greeting: "Hello %s, you have {n} items",
+  list: ['One', "Two",],
+  num: 0x1F,
+  /* block */ esc: 'It\'s here',
+}

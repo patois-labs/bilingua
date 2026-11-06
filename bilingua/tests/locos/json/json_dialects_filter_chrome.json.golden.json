@@ -1,0 +1,46 @@
+{
+ "format": "json",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Tab Saver",
+   "style": ""
+  },
+  {
+   "p_index": 1,
+   "text": "Hello ⟦x1⟧, you have ⟦x2⟧ open tabs",
+   "style": ""
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "ewogICJleHROYW1lIjogewogICAgIm1lc3NhZ2UiOiAiVGFiIFNhdmVyIiwKICAgICJkZXNjcmlwdGlvbiI6ICJOYW1lIG9mIHRoZSBleHRlbnNpb24sIHNob3duIGluIHRoZSBzdG9yZSIKICB9LAogICJncmVldCI6IHsKICAgICJtZXNzYWdlIjogIkhlbGxvICRVU0VSJCwgeW91IGhhdmUgJDEgb3BlbiB0YWJzIiwKICAgICJkZXNjcmlwdGlvbiI6ICJUb29sYmFyIGdyZWV0aW5nIiwKICAgICJwbGFjZWhvbGRlcnMiOiB7CiAgICAgICJ1c2VyIjogeyJjb250ZW50IjogIiQxIiwgImV4YW1wbGUiOiAiQ2lyYSJ9CiAgICB9CiAgfQp9Cg=="
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü Tab Saver",
+    "1": "Ü Hello ⟦x1⟧Ü , you have ⟦x2⟧Ü  open tabs"
+   },
+   "out_b64": "ewogICJleHROYW1lIjogewogICAgIm1lc3NhZ2UiOiAiw5wgVGFiIFNhdmVyIiwKICAgICJkZXNjcmlwdGlvbiI6ICJOYW1lIG9mIHRoZSBleHRlbnNpb24sIHNob3duIGluIHRoZSBzdG9yZSIKICB9LAogICJncmVldCI6IHsKICAgICJtZXNzYWdlIjogIsOcIEhlbGxvICRVU0VSJMOcICwgeW91IGhhdmUgJDHDnCAgb3BlbiB0YWJzIiwKICAgICJkZXNjcmlwdGlvbiI6ICJUb29sYmFyIGdyZWV0aW5nIiwKICAgICJwbGFjZWhvbGRlcnMiOiB7CiAgICAgICJ1c2VyIjogeyJjb250ZW50IjogIiQxIiwgImV4YW1wbGUiOiAiQ2lyYSJ9CiAgICB9CiAgfQp9Cg=="
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Tab Saver & <\"'>"
+   },
+   "out_b64": "ewogICJleHROYW1lIjogewogICAgIm1lc3NhZ2UiOiAiVGFiIFNhdmVyICYgPFwiJz4iLAogICAgImRlc2NyaXB0aW9uIjogIk5hbWUgb2YgdGhlIGV4dGVuc2lvbiwgc2hvd24gaW4gdGhlIHN0b3JlIgogIH0sCiAgImdyZWV0IjogewogICAgIm1lc3NhZ2UiOiAiSGVsbG8gJFVTRVIkLCB5b3UgaGF2ZSAkMSBvcGVuIHRhYnMiLAogICAgImRlc2NyaXB0aW9uIjogIlRvb2xiYXIgZ3JlZXRpbmciLAogICAgInBsYWNlaG9sZGVycyI6IHsKICAgICAgInVzZXIiOiB7ImNvbnRlbnQiOiAiJDEiLCAiZXhhbXBsZSI6ICJDaXJhIn0KICAgIH0KICB9Cn0K"
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "out_b64": "ewogICJleHROYW1lIjogewogICAgIm1lc3NhZ2UiOiAiVGFiIFNhdmVyIiwKICAgICJkZXNjcmlwdGlvbiI6ICJOYW1lIG9mIHRoZSBleHRlbnNpb24sIHNob3duIGluIHRoZSBzdG9yZSIKICB9LAogICJncmVldCI6IHsKICAgICJtZXNzYWdlIjogIkhlbGxvICRVU0VSJCwgeW91IGhhdmUgJDEgb3BlbiB0YWJzIiwKICAgICJkZXNjcmlwdGlvbiI6ICJUb29sYmFyIGdyZWV0aW5nIiwKICAgICJwbGFjZWhvbGRlcnMiOiB7CiAgICAgICJ1c2VyIjogeyJjb250ZW50IjogIiQxIiwgImV4YW1wbGUiOiAiQ2lyYSJ9CiAgICB9CiAgfQp9Cg=="
+  }
+ ]
+}

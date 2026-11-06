@@ -145,7 +145,8 @@ impl Resx {
         let mut pos = 0usize;
         let (mut n_tr, mut n_lock) = (0usize, 0usize);
         let (mut line, mut line_at) = (1usize, 0usize);
-        for e in &p.scan.entries {
+        let locos = opts.is_profile(profile::LOCOS);
+        for (slot, e) in p.scan.entries.iter().enumerate() {
             if e.typed || e.complex {
                 continue;
             }
@@ -186,6 +187,10 @@ impl Resx {
             line_at = e.start;
             unit.context.kind = Some("string".into());
             unit.context.key = Some(e.name.clone());
+            if locos {
+                // LocOS numbers every <data> that has a <value>, skipped ones included
+                unit.context.extra.insert(profile::P_INDEX.into(), slot.to_string());
+            }
             unit.context.location = Some(format!("line {line}"));
             if !e.comment.is_empty() {
                 unit.context.notes = vec![e.comment.clone()];

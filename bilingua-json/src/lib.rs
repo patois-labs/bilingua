@@ -50,17 +50,32 @@ impl Filter for JsonFilter {
         let text_owned = std::mem::take(&mut dec.text);
         let text = text_owned.as_str();
         let encoding = dec.encoding.as_str();
-        let vals = scan::scan(text)?;
+        let locos = opts.is_profile(profile::LOCOS);
+        let vals = scan::scan_with(text, locos)?;
+        // LocOS walks `json.loads`'s dict: the last of a duplicate key at the first one's place, every string
+        // with a letter or digit (placeholder-only and URL values included); p_index is that walk's order
+        let mut order: Vec<usize> = (0..vals.len()).filter(|&k| !vals[k].dead).collect();
+        order.sort_by(|&a, &b| vals[a].ord.cmp(&vals[b].ord));
+        let mut walk_at = vec![usize::MAX; vals.len()];
+        let mut live = 0usize;
+        for k in order {
+            let (a, b) = (vals[k].start, vals[k].end);
+            let alnum = scan::unescape(&text[a + 1..b - 1]).is_some_and(|v| py_has_alnum(&v));
+            if alnum {
+                walk_at[k] = live;
+                live += 1;
+            }
+        }
 
         let mut parts: Vec<SkelPart> = Vec::new();
         let mut units: Vec<Unit> = Vec::new();
         let mut pos = 0usize;
-        for v in vals {
+        for (k, v) in vals.into_iter().enumerate() {
             let token = &text[v.start..v.end];
             let Some(value) = scan::unescape(&token[1..token.len() - 1]) else { continue };
             let (inl, codes) = inline::tag_placeholders(&value);
-            let skip = inline::looks_untranslatable(&value, &inl);
-            if skip && (!opts.include_locked || value.trim().is_empty()) {
+            let skip = if locos { walk_at[k] == usize::MAX } else { inline::looks_untranslatable(&value, &inl) };
+            if skip && (locos || !opts.include_locked || value.trim().is_empty()) {
                 continue;
             }
             if v.start > pos {
@@ -73,6 +88,9 @@ impl Filter for JsonFilter {
             unit.context.kind = Some("string".into());
             unit.context.key = Some(v.pointer);
             unit.translate = !skip;
+            if locos {
+                unit.context.extra.insert(profile::P_INDEX.into(), walk_at[k].to_string());
+            }
             parts.push(SkelPart::Unit(units.len()));
             units.push(unit);
         }
@@ -95,7 +113,7 @@ impl Filter for JsonFilter {
                 SkelPart::Raw(s) => out.push_str(s),
                 SkelPart::Unit(i) => {
                     let unit = doc.units.get(*i).ok_or_else(|| Error::Write(format!("no unit {i}")))?;
-                    out.push_str(&render_token(unit));
+                    out.push_str(&render_token(unit, opts.is_profile(profile::LOCOS)));
                 }
             }
         }
@@ -103,9 +121,10 @@ impl Filter for JsonFilter {
     }
 }
 
-/// The string token to write for a unit.
-fn render_token(unit: &Unit) -> String {
-    let untouched = unit.segments.iter().all(|s| !s.has_target());
+/// The string token to write for a unit. Under the LocOS profile a translation equal to the source keeps the
+/// original token too, as LocOS's splice does.
+fn render_token(unit: &Unit, locos: bool) -> String {
+    let untouched = unit.segments.iter().all(|s| !s.has_target()) || (locos && unit.output() == unit.source());
     if untouched {
         if let Some(raw) = unit.codes.get(RAW_KEY).and_then(|c| c.standalone.as_deref()) {
             return raw.to_string();

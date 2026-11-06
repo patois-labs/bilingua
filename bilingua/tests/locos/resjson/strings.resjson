@@ -1,0 +1,6 @@
+{
+  "Greeting": "Hello, {0}!",
+  "_Greeting.comment": "Shown at start",
+  "Save": "Save & close",
+  "Pct": "%1 of %2"
+}

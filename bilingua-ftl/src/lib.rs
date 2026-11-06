@@ -490,6 +490,50 @@ fn flat(unit: &Unit, v: &[Inline]) -> String {
     s
 }
 
+/// Under the LocOS profile a unit's placeables are plain text in its source (the profile flattens them and keeps
+/// their codes). The translation is then read as LocOS's `_encode` does: every occurrence of one of the source's
+/// placeables (the first one listed wins at a position) is written as it is, everything else is escaped. Returns
+/// `out` unchanged for a unit whose source still has its placeable tags.
+fn retag_flattened(unit: &Unit, out: Vec<Inline>) -> Vec<Inline> {
+    let mut ph: Vec<(usize, &str, &str)> = unit
+        .codes
+        .iter()
+        .filter(|(_, c)| c.label.as_deref() == Some("placeholder"))
+        .filter_map(|(id, c)| Some((id.parse::<usize>().ok()?, id.as_str(), c.standalone.as_deref()?)))
+        .filter(|(_, _, m)| !m.is_empty())
+        .collect();
+    let used = |id: &str| unit.segments.iter().any(|s| s.source.iter().any(|i| matches!(i, Inline::Tag { id: t, .. } if t == id)));
+    if ph.is_empty() || ph.iter().any(|(_, id, _)| used(id)) {
+        return out;
+    }
+    ph.sort();
+    let mut v = Vec::with_capacity(out.len());
+    for i in out {
+        let Inline::Text(t) = i else {
+            v.push(i);
+            continue;
+        };
+        let mut pos = 0;
+        while pos < t.len() {
+            let hit = ph.iter().filter_map(|(_, id, m)| t[pos..].find(m).map(|at| (pos + at, *id, *m))).min_by_key(|(at, ..)| *at);
+            match hit {
+                Some((at, id, m)) => {
+                    if at > pos {
+                        v.push(Inline::text(&t[pos..at]));
+                    }
+                    v.push(Inline::tag(id, TagKind::Standalone, m));
+                    pos = at + m.len();
+                }
+                None => {
+                    v.push(Inline::text(&t[pos..]));
+                    pos = t.len();
+                }
+            }
+        }
+    }
+    v
+}
+
 /// The source text to write for a unit: the original when nothing changed, else the encoded translation.
 fn render(unit: &Unit) -> String {
     let Some(h) = unit.codes.get(HIDDEN) else { return String::new() };
@@ -497,7 +541,7 @@ fn render(unit: &Unit) -> String {
     if !unit.translate || unit.segments.iter().all(|s| !s.has_target()) {
         return raw.to_string();
     }
-    let out = unit.output();
+    let out = retag_flattened(unit, unit.output());
     if flat(unit, &out) == flat(unit, &unit.source()) {
         return raw.to_string();
     }

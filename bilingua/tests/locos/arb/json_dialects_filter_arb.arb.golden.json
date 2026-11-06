@@ -1,0 +1,144 @@
+{
+ "format": "arb",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Hello {name}",
+   "style": ""
+  },
+  {
+   "p_index": 1,
+   "text": "No items",
+   "style": ""
+  },
+  {
+   "p_index": 2,
+   "text": "⟦x1⟧ item",
+   "style": ""
+  },
+  {
+   "p_index": 3,
+   "text": "⟦x1⟧ items",
+   "style": ""
+  },
+  {
+   "p_index": 4,
+   "text": "You have ⟦x1⟧ from {who}",
+   "style": ""
+  },
+  {
+   "p_index": 5,
+   "text": "⟦x1⟧ new message",
+   "style": ""
+  },
+  {
+   "p_index": 6,
+   "text": "⟦x1⟧ new messages",
+   "style": ""
+  },
+  {
+   "p_index": 7,
+   "text": "He liked it",
+   "style": ""
+  },
+  {
+   "p_index": 8,
+   "text": "She liked it",
+   "style": ""
+  },
+  {
+   "p_index": 9,
+   "text": "They liked it",
+   "style": ""
+  },
+  {
+   "p_index": 10,
+   "text": "⟦x1⟧st place",
+   "style": ""
+  },
+  {
+   "p_index": 11,
+   "text": "⟦x1⟧th place",
+   "style": ""
+  },
+  {
+   "p_index": 12,
+   "text": "Use '{braces}' and it''s fine",
+   "style": ""
+  },
+  {
+   "p_index": 13,
+   "text": "4711",
+   "style": ""
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "ewogICJAQGxvY2FsZSI6ICJlbiIsCiAgIkBAbGFzdF9tb2RpZmllZCI6ICIyMDI2LTEwLTEwVDA5OjAwOjAwIiwKICAidGl0bGUiOiAiSGVsbG8ge25hbWV9IiwKICAiQHRpdGxlIjogewogICAgImRlc2NyaXB0aW9uIjogIkdyZWV0aW5nIG9uIHRoZSBob21lIHBhZ2UiLAogICAgInBsYWNlaG9sZGVycyI6IHsibmFtZSI6IHsidHlwZSI6ICJTdHJpbmciLCAiZXhhbXBsZSI6ICJCb2IifX0KICB9LAogICJpdGVtcyI6ICJ7Y291bnQsIHBsdXJhbCwgPTB7Tm8gaXRlbXN9IG9uZXsjIGl0ZW19IG90aGVyeyMgaXRlbXN9fSIsCiAgIkBpdGVtcyI6IHsiZGVzY3JpcHRpb24iOiAiU2hvd24gdW5kZXIgdGhlIGNhcnQifSwKICAibWl4ZWQiOiAiWW91IGhhdmUge2NvdW50LCBwbHVyYWwsIG9uZXsjIG5ldyBtZXNzYWdlfSBvdGhlcnsjIG5ldyBtZXNzYWdlc319IGZyb20ge3dob30iLAogICJzZWwiOiAie2dlbmRlciwgc2VsZWN0LCBtYWxle0hlIGxpa2VkIGl0fSBmZW1hbGV7U2hlIGxpa2VkIGl0fSBvdGhlcntUaGV5IGxpa2VkIGl0fX0iLAogICJyYW5rIjogIntuLCBzZWxlY3RvcmRpbmFsLCBvbmV7I3N0IHBsYWNlfSBvdGhlcnsjdGggcGxhY2V9fSIsCiAgInF1b3RlZCI6ICJVc2UgJ3ticmFjZXN9JyBhbmQgaXQnJ3MgZmluZSIsCiAgImlkIjogIjQ3MTEiCn0K"
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü Hello {name}",
+    "1": "Ü No items",
+    "2": "⟦x1⟧Ü  item",
+    "3": "⟦x1⟧Ü  items",
+    "4": "Ü You have ⟦x1⟧Ü  from {who}",
+    "5": "⟦x1⟧Ü  new message",
+    "6": "⟦x1⟧Ü  new messages",
+    "7": "Ü He liked it",
+    "8": "Ü She liked it",
+    "9": "Ü They liked it",
+    "10": "⟦x1⟧Ü st place",
+    "11": "⟦x1⟧Ü th place",
+    "12": "Ü Use '{braces}' and it''s fine",
+    "13": "Ü 4711"
+   },
+   "out_b64": "ewogICJAQGxvY2FsZSI6ICJlbiIsCiAgIkBAbGFzdF9tb2RpZmllZCI6ICIyMDI2LTEwLTEwVDA5OjAwOjAwIiwKICAidGl0bGUiOiAiw5wgSGVsbG8ge25hbWV9IiwKICAiQHRpdGxlIjogewogICAgImRlc2NyaXB0aW9uIjogIkdyZWV0aW5nIG9uIHRoZSBob21lIHBhZ2UiLAogICAgInBsYWNlaG9sZGVycyI6IHsibmFtZSI6IHsidHlwZSI6ICJTdHJpbmciLCAiZXhhbXBsZSI6ICJCb2IifX0KICB9LAogICJpdGVtcyI6ICJ7Y291bnQsIHBsdXJhbCwgPTB7w5wgTm8gaXRlbXN9IG9uZXsjw5wgIGl0ZW19IG90aGVyeyPDnCAgaXRlbXN9fSIsCiAgIkBpdGVtcyI6IHsiZGVzY3JpcHRpb24iOiAiU2hvd24gdW5kZXIgdGhlIGNhcnQifSwKICAibWl4ZWQiOiAiw5wgWW91IGhhdmUge2NvdW50LCBwbHVyYWwsIG9uZXsjw5wgIG5ldyBtZXNzYWdlfSBvdGhlcnsjw5wgIG5ldyBtZXNzYWdlc319w5wgIGZyb20ge3dob30iLAogICJzZWwiOiAie2dlbmRlciwgc2VsZWN0LCBtYWxle8OcIEhlIGxpa2VkIGl0fSBmZW1hbGV7w5wgU2hlIGxpa2VkIGl0fSBvdGhlcnvDnCBUaGV5IGxpa2VkIGl0fX0iLAogICJyYW5rIjogIntuLCBzZWxlY3RvcmRpbmFsLCBvbmV7I8OcIHN0IHBsYWNlfSBvdGhlcnsjw5wgdGggcGxhY2V9fSIsCiAgInF1b3RlZCI6ICLDnCBVc2UgJ3ticmFjZXN9JyBhbmQgaXQnJ3MgZmluZSIsCiAgImlkIjogIsOcIDQ3MTEiCn0K"
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Hello {name} & <\"'>",
+    "2": "⟦x1⟧ item & <\"'>",
+    "4": "You have  & <\"'>⟦x1⟧ from {who} & <\"'>",
+    "6": "⟦x1⟧ new messages & <\"'>",
+    "8": "She liked it & <\"'>",
+    "10": "⟦x1⟧st place & <\"'>",
+    "12": "Use '{braces}' and it''s fine & <\"'>"
+   },
+   "out_b64": "ewogICJAQGxvY2FsZSI6ICJkZV9ERSIsCiAgIkBAbGFzdF9tb2RpZmllZCI6ICIyMDI2LTEwLTEwVDA5OjAwOjAwIiwKICAidGl0bGUiOiAiSGVsbG8ge25hbWV9ICYgPFwiJz4iLAogICJAdGl0bGUiOiB7CiAgICAiZGVzY3JpcHRpb24iOiAiR3JlZXRpbmcgb24gdGhlIGhvbWUgcGFnZSIsCiAgICAicGxhY2Vob2xkZXJzIjogeyJuYW1lIjogeyJ0eXBlIjogIlN0cmluZyIsICJleGFtcGxlIjogIkJvYiJ9fQogIH0sCiAgIml0ZW1zIjogIntjb3VudCwgcGx1cmFsLCA9MHtObyBpdGVtc30gb25leyMgaXRlbSAmIDxcIic+fSBvdGhlcnsjIGl0ZW1zfX0iLAogICJAaXRlbXMiOiB7ImRlc2NyaXB0aW9uIjogIlNob3duIHVuZGVyIHRoZSBjYXJ0In0sCiAgIm1peGVkIjogIllvdSBoYXZlICAmIDxcIic+e2NvdW50LCBwbHVyYWwsIG9uZXsjIG5ldyBtZXNzYWdlfSBvdGhlcnsjIG5ldyBtZXNzYWdlcyAmIDxcIic+fX0gZnJvbSB7d2hvfSAmIDxcIic+IiwKICAic2VsIjogIntnZW5kZXIsIHNlbGVjdCwgbWFsZXtIZSBsaWtlZCBpdH0gZmVtYWxle1NoZSBsaWtlZCBpdCAmIDxcIic+fSBvdGhlcntUaGV5IGxpa2VkIGl0fX0iLAogICJyYW5rIjogIntuLCBzZWxlY3RvcmRpbmFsLCBvdGhlcnsjdGggcGxhY2V9fSIsCiAgInF1b3RlZCI6ICJVc2UgJ3ticmFjZXN9JyBhbmQgaXQnJ3MgZmluZSAmIDxcIic+IiwKICAiaWQiOiAiNDcxMSIKfQo="
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "out_b64": "ewogICJAQGxvY2FsZSI6ICJkZV9ERSIsCiAgIkBAbGFzdF9tb2RpZmllZCI6ICIyMDI2LTEwLTEwVDA5OjAwOjAwIiwKICAidGl0bGUiOiAiSGVsbG8ge25hbWV9IiwKICAiQHRpdGxlIjogewogICAgImRlc2NyaXB0aW9uIjogIkdyZWV0aW5nIG9uIHRoZSBob21lIHBhZ2UiLAogICAgInBsYWNlaG9sZGVycyI6IHsibmFtZSI6IHsidHlwZSI6ICJTdHJpbmciLCAiZXhhbXBsZSI6ICJCb2IifX0KICB9LAogICJpdGVtcyI6ICJ7Y291bnQsIHBsdXJhbCwgPTB7Tm8gaXRlbXN9IG9uZXsjIGl0ZW19IG90aGVyeyMgaXRlbXN9fSIsCiAgIkBpdGVtcyI6IHsiZGVzY3JpcHRpb24iOiAiU2hvd24gdW5kZXIgdGhlIGNhcnQifSwKICAibWl4ZWQiOiAiWW91IGhhdmUge2NvdW50LCBwbHVyYWwsIG9uZXsjIG5ldyBtZXNzYWdlfSBvdGhlcnsjIG5ldyBtZXNzYWdlc319IGZyb20ge3dob30iLAogICJzZWwiOiAie2dlbmRlciwgc2VsZWN0LCBtYWxle0hlIGxpa2VkIGl0fSBmZW1hbGV7U2hlIGxpa2VkIGl0fSBvdGhlcntUaGV5IGxpa2VkIGl0fX0iLAogICJyYW5rIjogIntuLCBzZWxlY3RvcmRpbmFsLCBvdGhlcnsjdGggcGxhY2V9fSIsCiAgInF1b3RlZCI6ICJVc2UgJ3ticmFjZXN9JyBhbmQgaXQnJ3MgZmluZSIsCiAgImlkIjogIjQ3MTEiCn0K"
+  },
+  {
+   "name": "escape-pl-PL",
+   "locale": "pl-PL",
+   "map": {
+    "0": "Hello {name} & <\"'>",
+    "2": "⟦x1⟧ item & <\"'>",
+    "4": "You have  & <\"'>⟦x1⟧ from {who} & <\"'>",
+    "6": "⟦x1⟧ new messages & <\"'>",
+    "8": "She liked it & <\"'>",
+    "10": "⟦x1⟧st place & <\"'>",
+    "12": "Use '{braces}' and it''s fine & <\"'>"
+   },
+   "out_b64": "ewogICJAQGxvY2FsZSI6ICJwbF9QTCIsCiAgIkBAbGFzdF9tb2RpZmllZCI6ICIyMDI2LTEwLTEwVDA5OjAwOjAwIiwKICAidGl0bGUiOiAiSGVsbG8ge25hbWV9ICYgPFwiJz4iLAogICJAdGl0bGUiOiB7CiAgICAiZGVzY3JpcHRpb24iOiAiR3JlZXRpbmcgb24gdGhlIGhvbWUgcGFnZSIsCiAgICAicGxhY2Vob2xkZXJzIjogeyJuYW1lIjogeyJ0eXBlIjogIlN0cmluZyIsICJleGFtcGxlIjogIkJvYiJ9fQogIH0sCiAgIml0ZW1zIjogIntjb3VudCwgcGx1cmFsLCA9MHtObyBpdGVtc30gb25leyMgaXRlbSAmIDxcIic+fSBmZXd7IyBpdGVtc30gbWFueXsjIGl0ZW1zfSBvdGhlcnsjIGl0ZW1zfX0iLAogICJAaXRlbXMiOiB7ImRlc2NyaXB0aW9uIjogIlNob3duIHVuZGVyIHRoZSBjYXJ0In0sCiAgIm1peGVkIjogIllvdSBoYXZlICAmIDxcIic+e2NvdW50LCBwbHVyYWwsIG9uZXsjIG5ldyBtZXNzYWdlfSBmZXd7IyBuZXcgbWVzc2FnZXMgJiA8XCInPn0gbWFueXsjIG5ldyBtZXNzYWdlcyAmIDxcIic+fSBvdGhlcnsjIG5ldyBtZXNzYWdlcyAmIDxcIic+fX0gZnJvbSB7d2hvfSAmIDxcIic+IiwKICAic2VsIjogIntnZW5kZXIsIHNlbGVjdCwgbWFsZXtIZSBsaWtlZCBpdH0gZmVtYWxle1NoZSBsaWtlZCBpdCAmIDxcIic+fSBvdGhlcntUaGV5IGxpa2VkIGl0fX0iLAogICJyYW5rIjogIntuLCBzZWxlY3RvcmRpbmFsLCBvdGhlcnsjdGggcGxhY2V9fSIsCiAgInF1b3RlZCI6ICJVc2UgJ3ticmFjZXN9JyBhbmQgaXQnJ3MgZmluZSAmIDxcIic+IiwKICAiaWQiOiAiNDcxMSIKfQo="
+  },
+  {
+   "name": "none-pl-PL",
+   "locale": "pl-PL",
+   "map": {},
+   "out_b64": "ewogICJAQGxvY2FsZSI6ICJwbF9QTCIsCiAgIkBAbGFzdF9tb2RpZmllZCI6ICIyMDI2LTEwLTEwVDA5OjAwOjAwIiwKICAidGl0bGUiOiAiSGVsbG8ge25hbWV9IiwKICAiQHRpdGxlIjogewogICAgImRlc2NyaXB0aW9uIjogIkdyZWV0aW5nIG9uIHRoZSBob21lIHBhZ2UiLAogICAgInBsYWNlaG9sZGVycyI6IHsibmFtZSI6IHsidHlwZSI6ICJTdHJpbmciLCAiZXhhbXBsZSI6ICJCb2IifX0KICB9LAogICJpdGVtcyI6ICJ7Y291bnQsIHBsdXJhbCwgPTB7Tm8gaXRlbXN9IG9uZXsjIGl0ZW19IGZld3sjIGl0ZW1zfSBtYW55eyMgaXRlbXN9IG90aGVyeyMgaXRlbXN9fSIsCiAgIkBpdGVtcyI6IHsiZGVzY3JpcHRpb24iOiAiU2hvd24gdW5kZXIgdGhlIGNhcnQifSwKICAibWl4ZWQiOiAiWW91IGhhdmUge2NvdW50LCBwbHVyYWwsIG9uZXsjIG5ldyBtZXNzYWdlfSBmZXd7IyBuZXcgbWVzc2FnZXN9IG1hbnl7IyBuZXcgbWVzc2FnZXN9IG90aGVyeyMgbmV3IG1lc3NhZ2VzfX0gZnJvbSB7d2hvfSIsCiAgInNlbCI6ICJ7Z2VuZGVyLCBzZWxlY3QsIG1hbGV7SGUgbGlrZWQgaXR9IGZlbWFsZXtTaGUgbGlrZWQgaXR9IG90aGVye1RoZXkgbGlrZWQgaXR9fSIsCiAgInJhbmsiOiAie24sIHNlbGVjdG9yZGluYWwsIG90aGVyeyN0aCBwbGFjZX19IiwKICAicXVvdGVkIjogIlVzZSAne2JyYWNlc30nIGFuZCBpdCcncyBmaW5lIiwKICAiaWQiOiAiNDcxMSIKfQo="
+  }
+ ]
+}

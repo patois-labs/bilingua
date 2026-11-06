@@ -1,0 +1,13 @@
+{
+  "extName": {
+    "message": "Tab Saver",
+    "description": "Name of the extension, shown in the store"
+  },
+  "greet": {
+    "message": "Hello $USER$, you have $1 open tabs",
+    "description": "Toolbar greeting",
+    "placeholders": {
+      "user": {"content": "$1", "example": "Cira"}
+    }
+  }
+}

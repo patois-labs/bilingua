@@ -1,0 +1,53 @@
+{
+ "format": "json",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Welcome",
+   "style": ""
+  },
+  {
+   "p_index": 1,
+   "text": "⟦x1⟧ file",
+   "style": ""
+  },
+  {
+   "p_index": 2,
+   "text": "⟦x1⟧ files",
+   "style": ""
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "ewogICJob21lIjogewogICAgInRpdGxlIjogewogICAgICAic3RyaW5nIjogIldlbGNvbWUiLAogICAgICAiY29udGV4dCI6ICJwYWdlIGhlYWRlciIsCiAgICAgICJkZXZlbG9wZXJfY29tbWVudCI6ICJLZWVwIGl0IHNob3J0IiwKICAgICAgImNoYXJhY3Rlcl9saW1pdCI6IDIwCiAgICB9LAogICAgImZpbGVzIjogeyJzdHJpbmciOiAie24sIHBsdXJhbCwgb25leyMgZmlsZX0gb3RoZXJ7IyBmaWxlc319In0KICB9Cn0K"
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü Welcome",
+    "1": "⟦x1⟧Ü  file",
+    "2": "⟦x1⟧Ü  files"
+   },
+   "out_b64": "ewogICJob21lIjogewogICAgInRpdGxlIjogewogICAgICAic3RyaW5nIjogIsOcIFdlbGNvbWUiLAogICAgICAiY29udGV4dCI6ICJwYWdlIGhlYWRlciIsCiAgICAgICJkZXZlbG9wZXJfY29tbWVudCI6ICJLZWVwIGl0IHNob3J0IiwKICAgICAgImNoYXJhY3Rlcl9saW1pdCI6IDIwCiAgICB9LAogICAgImZpbGVzIjogeyJzdHJpbmciOiAie24sIHBsdXJhbCwgb25leyPDnCAgZmlsZX0gb3RoZXJ7I8OcICBmaWxlc319In0KICB9Cn0K"
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Welcome & <\"'>",
+    "2": "⟦x1⟧ files & <\"'>"
+   },
+   "out_b64": "ewogICJob21lIjogewogICAgInRpdGxlIjogewogICAgICAic3RyaW5nIjogIldlbGNvbWUgJiA8XCInPiIsCiAgICAgICJjb250ZXh0IjogInBhZ2UgaGVhZGVyIiwKICAgICAgImRldmVsb3Blcl9jb21tZW50IjogIktlZXAgaXQgc2hvcnQiLAogICAgICAiY2hhcmFjdGVyX2xpbWl0IjogMjAKICAgIH0sCiAgICAiZmlsZXMiOiB7InN0cmluZyI6ICJ7biwgcGx1cmFsLCBvbmV7IyBmaWxlfSBvdGhlcnsjIGZpbGVzICYgPFwiJz59fSJ9CiAgfQp9Cg=="
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "out_b64": "ewogICJob21lIjogewogICAgInRpdGxlIjogewogICAgICAic3RyaW5nIjogIldlbGNvbWUiLAogICAgICAiY29udGV4dCI6ICJwYWdlIGhlYWRlciIsCiAgICAgICJkZXZlbG9wZXJfY29tbWVudCI6ICJLZWVwIGl0IHNob3J0IiwKICAgICAgImNoYXJhY3Rlcl9saW1pdCI6IDIwCiAgICB9LAogICAgImZpbGVzIjogeyJzdHJpbmciOiAie24sIHBsdXJhbCwgb25leyMgZmlsZX0gb3RoZXJ7IyBmaWxlc319In0KICB9Cn0K"
+  }
+ ]
+}

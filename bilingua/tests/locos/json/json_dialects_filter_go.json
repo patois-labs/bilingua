@@ -1,0 +1,9 @@
+{
+  "PersonCats": {
+    "description": "The number of cats a person has",
+    "hash": "sha1-abc",
+    "one": "{{.Name}} has {{.Count}} cat.",
+    "other": "{{.Name}} has {{.Count}} cats."
+  },
+  "HelloPerson": "Hello {{.Name}}"
+}
