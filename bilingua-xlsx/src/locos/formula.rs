@@ -258,7 +258,7 @@ pub(super) fn translate(formula: &str, origin: (i64, i64), dest: Option<(i64, i6
     let chars: Vec<char> = formula.chars().collect();
     let toks = tokenize(&chars)?;
     let Some(first) = toks.first() else { return Ok(String::new()) };
-    if !chars.first().is_some_and(|&c| c == '=') {
+    if chars.first() != Some(&'=') {
         return Ok(first.value.clone());
     }
     let (dr, dc) = dest.map_or((0, 0), |d| (d.0 - origin.0, d.1 - origin.1));

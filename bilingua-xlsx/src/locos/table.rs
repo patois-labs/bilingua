@@ -319,9 +319,8 @@ pub(super) fn apply(pkg: &mut Package, doc: &Document, texts: &BTreeMap<usize, S
         let Some(path) = usize::try_from(sheet).ok().and_then(|s| pkg.sheets.get(s)).cloned() else { continue };
         let sheet = sheet as usize;
         let tr = xml_target_text(tr);
-        if !views.contains_key(&sheet) {
-            let v = View::build(pkg, &path, &ctx)?;
-            views.insert(sheet, v);
+        if let std::collections::hash_map::Entry::Vacant(e) = views.entry(sheet) {
+            e.insert(View::build(pkg, &path, &ctx)?);
         }
         let view = &views[&sheet];
         let value = view.str_at(row, col).to_string();
