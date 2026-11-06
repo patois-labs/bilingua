@@ -70,6 +70,12 @@ pub fn filters() -> Vec<Box<dyn Filter>> {
         Box::new(bilingua_arb::Arb),
         // String Catalog: JSON with a string sourceLanguage and an object strings (strict sniff), before plain JSON.
         Box::new(bilingua_xcstrings::Xcstrings),
+        // Rich text JSON (Contentful, Sanity, ADF, Notion) sniffs strictly (an exact tree shape) and is claimed by its own
+        // extensions, so it goes before plain JSON, whose sniff takes any object or array.
+        Box::new(bilingua_richtext::Contentful),
+        Box::new(bilingua_richtext::Sanity),
+        Box::new(bilingua_richtext::Adf),
+        Box::new(bilingua_richtext::Notion),
         Box::new(bilingua_json::JsonFilter),
         Box::new(bilingua_json5::Json5Filter::default()),
         Box::new(bilingua_markdown::MarkdownFilter),

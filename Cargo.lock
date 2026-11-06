@@ -60,6 +60,7 @@ dependencies = [
  "bilingua-rc",
  "bilingua-resjson",
  "bilingua-resx",
+ "bilingua-richtext",
  "bilingua-rst",
  "bilingua-scc",
  "bilingua-sdl",
@@ -538,6 +539,15 @@ dependencies = [
  "bilingua-model",
  "proptest",
  "quick-xml",
+ "serde_json",
+]
+
+[[package]]
+name = "bilingua-richtext"
+version = "0.9.0"
+dependencies = [
+ "bilingua-model",
+ "proptest",
  "serde_json",
 ]
 
