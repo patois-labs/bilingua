@@ -296,6 +296,14 @@ fn skip_ws(b: &[u8], mut i: usize, limit: usize) -> usize {
     i
 }
 
+/// After `\begin` / `\end` at `e`: a `{` follows that the group maps cannot match, only because a `%` before it on
+/// the line reads as a comment to them (LocOS's maps do not know that `\url{a%b}` keeps its `%`). A brace that is
+/// unmatched for any other reason is not one.
+fn hidden_group(tx: &Txt, e: usize, limit: usize) -> bool {
+    let j = skip_ws(tx.bytes(), e, limit);
+    j < limit && tx.bytes()[j] == b'{' && tx.match_brace(j, limit, false).is_none() && tx.match_brace(j, limit, true).is_some()
+}
+
 /// One `[opt]` or `{arg}` group: the opening character, start and end (delimiters included).
 pub type Arg = (u8, usize, usize);
 
@@ -619,7 +627,7 @@ impl<'a> Scan<'a> {
                         // a `{` the group maps cannot match (it follows a `%` they read as a comment, as in
                         // `\url{a%b} \begin{x}`): the command stays in the run with the group after it, so a
                         // translation is never written between `\begin` and its name
-                        if by.get(skip_ws(by, e, b)) == Some(&b'{') {
+                        if hidden_group(tx, e, b) {
                             start!(i);
                         }
                         i = e;
@@ -660,7 +668,7 @@ impl<'a> Scan<'a> {
                             }
                         }
                         e = envs[0].2;
-                    } else if by.get(skip_ws(by, e, b)) == Some(&b'{') {
+                    } else if hidden_group(tx, e, b) {
                         // as for `\begin`: an unreadable group stays in the run with its command
                         start!(i);
                     }
