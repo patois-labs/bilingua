@@ -1,0 +1,46 @@
+{
+ "format": "html",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "One.",
+   "style": ""
+  },
+  {
+   "p_index": 1,
+   "text": "Alt one",
+   "style": "a11y:img-alt"
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "PHA+T25lLjwvcD48aW1nIHNyYz0iYS5wbmciIGFsdD0iQWx0IG9uZSI+"
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü One.",
+    "1": "Ü Alt one"
+   },
+   "out_b64": "PHA+w5wgT25lLjwvcD48aW1nIHNyYz0iYS5wbmciIGFsdD0iw5wgQWx0IG9uZSI+"
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "One. & <\"'>"
+   },
+   "out_b64": "PHA+T25lLiAmYW1wOyAmbHQ7IicmZ3Q7PC9wPjxpbWcgc3JjPSJhLnBuZyIgYWx0PSJBbHQgb25lIj4="
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "out_b64": "PHA+T25lLjwvcD48aW1nIHNyYz0iYS5wbmciIGFsdD0iQWx0IG9uZSI+"
+  }
+ ]
+}

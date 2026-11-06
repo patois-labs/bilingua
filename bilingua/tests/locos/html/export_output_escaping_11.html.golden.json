@@ -1,0 +1,53 @@
+{
+ "format": "html",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "See ⟦x1⟧ here",
+   "style": ""
+  },
+  {
+   "p_index": 1,
+   "text": "Next",
+   "style": ""
+  },
+  {
+   "p_index": 2,
+   "text": "a > b",
+   "style": "a11y:img-alt"
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "PHA+U2VlIDxpbWcgYWx0PSJhID4gYiI+IGhlcmU8L3A+PHA+TmV4dDwvcD4="
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü See ⟦x1⟧Ü  here",
+    "1": "Ü Next",
+    "2": "Ü a > b"
+   },
+   "out_b64": "PHA+w5wgU2VlIDxpbWcgYWx0PSLDnCBhICZndDsgYiI+w5wgIGhlcmU8L3A+PHA+w5wgTmV4dDwvcD4="
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "See  & <\"'>⟦x1⟧ here & <\"'>",
+    "2": "a > b & <\"'>"
+   },
+   "out_b64": "PHA+U2VlICAmYW1wOyAmbHQ7IicmZ3Q7PGltZyBhbHQ9ImEgJmd0OyBiICZhbXA7ICZsdDsmcXVvdDsmI3gyNzsmZ3Q7Ij4gaGVyZSAmYW1wOyAmbHQ7IicmZ3Q7PC9wPjxwPk5leHQ8L3A+"
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "out_b64": "PHA+U2VlIDxpbWcgYWx0PSJhID4gYiI+IGhlcmU8L3A+PHA+TmV4dDwvcD4="
+  }
+ ]
+}

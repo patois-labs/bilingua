@@ -1,0 +1,40 @@
+{
+ "format": "html",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Hello there. ⟦g1⟧b⟦/g1⟧",
+   "style": ""
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "PCFbQ0RBVEFbPjxhIHRpdGxlPSJdXT5IZWxsbyB0aGVyZS4gPGIgdGl0bGU9IngiPmI8L2I+"
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü Hello there. ⟦g1⟧Ü b⟦/g1⟧"
+   },
+   "out_b64": "PCFbQ0RBVEFbPjxhIHRpdGxlPSJdXT7DnCBIZWxsbyB0aGVyZS4gPGIgdGl0bGU9IngiPsOcIGI8L2I+"
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Hello there.  & <\"'>⟦g1⟧b & <\"'>⟦/g1⟧"
+   },
+   "out_b64": "PCFbQ0RBVEFbPjxhIHRpdGxlPSJdXT5IZWxsbyB0aGVyZS4gICZhbXA7ICZsdDsmcXVvdDsmI3gyNzsmZ3Q7PGIgdGl0bGU9IngiPmIgJmFtcDsgJmx0OyZxdW90OyYjeDI3OyZndDs8L2I+"
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "out_b64": "PCFbQ0RBVEFbPjxhIHRpdGxlPSJdXT5IZWxsbyB0aGVyZS4gPGIgdGl0bGU9IngiPmI8L2I+"
+  }
+ ]
+}

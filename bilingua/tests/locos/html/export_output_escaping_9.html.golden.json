@@ -1,0 +1,40 @@
+{
+ "format": "html",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Hi {% if n > 1 %}friends{% endif %}",
+   "style": ""
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "PHA+SGkgeyUgaWYgbiA+IDEgJX1mcmllbmRzeyUgZW5kaWYgJX08L3A+"
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü Hi {% if n > 1 %}friends{% endif %}"
+   },
+   "out_b64": "PHA+w5wgSGkgeyUgaWYgbiAmZ3Q7IDEgJX1mcmllbmRzeyUgZW5kaWYgJX08L3A+"
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Hi {% if n > 1 %}friends{% endif %} & <\"'>"
+   },
+   "out_b64": "PHA+SGkgeyUgaWYgbiAmZ3Q7IDEgJX1mcmllbmRzeyUgZW5kaWYgJX0gJmFtcDsgJmx0OyInJmd0OzwvcD4="
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "out_b64": "PHA+SGkgeyUgaWYgbiA+IDEgJX1mcmllbmRzeyUgZW5kaWYgJX08L3A+"
+  }
+ ]
+}

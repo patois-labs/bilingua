@@ -1,0 +1,46 @@
+{
+ "format": "html",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Hello",
+   "style": ""
+  },
+  {
+   "p_index": 1,
+   "text": "World",
+   "style": ""
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "PHNjcmlwdD48IS0teDwvc2NyaXB0PjxoMT5IZWxsbzwvaDE+PHA+V29ybGQ8L3A+"
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü Hello",
+    "1": "Ü World"
+   },
+   "out_b64": "PHNjcmlwdD48IS0teDwvc2NyaXB0PjxoMT7DnCBIZWxsbzwvaDE+PHA+w5wgV29ybGQ8L3A+"
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Hello & <\"'>"
+   },
+   "out_b64": "PHNjcmlwdD48IS0teDwvc2NyaXB0PjxoMT5IZWxsbyAmYW1wOyAmbHQ7IicmZ3Q7PC9oMT48cD5Xb3JsZDwvcD4="
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "out_b64": "PHNjcmlwdD48IS0teDwvc2NyaXB0PjxoMT5IZWxsbzwvaDE+PHA+V29ybGQ8L3A+"
+  }
+ ]
+}

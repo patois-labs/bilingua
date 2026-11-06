@@ -1,0 +1,46 @@
+{
+ "format": "html",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "</ x ⟦g1⟧Hello there. ⟦g2⟧i⟦/g2⟧",
+   "style": ""
+  },
+  {
+   "p_index": 1,
+   "text": "> <b title=",
+   "style": "a11y:link-title"
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "PHA+PC8geCA8YSB0aXRsZT0iPiA8YiB0aXRsZT0iPkhlbGxvIHRoZXJlLiA8aSB0aXRsZT0ieSI+aTwvaT48L3A+"
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü </ x ⟦g1⟧Ü Hello there. ⟦g2⟧Ü i⟦/g2⟧",
+    "1": "Ü > <b title="
+   },
+   "error": "UnsafeMarkupRefused: This page cannot be exported safely: in the translated file a web browser would read the <a> tag at line 1 differently from the source page, so a translation could add markup or an attribute the source does not have. The source page has markup that browsers and the translation filter read differently (for example an abrupt comment <!-->, a <style> or <script> inside SVG, a stray </ x>, or an unclosed <textarea> or <xmp>). Correct that markup in the source file, upload it again and export again."
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "</ x  & <\"'>⟦g1⟧Hello there.  & <\"'>⟦g2⟧i & <\"'>⟦/g2⟧"
+   },
+   "error": "UnsafeMarkupRefused: This page cannot be exported safely: in the translated file a web browser would read the <a> tag at line 1 differently from the source page, so a translation could add markup or an attribute the source does not have. The source page has markup that browsers and the translation filter read differently (for example an abrupt comment <!-->, a <style> or <script> inside SVG, a stray </ x>, or an unclosed <textarea> or <xmp>). Correct that markup in the source file, upload it again and export again."
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "out_b64": "PHA+PC8geCA8YSB0aXRsZT0iPiA8YiB0aXRsZT0iPkhlbGxvIHRoZXJlLiA8aSB0aXRsZT0ieSI+aTwvaT48L3A+"
+  }
+ ]
+}

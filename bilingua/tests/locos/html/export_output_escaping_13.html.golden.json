@@ -1,0 +1,46 @@
+{
+ "format": "html",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "⟦g1⟧b",
+   "style": ""
+  },
+  {
+   "p_index": 1,
+   "text": "?>Hello there. <b title=",
+   "style": "a11y:link-title"
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "PD94ID48YSB0aXRsZT0iPz5IZWxsbyB0aGVyZS4gPGIgdGl0bGU9IngiPmI8L2I+"
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "⟦g1⟧Ü b",
+    "1": "Ü ?>Hello there. <b title="
+   },
+   "out_b64": "PD94ID48YSB0aXRsZT0iw5wgPyZndDtIZWxsbyB0aGVyZS4gJmx0O2IgdGl0bGU9IngiPsOcIGI8L2I+"
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "⟦g1⟧b & <\"'>"
+   },
+   "out_b64": "PD94ID48YSB0aXRsZT0iPz5IZWxsbyB0aGVyZS4gPGIgdGl0bGU9IngiPmIgJmFtcDsgJmx0OyInJmd0OzwvYj4="
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "out_b64": "PD94ID48YSB0aXRsZT0iPz5IZWxsbyB0aGVyZS4gPGIgdGl0bGU9IngiPmI8L2I+"
+  }
+ ]
+}

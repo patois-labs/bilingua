@@ -1,0 +1,46 @@
+{
+ "format": "html",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Hello ⟦x1⟧",
+   "style": ""
+  },
+  {
+   "p_index": 1,
+   "text": "A cat",
+   "style": "a11y:img-alt"
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "PHA+SGVsbG8gPGltZyBzcmM9J2EucG5nJyBhbHQ9J0EgY2F0Jz48L3A+"
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü Hello ⟦x1⟧",
+    "1": "Ü A cat"
+   },
+   "out_b64": "PHA+w5wgSGVsbG8gPGltZyBzcmM9J2EucG5nJyBhbHQ9J8OcIEEgY2F0Jz48L3A+"
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Hello  & <\"'>⟦x1⟧"
+   },
+   "out_b64": "PHA+SGVsbG8gICZhbXA7ICZsdDsiJyZndDs8aW1nIHNyYz0nYS5wbmcnIGFsdD0nQSBjYXQnPjwvcD4="
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "out_b64": "PHA+SGVsbG8gPGltZyBzcmM9J2EucG5nJyBhbHQ9J0EgY2F0Jz48L3A+"
+  }
+ ]
+}

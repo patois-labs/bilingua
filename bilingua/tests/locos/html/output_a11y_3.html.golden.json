@@ -1,0 +1,40 @@
+{
+ "format": "html",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "T.",
+   "style": ""
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "PHA+VC48L3A+PGltZyBzcmM9ImUucG5nIiBhbHQ9IiI+"
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü T."
+   },
+   "out_b64": "PHA+w5wgVC48L3A+PGltZyBzcmM9ImUucG5nIiBhbHQ9IiI+"
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "T. & <\"'>"
+   },
+   "out_b64": "PHA+VC4gJmFtcDsgJmx0OyInJmd0OzwvcD48aW1nIHNyYz0iZS5wbmciIGFsdD0iIj4="
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "out_b64": "PHA+VC48L3A+PGltZyBzcmM9ImUucG5nIiBhbHQ9IiI+"
+  }
+ ]
+}

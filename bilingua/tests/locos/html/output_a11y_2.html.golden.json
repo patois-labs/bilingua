@@ -1,0 +1,46 @@
+{
+ "format": "html",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "One.",
+   "style": ""
+  },
+  {
+   "p_index": 1,
+   "text": "Two.",
+   "style": ""
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "PHA+T25lLjwvcD48cD5Ud28uPC9wPg=="
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü One.",
+    "1": "Ü Two."
+   },
+   "out_b64": "PHA+w5wgT25lLjwvcD48cD7DnCBUd28uPC9wPg=="
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "One. & <\"'>"
+   },
+   "out_b64": "PHA+T25lLiAmYW1wOyAmbHQ7IicmZ3Q7PC9wPjxwPlR3by48L3A+"
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "out_b64": "PHA+T25lLjwvcD48cD5Ud28uPC9wPg=="
+  }
+ ]
+}

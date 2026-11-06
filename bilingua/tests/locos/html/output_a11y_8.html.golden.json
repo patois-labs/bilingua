@@ -1,0 +1,46 @@
+{
+ "format": "html",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Text here.",
+   "style": ""
+  },
+  {
+   "p_index": 1,
+   "text": "x > y",
+   "style": "a11y:img-alt"
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "PHA+VGV4dCBoZXJlLjwvcD48aW1nIHNyYz0naS5wbmcnIGFsdD0neCA+IHknPg=="
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü Text here.",
+    "1": "Ü x > y"
+   },
+   "out_b64": "PHA+w5wgVGV4dCBoZXJlLjwvcD48aW1nIHNyYz0naS5wbmcnIGFsdD0nw5wgeCAmZ3Q7IHknPg=="
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Text here. & <\"'>"
+   },
+   "out_b64": "PHA+VGV4dCBoZXJlLiAmYW1wOyAmbHQ7IicmZ3Q7PC9wPjxpbWcgc3JjPSdpLnBuZycgYWx0PSd4ID4geSc+"
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "out_b64": "PHA+VGV4dCBoZXJlLjwvcD48aW1nIHNyYz0naS5wbmcnIGFsdD0neCA+IHknPg=="
+  }
+ ]
+}

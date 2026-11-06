@@ -1,0 +1,40 @@
+{
+ "format": "html",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Use < 5",
+   "style": ""
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "VXNlIDwgNQ=="
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü Use < 5"
+   },
+   "out_b64": "w5wgVXNlICZsdDsgNQ=="
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Use < 5 & <\"'>"
+   },
+   "out_b64": "VXNlICZsdDsgNSAmYW1wOyAmbHQ7IicmZ3Q7"
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "out_b64": "VXNlIDwgNQ=="
+  }
+ ]
+}

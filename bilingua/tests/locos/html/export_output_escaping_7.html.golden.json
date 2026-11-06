@@ -1,0 +1,46 @@
+{
+ "format": "html",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "See ⟦x1⟧ the picture",
+   "style": ""
+  },
+  {
+   "p_index": 1,
+   "text": "a > b",
+   "style": "a11y:img-alt"
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "PHA+U2VlIDxpbWcgYWx0PSJhID4gYiI+IHRoZSBwaWN0dXJlPC9wPg=="
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü See ⟦x1⟧Ü  the picture",
+    "1": "Ü a > b"
+   },
+   "out_b64": "PHA+w5wgU2VlIDxpbWcgYWx0PSLDnCBhICZndDsgYiI+w5wgIHRoZSBwaWN0dXJlPC9wPg=="
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "See  & <\"'>⟦x1⟧ the picture & <\"'>"
+   },
+   "out_b64": "PHA+U2VlICAmYW1wOyAmbHQ7IicmZ3Q7PGltZyBhbHQ9ImEgPiBiIj4gdGhlIHBpY3R1cmUgJmFtcDsgJmx0OyInJmd0OzwvcD4="
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "out_b64": "PHA+U2VlIDxpbWcgYWx0PSJhID4gYiI+IHRoZSBwaWN0dXJlPC9wPg=="
+  }
+ ]
+}

@@ -1,0 +1,40 @@
+{
+ "format": "html",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "No images here.",
+   "style": ""
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "PHA+Tm8gaW1hZ2VzIGhlcmUuPC9wPg=="
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü No images here."
+   },
+   "out_b64": "PHA+w5wgTm8gaW1hZ2VzIGhlcmUuPC9wPg=="
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "No images here. & <\"'>"
+   },
+   "out_b64": "PHA+Tm8gaW1hZ2VzIGhlcmUuICZhbXA7ICZsdDsiJyZndDs8L3A+"
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "out_b64": "PHA+Tm8gaW1hZ2VzIGhlcmUuPC9wPg=="
+  }
+ ]
+}

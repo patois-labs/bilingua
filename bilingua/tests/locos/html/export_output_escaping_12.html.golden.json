@@ -1,0 +1,40 @@
+{
+ "format": "html",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "⟦x1⟧Hello world⟦x2⟧",
+   "style": ""
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "PGJyIGRhdGEtbGFiZWw9IkhvbWUgPiBEb2NzIj5IZWxsbyB3b3JsZDwvYnI+"
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "⟦x1⟧Ü Hello world⟦x2⟧"
+   },
+   "out_b64": "PGJyIGRhdGEtbGFiZWw9IkhvbWUgPiBEb2NzIj7DnCBIZWxsbyB3b3JsZDwvYnI+"
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "⟦x1⟧Hello world & <\"'>⟦x2⟧"
+   },
+   "out_b64": "PGJyIGRhdGEtbGFiZWw9IkhvbWUgPiBEb2NzIj5IZWxsbyB3b3JsZCAmYW1wOyAmbHQ7IicmZ3Q7PC9icj4="
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "out_b64": "PGJyIGRhdGEtbGFiZWw9IkhvbWUgPiBEb2NzIj5IZWxsbyB3b3JsZDwvYnI+"
+  }
+ ]
+}
