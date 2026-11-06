@@ -83,7 +83,11 @@ fn batch_extensions() {
 fn unsafe_paths_refuse_the_whole_archive() {
     for bad in ["../evil.md", "docs/../../evil.md", "/etc/evil.md", "C:/evil.md", "C:\\evil.md", "docs\\..\\..\\evil.md", "a\u{1}b.md", "trail./x.md", " lead/x.md"] {
         let z = zip_of(&[("ok.md", MD), (bad, MD)]);
-        assert!(batch::expand(&z).is_err(), "{bad:?} accepted");
+        // every refusal of a real archive is a limit error with a message for the uploader (LocOS InputLimitError)
+        match batch::expand(&z) {
+            Err(Error::Limit(l)) => assert!(l.kind == LimitKind::ZipMalformed && l.msg.contains("unsafe path"), "{bad:?}: {l:?}"),
+            other => panic!("{bad:?}: {other:?}"),
+        }
     }
     for raw in ["../x", "/x", "c:x", "", "a/./../b", "a\u{7f}b", "x /y.md", "x./y.md"] {
         assert_eq!(batch::safe_member_path(raw), None, "{raw:?}");
@@ -98,6 +102,31 @@ fn stricter_than_locos_duplicates_by_case_refuse() {
     // LocOS skips the second spelling; the shared zip guard refuses the archive (documented difference)
     let z = zip_of(&[("docs/guide/intro.md", MD), ("DOCS/GUIDE/INTRO.md", MD)]);
     assert_eq!(limit_kind(batch::expand(&z)), Some(LimitKind::ZipMalformed));
+}
+
+#[test]
+fn hidden_duplicates_links_and_unicode_case_twins() {
+    // the same name twice in the central directory: the zip reader keeps one and hides the other; in every layout
+    // (plain, zip64 end record, bytes before the archive) the archive is refused
+    let twice = bilingua_zip::hostile::stored_zip(&[("a.md", MD), ("b.txt", TXT), ("a.md", b"# evil\n")]);
+    for (layout, z) in bilingua_zip::hostile::layouts(&twice) {
+        assert_eq!(limit_kind(batch::expand(&z)), Some(LimitKind::ZipMalformed), "{layout}");
+    }
+    // a symbolic link refuses the archive (LocOS skips it)
+    let mut w = zip::ZipWriter::new(std::io::Cursor::new(Vec::new()));
+    w.start_file("ok.md", zip::write::SimpleFileOptions::default()).unwrap();
+    w.write_all(MD).unwrap();
+    w.add_symlink("docs/link.md", "/etc/passwd", zip::write::SimpleFileOptions::default()).unwrap();
+    let z = w.finish().unwrap().into_inner();
+    assert_eq!(limit_kind(batch::expand(&z)), Some(LimitKind::ZipMalformed));
+    // names that differ only in non-ASCII case pass the guard and are skipped as duplicates, as LocOS
+    let b = batch::expand(&zip_of(&[("Ä.md", MD), ("ä.md", MD)])).unwrap();
+    assert_eq!((b.members.len(), b.skipped.len()), (1, 1));
+    assert!(b.skipped[0].reason.contains("duplicate path"));
+    // a member comes back byte for byte (stored, and deflated above)
+    let raw: Vec<u8> = b"line one\r\n\xc3\xa9t\xc3\xa9\r\nno newline at end".to_vec();
+    let b = batch::expand(&bilingua_zip::hostile::stored_zip(&[("bin/data.txt", &raw)])).unwrap();
+    assert_eq!(b.members[0].data, raw);
 }
 
 #[test]

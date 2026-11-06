@@ -60,7 +60,7 @@ pub enum Kind {
 pub struct Slot {
     pub name: String,
     pub kind: Kind,
-    /// translatable="false", a resource reference, or (Java) an entry with child elements.
+    /// translatable="false", a resource reference, or (Java) an entry with child elements, comments or PIs.
     pub skip: bool,
     /// Byte span of the inner XML; `None` for an empty element.
     pub inner: Option<(usize, usize)>,
@@ -190,6 +190,8 @@ struct Parent {
     off: bool,
     count: usize,
     group: Option<usize>,
+    /// the comment before the `<plurals>` or `<string-array>` (LocOS gives it to every item's record)
+    comment: String,
 }
 
 fn is_point(d: Dialect, qname: &[u8]) -> bool {
@@ -288,6 +290,7 @@ pub fn scan(text: &str, d: Dialect) -> Result<Scan, Error> {
                                     off: a.translatable_false,
                                     count: 0,
                                     group,
+                                    comment: comment.clone(),
                                 });
                             }
                             (Dialect::JavaProps, b"entry") => {
@@ -304,7 +307,7 @@ pub fn scan(text: &str, d: Dialect) -> Result<Scan, Error> {
                                 p.count += 1;
                                 Kind::Array(p.count - 1)
                             };
-                            new_cap = Some((start_slot(p.name.clone(), kind, p.off, String::new()), p.group));
+                            new_cap = Some((start_slot(p.name.clone(), kind, p.off, p.comment.clone()), p.group));
                         }
                     }
                     if let Some((slot, group)) = new_cap {
@@ -385,6 +388,9 @@ pub fn scan(text: &str, d: Dialect) -> Result<Scan, Error> {
             }
             Event::Comment(t) => {
                 if let Some(c) = cap.as_mut() {
+                    if d == Dialect::JavaProps {
+                        c.slot.skip = true; // lxml counts a comment as a child: LocOS leaves the entry alone
+                    }
                     if c.point.is_none() {
                         c.slot.pieces.push(Piece::Point(text[before..after].to_string()));
                     }
@@ -394,6 +400,9 @@ pub fn scan(text: &str, d: Dialect) -> Result<Scan, Error> {
             }
             Event::PI(_) => {
                 if let Some(c) = cap.as_mut() {
+                    if d == Dialect::JavaProps {
+                        c.slot.skip = true; // as a comment
+                    }
                     if c.point.is_none() {
                         c.slot.pieces.push(Piece::Point(text[before..after].to_string()));
                     }

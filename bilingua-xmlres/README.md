@@ -18,7 +18,7 @@ let out = AndroidStrings.merge(&doc)?;
 
 - One unit per `<string>`, per `<item>` of a `<plurals>` (`context.extra["plural"]` = the quantity) and per `<item>`
   of a `<string-array>` (`context.extra["index"]`). `context.key` is the resource name, `context.notes` the comment
-  right before it. Ids are `u1`, `u2`, ... in file order.
+  right before it (for a plural or array item, the comment before its group). Ids are `u1`, `u2`, ... in file order.
 - Not translated: `translatable="false"` (on the string, the plurals or the array), a value that is a resource or
   theme reference (`@string/x`, `?attr/x`), values with no letter or digit, `<color>`, `<dimen>` and other resource
   types.
@@ -35,7 +35,8 @@ let out = AndroidStrings.merge(&doc)?;
 ## Java XML properties (`javaxml`)
 
 - One unit per `<entry key>`; `context.key` is the key. `<comment>` and the DOCTYPE are kept byte for byte (the DTD
-  URI is never fetched). An entry with child elements is left alone.
+  URI is never fetched). An entry with child elements, a comment or a processing instruction inside is left alone
+  (LocOS: lxml counts them as children).
 - A value with MessageFormat arguments (`{0}`, `{1,date}`) shows a doubled `''` as one `'` and doubles every `'` on
   merge; other values keep a single apostrophe.
 
@@ -44,7 +45,9 @@ let out = AndroidStrings.merge(&doc)?;
 - Placeholders (`%1$s`, `%d`, `{0}`) stay text, as LocOS shows them.
 - An untouched merge returns the original bytes. Only translated values change; everything else (declaration,
   comments, indentation, attribute quoting, CRLF, BOM) is kept. Translated text is escaped (`& < >`); characters
-  XML 1.0 forbids are dropped.
+  XML 1.0 forbids are dropped. The markup of a translation is repaired as LocOS repairs it, so a merge never writes
+  broken XML: an unknown tag or a second use of one is dropped, a close with no matching open is dropped, and a
+  pair left open is closed at the end.
 - Encodings (`bilingua_model::enc`): UTF-8 (BOM kept), UTF-16 with a BOM, and the charset the declaration names. The
   file goes back in its own encoding (LocOS writes UTF-8; use `MergeOptions` `output_encoding` UTF-8 for that).
 - Safety: a DTD internal subset is refused (no entity expansion, no XXE), undefined entities, invalid character

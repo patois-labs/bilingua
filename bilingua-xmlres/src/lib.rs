@@ -116,8 +116,9 @@ fn escape_raw_breaks(s: &str) -> String {
             start = j;
             continue;
         }
-        // advance one character (stay on char boundaries)
-        i += s[i..].chars().next().map_or(1, char::len_utf8);
+        // No break starts anywhere in what the scan passed over (an escape and spaces not followed by a break), so
+        // go on after it: one pass, also over a long run of spaces. `j` sits on an ASCII byte's end, a char boundary.
+        i = if j > i { j } else { i + s[i..].chars().next().map_or(1, char::len_utf8) };
     }
     out.push_str(&s[start..]);
     out
@@ -386,7 +387,12 @@ fn write_unit(d: Dialect, u: &Unit) -> Option<String> {
         T(String),
         M(String),
     }
+    // The markup is repaired as LocOS's `_rebuild_target` does, so a translation never writes broken XML: an
+    // unknown tag or a second use of one is dropped, a close with no open on top of the stack is dropped, and a
+    // pair the translation left open is closed at the end.
     let mut ps: Vec<P> = Vec::new();
+    let mut used: std::collections::HashSet<&str> = std::collections::HashSet::new();
+    let mut stack: Vec<&str> = Vec::new();
     for i in &out {
         match i {
             Inline::Text(t) => match ps.last_mut() {
@@ -394,15 +400,31 @@ fn write_unit(d: Dialect, u: &Unit) -> Option<String> {
                 _ => ps.push(P::T(t.clone())),
             },
             Inline::Tag { id, kind, .. } => {
-                let c = u.codes.get(id);
-                let raw = match kind {
-                    TagKind::Open => c.and_then(|c| c.open.clone()),
-                    TagKind::Close => c.and_then(|c| c.close.clone()),
-                    TagKind::Standalone => c.and_then(|c| c.standalone.clone()),
-                };
-                ps.push(P::M(raw.unwrap_or_default()));
+                let Some((key, c)) = u.codes.get_key_value(id) else { continue };
+                match kind {
+                    TagKind::Open => {
+                        if let Some(open) = c.open.as_ref().filter(|_| used.insert(key.as_str())) {
+                            stack.push(key.as_str());
+                            ps.push(P::M(open.clone()));
+                        }
+                    }
+                    TagKind::Close => {
+                        if stack.last() == Some(&key.as_str()) {
+                            stack.pop();
+                            ps.push(P::M(c.close.clone().unwrap_or_default()));
+                        }
+                    }
+                    TagKind::Standalone => {
+                        if let Some(s) = c.standalone.as_ref().filter(|_| used.insert(key.as_str())) {
+                            ps.push(P::M(s.clone()));
+                        }
+                    }
+                }
             }
         }
+    }
+    while let Some(key) = stack.pop() {
+        ps.push(P::M(u.codes.get(key).and_then(|c| c.close.clone()).unwrap_or_default()));
     }
     if u.has_hidden(ESC_NL) {
         for p in ps.iter_mut() {
@@ -488,11 +510,17 @@ fn fill_plurals(text: &str, locale: &str) -> Result<String, Error> {
         let add: String = missing.iter().map(|q| format!("{nl}{indent}<item quantity=\"{q}\">{inner}</item>")).collect();
         edits.push((last.end, last.end, add));
     }
-    let mut out = text.to_string();
-    edits.sort_by(|a, b| (b.0, b.1).cmp(&(a.0, a.1)));
+    // one pass over the text (replacing ranges in place would move the tail once per edit)
+    edits.sort_by_key(|a| (a.0, a.1));
+    let mut out = String::with_capacity(text.len() + edits.iter().map(|e| e.2.len()).sum::<usize>());
+    let mut pos = 0;
     for (s, e, r) in edits {
-        out.replace_range(s..e, &r);
+        let s = s.max(pos);
+        out.push_str(&text[pos..s]);
+        out.push_str(&r);
+        pos = e.max(s);
     }
+    out.push_str(&text[pos..]);
     Ok(out)
 }
 

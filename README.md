@@ -156,6 +156,26 @@ output encoding and target language stamping; `bilingua::format_option_keys()` l
 (`csv.columns`, `odf.translate_comments`, ...). [MIGRATION.md](MIGRATION.md) shows the builder style every option and
 model type uses.
 
+### ZIP batches
+
+`.zip` is not a format: `bilingua::detect` refuses it. An upload form that takes a folder of files as one `.zip`
+opens it with `bilingua::batch` (as Localization OS's ZIP batch upload does) and extracts each member as an upload
+of its own:
+
+```rust
+if bilingua::batch::is_batch("site.zip") {
+    let b = bilingua::batch::expand(&bytes)?;          // or expand_with(&bytes, &BatchOptions::new().with_max_documents(100))
+    for m in &b.members {                              // m.path "docs/guide/intro.md", m.name "docs__guide__intro.md"
+        let doc = bilingua::extract(&m.name, &m.data, &opts); // an error here belongs to this member only
+    }
+    for s in &b.skipped { println!("{}: {}", s.path, s.reason); } // nested zips, OS junk, duplicates, unsupported
+}
+```
+
+The archive goes through the same zip guard as every package format first; an unsafe or repeated name, a link, a
+bomb or more than 500 supported members (`BatchOptions::max_documents`) refuses the whole archive with an
+`Error::Limit`.
+
 ### Command line
 
 ```

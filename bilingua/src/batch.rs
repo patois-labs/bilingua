@@ -20,9 +20,33 @@
 //! The member's folder path is kept: [`Member::name`] is the path with `/` written as `__` (a document name may
 //! not carry a path), [`Member::path`] the normalised relative path.
 //!
-//! Two differences from LocOS, both stricter: a symbolic link or two names that differ only in case refuse the
-//! archive (the shared zip guard refuses them for every package; LocOS skips the member), and so does a name
-//! with a colon.
+//! Differences from LocOS, all stricter: a symbolic link, an encrypted member, a name listed twice in the central
+//! directory (a copy the zip reader would hide), two names that differ only in ASCII case, and a name with a colon
+//! refuse the archive (the shared zip guard refuses them for every package; LocOS skips a link and a case twin).
+//! Names that differ only in non-ASCII case (`Ä.md`, `ä.md`) are skipped as duplicates, as LocOS does.
+//!
+//! Errors: bytes that are not a zip are [`Error::Parse`] for format `zip`; every refusal of a real archive (a guard
+//! limit, an unsafe or repeated name, a link, too many documents) is an [`Error::Limit`], so a caller can show its
+//! message to whoever uploaded the file. Nothing is returned in either case.
+//!
+//! ```
+//! # fn run(upload_name: &str, bytes: &[u8]) -> Result<(), bilingua::Error> {
+//! use bilingua::batch;
+//! if batch::is_batch(upload_name) {
+//!     let b = batch::expand_with(bytes, &batch::BatchOptions::new().with_max_documents(100))?;
+//!     for m in &b.members {
+//!         // each member is an upload of its own: a parse error belongs to that member, not to the batch
+//!         match bilingua::extract(&m.name, &m.data, &bilingua::ExtractOptions::new()) {
+//!             Ok(doc) => println!("{}: {} units", m.path, doc.units.len()),
+//!             Err(e) => println!("{}: {e}", m.path),
+//!         }
+//!     }
+//!     for s in &b.skipped {
+//!         println!("{}: skipped, {}", s.path, s.reason);
+//!     }
+//! }
+//! # Ok(()) }
+//! ```
 
 use bilingua_model::{Error, LimitError, LimitKind, Limits};
 
@@ -141,12 +165,28 @@ fn ext_of(path: &str) -> String {
     leaf.rsplit_once('.').map(|(_, e)| e.to_ascii_lowercase()).unwrap_or_default()
 }
 
-fn supported(ext: &str) -> bool {
-    !ext.is_empty() && crate::filters().iter().any(|f| f.extensions().contains(&ext))
+/// Every extension some filter claims (built once per batch, not once per member).
+fn supported_exts() -> std::collections::HashSet<&'static str> {
+    crate::filters().iter().flat_map(|f| f.extensions().iter().copied()).collect()
 }
 
 fn refuse(msg: String) -> Error {
     Error::Limit(LimitError::new(LimitKind::ZipMalformed, msg))
+}
+
+/// The shared reader's errors in batch terms: not a zip stays a parse error; any other refusal of the archive (an
+/// unsafe name, a link, an encrypted or unreadable member) is a limit error with a message for the uploader.
+fn reader_error(e: Error) -> Error {
+    match e {
+        Error::Parse { msg, .. } if msg.contains("not a zip") || msg.contains("unreadable zip") => {
+            Error::Parse { format: "zip".into(), msg: "This .zip file is not a readable ZIP archive.".into() }
+        }
+        Error::Parse { msg, .. } if msg.starts_with("entry name") || msg.starts_with("an entry has an empty name") => {
+            refuse(format!("This ZIP archive contains an unsafe path ({msg}). It was not processed."))
+        }
+        Error::Parse { msg, .. } => refuse(format!("This ZIP archive cannot be opened safely ({msg}). It was not processed.")),
+        e => e,
+    }
 }
 
 /// [`expand_with`] with LocOS's numbers.
@@ -154,19 +194,15 @@ pub fn expand(bytes: &[u8]) -> Result<Batch, Error> {
     expand_with(bytes, &BatchOptions::default())
 }
 
-/// Opens a batch and returns its supported members plus the skipped list. Bytes that are not a zip are an
-/// [`Error::Parse`] for format `zip`; an archive over a guard limit, with an unsafe path or with too many
-/// supported members is an [`Error::Limit`]. Nothing is returned in either case.
+/// Opens a batch and returns its supported members (their bytes exactly as stored) plus the skipped list. Bytes
+/// that are not a zip are an [`Error::Parse`] for format `zip`; an archive over a guard limit, with an unsafe or
+/// repeated path, a link, or too many supported members is an [`Error::Limit`]. Nothing is returned in either case.
 pub fn expand_with(bytes: &[u8], opts: &BatchOptions) -> Result<Batch, Error> {
     let l = &opts.limits;
     let zl = bilingua_zip::ZipLimits::from(l);
     // the shared guard (bomb, entry count, forged sizes, names) over the whole archive before any member is used
-    let entries = bilingua_zip::read_zip("zip", bytes, &zl).map_err(|e| match e {
-        Error::Parse { msg, .. } if msg.contains("not a zip") || msg.contains("unreadable zip") => {
-            Error::Parse { format: "zip".into(), msg: "This .zip file is not a readable ZIP archive.".into() }
-        }
-        e => e,
-    })?;
+    let entries = bilingua_zip::read_zip("zip", bytes, &zl).map_err(reader_error)?;
+    let exts = supported_exts();
     let mut batch = Batch::default();
     let mut seen = std::collections::HashSet::new();
     for e in entries {
@@ -188,7 +224,7 @@ pub fn expand_with(bytes: &[u8], opts: &BatchOptions) -> Result<Batch, Error> {
             Some("duplicate path (another member already uses this name)".to_string())
         } else if BATCH_EXTS.contains(&ext.as_str()) {
             Some("nested ZIP archive (not opened; upload it separately)".to_string())
-        } else if !supported(&ext) {
+        } else if ext.is_empty() || !exts.contains(ext.as_str()) {
             Some(if ext.is_empty() { "unsupported format (no extension)".to_string() } else { format!("unsupported format (.{ext})") })
         } else if e.data.len() as u64 > l.max_input_bytes {
             Some(format!("larger than the upload limit ({} bytes)", l.max_input_bytes))
