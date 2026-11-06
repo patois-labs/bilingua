@@ -143,6 +143,28 @@ fn row_number(v: &str, name: &str) -> Result<i64, Error> {
 
 // ------------------------------------------------------------------------------------------- package
 
+/// The text of an XML part as lxml reads it: UTF-8 (a BOM dropped), or UTF-16 with its BOM (OPC allows both; a
+/// rewritten part is written as UTF-8, as LocOS's `save` writes it).
+fn decode_part(raw: &[u8]) -> Option<String> {
+    if let Some(b) = raw.strip_prefix(&[0xEF, 0xBB, 0xBF][..]) {
+        return String::from_utf8(b.to_vec()).ok();
+    }
+    let utf16 = |b: &[u8], le: bool| -> Option<String> {
+        if !b.len().is_multiple_of(2) {
+            return None;
+        }
+        let u: Vec<u16> = b.chunks(2).map(|c| if le { u16::from_le_bytes([c[0], c[1]]) } else { u16::from_be_bytes([c[0], c[1]]) }).collect();
+        String::from_utf16(&u).ok()
+    };
+    if let Some(b) = raw.strip_prefix(&[0xFF, 0xFE][..]) {
+        return utf16(b, true);
+    }
+    if let Some(b) = raw.strip_prefix(&[0xFE, 0xFF][..]) {
+        return utf16(b, false);
+    }
+    String::from_utf8(raw.to_vec()).ok()
+}
+
 /// The workbook package (LocOS's `xlsx_package.Package`) over the Transitional view of its parts.
 struct Package {
     /// Every entry name of the original package.
@@ -231,9 +253,8 @@ impl Package {
             return Ok(true);
         }
         let Some(raw) = self.parts.get(name) else { return Ok(false) };
-        let body = raw.strip_prefix(&[0xEF, 0xBB, 0xBF][..]).unwrap_or(raw);
-        let text = std::str::from_utf8(body).map_err(|_| invalid(name))?;
-        let d = dom::parse(text).map_err(|_| invalid(name))?;
+        let text = decode_part(raw).ok_or_else(|| invalid(name))?;
+        let d = dom::parse(&text).map_err(|_| invalid(name))?;
         self.roots.insert(name.to_string(), d);
         Ok(true)
     }

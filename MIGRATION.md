@@ -222,8 +222,8 @@ keeps the encoding:
   and a negative shared-string index counts from the end of the table. A text-box paragraph's tokens are LocOS's
   PowerPoint tokens: `profile::tokens::to_locos_text_for("xlsx", ..)` gives `r` run pairs and numbers each token by
   its tag id, so a break or field after two runs is `x3`, as LocOS writes it (the adapter's `_PAIR_LETTER` needs
-  `xlsx` too). Not ported:
-  LocOS's comment units (`comments=True`) and column mode (`xlsx.table`).
+  `xlsx` too). XML parts are read in UTF-8 or UTF-16 (with its BOM), as lxml reads them, and a rewritten part is
+  written as UTF-8. Not ported: LocOS's comment units (`comments=True`) and column mode (`xlsx.table`).
 - Track D group B, PPTX (and pptm, potx, potm, ppsx, ppsm): under the profile this is a port of LocOS's
   `pptx_filter.py` (`bilingua_pptx::locos`). The walk is LocOS's: per slide in `p:sldIdLst` order the slide's
   paragraphs (outside `mc:Fallback` and merged table cells), its SmartArt data and charts in reference order, its
@@ -261,6 +261,12 @@ keeps the encoding:
   XML tree the XLIFF and DOCX ports share is the internal crate `bilingua-xmltree`. Approximations: the bidi
   direction a re-created `w:bdo`/`w:dir` follows uses script blocks rather than Unicode's bidi table; tokens with
   non-ASCII digits are not read as tokens; a part in UTF-16 or UTF-8 only.
+- Track D group B, all zip formats under the profile (docx, pptx, xlsx, xlz, mqxlz, sdlrpx): Bilingua refuses some
+  packages LocOS opens, on purpose: an entry name that climbs out of the package (`../`, `..\`) or is absolute, the
+  same part name twice in a DOCX, PPTX or XLSX (LocOS's `zipfile` reads the last copy; its XLIFF packages already
+  refuse it), and a DTD in a DOCX part (LocOS's DOCX reader takes one; its PPTX and XLSX readers refuse it). LocOS
+  also reads LocOS-token look-alikes (`⟦x2⟧`) in source text as tokens and drops or moves them on export; the
+  profile keeps them as text, so such a unit's build differs.
 - `profile::lang_tag` and `profile::is_rtl` are LocOS's `html_lang` and `text_direction`.
 - LocOS export keywords are accepted and ignored for now: `docx.walk`, `xlsx.walk`, `pptx.walk`, `xlsx.table`,
   `csv.table`, `markdown.walk`, `markdown.md_walk`, `markdown.fm_keys`, `json.dialect`.
