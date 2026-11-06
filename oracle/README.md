@@ -37,3 +37,9 @@ LocOS is never edited, started or written to; its data directory is a throwaway.
 
 Not done: the comparison does not judge segmentation (LocOS splits sentences in another layer), and it cannot tell
 a formatting code from a placeholder, so code counts are shown but not compared.
+
+The LocOS side boots a throwaway database (LocOS's own `init_db` against a temp SQLite file, test mode, no provider
+keys), so filters that touch it (the PDF OCR fallback writes the spend ledger) work. OCR is offline: LocOS returns a
+placeholder string for a scanned page, which the oracle counts as `ocr_placeholders` and does not list as a unit.
+`gen_packages.py` rebuilds the memoQ and Trados packages in `corpus/`. `REPORT.md` needs a local `bl-dump` (cargo), so
+it is only regenerated on a machine that has both; the split run above writes `SCOREBOARD.md` only.
