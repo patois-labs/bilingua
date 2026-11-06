@@ -793,6 +793,7 @@ dependencies = [
 name = "bilingua-xlsx"
 version = "0.9.0"
 dependencies = [
+ "bilingua-csv",
  "bilingua-model",
  "bilingua-zip",
  "proptest",

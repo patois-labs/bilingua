@@ -32,7 +32,9 @@ yours.
 | Apple property lists (XML and binary) | `plist` | `.plist` |  |
 | AsciiDoc | `adoc` | `.adoc` `.asciidoc` `.asc` |  |
 | ASP.NET pages and controls | `aspx` | `.aspx` `.ascx` |  |
+| Atlassian Document Format (Jira, Confluence) | `adf` | `.adf` |  |
 | AutoCAD DXF (ASCII) | `dxf` | `.dxf` |  |
+| Contentful Rich Text (JSON) | `contentful` | `.contentful` |  |
 | CSV | `csv` | `.csv` |  |
 | DITA topics, maps and bookmaps | `dita` | `.dita` `.ditamap` `.bookmap` |  |
 | DocBook 4.x and 5 | `docbook` | `.dbk` `.docbook` |  |
@@ -73,6 +75,7 @@ yours.
 | Microsoft Visio | `vsdx` | `.vsdx` `.vsdm` |  |
 | Microsoft Word | `docx` | `.docx` `.docm` `.dotx` `.dotm` |  |
 | Mozilla Fluent | `ftl` | `.ftl` |  |
+| Notion blocks (JSON) | `notion` | `.notion` |  |
 | OpenDocument drawing | `odg` | `.odg` `.otg` |  |
 | OpenDocument presentation | `odp` | `.odp` `.otp` |  |
 | OpenDocument spreadsheet | `ods` | `.ods` `.ots` |  |
@@ -87,6 +90,7 @@ yours.
 | Raster images (text layer: PNG, JPEG, TIFF, BMP, GIF, WebP) | `image` | `.png` `.jpg` `.jpeg` `.tif` `.tiff` `.bmp` `.gif` `.webp` |  |
 | reStructuredText | `rst` | `.rst` `.rest` |  |
 | Salesforce Translation Workbench | `stf` | `.stf` |  |
+| Sanity Portable Text (JSON) | `sanity` | `.portabletext` |  |
 | Scenarist Closed Captions | `scc` | `.scc` |  |
 | Server-side includes (SSI) | `shtml` | `.shtml` `.shtm` `.stm` |  |
 | SubRip subtitles | `srt` | `.srt` |  |
@@ -115,7 +119,7 @@ yours.
 | YAML (generic, Rails i18n, Symfony) | `yaml` | `.yaml` `.yml` |  |
 | YouTube SBV subtitles | `sbv` | `.sbv` |  |
 
-92 formats.
+96 formats.
 <!-- formats:end -->
 
 `bilingua::detect` picks the format by extension and then by looking at the bytes, so most files need no hint.
