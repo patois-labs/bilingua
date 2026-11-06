@@ -13,6 +13,12 @@ pub(crate) fn is_adf(v: &Value) -> bool {
     v.has_str("type", "doc") && v.get("content").and_then(Value::as_arr).is_some()
 }
 
+/// What extract takes: an object typed `doc` (LocOS walks any object; an empty doc may lack `content`). The sniff
+/// also needs the `content` array.
+pub(crate) fn accepts(v: &Value) -> bool {
+    v.has_str("type", "doc")
+}
+
 fn ty(n: &Value) -> Option<&str> {
     n.get("type").and_then(Value::as_str)
 }
@@ -46,7 +52,9 @@ fn walk_leaf(node: &Value, path: &mut Vec<Step>, in_code: bool, out: &mut Vec<Pl
         if !in_code {
             let mut b = Builder::default();
             b.text(node.get("text").and_then(Value::as_str).unwrap_or(""));
-            out.push(b.finish(path.clone(), "text", Vec::new()));
+            let mut p = b.finish(path.clone(), "text", Vec::new());
+            p.leaf = true;
+            out.push(p);
         }
         return;
     }
@@ -161,7 +169,11 @@ pub(crate) fn apply(root: &mut Value, plans: &[Plan], outs: &[Option<Vec<Inline>
     for (i, (p, o)) in plans.iter().zip(outs).enumerate() {
         let Some(o) = o else { continue };
         let node = node_mut(root, &p.path).ok_or_else(|| Error::Write("the original text no longer matches the document".into()))?;
-        if p.kind == "text" && p.tokens.is_empty() && is_leaf(node) {
+        // the leaf walk's plans only: an inline container may itself be typed `text` (a malformed leaf with content)
+        if p.leaf {
+            if !is_leaf(node) {
+                return Err(Error::Write("the original text no longer matches the document".into()));
+            }
             node.set("text", Value::Str(plain_text(o)));
             continue;
         }

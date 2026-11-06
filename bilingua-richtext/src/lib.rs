@@ -81,7 +81,7 @@ impl Filter for Sanity {
     }
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
         check_own_options(self, &opts.format_options)?;
-        extract_doc("sanity", "Sanity Portable Text (an array with a text block)", bytes, opts, "", sanity::is_portable_text, sanity::plan)
+        extract_doc("sanity", "Sanity Portable Text (an array of blocks)", bytes, opts, "", sanity::accepts, sanity::plan)
     }
     fn merge_with(&self, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
         check_own_options(self, &opts.format_options)?;
@@ -109,7 +109,7 @@ impl Filter for Adf {
                 return Err(Error::FormatOption { key: "adf.units".into(), msg: "use inline or leaf".into() });
             }
         }
-        extract_doc("adf", "a Jira ADF document", bytes, opts, mode_option(&opts.format_options), adf::is_adf, adf::plan)
+        extract_doc("adf", "a Jira ADF document", bytes, opts, mode_option(&opts.format_options), adf::accepts, adf::plan)
     }
     fn merge_with(&self, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
         check_own_options(self, &opts.format_options)?;
@@ -129,7 +129,7 @@ impl Filter for Notion {
     }
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
         check_own_options(self, &opts.format_options)?;
-        extract_doc("notion", "a Notion block list", bytes, opts, "", notion::is_notion, notion::plan)
+        extract_doc("notion", "a Notion block list", bytes, opts, "", notion::accepts, notion::plan)
     }
     fn merge_with(&self, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
         check_own_options(self, &opts.format_options)?;

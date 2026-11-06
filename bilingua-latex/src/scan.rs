@@ -616,6 +616,12 @@ impl<'a> Scan<'a> {
                     flush!(i);
                     let envs = args(tx, e, b, true, false);
                     if envs.is_empty() || envs[0].0 != b'{' {
+                        // a `{` the group maps cannot match (it follows a `%` they read as a comment, as in
+                        // `\url{a%b} \begin{x}`): the command stays in the run with the group after it, so a
+                        // translation is never written between `\begin` and its name
+                        if by.get(skip_ws(by, e, b)) == Some(&b'{') {
+                            start!(i);
+                        }
                         i = e;
                         continue;
                     }
@@ -654,6 +660,9 @@ impl<'a> Scan<'a> {
                             }
                         }
                         e = envs[0].2;
+                    } else if by.get(skip_ws(by, e, b)) == Some(&b'{') {
+                        // as for `\begin`: an unreadable group stays in the run with its command
+                        start!(i);
                     }
                     i = e;
                     continue;

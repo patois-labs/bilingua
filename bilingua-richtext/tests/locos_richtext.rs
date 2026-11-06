@@ -215,7 +215,10 @@ fn sanity_broken_tokens_are_refused() {
     // text holding the placeholder brackets stays verbatim
     let code = bytes(&json!([{"_type": "block", "_key": "c", "children": [{"_type": "span", "_key": "x", "text": "a⟦b", "marks": []}]}]));
     assert!(open(&f, &code).units.is_empty());
-    assert!(matches!(f.extract(b"[1, 2]", &opts()), Err(Error::Parse { .. })));
+    // LocOS walks any list: an empty field or a list without text blocks has no units (the sniff still says no)
+    assert!(open(&f, b"[1, 2]").units.is_empty());
+    assert!(open(&f, b"[]").units.is_empty());
+    assert!(!f.sniff(b"[]"));
     assert!(matches!(f.extract(b"{}", &opts()), Err(Error::Parse { .. })));
 }
 

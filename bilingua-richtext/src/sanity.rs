@@ -14,6 +14,11 @@ pub(crate) fn is_portable_text(v: &Value) -> bool {
     v.as_arr().is_some_and(|a| a.iter().any(|b| b.has_str("_type", "block") && b.get("children").and_then(Value::as_arr).is_some()))
 }
 
+/// What extract takes (LocOS walks any list; an empty field is `[]`). The sniff needs a text block.
+pub(crate) fn accepts(v: &Value) -> bool {
+    v.as_arr().is_some()
+}
+
 fn is_span(n: &Value) -> bool {
     n.has_str("_type", "span") && n.get("text").and_then(Value::as_str).is_some()
 }
@@ -22,6 +27,8 @@ fn has_mark(n: &Value, mark: &str) -> bool {
     match n.get("marks") {
         Some(Value::Arr(a)) => a.iter().any(|m| m.as_str() == Some(mark)),
         Some(Value::Str(s)) => s.contains(mark),
+        // Python's `in` on a dict tests its keys
+        Some(Value::Obj(m)) => m.iter().any(|(k, _)| k == mark),
         _ => false,
     }
 }
@@ -93,9 +100,12 @@ pub(crate) fn plan(root: &Value, _leaf: bool) -> Vec<Plan> {
 }
 
 fn seed_of(block: &Value) -> String {
+    // Python's `str(block.get("_key") or "b")` for the key types a block has in practice
     match block.get("_key") {
-        Some(Value::Str(s)) if !s.is_empty() => s.clone(),
-        Some(Value::Num(n)) if n != "0" => n.clone(),
+        Some(v) if !v.truthy() => "b".into(),
+        Some(Value::Str(s)) => s.clone(),
+        Some(Value::Bool(true)) => "True".into(),
+        Some(Value::Num(n)) if n.bytes().all(|c| c.is_ascii_digit() || c == b'-') => n.clone(),
         _ => "b".into(),
     }
 }

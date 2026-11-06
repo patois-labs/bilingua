@@ -29,6 +29,12 @@ pub(crate) fn is_notion(root: &Value) -> bool {
     arr.is_some_and(|a| !a.is_empty() && a.iter().all(|b| is_block(b) || !b.is_obj()) && a.iter().any(|b| is_block(b) && (b.has_str("object", "block") || b.get("id").is_some())))
 }
 
+/// What extract takes: a block array (also an empty one, or one with non-block entries, which LocOS skips) or a list
+/// response with `results`. The sniff needs real blocks.
+pub(crate) fn accepts(root: &Value) -> bool {
+    blocks_path(root).is_some()
+}
+
 fn is_run(el: &Value) -> bool {
     el.has_str("type", "text") && el.get("text").is_some_and(|t| t.get("content").and_then(Value::as_str).is_some())
 }

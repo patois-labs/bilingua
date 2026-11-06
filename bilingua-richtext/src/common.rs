@@ -37,6 +37,8 @@ impl Token {
 #[derive(Debug, Clone)]
 pub(crate) struct Plan {
     pub path: Vec<Step>,
+    /// A text leaf of the ADF leaf walk (`adf.units=leaf`): its translation is written to the leaf's `text`.
+    pub leaf: bool,
     pub kind: String,
     pub extra: Vec<(String, String)>,
     pub src: Vec<Inline>,
@@ -107,7 +109,7 @@ impl Builder {
     }
 
     pub fn finish(self, path: Vec<Step>, kind: &str, extra: Vec<(String, String)>) -> Plan {
-        Plan { path, kind: kind.to_string(), extra, src: self.inl, codes: self.codes, tokens: self.tokens }
+        Plan { path, leaf: false, kind: kind.to_string(), extra, src: self.inl, codes: self.codes, tokens: self.tokens }
     }
 }
 
@@ -247,7 +249,7 @@ pub(crate) fn merge_doc(id: &'static str, doc: &Document, opts: &MergeOptions, p
         return enc::encode_text_with(text, encoding, opts);
     }
     let parsed = json::parse(text).map_err(|e| reparse(id, e))?;
-    let mut root = parsed.value;
+    let mut root = parsed.value.clone();
     let plans = plan(&root, mode == "leaf");
     if plans.len() != doc.units.len() {
         return Err(Error::Write(format!("{id}: the document has {} units but the original text has {}", doc.units.len(), plans.len())));
@@ -266,9 +268,17 @@ pub(crate) fn merge_doc(id: &'static str, doc: &Document, opts: &MergeOptions, p
     if outs.iter().all(Option::is_none) {
         return enc::encode_text_with(text, encoding, opts);
     }
+    // LocOS's walkers refuse a translation with a stray placeholder bracket (a token its adapter could not read
+    // back); Bilingua's tags are structural, so outside the profile the brackets are plain characters.
+    if opts.is_profile(profile::LOCOS) && id != "notion" && mode != "leaf" {
+        for (i, o) in outs.iter().enumerate() {
+            if o.as_ref().is_some_and(|o| o.iter().any(|x| matches!(x, Inline::Text(t) if t.contains(['\u{27E6}', '\u{27E7}'])))) {
+                return Err(unwritable(i, "the translation holds a placeholder bracket that is not a token"));
+            }
+        }
+    }
     apply(&mut root, &plans, &outs)?;
-    let st = &parsed.style;
-    let body = format!("{}{}{}", st.lead, json::write(&root, st), st.tail);
+    let body = json::splice(text, &parsed.value, &root, &parsed.span, &parsed.style);
     enc::encode_text_with(&body, encoding, opts)
 }
 
