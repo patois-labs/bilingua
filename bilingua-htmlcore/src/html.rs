@@ -406,6 +406,7 @@ pub fn tag_attr_values(tok: &str) -> Vec<(String, String)> {
     let end = if tok.ends_with('>') { tok.len() - 1 } else { tok.len() };
     let body = &tok[s.min(end)..end];
     let mut out: Vec<(String, String)> = Vec::new();
+    let mut seen: std::collections::HashSet<String> = std::collections::HashSet::new();
     let mut i = 0;
     let bad_name = |c: char| is_space(c) || matches!(c, '"' | '\'' | '>' | '/' | '=');
     while i < body.len() {
@@ -438,7 +439,7 @@ pub fn tag_attr_values(tok: &str) -> Vec<(String, String)> {
                 }
             }
         }
-        if !out.iter().any(|(n, _)| *n == name) {
+        if seen.insert(name.clone()) {
             out.push((name, unescape(&raw)));
         }
         i = j;

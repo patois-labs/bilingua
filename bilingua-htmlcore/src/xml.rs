@@ -316,9 +316,45 @@ pub fn xml_view(text: &str) -> Option<XmlView> {
     Some(view)
 }
 
+/// An internal entity whose value holds markup (`<!ENTITY e "<img onerror=...>">`) is expanded into elements by an
+/// XML reader (lxml in LocOS, a browser reading XHTML), while `xml_view` reads its value as text. A target that
+/// types `&e;` (references are kept as typed) more often than the source has it is refused, whether or not the
+/// page reads as XML here. Scans the text for declarations anywhere, which can only over-collect.
+fn check_markup_entities(before: &str, after: &str) -> Result<(), Unsafe> {
+    if !before.contains("<!ENTITY") {
+        return Ok(());
+    }
+    let mut names: HashSet<String> = HashSet::new();
+    let mut rest = before;
+    while let Some(p) = rest.find("<!ENTITY") {
+        rest = &rest[p + 8..];
+        let t = rest.trim_start();
+        if t.starts_with('%') {
+            continue;
+        }
+        let n = t.find(|c: char| c.is_whitespace()).unwrap_or(t.len());
+        let v = t[n..].trim_start();
+        let Some(q) = v.chars().next().filter(|c| *c == '"' || *c == '\'') else { continue };
+        let value = v[1..].find(q).map_or(&v[1..], |e| &v[1..1 + e]);
+        if value.contains('<') || value.contains('&') {
+            names.insert(t[..n].to_string());
+        }
+    }
+    for name in names {
+        let r = format!("&{name};");
+        if after.matches(&r).count() > before.matches(&r).count() {
+            let at = after.find(&r).unwrap_or(0);
+            let line = after.as_bytes()[..at].iter().filter(|&&c| c == b'\n').count() + 1;
+            return Err(Unsafe { what: format!("the entity reference {r}"), line, xml: true });
+        }
+    }
+    Ok(())
+}
+
 /// LocOS `_check_xml(before, after)`: nothing to check unless both read as XML; then every element of `after`
 /// must be one `before` has, and every script/style body too.
 pub fn check_xml(before: &str, after: &str) -> Result<(), Unsafe> {
+    check_markup_entities(before, after)?;
     let Some(xb) = xml_view(before) else { return Ok(()) };
     let Some(xa) = xml_view(after) else { return Ok(()) };
     let known: HashSet<&str> = xb.sigs.iter().map(|(s, _)| s.as_str()).collect();
@@ -347,6 +383,15 @@ mod tests {
         assert!(xml_view("<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"x.dtd\"><p>a &nbsp; b</p>").is_some());
         assert!(xml_view("<p>a</p><p>b</p>").is_none());
         assert!(xml_view("<p a=b>x</p>").is_none());
+    }
+
+    #[test]
+    fn refuses_a_new_reference_to_a_markup_entity() {
+        let before = "<!DOCTYPE html [<!ENTITY evil \"<img src='x' onerror='alert(1)'/>\"><!ENTITY okay \"plain\">]><html><p>Hi &okay;</p><p>Kept &evil;</p></html>";
+        // the reference a source already has may stay; one more is refused; a plain-text entity is free
+        assert!(check_xml(before, &before.replace("Hi", "Salut")).is_ok());
+        assert!(check_xml(before, &before.replace("Hi", "Salut &evil;")).is_err());
+        assert!(check_xml(before, &before.replace("Hi", "Salut &okay;")).is_ok());
     }
 
     #[test]

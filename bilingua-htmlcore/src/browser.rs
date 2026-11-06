@@ -80,6 +80,8 @@ fn read_tag(text: &str, p: usize, mut view: Option<&mut View>) -> Option<TagRead
     let name = text[p..e].to_lowercase();
     let mut i = e;
     let mut attrs: Attrs = Vec::new();
+    // the names seen: a tag of many thousands of attributes must not compare each with all before it
+    let mut seen: HashSet<String> = HashSet::new();
     loop {
         if i >= n {
             return None;
@@ -130,7 +132,7 @@ fn read_tag(text: &str, p: usize, mut view: Option<&mut View>) -> Option<TagRead
         } else {
             i = j;
         }
-        if !attrs.iter().any(|(a, _)| *a == aname) {
+        if seen.insert(aname.clone()) {
             attrs.push((aname, value));
         }
     }
@@ -523,6 +525,7 @@ pub fn raw_quotes_safe(text: &str) -> bool {
     }
     pos = 0;
     let mut raw_body = false;
+    let mut closes: std::collections::HashMap<String, Option<usize>> = std::collections::HashMap::new();
     for t in &tokens {
         pos += t.s.len();
         if t.s.is_empty() {
@@ -562,19 +565,31 @@ pub fn raw_quotes_safe(text: &str) -> bool {
             return false;
         }
         if RAW_TEXT_ELEMENTS.contains(&name.as_str()) {
-            let b = text.as_bytes();
-            let mut pat = b"</".to_vec();
-            pat.extend_from_slice(name.as_bytes());
-            let mut from = pos;
-            while let Some(i) = find_ci(b, from, &pat) {
-                let after = i + pat.len();
-                if after < b.len() && (is_ws(b[after]) || b[after] == b'/' || b[after] == b'>') {
-                    if !starts.contains(&i) {
-                        return false;
+            // the first end tag at or after `pos`; positions only grow, so the answer of an earlier search is
+            // reused until `pos` passes it (a page of unclosed `<title>`s would otherwise rescan to its end each time)
+            let cached = closes.get(name.as_str()).copied().filter(|c| c.is_none_or(|c| c >= pos));
+            let close = match cached {
+                Some(c) => c,
+                None => {
+                    let b = text.as_bytes();
+                    let mut pat = b"</".to_vec();
+                    pat.extend_from_slice(name.as_bytes());
+                    let mut from = pos;
+                    let mut found = None;
+                    while let Some(i) = find_ci(b, from, &pat) {
+                        let after = i + pat.len();
+                        if after < b.len() && (is_ws(b[after]) || b[after] == b'/' || b[after] == b'>') {
+                            found = Some(i);
+                            break;
+                        }
+                        from = i + 1;
                     }
-                    break;
+                    closes.insert(name.clone(), found);
+                    found
                 }
-                from = i + 1;
+            };
+            if close.is_some_and(|i| !starts.contains(&i)) {
+                return false;
             }
         }
     }

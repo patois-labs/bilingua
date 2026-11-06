@@ -262,11 +262,17 @@ fn every_skeleton_records_its_parser_and_merge_checks_it() {
             with_parser(&mut bumped, |q| q.as_mut().unwrap().version = version.into());
             assert!(merge(&bumped).is_ok(), "{name}: version {version} with the same schema refused");
         }
-        // An older schema merges (the crate still reads it); schema 1 is what every stamp without a schema means.
+        // An older schema merges (the crate still reads it), or is refused as one the crate no longer reads
+        // (`check_parser_min`: html, epub, eml and flprjzip since D4 refuse a schema 1 document with units, whose
+        // units were another filter's); schema 1 is what every stamp without a schema means.
         let mut older = doc.clone();
         with_parser(&mut older, |q| q.as_mut().unwrap().schema = 1);
         if p.schema > 1 {
-            assert!(merge(&older).is_ok(), "{name}: older schema refused");
+            match merge(&older) {
+                Ok(_) => {}
+                Err(Error::ParserVersion { expected, .. }) if expected.contains(&format!("reads skeleton schema 2 to {}", p.schema)) => {}
+                Err(e) => panic!("{name}: older schema refused without saying which it reads: {e}"),
+            }
         }
         // A skeleton from before stamps existed merges.
         let mut legacy = doc.clone();

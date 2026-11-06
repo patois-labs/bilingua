@@ -668,11 +668,17 @@ fn merge_with(d: Dialect, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>
         edits.entry(a.ti).or_default().push((a.start, a.end, val));
     }
     for (ti, mut spans) in edits {
-        spans.sort_by(|x, y| y.0.cmp(&x.0));
-        let mut tok = toks[ti].s.to_string();
+        // one pass over the token (a replace per value would move the rest of a tag of thousands of values each time)
+        spans.sort_by_key(|x| x.0);
+        let old = toks[ti].s.to_string();
+        let mut tok = String::with_capacity(old.len());
+        let mut last = 0;
         for (s, e, v) in spans {
-            tok.replace_range(s..e, &v);
+            tok.push_str(&old[last..s]);
+            tok.push_str(&v);
+            last = e;
         }
+        tok.push_str(&old[last..]);
         toks[ti].s = Cow::Owned(tok);
     }
     // body units, walked on the edited tokens

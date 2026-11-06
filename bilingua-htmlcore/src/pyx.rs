@@ -303,17 +303,17 @@ pub fn escape_protected(s: &str, protected: &[String], quotes: bool, out: &mut S
     if prot.is_empty() {
         return escape_text_with(s, quotes, out);
     }
+    // leftmost-first is the alternation order of `re.split` at each position, in one linear pass (a direct loop
+    // over the strings at every position is quadratic on a unit with thousands of template spans)
+    let Ok(ac) = aho_corasick::AhoCorasick::builder().match_kind(aho_corasick::MatchKind::LeftmostFirst).build(&prot) else {
+        // a pattern set too large to build: escape everything (safe; the template spans are written escaped)
+        return escape_text_with(s, quotes, out);
+    };
     let mut last = 0;
-    let mut i = 0;
-    while i < s.len() {
-        if let Some(p) = prot.iter().find(|p| s[i..].starts_with(**p)) {
-            escape_text_with(&s[last..i], quotes, out);
-            out.push_str(p);
-            i += p.len();
-            last = i;
-            continue;
-        }
-        i += s[i..].chars().next().map_or(1, char::len_utf8);
+    for m in ac.find_iter(s) {
+        escape_text_with(&s[last..m.start()], quotes, out);
+        out.push_str(&s[m.start()..m.end()]);
+        last = m.end();
     }
     escape_text_with(&s[last..], quotes, out);
 }

@@ -285,9 +285,10 @@ fn page_lang(toks: &[Tok]) -> Option<String> {
     attrs.into_iter().find(|(k, _)| k == "lang").map(|(_, v)| trim(&v).to_string()).filter(|v| !v.is_empty())
 }
 
-/// The name of the quoted attribute whose value spans `start..end` in a start tag.
-fn attr_name(tok: &str, start: usize) -> String {
-    html::tag_attrs(tok).into_iter().find(|a| a.1 == start).map(|a| a.0).unwrap_or_default()
+/// The name of the quoted attribute whose value starts at `start` in token `ti`. The attributes of a token are read
+/// once (`seen`): a tag of thousands of `alt`s must not be rescanned per attribute unit.
+fn attr_name(seen: &mut HashMap<usize, HashMap<usize, String>>, ti: usize, tok: &str, start: usize) -> String {
+    seen.entry(ti).or_insert_with(|| html::tag_attrs(tok).into_iter().map(|a| (a.1, a.0)).rev().collect()).get(&start).cloned().unwrap_or_default()
 }
 
 pub(crate) fn extract(bytes: &[u8], opts: &ExtractOptions, cfg: Cfg) -> Result<Document, Error> {
@@ -322,6 +323,7 @@ pub(crate) fn extract(bytes: &[u8], opts: &ExtractOptions, cfg: Cfg) -> Result<D
     let place = places(&toks, &wanted);
     let mut units: Vec<Unit> = Vec::with_capacity(body.len() + attrs.len());
     let mut heading: Option<String> = None;
+    let mut attr_names: HashMap<usize, HashMap<usize, String>> = HashMap::new();
     for (i, u) in body.iter().enumerate() {
         let mut unit = body_unit(format!("u{}", i + 1), u);
         let p = place.get(&u.start).cloned().unwrap_or_default();
@@ -340,7 +342,7 @@ pub(crate) fn extract(bytes: &[u8], opts: &ExtractOptions, cfg: Cfg) -> Result<D
         let tok = &toks[a.ti].s;
         let mut u = Unit::new(format!("u{}", units.len() + 1), vec![Inline::text(a.text.clone())]);
         let elem = html::parse_tag_str(tok).1;
-        let attr = attr_name(tok, a.start);
+        let attr = attr_name(&mut attr_names, a.ti, tok, a.start);
         let p = place.get(&a.ti).cloned().unwrap_or_default();
         let own = if p.path.is_empty() { elem.clone() } else { format!("{} > {elem}", p.path) };
         u.context.kind = Some(attr_kind(&a.style).into());
@@ -437,11 +439,17 @@ pub(crate) fn apply_attrs(toks: &mut [Tok], doc: &Document, page_meta: bool, val
         edits.entry(a.ti).or_default().push((a.start, a.end, val));
     }
     for (ti, mut spans) in edits {
-        spans.sort_by(|x, y| y.0.cmp(&x.0));
-        let mut tok = toks[ti].s.to_string();
+        // one pass over the token (a replace per value would move the rest of a tag of thousands of values each time)
+        spans.sort_by_key(|x| x.0);
+        let old = toks[ti].s.to_string();
+        let mut tok = String::with_capacity(old.len());
+        let mut last = 0;
         for (s, e, v) in spans {
-            tok.replace_range(s..e, &v);
+            tok.push_str(&old[last..s]);
+            tok.push_str(&v);
+            last = e;
         }
+        tok.push_str(&old[last..]);
         toks[ti].s = Cow::Owned(tok);
     }
     Ok(n_body)
@@ -473,12 +481,15 @@ fn server_dialect(doc: &Document, text: &str) -> Result<Option<bilingua_serverpa
 }
 
 pub(crate) fn merge(doc: &Document, opts: &MergeOptions, cfg: Cfg) -> Result<Vec<u8>, Error> {
+    // a schema 1 document with units has the units of the old filter (other ids and order): refused with
+    // `Error::ParserVersion` before its skeleton is read; one without units (a page-only skeleton) still merges
+    if doc.skeleton.parser().is_none_or(|p| p.name != SERVER_PAGES) {
+        check_parser_min(doc, &parser_info!(), if doc.units.is_empty() { 1 } else { crate::SKELETON_SCHEMA })?;
+    }
     let (text, encoding) = skeleton_text(doc)?;
     if let Some(d) = server_dialect(doc, &text)? {
         return d.filter().merge_with(doc, opts);
     }
-    // schema 1 skeletons hold unit parts and are refused below by `skeleton_text`; a page-only one still reads
-    check_parser(doc, &parser_info!())?;
     let targets: Vec<Option<Vec<Inline>>> = doc.units.iter().map(target_of).collect();
     let translated = targets.iter().any(Option::is_some);
     let tag = opts.stamp_lang(doc, translated).and_then(html::html_lang);

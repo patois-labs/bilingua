@@ -91,7 +91,8 @@ item below breaks code written against 0.1; after 1.0 these types grow without b
   effect). Block units have no `style` (LocOS's), attribute units have LocOS's (`a11y:img-alt`, ...), `key` the
   attribute and `extra["element"]` the element; the hidden `~raw`/`~attr` values are gone (`v` = `attr` stays,
   `bilingua_html::VALUE`). `SKELETON_SCHEMA` is 2 (the skeleton is the page); a schema 1 document with units is
-  refused at merge: open the file again. A `.html` page with closed server code is read through
+  refused at merge with `Error::ParserVersion` (Python `code == "parser_version"`): open the file again. EPUB,
+  e-mail and Flare are at schema 2 for the same reason (their units are the HTML filter's) and refuse the same way. A `.html` page with closed server code is read through
   `bilingua-serverpages`. EPUB, e-mail and Flare use `with_page_meta(false)`; for an XHTML target they write
   `bilingua_html::xml_named_refs` (LocOS `_xml_named_refs`) instead of the old `&` sentinel.
 - **bilingua-xml / bilingua-idml.** `MlConfig`, `MlInfo`, `Inspection`, `LangStamp`, `Detect` and `MlMode` are
@@ -157,6 +158,9 @@ keeps the encoding:
   position".
 - `Document::source_encoding` names the encoding Bilingua decoded a non-UTF-8 text file from (`utf-16le`,
   `windows-1252`, ...).
+- A document stored before D4 for `html`, `epub`, `eml` or `flprjzip` (skeleton schema 1, with units) is refused at
+  merge with `parser_version`: rebuild it from the stored original (the parser stamp plus hash rule) and carry the
+  translations over by text, not by unit id; ids and order changed.
 - An empty LocOS target is a translation to nothing: `profile::locos_set_target` (Python: set
   `"empty_target": true` on the segment).
 - Python: `merge(document, *, profile=None, output_encoding=None, stamp_target_always=None, format_options=None)`

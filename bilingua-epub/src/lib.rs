@@ -25,7 +25,9 @@
 //! characters XML 1.0 forbids are dropped.
 
 /// Skeleton schema number: bump only when this crate's skeleton layout changes (see `bilingua_model::check_parser`).
-pub const SKELETON_SCHEMA: u32 = 1;
+/// 2 (D4): the HTML filter underneath gives LocOS's units (other ids and order); a schema 1 document with units
+/// is refused at merge with `Error::ParserVersion`: open the file again.
+pub const SKELETON_SCHEMA: u32 = 2;
 
 mod chapter;
 mod dup;
@@ -155,7 +157,7 @@ fn stamp_opf(edits: &mut Edits, pkg: &Package, tag: &str, rtl: bool) {
 
 fn merge_epub(doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
     // the package's XHTML and OPF are written as UTF-8, so `output_encoding` has nothing to change
-    bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
+    bilingua_model::check_parser_min(doc, &bilingua_model::parser_info!(), if doc.units.is_empty() { 1 } else { SKELETON_SCHEMA })?;
     let Skeleton::Zip { entries: skel, .. } = &doc.skeleton else {
         return Err(Error::Write("epub needs a zip skeleton".into()));
     };

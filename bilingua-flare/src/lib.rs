@@ -32,7 +32,9 @@
 //! escaped and characters XML 1.0 forbids are dropped.
 
 /// Skeleton schema number: bump only when this crate's skeleton layout changes (see `bilingua_model::check_parser`).
-pub const SKELETON_SCHEMA: u32 = 1;
+/// 2 (D4): the HTML filter underneath gives LocOS's units (other ids and order); a schema 1 document with units
+/// is refused at merge with `Error::ParserVersion`: open the file again.
+pub const SKELETON_SCHEMA: u32 = 2;
 
 mod lang;
 mod mask;
@@ -192,7 +194,7 @@ fn extract_flare(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error>
 }
 
 fn merge_flare(doc: &Document, mopts: &MergeOptions) -> Result<Vec<u8>, Error> {
-    bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
+    bilingua_model::check_parser_min(doc, &bilingua_model::parser_info!(), if doc.units.is_empty() { 1 } else { SKELETON_SCHEMA })?;
     let Skeleton::Zip { entries: skel, .. } = &doc.skeleton else {
         return Err(Error::Write("flprjzip needs a zip skeleton".into()));
     };

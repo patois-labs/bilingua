@@ -2,7 +2,9 @@
 //! `app/filters/email_filter.py` and its suite `tests/verify_email_filter.py`. See the README.
 
 /// Skeleton schema number: bump only when this crate's skeleton layout changes (see `bilingua_model::check_parser`).
-pub const SKELETON_SCHEMA: u32 = 1;
+/// 2 (D4): the HTML filter underneath gives LocOS's units (other ids and order); a schema 1 document with units
+/// is refused at merge with `Error::ParserVersion`: open the file again.
+pub const SKELETON_SCHEMA: u32 = 2;
 
 mod codec;
 mod cte;
@@ -461,7 +463,7 @@ impl Filter for Email {
     /// there), so `Utf8` changes nothing here.
     fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
         bilingua_model::check_own_options(self, &opts.format_options)?;
-        bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
+        bilingua_model::check_parser_min(doc, &bilingua_model::parser_info!(), if doc.units.is_empty() { 1 } else { SKELETON_SCHEMA })?;
         let data = original_of(doc)?;
         let parsed = parse_message(data)?;
         let limits = unlimited();
