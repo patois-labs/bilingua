@@ -17,5 +17,7 @@ bilingua-model = { workspace = true }
 regex = { workspace = true }
 
 [dev-dependencies]
+# the linearity tests count work (bilingua_model::work), which only counts with this feature
+bilingua-model = { workspace = true, features = ["work-count"] }
 proptest = { version = "1", default-features = false, features = ["std"] }
 serde_json = { workspace = true }

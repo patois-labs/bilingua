@@ -103,51 +103,26 @@ fn assert_linear(name: &str, make: impl Fn(usize) -> Vec<u8>, n: usize) {
 fn deep_nesting_and_long_runs_are_linear() {
     let r = |s: &'static str| move |k: usize| s.repeat(k).into_bytes();
     assert_linear("nesting", r("*_`#"), 15_000);
-    assert_linear("marks", |k| format!("{}x{}
-", "*_".repeat(k), "_*".repeat(k)).into_bytes(), 25_000);
-    assert_linear("roles", |k| format!("{}
-", "[.r]#".repeat(k)).into_bytes(), 25_000);
-    assert_linear("links", |k| format!("{}
-", "link:x[".repeat(k)).into_bytes(), 25_000);
-    assert_linear("xrefs", |k| format!("{}
-", "<<a,".repeat(k)).into_bytes(), 25_000);
-    assert_linear("tables", r("|===
-|a
-"), 15_000);
-    assert_linear("nested tables", r("!===
-|===
-!===
-"), 15_000);
-    assert_linear("listing fences", r("----
-"), 30_000);
-    assert_linear("description lists", r("a::
-"), 30_000);
-    assert_linear("line breaks", |k| format!("{}
-", " +
-".repeat(k)).into_bytes(), 30_000);
-    assert_linear("words", |k| format!("{}
-", "a ".repeat(k)).into_bytes(), 30_000);
-    assert_linear("passthrough", |k| format!("text {}
-", "+x ".repeat(k)).into_bytes(), 15_000);
-    assert_linear("monospace", |k| format!("text {}
-", "`x ".repeat(k)).into_bytes(), 15_000);
-    assert_linear("bold", |k| format!("text {}
-", "*x ".repeat(k)).into_bytes(), 15_000);
-    assert_linear("attribute continuation", |k| format!(":a: \
-{}", "b \
-".repeat(k)).into_bytes(), 30_000);
-    assert_linear("header continuation", |k| format!("= T
-:description: {}
-", "a \
-  ".repeat(k)).into_bytes(), 15_000);
-    assert_linear("attribute refs", |k| format!("{}
-", "{a}".repeat(k)).into_bytes(), 15_000);
-    assert_linear("urls", |k| format!("{}
-", "https://x.org/ ".repeat(k)).into_bytes(), 15_000);
+    assert_linear("marks", |k| format!("{}x{}\n", "*_".repeat(k), "_*".repeat(k)).into_bytes(), 25_000);
+    assert_linear("roles", |k| format!("{}\n", "[.r]#".repeat(k)).into_bytes(), 25_000);
+    assert_linear("links", |k| format!("{}\n", "link:x[".repeat(k)).into_bytes(), 25_000);
+    assert_linear("xrefs", |k| format!("{}\n", "<<a,".repeat(k)).into_bytes(), 25_000);
+    assert_linear("tables", r("|===\n|a\n"), 15_000);
+    assert_linear("nested tables", r("!===\n|===\n!===\n"), 15_000);
+    assert_linear("listing fences", r("----\n"), 30_000);
+    assert_linear("description lists", r("a::\n"), 30_000);
+    assert_linear("line breaks", |k| format!("{}\n", " +\n".repeat(k)).into_bytes(), 30_000);
+    assert_linear("words", |k| format!("{}\n", "a ".repeat(k)).into_bytes(), 30_000);
+    assert_linear("passthrough", |k| format!("text {}\n", "+x ".repeat(k)).into_bytes(), 15_000);
+    assert_linear("monospace", |k| format!("text {}\n", "`x ".repeat(k)).into_bytes(), 15_000);
+    assert_linear("bold", |k| format!("text {}\n", "*x ".repeat(k)).into_bytes(), 15_000);
+    assert_linear("attribute continuation", |k| format!(":a: \\\n{}", "b \\\n".repeat(k)).into_bytes(), 30_000);
+    assert_linear("header continuation", |k| format!("= T\n:description: {}\n", "a \\\n  ".repeat(k)).into_bytes(), 15_000);
+    assert_linear("attribute refs", |k| format!("{}\n", "{a}".repeat(k)).into_bytes(), 15_000);
+    assert_linear("urls", |k| format!("{}\n", "https://x.org/ ".repeat(k)).into_bytes(), 15_000);
     // one unit near the 100 000-character cap: scans that never find their closer stop at the pattern's bound
     for p in ["link:", "{set:", "pass:[", "a link:a[", "x <<y", "[[z"] {
-        assert_linear(p, |k| format!("Text {}
-", p.repeat(k / p.len())).into_bytes(), 22_000);
+        assert_linear(p, |k| format!("Text {}\n", p.repeat(k / p.len())).into_bytes(), 45_000);
     }
 }
 

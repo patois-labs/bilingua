@@ -971,8 +971,23 @@ pub struct Document {
 
 /// The lookup behind [`Document::set_target`]. It is a cache: it never takes part in equality, serialisation or
 /// the document's identity, and a stale entry is detected and rebuilt, never trusted.
-#[derive(Debug, Clone, Default)]
+#[derive(Default)]
 struct SegIndex(Option<std::collections::HashMap<String, (usize, usize)>>);
+
+/// A clone starts without the cache (it is rebuilt on its first use), so cloning a document costs no more than
+/// before the index existed.
+impl Clone for SegIndex {
+    fn clone(&self) -> SegIndex {
+        SegIndex(None)
+    }
+}
+
+/// The cache never shows in a document's `Debug` output beyond its name, so the output does not change with it.
+impl std::fmt::Debug for SegIndex {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("SegIndex")
+    }
+}
 
 impl PartialEq for SegIndex {
     fn eq(&self, _: &SegIndex) -> bool {
@@ -1778,6 +1793,28 @@ mod tests {
         let mut c: Document = serde_json::from_str(&serde_json::to_string(&d).unwrap()).unwrap();
         c.set_target("u9", vec![Inline::text("x")]).unwrap();
         assert_eq!(c.find("u9").unwrap().1.target, vec![Inline::text("x")]);
+    }
+
+    #[test]
+    fn set_target_index_keeps_first_duplicate_send_sync_and_debug() {
+        fn send_sync<T: Send + Sync>() {}
+        send_sync::<Document>();
+        let mut d = big_doc(6);
+        d.units[4].segments[0].id = "u1".into();
+        let before = format!("{d:?}");
+        d.set_target("u1", vec![Inline::text("a")]).unwrap();
+        d.set_target("u1", vec![Inline::text("b")]).unwrap();
+        // the first segment with the id wins, as the old scan did; the later twin is untouched
+        assert_eq!(d.units[1].segments[0].target, vec![Inline::text("b")]);
+        assert!(!d.units[4].segments[0].has_target());
+        // the cache does not show in Debug, and a clone (which starts without it) sets targets the same way
+        let mut fresh = big_doc(6);
+        fresh.units[4].segments[0].id = "u1".into();
+        assert_eq!(before, format!("{fresh:?}"));
+        let mut c = d.clone();
+        c.set_target("u3", vec![Inline::text("z")]).unwrap();
+        assert_eq!(c.find("u3").unwrap().1.target, vec![Inline::text("z")]);
+        assert_eq!(format!("{:?}", d.clone()), format!("{d:?}"));
     }
 
     #[test]
