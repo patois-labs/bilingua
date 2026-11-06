@@ -168,11 +168,23 @@ fn flatten_codes(u: &mut Unit, pick: fn(&CodeData) -> bool, drop: bool) {
 }
 
 /// Sets a target the way Localization OS means it: an empty LocOS target is a translation to nothing (written as
-/// an empty value, [`Document::set_target_empty`]), anything else is [`Document::set_target`].
+/// an empty value, [`Document::set_target_empty`]); one of white space only is written as that white space (LocOS
+/// writes it, and the adapter's JSON document carries it, where [`Document::set_target`] would read it as no
+/// translation); anything else is [`Document::set_target`].
 pub fn locos_set_target(doc: &mut Document, seg_id: &str, target: Vec<Inline>) -> Result<(), Error> {
     if target.iter().all(|i| matches!(i, Inline::Text(t) if t.is_empty())) {
-        doc.set_target_empty(seg_id)
-    } else {
-        doc.set_target(seg_id, target)
+        return doc.set_target_empty(seg_id);
     }
+    let blank = target.iter().all(|i| matches!(i, Inline::Text(t) if t.trim().is_empty()));
+    if !blank {
+        return doc.set_target(seg_id, target);
+    }
+    // validated as any target (unknown segment, locked unit), then kept as it is
+    doc.set_target(seg_id, target.clone())?;
+    let seg = doc.units.iter_mut().flat_map(|u| u.segments.iter_mut()).find(|s| s.id == seg_id).ok_or_else(|| Error::UnknownSegment(seg_id.to_string()))?;
+    let text: String = target.iter().map(|i| if let Inline::Text(t) = i { t.as_str() } else { "" }).collect();
+    seg.target = vec![Inline::Text(text)];
+    seg.empty_target = false;
+    seg.state = crate::SegState::Draft;
+    Ok(())
 }

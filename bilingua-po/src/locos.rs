@@ -687,7 +687,10 @@ fn build_localized(source: &str, texts: &BTreeMap<usize, String>, locale: &str) 
 /// page only when no charset is declared or the declaration names that code page (ISO-8859-1 and US-ASCII
 /// declarations as themselves), else UTF-8.
 pub fn decode(bytes: &[u8], opts: &ExtractOptions) -> Result<(String, String, Vec<Warning>), Error> {
-    let (text, tag, warnings) = match enc::decode_text(bytes, &enc::DecodeOptions::new(opts).declared()) {
+    // valid UTF-8 is UTF-8 whatever the file declares (an ASCII file declaring ISO-8859-1 included), text as is
+    let body = bytes.strip_prefix(b"\xEF\xBB\xBF").unwrap_or(bytes);
+    let declared = if std::str::from_utf8(body).is_ok() { enc::DecodeOptions::new(opts) } else { enc::DecodeOptions::new(opts).declared() };
+    let (text, tag, warnings) = match enc::decode_text(bytes, &declared) {
         Ok(d) => (d.text, d.encoding, d.warnings),
         Err(Error::Encoding(_)) => {
             // LocOS: a charset that does not read the bytes is ignored and the file read as a code page
