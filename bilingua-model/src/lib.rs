@@ -1696,6 +1696,7 @@ mod tests {
             skeleton: Skeleton::Text { parts: vec![SkelPart::Unit(0)], encoding: "utf-8".into(), parser: None },
             warnings: vec![],
             source_encoding: None,
+            seg_index: SegIndex::default(),
         };
         // An editor that does not know the flag sends both codes as not free, and claims the %s is free.
         let t = vec![
@@ -1720,6 +1721,7 @@ mod tests {
             skeleton: Skeleton::Text { parts: vec![SkelPart::Unit(0)], encoding: "utf-8".into(), parser: None },
             warnings: vec![],
             source_encoding: None,
+            seg_index: SegIndex::default(),
         };
         assert!(d.set_target("u1", vec![Inline::text("y")]).is_ok());
         assert!(matches!(d.set_target("u1", vec![Inline::tag("2", TagKind::Open, "<i>")]), Err(Error::InventedTag(_))));
