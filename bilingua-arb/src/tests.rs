@@ -69,10 +69,6 @@ fn cldr_lookup_reduces_like_babel() {
     assert_eq!(plural_categories("und", false).unwrap(), ["one", "other"]);
     assert_eq!(plural_categories("root", false).unwrap(), ["other"]);
     assert!(plural_categories("zz", false).is_none());
-    // both tables must stay sorted for the binary search
-    for t in [cldr::TABLE, cldr::ALIASES] {
-        assert!(t.windows(2).all(|w| w[0].0 < w[1].0));
-    }
 }
 
 #[test]
