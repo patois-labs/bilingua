@@ -12,10 +12,10 @@ LocOS formats: 87. Bilingua parses 88 of them (source formats and the bilingual 
 
 | Status | Formats |
 |---|---|
-| same | 37 |
-| differs | 47 |
+| same | 51 |
+| differs | 34 |
 | bilingua-only | 1 |
-| untested | 3 |
+| untested | 2 |
 | missing | 0 |
 
 Status rules. `same`: every fixture file gives the same units (normalised) on both sides, an unchanged merge gives the same file and a pseudo-translated merge reads back. `differs`: anything else, with the top reasons (counts of unit-level differences, listed by kind). `bilingua-only`: Bilingua reads the files, LocOS cannot. `untested`: Bilingua parses the format but no fixture exists. `missing`: Bilingua has no parser; the LocOS unit count is shown when a fixture exists.
@@ -26,6 +26,10 @@ Extensions Bilingua parses with no LocOS registry entry: sdlproj.
 
 | LocOS format | Also reads as | Bilingua | Files | Units LocOS | Units Bilingua | Text match | Round trip | Status | Top reasons |
 |---|---|---|---|---|---|---|---|---|---|
+| adoc | asc, asciidoc | source | 13+0 | 232 | 232 | 100.0% | ok | same |  |
+| catkeys |  | source | 14+0 | 53 | 53 | 100.0% | ok | same |  |
+| csv |  | source | 28+1 | 219 | 219 | 100.0% | ok | same |  |
+| desktop |  | source | 15+0 | 76 | 76 | 100.0% | ok | same |  |
 | dita | bookmap, ditamap | source | 6+2 | 78 | 78 | 100.0% | ok | same |  |
 | docbook | dbk | source | 2+1 | 23 | 23 | 100.0% | ok | same |  |
 | dokuwiki |  | source | 15+0 | 141 | 141 | 100.0% | ok | same |  |
@@ -35,8 +39,9 @@ Extensions Bilingua parses with no LocOS registry entry: sdlproj.
 | hhp |  | source | 12+0 | 24 | 24 | 100.0% | ok | same |  |
 | idml |  | source | 7+0 | 59 | 59 | 100.0% | ok | same |  |
 | ini |  | source | 21+0 | 93 | 93 | 100.0% | ok | same |  |
-| js | cjs, cts, mjs, mts, ts | source | 48+1 | 289 | 289 | 100.0% | ok | same |  |
+| mdx |  | source | 2+1 | 61 | 61 | 100.0% | ok | same |  |
 | mif |  | source | 8+0 | 30 | 30 | 100.0% | ok | same |  |
+| mo | gmo | source | 23+0 | 65 | 65 | 100.0% | ok | same |  |
 | mqxliff |  | bilingual | 0+1 | 2 | 2 | 100.0% | ok | same |  |
 | mxliff |  | bilingual | 0+1 | 2 | 2 | 100.0% | ok | same |  |
 | odg | otg | source | 1+0 | 3 | 3 | 100.0% | ok | same |  |
@@ -49,27 +54,32 @@ Extensions Bilingua parses with no LocOS registry entry: sdlproj.
 | resjson |  | source | 4+0 | 46 | 46 | 100.0% | ok | same |  |
 | rst | rest | source | 8+0 | 75 | 75 | 100.0% | ok | same |  |
 | sbv |  | source | 3+0 | 8 | 8 | 100.0% | ok | same |  |
-| scc |  | source | 12+0 | 69 | 69 | 100.0% | ok | same |  |
 | sdlxliff | sdlxlf | bilingual | 0+1 | 4 | 4 | 100.0% | ok | same |  |
+| stf |  | source | 22+0 | 109 | 109 | 100.0% | ok | same |  |
 | stl |  | source | 6+0 | 9 | 9 | 100.0% | ok | same |  |
+| stringsdict |  | source | 14+1 | 61 | 61 | 100.0% | ok | same |  |
+| sub |  | source | 5+0 | 12 | 12 | 100.0% | ok | same |  |
+| tex | latex, ltx | source | 21+0 | 129 | 129 | 100.0% | ok | same |  |
 | toml |  | source | 5+0 | 64 | 64 | 100.0% | ok | same |  |
+| ts |  | source | 28+1 | 175 | 175 | 100.0% | ok | same |  |
+| tsv | tab | source | 5+0 | 29 | 29 | 100.0% | ok | same |  |
 | ttml | dfxp | source | 29+0 | 143 | 143 | 100.0% | ok | same |  |
+| txml |  | bilingual | 21+1 | 301 | 301 | 100.0% | ok | same |  |
 | txt | text | source | 3+1 | 49 | 29 | 100.0% | ok | same |  |
 | vsdx | vsdm | source | 7+0 | 54 | 54 | 100.0% | ok | same |  |
+| wiki | mediawiki, wikitext | source | 17+0 | 165 | 165 | 100.0% | ok | same |  |
 | xcloc |  | source | 2+0 | 10 | 10 | 100.0% | ok | same |  |
 | xcstrings |  | source | 4+1 | 54 | 54 | 100.0% | ok | same |  |
 | xliff | xlf | bilingual | 0+4 | 14 | 14 | 100.0% | ok | same |  |
+| xlz | wsxz | bilingual | 4+0 | 17 | 17 | 100.0% | ok | same |  |
 | xmb |  | source | 3+2 | 27 | 27 | 100.0% | ok | same |  |
+| xml |  | source | 10+1 | 51 | 51 | 100.0% | ok | same |  |
 | xslt | xsl | source | 38+0 | 187 | 187 | 100.0% | ok | same |  |
 | xtb |  | source | 2+1 | 19 | 19 | 100.0% | ok | same |  |
 | xtg | tag | source | 16+0 | 97 | 97 | 100.0% | ok | same |  |
-| adoc | asc, asciidoc | source | 13+0 | 232 | 232 | 100.0% | FAIL 13/13 | differs | round trip fails on 13 file(s) |
 | arb |  | source | 4+0 | 71 | 70 | 98.6% | ok | differs | missing in Bilingua x1 |
 | aspx | ascx | source | 7+0 | 51 | 51 | 100.0% | FAIL 2/7 | differs | round trip fails on 2 file(s) |
 | ass | ssa | source | 25+0 | 111 | 111 | 100.0% | FAIL 1/25 | differs | round trip fails on 1 file(s) |
-| catkeys |  | source | 14+0 | 53 | 53 | 100.0% | FAIL 14/14 | differs | round trip fails on 14 file(s) |
-| csv |  | source | 28+1 | 219 | 219 | 100.0% | FAIL 14/29 | differs | round trip fails on 14 file(s) |
-| desktop |  | source | 15+0 | 76 | 76 | 100.0% | FAIL 15/15 | differs | round trip fails on 15 file(s) |
 | docx | docm, dotm, dotx | source | 5+2 | 132 | 137 | 94.2% | ok | differs | extra in Bilingua x6; missing in Bilingua x1; different text x1 |
 | dtd |  | source | 15+0 | 132 | 132 | 79.1% | ok | differs | different text x24; missing in Bilingua x2; extra in Bilingua x2 |
 | dxf |  | source | 34+0 | 305 | 305 | 100.0% | FAIL 1/34 | differs | round trip fails on 1 file(s) |
@@ -80,40 +90,43 @@ Extensions Bilingua parses with no LocOS registry entry: sdlproj.
 | html | htm, xhtml | source | 6+1 | 121 | 126 | 88.5% | ok | differs | extra in Bilingua x9; missing in Bilingua x4; different text x2 |
 | icml | wcml | source | 10+0 | 37 | 37 | 100.0% | FAIL 1/10 | differs | round trip fails on 1 file(s) |
 | image | bmp, gif, jpeg, jpg, png, svg, tif, tiff, webp | source (only bmp, gif, jpeg, jpg, png, svg, tif, tiff, webp) | 35+0 | 82 | 98 | 87.2% | ok | differs | extra in Bilingua x12; LocOS failed on 2 file(s) |
+| js | cjs, cts, mjs, mts, ts | source | 20+0 | 114 | 114 | 100.0% | FAIL 2/20 | differs | round trip fails on 2 file(s) |
 | json |  | source | 5+1 | 65 | 64 | 96.9% | ok | differs | missing in Bilingua x1; different text x1 |
 | json5 | jsonc | source | 6+2 | 52 | 51 | 96.2% | ok | differs | missing in Bilingua x1; different text x1 |
 | jsp | jspf | source | 6+0 | 42 | 42 | 100.0% | FAIL 2/6 | differs | round trip fails on 2 file(s) |
 | md | markdown, mdown, mkd | source | 3+1 | 132 | 174 | 98.7% | ok | differs | different words x6; words missing in Bilingua x4 |
-| mdx |  | source | 2+1 | 61 | 61 | 100.0% | FAIL 1/3 | differs | round trip fails on 1 file(s) |
-| mo | gmo | source | 23+0 | 65 | 65 | 100.0% | FAIL 23/23 | differs | round trip fails on 23 file(s) |
-| pdf |  | source | 49+0 | 61 | 57 | 93.4% | FAIL 49/49 | differs | round trip fails on 49 file(s); missing in Bilingua x4 |
+| pdf |  | source | 49+0 | 61 | 57 | 93.4% | ok | differs | missing in Bilingua x4 |
 | phtml |  | source | 6+0 | 36 | 36 | 100.0% | FAIL 1/6 | differs | round trip fails on 1 file(s) |
 | po | pot | source | 3+0 | 38 | 38 | 94.7% | ok | differs | different text x2 |
 | pptx | potm, potx, ppsm, ppsx, pptm | source | 1+2 | 37 | 35 | 80.0% | ok | differs | missing in Bilingua x5; extra in Bilingua x3 |
-| properties |  | source | 7+0 | 157 | 157 | 96.8% | ok | differs | different text x3; missing in Bilingua x1; extra in Bilingua x1 |
+| properties |  | source | 6+0 | 151 | 151 | 99.3% | ok | differs | different text x1 |
 | resx | resw | source | 10+1 | 74 | 74 | 98.6% | ok | differs | different text x1 |
+| scc |  | source | 12+0 | 69 | 69 | 100.0% | FAIL 2/12 | differs | round trip fails on 2 file(s) |
 | shtml | shtm, stm | source | 6+0 | 42 | 42 | 100.0% | FAIL 3/6 | differs | round trip fails on 3 file(s) |
 | srt | vtt | source | 4+1 | 52 | 52 | 94.3% | ok | differs | missing in Bilingua x1; extra in Bilingua x1; different text x1 |
-| stf |  | source | 22+0 | 109 | 109 | 100.0% | FAIL 15/22 | differs | round trip fails on 15 file(s) |
 | strings |  | source | 13+0 | 68 | 67 | 80.9% | ok | differs | different text x12; missing in Bilingua x1 |
-| stringsdict |  | source | 14+1 | 61 | 61 | 100.0% | FAIL 8/15 | differs | round trip fails on 8 file(s) |
-| sub |  | source | 5+0 | 12 | 12 | 100.0% | FAIL 2/5 | differs | round trip fails on 2 file(s) |
-| tex | latex, ltx | source | 21+0 | 129 | 129 | 100.0% | FAIL 21/21 | differs | round trip fails on 21 file(s) |
-| tsv | tab | source | 5+0 | 29 | 29 | 100.0% | FAIL 1/5 | differs | round trip fails on 1 file(s) |
-| ttx |  | bilingual | 13+2 | 39 | 40 | 100.0% | FAIL 14/15 | differs | round trip fails on 14 file(s); LocOS failed on 2 file(s) |
-| txlf |  | bilingual | 18+1 | 58 | 60 | 96.7% | FAIL 19/19 | differs | round trip fails on 19 file(s); extra in Bilingua x2 |
-| txml |  | bilingual | 21+1 | 301 | 301 | 100.0% | FAIL 22/22 | differs | round trip fails on 22 file(s) |
-| wiki | mediawiki, wikitext | source | 17+0 | 165 | 165 | 100.0% | FAIL 15/17 | differs | round trip fails on 15 file(s) |
-| wxl |  | source | 7+1 | 65 | 64 | 80.9% | FAIL 2/8 | differs | round trip fails on 2 file(s); different text x6; missing in Bilingua x4; extra in Bilingua x3 |
+| ttx |  | bilingual | 13+2 | 39 | 40 | 100.0% | ok | differs | LocOS failed on 2 file(s) |
+| txlf |  | bilingual | 18+1 | 58 | 60 | 96.7% | ok | differs | extra in Bilingua x2 |
+| wxl |  | source | 7+1 | 65 | 64 | 80.9% | ok | differs | different text x6; missing in Bilingua x4; extra in Bilingua x3 |
 | xaml |  | source | 31+0 | 113 | 113 | 98.2% | ok | differs | different text x2 |
 | xlsx | xlsm, xltm, xltx | source | 2+2 | 74 | 71 | 93.2% | ok | differs | missing in Bilingua x3; extra in Bilingua x2 |
-| xlz | wsxz | bilingual | 4+0 | 17 | 17 | 100.0% | FAIL 4/4 | differs | round trip fails on 4 file(s) |
-| xml |  | source | 15+7 | 102 | 114 | 86.1% | FAIL 6/22 | differs | round trip fails on 6 file(s); extra in Bilingua x13; different text x2; missing in Bilingua x1 |
-| yaml | yml | source | 5+3 | 93 | 93 | 95.7% | FAIL 1/8 | differs | round trip fails on 1 file(s); different text x4 |
+| yaml | yml | source | 5+3 | 93 | 93 | 95.7% | ok | differs | different text x4 |
 | sdlproj |  | source | 28+1 | 0 | 0 | - | ok | bilingua-only | LocOS could not read the file(s) |
 | mqxlz |  | bilingual | 0 | - | - | - | - | untested | no fixture file in the LocOS tree |
 | sdlrpx | sdlppx | bilingual | 0 | - | - | - | - | untested | no fixture file in the LocOS tree |
-| ts |  | source | 0 | - | - | - | - | untested | no fixture file in the LocOS tree |
+
+## Dialects LocOS picks by content
+
+One row per dialect seen in the files: the LocOS registry format (left of the colon) reads these files with another walk than its plain one. `Bilingua` is the filter bl-dump picked for the same file.
+
+| LocOS dialect | Bilingua filter | Files | Units LocOS | Units Bilingua | Text match | Round trip | Status | Top reasons |
+|---|---|---|---|---|---|---|---|---|
+| properties:mozilla | properties | 1+0 | 6 | 6 | 42.9% | FAIL 1/1 | differs | round trip fails on 1 file(s); different text x2; missing in Bilingua x1; extra in Bilingua x1 |
+| xml:android | xml | 0+1 | 18 | 29 | 53.3% | ok | differs | extra in Bilingua x12; missing in Bilingua x1; different text x1 |
+| xml:dita | xml | 1+0 | 7 | 7 | 100.0% | ok | same |  |
+| xml:docbook | xml | 1+1 | 7 | 7 | 100.0% | ok | same |  |
+| xml:java-xml-properties | xml | 0+1 | 2 | 3 | 33.3% | ok | differs | extra in Bilingua x1; different text x1 |
+| xml:multilingual | xml | 3+3 | 17 | 17 | 100.0% | ok | same |  |
 
 ## Formats Bilingua does not parse yet
 
@@ -126,279 +139,25 @@ Ordered by a usage guess: software resource formats first, then Office, DTP, doc
 
 | Format | File and problem |
 |---|---|
-| adoc | minimal.adoc: 1 units differ, 0 set_target errors |
-| adoc | orders_ar.adoc: 3 units differ, 0 set_target errors |
-| adoc | orders_de.adoc: 3 units differ, 0 set_target errors |
-| adoc | orders_en.adoc: 3 units differ, 0 set_target errors |
-| adoc | orders_fr.adoc: 3 units differ, 0 set_target errors |
-| adoc | orders_fr_bom_crlf.adoc: 3 units differ, 0 set_target errors |
-| adoc | orders_fr_cp1252.adoc: 3 units differ, 0 set_target errors |
-| adoc | orders_fr_utf16.adoc: 3 units differ, 0 set_target errors |
-| adoc | orders_ja.adoc: 3 units differ, 0 set_target errors |
-| adoc | orders_ko.adoc: 3 units differ, 0 set_target errors |
-| adoc | orders_ru.adoc: 3 units differ, 0 set_target errors |
-| adoc | orders_zh.adoc: 3 units differ, 0 set_target errors |
-| adoc | tables_and_blocks.asciidoc: 5 units differ, 0 set_target errors |
 | aspx | lumen.ascx: 1 units differ, 0 set_target errors |
 | aspx | lumen.aspx: 1 units differ, 0 set_target errors |
 | ass | edge.ass: 1 units differ, 0 set_target errors |
-| catkeys | bridge_en.catkeys: 1 units differ, 0 set_target errors |
-| catkeys | crlf_bom.catkeys: 4 units differ, 0 set_target errors |
-| catkeys | lang_ar.catkeys: 4 units differ, 0 set_target errors |
-| catkeys | lang_de.catkeys: 4 units differ, 0 set_target errors |
-| catkeys | lang_en.catkeys: 4 units differ, 0 set_target errors |
-| catkeys | lang_es.catkeys: 4 units differ, 0 set_target errors |
-| catkeys | lang_fr.catkeys: 4 units differ, 0 set_target errors |
-| catkeys | lang_hi.catkeys: 4 units differ, 0 set_target errors |
-| catkeys | lang_ja.catkeys: 4 units differ, 0 set_target errors |
-| catkeys | lang_ko.catkeys: 4 units differ, 0 set_target errors |
-| catkeys | lang_ru.catkeys: 4 units differ, 0 set_target errors |
-| catkeys | lang_tr.catkeys: 4 units differ, 0 set_target errors |
-| catkeys | lang_zh.catkeys: 4 units differ, 0 set_target errors |
-| catkeys | locos_example.catkeys: 4 units differ, 0 set_target errors |
-| csv | blank_lines.csv: 2 units differ, 0 set_target errors |
-| csv | cp1252.csv: 3 units differ, 0 set_target errors |
-| csv | empty_cells.csv: 1 units differ, 0 set_target errors |
-| csv | formulas.csv: 4 units differ, 0 set_target errors |
-| csv | menu_cr_only.csv: 7 units differ, 0 set_target errors |
-| csv | menu_crlf.csv: 11 units differ, 0 set_target errors |
-| csv | menu_lf_nofinal.csv: 11 units differ, 0 set_target errors |
-| csv | mixed_endings.csv: 3 units differ, 0 set_target errors |
-| csv | pipe_in_text.csv: 2 units differ, 0 set_target errors |
-| csv | quote_in_field.csv: 2 units differ, 0 set_target errors |
-| csv | quoted_multiline.csv: 3 units differ, 0 set_target errors |
-| csv | space_after_delimiter.csv: 2 units differ, 0 set_target errors |
-| csv | utf16le.csv: 2 units differ, 0 set_target errors |
-| csv | shopify_translate_adapt.csv: 5 units differ, 0 set_target errors |
-| desktop | bridge_app.desktop: 2 units differ, 0 set_target errors |
-| desktop | crlf_bom.desktop: 7 units differ, 0 set_target errors |
-| desktop | lang_ar.desktop: 5 units differ, 0 set_target errors |
-| desktop | lang_de.desktop: 6 units differ, 0 set_target errors |
-| desktop | lang_en.desktop: 6 units differ, 0 set_target errors |
-| desktop | lang_es.desktop: 6 units differ, 0 set_target errors |
-| desktop | lang_fr.desktop: 6 units differ, 0 set_target errors |
-| desktop | lang_hi.desktop: 5 units differ, 0 set_target errors |
-| desktop | lang_ja.desktop: 5 units differ, 0 set_target errors |
-| desktop | lang_ko.desktop: 5 units differ, 0 set_target errors |
-| desktop | lang_ru.desktop: 5 units differ, 0 set_target errors |
-| desktop | lang_tr.desktop: 5 units differ, 0 set_target errors |
-| desktop | lang_zh.desktop: 5 units differ, 0 set_target errors |
-| desktop | locos_example.desktop: 7 units differ, 0 set_target errors |
-| desktop | no_final_newline.desktop: 1 units differ, 0 set_target errors |
 | dxf | escapes.dxf: 1 units differ, 0 set_target errors |
 | erb | cr-only.erb: 1 units differ, 0 set_target errors |
 | erb | lumen.erb: 1 units differ, 0 set_target errors |
 | ftl | edge.ftl: 1 units differ, 0 set_target errors |
 | icml | suite_hidden.icml: 1 units differ, 0 set_target errors |
+| js | crlf_bom.js: 1 units differ, 0 set_target errors |
+| js | vue_messages.js: 1 units differ, 0 set_target errors |
 | jsp | lumen.jsp: 1 units differ, 0 set_target errors |
 | jsp | lumen.jspf: 1 units differ, 0 set_target errors |
-| mdx | edge.mdx: 1 units differ, 0 set_target errors |
-| mo | catalog_be_hash.mo: 5 units differ, 0 set_target errors |
-| mo | catalog_le.mo: 5 units differ, 0 set_target errors |
-| mo | charset_placeholder.mo: 1 units differ, 0 set_target errors |
-| mo | lang_ar.mo: 4 units differ, 0 set_target errors |
-| mo | lang_de.mo: 4 units differ, 0 set_target errors |
-| mo | lang_es.mo: 4 units differ, 0 set_target errors |
-| mo | lang_fr.mo: 4 units differ, 0 set_target errors |
-| mo | lang_ja.mo: 4 units differ, 0 set_target errors |
-| mo | lang_ko.mo: 4 units differ, 0 set_target errors |
-| mo | lang_pl.mo: 4 units differ, 0 set_target errors |
-| mo | lang_pt.mo: 4 units differ, 0 set_target errors |
-| mo | lang_ru.mo: 4 units differ, 0 set_target errors |
-| mo | lang_tr.mo: 4 units differ, 0 set_target errors |
-| mo | lang_zh.mo: 4 units differ, 0 set_target errors |
-| mo | latin1.mo: 1 units differ, 0 set_target errors |
-| mo | legacy_ar_cp1256.mo: 1 units differ, 0 set_target errors |
-| mo | legacy_ja_shift_jis.mo: 1 units differ, 0 set_target errors |
-| mo | legacy_ko_euc_kr.mo: 1 units differ, 0 set_target errors |
-| mo | legacy_ru_cp1251.mo: 1 units differ, 0 set_target errors |
-| mo | legacy_tr_cp1254.mo: 1 units differ, 0 set_target errors |
-| mo | legacy_zh-tw_big5.mo: 1 units differ, 0 set_target errors |
-| mo | legacy_zh_gbk.mo: 1 units differ, 0 set_target errors |
-| mo | no_header.mo: 2 units differ, 0 set_target errors |
-| pdf | raw_actualtext_type3.pdf: merge failed: unsupported: pdf: a translated PDF is re-typeset from t... |
-| pdf | raw_bad_offsets.pdf: merge failed: unsupported: pdf: a translated PDF is re-typeset from t... |
-| pdf | raw_cjk_legacy.pdf: merge failed: unsupported: pdf: a translated PDF is re-typeset from t... |
-| pdf | raw_encodings.pdf: merge failed: unsupported: pdf: a translated PDF is re-typeset from t... |
-| pdf | raw_encrypted_aes128.pdf: merge failed: unsupported: pdf: a translated PDF is re-typeset from t... |
-| pdf | raw_encrypted_aes256.pdf: merge failed: unsupported: pdf: a translated PDF is re-typeset from t... |
-| pdf | raw_encrypted_rc4128.pdf: merge failed: unsupported: pdf: a translated PDF is re-typeset from t... |
-| pdf | raw_encrypted_rc440.pdf: merge failed: unsupported: pdf: a translated PDF is re-typeset from t... |
-| pdf | raw_filters.pdf: merge failed: unsupported: pdf: a translated PDF is re-typeset from t... |
-| pdf | raw_forms.pdf: merge failed: unsupported: pdf: a translated PDF is re-typeset from t... |
-| pdf | raw_incremental.pdf: merge failed: unsupported: pdf: a translated PDF is re-typeset from t... |
-| pdf | raw_junk_prefix.pdf: merge failed: unsupported: pdf: a translated PDF is re-typeset from t... |
-| pdf | raw_kerning.pdf: merge failed: unsupported: pdf: a translated PDF is re-typeset from t... |
-| pdf | raw_layout.pdf: merge failed: unsupported: pdf: a translated PDF is re-typeset from t... |
-| pdf | raw_no_xref.pdf: merge failed: unsupported: pdf: a translated PDF is re-typeset from t... |
-| pdf | raw_objstm.pdf: merge failed: unsupported: pdf: a translated PDF is re-typeset from t... |
-| pdf | raw_page_tree.pdf: merge failed: unsupported: pdf: a translated PDF is re-typeset from t... |
-| pdf | raw_prev_loop.pdf: merge failed: unsupported: pdf: a translated PDF is re-typeset from t... |
-| pdf | raw_rotated.pdf: merge failed: unsupported: pdf: a translated PDF is re-typeset from t... |
-| pdf | raw_std14.pdf: merge failed: unsupported: pdf: a translated PDF is re-typeset from t... |
-| pdf | raw_type0_tounicode.pdf: merge failed: unsupported: pdf: a translated PDF is re-typeset from t... |
-| pdf | raw_vertical_gap.pdf: merge failed: unsupported: pdf: a translated PDF is re-typeset from t... |
-| pdf | typst_digital.pdf: merge failed: unsupported: pdf: a translated PDF is re-typeset from t... |
-| pdf | typst_escape.pdf: merge failed: unsupported: pdf: a translated PDF is re-typeset from t... |
-| pdf | typst_hyphen_columns.pdf: merge failed: unsupported: pdf: a translated PDF is re-typeset from t... |
-| pdf | typst_lang_ar.pdf: merge failed: unsupported: pdf: a translated PDF is re-typeset from t... |
-| pdf | typst_lang_bn.pdf: merge failed: unsupported: pdf: a translated PDF is re-typeset from t... |
-| pdf | typst_lang_de.pdf: merge failed: unsupported: pdf: a translated PDF is re-typeset from t... |
-| pdf | typst_lang_el.pdf: merge failed: unsupported: pdf: a translated PDF is re-typeset from t... |
-| pdf | typst_lang_es.pdf: merge failed: unsupported: pdf: a translated PDF is re-typeset from t... |
-| pdf | typst_lang_fr.pdf: merge failed: unsupported: pdf: a translated PDF is re-typeset from t... |
-| pdf | typst_lang_he.pdf: merge failed: unsupported: pdf: a translated PDF is re-typeset from t... |
-| pdf | typst_lang_hi.pdf: merge failed: unsupported: pdf: a translated PDF is re-typeset from t... |
-| pdf | typst_lang_ja.pdf: merge failed: unsupported: pdf: a translated PDF is re-typeset from t... |
-| pdf | typst_lang_ko.pdf: merge failed: unsupported: pdf: a translated PDF is re-typeset from t... |
-| pdf | typst_lang_pl.pdf: merge failed: unsupported: pdf: a translated PDF is re-typeset from t... |
-| pdf | typst_lang_ru.pdf: merge failed: unsupported: pdf: a translated PDF is re-typeset from t... |
-| pdf | typst_lang_th.pdf: merge failed: unsupported: pdf: a translated PDF is re-typeset from t... |
-| pdf | typst_lang_zh-Hans.pdf: merge failed: unsupported: pdf: a translated PDF is re-typeset from t... |
-| pdf | typst_long_token.pdf: merge failed: unsupported: pdf: a translated PDF is re-typeset from t... |
-| pdf | typst_mixed_scan.pdf: merge failed: unsupported: pdf: a translated PDF is re-typeset from t... |
-| pdf | typst_multiscript.pdf: merge failed: unsupported: pdf: a translated PDF is re-typeset from t... |
-| pdf | typst_pagination.pdf: merge failed: unsupported: pdf: a translated PDF is re-typeset from t... |
-| pdf | typst_reparse.pdf: merge failed: unsupported: pdf: a translated PDF is re-typeset from t... |
-| pdf | typst_rotate.pdf: merge failed: unsupported: pdf: a translated PDF is re-typeset from t... |
-| pdf | typst_rtl_mixed.pdf: merge failed: unsupported: pdf: a translated PDF is re-typeset from t... |
-| pdf | typst_short_page.pdf: merge failed: unsupported: pdf: a translated PDF is re-typeset from t... |
-| pdf | typst_styles.pdf: merge failed: unsupported: pdf: a translated PDF is re-typeset from t... |
-| pdf | typst_translated.pdf: merge failed: unsupported: pdf: a translated PDF is re-typeset from t... |
 | phtml | lumen.phtml: 1 units differ, 0 set_target errors |
+| scc | random3.scc: 1 units differ, 0 set_target errors |
+| scc | random7.scc: 1 units differ, 0 set_target errors |
 | shtml | lumen.shtm: 1 units differ, 0 set_target errors |
 | shtml | lumen.shtml: 1 units differ, 0 set_target errors |
 | shtml | lumen.stm: 1 units differ, 0 set_target errors |
-| stf | bilingual_ar.stf: 2 units differ, 0 set_target errors |
-| stf | bilingual_de.stf: 2 units differ, 0 set_target errors |
-| stf | bilingual_de_utf8bom.stf: 2 units differ, 0 set_target errors |
-| stf | bilingual_en.stf: 2 units differ, 0 set_target errors |
-| stf | bilingual_es.stf: 2 units differ, 0 set_target errors |
-| stf | bilingual_fr.stf: 2 units differ, 0 set_target errors |
-| stf | bilingual_fr_cp1252.stf: 2 units differ, 0 set_target errors |
-| stf | bilingual_he.stf: 2 units differ, 0 set_target errors |
-| stf | bilingual_ja.stf: 2 units differ, 0 set_target errors |
-| stf | bilingual_ko.stf: 2 units differ, 0 set_target errors |
-| stf | bilingual_ko_utf16be.stf: 2 units differ, 0 set_target errors |
-| stf | bilingual_pt.stf: 2 units differ, 0 set_target errors |
-| stf | bilingual_ru.stf: 2 units differ, 0 set_target errors |
-| stf | bilingual_zh.stf: 2 units differ, 0 set_target errors |
-| stf | bilingual_zh_utf16le.stf: 2 units differ, 0 set_target errors |
-| stringsdict | edge.stringsdict: reopened with 17 units, expected 12 |
-| stringsdict | lang_de.stringsdict: reopened with 3 units, expected 2 |
-| stringsdict | lang_en.stringsdict: reopened with 3 units, expected 2 |
-| stringsdict | lang_hi.stringsdict: reopened with 3 units, expected 2 |
-| stringsdict | lang_ja.stringsdict: reopened with 3 units, expected 1 |
-| stringsdict | lang_ko.stringsdict: reopened with 3 units, expected 1 |
-| stringsdict | lang_zh.stringsdict: reopened with 3 units, expected 1 |
-| stringsdict | Localizable.stringsdict: reopened with 14 units, expected 11 |
-| sub | mdvd_en.sub: 3 units differ, 0 set_target errors |
-| sub | mdvd_ru_ko.sub: 2 units differ, 0 set_target errors |
-| tex | chapter_fragment.tex: 2 units differ, 0 set_target errors |
-| tex | deep_braces.tex: 1 units differ, 0 set_target errors |
-| tex | features.tex: 15 units differ, 0 set_target errors |
-| tex | features_bom.tex: 15 units differ, 0 set_target errors |
-| tex | features_crlf.tex: 15 units differ, 0 set_target errors |
-| tex | lumen_ar.tex: 3 units differ, 0 set_target errors |
-| tex | lumen_de.tex: 3 units differ, 0 set_target errors |
-| tex | lumen_en.tex: 3 units differ, 0 set_target errors |
-| tex | lumen_es.tex: 3 units differ, 0 set_target errors |
-| tex | lumen_fr.tex: 3 units differ, 0 set_target errors |
-| tex | lumen_it.tex: 3 units differ, 0 set_target errors |
-| tex | lumen_ja.tex: 3 units differ, 0 set_target errors |
-| tex | lumen_ko.tex: 3 units differ, 0 set_target errors |
-| tex | lumen_latin1.tex: 1 units differ, 0 set_target errors |
-| tex | lumen_nl.tex: 3 units differ, 0 set_target errors |
-| tex | lumen_pt.tex: 3 units differ, 0 set_target errors |
-| tex | lumen_utf16.tex: 1 units differ, 0 set_target errors |
-| tex | lumen_zh.tex: 3 units differ, 0 set_target errors |
-| tex | unclosed_group.tex: 2 units differ, 0 set_target errors |
-| tex | unclosed_math.tex: 2 units differ, 0 set_target errors |
-| tex | unclosed_verbatim.tex: 1 units differ, 0 set_target errors |
-| tsv | utf16be.tsv: 2 units differ, 0 set_target errors |
-| ttx | lang_ar.ttx: 4 units differ, 0 set_target errors |
-| ttx | lang_de.ttx: 4 units differ, 0 set_target errors |
-| ttx | lang_en.ttx: 4 units differ, 0 set_target errors |
-| ttx | lang_es.ttx: 4 units differ, 0 set_target errors |
-| ttx | lang_fr.ttx: 4 units differ, 0 set_target errors |
-| ttx | lang_ja.ttx: 4 units differ, 0 set_target errors |
-| ttx | lang_ko.ttx: 4 units differ, 0 set_target errors |
-| ttx | lang_pt.ttx: 4 units differ, 0 set_target errors |
-| ttx | lang_ru.ttx: 4 units differ, 0 set_target errors |
-| ttx | lang_tr.ttx: 4 units differ, 0 set_target errors |
-| ttx | lang_zh.ttx: 4 units differ, 0 set_target errors |
-| ttx | locos_suite_sample.ttx: 5 units differ, 0 set_target errors |
-| ttx | okapi_test01.ttx: 6 units differ, 0 set_target errors |
-| ttx | sample.ttx: 5 units differ, 0 set_target errors |
-| txlf | edge_segsource.txlf: 6 units differ, 0 set_target errors |
-| txlf | lang_ar.txlf: 4 units differ, 0 set_target errors |
-| txlf | lang_ar_utf16le.txlf: 4 units differ, 0 set_target errors |
-| txlf | lang_de.txlf: 4 units differ, 0 set_target errors |
-| txlf | lang_de_single_quotes.txlf: 4 units differ, 0 set_target errors |
-| txlf | lang_de_utf8_nodecl.txlf: 4 units differ, 0 set_target errors |
-| txlf | lang_en.txlf: 4 units differ, 0 set_target errors |
-| txlf | lang_es.txlf: 4 units differ, 0 set_target errors |
-| txlf | lang_fr.txlf: 4 units differ, 0 set_target errors |
-| txlf | lang_ja.txlf: 4 units differ, 0 set_target errors |
-| txlf | lang_ja_utf8bom_crlf.txlf: 4 units differ, 0 set_target errors |
-| txlf | lang_ko.txlf: 4 units differ, 0 set_target errors |
-| txlf | lang_ko_utf16be.txlf: 4 units differ, 0 set_target errors |
-| txlf | lang_pt.txlf: 4 units differ, 0 set_target errors |
-| txlf | lang_ru.txlf: 4 units differ, 0 set_target errors |
-| txlf | lang_tr.txlf: 4 units differ, 0 set_target errors |
-| txlf | lang_zh.txlf: 4 units differ, 0 set_target errors |
-| txlf | locos_sample.txlf: 4 units differ, 0 set_target errors |
-| txlf | sample.txlf: 4 units differ, 0 set_target errors |
-| txml | edge_inline.txml: 4 units differ, 0 set_target errors |
-| txml | lang_ar.txml: 5 units differ, 0 set_target errors |
-| txml | lang_ar_utf16le.txml: 5 units differ, 0 set_target errors |
-| txml | lang_de.txml: 5 units differ, 0 set_target errors |
-| txml | lang_de_single_quotes.txml: 5 units differ, 0 set_target errors |
-| txml | lang_de_utf8_nodecl.txml: 5 units differ, 0 set_target errors |
-| txml | lang_en.txml: 5 units differ, 0 set_target errors |
-| txml | lang_es.txml: 5 units differ, 0 set_target errors |
-| txml | lang_fr.txml: 5 units differ, 0 set_target errors |
-| txml | lang_ja.txml: 5 units differ, 0 set_target errors |
-| txml | lang_ja_utf8bom_crlf.txml: 5 units differ, 0 set_target errors |
-| txml | lang_ko.txml: 5 units differ, 0 set_target errors |
-| txml | lang_ko_utf16be.txml: 5 units differ, 0 set_target errors |
-| txml | lang_pt.txml: 5 units differ, 0 set_target errors |
-| txml | lang_ru.txml: 5 units differ, 0 set_target errors |
-| txml | lang_tr.txml: 5 units differ, 0 set_target errors |
-| txml | lang_zh.txml: 5 units differ, 0 set_target errors |
-| txml | locos_sample.txml: 7 units differ, 0 set_target errors |
-| txml | Test01.docx.txml: 10 units differ, 0 set_target errors |
-| txml | Test02.html.txml: 10 units differ, 0 set_target errors |
-| txml | Test03.mif.txml: 235 units differ, 0 set_target errors |
-| txml | sample.txml: 7 units differ, 0 set_target errors |
-| wiki | mixed.mediawiki: 2 units differ, 0 set_target errors |
-| wiki | orders_ar.wiki: 1 units differ, 0 set_target errors |
-| wiki | orders_de.wiki: 1 units differ, 0 set_target errors |
-| wiki | orders_en.wiki: 1 units differ, 0 set_target errors |
-| wiki | orders_es.wiki: 1 units differ, 0 set_target errors |
-| wiki | orders_fr.wiki: 1 units differ, 0 set_target errors |
-| wiki | orders_fr_bom_crlf.wiki: 1 units differ, 0 set_target errors |
-| wiki | orders_fr_cp1252.wiki: 1 units differ, 0 set_target errors |
-| wiki | orders_hi.wiki: 1 units differ, 0 set_target errors |
-| wiki | orders_it.wiki: 1 units differ, 0 set_target errors |
-| wiki | orders_ja.wiki: 1 units differ, 0 set_target errors |
-| wiki | orders_ko.wiki: 1 units differ, 0 set_target errors |
-| wiki | orders_pt.wiki: 1 units differ, 0 set_target errors |
-| wiki | orders_ru.wiki: 1 units differ, 0 set_target errors |
-| wiki | orders_zh.wiki: 1 units differ, 0 set_target errors |
-| wxl | edge.wxl: 1 units differ, 0 set_target errors |
-| wxl | v3_overridable.wxl: 1 units differ, 0 set_target errors |
-| xlz | locos_content.xlz: 4 units differ, 0 set_target errors |
-| xlz | lumen_bom.xlz: 2 units differ, 0 set_target errors |
-| xlz | lumen_languages.wsxz: 10 units differ, 0 set_target errors |
-| xlz | lumen_utf16.xlz: 2 units differ, 0 set_target errors |
-| xml | bakery_multilingual_attr.xml: 4 units differ, 0 set_target errors |
-| xml | bakery_multilingual_element.xml: 3 units differ, 0 set_target errors |
-| xml | bakery_multilingual_xpath.xml: 2 units differ, 0 set_target errors |
-| xml | catalog-attr.xml: 3 units differ, 0 set_target errors |
-| xml | items-element.xml: 3 units differ, 0 set_target errors |
-| xml | xpath-pi.xml: 2 units differ, 0 set_target errors |
-| yaml | rails.en.yml: reopened with 12 units, expected 10 |
+| properties:mozilla | mozilla_downloads.properties: 1 units differ, 0 set_target errors |
 
 ## Files read
 
@@ -411,7 +170,6 @@ Ordered by a usage guess: software resource formats first, then Office, DTP, doc
 | docbook | book5.dbk |
 | docx | strict_docx.docx, feature-brief.docx |
 | html | release-notes.html |
-| js | app_de.ts |
 | json | ui-strings.json |
 | json5 | app.json5, settings.jsonc |
 | md | product-overview.md |
@@ -425,6 +183,7 @@ Ordered by a usage guess: software resource formats first, then Office, DTP, doc
 | sdlxliff | sample.sdlxliff |
 | srt | tutorial-captions.srt |
 | stringsdict | Localizable.stringsdict |
+| ts | app_de.ts |
 | ttx | sample.ttx, unsegmented.ttx |
 | txlf | sample.txlf |
 | txml | sample.txml |
@@ -434,7 +193,11 @@ Ordered by a usage guess: software resource formats first, then Office, DTP, doc
 | xliff | messages.xlf, messages.xlf2.xlf, protected.xlf, content.xlf |
 | xlsx | generated_xlsx.xlsx, strict_xlsx.xlsx |
 | xmb | messages-localize.xmb, messages.xmb |
-| xml | strings.xml, messages.xml, catalog-attr.xml, items-element.xml, xpath-pi.xml, book45.xml, catalog.xml |
+| xml | catalog.xml |
+| xml:android | strings.xml |
+| xml:docbook | book45.xml |
+| xml:java-xml-properties | messages.xml |
+| xml:multilingual | catalog-attr.xml, items-element.xml, xpath-pi.xml |
 | xtb | messages.fr.xtb |
 | yaml | generic.yaml, messages.en.yaml, rails.en.yml |
 
