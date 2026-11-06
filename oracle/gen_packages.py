@@ -70,7 +70,14 @@ def sdlxliff(original, src, tgt, rows):
     )
 
 
-def sdlproj(name, guid, src, tgt):
+def sdlproj(name, guid, src, tgt, member, source_file=None):
+    base = member.rsplit("/", 1)[-1]
+    files = ""
+    if source_file:
+        files += (f'        <LanguageFile Path="{src}/" LanguageCode="{src}"><FileVersions><FileVersion VersionNumber="1" '
+                  f'FileName="{source_file}" PhysicalPath="{src}/{source_file}" /></FileVersions></LanguageFile>\n')
+    files += (f'        <LanguageFile Path="{tgt}/" LanguageCode="{tgt}"><FileVersions><FileVersion VersionNumber="1" '
+              f'FileName="{base}" PhysicalPath="{member.replace("/", chr(92))}" /></FileVersions></LanguageFile>\n')
     return (
         '<?xml version="1.0" encoding="utf-8"?>\n'
         '<PackageProject xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" '
@@ -78,7 +85,12 @@ def sdlproj(name, guid, src, tgt):
         f'PackageCreatedAt="2026-11-06T09:00:00Z" PackageCreatedBy="PM" Comment="" Version="4.0.0.0" Name="{name}">\n'
         "  <LanguageDirections>\n"
         f'    <LanguageDirection Guid="11111111-2222-4333-8444-555555555555" SettingsBundleGuid="aaaaaaaa-0000-4000-8000-000000000001" TargetLanguageCode="{tgt}" SourceLanguageCode="{src}" />\n'
-        "  </LanguageDirections>\n</PackageProject>\n"
+        "  </LanguageDirections>\n"
+        "  <ProjectFiles>\n"
+        f'    <ProjectFile Name="{base}" Path="" Role="Translatable">\n'
+        "      <LanguageFiles>\n" + files + "      </LanguageFiles>\n"
+        "    </ProjectFile>\n"
+        "  </ProjectFiles>\n</PackageProject>\n"
     )
 
 
@@ -119,7 +131,7 @@ def main():
         ("lum-0005", "Gluten free options are marked.", None, ""),
     ]
     w("sdlppx/trados_demo.sdlppx", zip_of([
-        ("lumen.sdlproj", sdlproj("lumen", "5c0de000-0000-4000-8000-0123456789ab", "en-US", "de-DE")),
+        ("lumen.sdlproj", sdlproj("lumen", "5c0de000-0000-4000-8000-0123456789ab", "en-US", "de-DE", "de-DE/menu.docx.sdlxliff", "menu.docx")),
         ("en-US/menu.docx", "source placeholder, not a real DOCX"),
         ("de-DE/menu.docx.sdlxliff", sdlxliff("menu.docx", "en-US", "de-DE", de_rows)),
         ("Reports/analysis.txt", "Analysis report\n"),
@@ -130,7 +142,7 @@ def main():
         ("lum-0003", 'Order from the <g id="pt1">menu</g> today.', None, ""),
     ]
     w("sdlppx/trados_ja.sdlppx", zip_of([
-        ("lumen-ja.sdlproj", sdlproj("lumen-ja", "5c0de000-0000-4000-8000-0123456789cd", "en-US", "ja-JP")),
+        ("lumen-ja.sdlproj", sdlproj("lumen-ja", "5c0de000-0000-4000-8000-0123456789cd", "en-US", "ja-JP", "ja-JP/hours.docx.sdlxliff")),
         ("ja-JP/hours.docx.sdlxliff", sdlxliff("hours.docx", "en-US", "ja-JP", ja_rows)),
     ]))
 
