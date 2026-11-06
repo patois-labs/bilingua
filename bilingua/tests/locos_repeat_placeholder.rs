@@ -136,7 +136,7 @@ fn repeats_are_written_as_locos_writes_them() {
             "a.arb",
             r##"{"@@locale": "en", "n": "{c, plural, one{# item} other{# items}}"}"##,
             vec!["\u{27E6}x1\u{27E7} item", "\u{27E6}x1\u{27E7} items"],
-            vec!["\u{27E6}x1\u{27E7} \u{27E6}x1\u{27E7} St\u{FC}ck", "\u{27E6}x1\u{27E7} und \u{27E6}x1\u{27E7} St\u{FC}cke"],
+            vec!["\u{27E6}x1\u{27E7} \u{27E6}x1\u{27E7} Stuck", "\u{27E6}x1\u{27E7} und \u{27E6}x1\u{27E7} Stucke"],
             r##"{"@@locale": "en", "n": "{c, plural, one{# # Stuck} other{# und # Stucke}}"}"##,
         ),
         (
