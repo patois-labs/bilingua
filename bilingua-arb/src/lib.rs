@@ -208,6 +208,8 @@ struct Plan {
     units: Vec<UnitPlan>,
     /// The ICU parse failed: the whole string is one opaque unit.
     fallback: bool,
+    /// Planned under the LocOS profile: a literal `⟦x<digits>⟧` does not count as words.
+    locos: bool,
 }
 
 struct Msg<'a> {
@@ -249,11 +251,11 @@ fn plan_message(value: &str, locos: bool) -> Plan {
         Ok(parts) => {
             let mut units = Vec::new();
             collect(&parts, String::new(), &mut units, locos);
-            Plan { units, fallback: false }
+            Plan { units, fallback: false, locos }
         }
         Err(_) => {
             let units = if icu::has_words(value, locos) { vec![fallback_unit(value)] } else { vec![] };
-            Plan { units, fallback: true }
+            Plan { units, fallback: true, locos }
         }
     }
 }
@@ -428,7 +430,16 @@ fn splice(orig: &str, doc: &Document, locos: bool) -> Result<String, Error> {
     let root = scan_root(orig, &limits).map_err(|e| Error::Write(format!("the skeleton is not an ARB file any more: {e}")))?;
     let Node::Obj { pairs, start: root_start, end: root_end } = &root else { return Err(Error::Write("not an object".into())) };
     let target = doc.target_lang.as_deref().map(str::trim).filter(|t| !t.is_empty());
-    let msgs = messages(orig, &root, locos);
+    // The units were planned when the file was extracted, maybe under another profile than this merge's (a message
+    // of only a literal LocOS token has a unit without the profile and none with it): plan the messages as the
+    // extract did, so a document extracted under the profile also merges without it and the other way round.
+    let mut msgs = messages(orig, &root, locos);
+    if !aligned(orig, &msgs, doc) {
+        let other = messages(orig, &root, !locos);
+        if aligned(orig, &other, doc) {
+            msgs = other;
+        }
+    }
 
     let mut edits: Vec<(usize, usize, String)> = Vec::new();
     // Added first so that, at the same position, @@locale comes before added plural keys.
@@ -478,6 +489,20 @@ fn splice(orig: &str, doc: &Document, locos: bool) -> Result<String, Error> {
     Ok(out)
 }
 
+/// True when the document's units are the messages' planned units, message by message.
+fn aligned(orig: &str, msgs: &[Msg], doc: &Document) -> bool {
+    let mut head = 0usize;
+    for m in msgs {
+        let k = m.plan.units.len();
+        let Some(units) = doc.units.get(head..head + k) else { return false };
+        if units.first().is_some_and(|u| u.codes.get(RAW_KEY).and_then(|c| c.standalone.as_deref()) != Some(&orig[m.start..m.end])) {
+            return false;
+        }
+        head += k;
+    }
+    head == doc.units.len()
+}
+
 fn rebuild_message(m: &Msg, tr: &mut Trans, target: Option<&str>, locos: bool) -> String {
     if m.plan.fallback {
         let Some(t) = tr.next() else { return m.value.clone() };
@@ -496,20 +521,21 @@ fn rebuild_message(m: &Msg, tr: &mut Trans, target: Option<&str>, locos: bool) -
         return s;
     }
     match icu::parse(&m.value) {
-        Ok(parts) => rebuild_level(&parts, tr, target, locos),
+        Ok(parts) => rebuild_level(&parts, tr, target, m.plan.locos, locos),
         Err(_) => m.value.clone(),
     }
 }
 
-fn rebuild_level(parts: &[Part], tr: &mut Trans, target: Option<&str>, locos: bool) -> String {
-    let translatable = icu::translatable(parts, locos);
+/// `planned`: the profile flag the units were planned with; `locos`: this merge's.
+fn rebuild_level(parts: &[Part], tr: &mut Trans, target: Option<&str>, planned: bool, locos: bool) -> String {
+    let translatable = icu::translatable(parts, planned);
     let mine = if translatable { tr.next() } else { None };
     let mut pieces: Vec<String> = Vec::new();
     for p in parts {
         match p {
             Part::Pound => pieces.push("#".into()),
             Part::Complex(cx) => {
-                let rendered: Vec<String> = cx.branches.iter().map(|b| rebuild_level(&b.msg, tr, target, locos)).collect();
+                let rendered: Vec<String> = cx.branches.iter().map(|b| rebuild_level(&b.msg, tr, target, planned, locos)).collect();
                 pieces.push(render_branches(cx, rendered, target));
             }
             _ => {}
