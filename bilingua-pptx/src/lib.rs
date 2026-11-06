@@ -12,6 +12,7 @@
 pub const SKELETON_SCHEMA: u32 = 2;
 
 mod extract;
+pub mod locos;
 mod preview;
 mod render;
 mod rich;
@@ -135,7 +136,8 @@ impl Filter for Pptx {
     }
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
         bilingua_model::check_own_options(self, &opts.format_options)?;
-        let mut doc = extract::extract_doc(bytes, opts)?;
+        // Track D: under the Localization OS profile, LocOS's own walk, numbers and writer
+        let mut doc = if opts.is_profile(bilingua_model::profile::LOCOS) { locos::extract(bytes, opts)? } else { extract::extract_doc(bytes, opts)? };
         if opts.format_flag("pptx.translate_comments") == Some(true) {
             doc.warnings.push(Warning::new(
                 "format_option",
@@ -147,6 +149,11 @@ impl Filter for Pptx {
     }
     fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
         bilingua_model::check_own_options(self, &opts.format_options)?;
+        if let Skeleton::Binary { .. } = &doc.skeleton {
+            // a document extracted under the Localization OS profile
+            bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
+            return locos::merge(doc, opts);
+        }
         // The parts are UTF-8 XML, and the language is set on the runs this merge rewrites (translated text), so neither
         // option changes anything: an untranslated run is never rewritten.
         merge_with_report(doc).map(|(b, _)| b)

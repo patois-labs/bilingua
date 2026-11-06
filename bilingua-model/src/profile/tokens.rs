@@ -68,7 +68,7 @@ pub fn to_locos_text(inl: &[Inline]) -> (String, LocosMap) {
 /// Like [`to_locos_text`] with another kind letter for pairs (`r` for DOCX runs). `pair_letter` must be a
 /// lower-case ASCII letter other than `x` and `p`; anything else falls back to `g`.
 pub fn to_locos_text_as(inl: &[Inline], pair_letter: char) -> (String, LocosMap) {
-    convert(inl, pair_letter, pairs(inl))
+    convert(inl, pair_letter, pairs(inl), None)
 }
 
 /// The pair-token letter a format's LocOS filter uses (the adapter's `_PAIR_LETTER`): `r` for docx and pptx runs
@@ -87,31 +87,65 @@ pub fn locos_pair_letter(format: &str) -> char {
 /// `placeholders_well_formed`; it is what LocOS stores.
 const LOCOS_PAIRS_BY_ID: &[&str] = &["html"];
 
+/// Formats whose LocOS filter does not number its tokens in reading order, so the tag ids carry LocOS's numbers
+/// ([`to_locos_text_numbered`]): PPTX numbers the runs first, the breaks and fields after them.
+const LOCOS_NUMBERED_BY_ID: &[&str] = &["pptx"];
+
 /// A unit's inline codes as the LocOS filter of `format` writes them: the format's pair letter
 /// ([`locos_pair_letter`]), and for the formats whose filter keeps its own tag tokens (`html`) every `Open` a
 /// pair token and every `Close` the closing token of the latest open of its id, crossing or not, an `Open` with
-/// no close a pair token with no closing one; a `Close` with no open stays an `x` token. Other formats:
-/// [`to_locos_text_as`]. [`from_locos_text`] reads both back.
+/// no close a pair token with no closing one; a `Close` with no open stays an `x` token. For the formats whose
+/// tag ids are LocOS's token numbers (`pptx`): [`to_locos_text_numbered`]. Other formats: [`to_locos_text_as`].
+/// [`from_locos_text`] reads them all back.
 pub fn to_locos_text_for(format: &str, inl: &[Inline]) -> (String, LocosMap) {
     let letter = locos_pair_letter(format);
     if LOCOS_PAIRS_BY_ID.contains(&format) {
-        convert(inl, letter, pairs_by_id(inl))
+        convert(inl, letter, pairs_by_id(inl), None)
+    } else if LOCOS_NUMBERED_BY_ID.contains(&format) {
+        to_locos_text_numbered(inl, letter)
     } else {
         to_locos_text_as(inl, letter)
     }
 }
 
-fn convert(inl: &[Inline], pair_letter: char, partner: Vec<Option<usize>>) -> (String, LocosMap) {
+/// Like [`to_locos_text_as`], but each token takes its number from its tag's id when the ids are LocOS's own token
+/// numbers: the formats whose LocOS filter does not number its tokens in reading order (PPTX under the profile,
+/// where LocOS numbers the runs `r1..rN` first and the breaks and fields after them, so a paragraph reads
+/// `⟦r1⟧a⟦/r1⟧⟦x3⟧⟦r2⟧b⟦/r2⟧`). The ids are used only when every tag id is a positive decimal number (no sign, no
+/// leading zero) and no number would stand for two tokens; otherwise this is exactly [`to_locos_text_as`]. The
+/// map is keyed by those numbers, so [`from_locos_text`] reads the text back as usual.
+pub fn to_locos_text_numbered(inl: &[Inline], pair_letter: char) -> (String, LocosMap) {
+    let partner = pairs(inl);
+    let mut nums = Vec::new();
+    let mut seen = std::collections::BTreeSet::new();
+    for (pos, i) in inl.iter().enumerate() {
+        let Inline::Tag { id, kind, .. } = i else { continue };
+        // a paired close takes its open's number; every other tag is a token of its own
+        if *kind == TagKind::Close && partner[pos].is_some() {
+            continue;
+        }
+        let ok = !id.is_empty() && id.len() <= 18 && id.bytes().all(|b| b.is_ascii_digit()) && !id.starts_with('0');
+        match id.parse::<usize>() {
+            Ok(n) if ok && seen.insert(n) => nums.push(n),
+            _ => return to_locos_text_as(inl, pair_letter),
+        }
+    }
+    convert(inl, pair_letter, partner, Some(&nums))
+}
+
+/// The shared body; `nums[k]` is the number of the k-th token (`None`: 1, 2, 3 ... in reading order).
+fn convert(inl: &[Inline], pair_letter: char, partner: Vec<Option<usize>>, nums: Option<&[usize]>) -> (String, LocosMap) {
     let pair = if pair_letter.is_ascii_lowercase() && pair_letter != POINT_LETTER && pair_letter != FREE_LETTER {
         pair_letter
     } else {
         PAIR_LETTER
     };
+    let number = |k: usize| nums.and_then(|v| v.get(k - 1).copied()).unwrap_or(k);
     let mut text = String::new();
     let mut map = LocosMap::new();
     // token number of each paired Open, by its position in `inl`
     let mut open_num: BTreeMap<usize, usize> = BTreeMap::new();
-    let mut n = 0usize;
+    let mut k = 0usize;
     for (pos, i) in inl.iter().enumerate() {
         let (id, kind, display, free) = match i {
             Inline::Text(t) => {
@@ -130,7 +164,8 @@ fn convert(inl: &[Inline], pair_letter: char, partner: Vec<Option<usize>>) -> (S
         };
         match (kind, partner[pos]) {
             (TagKind::Open, Some(_)) => {
-                n += 1;
+                k += 1;
+                let n = number(k);
                 open_num.insert(pos, n);
                 map.insert(n.to_string(), code(pair, Some(display), None, false, None));
                 text.push_str(&format!("{OPEN}{pair}{n}{CLOSE}"));
@@ -143,17 +178,20 @@ fn convert(inl: &[Inline], pair_letter: char, partner: Vec<Option<usize>>) -> (S
                 text.push_str(&format!("{OPEN}/{pair}{num}{CLOSE}"));
             }
             (TagKind::Open, None) => {
-                n += 1;
+                k += 1;
+                let n = number(k);
                 map.insert(n.to_string(), code(POINT_LETTER, Some(display), None, false, Some(TagKind::Open)));
                 text.push_str(&format!("{OPEN}{POINT_LETTER}{n}{CLOSE}"));
             }
             (TagKind::Close, None) => {
-                n += 1;
+                k += 1;
+                let n = number(k);
                 map.insert(n.to_string(), code(POINT_LETTER, None, Some(display), false, Some(TagKind::Close)));
                 text.push_str(&format!("{OPEN}{POINT_LETTER}{n}{CLOSE}"));
             }
             (TagKind::Standalone, _) => {
-                n += 1;
+                k += 1;
+                let n = number(k);
                 let letter = if *free { FREE_LETTER } else { POINT_LETTER };
                 map.insert(n.to_string(), code(letter, Some(display), None, *free, None));
                 text.push_str(&format!("{OPEN}{letter}{n}{CLOSE}"));
@@ -579,6 +617,41 @@ mod tests {
             let (x, map) = to_locos_text(&s);
             assert_eq!(from_locos_text(&x, &map), s);
         }
+    }
+
+    #[test]
+    fn numbered_by_id_like_locos_pptx() {
+        // LocOS's PPTX numbering: runs r1, r2 first, the break and the field after them
+        let s = vec![
+            Inline::tag("1", TagKind::Open, "<a:r>"),
+            Inline::text("a"),
+            Inline::tag("1", TagKind::Close, "</a:r>"),
+            Inline::tag("3", TagKind::Standalone, "<a:br/>"),
+            Inline::tag("2", TagKind::Open, "<a:r>"),
+            Inline::text("b"),
+            Inline::tag("2", TagKind::Close, "</a:r>"),
+            Inline::tag("4", TagKind::Standalone, "<a:fld/>"),
+        ];
+        let (t, map) = to_locos_text_numbered(&s, 'r');
+        assert_eq!(t, "\u{27E6}r1\u{27E7}a\u{27E6}/r1\u{27E7}\u{27E6}x3\u{27E7}\u{27E6}r2\u{27E7}b\u{27E6}/r2\u{27E7}\u{27E6}x4\u{27E7}");
+        assert!(well_formed(&t));
+        assert_eq!(from_locos_text(&t, &map), s);
+        // ids that are not usable token numbers: reading order, exactly as to_locos_text_as
+        for bad in [
+            vec![Inline::tag("a", TagKind::Standalone, "x")],
+            vec![Inline::tag("0", TagKind::Standalone, "x")],
+            vec![Inline::tag("01", TagKind::Standalone, "x")],
+            vec![Inline::tag("+2", TagKind::Standalone, "x")],
+            vec![Inline::tag("2", TagKind::Standalone, "x"), Inline::tag("2", TagKind::Standalone, "y")],
+            vec![Inline::tag("9", TagKind::Open, "x"), Inline::tag("9", TagKind::Open, "y")],
+            vec![Inline::tag("99999999999999999999999", TagKind::Standalone, "x")],
+        ] {
+            assert_eq!(to_locos_text_numbered(&bad, 'r'), to_locos_text_as(&bad, 'r'), "{bad:?}");
+        }
+        assert_eq!(to_locos_text_numbered(&sample(), 'g'), to_locos_text(&sample()));
+        assert_eq!(to_locos_text_numbered(&[], 'r'), (String::new(), LocosMap::new()));
+        // the per-format entry point picks it for pptx
+        assert_eq!(to_locos_text_for("pptx", &s), (t, map));
     }
 
     #[test]

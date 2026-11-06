@@ -16,6 +16,9 @@ the sidecar `<file>.golden.zip` (deflated, shared by every build of the file). T
 name: an untouched entry byte for byte, a rewritten one as canonical XML (zip compression, dates and LocOS's own XML
 serialiser are not the point).
 
+A `<file>.maps.json` next to an input lists extra builds made the same way (`[{"name": ..., "locale": ...,
+"map": {...}}]`): hostile targets, written by `oracle/gen_locos_pptx.py` for the PPTX decks it makes.
+
 `bilingua/tests/locos_golden.rs` reads them, extracts the same file through the facade under the LocOS profile,
 turns the units into LocOS text with `profile::tokens` (as the adapter does) and compares, then sets each mapping
 as targets and compares the merged bytes. Nothing in the LocOS tree is written; its data dir is a throwaway.
@@ -117,6 +120,11 @@ def golden(fmt: str, path: str, blobs: dict | None = None) -> dict:
         half = {str(u["p_index"]): pseudo(u["text"], "escape") for k, u in enumerate(units) if k % 2 == 0}
         add(f"escape-{loc}", loc, half)
         add(f"none-{loc}", loc, {})
+    # hostile mappings of a file, when it has a `<file>.maps.json` (a list of {"name", "locale", "map"})
+    if os.path.exists(path + ".maps.json"):
+        with open(path + ".maps.json", encoding="utf-8") as fh:
+            for m in json.load(fh):
+                add(m["name"], m["locale"], m["map"])
     return {"format": fmt, "units": units, "builds": builds}
 
 
@@ -127,7 +135,7 @@ def main() -> None:
         if not os.path.isdir(d) or (want and fmt not in want):
             continue
         for name in sorted(os.listdir(d)):
-            if name.endswith((".golden.json", ".golden.zip")):
+            if name.endswith((".golden.json", ".golden.zip", ".maps.json")):
                 continue
             blobs: dict = {}
             g = golden(fmt, os.path.join(d, name), blobs)
