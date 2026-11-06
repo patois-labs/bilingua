@@ -1,0 +1,72 @@
+{
+ "format": "srt",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Welcome to the trail.",
+   "style": ""
+  },
+  {
+   "p_index": 1,
+   "text": "⟦x1⟧Watch⟦x2⟧ your step on the rocks.",
+   "style": ""
+  },
+  {
+   "p_index": 2,
+   "text": "See you at the top.",
+   "style": ""
+  },
+  {
+   "p_index": 3,
+   "text": "The ⟦x1⟧orange⟦x2⟧ markers ⟦x3⟧point up⟦x4⟧.",
+   "style": ""
+  },
+  {
+   "p_index": 4,
+   "text": "Keep {left} and ⟦x1⟧⟦x2⟧stay⟦x3⟧ close\n⟦x4⟧on the ridge.⟦x5⟧",
+   "style": ""
+  },
+  {
+   "p_index": 5,
+   "text": "<i>No override here,</i> {just braces}.",
+   "style": ""
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "MQowMDowMDowMSwwMDAgLS0+IDAwOjAwOjAzLDAwMAp7XGFuOH1XZWxjb21lIHRvIHRoZSB0cmFpbC4KCjIKMDA6MDA6MDQsMDAwIC0tPiAwMDowMDowNiwwMDAKe1xpMX1XYXRjaHtcaTB9IHlvdXIgc3RlcCBvbiB0aGUgcm9ja3MuCgozCjAwOjAwOjA3LDAwMCAtLT4gMDA6MDA6MDksMDAwCntcYW44fXtcYyZIMDBGRkZGJn1TZWUgeW91IGF0IHRoZSB0b3AuCgo0CjAwOjAwOjEwLDAwMCAtLT4gMDA6MDA6MTIsMDAwClRoZSB7XGIxfW9yYW5nZXtcYjB9IG1hcmtlcnMge1xpMX1wb2ludCB1cHtcaTB9LgoKNQowMDowMDoxMywwMDAgLS0+IDAwOjAwOjE1LDAwMApLZWVwIHtsZWZ0fSBhbmQge1xmczIwfXtcYyZIRkYmfXN0YXl7XHJ9IGNsb3NlCntcaTF9b24gdGhlIHJpZGdlLntcaTB9Cgo2CjAwOjAwOjE2LDAwMCAtLT4gMDA6MDA6MTgsMDAwCjxpPk5vIG92ZXJyaWRlIGhlcmUsPC9pPiB7anVzdCBicmFjZXN9Lgo="
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü Welcome to the trail.",
+    "1": "⟦x1⟧Ü Watch⟦x2⟧Ü  your step on the rocks.",
+    "2": "Ü See you at the top.",
+    "3": "Ü The ⟦x1⟧Ü orange⟦x2⟧Ü  markers ⟦x3⟧Ü point up⟦x4⟧Ü .",
+    "4": "Ü Keep {left} and ⟦x1⟧⟦x2⟧Ü stay⟦x3⟧Ü  close\n⟦x4⟧Ü on the ridge.⟦x5⟧",
+    "5": "Ü <i>No override here,</i> {just braces}."
+   },
+   "out_b64": "MQowMDowMDowMSwwMDAgLS0+IDAwOjAwOjAzLDAwMAp7XGFuOH3DnCBXZWxjb21lIHRvIHRoZSB0cmFpbC4KCjIKMDA6MDA6MDQsMDAwIC0tPiAwMDowMDowNiwwMDAKe1xpMX3DnCBXYXRjaHtcaTB9w5wgIHlvdXIgc3RlcCBvbiB0aGUgcm9ja3MuCgozCjAwOjAwOjA3LDAwMCAtLT4gMDA6MDA6MDksMDAwCntcYW44fXtcYyZIMDBGRkZGJn3DnCBTZWUgeW91IGF0IHRoZSB0b3AuCgo0CjAwOjAwOjEwLDAwMCAtLT4gMDA6MDA6MTIsMDAwCsOcIFRoZSB7XGIxfcOcIG9yYW5nZXtcYjB9w5wgIG1hcmtlcnMge1xpMX3DnCBwb2ludCB1cHtcaTB9w5wgLgoKNQowMDowMDoxMywwMDAgLS0+IDAwOjAwOjE1LDAwMArDnCBLZWVwIHtsZWZ0fSBhbmQge1xmczIwfXtcYyZIRkYmfcOcIHN0YXl7XHJ9w5wgIGNsb3NlCntcaTF9w5wgb24gdGhlIHJpZGdlLntcaTB9Cgo2CjAwOjAwOjE2LDAwMCAtLT4gMDA6MDA6MTgsMDAwCsOcIDxpPk5vIG92ZXJyaWRlIGhlcmUsPC9pPiB7anVzdCBicmFjZXN9Lgo="
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Welcome to the trail. & <\"'>",
+    "2": "See you at the top. & <\"'>",
+    "4": "Keep {left} and  & <\"'>⟦x1⟧⟦x2⟧stay & <\"'>⟦x3⟧ close\n & <\"'>⟦x4⟧on the ridge. & <\"'>⟦x5⟧"
+   },
+   "out_b64": "MQowMDowMDowMSwwMDAgLS0+IDAwOjAwOjAzLDAwMAp7XGFuOH1XZWxjb21lIHRvIHRoZSB0cmFpbC4gJiA8Iic+CgoyCjAwOjAwOjA0LDAwMCAtLT4gMDA6MDA6MDYsMDAwCntcaTF9V2F0Y2h7XGkwfSB5b3VyIHN0ZXAgb24gdGhlIHJvY2tzLgoKMwowMDowMDowNywwMDAgLS0+IDAwOjAwOjA5LDAwMAp7XGFuOH17XGMmSDAwRkZGRiZ9U2VlIHlvdSBhdCB0aGUgdG9wLiAmIDwiJz4KCjQKMDA6MDA6MTAsMDAwIC0tPiAwMDowMDoxMiwwMDAKVGhlIHtcYjF9b3Jhbmdle1xiMH0gbWFya2VycyB7XGkxfXBvaW50IHVwe1xpMH0uCgo1CjAwOjAwOjEzLDAwMCAtLT4gMDA6MDA6MTUsMDAwCktlZXAge2xlZnR9IGFuZCAgJiA8Iic+e1xmczIwfXtcYyZIRkYmfXN0YXkgJiA8Iic+e1xyfSBjbG9zZQogJiA8Iic+e1xpMX1vbiB0aGUgcmlkZ2UuICYgPCInPntcaTB9Cgo2CjAwOjAwOjE2LDAwMCAtLT4gMDA6MDA6MTgsMDAwCjxpPk5vIG92ZXJyaWRlIGhlcmUsPC9pPiB7anVzdCBicmFjZXN9Lgo="
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "out_b64": "MQowMDowMDowMSwwMDAgLS0+IDAwOjAwOjAzLDAwMAp7XGFuOH1XZWxjb21lIHRvIHRoZSB0cmFpbC4KCjIKMDA6MDA6MDQsMDAwIC0tPiAwMDowMDowNiwwMDAKe1xpMX1XYXRjaHtcaTB9IHlvdXIgc3RlcCBvbiB0aGUgcm9ja3MuCgozCjAwOjAwOjA3LDAwMCAtLT4gMDA6MDA6MDksMDAwCntcYW44fXtcYyZIMDBGRkZGJn1TZWUgeW91IGF0IHRoZSB0b3AuCgo0CjAwOjAwOjEwLDAwMCAtLT4gMDA6MDA6MTIsMDAwClRoZSB7XGIxfW9yYW5nZXtcYjB9IG1hcmtlcnMge1xpMX1wb2ludCB1cHtcaTB9LgoKNQowMDowMDoxMywwMDAgLS0+IDAwOjAwOjE1LDAwMApLZWVwIHtsZWZ0fSBhbmQge1xmczIwfXtcYyZIRkYmfXN0YXl7XHJ9IGNsb3NlCntcaTF9b24gdGhlIHJpZGdlLntcaTB9Cgo2CjAwOjAwOjE2LDAwMCAtLT4gMDA6MDA6MTgsMDAwCjxpPk5vIG92ZXJyaWRlIGhlcmUsPC9pPiB7anVzdCBicmFjZXN9Lgo="
+  }
+ ]
+}

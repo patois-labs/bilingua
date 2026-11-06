@@ -638,6 +638,7 @@ name = "bilingua-subtitle"
 version = "0.9.0"
 dependencies = [
  "bilingua-model",
+ "regex",
 ]
 
 [[package]]
