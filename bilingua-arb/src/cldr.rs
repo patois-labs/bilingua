@@ -4,8 +4,6 @@
 /// The Babel version the shared table was generated from.
 pub const BABEL_VERSION: &str = "2.18.0";
 
-pub const ORDER: [&str; 6] = bilingua_model::cldr::ORDER;
-
 /// The categories the language uses, in CLDR order, always with `other`. `None` for a language the table does
 /// not know (callers then leave the plural forms as they are). Babel's aliases (`deu`, `iw`, `tl`, `und`) resolve,
 /// as in LocOS.
