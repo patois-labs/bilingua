@@ -74,6 +74,44 @@ proptest! {
     }
 }
 
+/// The proptest's minimal failure: a UTF-16LE fixture whose first 17 bytes were duplicated, so the file starts with
+/// two byte order marks (the second is U+FEFF content) and is misaligned until a byte inserted at 2 realigns it.
+/// The untouched merge dropped the second mark.
+#[test]
+fn mutated_utf16_fixture_with_a_second_bom_merges_exactly() {
+    let fx = fixtures();
+    let mut d = fx[12 % fx.len()].clone();
+    assert!(d.starts_with(&[0xFF, 0xFE]), "fixture 12 is the UTF-16LE one");
+    for (pos, byte, op) in [(0u16, 136u8, 3u8), (2, 0, 2), (1786, 201, 3)] {
+        let p = pos as usize % d.len();
+        if op == 2 {
+            d.insert(p, byte);
+        } else {
+            let end = (p + 1 + byte as usize % 40).min(d.len());
+            let chunk = d[p..end].to_vec();
+            d.splice(p..p, chunk);
+        }
+    }
+    assert!(d.starts_with(&[0xFF, 0xFE, 0xFF, 0xFE]));
+    check(&d);
+}
+
+/// Two byte order marks in every Unicode envelope: the second is text and an untouched merge writes it back.
+#[test]
+fn a_second_bom_is_content_and_survives_merge() {
+    let text = "\u{feff}= Titel\n\nEin Absatz mit *Fettschrift*.\n";
+    let mut le = vec![0xFF, 0xFE];
+    let mut be = vec![0xFE, 0xFF];
+    for u in text.encode_utf16() {
+        le.extend_from_slice(&u.to_le_bytes());
+        be.extend_from_slice(&u.to_be_bytes());
+    }
+    for data in [le, be, [b"\xef\xbb\xbf".as_slice(), text.as_bytes()].concat()] {
+        check(&data);
+        assert_eq!(Adoc.merge(&extract(&data).expect("extract")).unwrap(), data);
+    }
+}
+
 #[test]
 fn every_truncation_of_the_fixtures_is_safe() {
     for d in fixtures() {
