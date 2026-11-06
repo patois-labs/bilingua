@@ -278,6 +278,14 @@ pub(crate) fn merge_doc(id: &'static str, doc: &Document, opts: &MergeOptions, p
         }
     }
     apply(&mut root, &plans, &outs)?;
+    if opts.is_profile(profile::LOCOS) && id == "adf" && mode != "leaf" {
+        let (mut a, mut b) = (Vec::new(), Vec::new());
+        crate::adf::skeleton(&parsed.value, &mut a);
+        crate::adf::skeleton(&root, &mut b);
+        if a != b {
+            return Err(Error::Unwritable { unit: None, reason: "the translation moves a mention, emoji or other inline node (the Jira connector keeps their order)".into() });
+        }
+    }
     let body = json::splice(text, &parsed.value, &root, &parsed.span, &parsed.style);
     enc::encode_text_with(&body, encoding, opts)
 }

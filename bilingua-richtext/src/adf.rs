@@ -186,3 +186,20 @@ pub(crate) fn apply(root: &mut Value, plans: &[Plan], outs: &[Option<Vec<Inline>
     }
     Ok(())
 }
+
+/// The type of every non-text node, depth first through `content` (LocOS `_skeleton`): the Jira connector refuses an
+/// inline rebuild whose skeleton differs from the source's (`structure_ok_inline`), so a moved mention or emoji fails
+/// there. Used under the LocOS profile.
+pub(crate) fn skeleton(n: &Value, out: &mut Vec<Option<Value>>) {
+    if !n.is_obj() {
+        return;
+    }
+    if ty(n) != Some("text") {
+        out.push(n.get("type").cloned());
+    }
+    if let Some(c) = content_of(n) {
+        for x in c {
+            skeleton(x, out);
+        }
+    }
+}
