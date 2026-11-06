@@ -46,9 +46,12 @@ fn pieces(tok: &Tok, text: &[TP]) -> Vec<Piece> {
     let mut out: Vec<Piece> = Vec::new();
     let mut used: HashSet<usize> = HashSet::new();
     let mut stack: Vec<(String, Sk, usize)> = Vec::new();
+    let mut last: Option<usize> = None;
 
-    fn ctx(tok: &Tok, stack: &[(String, Sk, usize)]) -> (Option<usize>, Vec<usize>) {
-        let mut run = tok.dominant;
+    // `last` is the run tag closed most recently: text typed outside every run tag after it stays in that run, so
+    // text after a hidden range is not moved in front of it (LocOS sends it to the first run).
+    fn ctx(tok: &Tok, stack: &[(String, Sk, usize)], last: Option<usize>) -> (Option<usize>, Vec<usize>) {
+        let mut run = tok.dominant.or(last);
         let mut chain = Vec::new();
         for (_, k, n) in stack {
             match k {
@@ -67,13 +70,15 @@ fn pieces(tok: &Tok, text: &[TP]) -> Vec<Piece> {
         match tp {
             TP::Text(s) => {
                 if !s.is_empty() {
-                    let (run, chain) = ctx(tok, &stack);
+                    let (run, chain) = ctx(tok, &stack, last);
                     out.push(Piece { run, chain, kind: Pk::T(s.clone()) });
                 }
             }
             TP::Close(key) => {
                 if stack.last().is_some_and(|(k, _, _)| k == key) {
-                    stack.pop();
+                    if let Some((_, Sk::R(r), _)) = stack.pop() {
+                        last = Some(r);
+                    }
                 }
             }
             TP::Open(key) | TP::Point(key) => {
@@ -94,13 +99,13 @@ fn pieces(tok: &Tok, text: &[TP]) -> Vec<Piece> {
                 used.insert(n);
                 match entry {
                     Entry::Point { .. } => {
-                        let (run, chain) = ctx(tok, &stack);
+                        let (run, chain) = ctx(tok, &stack, last);
                         out.push(Piece { run, chain, kind: Pk::P(n) });
                     }
                     Entry::Run(r) => stack.push((key.clone(), Sk::R(*r), n)),
                     Entry::Wrap { .. } => {
                         stack.push((key.clone(), Sk::G, n));
-                        let (run, chain) = ctx(tok, &stack);
+                        let (run, chain) = ctx(tok, &stack, last);
                         out.push(Piece { run, chain, kind: Pk::W(n) });
                     }
                 }
