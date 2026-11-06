@@ -11,6 +11,7 @@
 pub const SKELETON_SCHEMA: u32 = 2;
 
 mod extract;
+mod locos;
 mod refs;
 mod render;
 mod rich;
@@ -114,12 +115,20 @@ fn split_meta(doc: &Document) -> Result<Split<'_>, Error> {
 
 /// Extracts with explicit options.
 pub fn extract_with(bytes: &[u8], opts: &ExtractOptions, xo: &XlsxOptions) -> Result<Document, Error> {
+    if opts.is_profile(bilingua_model::profile::LOCOS) {
+        return locos::extract(bytes, opts);
+    }
     extract::extract_doc(bytes, opts, xo)
 }
 
 /// Writes the document and reports what the caller should know.
 pub fn merge_with_report(doc: &Document) -> Result<(Vec<u8>, MergeReport), Error> {
     bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
+    if let Skeleton::Binary { .. } = &doc.skeleton {
+        // a document extracted under the Localization OS profile
+        let opts = bilingua_model::profile::locos().merge_options("xlsx");
+        return locos::merge(doc, &opts).map(|b| (b, MergeReport { warnings: vec![] }));
+    }
     let (meta, real) = split_meta(doc)?;
     let mut r = render::Renderer::new(doc);
     let mut out: Vec<(EntryMeta, zipio::Body)> = Vec::with_capacity(real.len());
@@ -168,6 +177,10 @@ impl Filter for Xlsx {
     }
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
         bilingua_model::check_own_options(self, &opts.format_options)?;
+        if opts.is_profile(bilingua_model::profile::LOCOS) {
+            // LocOS's walk: its options do not apply (see `locos`)
+            return locos::extract(bytes, opts);
+        }
         let mut xo = self.options.clone();
         let set = |key: &str, field: &mut bool| {
             if let Some(on) = opts.format_flag(key) {
@@ -181,6 +194,11 @@ impl Filter for Xlsx {
     }
     fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
         bilingua_model::check_own_options(self, &opts.format_options)?;
+        if let Skeleton::Binary { .. } = &doc.skeleton {
+            // a document extracted under the Localization OS profile
+            bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
+            return locos::merge(doc, opts);
+        }
         // The parts are UTF-8 XML and a workbook has no language to stamp, so neither option changes anything.
         merge_with_report(doc).map(|(b, _)| b)
     }
