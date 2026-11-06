@@ -22,16 +22,18 @@ fn pseudo(d: &Document) -> Document {
 }
 
 fn check(f: &dyn Filter, data: &[u8]) {
-    let o = ExtractOptions::new().with_target_lang("es-ES");
+    // no target language: the plural set stays as it is, so the unit count must come back the same
+    let o = ExtractOptions::new();
     let Ok(d) = f.extract(data, &o) else { return };
     assert_eq!(f.merge(&d).expect("untouched merge"), data, "untouched merge");
     let out = f.merge(&pseudo(&d)).expect("pseudo merge");
     let back = f.extract(&out, &o).expect("re-extract");
-    // es-ES adds the `many` plural forms: count units whose plural label the source has
-    let labels: std::collections::BTreeSet<(Option<String>, Option<String>)> =
-        d.units.iter().map(|u| (u.context.key.clone(), u.context.extra.get("plural").cloned())).collect();
-    let n = back.units.iter().filter(|u| u.translate && labels.contains(&(u.context.key.clone(), u.context.extra.get("plural").cloned()))).count();
-    assert_eq!(n, d.units.iter().filter(|u| u.translate).count(), "unit count after translation");
+    assert_eq!(back.units.iter().filter(|u| u.translate).count(), d.units.iter().filter(|u| u.translate).count(), "unit count after translation");
+    // with a target language the plural fill runs too (es-ES adds `many` and drops `few`): it must still read back
+    let mut d = d;
+    d.target_lang = Some("es-ES".into());
+    let out = f.merge(&pseudo(&d)).expect("localized pseudo merge");
+    f.extract(&out, &o).expect("re-extract after the plural fill");
 }
 
 fn soup() -> impl Strategy<Value = Vec<u8>> {

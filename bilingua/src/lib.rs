@@ -147,6 +147,10 @@ pub fn filters() -> Vec<Box<dyn Filter>> {
         Box::new(bilingua_xslt::Xslt),
         // Fluent sniffs only with a Fluent-only marker, but its text looks like key = value: after the others.
         Box::new(bilingua_ftl::FtlFilter),
+        // Android strings.xml and Java XML properties sniff the root element only (<resources>, <properties>); they
+        // own those vocabularies, so they go before DITA, DocBook and generic XML.
+        Box::new(bilingua_xmlres::AndroidStrings),
+        Box::new(bilingua_xmlres::JavaXmlProperties),
         // DITA and DocBook sniff strictly (a DOCTYPE naming the vocabulary, the DITA architecture attribute or the
         // DocBook 5 namespace); they own XML vocabularies, so they go just before generic XML.
         Box::new(bilingua_dita::Dita::new()),
@@ -201,6 +205,16 @@ pub fn detect(name: &str, bytes: &[u8]) -> Option<Box<dyn Filter>> {
     // LocOS sends a .json file in ARB shape (a string @@locale) to its ARB dialect; so do we.
     if ext == "json" && bilingua_arb::Arb.sniff(bytes) {
         return Some(Box::new(bilingua_arb::Arb));
+    }
+    // LocOS routes a .xml file by its root element: Android strings (<resources>) and Java XML properties
+    // (<properties>) have their own filters, any other root is generic XML (ITS, DITA, DocBook, multilingual).
+    if ext == "xml" {
+        if bilingua_xmlres::AndroidStrings.sniff(bytes) {
+            return Some(Box::new(bilingua_xmlres::AndroidStrings));
+        }
+        if bilingua_xmlres::JavaXmlProperties.sniff(bytes) {
+            return Some(Box::new(bilingua_xmlres::JavaXmlProperties));
+        }
     }
     // A Wordfast Pro TXLF saved as .xlf (XLIFF 1.2 declaring the gs4tr namespace) goes to the TXLF filter, which
     // knows the gs4tr protection rules; a plain .xlf stays XLIFF.
