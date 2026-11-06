@@ -326,14 +326,18 @@ keeps the encoding:
   Without the profile nothing changes: every such file still opens as ARB. `bilingua_json::dialect_of(bytes)` is new.
 - **ARB, a message of only a token.** Under the profile a message (or plural branch) whose text, after removing
   literal `⟦x<digits>⟧` tokens, has no letter or digit has no unit (LocOS `_translatable`). Without the profile such
-  a message is plain text and still a unit.
+  a message is plain text and still a unit. A merge plans the messages as the extract did, so a document extracted
+  under the profile merges without it and the other way round. Known difference: LocOS also deletes such a literal
+  token from the file when it rebuilds the message (`"a": "⟦x1⟧"` becomes `"a": ""`); Bilingua keeps the text.
 - **Repeated placeholders.** `profile::locos_set_target` now accepts a translation that repeats a standalone tag
   (`#` in an ICU plural, Chrome `$x$`, go `{{..}}`, `<br/>`), as LocOS does; `Document::set_target` still refuses it
   (`Error::DuplicatedTag`), and paired tags and tags the source lacks are refused by both. `Document::set_target_repeating`
   is the same call without the profile's other rules. The writers that write a repeat: all except those where LocOS
   itself keeps a tag once (ASS, TTML, TTX, TXLF/TXML, XMB/XTB, XTG, XSLT, generic XML/DITA/DocBook, Android strings,
-  DOCX, IDML, ICML, VSDX, server pages, WebVTT, XLIFF packages), which drop the second use as LocOS does. Qt Linguist
-  (`ts`) and the HTML part of an email now write every use under the profile; their default is unchanged (once).
+  DOCX, IDML, ICML, MIF, ODT, VSDX, Qt Linguist, server pages, WebVTT, XLIFF packages), which drop the second use as
+  LocOS does (measured per corpus file against LocOS `build`). The HTML part of an email now writes every use under
+  the profile, as LocOS does; its default is unchanged (once). Known difference: a server-page tag that carries code
+  (`<img src="<%= s %>">`) is written once, where LocOS writes the whole tag again, so page code never runs twice.
 - **CLDR.** `bilingua-arb`, `bilingua-plist` and `bilingua-qtts` use `bilingua_model::cldr`; their private tables
   are gone, with no change in answers (each crate's test compares the old table over every language code of two or
   three letters, with and without region, script and white space). New in the model: `cldr::bits_babel(lang, ordinal)`
