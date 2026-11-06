@@ -11,7 +11,7 @@ The first public release.
 
 ### Formats
 
-88 filter ids in 65 format crates, all behind the `bilingua` facade (`bilingua::filters()`, `bilingua::detect`). The full
+92 filter ids in 67 format crates, all behind the `bilingua` facade (`bilingua::filters()`, `bilingua::detect`). The full
 table, with extensions, is in the README.
 
 - Office and publishing: Word, Excel, PowerPoint, Visio, OpenDocument (text, spreadsheet, presentation, drawing),
@@ -20,7 +20,7 @@ table, with extensions, is in the README.
   DokuWiki, XML with ITS 2.0 rules, XSLT, server pages (ASP.NET, JSP, PHP templates, SSI, ERB), HTML Help, MadCap
   Flare projects, email messages, SVG text and the text layer of raster images.
 - Software strings: JSON, JSON5 and JSONC, YAML, TOML, INI, Java and Mozilla properties, gettext PO, POT and MO,
-  .NET resx and resw, XAML, Windows resjson and RC, WiX, Apple strings, stringsdict, property lists, String Catalogs
+  .NET resx and resw, Android string resources, Java XML properties, XAML, Windows resjson and RC, WiX, Apple strings, stringsdict, property lists, String Catalogs
   and Xcode localization bundles, Flutter ARB, Mozilla Fluent and DTD, Qt Linguist TS, JavaScript and TypeScript
   locale modules, PHP language arrays, Google and Angular XMB and XTB, freedesktop desktop entries, Haiku catkeys,
   Salesforce STF, CSV and TSV, plain text.
@@ -39,6 +39,11 @@ table, with extensions, is in the README.
   document granularity, and `resegment`, `join` and `split` to change it later.
 - Typed per-format options (`<format>.<name>` keys, listed by `format_option_keys()`), refused when misspelt.
 - Profiles: `locos` reproduces Localization OS's output choices.
+- ZIP batches (`bilingua::batch`): one uploaded `.zip` becomes one document per supported member, with every
+  skipped member listed with its reason (Localization OS's ZIP batch upload, stricter about hostile archives).
+- Content dialects as Localization OS picks them: a `.xml` file with a `<resources>` or `<properties>` root goes to
+  the Android strings or Java XML properties filter, and a Word file holding an Articulate Storyline "Export to
+  Word" table is translated in its Translation column only.
 - Builders on every option and model type, `#[non_exhaustive]` on the public structs and enums, so later additions
   do not break callers.
 

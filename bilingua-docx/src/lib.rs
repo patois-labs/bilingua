@@ -15,6 +15,7 @@ mod extract;
 pub mod locos;
 mod preview;
 mod render;
+mod storyline;
 mod xml;
 mod zipio;
 
@@ -261,6 +262,7 @@ fn extract_doc_inner(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Er
     let mut ex = Extractor::new(styles, comments);
     let mut templates: HashMap<usize, String> = HashMap::new();
     let mut wp = "w:".to_string();
+    let mut bilingual: Option<storyline::Found> = None;
     for (i, kind) in order {
         let e = &entries[i];
         let is_main = kind == PartKind::Main;
@@ -288,6 +290,9 @@ fn extract_doc_inner(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Er
         }
         let mut counter = 0;
         xml::number(&mut nodes, &format!("{}p", ns.w), &mut counter);
+        if is_main {
+            bilingual = storyline::translation_paragraphs(&nodes, &ns);
+        }
         let prefix = if is_main {
             String::new()
         } else {
@@ -303,7 +308,17 @@ fn extract_doc_inner(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Er
         ex.begin_part(kind, &e.name, prefix, ns);
         templates.insert(i, ex.run_part(&nodes));
     }
-    let units = ex.finish();
+    let mut units = ex.finish();
+    // A Storyline "Export to Word" table: only the Translation cells are translated (LocOS docx_bilingual)
+    let mut warnings = Vec::new();
+    if let Some(f) = &bilingual {
+        let keep: std::collections::HashSet<String> = f.keep.iter().map(|o| format!("p{o}")).collect();
+        for u in units.iter_mut().filter(|u| !keep.contains(&u.id)) {
+            u.translate = false;
+            u.lock_reason = Some("bilingual table: only the Translation column is translated".into());
+        }
+        warnings.push(bilingua_model::Warning::new("docx_bilingual_table", main.clone(), storyline::notice(f)));
+    }
     let idx: HashMap<&str, usize> = units
         .iter()
         .enumerate()
@@ -328,7 +343,7 @@ fn extract_doc_inner(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Er
     let meta_json = serde_json::to_vec(&meta).map_err(|e| perr(e.to_string()))?;
     zentries.push(ZipEntry::raw(META_NAME, meta_json));
 
-    Ok(Document::new("docx", units, Skeleton::zip(zentries, bilingua_model::parser_info!())).with_source_lang(opts.source_lang.clone().or(lang_default)).with_target_lang(opts.target_lang.clone()).with_granularity(Granularity::Paragraph))
+    Ok(Document::new("docx", units, Skeleton::zip(zentries, bilingua_model::parser_info!())).with_source_lang(opts.source_lang.clone().or(lang_default)).with_target_lang(opts.target_lang.clone()).with_granularity(Granularity::Paragraph).with_warnings(warnings))
 }
 
 type Split<'a> = (Option<Meta>, Vec<&'a ZipEntry>);

@@ -244,3 +244,24 @@ fn split_ranges_keep_white_space_tails_where_locos_puts_them() {
     let want = format!("{head}<Story Self=\"s\">\n <ParagraphStyleRange>\n  <CharacterStyleRange><Content>A</Content>\n   <Br/>\n   </CharacterStyleRange>\n  <CharacterStyleRange><Content>X</Content><Br/></CharacterStyleRange>\n  <CharacterStyleRange><Content>C</Content>\n  </CharacterStyleRange>\n  <CharacterStyleRange><Content>bare</Content>\n  <Br/>\n </CharacterStyleRange></ParagraphStyleRange>\n</Story>\n</Document>\n");
     assert_eq!(out, want);
 }
+
+#[test]
+fn text_after_hidden_range_stays_after_it() {
+    // Wave 12 round trip (suite_hidden.icml): text typed after the last run tag went to the first run, in front of
+    // the hidden range. It now stays in the run closed just before it; text before any run tag still goes first.
+    let conds = "\t<Condition Self=\"Condition/Print Only\" Name=\"Print Only\" Visible=\"false\"/>\n";
+    let body = psr(&format!(
+        "{}{}{}",
+        csr("<Content>Visible </Content>"),
+        csr_with("<Content>SECRET</Content>", NORMAL, " AppliedConditions=\"Condition/Print%20Only\""),
+        csr("<Content> tail</Content>")
+    ));
+    let data = icml(&body, conds, "");
+    let t = units(&data);
+    assert_eq!(t, vec!["\u{27E6}r1\u{27E7}Visible \u{27E6}/r1\u{27E7}\u{27E6}r2\u{27E7} tail\u{27E6}/r2\u{27E7}"]);
+    let out = translate(&data, &[(0, &format!("Zq{}qZ", t[0]))]);
+    assert!(well_formed(&out));
+    assert_eq!(visible_text(&out), "ZqVisible |SECRET| tailqZ");
+    let back = units(&out);
+    assert_eq!(back, vec!["\u{27E6}r1\u{27E7}ZqVisible \u{27E6}/r1\u{27E7}\u{27E6}r2\u{27E7} tailqZ\u{27E6}/r2\u{27E7}"]);
+}

@@ -26,7 +26,7 @@ REPO = HERE.parents[1]
 
 # Bilingual formats (XLIFF family, packages): Bilingua parses them like any other format. LocOS leaves finished
 # segments out of its unit list, so on the Bilingua side those are marked locked to line the lists up.
-BILINGUAL_EXTS = {"xlf", "xliff", "sdlxliff", "mqxliff", "mxliff", "sdlppx", "sdlrpx", "mqxlz"}
+BILINGUAL_EXTS = {"xlf", "xliff", "sdlxliff", "sdlxlf", "mqxliff", "mxliff", "sdlppx", "sdlrpx", "mqxlz", "txml", "txlf", "ttx", "xlz", "wsxz"}
 
 # Plain-script generators in the LocOS fixture tree: (folder/script, function, file name written).
 GENERATORS = [
@@ -106,34 +106,110 @@ def mark_finished(bres):
     return bres
 
 
+def _usage_split():
+    return """Split run (the PC has LocOS but no cargo; the M5 has cargo but no LocOS):
+    PC:  python run.py --scoreboard --locos-side DIR      LocOS inventory + LocOS units for every file; copies
+                                                          the LocOS-tree files into DIR/ext (scratch, never the repo)
+    M5:  python3 run.py --scoreboard --bilingua-side DIR  bl-dump --formats and bl-dump on every file listed in DIR
+    any: python run.py --scoreboard --from DIR [--out F]  renders SCOREBOARD.md from DIR/locos.json + DIR/bl.json"""
+
+
+def _arg(args, flag):
+    return Path(args[args.index(flag) + 1]) if flag in args else None
+
+
+def locos_side(d: Path):
+    """Everything that needs LocOS. Corpus files are listed by repository path (the M5 checkout has them); files
+    from the LocOS tree are copied to d/ext/<n>/<name> so the M5 can read them (scratch only)."""
+    import shutil
+
+    if not R.LOCOS_PY.exists():
+        sys.exit("LocOS venv python not found; set LOCOS_DIR")
+    d.mkdir(parents=True, exist_ok=True)
+    inv = locos_inventory()
+    files = collect_files()
+    lo = R.run_locos([p for p, _ in files])
+    listed = []
+    for n, (p, origin) in enumerate(files):
+        if origin == "corpus":
+            rel = p.relative_to(REPO).as_posix()
+        else:
+            rel = f"ext/{n}/{p.name}"
+            (d / "ext" / str(n)).mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(p, d / rel)
+        listed.append({"key": str(p), "rel": rel, "origin": origin, "name": p.name})
+    verify = len(sorted((R.LOCOS / "tests").glob("verify_*filter*.py"))) if (R.LOCOS / "tests").is_dir() else 0
+    (d / "locos.json").write_text(json.dumps({"inventory": inv, "files": listed, "lo": lo, "verify": verify}), encoding="utf-8")
+    print(f"wrote {d / 'locos.json'}: {len(inv)} LocOS formats, {len(listed)} files")
+
+
+def bilingua_side(d: Path):
+    """Everything that needs bl-dump, for the files locos_side listed."""
+    meta = json.loads((d / "locos.json").read_text(encoding="utf-8"))
+    scratch = Path(tempfile.mkdtemp(prefix="oracle-sb-"))
+    res = {}
+    for n, f in enumerate(meta["files"]):
+        src = (REPO / f["rel"]) if f["origin"] == "corpus" else (d / f["rel"])
+        res[f["key"]] = R.run_bl(src, scratch / f"{n}-{f['name']}")
+    (d / "bl.json").write_text(json.dumps({"formats": bilingua_formats(), "res": res}), encoding="utf-8")
+    print(f"wrote {d / 'bl.json'}: {len(res)} files")
+
+
 def main():
     args = sys.argv[1:]
     out = HERE / "SCOREBOARD.md"
     if "--out" in args:
         out = Path(args[args.index("--out") + 1])
+    if "--help" in args:
+        sys.exit(_usage_split())
+    if _arg(args, "--locos-side"):
+        return locos_side(_arg(args, "--locos-side"))
     if "--build" in args:
         subprocess.run(["cargo", "build", "-p", "bilingua-oracle"], cwd=R.ROOT, check=True)
-    if not R.LOCOS_PY.exists():
-        sys.exit("LocOS venv python not found; set LOCOS_DIR")
+    if _arg(args, "--bilingua-side"):
+        return bilingua_side(_arg(args, "--bilingua-side"))
+    if _arg(args, "--from"):
+        d = _arg(args, "--from")
+        meta = json.loads((d / "locos.json").read_text(encoding="utf-8"))
+        bl = json.loads((d / "bl.json").read_text(encoding="utf-8"))
+        inv, lo, bl_filters, verify = meta["inventory"], meta["lo"], bl["formats"], meta["verify"]
+        files = [(Path(f["key"]), f["origin"]) for f in meta["files"]]
+        get_bl = lambda n, p: bl["res"].get(str(p)) or {"error": "not built: no bl-dump result"}  # noqa: E731
+    else:
+        # One machine with both LocOS and a built bl-dump.
+        if not R.LOCOS_PY.exists():
+            sys.exit("LocOS venv python not found; set LOCOS_DIR (or use the split run: --help)")
+        inv = locos_inventory()
+        bl_filters = bilingua_formats()
+        files = collect_files()
+        lo = R.run_locos([p for p, _ in files])
+        verify = len(sorted((R.LOCOS / "tests").glob("verify_*filter*.py"))) if (R.LOCOS / "tests").is_dir() else 0
+        scratch = Path(tempfile.mkdtemp(prefix="oracle-sb-"))
+        get_bl = lambda n, p: R.run_bl(p, scratch / f"{n}-{p.name}")  # noqa: E731
+    text = render(inv, score(inv, bl_filters, files, lo, get_bl), {e for f in bl_filters for e in f["extensions"]}, set(), files, verify)
+    out.write_text(text, encoding="utf-8", newline="\n")
+    print(f"wrote {out}: {len(inv)} LocOS formats, {len(files)} files")
 
-    inv = locos_inventory()
-    bl_filters = bilingua_formats()
-    bl_exts = {e for f in bl_filters for e in f["extensions"]}
-    bi_exts = set()
+
+def score(inv, bl_filters, files, lo, get_bl):
     ext_fmt = {e: row["fmt"] for row in inv for e in row["exts"]}
-
-    files = collect_files()
-    lo = R.run_locos([p for p, _ in files])
-    scratch = Path(tempfile.mkdtemp(prefix="oracle-sb-"))
     rows = defaultdict(lambda: {"files": [], "bl_n": 0, "lo_n": 0, "m_n": 0, "m_d": 0, "issues": Counter(), "notes": Counter(),
-                                "bl_err": [], "lo_err": [], "rt_bad": [], "rt_checked": 0, "supported": False})
+                                "bl_err": [], "lo_err": [], "rt_bad": [], "rt_checked": 0, "supported": False, "bl_ids": set()})
     for n, (p, origin) in enumerate(files):
         ext = p.suffix[1:].lower()
         lres = lo.get(str(p)) or {"error": "LocOS not available"}
         fmt = lres.get("filter") or ext_fmt.get(ext) or ext
+        # A dialect LocOS picks by content (Android strings in .xml, chrome messages.json, a Storyline table in
+        # .docx, ...) gets its own row; a Qt Linguist .ts is LocOS's `ts` format (the `.ts` alias resolves to js).
+        if fmt == "js" and lres.get("dialect") == "qt":
+            fmt = "ts"
+        elif lres.get("dialect"):
+            fmt = f"{fmt}:{lres['dialect']}"
         row = rows[fmt]
         row["files"].append((p.name, origin))
-        bres = R.run_bl(p, scratch / f"{n}-{p.name}")
+        bres = get_bl(n, p)
+        if bres.get("format"):
+            row["bl_ids"].add(bres["format"])
         if ext in BILINGUAL_EXTS:
             bres = mark_finished(bres)
         if "no parser" in (bres.get("error") or "") or "not built" in (bres.get("error") or ""):
@@ -163,12 +239,10 @@ def main():
             for k, _, _ in r["notes"]:
                 row["notes"][k] += 1
         row["rt_checked"] += 1
-        if r["unchanged"] not in ("identical", "identical-parts", "n/a") or r["pseudo"] not in ("ok", "n/a"):
+        if r["unchanged"] not in ("identical", "identical-parts", "n/a") or not R.pseudo_ok(r["pseudo"]):
             row["rt_bad"].append(f"{p.name}: {R.short(r['unchanged'] if r['unchanged'] not in ('identical', 'identical-parts') else r['pseudo'], 70)}")
 
-    text = render(inv, rows, bl_exts, bi_exts, files)
-    out.write_text(text, encoding="utf-8", newline="\n")
-    print(f"wrote {out}: {len(inv)} LocOS formats, {len(files)} files")
+    return rows
 
 
 def support(row_inv, bl_exts, bi_exts):
@@ -187,7 +261,7 @@ def pct(a, b):
     return "-" if not b else f"{100.0 * a / b:.1f}%"
 
 
-def render(inv, rows, bl_exts, bi_exts, files):
+def render(inv, rows, bl_exts, bi_exts, files, verify=0):
     inv_by = {r["fmt"]: r for r in inv}
     table = []
     for fmt in sorted(set(inv_by) | set(rows)):
@@ -231,6 +305,9 @@ def render(inv, rows, bl_exts, bi_exts, files):
     known = {e for r in inv for e in r["exts"]}
     only = sorted(e for e in bl_exts | bi_exts if e not in known)
 
+    # Dialect rows (`xml:android`) are listed in their own table; the summary counts registry formats only.
+    dialects = [t for t in table if ":" in t["fmt"]]
+    table = [t for t in table if ":" not in t["fmt"]]
     cnt = Counter(t["status"] for t in table)
     L = ["# Bilingua conformance scoreboard", "",
          "Generated by `python run.py --scoreboard` (`bilingua/oracle/scoreboard.py`); do not edit the tables by hand.",
@@ -239,8 +316,8 @@ def render(inv, rows, bl_exts, bi_exts, files):
          "codes as one marker). Files are shown as `corpus+LocOS` (the corpus is made up and committed; LocOS files live only in",
          "the LocOS tree).", "",
          "## Summary", "",
-         f"LocOS formats: {len(inv)}. Bilingua parses {sum(1 for t in table if t['claims'])} of them (source formats and the bilingual "
-         "and the bilingual formats).", "",
+         f"LocOS formats: {len(inv)}. Bilingua parses {sum(1 for t in table if t['claims'])} of them (source formats and "
+         "the bilingual formats).", "",
          "| Status | Formats |", "|---|---|"]
     for s in ("same", "differs", "bilingua-only", "untested", "missing"):
         L.append(f"| {s} | {cnt.get(s, 0)} |")
@@ -265,6 +342,18 @@ def render(inv, rows, bl_exts, bi_exts, files):
             L.append(f"| {t['fmt']} | {t['exts']} | {t['sup']} | 0 | - | - | - | - | {t['status']} | {t['why']} |")
     L.append("")
 
+    L += ["## Dialects LocOS picks by content", "",
+          "One row per dialect seen in the files: the LocOS registry format (left of the colon) reads these files with "
+          "another walk than its plain one. `Bilingua` is the filter bl-dump picked for the same file.", "",
+          "| LocOS dialect | Bilingua filter | Files | Units LocOS | Units Bilingua | Text match | Round trip | Status | Top reasons |",
+          "|---|---|---|---|---|---|---|---|---|"]
+    for t in sorted(dialects, key=lambda t: t["fmt"]):
+        r = t["row"]
+        rt = "n/a" if not r["rt_checked"] else "ok" if not r["rt_bad"] else f"FAIL {len(r['rt_bad'])}/{r['rt_checked']}"
+        st = t["status"] if r["supported"] else "missing"
+        L.append(f"| {t['fmt']} | {', '.join(sorted(r['bl_ids'])) or '-'} | {t['files']} | {r['lo_n']} | {r['bl_n']} | {pct(r['m_n'], r['m_d'])} | {rt} | {st} | {t['why']} |")
+    L.append("")
+
     miss = sorted((t for t in table if t["status"] == "missing"), key=lambda t: (t["tier"], t["fmt"]))
     L += ["## Formats Bilingua does not parse yet", "",
           "Ordered by a usage guess: software resource formats first, then Office, DTP, documentation and CAT formats, then the long tail "
@@ -275,7 +364,7 @@ def render(inv, rows, bl_exts, bi_exts, files):
         L.append(f"| {i} | {t['fmt']} | {t['exts']} | {TIER[t['tier'][0]]} | {t['files']} | {r['lo_n'] if r and r['files'] else '-'} | {len(r['lo_err']) if r else 0} |")
     L.append("")
 
-    bad = [(t["fmt"], x) for t in table if t["row"] for x in t["row"]["bl_err"] + t["row"]["rt_bad"]]
+    bad = [(t["fmt"], x) for t in table + dialects if t["row"] for x in t["row"]["bl_err"] + t["row"]["rt_bad"]]
     L += ["## Bilingua errors and round-trip failures on these files", ""]
     if bad:
         L += ["| Format | File and problem |", "|---|---|"] + [f"| {f} | {x} |" for f, x in bad]
@@ -286,14 +375,13 @@ def render(inv, rows, bl_exts, bi_exts, files):
 
     L += ["## Files read", ""]
     nf = Counter(o for _, o in files)
-    verify = sorted((R.LOCOS / "tests").glob("verify_*filter*.py")) if (R.LOCOS / "tests").is_dir() else []
     L.append(f"{len(files)} files: {nf['corpus']} corpus, {nf['fixture']} in `local-tms/tests/fixtures/formats/`, {nf['generated']} written by "
              f"its plain-script generators (stdlib `make_*.py`, to a scratch folder), {nf['sample']} in `local-tms/sample-docs/`. "
-             f"The {len(verify)} `verify_*filter*.py` suites build their inputs inside the suite and import the application, so they were "
+             f"The {verify} `verify_*filter*.py` suites build their inputs inside the suite and import the application, so they were "
              "not run; the top-level files of `tests/fixtures/` are UI contracts, not localization files, and are not read.")
     L.append("")
     L += ["| LocOS format | LocOS fixture file names |", "|---|---|"]
-    for t in sorted(table, key=lambda t: t["fmt"]):
+    for t in sorted(table + dialects, key=lambda t: t["fmt"]):
         r = t["row"]
         names = [n for n, o in (r["files"] if r else []) if o != "corpus"]
         if names:

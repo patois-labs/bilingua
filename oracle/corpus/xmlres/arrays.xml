@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+    <!-- Planet names -->
+    <string-array name="planets"><item>Mercury</item><item>Venus</item><item>@string/earth</item></string-array>
+    <string-array name="codes" translatable="false"><item>MRC</item></string-array>
+    <string name="after">After the arrays</string>
+</resources>

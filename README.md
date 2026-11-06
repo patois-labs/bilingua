@@ -26,6 +26,7 @@ yours.
 | Adobe InCopy ICML and WoodWing WCML | `icml` | `.icml` `.wcml` |  |
 | Adobe InDesign IDML | `idml` | `.idml` |  |
 | Advanced SubStation Alpha and SSA subtitles | `ass` | `.ass` `.ssa` |  |
+| Android string resources (strings.xml) | `android` | by content |  |
 | Apple .strings | `strings` | `.strings` |  |
 | Apple .stringsdict | `stringsdict` | `.stringsdict` |  |
 | Apple property lists (XML and binary) | `plist` | `.plist` |  |
@@ -54,6 +55,7 @@ yours.
 | HTML Help table of contents | `hhc` | `.hhc` |  |
 | INI and Joomla language files | `ini` | `.ini` |  |
 | Java and Mozilla .properties | `properties` | `.properties` |  |
+| Java XML properties | `javaxml` | by content |  |
 | JavaScript and TypeScript locale modules | `js` | `.js` `.cjs` `.mjs` `.ts` `.mts` `.cts` |  |
 | JavaServer Pages | `jsp` | `.jsp` `.jspf` |  |
 | JSON | `json` | `.json` |  |
@@ -92,7 +94,7 @@ yours.
 | SVG text | `svg` | `.svg` |  |
 | TOML | `toml` | `.toml` |  |
 | Trados project and return packages | `sdlppx` | `.sdlppx` `.sdlrpx` | yes |
-| Trados SDLXLIFF | `sdlxliff` | `.sdlxliff` | yes |
+| Trados SDLXLIFF | `sdlxliff` | `.sdlxliff` `.sdlxlf` | yes |
 | Trados Studio project file | `sdlproj` | `.sdlproj` |  |
 | Trados TagEditor TTX | `ttx` | `.ttx` | yes |
 | TSV | `tsv` | `.tsv` `.tab` |  |
@@ -113,7 +115,7 @@ yours.
 | YAML (generic, Rails i18n, Symfony) | `yaml` | `.yaml` `.yml` |  |
 | YouTube SBV subtitles | `sbv` | `.sbv` |  |
 
-90 formats.
+92 formats.
 <!-- formats:end -->
 
 `bilingua::detect` picks the format by extension and then by looking at the bytes, so most files need no hint.
@@ -155,6 +157,26 @@ A `Document` serializes to JSON (serde), so you can store it between extract and
 output encoding and target language stamping; `bilingua::format_option_keys()` lists the per-format options
 (`csv.columns`, `odf.translate_comments`, ...). [MIGRATION.md](MIGRATION.md) shows the builder style every option and
 model type uses.
+
+### ZIP batches
+
+`.zip` is not a format: `bilingua::detect` refuses it. An upload form that takes a folder of files as one `.zip`
+opens it with `bilingua::batch` (as Localization OS's ZIP batch upload does) and extracts each member as an upload
+of its own:
+
+```rust
+if bilingua::batch::is_batch("site.zip") {
+    let b = bilingua::batch::expand(&bytes)?;          // or expand_with(&bytes, &BatchOptions::new().with_max_documents(100))
+    for m in &b.members {                              // m.path "docs/guide/intro.md", m.name "docs__guide__intro.md"
+        let doc = bilingua::extract(&m.name, &m.data, &opts); // an error here belongs to this member only
+    }
+    for s in &b.skipped { println!("{}: {}", s.path, s.reason); } // nested zips, OS junk, duplicates, unsupported
+}
+```
+
+The archive goes through the same zip guard as every package format first; an unsafe or repeated name, a link, a
+bomb or more than 500 supported members (`BatchOptions::max_documents`) refuses the whole archive with an
+`Error::Limit`.
 
 ### Command line
 

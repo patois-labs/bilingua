@@ -1,0 +1,205 @@
+{
+ "strings.xml": {
+  "input": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\r\n<resources xmlns:tools=\"http://schemas.android.com/tools\" xmlns:xliff=\"urn:oasis:names:tc:xliff:document:1.2\">\r\n    <!-- App name shown in the launcher -->\r\n    <string name=\"app_name\" translatable=\"false\">Northwind</string>\r\n    <string name=\"welcome\">Welcome, %1$s! You have %2$d new messages.</string>\r\n    <string name=\"cant_open\">Can\\'t open the file \\\"%s\\\".</string>\r\n    <string name=\"at_literal\">\\@home is the default tag</string>\r\n    <string name=\"alias\">@string/welcome</string>\r\n    <string name=\"theme_ref\">?android:attr/textColorPrimary</string>\r\n    <string name=\"styled\">Tap <b>Save</b> to keep <i>your</i> changes.</string>\r\n    <string name=\"placeholder\">Signed in as <xliff:g id=\"user\" example=\"Ana\">%1$s</xliff:g>.</string>\r\n    <string name=\"html_cdata\"><![CDATA[Read the <a href=\"https://example.com/terms\">terms</a> first.]]></string>\r\n    <string name=\"quoted\">\"It's   spaced   out\"</string>\r\n    <string name=\"newline\">First line\\nSecond line</string>\r\n    <string name=\"percent\" formatted=\"false\">100% sure</string>\r\n    <string name=\"lint_ok\" tools:ignore=\"MissingTranslation\">Only in English</string>\r\n    <string name=\"empty\"></string>\r\n    <plurals name=\"songs\">\r\n        <item quantity=\"one\">%d song found.</item>\r\n        <item quantity=\"other\">%d songs found.</item>\r\n    </plurals>\r\n    <plurals name=\"files\">\r\n        <item quantity=\"one\">%d file</item>\r\n        <item quantity=\"few\">%d files (few)</item>\r\n        <item quantity=\"many\">%d files (many)</item>\r\n        <item quantity=\"other\">%d files</item>\r\n    </plurals>\r\n    <string-array name=\"planets\">\r\n        <item>Mercury</item>\r\n        <item>Venus</item>\r\n    </string-array>\r\n    <string-array name=\"codes\" translatable=\"false\">\r\n        <item>MRC</item>\r\n    </string-array>\r\n    <color name=\"accent\">#FF4081</color>\r\n    <dimen name=\"pad\">16dp</dimen>\r\n</resources>\r\n",
+  "units": [
+   "Welcome, %1$s! You have %2$d new messages.",
+   "Can't open the file \"%s\".",
+   "@home is the default tag",
+   "Tap ⟦g1⟧Save⟦/g1⟧ to keep ⟦g2⟧your⟦/g2⟧ changes.",
+   "Signed in as ⟦x1⟧.",
+   "Read the <a href=\"https://example.com/terms\">terms</a> first.",
+   "It's   spaced   out",
+   "First line\\nSecond line",
+   "100% sure",
+   "Only in English",
+   "%d song found.",
+   "%d songs found.",
+   "%d file",
+   "%d files (few)",
+   "%d files (many)",
+   "%d files",
+   "Mercury",
+   "Venus"
+  ],
+  "translations": [
+   "Zq'\"& Welcome, %1$s! You have %2$d new messages. <ok>",
+   "Zq'\"& Can't open the file \"%s\". <ok>",
+   "Zq'\"& @home is the default tag <ok>",
+   "Zq'\"& Tap ⟦g1⟧Save⟦/g1⟧ to keep ⟦g2⟧your⟦/g2⟧ changes. <ok>",
+   "Zq'\"& Signed in as ⟦x1⟧. <ok>",
+   "Zq'\"& Read the <a href=\"https://example.com/terms\">terms</a> first. <ok>",
+   "Zq'\"& It's   spaced   out <ok>",
+   "Zq'\"& First line\\nSecond line <ok>",
+   "Zq'\"& 100% sure <ok>",
+   "Zq'\"& Only in English <ok>",
+   "Zq'\"& %d song found. <ok>",
+   "Zq'\"& %d songs found. <ok>",
+   "Zq'\"& %d file <ok>",
+   "Zq'\"& %d files (few) <ok>",
+   "Zq'\"& %d files (many) <ok>",
+   "Zq'\"& %d files <ok>",
+   "Zq'\"& Mercury <ok>",
+   "Zq'\"& Venus <ok>"
+  ],
+  "built": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\r\n<resources xmlns:tools=\"http://schemas.android.com/tools\" xmlns:xliff=\"urn:oasis:names:tc:xliff:document:1.2\">\r\n    <!-- App name shown in the launcher -->\r\n    <string name=\"app_name\" translatable=\"false\">Northwind</string>\r\n    <string name=\"welcome\">Zq\\'\\\"&amp; Welcome, %1$s! You have %2$d new messages. &lt;ok&gt;</string>\r\n    <string name=\"cant_open\">Zq\\'\\\"&amp; Can\\'t open the file \\\"%s\\\". &lt;ok&gt;</string>\r\n    <string name=\"at_literal\">Zq\\'\\\"&amp; @home is the default tag &lt;ok&gt;</string>\r\n    <string name=\"alias\">@string/welcome</string>\r\n    <string name=\"theme_ref\">?android:attr/textColorPrimary</string>\r\n    <string name=\"styled\">Zq\\'\\\"&amp; Tap <b>Save</b> to keep <i>your</i> changes. &lt;ok&gt;</string>\r\n    <string name=\"placeholder\">Zq\\'\\\"&amp; Signed in as <xliff:g id=\"user\" example=\"Ana\">%1$s</xliff:g>. &lt;ok&gt;</string>\r\n    <string name=\"html_cdata\"><![CDATA[Zq\\'\\\"& Read the <a href=\\\"https://example.com/terms\\\">terms</a> first. <ok>]]></string>\r\n    <string name=\"quoted\">\"Zq\\'\\\"&amp; It\\'s   spaced   out &lt;ok&gt;\"</string>\r\n    <string name=\"newline\">Zq\\'\\\"&amp; First line\\nSecond line &lt;ok&gt;</string>\r\n    <string name=\"percent\" formatted=\"false\">Zq\\'\\\"&amp; 100% sure &lt;ok&gt;</string>\r\n    <string name=\"lint_ok\" tools:ignore=\"MissingTranslation\">Zq\\'\\\"&amp; Only in English &lt;ok&gt;</string>\r\n    <string name=\"empty\"></string>\r\n    <plurals name=\"songs\">\r\n        <item quantity=\"one\">Zq\\'\\\"&amp; %d song found. &lt;ok&gt;</item>\r\n        <item quantity=\"other\">Zq\\'\\\"&amp; %d songs found. &lt;ok&gt;</item>\r\n    </plurals>\r\n    <plurals name=\"files\">\r\n        <item quantity=\"one\">Zq\\'\\\"&amp; %d file &lt;ok&gt;</item>\r\n        <item quantity=\"few\">Zq\\'\\\"&amp; %d files (few) &lt;ok&gt;</item>\r\n        <item quantity=\"many\">Zq\\'\\\"&amp; %d files (many) &lt;ok&gt;</item>\r\n        <item quantity=\"other\">Zq\\'\\\"&amp; %d files &lt;ok&gt;</item>\r\n    </plurals>\r\n    <string-array name=\"planets\">\r\n        <item>Zq\\'\\\"&amp; Mercury &lt;ok&gt;</item>\r\n        <item>Zq\\'\\\"&amp; Venus &lt;ok&gt;</item>\r\n    </string-array>\r\n    <string-array name=\"codes\" translatable=\"false\">\r\n        <item>MRC</item>\r\n    </string-array>\r\n    <color name=\"accent\">#FF4081</color>\r\n    <dimen name=\"pad\">16dp</dimen>\r\n</resources>\r\n",
+  "identity": true,
+  "built_pl": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\r\n<resources xmlns:tools=\"http://schemas.android.com/tools\" xmlns:xliff=\"urn:oasis:names:tc:xliff:document:1.2\">\r\n    <!-- App name shown in the launcher -->\r\n    <string name=\"app_name\" translatable=\"false\">Northwind</string>\r\n    <string name=\"welcome\">Zq\\'\\\"&amp; Welcome, %1$s! You have %2$d new messages. &lt;ok&gt;</string>\r\n    <string name=\"cant_open\">Zq\\'\\\"&amp; Can\\'t open the file \\\"%s\\\". &lt;ok&gt;</string>\r\n    <string name=\"at_literal\">Zq\\'\\\"&amp; @home is the default tag &lt;ok&gt;</string>\r\n    <string name=\"alias\">@string/welcome</string>\r\n    <string name=\"theme_ref\">?android:attr/textColorPrimary</string>\r\n    <string name=\"styled\">Zq\\'\\\"&amp; Tap <b>Save</b> to keep <i>your</i> changes. &lt;ok&gt;</string>\r\n    <string name=\"placeholder\">Zq\\'\\\"&amp; Signed in as <xliff:g id=\"user\" example=\"Ana\">%1$s</xliff:g>. &lt;ok&gt;</string>\r\n    <string name=\"html_cdata\"><![CDATA[Zq\\'\\\"& Read the <a href=\\\"https://example.com/terms\\\">terms</a> first. <ok>]]></string>\r\n    <string name=\"quoted\">\"Zq\\'\\\"&amp; It\\'s   spaced   out &lt;ok&gt;\"</string>\r\n    <string name=\"newline\">Zq\\'\\\"&amp; First line\\nSecond line &lt;ok&gt;</string>\r\n    <string name=\"percent\" formatted=\"false\">Zq\\'\\\"&amp; 100% sure &lt;ok&gt;</string>\r\n    <string name=\"lint_ok\" tools:ignore=\"MissingTranslation\">Zq\\'\\\"&amp; Only in English &lt;ok&gt;</string>\r\n    <string name=\"empty\"></string>\r\n    <plurals name=\"songs\">\r\n        <item quantity=\"one\">Zq\\'\\\"&amp; %d song found. &lt;ok&gt;</item>\r\n        <item quantity=\"other\">Zq\\'\\\"&amp; %d songs found. &lt;ok&gt;</item>\r\n        <item quantity=\"few\">Zq\\'\\\"&amp; %d songs found. &lt;ok&gt;</item>\r\n        <item quantity=\"many\">Zq\\'\\\"&amp; %d songs found. &lt;ok&gt;</item>\r\n    </plurals>\r\n    <plurals name=\"files\">\r\n        <item quantity=\"one\">Zq\\'\\\"&amp; %d file &lt;ok&gt;</item>\r\n        <item quantity=\"few\">Zq\\'\\\"&amp; %d files (few) &lt;ok&gt;</item>\r\n        <item quantity=\"many\">Zq\\'\\\"&amp; %d files (many) &lt;ok&gt;</item>\r\n        <item quantity=\"other\">Zq\\'\\\"&amp; %d files &lt;ok&gt;</item>\r\n    </plurals>\r\n    <string-array name=\"planets\">\r\n        <item>Zq\\'\\\"&amp; Mercury &lt;ok&gt;</item>\r\n        <item>Zq\\'\\\"&amp; Venus &lt;ok&gt;</item>\r\n    </string-array>\r\n    <string-array name=\"codes\" translatable=\"false\">\r\n        <item>MRC</item>\r\n    </string-array>\r\n    <color name=\"accent\">#FF4081</color>\r\n    <dimen name=\"pad\">16dp</dimen>\r\n</resources>\r\n",
+  "built_ja": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\r\n<resources xmlns:tools=\"http://schemas.android.com/tools\" xmlns:xliff=\"urn:oasis:names:tc:xliff:document:1.2\">\r\n    <!-- App name shown in the launcher -->\r\n    <string name=\"app_name\" translatable=\"false\">Northwind</string>\r\n    <string name=\"welcome\">Zq\\'\\\"&amp; Welcome, %1$s! You have %2$d new messages. &lt;ok&gt;</string>\r\n    <string name=\"cant_open\">Zq\\'\\\"&amp; Can\\'t open the file \\\"%s\\\". &lt;ok&gt;</string>\r\n    <string name=\"at_literal\">Zq\\'\\\"&amp; @home is the default tag &lt;ok&gt;</string>\r\n    <string name=\"alias\">@string/welcome</string>\r\n    <string name=\"theme_ref\">?android:attr/textColorPrimary</string>\r\n    <string name=\"styled\">Zq\\'\\\"&amp; Tap <b>Save</b> to keep <i>your</i> changes. &lt;ok&gt;</string>\r\n    <string name=\"placeholder\">Zq\\'\\\"&amp; Signed in as <xliff:g id=\"user\" example=\"Ana\">%1$s</xliff:g>. &lt;ok&gt;</string>\r\n    <string name=\"html_cdata\"><![CDATA[Zq\\'\\\"& Read the <a href=\\\"https://example.com/terms\\\">terms</a> first. <ok>]]></string>\r\n    <string name=\"quoted\">\"Zq\\'\\\"&amp; It\\'s   spaced   out &lt;ok&gt;\"</string>\r\n    <string name=\"newline\">Zq\\'\\\"&amp; First line\\nSecond line &lt;ok&gt;</string>\r\n    <string name=\"percent\" formatted=\"false\">Zq\\'\\\"&amp; 100% sure &lt;ok&gt;</string>\r\n    <string name=\"lint_ok\" tools:ignore=\"MissingTranslation\">Zq\\'\\\"&amp; Only in English &lt;ok&gt;</string>\r\n    <string name=\"empty\"></string>\r\n    <plurals name=\"songs\">\r\n        <item quantity=\"other\">Zq\\'\\\"&amp; %d songs found. &lt;ok&gt;</item>\r\n    </plurals>\r\n    <plurals name=\"files\">\r\n        <item quantity=\"other\">Zq\\'\\\"&amp; %d files &lt;ok&gt;</item>\r\n    </plurals>\r\n    <string-array name=\"planets\">\r\n        <item>Zq\\'\\\"&amp; Mercury &lt;ok&gt;</item>\r\n        <item>Zq\\'\\\"&amp; Venus &lt;ok&gt;</item>\r\n    </string-array>\r\n    <string-array name=\"codes\" translatable=\"false\">\r\n        <item>MRC</item>\r\n    </string-array>\r\n    <color name=\"accent\">#FF4081</color>\r\n    <dimen name=\"pad\">16dp</dimen>\r\n</resources>\r\n"
+ },
+ "messages.xml": {
+  "input": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\r\n<!DOCTYPE properties SYSTEM \"http://java.sun.com/dtd/properties.dtd\">\r\n<properties>\r\n<comment>Hand-written fixture for Localization OS</comment>\r\n<entry key=\"greeting\">Hello {0}, it''s {1,date,long}.</entry>\r\n<entry key=\"farewell\">Goodbye &amp; thanks</entry>\r\n<entry key=\"build.id\">4.2.0</entry>\r\n</properties>\r\n",
+  "units": [
+   "Hello {0}, it's {1,date,long}.",
+   "Goodbye & thanks",
+   "4.2.0"
+  ],
+  "translations": [
+   "Zq'\"& Hello {0}, it's {1,date,long}. <ok>",
+   "Zq'\"& Goodbye & thanks <ok>",
+   "Zq'\"& 4.2.0 <ok>"
+  ],
+  "built": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\r\n<!DOCTYPE properties SYSTEM \"http://java.sun.com/dtd/properties.dtd\">\r\n<properties>\r\n<comment>Hand-written fixture for Localization OS</comment>\r\n<entry key=\"greeting\">Zq''\"&amp; Hello {0}, it''s {1,date,long}. &lt;ok&gt;</entry>\r\n<entry key=\"farewell\">Zq'\"&amp; Goodbye &amp; thanks &lt;ok&gt;</entry>\r\n<entry key=\"build.id\">Zq'\"&amp; 4.2.0 &lt;ok&gt;</entry>\r\n</properties>\r\n",
+  "identity": true
+ },
+ "breaks_706.xml": {
+  "input": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<resources>\n    <string name=\"two\">Your download is complete.\\nOpen the file.</string>\n    <string name=\"kept\">One\\nTwo</string>\n    <string name=\"plain\">No break here.</string>\n    <plurals name=\"left\">\n        <item quantity=\"one\">%d file left.\\nKeep going.</item>\n        <item quantity=\"other\">%d files left.\\nKeep going.</item>\n    </plurals>\n</resources>\n",
+  "units": [
+   "Your download is complete.\\nOpen the file.",
+   "One\\nTwo",
+   "No break here.",
+   "%d file left.\\nKeep going.",
+   "%d files left.\\nKeep going."
+  ],
+  "translations": [
+   "Zq'\"& Your download is complete.\\nOpen the file. <ok>",
+   "Zq'\"& One\\nTwo <ok>",
+   "Zq'\"& No break here. <ok>",
+   "Zq'\"& %d file left.\\nKeep going. <ok>",
+   "Zq'\"& %d files left.\\nKeep going. <ok>"
+  ],
+  "built": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<resources>\n    <string name=\"two\">Zq\\'\\\"&amp; Your download is complete.\\nOpen the file. &lt;ok&gt;</string>\n    <string name=\"kept\">Zq\\'\\\"&amp; One\\nTwo &lt;ok&gt;</string>\n    <string name=\"plain\">Zq\\'\\\"&amp; No break here. &lt;ok&gt;</string>\n    <plurals name=\"left\">\n        <item quantity=\"one\">Zq\\'\\\"&amp; %d file left.\\nKeep going. &lt;ok&gt;</item>\n        <item quantity=\"other\">Zq\\'\\\"&amp; %d files left.\\nKeep going. &lt;ok&gt;</item>\n    </plurals>\n</resources>\n",
+  "identity": true,
+  "built_pl": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<resources>\n    <string name=\"two\">Zq\\'\\\"&amp; Your download is complete.\\nOpen the file. &lt;ok&gt;</string>\n    <string name=\"kept\">Zq\\'\\\"&amp; One\\nTwo &lt;ok&gt;</string>\n    <string name=\"plain\">Zq\\'\\\"&amp; No break here. &lt;ok&gt;</string>\n    <plurals name=\"left\">\n        <item quantity=\"one\">Zq\\'\\\"&amp; %d file left.\\nKeep going. &lt;ok&gt;</item>\n        <item quantity=\"other\">Zq\\'\\\"&amp; %d files left.\\nKeep going. &lt;ok&gt;</item>\n        <item quantity=\"few\">Zq\\'\\\"&amp; %d files left.\\nKeep going. &lt;ok&gt;</item>\n        <item quantity=\"many\">Zq\\'\\\"&amp; %d files left.\\nKeep going. &lt;ok&gt;</item>\n    </plurals>\n</resources>\n",
+  "built_ja": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<resources>\n    <string name=\"two\">Zq\\'\\\"&amp; Your download is complete.\\nOpen the file. &lt;ok&gt;</string>\n    <string name=\"kept\">Zq\\'\\\"&amp; One\\nTwo &lt;ok&gt;</string>\n    <string name=\"plain\">Zq\\'\\\"&amp; No break here. &lt;ok&gt;</string>\n    <plurals name=\"left\">\n        <item quantity=\"other\">Zq\\'\\\"&amp; %d files left.\\nKeep going. &lt;ok&gt;</item>\n    </plurals>\n</resources>\n"
+ },
+ "crlf_plurals.xml": {
+  "input": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\r\n<resources xmlns:xliff=\"urn:oasis:names:tc:xliff:document:1.2\">\r\n  <plurals name=\"apples\">\r\n    <item quantity=\"one\">%d apple</item>\r\n    <item quantity=\"other\">%d apples</item>\r\n  </plurals>\r\n  <plurals name=\"off\" translatable=\"false\">\r\n    <item quantity=\"one\">x</item>\r\n    <item quantity=\"other\">xs</item>\r\n  </plurals>\r\n  <plurals name=\"inline\"><item quantity=\"one\">one</item><item quantity=\"two\">two</item><item quantity=\"other\">many</item></plurals>\r\n</resources>\r\n",
+  "units": [
+   "%d apple",
+   "%d apples",
+   "one",
+   "two",
+   "many"
+  ],
+  "translations": [
+   "Zq'\"& %d apple <ok>",
+   "Zq'\"& %d apples <ok>",
+   "Zq'\"& one <ok>",
+   "Zq'\"& two <ok>",
+   "Zq'\"& many <ok>"
+  ],
+  "built": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\r\n<resources xmlns:xliff=\"urn:oasis:names:tc:xliff:document:1.2\">\r\n  <plurals name=\"apples\">\r\n    <item quantity=\"one\">Zq\\'\\\"&amp; %d apple &lt;ok&gt;</item>\r\n    <item quantity=\"other\">Zq\\'\\\"&amp; %d apples &lt;ok&gt;</item>\r\n  </plurals>\r\n  <plurals name=\"off\" translatable=\"false\">\r\n    <item quantity=\"one\">x</item>\r\n    <item quantity=\"other\">xs</item>\r\n  </plurals>\r\n  <plurals name=\"inline\"><item quantity=\"one\">Zq\\'\\\"&amp; one &lt;ok&gt;</item><item quantity=\"two\">Zq\\'\\\"&amp; two &lt;ok&gt;</item><item quantity=\"other\">Zq\\'\\\"&amp; many &lt;ok&gt;</item></plurals>\r\n</resources>\r\n",
+  "identity": true,
+  "built_pl": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\r\n<resources xmlns:xliff=\"urn:oasis:names:tc:xliff:document:1.2\">\r\n  <plurals name=\"apples\">\r\n    <item quantity=\"one\">Zq\\'\\\"&amp; %d apple &lt;ok&gt;</item>\r\n    <item quantity=\"other\">Zq\\'\\\"&amp; %d apples &lt;ok&gt;</item>\r\n    <item quantity=\"few\">Zq\\'\\\"&amp; %d apples &lt;ok&gt;</item>\r\n    <item quantity=\"many\">Zq\\'\\\"&amp; %d apples &lt;ok&gt;</item>\r\n  </plurals>\r\n  <plurals name=\"off\" translatable=\"false\">\r\n    <item quantity=\"one\">x</item>\r\n    <item quantity=\"other\">xs</item>\r\n  </plurals>\r\n  <plurals name=\"inline\"><item quantity=\"one\">Zq\\'\\\"&amp; one &lt;ok&gt;</item><item quantity=\"other\">Zq\\'\\\"&amp; many &lt;ok&gt;</item><item quantity=\"few\">Zq\\'\\\"&amp; many &lt;ok&gt;</item><item quantity=\"many\">Zq\\'\\\"&amp; many &lt;ok&gt;</item></plurals>\r\n</resources>\r\n",
+  "built_ja": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\r\n<resources xmlns:xliff=\"urn:oasis:names:tc:xliff:document:1.2\">\r\n  <plurals name=\"apples\">\r\n    <item quantity=\"other\">Zq\\'\\\"&amp; %d apples &lt;ok&gt;</item>\r\n  </plurals>\r\n  <plurals name=\"off\" translatable=\"false\">\r\n    <item quantity=\"one\">x</item>\r\n    <item quantity=\"other\">xs</item>\r\n  </plurals>\r\n  <plurals name=\"inline\"><item quantity=\"other\">Zq\\'\\\"&amp; many &lt;ok&gt;</item></plurals>\r\n</resources>\r\n"
+ },
+ "inline.xml": {
+  "input": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<resources xmlns:xliff=\"urn:oasis:names:tc:xliff:document:1.2\">\n    <string name=\"nested\">Use <b>bold <i>and italic</i></b> here.</string>\n    <string name=\"br\">Line<br/>break</string>\n    <string name=\"lead_ph\"><xliff:g id=\"n\">%1$d</xliff:g> items left</string>\n    <string name=\"comment\">Before <!-- a note --> after</string>\n    <string name=\"only_tag\"><b> </b></string>\n    <string name=\"link\">Read <a href=\"https://example.com/?a=1&amp;b=2\">the terms</a>.</string>\n</resources>\n",
+  "units": [
+   "Use ⟦g1⟧bold ⟦g2⟧and italic⟦/g2⟧⟦/g1⟧ here.",
+   "Line⟦g1⟧⟦/g1⟧break",
+   "⟦x1⟧ items left",
+   "Before ⟦x1⟧ after",
+   "⟦g1⟧ ⟦/g1⟧",
+   "Read ⟦g1⟧the terms⟦/g1⟧."
+  ],
+  "translations": [
+   "Zq'\"& Use ⟦g1⟧bold ⟦g2⟧and italic⟦/g2⟧⟦/g1⟧ here. <ok>",
+   "Zq'\"& Line⟦g1⟧⟦/g1⟧break <ok>",
+   "Zq'\"& ⟦x1⟧ items left <ok>",
+   "Zq'\"& Before ⟦x1⟧ after <ok>",
+   "Zq'\"& ⟦g1⟧ ⟦/g1⟧ <ok>",
+   "Zq'\"& Read ⟦g1⟧the terms⟦/g1⟧. <ok>"
+  ],
+  "built": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<resources xmlns:xliff=\"urn:oasis:names:tc:xliff:document:1.2\">\n    <string name=\"nested\">Zq\\'\\\"&amp; Use <b>bold <i>and italic</i></b> here. &lt;ok&gt;</string>\n    <string name=\"br\">Zq\\'\\\"&amp; Line<br/>break &lt;ok&gt;</string>\n    <string name=\"lead_ph\">Zq\\'\\\"&amp; <xliff:g id=\"n\">%1$d</xliff:g> items left &lt;ok&gt;</string>\n    <string name=\"comment\">Zq\\'\\\"&amp; Before <!-- a note --> after &lt;ok&gt;</string>\n    <string name=\"only_tag\">Zq\\'\\\"&amp; <b> </b> &lt;ok&gt;</string>\n    <string name=\"link\">Zq\\'\\\"&amp; Read <a href=\"https://example.com/?a=1&amp;b=2\">the terms</a>. &lt;ok&gt;</string>\n</resources>\n",
+  "identity": true,
+  "built_pl": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<resources xmlns:xliff=\"urn:oasis:names:tc:xliff:document:1.2\">\n    <string name=\"nested\">Zq\\'\\\"&amp; Use <b>bold <i>and italic</i></b> here. &lt;ok&gt;</string>\n    <string name=\"br\">Zq\\'\\\"&amp; Line<br/>break &lt;ok&gt;</string>\n    <string name=\"lead_ph\">Zq\\'\\\"&amp; <xliff:g id=\"n\">%1$d</xliff:g> items left &lt;ok&gt;</string>\n    <string name=\"comment\">Zq\\'\\\"&amp; Before <!-- a note --> after &lt;ok&gt;</string>\n    <string name=\"only_tag\">Zq\\'\\\"&amp; <b> </b> &lt;ok&gt;</string>\n    <string name=\"link\">Zq\\'\\\"&amp; Read <a href=\"https://example.com/?a=1&amp;b=2\">the terms</a>. &lt;ok&gt;</string>\n</resources>\n",
+  "built_ja": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<resources xmlns:xliff=\"urn:oasis:names:tc:xliff:document:1.2\">\n    <string name=\"nested\">Zq\\'\\\"&amp; Use <b>bold <i>and italic</i></b> here. &lt;ok&gt;</string>\n    <string name=\"br\">Zq\\'\\\"&amp; Line<br/>break &lt;ok&gt;</string>\n    <string name=\"lead_ph\">Zq\\'\\\"&amp; <xliff:g id=\"n\">%1$d</xliff:g> items left &lt;ok&gt;</string>\n    <string name=\"comment\">Zq\\'\\\"&amp; Before <!-- a note --> after &lt;ok&gt;</string>\n    <string name=\"only_tag\">Zq\\'\\\"&amp; <b> </b> &lt;ok&gt;</string>\n    <string name=\"link\">Zq\\'\\\"&amp; Read <a href=\"https://example.com/?a=1&amp;b=2\">the terms</a>. &lt;ok&gt;</string>\n</resources>\n"
+ },
+ "escapes.xml": {
+  "input": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<resources xmlns:xliff=\"urn:oasis:names:tc:xliff:document:1.2\">\n    <string name=\"amp\">Fish &amp; chips &lt;b&gt; &#233;t&#xE9;</string>\n    <string name=\"pad\">   padded value   </string>\n    <string name=\"quoted_pad\">\"  quoted, with spaces  \"</string>\n    <string name=\"q_cdata\"><![CDATA[\"Don't stop\"]]></string>\n    <string name=\"at\">\\@start and \\?q</string>\n    <string name=\"tail_bs\">ends with a backslash \\\\</string>\n    <string name=\"unicode\">\\u00e9 stays as typed \\t tab</string>\n    <string name=\"ref2\">@android:string/ok</string>\n    <string name=\"digits\">12345</string>\n    <string name=\"multi\">first line\n        second line</string>\n</resources>\n",
+  "units": [
+   "Fish & chips <b> été",
+   "padded value",
+   "quoted, with spaces",
+   "Don't stop",
+   "@start and ?q",
+   "ends with a backslash \\\\",
+   "\\u00e9 stays as typed \\t tab",
+   "12345",
+   "first line\n        second line"
+  ],
+  "translations": [
+   "Zq'\"& Fish & chips <b> été <ok>",
+   "Zq'\"& padded value <ok>",
+   "Zq'\"& quoted, with spaces <ok>",
+   "Zq'\"& Don't stop <ok>",
+   "Zq'\"& @start and ?q <ok>",
+   "Zq'\"& ends with a backslash \\\\ <ok>",
+   "Zq'\"& \\u00e9 stays as typed \\t tab <ok>",
+   "Zq'\"& 12345 <ok>",
+   "Zq'\"& first line\n        second line <ok>"
+  ],
+  "built": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<resources xmlns:xliff=\"urn:oasis:names:tc:xliff:document:1.2\">\n    <string name=\"amp\">Zq\\'\\\"&amp; Fish &amp; chips &lt;b&gt; été &lt;ok&gt;</string>\n    <string name=\"pad\">   Zq\\'\\\"&amp; padded value &lt;ok&gt;   </string>\n    <string name=\"quoted_pad\">\"  Zq\\'\\\"&amp; quoted, with spaces &lt;ok&gt;  \"</string>\n    <string name=\"q_cdata\"><![CDATA[\"Zq\\'\\\"& Don\\'t stop <ok>\"]]></string>\n    <string name=\"at\">Zq\\'\\\"&amp; @start and ?q &lt;ok&gt;</string>\n    <string name=\"tail_bs\">Zq\\'\\\"&amp; ends with a backslash \\\\ &lt;ok&gt;</string>\n    <string name=\"unicode\">Zq\\'\\\"&amp; \\u00e9 stays as typed \\t tab &lt;ok&gt;</string>\n    <string name=\"ref2\">@android:string/ok</string>\n    <string name=\"digits\">Zq\\'\\\"&amp; 12345 &lt;ok&gt;</string>\n    <string name=\"multi\">Zq\\'\\\"&amp; first line\n        second line &lt;ok&gt;</string>\n</resources>\n",
+  "identity": true,
+  "built_pl": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<resources xmlns:xliff=\"urn:oasis:names:tc:xliff:document:1.2\">\n    <string name=\"amp\">Zq\\'\\\"&amp; Fish &amp; chips &lt;b&gt; été &lt;ok&gt;</string>\n    <string name=\"pad\">   Zq\\'\\\"&amp; padded value &lt;ok&gt;   </string>\n    <string name=\"quoted_pad\">\"  Zq\\'\\\"&amp; quoted, with spaces &lt;ok&gt;  \"</string>\n    <string name=\"q_cdata\"><![CDATA[\"Zq\\'\\\"& Don\\'t stop <ok>\"]]></string>\n    <string name=\"at\">Zq\\'\\\"&amp; @start and ?q &lt;ok&gt;</string>\n    <string name=\"tail_bs\">Zq\\'\\\"&amp; ends with a backslash \\\\ &lt;ok&gt;</string>\n    <string name=\"unicode\">Zq\\'\\\"&amp; \\u00e9 stays as typed \\t tab &lt;ok&gt;</string>\n    <string name=\"ref2\">@android:string/ok</string>\n    <string name=\"digits\">Zq\\'\\\"&amp; 12345 &lt;ok&gt;</string>\n    <string name=\"multi\">Zq\\'\\\"&amp; first line\n        second line &lt;ok&gt;</string>\n</resources>\n",
+  "built_ja": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<resources xmlns:xliff=\"urn:oasis:names:tc:xliff:document:1.2\">\n    <string name=\"amp\">Zq\\'\\\"&amp; Fish &amp; chips &lt;b&gt; été &lt;ok&gt;</string>\n    <string name=\"pad\">   Zq\\'\\\"&amp; padded value &lt;ok&gt;   </string>\n    <string name=\"quoted_pad\">\"  Zq\\'\\\"&amp; quoted, with spaces &lt;ok&gt;  \"</string>\n    <string name=\"q_cdata\"><![CDATA[\"Zq\\'\\\"& Don\\'t stop <ok>\"]]></string>\n    <string name=\"at\">Zq\\'\\\"&amp; @start and ?q &lt;ok&gt;</string>\n    <string name=\"tail_bs\">Zq\\'\\\"&amp; ends with a backslash \\\\ &lt;ok&gt;</string>\n    <string name=\"unicode\">Zq\\'\\\"&amp; \\u00e9 stays as typed \\t tab &lt;ok&gt;</string>\n    <string name=\"ref2\">@android:string/ok</string>\n    <string name=\"digits\">Zq\\'\\\"&amp; 12345 &lt;ok&gt;</string>\n    <string name=\"multi\">Zq\\'\\\"&amp; first line\n        second line &lt;ok&gt;</string>\n</resources>\n"
+ },
+ "arrays.xml": {
+  "input": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<resources xmlns:xliff=\"urn:oasis:names:tc:xliff:document:1.2\">\n    <!-- Planet names -->\n    <string-array name=\"planets\"><item>Mercury</item><item>Venus</item><item>@string/earth</item></string-array>\n    <string-array name=\"codes\" translatable=\"false\"><item>MRC</item></string-array>\n    <string name=\"after\">After the arrays</string>\n</resources>\n",
+  "units": [
+   "Mercury",
+   "Venus",
+   "After the arrays"
+  ],
+  "translations": [
+   "Zq'\"& Mercury <ok>",
+   "Zq'\"& Venus <ok>",
+   "Zq'\"& After the arrays <ok>"
+  ],
+  "built": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<resources xmlns:xliff=\"urn:oasis:names:tc:xliff:document:1.2\">\n    <!-- Planet names -->\n    <string-array name=\"planets\"><item>Zq\\'\\\"&amp; Mercury &lt;ok&gt;</item><item>Zq\\'\\\"&amp; Venus &lt;ok&gt;</item><item>@string/earth</item></string-array>\n    <string-array name=\"codes\" translatable=\"false\"><item>MRC</item></string-array>\n    <string name=\"after\">Zq\\'\\\"&amp; After the arrays &lt;ok&gt;</string>\n</resources>\n",
+  "identity": true,
+  "built_pl": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<resources xmlns:xliff=\"urn:oasis:names:tc:xliff:document:1.2\">\n    <!-- Planet names -->\n    <string-array name=\"planets\"><item>Zq\\'\\\"&amp; Mercury &lt;ok&gt;</item><item>Zq\\'\\\"&amp; Venus &lt;ok&gt;</item><item>@string/earth</item></string-array>\n    <string-array name=\"codes\" translatable=\"false\"><item>MRC</item></string-array>\n    <string name=\"after\">Zq\\'\\\"&amp; After the arrays &lt;ok&gt;</string>\n</resources>\n",
+  "built_ja": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<resources xmlns:xliff=\"urn:oasis:names:tc:xliff:document:1.2\">\n    <!-- Planet names -->\n    <string-array name=\"planets\"><item>Zq\\'\\\"&amp; Mercury &lt;ok&gt;</item><item>Zq\\'\\\"&amp; Venus &lt;ok&gt;</item><item>@string/earth</item></string-array>\n    <string-array name=\"codes\" translatable=\"false\"><item>MRC</item></string-array>\n    <string name=\"after\">Zq\\'\\\"&amp; After the arrays &lt;ok&gt;</string>\n</resources>\n"
+ },
+ "ja_utf8_bom.xml": {
+  "input": "﻿<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<resources xmlns:xliff=\"urn:oasis:names:tc:xliff:document:1.2\">\n    <string name=\"hi\">こんにちは、%1$s さん</string>\n</resources>\n",
+  "units": [
+   "こんにちは、%1$s さん"
+  ],
+  "translations": [
+   "Zq'\"& こんにちは、%1$s さん <ok>"
+  ],
+  "built": "﻿<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<resources xmlns:xliff=\"urn:oasis:names:tc:xliff:document:1.2\">\n    <string name=\"hi\">Zq\\'\\\"&amp; こんにちは、%1$s さん &lt;ok&gt;</string>\n</resources>\n",
+  "identity": true,
+  "built_pl": "﻿<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<resources xmlns:xliff=\"urn:oasis:names:tc:xliff:document:1.2\">\n    <string name=\"hi\">Zq\\'\\\"&amp; こんにちは、%1$s さん &lt;ok&gt;</string>\n</resources>\n",
+  "built_ja": "﻿<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<resources xmlns:xliff=\"urn:oasis:names:tc:xliff:document:1.2\">\n    <string name=\"hi\">Zq\\'\\\"&amp; こんにちは、%1$s さん &lt;ok&gt;</string>\n</resources>\n"
+ },
+ "java_more.xml": {
+  "input": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n<!DOCTYPE properties SYSTEM \"http://java.sun.com/dtd/properties.dtd\">\n<properties>\n<entry key=\"plain\">Don't worry</entry>\n<entry key=\"args\">{0} can''t open {1}</entry>\n<entry key=\"cdata\"><![CDATA[Save & <close>]]></entry>\n<entry key=\"empty\"></entry>\n<entry key=\"pad\">  spaced  </entry>\n</properties>\n",
+  "units": [
+   "Don't worry",
+   "{0} can't open {1}",
+   "Save & <close>",
+   "spaced"
+  ],
+  "translations": [
+   "Zq'\"& Don't worry <ok>",
+   "Zq'\"& {0} can't open {1} <ok>",
+   "Zq'\"& Save & <close> <ok>",
+   "Zq'\"& spaced <ok>"
+  ],
+  "built": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n<!DOCTYPE properties SYSTEM \"http://java.sun.com/dtd/properties.dtd\">\n<properties>\n<entry key=\"plain\">Zq'\"&amp; Don't worry &lt;ok&gt;</entry>\n<entry key=\"args\">Zq''\"&amp; {0} can''t open {1} &lt;ok&gt;</entry>\n<entry key=\"cdata\"><![CDATA[Zq'\"& Save & <close> <ok>]]></entry>\n<entry key=\"empty\"></entry>\n<entry key=\"pad\">  Zq'\"&amp; spaced &lt;ok&gt;  </entry>\n</properties>\n",
+  "identity": true
+ }
+}

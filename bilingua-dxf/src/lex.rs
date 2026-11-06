@@ -372,22 +372,58 @@ pub fn render(target: &[Inline], codes: &BTreeMap<String, CodeData>, kind: Kind)
         }
     }
     let mut out = String::new();
+    // What to write after an open-ended code before anything follows it (see `open_end`).
+    let mut seal: Option<&'static str> = None;
+    let mut piece = String::new();
     for i in target {
+        piece.clear();
+        let mut code = None;
         match i {
-            Inline::Text(t) => escape(t, kind, &mut out),
+            Inline::Text(t) => escape(t, kind, &mut piece),
             Inline::Tag { id, kind: k, .. } => {
                 let Some(c) = codes.get(id) else { continue };
                 if let Some(raw) = &c.standalone {
-                    out.push_str(raw);
+                    piece.push_str(raw);
+                    code = Some(raw.as_str());
                 } else if *k == TagKind::Open && closes.contains(id.as_str()) {
-                    out.push_str(c.open.as_deref().unwrap_or("{"));
+                    piece.push_str(c.open.as_deref().unwrap_or("{"));
                 } else if *k == TagKind::Close && opens.contains(id.as_str()) {
-                    out.push_str(c.close.as_deref().unwrap_or("}"));
+                    piece.push_str(c.close.as_deref().unwrap_or("}"));
                 }
             }
         }
+        if piece.is_empty() {
+            continue;
+        }
+        if let Some(s) = seal.take() {
+            if !piece.starts_with(char::is_whitespace) {
+                out.push_str(s);
+            }
+        }
+        out.push_str(&piece);
+        seal = code.and_then(|raw| open_end(raw, kind));
     }
     out
+}
+
+/// A code that only ended where its value ended (a lone trailing `\`, a `\A1` with no `;`) would join whatever a
+/// translation puts after it (`\` + `q` reads back as the `\q` code). What closes it then: a second `\` makes the
+/// lone backslash the escaped one it shows as, `;` ends the format code. A code at the end of the value is written as is,
+/// so untouched and normal translations keep their bytes. Kept for LocOS byte parity (its goldens pin it): before
+/// white space nothing is added, so `\` + space still reads back as the `\ ` code and an open `\A1` still runs on to
+/// the next `;` (LocOS writes the joined form everywhere).
+fn open_end(raw: &str, kind: Kind) -> Option<&'static str> {
+    if kind == Kind::Text {
+        return None;
+    }
+    if raw == "\\" {
+        return Some("\\");
+    }
+    let mut c = raw.chars();
+    if c.next() != Some('\\') || raw.ends_with(';') || raw.ends_with('\\') {
+        return None;
+    }
+    c.next().filter(|d| "ACcFfHpQTWS".contains(*d)).map(|_| ";")
 }
 
 /// Characters the code page cannot hold become `\U+XXXX` (a surrogate pair above U+FFFF), as AutoCAD writes them.

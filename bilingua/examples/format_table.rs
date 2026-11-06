@@ -11,6 +11,7 @@
 fn name(id: &str) -> Option<&'static str> {
     Some(match id {
         "adoc" => "AsciiDoc",
+        "android" => "Android string resources (strings.xml)",
         "arb" => "Flutter ARB",
         "aspx" => "ASP.NET pages and controls",
         "ass" => "Advanced SubStation Alpha and SSA subtitles",
@@ -34,6 +35,7 @@ fn name(id: &str) -> Option<&'static str> {
         "idml" => "Adobe InDesign IDML",
         "image" => "Raster images (text layer: PNG, JPEG, TIFF, BMP, GIF, WebP)",
         "ini" => "INI and Joomla language files",
+        "javaxml" => "Java XML properties",
         "js" => "JavaScript and TypeScript locale modules",
         "json" => "JSON",
         "json5" => "JSON5 and JSONC",

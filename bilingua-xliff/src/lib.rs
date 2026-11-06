@@ -239,7 +239,7 @@ pub struct XliffFilter {
 /// All XLIFF filters, specific dialects first.
 pub fn filters() -> Vec<Box<dyn Filter>> {
     vec![
-        Box::new(XliffFilter { id: "sdlxliff", exts: &["sdlxliff"], dialect: Some(Format::Sdlxliff) }),
+        Box::new(XliffFilter { id: "sdlxliff", exts: &["sdlxliff", "sdlxlf"], dialect: Some(Format::Sdlxliff) }),
         Box::new(XliffFilter { id: "mqxliff", exts: &["mqxliff"], dialect: Some(Format::Mqxliff) }),
         Box::new(XliffFilter { id: "mxliff", exts: &["mxliff"], dialect: Some(Format::Mxliff) }),
         Box::new(XliffFilter { id: "xliff", exts: &["xlf", "xliff"], dialect: None }),

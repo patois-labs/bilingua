@@ -119,9 +119,12 @@ fn every_corpus_file_round_trips() {
             Ok(again) => {
                 // A merge with a target language may fill plural forms the target needs and the source lacks
                 // (es-ES has "many", an English file does not). Those new units are not a mismatch: count only
-                // the units whose plural label the source has.
+                // the units whose plural label the source has. It may also drop the forms the target never uses
+                // (Android `<plurals>`, as LocOS: es-ES has no "two"): those are not counted on the source side.
                 let labels: BTreeSet<(Option<String>, String)> = doc.units.iter().filter_map(plural_label).collect();
-                let a = doc.units.iter().filter(|u| u.translate).count();
+                let kept: BTreeSet<(Option<String>, String)> = again.units.iter().filter_map(plural_label).collect();
+                let dropped = |u: &&bilingua::Unit| doc.format == "android" && plural_label(u).is_some_and(|l| !kept.contains(&l));
+                let a = doc.units.iter().filter(|u| u.translate).filter(|u| !dropped(u)).count();
                 let b = again.units.iter().filter(|u| u.translate && plural_label(u).is_none_or(|l| labels.contains(&l))).count();
                 if a != b {
                     failures.push(format!("{name}: reopened with {b} units, had {a}"));
