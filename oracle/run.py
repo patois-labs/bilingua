@@ -72,7 +72,7 @@ FORMATS = {
     "phtml": "Server pages", "shtml": "Server pages", "shtm": "Server pages", "stm": "Server pages", "erb": "Server pages",
     "xsl": "XSLT", "xslt": "XSLT", "pdf": "PDF", "svg": "SVG", "png": "Image", "ttml": "TTML", "dfxp": "TTML",
     "ass": "ASS", "ssa": "ASS", "scc": "SCC", "stl": "EBU STL", "stf": "STF", "sbv": "SBV", "sub": "SUB",
-    "sdlproj": "sdlproj",
+    "sdlproj": "sdlproj", "mqxlz": "memoQ package", "sdlppx": "Trados package", "sdlrpx": "Trados package",
 }
 ORDER = ["DOCX", "XLSX", "PPTX", "HTML", "Markdown", "JSON", "PO", "SRT", "VTT", "TXT",
          "ARB", "DTD", "Fluent", "INI", "Properties", "Apple .strings", "TOML", "YAML", "RESX", "RESJSON", "JSON5", "WXL",
@@ -81,7 +81,7 @@ ORDER = ["DOCX", "XLSX", "PPTX", "HTML", "Markdown", "JSON", "PO", "SRT", "VTT",
          "ODF", "IDML", "ICML", "MIF", "EPUB", "Visio", "XPress Tags", "AsciiDoc", "reStructuredText", "MDX", "LaTeX",
          "MediaWiki", "DokuWiki", "Wordfast TXML", "Wordfast TXLF", "TTX", "XLIFF package", "DXF", "Email", "Flare",
          "HTML Help", "Server pages", "XSLT", "PDF", "SVG", "Image", "TTML", "ASS", "SCC", "EBU STL", "STF", "SBV", "SUB",
-         "sdlproj"]
+         "sdlproj", "memoQ package", "Trados package"]
 CODE = "\u00a4"
 LINE_BASED = {"txt": True, "md": True, "markdown": True}
 LOCOS_TOKEN = re.compile("\u27e6/?[a-z]?\\d+\u27e7")
