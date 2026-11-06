@@ -8,10 +8,14 @@
 //! The package types are generic over the open-file type ([`PackageDoc`]); `bilingua_xliff::Doc` is the one this
 //! workspace uses. [`filters`] gives the Bilingua [`Filter`]s: one document holds the segments of every target
 //! file, with segment ids `<path in the package>|<segment id>` (`%` and `|` in the path escaped as `%25`, `%7C`).
+//!
+//! Under the Localization OS profile a Trados package is read as LocOS reads it (its one target SDLXLIFF, written
+//! back as LocOS's return package) and a memoQ package goes through `bilingua_xliffpkg`'s LocOS port.
 
 /// Version of the skeleton layout this crate writes (bumped when an old skeleton can no longer be merged).
 pub const SKELETON_SCHEMA: u32 = 1;
 
+mod locos;
 mod package;
 mod zipio;
 
@@ -108,6 +112,14 @@ impl Filter for PackageFilter {
 
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, bilingua_model::Error> {
         bilingua_model::check_own_options(self, &opts.format_options)?;
+        if opts.is_profile(bilingua_model::profile::LOCOS) {
+            // Localization OS reads a Trados package as its one target SDLXLIFF, and a memoQ package with the
+            // XLIFF package engine (Track D group B)
+            return match self.family {
+                Family::Sdl => locos::extract(bytes, opts),
+                Family::Mq => bilingua_xliffpkg::mqxlz().extract(bytes, opts),
+            };
+        }
         // the B6 limits of this call (Localization OS's numbers unless the caller sets others)
         let limits = opts.limits();
         bilingua_model::guard::check_input(bytes, &limits)?;
@@ -143,6 +155,16 @@ impl Filter for PackageFilter {
         bilingua_model::check_own_options(self, &opts.format_options)?;
         // The package files are the project's: they already name its target language, and they are written as
         // UTF-8 XML, so neither option changes anything here.
+        if let Skeleton::Binary { data, .. } = &document.skeleton {
+            // a document extracted under the Localization OS profile
+            return match self.family {
+                Family::Sdl => {
+                    bilingua_model::check_parser(document, &bilingua_model::parser_info!())?;
+                    locos::merge(document, data, opts)
+                }
+                Family::Mq => bilingua_xliffpkg::mqxlz().merge_with(document, opts),
+            };
+        }
         bilingua_model::check_parser(document, &bilingua_model::parser_info!())?;
         let Skeleton::Zip { entries, .. } = &document.skeleton else {
             return Err(bilingua_model::Error::Write(format!("{} needs a zip skeleton", self.id)));

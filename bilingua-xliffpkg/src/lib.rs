@@ -18,6 +18,10 @@
 //!   `bilingua-model` (bombs, forged sizes, encrypted entries, links, path escapes), each XLIFF member passes the XML
 //!   guard (no entity declarations), at most 200 XLIFF members of at most 64 MB each.
 //! * XLIFF 2 members and members in a code page other than UTF-8 or UTF-16 are refused, as Localization OS does.
+//! * Under the Localization OS profile (Track D group B) the members go through `bilingua_xliff::locos` (LocOS's CAT
+//!   XLIFF engine): LocOS's units and its package numbering (`locos.p_index` = the member's offset plus the unit's
+//!   slot in the member's walk, protected slots counted), and LocOS's splice when writing. The document then keeps
+//!   the original package as a `Skeleton::Binary`.
 
 /// Version of the skeleton layout this crate writes (bumped when an old skeleton can no longer be merged).
 pub const SKELETON_SCHEMA: u32 = 1;
@@ -105,6 +109,57 @@ fn open_package(bytes: &[u8], l: &Limits) -> Result<Opened, Error> {
 }
 
 impl XliffPackage {
+    /// The package as Localization OS reads it (`xliff_package.parse_package`): every member through its CAT XLIFF
+    /// engine, a unit's `locos.p_index` its member's offset plus its slot in the member's walk.
+    fn extract_locos(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
+        let l = opts.limits();
+        guard::check_input(bytes, &l)?;
+        let opened = open_package(bytes, &l)?;
+        let mut units: Vec<Unit> = Vec::new();
+        let mut offset = 0i64;
+        for &i in &opened.members {
+            let e = &opened.entries[i];
+            guard::check_xml(&e.data, &l)?;
+            let (found, slots) = bilingua_xliff::locos::cat_units(&e.data, self.id, None)
+                .map_err(|err| perr(format!("The XLIFF file {:?} in this package could not be read: {err}", e.name)))?;
+            for u in found {
+                let p = offset + u.pos as i64;
+                units.push(bilingua_xliff::locos::document_unit(u, self.id, Some((&e.name, p))));
+            }
+            guard::check_unit_count(units.len(), &l)?;
+            offset += slots as i64;
+        }
+        let skeleton = Skeleton::binary(bytes.to_vec(), parser_info!());
+        let doc = Document::new(self.id.to_string(), units, skeleton).with_target_lang(opts.target_lang.clone()).with_granularity(Granularity::Paragraph);
+        guard::finish(doc, vec![], &l)
+    }
+
+    /// `xliff_package.build_package`: each member with something to write (or a target language to stamp) through
+    /// the CAT XLIFF splice; the original package when nothing changed.
+    fn merge_locos(&self, document: &Document, original: &[u8], opts: &MergeOptions) -> Result<Vec<u8>, Error> {
+        let l = Limits::default();
+        let opened = open_package(original, &l)?;
+        let any = document.units.iter().any(|u| u.segments.iter().any(|s| s.has_target()));
+        let tag = opts.stamp_lang(document, any).and_then(profile::lang_tag);
+        let mut replaced: HashMap<usize, Vec<u8>> = HashMap::new();
+        for &i in &opened.members {
+            let e = &opened.entries[i];
+            guard::check_xml(&e.data, &l)?;
+            let texts = bilingua_xliff::locos::written_texts(document.units.iter().filter(|u| u.context.location.as_deref() == Some(e.name.as_str())));
+            if texts.is_empty() && tag.is_none() {
+                continue;
+            }
+            let new = bilingua_xliff::locos::build_cat(&e.data, &texts, tag.as_deref())?;
+            if new != e.data {
+                replaced.insert(i, new);
+            }
+        }
+        if replaced.is_empty() {
+            return Ok(original.to_vec());
+        }
+        rebuild(original, &opened.entries, &replaced)
+    }
+
     fn extract_doc(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
         let l = opts.limits();
         guard::check_input(bytes, &l)?;
@@ -138,6 +193,9 @@ impl XliffPackage {
 
     fn merge_doc(&self, document: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
         check_parser(document, &parser_info!())?;
+        if let Skeleton::Binary { data, .. } = &document.skeleton {
+            return self.merge_locos(document, data, opts);
+        }
         let Skeleton::Zip { entries: skel, .. } = &document.skeleton else {
             return Err(Error::Write(format!("{} needs a zip skeleton", self.id)));
         };
@@ -250,6 +308,9 @@ impl Filter for XliffPackage {
     }
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
         bilingua_model::check_own_options(self, &opts.format_options)?;
+        if opts.is_profile(profile::LOCOS) {
+            return self.extract_locos(bytes, opts);
+        }
         self.extract_doc(bytes, opts)
     }
     /// `stamp_target_always`: with a `target_lang`, every XLIFF member's `<file>` without a language is stamped even

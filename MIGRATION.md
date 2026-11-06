@@ -182,6 +182,22 @@ keeps the encoding:
   (`bilingua.pyi`) ship in the wheel and a test checks them against the module.
 - Python `extract`'s default granularity is `"paragraph"` (what the adapter uses); Rust's `ExtractOptions` default is
   sentence.
+- Track D group B, XLIFF family (xliff, sdlxliff, mqxliff, mxliff, xlz, mqxlz, sdlppx/sdlrpx): under the profile
+  these are ports of LocOS's `xliff_filter.py`, `cat_xliff.py`, `xliff_package.py` and `sdl_package.py`
+  (`bilingua_xliff::locos`). Units are LocOS's (protected units, blank sources and code-only plain sources left
+  out); `locos.p_index` is LocOS's key (the `<source>` position, `1000000000` plus the seg `mrk` position, and in a
+  package the member's offset plus the unit's walk slot). Tag ids are LocOS's token numbers; `bpt`/`ept`/`it` and
+  the other begin/end codes are standalone codes, `<x id>`/`<ph id>` free unless they stand for a markup side or an
+  unnumbered argument, duplicate `g` ids are separate pairs, comments in a source are pairs as in lxml. A plain
+  XLIFF is written the way lxml serialises it in LocOS's envelope (a new `<target>` after its `<source>` with no
+  `state`, `new`/`needs-translation` become `translated`, `target-language` or `trgLang` set on every file from
+  the canonical tag, `es_ES` giving `es-ES`); vendor and seg-source files are LocOS's byte splice. A Trados package
+  is LocOS's one-target-file document and comes back as LocOS's return package (the `.sdlproj` with
+  `ReturnPackage` and the rebuilt SDLXLIFF only); `.mqxlz` goes through the XLIFF package port. The profile's
+  documents carry the original as a `Skeleton::Binary`. Known gap: an MXLIFF segment mixing element codes and
+  `{1}` text marks numbers its tokens in LocOS's order (elements first), which `profile::tokens` renumbers by
+  position.
+- `profile::lang_tag` and `profile::is_rtl` are LocOS's `html_lang` and `text_direction`.
 - LocOS export keywords are accepted and ignored for now: `docx.walk`, `xlsx.walk`, `pptx.walk`, `xlsx.table`,
   `csv.table`, `markdown.walk`, `markdown.md_walk`, `markdown.fm_keys`, `json.dialect`.
 

@@ -19,6 +19,8 @@ mod doc;
 mod error;
 mod inline;
 mod lang;
+#[doc(hidden)]
+pub mod locos;
 mod patch;
 mod x12;
 mod x2;
@@ -269,6 +271,9 @@ impl Filter for XliffFilter {
         let limits = opts.limits();
         bilingua_model::guard::check_input(bytes, &limits)?;
         bilingua_model::guard::check_xml(bytes, &limits)?;
+        if opts.is_profile(bilingua_model::profile::LOCOS) {
+            return locos::extract(bytes, self.id, opts);
+        }
         let body = bytes.strip_prefix(&[0xEF, 0xBB, 0xBF][..]).unwrap_or(bytes);
         if std::str::from_utf8(body).is_ok() {
             let doc = Doc::from_bytes_hint(bytes.to_vec(), self.id == "mxliff").map_err(|e| parse_err(self.id, e))?;
@@ -282,6 +287,12 @@ impl Filter for XliffFilter {
     }
     fn merge_with(&self, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, bilingua_model::Error> {
         bilingua_model::check_own_options(self, &opts.format_options)?;
+        if let Skeleton::Binary { data, .. } = &doc.skeleton {
+            // a document extracted under the Localization OS profile
+            bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
+            bilingua_model::guard::check_xml(data, &bilingua_model::Limits::default())?;
+            return locos::merge(doc, self.id, opts);
+        }
         merge_document_with(doc, self.id, opts)
     }
 }

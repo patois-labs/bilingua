@@ -167,6 +167,64 @@ fn flatten_codes(u: &mut Unit, pick: fn(&CodeData) -> bool, drop: bool) {
     }
 }
 
+/// The language tag Localization OS declares for a target locale (its `languages_catalog.html_lang`): underscores
+/// become hyphens and the case is canonical (`es_ES` gives `es-ES`, `zh_hant_tw` gives `zh-Hant-TW`); `None` for
+/// a blank or malformed code (spaces, quotes, an empty subtag, more than 64 characters).
+pub fn lang_tag(code: &str) -> Option<String> {
+    let tag = code.trim().replace('_', "-");
+    if tag.is_empty() || tag.len() > 64 {
+        return None;
+    }
+    let mut parts = tag.split('-');
+    let first = parts.next()?;
+    if !(2..=8).contains(&first.len()) || !first.bytes().all(|b| b.is_ascii_alphabetic()) {
+        return None;
+    }
+    let mut out = vec![first.to_ascii_lowercase()];
+    let mut ext = false;
+    for sub in parts {
+        if sub.is_empty() || sub.len() > 8 || !sub.bytes().all(|b| b.is_ascii_alphanumeric()) {
+            return None;
+        }
+        let alpha = sub.bytes().all(|b| b.is_ascii_alphabetic());
+        if sub.len() == 1 {
+            ext = true;
+            out.push(sub.to_ascii_lowercase());
+        } else if ext {
+            out.push(sub.to_ascii_lowercase());
+        } else if sub.len() == 4 && alpha {
+            let mut s = sub.to_ascii_lowercase();
+            s[..1].make_ascii_uppercase();
+            out.push(s);
+        } else if (sub.len() == 2 && alpha) || (sub.len() == 3 && sub.bytes().all(|b| b.is_ascii_digit())) {
+            out.push(sub.to_ascii_uppercase());
+        } else {
+            out.push(sub.to_ascii_lowercase());
+        }
+    }
+    Some(out.join("-"))
+}
+
+/// True when Localization OS writes `code` right to left (its `text_direction`): a script subtag decides
+/// (`ku-Arab` yes, `ug-Latn` no), else the base language (`ar`, `he`, `fa-IR`, `ur`). False for a code
+/// [`lang_tag`] refuses.
+pub fn is_rtl(code: &str) -> bool {
+    const SCRIPTS: [&str; 11] = ["arab", "hebr", "syrc", "thaa", "nkoo", "adlm", "rohg", "samr", "mand", "mend", "yezi"];
+    const LANGS: [&str; 22] =
+        ["ar", "arc", "azb", "ckb", "dv", "fa", "glk", "he", "iw", "ji", "ks", "lrc", "mzn", "nqo", "pnb", "prs", "ps", "sd", "syr", "ug", "ur", "yi"];
+    let Some(tag) = lang_tag(code) else { return false };
+    let parts: Vec<&str> = tag.split('-').collect();
+    for sub in &parts[1..] {
+        if sub.len() == 1 {
+            break;
+        }
+        if sub.len() == 4 && sub.bytes().all(|b| b.is_ascii_alphabetic()) {
+            return SCRIPTS.contains(&sub.to_ascii_lowercase().as_str());
+        }
+    }
+    LANGS.contains(&parts[0])
+}
+
 /// Sets a target the way Localization OS means it: an empty LocOS target is a translation to nothing (written as
 /// an empty value, [`Document::set_target_empty`]), anything else is [`Document::set_target`].
 pub fn locos_set_target(doc: &mut Document, seg_id: &str, target: Vec<Inline>) -> Result<(), Error> {
@@ -174,5 +232,18 @@ pub fn locos_set_target(doc: &mut Document, seg_id: &str, target: Vec<Inline>) -
         doc.set_target_empty(seg_id)
     } else {
         doc.set_target(seg_id, target)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn lang_tags_like_locos() {
+        for (code, want) in [("es_ES", Some("es-ES")), ("EN-us", Some("en-US")), ("zh_hant_tw", Some("zh-Hant-TW")), ("es-419", Some("es-419")), ("x", None), ("", None), ("de DE", None), ("de--DE", None), ("\"><b>", None)] {
+            assert_eq!(lang_tag(code).as_deref(), want, "{code}");
+        }
+        assert!(is_rtl("ar-SA") && is_rtl("ku-Arab") && is_rtl("he") && !is_rtl("ug-Latn") && !is_rtl("de") && !is_rtl("<x>"));
     }
 }
