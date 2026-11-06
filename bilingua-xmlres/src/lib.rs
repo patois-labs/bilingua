@@ -31,17 +31,6 @@ const QUOTED: &str = "quoted"; // Android: the whole value was in double quotes
 const ESC_NL: &str = "escnl"; // Android: the source writes line breaks as \n escapes and has no raw one (#706)
 const MSGFMT: &str = "msgfmt"; // Java: the value has MessageFormat arguments ({0}, {1,date})
 
-/// (leading white space, core, trailing white space), cut as Python's `str.strip()`.
-fn split_ws(s: &str) -> (&str, &str, &str) {
-    let core = s.trim_matches(py_isspace_char);
-    if core.is_empty() {
-        return (s, "", "");
-    }
-    let lead = &s[..s.len() - s.trim_start_matches(py_isspace_char).len()];
-    let trail = &s[s.trim_end_matches(py_isspace_char).len()..];
-    (lead, core, trail)
-}
-
 /// Android: the text a translator sees for a raw text piece (`\'` `\"` `\@` `\?` unescaped; `\n`, `\t`, `\uXXXX`
 /// and `\\` kept as typed).
 fn android_unescape(s: &str) -> String {

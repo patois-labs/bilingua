@@ -205,19 +205,6 @@ fn push_text(pieces: &mut Vec<Piece>, s: &str) {
     }
 }
 
-/// The local name of the root element, from the decoded text (`None` when there is no element).
-pub fn root_name(text: &str) -> Option<String> {
-    let mut rd = Reader::from_str(text);
-    loop {
-        match rd.read_event() {
-            Ok(Event::Start(e)) | Ok(Event::Empty(e)) => return Some(String::from_utf8_lossy(local(e.name().as_ref())).into_owned()),
-            Ok(Event::Eof) | Err(_) => return None,
-            Ok(Event::Text(t)) if !t.iter().all(|c| c.is_ascii_whitespace()) => return None,
-            _ => {}
-        }
-    }
-}
-
 pub fn scan(text: &str, d: Dialect) -> Result<Scan, Error> {
     if text.bytes().any(|b| b < 0x20 && !matches!(b, 9 | 10 | 13)) || text.contains('\u{FFFE}') || text.contains('\u{FFFF}') {
         return Err(parse_err(d, format!("{} contains a character XML does not allow", d.what())));
