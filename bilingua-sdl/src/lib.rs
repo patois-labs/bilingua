@@ -13,7 +13,9 @@
 //! back as LocOS's return package) and a memoQ package goes through `bilingua_xliffpkg`'s LocOS port.
 
 /// Version of the skeleton layout this crate writes (bumped when an old skeleton can no longer be merged).
-pub const SKELETON_SCHEMA: u32 = 1;
+/// Schema 2 (wave 12): segment ids follow `bilingua_xliff::segment_ids` (a trans-unit with one segment is named by
+/// its unit id); a schema 1 document is merged by the file's own segment ids, as it was made.
+pub const SKELETON_SCHEMA: u32 = 2;
 
 mod locos;
 mod package;
@@ -73,7 +75,11 @@ fn id_prefix(path: &str) -> String {
 /// path cannot make one file's ids match another's). A unit that lost its location is matched by id prefix alone.
 fn apply_file(doc: &mut Doc, document: &Document, path: &str) {
     let units = document.units.iter().filter(|u| u.context.location.as_deref().is_none_or(|l| l == path));
-    bilingua_xliff::apply_units_prefixed(doc, units, &id_prefix(path));
+    if bilingua_xliff::uses_file_segment_ids(document, env!("CARGO_PKG_NAME"), 2) {
+        bilingua_xliff::apply_units_prefixed_file_ids(doc, units, &id_prefix(path));
+    } else {
+        bilingua_xliff::apply_units_prefixed(doc, units, &id_prefix(path));
+    }
 }
 
 /// The bilingual files of a package as (path, bytes), plus the whole entry list.

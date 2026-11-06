@@ -6,8 +6,10 @@ Writes {file: {"units": [text, ...]} or {"error": ...}} where text is the unit t
 inline-code tokens left in place. Nothing in the LocOS tree is written; the data dir is a throwaway.
 """
 
+import atexit
 import json
 import os
+import shutil
 import sys
 import tempfile
 
@@ -17,6 +19,21 @@ LOCOS = os.environ.get("LOCOS_DIR") or next(
         os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), *[".."] * n)) for n in range(1, 8)]
      if os.path.isdir(os.path.join(up, "local-tms", "app", "filters"))), "local-tms")
 _DATA = tempfile.mkdtemp(prefix="locos-oracle-")
+
+
+def _cleanup() -> None:
+    """Removes the throwaway data folder when the run ends (the SQLite engine is closed first: Windows keeps an
+    open database file locked)."""
+    db = sys.modules.get("app.db")  # never import LocOS here: only close what the run opened
+    if db is not None:
+        try:
+            db.engine.dispose()
+        except Exception:  # noqa: BLE001
+            pass
+    shutil.rmtree(_DATA, ignore_errors=True)
+
+
+atexit.register(_cleanup)
 os.environ["LOC_TMS_DATA_DIR"] = _DATA
 # LocOS's test boot: a throwaway data folder AND a throwaway SQLite file (never the real database). Some filters
 # touch the database (the PDF OCR fallback writes the spend ledger), so it is initialised below with LocOS's own

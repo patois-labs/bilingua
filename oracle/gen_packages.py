@@ -123,12 +123,13 @@ def main():
         ("hours.ar.mqxliff", ar), ("hours.ja.mqxliff", ja), ("hours.zh.mqxliff", zh), ("readme.txt", "Lumen Bakery handoff\n")]))
 
     # Trados: one target SDLXLIFF per package, with the source file and a report beside it.
+    # Unit ids as Studio writes them (GUIDs); the ja package keeps numeric ids, so both shapes are covered.
     de_rows = [
-        ("1", 'Open the <g id="pt1">Orders</g> page. Then click Save.', None, ""),
-        ("2", 'Line one<x id="ph2"/>line two &amp; more.', None, ""),
-        ("3", "Locked legal notice.", "Gesperrter Hinweis.", ' locked="true" conf="Translated"'),
-        ("4", "Approved tagline.", "Genehmigter Slogan.", ' conf="ApprovedTranslation" origin="interactive"'),
-        ("5", "Gluten free options are marked.", None, ""),
+        ("3f1c9a52-6d0e-4b7a-9c18-2e5d7f40a1b3", 'Open the <g id="pt1">Orders</g> page. Then click Save.', None, ""),
+        ("8a7e2d14-0c5b-4f39-a6d2-91b0c3e4f5a6", 'Line one<x id="ph2"/>line two &amp; more.', None, ""),
+        ("c41b07e9-5f2a-4d8c-b3e6-7a9d0f1e2c34", "Locked legal notice.", "Gesperrter Hinweis.", ' locked="true" conf="Translated"'),
+        ("e9d2c6a1-3b4f-4a07-8e5c-0d1f2a3b4c5d", "Approved tagline.", "Genehmigter Slogan.", ' conf="ApprovedTranslation" origin="interactive"'),
+        ("5b6c7d8e-9f0a-4b1c-8d2e-3f4a5b6c7d8e", "Gluten free options are marked.", None, ""),
     ]
     w("sdlppx/trados_demo.sdlppx", zip_of([
         ("lumen.sdlproj", sdlproj("lumen", "5c0de000-0000-4000-8000-0123456789ab", "en-US", "de-DE", "de-DE/menu.docx.sdlxliff", "menu.docx")),
