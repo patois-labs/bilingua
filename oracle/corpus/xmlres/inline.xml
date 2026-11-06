@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+    <string name="nested">Use <b>bold <i>and italic</i></b> here.</string>
+    <string name="br">Line<br/>break</string>
+    <string name="lead_ph"><xliff:g id="n">%1$d</xliff:g> items left</string>
+    <string name="comment">Before <!-- a note --> after</string>
+    <string name="only_tag"><b> </b></string>
+    <string name="link">Read <a href="https://example.com/?a=1&amp;b=2">the terms</a>.</string>
+</resources>

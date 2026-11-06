@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="two">Your download is complete.\nOpen the file.</string>
+    <string name="kept">One\nTwo</string>
+    <string name="plain">No break here.</string>
+    <plurals name="left">
+        <item quantity="one">%d file left.\nKeep going.</item>
+        <item quantity="other">%d files left.\nKeep going.</item>
+    </plurals>
+</resources>

@@ -88,15 +88,46 @@ fn same_package(a: &[u8], b: &[u8]) -> Result<(), String> {
     }
 }
 
+/// The pseudo-translation wraps each unit in letters, not brackets: `[` and `{` mean something in LaTeX, AsciiDoc,
+/// wiki markup, WiX, MicroDVD and ASS, so a bracket would be read back as markup and look like a round-trip bug.
+const PRE: &str = "Zq";
+const POST: &str = "qZ";
+
+/// Text with the tag markers removed: a merge may move the pseudo letters across a tag that opens or closes the
+/// unit (`<b>Zq...` vs `Zq<b>...`), which is not a difference in text.
+fn no_tags(s: &str) -> String {
+    s.chars().filter(|c| !('\u{E010}'..='\u{E012}').contains(c)).collect()
+}
+
+/// The plural form a unit stands for (the same rule as `tests/corpus.rs`): a merge with a target language fills
+/// the plural forms es-ES needs and the source lacks, and those new units are not a mismatch.
+fn plural_label(u: &bilingua::Unit) -> Option<(Option<String>, String)> {
+    if let Some(p) = u.context.extra.get("plural") {
+        return Some((u.context.key.clone(), p.clone()));
+    }
+    let key = u.context.key.as_deref()?;
+    if let Some((base, last)) = key.rsplit_once('/') {
+        if matches!(last, "zero" | "one" | "two" | "few" | "many" | "other") {
+            return Some((Some(base.to_string()), last.to_string()));
+        }
+    }
+    let (base, rest) = key.rsplit_once('[')?;
+    let label = rest.strip_suffix(']')?;
+    Some((Some(base.to_string()), label.to_string()))
+}
+
+/// Formats whose translated merge is refused by design (see `tests/corpus.rs`).
+const MERGE_UNSUPPORTED_FORMATS: &[&str] = &["pdf"];
+
 fn pseudo(v: &[Inline]) -> Vec<Inline> {
-    let mut out = vec![Inline::text("[")];
+    let mut out = vec![Inline::text(PRE)];
     for i in v {
         match i {
             Inline::Text(t) => out.push(Inline::Text(t.clone())),
             tag => out.push(tag.clone()),
         }
     }
-    out.push(Inline::text("]"));
+    out.push(Inline::text(POST));
     out
 }
 
@@ -154,6 +185,9 @@ fn main() {
         let _ = std::fs::write(dest, b);
     }
     let pseudo_res = match merged {
+        Err(bilingua::Error::Unsupported(e)) if MERGE_UNSUPPORTED_FORMATS.contains(&doc.format.as_str()) => {
+            json!({"status": format!("n/a: a translated merge is refused by design ({e})")})
+        }
         Err(e) => json!({"status": format!("merge failed: {e}")}),
         Ok(b) => match bilingua::extract(&name, &b, &opts) {
             Err(e) => json!({"status": format!("reopen failed: {e}")}),
@@ -165,7 +199,7 @@ fn main() {
                     .units
                     .iter()
                     .filter(|u| u.translate)
-                    .flat_map(|u| u.segments.iter().map(|s| format!("[{}]", bilingua::plain_text(&s.source))))
+                    .flat_map(|u| u.segments.iter().map(|s| format!("{PRE}{}{POST}", bilingua::plain_text(&s.source))))
                     .collect();
                 let got: Vec<String> = d2
                     .units
@@ -194,19 +228,40 @@ fn main() {
                 }
             }
             Ok(d2) => {
-                let a: Vec<String> = doc.units.iter().filter(|u| u.translate).map(|u| render(u).0).collect();
-                let b2: Vec<String> = d2.units.iter().filter(|u| u.translate).map(|u| render(u).0).collect();
+                let labels: std::collections::BTreeSet<(Option<String>, String)> = doc.units.iter().filter_map(plural_label).collect();
+                // Android drops the plural forms the target never uses (es-ES has no "two"), as LocOS
+                let kept: std::collections::BTreeSet<(Option<String>, String)> = d2.units.iter().filter_map(plural_label).collect();
+                let a: Vec<String> = doc
+                    .units
+                    .iter()
+                    .filter(|u| u.translate && (doc.format != "android" || plural_label(u).is_none_or(|l| kept.contains(&l))))
+                    .map(|u| no_tags(&render(u).0))
+                    .collect();
+                let b2: Vec<String> = d2
+                    .units
+                    .iter()
+                    .filter(|u| u.translate && plural_label(u).is_none_or(|l| labels.contains(&l)))
+                    .map(|u| no_tags(&render(u).0))
+                    .collect();
                 if a.len() != b2.len() {
                     json!({"status": format!("reopened with {} units, expected {}", b2.len(), a.len())})
                 } else {
-                    // Markdown writes a typed bracket as `\[`; the text reads back as the raw source slice.
-                    let md = doc.format == "markdown";
-                    let same = |x: &String, y: &String| if md { format!("[{x}]").replace('\\', "") == y.replace('\\', "") } else { format!("[{x}]") == *y };
-                    let bad = a.iter().zip(&b2).filter(|(x, y)| !same(x, y)).count();
-                    if bad == 0 && set_errors == 0 {
+                    // Markdown writes a typed markup character with a backslash; the text reads back as the raw slice.
+                    let md = matches!(doc.format.as_str(), "markdown" | "mdx");
+                    // These formats write the translation beside the source (MO msgstr, desktop `Name[es]`, catkeys,
+                    // CSV and STF target columns, TTX/TXML/TXLF/XLZ targets, multilingual XML), so reopening the
+                    // merged file gives the source back unchanged.
+                    let beside_ok = matches!(doc.format.as_str(), "mo" | "desktop" | "catkeys" | "csv" | "tsv" | "stf" | "ttx" | "txml" | "txlf" | "xlz" | "xml");
+                    let want = |x: &String| format!("{PRE}{x}{POST}");
+                    let same = |x: &String, y: &String| if md { want(x).replace('\\', "") == y.replace('\\', "") } else { want(x) == *y };
+                    let beside = a.iter().zip(&b2).filter(|(x, y)| !same(x, y) && beside_ok && x == y).count();
+                    let bad = a.iter().zip(&b2).filter(|(x, y)| !same(x, y) && (!beside_ok || x != y)).count();
+                    if bad == 0 && set_errors == 0 && beside > 0 {
+                        json!({"status": format!("ok ({beside} units keep the source; the translation is written beside it)")})
+                    } else if bad == 0 && set_errors == 0 {
                         json!({"status": "ok"})
                     } else {
-                        let first = a.iter().zip(&b2).find(|(x, y)| !same(x, y)).map(|(x, y)| format!("{x:?} -> {y:?}"));
+                        let first = a.iter().zip(&b2).find(|(x, y)| !same(x, y) && (!beside_ok || x != y)).map(|(x, y)| format!("{x:?} -> {y:?}"));
                         json!({"status": format!("{bad} units differ, {set_errors} set_target errors"), "first": first})
                     }
                 }

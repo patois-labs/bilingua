@@ -20,6 +20,18 @@ python run.py --scoreboard    # regenerate SCOREBOARD.md (needs core/target/debu
 python run.py --external      # also files that live only in the LocOS tree (read in place, counts only in the report)
 ```
 
+Split scoreboard run, for a PC with LocOS but no cargo and a build machine (the M5) with cargo but no LocOS:
+
+```
+PC:  python run.py --scoreboard --locos-side DIR       # LocOS inventory, dialects and units; LocOS-tree files copied to DIR/ext
+     (copy DIR to the M5; the M5 checkout must be at the same commit, corpus files are read from it)
+M5:  python3 run.py --scoreboard --build --bilingua-side DIR   # bl-dump --formats and bl-dump on every listed file
+     (copy DIR/bl.json back)
+PC:  python run.py --scoreboard --from DIR             # renders SCOREBOARD.md from DIR/locos.json + DIR/bl.json
+```
+
+`DIR` is scratch, never inside the repository.
+
 `run.py` needs Python 3.9+ and a Localization OS checkout, by default a `local-tms` folder next to this repository (set `LOCOS_DIR` to change it).
 LocOS is never edited, started or written to; its data directory is a throwaway.
 

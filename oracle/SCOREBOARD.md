@@ -8,57 +8,126 @@ the LocOS tree).
 
 ## Summary
 
-LocOS formats: 87. Bilingua parses 35 of them (source formats and the bilingual and the bilingual formats).
+LocOS formats: 87. Bilingua parses 88 of them (source formats and the bilingual formats).
 
 | Status | Formats |
 |---|---|
-| same | 14 |
-| differs | 18 |
-| bilingua-only | 0 |
-| untested | 3 |
-| missing | 53 |
+| same | 51 |
+| differs | 34 |
+| bilingua-only | 1 |
+| untested | 2 |
+| missing | 0 |
 
 Status rules. `same`: every fixture file gives the same units (normalised) on both sides, an unchanged merge gives the same file and a pseudo-translated merge reads back. `differs`: anything else, with the top reasons (counts of unit-level differences, listed by kind). `bilingua-only`: Bilingua reads the files, LocOS cannot. `untested`: Bilingua parses the format but no fixture exists. `missing`: Bilingua has no parser; the LocOS unit count is shown when a fixture exists.
+
+Extensions Bilingua parses with no LocOS registry entry: sdlproj.
 
 ## Formats Bilingua parses
 
 | LocOS format | Also reads as | Bilingua | Files | Units LocOS | Units Bilingua | Text match | Round trip | Status | Top reasons |
 |---|---|---|---|---|---|---|---|---|---|
+| adoc | asc, asciidoc | source | 13+0 | 232 | 232 | 100.0% | ok | same |  |
+| catkeys |  | source | 14+0 | 53 | 53 | 100.0% | ok | same |  |
+| csv |  | source | 28+1 | 219 | 219 | 100.0% | ok | same |  |
+| desktop |  | source | 15+0 | 76 | 76 | 100.0% | ok | same |  |
+| dita | bookmap, ditamap | source | 6+2 | 78 | 78 | 100.0% | ok | same |  |
+| docbook | dbk | source | 2+1 | 23 | 23 | 100.0% | ok | same |  |
+| dokuwiki |  | source | 15+0 | 141 | 141 | 100.0% | ok | same |  |
+| eml |  | source | 34+0 | 181 | 181 | 100.0% | ok | same |  |
+| hhc |  | source | 5+0 | 20 | 20 | 100.0% | ok | same |  |
+| hhk |  | source | 3+0 | 15 | 15 | 100.0% | ok | same |  |
+| hhp |  | source | 12+0 | 24 | 24 | 100.0% | ok | same |  |
+| idml |  | source | 7+0 | 59 | 59 | 100.0% | ok | same |  |
 | ini |  | source | 21+0 | 93 | 93 | 100.0% | ok | same |  |
-| js | cjs, cts, mjs, mts, ts | source | 48+1 | 289 | 289 | 100.0% | ok | same |  |
+| mdx |  | source | 2+1 | 61 | 61 | 100.0% | ok | same |  |
+| mif |  | source | 8+0 | 30 | 30 | 100.0% | ok | same |  |
+| mo | gmo | source | 23+0 | 65 | 65 | 100.0% | ok | same |  |
 | mqxliff |  | bilingual | 0+1 | 2 | 2 | 100.0% | ok | same |  |
 | mxliff |  | bilingual | 0+1 | 2 | 2 | 100.0% | ok | same |  |
+| odg | otg | source | 1+0 | 3 | 3 | 100.0% | ok | same |  |
+| odp | otp | source | 1+0 | 13 | 13 | 100.0% | ok | same |  |
+| ods | ots | source | 1+0 | 16 | 16 | 100.0% | ok | same |  |
+| odt | ott | source | 1+0 | 27 | 27 | 100.0% | ok | same |  |
 | php |  | source | 20+0 | 158 | 158 | 100.0% | ok | same |  |
+| plist |  | source | 18+2 | 87 | 87 | 100.0% | ok | same |  |
+| rc |  | source | 12+0 | 133 | 133 | 100.0% | ok | same |  |
 | resjson |  | source | 4+0 | 46 | 46 | 100.0% | ok | same |  |
+| rst | rest | source | 8+0 | 75 | 75 | 100.0% | ok | same |  |
+| sbv |  | source | 3+0 | 8 | 8 | 100.0% | ok | same |  |
 | sdlxliff | sdlxlf | bilingual | 0+1 | 4 | 4 | 100.0% | ok | same |  |
+| stf |  | source | 22+0 | 109 | 109 | 100.0% | ok | same |  |
+| stl |  | source | 6+0 | 9 | 9 | 100.0% | ok | same |  |
+| stringsdict |  | source | 14+1 | 61 | 61 | 100.0% | ok | same |  |
+| sub |  | source | 5+0 | 12 | 12 | 100.0% | ok | same |  |
+| tex | latex, ltx | source | 21+0 | 129 | 129 | 100.0% | ok | same |  |
 | toml |  | source | 5+0 | 64 | 64 | 100.0% | ok | same |  |
+| ts |  | source | 28+1 | 175 | 175 | 100.0% | ok | same |  |
+| tsv | tab | source | 5+0 | 29 | 29 | 100.0% | ok | same |  |
+| ttml | dfxp | source | 29+0 | 143 | 143 | 100.0% | ok | same |  |
+| txml |  | bilingual | 21+1 | 301 | 301 | 100.0% | ok | same |  |
 | txt | text | source | 3+1 | 49 | 29 | 100.0% | ok | same |  |
+| vsdx | vsdm | source | 7+0 | 54 | 54 | 100.0% | ok | same |  |
+| wiki | mediawiki, wikitext | source | 17+0 | 165 | 165 | 100.0% | ok | same |  |
 | xcloc |  | source | 2+0 | 10 | 10 | 100.0% | ok | same |  |
 | xcstrings |  | source | 4+1 | 54 | 54 | 100.0% | ok | same |  |
 | xliff | xlf | bilingual | 0+4 | 14 | 14 | 100.0% | ok | same |  |
+| xlz | wsxz | bilingual | 4+0 | 17 | 17 | 100.0% | ok | same |  |
 | xmb |  | source | 3+2 | 27 | 27 | 100.0% | ok | same |  |
+| xml |  | source | 10+1 | 51 | 51 | 100.0% | ok | same |  |
+| xslt | xsl | source | 38+0 | 187 | 187 | 100.0% | ok | same |  |
 | xtb |  | source | 2+1 | 19 | 19 | 100.0% | ok | same |  |
+| xtg | tag | source | 16+0 | 97 | 97 | 100.0% | ok | same |  |
 | arb |  | source | 4+0 | 71 | 70 | 98.6% | ok | differs | missing in Bilingua x1 |
+| aspx | ascx | source | 7+0 | 51 | 51 | 100.0% | FAIL 2/7 | differs | round trip fails on 2 file(s) |
+| ass | ssa | source | 25+0 | 111 | 111 | 100.0% | FAIL 1/25 | differs | round trip fails on 1 file(s) |
 | docx | docm, dotm, dotx | source | 5+2 | 132 | 137 | 94.2% | ok | differs | extra in Bilingua x6; missing in Bilingua x1; different text x1 |
 | dtd |  | source | 15+0 | 132 | 132 | 79.1% | ok | differs | different text x24; missing in Bilingua x2; extra in Bilingua x2 |
+| dxf |  | source | 34+0 | 305 | 305 | 100.0% | FAIL 1/34 | differs | round trip fails on 1 file(s) |
+| epub |  | source | 4+0 | 113 | 112 | 98.2% | ok | differs | missing in Bilingua x1; different text x1 |
+| erb |  | source | 6+0 | 41 | 41 | 100.0% | FAIL 2/6 | differs | round trip fails on 2 file(s) |
+| flprjzip |  | source | 3+0 | 127 | 127 | 98.4% | ok | differs | missing in Bilingua x1; extra in Bilingua x1 |
 | ftl |  | source | 14+0 | 101 | 101 | 96.1% | FAIL 1/14 | differs | round trip fails on 1 file(s); missing in Bilingua x2; extra in Bilingua x2 |
 | html | htm, xhtml | source | 6+1 | 121 | 126 | 88.5% | ok | differs | extra in Bilingua x9; missing in Bilingua x4; different text x2 |
+| icml | wcml | source | 10+0 | 37 | 37 | 100.0% | FAIL 1/10 | differs | round trip fails on 1 file(s) |
+| image | bmp, gif, jpeg, jpg, png, svg, tif, tiff, webp | source (only bmp, gif, jpeg, jpg, png, svg, tif, tiff, webp) | 35+0 | 82 | 98 | 87.2% | ok | differs | extra in Bilingua x12; LocOS failed on 2 file(s) |
+| js | cjs, cts, mjs, mts, ts | source | 20+0 | 114 | 114 | 100.0% | FAIL 2/20 | differs | round trip fails on 2 file(s) |
 | json |  | source | 5+1 | 65 | 64 | 96.9% | ok | differs | missing in Bilingua x1; different text x1 |
 | json5 | jsonc | source | 6+2 | 52 | 51 | 96.2% | ok | differs | missing in Bilingua x1; different text x1 |
-| md | markdown, mdown, mkd | source | 3+1 | 103 | 98 | 97.4% | ok | differs | different words x6; words missing in Bilingua x4 |
+| jsp | jspf | source | 6+0 | 42 | 42 | 100.0% | FAIL 2/6 | differs | round trip fails on 2 file(s) |
+| md | markdown, mdown, mkd | source | 3+1 | 134 | 180 | 98.8% | ok | differs | different words x6; words missing in Bilingua x4 |
+| pdf |  | source | 49+0 | 61 | 57 | 93.4% | ok | differs | missing in Bilingua x4 |
+| phtml |  | source | 6+0 | 36 | 36 | 100.0% | FAIL 1/6 | differs | round trip fails on 1 file(s) |
 | po | pot | source | 3+0 | 38 | 38 | 94.7% | ok | differs | different text x2 |
 | pptx | potm, potx, ppsm, ppsx, pptm | source | 1+2 | 37 | 35 | 80.0% | ok | differs | missing in Bilingua x5; extra in Bilingua x3 |
-| properties |  | source | 7+0 | 157 | 157 | 96.8% | ok | differs | different text x3; missing in Bilingua x1; extra in Bilingua x1 |
+| properties |  | source | 6+0 | 151 | 151 | 99.3% | ok | differs | different text x1 |
 | resx | resw | source | 10+1 | 74 | 74 | 98.6% | ok | differs | different text x1 |
+| scc |  | source | 12+0 | 69 | 69 | 100.0% | FAIL 2/12 | differs | round trip fails on 2 file(s) |
+| shtml | shtm, stm | source | 6+0 | 42 | 42 | 100.0% | FAIL 3/6 | differs | round trip fails on 3 file(s) |
 | srt | vtt | source | 4+1 | 52 | 52 | 94.3% | ok | differs | missing in Bilingua x1; extra in Bilingua x1; different text x1 |
 | strings |  | source | 13+0 | 68 | 67 | 80.9% | ok | differs | different text x12; missing in Bilingua x1 |
-| wxl |  | source | 7+1 | 65 | 64 | 80.9% | FAIL 2/8 | differs | round trip fails on 2 file(s); different text x6; missing in Bilingua x4; extra in Bilingua x3 |
+| ttx |  | bilingual | 13+2 | 39 | 40 | 100.0% | ok | differs | LocOS failed on 2 file(s) |
+| txlf |  | bilingual | 18+1 | 58 | 60 | 96.7% | ok | differs | extra in Bilingua x2 |
+| wxl |  | source | 7+1 | 65 | 64 | 80.9% | ok | differs | different text x6; missing in Bilingua x4; extra in Bilingua x3 |
 | xaml |  | source | 31+0 | 113 | 113 | 98.2% | ok | differs | different text x2 |
 | xlsx | xlsm, xltm, xltx | source | 2+2 | 74 | 71 | 93.2% | ok | differs | missing in Bilingua x3; extra in Bilingua x2 |
-| yaml | yml | source | 5+3 | 93 | 93 | 95.7% | FAIL 1/8 | differs | round trip fails on 1 file(s); different text x4 |
+| yaml | yml | source | 5+3 | 93 | 93 | 95.7% | ok | differs | different text x4 |
+| sdlproj |  | source | 28+1 | 0 | 0 | - | ok | bilingua-only | LocOS could not read the file(s) |
 | mqxlz |  | bilingual | 0 | - | - | - | - | untested | no fixture file in the LocOS tree |
 | sdlrpx | sdlppx | bilingual | 0 | - | - | - | - | untested | no fixture file in the LocOS tree |
-| ts |  | source | 0 | - | - | - | - | untested | no fixture file in the LocOS tree |
+
+## Dialects LocOS picks by content
+
+One row per dialect seen in the files: the LocOS registry format (left of the colon) reads these files with another walk than its plain one. `Bilingua` is the filter bl-dump picked for the same file.
+
+| LocOS dialect | Bilingua filter | Files | Units LocOS | Units Bilingua | Text match | Round trip | Status | Top reasons |
+|---|---|---|---|---|---|---|---|---|
+| docx:storyline-table | docx | 1+0 | 5 | 5 | 100.0% | ok | same |  |
+| properties:mozilla | properties | 1+0 | 6 | 6 | 42.9% | FAIL 1/1 | differs | round trip fails on 1 file(s); different text x2; missing in Bilingua x1; extra in Bilingua x1 |
+| xml:android | android | 6+1 | 45 | 45 | 100.0% | ok | same |  |
+| xml:dita | xml | 1+0 | 7 | 7 | 100.0% | ok | same |  |
+| xml:docbook | xml | 1+1 | 7 | 7 | 100.0% | ok | same |  |
+| xml:java-xml-properties | javaxml | 1+1 | 6 | 6 | 100.0% | ok | same |  |
+| xml:multilingual | xml | 3+3 | 17 | 17 | 100.0% | ok | same |  |
 
 ## Formats Bilingua does not parse yet
 
@@ -66,72 +135,34 @@ Ordered by a usage guess: software resource formats first, then Office, DTP, doc
 
 | # | LocOS format | Also reads as | Group | Files | Units LocOS | LocOS read errors |
 |---|---|---|---|---|---|---|
-| 1 | xml |  | software resource | 0+7 | 34 | 0 |
-| 2 | stringsdict |  | software resource | 0+1 | 11 | 0 |
-| 3 | csv |  | software resource | 0+1 | 5 | 0 |
-| 4 | plist |  | software resource | 0+2 | 10 | 0 |
-| 5 | mo | gmo | software resource | 0 | - | 0 |
-| 6 | rc |  | software resource | 0 | - | 0 |
-| 7 | desktop |  | software resource | 0 | - | 0 |
-| 8 | tsv | tab | software resource | 0 | - | 0 |
-| 9 | erb |  | software resource | 0 | - | 0 |
-| 10 | catkeys |  | software resource | 0 | - | 0 |
-| 11 | odt | ott | Office, DTP, docs, CAT | 0 | - | 0 |
-| 12 | ods | ots | Office, DTP, docs, CAT | 0 | - | 0 |
-| 13 | odp | otp | Office, DTP, docs, CAT | 0 | - | 0 |
-| 14 | odg | otg | Office, DTP, docs, CAT | 0 | - | 0 |
-| 15 | idml |  | Office, DTP, docs, CAT | 0 | - | 0 |
-| 16 | icml | wcml | Office, DTP, docs, CAT | 0 | - | 0 |
-| 17 | mif |  | Office, DTP, docs, CAT | 0 | - | 0 |
-| 18 | pdf |  | Office, DTP, docs, CAT | 0 | - | 0 |
-| 19 | epub |  | Office, DTP, docs, CAT | 0 | - | 0 |
-| 20 | vsdx | vsdm | Office, DTP, docs, CAT | 0 | - | 0 |
-| 21 | xtg | tag | Office, DTP, docs, CAT | 0 | - | 0 |
-| 22 | adoc | asc, asciidoc | Office, DTP, docs, CAT | 0 | - | 0 |
-| 23 | rst | rest | Office, DTP, docs, CAT | 0 | - | 0 |
-| 24 | mdx |  | Office, DTP, docs, CAT | 0+1 | 11 | 0 |
-| 25 | tex | latex, ltx | Office, DTP, docs, CAT | 0 | - | 0 |
-| 26 | dita | bookmap, ditamap | Office, DTP, docs, CAT | 0+2 | 14 | 0 |
-| 27 | docbook | dbk | Office, DTP, docs, CAT | 0+1 | 5 | 0 |
-| 28 | wiki | mediawiki, wikitext | Office, DTP, docs, CAT | 0 | - | 0 |
-| 29 | dokuwiki |  | Office, DTP, docs, CAT | 0 | - | 0 |
-| 30 | txlf |  | Office, DTP, docs, CAT | 0+1 | 3 | 0 |
-| 31 | txml |  | Office, DTP, docs, CAT | 0+1 | 5 | 0 |
-| 32 | ttx |  | Office, DTP, docs, CAT | 0+2 | 3 | 1 |
-| 33 | xlz | wsxz | Office, DTP, docs, CAT | 0 | - | 0 |
-| 34 | dxf |  | Office, DTP, docs, CAT | 0 | - | 0 |
-| 35 | eml |  | Office, DTP, docs, CAT | 0 | - | 0 |
-| 36 | flprjzip |  | Office, DTP, docs, CAT | 0 | - | 0 |
-| 37 | hhc |  | Office, DTP, docs, CAT | 0 | - | 0 |
-| 38 | hhk |  | Office, DTP, docs, CAT | 0 | - | 0 |
-| 39 | hhp |  | Office, DTP, docs, CAT | 0 | - | 0 |
-| 40 | aspx | ascx | Office, DTP, docs, CAT | 0 | - | 0 |
-| 41 | jsp | jspf | Office, DTP, docs, CAT | 0 | - | 0 |
-| 42 | phtml |  | Office, DTP, docs, CAT | 0 | - | 0 |
-| 43 | shtml | shtm, stm | Office, DTP, docs, CAT | 0 | - | 0 |
-| 44 | xslt | xsl | Office, DTP, docs, CAT | 0 | - | 0 |
-| 45 | ass | ssa | long tail | 0 | - | 0 |
-| 46 | image | bmp, gif, jpeg, jpg, png, svg, tif, tiff, webp | long tail | 0 | - | 0 |
-| 47 | sbv |  | long tail | 0 | - | 0 |
-| 48 | scc |  | long tail | 0 | - | 0 |
-| 49 | sdlproj |  | long tail | 0+1 | 0 | 1 |
-| 50 | stf |  | long tail | 0 | - | 0 |
-| 51 | stl |  | long tail | 0 | - | 0 |
-| 52 | sub |  | long tail | 0 | - | 0 |
-| 53 | ttml | dfxp | long tail | 0 | - | 0 |
 
 ## Bilingua errors and round-trip failures on these files
 
 | Format | File and problem |
 |---|---|
+| aspx | lumen.ascx: 1 units differ, 0 set_target errors |
+| aspx | lumen.aspx: 1 units differ, 0 set_target errors |
+| ass | edge.ass: 1 units differ, 0 set_target errors |
+| dxf | escapes.dxf: 1 units differ, 0 set_target errors |
+| erb | cr-only.erb: 1 units differ, 0 set_target errors |
+| erb | lumen.erb: 1 units differ, 0 set_target errors |
 | ftl | edge.ftl: 1 units differ, 0 set_target errors |
-| wxl | edge.wxl: 1 units differ, 0 set_target errors |
-| wxl | v3_overridable.wxl: 1 units differ, 0 set_target errors |
-| yaml | rails.en.yml: reopened with 12 units, expected 10 |
+| icml | suite_hidden.icml: 1 units differ, 0 set_target errors |
+| js | crlf_bom.js: 1 units differ, 0 set_target errors |
+| js | vue_messages.js: 1 units differ, 0 set_target errors |
+| jsp | lumen.jsp: 1 units differ, 0 set_target errors |
+| jsp | lumen.jspf: 1 units differ, 0 set_target errors |
+| phtml | lumen.phtml: 1 units differ, 0 set_target errors |
+| scc | random3.scc: 1 units differ, 0 set_target errors |
+| scc | random7.scc: 1 units differ, 0 set_target errors |
+| shtml | lumen.shtm: 1 units differ, 0 set_target errors |
+| shtml | lumen.shtml: 1 units differ, 0 set_target errors |
+| shtml | lumen.stm: 1 units differ, 0 set_target errors |
+| properties:mozilla | mozilla_downloads.properties: 1 units differ, 0 set_target errors |
 
 ## Files read
 
-303 files: 253 corpus, 39 in `local-tms/tests/fixtures/formats/`, 5 written by its plain-script generators (stdlib `make_*.py`, to a scratch folder), 6 in `local-tms/sample-docs/`. The 61 `verify_*filter*.py` suites build their inputs inside the suite and import the application, so they were not run; the top-level files of `tests/fixtures/` are UI contracts, not localization files, and are not read.
+1025 files: 975 corpus, 39 in `local-tms/tests/fixtures/formats/`, 5 written by its plain-script generators (stdlib `make_*.py`, to a scratch folder), 6 in `local-tms/sample-docs/`. The 61 `verify_*filter*.py` suites build their inputs inside the suite and import the application, so they were not run; the top-level files of `tests/fixtures/` are UI contracts, not localization files, and are not read.
 
 | LocOS format | LocOS fixture file names |
 |---|---|
@@ -140,7 +171,6 @@ Ordered by a usage guess: software resource formats first, then Office, DTP, doc
 | docbook | book5.dbk |
 | docx | strict_docx.docx, feature-brief.docx |
 | html | release-notes.html |
-| js | app_de.ts |
 | json | ui-strings.json |
 | json5 | app.json5, settings.jsonc |
 | md | product-overview.md |
@@ -154,6 +184,7 @@ Ordered by a usage guess: software resource formats first, then Office, DTP, doc
 | sdlxliff | sample.sdlxliff |
 | srt | tutorial-captions.srt |
 | stringsdict | Localizable.stringsdict |
+| ts | app_de.ts |
 | ttx | sample.ttx, unsegmented.ttx |
 | txlf | sample.txlf |
 | txml | sample.txml |
@@ -163,35 +194,34 @@ Ordered by a usage guess: software resource formats first, then Office, DTP, doc
 | xliff | messages.xlf, messages.xlf2.xlf, protected.xlf, content.xlf |
 | xlsx | generated_xlsx.xlsx, strict_xlsx.xlsx |
 | xmb | messages-localize.xmb, messages.xmb |
-| xml | strings.xml, messages.xml, catalog-attr.xml, items-element.xml, xpath-pi.xml, book45.xml, catalog.xml |
+| xml | catalog.xml |
+| xml:android | strings.xml |
+| xml:docbook | book45.xml |
+| xml:java-xml-properties | messages.xml |
+| xml:multilingual | catalog-attr.xml, items-element.xml, xpath-pi.xml |
 | xtb | messages.fr.xtb |
 | yaml | generic.yaml, messages.en.yaml, rails.en.yml |
 
 ## What this means
 
-Written by hand after reading the tables above; `python run.py --scoreboard` copies it in unchanged.
+Written by hand after reading the tables above (wave 12, 2026-11-05); `python run.py --scoreboard` copies it in
+unchanged. The reconciliation with every LocOS dialect, connector shape and option, and the classification of each
+`differs` row, is `docs/status/BILINGUA-SCOREBOARD-2026-11-05.md`.
 
-- **Coverage is the real gap, not quality.** Of 87 LocOS formats Bilingua opens 15 (10 source parsers plus the
-  XLIFF family, SDLXLIFF, MQXLIFF, MXLIFF and the three package types, all now Bilingua crates). 73 have no parser. On the
-  formats Bilingua does read, nothing fails: every file opens, an unchanged merge gives the same file, and a
-  pseudo-translated merge reads back.
-- **No format can switch yet**, but the switch list is short for the formats LocOS fixtures already cover: TXT, SDLXLIFF,
-  MQXLIFF and MXLIFF are `same`. The rest of the `differs` rows are mostly the deliberate choices listed in
-  `REPORT.md` (more attributes extracted, master placeholders and URLs left out, shared strings once). Before DOCX,
-  HTML, JSON, PO, SRT, Markdown, PPTX or XLSX move over, each row needs one pass through its reasons to separate
-  those choices from real gaps.
-- **Known gaps seen again here** (features, not crashes): PPTX picture alt text, chart text and SmartArt-style shape text
-  (the generated and Strict PPTX packages); XLSX text boxes in drawings and `t="str"` cells without a formula; the
-  XLIFF 1.2 vendor extension of GlobalLink (`iws:status` finished or locked) that LocOS reads and Bilingua now reads too:
-  a finished segment is translated, a locked one is locked.
-- **Bilingual formats compare differently.** LocOS leaves finished segments (translated, confirmed) out of its unit
-  list; Bilingua lists every segment with a state. The scoreboard marks finished segments as locked on the
-  Bilingua side so the two lists line up. The pseudo-translated merge is checked on the target.
-- **Unit size.** TXT and Markdown are paragraphs in Bilingua and lines in LocOS: the match column compares words and
-  the unit counts are not compared.
-- **Nothing here is a verdict on LocOS being right.** Where the two disagree the row says so; the notes in
-  `REPORT.md` say which side looks wrong.
-- **Fixture coverage is thin** for some rows (one file each for most software resource formats), so a `same` is a
-  floor, not proof. Formats with no fixture show a dash.
-- Sorting of the missing list is a guess at customer usage, not data.
+- **Coverage is complete for the registry.** Every one of the 87 LocOS registry formats has a Bilingua filter; none is
+  `missing`. The dialects LocOS picks by content that the fixtures show (Android strings and Java XML properties in
+  `.xml`, Storyline tables in `.docx`, DITA, DocBook, multilingual XML) are `same`, except Mozilla `.properties`.
+- **The `differs` rows are mostly the LocOS-profile work of Track D** (placeholders LocOS keeps as text, its extra
+  units such as document properties, alt text and comments, one unit per line, entities kept as typed), listed in
+  local-tms `docs/reports/bilingua-differences.md`. A few are deliberate Bilingua choices (PNG text chunks and UTF-16
+  SVG read, URLs not extracted, SCC re-wrapped to 32 columns) and a few are small Bilingua bugs found by the pseudo
+  round trip (Fluent re-indent, ICML hidden range, DXF trailing backslash).
+- **Bilingual formats compare differently.** LocOS leaves finished segments out of its unit list; Bilingua lists every
+  segment with a state, so finished segments count as locked on the Bilingua side.
+- **Pseudo round trip.** Units are wrapped in letters (`Zq...qZ`) and tag markers are ignored; formats that write the
+  translation beside the source (MO, desktop, catkeys, CSV and STF target columns, TTX, TXML, TXLF, XLZ, multilingual
+  XML) pass when the source reads back unchanged. Letters typed right after a placeholder can still join it (Vue
+  `@:key`, Mozilla `#1`), which shows as a round-trip failure that a real translation with a space would not have.
+- **Fixture coverage is thin** for some rows, so a `same` is a floor, not proof. The LocOS side of PDF fails its OCR
+  fallback in the throwaway data folder (no database), which shows as missing units.
 
