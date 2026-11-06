@@ -391,8 +391,10 @@ keeps the encoding:
   (`Error::DuplicatedTag`), and paired tags and tags the source lacks are refused by both. `Document::set_target_repeating`
   is the same call without the profile's other rules. The writers that write a repeat: all except those where LocOS
   itself keeps a tag once (ASS, TTML, TTX, TXLF/TXML, XMB/XTB, XTG, XSLT, generic XML/DITA/DocBook, Android strings,
-  DOCX, IDML, ICML, MIF, ODT, VSDX, Qt Linguist, server pages, WebVTT, XLIFF packages), which drop the second use as
-  LocOS does (measured per corpus file against LocOS `build`). The HTML part of an email now writes every use under
+  DOCX, IDML, ICML, MIF, ODT, VSDX, Qt Linguist, server pages, WebVTT, XLIFF packages including memoQ `.mqxlz` and
+  Trados `.sdlppx`), which drop the second use as LocOS does (measured per corpus file against LocOS `build`).
+  Contentful, Sanity Portable Text and Jira ADF refuse the merge of a repeat (`Error::Unwritable`), as the LocOS
+  walkers refuse it and keep the stored field; Notion units are plain text runs, with no tag to repeat. The HTML part of an email now writes every use under
   the profile, as LocOS does; its default is unchanged (once). Known difference: a server-page tag that carries code
   (`<img src="<%= s %>">`) is written once, where LocOS writes the whole tag again, so page code never runs twice.
 - **CLDR.** `bilingua-arb`, `bilingua-plist` and `bilingua-qtts` use `bilingua_model::cldr`; their private tables

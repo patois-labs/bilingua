@@ -27,19 +27,29 @@ fn corpus() -> Vec<(String, Vec<u8>)> {
 /// Formats whose LocOS writer keeps a placeholder once (its `_rebuild_target`, `used` set or `placed` set drops a
 /// second use), measured against the LocOS filters on the corpus (11-06 gate: each unit translated as `Q` + its
 /// text, with and without its first `⟦xN⟧` written twice, LocOS `build` compared): Bilingua drops the repeat too.
-/// Qt Linguist (`ts`) is one of them (LocOS `render_inner` drops a duplicated token). Server pages also write a tag
-/// that carries code once (`<a href="<?php x() ?>">`), on purpose, where LocOS writes such a tag twice. Every
-/// other format writes a repeated standalone placeholder each time, as LocOS does.
+/// Qt Linguist (`ts`) is one of them (LocOS `render_inner` drops a duplicated token), and so are the memoQ and Trados
+/// packages (`mqxlz`, `sdlppx`: LocOS writes their XLIFF through `cat_xliff._render`, which drops a used token).
+/// Server pages also write a tag that carries code once (`<a href="<?php x() ?>">`), on purpose, where LocOS writes
+/// such a tag twice. Every other format but those in [`LOCOS_REFUSES`] writes a repeated standalone placeholder each
+/// time, as LocOS does.
 const LOCOS_KEEPS_ONCE: &[&str] = &[
-    "android", "aspx", "ass", "dita", "docbook", "docx", "erb", "icml", "idml", "jsp", "mif", "odt", "phtml", "shtml", "ts", "ttml", "ttx", "txlf",
-    "txml", "vsdx", "vtt", "xlz", "xmb", "xml", "xslt", "xtb", "xtg",
+    "android", "aspx", "ass", "dita", "docbook", "docx", "erb", "icml", "idml", "jsp", "mif", "mqxlz", "odt", "phtml", "sdlppx", "shtml", "ts", "ttml",
+    "ttx", "txlf", "txml", "vsdx", "vtt", "xlz", "xmb", "xml", "xslt", "xtb", "xtg",
 ];
+
+/// Formats whose LocOS writer refuses a repeated placeholder: the Contentful, Sanity Portable Text and Jira ADF
+/// walkers (`contentful_rich_text._rebuild`, `sanity_portable_text._rebuild_children`, `adf._rebuild_inline`) want
+/// the translation's tokens to be the source's exactly (a sorted list compare), so a doubled `⟦xN⟧` marks the unit
+/// bad and the connector keeps the field's stored value (11-06, measured on the corpus files). Bilingua's merge
+/// refuses the repeat for them. Notion is not here: its units are plain text runs, with no tags to repeat.
+const LOCOS_REFUSES: &[&str] = &["adf", "contentful", "sanity"];
 
 /// For every corpus file: translate each unit as `Q ` + its source (the baseline) and the same with its first
 /// standalone tag written twice, merge both under the profile: the repeat must be accepted, written (the output
 /// differs from the baseline's) in every format but those in [`LOCOS_KEEPS_ONCE`], dropped (the baseline's output)
-/// in those, and the result must read back. The baseline is a changed translation too, so a writer that re-renders
-/// a changed unit (escaping, white space) does not pass for one that writes the repeat.
+/// in those, refused in those in [`LOCOS_REFUSES`], and the result must read back. The baseline is a changed
+/// translation too, so a writer that re-renders a changed unit (escaping, white space) does not pass for one that
+/// writes the repeat.
 #[test]
 fn every_format_writes_a_repeated_standalone_placeholder_each_time() {
     let mut problems: Vec<String> = Vec::new();
@@ -83,7 +93,17 @@ fn every_format_writes_a_repeated_standalone_placeholder_each_time() {
         }
         let m = profile::locos().merge_options(&base.format);
         let Ok(out_base) = merge_with(&base, &m) else { continue };
+        let refuses = LOCOS_REFUSES.contains(&fmt.as_str());
         let out_rep = match merge_with(&rep, &m) {
+            Ok(_) if refuses => {
+                problems.push(format!("{name} [{fmt}]: LocOS refuses a repeated placeholder, but the merge wrote it"));
+                continue;
+            }
+            Err(_) if refuses => {
+                checked += repeated;
+                formats.insert(base.format.clone());
+                continue;
+            }
             Ok(b) => b,
             Err(e) => {
                 problems.push(format!("{name} [{fmt}]: merge refused a repeated standalone tag: {e}"));
