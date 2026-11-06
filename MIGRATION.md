@@ -274,12 +274,20 @@ keeps the encoding:
   `XmlFilter::its_rules`; malformed or unsafe rules are `Error::Parse`/`Error::Unsupported`, never ignored).
   `xml.multilingual` (text, default none: a JSON object with `mode`, `source`, `lang_attr`, `source_xpath`,
   `target_xpath`, `create`, `enabled`, as `MlConfig::from_json` reads it; replaces the filter's multilingual
-  policy for that extract, `{"enabled": false}` turns the layout detection off). An empty value is the same as no
-  option. `bilingua-dita` and `bilingua-docbook` run an `XmlFilter` engine, so they pass these two keys through.
-  `bilingua_xmlres::records(bytes)` (root `<resources>` or `<properties>`, else `Error::Unsupported`),
-  `AndroidStrings::records` and `JavaXmlProperties::records` give LocOS's `records()` as `bilingua_xmlres::Record`
-  (`key`, `value` in LocOS token text with its outer white space, `comment`, `plural`, `index`, `max_length`,
-  `context`, `translatable`): every entry in file order, translatable or not.
+  policy for that extract, `{"enabled": false}` turns the layout detection off). An empty or blank value is the same
+  as no option (LocOS's constructor refuses a blank rules file or config; a typed option treats blank as unset).
+  `xaml.view_attributes` takes `true/false/1/0/yes/no/on/off` and refuses anything else (LocOS's environment
+  variable reads anything else as off). DITA and DocBook (`bilingua-dita`) run on the `XmlFilter` engine, as LocOS's
+  `DitaFilter` and `DocBookFilter` subclass `ItsXmlFilter`, so the `xml.*` keys reach them: `xml.its_rules` applies
+  (after the bundled rule set and `with_its_rules`, before the document's rules; LocOS `DitaFilter(rules=...)`),
+  `xml.multilingual` is checked (a bad config is refused) but not applied, since LocOS reads multilingual layouts
+  for generic `.xml` only; the same holds for an `XmlFilter` built with `no_multilingual()`. The option changes
+  extraction only: a merge replays the layout and rules recorded in the document, so it needs no option (LocOS
+  reads its setting again at export). `bilingua_xmlres::records(bytes)` (root `<resources>` or `<properties>`, else
+  `Error::Unsupported`; LocOS crashes on another root), `AndroidStrings::records` and `JavaXmlProperties::records`
+  give LocOS's `records()` as `bilingua_xmlres::Record` (`key`, `value` in LocOS token text with its outer white
+  space, `comment`, `plural`, `index`, `translatable`): every entry in file order, translatable or not. LocOS's
+  `ResourceRecord.max_length` and `context` are always empty for these dialects and are left out.
 - `profile::lang_tag` and `profile::is_rtl` are LocOS's `html_lang` and `text_direction`.
 - LocOS export keywords are accepted and ignored for now: `docx.walk`, `xlsx.walk`, `pptx.walk`, `xlsx.table`,
   `csv.table`, `markdown.walk`, `markdown.md_walk`, `markdown.fm_keys`, `json.dialect`.

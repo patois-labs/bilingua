@@ -45,7 +45,6 @@ fn check(got: Vec<bilingua_xmlres::Record>, want: &[Row]) {
     assert_eq!(got.len(), want.len());
     for (g, w) in got.iter().zip(want) {
         assert_eq!((g.key.as_str(), g.value.as_str(), g.comment.as_str(), g.plural.as_str(), g.index, g.translatable), *w, "{}", w.0);
-        assert!(g.max_length.is_none() && g.context.is_empty());
     }
 }
 
@@ -87,4 +86,40 @@ fn records_keep_outer_white_space_and_unescape_like_the_translator_view() {
     let x = b"<?xml version=\"1.0\"?><resources><string name=\"a\">  Hello \\'x\\'  </string></resources>";
     let r = AndroidStrings.records(x).unwrap();
     assert_eq!(r[0].value, "  Hello 'x'  ");
+}
+
+/// Every case of `tests/data/locos_records.json` (written by `tests/tools/gen_records.py` from LocOS's
+/// `get_filter("xml").records`): white space, references, comments, tokens, quotes, CDATA, missing names, Java.
+#[test]
+fn records_match_locos_on_every_probe() {
+    let all: serde_json::Value = serde_json::from_str(include_str!("data/locos_records.json")).unwrap();
+    let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests").join("data");
+    let mut n = 0;
+    for (name, case) in all.as_object().unwrap() {
+        let bytes = match (case.get("input"), case.get("file")) {
+            (Some(i), _) => i.as_str().unwrap().as_bytes().to_vec(),
+            (None, Some(f)) => std::fs::read(dir.join(f.as_str().unwrap())).unwrap(),
+            _ => panic!("{name}: no input"),
+        };
+        let got = records(&bytes).unwrap_or_else(|e| panic!("{name}: {e}"));
+        let want = case["records"].as_array().unwrap();
+        let g: Vec<String> = got.iter().map(|r| format!("{:?}|{:?}|{:?}|{:?}|{:?}|{}", r.key, r.value, r.comment, r.plural, r.index, r.translatable)).collect();
+        let w: Vec<String> = want
+            .iter()
+            .map(|r| {
+                format!(
+                    "{:?}|{:?}|{:?}|{:?}|{:?}|{}",
+                    r["key"].as_str().unwrap(),
+                    r["value"].as_str().unwrap(),
+                    r["comment"].as_str().unwrap(),
+                    r["plural"].as_str().unwrap(),
+                    r["index"].as_u64().map(|i| i as usize),
+                    r["translatable"].as_bool().unwrap()
+                )
+            })
+            .collect();
+        assert_eq!(g, w, "{name}");
+        n += 1;
+    }
+    assert!(n >= 9);
 }

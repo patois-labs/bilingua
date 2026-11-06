@@ -374,7 +374,8 @@ fn extract(d: Dialect, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, 
 }
 
 /// One resource entry as a key-based project sees it (Localization OS `ResourceRecord`): every entry of the file in
-/// order, translatable or not.
+/// order, translatable or not. LocOS's `max_length` and `context` are always empty for these two dialects and are
+/// left out.
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[non_exhaustive]
 pub struct Record {
@@ -389,10 +390,6 @@ pub struct Record {
     pub plural: String,
     /// The position of an Android `<string-array>` item.
     pub index: Option<usize>,
-    /// A length limit; neither dialect has one, so always `None` (kept for LocOS parity).
-    pub max_length: Option<usize>,
-    /// Neither dialect has a context; always empty (kept for LocOS parity).
-    pub context: String,
     /// Not `translatable="false"`, not a resource reference, and the value has a letter, a digit or markup.
     pub translatable: bool,
 }
@@ -415,7 +412,7 @@ fn records_of(d: Dialect, bytes: &[u8]) -> Result<Vec<Record>, Error> {
             Kind::Array(i) => (String::new(), Some(*i)),
             _ => (String::new(), None),
         };
-        out.push(Record { key: s.name.clone(), value, comment: s.comment.clone(), plural, index, max_length: None, context: String::new(), translatable });
+        out.push(Record { key: s.name.clone(), value, comment: s.comment.clone(), plural, index, translatable });
     }
     Ok(out)
 }

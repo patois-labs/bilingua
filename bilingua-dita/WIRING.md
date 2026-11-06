@@ -17,7 +17,8 @@
 - Contract test `crate_of`: `"dita" | "docbook" => "bilingua-xml"`. The skeleton is bilingua-xml's (its parser
   record and `SKELETON_SCHEMA`), since that crate writes and reads it; this crate only delegates. Documents carry
   `format = "dita"` / `"docbook"`, so `filter_for` routes the merge here.
-- Options: none (`dita.*` / `docbook.*` keys are refused as unknown). `Dita::with_its_rules` /
+- Options: none of their own (`dita.*` / `docbook.*` keys are refused as unknown). The engine's `xml.*` keys reach
+  them (MIGRATION.md, wave 12 item D): `xml.its_rules` applies, `xml.multilingual` is checked and ignored, as in LocOS. `Dita::with_its_rules` /
   `DocBook::with_its_rules` take a user's `<its:rules>` file (LocOS `DitaFilter(rules=...)`); the facade does not
   need it. Limits: `ExtractOptions::limits` as in bilingua-xml.
 - LocOS adapter: tags map one to one (`Open`/`Close` = `g`, `Standalone` = `x`), no free tags (LocOS keeps `{0}`,

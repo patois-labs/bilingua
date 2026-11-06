@@ -230,7 +230,7 @@ const MULTILINGUAL_KEY: &str = "xml.multilingual";
 /// The `format_options` keys of the XML filter.
 pub const FORMAT_OPTIONS: &[FormatOptionKey] = &[
     FormatOptionKey::text("xml.its_rules", "Content of an external ITS 2.0 rules file (<its:rules>), applied before the rules inside the document."),
-    FormatOptionKey::text("xml.multilingual", "Multilingual layout as a JSON object: mode, source, lang_attr, source_xpath, target_xpath, create, enabled."),
+    FormatOptionKey::text("xml.multilingual", "Multilingual layout as a JSON object: mode, source, lang_attr, source_xpath, target_xpath, create, enabled (generic XML only; DITA and DocBook check it and ignore it)."),
 ];
 
 /// Hidden code on the first unit of a multilingual document: the layout to replay on merge.
@@ -279,7 +279,13 @@ impl Filter for XmlFilter {
             f.rules.rules.extend(ItsRules::parse(text.as_bytes())?.rules);
         }
         if let Some(json) = ml {
-            f.ml = MlPolicy::Config(MlConfig::from_json(json)?);
+            // Checked everywhere (LocOS's constructor refuses a bad config for DITA and DocBook too), applied only by
+            // a filter that reads multilingual layouts at all: LocOS reads them for generic `.xml` only, and the
+            // DITA and DocBook engines (`with_id`) and `no_multilingual()` have the policy off.
+            let cfg = MlConfig::from_json(json)?;
+            if !matches!(f.ml, MlPolicy::Off) {
+                f.ml = MlPolicy::Config(cfg);
+            }
         }
         f.do_extract(bytes, opts)
     }
