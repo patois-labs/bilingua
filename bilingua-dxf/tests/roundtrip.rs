@@ -190,3 +190,33 @@ fn an_empty_translation_writes_an_empty_value() {
     assert_eq!(out, b"  0\nSECTION\n  2\nENTITIES\n  0\nTEXT\n  1\n\n  0\nMTEXT\n  1\n\n  0\nENDSEC\n  0\nEOF\n");
     assert!(extract(&out).unwrap().units.is_empty());
 }
+
+#[test]
+fn code_at_value_end_does_not_join_the_next_letter() {
+    // Wave 12 round trip: a translation with `q` after a lone trailing `\` code read back as the MTEXT `\q` code.
+    // A code that only ended where the value ended is now closed when something follows it (a second `\` for the
+    // lone backslash, `;` for an unterminated format code); at the end of the value it is written as it was.
+    let data = dxf(&p(&[(0, "SECTION"), (2, "ENTITIES"), (0, "MTEXT"), (5, "1"), (1, r"Note \"), (0, "MTEXT"), (5, "2"), (1, r"Big \H2.5x"), (0, "ENDSEC"), (0, "EOF")]), "\r\n", utf8);
+    let mut doc = extract(&data).unwrap();
+    for u in &mut doc.units {
+        assert!(matches!(u.source().last(), Some(Inline::Tag { .. })), "{:?}", u.source());
+        let mut t = vec![Inline::text("Zq")];
+        t.extend(u.source());
+        t.push(Inline::text("qZ"));
+        u.segments[0].target = t;
+    }
+    let out = Dxf.merge(&doc).unwrap();
+    let s = String::from_utf8(out.clone()).unwrap();
+    assert!(s.contains(r"ZqNote \\qZ") && s.contains(r"ZqBig \H2.5x;qZ"), "{s}");
+    let back = extract(&out).unwrap();
+    assert_eq!(back.units.iter().map(|u| plain_text(&u.source())).collect::<Vec<_>>(), vec![r"ZqNote \qZ", "ZqBig qZ"]);
+    // nothing after the code: the bytes are the source's (the prefix-only pseudo round trip and LocOS)
+    let mut doc = extract(&data).unwrap();
+    for u in &mut doc.units {
+        let mut t = vec![Inline::text("Zq")];
+        t.extend(u.source());
+        u.segments[0].target = t;
+    }
+    let s = String::from_utf8(Dxf.merge(&doc).unwrap()).unwrap();
+    assert!(s.contains("\r\nZqNote \\\r\n") && s.contains("\r\nZqBig \\H2.5x\r\n"), "{s}");
+}
