@@ -296,6 +296,12 @@ impl Filter for Php {
                 }
             }
         }
+        // The decoder takes the byte order mark off and the encoder takes one leading U+FEFF off the text before it
+        // writes the mark back, so a U+FEFF that is file content (a file that starts with two marks) needs one more
+        // in front of it to survive an untouched merge.
+        if out.starts_with('\u{feff}') {
+            out.insert(0, '\u{feff}');
+        }
         enc::encode_text_with(&out, encoding, opts)
     }
 }

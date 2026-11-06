@@ -1136,6 +1136,11 @@ fn skeleton(buf: &[u8], unit: &UnitInfo, segs: &[SegRec]) -> String {
     let mut out = String::new();
     let mut at = inner.start;
     for (i, range) in unit.src_ranges.iter().enumerate() {
+        // A malformed unit (two `seg-source` elements, nested segment `mrk`s) gives ranges that are
+        // out of order or outside the last `seg-source`; those are left out rather than sliced.
+        if range.start < at || range.end > inner.end {
+            continue;
+        }
         out.push_str(&String::from_utf8_lossy(&buf[at..range.start]));
         if let Some(c) = segs.get(i).and_then(|r| r.content.get()) {
             out.push_str(&serialize(&c.target, Flavor::X12, &c.raws));

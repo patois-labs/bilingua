@@ -115,6 +115,18 @@ fn every_byte_prefix_of_the_main_fixtures_is_safe() {
 }
 
 #[test]
+fn a_file_starting_with_two_byte_order_marks_merges_back_exactly() {
+    let data = "\u{feff}\u{feff}<?php return ['a' => 'b'];".as_bytes();
+    let doc = extract(data).unwrap();
+    assert_eq!(Php.merge(&doc).unwrap(), data);
+    check(data);
+    check("\u{feff}\u{feff}<?php\n$lang['a'] = 'b';\n".as_bytes());
+    // one mark stays one mark
+    let one = "\u{feff}<?php return ['a' => 'b'];".as_bytes();
+    assert_eq!(Php.merge(&extract(one).unwrap()).unwrap(), one);
+}
+
+#[test]
 fn deep_nesting_is_a_typed_error() {
     for depth in [33usize, 100, 5_000, 200_000] {
         let arr = format!("<?php return {}'x'{};", "[".repeat(depth), "]".repeat(depth));

@@ -302,6 +302,34 @@ fn broken_side_parts_are_left_alone() {
 }
 
 #[test]
+fn a_notes_slide_shared_by_two_slides_goes_to_the_first_every_time() {
+    // slide3 (third in the slide list) points at the notes slide of slide2 (first in the list) too
+    let mut files: Vec<(&str, String)> = vec![];
+    for e in read_zip(&presentation_zip(), &ZipLimits::default()).unwrap() {
+        let mut t = String::from_utf8(e.data).unwrap();
+        if e.name == "ppt/slides/_rels/slide3.xml.rels" {
+            t = rels(&[
+                ("rId1", "slideLayout", "../slideLayouts/slideLayout1.xml"),
+                ("rId2", "notesSlide", "../notesSlides/notesSlide1.xml"),
+            ]);
+        }
+        files.push((Box::leak(e.name.into_boxed_str()), t));
+    }
+    let bytes = zip(&files);
+    let shape = |d: &Document| -> Vec<(String, Option<String>)> {
+        d.units.iter().map(|u| (u.id.clone(), u.context.location.clone())).collect()
+    };
+    let first = extract(&bytes);
+    assert_eq!(
+        unit(&first, "notesSlide1-p1").context.location.as_deref(),
+        Some("slide 1, notes, shape \"Notes Placeholder 2\"")
+    );
+    for _ in 0..20 {
+        assert_eq!(shape(&extract(&bytes)), shape(&first));
+    }
+}
+
+#[test]
 fn truncated_files_never_panic() {
     let bytes = presentation_zip();
     for cut in (0..bytes.len()).step_by(89) {

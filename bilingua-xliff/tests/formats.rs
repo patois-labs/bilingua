@@ -203,3 +203,23 @@ fn not_utf8_or_not_xliff_is_refused() {
     bad.push(0xFF);
     assert!(f.extract(&bad, &opts()).is_err());
 }
+
+#[test]
+fn a_unit_with_two_seg_sources_merges_without_panicking() {
+    // Two `seg-source` elements in one unit give segment ranges that run backwards from the last one; the merge
+    // that builds the missing `<target>` used to slice them and panic.
+    const TWO_SS: &str = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<xliff version=\"1.2\" xmlns=\"urn:oasis:names:tc:xliff:document:1.2\">\n<file original=\"a.txt\" source-language=\"en\" target-language=\"de\" datatype=\"plaintext\">\n<body>\n<trans-unit id=\"t1\">\n<source>Hello.</source>\n<seg-source><mrk mtype=\"seg\" mid=\"1\">Hello.</mrk></seg-source><seg-source><mrk mtype=\"seg\" mid=\"2\">Hello.</mrk></seg-source>\n</trans-unit>\n</body>\n</file>\n</xliff>\n";
+    for o in [ExtractOptions::new(), opts()] {
+        let f = filter("xliff");
+        let mut d = f.extract(TWO_SS.as_bytes(), &o).unwrap();
+        assert_eq!(f.merge(&d).unwrap(), TWO_SS.as_bytes());
+        let ids: Vec<String> = d.units.iter().flat_map(|u| u.segments.iter().map(|s| s.id.clone())).collect();
+        assert!(!ids.is_empty());
+        for id in &ids {
+            d.set_target(id, vec![Inline::text("Hallo.")]).unwrap();
+        }
+        let out = f.merge(&d).unwrap();
+        assert!(String::from_utf8(out.clone()).unwrap().contains("<target>"));
+        assert!(f.extract(&out, &o).is_ok());
+    }
+}

@@ -613,9 +613,13 @@ fn extract_doc_inner(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Er
             }
         };
     }
-    // Notes, SmartArt data and drawings belong to the slide that points at them.
+    // Notes, SmartArt data and drawings belong to the slide that points at them. A part that two
+    // slides point at goes to the first in presentation order (as the LocOS profile does), so the
+    // slides are walked in slide-number order, not in HashMap order.
     let mut owner: HashMap<String, u32> = HashMap::new();
-    for (name, n) in slide_no.clone() {
+    let mut in_order: Vec<(String, u32)> = slide_no.clone().into_iter().collect();
+    in_order.sort_by(|a, b| (a.1, &a.0).cmp(&(b.1, &b.0)));
+    for (name, n) in in_order {
         for rel in read_rels(&entries, &name) {
             if rel.typ.ends_with("/notesSlide") || rel.typ.ends_with("/diagramData") || rel.typ.ends_with("/diagramDrawing") {
                 owner.entry(rel.target).or_insert(n);
