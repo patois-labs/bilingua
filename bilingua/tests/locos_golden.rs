@@ -364,9 +364,9 @@ const KNOWN: &[(&str, &str)] = &[
     ("json_dialects_filter_structured.json", "LocOS JSON resource dialects (Structured JSON): not in group A"),
 ];
 
-/// Formats whose goldens do not match yet: reported, not fatal. Remove a format when all its files match. docx,
-/// pptx, xlsx: Track D group B, not ported yet.
-const PENDING: &[&str] = &["docx", "pptx", "xlsx"];
+/// Formats whose goldens do not match yet: reported, not fatal. Remove a format when all its files match. pptx,
+/// xlsx: Track D group B, not ported yet.
+const PENDING: &[&str] = &["pptx", "xlsx"];
 
 #[test]
 fn locos_profile_goldens() {

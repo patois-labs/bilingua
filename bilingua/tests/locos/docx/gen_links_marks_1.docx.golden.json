@@ -1,0 +1,266 @@
+{
+ "format": "docx",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "⟦r1⟧Visit ⟦/r1⟧⟦r2⟧our site⟦/r2⟧⟦r3⟧ today⟦/r3⟧⟦r4⟧ please.⟦/r4⟧",
+   "style": "Normal"
+  },
+  {
+   "p_index": 1,
+   "text": "⟦r1⟧Marked ⟦/r1⟧⟦r2⟧wrod⟦/r2⟧⟦r3⟧ end.⟦/r3⟧",
+   "style": "Normal"
+  },
+  {
+   "p_index": 2,
+   "text": "⟦r1⟧Before the picture ⟦/r1⟧⟦x3⟧⟦r2⟧ and after it.⟦/r2⟧",
+   "style": "Normal"
+  },
+  {
+   "p_index": 3,
+   "text": "Line one\nline two\ttabbed",
+   "style": "Normal"
+  },
+  {
+   "p_index": 4,
+   "text": "⟦r1⟧Only space runs⟦/r1⟧⟦r2⟧   ⟦/r2⟧",
+   "style": "Normal"
+  },
+  {
+   "p_index": 5,
+   "text": "Heading text",
+   "style": "Heading 1"
+  },
+  {
+   "p_index": 6,
+   "text": "Title text",
+   "style": "Title"
+  },
+  {
+   "p_index": 7,
+   "text": "Deutsch im Stil",
+   "style": "German text"
+  },
+  {
+   "p_index": 8,
+   "text": "A blue circle",
+   "style": "a11y:img-alt"
+  },
+  {
+   "p_index": 9,
+   "text": "Circle",
+   "style": "a11y:img-title"
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "zip": [
+    {
+     "name": "[Content_Types].xml",
+     "same": true
+    },
+    {
+     "name": "_rels/.rels",
+     "same": true
+    },
+    {
+     "name": "word/document.xml",
+     "same": true
+    },
+    {
+     "name": "word/_rels/document.xml.rels",
+     "same": true
+    },
+    {
+     "name": "word/styles.xml",
+     "same": true
+    },
+    {
+     "name": "docProps/core.xml",
+     "same": true
+    }
+   ]
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "⟦r1⟧Ü Visit ⟦/r1⟧⟦r2⟧Ü our site⟦/r2⟧⟦r3⟧Ü  today⟦/r3⟧⟦r4⟧Ü  please.⟦/r4⟧",
+    "1": "⟦r1⟧Ü Marked ⟦/r1⟧⟦r2⟧Ü wrod⟦/r2⟧⟦r3⟧Ü  end.⟦/r3⟧",
+    "2": "⟦r1⟧Ü Before the picture ⟦/r1⟧⟦x3⟧⟦r2⟧Ü  and after it.⟦/r2⟧",
+    "3": "Ü Line one\nline two\ttabbed",
+    "4": "⟦r1⟧Ü Only space runs⟦/r1⟧⟦r2⟧   ⟦/r2⟧",
+    "5": "Ü Heading text",
+    "6": "Ü Title text",
+    "7": "Ü Deutsch im Stil",
+    "8": "Ü A blue circle",
+    "9": "Ü Circle"
+   },
+   "zip": [
+    {
+     "name": "[Content_Types].xml",
+     "sha1": "18f6cfc0ce9e03ca60fc059f74ec86c6a9635389"
+    },
+    {
+     "name": "_rels/.rels",
+     "sha1": "523141fee7d88d5720f09b41f1b0c8ac110fed63"
+    },
+    {
+     "name": "word/document.xml",
+     "sha1": "2f5ec209e39f5349dd7979d4bb67bc9767d251e6"
+    },
+    {
+     "name": "word/_rels/document.xml.rels",
+     "sha1": "4f964b27d27764ba58b9d08935008a72576728d2"
+    },
+    {
+     "name": "word/styles.xml",
+     "sha1": "7df767d5d631acb187588bae041cb088d7ba4db6"
+    },
+    {
+     "name": "docProps/core.xml",
+     "sha1": "e755b870f452c5134cadea3c1bbe878d67c90b16"
+    }
+   ]
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "⟦r1⟧Visit  & <\"'>⟦/r1⟧⟦r2⟧our site & <\"'>⟦/r2⟧⟦r3⟧ today & <\"'>⟦/r3⟧⟦r4⟧ please. & <\"'>⟦/r4⟧",
+    "2": "⟦r1⟧Before the picture  & <\"'>⟦/r1⟧⟦x3⟧⟦r2⟧ and after it. & <\"'>⟦/r2⟧",
+    "4": "⟦r1⟧Only space runs & <\"'>⟦/r1⟧⟦r2⟧   ⟦/r2⟧",
+    "6": "Title text & <\"'>",
+    "8": "A blue circle & <\"'>"
+   },
+   "zip": [
+    {
+     "name": "[Content_Types].xml",
+     "sha1": "18f6cfc0ce9e03ca60fc059f74ec86c6a9635389"
+    },
+    {
+     "name": "_rels/.rels",
+     "sha1": "523141fee7d88d5720f09b41f1b0c8ac110fed63"
+    },
+    {
+     "name": "word/document.xml",
+     "sha1": "020b1a255f7cfbe73f8fefe466cec8320a949d53"
+    },
+    {
+     "name": "word/_rels/document.xml.rels",
+     "sha1": "4f964b27d27764ba58b9d08935008a72576728d2"
+    },
+    {
+     "name": "word/styles.xml",
+     "sha1": "a3fb25d63e3d15b1d6c65aada2d67d737607c722"
+    },
+    {
+     "name": "docProps/core.xml",
+     "sha1": "63aadacf5384eb6b3c77104ca37ba139affe8b3c"
+    }
+   ]
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "zip": [
+    {
+     "name": "[Content_Types].xml",
+     "sha1": "18f6cfc0ce9e03ca60fc059f74ec86c6a9635389"
+    },
+    {
+     "name": "_rels/.rels",
+     "sha1": "523141fee7d88d5720f09b41f1b0c8ac110fed63"
+    },
+    {
+     "name": "word/document.xml",
+     "sha1": "c87feb443808a2785d33247a9fda225c5745190e"
+    },
+    {
+     "name": "word/_rels/document.xml.rels",
+     "sha1": "4f964b27d27764ba58b9d08935008a72576728d2"
+    },
+    {
+     "name": "word/styles.xml",
+     "sha1": "a3fb25d63e3d15b1d6c65aada2d67d737607c722"
+    },
+    {
+     "name": "docProps/core.xml",
+     "sha1": "63aadacf5384eb6b3c77104ca37ba139affe8b3c"
+    }
+   ]
+  },
+  {
+   "name": "escape-ar-SA",
+   "locale": "ar-SA",
+   "map": {
+    "0": "⟦r1⟧Visit  & <\"'>⟦/r1⟧⟦r2⟧our site & <\"'>⟦/r2⟧⟦r3⟧ today & <\"'>⟦/r3⟧⟦r4⟧ please. & <\"'>⟦/r4⟧",
+    "2": "⟦r1⟧Before the picture  & <\"'>⟦/r1⟧⟦x3⟧⟦r2⟧ and after it. & <\"'>⟦/r2⟧",
+    "4": "⟦r1⟧Only space runs & <\"'>⟦/r1⟧⟦r2⟧   ⟦/r2⟧",
+    "6": "Title text & <\"'>",
+    "8": "A blue circle & <\"'>"
+   },
+   "zip": [
+    {
+     "name": "[Content_Types].xml",
+     "sha1": "18f6cfc0ce9e03ca60fc059f74ec86c6a9635389"
+    },
+    {
+     "name": "_rels/.rels",
+     "sha1": "523141fee7d88d5720f09b41f1b0c8ac110fed63"
+    },
+    {
+     "name": "word/document.xml",
+     "sha1": "f2e557d46dfae0bc756a58beee3bab065ebd8bbf"
+    },
+    {
+     "name": "word/_rels/document.xml.rels",
+     "sha1": "4f964b27d27764ba58b9d08935008a72576728d2"
+    },
+    {
+     "name": "word/styles.xml",
+     "sha1": "7df767d5d631acb187588bae041cb088d7ba4db6"
+    },
+    {
+     "name": "docProps/core.xml",
+     "sha1": "211cc4851dee74bb968358bcdb651aac3a6ced9f"
+    }
+   ]
+  },
+  {
+   "name": "none-ar-SA",
+   "locale": "ar-SA",
+   "map": {},
+   "zip": [
+    {
+     "name": "[Content_Types].xml",
+     "sha1": "18f6cfc0ce9e03ca60fc059f74ec86c6a9635389"
+    },
+    {
+     "name": "_rels/.rels",
+     "sha1": "523141fee7d88d5720f09b41f1b0c8ac110fed63"
+    },
+    {
+     "name": "word/document.xml",
+     "sha1": "795bb86c7bff042533a1f68906ecf735319340c4"
+    },
+    {
+     "name": "word/_rels/document.xml.rels",
+     "sha1": "4f964b27d27764ba58b9d08935008a72576728d2"
+    },
+    {
+     "name": "word/styles.xml",
+     "sha1": "7df767d5d631acb187588bae041cb088d7ba4db6"
+    },
+    {
+     "name": "docProps/core.xml",
+     "sha1": "211cc4851dee74bb968358bcdb651aac3a6ced9f"
+    }
+   ]
+  }
+ ]
+}

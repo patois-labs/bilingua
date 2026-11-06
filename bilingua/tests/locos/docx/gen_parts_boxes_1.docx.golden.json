@@ -1,0 +1,356 @@
+{
+ "format": "docx",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "⟦r1⟧Anchor ⟦/r1⟧⟦x3⟧⟦r2⟧ paragraph.⟦/r2⟧",
+   "style": "Normal"
+  },
+  {
+   "p_index": 1,
+   "text": "Box text",
+   "style": "Normal"
+  },
+  {
+   "p_index": 2,
+   "text": "⟦r1⟧Noted⟦/r1⟧⟦x3⟧⟦r2⟧ text.⟦/r2⟧",
+   "style": "Normal"
+  },
+  {
+   "p_index": 3,
+   "text": "Commented⟦x1⟧",
+   "style": "Normal"
+  },
+  {
+   "p_index": 4,
+   "text": "Header line⟦x1⟧",
+   "style": "Normal"
+  },
+  {
+   "p_index": 5,
+   "text": "Footer line",
+   "style": "Normal"
+  },
+  {
+   "p_index": 6,
+   "text": "⟦x1⟧ A footnote.",
+   "style": "Normal"
+  },
+  {
+   "p_index": 7,
+   "text": "⟦x1⟧Check this.",
+   "style": "Normal"
+  },
+  {
+   "p_index": 8,
+   "text": "Company logo",
+   "style": "a11y:img-alt"
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "zip": [
+    {
+     "name": "[Content_Types].xml",
+     "same": true
+    },
+    {
+     "name": "_rels/.rels",
+     "same": true
+    },
+    {
+     "name": "word/document.xml",
+     "same": true
+    },
+    {
+     "name": "word/_rels/document.xml.rels",
+     "same": true
+    },
+    {
+     "name": "word/styles.xml",
+     "same": true
+    },
+    {
+     "name": "docProps/core.xml",
+     "same": true
+    },
+    {
+     "name": "word/footer1.xml",
+     "same": true
+    },
+    {
+     "name": "word/header1.xml",
+     "same": true
+    },
+    {
+     "name": "word/footnotes.xml",
+     "same": true
+    },
+    {
+     "name": "word/comments.xml",
+     "same": true
+    }
+   ]
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "⟦r1⟧Ü Anchor ⟦/r1⟧⟦x3⟧⟦r2⟧Ü  paragraph.⟦/r2⟧",
+    "1": "Ü Box text",
+    "2": "⟦r1⟧Ü Noted⟦/r1⟧⟦x3⟧⟦r2⟧Ü  text.⟦/r2⟧",
+    "3": "Ü Commented⟦x1⟧",
+    "4": "Ü Header line⟦x1⟧",
+    "5": "Ü Footer line",
+    "6": "⟦x1⟧Ü  A footnote.",
+    "7": "⟦x1⟧Ü Check this.",
+    "8": "Ü Company logo"
+   },
+   "zip": [
+    {
+     "name": "[Content_Types].xml",
+     "sha1": "25c7bb5852fbd73f5bdfe94490355841a0dd5699"
+    },
+    {
+     "name": "_rels/.rels",
+     "sha1": "523141fee7d88d5720f09b41f1b0c8ac110fed63"
+    },
+    {
+     "name": "word/document.xml",
+     "sha1": "89d86a476a29243a5ac8b83d2fc932dbda69756e"
+    },
+    {
+     "name": "word/_rels/document.xml.rels",
+     "sha1": "cfd99cad55efb30621a6e3ae05f01e6ada9742c2"
+    },
+    {
+     "name": "word/styles.xml",
+     "sha1": "7df767d5d631acb187588bae041cb088d7ba4db6"
+    },
+    {
+     "name": "word/footer1.xml",
+     "sha1": "3c5d4ae682f57f4a9b0df2dd6b367710777f81d7"
+    },
+    {
+     "name": "word/header1.xml",
+     "sha1": "ab50d52beeb2424475b7467393dcff594e7dabc2"
+    },
+    {
+     "name": "word/footnotes.xml",
+     "sha1": "49fe644466f7488172e0dd063a78e6b29115f2b3"
+    },
+    {
+     "name": "word/comments.xml",
+     "sha1": "fe6920506cc54731488d3256dc57e053789efff7"
+    },
+    {
+     "name": "docProps/core.xml",
+     "sha1": "e755b870f452c5134cadea3c1bbe878d67c90b16"
+    }
+   ]
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "⟦r1⟧Anchor  & <\"'>⟦/r1⟧⟦x3⟧⟦r2⟧ paragraph. & <\"'>⟦/r2⟧",
+    "2": "⟦r1⟧Noted & <\"'>⟦/r1⟧⟦x3⟧⟦r2⟧ text. & <\"'>⟦/r2⟧",
+    "4": "Header line & <\"'>⟦x1⟧",
+    "6": "⟦x1⟧ A footnote. & <\"'>",
+    "8": "Company logo & <\"'>"
+   },
+   "zip": [
+    {
+     "name": "[Content_Types].xml",
+     "sha1": "25c7bb5852fbd73f5bdfe94490355841a0dd5699"
+    },
+    {
+     "name": "_rels/.rels",
+     "sha1": "523141fee7d88d5720f09b41f1b0c8ac110fed63"
+    },
+    {
+     "name": "word/document.xml",
+     "sha1": "543defee6a9d013245cdc71b097bdf6a36e8ca32"
+    },
+    {
+     "name": "word/_rels/document.xml.rels",
+     "sha1": "cfd99cad55efb30621a6e3ae05f01e6ada9742c2"
+    },
+    {
+     "name": "word/styles.xml",
+     "sha1": "a3fb25d63e3d15b1d6c65aada2d67d737607c722"
+    },
+    {
+     "name": "word/footer1.xml",
+     "sha1": "72df8413f103570c689d3e72930b97a3383765e1"
+    },
+    {
+     "name": "word/header1.xml",
+     "sha1": "6798abba7766490d19676c312becc0918ec427ef"
+    },
+    {
+     "name": "word/footnotes.xml",
+     "sha1": "99fdc65270f42cd231b3524198c10f50b4b0100f"
+    },
+    {
+     "name": "word/comments.xml",
+     "sha1": "ed16255055c5e635362c00e70c3ceb3de0588ed8"
+    },
+    {
+     "name": "docProps/core.xml",
+     "sha1": "63aadacf5384eb6b3c77104ca37ba139affe8b3c"
+    }
+   ]
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "zip": [
+    {
+     "name": "[Content_Types].xml",
+     "sha1": "25c7bb5852fbd73f5bdfe94490355841a0dd5699"
+    },
+    {
+     "name": "_rels/.rels",
+     "sha1": "523141fee7d88d5720f09b41f1b0c8ac110fed63"
+    },
+    {
+     "name": "word/document.xml",
+     "sha1": "6d66832c38f753d71a622ab405a141d058c1eccc"
+    },
+    {
+     "name": "word/_rels/document.xml.rels",
+     "sha1": "cfd99cad55efb30621a6e3ae05f01e6ada9742c2"
+    },
+    {
+     "name": "word/styles.xml",
+     "sha1": "a3fb25d63e3d15b1d6c65aada2d67d737607c722"
+    },
+    {
+     "name": "word/footer1.xml",
+     "sha1": "72df8413f103570c689d3e72930b97a3383765e1"
+    },
+    {
+     "name": "word/header1.xml",
+     "sha1": "39e108a1a2482677b16ac847e0c92dcd19a658d4"
+    },
+    {
+     "name": "word/footnotes.xml",
+     "sha1": "5025554f4136cdf77a89d207bca999f8f38c15e1"
+    },
+    {
+     "name": "word/comments.xml",
+     "sha1": "ed16255055c5e635362c00e70c3ceb3de0588ed8"
+    },
+    {
+     "name": "docProps/core.xml",
+     "sha1": "63aadacf5384eb6b3c77104ca37ba139affe8b3c"
+    }
+   ]
+  },
+  {
+   "name": "escape-ar-SA",
+   "locale": "ar-SA",
+   "map": {
+    "0": "⟦r1⟧Anchor  & <\"'>⟦/r1⟧⟦x3⟧⟦r2⟧ paragraph. & <\"'>⟦/r2⟧",
+    "2": "⟦r1⟧Noted & <\"'>⟦/r1⟧⟦x3⟧⟦r2⟧ text. & <\"'>⟦/r2⟧",
+    "4": "Header line & <\"'>⟦x1⟧",
+    "6": "⟦x1⟧ A footnote. & <\"'>",
+    "8": "Company logo & <\"'>"
+   },
+   "zip": [
+    {
+     "name": "[Content_Types].xml",
+     "sha1": "25c7bb5852fbd73f5bdfe94490355841a0dd5699"
+    },
+    {
+     "name": "_rels/.rels",
+     "sha1": "523141fee7d88d5720f09b41f1b0c8ac110fed63"
+    },
+    {
+     "name": "word/document.xml",
+     "sha1": "1e22186e7ad93260fec7027e8f4482db61c3d04e"
+    },
+    {
+     "name": "word/_rels/document.xml.rels",
+     "sha1": "cfd99cad55efb30621a6e3ae05f01e6ada9742c2"
+    },
+    {
+     "name": "word/styles.xml",
+     "sha1": "7df767d5d631acb187588bae041cb088d7ba4db6"
+    },
+    {
+     "name": "word/footer1.xml",
+     "sha1": "1fd8985e01c397cec4d613f245a68949ce894fa3"
+    },
+    {
+     "name": "word/header1.xml",
+     "sha1": "0a9f7f4eeba8a63d5c4f9a9f0938bc6289fe97b6"
+    },
+    {
+     "name": "word/footnotes.xml",
+     "sha1": "74247b798deac9503c04b94257f9c145f0aa96f6"
+    },
+    {
+     "name": "word/comments.xml",
+     "sha1": "455d01031afeaab690f08ae257118c78195eb4af"
+    },
+    {
+     "name": "docProps/core.xml",
+     "sha1": "211cc4851dee74bb968358bcdb651aac3a6ced9f"
+    }
+   ]
+  },
+  {
+   "name": "none-ar-SA",
+   "locale": "ar-SA",
+   "map": {},
+   "zip": [
+    {
+     "name": "[Content_Types].xml",
+     "sha1": "25c7bb5852fbd73f5bdfe94490355841a0dd5699"
+    },
+    {
+     "name": "_rels/.rels",
+     "sha1": "523141fee7d88d5720f09b41f1b0c8ac110fed63"
+    },
+    {
+     "name": "word/document.xml",
+     "sha1": "4d500e8fd943621dc9449c16e3c11ff05976ead4"
+    },
+    {
+     "name": "word/_rels/document.xml.rels",
+     "sha1": "cfd99cad55efb30621a6e3ae05f01e6ada9742c2"
+    },
+    {
+     "name": "word/styles.xml",
+     "sha1": "7df767d5d631acb187588bae041cb088d7ba4db6"
+    },
+    {
+     "name": "word/footer1.xml",
+     "sha1": "1fd8985e01c397cec4d613f245a68949ce894fa3"
+    },
+    {
+     "name": "word/header1.xml",
+     "sha1": "ac3c1588dcc956f09afcabb6939a5354ce17440b"
+    },
+    {
+     "name": "word/footnotes.xml",
+     "sha1": "25f2931544accc8fb54e579828906cfd2416eca7"
+    },
+    {
+     "name": "word/comments.xml",
+     "sha1": "455d01031afeaab690f08ae257118c78195eb4af"
+    },
+    {
+     "name": "docProps/core.xml",
+     "sha1": "211cc4851dee74bb968358bcdb651aac3a6ced9f"
+    }
+   ]
+  }
+ ]
+}
