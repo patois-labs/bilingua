@@ -296,12 +296,16 @@ fn skip_ws(b: &[u8], mut i: usize, limit: usize) -> usize {
     i
 }
 
-/// After `\begin` / `\end` at `e`: a `{` follows that the group maps cannot match, only because a `%` before it on
-/// the line reads as a comment to them (LocOS's maps do not know that `\url{a%b}` keeps its `%`). A brace that is
-/// unmatched for any other reason is not one.
+/// After `\begin` / `\end` at `e`: a `{` follows that the group maps cannot match only because a `%` before it on
+/// its line reads as a comment to them, while the walk has read that `%` as text (LocOS's maps do not know that
+/// `\url{a%b}` keeps its `%`). A brace unmatched for any other reason (a `%` inside the group, a missing `}`) is not.
 fn hidden_group(tx: &Txt, e: usize, limit: usize) -> bool {
     let j = skip_ws(tx.bytes(), e, limit);
-    j < limit && tx.bytes()[j] == b'{' && tx.match_brace(j, limit, false).is_none() && tx.match_brace(j, limit, true).is_some()
+    j < limit
+        && tx.bytes()[j] == b'{'
+        && in_comment(tx.s, j)
+        && tx.match_brace(j, limit, false).is_none()
+        && tx.match_brace(j, limit, true).is_some()
 }
 
 /// One `[opt]` or `{arg}` group: the opening character, start and end (delimiters included).
