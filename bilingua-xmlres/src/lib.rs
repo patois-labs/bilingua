@@ -5,7 +5,6 @@
 pub const SKELETON_SCHEMA: u32 = 1;
 
 mod cldr;
-mod cldr_table;
 mod scan;
 
 pub use bilingua_model::Limits;

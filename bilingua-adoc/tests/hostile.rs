@@ -86,32 +86,69 @@ fn every_truncation_of_the_fixtures_is_safe() {
     }
 }
 
+/// Scanning steps ([`bilingua_model::work`]) one file costs: extract, untouched merge, targets set, merge, re-read.
+fn work_of(data: &[u8]) -> u64 {
+    bilingua_model::work::count(|| check(data)).1
+}
+
+/// Linear work doubles when the input doubles; quadratic work quadruples. Counting steps instead of time makes
+/// the answer the same on a slow machine, a busy one and the M5.
+fn assert_linear(name: &str, make: impl Fn(usize) -> Vec<u8>, n: usize) {
+    let (small, big) = (work_of(&make(n)), work_of(&make(2 * n)));
+    assert!(small > 0, "{name}: no work counted");
+    assert!(big * 10 <= small * 25 + 2_000, "{name}: {small} steps for n={n}, {big} for n={}: more than linear", 2 * n);
+}
+
 #[test]
 fn deep_nesting_and_long_runs_are_linear() {
-    let t0 = std::time::Instant::now();
-    check("*_`#".repeat(30_000).as_bytes());
-    check(format!("{}x{}\n", "*_".repeat(50_000), "_*".repeat(50_000)).as_bytes());
-    check(format!("{}\n", "[.r]#".repeat(50_000)).as_bytes());
-    check(format!("{}\n", "link:x[".repeat(50_000)).as_bytes());
-    check(format!("{}\n", "<<a,".repeat(50_000)).as_bytes());
-    check("|===\n|a\n".repeat(30_000).as_bytes());
-    check("!===\n|===\n!===\n".repeat(30_000).as_bytes());
-    check("----\n".repeat(60_000).as_bytes());
-    check("a::\n".repeat(60_000).as_bytes());
-    check(format!("{}\n", " +\n".repeat(60_000)).as_bytes());
-    check(format!("{}\n", "a ".repeat(60_000)).as_bytes());
-    check(format!("text {}\n", "+x ".repeat(30_000)).as_bytes());
-    check(format!("text {}\n", "`x ".repeat(30_000)).as_bytes());
-    check(format!("text {}\n", "*x ".repeat(30_000)).as_bytes());
-    check(format!(":a: \\\n{}", "b \\\n".repeat(60_000)).as_bytes());
-    check(format!("= T\n:description: {}\n", "a \\\n  ".repeat(30_000)).as_bytes());
-    check(format!("{}\n", "{a}".repeat(30_000)).as_bytes());
-    check(format!("{}\n", "https://x.org/ ".repeat(30_000)).as_bytes());
+    let r = |s: &'static str| move |k: usize| s.repeat(k).into_bytes();
+    assert_linear("nesting", r("*_`#"), 15_000);
+    assert_linear("marks", |k| format!("{}x{}
+", "*_".repeat(k), "_*".repeat(k)).into_bytes(), 25_000);
+    assert_linear("roles", |k| format!("{}
+", "[.r]#".repeat(k)).into_bytes(), 25_000);
+    assert_linear("links", |k| format!("{}
+", "link:x[".repeat(k)).into_bytes(), 25_000);
+    assert_linear("xrefs", |k| format!("{}
+", "<<a,".repeat(k)).into_bytes(), 25_000);
+    assert_linear("tables", r("|===
+|a
+"), 15_000);
+    assert_linear("nested tables", r("!===
+|===
+!===
+"), 15_000);
+    assert_linear("listing fences", r("----
+"), 30_000);
+    assert_linear("description lists", r("a::
+"), 30_000);
+    assert_linear("line breaks", |k| format!("{}
+", " +
+".repeat(k)).into_bytes(), 30_000);
+    assert_linear("words", |k| format!("{}
+", "a ".repeat(k)).into_bytes(), 30_000);
+    assert_linear("passthrough", |k| format!("text {}
+", "+x ".repeat(k)).into_bytes(), 15_000);
+    assert_linear("monospace", |k| format!("text {}
+", "`x ".repeat(k)).into_bytes(), 15_000);
+    assert_linear("bold", |k| format!("text {}
+", "*x ".repeat(k)).into_bytes(), 15_000);
+    assert_linear("attribute continuation", |k| format!(":a: \
+{}", "b \
+".repeat(k)).into_bytes(), 30_000);
+    assert_linear("header continuation", |k| format!("= T
+:description: {}
+", "a \
+  ".repeat(k)).into_bytes(), 15_000);
+    assert_linear("attribute refs", |k| format!("{}
+", "{a}".repeat(k)).into_bytes(), 15_000);
+    assert_linear("urls", |k| format!("{}
+", "https://x.org/ ".repeat(k)).into_bytes(), 15_000);
     // one unit near the 100 000-character cap: scans that never find their closer stop at the pattern's bound
     for p in ["link:", "{set:", "pass:[", "a link:a[", "x <<y", "[[z"] {
-        check(format!("Text {}\n", p.repeat(90_000 / p.len())).as_bytes());
+        assert_linear(p, |k| format!("Text {}
+", p.repeat(k / p.len())).into_bytes(), 22_000);
     }
-    assert!(t0.elapsed().as_secs() < 60, "took {:?}", t0.elapsed());
 }
 
 #[test]

@@ -370,11 +370,18 @@ fn ts_extension_claims_locale_modules_and_refuses_other_typescript() {
 // 11 test_printf_regex_linear
 #[test]
 fn printf_scan_stays_linear_on_a_run_of_zeros() {
-    let t0 = std::time::Instant::now();
-    let zeros = "0".repeat(60000);
-    let src = format!("export default {{ a: 'Sale %{zeros}z' }}");
-    assert_eq!(texts_str(&src), [format!("Sale %{zeros}z")]);
-    assert!(t0.elapsed().as_secs() < 5, "{:?}", t0.elapsed());
+    // Counts scanning steps (bilingua_model::work) instead of time: a linear scan does twice the work for twice
+    // the zeros, a quadratic one four times.
+    let run = |n: usize| {
+        let zeros = "0".repeat(n);
+        let src = format!("export default {{ a: 'Sale %{zeros}z' }}");
+        let (got, work) = bilingua_model::work::count(|| texts_str(&src));
+        assert_eq!(got, [format!("Sale %{zeros}z")]);
+        work
+    };
+    let (small, big) = (run(30_000), run(60_000));
+    assert!(small >= 30_000, "the scan was not counted: {small}");
+    assert!(big * 10 <= small * 25, "{small} steps for 30 000 zeros, {big} for 60 000: more than linear");
     for s in ["Saved %s of %1$d files", "%05.2f%%", "%(name)s left"] {
         assert!(
             texts_str(&format!("export default {{ a: 'Go {s}' }}"))[0].contains('\u{27E6}'),

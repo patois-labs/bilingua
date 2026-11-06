@@ -156,6 +156,7 @@ pub fn slots(text: &str, limits: &Limits) -> Result<Vec<Slot>, Error> {
     for (idx, &(s, e)) in lines.iter().enumerate() {
         let line = idx + 1;
         let body = &text[s..e];
+        bilingua_model::work::tick(1 + body.len() as u64);
         let rs = rstrip(body);
         if let Some(v) = &verbatim {
             if rs == v {

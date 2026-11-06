@@ -103,6 +103,7 @@ impl<'a> Icu<'a> {
         let n = b.len();
         let mut start = i;
         while i < n {
+            bilingua_model::work::tick(1);
             match b[i] {
                 b'{' => {
                     self.emit(K::Text, &s[start..i]);
@@ -314,6 +315,7 @@ pub fn unit_inlines(value: &str) -> (Vec<Inline>, BTreeMap<String, CodeData>) {
         });
     };
     for (k, chunk) in &pieces {
+        bilingua_model::work::tick(1 + chunk.len() as u64);
         if *k != K::Text {
             point(chunk, false, &mut inl);
             continue;
@@ -323,6 +325,7 @@ pub fn unit_inlines(value: &str) -> (Vec<Inline>, BTreeMap<String, CodeData>) {
             if m.start() > pos {
                 inl.push(Inline::Text(chunk[pos..m.start()].to_string()));
             }
+            bilingua_model::work::tick(1 + m.len() as u64);
             point(m.as_str(), is_free(m.as_str()), &mut inl);
             pos = m.end();
         }
