@@ -252,7 +252,14 @@ fn main() {
                     // CSV and STF target columns, TTX/TXML/TXLF/XLZ targets, multilingual XML), so reopening the
                     // merged file gives the source back unchanged.
                     let beside_ok = matches!(doc.format.as_str(), "mo" | "desktop" | "catkeys" | "csv" | "tsv" | "stf" | "ttx" | "txml" | "txlf" | "xlz" | "xml");
-                    let want = |x: &String| format!("{PRE}{x}{POST}");
+                    // Flare topics and EPUB chapters are XHTML read without a DTD: a translation that types an
+                    // HTML-only named reference (`&eacute;`, kept as typed in the source text) is written as a
+                    // numeric one (`&#233;`), as LocOS's `_xml_named_refs` does, so that is the text to expect.
+                    let xml_refs = matches!(doc.format.as_str(), "flprjzip" | "epub");
+                    let want = |x: &String| {
+                        let w = format!("{PRE}{x}{POST}");
+                        if xml_refs { bilingua_html::xml_named_refs(&w) } else { w }
+                    };
                     let same = |x: &String, y: &String| if md { want(x).replace('\\', "") == y.replace('\\', "") } else { want(x) == *y };
                     let beside = a.iter().zip(&b2).filter(|(x, y)| !same(x, y) && beside_ok && x == y).count();
                     let bad = a.iter().zip(&b2).filter(|(x, y)| !same(x, y) && (!beside_ok || x != y)).count();

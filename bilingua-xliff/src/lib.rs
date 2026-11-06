@@ -12,7 +12,9 @@
 //! Localization OS rule (see `inline.rs`).
 
 /// Version of the skeleton layout this crate writes (bumped when an old skeleton can no longer be merged).
-pub const SKELETON_SCHEMA: u32 = 1;
+/// Schema 2 (wave 12): a trans-unit with one segment names that segment by the unit id (see [`segment_ids`]);
+/// a schema 1 document is merged by the file's own segment ids, as it was made.
+pub const SKELETON_SCHEMA: u32 = 2;
 
 mod attrs;
 mod doc;
@@ -30,7 +32,65 @@ pub use error::Error;
 pub use inline::{RawTag, TagDef, TagDefs};
 
 use bilingua_model::{Document, ExtractOptions, Filter, Granularity, Inline, MergeOptions, Segment, SkelPart, Skeleton, TagKind, Unit};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
+
+/// The unit ids and segment ids [`to_document`] gives an open file, one unit id per trans-unit (`Doc` unit
+/// position) and one segment id per segment (`Doc` segment position).
+///
+/// A unit id is the trans-unit id (`~2`, `~3`, ... after a repeat). A unit with one segment names that segment by
+/// its unit id, so the facade contract "segment id = unit id in paragraph mode" holds also for a Trados SDLXLIFF,
+/// whose trans-unit ids are GUIDs and whose segment ids (`mrk mid`) are numbers. A unit with several segments keeps
+/// the file's own segment ids ([`SegView::id`]). Ids stay unique in the document: an id already taken gets `~2`, ...
+pub fn segment_ids(doc: &Doc) -> (Vec<String>, Vec<String>) {
+    let mut unit_ids: Vec<Option<String>> = vec![None; doc.unit_count()];
+    let mut seg_count = vec![0usize; doc.unit_count()];
+    let mut seen: HashSet<String> = HashSet::new();
+    for i in 0..doc.len() {
+        let v = doc.seg(i);
+        seg_count[v.unit_ix] += 1;
+        if unit_ids[v.unit_ix].is_none() {
+            let mut uid = v.unit_id.to_string();
+            let mut n = 1;
+            while !seen.insert(uid.clone()) {
+                n += 1;
+                uid = format!("{}~{n}", v.unit_id);
+            }
+            unit_ids[v.unit_ix] = Some(uid);
+        }
+    }
+    // the file's own ids of multi-segment units first, so a single-segment unit never takes one of them
+    let mut taken: HashSet<String> = HashSet::new();
+    for i in 0..doc.len() {
+        let v = doc.seg(i);
+        if seg_count[v.unit_ix] > 1 {
+            taken.insert(v.id.to_string());
+        }
+    }
+    let mut seg_ids = Vec::with_capacity(doc.len());
+    for i in 0..doc.len() {
+        let v = doc.seg(i);
+        if seg_count[v.unit_ix] > 1 {
+            seg_ids.push(v.id.to_string());
+            continue;
+        }
+        let base = unit_ids[v.unit_ix].clone().unwrap_or_default();
+        let mut id = base.clone();
+        let mut n = 1;
+        while !taken.insert(id.clone()) {
+            n += 1;
+            id = format!("{base}~{n}");
+        }
+        seg_ids.push(id);
+    }
+    (unit_ids.into_iter().map(Option::unwrap_or_default).collect(), seg_ids)
+}
+
+/// True when `document` was made with the file's own segment ids ([`SegView::id`]) rather than [`segment_ids`]:
+/// its skeleton has no stamp, or a stamp of crate `parser` with a schema below `first` (that crate's first schema
+/// with [`segment_ids`]: 2 for `bilingua-xliff` and `bilingua-sdl`). A stamp of another crate answers false.
+pub fn uses_file_segment_ids(document: &Document, parser: &str, first: u32) -> bool {
+    document.skeleton.parser().is_none_or(|p| p.name == parser && p.schema < first)
+}
 
 /// Which bilingual dialect a file was read as.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -112,19 +172,13 @@ pub fn to_document_in(
         .map_err(|e| bilingua_model::Error::Parse { format: id.to_string(), msg: format!("not valid UTF-8: {e}") })?;
     let mut units: Vec<Unit> = Vec::new();
     let mut unit_of: Vec<Option<usize>> = vec![None; doc.unit_count()];
-    let mut seen: HashSet<String> = HashSet::new();
-    for i in 0..doc.len() {
+    let (unit_ids, seg_ids) = segment_ids(doc);
+    for (i, sid) in seg_ids.iter().enumerate() {
         let v = doc.seg(i);
         let ui = match unit_of[v.unit_ix] {
             Some(ui) => ui,
             None => {
-                let mut uid = v.unit_id.to_string();
-                let mut n = 1;
-                while !seen.insert(uid.clone()) {
-                    n += 1;
-                    uid = format!("{}~{n}", v.unit_id);
-                }
-                let mut u = Unit::new(uid, vec![]);
+                let mut u = Unit::new(unit_ids[v.unit_ix].clone(), vec![]);
                 u.segments.clear();
                 u.context.kind = Some("segment".into());
                 u.context.key = Some(v.unit_id.to_string());
@@ -140,7 +194,7 @@ pub fn to_document_in(
             u.separators.push(String::new());
         }
         if let Some(n) = v.native_state {
-            u.context.extra.insert(format!("xliff.state.{}", v.id), n.to_string());
+            u.context.extra.insert(format!("xliff.state.{sid}"), n.to_string());
         }
         for r in v.raws {
             let c = u.codes.entry(r.id.clone()).or_default();
@@ -154,7 +208,7 @@ pub fn to_document_in(
             u.translate = false;
             u.lock_reason = v.lock_reason.map(str::to_string);
         }
-        u.segments.push(Segment::new(v.id.to_string(), v.source.to_vec()).with_target(v.target.to_vec()).with_state(v.state).with_origin(v.origin.cloned()));
+        u.segments.push(Segment::new(sid.clone(), v.source.to_vec()).with_target(v.target.to_vec()).with_state(v.state).with_origin(v.origin.cloned()));
     }
     let lang = |s: &str, fallback: &Option<String>| (!s.trim().is_empty()).then(|| s.to_string()).or_else(|| fallback.clone());
     bilingua_model::guard::finish(Document::new(id.to_string(), units, Skeleton::text(
@@ -173,15 +227,31 @@ pub fn apply_document(doc: &mut Doc, document: &Document) {
 /// Like [`apply_document`] for a document that holds the segments of several files: only segments whose id
 /// starts with `prefix` are used, and the id is matched without it.
 pub fn apply_document_prefixed(doc: &mut Doc, document: &Document, prefix: &str) {
-    apply_units_prefixed(doc, document.units.iter(), prefix);
+    if uses_file_segment_ids(document, env!("CARGO_PKG_NAME"), 2) {
+        apply_units_prefixed_file_ids(doc, document.units.iter(), prefix);
+    } else {
+        apply_units_prefixed(doc, document.units.iter(), prefix);
+    }
 }
 
 /// Like [`apply_document_prefixed`] for a chosen set of units (a package passes the units of one of its files).
+/// Segments are matched by the ids [`to_document`] gives ([`segment_ids`]).
 pub fn apply_units_prefixed<'a>(doc: &mut Doc, units: impl Iterator<Item = &'a Unit>, prefix: &str) {
+    let ids: HashMap<String, usize> = segment_ids(doc).1.into_iter().enumerate().map(|(i, s)| (s, i)).collect();
+    apply_units_with(doc, units, prefix, |_, id| ids.get(id).copied());
+}
+
+/// [`apply_units_prefixed`] for a document made before [`segment_ids`] (skeleton schema 1): segments are matched
+/// by the file's own ids ([`SegView::id`], the Trados `mid` for an SDLXLIFF).
+pub fn apply_units_prefixed_file_ids<'a>(doc: &mut Doc, units: impl Iterator<Item = &'a Unit>, prefix: &str) {
+    apply_units_with(doc, units, prefix, |d, id| d.index_of(id));
+}
+
+fn apply_units_with<'a>(doc: &mut Doc, units: impl Iterator<Item = &'a Unit>, prefix: &str, find: impl Fn(&Doc, &str) -> Option<usize>) {
     for u in units.filter(|u| u.translate) {
         for s in &u.segments {
             let Some(id) = s.id.strip_prefix(prefix) else { continue };
-            let Some(i) = doc.index_of(id) else { continue };
+            let Some(i) = find(&*doc, id) else { continue };
             if doc.seg(i).locked {
                 continue;
             }

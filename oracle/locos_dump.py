@@ -6,8 +6,10 @@ Writes {file: {"units": [text, ...]} or {"error": ...}} where text is the unit t
 inline-code tokens left in place. Nothing in the LocOS tree is written; the data dir is a throwaway.
 """
 
+import atexit
 import json
 import os
+import shutil
 import sys
 import tempfile
 
@@ -16,12 +18,50 @@ LOCOS = os.environ.get("LOCOS_DIR") or next(
     (os.path.join(up, "local-tms") for up in [os.path.dirname(os.path.abspath(__file__))] + [
         os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), *[".."] * n)) for n in range(1, 8)]
      if os.path.isdir(os.path.join(up, "local-tms", "app", "filters"))), "local-tms")
-os.environ["LOC_TMS_DATA_DIR"] = tempfile.mkdtemp(prefix="locos-oracle-")
+_DATA = tempfile.mkdtemp(prefix="locos-oracle-")
+
+
+def _cleanup() -> None:
+    """Removes the throwaway data folder when the run ends (the SQLite engine is closed first: Windows keeps an
+    open database file locked)."""
+    db = sys.modules.get("app.db")  # never import LocOS here: only close what the run opened
+    if db is not None:
+        try:
+            db.engine.dispose()
+        except Exception:  # noqa: BLE001
+            pass
+    shutil.rmtree(_DATA, ignore_errors=True)
+
+
+atexit.register(_cleanup)
+os.environ["LOC_TMS_DATA_DIR"] = _DATA
+# LocOS's test boot: a throwaway data folder AND a throwaway SQLite file (never the real database). Some filters
+# touch the database (the PDF OCR fallback writes the spend ledger), so it is initialised below with LocOS's own
+# init_db. The environment is set before any `app` import, and is made offline: no provider keys, no local engine,
+# so OCR never calls a paid or remote engine (the .env file in the LocOS tree is only read where a variable is unset).
+os.environ["LOC_TMS_TEST_MODE"] = "1"
+os.environ.pop("LOC_TMS_SERVER", None)
+os.environ["DATABASE_URL"] = "sqlite:///" + os.path.join(_DATA, "oracle.db").replace("\\", "/")
+os.environ["DEFAULT_PROVIDER"] = "mock"
+for _k in ("ANTHROPIC_API_KEY", "GEMINI_API_KEY", "OPENAI_API_KEY", "TYPESAFE_API_KEY", "LOCAL_BASE_URL"):
+    os.environ[_k] = ""
 sys.dont_write_bytecode = True
 sys.path.insert(0, LOCOS)
 
 from app import filters as _f  # noqa: E402,F401
 from app.filters.base import get_filter  # noqa: E402
+
+DB_ERROR = None
+try:
+    from app.db import init_db  # noqa: E402
+
+    init_db()
+except Exception as _e:  # noqa: BLE001
+    DB_ERROR = f"{type(_e).__name__}: {str(_e)[:150]}"
+
+# Without a vision engine LocOS's OCR returns these placeholders instead of text (offline, deterministic). They are
+# not document text, so they are counted and reported, not listed as units.
+OCR_PLACEHOLDERS = ("[scanned page", "[OCR blocked", "[OCR error")
 
 EXT = {"docm": "docx", "dotx": "docx", "dotm": "docx", "htm": "html", "markdown": "md", "text": "txt"}
 
@@ -109,8 +149,14 @@ def main() -> None:
                         openpyxl.load_workbook(f).close()
             except Exception as e:  # noqa: BLE001
                 opened = f"{type(e).__name__}: {str(e)[:150]}"
+            ocr = sum(1 for u in pr.units if u.text.startswith(OCR_PLACEHOLDERS))
             res[f] = {"filter": filt.fmt, "dialect": dialect(filt.fmt, data, pr), "open_error": opened, "units": [
-                {"i": u.p_index, "text": u.text, "style": u.style} for u in pr.units]}
+                {"i": u.p_index, "text": u.text, "style": u.style} for u in pr.units
+                if not u.text.startswith(OCR_PLACEHOLDERS)]}
+            if ocr:
+                res[f]["ocr_placeholders"] = ocr
+            if DB_ERROR:
+                res[f]["db_error"] = DB_ERROR
         except Exception as e:  # noqa: BLE001
             res[f] = {"error": f"{type(e).__name__}: {str(e)[:200]}"}
     with open(out_path, "w", encoding="utf-8") as fh:

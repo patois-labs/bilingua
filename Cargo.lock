@@ -430,6 +430,7 @@ name = "bilingua-oracle"
 version = "0.9.0"
 dependencies = [
  "bilingua",
+ "bilingua-html",
  "serde_json",
  "zip",
 ]

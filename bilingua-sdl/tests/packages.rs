@@ -40,8 +40,8 @@ fn sdl_package_reads_target_files_and_writes_edits_back() {
     let mut d = f.extract(&pkg, &ExtractOptions::default()).unwrap();
     // Two target files; the source copy is not a work file.
     assert_eq!(d.units.len(), 2);
-    let ar_id = "ar-SA/a.sdlxliff|1";
-    let ja_id = "ja-JP/a.sdlxliff|1";
+    let ar_id = "ar-SA/a.sdlxliff|t";
+    let ja_id = "ja-JP/a.sdlxliff|t";
     assert_eq!(plain_text(&d.find(ar_id).unwrap().1.target), "\u{62D}\u{641}\u{638}");
     assert_eq!(d.find(ja_id).unwrap().1.state, SegState::New);
     // Untouched: every entry comes back with the same content.

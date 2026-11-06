@@ -45,6 +45,15 @@ item below breaks code written against 0.1; after 1.0 these types grow without b
   `bilingua::format_option_keys()` (CLI: `bilingua options`) lists them.
 - **`Skeleton::Binary`** is new (mo and stl use it); **`Unit::hidden`** holds parser-private values that used to be
   `~` codes in `Unit::codes`. Old JSON documents still read (the `~` codes move into `hidden`).
+- **XLIFF segment ids (wave 12).** Without a profile, a trans-unit with one segment now names that segment by its
+  unit id, so "segment id = unit id in paragraph mode" holds for every format. This changes the ids of an SDLXLIFF
+  (and of any XLIFF 1.2 with `<seg-source>`): a Trados trans-unit `id="3f1c...a1b3"` holding `mrk mid="1"` gave
+  segment `1` and now gives `3f1c...a1b3`; in a Trados package, `de-DE/a.sdlxliff|1` becomes
+  `de-DE/a.sdlxliff|3f1c...a1b3`. A trans-unit with several segments keeps the file's own ids (the `mid`s); a unit
+  id already used as such a `mid` gets `~2`. Unit ids, the Localization OS profile and the `Doc` handle
+  (`SegView::id`, CAT OS) do not change. `bilingua_xliff::segment_ids(&doc)` gives the new ids. The skeleton schema
+  of `bilingua-xliff` and `bilingua-sdl` is now 2; a stored schema 1 document still merges, by the old ids
+  (`apply_units_prefixed_file_ids`). Re-extract to get the new ids; do not mix ids from the two.
 - **Empty translations.** An empty `target` still means untranslated (the source is written).
   `Document::set_target_empty(id)` marks a segment as translated to nothing (`Segment::empty_target`); it is written
   empty. `Segment::has_target()` / `Unit::is_translated()` are the tests to use.

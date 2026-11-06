@@ -223,3 +223,54 @@ fn a_unit_with_two_seg_sources_merges_without_panicking() {
         assert!(f.extract(&out, &o).is_ok());
     }
 }
+
+// A Trados SDLXLIFF as Studio writes it: GUID trans-unit ids, numeric `mrk mid`s, one unit with two segments.
+const SDL_GUID: &str = "<?xml version=\"1.0\" encoding=\"utf-8\"?><xliff xmlns:sdl=\"http://sdl.com/FileTypes/SdlXliff/1.0\" xmlns=\"urn:oasis:names:tc:xliff:document:1.2\" version=\"1.2\" sdl:version=\"1.0\">\n<file original=\"a.docx\" datatype=\"x-sdlfilterframework2\" source-language=\"en-US\" target-language=\"de-DE\"><body>\n<trans-unit id=\"0f4a8c2e-1b3d-4e5f-8a6b-7c8d9e0f1a2b\"><source>Save.</source><seg-source><mrk mtype=\"seg\" mid=\"1\">Save.</mrk></seg-source><target><mrk mtype=\"seg\" mid=\"1\"></mrk></target><sdl:seg-defs><sdl:seg id=\"1\"/></sdl:seg-defs></trans-unit>\n<trans-unit id=\"9e8d7c6b-5a4f-4e3d-8c2b-1a0f9e8d7c6b\"><source>Open it. Then save.</source><seg-source><mrk mtype=\"seg\" mid=\"2\">Open it.</mrk> <mrk mtype=\"seg\" mid=\"3\">Then save.</mrk></seg-source><target><mrk mtype=\"seg\" mid=\"2\"></mrk> <mrk mtype=\"seg\" mid=\"3\"></mrk></target><sdl:seg-defs><sdl:seg id=\"2\"/><sdl:seg id=\"3\"/></sdl:seg-defs></trans-unit>\n<trans-unit id=\"2\"><source>Close.</source><seg-source><mrk mtype=\"seg\" mid=\"4\">Close.</mrk></seg-source><target><mrk mtype=\"seg\" mid=\"4\"></mrk></target><sdl:seg-defs><sdl:seg id=\"4\"/></sdl:seg-defs></trans-unit>\n</body></file></xliff>";
+
+#[test]
+fn sdlxliff_single_segment_units_are_named_by_their_guid_unit_id() {
+    let f = filter("sdlxliff");
+    let mut d = f.extract(SDL_GUID.as_bytes(), &opts()).unwrap();
+    let ids: Vec<(String, Vec<String>)> = d.units.iter().map(|u| (u.id.clone(), u.segments.iter().map(|s| s.id.clone()).collect())).collect();
+    // one segment: the unit id; two segments: the file's own mids; a unit id that is also a mid elsewhere ("2")
+    // takes a suffix so every segment id stays unique
+    assert_eq!(ids, vec![
+        ("0f4a8c2e-1b3d-4e5f-8a6b-7c8d9e0f1a2b".to_string(), vec!["0f4a8c2e-1b3d-4e5f-8a6b-7c8d9e0f1a2b".to_string()]),
+        ("9e8d7c6b-5a4f-4e3d-8c2b-1a0f9e8d7c6b".to_string(), vec!["2".to_string(), "3".to_string()]),
+        ("2".to_string(), vec!["2~2".to_string()]),
+    ]);
+    assert_eq!(f.merge(&d).unwrap(), SDL_GUID.as_bytes());
+    d.set_target("0f4a8c2e-1b3d-4e5f-8a6b-7c8d9e0f1a2b", vec![Inline::text("Speichern.")]).unwrap();
+    d.set_target("3", vec![Inline::text("Dann speichern.")]).unwrap();
+    d.set_target("2~2", vec![Inline::text("Schliessen.")]).unwrap();
+    let out = String::from_utf8(f.merge(&d).unwrap()).unwrap();
+    assert!(out.contains("<target><mrk mtype=\"seg\" mid=\"1\">Speichern.</mrk></target>"), "{out}");
+    assert!(out.contains("<mrk mtype=\"seg\" mid=\"2\"></mrk> <mrk mtype=\"seg\" mid=\"3\">Dann speichern.</mrk>"), "{out}");
+    assert!(out.contains("<target><mrk mtype=\"seg\" mid=\"4\">Schliessen.</mrk></target>"), "{out}");
+    let back = f.extract(out.as_bytes(), &opts()).unwrap();
+    assert_eq!(tgt(&back, "0f4a8c2e-1b3d-4e5f-8a6b-7c8d9e0f1a2b"), "Speichern.");
+    assert_eq!(tgt(&back, "2~2"), "Schliessen.");
+}
+
+#[test]
+fn a_schema_1_sdlxliff_document_still_merges_by_mid() {
+    // A document stored before skeleton schema 2 named every SDLXLIFF segment by its mid.
+    let f = filter("sdlxliff");
+    let mut d = f.extract(SDL_GUID.as_bytes(), &opts()).unwrap();
+    match &mut d.skeleton {
+        bilingua_model::Skeleton::Text { parser, .. } => parser.as_mut().unwrap().schema = 1,
+        _ => unreachable!(),
+    }
+    let old = ["1", "2", "3", "4"];
+    let mut k = 0;
+    for u in &mut d.units {
+        for s in &mut u.segments {
+            s.id = old[k].to_string();
+            k += 1;
+        }
+    }
+    d.set_target("1", vec![Inline::text("Speichern.")]).unwrap();
+    d.set_target("4", vec![Inline::text("Schliessen.")]).unwrap();
+    let out = String::from_utf8(f.merge(&d).unwrap()).unwrap();
+    assert!(out.contains("mid=\"1\">Speichern.</mrk>") && out.contains("mid=\"4\">Schliessen.</mrk>"), "{out}");
+}

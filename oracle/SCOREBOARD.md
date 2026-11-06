@@ -12,10 +12,10 @@ LocOS formats: 87. Bilingua parses 88 of them (source formats and the bilingual 
 
 | Status | Formats |
 |---|---|
-| same | 51 |
-| differs | 34 |
+| same | 57 |
+| differs | 30 |
 | bilingua-only | 1 |
-| untested | 2 |
+| untested | 0 |
 | missing | 0 |
 
 Status rules. `same`: every fixture file gives the same units (normalised) on both sides, an unchanged merge gives the same file and a pseudo-translated merge reads back. `differs`: anything else, with the top reasons (counts of unit-level differences, listed by kind). `bilingua-only`: Bilingua reads the files, LocOS cannot. `untested`: Bilingua parses the format but no fixture exists. `missing`: Bilingua has no parser; the LocOS unit count is shown when a fixture exists.
@@ -34,26 +34,32 @@ Extensions Bilingua parses with no LocOS registry entry: sdlproj.
 | docbook | dbk | source | 2+1 | 23 | 23 | 100.0% | ok | same |  |
 | dokuwiki |  | source | 15+0 | 141 | 141 | 100.0% | ok | same |  |
 | eml |  | source | 34+0 | 181 | 181 | 100.0% | ok | same |  |
+| epub |  | source | 4+0 | 113 | 113 | 100.0% | ok | same |  |
+| flprjzip |  | source | 3+0 | 127 | 127 | 100.0% | ok | same |  |
 | hhc |  | source | 5+0 | 20 | 20 | 100.0% | ok | same |  |
 | hhk |  | source | 3+0 | 15 | 15 | 100.0% | ok | same |  |
 | hhp |  | source | 12+0 | 24 | 24 | 100.0% | ok | same |  |
+| icml | wcml | source | 10+0 | 37 | 37 | 100.0% | ok | same |  |
 | idml |  | source | 7+0 | 59 | 59 | 100.0% | ok | same |  |
 | ini |  | source | 21+0 | 93 | 93 | 100.0% | ok | same |  |
 | mdx |  | source | 2+1 | 61 | 61 | 100.0% | ok | same |  |
 | mif |  | source | 8+0 | 30 | 30 | 100.0% | ok | same |  |
 | mo | gmo | source | 23+0 | 65 | 65 | 100.0% | ok | same |  |
 | mqxliff |  | bilingual | 0+1 | 2 | 2 | 100.0% | ok | same |  |
+| mqxlz |  | bilingual | 2+0 | 8 | 8 | 100.0% | ok | same |  |
 | mxliff |  | bilingual | 0+1 | 2 | 2 | 100.0% | ok | same |  |
 | odg | otg | source | 1+0 | 3 | 3 | 100.0% | ok | same |  |
 | odp | otp | source | 1+0 | 13 | 13 | 100.0% | ok | same |  |
 | ods | ots | source | 1+0 | 16 | 16 | 100.0% | ok | same |  |
 | odt | ott | source | 1+0 | 27 | 27 | 100.0% | ok | same |  |
+| pdf |  | source | 49+0 | 57 | 57 | 100.0% | ok | same |  |
 | php |  | source | 20+0 | 158 | 158 | 100.0% | ok | same |  |
 | plist |  | source | 18+2 | 87 | 87 | 100.0% | ok | same |  |
 | rc |  | source | 12+0 | 133 | 133 | 100.0% | ok | same |  |
 | resjson |  | source | 4+0 | 46 | 46 | 100.0% | ok | same |  |
 | rst | rest | source | 8+0 | 75 | 75 | 100.0% | ok | same |  |
 | sbv |  | source | 3+0 | 8 | 8 | 100.0% | ok | same |  |
+| sdlrpx | sdlppx | bilingual | 2+0 | 5 | 5 | 100.0% | ok | same |  |
 | sdlxliff | sdlxlf | bilingual | 0+1 | 4 | 4 | 100.0% | ok | same |  |
 | stf |  | source | 22+0 | 109 | 109 | 100.0% | ok | same |  |
 | stl |  | source | 6+0 | 9 | 9 | 100.0% | ok | same |  |
@@ -83,19 +89,15 @@ Extensions Bilingua parses with no LocOS registry entry: sdlproj.
 | docx | docm, dotm, dotx | source | 5+2 | 132 | 137 | 94.2% | ok | differs | extra in Bilingua x6; missing in Bilingua x1; different text x1 |
 | dtd |  | source | 15+0 | 132 | 132 | 79.1% | ok | differs | different text x24; missing in Bilingua x2; extra in Bilingua x2 |
 | dxf |  | source | 34+0 | 305 | 305 | 100.0% | FAIL 1/34 | differs | round trip fails on 1 file(s) |
-| epub |  | source | 4+0 | 113 | 112 | 98.2% | ok | differs | missing in Bilingua x1; different text x1 |
 | erb |  | source | 6+0 | 41 | 41 | 100.0% | FAIL 2/6 | differs | round trip fails on 2 file(s) |
-| flprjzip |  | source | 3+0 | 127 | 127 | 98.4% | ok | differs | missing in Bilingua x1; extra in Bilingua x1 |
 | ftl |  | source | 14+0 | 101 | 101 | 96.1% | FAIL 1/14 | differs | round trip fails on 1 file(s); missing in Bilingua x2; extra in Bilingua x2 |
-| html | htm, xhtml | source | 6+1 | 121 | 126 | 88.5% | ok | differs | extra in Bilingua x9; missing in Bilingua x4; different text x2 |
-| icml | wcml | source | 10+0 | 37 | 37 | 100.0% | FAIL 1/10 | differs | round trip fails on 1 file(s) |
+| html | htm, xhtml | source | 6+1 | 121 | 121 | 94.2% | ok | differs | different text x7 |
 | image | bmp, gif, jpeg, jpg, png, svg, tif, tiff, webp | source (only bmp, gif, jpeg, jpg, png, svg, tif, tiff, webp) | 35+0 | 82 | 98 | 87.2% | ok | differs | extra in Bilingua x12; LocOS failed on 2 file(s) |
 | js | cjs, cts, mjs, mts, ts | source | 20+0 | 114 | 114 | 100.0% | FAIL 2/20 | differs | round trip fails on 2 file(s) |
 | json |  | source | 5+1 | 65 | 64 | 96.9% | ok | differs | missing in Bilingua x1; different text x1 |
 | json5 | jsonc | source | 6+2 | 52 | 51 | 96.2% | ok | differs | missing in Bilingua x1; different text x1 |
 | jsp | jspf | source | 6+0 | 42 | 42 | 100.0% | FAIL 2/6 | differs | round trip fails on 2 file(s) |
-| md | markdown, mdown, mkd | source | 3+1 | 134 | 180 | 98.8% | ok | differs | different words x6; words missing in Bilingua x4 |
-| pdf |  | source | 49+0 | 61 | 57 | 93.4% | ok | differs | missing in Bilingua x4 |
+| md | markdown, mdown, mkd | source | 3+1 | 136 | 184 | 98.9% | ok | differs | different words x6; words missing in Bilingua x4 |
 | phtml |  | source | 6+0 | 36 | 36 | 100.0% | FAIL 1/6 | differs | round trip fails on 1 file(s) |
 | po | pot | source | 3+0 | 38 | 38 | 94.7% | ok | differs | different text x2 |
 | pptx | potm, potx, ppsm, ppsx, pptm | source | 1+2 | 37 | 35 | 80.0% | ok | differs | missing in Bilingua x5; extra in Bilingua x3 |
@@ -112,8 +114,6 @@ Extensions Bilingua parses with no LocOS registry entry: sdlproj.
 | xlsx | xlsm, xltm, xltx | source | 2+2 | 74 | 71 | 93.2% | ok | differs | missing in Bilingua x3; extra in Bilingua x2 |
 | yaml | yml | source | 5+3 | 93 | 93 | 95.7% | ok | differs | different text x4 |
 | sdlproj |  | source | 28+1 | 0 | 0 | - | ok | bilingua-only | LocOS could not read the file(s) |
-| mqxlz |  | bilingual | 0 | - | - | - | - | untested | no fixture file in the LocOS tree |
-| sdlrpx | sdlppx | bilingual | 0 | - | - | - | - | untested | no fixture file in the LocOS tree |
 
 ## Dialects LocOS picks by content
 
@@ -147,7 +147,6 @@ Ordered by a usage guess: software resource formats first, then Office, DTP, doc
 | erb | cr-only.erb: 1 units differ, 0 set_target errors |
 | erb | lumen.erb: 1 units differ, 0 set_target errors |
 | ftl | edge.ftl: 1 units differ, 0 set_target errors |
-| icml | suite_hidden.icml: 1 units differ, 0 set_target errors |
 | js | crlf_bom.js: 1 units differ, 0 set_target errors |
 | js | vue_messages.js: 1 units differ, 0 set_target errors |
 | jsp | lumen.jsp: 1 units differ, 0 set_target errors |
@@ -162,7 +161,7 @@ Ordered by a usage guess: software resource formats first, then Office, DTP, doc
 
 ## Files read
 
-1025 files: 975 corpus, 39 in `local-tms/tests/fixtures/formats/`, 5 written by its plain-script generators (stdlib `make_*.py`, to a scratch folder), 6 in `local-tms/sample-docs/`. The 61 `verify_*filter*.py` suites build their inputs inside the suite and import the application, so they were not run; the top-level files of `tests/fixtures/` are UI contracts, not localization files, and are not read.
+1029 files: 979 corpus, 39 in `local-tms/tests/fixtures/formats/`, 5 written by its plain-script generators (stdlib `make_*.py`, to a scratch folder), 6 in `local-tms/sample-docs/`. The 61 `verify_*filter*.py` suites build their inputs inside the suite and import the application, so they were not run; the top-level files of `tests/fixtures/` are UI contracts, not localization files, and are not read.
 
 | LocOS format | LocOS fixture file names |
 |---|---|

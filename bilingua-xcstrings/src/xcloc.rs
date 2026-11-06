@@ -210,10 +210,13 @@ impl Filter for Xcloc {
             let mut x = xliff_doc(e, &limits)?;
             let prefix = format!("x{}/", k + 1);
             let mut touched = false;
+            // the ids `to_document` gave the segments (a one-segment trans-unit is named by its unit id)
+            let ids: std::collections::HashMap<String, usize> =
+                bilingua_xliff::segment_ids(&x).1.into_iter().enumerate().map(|(i, s)| (s, i)).collect();
             for u in doc.units.iter().filter(|u| u.translate) {
                 for s in &u.segments {
                     let Some(local) = s.id.strip_prefix(&prefix) else { continue };
-                    let Some(i) = x.index_of(local) else { continue };
+                    let Some(&i) = ids.get(local) else { continue };
                     if x.seg(i).locked || s.target == x.seg(i).target || !s.has_target() {
                         continue;
                     }
