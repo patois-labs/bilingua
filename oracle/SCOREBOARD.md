@@ -12,8 +12,8 @@ LocOS formats: 87. Bilingua parses 88 of them (source formats and the bilingual 
 
 | Status | Formats |
 |---|---|
-| same | 56 |
-| differs | 31 |
+| same | 57 |
+| differs | 30 |
 | bilingua-only | 1 |
 | untested | 0 |
 | missing | 0 |
@@ -35,6 +35,7 @@ Extensions Bilingua parses with no LocOS registry entry: sdlproj.
 | dokuwiki |  | source | 15+0 | 141 | 141 | 100.0% | ok | same |  |
 | eml |  | source | 34+0 | 181 | 181 | 100.0% | ok | same |  |
 | epub |  | source | 4+0 | 113 | 113 | 100.0% | ok | same |  |
+| flprjzip |  | source | 3+0 | 127 | 127 | 100.0% | ok | same |  |
 | hhc |  | source | 5+0 | 20 | 20 | 100.0% | ok | same |  |
 | hhk |  | source | 3+0 | 15 | 15 | 100.0% | ok | same |  |
 | hhp |  | source | 12+0 | 24 | 24 | 100.0% | ok | same |  |
@@ -89,7 +90,6 @@ Extensions Bilingua parses with no LocOS registry entry: sdlproj.
 | dtd |  | source | 15+0 | 132 | 132 | 79.1% | ok | differs | different text x24; missing in Bilingua x2; extra in Bilingua x2 |
 | dxf |  | source | 34+0 | 305 | 305 | 100.0% | FAIL 1/34 | differs | round trip fails on 1 file(s) |
 | erb |  | source | 6+0 | 41 | 41 | 100.0% | FAIL 2/6 | differs | round trip fails on 2 file(s) |
-| flprjzip |  | source | 3+0 | 127 | 127 | 100.0% | FAIL 1/3 | differs | round trip fails on 1 file(s) |
 | ftl |  | source | 14+0 | 101 | 101 | 96.1% | FAIL 1/14 | differs | round trip fails on 1 file(s); missing in Bilingua x2; extra in Bilingua x2 |
 | html | htm, xhtml | source | 6+1 | 121 | 121 | 94.2% | ok | differs | different text x7 |
 | image | bmp, gif, jpeg, jpg, png, svg, tif, tiff, webp | source (only bmp, gif, jpeg, jpg, png, svg, tif, tiff, webp) | 35+0 | 82 | 98 | 87.2% | ok | differs | extra in Bilingua x12; LocOS failed on 2 file(s) |
@@ -97,7 +97,7 @@ Extensions Bilingua parses with no LocOS registry entry: sdlproj.
 | json |  | source | 5+1 | 65 | 64 | 96.9% | ok | differs | missing in Bilingua x1; different text x1 |
 | json5 | jsonc | source | 6+2 | 52 | 51 | 96.2% | ok | differs | missing in Bilingua x1; different text x1 |
 | jsp | jspf | source | 6+0 | 42 | 42 | 100.0% | FAIL 2/6 | differs | round trip fails on 2 file(s) |
-| md | markdown, mdown, mkd | source | 3+1 | 136 | 180 | 98.9% | ok | differs | different words x6; words missing in Bilingua x4 |
+| md | markdown, mdown, mkd | source | 3+1 | 136 | 184 | 98.9% | ok | differs | different words x6; words missing in Bilingua x4 |
 | phtml |  | source | 6+0 | 36 | 36 | 100.0% | FAIL 1/6 | differs | round trip fails on 1 file(s) |
 | po | pot | source | 3+0 | 38 | 38 | 94.7% | ok | differs | different text x2 |
 | pptx | potm, potx, ppsm, ppsx, pptm | source | 1+2 | 37 | 35 | 80.0% | ok | differs | missing in Bilingua x5; extra in Bilingua x3 |
@@ -146,7 +146,6 @@ Ordered by a usage guess: software resource formats first, then Office, DTP, doc
 | dxf | escapes.dxf: 1 units differ, 0 set_target errors |
 | erb | cr-only.erb: 1 units differ, 0 set_target errors |
 | erb | lumen.erb: 1 units differ, 0 set_target errors |
-| flprjzip | rich.flprjzip: 1 units differ, 0 set_target errors |
 | ftl | edge.ftl: 1 units differ, 0 set_target errors |
 | js | crlf_bom.js: 1 units differ, 0 set_target errors |
 | js | vue_messages.js: 1 units differ, 0 set_target errors |
