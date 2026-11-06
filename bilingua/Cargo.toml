@@ -14,6 +14,8 @@ categories.workspace = true
 
 [dependencies]
 bilingua-model = { workspace = true }
+# ZIP batches (src/batch.rs) read the archive with the shared zip guard
+bilingua-zip = { workspace = true }
 bilingua-seg = { workspace = true }
 bilingua-text = { workspace = true }
 bilingua-json = { workspace = true }
@@ -83,6 +85,6 @@ bilingua-subtext = { workspace = true }
 bilingua-wiki = { workspace = true }
 
 [dev-dependencies]
-bilingua-zip = { workspace = true }
+proptest = { workspace = true }
 zip = { workspace = true }
 serde_json = { workspace = true }

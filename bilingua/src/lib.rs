@@ -23,6 +23,8 @@
 pub use bilingua_model::*;
 pub use bilingua_seg::{join, split, Rules};
 
+pub mod batch;
+
 /// All available filters, most specific first. Plain text goes last because it accepts any UTF-8 file.
 pub fn filters() -> Vec<Box<dyn Filter>> {
     // The packages (zip) and the XLIFF family are recognised by extension or header; they go before the loose
