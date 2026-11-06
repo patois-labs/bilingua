@@ -188,7 +188,7 @@ impl<'a> P<'a> {
         }
         let a = self.i;
         let (v, kids) = match self.b.get(self.i) {
-            None => Err(err("the file ends before the JSON value does")),
+            None => return Err(err("the file ends before the JSON value does")),
             Some(b'{') => self.object(depth)?,
             Some(b'[') => self.array(depth)?,
             Some(b'"') => (Value::Str(self.string()?), Vec::new()),
