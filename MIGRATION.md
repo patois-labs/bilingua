@@ -111,7 +111,8 @@ item below breaks code written against 0.1; after 1.0 these types grow without b
   that opened as `json` before changes format. Differences from the LocOS walkers, on purpose:
   - Outside `profile::locos()` a translation may hold the bracket characters `⟦` `⟧` as text (Bilingua's tags
     are structural). Under the profile, as in LocOS, such a translation is `Error::Unwritable`, and so is an ADF inline
-    merge that moves a mention, emoji or other inline node (the Jira connector's `structure_ok_inline`).
+    merge that changes the order of its mentions, emoji and other inline nodes (the Jira connector's
+    `structure_ok_inline`; text may still move around them).
   - A Contentful hyperlink with no content is a standalone tag kept verbatim; LocOS makes it an empty pair it can
     never write back (its rebuild refuses an empty link), so there such a field could not be translated at all.
   - A merge is per unit: an untranslated unit keeps its source (LocOS's Contentful and Sanity rebuilds are all or

@@ -334,6 +334,45 @@ fn adf_leaf_mode_cases() {
 }
 
 #[test]
+fn adf_inline_container_typed_text_is_not_a_leaf() {
+    // a malformed leaf that also has content: inline mode takes its content (LocOS `_walk_inline`), leaf mode its text
+    let f = Adf;
+    let src = adf_doc(json!([{"type": "text", "text": "outer", "content": [at("inner words")]}]));
+    let mut d = open(&f, &src);
+    assert_eq!(texts(&d), ["inner words"]);
+    set(&mut d, 0, "innere Worte").unwrap();
+    let out = json(&f.merge(&d).unwrap());
+    assert_eq!(out["content"][0]["text"], "outer");
+    assert_eq!(out["content"][0]["content"][0]["text"], "innere Worte");
+    let mut d = f.extract(&src, &leaf_opts()).unwrap();
+    assert_eq!(texts(&d), ["outer"]);
+    set(&mut d, 0, "aussen").unwrap();
+    let out = json(&f.merge(&d).unwrap());
+    assert_eq!(out["content"][0]["text"], "aussen");
+    assert_eq!(out["content"][0]["content"][0]["text"], "inner words");
+}
+
+#[test]
+fn locos_profile_refuses_what_the_locos_walkers_refuse() {
+    // a stray bracket in a translation, and (ADF) a moved inline node: fine outside the profile, refused under it
+    let f = Adf;
+    let src = adf_doc(json!([{"type": "paragraph", "content": [at("Hi "), {"type": "mention", "attrs": {"id": "u"}}, at(" and "), {"type": "emoji", "attrs": {"shortName": ":x:"}}, at(" there")]}]));
+    let lo = profile::locos();
+    // (translation, accepted under the profile): text may move around the nodes, the nodes keep their order
+    for (text, under_ok) in [
+        ("Hallo \u{27E6}x1\u{27E7} \u{27E6} \u{27E6}x2\u{27E7} dort", false),
+        ("\u{27E6}x2\u{27E7} hallo \u{27E6}x1\u{27E7} dort", false),
+        ("\u{27E6}x1\u{27E7} hallo dort \u{27E6}x2\u{27E7}", true),
+    ] {
+        let mut d = open(&f, &src);
+        set(&mut d, 0, text).unwrap();
+        assert!(f.merge(&d).is_ok(), "{text}");
+        let under = f.merge_with(&d, &lo.merge_options("adf"));
+        assert_eq!(under.is_ok(), under_ok, "{text}: {under:?}");
+    }
+}
+
+#[test]
 fn adf_options() {
     let f = Adf;
     assert!(matches!(f.extract(JIRA, &opts().with_format_option("adf.units", "words")), Err(Error::FormatOption { .. })));

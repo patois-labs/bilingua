@@ -283,7 +283,7 @@ pub(crate) fn merge_doc(id: &'static str, doc: &Document, opts: &MergeOptions, p
         crate::adf::skeleton(&parsed.value, &mut a);
         crate::adf::skeleton(&root, &mut b);
         if a != b {
-            return Err(Error::Unwritable { unit: None, reason: "the translation moves a mention, emoji or other inline node (the Jira connector keeps their order)".into() });
+            return Err(Error::Unwritable { unit: None, reason: "the translation changes the order of the mentions, emoji and other inline nodes (the Jira connector refuses that)".into() });
         }
     }
     let body = json::splice(text, &parsed.value, &root, &parsed.span, &parsed.style);
