@@ -25,17 +25,21 @@ fn corpus() -> Vec<(String, Vec<u8>)> {
 }
 
 /// Formats whose LocOS writer keeps a placeholder once (its `_rebuild_target`, `used` set or `placed` set drops a
-/// second use), measured against the LocOS filters on the corpus (11-06): Bilingua matches and drops the repeat
-/// too. Server pages also write a tag that carries code once (`<a href="<?php x() ?>">`), on purpose. Every other
-/// format writes a repeated standalone placeholder each time, as LocOS does.
+/// second use), measured against the LocOS filters on the corpus (11-06 gate: each unit translated as `Q` + its
+/// text, with and without its first `⟦xN⟧` written twice, LocOS `build` compared): Bilingua drops the repeat too.
+/// Qt Linguist (`ts`) is one of them (LocOS `render_inner` drops a duplicated token). Server pages also write a tag
+/// that carries code once (`<a href="<?php x() ?>">`), on purpose, where LocOS writes such a tag twice. Every
+/// other format writes a repeated standalone placeholder each time, as LocOS does.
 const LOCOS_KEEPS_ONCE: &[&str] = &[
-    "android", "aspx", "ass", "dita", "docbook", "docx", "erb", "icml", "idml", "jsp", "phtml", "shtml", "ttml", "ttx", "txlf", "txml", "vsdx", "vtt",
-    "xlz", "xmb", "xml", "xslt", "xtb", "xtg",
+    "android", "aspx", "ass", "dita", "docbook", "docx", "erb", "icml", "idml", "jsp", "mif", "odt", "phtml", "shtml", "ts", "ttml", "ttx", "txlf",
+    "txml", "vsdx", "vtt", "xlz", "xmb", "xml", "xslt", "xtb", "xtg",
 ];
 
-/// For every corpus file: translate each unit as itself (the baseline) and as itself with its first standalone tag
-/// written twice, merge both under the profile: the repeat must be accepted, written (the output differs and is
-/// longer) and the result must read back.
+/// For every corpus file: translate each unit as `Q ` + its source (the baseline) and the same with its first
+/// standalone tag written twice, merge both under the profile: the repeat must be accepted, written (the output
+/// differs from the baseline's) in every format but those in [`LOCOS_KEEPS_ONCE`], dropped (the baseline's output)
+/// in those, and the result must read back. The baseline is a changed translation too, so a writer that re-renders
+/// a changed unit (escaping, white space) does not pass for one that writes the repeat.
 #[test]
 fn every_format_writes_a_repeated_standalone_placeholder_each_time() {
     let mut problems: Vec<String> = Vec::new();
@@ -56,13 +60,15 @@ fn every_format_writes_a_repeated_standalone_placeholder_each_time() {
             }
             let seg = &u.segments[0];
             let Some(at) = seg.source.iter().position(|i| matches!(i, Inline::Tag { kind: TagKind::Standalone, .. })) else { continue };
-            let mut twice = seg.source.clone();
-            twice.insert(at, seg.source[at].clone());
+            let mut changed = vec![Inline::text("Q ")];
+            changed.extend(seg.source.iter().cloned());
+            let mut twice = changed.clone();
+            twice.insert(at + 1, seg.source[at].clone());
             // the plain rule still refuses the repeat
             if rep.clone().set_target(&seg.id, twice.clone()).is_ok() {
                 problems.push(format!("{name} [{fmt}]: plain set_target took a repeated standalone tag in {}", u.id));
             }
-            if let Err(e) = profile::locos_set_target(&mut base, &seg.id, seg.source.clone()) {
+            if let Err(e) = profile::locos_set_target(&mut base, &seg.id, changed) {
                 problems.push(format!("{name} [{fmt}]: locos_set_target refused the source of {}: {e}", u.id));
                 continue;
             }
@@ -86,8 +92,13 @@ fn every_format_writes_a_repeated_standalone_placeholder_each_time() {
         };
         checked += repeated;
         formats.insert(base.format.clone());
-        if out_rep == out_base && !LOCOS_KEEPS_ONCE.contains(&fmt.as_str()) {
+        let once = LOCOS_KEEPS_ONCE.contains(&fmt.as_str());
+        if out_rep == out_base && !once {
             problems.push(format!("{name} [{fmt}]: {repeated} repeated placeholder(s) were not written (the output is the baseline's, {} bytes)", out_base.len()));
+            continue;
+        }
+        if out_rep != out_base && once {
+            problems.push(format!("{name} [{fmt}]: LocOS keeps a placeholder once, but the output with a repeat differs from the baseline's"));
             continue;
         }
         if extract(&name, &out_base, &o).is_ok() {

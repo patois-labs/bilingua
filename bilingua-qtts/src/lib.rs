@@ -386,7 +386,7 @@ impl Filter for QtTs {
                 }
                 SkelPart::Unit(i) => {
                     let u = doc.units.get(*i).ok_or_else(|| wr(format!("skeleton points at missing unit {i}")))?;
-                    write_unit(u, crlf, fill, &plural_lang, refs, opts.is_profile(bilingua_model::profile::LOCOS), &mut out)?;
+                    write_unit(u, crlf, fill, &plural_lang, refs, &mut out)?;
                 }
             }
         }
@@ -535,7 +535,7 @@ fn with_char_refs(s: String, refs: CharRefs) -> String {
 
 /// The translated text of a unit as inner XML: tags back as their original markup (each at most once, unknown
 /// ones dropped), text escaped, the source's surrounding white space kept.
-fn body_of(u: &Unit, crlf: bool, repeat: bool) -> String {
+fn body_of(u: &Unit, crlf: bool) -> String {
     let mut used: HashSet<String> = HashSet::new();
     let mut s = code(u, LEAD).unwrap_or_default();
     for i in u.output() {
@@ -543,8 +543,7 @@ fn body_of(u: &Unit, crlf: bool, repeat: bool) -> String {
             Inline::Text(t) => s.push_str(&escape_text(&xml_target_text(&t))),
             Inline::Tag { id, .. } => {
                 if let Some(raw) = u.codes.get(&id).and_then(|c| c.standalone.clone()) {
-                    // under the LocOS profile a tag may stand more than once, as LocOS writes it
-                    if used.insert(id) || repeat {
+                    if used.insert(id) {
                         s.push_str(&raw);
                     }
                 }
@@ -561,13 +560,13 @@ fn body_of(u: &Unit, crlf: bool, repeat: bool) -> String {
     }
 }
 
-fn write_unit(u: &Unit, crlf: bool, fill: bool, plural_lang: &str, refs: CharRefs, repeat: bool, out: &mut String) -> Result<(), Error> {
+fn write_unit(u: &Unit, crlf: bool, fill: bool, plural_lang: &str, refs: CharRefs, out: &mut String) -> Result<(), Error> {
     let raw = code(u, RAW).ok_or_else(|| Error::Write("a unit lost its translation element".into()))?;
     if !u.translate || u.segments.iter().all(|s| !s.has_target()) {
         out.push_str(&raw);
         return Ok(());
     }
-    let body = with_char_refs(body_of(u, crlf, repeat), refs);
+    let body = with_char_refs(body_of(u, crlf), refs);
     let numerus = u.has_hidden(NUM);
     let sc = scan(&raw, true, &Limits::default()).map_err(|_| Error::Write("the skeleton's translation element is not XML any more".into()))?;
     let el = sc.els[0];
