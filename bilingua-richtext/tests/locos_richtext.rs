@@ -482,5 +482,9 @@ fn notion_single_block_children_body_and_page_with_blocks() {
     let out = json(&f.merge(&d).unwrap());
     assert_eq!(out["properties"]["title"]["title"][0]["text"]["content"], "~Page name");
     assert_eq!(out["blocks"][0]["paragraph"]["rich_text"][0]["text"]["content"], "~Text");
+    // the new shapes open by extension or format id only: a sniff does not claim them or look-alike JSON
+    assert!(!f.sniff(&body) && !f.sniff(&page));
+    assert!(!f.sniff(br#"{"type": "menu", "menu": {"label": "File"}}"#));
+    assert!(!f.sniff(br#"{"children": [{"type": "item", "item": {"id": 1}}]}"#));
     assert!(matches!(f.extract(b"{\"a\": 1}", &opts()), Err(Error::Parse { .. })));
 }
