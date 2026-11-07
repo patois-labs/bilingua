@@ -50,10 +50,12 @@ def map_text(name: str, i: int, t: str):
         return "Kurz" if i % 2 == 0 else None
     if name == "dash":
         return "- " + t if i % 2 == 1 else None
+    if name == "tok":  # #814.1: a token no code of the unit has stays text
+        return t + " \u27e6x9999\u27e7 *a*"
     raise ValueError(name)
 
 
-MAPS = ["echo", "mark", "all", "third", "cjk", "long", "short", "dash"]
+MAPS = ["echo", "mark", "all", "third", "cjk", "long", "short", "dash", "tok"]
 
 
 def run_case(data: bytes) -> dict:

@@ -30,6 +30,7 @@ fn map_text(name: &str, i: usize, t: &str) -> Option<String> {
         "long" => Some(format!("{t} {t}")),
         "short" => i.is_multiple_of(2).then(|| "Kurz".to_string()),
         "dash" => (i % 2 == 1).then(|| format!("- {t}")),
+        "tok" => Some(format!("{t} \u{27e6}x9999\u{27e7} *a*")),
         _ => unreachable!(),
     }
 }
