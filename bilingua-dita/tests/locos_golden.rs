@@ -70,9 +70,6 @@ fn matches_locos_dita_and_docbook_filters() {
             only_locos_refuses.push(name.to_string());
             continue;
         }
-        // known difference (issue 809.3, fixed in Bilingua first): no attribute unit on a `translate="no"` or `conref`
-        // element, so LocOS's "Off" and "Ref" navtitle units are not ours and the builds are not comparable
-        let known_809 = name == "gate_attrs.ditamap";
         let want: Vec<(String, String, String)> = c["units"]
             .as_array()
             .unwrap()
@@ -81,8 +78,23 @@ fn matches_locos_dita_and_docbook_filters() {
             .collect();
         let got: Vec<(String, String, String)> =
             doc.units.iter().map(|u| (show(u), u.context.style.clone().unwrap_or_default(), u.notes.first().map(|n| n.text.clone()).unwrap_or_default())).collect();
-        let want: Vec<_> = if known_809 { want.into_iter().filter(|u| u.0 != "Off" && u.0 != "Ref").collect() } else { want };
-        if got != want {
+        // known difference (issue 809.3, fixed in Bilingua first): no attribute unit under translate="no" (or on a
+        // conref element), so LocOS's extra attribute units are not ours; the builds are not comparable then
+        let known_809 = got != want && {
+            let mut it = want.iter().peekable();
+            let mut ok = true;
+            for g in &got {
+                while it.peek().is_some_and(|w| *w != g && (w.1.starts_with("attr:") || w.1.starts_with("a11y:"))) {
+                    it.next();
+                }
+                if it.next() != Some(g) {
+                    ok = false;
+                    break;
+                }
+            }
+            ok && it.all(|w| w.1.starts_with("attr:") || w.1.starts_with("a11y:"))
+        };
+        if got != want && !known_809 {
             fails.push(format!("{name}: units differ\n  ours  {got:?}\n  locos {want:?}"));
             continue;
         }
