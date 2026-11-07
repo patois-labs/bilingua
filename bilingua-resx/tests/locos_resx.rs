@@ -76,6 +76,19 @@ fn resw_is_the_same_format_and_keeps_bom_and_crlf() {
 }
 
 #[test]
+fn a_multi_line_translation_in_a_crlf_file_gets_crlf() {
+    let resx = s(STRINGS).replace('
+', "
+");
+    let out = translate(resx.as_bytes(), &[(1, "line one
+line two")]);
+    assert!(!out.windows(2).any(|w| w[1] == b'
+' && w[0] != b''), "bare LF in a CRLF file");
+    assert!(String::from_utf8_lossy(&out).contains("line one
+line two"));
+}
+
+#[test]
 fn utf16_upload_keeps_its_encoding() {
     // LocOS converts to UTF-8; Bilingua writes the file back the way it came (UTF-16 with its BOM and declaration)
     let text = s(STRINGS).replace("encoding=\"utf-8\"", "encoding=\"utf-16\"");

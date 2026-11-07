@@ -403,6 +403,7 @@ fn masked_spans(s: &[char]) -> Vec<bool> {
 fn source_urls(src: &[char]) -> BTreeSet<String> {
     let masked = masked_spans(src);
     let mut out = BTreeSet::new();
+    let mut glued_in_source = BTreeSet::new();
     for (a, b) in bare_urls(src) {
         if masked[a] {
             continue;
@@ -416,9 +417,22 @@ fn source_urls(src: &[char]) -> BTreeSet<String> {
         if url.last() == Some(&')') && opens < closes {
             url.pop();
         }
-        out.insert(url.into_iter().collect());
+        // a URL the source itself glues to its neighbours (a link text, a CJK sentence) is not repaired: the glue is
+        // the author's, and wrapping it would rewrite link text
+        let end = a + url.len();
+        let key: String = url.into_iter().collect();
+        if glued_before(src, a) || src[end..b.max(end)].iter().any(|c| !URL_TRAIL.contains(c) && *c != ')') {
+            glued_in_source.insert(key.clone());
+        }
+        out.insert(key);
     }
+    out.retain(|u| !glued_in_source.contains(u));
     out
+}
+
+/// True when the character before a URL at `a` is neither a blank nor a mark that may open a URL.
+fn glued_before(s: &[char], a: usize) -> bool {
+    before(s, a).is_some_and(|c| !py_isspace_char(c) && !matches!(c, '*' | '_' | '~' | '('))
 }
 
 /// LocOS `fix_cjk_autolinks` (Markdown, not MDX): a bare URL of the source that the translation glued to the text
@@ -463,13 +477,12 @@ pub fn fix_cjk_autolinks(src: &str, new: &str) -> String {
             if masked[a] || edited[a..b].iter().any(|e| *e) {
                 continue;
             }
-            let bf = before(&s, a);
             let run_len = s[b..].iter().take_while(|c| !py_isspace_char(**c) && **c != '<').count();
             let run = &s[b..b + run_len];
             if run.first().is_some_and(|c| c.is_ascii() && !URL_TRAIL.contains(c)) {
                 continue;
             }
-            let glued_before = bf.is_some_and(|c| !py_isspace_char(c) && !matches!(c, '*' | '_' | '~' | '('));
+            let glued_before = glued_before(&s, a);
             let glued_after = run.iter().any(|c| !URL_TRAIL.contains(c));
             if glued_before || glued_after {
                 let rep = if url.starts_with("www.") { format!("[{url}](http://{url})") } else { format!("<{url}>") };
@@ -520,6 +533,18 @@ mod tests {
         assert_eq!(fix_cjk_autolinks("See https://e.com/a now", "参见https://e.com/a。"), "参见<https://e.com/a>。");
         assert_eq!(fix_cjk_autolinks("See https://e.com/a now", "See https://e.com/a now"), "See https://e.com/a now");
         assert_eq!(fix_cjk_autolinks("see www.e.com", "见www.e.com"), "见[www.e.com](http://www.e.com)");
+    }
+
+    #[test]
+    fn a_url_the_source_already_glued_is_left_alone() {
+        // a link text that holds a URL (the destination is not a plain one, so the link is not masked)
+        let src = "[https://example.com/a #hash](<a b.md>)";
+        assert_eq!(fix_cjk_autolinks(src, src), src);
+        let tr = "[https://example.com/a #hash](<a b.md>)\u{3002}";
+        assert_eq!(fix_cjk_autolinks(src, tr), tr);
+        // glued after in the source: a CJK sentence
+        let tr = "\u{53c2}\u{898b}https://e.com/a\u{3002}";
+        assert_eq!(fix_cjk_autolinks("see\u{898b}https://e.com/a\u{3002}", tr), tr);
     }
 
     #[test]

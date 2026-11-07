@@ -19,6 +19,27 @@ fn re(cell: &'static OnceLock<Regex>, pat: &str) -> &'static Regex {
     cell.get_or_init(|| Regex::new(pat).expect("subtitle pattern"))
 }
 
+/// The numbers that token-like text already in `text` uses (`⟦x2⟧`, `⟦/g1⟧`, `⟦3⟧`): a real token must not take
+/// one, or the build could not tell the author's text from the code.
+fn reserved_numbers(text: &str) -> HashSet<usize> {
+    any_marker()
+        .find_iter(text)
+        .filter_map(|m| {
+            let d: String = m.as_str().chars().filter(char::is_ascii_digit).collect();
+            d.parse().ok()
+        })
+        .collect()
+}
+
+/// The next token number after `n` that no literal token-like text of the source uses.
+fn next_free(mut n: usize, reserved: &HashSet<usize>) -> usize {
+    n += 1;
+    while reserved.contains(&n) {
+        n += 1;
+    }
+    n
+}
+
 fn vtt_tag() -> &'static Regex {
     static R: OnceLock<Regex> = OnceLock::new();
     re(&R, r"<[^<>\n]*>")
@@ -290,6 +311,7 @@ fn vtt_tokenize(text: &str) -> Tokenized {
     let mut ids: HashMap<usize, usize> = HashMap::new();
     let mut tokens = HashMap::new();
     let mut out = Vec::new();
+    let reserved = reserved_numbers(text);
     let mut n = 0;
     for (j, (tok, s)) in core.into_iter().enumerate() {
         let k = lo + j;
@@ -300,7 +322,7 @@ fn vtt_tokenize(text: &str) -> Tokenized {
             tokens.insert(format!("/{name}"), s.clone());
             out.push(Piece::Close(name, s));
         } else {
-            n += 1;
+            n = next_free(n, &reserved);
             if pairs.get(&k).is_some_and(|c| *c < hi) {
                 ids.insert(k, n);
                 let name = format!("g{n}");
@@ -336,9 +358,12 @@ fn srt_tokenize(text: &str) -> Tokenized {
     let (prefix, core, suffix) = edges(&p, lo, hi);
     let mut tokens = HashMap::new();
     let mut out = Vec::new();
+    let reserved = reserved_numbers(text);
+    let mut n = 0;
     for (tok, s) in core {
         if tok {
-            let name = format!("x{}", tokens.len() + 1);
+            n = next_free(n, &reserved);
+            let name = format!("x{n}");
             tokens.insert(name.clone(), s.clone());
             out.push(Piece::Point(name, s));
         } else {
@@ -397,6 +422,11 @@ fn vtt_detokenize(translated: &str, tokens: &HashMap<String, String>) -> String 
         pos = m.end();
         let s = m.as_str();
         let name = &s['\u{27E6}'.len_utf8()..s.len() - '\u{27E7}'.len_utf8()];
+        // token-like text the cue itself holds (or a model made up) is text, not a code to drop
+        if !tokens.contains_key(name) {
+            out.push_str(&vtt_escape(s));
+            continue;
+        }
         if let Some(closed) = name.strip_prefix('/') {
             if stack.last().is_some_and(|t| t == closed) {
                 stack.pop();
@@ -448,8 +478,13 @@ fn srt_cue(text: &str, translated: &str) -> String {
         pos = m.end();
         let s = m.as_str();
         let name = &s['\u{27E6}'.len_utf8()..s.len() - '\u{27E7}'.len_utf8()];
-        if let (Some(t), true) = (tokens.get(name), used.insert(name.to_string())) {
-            out.push_str(t);
+        match tokens.get(name) {
+            Some(t) => {
+                if used.insert(name.to_string()) {
+                    out.push_str(t);
+                }
+            }
+            None => out.push_str(s),
         }
     }
     out.push_str(&translated[pos..]);
@@ -646,6 +681,21 @@ mod tests {
         let (_, core, _, _) = srt_tokenize("{\\an8}{\\i1}Watch{\\i0} out{\\i1}");
         // the toggles at the edges stay in the unit, their partner is inside; `{\an8}` stays out
         assert_eq!(core_text(&core), "\u{27E6}x1\u{27E7}Watch\u{27E6}x2\u{27E7} out\u{27E6}x3\u{27E7}");
+    }
+
+    #[test]
+    fn token_like_text_in_a_cue_is_kept() {
+        // a literal look-alike is text: it survives the build, and the real codes take other numbers
+        let cue = "<i>a</i> ref \u{27E6}1\u{27E7} b \u{27E6}x2\u{27E7}";
+        let (_, core, _, tokens) = vtt_tokenize(cue);
+        assert!(!tokens.contains_key("g1") && !tokens.contains_key("x2"));
+        assert_eq!(vtt_cue(cue, &core_text(&core)), cue);
+        let tr = format!("X {}", core_text(&core));
+        assert_eq!(vtt_cue(cue, &tr), "X <i>a</i> ref \u{27E6}1\u{27E7} b \u{27E6}x2\u{27E7}");
+        // the same for a SubRip override block
+        let srt = "{\i1}a{\i0} \u{27E6}x1\u{27E7} z";
+        let (_, core, _, _) = srt_tokenize(srt);
+        assert_eq!(srt_cue(srt, &core_text(&core)), srt);
     }
 
     #[test]

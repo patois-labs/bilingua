@@ -115,11 +115,11 @@ fn clean(s: &str) -> String {
 }
 
 /// A translated value as inner XML: `lead`, `new` and `trail` (the value's own white space around the
-/// translation). In a CRLF file the line breaks become CRLF: all of them, or under the LocOS profile only those of
-/// the value's own white space (LocOS writes the breaks of a translation as they are).
-fn encode_value(lead: &str, new: &str, trail: &str, cdata: bool, crlf: bool, locos: bool) -> String {
+/// translation). In a CRLF file every line break becomes CRLF, the translation's too (the LocOS profile as well:
+/// LocOS left a translation's LF in a CRLF file).
+fn encode_value(lead: &str, new: &str, trail: &str, cdata: bool, crlf: bool) -> String {
     let parts = [clean(lead), clean(new), clean(trail)];
-    let nl = |k: usize, s: String| if crlf && (!locos || k != 1) { s.replace('\n', "\r\n") } else { s };
+    let nl = |_k: usize, s: String| if crlf { s.replace('\n', "\r\n") } else { s };
     let all = parts.concat();
     if cdata && !all.contains("]]>") && !all.contains('\r') {
         let body: String = parts.into_iter().enumerate().map(|(k, p)| nl(k, p)).collect();
@@ -271,7 +271,7 @@ impl Filter for Resx {
                 SkelPart::Raw(s) => out.push_str(s),
                 SkelPart::Unit(i) => {
                     let u = doc.units.get(*i).ok_or_else(|| Error::Write(format!("skeleton points at missing unit {i}")))?;
-                    changed |= write_unit(u, &mut out, opts.is_profile(profile::LOCOS));
+                    changed |= write_unit(u, &mut out);
                 }
             }
         }
@@ -279,7 +279,7 @@ impl Filter for Resx {
     }
 }
 
-fn write_unit(u: &Unit, out: &mut String, locos: bool) -> bool {
+fn write_unit(u: &Unit, out: &mut String) -> bool {
     let raw = u.hidden(RAW).unwrap_or("");
     if !u.translate || u.segments.iter().all(|s| !s.has_target()) {
         out.push_str(raw);
@@ -291,7 +291,7 @@ fn write_unit(u: &Unit, out: &mut String, locos: bool) -> bool {
         return false;
     }
     let (lead, trail) = (code(u, LEAD).unwrap_or_default(), code(u, TRAIL).unwrap_or_default());
-    out.push_str(&encode_value(&lead, &new, &trail, code(u, CDATA).is_some(), code(u, NL).as_deref() == Some("crlf"), locos));
+    out.push_str(&encode_value(&lead, &new, &trail, code(u, CDATA).is_some(), code(u, NL).as_deref() == Some("crlf")));
     true
 }
 

@@ -134,7 +134,45 @@ pub fn to_locos_text_numbered(inl: &[Inline], pair_letter: char) -> (String, Loc
             _ => return to_locos_text_as(inl, pair_letter),
         }
     }
+    // source text that already looks like a token with one of these numbers: the numbers give way (see `convert`)
+    let reserved = reserved_numbers(inl);
+    if nums.iter().any(|n| reserved.contains(n)) {
+        return to_locos_text_as(inl, pair_letter);
+    }
     convert(inl, pair_letter, partner, Some(&nums))
+}
+
+/// The numbers of token-like text (`⟦x2⟧`, `⟦/g1⟧`, `⟦3⟧`) that the plain text of `inl` already holds. LocOS reads
+/// such text in a source as one of its tokens and drops or moves it on export; here a real code never takes the
+/// number of a look-alike, so [`from_locos_text`] can only read a look-alike as the text it is (it names no code
+/// in the map).
+fn reserved_numbers(inl: &[Inline]) -> std::collections::BTreeSet<usize> {
+    let mut out = std::collections::BTreeSet::new();
+    let mut run = String::new();
+    let mut flush = |run: &mut String, out: &mut std::collections::BTreeSet<usize>| {
+        let mut rest = run.as_str();
+        while let Some(at) = rest.find(OPEN) {
+            rest = &rest[at..];
+            match scan_token(rest) {
+                Some((len, _, _, num)) => {
+                    if let Ok(n) = num.parse() {
+                        out.insert(n);
+                    }
+                    rest = &rest[len..];
+                }
+                None => rest = &rest[OPEN.len_utf8()..],
+            }
+        }
+        run.clear();
+    };
+    for i in inl {
+        match i {
+            Inline::Text(t) => run.push_str(t),
+            Inline::Tag { .. } => flush(&mut run, &mut out),
+        }
+    }
+    flush(&mut run, &mut out);
+    out
 }
 
 /// The shared body; `nums[k]` is the number of the k-th token (`None`: 1, 2, 3 ... in reading order).
@@ -144,7 +182,19 @@ fn convert(inl: &[Inline], pair_letter: char, partner: Vec<Option<usize>>, nums:
     } else {
         PAIR_LETTER
     };
-    let number = |k: usize| nums.and_then(|v| v.get(k - 1).copied()).unwrap_or(k);
+    // positional numbers skip the numbers that look-alike text in the source uses
+    let reserved = if nums.is_some() { Default::default() } else { reserved_numbers(inl) };
+    let mut last = 0usize;
+    let mut number = |k: usize| match nums {
+        Some(v) => v.get(k - 1).copied().unwrap_or(k),
+        None => {
+            last += 1;
+            while reserved.contains(&last) {
+                last += 1;
+            }
+            last
+        }
+    };
     let mut text = String::new();
     let mut map = LocosMap::new();
     // token number of each paired Open, by its position in `inl`
@@ -492,6 +542,32 @@ mod tests {
         let (t, map) = to_locos_text_as(&s, 'r');
         assert!(t.contains("\u{27E6}r1\u{27E7}") && t.contains("\u{27E6}/r1\u{27E7}"));
         assert_eq!(from_locos_text(&t, &map), s);
+    }
+
+    #[test]
+    fn token_look_alikes_in_the_text_are_text() {
+        // the text says "use ⟦x2⟧ and ⟦g1⟧": no real code may take number 1 or 2
+        let inl = vec![
+            Inline::text("Use \u{27E6}x2\u{27E7} and \u{27E6}g1\u{27E7} "),
+            Inline::tag("a", TagKind::Open, "<b>"),
+            Inline::text("here"),
+            Inline::tag("a", TagKind::Close, "</b>"),
+            Inline::tag("b", TagKind::Standalone, "<br/>"),
+        ];
+        for f in ["xliff", "html", "docx"] {
+            let (t, map) = to_locos_text_for(f, &inl);
+            assert!(!map.contains_key("1") && !map.contains_key("2"), "{f}: {map:?}");
+            assert_eq!(from_locos_text(&t, &map), inl, "{f}: {t}");
+            // a translator keeps the text and moves the code
+            let moved = t.replace("here", "HERE");
+            let back = from_locos_text(&moved, &map);
+            assert!(matches!(&back[0], Inline::Text(x) if x.starts_with("Use \u{27E6}x2\u{27E7} and \u{27E6}g1\u{27E7}")), "{f}");
+        }
+        // a letterless look-alike ("⟦1⟧") also keeps its number free
+        let inl = vec![Inline::text("\u{27E6}1\u{27E7} "), Inline::tag("a", TagKind::Standalone, "<br/>")];
+        let (t, map) = to_locos_text(&inl);
+        assert_eq!(t, "\u{27E6}1\u{27E7} \u{27E6}x2\u{27E7}");
+        assert_eq!(from_locos_text(&t, &map), inl);
     }
 
     #[test]
