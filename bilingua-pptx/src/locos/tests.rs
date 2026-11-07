@@ -348,7 +348,7 @@ fn slide_comments_are_units_like_locos() {
     let plain = crate::Pptx.extract(&d, &opts(None)).unwrap();
     assert_eq!(units(&plain), vec![("0".into(), "Body".into(), "slide 1".into())]);
     let doc = crate::Pptx.extract(&d, &comment_opts()).unwrap();
-    assert!(doc.warnings.iter().all(|w| w.code != "format_option"), "{:?}", doc.warnings);
+    assert!(doc.warnings.iter().all(|w| w.kind != "format_option"), "{:?}", doc.warnings);
     let c = "slide 1 comment".to_string();
     assert_eq!(
         units(&doc),
