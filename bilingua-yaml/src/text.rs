@@ -47,8 +47,9 @@ fn looks_binary(d: &[u8]) -> bool {
     bad > 2 + d.len() / 100
 }
 
+/// A decode refusal: code `encoding` (LocOS UnsupportedEncodingError).
 fn err(msg: impl Into<String>) -> Error {
-    Error::Unsupported(msg.into())
+    Error::Encoding(msg.into())
 }
 
 pub fn decode(bytes: &[u8]) -> Result<(String, Enc), Error> {
@@ -70,7 +71,7 @@ pub fn decode(bytes: &[u8]) -> Result<(String, Enc), Error> {
         }
     }
     if looks_binary(bytes) {
-        return Err(err("the file is not valid UTF-8 and looks like a binary file; save it as UTF-8"));
+        return Err(err("file is not valid UTF-8 and looks like a binary file, not text; re-save the file as UTF-8."));
     }
     let mut s = String::with_capacity(bytes.len());
     for (i, &b) in bytes.iter().enumerate() {

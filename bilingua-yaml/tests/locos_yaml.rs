@@ -268,7 +268,7 @@ fn encodings() {
     assert_eq!(translate(cp, None, |_, _| Some("Gr\u{fc}\u{df}e".into())), "greeting: Gr\u{fc}\u{df}e\n".as_bytes());
     // binary and control characters are refused
     let bin = b"\xff\xd8\xff\x00\x81binary\x00".repeat(10);
-    assert!(matches!(Yaml.extract(&bin, &opts(None)), Err(Error::Unsupported(_))));
+    assert!(matches!(Yaml.extract(&bin, &opts(None)), Err(Error::Encoding(_))));
     match Yaml.extract(b"k: \x00\x01\x02 text\n", &opts(None)) {
         Err(Error::Parse { msg, .. }) => assert!(msg.contains("YAML")),
         other => panic!("{other:?}"),
@@ -290,7 +290,7 @@ fn hostile() {
     assert_eq!(texts(evil), ["Safe text"]);
     assert!(translate(evil, None, |_, _| Some("Sicher".into())).starts_with(b"x: !!python/object/apply:os.system"));
     let deep = format!("k: {}x{}\n", "[".repeat(500), "]".repeat(500));
-    assert!(matches!(Yaml.extract(deep.as_bytes(), &opts(None)), Err(Error::Unsupported(_))));
+    assert!(matches!(Yaml.extract(deep.as_bytes(), &opts(None)), Err(Error::Limit(_))));
     for bad in ["a: [unclosed\n", "a: b: c\n", "key: 'unterminated\n"] {
         match Yaml.extract(bad.as_bytes(), &opts(None)) {
             Err(Error::Parse { msg, .. }) => assert!(msg.contains("YAML"), "{msg}"),
@@ -299,12 +299,12 @@ fn hostile() {
     }
     let small = { let mut built = Limits::default(); built.max_units = 5; built };
     let many: String = (0..10).map(|i| format!("k{i}: Value {i}\n")).collect();
-    assert!(matches!(Yaml.extract_with(many.as_bytes(), &opts(None), &small), Err(Error::Unsupported(_))));
+    assert!(matches!(Yaml.extract_with(many.as_bytes(), &opts(None), &small), Err(Error::Limit(_))));
     let flow = format!("k: [{}]\n", vec!["1"; 200].join(","));
-    assert!(matches!(Yaml.extract_with(flow.as_bytes(), &opts(None), &{ let mut built = Limits::default(); built.max_units = 5; built }), Err(Error::Unsupported(_))));
+    assert!(matches!(Yaml.extract_with(flow.as_bytes(), &opts(None), &{ let mut built = Limits::default(); built.max_units = 5; built }), Err(Error::Limit(_))));
     let chars = { let mut built = Limits::default(); built.max_unit_chars = 50; built };
     let long = format!("k: {}\n", "word ".repeat(40));
-    assert!(matches!(Yaml.extract_with(long.as_bytes(), &opts(None), &chars), Err(Error::Unsupported(_))));
+    assert!(matches!(Yaml.extract_with(long.as_bytes(), &opts(None), &chars), Err(Error::Limit(_))));
 }
 
 #[test]
@@ -353,4 +353,33 @@ fn gate_fixes() {
         let t = format!("{key}:\n  a: Hi\n");
         assert!(!extract(t.as_bytes()).units[0].context.extra.contains_key("rails_locale"), "{key}");
     }
+}
+
+/// The document as the LocOS adapter sees it: extracted with the profile, then annotated.
+fn locos_doc(b: &[u8]) -> Document {
+    let mut d = Yaml.extract(b, &profile::locos().extract_options()).unwrap();
+    profile::annotate(&mut d, Some("locos"));
+    d
+}
+
+/// B-side 11 and 12 (35 of 36 wild yaml files): LocOS's yaml filter offers the plain value (no inline map) and no
+/// style; under the profile Rails `%{name}`, `{name}`, HTML and printf codes are text, and `locos.style` is empty.
+#[test]
+fn locos_profile_offers_plain_text_and_no_style() {
+    let src = "a: \"Validation failed: %{errors}\"\nb: '<b>%{email}</b> and {email}'\nc: '%d-%m-%Y'\nd: plain\n";
+    let d = locos_doc(src.as_bytes());
+    let units = profile::locos_units(&d);
+    let texts: Vec<&str> = units.iter().map(|u| u.text.as_str()).collect();
+    assert_eq!(texts, ["Validation failed: %{errors}", "<b>%{email}</b> and {email}", "%d-%m-%Y", "plain"]);
+    assert!(units.iter().all(|u| u.style.is_empty() && u.map.is_empty()), "{units:?}");
+    // a plain translation is written back and re-reads as the same plain text (test_requoting:174)
+    let mut d = d;
+    let id = d.units[3].segments[0].id.clone();
+    profile::locos_set_target(&mut d, &id, vec![Inline::text("{brace}")]).unwrap();
+    let out = Yaml.merge_with(&d, &profile::locos().merge_options("yaml")).unwrap();
+    assert_eq!(scalars(&out)[7], "{brace}");
+    let again = profile::locos_units(&locos_doc(&out));
+    assert_eq!(again[3].text, "{brace}");
+    // without the profile the codes stay inline tags
+    assert!(extract(src.as_bytes()).units[0].source().iter().any(|i| matches!(i, Inline::Tag { .. })));
 }

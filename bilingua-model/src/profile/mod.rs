@@ -172,14 +172,16 @@ pub fn annotate(doc: &mut Document, profile: Option<&str>) {
 }
 
 /// Formats whose LocOS units carry no style (`""`) where Bilingua sets `context.style`.
-const LOCOS_NO_STYLE: &[&str] = &["po", "wxl", "xaml", "resx", "strings", "properties", "json", "json5", "resjson", "arb"];
+const LOCOS_NO_STYLE: &[&str] = &["po", "wxl", "xaml", "resx", "strings", "properties", "json", "json5", "resjson", "arb", "yaml"];
 
 /// For the formats whose LocOS filter keeps (some) inline codes as plain unit text, which codes: every code in the
 /// key/value formats (placeholders such as `%@`, `{0}`, `[ProductName]`, and JSON's HTML), only `placeholder` codes
-/// in ARB (LocOS keeps its ICU plural and select arguments as tokens) and FTL (its placeables).
+/// in ARB (LocOS keeps its ICU plural and select arguments as tokens) and FTL (its placeables). YAML: every code
+/// (LocOS's yaml filter has no inline map at all).
 fn locos_text_codes(format: &str) -> Option<fn(&CodeData) -> bool> {
     match format {
-        "po" | "strings" | "properties" | "dtd" | "wxl" | "xaml" | "resx" | "json" | "json5" | "resjson" => Some(|_| true),
+        // yaml: LocOS `yaml_filter` offers the plain value (no inline map): Rails `%{name}`, `{name}`, HTML, `%d`
+        "po" | "strings" | "properties" | "dtd" | "wxl" | "xaml" | "resx" | "json" | "json5" | "resjson" | "yaml" => Some(|_| true),
         "arb" | "ftl" => Some(|c| c.label.as_deref() == Some("placeholder")),
         _ => None,
     }
