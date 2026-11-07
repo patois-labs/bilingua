@@ -246,10 +246,11 @@ fn clean_text(text: &str) -> String {
     out
 }
 
-/// The characters of a page that count toward the OCR threshold: the cleaned text, stripped, without U+FFFD.
+/// The characters of a page that count toward the OCR threshold: the cleaned text, stripped, without U+FFFD and U+FFFE.
 /// A page of garbage glyph codes counts as empty, so it goes to OCR.
 fn printable_count(text: &str) -> usize {
-    py_strip(&clean_text(text)).chars().filter(|&c| c != '\u{fffd}').count()
+    let kept: String = text.chars().filter(|&c| c != '\u{fffd}' && c != '\u{fffe}').collect();
+    py_strip(&clean_text(&kept)).chars().count()
 }
 
 /// LocOS `_paragraphs`: split on blank lines (`\n\s*\n`), join each block's stripped, non-empty lines with a space.
@@ -421,7 +422,7 @@ mod tests {
         let garbage: String = "\u{1}\u{5}\u{7}".repeat(20);
         assert!(paragraphs(&garbage).is_empty());
         assert_eq!(printable_count(&garbage), 0);
-        assert_eq!(printable_count("\u{fffd}\u{fffe}\u{fffe}\u{fffd}"), 2);
+        assert_eq!(printable_count("\u{fffd}\u{fffe}\u{fffe}\u{fffd}"), 0);
         assert_eq!(printable_count("  hello \u{3} world  "), 11);
     }
 
