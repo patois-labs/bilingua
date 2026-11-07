@@ -366,7 +366,9 @@ fn markup_bytes(bytes: &[u8]) -> std::borrow::Cow<'_, [u8]> {
 /// The count is only as good as the reader's agreement on where those regions end, so a part is also refused when
 /// the readers would not agree: a DOCTYPE that never ends, has a `<`, `>` or bracket in a quoted string, a quote or
 /// bracket in a comment of its internal subset, or a `<`/`>` that `quick-xml` pairs differently; a comment that
-/// starts with `>` or `->`; `<?>`; a `<!` declaration outside the DOCTYPE.
+/// starts with `>` or `->`; `<?>`; a `<!` declaration outside the DOCTYPE. Every reading a reader may give the
+/// bytes is scanned: UTF-16 and UTF-8 for `<\0` without a byte order mark, and the double-byte code pages for
+/// bytes that are not UTF-8.
 pub fn check_xml(bytes: &[u8], l: &Limits) -> Result<(), Error> {
     check_xml_with(bytes, l, false)
 }
@@ -484,9 +486,36 @@ fn ambiguous_markup(what: &str) -> Error {
     .into()
 }
 
+/// Every way a reader in the workspace may read `bytes` as markup. A UTF-16 byte order mark leaves one reading.
+/// Without one, `<\0` or `\0<` is UTF-16 for the readers that sniff it (EPUB, IDML) but UTF-8 with a NUL for the
+/// ones that decode with [`crate::enc::decode_text`], so both are scanned. Bytes that are not UTF-8 may be read
+/// in a double-byte code page whose second byte can be `[` or `]` (Shift_JIS, GBK/GB18030, Big5: a CDATA section
+/// then ends at another `]]>` than in the bytes), so each of those readings is scanned too.
+fn markup_views(bytes: &[u8]) -> Vec<std::borrow::Cow<'_, [u8]>> {
+    use std::borrow::Cow;
+    let decode = |e: &'static encoding_rs::Encoding| Cow::Owned(e.decode_without_bom_handling(bytes).0.into_owned().into_bytes());
+    if (bytes.starts_with(&[0xFF, 0xFE]) && !bytes.starts_with(&[0xFF, 0xFE, 0, 0])) || bytes.starts_with(&[0xFE, 0xFF]) {
+        return vec![markup_bytes(bytes)];
+    }
+    let mut v = vec![Cow::Borrowed(bytes)];
+    if bytes.starts_with(&[b'<', 0]) || bytes.starts_with(&[0, b'<']) {
+        v.push(markup_bytes(bytes));
+    } else if std::str::from_utf8(bytes.strip_prefix(&[0xEF, 0xBB, 0xBF]).unwrap_or(bytes)).is_err() {
+        for e in [encoding_rs::SHIFT_JIS, encoding_rs::GB18030, encoding_rs::BIG5] {
+            v.push(decode(e));
+        }
+    }
+    v
+}
+
 fn check_xml_with(bytes: &[u8], l: &Limits, keep_dtd: bool) -> Result<(), Error> {
-    let data = markup_bytes(bytes);
-    let b: &[u8] = &data;
+    for view in markup_views(bytes) {
+        scan_xml(&view, l, keep_dtd)?;
+    }
+    Ok(())
+}
+
+fn scan_xml(b: &[u8], l: &Limits, keep_dtd: bool) -> Result<(), Error> {
     let strict = !keep_dtd;
     let (mut i, mut depth, mut elements) = (0usize, 0usize, 0usize);
     while i < b.len() {
@@ -730,6 +759,30 @@ mod tests {
         }
         // the keep-DTD check leaves this to its reader (the XML filter family refuses a mismatch itself)
         assert!(check_xml_keeping_dtd(b"<!DOCTYPE r [<!-- > --> ]><r/>", &Limits::default()).is_ok());
+    }
+
+    #[test]
+    fn every_reading_of_the_bytes_is_scanned() {
+        let l = Limits { max_xml_depth: 2, max_xml_elements: 3, ..Limits::default() };
+        let body = "<a><b><c/></b></a>";
+        // 0x81 0x5D is one Shift_JIS / GBK character: the bytes end the CDATA at `]]>`, the decoded text later
+        let sjis = format!("<?xml version=\"1.0\" encoding=\"Shift_JIS\"?><r><![CDATA[\u{1}]]><!--]]>{body}--></r>");
+        let mut bytes = sjis.into_bytes();
+        let p = bytes.iter().position(|c| *c == 1).unwrap();
+        bytes[p] = 0x81;
+        assert!(check_xml(&bytes, &l).is_err());
+        // a valid double-byte file still passes
+        let ok = b"<?xml version=\"1.0\" encoding=\"Shift_JIS\"?><r><![CDATA[\x93\xfa]]>\x96\x7b</r>";
+        assert!(check_xml(ok, &Limits::default()).is_ok());
+        // a NUL first: UTF-16BE for one reader, UTF-8 for another
+        let nul = format!("\0<r>{body}</r>");
+        assert!(check_xml(nul.as_bytes(), &l).is_err());
+        let mut le = Vec::new();
+        for u in format!("<r>{body}</r>").encode_utf16() {
+            le.extend(u.to_le_bytes());
+        }
+        assert!(check_xml(&le, &l).is_err());
+        assert!(check_xml(&le, &Limits::default()).is_ok());
     }
 
     #[test]
