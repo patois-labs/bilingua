@@ -118,6 +118,15 @@ def main() -> None:
         inventory(sys.argv[2])
         return
     out_path, files = sys.argv[1], sys.argv[2:]
+    # The first argument is the OUTPUT. Passing an input file there by mistake overwrote corpus files twice
+    # (11-06), so the output must be a .json path and an existing file is only replaced if it is already JSON.
+    if not out_path.lower().endswith(".json"):
+        sys.exit(f"locos_dump: the first argument is the output and must end in .json (got {out_path!r})")
+    if os.path.exists(out_path):
+        with open(out_path, "rb") as fh:
+            head = fh.read(1).lstrip()
+        if head not in (b"{", b""):
+            sys.exit(f"locos_dump: refusing to overwrite {out_path!r}: it is not a JSON output file")
     if len(files) == 1 and files[0].startswith("@"):  # a list file, one path per line
         with open(files[0][1:], encoding="utf-8") as fh:
             files = [ln for ln in fh.read().splitlines() if ln]
