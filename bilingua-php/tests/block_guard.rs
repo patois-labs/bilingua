@@ -13,6 +13,7 @@ fn block_guard_is_accepted_and_merge_is_exact() {
         "if (!defined('entry')) die('x');",
         "if ( ! defined('entry') or ! entry ) { exit; }",
         "if (!defined('entry')) {\n exit();\n}",
+        "IF (!DEFINED('entry') OR !entry) /* guard */ { // no direct access\n DIE(\"Not here\"); }",
     ] {
         let src = format!("<?php\n{guard}\n$strings = array(\n    'a' => 'Hello',\n    'b' => array('c' => 'World'),\n);\n");
         let mut doc = open(&src).unwrap_or_else(|e| panic!("{guard}: {e}"));
@@ -41,6 +42,17 @@ fn block_guard_refuses_anything_else() {
         "if (!defined('entry')) { die(system('id')); }",
         "if (!defined('entry') || !entry()) { die('x'); }",
         "if (!defined('entry')) { die('x'); echo 'y'; }",
+        "if (!defined('entry')) { die('a' . 'b'); }",
+        "if (!defined('entry')) { die(\"{$x}\"); }",
+        "if (!defined('entry')) { die(<<<EOT\n{$x->run()}\nEOT); }",
+        "if (!defined(constant('entry'))) { die('x'); }",
+        "if ((!defined('entry'))) { die('x'); }",
+        "if (!defined('entry') || !entry || !other) { die('x'); }",
+        "if (!defined('entry')): die('x'); endif;",
+        "if (!defined('entry')) die('x') or system('id');",
+        "if (!defined('entry')) { die('x'); } system('id');",
+        "if (!defined('entry')) { print('x'); }",
+        "if (!defined('entry')) { die; } elseif (1) { die; }",
     ] {
         let src = format!("<?php\n{guard}\n$strings = array('a' => 'Hello');\n");
         assert!(open(&src).is_err(), "{guard}");

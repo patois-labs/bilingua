@@ -389,7 +389,7 @@ pub fn check_xml(bytes: &[u8], l: &Limits) -> Result<(), Error> {
 }
 
 /// Like [`check_xml`], but a DOCTYPE may declare plain internal entities: `<!ENTITY name "literal">` with a literal
-/// that holds no `&` (so no entity expands into another) and at most 64 of them. Adobe Illustrator, Inkscape and
+/// that holds no `&` (so no entity expands into another), at most 1024 bytes long, and at most 64 of them. Adobe Illustrator, Inkscape and
 /// Sodipodi SVGs declare a few of these for namespace URIs. External (`SYSTEM`, `PUBLIC`) and parameter (`%`)
 /// entities are refused as before, and every other check of [`check_xml`] still applies. For a reader that never
 /// expands an entity (the SVG filter keeps every `&name;` as typed).
@@ -430,7 +430,9 @@ fn only_plain_internal_entities(doctype: &[u8]) -> bool {
             return false;
         }
         let Some(len) = doctype[j + 1..].iter().position(|c| *c == q) else { return false };
-        if doctype[j + 1..j + 1 + len].contains(&b'&') {
+        // no `&`: nothing expands into anything; at most 1024 bytes: a few references cannot blow up a reader
+        // that does expand them (the file is written back as it is, for browsers and editors to read)
+        if len > 1024 || doctype[j + 1..j + 1 + len].contains(&b'&') {
             return false;
         }
         from = j + 1 + len + 1;
@@ -799,6 +801,16 @@ mod tests {
         ] {
             assert_eq!(kind(check_xml_internal_entities(bad.as_bytes(), &l)), Some(LimitKind::XmlEntities), "{bad}");
         }
+        let long = format!("<!DOCTYPE r [<!ENTITY x \"{}\">]><r/>", "a".repeat(1025));
+        assert_eq!(kind(check_xml_internal_entities(long.as_bytes(), &l)), Some(LimitKind::XmlEntities));
+        // a literal never carries markup: a quoted '<' or '>' in the DOCTYPE is refused
+        for bad in [r#"<!DOCTYPE r [<!ENTITY x "<g/>">]><r/>"#, r#"<!DOCTYPE r [<!ENTITY x "a>b">]><r/>"#] {
+            assert!(check_xml_internal_entities(bad.as_bytes(), &l).is_err(), "{bad}");
+        }
+        // declared entities do not lift the depth and element limits
+        let tight = Limits { max_xml_depth: 2, max_xml_elements: 3, ..Limits::default() };
+        let deep = r#"<!DOCTYPE r [<!ENTITY x "y">]><r><a><b>&x;</b></a></r>"#;
+        assert!(check_xml_internal_entities(deep.as_bytes(), &tight).is_err());
         let many: String = (0..65).map(|k| format!("<!ENTITY e{k} \"v\">")).collect();
         assert!(check_xml_internal_entities(format!("<!DOCTYPE r [{many}]><r/>").as_bytes(), &l).is_err());
     }
