@@ -173,5 +173,5 @@ fn matches_locos_on_random_files() {
         }
     }
     println!("{} cases, {refused} refused, {nunits} units, {builds} builds, {} differences", cases.len(), bad.len());
-    assert!(bad.is_empty(), "{}\n{}", bad.len(), bad.iter().take(12).cloned().collect::<Vec<_>>().join("\n"));
+    assert!(bad.is_empty(), "{}\n{}", bad.len(), bad.iter().cloned().collect::<Vec<_>>().join("\n"));
 }
