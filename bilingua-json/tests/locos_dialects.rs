@@ -267,9 +267,17 @@ fn chrome() {
     assert_eq!(v["greet"]["description"], "Toolbar greeting");
     assert_eq!(v["greet"]["placeholders"]["user"], json(r#"{"content": "$1", "example": "Cira"}"#));
     assert_eq!(out.replace("Tab-Retter", "Tab Saver").replace("Hallo $USER$, du hast $1 offene Tabs", "Hello $USER$, you have $1 open tabs"), CHROME);
-    // an invented token falls back to the source message
+    // an invented token is kept as text; the translation is not replaced by the source (#814.1)
     let bad = json(&build(CHROME, &[(1, "Hallo \u{27E6}x9\u{27E7}".into())], None));
-    assert_eq!(bad["greet"]["message"], "Hello $USER$, you have $1 open tabs");
+    assert_eq!(bad["greet"]["message"], "Hallo \u{27E6}x9\u{27E7}");
+    // the same under the native profile, with characters JSON must escape
+    let o = ExtractOptions::new().with_source_lang("en");
+    let mut doc = JsonFilter.extract(br#"{"a": "Hello world", "b": "Other"}"#, &o).unwrap();
+    let id = doc.units[0].segments[0].id.clone();
+    doc.set_target(&id, vec![Inline::text("Hallo \u{27E6}x9\u{27E7} \"q\" \\")]).unwrap();
+    let native = json(&String::from_utf8(JsonFilter.merge_with(&doc, &MergeOptions::new()).unwrap()).unwrap());
+    assert_eq!(native["a"], "Hallo \u{27E6}x9\u{27E7} \"q\" \\");
+    assert_eq!(native["b"], "Other");
 }
 
 #[test]

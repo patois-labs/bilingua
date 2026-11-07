@@ -166,7 +166,7 @@ impl Filter for Arb {
         let touched = |u: &Unit| u.segments.iter().any(|s| s.has_target());
         let stamp = opts.stamp_lang(doc, false).is_some();
         // the LocOS profile: an entry added on its own line ends with `\n` whatever the file uses, and a
-        // translation with a LocOS token its unit does not have keeps the source (LocOS `_tokens_ok`)
+        // translation is written as it is (a token its unit does not have stays in it as text)
         let locos = opts.is_profile(profile::LOCOS);
         let out = if stamp || doc.units.iter().any(touched) { splice(&orig, doc, locos)? } else { orig };
         let mut bytes = Vec::with_capacity(out.len() + 3);
@@ -463,7 +463,7 @@ fn splice(orig: &str, doc: &Document, locos: bool) -> Result<String, Error> {
             list: units.iter().map(|u| if u.segments.iter().all(|s| !s.has_target()) { None } else { Some(u.output()) }).collect(),
             at: 0,
         };
-        let new = rebuild_message(m, &mut tr, target, locos);
+        let new = rebuild_message(m, &mut tr, target);
         if new != m.value {
             let token = scan::quote(&new);
             changed.insert(m.start, token.clone());
@@ -503,7 +503,7 @@ fn aligned(orig: &str, msgs: &[Msg], doc: &Document) -> bool {
     head == doc.units.len()
 }
 
-fn rebuild_message(m: &Msg, tr: &mut Trans, target: Option<&str>, locos: bool) -> String {
+fn rebuild_message(m: &Msg, tr: &mut Trans, target: Option<&str>) -> String {
     if m.plan.fallback {
         let Some(t) = tr.next() else { return m.value.clone() };
         let roles = &m.plan.units[0].roles;
@@ -521,13 +521,13 @@ fn rebuild_message(m: &Msg, tr: &mut Trans, target: Option<&str>, locos: bool) -
         return s;
     }
     match icu::parse(&m.value) {
-        Ok(parts) => rebuild_level(&parts, tr, target, m.plan.locos, locos),
+        Ok(parts) => rebuild_level(&parts, tr, target, m.plan.locos),
         Err(_) => m.value.clone(),
     }
 }
 
 /// `planned`: the profile flag the units were planned with; `locos`: this merge's.
-fn rebuild_level(parts: &[Part], tr: &mut Trans, target: Option<&str>, planned: bool, locos: bool) -> String {
+fn rebuild_level(parts: &[Part], tr: &mut Trans, target: Option<&str>, planned: bool) -> String {
     let translatable = icu::translatable(parts, planned);
     let mine = if translatable { tr.next() } else { None };
     let mut pieces: Vec<String> = Vec::new();
@@ -535,7 +535,7 @@ fn rebuild_level(parts: &[Part], tr: &mut Trans, target: Option<&str>, planned: 
         match p {
             Part::Pound => pieces.push("#".into()),
             Part::Complex(cx) => {
-                let rendered: Vec<String> = cx.branches.iter().map(|b| rebuild_level(&b.msg, tr, target, planned, locos)).collect();
+                let rendered: Vec<String> = cx.branches.iter().map(|b| rebuild_level(&b.msg, tr, target, planned)).collect();
                 pieces.push(render_branches(cx, rendered, target));
             }
             _ => {}
@@ -543,7 +543,7 @@ fn rebuild_level(parts: &[Part], tr: &mut Trans, target: Option<&str>, planned: 
     }
     if let Some(inl) = mine {
         let roles = level_unit(parts, "").roles;
-        if let Some(text) = render_translation(&inl, &roles, &pieces, locos) {
+        if let Some(text) = render_translation(&inl, &roles, &pieces) {
             return text;
         }
     }
@@ -561,28 +561,16 @@ fn rebuild_level(parts: &[Part], tr: &mut Trans, target: Option<&str>, planned: 
     out
 }
 
-/// `⟦x<digits>⟧` somewhere in `t`: a LocOS argument token (`_TOKEN_RE`).
-fn has_locos_token(t: &str) -> bool {
-    t.match_indices("\u{27E6}x").any(|(at, m)| {
-        let rest = &t[at + m.len()..];
-        let d = rest.chars().take_while(|c| bilingua_model::py_isdecimal_char(*c)).map(char::len_utf8).sum::<usize>();
-        d > 0 && rest[d..].starts_with('\u{27E7}')
-    })
-}
-
 /// The text of a translated level, or `None` when it must fall back to the source: an unknown tag, a complex
 /// argument missing or repeated, or text that would break the ICU structure it is written into. Under the LocOS
-/// profile also a token its unit does not have, left as text (LocOS `_tokens_ok`).
-fn render_translation(inl: &[Inline], roles: &[Role], pieces: &[String], locos: bool) -> Option<String> {
+/// profile too, a token its unit does not have stays in the text (#814.1: kept as literal text, never a reason to fall back).
+fn render_translation(inl: &[Inline], roles: &[Role], pieces: &[String]) -> Option<String> {
     let mut text = String::new();
     let mut safe = String::new();
     let mut uses = vec![0usize; pieces.len()];
     for i in inl {
         match i {
             Inline::Text(t) => {
-                if locos && has_locos_token(t) {
-                    return None;
-                }
                 text.push_str(t);
                 safe.push_str(t);
             }

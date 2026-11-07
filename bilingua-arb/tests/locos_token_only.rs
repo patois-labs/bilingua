@@ -76,7 +76,30 @@ fn a_document_merges_under_either_profile() {
         assert!(out.contains("\"b\": \"b:Hi\""), "{extract_with:?} -> {merge_with:?}: {out}");
         assert!(out.contains("other{p:# items}"), "{extract_with:?} -> {merge_with:?}: {out}");
         let a_translated = out.contains(&format!("\"a\": \"a:{T}\""));
-        // under a LocOS merge a translation with a literal token keeps the source (LocOS `_tokens_ok`)
-        assert_eq!(a_translated, extract_with.is_none() && merge_with.is_none(), "{extract_with:?} -> {merge_with:?}: {out}");
+        // the units of a message of only a token exist only without the profile; the token is text, not a reason for the source
+        assert_eq!(a_translated, extract_with.is_none(), "{extract_with:?} -> {merge_with:?}: {out}");
+    }
+}
+
+/// #814.1: a token in a translation that names no code of the unit is kept as text, under both profiles, and the
+/// translation is never replaced by the source. A real argument still maps beside it.
+#[test]
+fn unknown_token_in_a_translation_is_kept_as_text() {
+    let src = "{\"@@locale\": \"en\", \"a\": \"Hello {name}\", \"p\": \"{n, plural, one{# item} other{# items}}\", \"b\": \"Hi\"}";
+    for profile in [Some(profile::LOCOS), None] {
+        let o = ExtractOptions::new().with_source_lang("en").with_profile(profile);
+        let mut doc = Arb.extract(src.as_bytes(), &o).unwrap();
+        let ids: Vec<(String, Vec<Inline>, Option<String>)> =
+            doc.units.iter().map(|u| (u.segments[0].id.clone(), u.segments[0].source.clone(), u.context.key.clone())).collect();
+        for (id, s, key) in ids {
+            let mut t = vec![Inline::text(format!("{}: {T} \u{27E6}x9\u{27E7} ", key.unwrap_or_default()))];
+            t.extend(s);
+            doc.set_target(&id, t).unwrap();
+        }
+        let out = String::from_utf8(Arb.merge_with(&doc, &MergeOptions::new().with_profile(profile)).unwrap()).unwrap();
+        let tok = format!("{T} \u{27E6}x9\u{27E7} ");
+        assert!(out.contains(&format!("\"b\": \"b: {tok}Hi\"")), "{profile:?}: {out}");
+        assert!(out.contains(&format!("\"a\": \"a: {tok}Hello {{name}}\"")), "{profile:?}: {out}");
+        assert!(out.contains(&format!("other{{p: {tok}# items}}")), "{profile:?}: {out}");
     }
 }

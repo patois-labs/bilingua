@@ -83,16 +83,35 @@ fn translated_round_trip() {
     assert_eq!(back, want);
 }
 
+/// #814.1: a token in a translation that names no code of the unit is typed text. It is kept between words, next to
+/// escaped characters and in a title, and never deletes anything else.
+#[test]
+fn unknown_token_is_kept_as_text() {
+    let tok = "\u{27E6}x77\u{27E7}";
+    let out = build_str(b"Plain words here.\n", &[(0, &format!("Words {tok} *star* {tok}"))]);
+    assert_eq!(out, format!("Words {tok} \*star\* {tok}\n"));
+    // a closing-form token, a pair token with no pair and a number no code has
+    for t in ["\u{27E6}/g5\u{27E7}", "\u{27E6}g5\u{27E7}", "\u{27E6}x9999\u{27E7}"] {
+        assert_eq!(build_str(b"Text here.\n", &[(0, &format!("Ein {t} Wort"))]), format!("Ein {t} Wort\n"), "{t}");
+    }
+    // a title keeps it
+    let out = build_str(b"Title\n=====\n\nBody.\n", &[(0, &format!("Titel {tok}"))]);
+    assert!(out.starts_with(&format!("Titel {tok}\n")), "{out}");
+    // a real code still maps, beside the unknown one
+    let out = build_str(b"A **bold** word.\n", &[(0, &format!("Ein \u{27E6}g1\u{27E7}fett\u{27E6}/g1\u{27E7} {tok}"))]);
+    assert_eq!(out, format!("Ein **fett** {tok}\n"));
+}
+
 #[test]
 fn inline_escaping_and_paragraph_start() {
     let data = b"Price is low.\n\nSecond para.\n";
     let out = build(data, &[(0, "Use *all* the_ items | now"), (1, "- not a bullet")]);
     assert_eq!(out, b"Use \\*all\\* the\\_ items \\| now\n\n\\- not a bullet\n");
     assert_eq!(units(&out).len(), 2, "still two paragraphs, no list item");
-    // a translation that drops a pair keeps the markup balanced; unknown tokens dropped
+    // a translation that drops a pair keeps the markup balanced; an unknown token stays as text (#814.1)
     let data = b"A **bold** word.\n";
     let out = build(data, &[(0, "Ein \u{27E6}g1\u{27E7}fettes\u{27E6}/g1\u{27E7} Wort \u{27E6}x9\u{27E7}.")]);
-    assert_eq!(out, b"Ein **fettes** Wort .\n");
+    assert_eq!(out, "Ein **fettes** Wort \u{27E6}x9\u{27E7}.\n".as_bytes());
     // gate: a lone close is dropped, an open the translation never closes is closed
     assert_eq!(build(data, &[(0, "Ein \u{27E6}g1\u{27E7}fettes Wort.")]), b"Ein **fettes Wort.**\n");
     assert_eq!(build(data, &[(0, "Ein fettes\u{27E6}/g1\u{27E7} Wort.")]), b"Ein fettes Wort.\n");

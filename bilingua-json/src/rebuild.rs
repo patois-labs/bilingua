@@ -31,7 +31,7 @@ pub fn splice(orig: &str, doc: &Document, d: Dialect, target: Option<&str>, loco
             continue;
         }
         let mut tr = Trans { list: units.iter().map(|u| if u.segments.iter().all(|s| !s.has_target()) { None } else { Some(u.output()) }).collect(), at: 0 };
-        let new = plan::rebuild_message(m.value, &plan, m.syntax, &mut tr, target, locos);
+        let new = plan::rebuild_message(m.value, &plan, m.syntax, &mut tr, target);
         if new != m.value {
             edits.push((m.start, m.end, scan::quote(&new)));
         }

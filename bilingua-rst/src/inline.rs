@@ -579,39 +579,6 @@ fn escape_text(chunk: &str, out: &mut String) {
     }
 }
 
-/// Splits a text piece at token-shaped substrings (`⟦/?[a-z]?\d+⟧`), which LocOS consumes whether or not the
-/// number is known; the parts between them are separate escaping contexts.
-fn split_tokens(s: &str) -> Vec<&str> {
-    let mut parts = Vec::new();
-    let mut last = 0usize;
-    let mut i = 0usize;
-    while let Some(off) = s[i..].find('\u{27E6}') {
-        let st = i + off;
-        let r = &s[st + 3..];
-        let mut j = 0usize;
-        let b = r.as_bytes();
-        if b.first() == Some(&b'/') {
-            j += 1;
-        }
-        if b.get(j).is_some_and(u8::is_ascii_lowercase) {
-            j += 1;
-        }
-        let d0 = j;
-        while b.get(j).is_some_and(u8::is_ascii_digit) {
-            j += 1;
-        }
-        if j > d0 && r[j..].starts_with('\u{27E7}') {
-            parts.push(&s[last..st]);
-            last = st + 3 + j + 3;
-            i = last;
-        } else {
-            i = st + 3;
-        }
-    }
-    parts.push(&s[last..]);
-    parts
-}
-
 fn collapse_ws(s: &str) -> String {
     let mut out = String::with_capacity(s.len());
     let mut in_ws = false;
@@ -695,11 +662,10 @@ pub fn render(translation: &[Inline], codes: &BTreeMap<String, CodeData>) -> Str
     let mut spans: Vec<(usize, usize)> = Vec::new();
     for (text, tag) in items {
         if let Some(t) = text {
-            for part in split_tokens(&t) {
-                let mut s = String::with_capacity(part.len());
-                escape_text(part, &mut s);
-                out.push(s);
-            }
+            // #814.1: token-shaped text is plain text here (a token naming a code is a Tag), kept and escaped as text
+            let mut s = String::with_capacity(t.len());
+            escape_text(&t, &mut s);
+            out.push(s);
             continue;
         }
         let Some(Inline::Tag { id, kind, .. }) = tag else { continue };

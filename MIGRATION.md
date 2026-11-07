@@ -653,6 +653,19 @@ Found by running the LocOS suites with Bilingua switched on. Bilingua now gives 
   `Filter.build` guard and `export._nothing_written`, so the adapter keeps it (Bilingua's own merge of an untouched
   document under the profile writes UTF-8 too).
 
+## Differences from LocOS: unknown tokens in rst, ARB and JSON (#814 item 1, 11-07)
+
+Both engines now follow one rule: a token in a translation that names no code of the unit is typed text. It is kept,
+with the format's escaping (backslashes in rst, JSON string escapes in ARB and JSON), and never replaces the
+translation with the source.
+
+- **rst.** The writer cut every token-shaped piece out of a text (`Ein Wort ⟦x9⟧.` became `Ein Wort .`). It writes the
+  text as it is. The text around a token is now one escaping context, not two.
+- **ARB, Chrome, go-i18n, FormatJS and the other JSON dialects (LocOS profile).** A level whose translation held a
+  `⟦xN⟧` its unit did not have was written as the source (LocOS `_tokens_ok`). The translation is written, token
+  included. The native profile already did this.
+- The adapter needs no change. A repeated or wrong-kind real code is handled as before.
+
 ## CAT OS core (note for the lead)
 
 - `catcore` re-exported `bilingua_sdl::ZipLimits`; it now re-exports `bilingua_model::Limits as PackageLimits`

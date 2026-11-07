@@ -133,6 +133,10 @@ is listed here).
   emphasis repair can move a mark into one, `⟦*x1⟧`, which LocOS writes as text and so loses the code) is not
   applied to that line. The public `bilingua_xliff::locos` functions
   `target_text`, `written_texts` and `build_cat` keep their 0.9.0 behaviour (#814).
+- rst, ARB and JSON (Chrome, go-i18n, FormatJS, ICU and the other JSON dialects): a token in a translation that names
+  no code of the unit (`⟦x9⟧`) is kept as literal text, with the format's escaping, in both profiles. The rst writer
+  used to delete it; the ARB and JSON writers (LocOS profile) wrote the source message instead of the translation
+  (#814).
 - LocOS profile: a Markdown file with a byte order mark reads its first heading as a heading (the mark is not part of
   the line) and keeps the mark; ARB `@@locale` and plural keys use the file's CRLF; resx writes a translation's line
   breaks as CRLF in a CRLF file; the CJK autolink repair leaves a URL alone when the source already had it glued to
