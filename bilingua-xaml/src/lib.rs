@@ -98,10 +98,25 @@ fn escape_attr(s: &str, quote: u8) -> String {
     s.replace('\t', "&#9;").replace('\n', "&#10;").replace('\r', "&#13;")
 }
 
+/// LocOS `xaml_filter._DTD_MSG`.
+const DTD_MSG: &str = "This XAML file declares a DOCTYPE / DTD; refused (XAML never needs one).";
+
+/// A `<!DOCTYPE` (any case) in the first 4096 bytes, read as bytes and, for a UTF-16 file, with its zero bytes
+/// left out (LocOS searches the raw head, then asks the parser).
+fn declares_doctype(bytes: &[u8]) -> bool {
+    let head = &bytes[..bytes.len().min(8192)];
+    let has = |h: &[u8]| h.windows(9).any(|w| w.eq_ignore_ascii_case(b"<!DOCTYPE"));
+    has(&head[..head.len().min(4096)]) || (head.contains(&0) && has(&head.iter().copied().filter(|&b| b != 0).collect::<Vec<u8>>()))
+}
+
 impl Xaml {
     /// Like [`Filter::extract`] with explicit limits.
     pub fn extract_with(&self, bytes: &[u8], opts: &ExtractOptions, limits: &Limits) -> Result<Document, Error> {
         guard::check_input(bytes, limits)?;
+        if declares_doctype(bytes) {
+            // LocOS `xaml_filter._check_xml`: its own sentence, before the engine's entity guard words it generally
+            return Err(scan::perr(DTD_MSG));
+        }
         guard::check_xml(bytes, limits)?;
         let dec = enc::decode_text(bytes, &enc::DecodeOptions::with_limits(*limits).with_source_lang(opts.source_lang.as_deref()).declared())?;
         let text = &dec.text;

@@ -204,3 +204,45 @@ fn namespace_resolution() {
 </ResourceDictionary>";
     assert_eq!(units(data), ["Uwp string"]);
 }
+
+/// B-side 5, 5b (verify_xaml_filter test_encodings_and_bom:195-202): under the LocOS profile's merge options a
+/// UTF-16 file keeps its BOM and UTF-16, and a declared windows-1252 file stays windows-1252 with a character
+/// reference for what it cannot hold (LocOS `xaml_filter` re-encodes with the file's own codec).
+#[test]
+fn locos_profile_keeps_the_file_encoding() {
+    let mo = profile::locos().merge_options("xaml");
+    let build = |data: &[u8], t: &str| -> Vec<u8> {
+        let mut d = extract(data);
+        let id = d.units[0].segments[0].id.clone();
+        d.set_target(&id, vec![Inline::text(t)]).unwrap();
+        OFF.merge_with(&d, &mo).unwrap()
+    };
+    let mut le = vec![0xFF, 0xFE];
+    le.extend(s(MAUI).encode_utf16().flat_map(|u| u.to_le_bytes()));
+    let mut want = vec![0xFF, 0xFE];
+    want.extend(s(MAUI).replace(">Welcome<", ">Willkommen \u{2713}<").encode_utf16().flat_map(|u| u.to_le_bytes()));
+    assert_eq!(build(&le, "Willkommen \u{2713}"), want);
+    let mut legacy = b"<?xml version=\"1.0\" encoding=\"windows-1252\"?>\n".to_vec();
+    legacy.extend(encoding_rs::WINDOWS_1252.encode(&s(MAUI).replace("Welcome", "Caf\u{e9}")).0.iter());
+    let out = build(&legacy, "Caf\u{e9} \u{2713}");
+    assert!(out.windows(15).any(|w| w == b">Caf\xe9 &#10003;<"), "{}", String::from_utf8_lossy(&out));
+    assert!(out.starts_with(b"<?xml version=\"1.0\" encoding=\"windows-1252\"?>"));
+}
+
+/// B-side 5c (verify_xaml_filter test_hostile_inputs:215-217): a DOCTYPE is refused with LocOS's sentence, UTF-16
+/// files included.
+#[test]
+fn doctype_refusal_has_the_locos_sentence() {
+    let want = "This XAML file declares a DOCTYPE / DTD; refused (XAML never needs one).";
+    for data in [
+        &b"<?xml version=\"1.0\"?><!DOCTYPE r [<!ENTITY x SYSTEM \"file:///etc/passwd\">]><r>&x;</r>"[..],
+        &b"<!doctype l [<!ENTITY a \"aaaa\"><!ENTITY b \"&a;&a;&a;\">]><r>&b;</r>"[..],
+        &b"<!DOCTYPE r><r/>"[..],
+    ] {
+        let e = OFF.extract(data, &opts()).unwrap_err();
+        assert!(matches!(&e, Error::Parse { msg, .. } if msg == want), "{e:?}");
+    }
+    let mut u16 = vec![0xFF, 0xFE];
+    u16.extend("<!DOCTYPE r><r/>".encode_utf16().flat_map(|u| u.to_le_bytes()));
+    assert!(matches!(OFF.extract(&u16, &opts()), Err(Error::Parse { msg, .. }) if msg == want));
+}
