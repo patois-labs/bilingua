@@ -227,6 +227,35 @@ fn main() {
                     json!({"status": format!("source changed after merge ({} units, {} set_target errors)", a.len(), set_errors)})
                 }
             }
+            Ok(d2) if matches!(doc.format.as_str(), "scc" | "stl" | "eml") => {
+                // Captions (SCC, EBU STL) are re-wrapped to their row width and a plain-text email paragraph is
+                // re-flowed, so a longer translation moves line breaks and spaces (and an email's hard-wrapped
+                // paragraphs may regroup): the whole text is compared with white space normalised. Captions
+                // must still keep their count.
+                let words = |d: &bilingua::Document, wrap: bool| -> Vec<String> {
+                    let all: Vec<String> = d
+                        .units
+                        .iter()
+                        .filter(|u| u.translate)
+                        .map(|u| {
+                            let t = no_tags(&render(u).0);
+                            if wrap { format!("{PRE}{t}{POST}") } else { t }
+                        })
+                        .collect();
+                    all.join(" ").split_whitespace().map(str::to_string).collect()
+                };
+                let (want, got) = (words(&doc, true), words(&d2, false));
+                let count = |d: &bilingua::Document| d.units.iter().filter(|u| u.translate).count();
+                if doc.format != "eml" && count(&doc) != count(&d2) {
+                    json!({"status": format!("reopened with {} units, expected {}", count(&d2), count(&doc))})
+                } else if want == got && set_errors == 0 {
+                    json!({"status": "ok"})
+                } else {
+                    let at = want.iter().zip(&got).position(|(x, y)| x != y).unwrap_or(want.len().min(got.len()));
+                    let near = |v: &[String]| v[at.saturating_sub(6).min(v.len())..(at + 6).min(v.len())].join(" ");
+                    json!({"status": format!("text differs after merge (white space normalised), {set_errors} set_target errors"), "first": format!("{:?} -> {:?}", near(&want), near(&got))})
+                }
+            }
             Ok(d2) => {
                 let labels: std::collections::BTreeSet<(Option<String>, String)> = doc.units.iter().filter_map(plural_label).collect();
                 // Android drops the plural forms the target never uses (es-ES has no "two"), as LocOS

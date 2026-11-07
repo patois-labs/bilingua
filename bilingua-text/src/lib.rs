@@ -16,6 +16,8 @@ pub struct TextFilter;
 
 const ID: &str = "txt";
 const BOM: &[u8] = &[0xEF, 0xBB, 0xBF];
+/// Most lines in one piece of a paragraph the unit size limit would refuse.
+const CUT_LINES: usize = 500;
 
 impl Filter for TextFilter {
     fn id(&self) -> &'static str {
@@ -64,8 +66,9 @@ impl Filter for TextFilter {
         };
 
         // a paragraph the unit size limit would refuse (a list with no blank lines) is cut at line breaks into
-        // pieces of at most half the limit, so the file is read as several units (with room for a longer
-        // translation) rather than refused; a paragraph within the limit stays one unit, as before
+        // pieces of at most CUT_LINES lines and half the limit, so the file is read as several units rather than
+        // refused; a paragraph within the limit stays one unit, as before. The line count is what decides on most
+        // files, so a translated file (longer lines) reopens with the same pieces.
         let max = opts.limits().max_unit_chars;
         let cap = (max / 2).max(1);
         let emit = |group: &mut Vec<&str>, raw: &mut String, parts: &mut Vec<SkelPart>, units: &mut Vec<Unit>| {
@@ -77,7 +80,7 @@ impl Filter for TextFilter {
             let mut chunk_chars = 0usize;
             for line in all {
                 let n = split_eol(line).0.chars().count() + 1;
-                if !group.is_empty() && chunk_chars + n > cap {
+                if !group.is_empty() && (chunk_chars + n > cap || group.len() >= CUT_LINES) {
                     flush(group, raw, parts, units);
                     chunk_chars = 0;
                 }
@@ -300,6 +303,19 @@ mod tests {
         let want: Vec<String> = (1..=d.units.len()).map(|i| format!("p{i}")).collect();
         assert_eq!(ids, want);
         assert_eq!(extract(src.as_bytes()).units.len(), d.units.len());
+        // a longer translation of every piece reopens with the same pieces
+        let para = ExtractOptions::default().with_granularity(Granularity::Paragraph);
+        let d = TextFilter.extract(src.as_bytes(), &para).unwrap();
+        let mut t = d.clone();
+        for u in &d.units {
+            let mut v = vec![Inline::text("Zq")];
+            v.extend(u.segments[0].source.iter().cloned());
+            v.push(Inline::text("qZ"));
+            t.set_target(&u.segments[0].id, v).unwrap();
+        }
+        let back = TextFilter.extract(&TextFilter.merge(&t).unwrap(), &para).unwrap();
+        assert_eq!(back.units.len(), d.units.len());
+        assert!(back.units.iter().all(|u| plain_text(&u.source()).starts_with("ZqGr")));
     }
 
     #[test]

@@ -218,3 +218,24 @@ fn a_letter_with_a_floating_diacritic_and_no_single_code_is_written_back() {
     let out = Stl.merge(&d).unwrap();
     assert_eq!(texts(&ex(&out)), vec!["ZqxD\u{300}yqZ".to_string()]);
 }
+
+#[test]
+fn a_row_wider_than_the_header_mnc_takes_a_translation_as_long_as_its_source() {
+    // the header says 20 characters per row, but the source row has 35: a translation of the same length fits
+    let data = cat(&[&gsi(b"00", b"09", b'1', b"20", 1), &t(1, &cat(&[DH, b"The keeper waves from the old rocks", END]))]);
+    let mut d = ex(&data);
+    set(&mut d, 0, "El guarda saluda desde las rocas ya");
+    let out = Stl.merge(&d).unwrap();
+    assert_eq!(texts(&ex(&out)), vec!["El guarda saluda desde las rocas ya".to_string()]);
+    // a longer one is wrapped at the source row width
+    set(&mut d, 0, "El guarda del faro saluda desde las rocas viejas");
+    let out = Stl.merge(&d).unwrap();
+    let back = texts(&ex(&out));
+    let rows: Vec<&str> = back[0].split('\n').collect();
+    assert_eq!(rows.len(), 2, "{back:?}");
+    assert!(rows.iter().all(|r| r.chars().count() <= 35) && rows.iter().any(|r| r.chars().count() > 20), "{back:?}");
+    // the locos profile keeps LocOS's header width: the same-length translation is wrapped at 20
+    set(&mut d, 0, "El guarda saluda desde las rocas ya");
+    let out = Stl.merge_with(&d, &bilingua_model::profile::locos().merge_options("xml")).unwrap();
+    assert!(texts(&ex(&out))[0].contains('\n'));
+}

@@ -107,6 +107,11 @@ fn width<'a>(it: impl Iterator<Item = &'a Atom>) -> usize {
     n
 }
 
+/// The width of the widest row of a subtitle's text.
+fn widest_row(atoms: &[Atom]) -> usize {
+    atoms.split(|a| *a == Atom::C('\n')).map(|r| width(strip(r).iter())).max().unwrap_or(0)
+}
+
 fn is_ws(a: &Atom) -> bool {
     matches!(a, Atom::C(c) if py_isspace_char(*c))
 }
@@ -282,6 +287,8 @@ pub struct UnitInfo {
 }
 
 /// Rebuild the file. `changed` maps unit index to the new text atoms; `lc` is the language byte to stamp.
+/// `pairs` is false under the locos profile (LocOS's behaviour); true adds the byte pairs of `unsupported_with` and
+/// lets a row be as wide as the widest source row of its subtitle when that is over the MNC.
 pub fn rebuild(raw: &[u8], parsed: &read::Parsed, units: &[UnitInfo], changed: &BTreeMap<usize, Vec<Atom>>, lc: Option<u8>, pairs: bool) -> Result<Vec<u8>, Error> {
     let cct = parsed.cct;
     let mnc = read::mnc(raw);
@@ -322,7 +329,11 @@ pub fn rebuild(raw: &[u8], parsed: &read::Parsed, units: &[UnitInfo], changed: &
     let mut new_tf: BTreeMap<usize, (usize, Vec<u8>, i64)> = BTreeMap::new(); // first block -> (unit, tf, dvp)
     for (k, u) in units.iter().enumerate() {
         let r = if let Some(t) = changed.get(&k) {
-            encode_subtitle(&u.sub, t, chosen, mnc, false, pairs)
+            // outside the locos profile a row may be as wide as the widest row of the source subtitle: a file
+            // whose rows are wider than its own MNC (a header written by hand) still takes a translation as long
+            // as its source
+            let row_mnc = if pairs { mnc.max(widest_row(&u.atoms)) } else { mnc };
+            encode_subtitle(&u.sub, t, chosen, row_mnc, false, pairs)
         } else if chosen != cct {
             encode_subtitle(&u.sub, &u.atoms, chosen, mnc, true, pairs)
         } else {
