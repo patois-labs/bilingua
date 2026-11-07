@@ -62,143 +62,7 @@ fn mapping(m: &serde_json::Value) -> Vec<(usize, String)> {
     v
 }
 
-/// The code tables, read from the crate's generated table file (the test keeps its own decoder).
-#[allow(dead_code)]
-#[path = "../src/tables.rs"]
-mod tables;
-
-/// byte -> character, for table `n` (0-4); floating diacritics of table 00 have none here.
-fn chars(n: u8) -> [Option<char>; 256] {
-    let mut d = [None; 256];
-    for b in 0x20u8..0x7F {
-        d[b as usize] = Some(b as char);
-    }
-    if n == 0 {
-        for &(b, c) in tables::T00_HIGH {
-            d[b as usize] = Some(c);
-        }
-    } else {
-        let high = [&tables::HIGH_01, &tables::HIGH_02, &tables::HIGH_03, &tables::HIGH_04][n as usize - 1];
-        for (i, c) in high.iter().enumerate() {
-            d[0xA0 + i] = (*c != '\0').then_some(*c);
-        }
-    }
-    d
-}
-
-/// The only accepted differences from LocOS (issue 798): a code table switch LocOS makes (and writes, or refuses for
-/// another reason such as row length), refused by Bilingua with its table-switch message, where the file really is
-/// the case the message names:
-/// - "hold bytes with no equivalent": the subtitle text holds a byte the old table has no character for (or a table
-///   00 floating diacritic) that the new table reads as a character. LocOS copies it raw and it turns into a letter.
-/// - "comment subtitles hold characters": the file has a comment subtitle with upper-half bytes (LocOS leaves the
-///   comment in the old table, so it reads as other letters under the new table).
-///
-/// Any other refusal, and any refusal of a file that is not such a case, still counts as a difference.
-fn switch_refused_on_purpose(got: &Result<Vec<u8>, Error>, want: &serde_json::Value, input: &[u8]) -> bool {
-    let Err(Error::Unwritable { reason, .. }) = got else { return false };
-    let head = "The EBU STL file was not exported: the translation needs code table 0";
-    if want.get("err").is_some_and(|e| e != "CaptionTargetError") || !reason.starts_with(head) {
-        return false;
-    }
-    let to = reason.as_bytes()[head.len()].wrapping_sub(b'0');
-    let from = match &input[12..14] {
-        [a, b] if a.is_ascii_whitespace() && b.is_ascii_whitespace() => 0,
-        [b'0', d @ b'0'..=b'4'] => d - b'0',
-        _ => return false,
-    };
-    if to > 4 || to == from {
-        return false;
-    }
-    let (old, new) = (chars(from), chars(to));
-    let diacritic = |b: u8| tables::DIACRITICS.iter().any(|(x, _)| *x == b);
-    // a byte the old table reads as no character (a control code here) that the new table reads as a character
-    let turns = |b: u8| (old[b as usize].is_none() || (from == 0 && diacritic(b))) && (new[b as usize].is_some() || (to == 0 && diacritic(b)));
-    // the subtitles as the crate groups them: (first block, comment, text field)
-    let mut groups: Vec<(usize, bool, Vec<u8>)> = Vec::new();
-    let mut open = false;
-    for (i, blk) in input[1024..].chunks(128).enumerate() {
-        if blk.len() < 128 || blk[3] == 0xFE || (0xF0..=0xFD).contains(&blk[3]) {
-            continue;
-        }
-        let first_sn = groups.last().map(|g| &input[1024 + g.0 * 128 + 1..1024 + g.0 * 128 + 3]);
-        if open && first_sn == Some(&blk[1..3]) {
-            groups.last_mut().unwrap().2.extend_from_slice(&blk[16..]);
-        } else {
-            groups.push((i, blk[15] == 1, blk[16..].to_vec()));
-        }
-        open = blk[3] != 0xFF;
-    }
-    // units: subtitles that are not comments and have a character other than a space (a floating mark counts)
-    let has_text = |tf: &[u8]| {
-        tf.iter().enumerate().any(|(i, &b)| match old[b as usize] {
-            Some(c) => !c.is_whitespace(),
-            None => from == 0 && diacritic(b) && tf.get(i + 1).is_some_and(|n| *n < 0x80 && old[*n as usize].is_some()),
-        })
-    };
-    let units: Vec<&[u8]> = groups.iter().filter(|g| !g.1 && has_text(&g.2)).map(|g| g.2.as_slice()).collect();
-    if Stl.extract(input, &opts(None)).map(|d| d.units.len()).ok() != Some(units.len()) {
-        return false;
-    }
-    // every subtitle the message names must really be the case it names
-    let named = |part: &str| -> Vec<String> {
-        let Some(at) = reason.find(part) else { return Vec::new() };
-        let rest = &reason[at + part.len()..];
-        let end = [". Remove", "; and ", " (and "].iter().filter_map(|m| rest.find(m)).min().unwrap_or(rest.len());
-        rest[..end].split(", ").map(String::from).collect()
-    };
-    let bytes = named("(they would read as other characters): ");
-    let lacking = named("comment subtitles hold characters that table does not have: ");
-    if bytes.is_empty() && lacking.is_empty() {
-        return false;
-    }
-    let comment = |item: &str| {
-        let n = item.strip_prefix("comment subtitle at block ")?.parse::<usize>().ok()?;
-        groups.iter().find(|g| g.0 + 1 == n)
-    };
-    let bytes_ok = bytes.iter().all(|item| {
-        let tf = match item.strip_prefix("subtitle ").and_then(|n| n.parse::<usize>().ok()) {
-            Some(k) => units.get(k.wrapping_sub(1)).copied(),
-            None => comment(item).map(|g| g.2.as_slice()),
-        };
-        tf.is_some_and(|tf| tf.iter().any(|b| turns(*b)))
-    });
-    // a comment that lacks characters: an upper-half character of the old table that the new table does not have, or
-    // a table 00 accented letter (a floating mark before its letter) when the new table is not Latin
-    let lacking_ok = lacking.iter().all(|item| {
-        comment(item).is_some_and(|g| {
-            g.1 && g.2.iter().any(|b| (*b >= 0xA0 && old[*b as usize].is_some_and(|c| !new.contains(&Some(c)))) || (from == 0 && to != 0 && diacritic(*b)))
-        })
-    });
-    bytes_ok && lacking_ok
-}
-
-/// The other accepted difference (issue 798): on a code table switch Bilingua re-encodes comment subtitles in the new
-/// table, where LocOS keeps their old bytes. The build equals LocOS's once each comment block takes back the input
-/// block with the same subtitle and extension number; everything else must still be byte for byte.
-fn comments_as_input(out: &[u8], input: &[u8]) -> Vec<u8> {
-    let mut v = out.to_vec();
-    if v.len() < 1024 || input.len() < 1024 || out[12..14] == input[12..14] {
-        return v;
-    }
-    for k in 0..(v.len() - 1024) / 128 {
-        let at = 1024 + k * 128;
-        if v[at + 15] != 1 {
-            continue;
-        }
-        let same = input[1024..].chunks(128).find(|blk| blk.len() == 128 && blk[15] == 1 && blk[1..4] == v[at + 1..at + 4]);
-        if let Some(blk) = same {
-            v[at + 16..at + 128].copy_from_slice(&blk[16..]);
-        }
-    }
-    v
-}
-
 fn check(name: &str, what: &str, got: Result<Vec<u8>, Error>, want: &serde_json::Value, bad: &mut Vec<String>, dir: &Option<String>, input: &[u8]) {
-    if switch_refused_on_purpose(&got, want, input) {
-        println!("accepted 798 refusal: {name}: {what}");
-        return;
-    }
     if let Some(err) = want.get("err") {
         let msg = want["msg"].as_str().unwrap();
         match got {
@@ -211,7 +75,7 @@ fn check(name: &str, what: &str, got: Result<Vec<u8>, Error>, want: &serde_json:
     match got {
         Err(e) => bad.push(format!("{name}: {what}: LocOS builds, we refuse: {e}")),
         Ok(b) => {
-            if sha256(&b) != want["sha"].as_str().unwrap() && sha256(&comments_as_input(&b, input)) != want["sha"].as_str().unwrap() {
+            if sha256(&b) != want["sha"].as_str().unwrap() {
                 if let Some(d) = dir {
                     std::fs::write(format!("{d}/{name}.{}.got.stl", what.replace([':', ' '], "_")), &b).unwrap();
                     std::fs::write(format!("{d}/{name}.in.stl"), input).unwrap();
