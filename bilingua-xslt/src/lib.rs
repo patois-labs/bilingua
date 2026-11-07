@@ -44,9 +44,12 @@ fn xml_target_text(s: &str) -> String {
         .collect()
 }
 
-fn escape_lit(s: &str, tvt: bool, attr: bool, quote: u8, crlf: bool) -> String {
+/// `keep_cr`: the source text of the unit holds a carriage return (it came from `&#13;`, since an XML reader turns a
+/// literal CR into LF), so the translation's CRs are the author's and are written back as `&#13;`.
+fn escape_lit(s: &str, tvt: bool, attr: bool, quote: u8, crlf: bool, keep_cr: bool) -> String {
     let mut s = s.to_string();
-    if !attr {
+    let keep_cr = keep_cr && !attr && s.contains('\r');
+    if !attr && !keep_cr {
         s = s.replace("\r\n", "\n").replace('\r', "\n");
     }
     s = s.replace('&', "&amp;").replace('<', "&lt;");
@@ -55,7 +58,9 @@ fn escape_lit(s: &str, tvt: bool, attr: bool, quote: u8, crlf: bool) -> String {
         s = s.replace('\t', "&#9;").replace('\n', "&#10;").replace('\r', "&#13;");
     } else {
         s = s.replace('>', "&gt;");
-        if crlf {
+        if keep_cr {
+            s = s.replace('\r', "&#13;");
+        } else if crlf {
             s = s.replace('\n', "\r\n");
         }
     }
@@ -425,7 +430,7 @@ fn restamp(part: &str, tag: &str) -> Option<String> {
     for (n, vs, ve, q) in attrs {
         if (n == "lang" || n == "xml:lang") && !part[vs..ve].contains('{') {
             out.push_str(&part[last..vs]);
-            out.push_str(&escape_lit(tag, false, true, q, false));
+            out.push_str(&escape_lit(tag, false, true, q, false, false));
             last = ve;
             changed = true;
         }
@@ -536,6 +541,7 @@ fn write_unit(doc: &Document, u: &Unit, refs: CharRefs) -> String {
 /// dropped point is appended; nothing protected is lost.
 fn rebuild(doc: &Document, u: &Unit, target: &[Inline], refs: CharRefs) -> String {
     let (attr, quote, crlf, top_tvt) = meta_of(u);
+    let keep_cr = u.source().iter().any(|i| matches!(i, Inline::Text(t) if t.contains('\r')));
     let mut out = String::new();
     let mut stack: Vec<String> = Vec::new();
     let mut tvts = vec![top_tvt];
@@ -567,7 +573,7 @@ fn rebuild(doc: &Document, u: &Unit, target: &[Inline], refs: CharRefs) -> Strin
         match i {
             Inline::Text(t) => {
                 let tvt = *tvts.last().unwrap_or(&top_tvt);
-                let lit = with_char_refs(escape_lit(&xml_target_text(t), tvt, attr, quote, crlf), refs);
+                let lit = with_char_refs(escape_lit(&xml_target_text(t), tvt, attr, quote, crlf, keep_cr), refs);
                 if ((n == 0 && wrap_first) || (n == last && wrap_last)) && !lit.trim().is_empty() && stack.is_empty() {
                     out.push_str(&format!("<{wrap_prefix}text>{lit}</{wrap_prefix}text>"));
                 } else {

@@ -216,3 +216,17 @@ fn units_carry_context() {
     assert_eq!(d.units[11].context.style.as_deref(), Some("attr:title"));
     assert_eq!(d.units[0].context.location.as_deref(), Some("line 15"));
 }
+
+#[test]
+fn carriage_return_from_a_character_reference_survives_a_translation() {
+    // `&#13;&#10;` is a CR LF in the text; a translation that keeps it must write the CR as a reference again
+    let data = b"<?xml version=\"1.0\"?>\n<xsl:stylesheet version=\"1.0\" xmlns:xsl=\"http://www.w3.org/1999/XSL/Transform\">\n<xsl:template match=\"/\"><xsl:text>&#13;&#10;</xsl:text><p>Hello</p></xsl:template>\n</xsl:stylesheet>\n";
+    let d = extract(data);
+    let i = d.units.iter().position(|u| u.source().iter().any(|x| matches!(x, Inline::Text(t) if t.contains('\r')))).expect("a unit with the CR");
+    let mut d2 = d.clone();
+    d2.units[i].segments[0].target = vec![Inline::text("Zq\r\nqZ")];
+    let out = s(&Xslt.merge(&d2).unwrap());
+    assert!(out.contains("Zq&#13;\nqZ"), "{out}");
+    let back = extract(out.as_bytes());
+    assert!(back.units.iter().any(|u| u.source().iter().any(|x| matches!(x, Inline::Text(t) if t == "Zq\r\nqZ"))), "{out}");
+}

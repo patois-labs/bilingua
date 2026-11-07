@@ -359,3 +359,20 @@ fn translation_line_breaks_follow_the_file() {
         }
     }
 }
+
+#[test]
+fn carriage_return_from_a_character_reference_survives_a_translation() {
+    // a value written with `&#13;&#10;` in a file whose own line breaks are LF: the CR is the author's
+    let data = b"<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<WixLocalization Culture=\"en-us\" xmlns=\"http://schemas.microsoft.com/wix/2006/localization\">\n  <String Id=\"A\">Line one&#13;&#10;Line two</String>\n</WixLocalization>\n";
+    let mut d = ex(data);
+    assert_eq!(texts(&d), ["Line one\r\nLine two"]);
+    let t = vec![Inline::text("Zq")]
+        .into_iter()
+        .chain(d.units[0].source())
+        .chain(vec![Inline::text("qZ")])
+        .collect::<Vec<_>>();
+    d.units[0].segments[0].target = t;
+    let out = s(&merged(&d));
+    assert!(out.contains("ZqLine one&#13;\nLine twoqZ"), "{out}");
+    assert_eq!(texts(&ex(out.as_bytes())), ["ZqLine one\r\nLine twoqZ"]);
+}

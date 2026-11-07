@@ -185,8 +185,31 @@ fn flatten(v: &[Inline]) -> String {
 }
 
 /// What goes into the file for a full value (lead + text + trail) in a given form.
-fn encode_value(form: &str, value: &str, original_cdata_ok: bool, nl: &str) -> String {
+/// `keep_cr`: the source value held a carriage return (it came from `&#13;`, since an XML reader turns a literal CR
+/// into LF), so the translation's CRs are the author's and are written back as `&#13;` in element text.
+fn encode_value(form: &str, value: &str, original_cdata_ok: bool, nl: &str, keep_cr: bool) -> String {
     let mut v = clean_target(value);
+    if keep_cr && !form.starts_with('a') && v.contains('\r') {
+        let mut o = String::with_capacity(v.len() + 8);
+        let mut it = v.chars().peekable();
+        while let Some(c) = it.next() {
+            match c {
+                '\r' => {
+                    o.push_str("&#13;");
+                    if it.peek() == Some(&'\n') {
+                        it.next();
+                        o.push('\n');
+                    }
+                }
+                '\n' => o.push_str(if nl.is_empty() { "\n" } else { nl }),
+                '&' => o.push_str("&amp;"),
+                '<' => o.push_str("&lt;"),
+                '>' => o.push_str("&gt;"),
+                c => o.push(c),
+            }
+        }
+        return o;
+    }
     // element text and CDATA: the translation's line breaks take the file's style (an attribute holds them as
     // character references, which keep their own value)
     if !nl.is_empty() && !form.starts_with('a') && v.contains(['\r', '\n']) {
@@ -330,7 +353,7 @@ impl Filter for Wxl {
             unit.codes.insert(FORM_KEY.into(), code(form));
             let raw = &text[start..end];
             // (a value with a line break keeps its spelling: a merge writes the file's line break into changed values only)
-            if raw.contains(['\r', '\n']) || encode_value(form, &e.text, form == "c", "") != raw {
+            if raw.contains(['\r', '\n']) || encode_value(form, &e.text, form == "c", "", false) != raw {
                 unit.codes.insert(RAW_KEY.into(), code(raw));
             }
             fill_context(&mut unit, e, idx, form);
@@ -426,7 +449,7 @@ fn render(unit: &Unit, nl: &str) -> String {
         }
     }
     let full = format!("{}{}{}", hidden(unit, LEAD_KEY), out, hidden(unit, TRAIL_KEY));
-    encode_value(form, &full, form == "c", nl)
+    encode_value(form, &full, form == "c", nl, flatten(&unit.source()).contains('\r'))
 }
 
 /// The culture to write for a target locale: LocOS `html_lang(...).lower()`, or `None` when the tag is unusable.
