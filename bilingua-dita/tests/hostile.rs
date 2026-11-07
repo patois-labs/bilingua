@@ -4,6 +4,7 @@
 
 mod common;
 
+use bilingua_dita::{Dita, DocBook};
 use bilingua_model::*;
 use common::*;
 use proptest::prelude::*;
@@ -241,7 +242,7 @@ fn docbook4_file_with_an_entity_subset_and_latin1_opens() {
     let mut raw = b"<?xml version='1.0' encoding='ISO-8859-1'?>\n<!DOCTYPE refentry PUBLIC \"-//OASIS//DTD DocBook XML V4.2//EN\"\n  \"http://www.oasis-open.org/docbook/xml/4.2/docbookx.dtd\" [\n<!-- it's a comment with > and quotes -->\n<!ENTITY % defs SYSTEM \"defs.ent\"> %defs;\n<!ENTITY prog \"tool\">\n<!ENTITY part SYSTEM \"part.xml\">\n]>\n<refentry><refnamediv><refpurpose>Caf".to_vec();
     raw.push(0xE9);
     raw.extend_from_slice(b" for &prog; users</refpurpose></refnamediv>&part;</refentry>\n");
-    for f in [&docbook() as &dyn Filter, &dita()] {
+    for f in [&DocBook::new() as &dyn Filter, &Dita::new()] {
         let d = ex(f, &raw);
         assert_eq!(show(&d.units[0]), "Caf\u{e9} for \u{27E6}x1\u{27E7} users");
         assert_eq!(f.merge(&d).unwrap(), raw);
