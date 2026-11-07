@@ -66,9 +66,14 @@ pub fn unsupported(atoms: &[Atom], cct: Cct) -> Vec<char> {
     // a set beside the ordered list: a translation can hold 100 000 distinct characters (gate: was quadratic)
     let mut seen: Vec<char> = Vec::new();
     let mut set: BTreeSet<char> = BTreeSet::new();
-    for a in prep(atoms, cct) {
-        if let Atom::C(c) = a {
-            if c != '\n' && !set.contains(&c) && codec::encode_char(c, cct).is_none() {
+    let prepped = prep(atoms, cct);
+    for (i, a) in prepped.iter().enumerate() {
+        if let Atom::C(c) = *a {
+            // a base letter with no single code and its mark are written as a pair
+            if i > 0 && matches!(prepped[i - 1], Atom::C(b) if codec::encode_pair(b, c, cct).is_some()) {
+                continue;
+            }
+            if c != '\n' &&!set.contains(&c) && codec::encode_char(c, cct).is_none() {
                 set.insert(c);
                 seen.push(c);
             }
@@ -171,7 +176,11 @@ pub fn layout(text: &[Atom], n_rows: usize, max_rows: usize, mnc: usize) -> Opti
 fn encode_atoms(atoms: &[Atom], cct: Cct) -> Option<Vec<u8>> {
     let kept: Vec<&Atom> = atoms.iter().filter(|a| **a != Atom::U).collect();
     let mut out: Vec<u8> = Vec::with_capacity(kept.len());
+    let mut skip_mark = false;
     for (i, a) in kept.iter().enumerate() {
+        if std::mem::take(&mut skip_mark) {
+            continue;
+        }
         match a {
             Atom::T(b) => {
                 if spacing(*b) && i > 0 && *kept[i - 1] == Atom::C(' ') && out.last() == Some(&0x20) {
@@ -180,6 +189,13 @@ fn encode_atoms(atoms: &[Atom], cct: Cct) -> Option<Vec<u8>> {
                 out.push(*b);
             }
             Atom::C(c) => {
+                if let (Some(Atom::C(m)), Some(_)) = (kept.get(i + 1), codec::encode_char(*c, cct)) {
+                    if let Some(pair) = codec::encode_pair(*c, *m, cct) {
+                        out.extend_from_slice(&pair);
+                        skip_mark = true;
+                        continue;
+                    }
+                }
                 let (bytes, n) = codec::encode_char(*c, cct)?;
                 out.extend_from_slice(&bytes[..n]);
             }

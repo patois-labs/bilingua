@@ -206,3 +206,13 @@ fn dfc_30_and_blank_cct_read() {
     assert_eq!(texts(&d), ["Thirty fps"]);
     assert_eq!(Stl.merge(&d).unwrap(), data);
 }
+
+#[test]
+fn a_letter_with_a_floating_diacritic_and_no_single_code_is_written_back() {
+    // grave + D has no precomposed character: it reads as D and U+0300 and must be written as the byte pair
+    let data = cat(&[&gsi_default(1), &t(1, &cat(&[DH, b"x\xc1Dy", END]))]);
+    let d = ex(&data);
+    assert_eq!(texts(&d), vec!["xD\u{300}y".to_string()]);
+    let out = build(&data, &[(0, "ZqxD\u{300}yqZ".to_string())]).unwrap();
+    assert_eq!(texts(&ex(&out)), vec!["ZqxD\u{300}yqZ".to_string()]);
+}
