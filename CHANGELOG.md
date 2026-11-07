@@ -45,6 +45,21 @@ is listed here).
   supersets (GBK, 932, 949, 950), so a localized CJK export can be read back.
 - zip batch: a member path with a Windows device name (`CON/a.md`, `aux.md`, `COM1.md`, ...) refuses the archive.
   Package formats (DOCX, EPUB, ...) still accept such part names.
+- HTML: an end tag with no open tag (`<p>Hello</b> big</p>`) is kept as a point code, so a translated build writes it
+  back. It used to be blanked with the rest of its unit (also in XHTML, server pages, EPUB, e-mail and Flare).
+- Text files that declare ISO-8859-3, -4, -6, -8, -10, -13, -14, -16, Windows-874, IBM866 or the Mac code pages are read
+  in that code page and written back in it. Hebrew pages used to come out as Windows-1252 mojibake. A page labelled
+  ISO-8859-8 that holds Windows-1255 vowel points is read as Windows-1255 (label kept); a file with a byte its declared
+  rare code page leaves undefined is read the way it was before, not refused.
+- Token look-alikes: text in a source that looks like a LocOS token (`⟦x2⟧`, `⟦1⟧`) stays text. Real codes in the
+  LocOS text skip those numbers, and an unknown token in a translation is kept, not deleted. WebVTT and SubRip builds
+  used to drop such text.
+- LocOS profile: a Markdown file with a byte order mark reads its first heading as a heading (the mark is not part of
+  the line) and keeps the mark; ARB `@@locale` and plural keys use the file's CRLF; resx writes a translation's line
+  breaks as CRLF in a CRLF file; the CJK autolink repair leaves a URL alone when the source already had it glued to
+  text (a link text such as `[https://x.example/a #hash](<a b.md>)`).
+- XAML, LocOS profile: a translation's line breaks are written as CRLF in a CRLF file (they used to stay LF unless the
+  string's own text held a CRLF).
 
 ## [0.9.0] - 2026-11-06
 

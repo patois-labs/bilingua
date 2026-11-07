@@ -596,3 +596,13 @@ fn depth_cap_cannot_be_dodged() {
     let src = format!("<html><body><table>{}</table><ul>{}</ul></body></html>", row.repeat(3000), "<li>x</li>".repeat(3000));
     assert!(Html.extract(src.as_bytes(), &ExtractOptions::default()).is_ok());
 }
+
+#[test]
+fn an_orphan_end_tag_survives_a_translated_build() {
+    let src = "<p>Hello</b> big <i>world</p>";
+    let mut d = round_trip(src);
+    translate_all(&mut d);
+    let out = merged(&d);
+    assert!(out.contains("</b>"), "orphan end tag lost: {out}");
+    assert!(out.contains("<i>"), "{out}");
+}

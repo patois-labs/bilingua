@@ -323,6 +323,15 @@ keeps the encoding:
   refuse it), and a DTD in a DOCX part (LocOS's DOCX reader takes one; its PPTX and XLSX readers refuse it). LocOS
   also reads LocOS-token look-alikes (`⟦x2⟧`) in source text as tokens and drops or moves them on export; the
   profile keeps them as text, so such a unit's build differs.
+- HTML family, text profile and token look-alikes (11-07, LocOS issues 810, 813, 814): Bilingua now differs from
+  LocOS on purpose, and LocOS is getting the same fixes. An orphan end tag (`</b>` with no `<b>`) is a point code in
+  the unit text and in the build; LocOS drops it from the unit and blanks it from a translated build. A file that
+  declares ISO-8859-8 (or -3, -4, -6, -10, -13, -14, -16, Windows-874) is read in that code page; LocOS reads it as
+  Windows-1252. Under the profile a Markdown BOM is not part of the first line, so `# Title` is a heading and the
+  unit text is `Title`; LocOS lists the mark and `# Title` as text. ARB, resx and XAML follow the file's CRLF for what they
+  add or translate; LocOS wrote bare LF. The CJK autolink repair skips a URL that the source already had glued to text.
+  Token-like text in a source (`⟦x2⟧`) stays text: Bilingua's real codes skip those numbers (so a unit's tokens can
+  be numbered with gaps) and an unknown token in a translation is kept; LocOS drops or moves it.
 - XML, DITA and DocBook (11-06): Bilingua opens a file whose DOCTYPE has an internal subset (entity declarations,
   as in most DocBook 4 manuals); LocOS refuses it. The subset is kept byte for byte and never read: no entity
   (internal, external or parameter) is expanded or fetched, every `&name;` stays a code, and the depth and element

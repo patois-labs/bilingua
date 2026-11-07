@@ -174,3 +174,16 @@ fn sniff() {
     assert!(!OFF.sniff(b"key=value\n"));
     assert!(!OFF.sniff(b"{\"a\":1}"));
 }
+
+#[test]
+fn the_locos_profile_writes_a_translations_line_breaks_as_crlf_in_a_crlf_file() {
+    let data = b"<ResourceDictionary xmlns:x=\"http://schemas.microsoft.com/winfx/2006/xaml\">\r\n  <x:String x:Key=\"A\">One line</x:String>\r\n</ResourceDictionary>\r\n";
+    let o = opts().with_profile(Some(profile::LOCOS));
+    let mut d = OFF.extract(data, &o).unwrap();
+    let id = d.units[0].segments[0].id.clone();
+    d.set_target(&id, vec![Inline::text("Zeile eins\nZeile zwei")]).unwrap();
+    let out = OFF.merge_with(&d, &MergeOptions::new().with_profile(Some(profile::LOCOS))).unwrap();
+    let out = String::from_utf8(out).unwrap();
+    assert!(out.contains(">Zeile eins\r\nZeile zwei<"), "{out:?}");
+    assert!(!out.replace("\r\n", "").contains('\n'), "a bare LF in a CRLF file: {out:?}");
+}

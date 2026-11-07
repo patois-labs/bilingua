@@ -444,7 +444,7 @@ fn splice(orig: &str, doc: &Document, locos: bool) -> Result<String, Error> {
     let mut edits: Vec<(usize, usize, String)> = Vec::new();
     // Added first so that, at the same position, @@locale comes before added plural keys.
     if let Some(t) = target {
-        edits.push(locale_edit(orig, &root, t, locos));
+        edits.push(locale_edit(orig, &root, t));
     }
     let mut changed: HashMap<usize, String> = HashMap::new(); // value start -> new token
     let mut head = 0usize;
@@ -471,7 +471,7 @@ fn splice(orig: &str, doc: &Document, locos: bool) -> Result<String, Error> {
         }
     }
     if let Some(t) = target {
-        suffix_plural_edits(orig, pairs, *root_start, t, &changed, &mut edits, locos);
+        suffix_plural_edits(orig, pairs, *root_start, t, &changed, &mut edits);
     }
     let _ = root_end;
     edits.sort_by_key(|e| e.0);
@@ -660,9 +660,9 @@ fn render_branches(cx: &Complex, rendered: Vec<String>, target: Option<&str>) ->
     out
 }
 
-/// `\n` or `\r\n`, whichever line ending the newline at `nl` ends; always `\n` with `lf` (LocOS).
-fn newline_at(text: &str, nl: usize, lf: bool) -> &'static str {
-    if !lf && nl > 0 && text.as_bytes()[nl - 1] == b'\r' {
+/// `\n` or `\r\n`, whichever line ending the newline at `nl` ends (under the LocOS profile too: LocOS wrote `\n` into a CRLF file).
+fn newline_at(text: &str, nl: usize) -> &'static str {
+    if nl > 0 && text.as_bytes()[nl - 1] == b'\r' {
         "\r\n"
     } else {
         "\n"
@@ -670,7 +670,7 @@ fn newline_at(text: &str, nl: usize, lf: bool) -> &'static str {
 }
 
 /// Sets `@@locale` to the target, or adds it as the first entry, indented like the first key.
-fn locale_edit(text: &str, root: &Node, target: &str, lf: bool) -> (usize, usize, String) {
+fn locale_edit(text: &str, root: &Node, target: &str) -> (usize, usize, String) {
     let loc = scan::quote(&target.trim().replace('-', "_"));
     let Node::Obj { pairs, start, end } = root else { return (0, 0, String::new()) };
     if let Some(p) = pairs.iter().rev().find(|p| p.key == "@@locale") {
@@ -681,7 +681,7 @@ fn locale_edit(text: &str, root: &Node, target: &str, lf: bool) -> (usize, usize
         let sep = match text[*start..key_start].rfind('\n') {
             Some(rel) => {
                 let nl = start + rel;
-                format!("{}{}", newline_at(text, nl, lf), &text[nl + 1..key_start])
+                format!("{}{}", newline_at(text, nl), &text[nl + 1..key_start])
             }
             None => " ".to_string(),
         };
@@ -699,7 +699,6 @@ fn suffix_plural_edits(
     target: &str,
     changed: &HashMap<usize, String>,
     edits: &mut Vec<(usize, usize, String)>,
-    lf: bool,
 ) {
     const WORDS: [&str; 6] = ["Zero", "One", "Two", "Few", "Many", "Other"];
     let all_keys: std::collections::HashSet<&str> = pairs.iter().map(|p| p.key.as_str()).collect();
@@ -746,7 +745,7 @@ fn suffix_plural_edits(
                 let nl = root_start + rel;
                 let indent = &text[nl + 1..key_at];
                 if indent.trim().is_empty() {
-                    format!("{}{indent}", newline_at(text, nl, lf))
+                    format!("{}{indent}", newline_at(text, nl))
                 } else {
                     " ".to_string()
                 }

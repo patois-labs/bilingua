@@ -218,3 +218,18 @@ fn document_json_round_trips() {
     assert_eq!(back, d);
     assert_eq!(Arb.merge(&back).unwrap(), LANGS.as_bytes());
 }
+
+#[test]
+fn the_locos_profile_adds_locale_and_plural_keys_with_the_files_crlf() {
+    let crlf = "{\r\n  \"hello\": \"Hello\",\r\n  \"itemOne\": \"one\",\r\n  \"itemOther\": \"many\"\r\n}\r\n";
+    let o = ExtractOptions::new().with_source_lang("en").with_profile(Some(profile::LOCOS));
+    let mut d = Arb.extract(crlf.as_bytes(), &o).unwrap();
+    d.target_lang = Some("ru".into());
+    for u in d.units.iter_mut() {
+        u.segments[0].target = vec![Inline::text("x")];
+    }
+    let m = MergeOptions::new().with_profile(Some(profile::LOCOS));
+    let out = String::from_utf8(Arb.merge_with(&d, &m).unwrap()).unwrap();
+    assert!(out.contains("\"@@locale\""), "{out}");
+    assert!(!out.replace("\r\n", "").contains('\n'), "a bare LF in a CRLF file: {out:?}");
+}

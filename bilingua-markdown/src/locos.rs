@@ -1702,6 +1702,11 @@ fn restore_cell_escapes(src: &str, new: &str) -> String {
 
 // ---- extract and merge ----------------------------------------------------------------------------
 
+/// The one leading U+FEFF (as text) and the rest.
+fn split_bom(text: &str) -> (&str, &str) {
+    text.split_at(if text.starts_with('\u{FEFF}') { '\u{FEFF}'.len_utf8() } else { 0 })
+}
+
 /// The lines (`splitlines()`) of the text.
 fn split(text: &str) -> (Vec<&str>, Vec<&str>) {
     let raw = py_splitlines_keepends(text);
@@ -1716,7 +1721,8 @@ pub fn extract(text: &str, encoding: &str, opts: &ExtractOptions, warnings: Vec<
         full.push('\u{FEFF}');
     }
     full.push_str(text);
-    let (lines, _) = split(&full);
+    // the byte order mark is not part of the first line (LocOS reads and builds with sig=True): the walk starts after it
+    let (lines, _) = split(split_bom(&full).1);
     let fm = find_front_matter(&lines);
     let mut units = Vec::new();
     let mut add = |t: String, image: bool| {
@@ -1747,7 +1753,8 @@ pub fn merge(doc: &Document, data: &[u8]) -> Result<Vec<u8>, Error> {
             texts.insert(k, plain_text(&u.output()));
         }
     }
-    let (lines, raw) = split(text);
+    let (bom, body) = split_bom(text);
+    let (lines, raw) = split(body);
     let mut out: Vec<String> = raw.iter().map(|s| s.to_string()).collect();
     let fm = find_front_matter(&lines);
     let fields = fm.as_ref().map(|f| f.fields.clone()).unwrap_or_default();
@@ -1784,7 +1791,7 @@ pub fn merge(doc: &Document, data: &[u8]) -> Result<Vec<u8>, Error> {
         }
         out[it.line] = format!("{}{new}{tail}{ending}", it.prefix);
     }
-    Ok(out.concat().into_bytes())
+    Ok(format!("{bom}{}", out.concat()).into_bytes())
 }
 
 #[cfg(test)]

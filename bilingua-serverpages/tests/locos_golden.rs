@@ -51,6 +51,50 @@ fn nobom(b: &[u8]) -> String {
     String::from_utf8_lossy(b).trim_start_matches('\u{feff}').replace("&#92;", "\\")
 }
 
+/// The ids of a unit's orphan end tags (`</b>` with no `<b>`): point codes here (kept on purpose, LocOS issue 810),
+/// dropped from the unit with no token number in LocOS.
+fn orphan_ids(u: &Unit) -> Vec<String> {
+    u.source()
+        .iter()
+        .filter_map(|i| match i {
+            Inline::Tag { id, kind: TagKind::Standalone, .. }
+                if u.codes.get(id).and_then(|c| c.standalone.as_deref()).is_some_and(|t| t.starts_with("</")) =>
+            {
+                Some(id.clone())
+            }
+            _ => None,
+        })
+        .collect()
+}
+
+/// A token id as LocOS numbers it: no number for an orphan end tag, so each id after one is one lower.
+fn locos_id(id: &str, orphans: &[String]) -> String {
+    match id.parse::<usize>() {
+        Ok(n) => (n - orphans.iter().filter(|o| o.parse::<usize>().is_ok_and(|m| m < n)).count()).to_string(),
+        Err(_) => id.to_string(),
+    }
+}
+
+/// The unit text as LocOS shows it with the orphan end tags left out (and the white space at the unit's edges,
+/// which LocOS trims once the orphan is gone).
+fn locos_view(u: &Unit) -> String {
+    let orphans = orphan_ids(u);
+    if orphans.is_empty() {
+        return locos_text(u);
+    }
+    let mut s = String::new();
+    for i in u.source() {
+        match i {
+            Inline::Text(t) => s.push_str(&t),
+            Inline::Tag { id, .. } if orphans.contains(&id) => {}
+            Inline::Tag { id, kind: TagKind::Open, .. } => s.push_str(&format!("\u{27E6}g{}\u{27E7}", locos_id(&id, &orphans))),
+            Inline::Tag { id, kind: TagKind::Close, .. } => s.push_str(&format!("\u{27E6}/g{}\u{27E7}", locos_id(&id, &orphans))),
+            Inline::Tag { id, kind: TagKind::Standalone, .. } => s.push_str(&format!("\u{27E6}x{}\u{27E7}", locos_id(&id, &orphans))),
+        }
+    }
+    s.trim().to_string()
+}
+
 fn check_units(name: &str, doc: &Document, want: &[serde_json::Value], has_bom: bool) {
     assert_eq!(doc.units.len(), want.len(), "{name}: unit count");
     for (k, (u, w)) in doc.units.iter().zip(want).enumerate() {
@@ -58,7 +102,9 @@ fn check_units(name: &str, doc: &Document, want: &[serde_json::Value], has_bom: 
         // part of the envelope, so the first unit has no U+FEFF in front.
         let want_text = w["text"].as_str().unwrap();
         let want_text = if k == 0 && has_bom { want_text.trim_start_matches('\u{feff}') } else { want_text };
-        assert_eq!(locos_text(u), want_text, "{name}: unit {k} text");
+        let orphans = orphan_ids(u);
+        let want_text = if orphans.is_empty() { want_text } else { want_text.trim() };
+        assert_eq!(locos_view(u), want_text, "{name}: unit {k} text");
         let style = w["style"].as_str().filter(|s| !s.is_empty());
         assert_eq!(u.context.style.as_deref(), style, "{name}: unit {k} style");
         let map = w["map"].as_object().unwrap();
@@ -66,7 +112,10 @@ fn check_units(name: &str, doc: &Document, want: &[serde_json::Value], has_bom: 
         let mut seen = 0;
         for i in u.source() {
             let Inline::Tag { id, kind, .. } = i else { continue };
-            let entry = &map[&id];
+            if orphans.contains(&id) {
+                continue;
+            }
+            let entry = &map[&locos_id(&id, &orphans)];
             let code = &u.codes[&id];
             match kind {
                 TagKind::Open => {
@@ -130,7 +179,8 @@ fn matches_locos_on_random_pages_and_fixtures() {
         // LocOS writes every server page as UTF-8; Bilingua writes the file's own encoding (B6), so the built bytes
         // of a legacy-encoded or UTF-16 fixture are not comparable here (tests/roundtrip.rs covers them)
         let plain = std::str::from_utf8(&data).is_ok();
-        if !plain {
+        // kept on purpose (LocOS issue 810): a translated build keeps an orphan end tag that LocOS blanks
+        if !plain || doc.units.iter().any(|u| !orphan_ids(u).is_empty()) {
             ok += 1;
             continue;
         }

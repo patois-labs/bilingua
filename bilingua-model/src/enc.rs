@@ -106,6 +106,20 @@ fn declared_ok(e: &'static Encoding) -> bool {
         ISO_8859_5, ISO_8859_7, ISO_8859_15, KOI8_R, KOI8_U, SHIFT_JIS, EUC_JP, GBK, GB18030, BIG5, EUC_KR,
     ]
     .contains(&e)
+        || declared_if_strict(e)
+}
+
+/// The rarer charsets added on 11-07 (LocOS issue 810.3). A file that declares one is read in it when every byte
+/// decodes; one that does not (often a page labelled ISO-8859-8 that holds Windows-1255 vowel points) is read the
+/// way it was before, by the default path, not refused. ISO-8859-8 visual and -8-I logical decode to the same
+/// characters in the order of the bytes: nothing is reordered.
+fn declared_if_strict(e: &'static Encoding) -> bool {
+    use encoding_rs::*;
+    [
+        ISO_8859_3, ISO_8859_4, ISO_8859_6, ISO_8859_8, ISO_8859_8_I, ISO_8859_10, ISO_8859_13, ISO_8859_14, ISO_8859_16, WINDOWS_874,
+        IBM866, MACINTOSH, X_MAC_CYRILLIC,
+    ]
+    .contains(&e)
 }
 
 fn ascii_head(data: &[u8], n: usize) -> String {
@@ -429,10 +443,20 @@ fn decode_text_inner(data: &[u8], o: &DecodeOptions) -> Result<Decoded, Error> {
                 return Err(bad_declared(&name, data, bad));
             }
             if declared_ok(e) {
-                return match strict(e, data) {
-                    Ok(s) => done(rewrite_declared(&s), &e.name().to_ascii_lowercase(), label.as_deref(), Vec::new(), &o.limits),
-                    Err(pos) => Err(bad_declared(&name, data, pos)),
-                };
+                match strict(e, data) {
+                    Ok(s) => return done(rewrite_declared(&s), &e.name().to_ascii_lowercase(), label.as_deref(), Vec::new(), &o.limits),
+                    Err(pos) => {
+                        // Windows-1255 holds all of ISO-8859-8 at the same bytes, plus the vowel points pages use;
+                        // the declared label stays, so a merge writes the same bytes back
+                        let hebrew = e == encoding_rs::ISO_8859_8 || e == encoding_rs::ISO_8859_8_I;
+                        if let Some(s) = hebrew.then(|| strict(encoding_rs::WINDOWS_1255, data).ok()).flatten() {
+                            return done(rewrite_declared(&s), "windows-1255", label.as_deref(), Vec::new(), &o.limits);
+                        }
+                        if !declared_if_strict(e) {
+                            return Err(bad_declared(&name, data, pos));
+                        }
+                    }
+                }
             }
         }
     }
@@ -991,6 +1015,49 @@ mod tests {
         // text that does not fit is UTF-8 under the UTF-8 label
         let out = encode_text(&d.text.replace('\u{3b1}', "\u{4e2d}"), &d.encoding).unwrap();
         assert!(String::from_utf8(out).unwrap().contains("charset=\"UTF-8\""));
+    }
+
+    #[test]
+    fn declared_hebrew_and_other_rare_charsets_are_read_not_mojibake() {
+        // ISO-8859-8 was read as Windows-1252 soup before
+        let src = "<html><head><meta charset=\"iso-8859-8\"></head><body>\u{5e9}\u{5dc}\u{5d5}\u{5dd}</body></html>";
+        let b = legacy(encoding_rs::ISO_8859_8, src);
+        let d = dec(&b, None, true).unwrap();
+        assert!(d.text.contains("\u{5e9}\u{5dc}\u{5d5}\u{5dd}"), "{}", d.text);
+        assert_eq!(encode_text(&d.text, &d.encoding).unwrap(), b);
+        let src = "<meta charset=\"windows-874\"><p>\u{e2a}\u{e27}\u{e31}\u{e2a}\u{e14}\u{e35}</p>";
+        let b = legacy(encoding_rs::WINDOWS_874, src);
+        let d = dec(&b, None, true).unwrap();
+        assert!(d.text.contains("\u{e2a}\u{e27}"), "{}", d.text);
+        assert_eq!(encode_text(&d.text, &d.encoding).unwrap(), b);
+    }
+
+    #[test]
+    fn rare_declared_charsets_never_refuse_a_file_they_used_to_open_and_never_lose_a_character() {
+        // a page labelled ISO-8859-8 with a Windows-1255 vowel point (qamats, byte 0xC8, undefined in ISO-8859-8)
+        let mut b = b"<meta charset=\"iso-8859-8\"><p>".to_vec();
+        b.extend_from_slice(&[0xF9, 0xC8, 0xEC, 0xE5, 0xED]);
+        b.extend_from_slice(b"</p>");
+        let d = dec(&b, None, true).unwrap();
+        assert!(d.text.contains("\u{5e9}\u{5b8}\u{5dc}\u{5d5}\u{5dd}"), "{}", d.text);
+        assert_eq!(encode_text(&d.text, &d.encoding).unwrap(), b);
+        // ISO-8859-6 with a byte it leaves undefined (0xA1): read by the default path as before, not refused
+        let b = b"<meta charset=\"iso-8859-6\"><p>a\xA1b</p>".to_vec();
+        let d = dec(&b, None, true).unwrap();
+        assert_eq!(encode_text(&d.text, &d.encoding).unwrap(), b);
+        // Mac Roman and Mac Cyrillic: the unchanged text comes back byte for byte
+        for (e, s) in [(encoding_rs::MACINTOSH, "<meta charset=\"macintosh\"><p>caf\u{e9} \u{2022}</p>"), (encoding_rs::X_MAC_CYRILLIC, "<meta charset=\"x-mac-cyrillic\"><p>\u{43f}\u{440}\u{438}\u{432}\u{435}\u{442}</p>")] {
+            let b = legacy(e, s);
+            let d = dec(&b, None, true).unwrap();
+            assert!(d.text.contains(&s[s.find("<p>").unwrap()..]), "{}", d.text);
+            assert_eq!(encode_text(&d.text, &d.encoding).unwrap(), b);
+        }
+        // a translation the code page cannot hold: the whole file is written as UTF-8 and says so, nothing is replaced
+        let b = legacy(encoding_rs::ISO_8859_8, "<meta charset=\"iso-8859-8\"><p>\u{5e9}\u{5dc}\u{5d5}\u{5dd}</p>");
+        let d = dec(&b, None, true).unwrap();
+        let out = encode_text(&d.text.replace("\u{5e9}\u{5dc}\u{5d5}\u{5dd}", "\u{65e5}\u{672c}"), &d.encoding).unwrap();
+        let out = String::from_utf8(out).unwrap();
+        assert!(out.contains("charset=\"UTF-8\"") && out.contains("\u{65e5}\u{672c}"), "{out}");
     }
 
     #[test]

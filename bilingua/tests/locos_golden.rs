@@ -361,7 +361,10 @@ fn check(golden: &Path) -> (usize, usize, usize, Vec<String>) {
 
 /// Goldens that still differ, with the reason; their failures are printed, not fatal. Remove a line when its
 /// file matches.
-const KNOWN: &[(&str, &str)] = &[];
+const KNOWN: &[(&str, &str)] = &[
+    ("export_output_escaping_13.html", "LocOS issue 810.1: an orphan end tag is a point code here and is lost in LocOS"),
+    ("bom_crlf.md", "LocOS issue 813.1: the byte order mark is not part of the first heading here"),
+];
 
 /// Formats whose goldens do not match yet: reported, not fatal. Remove a format when all its files match. Empty:
 /// every Track D format matches.
