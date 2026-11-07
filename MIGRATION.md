@@ -540,6 +540,10 @@ commented list in the test.
 - **reStructuredText, a literal that ends in a backtick.** A run of exactly three backticks ends the literal
   (``` ``:role:`x``` ``` is one literal, as docutils reads it); LocOS ends it at the first pair and offers the last
   backtick as text. Any other run still closes at its first pair. Golden list `LITERAL_BACKTICK`.
+- **reStructuredText (native), a backslash that ends a unit (wild round 2, 11-07).** `**x**\ ` at the end of a line
+  (an escaped blank, which prints nothing) ends the unit in an escape code written back as `\ `. LocOS offers the
+  backslash as text (`a\`) and a translation then prints a visible backslash. The LocOS profile keeps LocOS's
+  reading (golden inline-40 runs under the profile).
 - **Server pages, code between attributes (11-07).** `<div <%= attrs %> class="a">`, `<input checked <%= x %> />`,
   `<option<?php if ($s): ?> selected="selected"<?php endif ?>>` and JSP code around a bare attribute are opened; LocOS
   refuses them ("code is used as a tag or attribute name"). The code is an opaque code of the tag, attribute values
@@ -576,6 +580,11 @@ Each golden test relaxes exactly the cases named here, through a commented rule 
   not (a fence, `# `, `- `, `1. `, `> `, a rule or setext underline) at a block start gets a backslash before the
   marker; a translated cell escapes `|`; a `[` or `]` inside a link's text is escaped; an ATX heading that ends in
   ` #` escapes it (the reader drops a closing sequence). Unit text stays Markdown source otherwise.
+- **Markdown (native), emphasis glued to the translation (wild round 2).** Native Markdown now runs LocOS's #695
+  repair too (`_` to `*`, then edge punctuation moved outside the marks: `**「保存」**を` is written `「**保存**」を`).
+  Beyond LocOS, a pair that still would not open or close (`*( x)*y`: a blank inside the punctuation) is written as
+  `<em>` / `<strong>`; LocOS leaves those marks to print as stars. The LocOS profile is unchanged. A renderer that
+  drops raw HTML (Hugo's default) shows that text without the emphasis, never the marks.
 - **MDX and Markdown (LocOS profile), heading text.** The block-start escape also runs on heading text: LocOS's
   prefix takes a translated `# `, `- ` or `1. ` after the heading's `#` (`## 1. Zwei` reads back as `Zwei`).
   Escaped, it prints the same. `locos_suite::block_start` expects `## 1\. Überschrift zwei`. A translated line

@@ -477,6 +477,26 @@ pub fn tokenize(raw: &str) -> Tok {
     t
 }
 
+/// `tokenize` for the native profile: a backslash that ends the unit (`**x**\ ` at the end of a line, an escaped
+/// blank that prints nothing) is an escape code written back as `\ `, not text. LocOS offers it as text (`a\`, golden
+/// inline-40), and its writer then prints a visible backslash, so the LocOS profile keeps `tokenize`.
+pub fn tokenize_native(raw: &str) -> Tok {
+    let mut t = tokenize(raw);
+    if let Some(Piece::Text(last)) = t.pieces.last_mut() {
+        let run = last.chars().rev().take_while(|&c| c == '\\').count();
+        if run % 2 == 1 && t.n < MAX_TOKENS {
+            last.pop();
+            let kept = rstrip(last).len();
+            last.truncate(kept);
+            if last.is_empty() {
+                t.pieces.pop();
+            }
+            t.point("\\ ");
+        }
+    }
+    t
+}
+
 impl Tok {
     fn strip(&mut self) {
         if let Some(Piece::Text(first)) = self.pieces.first_mut() {

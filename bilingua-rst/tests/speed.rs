@@ -3,6 +3,8 @@
 //!   cargo test -p bilingua-rst --release --test speed -- --nocapture
 //! Set BILINGUA_RST_SPEED_OUT to a path to keep the generated file (tests/tools/speed_locos.py times LocOS on it).
 mod common;
+/// The profile the shared helpers extract with.
+const PROFILE: Option<&str> = None;
 use bilingua_model::*;
 use bilingua_rst::Rst;
 use std::time::Instant;

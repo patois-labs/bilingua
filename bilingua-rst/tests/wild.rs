@@ -1,5 +1,7 @@
 //! Regressions found by running real files from the Internet through the pseudo round trip.
 mod common;
+/// The profile the shared helpers extract with.
+const PROFILE: Option<&str> = None;
 use common::*;
 
 #[test]
@@ -52,4 +54,33 @@ fn other_backtick_runs_close_at_the_first_pair() {
     assert_eq!(u, vec!["See \u{27E6}x1\u{27E7}`x`:py:class: here.".to_string()]);
     let u = units(b"See ``a`b````lit`` here.\n");
     assert_eq!(u, vec!["See \u{27E6}x1\u{27E7}\u{27E6}x2\u{27E7} here.".to_string()]);
+}
+
+#[test]
+fn backslash_that_ends_a_line_is_an_escape() {
+    use bilingua_model::{Filter, Inline, SegState};
+    // `\ ` after a bold run at the end of a line prints nothing: an escape code, not text (native profile)
+    let src = b"Some text here. **Alpha, Beta**\\ \n\nNext one.\n";
+    let u = units(src);
+    assert!(u[0].ends_with('\u{27E7}') && !u[0].contains('\\'), "the unit ends in the escape code: {u:?}");
+    assert_eq!(u[0].matches('\u{27E6}').count(), 3, "the strong pair and the escape: {u:?}");
+    assert_identity(src);
+    let mut d = extract(src).unwrap();
+    let mut t = d.units[0].source();
+    t.insert(0, Inline::text("Zq"));
+    d.units[0].segments[0].target = t;
+    d.units[0].segments[0].state = SegState::Draft;
+    let out = String::from_utf8(bilingua_rst::Rst.merge(&d).unwrap()).unwrap();
+    assert!(out.contains("**Alpha, Beta**\\ "), "{out:?}");
+    assert!(!out.contains("\\\\"), "no visible backslash: {out:?}");
+    let back = extract(out.as_bytes()).unwrap();
+    assert!(back.units[0].source().iter().all(|i| !matches!(i, Inline::Text(t) if t.contains('\\'))), "{out:?}");
+}
+
+#[test]
+fn backslash_that_ends_a_line_stays_text_under_the_locos_profile() {
+    use bilingua_model::{ExtractOptions, Filter, Granularity};
+    let o = ExtractOptions::new().with_source_lang("en").with_granularity(Granularity::Paragraph).with_profile("locos");
+    let d = bilingua_rst::Rst.extract(b"a\\ \n", &o).unwrap();
+    assert_eq!(d.units[0].source(), vec![bilingua_model::Inline::text("a\\")]);
 }
