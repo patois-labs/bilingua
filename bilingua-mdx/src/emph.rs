@@ -190,6 +190,10 @@ fn source_kinds(src: &str) -> Vec<String> {
 fn try_pair(s: &str, o: (usize, usize), c: (usize, usize), mark: &str, mv: bool) -> Option<String> {
     let inner = &s[o.1..c.0];
     let (mut lead, mut trail, mut core) = ("", "", inner);
+    // moving the punctuation at the ends of a link (`[a](u)`) out of the marks would cut the link in two
+    if mv && inner.contains("](") {
+        return None;
+    }
     if mv {
         let movable = |ch: char| is_punct_symbol_or_ascii(ch) && !"*_\\`".contains(ch);
         let mut i = 0;
@@ -499,6 +503,13 @@ mod tests {
     fn emphasis_rewritten() {
         assert_eq!(fix_cjk_emphasis("Choose __Advanced__ options.", "__詳細__オプションを選択。"), "**詳細**オプションを選択。");
         assert_eq!(fix_cjk_emphasis("Click **\"Save\"** now.", "**「保存」**をクリック。"), "「**保存**」をクリック。");
+    }
+
+    #[test]
+    fn a_link_inside_the_marks_is_never_cut() {
+        let src = "**[Park UI](https://park-ui.com/)**: base.";
+        let new = "Zq**[Park UI](https://park-ui.com/)**: base.qZ";
+        assert_eq!(fix_cjk_emphasis(src, new), new);
     }
 
     #[test]

@@ -117,7 +117,16 @@ fn write_table(doc: &Document, i: usize, head: &Unit) -> Result<String, Error> {
         return Ok(raw.to_string());
     }
     let ls = blocks::lines(raw);
-    let strs: Vec<&str> = ls.iter().map(|l| l.s).collect();
+    // The slot starts at the table's first character, so an indented table has its indent on every line but the
+    // first one: read the table without that indent and put it back on the lines written.
+    let pad: &str = ls
+        .iter()
+        .skip(1)
+        .filter(|l| !l.s.trim().is_empty())
+        .map(|l| &l.s[..l.s.len() - l.s.trim_start_matches([' ', '\t']).len()])
+        .min_by_key(|p| p.len())
+        .unwrap_or("");
+    let strs: Vec<&str> = ls.iter().enumerate().map(|(k, l)| if k > 0 { l.s.strip_prefix(pad).unwrap_or(l.s) } else { l.s }).collect();
     let rendered = if kind == "grid" {
         let mut g = table::Grid::new(&strs);
         if !g.parse().unwrap_or(false) {
@@ -138,7 +147,12 @@ fn write_table(doc: &Document, i: usize, head: &Unit) -> Result<String, Error> {
         }
         t.render(&cells, line)
     };
-    let lines = rendered.map_err(Error::Write)?;
+    let mut lines = rendered.map_err(Error::Write)?;
+    if !pad.is_empty() {
+        for l in lines.iter_mut().skip(1).filter(|l| !l.trim().is_empty()) {
+            l.insert_str(0, pad);
+        }
+    }
     let nl = match raw.find(['\r', '\n']) {
         Some(p) if raw[p..].starts_with("\r\n") => "\r\n",
         Some(p) if raw[p..].starts_with('\r') => "\r",

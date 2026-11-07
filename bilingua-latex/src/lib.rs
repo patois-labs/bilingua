@@ -154,7 +154,12 @@ impl Filter for Latex {
                     if inline::same(&new, &src) {
                         out.push_str(raw);
                     } else {
-                        out.push_str(&inline::render(u, &new));
+                        let r = inline::render(u, &new);
+                        // text glued to a control word at the end of the skeleton would change the word (`\medskipZq`)
+                        if r.starts_with(|c: char| c.is_ascii_alphabetic()) && inline::ends_in_control_word(&out) {
+                            out.push_str("{}");
+                        }
+                        out.push_str(&r);
                         changed = true;
                     }
                 }

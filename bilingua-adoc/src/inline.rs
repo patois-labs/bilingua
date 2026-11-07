@@ -219,10 +219,15 @@ const NAMES: &[&str] = &[
 ];
 
 fn macro_at(s: &[char], i: usize) -> Option<Found> {
-    if i > 0 && (is_word(s[i - 1]) || s[i - 1] == '\\') {
+    if i > 0 && s[i - 1] == '\\' {
         return None;
     }
     let name: &'static str = NAMES.iter().copied().find(|n| starts(s, i, n) && at(s, i + n.len()) == Some(':'))?;
+    // Asciidoctor reads `link:`, `xref:`, `image:` and the other macros anywhere, even glued to a letter (a
+    // translation may put a word right before one); the short common names such as `stem:` or `menu:` still need one.
+    if !matches!(name, "link" | "xref" | "mailto" | "image" | "footnote" | "kbd" | "btn") && i > 0 && is_word(s[i - 1]) {
+        return None;
+    }
     let t0 = i + name.len() + 1;
     let mut t = t0;
     while at(s, t).is_some_and(|c| !is_space(c) && c != '[' && c != ']') && t - t0 <= 500 {

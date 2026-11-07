@@ -100,9 +100,26 @@ fn end_indented(vl: &[Line], i: usize) -> usize {
 }
 
 fn dedent<'a>(vl: &[Line<'a>]) -> Vec<Line<'a>> {
-    let m = vl.iter().filter(|l| !blank(l.s)).map(|l| indent(l.s)).min().unwrap_or(0);
+    dedent_cap(vl, usize::MAX)
+}
+
+/// Like `dedent`, but past the first blank line removes at most `cap` columns. A list item's body starts at the
+/// column of its first line's text, so a literal block that is the only indented thing under the item keeps its
+/// extra indentation. The lines that continue the item's first paragraph (before any blank line) are dedented as
+/// before, as LocOS does: they stay one paragraph with the first line.
+fn dedent_cap<'a>(vl: &[Line<'a>], cap: usize) -> Vec<Line<'a>> {
+    let all = vl.iter().filter(|l| !blank(l.s)).map(|l| indent(l.s)).min().unwrap_or(0);
+    let first_blank = vl.iter().position(|l| blank(l.s)).unwrap_or(vl.len());
     vl.iter()
-        .map(|l| if !blank(l.s) { Line { off: l.off + m, s: &l.s[m..] } } else { Line { off: l.off + l.s.len(), s: "" } })
+        .enumerate()
+        .map(|(k, l)| {
+            let m = if k < first_blank { all } else { all.min(cap) };
+            if !blank(l.s) {
+                Line { off: l.off + m, s: &l.s[m..] }
+            } else {
+                Line { off: l.off + l.s.len(), s: "" }
+            }
+        })
         .collect()
 }
 
@@ -227,7 +244,7 @@ impl<'a> Walk<'a> {
             if let Some(k) = bm.or(em.as_ref().map(|e| e.end)) {
                 let j = end_indented(vl, i + 1);
                 let mut body = vec![Line { off: off + k, s: &s[k..] }];
-                body.extend(dedent(&vl[i + 1..j]));
+                body.extend(dedent_cap(&vl[i + 1..j], s[..k].chars().count()));
                 self.walk(&body, depth + 1)?;
                 i = j;
                 continue;

@@ -117,6 +117,11 @@ fn m_lit(s: &str, i: usize) -> Option<M> {
         if is_space(ch) {
             continue;
         }
+        // a run of exactly three backticks ends a literal that ends in a backtick (``:role:`x```), as docutils
+        // reads it; any other run closes at its first pair, as LocOS reads it
+        if s[j..].starts_with("```") && !s[j..].starts_with("````") && not_word_at(s, j + 3) {
+            return Some(M { start: 0, end: j + 3, kind: Kind::Other });
+        }
         if s[j..].starts_with("``") && not_word_at(s, j + 2) {
             return Some(M { start: 0, end: j + 2, kind: Kind::Other });
         }

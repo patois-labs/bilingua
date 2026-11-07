@@ -34,6 +34,15 @@ fn map_text(name: &str, i: usize, t: &str) -> Option<String> {
     }
 }
 
+/// Documented differences from LocOS (MIGRATION.md "Differences from LocOS", crate README): LocOS's units are
+/// wrong in these cases, so they are skipped (each must still differ, or it comes off the list).
+/// LITERAL_UNDER_ITEM: a literal block under a list item (`* Run it::`, blank line, indented lines). LocOS dedents
+/// the item's body to column 0, so the block is no longer indented and its lines are offered as text.
+const LITERAL_UNDER_ITEM: &[&str] = &["doc-8", "doc-214", "doc-539", "doc-693"];
+/// LITERAL_BACKTICK: a literal that ends in a backtick (``:role:`x```) ends at the run of three backticks, as
+/// docutils reads it; LocOS ends it at the first pair and offers the last backtick as text.
+const LITERAL_BACKTICK: &[&str] = &["doc-829"];
+
 /// Builds with the units' own tags, bypassing `set_target`'s tag-count check (the `long` mapping repeats tags).
 #[test]
 fn matches_locos_on_generated_files() {
@@ -49,6 +58,10 @@ fn matches_locos_on_generated_files() {
             continue;
         }
         let want: Vec<String> = c["units"].as_array().unwrap().iter().map(|u| u.as_str().unwrap().to_string()).collect();
+        if LITERAL_UNDER_ITEM.contains(&name) || LITERAL_BACKTICK.contains(&name) {
+            assert_ne!(units(&data), want, "{name}: on a difference list but now matches LocOS: take it off the list");
+            continue;
+        }
         assert_eq!(units(&data), want, "{name}: units");
         let wst: Vec<String> = c["styles"].as_array().unwrap().iter().map(|u| u.as_str().unwrap().to_string()).collect();
         assert_eq!(styles(&data), wst, "{name}: styles");

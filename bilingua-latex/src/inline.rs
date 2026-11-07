@@ -342,7 +342,7 @@ fn fold_newlines(s: &str) -> String {
 
 /// A control word ends at the first non-letter: the text ends in `\` + ASCII letters preceded by an odd run of
 /// backslashes (`\TeX`, not `\\TeX`).
-fn ends_in_control_word(s: &str) -> bool {
+pub(crate) fn ends_in_control_word(s: &str) -> bool {
     let b = s.as_bytes();
     let mut k = b.len();
     while k > 0 && b[k - 1].is_ascii_alphabetic() {
@@ -359,7 +359,12 @@ fn ends_in_control_word(s: &str) -> bool {
     slashes % 2 == 1
 }
 
-/// A point token that is `\\` or `\\*` with no `[..]` of its own.
+/// True when `s` ends in one backslash that is not part of a pair or a control word.
+fn ends_in_lone_backslash(s: &str) -> bool {
+    (s.len() - s.trim_end_matches('\\').len()) % 2 == 1
+}
+
+/// A point token that is`\\` or `\\*` with no `[..]` of its own.
 fn is_bare_newline(raw: &str) -> bool {
     matches!(raw.trim_end_matches([' ', '\t']), "\\\\" | "\\\\*")
 }
@@ -403,6 +408,7 @@ pub fn render(u: &Unit, target: &[Inline]) -> String {
     let mut out: Vec<String> = Vec::new();
     let mut opened: Vec<&str> = Vec::new();
     let mut words: Vec<usize> = Vec::new();
+    let mut lone: Vec<usize> = Vec::new(); // a tag that ends in a single `\` (a control space at a line end)
     let mut breaks: Vec<usize> = Vec::new(); // a bare `\\` (it looks for `[` after blanks)
     for i in &t {
         match i {
@@ -444,6 +450,8 @@ pub fn render(u: &Unit, target: &[Inline]) -> String {
                         if let Some(r) = &code.standalone {
                             if ends_in_control_word(r) {
                                 words.push(out.len());
+                            } else if ends_in_lone_backslash(r) {
+                                lone.push(out.len());
                             }
                             if is_bare_newline(r) && !bracket_after_in_source(u, id) {
                                 breaks.push(out.len());
@@ -478,6 +486,13 @@ pub fn render(u: &Unit, target: &[Inline]) -> String {
             if next[lead..].starts_with('[') {
                 next.replace_range(lead..lead + 1, "{[}");
             }
+        }
+    }
+    // text glued to a lone `\` would become a control word (`\qZ`): a blank keeps it a control space
+    for &w in &lone {
+        let nxt = out[w + 1..].iter().find_map(|p| p.chars().next());
+        if nxt.is_some_and(|c| c.is_ascii_alphabetic()) {
+            out[w].push(' ');
         }
     }
     for &w in &words {

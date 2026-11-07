@@ -18,6 +18,28 @@ mod render;
 use bilingua_model::*;
 use std::collections::BTreeMap;
 
+/// A title written with an underline (`Title` over `=====`) is a title only while the underline is within one
+/// character of the title's length: when a translation changes the length, the underline is redrawn. `after` is
+/// the skeleton text that follows the title; the result is that text with the new underline.
+fn fit_underline(old: &str, new: &str, after: &str) -> Option<String> {
+    let rest = after.strip_prefix("\r\n").or_else(|| after.strip_prefix('\n'))?;
+    let nl = &after[..after.len() - rest.len()];
+    let end = rest.find(['\r', '\n']).unwrap_or(rest.len());
+    let (line, tail) = rest.split_at(end);
+    let under = lex::rstrip(line);
+    if !lex::is_setext_line(under) || new.contains(['\r', '\n']) || old.contains(['\r', '\n']) || old.starts_with(['.', '[']) {
+        return None;
+    }
+    let (old_len, new_len, under_len) = (lex::rstrip(old).chars().count(), lex::rstrip(new).chars().count(), under.chars().count());
+    if under_len.abs_diff(old_len) > 1 || under_len.abs_diff(new_len) <= 1 {
+        return None;
+    }
+    let mark = under.chars().next()?;
+    let mut fixed: String = std::iter::repeat_n(mark, new_len.max(2)).collect();
+    fixed.push_str(&line[under.len()..]);
+    Some(format!("{nl}{fixed}{tail}"))
+}
+
 /// The AsciiDoc filter.
 pub struct Adoc;
 
@@ -174,9 +196,10 @@ impl Filter for Adoc {
         let mut attrs = render::Attrs::new(original);
         let mut out = String::new();
         let mut translated = false;
-        for p in parts {
+        let mut next_raw: Option<String> = None;
+        for (pi, p) in parts.iter().enumerate() {
             match p {
-                SkelPart::Raw(s) => out.push_str(s),
+                SkelPart::Raw(s) => out.push_str(&next_raw.take().unwrap_or_else(|| s.clone())),
                 SkelPart::Unit(i) => {
                     let u = doc.units.get(*i).ok_or_else(|| Error::Write(format!("skeleton points at missing unit {i}")))?;
                     let raw = raw_of(u);
@@ -197,6 +220,11 @@ impl Filter for Adoc {
                         // a translation that opens with block syntax would turn the paragraph into another block
                         if flag(u, LS) && sep.is_none() && lex::is_block_start(&r) {
                             r.insert_str(0, "{empty}");
+                        }
+                        // only a title that starts its line can be a setext title (not `.Block title` or `* item`)
+                        let line_start = pi == 0 || matches!(parts.get(pi - 1), Some(SkelPart::Raw(b)) if b.is_empty() || b.ends_with(char::from(10)));
+                        if let (true, Some(SkelPart::Raw(after))) = (line_start, parts.get(pi + 1)) {
+                            next_raw = fit_underline(&raw, &r, after);
                         }
                         out.push_str(&r);
                     }

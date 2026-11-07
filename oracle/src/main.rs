@@ -318,13 +318,17 @@ fn main() {
                     // escapes `'`, `"`, `>` and `&` in a translation where a browser needs it (LocOS #672), so the
                     // re-read unit holds `&#x27;` for `'`. Both render the same text: compare after decoding.
                     let html_refs = matches!(doc.format.as_str(), "html" | "aspx" | "jsp" | "phtml" | "shtml" | "erb");
+                    // These writers may fold or rewrap white space (a reflowed paragraph, a table cell, a list
+                    // item), which is not a difference in text: runs of white space compare as one blank.
+                    let ws = matches!(doc.format.as_str(), "rst" | "dokuwiki" | "wiki" | "markdown" | "mdx");
+                    let fold = |t: String| if ws { t.split_whitespace().collect::<Vec<_>>().join(" ") } else { t };
                     let same = |x: &String, y: &String| {
                         if md {
-                            want(x).replace('\\', "") == y.replace('\\', "")
+                            fold(want(x).replace('\\', "")) == fold(y.replace('\\', ""))
                         } else if html_refs {
                             want(x) == *y || bilingua_htmlcore::pyx::unescape(&want(x)) == bilingua_htmlcore::pyx::unescape(y)
                         } else {
-                            want(x) == *y
+                            fold(want(x)) == fold(y.clone())
                         }
                     };
                     let beside = a.iter().zip(&b2).filter(|(x, y)| !same(x, y) && beside_ok && x == y).count();

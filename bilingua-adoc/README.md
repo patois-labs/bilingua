@@ -30,4 +30,7 @@ rewritten) `:lang:`. The encoding (UTF-8, BOM, UTF-16, code pages), BOM and line
 Known differences from LocOS: Unicode categories come from Rust (`isalpha`, `isalnum`, `\w` for non-ASCII); LocOS
 writes UTF-8 for a file that was not UTF-8 and Bilingua keeps the file's encoding (B6); no `:lang:` stamp when nothing
 is translated (lead decision 11-04); a header description that overlaps a body span (a malformed header) is dropped;
-a locked unit (`include_locked`) is added for a span with no letter.
+a locked unit (`include_locked`) is added for a span with no letter. On purpose (LocOS output is broken there, see
+MIGRATION.md): a two-line title's underline is redrawn when a translation changes the title's length, and `link:`,
+`xref:`, `mailto:`, `image:`, `footnote:`, `kbd:` and `btn:` are macros even right after a letter (golden lists
+`SETEXT` and `GLUED_MACRO` in `tests/locos_golden.rs`).

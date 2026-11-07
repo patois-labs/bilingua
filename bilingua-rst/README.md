@@ -57,3 +57,7 @@ nothing. Limits: `Limits` from `bilingua-model` (units counted per walked slot, 
 generated and mutated files (9,864 units, 19,272 builds) with what the LocOS filter makes of them; regenerate the
 golden with `tests/tools/gen_golden.py` and the Unicode tables with `tests/tools/gen_tables.py` (both run on the LocOS
 venv, read only). Also `roundtrip.rs`, `hostile.rs` (proptest), `speed.rs` (+ `tests/tools/speed_locos.py`).
+
+Differences from LocOS on purpose (see MIGRATION.md): a literal block under a list item stays literal (LocOS
+offered its lines as text), and a literal that ends in a backtick (``` ``:role:`x``` ```) ends at the run of three
+backticks. The golden test skips exactly those cases (`LITERAL_UNDER_ITEM`, `LITERAL_BACKTICK`).

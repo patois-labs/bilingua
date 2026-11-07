@@ -243,18 +243,39 @@ fn dw_search(m: &str, pos: usize, limit: usize, sk: &mut Seekers) -> Option<Hit>
 
 // ---------------------------------------------------------------------------------------- file links
 
+/// The File / Image / Media namespace names (and the common local aliases) of the larger wikis. MediaWiki
+/// reads every one of them as a file link, so `[[Файл:a.jpg|мини|text]]` has options in front of its caption.
+const FILE_NAMESPACES: &[&str] = &[
+    "file", "image", "media", "datei", "bild", "medium", "fichier", "image", "archivo", "imagen", "immagine", "ficheiro", "arquivo", "imagem",
+    "файл", "изображение", "медиа", "зображення", "ファイル", "画像", "メディア", "文件", "檔案", "档案", "图像", "圖像", "媒体", "ملف", "صورة", "وسائط",
+    "bestand", "afbeelding", "plik", "grafika", "fil", "billede", "bilde", "tiedosto", "kuva", "soubor", "obrázek", "súbor", "obrázok", "fájl", "kép",
+    "fișier", "imagine", "datoteka", "slika", "dosya", "resim", "파일", "그림", "קובץ", "תמונה", "پرونده", "تصویر", "tập tin", "hình", "berkas",
+    "gambar", "fitxer", "arquivo", "αρχείο", "εικόνα", "ไฟล์", "ဖိုင်", "फ़ाइल", "চিত্র", "ফাইল", "ಚಿತ್ರ", "ഫയൽ", "கோப்பு", "ឯកសារ", "файл", "суроат",
+];
+
 fn file_ns(target: &str) -> bool {
     let t = target.trim_start_matches([' ', '\t']);
-    for name in ["file", "image", "media"] {
-        if t.len() >= name.len() && t.is_char_boundary(name.len()) && t[..name.len()].eq_ignore_ascii_case(name) {
-            let r = t[name.len()..].trim_start_matches([' ', '\t']);
-            if r.starts_with(':') {
-                return true;
-            }
-        }
-    }
-    false
+    let Some((ns, _)) = t.split_once(':') else { return false };
+    let ns = ns.trim_matches([' ', '\t']).replace('_', " ").to_lowercase();
+    FILE_NAMESPACES.contains(&ns.as_str())
 }
+
+/// Localized spellings of the image options that decide how a picture is placed (the usual ones on the larger wikis).
+const LOCAL_OPTIONS: &[&str] = &[
+    "миниатюра", "мини", "слева", "справа", "центр", "без", "рамка", "миниатюр", "vignette", "gauche", "droite", "centré", "sans", "cadre", "miniatur",
+    "mini", "links", "rechts", "zentriert", "ohne", "rahmen", "miniaturadeimagen", "izquierda", "derecha", "centro", "ninguna", "marco", "miniatura",
+    "esquerda", "direita", "centro", "sinistra", "destra", "centrato", "senza", "cornice", "tegn", "venstre", "høyre", "midtstilt", "ramme",
+    "thumb", "minigatuur", "links", "rechts", "gecentreerd", "geen", "kader", "mały", "lewej", "prawej", "środek", "ramka", "bez", "ingen",
+    "تصغير", "يمين", "يسار", "مركز", "إطار", "بدون", "缩略图", "縮圖", "左", "右", "居中", "无", "無", "框", "サムネイル", "左", "右", "中央", "なし", "枠",
+    "섬네일", "썸네일", "왼쪽", "오른쪽", "가운데", "없음", "küçükresim", "sol", "sağ", "ortala", "yok", "çerçeve", "ממוזער", "שמאל", "ימין", "מרכז",
+    "بندانگشتی", "چپ", "راست", "وسط", "بدون‌قاب", "thumbnail", "trái", "phải", "giữa", "không", "khung", "bingkai", "kiri", "kanan", "tengah",
+    "miniatyr", "vänster", "höger", "centrerad", "ingen", "ram", "pienoiskuva", "vasen", "oikea", "keskitetty", "pienoiskuva", "ei", "kehys",
+    "náhled", "vlevo", "vpravo", "střed", "bez", "rámeček", "bélyegkép", "balra", "jobbra", "középre", "nincs", "keret", "μικρογραφία", "αριστερά",
+    "δεξιά", "κέντρο", "χωρίς", "πλαίσιο", "миниатюрa", "ліворуч", "праворуч", "центр", "міні", "мініатюра", "рамка",
+];
+
+/// Localized spellings of the `px` size unit (`250بك`).
+const LOCAL_PX: &[&str] = &["بك", "بكسل", "پیکسل", "像素", "픽셀", "пкс", "ピクセル"];
 
 /// A file link part that is an option (`thumb`, `200px`, `alt=..`), not a caption.
 fn file_option(cap: &str) -> bool {
@@ -263,8 +284,18 @@ fn file_option(cap: &str) -> bool {
         "thumb", "thumbnail", "frame", "framed", "frameless", "border", "left", "right", "center", "centre", "none", "upright", "baseline", "sub",
         "super", "top", "text-top", "middle", "bottom", "text-bottom", "loop", "muted",
     ];
-    if WORDS.contains(&s.as_str()) {
+    // the local words are matched as written (MediaWiki's image options are case sensitive), so a one-word
+    // caption such as `Marco` or `Links` stays a caption
+    if WORDS.contains(&s.as_str()) || LOCAL_OPTIONS.contains(&strip(cap)) {
         return true;
+    }
+    // a size with a local unit, as in `250بك` (the units of the larger wikis only: `2010年` is a caption)
+    {
+        let digits = s.trim_start_matches(is_decimal);
+        let unit = digits.strip_prefix('x').map_or(digits, |r| r.trim_start_matches(is_decimal));
+        if unit.len() < s.len() && LOCAL_PX.contains(&unit) {
+            return true;
+        }
     }
     // \d*(?:x\d+)?[ \t]*px
     let mut it = s.as_str();
@@ -479,12 +510,23 @@ impl<'a> Tok<'a> {
                 let close_end = end + 2;
                 let pipes = top_pipes(m, s + 2, end, self.cx.links);
                 let target = sl(m, s + 2, pipes.first().copied().unwrap_or(end));
-                if !pipes.is_empty() && file_ns(target) && !strip(target).starts_with(':') {
-                    let ls = pipes[pipes.len() - 1] + 1;
-                    let cap = sl(m, ls, end);
-                    if has_alpha(cap) && !file_option(cap) {
-                        self.pair_trim(s, ls, end, close_end, depth, out);
-                        return close_end;
+                // a target that is a template call (`{{Localized media|x|svg}}`) is a file when an option follows it
+                let templated_file = strip(sl(t, s + 2, pipes.first().copied().unwrap_or(end))).starts_with("{{")
+                    && pipes.len() >= 2
+                    && pipes.windows(2).any(|w| file_option(sl(m, w[0] + 1, w[1])));
+                if !pipes.is_empty() && (file_ns(target) || templated_file) && !strip(target).starts_with(':') {
+                    // MediaWiki takes the last part that is not an option as the caption; options may follow it
+                    for k in (0..pipes.len()).rev() {
+                        let (ls, le) = (pipes[k] + 1, pipes.get(k + 1).copied().unwrap_or(end));
+                        let cap = sl(m, ls, le);
+                        if file_option(cap) {
+                            continue;
+                        }
+                        if has_alpha(cap) {
+                            self.pair_trim(s, ls, le, close_end, depth, out);
+                            return close_end;
+                        }
+                        break;
                     }
                 } else if !pipes.is_empty() && has_alpha(sl(m, pipes[0] + 1, end)) {
                     self.pair_trim(s, pipes[0] + 1, end, close_end, depth, out);
