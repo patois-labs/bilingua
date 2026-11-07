@@ -308,7 +308,8 @@ fn scan(k: Kind, raw: &str) -> Vec<Tok<'_>> {
                     .to_ascii_lowercase();
                 let is_stamp = !closing && body.as_bytes().first().is_some_and(|c| c.is_ascii_digit()) && body.contains(':');
                 let ok = match k {
-                    Kind::Srt => srt_tag(&name) && !name.is_empty(),
+                    // YouTube-style SRT files keep word timings as <00:00:04.480> inside the cue text
+                    Kind::Srt => (srt_tag(&name) && !name.is_empty()) || (is_stamp && body.contains(['.', ',']) && body.bytes().all(|c| c.is_ascii_digit() || matches!(c, b':' | b'.' | b','))),
                     Kind::Vtt => is_stamp || (!name.is_empty() && body.as_bytes().first().is_some_and(|c| c.is_ascii_alphabetic())),
                 };
                 if ok && !inner.contains('\n') {

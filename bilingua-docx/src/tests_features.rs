@@ -871,3 +871,36 @@ fn ruby_base_text_is_the_unit_text_and_the_guide_is_kept() {
     let only = round_trip(&doc_of(&format!("<w:p>{ruby}</w:p>")));
     assert_eq!(src(&only, "p1"), "\u{6771}\u{4EAC}");
 }
+
+#[test]
+fn drawingml_text_in_a_canvas_is_a_unit() {
+    // a lockedCanvas / group shape keeps its text in a:p, not in w:txbxContent
+    let shape = |t1: &str, t2: &str| {
+        format!(
+            "<a:sp><a:txSp><a:txBody><a:bodyPr/><a:p><a:pPr algn=\"ctr\"/><a:r><a:rPr lang=\"ru-RU\" sz=\"2000\"/><a:t>{t1}</a:t></a:r>\
+<a:r><a:rPr lang=\"ru-RU\"/><a:t>{t2}</a:t></a:r><a:endParaRPr lang=\"ru-RU\"/></a:p></a:txBody></a:txSp></a:sp>"
+        )
+    };
+    let inner = format!(
+        "<w:p><w:r><w:t>Before</w:t></w:r><w:r><w:drawing><wp:anchor><a:graphic><a:graphicData uri=\"urn:x\"><a:grpSp>{}</a:grpSp></a:graphicData></a:graphic></wp:anchor></w:drawing></w:r></w:p>",
+        shape("Young ", "ecologists &amp; co")
+    );
+    let mut doc = round_trip(&doc_of(&inner));
+    assert_eq!(doc.units.len(), 2, "{:?}", doc.units.iter().map(|u| u.id.clone()).collect::<Vec<_>>());
+    assert_eq!(src(&doc, "p1"), "Before");
+    assert_eq!(src(&doc, "d1"), "Young ecologists & co");
+    assert_eq!(doc.units[1].context.kind.as_deref(), Some("textbox"));
+    doc.target_lang = Some("de-DE".into());
+    doc.set_target("d1", vec![Inline::text("Junge <Oekologen>")]).unwrap();
+    let out = Docx.merge(&doc).unwrap();
+    let x = xml_of(&out, "word/document.xml");
+    assert!(
+        x.contains("<a:pPr algn=\"ctr\"/><a:r><a:rPr lang=\"ru-RU\" sz=\"2000\"/><a:t>Junge &lt;Oekologen&gt;</a:t></a:r><a:endParaRPr lang=\"ru-RU\"/></a:p>"),
+        "{x}"
+    );
+    assert_eq!(src(&extract(&out), "d1"), "Junge <Oekologen>");
+    // a line break in the paragraph: left alone
+    let br = "<w:p><w:r><w:drawing><a:p><a:r><a:t>One</a:t></a:r><a:br/><a:r><a:t>Two</a:t></a:r></a:p></w:drawing></w:r></w:p>";
+    let none = round_trip(&doc_of(br));
+    assert!(none.find("d1").is_none());
+}

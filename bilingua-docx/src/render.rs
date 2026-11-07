@@ -85,6 +85,10 @@ impl<'a> Renderer<'a> {
         if u.codes.contains_key(C_SIMPLE) {
             return Ok(escape_text(&plain_text(&out)));
         }
+        if u.codes.contains_key(C_DML) {
+            let rpr = Self::code_str(u, C_DML);
+            return Ok(format!("<a:r>{rpr}<a:t>{}</a:t></a:r>", escape_text(&plain_text(&out))));
+        }
         self.rebuild(u, &out, depth)
     }
 

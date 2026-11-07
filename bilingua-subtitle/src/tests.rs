@@ -266,3 +266,27 @@ fn cr_cr_lf_line_endings_keep_a_cue_in_one_piece() {
     assert_eq!(back.units.len(), 2);
     assert!(plain_text(&back.units[0].segments[0].source).starts_with("ZqFirst line"));
 }
+
+#[test]
+fn srt_word_timing_marks_are_codes_not_text() {
+    // YouTube-style auto captions: <hh:mm:ss.mmm> before each word
+    let s = "1\n00:00:04,160 --> 00:00:08,070\nWe are <00:00:04.480>ourselves.\n\n2\n00:00:09,000 --> 00:00:10,000\nStays <1:2> text and <b>bold</b>\n";
+    let mut d = srt(s);
+    assert_eq!(String::from_utf8(Srt.merge(&d).unwrap()).unwrap(), s);
+    assert_eq!(text_of(&d, "c1"), "We are ourselves.");
+    let stamp = d.units[0].codes.values().find(|c| c.label.as_deref() == Some("timestamp")).expect("a timestamp code");
+    assert_eq!(stamp.standalone.as_deref(), Some("<00:00:04.480>"));
+    // something that only looks like a stamp stays text
+    assert_eq!(text_of(&d, "c2"), "Stays <1:2> text and bold");
+    let mut t = d.units[0].segments[0].source.clone();
+    for i in t.iter_mut() {
+        if let Inline::Text(x) = i {
+            if x == "We are " {
+                *x = "Wir sind ".into();
+            }
+        }
+    }
+    d.set_target("c1", t).unwrap();
+    let out = String::from_utf8(Srt.merge(&d).unwrap()).unwrap();
+    assert!(out.contains("Wir sind <00:00:04.480>ourselves."), "{out}");
+}
