@@ -105,8 +105,15 @@ impl<'py> De<'py> {
         De { obj, depth: self.depth + 1 }
     }
 
-    /// The items of a list or tuple, iterated the way `from_py` iterates them.
+    /// The items of a list or tuple, iterated the way `from_py` iterates them (a plain list or tuple directly:
+    /// its iterator is the built-in one; a subclass through `iter()`, which may be overridden).
     fn items(&self) -> Result<Vec<De<'py>>, DeError> {
+        if let Ok(l) = self.obj.downcast_exact::<PyList>() {
+            return Ok(l.iter().map(|x| self.child(x)).collect());
+        }
+        if let Ok(t) = self.obj.downcast_exact::<PyTuple>() {
+            return Ok(t.iter().map(|x| self.child(x)).collect());
+        }
         let mut out = Vec::new();
         for x in self.obj.try_iter().map_err(|e| DeError(e.to_string()))? {
             out.push(self.child(x.map_err(|e| DeError(e.to_string()))?));
@@ -114,13 +121,13 @@ impl<'py> De<'py> {
         Ok(out)
     }
 
-    /// The entries of a dict; keys must be str, as in `from_py`.
-    fn entries(&self) -> Result<Vec<(String, De<'py>)>, DeError> {
+    /// The entries of a dict; keys must be str (valid UTF-8), as in `from_py`.
+    fn entries(&self) -> Result<Vec<(Bound<'py, PyString>, De<'py>)>, DeError> {
         let d = self.obj.downcast::<PyDict>().map_err(|e| DeError(e.to_string()))?;
         let mut out = Vec::with_capacity(d.len());
         for (k, v) in d.iter() {
-            let key = k.downcast::<PyString>().map_err(|_| DeError("dict keys must be strings".into()))?;
-            let key = key.to_str().map_err(|e| DeError(e.to_string()))?.to_string();
+            let key = k.downcast_into::<PyString>().map_err(|_| DeError("dict keys must be strings".into()))?;
+            key.to_str().map_err(|e| DeError(e.to_string()))?;
             out.push((key, self.child(v)));
         }
         Ok(out)
@@ -207,7 +214,7 @@ impl<'de, 'py> de::Deserializer<'de> for De<'py> {
                     return fail("map with a single key");
                 }
                 let (k, v) = entries.pop().expect("one entry");
-                (k, Some(v))
+                (k.to_str().map_err(|e| DeError(e.to_string()))?.to_owned(), Some(v))
             }
             Kind::Str(s) => (s.into_owned(), None),
             _ => return fail("invalid type: expected string or map"),
@@ -330,7 +337,7 @@ impl<'de, 'py> de::SeqAccess<'de> for Seq<'py> {
 }
 
 struct MapIn<'py> {
-    iter: std::vec::IntoIter<(String, De<'py>)>,
+    iter: std::vec::IntoIter<(Bound<'py, PyString>, De<'py>)>,
     value: Option<De<'py>>,
 }
 
@@ -341,7 +348,8 @@ impl<'de, 'py> de::MapAccess<'de> for MapIn<'py> {
         match self.iter.next() {
             Some((k, v)) => {
                 self.value = Some(v);
-                let key: de::value::StringDeserializer<DeError> = k.into_deserializer();
+                let s = k.to_str().map_err(|e| DeError(e.to_string()))?;
+                let key: de::value::StrDeserializer<'_, DeError> = s.into_deserializer();
                 seed.deserialize(key).map(Some)
             }
             None => Ok(None),

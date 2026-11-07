@@ -285,15 +285,15 @@ impl pythonize::PythonizeMappingType for SortedDict {
     }
 
     fn finish<'py>(builder: Self::Builder<'py>) -> PyResult<Bound<'py, pyo3::types::PyMapping>> {
-        let (py, items) = builder;
-        let mut keyed = Vec::with_capacity(items.len());
-        for (k, v) in items {
-            keyed.push((k.to_str()?.to_owned(), k, v));
+        let (py, mut items) = builder;
+        // byte order, as BTreeMap<String, _> orders; a struct never repeats a key. Every key was made from a
+        // Rust &str, so to_str cannot fail; the check stays for safety.
+        for (k, _) in &items {
+            k.to_str()?;
         }
-        // byte order, as BTreeMap<String, _> orders; a struct never repeats a key
-        keyed.sort_by(|a, b| a.0.cmp(&b.0));
+        items.sort_by(|a, b| a.0.to_str().unwrap_or("").cmp(b.0.to_str().unwrap_or("")));
         let d = PyDict::new(py);
-        for (_, k, v) in keyed {
+        for (k, v) in items {
             d.set_item(k, v)?;
         }
         Ok(d.into_mapping())
