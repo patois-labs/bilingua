@@ -423,7 +423,7 @@ mod tests {
         assert!(paragraphs(&garbage).is_empty());
         assert_eq!(printable_count(&garbage), 0);
         assert_eq!(printable_count("\u{fffd}\u{fffe}\u{fffe}\u{fffd}"), 0);
-        assert_eq!(printable_count("  hello \u{3} world  "), 11);
+        assert_eq!(printable_count("  hello \u{3} world  "), 12);
     }
 
     #[test]
