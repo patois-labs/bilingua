@@ -381,7 +381,8 @@ pub fn encode_line(line: &Line, text: &[Atom], locos_glue: bool) -> Result<Vec<W
                 // (the locos profile keeps LocOS's glued rows, byte for byte)
                 // a row without a PAC has nothing that starts a new row: add a carriage return, or the
                 // rows of a re-wrapped caption would run together ("orWindows")
-                if i > 0 && !locos_glue && !(j >= 1 && s.head.iter().any(|e| e.name == Name::Cr)) && !(j < 1 && line.mode == Mode::RollUp) {
+                let has_break = if j >= 1 { s.head.iter().any(|e| e.name == Name::Cr) } else { line.mode == Mode::RollUp };
+                if i > 0 && !locos_glue && !has_break {
                     words.extend_from_slice(&cr_words);
                 }
                 // the first row's mode and style codes are not repeated on an added row (a second mode code
