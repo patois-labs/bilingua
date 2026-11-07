@@ -1,5 +1,6 @@
 //! Generated from the Localization OS plural rules (babel's gettext table, CLDR rules for the rest): one row per
 //! locale whose rule differs from its language's. (key, nplurals, expression, slot for n = 1, catch-all slot).
+//! Made by bilingua/tools/gen-plural-table.py; edit that, not this file.
 
 pub const RULES: &[(&str, u8, &str, u8, u8)] = &[
     ("aa", 1, "0", 0, 0),

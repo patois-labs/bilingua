@@ -55,3 +55,28 @@ fn a_multi_line_plain_front_matter_value_is_not_offered_under_the_profile() {
     let texts: Vec<String> = locos_extract(src).units.iter().map(|u| plain_text(&u.source())).collect();
     assert_eq!(texts, vec!["Quoted".to_string(), "Plain".to_string(), "Next".to_string(), "Body.".to_string()]);
 }
+
+#[test]
+fn a_schema_1_profile_document_still_merges() {
+    // before schema 2 the profile skeleton was the decoded file alone; its first line must not be read as a tag
+    let src = b"Intro\n\nBody text.\n";
+    let mut d = locos_extract(src);
+    d.skeleton = Skeleton::binary(src.to_vec(), bilingua_model::parser_info!(1));
+    let o = MergeOptions::new().with_profile(Some(profile::LOCOS));
+    assert_eq!(MarkdownFilter.merge_with(&d, &o).unwrap(), src);
+    let id = d.units[1].segments[0].id.clone();
+    d.set_target(&id, vec![Inline::text("Textkoerper.")]).unwrap();
+    assert_eq!(MarkdownFilter.merge_with(&d, &o).unwrap(), b"Intro\n\nTextkoerper.\n");
+    // the current layout keeps its tag line out of the output
+    let d = locos_extract(src);
+    assert_eq!(MarkdownFilter.merge_with(&d, &o).unwrap(), src);
+}
+
+#[test]
+fn a_one_line_value_before_a_nested_key_or_an_indented_comment_stays_offered_under_the_profile() {
+    let src = b"---\ntitle: Kept title\nauthor:\n  name: x\ndescription: Kept summary\n  # an indented comment\nnotes: a plain value that\n  goes on\n---\nBody text here.\n";
+    let d = locos_extract(src);
+    let texts: Vec<String> = d.units.iter().map(|u| plain_text(&u.source())).collect();
+    assert_eq!(texts, vec!["Kept title".to_string(), "Kept summary".to_string(), "Body text here.".to_string()]);
+    assert_eq!(MarkdownFilter.merge_with(&d, &MergeOptions::new().with_profile(Some(profile::LOCOS))).unwrap(), src);
+}

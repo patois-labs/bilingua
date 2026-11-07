@@ -1783,7 +1783,13 @@ pub fn extract(text: &str, encoding: &str, opts: &ExtractOptions, warnings: Vec<
 
 /// LocOS `build` (Markdown has no language declaration, so `build_localized` is the same).
 pub fn merge(doc: &Document, data: &[u8]) -> Result<Vec<u8>, Error> {
-    let (_, text) = bilingua_model::enc::locos_skeleton_parts(data).ok_or_else(|| Error::Write("markdown: not a LocOS profile skeleton".into()))?;
+    // schema 1 (before 0.9.1) kept the decoded file alone, with no tag line: read it as it was written, so a stored
+    // Document still merges and its first line is never taken for a tag
+    let text = if doc.skeleton.parser().map_or(1, |p| p.schema) < 2 {
+        std::str::from_utf8(data).map_err(|_| Error::Write("markdown: the LocOS skeleton is not UTF-8".into()))?
+    } else {
+        bilingua_model::enc::locos_skeleton_parts(data).ok_or_else(|| Error::Write("markdown: not a LocOS profile skeleton".into()))?.1
+    };
     let mut texts: HashMap<usize, String> = HashMap::new();
     for (k, u) in doc.units.iter().enumerate() {
         if u.segments.iter().any(Segment::has_target) {

@@ -459,3 +459,12 @@ fn a_plain_front_matter_value_that_goes_on_is_left_alone() {
     let d = extract("---\ntitle: Whole value\n# a comment\nauthor: x\n---\nBody text here.\n");
     assert_eq!(texts(&d), vec!["Whole value", "Body text here."]);
 }
+
+#[test]
+fn a_one_line_value_before_a_nested_key_or_an_indented_comment_stays_offered() {
+    // the indented lines belong to the next key, or are a comment: the value above them is still one line
+    let src = "---\ntitle: Kept title\nauthor:\n  name: x\ndescription: Kept summary\n  # an indented comment\nnotes: a plain value that\n  goes on\n---\nBody text here.\n";
+    let d = extract(src);
+    assert_eq!(texts(&d), vec!["Kept title", "Kept summary", "Body text here."]);
+    assert_eq!(merged(&d), src);
+}

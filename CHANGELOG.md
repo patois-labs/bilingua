@@ -23,7 +23,7 @@ is listed here).
 ### Changed
 
 - markdown: the LocOS-profile skeleton schema is 2 (the skeleton starts with the file's encoding tag, as po and
-  srt do). A Document imported before this release is refused as `parser_version`: extract it again.
+  srt do). A stored schema 1 Document (no tag line) still merges as before; its `source_encoding` stays as stored.
 - Tests: the LocOS goldens were made again from Localization OS with its fixes for trackers 805, 810, 811, 813 and
   814; the cases kept as known differences (html orphan end tag, Markdown BOM, PPTX look-alike tokens, 15 DXF
   drawings) now match and their lists are gone.

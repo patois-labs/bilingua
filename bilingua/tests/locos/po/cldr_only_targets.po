@@ -1,11 +1,8 @@
 msgid ""
 msgstr ""
-"Language: 
-"
-"Content-Type: text/plain; charset=UTF-8
-"
-"Plural-Forms: nplurals=2; plural=(n != 1);
-"
+"Language: \n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 msgid "Open"
 msgstr ""
