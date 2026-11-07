@@ -247,6 +247,11 @@ fn mask(d: Dialect, text: &str, limits: &Limits) -> Result<Masked, Error> {
     Ok(Masked { text: out, codes, inline })
 }
 
+/// A tag library's script or style element (`s:script`, `aui:script`, `x:style`).
+fn prefixed_script(name: &str) -> bool {
+    name.split_once(':').is_some_and(|(p, l)| !p.is_empty() && matches!(l, "script" | "style"))
+}
+
 /// Sentinels in a tag token may only sit inside attribute VALUES.
 fn check_tag(d: Dialect, tok: &str, orig: &str, m: &Masked, masked_pos: usize) -> Result<(), Error> {
     if !tok.contains(S_OPEN) || tok.starts_with("<!") || tok.starts_with("<?") {
@@ -304,21 +309,51 @@ fn tokens<'m>(d: Dialect, m: &'m Masked, orig: &str, budget: &mut Option<i64>, l
     let mut out: Vec<Tok<'m>> = Vec::with_capacity(raw.len() + m.codes.len() * 2);
     let mut skip_name = String::new();
     let mut pos = 0;
-    for tok in raw {
-        let len = tok.s.len();
-        let s: &'m str = match tok.s {
+    let mut ri = 0;
+    while ri < raw.len() {
+        let (kind, len) = (raw[ri].k, raw[ri].s.len());
+        let s: &'m str = match raw[ri].s {
             Cow::Borrowed(s) => s,
             Cow::Owned(_) => unreachable!("tokenizer borrows"),
         };
-        if tok.k == K::Markup {
+        ri += 1;
+        if kind == K::Markup {
             check_tag(d, s, orig, m, pos)?;
-            let (closing, name, _sc) = html::parse_tag_str(s);
+            let (closing, name, sc) = html::parse_tag_str(s);
             if !skip_name.is_empty() {
                 if closing && name == skip_name {
                     skip_name.clear();
                 }
             } else if html::SKIP_CONTAINERS.contains(&name.as_str()) && !closing {
                 skip_name = name;
+            } else if !closing && !sc && prefixed_script(&name) {
+                // `<s:script>` / `<aui:script>`: a tag library's script or style element. Its body is code for a
+                // browser, not text, so it becomes one opaque run (no units, no attributes) up to the matching end tag.
+                out.push(Tok { k: K::Markup, s: Cow::Borrowed(s) });
+                pos += len;
+                let body_start = pos;
+                let mut j = ri;
+                while j < raw.len() {
+                    if raw[j].k == K::Markup {
+                        let (c, n, _) = html::parse_tag_str(&raw[j].s);
+                        if c && n == name {
+                            break;
+                        }
+                    }
+                    pos += raw[j].s.len();
+                    j += 1;
+                }
+                ri = j;
+                let mut body: &'m str = &m.text[body_start..pos];
+                // a run that starts with `<` would be read as a tag name: hand those over one by one
+                while body.starts_with('<') {
+                    out.push(Tok { k: K::Island, s: Cow::Borrowed(&body[..1]) });
+                    body = &body[1..];
+                }
+                if !body.is_empty() {
+                    out.push(Tok { k: K::Island, s: Cow::Borrowed(body) });
+                }
+                continue;
             }
             out.push(Tok { k: K::Markup, s: Cow::Borrowed(s) });
         } else if s.contains(S_OPEN) {
@@ -347,7 +382,7 @@ fn tokens<'m>(d: Dialect, m: &'m Masked, orig: &str, budget: &mut Option<i64>, l
             }
             out.push(Tok { k: K::Text, s: Cow::Borrowed(&s[last..]) });
         } else {
-            out.push(Tok { k: tok.k, s: Cow::Borrowed(s) });
+            out.push(Tok { k: kind, s: Cow::Borrowed(s) });
         }
         pos += len;
     }

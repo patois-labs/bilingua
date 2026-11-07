@@ -106,3 +106,19 @@ fn another_crates_skeleton_is_refused() {
     }
     assert!(matches!(f.merge(&doc), Err(Error::ParserVersion { .. })));
 }
+
+#[test]
+fn a_tag_library_script_element_is_code_not_text() {
+    // wild-file fix (11-06): `<s:script>` (Struts) and `<aui:script>` (Liferay) hold JavaScript, which is never a unit,
+    // even with server code and a `<` inside it
+    let src = "<p>Hello there</p>\n<s:script>\n  $('ul.alert').each(function () { if (a < b) { wrapper.append('<div>'); } });\n  var u = '<%= url %>';\n</s:script>\n<p>Goodbye now</p>\n<aui:script use=\"a,b\">\n  Liferay.component('<%= id %>calendar', () => {});\n</aui:script>\n<s:script src=\"x.js\"/>\n<p>Last one</p>\n";
+    for fmt in ["jsp", "aspx", "erb"] {
+        let t = texts_str(fmt, src);
+        assert_eq!(t, ["Hello there", "Goodbye now", "Last one"], "{fmt}");
+        assert_identity(fmt, src.as_bytes());
+        let out = build_str(fmt, src, &[(0, "Hola"), (1, "Adios"), (2, "Ultimo")]);
+        assert_eq!(out, src.replace("Hello there", "Hola").replace("Goodbye now", "Adios").replace("Last one", "Ultimo"), "{fmt}");
+    }
+    // an unclosed one swallows the rest of the page, as an unclosed `<script>` does
+    assert_eq!(texts_str("jsp", "<p>One two</p><s:style>\n a { x: y }\n<p>not text</p>"), ["One two"]);
+}
