@@ -716,6 +716,9 @@ gives LocOS's parse options, here `comments=True`) compare the units and every b
 - **`=` text cells (xlsx-1).** A cell whose string starts with `=` (shared, inline or `str`) is LocOS's formula
   look-alike (`_iter_cells`): no unit, so every later cell keeps LocOS's number. A leading space before `=` is text.
   Native extraction still offers such a cell.
+- **Values under a merge (xlsx-2, `01-stress002`).** A value Excel left in a cell of a merged range other than its
+  top-left one is no unit, as openpyxl reads it (a `MergedCell` with no value); it moved every later cell by one.
+  Native extraction is unchanged.
 - **ODF style (odf-1, odf-2).** `heading` for a `text:h`, `comment` for a comment paragraph, nothing for every other
   paragraph, as `odf_filter.parse` gives them (Bilingua gave the automatic or named style, `P1`, `Heading_20_1`).
   Under the profile `context.style` is cleared and `locos.style` set.
@@ -741,8 +744,7 @@ gives LocOS's parse options, here `comments=True`) compare the units and every b
 - Known rules, not changed: pptx-2 / xlsx-3 (a typed unknown token is kept as text, on purpose), pptx-3 / xlsx-4
   (`<a:t/>`, `<t/>` for an emptied text, canonically equal), odf-3 and vsdx-3 (quote, declaration and `<x></x>`
   serialisation, canonically equal), icml-5 (LocOS rewrites the story start tag on one line), docx-6 (the nesting
-  caps are `limit` since W3 B16). pptx-4 (LocOS's markup budget) stays in the adapter's gate. xlsx-2 (`01-stress002`):
-  see B-DONE.
+  caps are `limit` since W3 B16). pptx-4 (LocOS's markup budget) stays in the adapter's gate.
 - No profile version bump: no LocOS document was ever stored by Bilingua in production.
 
 ## Wave 3 B-side: bilingual and CAT formats (W3, 11-07)

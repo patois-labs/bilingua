@@ -44,7 +44,7 @@ is listed here).
 ### Changed
 
 - LocOS profile, Office and DTP formats (W4): DOCX units carry LocOS's image inventory for the missing-alt prompts
-  and give the Storyline notice; XLSX text cells starting with `=` are not units; ODF styles are `heading`, `comment`
+  and give the Storyline notice; XLSX text cells starting with `=` and values under a merged range are not units; ODF styles are `heading`, `comment`
   or none; Visio `p_index` is LocOS's slot index (with gaps) and comments are `1000000 + j`; IDML and ICML ranges
   are `r` pairs; ICML refuses a bare `<Story>` root and skips story-level tables, as LocOS does. Native and profile:
   a DOCX `customXml/` part is no longer depth-checked; a rebuilt ICML story keeps the file's CRLF line ends; a
