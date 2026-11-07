@@ -373,7 +373,8 @@ impl Package {
         Ok(d.iter_tag(d.root, M, "si").into_iter().map(|si| rich_content(d, si).replace("x005F_", "")).collect())
     }
 
-    /// Every unit cell: (sheet index, row, column, value), in openpyxl's order (`_iter_cells`).
+    /// Every unit cell: (sheet index, row, column, value), in openpyxl's order (`_iter_cells`): a string value with
+    /// a letter or digit that does not start with `=`.
     fn unit_cells(&mut self) -> Result<Vec<(usize, i64, i64, String)>, Error> {
         let sst = self.string_table()?;
         let mut out = Vec::new();
@@ -382,7 +383,9 @@ impl Package {
             let d = &self.roots[path];
             for (&(row, col), &c) in &self.cells[path] {
                 if let Some(v) = cell_value(d, c, &sst, path)? {
-                    if bilingua_model::py_has_alnum(&v) {
+                    // LocOS `_iter_cells`: a string that starts with `=` is a formula look-alike, never a unit,
+                    // even a shared or inline string (`= Mandatory fields`)
+                    if !v.starts_with('=') && bilingua_model::py_has_alnum(&v) {
                         out.push((n, row, col, v));
                     }
                 }

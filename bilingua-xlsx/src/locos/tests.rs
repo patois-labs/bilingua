@@ -385,3 +385,22 @@ fn private_use_characters_round_trip_in_a_text_box() {
     assert!(d.contains(&format!("<a:t>w{PUA}</a:t>")), "{d}");
     assert!(d.contains(&format!("<a:t>Second {PUA}</a:t>")), "{d}");
 }
+
+/// W4 xlsx-1: a text cell whose value starts with `=` (shared, inline or `str`) is LocOS's formula look-alike:
+/// never a unit, and the cells after it keep LocOS's numbers. A leading space before `=` is ordinary text.
+#[test]
+fn equals_sign_text_cells_are_not_units() {
+    let sst = "<si><t>= Mandatory fields</t></si><si><t>Name</t></si><si><t> =spaced</t></si>";
+    let sheet = "<sheetData><row r=\"1\"><c r=\"A1\" t=\"s\"><v>0</v></c><c r=\"B1\" t=\"inlineStr\"><is><t>=Optional</t></is></c><c r=\"C1\" t=\"str\"><v>=x1</v></c><c r=\"D1\" t=\"s\"><v>1</v></c><c r=\"E1\" t=\"s\"><v>2</v></c></row></sheetData>";
+    let data = book(sheet, sst, &[], &[]);
+    let mut doc = extract(&data, &opts(None)).unwrap();
+    assert_eq!(unit_texts(&doc), ["Name", " =spaced"]);
+    let ps: Vec<String> = doc.units.iter().map(|u| u.context.extra[profile::P_INDEX].clone()).collect();
+    assert_eq!(ps, ["0", "1"]);
+    set(&mut doc, 0, "Nom");
+    let out = merged(&doc);
+    let s = entry(&out, "xl/sharedStrings.xml").unwrap();
+    assert!(s.contains("<si><t>= Mandatory fields</t></si>") && s.contains("<si><t>Nom</t></si>"), "{s}");
+    let w = entry(&out, "xl/worksheets/sheet1.xml").unwrap();
+    assert!(w.contains("<is><t>=Optional</t></is>"), "{w}");
+}
