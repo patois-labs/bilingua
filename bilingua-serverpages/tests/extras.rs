@@ -106,3 +106,28 @@ fn another_crates_skeleton_is_refused() {
     }
     assert!(matches!(f.merge(&doc), Err(Error::ParserVersion { .. })));
 }
+
+#[test]
+fn a_tag_library_script_element_is_code_not_text() {
+    // wild-file fix (11-06): `<s:script>` (Struts) and `<aui:script>` (Liferay) hold JavaScript, which is never a unit,
+    // even with server code and a `<` inside it
+    let src = "<p>Hello there</p>\n<s:script>\n  $('ul.alert').each(function () { if (a < b) { wrapper.append('<div>'); } });\n  var u = '<%= url %>';\n</s:script>\n<p>Goodbye now</p>\n<aui:script use=\"a,b\">\n  Liferay.component('<%= id %>calendar', () => {});\n</aui:script>\n<s:script src=\"x.js\"/>\n<p>Last one</p>\n";
+    for fmt in ["jsp", "aspx", "erb"] {
+        let t = texts_str(fmt, src);
+        assert_eq!(t, ["Hello there", "Goodbye now", "Last one"], "{fmt}");
+        assert_identity(fmt, src.as_bytes());
+        let out = build_str(fmt, src, &[(0, "Hola"), (1, "Adios"), (2, "Ultimo")]);
+        assert_eq!(out, src.replace("Hello there", "Hola").replace("Goodbye now", "Adios").replace("Last one", "Ultimo"), "{fmt}");
+    }
+    // an unclosed one does not compile on the server: the page is read as HTML, so no text after it is lost
+    let src = "<p>One two</p><s:style>\n a { x: y }\n<p>Still here</p>";
+    let t = texts_str("jsp", src);
+    assert_eq!(t.first().map(String::as_str), Some("One two"));
+    assert_eq!(t.last().map(String::as_str), Some("Still here"));
+    assert_identity("jsp", src.as_bytes());
+    // many unclosed ones stay linear (each name is looked for once)
+    let many = format!("<p>Top</p>{}<p>End</p>", "<a:script>x ".repeat(20_000));
+    let t = texts_str("jsp", &many);
+    assert_eq!(t.first().map(String::as_str), Some("Top"));
+    assert_eq!(t.last().map(String::as_str), Some("End"));
+}

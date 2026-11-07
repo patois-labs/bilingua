@@ -433,6 +433,7 @@ version = "0.9.0"
 dependencies = [
  "bilingua",
  "bilingua-html",
+ "bilingua-htmlcore",
  "serde_json",
  "zip",
 ]

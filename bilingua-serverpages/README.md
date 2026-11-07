@@ -64,6 +64,9 @@ with the LocOS message and line.
   between tokens). A tag whose markup holds code (`<a href="<?php track(); ?>">`) is written at most once.
 * The XML cross-check LocOS runs with lxml on well-formed pages (`html_guard._check_xml`) is not ported; the browser
   check is.
+* A tag library's script or style element (`<s:script>`, `<aui:script>`, any `prefix:script` or `prefix:style` with
+  an end tag) is code, like `<script>`: its body is never a unit (LocOS reads it as page text). Without an end tag it
+  is read as HTML, so no text after it is lost.
 * `skeleton["a11y_images"]` (missing-alt findings) is not produced.
 * `check_markup` (B6) also refuses a page that declares `<!ENTITY`.
 
