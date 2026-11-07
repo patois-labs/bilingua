@@ -19,8 +19,14 @@
 //!   parts that changed are re-serialised, every other entry keeps its bytes. A Strict Open XML file is read and
 //!   written through LocOS's namespace swap.
 //!
-//! Not ported: slide comments (LocOS's `comments=True` option, off by default), LocOS's segment and markup
-//! budgets (the facade's limits apply instead), XML parts in an encoding other than UTF-8 or UTF-16.
+//! * Slide comments (LocOS's `comments=True`, here `pptx.translate_comments`): per walked slide, in the order of
+//!   its relationships, every `comments` part once: a classic `p:cmLst` gives each `p:cm`'s `p:text` (plain text,
+//!   stripped, kept when it has a letter or digit), any other root (PowerPoint 365's modern comments) every `a:p`
+//!   of every `p188:txBody`, comments and replies. They are numbered `COMMENT_BASE + j` (`j` counts every slot, the
+//!   skipped ones too) and styled `"slide N comment"`; a merge writes a comment whenever its unit has a target.
+//!
+//! Not ported: LocOS's segment and markup budgets (the facade's limits apply instead), XML parts in an encoding
+//! other than UTF-8 or UTF-16.
 //!
 //! The XML tree is the internal crate `bilingua-xmltree` the XLIFF and DOCX ports share (`dom` here).
 
@@ -30,7 +36,7 @@ use bilingua_xmltree as dom;
 #[cfg(test)]
 mod tests;
 
-use bilingua_model::pytext::{py_has_alnum, py_isdecimal_char, py_strip};
+use bilingua_model::pytext::{py_has_alnum, py_isdecimal_char, py_lstrip, py_rstrip, py_strip};
 use bilingua_model::*;
 use bilingua_zip::{Body, EntryMeta, RawEntry, ZipLimits};
 use dom::Dom;
@@ -44,7 +50,10 @@ const DSP: &str = "http://schemas.microsoft.com/office/drawing/2008/diagram";
 const C: &str = "http://schemas.openxmlformats.org/drawingml/2006/chart";
 const MC: &str = "http://schemas.openxmlformats.org/markup-compatibility/2006";
 const PKG_REL: &str = "http://schemas.openxmlformats.org/package/2006/relationships";
+const P188: &str = "http://schemas.microsoft.com/office/powerpoint/2018/8/main";
 const ALT_ATTRS: [(&str, &str); 2] = [("descr", "a11y:img-alt"), ("title", "a11y:img-title")];
+/// LocOS `office_comments.COMMENT_BASE`: the first comment unit's `p_index`.
+pub const COMMENT_BASE: usize = 1_000_000;
 /// `UnitContext::extra` key with the package part a unit comes from.
 pub const PART: &str = "pptx.part";
 
@@ -409,11 +418,13 @@ struct Walk {
     alts: Vec<Alt>,
     /// diagramData part and its cached drawing part, in walk order.
     drawings: Vec<(String, String)>,
+    /// (slide part, label, relationships) of every walked slide, for the comments (#690).
+    slides: Vec<(String, String, Rels)>,
 }
 
 impl Walk {
     fn new(pkg: &mut Pkg) -> Result<Walk, Error> {
-        let mut w = Walk { paras: Vec::new(), alts: Vec::new(), drawings: Vec::new() };
+        let mut w = Walk { paras: Vec::new(), alts: Vec::new(), drawings: Vec::new(), slides: Vec::new() };
         let main = main_part(pkg)?;
         let prels = pkg.rels(&main)?;
         let mut seen: HashSet<String> = HashSet::new();
@@ -439,6 +450,7 @@ impl Walk {
             let label = format!("slide {n}{}", if hidden { " hidden" } else { "" });
             w.add(pkg, &path, &label);
             let srels = pkg.rels(&path)?;
+            w.slides.push((path.clone(), label.clone(), srels.clone()));
             // SmartArt and charts, in the order the slide references them
             let refs: Vec<(Option<String>, &str)> = {
                 let d = pkg.dom(&path);
@@ -512,6 +524,69 @@ impl Walk {
             self.paras.push((part.to_string(), p, style.to_string()));
         }
     }
+}
+
+/// One comment slot (`_comment_slots`): its part, classic (`p:text`, plain text) or modern (an `a:p`), the element
+/// and the style.
+struct CSlot {
+    part: String,
+    classic: bool,
+    node: usize,
+    style: String,
+}
+
+/// `_comment_slots`: every comment slot of the walked slides, in LocOS's order (numbered from [`COMMENT_BASE`]).
+/// Parsed only when comments are wanted, so a broken comments part never stops a deck read without them.
+fn comment_slots(pkg: &mut Pkg, walk: &Walk) -> Result<Vec<CSlot>, Error> {
+    let mut out = Vec::new();
+    let mut seen: HashSet<String> = HashSet::new();
+    for (_, label, srels) in &walk.slides {
+        for (_, (kind, sub)) in srels {
+            if kind != "comments" || seen.contains(sub) || !pkg.names.contains(sub) {
+                continue;
+            }
+            seen.insert(sub.clone());
+            if !pkg.load(sub)? {
+                continue;
+            }
+            let d = pkg.dom(sub);
+            let style = format!("{label} comment");
+            if d.is(d.root, P, "cmLst") {
+                for cm in d.iter(d.root).into_iter().filter(|&e| d.is(e, P, "cm")) {
+                    if let Some(t) = d.find(cm, P, "text") {
+                        out.push(CSlot { part: sub.clone(), classic: true, node: t, style: style.clone() });
+                    }
+                }
+            } else {
+                for body in d.iter(d.root).into_iter().filter(|&e| d.is(e, P188, "txBody")) {
+                    for p in d.iter(body).into_iter().filter(|&e| d.is(e, A, "p")) {
+                        out.push(CSlot { part: sub.clone(), classic: false, node: p, style: style.clone() });
+                    }
+                }
+            }
+        }
+    }
+    Ok(out)
+}
+
+/// lxml's `el.text = text`: the text before the element's first child is replaced.
+fn set_lead_text(d: &mut Dom, el: usize, text: &str) {
+    let lead = d.first_slot(el);
+    let gone: Vec<usize> = d.nodes[el].children.drain(..lead).collect();
+    for g in gone {
+        d.nodes[g].parent = None;
+    }
+    if !text.is_empty() {
+        let t = d.new_text(text);
+        d.insert(el, 0, t);
+    }
+}
+
+/// `el.text` of a classic comment with its stripped core replaced by `new` (LocOS keeps the white space around it).
+fn classic_comment_text(old: &str, new: &str) -> String {
+    let lead = &old[..old.len() - py_lstrip(old).len()];
+    let trail = &old[py_rstrip(old).len()..];
+    format!("{lead}{new}{trail}")
 }
 
 // --------------------------------------------------------------------------------------- tokenizing
@@ -887,6 +962,23 @@ pub fn extract(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
     for (j, a) in walk.alts.iter().enumerate() {
         units.push(unit(base + j, vec![Inline::text(a.value.clone())], BTreeMap::new(), &a.part, a.style, "alt"));
     }
+    if opts.format_flag("pptx.translate_comments") == Some(true) {
+        for (j, c) in comment_slots(&mut pkg, &walk)?.iter().enumerate() {
+            let d = pkg.dom(&c.part);
+            let (source, codes) = if c.classic {
+                let t = py_strip(&d.lead_text(c.node)).to_string();
+                if !py_has_alnum(&t) {
+                    continue;
+                }
+                (vec![Inline::text(t)], BTreeMap::new())
+            } else if has_text(d, c.node) {
+                tok_inlines(d, &pkg.texts[&c.part], c.node)
+            } else {
+                continue;
+            };
+            units.push(unit(COMMENT_BASE + j, source, codes, &c.part, &c.style, "comment"));
+        }
+    }
     Ok(Document::new("pptx".to_string(), units, Skeleton::binary(bytes.to_vec(), bilingua_model::parser_info!()))
         .with_source_lang(opts.source_lang.clone())
         .with_target_lang(opts.target_lang.clone())
@@ -966,6 +1058,7 @@ fn rebuild_escaped(original: &[u8], texts: &[(i64, String)], target: Option<&str
     }
     let mut touched: HashSet<String> = HashSet::new();
     let base = walk.paras.len() as i64;
+    let cslots = if texts.iter().any(|(i, _)| *i >= COMMENT_BASE as i64) { comment_slots(&mut pkg, &walk).map_err(werr)? } else { Vec::new() };
     for (i, text) in texts {
         let text = xml_target_text(text);
         if (0..base).contains(i) {
@@ -980,6 +1073,18 @@ fn rebuild_escaped(original: &[u8], texts: &[(i64, String)], target: Option<&str
             let a = &walk.alts[(i - base) as usize];
             pkg.doms.get_mut(&a.part).unwrap().set(a.node, a.attr, &unesc_lit(&text));
             touched.insert(a.part.clone());
+        } else if let Some(c) = i.checked_sub(COMMENT_BASE as i64).and_then(|j| usize::try_from(j).ok()).and_then(|j| cslots.get(j)) {
+            let d = pkg.doms.get_mut(&c.part).unwrap();
+            if c.classic {
+                let new = classic_comment_text(&d.lead_text(c.node), &unesc_lit(&text));
+                set_lead_text(d, c.node, &new);
+            } else {
+                write_paragraph(d, c.node, &text);
+                if let Some(tag) = &tag {
+                    stamp_language(d, c.node, tag, rtl);
+                }
+            }
+            touched.insert(c.part.clone());
         }
     }
     for ((data, drawing), (_, src)) in walk.drawings.iter().zip(&smart_src) {

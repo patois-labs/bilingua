@@ -122,10 +122,11 @@ pub fn merge_with_report(doc: &Document) -> Result<(Vec<u8>, MergeReport), Error
     Ok((bytes, MergeReport { warnings: r.warnings }))
 }
 
-/// The `format_options` keys of the PPTX filter. `pptx.translate_comments` is accepted so one project option can
-/// be sent to every Office format, but slide comments are not extracted yet: `true` adds a warning.
+/// The `format_options` keys of the PPTX filter. `pptx.translate_comments`: under the LocOS profile the slide
+/// comments become units as LocOS gives them; without the profile they are not extracted yet and `true` adds a
+/// warning.
 pub const FORMAT_OPTIONS: &[bilingua_model::FormatOptionKey] = &[
-    bilingua_model::FormatOptionKey::bool("pptx.translate_comments", "Translate slide comments (not supported yet: true adds a warning)."),
+    bilingua_model::FormatOptionKey::bool("pptx.translate_comments", "Translate slide comments (LocOS profile; otherwise not supported yet and true adds a warning)."),
     bilingua_model::FormatOptionKey::text("pptx.walk", "Accepted and ignored: LocOS's numbering walk stamp; Bilingua has one walk, the current one."),
 ];
 
@@ -147,7 +148,8 @@ impl Filter for Pptx {
         bilingua_model::check_own_options(self, &opts.format_options)?;
         // Track D: under the Localization OS profile, LocOS's own walk, numbers and writer
         let mut doc = if opts.is_profile(bilingua_model::profile::LOCOS) { locos::extract(bytes, opts)? } else { extract::extract_doc(bytes, opts)? };
-        if opts.format_flag("pptx.translate_comments") == Some(true) {
+        let locos = opts.is_profile(bilingua_model::profile::LOCOS);
+        if !locos && opts.format_flag("pptx.translate_comments") == Some(true) {
             doc.warnings.push(Warning::new(
                 "format_option",
                 "pptx.translate_comments",

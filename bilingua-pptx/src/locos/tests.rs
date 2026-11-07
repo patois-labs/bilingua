@@ -310,3 +310,97 @@ fn public_rebuild_still_reads_plain_locos_text() {
     // and `target_text` is still plain LocOS text
     assert_eq!(target_text(&[Inline::text(format!("{O}x1{Z}\u{e000}"))]), format!("{O}x1{Z}\u{e000}"));
 }
+
+/// A one-slide deck with a classic comments part and a modern one (PowerPoint 365), both related to the slide.
+fn deck_with_comments() -> Vec<u8> {
+    let rels = |items: &str| format!("<Relationships xmlns=\"{PKG_REL}\">{items}</Relationships>");
+    let root = rels(&format!("<Relationship Id=\"rId1\" Type=\"{R}/officeDocument\" Target=\"ppt/presentation.xml\"/>"));
+    let pres = format!("<p:presentation xmlns:r=\"{R}\" xmlns:p=\"{P}\"><p:sldIdLst><p:sldId id=\"256\" r:id=\"rId1\"/></p:sldIdLst></p:presentation>");
+    let prels = rels(&format!("<Relationship Id=\"rId1\" Type=\"{R}/slide\" Target=\"slides/slide1.xml\"/>"));
+    let slide = format!("<p:sld xmlns:a=\"{A}\" xmlns:r=\"{R}\" xmlns:p=\"{P}\"><p:cSld><p:spTree>{}</p:spTree></p:cSld></p:sld>", sp("<a:p><a:r><a:t>Body</a:t></a:r></a:p>"));
+    let srels = rels(&format!(
+        "<Relationship Id=\"rId2\" Type=\"{R}/comments\" Target=\"../comments/comment1.xml\"/><Relationship Id=\"rId3\" Type=\"http://schemas.microsoft.com/office/2018/10/relationships/comments\" Target=\"../comments/modernComment_1.xml\"/>"
+    ));
+    let classic = format!("<p:cmLst xmlns:p=\"{P}\"><p:cm authorId=\"0\" idx=\"1\"><p:pos x=\"1\" y=\"1\"/><p:text>  Check this.  </p:text></p:cm><p:cm authorId=\"0\" idx=\"2\"><p:text>--</p:text></p:cm></p:cmLst>");
+    let modern = format!(
+        "<p188:cmLst xmlns:a=\"{A}\" xmlns:p188=\"{P188}\"><p188:cm id=\"{{1}}\" authorId=\"{{A}}\"><p188:txBody><a:bodyPr/><a:p><a:r><a:t>Modern </a:t></a:r><a:r><a:rPr b=\"1\"/><a:t>note</a:t></a:r></a:p></p188:txBody><p188:replyLst><p188:reply id=\"{{2}}\" authorId=\"{{A}}\"><p188:txBody><a:bodyPr/><a:p><a:r><a:t>A reply</a:t></a:r></a:p></p188:txBody></p188:reply></p188:replyLst></p188:cm></p188:cmLst>"
+    );
+    stored_zip(&[
+        ("[Content_Types].xml", b"<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"/>"),
+        ("_rels/.rels", root.as_bytes()),
+        ("ppt/presentation.xml", pres.as_bytes()),
+        ("ppt/_rels/presentation.xml.rels", prels.as_bytes()),
+        ("ppt/slides/slide1.xml", slide.as_bytes()),
+        ("ppt/slides/_rels/slide1.xml.rels", srels.as_bytes()),
+        ("ppt/comments/comment1.xml", classic.as_bytes()),
+        ("ppt/comments/modernComment_1.xml", modern.as_bytes()),
+    ])
+}
+
+fn comment_opts() -> ExtractOptions {
+    opts(Some("de-DE")).with_format_option("pptx.translate_comments", true)
+}
+
+#[test]
+fn slide_comments_are_units_like_locos() {
+    let d = deck_with_comments();
+    // without the option: the body only, as before
+    let plain = crate::Pptx.extract(&d, &opts(None)).unwrap();
+    assert_eq!(units(&plain), vec![("0".into(), "Body".into(), "slide 1".into())]);
+    let doc = crate::Pptx.extract(&d, &comment_opts()).unwrap();
+    assert!(doc.warnings.iter().all(|w| w.code != "format_option"), "{:?}", doc.warnings);
+    let c = "slide 1 comment".to_string();
+    assert_eq!(
+        units(&doc),
+        vec![
+            ("0".into(), "Body".into(), "slide 1".into()),
+            // the classic comment is stripped; the second one ("--") has no letter, so 1000001 is skipped
+            ("1000000".into(), "Check this.".into(), c.clone()),
+            ("1000002".into(), format!("{O}r1{Z}Modern {O}/r1{Z}{O}r2{Z}note{O}/r2{Z}"), c.clone()),
+            ("1000003".into(), "A reply".into(), c),
+        ]
+    );
+    assert_eq!(doc.units[1].context.kind.as_deref(), Some("comment"));
+}
+
+#[test]
+fn slide_comments_are_written_back() {
+    let d = deck_with_comments();
+    let mut doc = crate::Pptx.extract(&d, &comment_opts()).unwrap();
+    let set = [("1000000", "Pr\u{fc}fen."), ("1000002", &*format!("{O}r2{Z}Neue{O}/r2{Z}{O}r1{Z} Notiz{O}/r1{Z}")), ("1000003", "Eine Antwort")];
+    for (p, t) in set {
+        let u = doc.units.iter().find(|u| u.context.extra[profile::P_INDEX] == p).unwrap();
+        let id = u.segments[0].id.clone();
+        let (_, map) = profile::tokens::to_locos_text_for("pptx", &u.segments[0].source);
+        profile::locos_set_target(&mut doc, &id, profile::tokens::from_locos_text(t, &map)).unwrap();
+    }
+    let out = crate::Pptx.merge_with(&doc, &profile::locos().merge_options("pptx")).unwrap();
+    well_formed(&out);
+    // the classic comment keeps its own white space around the translation
+    let classic = part(&out, "ppt/comments/comment1.xml");
+    assert!(classic.contains("<p:text>  Pr\u{fc}fen.  </p:text>"), "{classic}");
+    assert!(classic.contains("<p:text>--</p:text>"), "{classic}");
+    let modern = part(&out, "ppt/comments/modernComment_1.xml");
+    assert!(modern.contains("<a:r><a:rPr b=\"1\" lang=\"de-DE\"/><a:t>Neue</a:t></a:r><a:r><a:rPr lang=\"de-DE\"/><a:t> Notiz</a:t></a:r>"), "{modern}");
+    assert!(modern.contains("<a:t>Eine Antwort</a:t>"), "{modern}");
+    // the slide and every other part keep their bytes
+    assert_eq!(part(&out, "ppt/slides/slide1.xml"), part(&d, "ppt/slides/slide1.xml"));
+    let back = crate::Pptx.extract(&out, &comment_opts()).unwrap();
+    assert_eq!(units(&back)[1].1, "Pr\u{fc}fen.");
+}
+
+#[test]
+fn a_broken_comments_part_only_matters_when_comments_are_wanted() {
+    let d = deck_with_comments();
+    let entries = bilingua_zip::read_zip("pptx", &d, &ZipLimits::default()).unwrap();
+    let mut items: Vec<(String, Vec<u8>)> = entries.into_iter().map(|e| (e.name, e.data)).collect();
+    for (n, b) in &mut items {
+        if n == "ppt/comments/comment1.xml" {
+            *b = b"<p:cmLst><p:cm>".to_vec();
+        }
+    }
+    let refs: Vec<(&str, &[u8])> = items.iter().map(|(n, b)| (n.as_str(), b.as_slice())).collect();
+    let broken = stored_zip(&refs);
+    assert!(crate::Pptx.extract(&broken, &opts(None)).is_ok());
+    assert!(crate::Pptx.extract(&broken, &comment_opts()).is_err());
+}
