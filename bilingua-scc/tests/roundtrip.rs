@@ -315,7 +315,7 @@ fn a_caption_that_would_read_back_on_channel_2_is_refused() {
 
 /// Plain text as SCC hex words (odd parity, two characters per word).
 fn hex_words(text: &str) -> String {
-    let par = |b: u8| if b.count_ones() % 2 == 0 { b | 0x80 } else { b };
+    let par = |b: u8| if b.count_ones().is_multiple_of(2) { b | 0x80 } else { b };
     text.as_bytes()
         .chunks(2)
         .map(|c| format!("{:02x}{:02x}", par(c[0]), if c.len() > 1 { par(c[1]) } else { 0x80 }))
