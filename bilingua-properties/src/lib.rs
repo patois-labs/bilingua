@@ -74,13 +74,13 @@ fn mf_doubled(v: &str) -> bool {
     moz::mf_arg().is_match(v) && !v.replace("''", "").contains('\'')
 }
 
-fn limit_err(msg: String) -> Error {
-    Error::Unsupported(format!("input limit: {msg}"))
+fn limit_err(kind: guard::LimitKind, msg: String) -> Error {
+    guard::LimitError::new(kind, format!("input limit: {msg}")).into()
 }
 
 fn check_limits(bytes: &[u8], l: &Limits) -> Result<(), Error> {
     if bytes.len() > l.max_input_bytes {
-        return Err(limit_err(format!("the file is larger than {} bytes", l.max_input_bytes)));
+        return Err(limit_err(guard::LimitKind::InputBytes, format!("the file is larger than {} bytes", l.max_input_bytes)));
     }
     Ok(())
 }
@@ -89,7 +89,7 @@ fn line_budget(text: &str, l: &Limits) -> Result<(), Error> {
     let limit = l.max_units.saturating_mul(20);
     let breaks = text.bytes().filter(|&b| b == b'\n' || b == b'\r').count();
     if breaks > limit {
-        return Err(limit_err(format!("the file has more than {limit} lines")));
+        return Err(limit_err(guard::LimitKind::Lines, format!("the file has more than {limit} lines")));
     }
     Ok(())
 }
@@ -234,13 +234,13 @@ impl Properties {
                 continue;
             }
             if units.len() >= limits.max_units {
-                return Err(limit_err(format!("the file has more than {} entries", limits.max_units)));
+                return Err(limit_err(guard::LimitKind::Units, format!("the file has more than {} entries", limits.max_units)));
             }
             let mf_is_doubled = translatable && mf_doubled(&e.value);
             let shown: std::borrow::Cow<str> = if mf_is_doubled { e.value.replace("''", "'").into() } else { (&e.value[..]).into() };
             let (lead, core, trail) = scan::split_ws(&shown);
             if core.len() > limits.max_value_chars && core.chars().count() > limits.max_value_chars {
-                return Err(limit_err(format!("a value is longer than {} characters", limits.max_value_chars)));
+                return Err(limit_err(guard::LimitKind::UnitChars, format!("a value is longer than {} characters", limits.max_value_chars)));
             }
             let mut unit = if translatable {
                 n_tr += 1;

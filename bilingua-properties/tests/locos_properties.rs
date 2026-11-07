@@ -143,15 +143,19 @@ fn hostile_inputs() {
     assert!(matches!(&err, Error::Parse { msg, .. } if msg.contains("malformed")), "{err}");
     let bin = b"k = v\x00\x01\x02\x03\x04\x05".repeat(50);
     let err = Properties.extract(&bin, &opts()).unwrap_err();
-    assert!(matches!(&err, Error::Unsupported(m) if m.contains("binary")), "{err}");
+    // LocOS kv_resource.refuse_binary: an encoding refusal (UnsupportedEncodingError) with this sentence
+    assert!(
+        matches!(&err, Error::Encoding(m) if m == "file is not valid UTF-8 and looks like a binary file, not text; re-save the file as UTF-8."),
+        "{err:?}"
+    );
     let utf16: Vec<u8> = [0xFFu8, 0xFE].into_iter().chain("k=v\n".encode_utf16().flat_map(|u| u.to_le_bytes())).collect();
     let err = Properties.extract(&utf16, &opts()).unwrap_err();
-    assert!(matches!(&err, Error::Unsupported(m) if m.contains("UTF-16")), "{err}");
+    assert!(matches!(&err, Error::Encoding(m) if m.contains("UTF-16")), "{err}");
     // over the unit cap
     let big: String = (0..30).map(|i| format!("key{i} = Value number {i}\n")).collect();
     let small = { let mut built = Limits::default(); built.max_units = 10; built };
     let err = Properties.extract_with(big.as_bytes(), &opts(), &small).unwrap_err();
-    assert!(matches!(&err, Error::Unsupported(m) if m.contains("limit")), "{err}");
+    assert!(matches!(&err, Error::Limit(e) if e.msg.contains("limit") && e.kind == LimitKind::Units), "{err}");
     // a key-only file and a file of comments only parse to nothing
     assert!(units(b"# only a comment\nflag\n").is_empty());
     // odd backslash at the end of the file, no next line: no crash
