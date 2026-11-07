@@ -186,3 +186,17 @@ fn a_label_full_of_placeholders_loads_its_translation_linearly() {
     assert_eq!(StfFilter.merge(&doc).unwrap(), s.as_bytes());
     assert!(t.elapsed().as_secs() < 30, "took {:?}", t.elapsed());
 }
+
+/// Wild file (11-06): a Source file whose rows use `KEY=label` instead of a tab has no rows. It stays byte for byte
+/// and says why.
+#[test]
+fn rows_without_a_tab_give_no_units_and_a_warning() {
+    let src = "Language code: en_US\nType: Source\n\nCustomLabel.A=Save\nCustomLabel.B=Cancel\n";
+    let doc = StfFilter.extract(src.as_bytes(), &off()).unwrap();
+    assert!(doc.units.is_empty());
+    assert!(doc.warnings.iter().any(|w| w.kind == "no_tab_rows"), "{:?}", doc.warnings);
+    assert_eq!(StfFilter.merge(&doc).unwrap(), src.as_bytes());
+    // an empty Bilingual file has nothing stray and nothing to say
+    let empty = "Language code: ja\nType: Bilingual\n\n------------------TRANSLATED-------------------\n\n------------------UNTRANSLATED-----------------\n";
+    assert!(StfFilter.extract(empty.as_bytes(), &off()).unwrap().warnings.is_empty());
+}

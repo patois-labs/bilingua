@@ -274,3 +274,38 @@ fn a_schema_1_sdlxliff_document_still_merges_by_mid() {
     let out = String::from_utf8(f.merge(&d).unwrap()).unwrap();
     assert!(out.contains("mid=\"1\">Speichern.</mrk>") && out.contains("mid=\"4\">Schliessen.</mrk>"), "{out}");
 }
+
+// ---- wild-file fixes (11-06) ----
+
+/// A prefixed `version` attribute on the root (`its:version`, Phrase's `m:version`) is not the XLIFF version.
+#[test]
+fn prefixed_version_attributes_do_not_make_a_1_2_file_xliff_2() {
+    let its = "<?xml version=\"1.0\"?>\n<xliff xmlns=\"urn:oasis:names:tc:xliff:document:1.2\" xmlns:its=\"http://www.w3.org/2005/11/its\" its:version=\"2.0\" version=\"1.2\">\n<file original=\"a.txt\" source-language=\"en\" target-language=\"fr\" datatype=\"plaintext\"><body>\n<trans-unit id=\"1\"><source>Hello</source></trans-unit>\n</body></file></xliff>\n";
+    let d = filter("xliff").extract(its.as_bytes(), &opts()).unwrap();
+    assert_eq!(d.segment_count(), 1);
+    let mx = "<?xml version=\"1.0\"?><xliff xmlns=\"urn:oasis:names:tc:xliff:document:1.2\" xmlns:m=\"http://www.memsource.com/mxlf/2.0\" version=\"1.2\" m:level=\"2\" m:version=\"2.9\">\n<file original=\"a.txt\" source-language=\"en\" target-language=\"lo\" datatype=\"x-undefined\"><body>\n<group id=\"0\"><trans-unit id=\"t:0\" m:confirmed=\"0\"><source>Hello</source><target/></trans-unit></group>\n</body></file></xliff>\n";
+    let d = filter("mxliff").extract(mx.as_bytes(), &opts()).unwrap();
+    assert_eq!(d.format, "mxliff");
+    assert_eq!(d.segment_count(), 1);
+    // spaces around the equals sign and single quotes still count as the real version
+    assert_eq!(Doc::from_bytes(b"<xliff version = '2.0' xmlns='urn:oasis:names:tc:xliff:document:2.0' srcLang='en'><file id='f'><unit id='1'><segment><source>x</source></segment></unit></file></xliff>".to_vec()).unwrap().format(), Format::Xliff2);
+}
+
+/// A 1.2 `<target>` that wraps its whole text in one `<mrk mtype="seg">` (no `seg-source`): writing a translation
+/// must replace the content of the target, not leave an unclosed `<mrk>`.
+#[test]
+fn target_wrapped_in_a_seg_mrk_without_seg_source_survives_a_write() {
+    let src = "<?xml version=\"1.0\"?>\n<xliff version=\"1.2\" xmlns=\"urn:oasis:names:tc:xliff:document:1.2\">\n<file original=\"a.po\" source-language=\"en\" target-language=\"fr\" datatype=\"plaintext\"><body>\n<trans-unit id=\"1\"><source>Hello</source><target><mrk mid=\"0\" mtype=\"seg\">Bonjour</mrk></target></trans-unit>\n</body></file></xliff>\n";
+    for id in ["xliff", "sdlxliff"] {
+        let f = filter(id);
+        let mut d = f.extract(src.as_bytes(), &opts()).unwrap();
+        assert_eq!(f.merge(&d).unwrap(), src.as_bytes());
+        d.set_target("1", vec![Inline::text("Salut")]).unwrap();
+        let out = f.merge(&d).unwrap();
+        let text = String::from_utf8(out.clone()).unwrap();
+        assert!(text.contains("Salut"), "{text}");
+        assert_eq!(text.matches("<mrk").count(), text.matches("</mrk>").count(), "{text}");
+        let again = f.extract(&out, &opts()).unwrap();
+        assert_eq!(tgt(&again, "1"), "Salut");
+    }
+}

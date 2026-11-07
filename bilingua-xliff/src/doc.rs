@@ -122,6 +122,27 @@ pub struct Doc {
     unit_data: Vec<Vec<(String, Range<usize>)>>,
 }
 
+/// True when the root element's own `version` attribute starts with `2.` (a prefixed attribute such as Phrase's
+/// `m:version="2.9"` is not the XLIFF version).
+fn root_version_is_2(tag: &str) -> bool {
+    let b = tag.as_bytes();
+    let mut from = 0;
+    while let Some(p) = tag[from..].find("version") {
+        let at = from + p;
+        from = at + 7;
+        if at == 0 || !b[at - 1].is_ascii_whitespace() {
+            continue;
+        }
+        let rest = tag[at + 7..].trim_start();
+        let Some(rest) = rest.strip_prefix('=') else { continue };
+        let rest = rest.trim_start();
+        if rest.starts_with("\"2.") || rest.starts_with("'2.") {
+            return true;
+        }
+    }
+    false
+}
+
 /// The dialect of a file from its header.
 pub fn detect(buf: &[u8]) -> Result<Format, Error> {
     let head = &buf[..buf.len().min(16 * 1024)];
@@ -137,7 +158,7 @@ pub fn detect(buf: &[u8]) -> Result<Format, Error> {
     };
     let tag_end = text[p..].find('>').map_or(text.len(), |e| p + e);
     let tag = &text[p..tag_end];
-    if tag.contains("version=\"2.") || tag.contains("version='2.") {
+    if root_version_is_2(tag) {
         Ok(Format::Xliff2)
     } else if tag.contains("SdlXliff") || tag.contains("xmlns:sdl") {
         Ok(Format::Sdlxliff)
