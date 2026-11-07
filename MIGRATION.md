@@ -447,6 +447,16 @@ commented list in the test.
 - **AsciiDoc, glued macros.** `link:`, `xref:`, `mailto:`, `image:`, `footnote:`, `kbd:` and `btn:` are macros even
   right after a letter (`wordfootnote:[A note.]`), as Asciidoctor reads them; LocOS offered the macro syntax as text.
   A macro still needs its `[..]`, so `footnote:` in prose and URLs in text do not change. Golden list `GLUED_MACRO`.
+- **AsciiDoc, translated table cells (security).** In a nested `!===` table a translated `|` is escaped (`\|`) as well
+  as `!`, so it cannot split the outer `a|` cell. A cell that starts its line gets the `{empty}` guard when the
+  translation opens with block syntax or a directive (`ifdef::`, `include::`, `//`), as paragraphs do. LocOS does
+  neither (issue 788); the fix is going into LocOS too.
+- **rc, a short escape before a translated digit.** `\x4` followed by `1`, or `\1` followed by `2`, would be read by
+  rc.exe as `\x41` and `\12`. Bilingua refuses the merge (`Unwritable`); LocOS writes the merged escape (issue 791).
+- **Fluent, multi-line indent.** A value that starts on its own line writes its continuation lines at that line's
+  indent. LocOS used the first deeper-indented line, so the value gained two spaces per merge (issue 811, item 1).
+  The golden file was regenerated with that one LocOS function patched in `tests/tools/gen_golden.py`; drop the
+  patch when LocOS has the fix.
 - **LaTeX, text after a control word.** When a translation that starts with a letter follows a control word of the
   skeleton, Bilingua writes `\chapter{}Text`; LocOS writes `\chapterText`, another (undefined) control word. A text
   after a control space at a line end gets a blank for the same reason. Golden list `GLUED_WORD` (49 cases, each
