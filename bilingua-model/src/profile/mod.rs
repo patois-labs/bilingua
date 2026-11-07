@@ -9,6 +9,7 @@
 //! [`tokens`] converts inline codes to and from the text tokens Localization OS uses, one token per tag.
 
 use crate::{CodeData, Document, Error, ExtractOptions, Inline, MergeOptions, OutputEncoding, TagKind, Unit};
+use serde::Serialize;
 
 pub mod tokens;
 
@@ -39,6 +40,12 @@ pub fn locos() -> Profile {
     Profile { name: LOCOS, version: LOCOS_VERSION }
 }
 
+/// The oldest version of the LocOS profile this release can still produce on request. A release that bumps
+/// [`LOCOS_VERSION`] keeps the old behaviour reachable (`resolve("locos@1")`), the way LocOS keeps its own walk and
+/// reading stamps, so a document stored under the old version still rebuilds; it raises this only when an old version
+/// cannot be replayed any more, and the adapter then asks for a re-import.
+pub const LOCOS_OLDEST_VERSION: u32 = 1;
+
 /// Every profile Bilingua knows.
 pub fn profiles() -> Vec<Profile> {
     vec![locos()]
@@ -47,6 +54,32 @@ pub fn profiles() -> Vec<Profile> {
 /// The profile with this name.
 pub fn find(name: &str) -> Option<Profile> {
     profiles().into_iter().find(|p| p.name == name)
+}
+
+/// The profile a caller asks for, at a version: `spec` is a name (`"locos"`) or a name and a version
+/// (`"locos@1"`); `version`, when given, must agree with a version in `spec`. No version means the current one. An
+/// unknown name is `Error::UnknownProfile`; a version this release cannot produce (newer than the current one, or
+/// older than the oldest it replays) is `Error::ParserVersion`, so the caller can ask for a re-import.
+pub fn resolve(spec: &str, version: Option<u32>) -> Result<Profile, Error> {
+    let (name, in_spec) = match spec.split_once('@') {
+        Some((n, v)) => {
+            let v: u32 = v.parse().map_err(|_| Error::UnknownProfile(spec.to_string()))?;
+            (n, Some(v))
+        }
+        None => (spec, None),
+    };
+    let current = find(name).ok_or_else(|| Error::UnknownProfile(spec.to_string()))?;
+    let want = match (in_spec, version) {
+        (Some(a), Some(b)) if a != b => return Err(Error::UnknownProfile(format!("{spec} (asked for version {b})"))),
+        (a, b) => a.or(b).unwrap_or(current.version),
+    };
+    if !current.reads(want) {
+        return Err(Error::ParserVersion {
+            found: format!("profile {name} version {want}"),
+            expected: format!("profile {name} versions {} to {}", current.oldest(), current.version),
+        });
+    }
+    Ok(Profile { name: current.name, version: want })
 }
 
 /// Refuses a profile name Bilingua does not know (`Error::UnknownProfile`); `None` is fine.
@@ -64,6 +97,21 @@ pub fn check(name: Option<&str>) -> Result<(), Error> {
 const LOCOS_KEEPS_ENCODING: &[&str] = &["ini", "strings", "dxf", "txt", "properties"];
 
 impl Profile {
+    /// The oldest version of this profile the release can still produce.
+    pub fn oldest(&self) -> u32 {
+        match self.name {
+            LOCOS => LOCOS_OLDEST_VERSION,
+            _ => self.version,
+        }
+    }
+
+    /// True when this release can produce version `version` of the profile (the current one or an older one it
+    /// still replays).
+    pub fn reads(&self, version: u32) -> bool {
+        let current = find(self.name).map_or(self.version, |p| p.version);
+        (self.oldest()..=current).contains(&version)
+    }
+
     /// Extraction options with this profile switched on.
     pub fn extract_options(&self) -> ExtractOptions {
         ExtractOptions::new().with_profile(self.name)
@@ -225,6 +273,45 @@ pub fn is_rtl(code: &str) -> bool {
     LANGS.contains(&parts[0])
 }
 
+/// One translatable segment as the Localization OS adapter numbers it ([`locos_units`]).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[non_exhaustive]
+pub struct LocosUnit {
+    /// LocOS's paragraph index (`TextUnit.p_index`).
+    pub p_index: i64,
+    /// The Bilingua segment id the index stands for (what [`locos_set_target`] takes).
+    pub segment_id: String,
+    /// The segment's source as LocOS text, tokens included ([`tokens::to_locos_text_for`]).
+    pub text: String,
+    /// The side map of the tokens in `text`, for [`tokens::from_locos_text`].
+    pub map: tokens::LocosMap,
+    /// LocOS's style for the unit: `locos.style`, else `context.style`, else empty.
+    pub style: String,
+}
+
+/// The translatable segments of a document extracted under the LocOS profile at paragraph granularity, numbered the
+/// way Localization OS numbers its units: `p_index` is `context.extra[P_INDEX]` when every segment's unit has one
+/// and they are all distinct, else the position among the translatable segments; the text is the segment's source
+/// with its codes as LocOS tokens, numbered by the format's LocOS rule.
+pub fn locos_units(doc: &Document) -> Vec<LocosUnit> {
+    let segs: Vec<(&Unit, &crate::Segment)> = doc.units.iter().filter(|u| u.translate).flat_map(|u| u.segments.iter().map(move |s| (u, s))).collect();
+    let metas: Vec<Option<i64>> = segs.iter().map(|(u, _)| u.context.extra.get(P_INDEX).and_then(|p| p.parse().ok())).collect();
+    let distinct = metas.iter().flatten().collect::<std::collections::BTreeSet<_>>().len() == metas.len();
+    let use_meta = !segs.is_empty() && metas.iter().all(Option::is_some) && distinct;
+    segs.iter()
+        .enumerate()
+        .map(|(i, (u, s))| {
+            let (text, map) = tokens::to_locos_text_for(&doc.format, &s.source);
+            let style = u.context.extra.get(STYLE).filter(|s| !s.is_empty()).cloned().or_else(|| u.context.style.clone()).unwrap_or_default();
+            let p_index = match (use_meta, metas[i]) {
+                (true, Some(p)) => p,
+                _ => i as i64,
+            };
+            LocosUnit { p_index, segment_id: s.id.clone(), text, map, style }
+        })
+        .collect()
+}
+
 /// Sets a target the way Localization OS means it: an empty LocOS target is a translation to nothing (written as
 /// an empty value, [`Document::set_target_empty`]); one of white space only is written as that white space (LocOS
 /// writes it, and the adapter's JSON document carries it, where [`Document::set_target`] would read it as no
@@ -260,5 +347,19 @@ mod tests {
             assert_eq!(lang_tag(code).as_deref(), want, "{code}");
         }
         assert!(is_rtl("ar-SA") && is_rtl("ku-Arab") && is_rtl("he") && !is_rtl("ug-Latn") && !is_rtl("de") && !is_rtl("<x>"));
+    }
+
+    #[test]
+    fn resolve_names_and_versions() {
+        assert_eq!(resolve("locos", None).unwrap(), locos());
+        assert_eq!(resolve("locos@1", None).unwrap(), locos());
+        assert_eq!(resolve("locos", Some(LOCOS_VERSION)).unwrap(), locos());
+        assert_eq!(resolve("locos@1", Some(1)).unwrap().version, 1);
+        assert!(matches!(resolve("locos@1", Some(2)), Err(Error::UnknownProfile(_))));
+        assert!(matches!(resolve("locos@x", None), Err(Error::UnknownProfile(_))));
+        assert!(matches!(resolve("nope", None), Err(Error::UnknownProfile(_))));
+        assert!(matches!(resolve("locos", Some(LOCOS_VERSION + 1)), Err(Error::ParserVersion { .. })));
+        assert!(matches!(resolve("locos@0", None), Err(Error::ParserVersion { .. })));
+        assert!(locos().reads(1) && !locos().reads(0) && !locos().reads(LOCOS_VERSION + 1));
     }
 }

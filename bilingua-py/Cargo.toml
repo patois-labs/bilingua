@@ -24,3 +24,6 @@ pyo3 = { version = "0.26", features = ["abi3-py311"] }
 [features]
 # maturin turns this on for wheels; plain cargo test and cargo clippy leave it off so they link.
 extension-module = ["pyo3/extension-module"]
+# A Windows abi3 wheel built off Windows (maturin with cargo-xwin) needs python3.lib; PyO3 writes it with this.
+# Off by default; pass `--features generate-import-lib` for that build only.
+generate-import-lib = ["pyo3/generate-import-lib"]

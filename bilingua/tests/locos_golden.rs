@@ -17,38 +17,13 @@ use serde_json::Value;
 use std::collections::{BTreeSet, HashMap};
 use std::path::{Path, PathBuf};
 
-struct Numbered {
-    p: i64,
-    seg: String,
-    text: String,
-    map: tokens::LocosMap,
-    style: String,
-}
-
 fn opts(locale: Option<&str>) -> ExtractOptions {
     profile::locos().extract_options().with_granularity(Granularity::Paragraph).with_target_lang(locale.map(|l| l.replace('_', "-")))
 }
 
-fn numbered(doc: &Document) -> Vec<Numbered> {
-    let segs: Vec<(&Unit, &Segment)> = doc.units.iter().filter(|u| u.translate).flat_map(|u| u.segments.iter().map(move |s| (u, s))).collect();
-    let metas: Vec<Option<i64>> = segs.iter().map(|(u, _)| u.context.extra.get(profile::P_INDEX).and_then(|p| p.parse().ok())).collect();
-    let distinct = metas.iter().flatten().collect::<BTreeSet<_>>().len() == metas.len();
-    let use_meta = !segs.is_empty() && metas.iter().all(Option::is_some) && distinct;
-    segs.iter()
-        .enumerate()
-        .map(|(i, (u, s))| {
-            let (text, map) = tokens::to_locos_text_for(&doc.format, &s.source);
-            let style = u
-                .context
-                .extra
-                .get(profile::STYLE)
-                .filter(|s| !s.is_empty())
-                .cloned()
-                .or_else(|| u.context.style.clone())
-                .unwrap_or_default();
-            Numbered { p: if use_meta { metas[i].unwrap() } else { i as i64 }, seg: s.id.clone(), text, map, style }
-        })
-        .collect()
+/// The adapter's numbering, from the profile (one implementation, also behind `bilingua.locos_units` in Python).
+fn numbered(doc: &Document) -> Vec<profile::LocosUnit> {
+    profile::locos_units(doc)
 }
 
 /// The goldens' root: `tests/locos`, or `BILI_LOCOS_ROOT` (a corpus from `oracle/locos_fuzz.py`).
@@ -278,7 +253,7 @@ fn check(golden: &Path) -> (usize, usize, usize, Vec<String>) {
         Ok(d) => d,
         Err(e) => return (0, 0, 0, vec![format!("{name}: extract failed: {e}")]),
     };
-    let have: Vec<(i64, String, String)> = numbered(&doc).into_iter().map(|n| (n.p, n.text, n.style)).collect();
+    let have: Vec<(i64, String, String)> = numbered(&doc).into_iter().map(|n| (n.p_index, n.text, n.style)).collect();
     let want: Vec<(i64, String, String)> = g["units"]
         .as_array()
         .unwrap()
@@ -330,10 +305,10 @@ fn check(golden: &Path) -> (usize, usize, usize, Vec<String>) {
         };
         let mut set_fail = None;
         for n in numbered(&doc) {
-            if let Some(t) = map.get(&n.p.to_string()).and_then(Value::as_str) {
+            if let Some(t) = map.get(&n.p_index.to_string()).and_then(Value::as_str) {
                 let inl = tokens::from_locos_text(t, &n.map);
-                if let Err(e) = profile::locos_set_target(&mut doc, &n.seg, inl) {
-                    set_fail = Some(format!("{label}: set_target {}: {e}", n.p));
+                if let Err(e) = profile::locos_set_target(&mut doc, &n.segment_id, inl) {
+                    set_fail = Some(format!("{label}: set_target {}: {e}", n.p_index));
                 }
             }
         }

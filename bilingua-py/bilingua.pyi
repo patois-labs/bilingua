@@ -72,7 +72,18 @@ class Warning(TypedDict, total=False):
     part: str
     message: str
 
+class ParserRecord(TypedDict, total=False):
+    """What made a Document (`extract` adds it as `parser`; `merge` ignores it)."""
+    bilingua: str
+    format: str
+    crate: str | None
+    crate_version: str | None
+    schema: int | None
+    profile: str | None
+    profile_version: int | None
+
 class Document(TypedDict, total=False):
+    parser: ParserRecord
     format: str
     name: str | None
     source_lang: str | None
@@ -113,11 +124,15 @@ def extract(
     limits: Mapping[str, int] | None = None,
     format_options: Mapping[str, FormatOptionValue] | None = None,
     profile: str | None = None,
+    profile_version: int | None = None,
 ) -> Document:
     """Opens a file. `limits` changes any of the safety limits by name (`max_units`, ...). `format_options` are
     `"<format>.<name>"` keys (`"csv.columns"`, `"odf.translate_comments"`) to str, bool or int; a key no format
     declares, a value of the wrong kind, or an unknown `profile` raises BilinguaError with code
-    "invalid_argument". `profile="locos"` gives Localization OS's behaviour."""
+    "invalid_argument". `profile="locos"` gives Localization OS's behaviour; `profile="locos@1"` or
+    `profile_version=1` asks for that version of the profile (a version this release cannot produce raises code
+    "parser_version"). The Document carries `parser`: the Bilingua release, the format crate, its version and
+    skeleton schema, and the profile and its version, for the caller to stamp."""
 
 def merge(
     document: Mapping[str, Any],
@@ -126,16 +141,60 @@ def merge(
     stamp_target_always: bool | None = None,
     profile: str | None = None,
     format_options: Mapping[str, FormatOptionValue] | None = None,
+    profile_version: int | None = None,
 ) -> bytes:
     """Writes a Document back to file bytes. Every option is keyword-only. `output_encoding="utf-8"` writes UTF-8
     whatever the file's own encoding ("keep" is the default); `stamp_target_always` stamps the target language and
     fills plurals even when nothing is translated (default False). `profile="locos"` starts from Localization OS's
     options (UTF-8 out except ini, strings, dxf, txt and properties, stamp always); `output_encoding` and
     `stamp_target_always` given here override the profile's. An unknown profile or format option raises BilinguaError with code
-    "invalid_argument"."""
+    "invalid_argument". The profile version is `profile_version`, else the one in `profile` (`"locos@1"`), else the
+    one in the Document's `parser` record, else the current one; one this release cannot produce raises
+    "parser_version"."""
 
 def profiles() -> dict[str, int]:
     """The profiles Bilingua knows, name to version (`{"locos": 1}`)."""
 
 def version() -> str:
     """The Bilingua version."""
+
+class LocosCode(TypedDict, total=False):
+    id: str
+    letter: str
+    open: str | None
+    close: str | None
+    free: bool
+    unpaired: Literal["open", "close"]
+
+LocosMap = dict[str, LocosCode]
+
+class TokenProblem(TypedDict, total=False):
+    kind: Literal["stray", "unknown", "kind_mismatch"]
+    token: str
+    at: int
+
+class LocosUnit(TypedDict):
+    p_index: int
+    segment_id: str
+    text: str
+    map: LocosMap
+    style: str
+
+def to_locos_text(format: str, inlines: list[Inline]) -> tuple[str, LocosMap]:
+    """A segment's inline list as Localization OS text (tokens such as `⟦g1⟧`) and its token map,
+    numbered by the LocOS rule of `format`: pairs by id for html, the tag ids as numbers for docx, pptx and xlsx,
+    in reading order otherwise; a number that look-alike text in the source uses is skipped."""
+
+def from_locos_text(text: str, map: LocosMap) -> tuple[list[Inline], list[TokenProblem]]:
+    """Localization OS text back to inlines with the map `to_locos_text` gave. A malformed token, one naming no
+    code in the map, or one of the wrong kind stays in the text as it is and is listed."""
+
+def locos_units(document: Mapping[str, Any]) -> list[LocosUnit]:
+    """The translatable segments of a Document extracted with `profile="locos"`, numbered as Localization OS
+    numbers its units (`locos.p_index` when every unit has a distinct one, else the position), with their LocOS
+    text, token map and style."""
+
+def locos_set_targets(document: Mapping[str, Any], targets: Mapping[str, str]) -> tuple[Document, dict[str, list[TokenProblem]]]:
+    """Sets LocOS-text translations by segment id the way Localization OS means them (empty = translated to
+    nothing, white space kept, standalone placeholders may repeat). Returns the new Document and, per segment, the
+    tokens kept as text. A target the document cannot take raises BilinguaError naming the segment."""
