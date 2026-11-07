@@ -86,7 +86,9 @@ const SETEXT: &[&str] = &[
 ];
 /// CELL_GUARD: translated table cells (#788). A `|` in a nested-table cell is escaped, and a cell that starts a line
 /// gets the `{empty}` guard when the translation opens with block syntax or a directive; LocOS does neither, so the
-/// builds of these cases differ. Units, styles, inline maps and the echo build are still compared.
+/// builds of these cases differ. Units, styles, inline maps and the echo build are still compared, and every other
+/// build must match LocOS once both have those two things taken out (`norm`; LocOS digests in
+/// `data/cell_guard_norm.json`, made by `tools/gen_cell_guard.py`).
 const CELL_GUARD: &[&str] = &[
     "random-5", "random-8", "random-9", "random-32", "random-41", "random-53", "random-54", "random-57",
     "random-59", "random-60", "random-61", "random-63", "random-76", "random-77", "random-80", "random-91",
@@ -103,8 +105,38 @@ const CELL_GUARD: &[&str] = &[
 /// `btn:`, `mailto:`) even right after a letter; LocOS offered the macro syntax as text.
 const GLUED_MACRO: &[&str] = &["random-558"];
 
+/// A build without the #788 differences: every `{empty}` that starts a line and every backslash right before `|`
+/// are dropped (the same rule as `norm` in `tools/gen_cell_guard.py`).
+fn norm(b: &[u8]) -> Vec<u8> {
+    let mut out = Vec::with_capacity(b.len());
+    let mut i = 0;
+    while i < b.len() {
+        if b[i..].starts_with(b"{empty}") && (i == 0 || matches!(b[i - 1], b'\r' | b'\n')) {
+            i += 7;
+            continue;
+        }
+        if b[i] == b'\\' && b.get(i + 1) == Some(&b'|') {
+            i += 1;
+            continue;
+        }
+        out.push(b[i]);
+        i += 1;
+    }
+    out
+}
+
+/// For a CELL_GUARD case: true when the build differs from LocOS by more than the cell escapes and the guard.
+fn beyond_cell_guard(norms: &serde_json::Value, name: &str, key: &str, build: &[u8]) -> bool {
+    norms[name][key].as_str() != Some(fnv(&norm(build)).as_str())
+}
+
 #[test]
 fn matches_locos_on_random_files() {
+    let norms: serde_json::Value = serde_json::from_str(
+        &std::fs::read_to_string(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/data/cell_guard_norm.json")).unwrap(),
+    )
+    .unwrap();
+    assert_eq!(norms.as_object().unwrap().len(), CELL_GUARD.len(), "regenerate data/cell_guard_norm.json");
     let text = std::fs::read_to_string(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/data/locos_golden.json")).unwrap();
     let cases: Vec<serde_json::Value> = serde_json::from_str(&text).unwrap();
     assert!(cases.len() >= 609);
@@ -155,9 +187,12 @@ fn matches_locos_on_random_files() {
         }
         let mut differs = false;
         for (label, d) in c["builds"].as_object().unwrap() {
-            let got = fnv(&run(&data, &mapping(label, &want), None));
+            let b = run(&data, &mapping(label, &want), None);
+            let got = fnv(&b);
             if got != d.as_str().unwrap() {
-                if setext && label != "echo" {
+                if CELL_GUARD.contains(&name) && beyond_cell_guard(&norms, name, label, &b) {
+                    bad.push(format!("{name}: build {label} differs beyond the cell guard"));
+                } else if setext && label != "echo" {
                     differs = true;
                 } else {
                     bad.push(format!("{name}: build {label}"));
@@ -174,7 +209,9 @@ fn matches_locos_on_random_files() {
                 let m = mapping(label, &want);
                 let got = run(&data, &m, Some(lc));
                 if fnv(&got) != d.as_str().unwrap() {
-                    if setext && label != "echo" {
+                    if CELL_GUARD.contains(&name) && beyond_cell_guard(&norms, name, lc, &got) {
+                        bad.push(format!("{name}: localized {lc} differs beyond the cell guard"));
+                    } else if setext && label != "echo" {
                         differs = true;
                     } else {
                         bad.push(format!("{name}: localized {lc} ({label})"));
