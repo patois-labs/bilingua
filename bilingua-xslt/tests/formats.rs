@@ -244,3 +244,17 @@ fn entity_from_an_external_subset_is_a_protected_token() {
     let bad = b"<?xml version=\"1.0\"?>\n<xsl:stylesheet version=\"1.0\" xmlns:xsl=\"http://www.w3.org/1999/XSL/Transform\">\n<xsl:template match=\"/\"><p>See &pfx; now</p></xsl:template>\n</xsl:stylesheet>\n";
     assert!(Xslt.extract(bad, &opts()).is_err());
 }
+
+#[test]
+fn carriage_return_reference_in_a_crlf_file_keeps_the_file_line_breaks() {
+    // a CRLF file: the CR of `&#13;` is written back as a reference and the translation's other line breaks as CRLF
+    let data = b"<?xml version=\"1.0\"?>\r\n<xsl:stylesheet version=\"1.0\" xmlns:xsl=\"http://www.w3.org/1999/XSL/Transform\">\r\n<xsl:template match=\"/\"><xsl:text>One&#13;\r\nTwo</xsl:text></xsl:template>\r\n</xsl:stylesheet>\r\n";
+    let d = extract(data);
+    assert_eq!(Xslt.merge(&d).unwrap(), data);
+    let i = d.units.iter().position(|u| u.source().iter().any(|x| matches!(x, Inline::Text(t) if t.contains('\r')))).expect("a unit with the CR");
+    let mut d2 = d.clone();
+    d2.units[i].segments[0].target = vec![Inline::text("Eins\r\nZwei\nDrei")];
+    let out = s(&Xslt.merge(&d2).unwrap());
+    assert!(out.contains("Eins&#13;\r\nZwei\r\nDrei"), "{out:?}");
+    assert!(!out.replace("\r\n", "").contains('\n'), "{out:?}");
+}

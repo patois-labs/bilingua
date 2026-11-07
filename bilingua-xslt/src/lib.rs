@@ -58,9 +58,11 @@ fn escape_lit(s: &str, tvt: bool, attr: bool, quote: u8, crlf: bool, keep_cr: bo
         s = s.replace('\t', "&#9;").replace('\n', "&#10;").replace('\r', "&#13;");
     } else {
         s = s.replace('>', "&gt;");
+        // the CRs become references first, so a CRLF file's own line breaks still follow the file
         if keep_cr {
             s = s.replace('\r', "&#13;");
-        } else if crlf {
+        }
+        if crlf {
             s = s.replace('\n', "\r\n");
         }
     }
