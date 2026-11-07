@@ -89,8 +89,7 @@ fn translated_round_trip() {
 fn unknown_token_is_kept_as_text() {
     let tok = "\u{27E6}x77\u{27E7}";
     let out = build_str(b"Plain words here.\n", &[(0, &format!("Words {tok} *star* {tok}"))]);
-    assert_eq!(out, format!("Words {tok} \*star\* {tok}
-"));
+    assert_eq!(out, format!("Words {tok} \\*star\\* {tok}\n"));
     // a closing-form token, a pair token with no pair and a number no code has
     for t in ["\u{27E6}/g5\u{27E7}", "\u{27E6}g5\u{27E7}", "\u{27E6}x9999\u{27E7}"] {
         assert_eq!(build_str(b"Text here.\n", &[(0, &format!("Ein {t} Wort"))]), format!("Ein {t} Wort\n"), "{t}");
