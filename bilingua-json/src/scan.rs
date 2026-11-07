@@ -17,6 +17,10 @@ pub struct StrVal {
 }
 
 const MAX_DEPTH: usize = 200;
+/// The LocOS profile reads as deep as `json.loads` does: LocOS refuses at Python's recursion limit (about 990 levels,
+/// less when its caller's stack is deep), so the profile reads 900 and refuses past that (a 300-level array is text
+/// to LocOS, `verify_json_dialects_filter`).
+const PYTHON_MAX_DEPTH: usize = 900;
 
 pub fn scan(text: &str) -> Result<Vec<StrVal>, Error> {
     scan_with(text, false)
@@ -162,7 +166,8 @@ impl Scan<'_> {
 
     fn enter(&mut self) -> Result<(), Error> {
         self.depth += 1;
-        if self.depth > MAX_DEPTH {
+        let cap = if self.python { PYTHON_MAX_DEPTH } else { MAX_DEPTH };
+        if self.depth > cap {
             return Err(self.err("nesting is too deep"));
         }
         Ok(())

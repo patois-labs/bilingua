@@ -1026,7 +1026,7 @@ fn find_front_matter(lines: &[&str], keys: &[String]) -> Option<FrontMatter> {
             continue;
         };
         let lower = key.to_lowercase();
-        if !keys.iter().any(|k| *k == lower) {
+        if !keys.contains(&lower) {
             continue;
         }
         let Some((end, style)) = (if toml { toml_span(&v, at) } else { yaml_span(&v, at) }) else {

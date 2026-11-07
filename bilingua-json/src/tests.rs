@@ -250,6 +250,12 @@ fn deep_nesting_is_refused_not_crashed() {
     assert!(matches!(JsonFilter.extract(deep.as_bytes(), &Default::default()), Err(Error::Parse { .. })));
     let ok = format!("{}\"fine text\"{}", "[".repeat(100), "]".repeat(100));
     assert_eq!(extract(&ok).units.len(), 1);
+    // the LocOS profile reads as deep as json.loads (300 levels are text there), refusing past 900
+    let o = ExtractOptions::new().with_profile(Some(profile::LOCOS));
+    let deep = format!("{}\"deep text\"{}", "[".repeat(300), "]".repeat(300));
+    assert_eq!(JsonFilter.extract(deep.as_bytes(), &o).unwrap().units.len(), 1);
+    let deeper = format!("{}{}", "[".repeat(901), "]".repeat(901));
+    assert!(matches!(JsonFilter.extract(deeper.as_bytes(), &o), Err(Error::Parse { .. })));
 }
 
 #[test]

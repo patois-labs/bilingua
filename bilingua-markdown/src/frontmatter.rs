@@ -86,7 +86,7 @@ fn parse_line(text: &str, line_start: usize, line: &str, keys: Option<&[String]>
     let colon = line.find(':')?;
     let key = &line[..colon];
     let allowed = match keys {
-        Some(k) => k.iter().any(|k| *k == key.to_lowercase()),
+        Some(k) => k.contains(&key.to_lowercase()),
         None => KEYS.contains(&key),
     };
     if !allowed {
