@@ -189,8 +189,7 @@ fn encode_value(form: &str, value: &str, original_cdata_ok: bool, nl: &str) -> S
     let mut v = clean_target(value);
     // element text and CDATA: the translation's line breaks take the file's style (an attribute holds them as
     // character references, which keep their own value)
-    if !nl.is_empty() && !form.starts_with('a') && v.contains(['', '
-']) {
+    if !nl.is_empty() && !form.starts_with('a') && v.contains(['\r', '\n']) {
         v = with_newlines(&v, nl);
     }
     match form {
@@ -207,15 +206,13 @@ fn with_newlines(s: &str, nl: &str) -> String {
     let mut it = s.chars().peekable();
     while let Some(c) = it.next() {
         match c {
-            '' => {
-                if it.peek() == Some(&'
-') {
+            '\r' => {
+                if it.peek() == Some(&'\n') {
                     it.next();
                 }
                 o.push_str(nl);
             }
-            '
-' => o.push_str(nl),
+            '\n' => o.push_str(nl),
             c => o.push(c),
         }
     }
@@ -223,20 +220,16 @@ fn with_newlines(s: &str, nl: &str) -> String {
 }
 
 /// The line break the file uses: that of its first line break (empty when it has none).
-fn file_newline<'a>(parts: &'a [SkelPart]) -> &'static str {
+fn file_newline(parts: &[SkelPart]) -> &'static str {
     for p in parts {
         if let SkelPart::Raw(s) = p {
-            if let Some(i) = s.find(['', '
-']) {
-                return if s[i..].starts_with("
-") {
-                    "
-"
-                } else if s[i..].starts_with('') {
-                    ""
+            if let Some(i) = s.find(['\r', '\n']) {
+                return if s[i..].starts_with("\r\n") {
+                    "\r\n"
+                } else if s[i..].starts_with('\r') {
+                    "\r"
                 } else {
-                    "
-"
+                    "\n"
                 };
             }
         }
