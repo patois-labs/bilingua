@@ -20,7 +20,7 @@ fn the_known_keys_are_declared() {
         "vsdx.translate_comments",
         "mdx.attrs",
         "mdx.front_matter_keys",
-        // LocOS export keywords the adapter sends: accepted, ignored for now
+        // LocOS export keywords the adapter sends (markdown.walk ignored, markdown.fm_keys applied)
         "docx.walk",
         "xlsx.walk",
         "pptx.walk",

@@ -172,8 +172,9 @@ pub fn locos_skeleton(tag: &str, text: &str) -> Vec<u8> {
 pub fn locos_skeleton_parts(data: &[u8]) -> Option<(&str, &str)> {
     let s = std::str::from_utf8(data).ok()?;
     let (tag, text) = s.split_once('\n')?;
-    // a tag is a charset name with `;nl=` / `;label=` parts: nothing a declaration could carry as markup
-    let ok = !tag.is_empty() && tag.len() <= 200 && tag.bytes().all(|b| b.is_ascii_alphanumeric() || b"_.:;=-".contains(&b));
+    // a tag is a charset name with `;nl=` / `;label=` (markdown: `;fm=`) parts: nothing a declaration could carry
+    // as markup
+    let ok = !tag.is_empty() && tag.len() <= 4096 && tag.bytes().all(|b| b.is_ascii_alphanumeric() || b"_.:;=-".contains(&b));
     ok.then_some((tag, text))
 }
 
@@ -193,8 +194,220 @@ pub fn locos_utf8_tag(tag: &str) -> String {
 pub fn declared_encoding(data: &[u8]) -> Option<&'static Encoding> {
     let head = ascii_head(data, 4096);
     let m = decl_re().captures(&head)?;
-    Encoding::for_label(m.get(2)?.as_str().as_bytes())
+    label_encoding(m.get(2)?.as_str())
 }
+
+/// The encoding a charset label names, as Localization OS reads a declaration (`codecs.lookup`, then its
+/// `_LABEL_ALIASES`): the WHATWG label first (what `encoding_rs` knows), then Python's codec names and aliases of
+/// the legacy charsets a file may declare (`CP932`, `cp936`, `sjis`, `ujis`, `uhc`, `ms949`, `iso8859_2` ...),
+/// normalised the way Python does (case, and runs of punctuation as one `_`). Python's ISO-8859-1, Windows-1252
+/// and UTF-16 aliases are not in the table: LocOS reads those by its default path, not as a declaration.
+pub fn label_encoding(label: &str) -> Option<&'static Encoding> {
+    if let Some(e) = Encoding::for_label(label.trim().as_bytes()) {
+        return Some(e);
+    }
+    let norm = python_normalize(&label.to_ascii_lowercase());
+    let find = |k: &str| PY_ALIASES.binary_search_by(|(a, _)| (*a).cmp(k)).ok().map(|i| PY_ALIASES[i].1);
+    let whatwg = find(&norm).or_else(|| find(&norm.replace('.', "_")))?;
+    Encoding::for_label(whatwg.as_bytes())
+}
+
+/// Python's `encodings.normalize_encoding`: letters, digits and dots kept, every other run of characters one `_`
+/// (none at the ends).
+fn python_normalize(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    let mut punct = false;
+    for c in s.chars() {
+        if c.is_alphanumeric() || c == '.' {
+            if punct && !out.is_empty() {
+                out.push('_');
+            }
+            if c.is_ascii() {
+                out.push(c);
+            }
+            punct = false;
+        } else {
+            punct = true;
+        }
+    }
+    out
+}
+
+/// Python 3 codec aliases (normalised) of the charsets LocOS reads from a declaration, to the WHATWG label of the
+/// same encoding. Sorted (binary search). Generated from `encodings.aliases` and the codec module names.
+const PY_ALIASES: &[(&str, &str)] = &[
+    ("1250", "windows-1250"),
+    ("1251", "windows-1251"),
+    ("1253", "windows-1253"),
+    ("1254", "windows-1254"),
+    ("1255", "windows-1255"),
+    ("1256", "windows-1256"),
+    ("1257", "windows-1257"),
+    ("1258", "windows-1258"),
+    ("866", "ibm866"),
+    ("932", "shift_jis"),
+    ("936", "gbk"),
+    ("949", "euc-kr"),
+    ("arabic", "iso-8859-6"),
+    ("asmo_708", "iso-8859-6"),
+    ("big5", "big5"),
+    ("big5_tw", "big5"),
+    ("chinese", "gbk"),
+    ("cp1250", "windows-1250"),
+    ("cp1251", "windows-1251"),
+    ("cp1253", "windows-1253"),
+    ("cp1254", "windows-1254"),
+    ("cp1255", "windows-1255"),
+    ("cp1256", "windows-1256"),
+    ("cp1257", "windows-1257"),
+    ("cp1258", "windows-1258"),
+    ("cp866", "ibm866"),
+    ("cp874", "windows-874"),
+    ("cp932", "shift_jis"),
+    ("cp936", "gbk"),
+    ("cp949", "euc-kr"),
+    ("csbig5", "big5"),
+    ("csibm866", "ibm866"),
+    ("csiso58gb231280", "gbk"),
+    ("csisolatin2", "iso-8859-2"),
+    ("csisolatin3", "iso-8859-3"),
+    ("csisolatin4", "iso-8859-4"),
+    ("csisolatin5", "iso-8859-9"),
+    ("csisolatin6", "iso-8859-10"),
+    ("csisolatinarabic", "iso-8859-6"),
+    ("csisolatincyrillic", "iso-8859-5"),
+    ("csisolatingreek", "iso-8859-7"),
+    ("csisolatinhebrew", "iso-8859-8"),
+    ("cskoi8r", "koi8-r"),
+    ("csshiftjis", "shift_jis"),
+    ("cyrillic", "iso-8859-5"),
+    ("ecma_114", "iso-8859-6"),
+    ("ecma_118", "iso-8859-7"),
+    ("elot_928", "iso-8859-7"),
+    ("euc_cn", "gbk"),
+    ("euc_jp", "euc-jp"),
+    ("euc_kr", "euc-kr"),
+    ("euccn", "gbk"),
+    ("eucgb2312_cn", "gbk"),
+    ("eucjp", "euc-jp"),
+    ("euckr", "euc-kr"),
+    ("gb18030", "gb18030"),
+    ("gb18030_2000", "gb18030"),
+    ("gb2312", "gbk"),
+    ("gb2312_1980", "gbk"),
+    ("gb2312_80", "gbk"),
+    ("gbk", "gbk"),
+    ("greek", "iso-8859-7"),
+    ("greek8", "iso-8859-7"),
+    ("hebrew", "iso-8859-8"),
+    ("ibm866", "ibm866"),
+    ("iso8859_10", "iso-8859-10"),
+    ("iso8859_13", "iso-8859-13"),
+    ("iso8859_14", "iso-8859-14"),
+    ("iso8859_15", "iso-8859-15"),
+    ("iso8859_16", "iso-8859-16"),
+    ("iso8859_2", "iso-8859-2"),
+    ("iso8859_3", "iso-8859-3"),
+    ("iso8859_4", "iso-8859-4"),
+    ("iso8859_5", "iso-8859-5"),
+    ("iso8859_6", "iso-8859-6"),
+    ("iso8859_7", "iso-8859-7"),
+    ("iso8859_8", "iso-8859-8"),
+    ("iso8859_9", "iso-8859-9"),
+    ("iso_8859_10", "iso-8859-10"),
+    ("iso_8859_10_1992", "iso-8859-10"),
+    ("iso_8859_13", "iso-8859-13"),
+    ("iso_8859_14", "iso-8859-14"),
+    ("iso_8859_14_1998", "iso-8859-14"),
+    ("iso_8859_15", "iso-8859-15"),
+    ("iso_8859_16", "iso-8859-16"),
+    ("iso_8859_16_2001", "iso-8859-16"),
+    ("iso_8859_2", "iso-8859-2"),
+    ("iso_8859_2_1987", "iso-8859-2"),
+    ("iso_8859_3", "iso-8859-3"),
+    ("iso_8859_3_1988", "iso-8859-3"),
+    ("iso_8859_4", "iso-8859-4"),
+    ("iso_8859_4_1988", "iso-8859-4"),
+    ("iso_8859_5", "iso-8859-5"),
+    ("iso_8859_5_1988", "iso-8859-5"),
+    ("iso_8859_6", "iso-8859-6"),
+    ("iso_8859_6_1987", "iso-8859-6"),
+    ("iso_8859_7", "iso-8859-7"),
+    ("iso_8859_7_1987", "iso-8859-7"),
+    ("iso_8859_8", "iso-8859-8"),
+    ("iso_8859_8_1988", "iso-8859-8"),
+    ("iso_8859_9", "iso-8859-9"),
+    ("iso_8859_9_1989", "iso-8859-9"),
+    ("iso_celtic", "iso-8859-14"),
+    ("iso_ir_101", "iso-8859-2"),
+    ("iso_ir_109", "iso-8859-3"),
+    ("iso_ir_110", "iso-8859-4"),
+    ("iso_ir_126", "iso-8859-7"),
+    ("iso_ir_127", "iso-8859-6"),
+    ("iso_ir_138", "iso-8859-8"),
+    ("iso_ir_144", "iso-8859-5"),
+    ("iso_ir_148", "iso-8859-9"),
+    ("iso_ir_157", "iso-8859-10"),
+    ("iso_ir_199", "iso-8859-14"),
+    ("iso_ir_226", "iso-8859-16"),
+    ("iso_ir_58", "gbk"),
+    ("koi8_r", "koi8-r"),
+    ("koi8_u", "koi8-u"),
+    ("korean", "euc-kr"),
+    ("ks_c_5601", "euc-kr"),
+    ("ks_c_5601_1987", "euc-kr"),
+    ("ks_x_1001", "euc-kr"),
+    ("ksc5601", "euc-kr"),
+    ("ksx1001", "euc-kr"),
+    ("l10", "iso-8859-16"),
+    ("l2", "iso-8859-2"),
+    ("l3", "iso-8859-3"),
+    ("l4", "iso-8859-4"),
+    ("l5", "iso-8859-9"),
+    ("l6", "iso-8859-10"),
+    ("l7", "iso-8859-13"),
+    ("l8", "iso-8859-14"),
+    ("l9", "iso-8859-15"),
+    ("latin10", "iso-8859-16"),
+    ("latin2", "iso-8859-2"),
+    ("latin3", "iso-8859-3"),
+    ("latin4", "iso-8859-4"),
+    ("latin5", "iso-8859-9"),
+    ("latin6", "iso-8859-10"),
+    ("latin7", "iso-8859-13"),
+    ("latin8", "iso-8859-14"),
+    ("latin9", "iso-8859-15"),
+    ("mac_cyrillic", "x-mac-cyrillic"),
+    ("mac_roman", "macintosh"),
+    ("maccyrillic", "x-mac-cyrillic"),
+    ("macintosh", "macintosh"),
+    ("macroman", "macintosh"),
+    ("ms932", "shift_jis"),
+    ("ms936", "gbk"),
+    ("ms949", "euc-kr"),
+    ("ms_kanji", "shift_jis"),
+    ("mskanji", "shift_jis"),
+    ("s_jis", "shift_jis"),
+    ("shift_jis", "shift_jis"),
+    ("shiftjis", "shift_jis"),
+    ("sjis", "shift_jis"),
+    ("u_jis", "euc-jp"),
+    ("uhc", "euc-kr"),
+    ("ujis", "euc-jp"),
+    ("windows_1250", "windows-1250"),
+    ("windows_1251", "windows-1251"),
+    ("windows_1253", "windows-1253"),
+    ("windows_1254", "windows-1254"),
+    ("windows_1255", "windows-1255"),
+    ("windows_1256", "windows-1256"),
+    ("windows_1257", "windows-1257"),
+    ("windows_1258", "windows-1258"),
+    ("windows_31j", "shift_jis"),
+    ("x_mac_japanese", "shift_jis"),
+    ("x_mac_korean", "euc-kr"),
+    ("x_mac_simp_chinese", "gbk"),
+    ("x_mac_trad_chinese", "big5"),
+];
 
 /// The charset name a file declares in its first 4 KB, as written.
 #[doc(hidden)]
@@ -816,7 +1029,7 @@ fn encode_text_as_is(text: &str, encoding: &str) -> Result<Vec<u8>, Error> {
     // the bytes and every declaration in the file must agree; if one does not, write UTF-8 under the UTF-8 labels
     let agree = decl_re().captures_iter(&restored).all(|c| {
         let name = c.get(2).map_or("", |m| m.as_str());
-        Encoding::for_label(name.as_bytes()) == Some(enc)
+        label_encoding(name) == Some(enc)
             || env.label.is_some_and(|l| l.eq_ignore_ascii_case(name))
             || name.eq_ignore_ascii_case("us-ascii")
     });
@@ -1114,6 +1327,39 @@ mod tests {
         assert!(matches!(&e, Error::Encoding(m) if m.contains("binary")), "{e}");
         let e = dec(&[b'a', 0x90, b'b'], Some("en"), false).unwrap_err();
         assert!(matches!(e, Error::Encoding(_)));
+    }
+
+    #[test]
+    fn python_charset_names_are_read_and_written_back() {
+        use encoding_rs::*;
+        // LocOS reads a declared charset with Python's codec lookup: CP932, cp936, sjis, uhc are not WHATWG labels
+        for (l, e) in [
+            ("CP932", SHIFT_JIS),
+            ("ms_kanji", SHIFT_JIS),
+            ("x.mac.japanese", SHIFT_JIS),
+            ("cp936", GBK),
+            ("UHC", EUC_KR),
+            ("cp949", EUC_KR),
+            ("ujis", EUC_JP),
+            ("iso8859_2", ISO_8859_2),
+            ("KOI8_R", KOI8_R),
+        ] {
+            assert_eq!(label_encoding(l), Some(e), "{l}");
+        }
+        // WHATWG first: its meaning wins where both know a label; unknown names stay unknown
+        assert_eq!(label_encoding("latin1"), Some(WINDOWS_1252));
+        assert_eq!(label_encoding("x-made-up"), None);
+        assert_eq!(label_encoding("cp437"), None);
+        assert_eq!(label_encoding("MS-932"), None); // Python does not know it either
+        assert!(PY_ALIASES.windows(2).all(|w| w[0].0 < w[1].0), "PY_ALIASES must stay sorted");
+        // a PO header declaring CP932: read as Shift_JIS, written back in it under its own label
+        let mut b = b"msgid \"\"\nmsgstr \"Content-Type: text/plain; charset=CP932\\n\"\n\nmsgid \"a\"\nmsgstr \"".to_vec();
+        b.extend_from_slice(&[0x93, 0xfa, 0x96, 0x7b]);
+        b.extend_from_slice(b"\"\n");
+        let d = dec(&b, Some("en"), true).unwrap();
+        assert!(d.text.contains("\u{65e5}\u{672c}") && d.text.contains("charset=UTF-8"), "{}", d.text);
+        assert!(d.encoding.starts_with("shift_jis") && d.encoding.contains("label=CP932"), "{}", d.encoding);
+        assert_eq!(encode_text(&d.text, &d.encoding).unwrap(), b);
     }
 
     #[test]

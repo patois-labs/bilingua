@@ -292,3 +292,26 @@ fn a_vue_i18n_linked_message_is_not_text() {
     let d = extract(r#"{"a": "Save", "b": "@:common.save", "c": "@.lower:(common.save)", "d": "Press @:common.save now"}"#);
     assert_eq!(texts(&d), ["Save", "Press @:common.save now"]);
 }
+
+#[test]
+fn value_and_string_floods_are_refused_as_limits_like_locos() {
+    // LocOS check_json_budget: more than 20 x max_units commas and brackets, or 40 x max_units quotes, is a
+    // limit refusal before any value is read (a file of `{},` holds no text but millions of values)
+    let l = Limits::new().with_max_units(10);
+    for profile in [None, Some(profile::LOCOS)] {
+        let o = ExtractOptions::new().with_limits(l).with_profile(profile);
+        let flood = format!("[{}{{}}]", "{},".repeat(200));
+        match JsonFilter.extract(flood.as_bytes(), &o) {
+            Err(Error::Limit(e)) => {
+                assert_eq!(e.kind, LimitKind::Units);
+                assert!(e.msg.contains("far more values than a file of 10 segments. Split"), "{}", e.msg);
+            }
+            other => panic!("{profile:?}: {other:?}"),
+        }
+        let strings = format!("[{}\"x\"]", "\"\",".repeat(200));
+        assert!(matches!(JsonFilter.extract(strings.as_bytes(), &o), Err(Error::Limit(e)) if e.msg.contains("far more strings")));
+        // under the budget: read as before
+        let ok = format!("[{}\"Hello\"]", "{},".repeat(50));
+        assert_eq!(JsonFilter.extract(ok.as_bytes(), &o).unwrap().units.len(), 1);
+    }
+}

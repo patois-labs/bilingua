@@ -284,6 +284,21 @@ pub fn check_unit_count(count: usize, l: &Limits) -> Result<(), Error> {
     Ok(())
 }
 
+/// Localization OS's pre-parse budget (#571 and its gate): a text with more than `per_unit` x `max_units` of some
+/// marker (`count`: JSON quotes, or commas and brackets; PO backslashes) is refused before the parser builds
+/// anything, since each marker costs work or memory whether or not it ends in a unit (100 MB of `{},` holds no
+/// text but millions of values). `what` names the file and the marker ("This JSON file has far more values").
+pub fn check_budget(count: usize, per_unit: usize, what: &str, l: &Limits) -> Result<(), Error> {
+    if count > per_unit.saturating_mul(l.max_units) {
+        return Err(LimitError::new(
+            LimitKind::Units,
+            format!("{what} than a file of {} segments. Split it into smaller files.", l.max_units),
+        )
+        .into());
+    }
+    Ok(())
+}
+
 /// Refuses a unit text longer than `max_unit_chars` characters.
 pub fn check_unit_chars(chars: usize, l: &Limits) -> Result<(), Error> {
     if chars > l.max_unit_chars {
@@ -688,6 +703,16 @@ mod tests {
         let l = Limits::default();
         assert_eq!((l.max_input_bytes, l.max_units, l.max_unit_chars), (100 << 20, 50_000, 100_000));
         assert_eq!((l.max_zip_entries, l.max_zip_bytes, l.max_zip_ratio), (10_000, 256 << 20, 200));
+    }
+
+    #[test]
+    fn pre_parse_budget_scales_with_the_unit_limit() {
+        let l = Limits { max_units: 10, ..Limits::default() };
+        assert!(check_budget(200, 20, "This JSON file has far more values", &l).is_ok());
+        let e = check_budget(201, 20, "This JSON file has far more values", &l).unwrap_err();
+        assert!(e.to_string().contains("far more values than a file of 10 segments. Split"), "{e}");
+        assert_eq!(kind(Err(e)), Some(LimitKind::Units));
+        assert!(check_budget(usize::MAX, usize::MAX, "x", &Limits { max_units: usize::MAX, ..Limits::default() }).is_ok());
     }
 
     #[test]

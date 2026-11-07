@@ -964,11 +964,11 @@ fn plain_continues(next: &[&str], tail: &[char]) -> bool {
         .is_some_and(|l| l.starts_with([' ', '\t']) && !py_lstrip(l).starts_with('#'))
 }
 
-/// LocOS `find_front_matter` with the default keys. The whole block is checked for what PyYAML / tomllib refuse
+/// LocOS `find_front_matter` with the allowlist `keys` (lower case: `markdown.fm_keys`, else LocOS's defaults). The whole block is checked for what PyYAML / tomllib refuse
 /// (`yaml_block_ok`, `toml_block_ok`), not parsed: a key's last top-level one-line value stands for what the block
 /// gives it (YAML keeps the last of a repeated key), and TOML keys after
 /// the first table header are not top-level. A repeated TOML key makes the block unreadable (no fields).
-fn find_front_matter(lines: &[&str]) -> Option<FrontMatter> {
+fn find_front_matter(lines: &[&str], keys: &[String]) -> Option<FrontMatter> {
     let first = lines.first()?.trim_start_matches('\u{FEFF}').trim_end_matches([' ', '\t']);
     let toml = match first {
         "---" => false,
@@ -1025,7 +1025,8 @@ fn find_front_matter(lines: &[&str]) -> Option<FrontMatter> {
         let Some((key, at)) = fm_key(&v, toml) else {
             continue;
         };
-        if !FM_KEYS.contains(&key.to_lowercase().as_str()) {
+        let lower = key.to_lowercase();
+        if !keys.iter().any(|k| *k == lower) {
             continue;
         }
         let Some((end, style)) = (if toml { toml_span(&v, at) } else { yaml_span(&v, at) }) else {
@@ -1744,6 +1745,111 @@ fn enc_tag(encoding: &str) -> &str {
     }
 }
 
+/// The front matter allowlist a skeleton tag names (`;fm=a:b`, written when `markdown.fm_keys` was set), else
+/// LocOS's default keys. A key LocOS can match is ASCII letters, digits, `_` and `-` (its `_YAML_KEY` and
+/// `_TOML_KEY`), so the tag keeps only those: a name with any other character never matches a key either way.
+fn tag_fm_keys(tag: &str) -> Vec<String> {
+    match tag.split(';').skip(1).find_map(|p| p.strip_prefix("fm=")) {
+        Some(list) => list.split(':').filter(|k| !k.is_empty()).map(str::to_string).collect(),
+        None => FM_KEYS.iter().map(|k| k.to_string()).collect(),
+    }
+}
+
+fn fm_tag_part(keys: &[String]) -> String {
+    let usable: Vec<&str> = keys
+        .iter()
+        .map(String::as_str)
+        .filter(|k| k.bytes().all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'_' || b == b'-'))
+        .collect();
+    format!(";fm={}", usable.join(":"))
+}
+
+/// `_FENCE` (`^\s*(```|~~~)`), the fence toggle of LocOS's image scan.
+fn image_fence(line: &str) -> bool {
+    let t = line.trim_start_matches(sp);
+    t.starts_with("```") || t.starts_with("~~~")
+}
+
+/// `_IMAGE.finditer`: (alt, target) of every `![alt](target)` / `![alt][ref]` in a line.
+fn images(s: &str) -> Vec<(String, String)> {
+    let v = chars(s);
+    let mut out = Vec::new();
+    let mut a = 0;
+    while a < v.len() {
+        match image_at(&v, a) {
+            Some((alt, target, end)) => {
+                out.push((alt, target));
+                a = end;
+            }
+            None => a += 1,
+        }
+    }
+    out
+}
+
+/// One `_IMAGE` match starting at `a`: (alt, target, char offset after the match).
+fn image_at(v: &[char], a: usize) -> Option<(String, String, usize)> {
+    if v[a] != '!' || v.get(a + 1) != Some(&'[') {
+        return None;
+    }
+    let mut j = a + 2;
+    while j < v.len() && v[j] != '[' && v[j] != ']' {
+        j += 1;
+    }
+    if v.get(j) != Some(&']') {
+        return None;
+    }
+    let alt = cs(v, a + 2, j);
+    j += 1;
+    while j < v.len() && sp(v[j]) {
+        j += 1;
+    }
+    if !v.get(j).is_some_and(|c| *c == '(' || *c == '[') {
+        return None;
+    }
+    let t0 = j + 1;
+    let mut k = t0;
+    while k < v.len() && v[k] != ')' && v[k] != ']' {
+        k += 1;
+    }
+    (k < v.len()).then(|| (alt, cs(v, t0, k), k + 1))
+}
+
+/// LocOS's image inventory (`skeleton["a11y_images"]`): every image outside code fences after the front matter,
+/// on the unit `a11y.anchor_for` gives it (the unit on its line, else the nearest one before, else the first),
+/// as the unit extras [`profile::A11Y_IMAGES`] (how many) and [`profile::A11Y_EMPTY_ALT`] (the file names of those
+/// with an empty alt, one per line). `spans` is (line, unit index) in unit order.
+fn note_images(lines: &[&str], start: usize, spans: &[(usize, usize)], units: &mut [Unit]) {
+    let mut in_fence = false;
+    let mut found: Vec<(usize, String, String)> = Vec::new();
+    for (li, line) in lines.iter().enumerate().skip(start) {
+        if image_fence(line) {
+            in_fence = !in_fence;
+            continue;
+        }
+        if !in_fence {
+            found.extend(images(line).into_iter().map(|(alt, target)| (li, alt, target)));
+        }
+    }
+    let mut count: HashMap<usize, usize> = HashMap::new();
+    let mut empty: HashMap<usize, Vec<String>> = HashMap::new();
+    for (li, alt, target) in found {
+        let anchor = spans.iter().find(|(l, _)| *l == li).or_else(|| spans.iter().rev().find(|(l, _)| *l < li)).or(spans.first());
+        let Some(&(_, u)) = anchor else { continue };
+        *count.entry(u).or_default() += 1;
+        if py_strip(&alt).is_empty() {
+            let first = py_strip(&target).split(' ').next().unwrap_or("");
+            empty.entry(u).or_default().push(first.rsplit('/').next().unwrap_or("").to_string());
+        }
+    }
+    for (u, n) in count {
+        units[u].context.extra.insert(profile::A11Y_IMAGES.into(), n.to_string());
+    }
+    for (u, names) in empty {
+        units[u].context.extra.insert(profile::A11Y_EMPTY_ALT.into(), names.join("\n"));
+    }
+}
+
 /// Extracts a Markdown file the LocOS way (see the module notes).
 pub fn extract(text: &str, encoding: &str, opts: &ExtractOptions, warnings: Vec<Warning>) -> Result<Document, Error> {
     let mut full = String::with_capacity(text.len() + 3);
@@ -1753,8 +1859,11 @@ pub fn extract(text: &str, encoding: &str, opts: &ExtractOptions, warnings: Vec<
     full.push_str(text);
     // the byte order mark is not part of the first line (LocOS reads and builds with sig=True): the walk starts after it
     let (lines, _) = split(split_bom(&full).1);
-    let fm = find_front_matter(&lines);
+    let keys_opt = crate::fm_keys(&opts.format_options);
+    let keys = keys_opt.clone().unwrap_or_else(|| FM_KEYS.iter().map(|k| k.to_string()).collect());
+    let fm = find_front_matter(&lines, &keys);
     let mut units = Vec::new();
+    let mut spans: Vec<(usize, usize)> = Vec::new();
     let mut add = |t: String, image: bool| {
         let mut u = Unit::new(format!("u{}", units.len() + 1), vec![Inline::text(t)]);
         u.context.kind = Some("line".into());
@@ -1764,15 +1873,23 @@ pub fn extract(text: &str, encoding: &str, opts: &ExtractOptions, warnings: Vec<
         units.push(u);
     };
     for f in fm.as_ref().map(|f| f.fields.as_slice()).unwrap_or(&[]) {
+        spans.push((f.line, spans.len()));
         add(f.text.clone(), false);
     }
-    for it in iter_md(&lines, fm.as_ref().map_or(0, |f| f.end)) {
+    let start = fm.as_ref().map_or(0, |f| f.end);
+    for it in iter_md(&lines, start) {
         let image = it.delim.is_none() && has_image(&it.text);
+        spans.push((it.line, spans.len()));
         add(it.text, image);
     }
+    note_images(&lines, start, &spans, &mut units);
     // the file's skeleton tag, a line break, then the decoded text (a UTF-8 BOM kept in it): the tag is what
     // `source_encoding` reports; the file is written as UTF-8, as LocOS writes it
-    let tag = enc_tag(encoding);
+    // a set allowlist travels in the tag, so the merge walks the file with the keys it was extracted with
+    let tag = match &keys_opt {
+        Some(k) => format!("{}{}", enc_tag(encoding), fm_tag_part(k)),
+        None => enc_tag(encoding).to_string(),
+    };
     let mut data = Vec::with_capacity(tag.len() + 1 + full.len());
     data.extend_from_slice(tag.as_bytes());
     data.push(b'\n');
@@ -1785,10 +1902,10 @@ pub fn extract(text: &str, encoding: &str, opts: &ExtractOptions, warnings: Vec<
 pub fn merge(doc: &Document, data: &[u8]) -> Result<Vec<u8>, Error> {
     // schema 1 (before 0.9.1) kept the decoded file alone, with no tag line: read it as it was written, so a stored
     // Document still merges and its first line is never taken for a tag
-    let text = if doc.skeleton.parser().map_or(1, |p| p.schema) < 2 {
-        std::str::from_utf8(data).map_err(|_| Error::Write("markdown: the LocOS skeleton is not UTF-8".into()))?
+    let (tag, text) = if doc.skeleton.parser().map_or(1, |p| p.schema) < 2 {
+        ("utf-8", std::str::from_utf8(data).map_err(|_| Error::Write("markdown: the LocOS skeleton is not UTF-8".into()))?)
     } else {
-        bilingua_model::enc::locos_skeleton_parts(data).ok_or_else(|| Error::Write("markdown: not a LocOS profile skeleton".into()))?.1
+        bilingua_model::enc::locos_skeleton_parts(data).ok_or_else(|| Error::Write("markdown: not a LocOS profile skeleton".into()))?
     };
     let mut texts: HashMap<usize, String> = HashMap::new();
     for (k, u) in doc.units.iter().enumerate() {
@@ -1799,7 +1916,7 @@ pub fn merge(doc: &Document, data: &[u8]) -> Result<Vec<u8>, Error> {
     let (bom, body) = split_bom(text);
     let (lines, raw) = split(body);
     let mut out: Vec<String> = raw.iter().map(|s| s.to_string()).collect();
-    let fm = find_front_matter(&lines);
+    let fm = find_front_matter(&lines, &tag_fm_keys(tag));
     let fields = fm.as_ref().map(|f| f.fields.clone()).unwrap_or_default();
     let toml = fm.as_ref().is_some_and(|f| f.toml);
     for (k, f) in fields.iter().enumerate() {

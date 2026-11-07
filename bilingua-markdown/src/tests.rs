@@ -468,3 +468,61 @@ fn a_one_line_value_before_a_nested_key_or_an_indented_comment_stays_offered() {
     assert_eq!(texts(&d), vec!["Kept title", "Kept summary", "Body text here."]);
     assert_eq!(merged(&d), src);
 }
+
+fn with_keys(keys: &str, locos: bool) -> ExtractOptions {
+    let mut o = ExtractOptions::default();
+    o.format_options.insert("markdown.fm_keys".into(), keys.into());
+    if locos {
+        o = o.with_profile(Some(profile::LOCOS));
+    }
+    o
+}
+
+const FM_DOC: &str = "---\nTitle: T one\ndescription: D one\nkeywords: k one, k two\nsummary: S one\n---\nBody text here.\n";
+
+#[test]
+fn front_matter_allowlist_option_under_the_locos_profile() {
+    // LocOS LOC_TMS_FRONT_MATTER_KEYS="Title, keywords": those keys only, case-insensitive, in file order
+    let o = with_keys("Title, keywords", true);
+    let mut d = MarkdownFilter.extract(FM_DOC.as_bytes(), &o).unwrap();
+    assert_eq!(texts(&d), vec!["T one", "k one, k two", "Body text here."]);
+    let mo = MergeOptions::new().with_profile(Some(profile::LOCOS));
+    assert_eq!(MarkdownFilter.merge_with(&d, &mo).unwrap(), FM_DOC.as_bytes());
+    // the merge walks with the keys the document was extracted with (they travel in the skeleton)
+    let (k, b) = (d.units[1].segments[0].id.clone(), d.units[2].segments[0].id.clone());
+    d.set_target(&k, vec![Inline::text("K eins")]).unwrap();
+    d.set_target(&b, vec![Inline::text("Text hier.")]).unwrap();
+    let out = String::from_utf8(MarkdownFilter.merge_with(&d, &mo).unwrap()).unwrap();
+    assert_eq!(out, "---\nTitle: T one\ndescription: D one\nkeywords: K eins\nsummary: S one\n---\nText hier.\n");
+    // the default list without the option; an empty list translates no front matter at all
+    let d = MarkdownFilter.extract(FM_DOC.as_bytes(), &ExtractOptions::default().with_profile(Some(profile::LOCOS))).unwrap();
+    assert_eq!(texts(&d), vec!["T one", "D one", "S one", "Body text here."]);
+    let d = MarkdownFilter.extract(FM_DOC.as_bytes(), &with_keys("", true)).unwrap();
+    assert_eq!(texts(&d), vec!["Body text here."]);
+    assert_eq!(MarkdownFilter.merge_with(&d, &mo).unwrap(), FM_DOC.as_bytes());
+}
+
+#[test]
+fn front_matter_allowlist_option_in_native_mode() {
+    let d = MarkdownFilter.extract(FM_DOC.as_bytes(), &with_keys("keywords,SUMMARY", false)).unwrap();
+    assert_eq!(texts(&d), vec!["k one, k two", "S one", "Body text here."]);
+    assert_eq!(merged(&d), FM_DOC);
+    // unset: title and description (the file's `Title` is not `title`)
+    assert_eq!(texts(&extract(FM_DOC)), vec!["D one", "Body text here."]);
+}
+
+#[test]
+fn image_inventory_under_the_locos_profile() {
+    // LocOS a11y_images: every image outside fences, on the unit of its line; empty alt text names the file
+    let src = "---\ntitle: Pics\n---\n![](img/one.png \"t\")\n\n```\n![](in/fence.png)\n```\n\nSee ![A cat](cat.png) and ![ ](x/two.gif).\n\n![ok](three.png)\n";
+    let d = MarkdownFilter.extract(src.as_bytes(), &ExtractOptions::default().with_profile(Some(profile::LOCOS))).unwrap();
+    let extra = |i: usize, k: &str| d.units[i].context.extra.get(k).cloned();
+    assert_eq!(texts(&d), vec!["Pics", "![](img/one.png \"t\")", "See ![A cat](cat.png) and ![ ](x/two.gif).", "![ok](three.png)"]);
+    assert_eq!(extra(0, profile::A11Y_IMAGES), None);
+    assert_eq!(extra(1, profile::A11Y_IMAGES).as_deref(), Some("1"));
+    assert_eq!(extra(1, profile::A11Y_EMPTY_ALT).as_deref(), Some("one.png"));
+    assert_eq!(extra(2, profile::A11Y_IMAGES).as_deref(), Some("2"));
+    assert_eq!(extra(2, profile::A11Y_EMPTY_ALT).as_deref(), Some("two.gif"));
+    assert_eq!(extra(3, profile::A11Y_IMAGES).as_deref(), Some("1"));
+    assert_eq!(extra(3, profile::A11Y_EMPTY_ALT), None);
+}

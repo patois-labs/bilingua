@@ -104,6 +104,13 @@ impl Filter for JsonFilter {
         let text = text_owned.as_str();
         let encoding = dec.encoding.as_str();
         let locos = opts.is_profile(profile::LOCOS);
+        // LocOS `check_json_budget` (#571 and its gate): quotes, and the commas and brackets of values that are
+        // not strings, bound the work before any value is read
+        let limits = opts.limits();
+        let quotes = text.bytes().filter(|b| *b == b'"').count();
+        bilingua_model::guard::check_budget(quotes, 40, "This JSON file has far more strings", &limits)?;
+        let values = text.bytes().filter(|b| matches!(b, b',' | b'[' | b'{')).count();
+        bilingua_model::guard::check_budget(values, 20, "This JSON file has far more values", &limits)?;
         let vals = scan::scan_with(text, locos)?;
         let want = want_dialect(opts, locos)?;
         if !matches!(want, Want::Plain) {
