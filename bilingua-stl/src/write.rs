@@ -350,7 +350,7 @@ pub fn rebuild(raw: &[u8], parsed: &read::Parsed, units: &[UnitInfo], changed: &
         let mut usable = vec![cct];
         for c in Cct::ALL {
             let units_ok = !units.iter().enumerate().any(|(k, u)| {
-                !structure_movable(&u.sub) || (!changed.contains_key(&k) && !(atoms_movable(&u.atoms) && unsupported_with(&u.atoms, c, pairs).is_empty()))
+                !structure_movable(&u.sub) || !(changed.contains_key(&k) || atoms_movable(&u.atoms) && unsupported_with(&u.atoms, c, pairs).is_empty())
             });
             let others_ok = others.iter().all(|o| sub_movable(&o.sub, &o.atoms) && unsupported_with(&o.atoms, c, pairs).is_empty());
             if c != cct && units_ok && others_ok {
