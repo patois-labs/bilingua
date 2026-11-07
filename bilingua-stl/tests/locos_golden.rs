@@ -173,6 +173,27 @@ fn switch_refused_on_purpose(got: &Result<Vec<u8>, Error>, want: &serde_json::Va
     bytes_ok && lacking_ok
 }
 
+/// The other accepted difference (issue 798): on a code table switch Bilingua re-encodes comment subtitles in the new
+/// table, where LocOS keeps their old bytes. The build equals LocOS's once each comment block takes back the input
+/// block with the same subtitle and extension number; everything else must still be byte for byte.
+fn comments_as_input(out: &[u8], input: &[u8]) -> Vec<u8> {
+    let mut v = out.to_vec();
+    if v.len() < 1024 || input.len() < 1024 || out[12..14] == input[12..14] {
+        return v;
+    }
+    for k in 0..(v.len() - 1024) / 128 {
+        let at = 1024 + k * 128;
+        if v[at + 15] != 1 {
+            continue;
+        }
+        let same = input[1024..].chunks(128).find(|blk| blk.len() == 128 && blk[15] == 1 && blk[1..4] == v[at + 1..at + 4]);
+        if let Some(blk) = same {
+            v[at + 16..at + 128].copy_from_slice(&blk[16..]);
+        }
+    }
+    v
+}
+
 fn check(name: &str, what: &str, got: Result<Vec<u8>, Error>, want: &serde_json::Value, bad: &mut Vec<String>, dir: &Option<String>, input: &[u8]) {
     if switch_refused_on_purpose(&got, want, input) {
         println!("accepted 798 refusal: {name}: {what}");
@@ -190,7 +211,7 @@ fn check(name: &str, what: &str, got: Result<Vec<u8>, Error>, want: &serde_json:
     match got {
         Err(e) => bad.push(format!("{name}: {what}: LocOS builds, we refuse: {e}")),
         Ok(b) => {
-            if sha256(&b) != want["sha"].as_str().unwrap() {
+            if sha256(&b) != want["sha"].as_str().unwrap() && sha256(&comments_as_input(&b, input)) != want["sha"].as_str().unwrap() {
                 if let Some(d) = dir {
                     std::fs::write(format!("{d}/{name}.{}.got.stl", what.replace([':', ' '], "_")), &b).unwrap();
                     std::fs::write(format!("{d}/{name}.in.stl"), input).unwrap();

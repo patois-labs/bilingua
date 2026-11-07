@@ -70,9 +70,27 @@ fn matches_locos_on_random_files_and_corpus() {
                 let eo = eo.with_target_lang(target.map(String::from));
                 let got = build_opts(&data, &m, &eo, &opts);
                 // the one deliberate difference: a literal backslash in a translation is written as two (issue 804),
-                // which LocOS does not do yet; such a build must still read back with the same unit count
+                // which LocOS does not do yet. Such a build reads back with the same unit count, and is LocOS's build
+                // byte for byte once each translated backslash is written raw: build again with a stand-in character
+                // for the backslash and put a single backslash back in its place.
                 if m.iter().any(|(_, t)| t.contains('\\')) {
                     assert_eq!(common::extract(&got).unwrap().units.len(), common::extract(&data).unwrap().units.len(), "{name}: build {label} ({mode})");
+                    let stand_in: Vec<_> = m.iter().map(|(k, t)| (*k, t.replace('\\', "\u{E000}"))).collect();
+                    let raw = build_opts(&data, &stand_in, &eo, &opts);
+                    let pua = "\u{E000}".as_bytes();
+                    let mut back: Vec<u8> = Vec::with_capacity(raw.len());
+                    let mut i = 0;
+                    while i < raw.len() {
+                        if raw[i..].starts_with(pua) {
+                            back.push(b'\\');
+                            i += pua.len();
+                        } else {
+                            back.push(raw[i]);
+                            i += 1;
+                        }
+                    }
+                    assert_eq!(back, want_bytes, "{name}: build {label} ({mode}), backslashes written raw");
+                    builds += 1;
                     continue;
                 }
                 assert_eq!(got, want_bytes, "{name}: build {label} ({mode})");
