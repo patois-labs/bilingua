@@ -345,15 +345,23 @@ pub fn rebuild(raw: &[u8], parsed: &read::Parsed, units: &[UnitInfo], changed: &
     let mut problems: Vec<String> = Vec::new();
     // the units already named in `problems` (gate: a prefix search of `problems` per refused unit was quadratic)
     let mut reported: BTreeSet<usize> = BTreeSet::new();
+    // a refusal is certain: the comments are then not re-encoded, so the message is the one LocOS gives
+    let mut refusing = false;
     let chosen = if fits(cct) {
         cct
     } else {
         // the rest of the file (units kept as they are, comments, text-less subtitles) has characters in table c
-        let covers = |c: Cct| {
-            units.iter().enumerate().all(|(k, u)| changed.contains_key(&k) || unsupported_with(&u.atoms, c, pairs).is_empty())
-                && others.iter().all(|o| unsupported_with(&o.atoms, c, pairs).is_empty())
+        // the units kept as they are have characters in table c (LocOS's test for a usable table)
+        let units_cover = |c: Cct| units.iter().enumerate().all(|(k, u)| changed.contains_key(&k) || unsupported_with(&u.atoms, c, pairs).is_empty());
+        // the comments and text-less subtitles that have characters table c lacks (they move with the file, issue 798)
+        let others_lacking = |c: Cct| -> Vec<String> {
+            others
+                .iter()
+                .filter(|o| !unsupported_with(&o.atoms, c, pairs).is_empty())
+                .map(|o| format!("comment subtitle at block {}", parsed.groups[o.group].blocks[0] + 1))
+                .collect()
         };
-        // the bytes of each subtitle that would read as other characters in table c (issue 798)
+        // the subtitles with bytes that would read as other characters in table c (issue 798)
         let unmovable = |c: Cct| -> Vec<String> {
             let mut v: Vec<String> = Vec::new();
             for (k, u) in units.iter().enumerate() {
@@ -370,26 +378,40 @@ pub fn rebuild(raw: &[u8], parsed: &read::Parsed, units: &[UnitInfo], changed: &
         };
         let mut usable = vec![cct];
         for c in Cct::ALL {
-            if c != cct && covers(c) && unmovable(c).is_empty() {
+            if c != cct && units_cover(c) && others_lacking(c).is_empty() && unmovable(c).is_empty() {
                 usable.push(c);
             }
         }
         match usable.iter().copied().find(|c| fits(*c)) {
             Some(c) => c,
             None => {
-                // a table holds every character, but the file has bytes it would turn into other characters
-                if let Some(c) = Cct::ALL.iter().copied().find(|c| *c != cct && covers(*c) && fits(*c)) {
-                    let bad = unmovable(c);
-                    let more = if bad.len() > 10 { format!(" (and {} more)", bad.len() - 10) } else { String::new() };
+                refusing = true;
+                // a table holds the translation and the units kept as they are (LocOS switches to it), but a comment
+                // cannot move there or the file has bytes it would turn into other characters
+                if let Some(c) = Cct::ALL.iter().copied().find(|c| *c != cct && units_cover(*c) && fits(*c)) {
+                    let shown = |v: Vec<String>| {
+                        let more = if v.len() > 10 { format!(" (and {} more)", v.len() - 10) } else { String::new() };
+                        format!("{}{more}", v.iter().take(10).cloned().collect::<Vec<_>>().join(", "))
+                    };
+                    let mut why: Vec<String> = Vec::new();
+                    let bytes = unmovable(c);
+                    if !bytes.is_empty() {
+                        why.push(format!("these subtitles hold bytes with no equivalent in that table (they would read as other characters): {}", shown(bytes)));
+                    }
+                    let lacking = others_lacking(c);
+                    if !lacking.is_empty() {
+                        why.push(format!("these comment subtitles hold characters that table does not have: {}", shown(lacking)));
+                    }
+                    let d = |t: Cct| String::from_utf8_lossy(&t.digits()).into_owned();
                     return Err(refuse(format!(
-                        "The EBU STL file was not exported: the translation needs code table {}{}, but these subtitles hold bytes with no equivalent in that table (they would read as other characters): {}{more}. Remove those bytes or keep the translation in code table {}{}.",
-                        c.digits()[0] as char,
-                        c.digits()[1] as char,
-                        bad.iter().take(10).cloned().collect::<Vec<_>>().join(", "),
-                        cct.digits()[0] as char,
-                        cct.digits()[1] as char,
+                        "The EBU STL file was not exported: the translation needs code table {}, but {}. Remove those bytes or characters, or keep the translation in code table {}.",
+                        d(c),
+                        why.join("; and "),
+                        d(cct)
                     )));
                 }
+                // no table holds the translation: name its characters as LocOS does, for the table LocOS would pick
+                let usable: Vec<Cct> = std::iter::once(cct).chain(Cct::ALL.iter().copied().filter(|c| *c != cct && units_cover(*c))).collect();
                 let cost = |c: Cct| changed.values().map(|t| unsupported_with(t, c, pairs).len()).sum::<usize>();
                 let best = usable.iter().copied().min_by_key(|c| cost(*c)).unwrap_or(cct);
                 for (k, t) in changed {
@@ -433,7 +455,7 @@ pub fn rebuild(raw: &[u8], parsed: &read::Parsed, units: &[UnitInfo], changed: &
             }
         }
     }
-    if chosen != cct {
+    if chosen != cct && !refusing {
         // every subtitle can move here: `chosen` is only another table when `unmovable(chosen)` is empty
         for o in &others {
             let first = parsed.groups[o.group].blocks[0];

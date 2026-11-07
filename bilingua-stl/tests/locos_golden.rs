@@ -86,14 +86,27 @@ fn defined(n: u8) -> [bool; 256] {
     d
 }
 
-/// The only accepted difference from LocOS (issue 798): a code table switch LocOS writes, refused by Bilingua with its
-/// table-switch message, in a file whose subtitle text really holds a byte the old table has no character for (or a
-/// table 00 floating diacritic) that the other table reads as a character. LocOS copies such a byte raw and it turns
-/// into a letter. Any other refusal, and any refusal of a file without such a byte, still counts as a difference.
+/// The only accepted differences from LocOS (issue 798): a code table switch LocOS makes (and writes, or refuses for
+/// another reason such as row length), refused by Bilingua with its table-switch message, where the file really is
+/// the case the message names:
+/// - "hold bytes with no equivalent": the subtitle text holds a byte the old table has no character for (or a table
+///   00 floating diacritic) that the new table reads as a character. LocOS copies it raw and it turns into a letter.
+/// - "comment subtitles hold characters": the file has a comment subtitle with upper-half bytes (LocOS leaves the
+///   comment in the old table, so it reads as other letters under the new table).
+///
+/// Any other refusal, and any refusal of a file that is not such a case, still counts as a difference.
 fn switch_refused_on_purpose(got: &Result<Vec<u8>, Error>, want: &serde_json::Value, input: &[u8]) -> bool {
     let Err(Error::Unwritable { reason, .. }) = got else { return false };
-    if want.get("err").is_some() || !reason.contains("hold bytes with no equivalent in that table") {
+    if want.get("err").is_some_and(|e| e != "CaptionTargetError") || !reason.starts_with("The EBU STL file was not exported: the translation needs code table 0") {
         return false;
+    }
+    let tti = || input[1024..].chunks(128).filter(|blk| blk.len() == 128 && blk[3] != 0xFE && !(0xF0..=0xFD).contains(&blk[3]));
+    let comments_ok = !reason.contains("comment subtitles hold characters") || tti().any(|blk| blk[15] == 1 && blk[16..].iter().any(|b| *b >= 0xA0));
+    if !comments_ok {
+        return false;
+    }
+    if !reason.contains("hold bytes with no equivalent in that table") {
+        return true;
     }
     let Some(pos) = reason.find("needs code table 0") else { return false };
     let to = reason.as_bytes()[pos + "needs code table 0".len()].wrapping_sub(b'0');
@@ -107,7 +120,7 @@ fn switch_refused_on_purpose(got: &Result<Vec<u8>, Error>, want: &serde_json::Va
     }
     let (old, new) = (defined(from), defined(to));
     let diacritic = |b: u8| tables::DIACRITICS.iter().any(|(x, _)| *x == b);
-    input[1024..].chunks(128).filter(|blk| blk.len() == 128 && blk[3] != 0xFE && !(0xF0..=0xFD).contains(&blk[3])).any(|blk| {
+    tti().any(|blk| {
         blk[16..].iter().any(|&b| {
             let ctl_old = !old[b as usize] || (from == 0 && diacritic(b));
             let reads_new = new[b as usize] || (to == 0 && diacritic(b));
