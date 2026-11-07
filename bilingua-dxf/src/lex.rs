@@ -431,15 +431,17 @@ fn open_end(raw: &str, kind: Kind) -> Option<&'static str> {
 }
 
 /// Characters the code page cannot hold become `\U+XXXX` (a surrogate pair above U+FFFF), as AutoCAD writes them.
+/// In DOS 864 `%` stays: the writer puts it back as byte 0x25, where it was read from (`decode_value`).
 pub fn fit_codec(s: &str, codec: Codec) -> String {
     if codec.can_write(s) {
         return s.to_string();
     }
+    let dos864 = codec.name() == "cp864";
     let mut out = String::with_capacity(s.len() + 16);
     let mut scratch = Vec::new();
     for c in s.chars() {
         scratch.clear();
-        if codec.encode_char(c, &mut scratch) {
+        if (dos864 && c == '%') || codec.encode_char(c, &mut scratch) {
             out.push(c);
         } else {
             let mut cp = c as u32;

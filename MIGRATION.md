@@ -497,8 +497,9 @@ Bilingua fixes these first; LocOS gets the same changes next and its goldens are
 - **dxf, issue 805**: a single `%` at the end of a translated text piece before a `%%d`, `%%c`, `%%p` or `%%nnn` code is
   written `%%%`, so the code survives (LocOS wrote `%%%d`, which reads back as a literal `%` and a stray `d`). The
   line budget counts a CRLF line end once (LocOS counted it twice and refused CRLF files at half the group codes). A
-  DOS864 drawing reads byte 0x25 as `%` (not U+066A), so `%%d` stays a code. A translator-typed Arabic percent sign
-  is still written as byte 0x25 in that code page.
+  DOS864 drawing reads byte 0x25 as `%` (not U+066A), so `%%d` stays a code, and writes `%` back as byte 0x25 (the
+  code page has no other byte for it; LocOS's codec has none for `%` at all and wrote `\U+0025`). A translator-typed
+  Arabic percent sign is still written as byte 0x25 in that code page.
 - **dxf, issue 811 item 3**: a code that ends where the value ended (`\` alone, an unterminated `\A1`) is closed
   when anything follows it, white space included (LocOS closed it only before other characters).
 - **htmlhelp, issue 796**: a declared `gb2312`, `shift_jis`, `euc-kr` or `ks_c_5601-1987`, or `big5` label is read and

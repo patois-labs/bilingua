@@ -284,7 +284,13 @@ fn dos864_percent_bytes_survive_untouched_and_translated_merges() {
     assert_eq!(plain_text(&doc.units[0].source()), "Rate 45% off");
     assert_eq!(Dxf.merge(&doc).unwrap(), data);
     doc.units[0].segments[0].target = vec![Inline::text("Rate 45% off, now 50\u{66a}")];
+    // the second unit keeps its `%%d` code: it must come back as those three bytes, not as `\U+0025` escapes
+    let mut t = vec![Inline::text("Winkel 45")];
+    t.extend(doc.units[1].source().into_iter().filter(|i| matches!(i, Inline::Tag { .. })));
+    doc.units[1].segments[0].target = t;
     let out = Dxf.merge(&doc).unwrap();
     assert!(out.windows(23).any(|w| w == b"Rate 45% off, now 50%\r\n"), "{out:?}");
-    assert!(out.windows(11).any(|w| w == b"Angle 45%%d"), "{out:?}");
+    assert!(out.windows(14).any(|w| w == b"Winkel 45%%d\r\n"), "{out:?}");
+    let back = extract(&out).unwrap();
+    assert!(matches!(back.units[1].source().last(), Some(Inline::Tag { .. })), "{:?}", back.units[1].source());
 }

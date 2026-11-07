@@ -281,6 +281,14 @@ fn write_unit(unit: &Unit, occ: usize, changed: &mut bool, codec: Codec, out: &m
     let text = lex::render(&unit.output(), &unit.codes, kind);
     let value = lex::fit_codec(&text, codec);
     let enc = |s: &str| -> Result<Vec<u8>, Error> {
+        // DOS 864: `%` goes back to byte 0x25 (the code page itself only writes U+066A there), see `decode_value`
+        let pct;
+        let s = if codec.name() == "cp864" && s.contains('%') {
+            pct = s.replace('%', "\u{66a}");
+            pct.as_str()
+        } else {
+            s
+        };
         let b = codec.encode(s).ok_or_else(|| Error::Unwritable {
             unit: Some(unit.id.clone()),
             reason: format!("the translation has a character the drawing's code page ({}) cannot hold", codec.name()),
