@@ -37,7 +37,7 @@ fn check(data: &[u8]) {
             });
             assert_eq!(again.units.len(), n, "unit count after translation");
         }
-        Err(Error::Parse { .. } | Error::Unsupported(_)) => {}
+        Err(Error::Parse { .. } | Error::Unsupported(_) | Error::Limit(_) | Error::Encoding(_)) => {}
         Err(e) => panic!("unexpected error kind: {e}"),
     }
 }
@@ -175,7 +175,7 @@ fn deep_nesting_is_a_typed_error() {
             "}".repeat(depth)
         );
         assert!(
-            matches!(extract_str(&src), Err(Error::Unsupported(m)) if m.contains("nested")),
+            matches!(extract_str(&src), Err(Error::Limit(e)) if e.msg.contains("nested")),
             "depth {depth}"
         );
         let arr = format!(
@@ -209,16 +209,16 @@ fn huge_and_degenerate_files_are_typed_errors_or_fine() {
     let big = vec![b' '; 1001];
     assert!(matches!(
         JsModule.extract_with(&big, &ExtractOptions::default(), &lim),
-        Err(Error::Unsupported(_))
+        Err(Error::Limit(_))
     ));
     // a million line breaks and a million quotes
     let lines = "\n".repeat(1_000_001);
-    assert!(matches!(extract_str(&lines), Err(Error::Unsupported(m)) if m.contains("lines")));
+    assert!(matches!(extract_str(&lines), Err(Error::Limit(e)) if e.msg.contains("lines")));
     let quotes = format!("export default [{}]", "'',".repeat(700_000));
-    assert!(matches!(extract_str(&quotes), Err(Error::Unsupported(_))));
+    assert!(matches!(extract_str(&quotes), Err(Error::Limit(_))));
     // one value over the character limit
     let long = format!("export default {{ a: '{}' }}", "word ".repeat(30_000));
-    assert!(matches!(extract_str(&long), Err(Error::Unsupported(m)) if m.contains("longer than")));
+    assert!(matches!(extract_str(&long), Err(Error::Limit(e)) if e.msg.contains("longer than")));
     // quadratic traps
     let work = |make: &dyn Fn(usize) -> String, n: usize| {
         let (small, big) = (bilingua_model::work::count(|| extract_str(&make(n))).1, bilingua_model::work::count(|| extract_str(&make(2 * n))).1);

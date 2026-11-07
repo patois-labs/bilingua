@@ -123,7 +123,7 @@ pub fn assert_identity(data: &[u8]) {
 
 pub fn refused(src: &str, needle: &str) -> String {
     match extract_str(src) {
-        Err(Error::Parse { msg, .. }) | Err(Error::Unsupported(msg)) => {
+        Err(Error::Parse { msg, .. }) | Err(Error::Unsupported(msg)) | Err(Error::Encoding(msg)) | Err(Error::Limit(LimitError { msg, .. })) => {
             assert!(
                 msg.contains(needle),
                 "{needle:?} not in {msg:?} for {src:?}"

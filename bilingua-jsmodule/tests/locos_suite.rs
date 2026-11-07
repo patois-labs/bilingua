@@ -404,13 +404,13 @@ fn caps_nesting_segments_quotes_tokens_and_length() {
             .collect::<Vec<_>>()
             .join(",")
     );
-    assert!(matches!(with(&many), Err(Error::Unsupported(m)) if m.contains("segments")));
+    assert!(matches!(with(&many), Err(Error::Limit(e)) if e.msg.contains("segments")));
     let quotes = format!("export default [{}]", "'',".repeat(300));
-    assert!(matches!(with(&quotes), Err(Error::Unsupported(m)) if m.contains("strings")));
+    assert!(matches!(with(&quotes), Err(Error::Limit(e)) if e.msg.contains("strings")));
     let toks = format!("export default {{}}{}", ";".repeat(400));
-    assert!(matches!(with(&toks), Err(Error::Unsupported(m)) if m.contains("tokens")));
+    assert!(matches!(with(&toks), Err(Error::Limit(e)) if e.msg.contains("tokens")));
     let huge = format!("export default {{ a: '{}' }}", "x".repeat(100_001));
-    assert!(matches!(extract_str(&huge), Err(Error::Unsupported(m)) if m.contains("longer than")));
+    assert!(matches!(extract_str(&huge), Err(Error::Limit(e)) if e.msg.contains("longer than")));
 }
 
 // 13 test_encodings
@@ -464,4 +464,42 @@ fn end_to_end_extract_save_merge_and_app_code_refused() {
     assert!(JsModule
         .extract(b"document.title = 'Hello';\n", &ExtractOptions::default())
         .is_err());
+}
+
+/// verify_js_module_filter test_caps (B-side 10c): `Filter::extract` follows `ExtractOptions::limits`
+/// (MAX_DOCUMENT_SEGMENTS=5 there), and every budget is code `limit` with LocOS's sentence.
+#[test]
+fn budgets_follow_the_call_limits() {
+    let mut o = ExtractOptions::default();
+    o.limits = Some(bilingua_model::Limits::new().with_max_units(5));
+    let ex = |src: &str| JsModule.extract(src.as_bytes(), &o);
+    let quotes = format!("export default [{}]", "'',".repeat(300));
+    let e = ex(&quotes).unwrap_err();
+    assert!(
+        matches!(&e, Error::Limit(l) if l.msg == "This file has far more strings than MAX_DOCUMENT_SEGMENTS allows (5). Split it into smaller files."),
+        "{e:?}"
+    );
+    let toks = format!("export default {{}}{}", ";".repeat(400));
+    let e = ex(&toks).unwrap_err();
+    assert!(matches!(&e, Error::Limit(l) if l.msg.contains("far more tokens than MAX_DOCUMENT_SEGMENTS allows (5)")), "{e:?}");
+    let mut o2 = ExtractOptions::default();
+    o2.limits = Some(bilingua_model::Limits::new().with_max_unit_chars(10));
+    let e = JsModule.extract(b"export default { a: 'a value over ten characters' }", &o2).unwrap_err();
+    assert!(matches!(&e, Error::Limit(l) if l.kind == LimitKind::UnitChars && l.msg.contains("MAX_SEGMENT_CHARS")), "{e:?}");
+    assert_eq!(ex("export default { a: 'Hello', b: 'World' }").unwrap().units.len(), 2);
+}
+
+/// verify_js_module_filter test_placeholders_and_unknown_tokens:240 (B-side 10b, #814.1): through the profile's
+/// token reader a pair token naming a point code is dropped and a token naming no code is kept as text.
+#[test]
+fn wrong_kind_token_naming_a_point_code_is_dropped() {
+    use bilingua_model::profile::{locos_set_target, locos_units, tokens::parse_locos_text_for};
+    let src = "export default { a: 'Hi {{name}}, %s and {count} <b>bold</b>' }";
+    let mut doc = extract(src.as_bytes()).unwrap();
+    let u = locos_units(&doc).remove(0);
+    let t = "Hallo \u{27E6}x1\u{27E7} \u{27E6}x9\u{27E7} \u{27E6}g1\u{27E7}fett\u{27E6}/g1\u{27E7}";
+    let (inl, _) = parse_locos_text_for(&doc.format, t, &u.map);
+    locos_set_target(&mut doc, &u.segment_id, inl).unwrap();
+    let out = String::from_utf8(JsModule.merge(&doc).unwrap()).unwrap();
+    assert!(out.contains("a: 'Hallo {{name}} \u{27E6}x9\u{27E7} fett'"), "{out}");
 }

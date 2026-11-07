@@ -589,7 +589,7 @@ impl<'a> P<'a, '_> {
         });
         if self.units.len() > self.limits.max_units {
             return Err(ModuleError::Limit(format!(
-                "This file has more than {} segments. Split it into smaller files.",
+                "This file has more than {} segments (MAX_DOCUMENT_SEGMENTS). Split it into smaller files.",
                 self.limits.max_units
             )));
         }

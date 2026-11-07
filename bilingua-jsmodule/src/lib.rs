@@ -20,7 +20,8 @@ const ID: &str = "js";
 /// `open` = the quote character, `close` = "1" when the literal is a multi-line template.
 const HIDDEN: &str = "$js";
 
-/// Size limits (the Localization OS defaults). `bilingua-model` has no limits in this tree, so the crate caps itself.
+/// Size limits (the Localization OS defaults). `Filter::extract` takes them from `ExtractOptions::limits`
+/// ([`Limits::from_model`]); `extract_with` takes them as given.
 #[derive(Debug, Clone, Copy)]
 #[non_exhaustive]
 pub struct Limits {
@@ -42,6 +43,19 @@ impl Default for Limits {
     }
 }
 
+impl Limits {
+    /// The crate's limits from the call's `ExtractOptions::limits` (LocOS's `MAX_DOCUMENT_SEGMENTS`,
+    /// `MAX_SEGMENT_CHARS` and upload size), so the budgets follow the caller's numbers.
+    pub fn from_model(l: &bilingua_model::Limits) -> Limits {
+        let d = Limits::default();
+        Limits {
+            max_units: l.max_units,
+            max_value_chars: l.max_unit_chars,
+            max_bytes: d.max_bytes.min(usize::try_from(l.max_input_bytes).unwrap_or(usize::MAX)),
+        }
+    }
+}
+
 /// Why a file was not read.
 #[derive(Debug)]
 pub(crate) enum ModuleError {
@@ -58,7 +72,11 @@ impl From<ModuleError> for Error {
                 format: ID.into(),
                 msg,
             },
-            ModuleError::Limit(msg) => Error::Unsupported(msg),
+            // LocOS InputLimitError: code `limit`
+            ModuleError::Limit(msg) => {
+                let kind = if msg.contains("nested") { LimitKind::Depth } else { LimitKind::Units };
+                LimitError::new(kind, msg).into()
+            }
         }
     }
 }
@@ -104,10 +122,11 @@ struct Loaded {
 
 fn load(bytes: &[u8], limits: &Limits) -> Result<Loaded, Error> {
     if bytes.len() > limits.max_bytes {
-        return Err(Error::Unsupported(format!(
-            "this file is larger than {} bytes; split it into smaller files",
-            limits.max_bytes
-        )));
+        return Err(LimitError::new(
+            LimitKind::InputBytes,
+            format!("this file is larger than {} bytes; split it into smaller files", limits.max_bytes),
+        )
+        .into());
     }
     if is_xml(bytes) {
         return Err(Error::Parse {
@@ -126,17 +145,27 @@ fn load(bytes: &[u8], limits: &Limits) -> Result<Loaded, Error> {
             _ => {}
         }
     }
+    // LocOS `check_line_budget` and `_budget` (#571), code `limit`, LocOS's sentences
     if lines > 20 * lim {
-        return Err(Error::Unsupported(format!(
-            "this file has more than {} lines; split it into smaller files",
-            20 * lim
-        )));
+        return Err(LimitError::new(
+            LimitKind::Lines,
+            format!("This file has more than {} lines (20 x MAX_DOCUMENT_SEGMENTS). Split it into smaller files.", 20 * lim),
+        )
+        .into());
     }
     if quotes > 40 * lim {
-        return Err(Error::Unsupported(format!("this file has far more strings than the limit allows ({lim}); split it into smaller files")));
+        return Err(LimitError::new(
+            LimitKind::Units,
+            format!("This file has far more strings than MAX_DOCUMENT_SEGMENTS allows ({lim}). Split it into smaller files."),
+        )
+        .into());
     }
     if values > 20 * lim {
-        return Err(Error::Unsupported(format!("this file has far more values than the limit allows ({lim}); split it into smaller files")));
+        return Err(LimitError::new(
+            LimitKind::Units,
+            format!("This file has far more values than MAX_DOCUMENT_SEGMENTS allows ({lim}). Split it into smaller files."),
+        )
+        .into());
     }
     Ok(Loaded { text, encoding })
 }
@@ -267,10 +296,14 @@ impl JsModule {
             if ru.value.len() > limits.max_value_chars
                 && ru.value.chars().count() > limits.max_value_chars
             {
-                return Err(Error::Unsupported(format!(
-                    "this file has a string longer than {} characters; break it into shorter strings",
-                    limits.max_value_chars
-                )));
+                return Err(LimitError::new(
+                    LimitKind::UnitChars,
+                    format!(
+                        "This file has a line or paragraph longer than {} characters (MAX_SEGMENT_CHARS). Break it into shorter lines.",
+                        limits.max_value_chars
+                    ),
+                )
+                .into());
             }
             if ru.start > pos {
                 parts.push(SkelPart::Raw(text[pos..ru.start].to_string()));
@@ -323,7 +356,7 @@ impl Filter for JsModule {
 
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
         bilingua_model::check_own_options(self, &opts.format_options)?;
-        self.extract_with(bytes, opts, &Limits::default())
+        self.extract_with(bytes, opts, &Limits::from_model(&opts.limits()))
     }
 
     fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
