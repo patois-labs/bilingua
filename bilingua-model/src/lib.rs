@@ -1166,6 +1166,9 @@ impl Document {
             return Err(Error::Locked(seg_id.to_string()));
         }
         let seg = &mut unit.segments[si];
+        if seg.state == SegState::Locked {
+            return Err(Error::Locked(seg_id.to_string()));
+        }
         check_tags(&seg.source, &target, repeat_standalone)?;
         // The free flag belongs to the source code: a target tag takes it from the source tag with its id, so a
         // caller (an editor, a LocOS adapter) that does not know the flag cannot drop or invent it.
@@ -1203,6 +1206,9 @@ impl Document {
             return Err(Error::Locked(seg_id.to_string()));
         }
         let seg = &mut unit.segments[si];
+        if seg.state == SegState::Locked {
+            return Err(Error::Locked(seg_id.to_string()));
+        }
         seg.target.clear();
         seg.empty_target = true;
         seg.state = SegState::Draft;
