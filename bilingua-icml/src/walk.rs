@@ -443,6 +443,9 @@ pub fn shallow(dom: &mut Dom, el: Id) -> Id {
     shallow_with(dom, el, &keeps)
 }
 
+/// LocOS `_shallow`: a copy of `el` with copies of `keeps` (its `Properties` / `XMLAttribute` children). lxml's
+/// `deepcopy` keeps each one's tail, so the text right after a kept child (the indentation before `<Content>`) is
+/// copied with it (W4: LocOS keeps it in a rebuilt range); the clone itself has no tail.
 fn shallow_with(dom: &mut Dom, el: Id, keeps: &[Id]) -> Id {
     let n = dom.n(el);
     let (name, ns, attrs, decls) = (n.name.clone(), n.ns, n.attrs.clone(), n.nsdecls.clone());
@@ -450,6 +453,15 @@ fn shallow_with(dom: &mut Dom, el: Id, keeps: &[Id]) -> Id {
     for &child in keeps {
         let c = dom.deep_copy(child);
         dom.append(clone, c);
+        let p = dom.n(child).parent;
+        let tail: Vec<Id> = match (p != NIL).then(|| dom.index_of(p, child)).flatten() {
+            Some(i) => dom.n(p).children[i + 1..].iter().copied().take_while(|t| dom.n(*t).kind == Kind::Text).collect(),
+            None => Vec::new(),
+        };
+        for t in tail {
+            let tn = dom.deep_copy(t);
+            dom.append(clone, tn);
+        }
     }
     clone
 }
