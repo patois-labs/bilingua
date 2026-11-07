@@ -190,6 +190,10 @@ pub fn mw_slots(w: &mut Walk, holes: &[Region]) -> Result<(), Error> {
         }
         if s < link_open_until {
             w.para_force(s, e);
+            // the line that closes one caption may open the next one
+            if let Some(end) = multiline_file_link(w.cx, link_open_until.min(e), e) {
+                link_open_until = end;
+            }
             continue;
         }
         let stripped = strip(body);
@@ -292,7 +296,13 @@ fn multiline_file_link(cx: &Ctx, s: usize, e: usize) -> Option<usize> {
                 let inner = sl(cx.mask, i + 2, end);
                 let target = inner.split('|').next().unwrap_or("");
                 let far = close - e > 20000 || m[e..close].iter().filter(|c| **c == 10).count() > 200;
-                if inner.contains('|') && crate::inline::file_ns(target) && !far {
+                // a heading line between is a heading (MediaWiki reads headings before links), not caption text
+                let heading = !far
+                    && sl(cx.mask, e, close).lines().any(|l| {
+                        let t = l.trim_end_matches([' ', '\t', '\r']);
+                        t.len() >= 3 && t.starts_with('=') && t.ends_with('=')
+                    });
+                if inner.contains('|') && crate::inline::file_ns(target) && !far && !heading {
                     return Some(close);
                 }
             }

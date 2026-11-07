@@ -165,6 +165,20 @@ fn write_table(doc: &Document, i: usize, head: &Unit, widen: bool) -> Result<Str
     Ok(lines.join(nl))
 }
 
+/// The indentation of the second line of a paragraph `raw` whose first line follows an explicit markup start on
+/// the current output line (`.. [x] `, `.. name:: `); None when the paragraph is one line or starts its own line.
+fn explicit_body_pad<'a>(out: &str, raw: &'a str) -> Option<&'a str> {
+    let line = &out[out.rfind(['\n', '\r']).map_or(0, |p| p + 1)..];
+    let lead = line.trim_start_matches([' ', '\t']);
+    if !lead.starts_with(".. ") || lead.trim_end_matches([' ', '\t']).len() <= 2 {
+        return None;
+    }
+    let second = &raw[raw.find(['\n', '\r'])?..];
+    let second = second.trim_start_matches(['\r', '\n']);
+    let pad = &second[..second.len() - second.trim_start_matches([' ', '\t']).len()];
+    (!pad.is_empty()).then_some(pad)
+}
+
 fn write_unit(doc: &Document, i: usize, out: &mut String, widen: bool) -> Result<(), Error> {
     let u = doc.units.get(i).ok_or_else(|| Error::Write(format!("skeleton points at missing unit {i}")))?;
     let kind = get(u, KIND).unwrap_or("");
@@ -188,6 +202,18 @@ fn write_unit(doc: &Document, i: usize, out: &mut String, widen: bool) -> Result
             }
             if kind == "para" && !starts_with_token(&new) && inline::para_start(&rendered) {
                 rendered.insert(0, '\\');
+            }
+            // native profile: a paragraph that starts on an explicit markup line (`.. [1] text`, `.. note:: text`)
+            // and went on over more lines set the body's indentation with its second line. Written as one line on
+            // the marker line, a more indented block after it (a literal block) would become the body's own level,
+            // so the text moves to its own line at that indentation instead.
+            if widen && kind == "para" {
+                if let Some(pad) = explicit_body_pad(out, raw) {
+                    let keep = out.trim_end_matches([' ', '\t']).len();
+                    out.truncate(keep);
+                    out.push_str(if raw.contains("\r\n") { "\r\n" } else if raw.contains('\n') { "\n" } else { "\r" });
+                    out.push_str(pad);
+                }
             }
             out.push_str(&rendered);
             Ok(())
@@ -336,6 +362,7 @@ impl Filter for Rst {
         let native = !opts.is_profile(profile::LOCOS);
         let ls = blocks::lines(text);
         let mut w = Walk::new(text, limits);
+        w.native = native;
         w.walk(&ls, 0)?;
 
         let mut units: Vec<Unit> = Vec::new();

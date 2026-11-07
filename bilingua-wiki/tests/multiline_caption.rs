@@ -47,3 +47,61 @@ fn an_unclosed_file_link_does_not_swallow_the_page() {
     assert!(t.iter().any(|s| s == "Heading"), "{t:?}");
     assert_identity(&f, page.as_bytes());
 }
+
+#[test]
+fn a_close_more_than_200_lines_away_is_not_a_caption() {
+    let f = MediaWiki::default();
+    let mut page = String::from("[[File:d.png|thumb|caption start\n");
+    for k in 0..210 {
+        page.push_str(&format!("\nParagraph number {k}.\n"));
+        if k == 205 {
+            page.push_str("\nA stray close ]] here.\n");
+        }
+    }
+    let t = texts(&f, page.as_bytes());
+    assert!(t.iter().any(|s| s == "Paragraph number 200."), "{t:?}");
+    assert!(t.len() > 200, "{}", t.len());
+    assert_identity(&f, page.as_bytes());
+}
+
+#[test]
+fn a_heading_between_does_not_join_the_caption() {
+    let f = MediaWiki::default();
+    let page = "[[File:d.png|thumb|caption start\n\n== Heading ==\nBody text with a stray ]] close.\n";
+    let t = texts(&f, page.as_bytes());
+    assert!(t.iter().any(|s| s == "Heading"), "{t:?}");
+    assert_identity(&f, page.as_bytes());
+}
+
+#[test]
+fn a_caption_with_a_nested_link_over_two_lines() {
+    let f = MediaWiki::default();
+    let page = "[[File:e.png|thumb|A caption with [[Some page|a link]]\nand a second line]]\n\nNext paragraph.\n";
+    let t = texts(&f, page.as_bytes());
+    assert_eq!(t.len(), 2, "{t:?}");
+    assert!(t[0].contains("second line") && !t[0].contains("]]"), "{}", t[0]);
+    assert_eq!(t[1], "Next paragraph.");
+    assert_identity(&f, page.as_bytes());
+    let out = prefixed(&f, page.as_bytes());
+    assert!(out.contains("[[File:e.png|thumb|") && out.contains("[[Some page|"), "{out}");
+}
+
+#[test]
+fn a_close_inside_nowiki_does_not_end_the_caption() {
+    let f = MediaWiki::default();
+    let page = "[[File:f.png|thumb|Caption with <nowiki>]]</nowiki> in it\nand a second line]]\n\nEnd.\n";
+    let t = texts(&f, page.as_bytes());
+    assert_eq!(t.len(), 2, "{t:?}");
+    assert!(t[0].contains("second line"), "{}", t[0]);
+    assert_identity(&f, page.as_bytes());
+}
+
+#[test]
+fn the_closing_line_opens_the_next_caption() {
+    let f = MediaWiki::default();
+    let page = "[[File:g.png|thumb|First caption\nends here]] [[File:h.png|thumb|Second caption\n----\nends too]]\n\nEnd.\n";
+    let t = texts(&f, page.as_bytes());
+    assert_eq!(t.len(), 2, "{t:?}");
+    assert!(t[0].contains("Second caption") && t[0].contains("ends too"), "{}", t[0]);
+    assert_identity(&f, page.as_bytes());
+}

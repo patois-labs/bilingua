@@ -51,6 +51,9 @@ pub struct Walk<'a> {
     count: usize,
     limits: Limits,
     nl: Vec<usize>,
+    /// The native profile: a letter enumerator followed by an enumerator line starts a list only when that line
+    /// holds the next enumerator (docutils); LocOS takes any enumerator line.
+    pub native: bool,
 }
 
 /// `_lines(text)`.
@@ -128,7 +131,7 @@ type R<T> = Result<T, Error>;
 impl<'a> Walk<'a> {
     pub fn new(text: &'a str, limits: Limits) -> Walk<'a> {
         let nl = text.bytes().enumerate().filter(|(_, b)| *b == b'\n').map(|(i, _)| i).collect();
-        Walk { text, slots: Vec::new(), meta: Vec::new(), skipped: Vec::new(), count: 0, limits, nl }
+        Walk { text, slots: Vec::new(), meta: Vec::new(), skipped: Vec::new(), count: 0, limits, nl, native: false }
     }
 
     pub fn line_no(&self, off: usize) -> usize {
@@ -237,7 +240,11 @@ impl<'a> Walk<'a> {
             }
             if em.as_ref().is_some_and(|e| !e.g2.is_empty() && e.g2.chars().all(is_alpha)) && i + 1 < n {
                 let nxt = vl[i + 1].s;
-                if !blank(nxt) && indent(nxt) == 0 && rx::enum_match(nxt).is_none() {
+                let follows = match (rx::enum_match(nxt), em.as_ref()) {
+                    (Some(n), Some(e)) => !self.native || rx::enum_follows(e, &n),
+                    _ => false,
+                };
+                if !blank(nxt) && indent(nxt) == 0 && !follows {
                     em = None;
                 }
             }

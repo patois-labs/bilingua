@@ -62,6 +62,62 @@ pub fn enum_match(s: &str) -> Option<EnumM<'_>> {
     None
 }
 
+const ROMAN: &[(usize, &str)] =
+    &[(1000, "m"), (900, "cm"), (500, "d"), (400, "cd"), (100, "c"), (90, "xc"), (50, "l"), (40, "xl"), (10, "x"), (9, "ix"), (5, "v"), (4, "iv"), (1, "i")];
+
+fn to_roman(mut n: usize) -> String {
+    let mut out = String::new();
+    for &(v, s) in ROMAN {
+        while n >= v {
+            out.push_str(s);
+            n -= v;
+        }
+    }
+    out
+}
+
+/// The value of a lower or upper case roman numeral written the usual way (1 to 3999).
+fn roman_value(s: &str) -> Option<usize> {
+    let low = s.to_ascii_lowercase();
+    let mut total: isize = 0;
+    let val = |c: char| ROMAN.iter().find(|(_, r)| r.len() == 1 && r.starts_with(c)).map(|(v, _)| *v as isize);
+    let ds: Vec<isize> = low.chars().map(val).collect::<Option<_>>()?;
+    for (k, &d) in ds.iter().enumerate() {
+        if ds.get(k + 1).is_some_and(|&n| n > d) {
+            total -= d;
+        } else {
+            total += d;
+        }
+    }
+    let n = usize::try_from(total).ok().filter(|n| (1..4000).contains(n))?;
+    (to_roman(n) == low).then_some(n)
+}
+
+/// docutils' rule for a list item whose next line starts at its own column: that line must hold the next
+/// enumerator of the same sequence and form (`a.` then `b.`, `I.` then `II.`), or `#`. A single letter that is also
+/// a roman numeral (`i`, `C`) may go on either way.
+pub fn enum_follows(cur: &EnumM, next: &EnumM) -> bool {
+    if cur.paren != next.paren || cur.g3 != next.g3 {
+        return false;
+    }
+    if next.g2 == "#" {
+        return true;
+    }
+    let mut ok = false;
+    let mut c = cur.g2.chars();
+    if let (Some(ch), None) = (c.next(), c.next()) {
+        if ch.is_ascii_alphabetic() && !matches!(ch, 'z' | 'Z') {
+            ok |= next.g2.len() == 1 && next.g2.starts_with((ch as u8 + 1) as char);
+        }
+    }
+    if let Some(v) = roman_value(cur.g2) {
+        let want = to_roman(v + 1);
+        let want = if cur.g2.chars().all(|c| c.is_ascii_uppercase()) { want.to_ascii_uppercase() } else { want };
+        ok |= next.g2 == want;
+    }
+    ok
+}
+
 /// `_FIELD.match(s)`.
 pub fn field(s: &str) -> bool {
     if !s.starts_with(':') {
@@ -375,6 +431,9 @@ mod tests {
         let e = enum_match("(iv) x").unwrap();
         assert!(e.paren && e.g2 == "iv" && e.g3 == ')');
         assert!(enum_match("1234567890. x").is_none());
+        let f = |a: &str, b: &str| enum_follows(&enum_match(a).unwrap(), &enum_match(b).unwrap());
+        assert!(f("a. x", "b. y") && f("I. x", "II. y") && f("i) x", "ii) y") && f("C. x", "D. y") && f("A. x", "#. y"));
+        assert!(!f("I. x", "B. y") && !f("a. x", "c. y") && !f("a. x", "b) y") && !f("ix. x", "xi. y") && f("ix. x", "x. y"));
         assert!(field(":Author: Jane") && field(":a:") && !field(":a b :") && !field(":: x"));
         assert_eq!(option_list("-v  verbose"), Some(true));
         assert_eq!(option_list("--long"), Some(false));

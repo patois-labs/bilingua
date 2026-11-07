@@ -474,24 +474,53 @@ impl<'a> Simple<'a> {
         if need.iter().all(|n| *n == 0) {
             return self.render(new_cells, slot_line);
         }
+        // the cells of each row: a row of a spanned group holds a cell wider than one column
+        let mut row_cells: Vec<Vec<(usize, Option<usize>)>> = vec![Vec::new(); self.rows.len()];
+        for c in &self.cells {
+            for &r in &c.rows {
+                row_cells[r].push((c.a, c.b));
+            }
+        }
         let mut rows: Vec<Vec<String>> = self.rows.iter().map(|r| owned(r)).collect();
         for k in (0..self.cols.len()).rev() {
-            let at = self.cols[k].1;
+            if need[k] == 0 {
+                continue;
+            }
+            let (start, at) = self.cols[k];
             for (r, row) in rows.iter_mut().enumerate() {
-                if row.len() <= at {
+                let rule = r == 0 || rx::simple_border(self.orig[r]) || rx::simple_span(self.orig[r]);
+                // a text row opens at the end of the cell that holds column k: a spanned cell ends past `at`, and
+                // one that runs to the end of the line needs nothing
+                let point = if rule {
+                    Some(at)
+                } else {
+                    match row_cells[r].iter().find(|(a, b)| *a <= start && b.is_none_or(|b| b >= at)) {
+                        Some((_, b)) => *b,
+                        None => Some(at),
+                    }
+                };
+                let Some(point) = point else { continue };
+                if row.len() <= point {
                     continue;
                 }
-                let edge = if r > 0 && !rx::simple_border(self.orig[r]) && !rx::simple_span(self.orig[r]) { " " } else { row[at - 1].as_str() };
+                let edge = if rule { row[point - 1].as_str() } else { " " };
                 let ch = if edge == "=" || edge == "-" { edge.to_string() } else { " ".to_string() };
                 for _ in 0..need[k] {
-                    row.insert(at, ch.clone());
+                    row.insert(point, ch.clone());
                 }
             }
         }
         let wide: Vec<String> = rows.iter().map(|r| r.concat()).collect();
         let refs: Vec<&str> = wide.iter().map(String::as_str).collect();
         let mut t = Simple::new(&refs);
-        if !t.parse() || t.cells.len() != self.cells.len() {
+        // the redrawn table must read as the same table: same cells on the same rows, and every cell that is not
+        // translated keeps its text; otherwise the merge refuses as without widening
+        let same = t.parse()
+            && t.cells.len() == self.cells.len()
+            && t.cells.iter().zip(&self.cells).enumerate().all(|(ci, (n, o))| {
+                n.rows == o.rows && n.first == o.first && (new_cells.iter().any(|(c, _)| *c == ci) || n.raw == o.raw)
+            });
+        if !same {
             return self.render(new_cells, slot_line);
         }
         t.render(new_cells, slot_line)
