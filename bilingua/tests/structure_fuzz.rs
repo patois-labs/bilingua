@@ -93,6 +93,16 @@ fn expand(n: Norm, u: &Unit, inl: &[Inline]) -> String {
                     };
                     let piece = piece.unwrap_or_default();
                     // the AsciiDoc writer may double a constrained mark next to punctuation (`}*p*` to `}**p**`)
+                    // Markdown writes an emphasis pair as <strong> / <em> when its marks would not flank in the translation
+                    let piece = if n == Norm::MdRaw {
+                        match piece {
+                            "<strong>" | "</strong>" => "**",
+                            "<em>" | "</em>" => "*",
+                            p => p,
+                        }
+                    } else {
+                        piece
+                    };
                     if n == Norm::Adoc && piece.len() == 2 && piece.as_bytes()[0] == piece.as_bytes()[1] {
                         s.push_str(&piece[..1]);
                     } else {

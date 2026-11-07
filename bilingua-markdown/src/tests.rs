@@ -526,3 +526,17 @@ fn image_inventory_under_the_locos_profile() {
     assert_eq!(extra(3, profile::A11Y_IMAGES).as_deref(), Some("1"));
     assert_eq!(extra(3, profile::A11Y_EMPTY_ALT), None);
 }
+
+#[test]
+fn emphasis_that_would_not_flank_in_the_translation_is_written_as_html() {
+    // a bold run that ends in punctuation and is followed by a letter does not close in CommonMark
+    let mut d = extract("Intro text\n\n**Note (1)**\n");
+    let src = d.units[1].source();
+    d.set_target("u2", vec![src[0].clone(), Inline::text("\u{ff08}1\u{ff09}"), src[2].clone(), Inline::text("abc")]).unwrap();
+    assert_eq!(merged(&d), "Intro text\n\n<strong>\u{ff08}1\u{ff09}</strong>abc\n");
+    // a translation that keeps good flanking keeps its stars
+    d.set_target("u2", vec![src[0].clone(), Inline::text("Nota"), src[2].clone(), Inline::text(" abc")]).unwrap();
+    assert_eq!(merged(&d), "Intro text\n\n**Nota** abc\n");
+    let d2 = extract(&merged(&d));
+    assert_eq!(d2.units.len(), 2);
+}
