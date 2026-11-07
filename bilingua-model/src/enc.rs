@@ -103,7 +103,9 @@ fn declared_ok(e: &'static Encoding) -> bool {
     use encoding_rs::*;
     [
         WINDOWS_1250, WINDOWS_1251, WINDOWS_1253, WINDOWS_1254, WINDOWS_1255, WINDOWS_1256, WINDOWS_1257, WINDOWS_1258, ISO_8859_2,
-        ISO_8859_5, ISO_8859_7, ISO_8859_15, KOI8_R, KOI8_U, SHIFT_JIS, EUC_JP, GBK, GB18030, BIG5, EUC_KR,
+        ISO_8859_5, ISO_8859_7, ISO_8859_15, KOI8_R, KOI8_U, SHIFT_JIS, EUC_JP, GBK, GB18030, BIG5, EUC_KR, ISO_8859_3,
+        ISO_8859_4, ISO_8859_6, ISO_8859_8, ISO_8859_8_I, ISO_8859_10, ISO_8859_13, ISO_8859_14, ISO_8859_16, WINDOWS_874,
+        IBM866, MACINTOSH, X_MAC_CYRILLIC,
     ]
     .contains(&e)
 }
@@ -991,6 +993,21 @@ mod tests {
         // text that does not fit is UTF-8 under the UTF-8 label
         let out = encode_text(&d.text.replace('\u{3b1}', "\u{4e2d}"), &d.encoding).unwrap();
         assert!(String::from_utf8(out).unwrap().contains("charset=\"UTF-8\""));
+    }
+
+    #[test]
+    fn declared_hebrew_and_other_rare_charsets_are_read_not_mojibake() {
+        // ISO-8859-8 was read as Windows-1252 soup before
+        let src = "<html><head><meta charset=\"iso-8859-8\"></head><body>\u{5e9}\u{5dc}\u{5d5}\u{5dd}</body></html>";
+        let b = legacy(encoding_rs::ISO_8859_8, src);
+        let d = dec(&b, None, true).unwrap();
+        assert!(d.text.contains("\u{5e9}\u{5dc}\u{5d5}\u{5dd}"), "{}", d.text);
+        assert_eq!(encode_text(&d.text, &d.encoding).unwrap(), b);
+        let src = "<meta charset=\"windows-874\"><p>\u{e2a}\u{e27}\u{e31}\u{e2a}\u{e14}\u{e35}</p>";
+        let b = legacy(encoding_rs::WINDOWS_874, src);
+        let d = dec(&b, None, true).unwrap();
+        assert!(d.text.contains("\u{e2a}\u{e27}"), "{}", d.text);
+        assert_eq!(encode_text(&d.text, &d.encoding).unwrap(), b);
     }
 
     #[test]

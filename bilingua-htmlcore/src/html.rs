@@ -792,6 +792,11 @@ pub fn iter_units<'t>(tokens: &'t [Tok<'_>], cap: Option<usize>) -> Result<Vec<B
                         st.map[oid as usize - 1].close = Some(tok.s.to_string());
                         st.parts.push(Piece::Close(oid));
                         st.indices.push(ti);
+                    } else {
+                        // an orphan end tag is a point code, so a build writes it back instead of blanking it
+                        st.map.push(Entry { point: Some(tok.s.to_string()), name, ..Default::default() });
+                        st.parts.push(Piece::Point(st.counter()));
+                        st.indices.push(ti);
                     }
                 } else {
                     st.map.push(Entry { open: Some(tok.s.to_string()), name: name.clone(), ..Default::default() });
