@@ -93,16 +93,6 @@ fn expand(n: Norm, u: &Unit, inl: &[Inline]) -> String {
                     };
                     let piece = piece.unwrap_or_default();
                     // the AsciiDoc writer may double a constrained mark next to punctuation (`}*p*` to `}**p**`)
-                    // Markdown writes an emphasis pair as <strong> / <em> when its marks would not flank in the translation
-                    let piece = if n == Norm::MdRaw {
-                        match piece {
-                            "<strong>" | "</strong>" => "**",
-                            "<em>" | "</em>" => "*",
-                            p => p,
-                        }
-                    } else {
-                        piece
-                    };
                     if n == Norm::Adoc && piece.len() == 2 && piece.as_bytes()[0] == piece.as_bytes()[1] {
                         s.push_str(&piece[..1]);
                     } else {
@@ -118,10 +108,37 @@ fn expand(n: Norm, u: &Unit, inl: &[Inline]) -> String {
         Norm::Wiki => s.replace("<nowiki>", "").replace("</nowiki>", ""),
         // an attribute reference or escape the writer adds can be read back as a code
         Norm::Adoc => unref(&s.replace("{empty}", "").replace("{two-colons}", "::").replace("{two-semicolons}", ";;").replace("\\|", "|").replace("\\!", "!")),
-        Norm::MdRaw => s.replace('\\', ""),
+        // the emphasis repair may write `_` as `*`, move edge punctuation over a mark, or write the pair as HTML
+        Norm::MdRaw => s
+            .replace('\\', "")
+            .replace("<strong>", "**")
+            .replace("</strong>", "**")
+            .replace("<em>", "*")
+            .replace("</em>", "*")
+            .replace('_', "*"),
         _ => s,
     };
-    s.chars().filter(|c| !c.is_whitespace()).collect()
+    let s: String = s.chars().filter(|c| !c.is_whitespace()).collect();
+    if n == Norm::MdRaw { sort_punct_runs(&s) } else { s }
+}
+
+/// Each run of non-alphanumeric characters sorted: punctuation moved across an emphasis mark compares equal, while
+/// a mark or punctuation added, lost or moved past a letter still differs.
+fn sort_punct_runs(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    let mut run: Vec<char> = Vec::new();
+    for c in s.chars() {
+        if c.is_alphanumeric() {
+            run.sort_unstable();
+            out.extend(run.drain(..));
+            out.push(c);
+        } else {
+            run.push(c);
+        }
+    }
+    run.sort_unstable();
+    out.extend(run);
+    out
 }
 
 /// Well-formed numeric and the five XML character references.

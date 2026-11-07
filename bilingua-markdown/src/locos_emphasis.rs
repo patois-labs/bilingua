@@ -323,18 +323,63 @@ fn try_pair(s: &mut [char], o: Run, c: Run, mark: char, mv: bool) -> bool {
     false
 }
 
+/// `_source_kinds`: the emphasis kinds of which CommonMark reads at least one pair in the source.
+fn source_kinds(src: &str) -> Vec<String> {
+    let sv: Vec<char> = src.chars().collect();
+    pairs(&sv)
+        .into_iter()
+        .filter(|(_, ps)| ps.iter().any(|(o, c)| can_open(&sv, o.0, o.1) && can_close(&sv, c.0, c.1)))
+        .map(|(k, _)| k)
+        .collect()
+}
+
+/// Native Markdown (beyond LocOS): `fix_cjk_emphasis` first (`_` to `*`, then the punctuation at the inner edges
+/// moved outside the marks: plain CommonMark, read the same by every renderer); a pair of a kind the source reads
+/// that still would not parse (its text starts or ends with a blank once the edge punctuation is out: `*( x)*y`)
+/// is then written as `<em>` / `<strong>`, so its marks never print as stars. Code spans, tags, link destinations
+/// and escaped marks are never touched.
+pub fn fix_emphasis_native(src: &str, new: &str) -> String {
+    let fixed = fix_cjk_emphasis(src, new);
+    if !fixed.contains('*') && !fixed.contains('_') {
+        return fixed;
+    }
+    let wanted = source_kinds(src);
+    let s: Vec<char> = fixed.chars().collect();
+    let mut cuts: Vec<(Run, &str)> = Vec::new();
+    for (kind, ps) in pairs(&s) {
+        if !wanted.contains(&kind) {
+            continue;
+        }
+        let (open, close) = if kind.len() == 2 { ("<strong>", "</strong>") } else { ("<em>", "</em>") };
+        for (o, c) in ps {
+            if !(can_open(&s, o.0, o.1) && can_close(&s, c.0, c.1)) {
+                cuts.push((o, open));
+                cuts.push((c, close));
+            }
+        }
+    }
+    if cuts.is_empty() {
+        return fixed;
+    }
+    cuts.sort_by_key(|(r, _)| r.0);
+    let mut out = String::with_capacity(fixed.len() + cuts.len() * 8);
+    let mut p = 0;
+    for ((a, b), tag) in cuts {
+        out.extend(&s[p..a]);
+        out.push_str(tag);
+        p = b;
+    }
+    out.extend(&s[p..]);
+    out
+}
+
 /// LocOS `fix_cjk_emphasis`: rewrites the emphasis pairs of a translation that CommonMark would print as literal
 /// marks, for the kinds of emphasis the source has; unchanged when nothing needs it.
 pub fn fix_cjk_emphasis(src: &str, new: &str) -> String {
     if new.is_empty() || (!new.contains('*') && !new.contains('_')) {
         return new.to_string();
     }
-    let sv: Vec<char> = src.chars().collect();
-    let wanted: Vec<String> = pairs(&sv)
-        .into_iter()
-        .filter(|(_, ps)| ps.iter().any(|(o, c)| can_open(&sv, o.0, o.1) && can_close(&sv, c.0, c.1)))
-        .map(|(k, _)| k)
-        .collect();
+    let wanted = source_kinds(src);
     if wanted.is_empty() {
         return new.to_string();
     }
@@ -518,6 +563,21 @@ mod tests {
         // punctuation at the inner edges moves outside
         assert_eq!(fix_cjk_emphasis("Click **\"Save\"** now", "**「変更を保存」**をクリック"), "「**変更を保存**」をクリック");
         assert_eq!(fix_cjk_emphasis("no marks", "**x**"), "**x**");
+    }
+
+    #[test]
+    fn native_repair_falls_back_to_html() {
+        // plain Markdown repairs first
+        assert_eq!(fix_emphasis_native("Click **\"Save\"** now", "**「保存」**を"), "「**保存**」を");
+        assert_eq!(fix_emphasis_native("Click __Save__ now", "__保存__を"), "**保存**を");
+        // nothing else works: HTML for that pair only
+        assert_eq!(fix_emphasis_native("a *b* c", "x *( y)*z *w* v"), "x <em>( y)</em>z *w* v");
+        assert_eq!(fix_emphasis_native("a __b__ c", "__( y)__z"), "<strong>( y)</strong>z");
+        // escaped marks, code spans and kinds the source does not read are left as written
+        assert_eq!(fix_emphasis_native("a *b* c", "x \\*( y)\\*z"), "x \\*( y)\\*z");
+        assert_eq!(fix_emphasis_native("a *b* c", "x `*( y)*z`"), "x `*( y)*z`");
+        assert_eq!(fix_emphasis_native("no marks", "*( y)*z"), "*( y)*z");
+        assert_eq!(fix_emphasis_native("a *b* c", "**( y)**z"), "**( y)**z");
     }
 
     #[test]

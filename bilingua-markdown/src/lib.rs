@@ -100,9 +100,11 @@ impl Filter for MarkdownFilter {
                     if unit.segments.iter().any(|s| s.has_target()) && !unit.codes.contains_key(extract::FM_KEY) {
                         // a translation opens no block, splits no cell and breaks no link its source did not
                         // (LocOS #704, #790, structure fuzz)
-                        let text = render::inlines_md_translated(doc, unit, &render::escape_link_text(unit, &unit.output()), out.chars().next_back());
+                        let text = render::inlines_md(doc, unit, &render::escape_link_text(unit, &unit.output()));
                         let line = &out[out.rfind('\n').map_or(0, |p| p + 1)..];
                         let src = render::inlines_md(doc, unit, &unit.source());
+                        // emphasis marks the translation left unable to open or close (CJK text glued to them)
+                        let text = locos_emphasis::fix_emphasis_native(&src, &text);
                         let mut text = render::guard_block_starts(line, &src, &text);
                         match unit.context.kind.as_deref() {
                             Some("cell") => text = render::guard_cell(&text),
