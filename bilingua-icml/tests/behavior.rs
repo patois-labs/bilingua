@@ -274,6 +274,9 @@ fn line_feeds_in_a_code_block_survive_a_translation() {
     assert_eq!(units(&data), vec!["if x {\n    run();\n}"]);
     let out = translate(&data, &[(0, "if y {\n    go();\n}")]);
     assert_eq!(units(&out), vec!["if y {\n    go();\n}"]);
+    // a CRLF or CR from the translation is a line feed too
+    let out = translate(&data, &[(0, "a\r\nb\rc")]);
+    assert_eq!(units(&out), vec!["a\nb\nc"]);
     // a paragraph without line feeds in its source still gets spaces
     let plain = icml(&psr(&csr("<Content>Hello</Content>")), "", "");
     let out = translate(&plain, &[(0, "A\nB")]);

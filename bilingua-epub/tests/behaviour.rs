@@ -284,3 +284,24 @@ fn custom_limits_travel_with_the_skeleton() {
     assert!(member_text(&m, "OEBPS/content.opf").contains(">Titre<"));
     assert_eq!(m["OEBPS/img/pad.bin"], big);
 }
+
+#[test]
+fn an_apostrophe_inside_a_link_is_written_once_escaped() {
+    // wild run: an apostrophe inside a link read back as the text "&#x27;". The chapter must carry a character
+    // reference (or the plain character), never "&amp;#x27;", which a reader would show as text.
+    let ch = CH1.replace(
+        "<p>Hello <b>bold</b>",
+        "<p>It looks like <a href=\"https://example.org/O%27s_page\">O'Neill's chart</a>: done.</p>\n<p>Hello <b>bold</b>",
+    );
+    let src = epub_with(&[("OEBPS/text/ch1.xhtml", ch.as_bytes())]);
+    let mut d = extract(&src);
+    let i = d.units.iter().position(|u| loc_text(u).starts_with("It looks")).unwrap();
+    let t = format!("Zq{}qZ", loc_text(&d.units[i]));
+    set(&mut d, i, &t);
+    let (m, _) = members(&merge(&d));
+    well_formed(&m);
+    let c = member_text(&m, "OEBPS/text/ch1.xhtml");
+    assert!(!c.contains("&amp;#"), "{c}");
+    assert!(c.contains("O&#x27;Neill&#x27;s chart</a>: done.qZ</p>") || c.contains("O'Neill's chart</a>: done.qZ</p>"), "{c}");
+    assert!(c.contains("href=\"https://example.org/O%27s_page\""), "{c}");
+}

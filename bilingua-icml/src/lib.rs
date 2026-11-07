@@ -327,9 +327,9 @@ fn to_tp(v: &[Inline], keep_nl: bool) -> Vec<TP> {
                 if it.peek() == Some(&'\n') {
                     it.next();
                 }
-                s.push(' ');
+                s.push(if keep_nl { '\n' } else { ' ' });
             } else if c == '\n' {
-                s.push(if keep_nl { char::from(10u8) } else { ' ' });
+                s.push(if keep_nl { '\n' } else { ' ' });
             } else {
                 s.push(c);
             }

@@ -805,6 +805,40 @@ impl Extractor {
                         open: None,
                     });
                 }
+                "ruby" if c.elements().any(|b| ns.is_w(&b.name, "rubyBase") && !b.end.is_empty()) => {
+                    // Ruby (a phonetic guide): the base text is the unit text, between a paired code that keeps
+                    // the run, `w:rubyPr` and the guide `w:rt` as they were. The base holds runs, so it is read
+                    // like a hyperlink.
+                    let mut open = format!("<{}r>{rpr}{}", ns.w, c.start);
+                    let mut base = None;
+                    for n in &c.children {
+                        match n {
+                            Node::El(b) if ns.is_w(&b.name, "rubyBase") && !b.end.is_empty() && base.is_none() => {
+                                open.push_str(&b.start);
+                                base = Some(b);
+                            }
+                            Node::El(x) if base.is_none() => open.push_str(&self.emit_el_nested(x, fl)),
+                            other if base.is_none() => other.write_raw(&mut open),
+                            _ => {}
+                        }
+                    }
+                    let b = base.expect("checked");
+                    let mut close = b.end.clone();
+                    let mut after = false;
+                    for n in &c.children {
+                        match n {
+                            Node::El(x) if std::ptr::eq(x, b) => after = true,
+                            Node::El(x) if after => close.push_str(&self.emit_el_nested(x, fl)),
+                            other if after => other.write_raw(&mut close),
+                            _ => {}
+                        }
+                    }
+                    close.push_str(&c.end);
+                    close.push_str(&format!("</{}r>", ns.w));
+                    out.push(Atom::Open { open, close, display: "<ruby>".into(), close_display: "</ruby>".into(), label: "ruby" });
+                    self.atoms(&b.children, out, st, fl);
+                    out.push(Atom::Close);
+                }
                 "sym" => out.push(Atom::Code {
                     xml: wrap(&c.raw()),
                     display: "<sym>".into(),

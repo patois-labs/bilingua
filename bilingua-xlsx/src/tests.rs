@@ -422,3 +422,36 @@ fn libreoffice_opens_the_merged_file_when_installed() {
     assert!(dir.join("merged.pdf").exists(), "{}{}", String::from_utf8_lossy(&status.stdout), String::from_utf8_lossy(&status.stderr));
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+#[test]
+fn literal_line_ends_read_as_lf_and_an_unchanged_merge_keeps_the_bytes() {
+    // a literal CRLF or CR in a shared string is a LF to every XML reader (openpyxl, Excel); a written &#13; is a CR
+    let sst = sst_xml()
+        .replace("<si><t>Subtotal</t></si>", "<si><t xml:space=\"preserve\">a\r\nb\rc</t></si>")
+        .replace("<si><t>Tom &amp; Jerry &lt;3 \"quoted\"</t></si>", "<si><t xml:space=\"preserve\">d&#13;\ne</t></si>");
+    let src = workbook_zip();
+    let parts: Vec<(String, String)> = read_zip(&src, &ZipLimits::default())
+        .unwrap()
+        .into_iter()
+        .map(|e| {
+            let d = if e.name == "xl/sharedStrings.xml" { sst.clone() } else { String::from_utf8(e.data).unwrap() };
+            (e.name, d)
+        })
+        .collect();
+    let refs: Vec<(&str, String)> = parts.iter().map(|(n, d)| (n.as_str(), d.clone())).collect();
+    let bytes = zip(&refs);
+    let doc = extract(&bytes);
+    assert_eq!(src_text(&doc, "ss14"), "a\nb\nc");
+    assert_eq!(src_text(&doc, "ss20"), "d\r\ne");
+    // unchanged: every part byte for byte, the literal CRs and the &#13; included
+    let out = Xlsx::default().merge(&doc).unwrap();
+    assert_same_parts(&bytes, &out);
+    // translated: the line feeds come back as line feeds
+    let mut doc = extract(&bytes);
+    set_plain(&mut doc, "ss14", "x\ny");
+    let out = Xlsx::default().merge(&doc).unwrap();
+    assert_all_xml_valid(&out);
+    let again = extract(&out);
+    assert_eq!(src_text(&again, "ss14"), "x\ny");
+    assert_eq!(src_text(&again, "ss20"), "d\r\ne");
+}

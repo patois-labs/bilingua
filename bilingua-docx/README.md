@@ -44,6 +44,7 @@ For the facade (`bilingua/src/lib.rs`, `filters()`): `Box::new(bilingua_docx::Do
 | Split runs | Neighbouring runs with the same formatting are merged. Spell-check marks, `w:lang`, `w:noProof` and rsid attributes do not count as formatting. They are dropped from a rebuilt paragraph |
 | Formatting | The most common formatting of a paragraph needs no tag. Other runs become paired tags: `<b>`, `<i>`, `<u>`, `<sup>`, `<sub>`, or `<fmt>` for anything else (label says what, e.g. "italic color"). The full `w:rPr` is kept in the tag's code |
 | Hyperlinks, smart tags, content controls (`w:sdt`) | Paired tags (`<a>`, `<x>`); the relationship id and all attributes are kept. Formatting inside a link is relative to the link's own most common formatting |
+| Ruby text (`w:ruby`, phonetic guides) | The base text is the unit text, inside a paired `<ruby>` tag. The guide (`w:rt`) and `w:rubyPr` stay in the tag's code as they were and are not offered for translation, so a translated base keeps the source guide. LocOS keeps the whole ruby as one standalone code and reads no base text |
 | Tabs, line and page breaks, symbols, images, equations, footnote references | Standalone tags |
 | Fields | Simple and complex fields are one locked standalone tag, shown like `{PAGE 3}`. The instruction is never translated. A field that spans paragraphs (a table of contents) locks all of those paragraphs |
 | Bookmarks, comment ranges, permission marks | Not shown as tags. Marks at the start of a paragraph stay at the start; all others move to the end of the paragraph when it is rebuilt |
@@ -57,7 +58,6 @@ For the facade (`bilingua/src/lib.rs`, `filters()`): `Box::new(bilingua_docx::Do
 
 | Not supported | What happens |
 |---|---|
-| Ruby text (`w:ruby`, phonetic guides) | The base text and the guide are not extracted; the run is kept as a code |
 | SmartArt, charts, embedded objects, text inside DrawingML shapes that are not text boxes | Left untouched, not extracted |
 | Right-to-left setup for a target language | Translating into Arabic, Hebrew etc. does not add `w:bidi` or `w:rtl`. Fix the paragraph direction in Word, or start from a template that has it |
 | `w:ins`/`w:del` inside a changed paragraph | Accepted (see above); the reviewer sees plain text |
