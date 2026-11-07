@@ -56,7 +56,23 @@ fn joined(row: &[&str], a: usize, b: Option<usize>) -> String {
 /// something cannot fit.
 pub fn wrap(text: &str, width: usize) -> Option<Vec<String>> {
     let mut words: Vec<String> = Vec::new();
+    // a word that ends in an odd number of backslashes is an escaped blank (`\ `): it stays with the next word
+    let mut glued: Vec<String> = Vec::new();
+    let mut carry: Option<String> = None;
     for w in split_ws(text) {
+        let w = match carry.take() {
+            Some(c) => format!("{c} {w}"),
+            None => w.to_string(),
+        };
+        let slashes = w.len() - w.trim_end_matches('\\').len();
+        if slashes % 2 == 1 {
+            carry = Some(w);
+        } else {
+            glued.push(w);
+        }
+    }
+    glued.extend(carry);
+    for w in glued.iter().map(String::as_str) {
         if column_width(w) <= width {
             words.push(w.to_string());
             continue;

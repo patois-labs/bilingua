@@ -412,16 +412,44 @@ fn doc_re(begin: bool) -> &'static Regex {
     }
 }
 
-/// The start of the first `\begin{document}` that is not in a comment.
-pub fn document_start(t: &str) -> Option<usize> {
-    let mut doc = doc_re(true).find(t);
-    while let Some(d) = doc {
-        if !in_comment(t, d.start()) {
-            return Some(d.start());
+fn env_re() -> &'static Regex {
+    static R: OnceLock<Regex> = OnceLock::new();
+    R.get_or_init(|| Regex::new(r"\\(begin|end)\s*\{([A-Za-z@*]+)\}").expect("environment pattern"))
+}
+
+/// The first `\begin{document}` that is not in a comment and not inside another environment: a manual or a
+/// package guide shows `\begin{document}` in its examples, and a chapter file may have no preamble at all.
+/// The bodies of verbatim environments are not read for `\begin` and `\end`.
+fn document_begin(t: &str) -> Option<(usize, usize)> {
+    let mut stack: Vec<&str> = Vec::new();
+    let mut at = 0usize;
+    while let Some(c) = env_re().captures_at(t, at) {
+        let m = c.get(0)?;
+        at = m.end();
+        if in_comment(t, m.start()) {
+            continue;
         }
-        doc = doc_re(true).find_at(t, d.end());
+        let name = c.get(2)?.as_str();
+        if &c[1] == "begin" {
+            if name == "document" && stack.is_empty() {
+                return Some((m.start(), m.end()));
+            }
+            if matches!(name, "verbatim" | "Verbatim" | "lstlisting" | "minted" | "comment" | "verbatim*" | "Verbatim*") {
+                let close = format!(r"\end{{{name}}}");
+                at = t[at..].find(&close).map_or(t.len(), |k| at + k + close.len());
+                continue;
+            }
+            stack.push(name);
+        } else if let Some(k) = stack.iter().rposition(|n| *n == name) {
+            stack.truncate(k);
+        }
     }
     None
+}
+
+/// The start of the first genuine `\begin{document}` (see `document_begin`).
+pub fn document_start(t: &str) -> Option<usize> {
+    document_begin(t).map(|d| d.0)
 }
 
 // ---------------------------------------------------------------------------------------------- block scan
@@ -467,24 +495,18 @@ impl<'a> Scan<'a> {
 
     pub fn run(&mut self) -> Result<(), Error> {
         let t = self.tx.s;
-        let mut doc = doc_re(true).find(t);
-        while let Some(d) = doc {
-            if !in_comment(t, d.start()) {
-                break;
-            }
-            doc = doc_re(true).find_at(t, d.end());
-        }
+        let doc = document_begin(t);
         match doc {
-            Some(d) => {
-                self.preamble(0, d.start())?;
-                let mut end = doc_re(false).find_at(t, d.end());
+            Some((d_start, d_end)) => {
+                self.preamble(0, d_start)?;
+                let mut end = doc_re(false).find_at(t, d_end);
                 while let Some(e) = end {
                     if !in_comment(t, e.start()) {
                         break;
                     }
                     end = doc_re(false).find_at(t, e.end());
                 }
-                self.body(d.end(), end.map_or(t.len(), |e| e.start()))
+                self.body(d_end, end.map_or(t.len(), |e| e.start()))
             }
             None => self.body(0, t.len()),
         }

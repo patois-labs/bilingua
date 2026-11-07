@@ -117,7 +117,8 @@ fn m_lit(s: &str, i: usize) -> Option<M> {
         if is_space(ch) {
             continue;
         }
-        if s[j..].starts_with("``") && not_word_at(s, j + 2) {
+        // a closing pair followed by a backtick is part of the literal (``:role:`x```), as docutils reads it
+        if s[j..].starts_with("``") && not_word_at(s, j + 2) && at(s, j + 2) != Some('`') {
             return Some(M { start: 0, end: j + 2, kind: Kind::Other });
         }
     }
