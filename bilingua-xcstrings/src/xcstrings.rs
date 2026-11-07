@@ -125,6 +125,18 @@ fn leaves(loc: &Node, path: &mut Vec<String>, depth: usize, out: &mut Vec<(Vec<S
                     }
                 }
             }
+            "stringSet" => {
+                // App Shortcuts phrases: one unit per string of `values`, numbered by position
+                if let Some(Kind::Arr(items)) = val.obj().and_then(|so| so.get("values")).map(|v| &v.kind) {
+                    for (i, v) in items.iter().enumerate() {
+                        if let Some(s) = v.str() {
+                            let mut p = path.clone();
+                            p.extend(["stringSet".to_string(), i.to_string()]);
+                            out.push((p, s.to_string(), (v.start, v.end)));
+                        }
+                    }
+                }
+            }
             "variations" => {
                 if let Some(vo) = val.obj() {
                     for (vtype, vmap) in vo.items() {
@@ -209,9 +221,17 @@ fn unit_for(id: String, e: &Entry<'_>, leaf: &Leaf, source: &str, limits: &Limit
     if e.src.is_some() {
         loc.push_str("localizations.");
         loc.push_str(source);
+        let in_set = p.len() >= 2 && p[p.len() - 2] == "stringSet";
         for part in &p[..p.len() - 1] {
             loc.push('.');
             loc.push_str(part);
+        }
+        if in_set {
+            loc.push('[');
+            loc.push_str(&p[p.len() - 1]);
+            loc.push(']');
+            u.context.extra.insert("string_set_index".into(), p[p.len() - 1].clone());
+            u.context.kind = Some("stringSet".into());
         }
     } else {
         loc.push_str("key");
@@ -362,6 +382,8 @@ type Substitution = (String, Shape, Vec<(String, J)>);
 
 enum ShapeItem {
     StringUnit,
+    /// The source strings of a `stringSet`.
+    StringSet(Vec<String>),
     /// variation type -> (category, shape or None for a value that is not an object)
     Variations(Vec<(String, Vec<Category>)>),
     /// name, shape, copied `argNum` / `formatSpecifier`
@@ -374,6 +396,11 @@ fn shape_of(text: &str, loc: &Node) -> Shape {
         for (key, val) in o.items() {
             match key {
                 "stringUnit" if val.obj().is_some() => items.push(ShapeItem::StringUnit),
+                "stringSet" => {
+                    if let Some(Kind::Arr(vals)) = val.obj().and_then(|so| so.get("values")).map(|v| &v.kind) {
+                        items.push(ShapeItem::StringSet(vals.iter().filter_map(|v| v.str().map(str::to_string)).collect()));
+                    }
+                }
                 "variations" => {
                     if let Some(vo) = val.obj() {
                         let mut v = Vec::new();
@@ -428,6 +455,31 @@ fn mirror(shape: &Shape, old: Option<&J>, trans: &Trans, path: &mut Vec<String>,
                     out.push(("stringUnit".into(), translated_unit(v)));
                 } else if let Some(o) = old.and_then(|o| o.get("stringUnit")).filter(|o| matches!(o, J::Obj(_))) {
                     out.push(("stringUnit".into(), o.clone()));
+                }
+            }
+            ShapeItem::StringSet(src) => {
+                let oset = old.and_then(|o| o.get("stringSet")).filter(|o| matches!(o, J::Obj(_)));
+                let oldv: Vec<&str> = match oset.and_then(|o| o.get("values")) {
+                    Some(J::Arr(a)) => a.iter().filter_map(|x| if let J::Str(s) = x { Some(s.as_str()) } else { None }).collect(),
+                    _ => Vec::new(),
+                };
+                let n = path.len();
+                path.push("stringSet".into());
+                let mut any = false;
+                let mut vals: Vec<J> = Vec::with_capacity(src.len());
+                for (i, sv) in src.iter().enumerate() {
+                    path.push(i.to_string());
+                    let t = lookup(trans, path);
+                    path.pop();
+                    any |= t.is_some();
+                    // values are positional: a string without a translation keeps the target's old string, else the source
+                    vals.push(J::Str(t.or_else(|| oldv.get(i).copied()).unwrap_or(sv).to_string()));
+                }
+                path.truncate(n);
+                if any {
+                    out.push(("stringSet".into(), J::Obj(vec![("state".into(), J::Str("translated".into())), ("values".into(), J::Arr(vals))])));
+                } else if let Some(o) = oset {
+                    out.push(("stringSet".into(), o.clone()));
                 }
             }
             ShapeItem::Variations(types) => {
