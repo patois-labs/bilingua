@@ -386,3 +386,49 @@ fn write_corpus() {
     w("shiftjis.vsdx", &with_page2_bytes(b.into_owned()));
     w("rtl-paragraph.vsdx", &Pkg { page1: super::tests::rtl_page1_pub(), ..Default::default() }.build());
 }
+
+/// The package of the W4 vsdx tests: an untranslatable shape (`---`) before `Start` on the first walked page, and a
+/// comments part with an entry that has no text.
+pub fn gaps_package() -> Vec<u8> {
+    let page = page2().replace("<Shape ID='7' Type='Shape'><Text>Start</Text></Shape>", "<Shape ID='6' Type='Shape'><Text>---</Text></Shape><Shape ID='7' Type='Shape'><Text>Start</Text></Shape>");
+    let rels = "<Relationships xmlns='http://schemas.openxmlformats.org/package/2006/relationships'><Relationship Id='rId9' Type='http://schemas.microsoft.com/visio/2010/relationships/comments' Target='comments.xml'/></Relationships>";
+    let comments = format!("<?xml version='1.0' encoding='utf-8' ?><Comments xmlns='{NS}'><AuthorList><AuthorEntry Name='Ann' Initials='A' ID='0'/></AuthorList><CommentList><CommentEntry AuthorID='0' PageID='0' CommentID='0'>  </CommentEntry><CommentEntry AuthorID='0' PageID='0' CommentID='1'>Move this shape.</CommentEntry></CommentList></Comments>");
+    Pkg {
+        page2: page,
+        extra: vec![("visio/_rels/document.xml.rels".into(), rels.as_bytes().to_vec()), ("visio/comments.xml".into(), comments.into_bytes())],
+        ..Default::default()
+    }
+    .build()
+}
+
+/// W4 vsdx-1 / vsdx-2: under the LocOS profile `locos.p_index` is LocOS's slot index (page names, shape texts and
+/// data labels, untranslatable slots counted, so there are gaps) and a comment is `COMMENT_BASE + j`.
+#[test]
+fn locos_p_index_is_the_slot_index_with_gaps() {
+    let data = gaps_package();
+    let lo = profile::locos().extract_options().with_format_option("vsdx.translate_comments", true);
+    let doc = Vsdx.extract(&data, &lo).unwrap();
+    let got: Vec<(String, String)> = doc.units.iter().map(|u| (u.context.extra[profile::P_INDEX].clone(), plain_text(&u.source()))).collect();
+    let want: Vec<(String, String)> = [
+        ("0", "Overview"),
+        ("1", "Process details"),
+        // slot 2 is the `---` shape
+        ("3", "Start"),
+        ("4", "Process owner"),
+        ("5", "Review the request by %1$s\n"),
+        ("6", "Printed on 10/10/2026\n"),
+        // slot 7 is the field-only shape
+        ("8", "42"),
+        // the first comment entry is blank: 1000000 is skipped
+        ("1000001", "Move this shape."),
+    ]
+    .iter()
+    .map(|(a, b)| (a.to_string(), b.to_string()))
+    .collect();
+    assert_eq!(got.iter().map(|g| g.0.clone()).collect::<Vec<_>>(), want.iter().map(|w| w.0.clone()).collect::<Vec<_>>(), "{got:?}");
+    assert_eq!(got.last(), want.last());
+    // without the profile nothing changes: no LocOS index
+    let plain = Vsdx.extract(&data, &ExtractOptions::new().with_format_option("vsdx.translate_comments", true)).unwrap();
+    assert!(plain.units.iter().all(|u| !u.context.extra.contains_key(profile::P_INDEX)));
+    assert_eq!(plain.units.len(), doc.units.len());
+}

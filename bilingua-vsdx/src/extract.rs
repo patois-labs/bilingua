@@ -324,6 +324,21 @@ struct Builder {
     units: Vec<Unit>,
     max_units: usize,
     slots: usize,
+    /// Under the LocOS profile: record LocOS's p_index (the slot's index, empty and untranslatable slots counted)
+    locos: bool,
+}
+
+/// LocOS `office_comments.COMMENT_BASE`: the p_index of the first comment entry.
+const COMMENT_BASE: usize = 1_000_000;
+
+impl Builder {
+    /// Under the LocOS profile, `locos.p_index` = the current slot's index (LocOS `_walk` numbers every page name,
+    /// shape text and data label, so the numbers have gaps).
+    fn mark(&self, u: &mut Unit, p_index: usize) {
+        if self.locos {
+            u.context.extra.insert(bilingua_model::profile::P_INDEX.to_string(), p_index.to_string());
+        }
+    }
 }
 
 impl Builder {
@@ -410,7 +425,7 @@ fn extract_inner(bytes: &[u8], opts: &ExtractOptions, with_comments: bool) -> Re
             }
         }
     }
-    let mut b = Builder { units: vec![], max_units: l.max_units, slots: 0 };
+    let mut b = Builder { units: vec![], max_units: l.max_units, slots: 0, locos: opts.is_profile(bilingua_model::profile::LOCOS) };
     let mut parts: Vec<Part> = Vec::new();
     let mut page_names: HashMap<String, (usize, String)> = HashMap::new();
 
@@ -451,6 +466,7 @@ fn extract_inner(bytes: &[u8], opts: &ExtractOptions, with_comments: bool) -> Re
             let root = root_of(&part.parsed.nodes).expect("root");
             let page = root.elements().find(|p| p.id == id).expect("page");
             u.codes.insert(C_ORIG.into(), code(page.start[a.vs..a.ve].to_string()));
+            b.mark(&mut u, b.slots - 1);
             b.units.push(u);
             part.edits.insert(id, Edit::Attr { unit, name: "Name", nameu: !has_nameu });
             part.changed = true;
@@ -567,6 +583,7 @@ fn extract_inner(bytes: &[u8], opts: &ExtractOptions, with_comments: bool) -> Re
                 u.context.style = Some(STYLE_COMMENT.into());
                 u.context.location = Some(format!("comment {}", j + 1));
                 set_run_codes(&mut u, &core, &el.children, "text");
+                b.mark(&mut u, COMMENT_BASE + j);
                 b.units.push(u);
                 edits.insert(el.id, Edit::Children { unit });
             }
@@ -671,6 +688,7 @@ impl PageWalk<'_> {
                     u.context.location = Some(self.location(Some(shape)));
                     set_run_codes(&mut u, &core, &el.children, "text");
                     u.codes.insert(C_SHAPE.into(), code(shape.start.clone()));
+                    self.b.mark(&mut u, self.b.slots - 1);
                     self.b.units.push(u);
                     self.edits.insert(el.id, Edit::Children { unit });
                     self.edits.insert(shape.id, Edit::Shape { unit, text_id: el.id });
@@ -691,6 +709,7 @@ impl PageWalk<'_> {
                 u.codes.insert(C_KIND.into(), code("attr"));
                 u.codes.insert(C_QUOTE.into(), code((a.quote as char).to_string()));
                 u.codes.insert(C_ORIG.into(), code(el.start[a.vs..a.ve].to_string()));
+                self.b.mark(&mut u, self.b.slots - 1);
                 self.b.units.push(u);
                 self.edits.insert(el.id, Edit::Attr { unit, name: "V", nameu: false });
             }
