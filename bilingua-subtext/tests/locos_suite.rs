@@ -68,7 +68,7 @@ fn microdvd() {
         &[
             (0, "\u{27E6}g1\u{27E7}Salut !\u{27E6}/g1\u{27E7}\nCa va ?"),
             (1, "Texte {0} simple"),
-            // the token brings back its code; an invented token is dropped
+            // the token brings back its code; an invented token stays text (LocOS issue 814)
             (2, "\u{27E6}g1\u{27E7}Rouge\u{27E6}/g1\u{27E7}\n\u{27E6}g2\u{27E7}Ligne grasse\u{27E6}/g2\u{27E7} \u{27E6}x9\u{27E7}"),
         ],
     ));
@@ -78,8 +78,7 @@ fn microdvd() {
     assert_eq!(lines[2], "{25}{50}{y:i}Salut !|Ca va ?");
     assert_eq!(lines[3], "{60}{90}Texte {0} simple");
     assert_eq!(lines[4], "{100}{}{Y:b}");
-    assert_eq!(lines[5], "{120}{150}{c:$0000FF}Rouge|{y:b}Ligne grasse");
-    assert!(!out.contains('\u{27E6}'));
+    assert_eq!(lines[5], "{120}{150}{c:$0000FF}Rouge|{y:b}Ligne grasse \u{27E6}x9\u{27E7}");
     // Gate: spaces around | are layout; the unit is trimmed per line and identity is exact.
     let spaced = b"{10}{20}{0} items | %s\r\n";
     assert_eq!(units("sub", spaced), ["{0} items\n%s"]);

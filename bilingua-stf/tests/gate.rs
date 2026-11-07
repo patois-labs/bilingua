@@ -39,6 +39,28 @@ fn existing_translations_load_as_targets_by_default() {
 }
 
 #[test]
+fn a_source_escape_stays_a_tag_and_backslash_n_corners_round_trip() {
+    // source "Hi {0}\n{!$User.Name}" has one \n; the cell has it once as a tag plus `\\n` (a backslash then n),
+    // `\\\n` (a backslash then a line feed) and a second \n the source lacks
+    let cell = "{!$User.Name} A\\nB\\\\nC\\\\\\nD\\n{0}";
+    let file = BILINGUAL.replace("{!$User.Name} Hallo\\n{0} \\t {9}", cell);
+    let mut doc = extract(file.as_bytes()).unwrap();
+    let t = &doc.units[1].segments[0].target;
+    let tags: Vec<&str> = t.iter().filter_map(|i| if let Inline::Tag { display, .. } = i { Some(display.as_str()) } else { None }).collect();
+    assert_eq!(tags, ["{!$User.Name}", "\\n", "{0}"], "{t:?}");
+    // `\\n` is a backslash and n; `\\` then \n is a backslash and a line feed; the extra \n is a line feed
+    assert_eq!(plain_text(t), " AB\\nC\\\nD\n");
+    // untouched: byte for byte
+    assert_eq!(StfFilter.merge(&doc).unwrap(), file.as_bytes());
+    // the loaded target set again as the target, plus one letter: only the letter changes in the cell
+    let mut edited = t.clone();
+    edited.push(Inline::text("!"));
+    doc.set_target("u2", edited).unwrap();
+    let out = String::from_utf8(StfFilter.merge(&doc).unwrap()).unwrap();
+    assert!(out.contains(&format!("\t{cell}!\t*\n")), "{out}");
+}
+
+#[test]
 fn an_escape_a_translator_typed_is_decoded_and_escaped_once_on_merge() {
     // the source "Save" has no escapes; the translation cell holds a backslash pair, \n and \t as escapes
     let file = BILINGUAL.replace("Save\tSpeichern\t-", "Save\tA\\\\B\\nC\\tD\t-");

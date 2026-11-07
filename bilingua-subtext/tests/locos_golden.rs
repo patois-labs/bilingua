@@ -45,6 +45,8 @@ fn map_text(name: &str, i: usize, t: &str) -> Option<String> {
         "notok" => Some(format!("{}!", strip(t))),
         "nl" => Some(t.replace(' ', "\n")),
         "ws" => Some(format!("  {t} \n")),
+        // a token that names no code of the unit: LocOS keeps it as text (issue 814)
+        "unk" => Some(format!("{t} \u{27E6}x99\u{27E7}")),
         _ => unreachable!(),
     }
 }

@@ -1,7 +1,7 @@
 //! Shared helpers: units as LocOS writes them (inline codes as numbered tokens) and builds from LocOS-style text,
-//! the way the Localization OS adapter calls the filter (UTF-8 out, unresolved tokens dropped).
+//! the way the Localization OS adapter calls the filter (UTF-8 out, a token that names no code stays text).
 #![allow(dead_code)]
-use bilingua_model::profile::tokens::{parse_locos_text, to_locos_text, TokenProblem};
+use bilingua_model::profile::tokens::{from_locos_text, to_locos_text};
 use bilingua_model::*;
 use bilingua_subtext::{Sbv, Sub};
 
@@ -25,17 +25,11 @@ pub fn units(fmt: &str, data: &[u8]) -> Vec<String> {
     extract(fmt, data).expect("extract").units.iter().map(|u| to_locos_text(&u.source()).0).collect()
 }
 
-/// LocOS text to a target: unknown tokens (an invented `x9`) are dropped, as LocOS drops them.
+/// LocOS text to a target: a token that names no code of the unit (an invented `x9`) stays text, as the LocOS build
+/// keeps it (issue 814).
 pub fn target(u: &Unit, t: &str) -> Vec<Inline> {
     let (_, map) = to_locos_text(&u.source());
-    let (_, problems) = parse_locos_text(t, &map);
-    let mut t = t.to_string();
-    for p in problems {
-        if let TokenProblem::Unknown { token } | TokenProblem::KindMismatch { token } = p {
-            t = t.replace(&token, "");
-        }
-    }
-    parse_locos_text(&t, &map).0
+    from_locos_text(t, &map)
 }
 
 pub fn try_build_with(fmt: &str, data: &[u8], tr: &[(usize, String)], mo: &MergeOptions) -> Result<Vec<u8>, Error> {
