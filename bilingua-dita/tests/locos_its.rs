@@ -259,9 +259,11 @@ fn hostile_inputs() {
     for f in [&dita() as &dyn Filter, &docbook()] {
         let laughs = br#"<?xml version="1.0"?><!DOCTYPE topic [<!ENTITY lol "lol"><!ENTITY lol2 "&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;">]><topic>&lol2;</topic>"#;
         let xxe = br#"<!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd" [<!ENTITY x SYSTEM "file:///etc/passwd">]><topic><title>&x;</title></topic>"#;
+        // Bilingua keeps an internal subset (LocOS refuses it); no entity is expanded or fetched
         for raw in [&laughs[..], &xxe[..]] {
-            assert!(matches!(f.extract(raw, &opts(None)), Err(Error::Limit(_) | Error::Parse { .. })), "internal subset accepted");
-            assert!(!f.sniff(raw));
+            let d = f.extract(raw, &opts(None)).unwrap();
+            assert_eq!(f.merge(&d).unwrap(), raw);
+            assert!(d.units.iter().all(|u| !show(u).contains("root:")));
         }
         // an external DTD is never fetched (the address does not answer): its entities stay tags
         let ext = br#"<!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "http://127.0.0.1:9/evil.dtd"><topic id="t"><title>Hi &ent; there</title></topic>"#;

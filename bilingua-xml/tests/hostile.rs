@@ -190,21 +190,32 @@ fn malformed_files_are_typed_errors() {
 }
 
 #[test]
-fn entity_declarations_are_refused() {
+fn entity_declarations_are_kept_as_codes_never_expanded() {
     let f = XmlFilter::new();
     let bomb = br#"<?xml version="1.0"?><!DOCTYPE lolz [<!ENTITY lol "lol"><!ENTITY lol2 "&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;"><!ENTITY lol3 "&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;">]><lolz>&lol3;</lolz>"#;
     let xxe = br#"<?xml version="1.0"?><!DOCTYPE r [<!ENTITY xxe SYSTEM "file:///etc/passwd">]><r>&xxe;</r>"#;
     let param = br#"<?xml version="1.0"?><!DOCTYPE r [<!ENTITY % p SYSTEM "http://127.0.0.1:9/x.dtd"> %p;]><r/>"#;
     let in_attr = br#"<!DOCTYPE r SYSTEM "a>b" [<!ENTITY a "x">]><r y="&a;">hi</r>"#;
+    // The DTD is kept byte for byte and no entity is ever expanded or fetched: a `&name;` is a code.
     for raw in [&bomb[..], &xxe[..], &param[..], &in_attr[..]] {
-        assert!(matches!(f.extract(raw, &opts(None)), Err(Error::Limit(_) | Error::Parse { .. })), "{}", String::from_utf8_lossy(raw));
+        let d = f.extract(raw, &opts(None)).unwrap_or_else(|e| panic!("{}: {e}", String::from_utf8_lossy(raw)));
+        assert!(d.units.iter().all(|u| !show(u).contains("lol lol") && !show(u).contains("root:")));
+        assert_eq!(f.merge(&d).unwrap(), raw, "untouched = as uploaded");
     }
-    // entities in a UTF-16 file are found too
+    let d = f.extract(&bomb[..], &opts(None)).unwrap();
+    assert_eq!(show(&d.units[0]), "\u{27E6}x1\u{27E7}");
+    // a comment with a quote or a ">" inside the subset does not hide what follows it
+    let tricky = br#"<!DOCTYPE r [ <!-- don't > "x --> <!ENTITY a "x"> ]><r><p>Hi &a; there</p></r>"#;
+    assert_eq!(texts(&f, tricky), vec!["Hi \u{27E6}x1\u{27E7} there"]);
+    // entities in a UTF-16 file are handled too
     let mut u16 = vec![0xFF, 0xFE];
     for c in String::from_utf8_lossy(&bomb[..]).encode_utf16() {
         u16.extend_from_slice(&c.to_le_bytes());
     }
-    assert!(matches!(f.extract(&u16, &opts(None)), Err(Error::Limit(_))));
+    assert!(f.extract(&u16, &opts(None)).is_ok());
+    // the depth limit still applies behind a DOCTYPE with entities
+    let deep = format!("<!DOCTYPE r [<!ENTITY a \"x\">]>{}x{}", "<a>".repeat(5000), "</a>".repeat(5000));
+    assert!(matches!(f.extract(deep.as_bytes(), &opts(None)), Err(Error::Limit(e)) if e.kind == LimitKind::XmlDepth));
     // the five predefined entities and character references are all a document needs
     let ok = br#"<r>&amp;&lt;&gt;&quot;&apos;&#65;&#x42;</r>"#;
     assert_eq!(texts(&f, ok), vec![r#"&<>"'AB"#]);

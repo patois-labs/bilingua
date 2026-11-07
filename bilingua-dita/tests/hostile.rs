@@ -147,15 +147,16 @@ fn dtds_are_never_fetched_and_internal_subsets_are_refused() {
             assert_eq!(show(&d.units[0]), "A \u{27E6}x1\u{27E7} and & B", "an entity of the DTD stays a code");
             assert_eq!(f.merge(&d).unwrap(), doc.as_bytes());
         }
-        // an internal subset (entity bombs, external entities, parameter entities) is refused before parsing
+        // an internal subset (entity bombs, external entities, parameter entities) is kept as it is: nothing is
+        // expanded or fetched, an entity stays a code and the file is written back unchanged
         for raw in [
             &br#"<!DOCTYPE topic [<!ENTITY a "aaaaaaaaaa"><!ENTITY b "&a;&a;&a;&a;&a;&a;&a;&a;&a;&a;">]><topic><title>&b;</title></topic>"#[..],
             br#"<!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd" [<!ENTITY x SYSTEM "http://127.0.0.1:9/x">]><topic><title>&x;</title></topic>"#,
             br#"<!DOCTYPE topic [<!ENTITY % p SYSTEM "http://127.0.0.1:9/p.dtd"> %p;]><topic/>"#,
             br#"<!DOCTYPE book [<!ELEMENT book ANY>]><book><para>x</para></book>"#,
         ] {
-            assert!(matches!(f.extract(raw, &opts(None)), Err(Error::Limit(_) | Error::Parse { .. })), "{}", String::from_utf8_lossy(raw));
-            assert!(!f.sniff(raw));
+            let d = f.extract(raw, &opts(None)).unwrap_or_else(|e| panic!("{}: {e}", String::from_utf8_lossy(raw)));
+            assert_eq!(f.merge(&d).unwrap(), raw, "untouched = as uploaded");
         }
         // XInclude is not followed: the element stays markup
         let xi = br#"<topic id="t" xmlns:xi="http://www.w3.org/2001/XInclude"><title>T <xi:include href="file:///etc/passwd"/></title></topic>"#;

@@ -248,9 +248,11 @@ fn encodings() {
 #[test]
 fn hostile() {
     let bomb = br#"<?xml version="1.0"?><!DOCTYPE r [<!ENTITY a "aaaa"><!ENTITY b "&a;&a;&a;">]><r><g><t xml:lang="en">&b;</t><t xml:lang="de">x</t></g><g><t xml:lang="en">y</t><t xml:lang="de">z</t></g></r>"#;
-    refused(f().extract(bomb, &opts(None)), "DTD");
+    // the DTD is kept and never expanded
+    let d = f().extract(bomb, &opts(None)).unwrap();
+    assert_eq!(f().merge(&d).unwrap(), bomb);
     let xxe = br#"<?xml version="1.0"?><!DOCTYPE r [<!ENTITY x SYSTEM "file:///etc/passwd">]><r/>"#;
-    refused(f().extract(xxe, &opts(None)), "DTD");
+    assert!(f().extract(xxe, &opts(None)).is_ok());
     // an unvalidated language code never reaches the XPath or the output
     let d = data("xpath-pi.xml");
     let mut doc = ex_to(&f(), &d, "fr'] | //*[@a='");

@@ -363,6 +363,52 @@ fn markup_bytes(bytes: &[u8]) -> std::borrow::Cow<'_, [u8]> {
 ///
 /// Comments, CDATA sections and processing instructions are skipped, so markup inside them is not counted.
 pub fn check_xml(bytes: &[u8], l: &Limits) -> Result<(), Error> {
+    check_xml_with(bytes, l, false)
+}
+
+/// Like [`check_xml`] for document formats where a DTD with entity declarations is normal (DocBook, DITA, plain
+/// XML): the declarations are allowed, and the depth and element limits still apply. This is safe only for a reader
+/// that never expands or fetches an entity, as the XML filter family does: it keeps every `&name;` as an opaque
+/// code and writes the DOCTYPE back byte for byte.
+pub fn check_xml_keeping_dtd(bytes: &[u8], l: &Limits) -> Result<(), Error> {
+    check_xml_with(bytes, l, true)
+}
+
+/// End of a `<!DOCTYPE ...>` that starts at `i`: the index of its closing `>` (or `b.len()`). Quoted strings, the
+/// `[ ... ]` internal subset and the comments and processing instructions inside it are skipped.
+fn doctype_end(b: &[u8], i: usize) -> usize {
+    let (mut j, mut sq, mut subset) = (i + 9, 0u8, 0usize);
+    while j < b.len() {
+        let c = b[j];
+        if sq != 0 {
+            if c == sq {
+                sq = 0;
+            }
+        } else if c == b'"' || c == b''' {
+            sq = c;
+        } else if subset > 0 && b[j..].starts_with(b"<!--") {
+            match find(b, j + 4, b"-->") {
+                Some(e) => j = e + 2,
+                None => return b.len(),
+            }
+        } else if subset > 0 && b[j..].starts_with(b"<?") {
+            match find(b, j + 2, b"?>") {
+                Some(e) => j = e + 1,
+                None => return b.len(),
+            }
+        } else if c == b'[' {
+            subset += 1;
+        } else if c == b']' {
+            subset = subset.saturating_sub(1);
+        } else if c == b'>' && subset == 0 {
+            break;
+        }
+        j += 1;
+    }
+    j.min(b.len())
+}
+
+fn check_xml_with(bytes: &[u8], l: &Limits, keep_dtd: bool) -> Result<(), Error> {
     let data = markup_bytes(bytes);
     let b: &[u8] = &data;
     let (mut i, mut depth, mut elements) = (0usize, 0usize, 0usize);
@@ -386,27 +432,8 @@ pub fn check_xml(bytes: &[u8], l: &Limits) -> Result<(), Error> {
                 None => break,
             }
         } else if rest.len() >= 9 && rest[..9].eq_ignore_ascii_case(b"<!DOCTYPE") {
-            // up to the closing '>' outside quotes and outside the internal subset [..]
-            let (mut j, mut sq, mut subset) = (i + 9, 0u8, 0usize);
-            while j < b.len() {
-                let c = b[j];
-                if sq != 0 {
-                    if c == sq {
-                        sq = 0;
-                    }
-                } else if c == b'"' || c == b'\'' {
-                    sq = c;
-                } else if c == b'[' {
-                    subset += 1;
-                } else if c == b']' {
-                    subset = subset.saturating_sub(1);
-                } else if c == b'>' && subset == 0 {
-                    break;
-                }
-                j += 1;
-            }
-            let end = j.min(b.len());
-            if contains_ci(&b[i..end], b"<!ENTITY") {
+            let end = doctype_end(b, i);
+            if !keep_dtd && contains_ci(&b[i..end], b"<!ENTITY") {
                 return Err(unsafe_xml(
                     "This file declares XML entities (a DTD), which could expand without limit or read other files. It was not processed.",
                 ));

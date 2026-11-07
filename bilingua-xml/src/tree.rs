@@ -75,6 +75,8 @@ pub(crate) struct Tree<'a> {
     pub epilog: Vec<Item>,
     pub root: u32,
     pub has_doctype: bool,
+    /// The DOCTYPE has an internal subset (`[ ... ]`).
+    pub has_subset: bool,
 }
 
 fn bad(msg: impl Into<String>) -> Error {
@@ -311,6 +313,7 @@ impl<'a> Tree<'a> {
             epilog: Vec::new(),
             root: NONE,
             has_doctype: false,
+            has_subset: false,
         };
         let mut uri_ids: HashMap<String, u32> = HashMap::new();
         let mut stack: Vec<u32> = Vec::new();
@@ -503,9 +506,8 @@ impl<'a> Tree<'a> {
                     let raw = &text[start..end];
                     // XML characters only: a NUL here would also be read as a skeleton marker
                     check_value(raw, false)?;
-                    if doctype_has_subset(raw) {
-                        return Err(bad("this file declares a DTD internal subset; refused (it is where entities are declared, an entity-expansion / XXE vector). Remove the [ ... ] block."));
-                    }
+                    // An internal subset is kept as it is: no entity is ever expanded or fetched, a `&name;` stays a code.
+                    t.has_subset = doctype_has_subset(raw);
                     t.has_doctype = true;
                     t.prolog.push(Item { kind: Kind::Doctype, s: start, e: end, el: NONE });
                 }
