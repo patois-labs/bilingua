@@ -489,6 +489,25 @@ commented list in the test.
 - **`${name}` parameters** (App Intents and App Shortcuts, `${applicationName}`) are free inline codes in every value;
   LocOS offered them as text. A value that is only parameters is not a unit.
 
+## Differences from LocOS: issue fixes (cadzip group, 11-07)
+
+Bilingua fixes these first; LocOS gets the same changes next and its goldens are regenerated. The golden tests in
+`bilingua-dxf` and `bilingua-htmlhelp` list the cases that differ on purpose (`FIXED_ON_PURPOSE`).
+
+- **dxf, issue 805**: a single `%` at the end of a translated text piece before a `%%d`, `%%c`, `%%p` or `%%nnn` code is
+  written `%%%`, so the code survives (LocOS wrote `%%%d`, which reads back as a literal `%` and a stray `d`). The
+  line budget counts a CRLF line end once (LocOS counted it twice and refused CRLF files at half the group codes). A
+  DOS864 drawing reads byte 0x25 as `%` (not U+066A), so `%%d` stays a code. A translator-typed Arabic percent sign
+  is still written as byte 0x25 in that code page.
+- **dxf, issue 811 item 3**: a code that ends where the value ended (`\` alone, an unterminated `\A1`) is closed
+  when anything follows it, white space included (LocOS closed it only before other characters).
+- **htmlhelp, issue 796**: a declared `gb2312`, `shift_jis`, `euc-kr` or `ks_c_5601-1987`, or `big5` label is read and
+  written as GBK, Windows 932, Windows 949 or Windows 950, the way browsers and HTML Help Workshop read them. A
+  localized CJK export now reads back (LocOS fell back to Windows-1252 for any character outside the strict subset).
+  The EUC-KR make-up sequence is no longer special.
+- **zip, issue 812 item 2**: a zip entry whose name has a path component that is a Windows device name (`CON`, `PRN`,
+  `AUX`, `NUL`, `COM1` to `COM9`, `LPT1` to `LPT9`, any case, any extension) is refused. A colon was refused already.
+
 ## CAT OS core (note for the lead)
 
 - `catcore` re-exported `bilingua_sdl::ZipLimits`; it now re-exports `bilingua_model::Limits as PackageLimits`

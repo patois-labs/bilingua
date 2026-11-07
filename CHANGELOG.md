@@ -15,6 +15,13 @@ is listed here).
 - xcstrings: App Intents parameters (`${applicationName}`, `${place}`) are inline codes a translation may move. They
   used to be offered as text (LocOS does the same).
 
+- dxf: a lone `%` before a `%%d` style code keeps the code (it was written `%%%d`); a CRLF drawing gets the same group
+  code budget as an LF one; DOS864 drawings read byte 0x25 as `%`; a code that ends at the value end is closed before
+  white space too. See MIGRATION.md.
+- htmlhelp: `gb2312`, `shift_jis`, `euc-kr`, `ks_c_5601-1987` and `big5` declared charsets are read as the Windows
+  supersets (GBK, 932, 949, 950), so a localized CJK export can be read back.
+- zip (all zip-based formats): entry names that are Windows device names (`CON`, `aux.md`, `COM1`, ...) are refused.
+
 ## [0.9.0] - 2026-11-06
 
 The first public release.

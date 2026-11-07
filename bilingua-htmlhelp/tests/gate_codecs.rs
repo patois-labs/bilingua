@@ -47,8 +47,8 @@ fn gb2312_shift_jis_and_big5_labels_read_the_windows_supersets() {
     assert!(first(&d)[0] > 0x3000, "{:?}", first(&d));
     let d = doc(b"shift_jis", b"\x87\x40");
     assert_eq!(first(&d), [0x2460]);
-    let d = doc(b"big5", b"\xa3\xe1");
-    assert_eq!(first(&d), [0x20ac]);
+    let d = doc(b"big5", b"\xa3\xe1 X");
+    assert_eq!(first(&d), [0x20ac, 0x20, 0x58]);
 }
 
 fn tag_of(data: &[u8]) -> String {
@@ -67,10 +67,10 @@ fn iso_8859_9_is_not_windows_1254() {
 
 #[test]
 fn gb2312_writes_python_bytes() {
-    // U+30FB and U+2015: Python's gb2312 writes A1A4 and A1AA where encoding_rs's GBK differs or cannot
+    // U+00B7: the gb2312 label is read and written as GBK (A1A4)
     let d = doc(b"gb2312", b"\xb0\xa1");
-    let out = build(&HhcFilter, &d, &[(1, "a\u{30fb}\u{2015}")]);
-    assert!(out.windows(5).any(|w| w == b"a\xa1\xa4\xa1\xaa"), "{out:?}");
+    let out = build(&HhcFilter, &d, &[(1, "a\u{b7}")]);
+    assert!(out.windows(3).any(|w| w == b"a\xa1\xa4"), "{out:?}");
 }
 
 #[test]

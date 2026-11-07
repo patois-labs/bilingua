@@ -35,6 +35,11 @@ fn try_build(data: &[u8], mapping: &[(usize, String)]) -> Result<Vec<u8>, Error>
     Dxf.merge(&doc)
 }
 
+/// Cases where Bilingua now differs from the recorded LocOS output on purpose (issues 805 and 811): a code before white
+/// space is closed (`trail\\ ` instead of `trail\ `), and DOS864 reads byte 0x25 as `%`. LocOS gets the same fixes next;
+/// then these goldens are regenerated and this list goes away. The test fails if a listed case stops differing.
+const FIXED_ON_PURPOSE: &[&str] = &["random-12", "random-17", "random-45", "random-52", "random-69", "random-70", "random-82", "random-88", "random-93", "random-97", "random-104", "mutated-14", "mutated-47", "escapes.dxf"];
+
 #[test]
 fn matches_locos_on_random_files_and_corpus() {
     let text = std::fs::read_to_string(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/data/locos_golden.json")).unwrap();
@@ -85,6 +90,10 @@ fn matches_locos_on_random_files_and_corpus() {
         }
         ok += 1;
     }
+    for known in FIXED_ON_PURPOSE {
+        assert!(bad.iter().any(|b| b.starts_with(&format!("{known}:"))), "{known} no longer differs: remove it from FIXED_ON_PURPOSE");
+    }
+    bad.retain(|b| !FIXED_ON_PURPOSE.iter().any(|k| b.starts_with(&format!("{k}:"))));
     println!("golden: {ok} files identical to LocOS ({builds} builds), {refused} refused by LocOS");
     assert!(bad.is_empty(), "{} differences, first 25:\n{}", bad.len(), bad.iter().take(25).cloned().collect::<Vec<_>>().join("\n"));
 }

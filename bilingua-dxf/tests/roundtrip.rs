@@ -234,8 +234,9 @@ fn a_percent_before_a_code_token_keeps_the_code() {
     let s = String::from_utf8(out.clone()).unwrap();
     assert!(s.contains("Winkel 45%%%%%d"), "{s}");
     let back = extract(&out).unwrap();
-    assert!(matches!(back.units[0].source().last(), Some(Inline::Tag { .. })), "{:?}", back.units[0].source());
-    assert_eq!(plain_text(&back.units[0].source()), "Winkel 45%");
+    // the literal-percent code `%%%` and the degree code `%%d`, both kept as codes
+    assert_eq!(tags_of(&back.units[0]), vec!["%%%", "%%d"]);
+    assert_eq!(plain_text(&back.units[0].source()), "Winkel 45");
 }
 
 #[test]
@@ -248,7 +249,7 @@ fn code_before_white_space_is_closed_too() {
     t.push(Inline::text(" tail"));
     u.segments[0].target = t;
     let s = String::from_utf8(Dxf.merge(&doc).unwrap()).unwrap();
-    assert!(s.contains("Note \\ tail"), "{s}");
+    assert!(s.contains("Note \\\\ tail"), "{s}");
 }
 
 #[test]

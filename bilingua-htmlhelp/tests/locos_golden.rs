@@ -64,6 +64,10 @@ fn check(bad: &mut Vec<String>, name: &str, what: &str, want: &str, got: Result<
     }
 }
 
+/// Files that declare `shift_jis`: LocOS reads that label with its strict codec, Bilingua as Windows 932 (issue 796), so the
+/// localized exports of NEC rows and the like differ on purpose. LocOS gets the same fix next; then this list goes away.
+const FIXED_ON_PURPOSE: &[&str] = &["random-121", "random-136", "random-156", "random-166", "random-227", "random-235", "random-252", "random-265", "random-284", "random-326", "random-329", "random-369", "random-377", "random-385", "random-423", "random-454", "random-459", "random-489", "random-509", "random-52", "random-67", "random-68", "random-89"];
+
 #[test]
 fn matches_locos_on_random_files() {
     let text = std::fs::read_to_string(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/data/locos_golden.json")).unwrap();
@@ -137,6 +141,10 @@ fn matches_locos_on_random_files() {
             builds += 1;
         }
     }
+    for known in FIXED_ON_PURPOSE {
+        assert!(bad.iter().any(|b| b.starts_with(&format!("{known}:"))), "{known} no longer differs: remove it from FIXED_ON_PURPOSE");
+    }
+    bad.retain(|b| !FIXED_ON_PURPOSE.iter().any(|k| b.starts_with(&format!("{k}:"))));
     println!("{} cases, {refused} refused, {nunits} units, {builds} builds, {} differences", cases.len(), bad.len());
     assert!(bad.is_empty(), "{}\n{}", bad.len(), bad.iter().take(if std::env::var("HH_ALL").is_ok() { usize::MAX } else { 25 }).cloned().collect::<Vec<_>>().join("\n"));
 }
