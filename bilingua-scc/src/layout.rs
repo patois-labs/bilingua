@@ -384,7 +384,11 @@ pub fn encode_line(line: &Line, text: &[Atom], locos_glue: bool) -> Result<Vec<W
                 if i > 0 && !locos_glue && !(j >= 1 && s.head.iter().any(|e| e.name == Name::Cr)) && !(j < 1 && line.mode == Mode::RollUp) {
                     words.extend_from_slice(&cr_words);
                 }
-                words.extend(s.pos.iter().flat_map(|e| e.words.iter().copied()));
+                // the first row's mode and style codes are not repeated on an added row (a second mode code
+                // makes the row read back as another caption)
+                if i == 0 || j >= 1 {
+                    words.extend(s.pos.iter().flat_map(|e| e.words.iter().copied()));
+                }
             }
             Some(rnum) => {
                 let mut new_r = rnum as usize;

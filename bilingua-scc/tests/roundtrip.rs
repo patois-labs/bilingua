@@ -332,3 +332,14 @@ fn rewrapped_rows_without_a_pac_do_not_run_together() {
     assert_eq!(again.len(), 1);
     assert_eq!(again[0], "Zqdoes it work on Mac or\nWindowsqz");
 }
+
+#[test]
+fn an_added_row_does_not_repeat_the_mode_codes() {
+    // roll-up caption (ENM, RCL, RU3 then text, no PAC): a longer translation adds a row
+    let src = format!("Scenarist_SCC V1.0\n\n00:00:01:00\t94ae 94ae 9420 9420 9426 9426 {}\n", hex_words("Works on Mac or Windows."));
+    let out = try_build(src.as_bytes(), &[(0, "Zqdoes it work on Mac or Windowsqz".into())]).unwrap();
+    let again = units(&out);
+    assert_eq!(again, vec!["Zqdoes it work on Mac or\nWindowsqz".to_string()]);
+    let text = String::from_utf8(out).unwrap();
+    assert_eq!(text.matches("9426").count(), 2, "{text}");
+}
