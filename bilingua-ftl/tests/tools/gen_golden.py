@@ -23,6 +23,30 @@ sys.path.insert(0, LOCOS)
 from app import filters as _f  # noqa: E402,F401
 from app.filters.base import get_filter  # noqa: E402
 
+# ---- LOCOS PATCH (golden generation only) -------------------------------------------------------------------------
+# #811 item 1: the fix LocOS is getting. A run that starts its line (only spaces before it) writes its continuation
+# lines at that line's indent. This script patches LocOS's fluent_filter._indent_of in this process only (nothing in
+# LocOS is changed on disk), so the golden outputs are LocOS PLUS THIS FIX, not what LocOS itself produces today.
+# Every golden case records it in its "locos_patch" field. When app/filters/fluent_filter.py has the fix, drop this
+# block, drop LOCOS_PATCH, and regenerate.
+LOCOS_PATCH = "811.1: fluent_filter._indent_of patched by tests/tools/gen_golden.py (not LocOS's own output)"
+from app.filters import fluent_filter as _ff  # noqa: E402
+
+_old_indent_of = _ff._indent_of
+
+
+def _indent_of(src, start, end):
+    bol = max(src.rfind("\n", 0, start), src.rfind("\r", 0, start)) + 1
+    line = src[bol:start]
+    if line and not line.strip(" "):
+        return line
+    return _old_indent_of(src, start, end)
+
+
+_ff._indent_of = _indent_of
+print("gen_golden: LocOS patched for the golden:", LOCOS_PATCH, file=sys.stderr)
+# ---- end of LOCOS PATCH -------------------------------------------------------------------------------------------
+
 WORDS = [
     "Save", "Cancel", "Welcome back", "Hello, { $name }!", "{ $n } items", "Text { -brand } text", "{ $only }",
     "---", "Caf\u00e9", "\u65e5\u672c\u8a9e", "\u0645\u0631\u062d\u0628\u0627", "\ud55c\uad6d\uc5b4", "a { \"{\" } b",
@@ -115,6 +139,7 @@ def golden(data):
             r["localized"] = {loc: f.build_localized(data, maps["all"], loc).hex() for loc in LOCALES}
         rec[key] = r
     os.environ.pop("FTL_TRANSLATE_TERMS", None)
+    rec["locos_patch"] = LOCOS_PATCH
     return rec
 
 

@@ -12,6 +12,8 @@ pub struct Slot {
     pub end: usize,
     /// The table cell separator for a cell (escaped on merge).
     pub sep: Option<char>,
+    /// The cell is in a nested table (its text sits inside an outer cell, so the outer `|` must be escaped too).
+    pub nested: bool,
     pub kind: &'static str,
     /// Section level for a heading.
     pub level: usize,
@@ -31,6 +33,7 @@ struct Table {
     close: String,
     sep: char,
     style: char, // '\0' = none
+    nested: bool,
 }
 
 struct Walk<'a> {
@@ -49,8 +52,19 @@ impl Walk<'_> {
         if start < end {
             let chars = self.text[start..end].chars().count();
             guard::check_unit_chars(chars, self.limits)?;
-            self.slots.push(Slot { start, end, sep, kind, level, line });
+            self.slots.push(Slot { start, end, sep, nested: false, kind, level, line });
             guard::check_unit_count(self.slots.len(), self.limits)?;
+        }
+        Ok(())
+    }
+
+    fn add_cell(&mut self, start: usize, end: usize, sep: char, nested: bool, line: usize) -> Result<(), Error> {
+        let before = self.slots.len();
+        self.add(start, end, Some(sep), "cell", 0, line)?;
+        if nested && self.slots.len() > before {
+            if let Some(sl) = self.slots.last_mut() {
+                sl.nested = true;
+            }
         }
         Ok(())
     }
@@ -69,7 +83,7 @@ impl Walk<'_> {
         let seps: Vec<usize> = (0..b.len()).filter(|&k| b[k] == sep as u8 && (k == 0 || b[k - 1] != b'\\')).collect();
         if seps.is_empty() {
             if table.style != 'l' {
-                self.add(s, s + body.len(), Some(sep), "cell", 0, line)?;
+                self.add_cell(s, s + body.len(), sep, table.nested, line)?;
             }
             return Ok(());
         }
@@ -95,7 +109,7 @@ impl Walk<'_> {
                 }
             }
             if table.style != 'l' {
-                self.add(s + start, s + end, Some(sep), "cell", 0, line)?;
+                self.add_cell(s + start, s + end, sep, table.nested, line)?;
             }
             if let Some(n) = nxt {
                 table.style = n;
@@ -216,7 +230,7 @@ pub fn slots(text: &str, limits: &Limits) -> Result<Vec<Slot>, Error> {
                 continue;
             }
             if tm == Some('!') && nested.is_none() {
-                nested = Some(Table { close: rs.to_string(), sep: '!', style: '\0' });
+                nested = Some(Table { close: rs.to_string(), sep: '!', style: '\0', nested: true });
                 continue;
             }
             let cur = if nested.is_some() { nested.as_mut() } else { table.as_mut() }.expect("a table is open");
@@ -229,7 +243,7 @@ pub fn slots(text: &str, limits: &Limits) -> Result<Vec<Slot>, Error> {
             if sep == ',' || sep == ':' || is_table_format_skip(&pending) {
                 verbatim = Some(rs.to_string());
             } else {
-                table = Some(Table { close: rs.to_string(), sep, style: '\0' });
+                table = Some(Table { close: rs.to_string(), sep, style: '\0', nested: false });
             }
             pending.clear();
             continue;

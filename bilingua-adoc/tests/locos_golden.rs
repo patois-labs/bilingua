@@ -84,12 +84,59 @@ const SETEXT: &[&str] = &[
     "random-428", "random-431", "random-432", "random-443", "random-451", "random-458", "random-462", "random-465",
     "random-490", "random-525", "random-542", "random-553", "random-576", "random-578", "random-586", "random-597",
 ];
+/// CELL_GUARD: translated table cells (#788). A `|` in a nested-table cell is escaped, and a cell that starts a line
+/// gets the `{empty}` guard when the translation opens with block syntax or a directive; LocOS does neither, so the
+/// builds of these cases differ. Units, styles, inline maps and the echo build are still compared, and every other
+/// build must match LocOS once both have those two things taken out (`norm`; LocOS digests in
+/// `data/cell_guard_norm.json`, made by `tools/gen_cell_guard.py`).
+const CELL_GUARD: &[&str] = &[
+    "random-5", "random-8", "random-9", "random-32", "random-41", "random-53", "random-54", "random-57",
+    "random-59", "random-60", "random-61", "random-63", "random-76", "random-77", "random-80", "random-91",
+    "random-94", "random-101", "random-105", "random-124", "random-132", "random-141", "random-146", "random-149",
+    "random-166", "random-168", "random-196", "random-197", "random-210", "random-225", "random-228", "random-230",
+    "random-240", "random-247", "random-259", "random-264", "random-265", "random-271", "random-275", "random-304",
+    "random-316", "random-323", "random-326", "random-334", "random-346", "random-349", "random-357", "random-361",
+    "random-371", "random-378", "random-385", "random-394", "random-398", "random-401", "random-402", "random-405",
+    "random-421", "random-426", "random-454", "random-456", "random-460", "random-464", "random-467", "random-475",
+    "random-478", "random-491", "random-500", "random-501", "random-509", "random-520", "random-527", "random-550",
+    "random-551", "random-554", "random-579", "random-590", "random-595",
+];
 /// GLUED_MACRO: `footnofootnote:[A note.]`: Asciidoctor reads `footnote:[..]` (and `link:`, `xref:`, `image:`, `kbd:`,
 /// `btn:`, `mailto:`) even right after a letter; LocOS offered the macro syntax as text.
 const GLUED_MACRO: &[&str] = &["random-558"];
 
+/// A build without the #788 differences: every `{empty}` that starts a line and every backslash right before `|`
+/// are dropped (the same rule as `norm` in `tools/gen_cell_guard.py`).
+fn norm(b: &[u8]) -> Vec<u8> {
+    let mut out = Vec::with_capacity(b.len());
+    let mut i = 0;
+    while i < b.len() {
+        if b[i..].starts_with(b"{empty}") && (i == 0 || matches!(b[i - 1], b'\r' | b'\n')) {
+            i += 7;
+            continue;
+        }
+        if b[i] == b'\\' && b.get(i + 1) == Some(&b'|') {
+            i += 1;
+            continue;
+        }
+        out.push(b[i]);
+        i += 1;
+    }
+    out
+}
+
+/// For a CELL_GUARD case: true when the build differs from LocOS by more than the cell escapes and the guard.
+fn beyond_cell_guard(norms: &serde_json::Value, name: &str, key: &str, build: &[u8]) -> bool {
+    norms[name][key].as_str() != Some(fnv(&norm(build)).as_str())
+}
+
 #[test]
 fn matches_locos_on_random_files() {
+    let norms: serde_json::Value = serde_json::from_str(
+        &std::fs::read_to_string(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/data/cell_guard_norm.json")).unwrap(),
+    )
+    .unwrap();
+    assert_eq!(norms.as_object().unwrap().len(), CELL_GUARD.len(), "regenerate data/cell_guard_norm.json");
     let text = std::fs::read_to_string(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/data/locos_golden.json")).unwrap();
     let cases: Vec<serde_json::Value> = serde_json::from_str(&text).unwrap();
     assert!(cases.len() >= 609);
@@ -100,7 +147,7 @@ fn matches_locos_on_random_files() {
         if GLUED_MACRO.contains(&name) {
             continue;
         }
-        let setext = SETEXT.contains(&name);
+        let setext = SETEXT.contains(&name) || CELL_GUARD.contains(&name);
         let data = hex(c["hex"].as_str().unwrap());
         if c.get("error").is_some() {
             if extract(&data).is_ok() {
@@ -140,9 +187,12 @@ fn matches_locos_on_random_files() {
         }
         let mut differs = false;
         for (label, d) in c["builds"].as_object().unwrap() {
-            let got = fnv(&run(&data, &mapping(label, &want), None));
+            let b = run(&data, &mapping(label, &want), None);
+            let got = fnv(&b);
             if got != d.as_str().unwrap() {
-                if setext && label != "echo" {
+                if CELL_GUARD.contains(&name) && beyond_cell_guard(&norms, name, label, &b) {
+                    bad.push(format!("{name}: build {label} differs beyond the cell guard"));
+                } else if setext && label != "echo" {
                     differs = true;
                 } else {
                     bad.push(format!("{name}: build {label}"));
@@ -159,7 +209,9 @@ fn matches_locos_on_random_files() {
                 let m = mapping(label, &want);
                 let got = run(&data, &m, Some(lc));
                 if fnv(&got) != d.as_str().unwrap() {
-                    if setext && label != "echo" {
+                    if CELL_GUARD.contains(&name) && beyond_cell_guard(&norms, name, lc, &got) {
+                        bad.push(format!("{name}: localized {lc} differs beyond the cell guard"));
+                    } else if setext && label != "echo" {
                         differs = true;
                     } else {
                         bad.push(format!("{name}: localized {lc} ({label})"));
@@ -169,9 +221,9 @@ fn matches_locos_on_random_files() {
             }
         }
         if setext && !differs {
-            bad.push(format!("{name}: in SETEXT but now matches LocOS: take it off the list"));
+            bad.push(format!("{name}: in SETEXT or CELL_GUARD but now matches LocOS: take it off the list"));
         }
     }
     println!("{} cases, {refused} refused, {nunits} units, {builds} builds, {} differences", cases.len(), bad.len());
-    assert!(bad.is_empty(), "{}\n{}", bad.len(), bad.iter().take(12).cloned().collect::<Vec<_>>().join("\n"));
+    assert!(bad.is_empty(), "{}\n{}", bad.len(), bad.join("\n"));
 }

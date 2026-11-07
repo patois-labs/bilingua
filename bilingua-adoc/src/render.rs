@@ -84,7 +84,7 @@ fn bad_after(mark: char, c: char) -> bool {
     mark == '`' && "\"'`".contains(c)
 }
 
-fn text_part(s: &str, sep: Option<char>) -> String {
+fn text_part(s: &str, sep: Option<char>, nested: bool) -> String {
     let t = plain(s);
     match sep {
         None => t,
@@ -92,7 +92,8 @@ fn text_part(s: &str, sep: Option<char>) -> String {
             let mut out = String::with_capacity(t.len() + 2);
             let mut prev = '\0';
             for c in t.chars() {
-                if c == sc && prev != '\\' {
+                // a nested table sits inside an outer `|` cell: its text must not split that cell either (#788)
+                if (c == sc || (nested && c == '|')) && prev != '\\' {
                     out.push('\\');
                 }
                 out.push(c);
@@ -179,7 +180,7 @@ fn explicit_links(out: &mut [String], links: &[usize], attrs: &mut Attrs) {
 }
 
 /// The AsciiDoc for a translated unit.
-pub fn render(unit: &Unit, target: &[Inline], sep: Option<char>, attrs: &mut Attrs) -> String {
+pub fn render(unit: &Unit, target: &[Inline], sep: Option<char>, nested: bool, attrs: &mut Attrs) -> String {
     // the translation is stripped like Python's str.strip: only text at either end can be white space
     let mut t: Vec<Inline> = target.to_vec();
     if let Some(Inline::Text(s)) = t.first_mut() {
@@ -196,7 +197,7 @@ pub fn render(unit: &Unit, target: &[Inline], sep: Option<char>, attrs: &mut Att
     for inl in &t {
         match inl {
             Inline::Text(s) => {
-                out.push(text_part(s, sep));
+                out.push(text_part(s, sep, nested));
                 prev_text = true;
             }
             Inline::Tag { id, kind, .. } => {

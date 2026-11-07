@@ -157,8 +157,14 @@ fn push_text(pieces: &mut Vec<Piece>, s: &str) {
     }
 }
 
-/// Indentation for continuation lines: the run's own, else its line's plus four spaces.
+/// Indentation for continuation lines. A run that starts its line (only spaces before it) uses that line's indent, so
+/// a merge does not add indent every time (#811). Otherwise the run's own, else its line's plus four spaces.
 fn indent_of(src: &str, start: usize, end: usize) -> String {
+    let bol = src.as_bytes()[..start].iter().rposition(|&c| c == b'\n' || c == b'\r').map_or(0, |p| p + 1);
+    let before = &src[bol..start];
+    if !before.is_empty() && before.bytes().all(|c| c == b' ') {
+        return before.to_string();
+    }
     let seg = &src[start..end];
     let b = seg.as_bytes();
     for (i, &c) in b.iter().enumerate() {

@@ -47,6 +47,7 @@ const ID: &str = "adoc";
 // Keys of the unit's hidden values (`Unit::hidden`).
 const RAW: &str = "raw"; // the source text of the span
 const SEP: &str = "sep"; // table cell separator
+const NEST: &str = "nest"; // the cell is in a nested table
 const LS: &str = "ls"; // the span starts a line
 const META: &str = "meta"; // a header description / keywords value
 
@@ -107,6 +108,9 @@ impl Filter for Adoc {
             u.set_hidden(RAW, raw.to_string());
             if let Some(sep) = sl.sep {
                 u.set_hidden(SEP, sep.to_string());
+                if sl.nested {
+                    u.set_hidden(NEST, "1");
+                }
             }
             if sl.start == 0 || matches!(text.as_bytes()[sl.start - 1], b'\r' | b'\n') {
                 u.set_hidden(LS, "1");
@@ -216,9 +220,10 @@ impl Filter for Adoc {
                         out.push_str(if t.is_empty() { &raw } else { &t });
                     } else {
                         let sep = u.hidden(SEP).and_then(|s| s.chars().next());
-                        let mut r = render::render(u, &new, sep, &mut attrs);
-                        // a translation that opens with block syntax would turn the paragraph into another block
-                        if flag(u, LS) && sep.is_none() && lex::is_block_start(&r) {
+                        let mut r = render::render(u, &new, sep, flag(u, NEST), &mut attrs);
+                        // a translation that opens with block syntax would turn the paragraph into another block, or a
+                        // cell that starts a line would run a directive (`ifdef::`, `include::`, `//`) (#788)
+                        if flag(u, LS) && lex::is_block_start(&r) {
                             r.insert_str(0, "{empty}");
                         }
                         // only a title that starts its line can be a setext title (not `.Block title` or `* item`)

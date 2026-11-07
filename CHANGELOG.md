@@ -15,6 +15,14 @@ is listed here).
   codes of fonts with no Unicode map) are removed from units, except tab and line breaks, and a page counts only
   printable characters (not C0, U+FFFD or U+FFFE) toward the OCR threshold, so a page of garbage codes now goes to
   OCR. `page_texts` still returns PDFium's text unchanged (#808).
+- adoc: a translated cell of a nested table escapes `|` as well as `!`, so it cannot split the outer cell; a cell that
+  starts a line and a translation that opens with block syntax or a directive (`ifdef::`, `include::`, `//`) is
+  written after `{empty}`, as paragraphs already were (security; LocOS tracker #788).
+- rc: a translated character right after a short escape (`\x4` + `1`, `\1` + `2`) would join it into another
+  character; the escape is now padded with leading zeros to the width rc.exe reads (`\x04`, `\001`), the same
+  character. Octal escapes in `L"..."` strings are read up to 7 digits, as rc.exe does (was 3) (LocOS tracker #791).
+- ftl: a multi-line value whose first line is on its own line no longer gains two spaces of indent per merge;
+  continuation lines use the indent of the line the value starts on (LocOS tracker #811 item 1).
 - xcstrings: `stringSet` localizations (App Shortcuts phrases) are read as one unit per string and written back as a
   `stringSet` for the target language, one string per source string in order; a set with a phrase that has no
   new translation is marked `needs_review`. Such catalogs used to open with no units.

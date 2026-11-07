@@ -48,13 +48,26 @@ fn raw_of(u: &Unit, id: &str) -> Option<String> {
 fn render(u: &Unit, items: &[Item], wide: bool) -> String {
     let mut s = String::with_capacity(items.len() + 4);
     s.push_str(if wide { "L\"" } else { "\"" });
+    // the last code written, while nothing has been written after it
+    let mut last: Option<&str> = None;
     for it in items {
         match it {
-            Item::Ch(c) => lit::escape_char(*c, wide, &mut s),
+            Item::Ch(c) => {
+                // a short escape before a digit would read as a longer one (`\x4` + `1` is `\x41`): pad it (#791)
+                if let Some(raw) = last.take() {
+                    let padded = lit::pad_escape(raw, *c, wide);
+                    if padded != raw {
+                        s.truncate(s.len() - raw.len());
+                        s.push_str(&padded);
+                    }
+                }
+                lit::escape_char(*c, wide, &mut s)
+            }
             // an unknown code is dropped (same tolerance as the other formats)
             Item::Code(id) => {
                 if let Some(raw) = u.codes.get(id).and_then(|c| c.standalone.as_deref()) {
-                    s.push_str(raw)
+                    s.push_str(raw);
+                    last = Some(raw);
                 }
             }
         }

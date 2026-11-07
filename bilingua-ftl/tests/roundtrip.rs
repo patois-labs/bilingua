@@ -201,21 +201,14 @@ fn odd_target_locales_never_panic() {
 }
 
 #[test]
-fn multiline_reindent_is_the_locos_quirk() {
-    // Wave 12 round trip (edge.ftl), KNOWN QUIRK kept for LocOS byte parity. Continuation lines are written at the
-    // indent of the first indented line of the run. When the value starts on its own line and a later line sits
-    // deeper (`Line one` / `  indented more`), that deeper indent is used, so every continuation line of the
-    // translation gains two spaces of relative indent per merge, in the file and in the value read back. LocOS
-    // `_indent_of` does exactly this, and the correct rule (a block value's lines at its first line's indent) changes
-    // 63 of the 3025 LocOS golden builds, so it is not applied. This test pins the LocOS bytes; when LocOS is fixed,
-    // regenerate the goldens and turn it into a no-drift test.
+fn multiline_value_does_not_drift_on_repeated_merges() {
+    // #811 item 1: a block value whose first line is on its own line and a later line sits deeper used to gain two
+    // spaces of relative indent per merge. The continuation lines now use the indent of the line the run starts on.
     let mut data = b"multi =\n    Line one\n      indented more\n    last { $v }\n".to_vec();
-    let bytes = ["        mehr\n      letzte", "          mehr\n        letzte", "            mehr\n          letzte"];
-    let value = ["    mehr\n  letzte", "      mehr\n    letzte", "        mehr\n      letzte"];
-    for (b, v) in bytes.iter().zip(value) {
+    for _ in 0..3 {
         data = build(&data, &[(0, "Zeile eins\n  mehr\nletzte { $v }")]);
-        assert_eq!(String::from_utf8(data.clone()).unwrap(), format!("multi =\n    Zeile eins\n{b} {{ $v }}\n"));
-        assert_eq!(units(&data), vec![format!("Zeile eins\n{v} {{ $v }}")]);
+        assert_eq!(String::from_utf8(data.clone()).unwrap(), "multi =\n    Zeile eins\n      mehr\n    letzte { $v }\n");
+        assert_eq!(units(&data), vec!["Zeile eins\n  mehr\nletzte { $v }".to_string()]);
         assert_eq!(structure(&data).unwrap().junk, 0);
     }
 }
