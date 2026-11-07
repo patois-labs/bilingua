@@ -125,7 +125,7 @@ struct Ex<'a> {
     newlines: Vec<usize>,
 }
 
-pub fn extract(full: &str, include_locked: bool) -> Extracted {
+pub fn extract(full: &str, include_locked: bool, fm_keys: Option<&[String]>) -> Extracted {
     let _ = include_locked;
     let mut newlines = vec![];
     for (i, b) in full.bytes().enumerate() {
@@ -133,7 +133,7 @@ pub fn extract(full: &str, include_locked: bool) -> Extracted {
             newlines.push(i);
         }
     }
-    let fm = frontmatter::parse(full);
+    let fm = frontmatter::parse_with(full, fm_keys);
     let off = fm.as_ref().map(|f| f.end).unwrap_or(0);
     let mut ex = Ex { full, off, body: &full[off..], units: vec![], parts: vec![], raw_cursor: 0, last_heading: None, newlines };
     if let Some(fm) = fm {

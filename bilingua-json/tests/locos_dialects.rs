@@ -473,8 +473,11 @@ fn hostile_inputs() {
         assert!(JsonFilter.extract(bad.as_bytes(), &arb).is_err(), "{bad}");
     }
     assert!(JsonFilter.extract(b"{\"a\": \"caf\xe9\"}", &arb).is_err());
+    // W1: LocOS reads 300 levels; the profile reads up to 400 and refuses past that (never a stack overflow)
     let deep = format!("{{{}{}}}", "\"a\": {".repeat(300), "}".repeat(300));
-    assert!(JsonFilter.extract(deep.as_bytes(), &locos_opts()).is_err());
+    assert!(JsonFilter.extract(deep.as_bytes(), &locos_opts()).unwrap().units.is_empty());
+    let deeper = format!("{{{}{}}}", "\"a\": {".repeat(401), "}".repeat(401));
+    assert!(JsonFilter.extract(deeper.as_bytes(), &locos_opts()).is_err());
     // malformed ICU: one opaque unit, rebuilt verbatim
     let src = r#"{"bad": "{count, plural, one{# x} other{# y}", "@@locale": "en"}"#;
     assert_eq!(units(src), vec!["{count, plural, one{# x} other{# y}"]);

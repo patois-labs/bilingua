@@ -396,3 +396,45 @@ fn cldr_only_targets_get_their_language_and_plural_rule_under_the_profile() {
         }
     }
 }
+
+#[test]
+fn escape_flood_is_a_limit_like_locos() {
+    // LocOS: more than 40 x max_units backslashes is refused before the entries are read
+    let l = Limits::new().with_max_units(10);
+    let flood = format!("msgid \"{}\"\nmsgstr \"\"\n", "\\n".repeat(401));
+    let ok = format!("msgid \"a{}\"\nmsgstr \"\"\n", "\\n".repeat(400));
+    for profile in [None, Some(profile::LOCOS)] {
+        let o = ExtractOptions::new().with_limits(l).with_profile(profile);
+        match Po.extract(flood.as_bytes(), &o) {
+            Err(Error::Limit(e)) => {
+                assert_eq!(e.kind, LimitKind::Units);
+                assert!(e.msg.contains("escape sequences than a file of 10 segments. Split"), "{}", e.msg);
+            }
+            other => panic!("{profile:?}: {other:?}"),
+        }
+        assert_eq!(Po.extract(ok.as_bytes(), &o).unwrap().units.len(), 1, "{profile:?}");
+    }
+}
+
+#[test]
+fn a_python_charset_name_is_read_and_kept_like_locos() {
+    // charset=CP932 is Python's name for Windows-31J (no WHATWG label): LocOS reads the catalog in it whatever the
+    // project language, and writes it back in it under the same label
+    let mut src = b"msgid \"\"\nmsgstr \"\"\n\"Content-Type: text/plain; charset=CP932\\n\"\n\nmsgid \"Hello\"\nmsgstr \"".to_vec();
+    src.extend_from_slice(&[0x93, 0xfa, 0x96, 0x7b]); // nihon
+    src.extend_from_slice(b"\"\n\nmsgid \"World\"\nmsgstr \"\"\n");
+    let mo = MergeOptions::new().with_profile(Some(profile::LOCOS));
+    for lang in ["en", "ja"] {
+        let o = ExtractOptions::new().with_profile(Some(profile::LOCOS)).with_source_lang(lang);
+        let mut doc = Po.extract(&src, &o).unwrap_or_else(|e| panic!("{lang}: {e}"));
+        assert_eq!(doc.detected_source_encoding().as_deref(), Some("shift_jis"), "{lang}");
+        assert_eq!(Po.merge_with(&doc, &mo).unwrap(), src, "{lang}: untouched");
+        let id = doc.units[1].segments[0].id.clone();
+        doc.set_target(&id, vec![Inline::text("\u{4e16}\u{754c}")]).unwrap();
+        let out = Po.merge_with(&doc, &mo).unwrap();
+        assert!(out.windows(13).any(|w| w == b"charset=CP932"), "{lang}: {}", String::from_utf8_lossy(&out));
+        assert!(std::str::from_utf8(&out).is_err(), "{lang}: written in the code page, not UTF-8");
+        let (back, _, _) = bilingua_model::encoding_rs::SHIFT_JIS.decode(&out);
+        assert!(back.contains("msgstr \"\u{4e16}\u{754c}\""), "{lang}: {back}");
+    }
+}

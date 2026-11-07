@@ -24,6 +24,12 @@ pub const P_INDEX: &str = "locos.p_index";
 /// `UnitContext::extra` key with the unit's LocOS style (`a11y:*`, `meta:*`, ...), set under the LocOS profile by
 /// the formats that have one; unset otherwise.
 pub const STYLE: &str = "locos.style";
+/// `UnitContext::extra` key, LocOS profile: how many images LocOS's accessibility scan anchors at this unit
+/// (LocOS `skeleton["a11y_images"]["images"]` is the sum over the units). Unset: none.
+pub const A11Y_IMAGES: &str = "locos.a11y_images";
+/// `UnitContext::extra` key, LocOS profile: the images anchored at this unit whose alt text is empty, one `where`
+/// (the image's file name) per line, in file order (LocOS `missing_alt` entries of kind `empty`). Unset: none.
+pub const A11Y_EMPTY_ALT: &str = "locos.a11y_empty_alt";
 
 /// A named profile and its version.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

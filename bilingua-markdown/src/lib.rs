@@ -7,7 +7,8 @@
 //! indented code, HTML blocks, reference definitions and everything else stay in the skeleton.
 //!
 //! The file is never re-rendered: only the byte ranges of unit text are rewritten, so an untouched file comes
-//! back byte for byte. YAML front matter keys `title` and `description` (one-line values) are units too.
+//! back byte for byte. YAML front matter keys `title` and `description` (one-line values) are units too, or the
+//! keys `markdown.fm_keys` lists.
 
 /// Skeleton schema number: bump only when this crate's skeleton layout changes (see `bilingua_model::check_parser`).
 pub const SKELETON_SCHEMA: u32 = 2;
@@ -28,8 +29,22 @@ const ID: &str = "markdown";
 pub const FORMAT_OPTIONS: &[bilingua_model::FormatOptionKey] = &[
     bilingua_model::FormatOptionKey::text("markdown.walk", "Accepted and ignored: LocOS's pre-#731 walk stamp; Bilingua has one walk, the current one."),
     bilingua_model::FormatOptionKey::text("markdown.md_walk", "Accepted and ignored: the same as markdown.walk (LocOS's own keyword name)."),
-    bilingua_model::FormatOptionKey::text("markdown.fm_keys", "Accepted and ignored for now: LocOS's front matter keys stamp (Track D)."),
+    bilingua_model::FormatOptionKey::text(
+        "markdown.fm_keys",
+        "The front matter keys whose one-line values are translated: comma separated, case-insensitive (LocOS's LOC_TMS_FRONT_MATTER_KEYS); empty = none. Unset: title and description (LocOS profile: LocOS's default list).",
+    ),
 ];
+
+/// `markdown.fm_keys` as LocOS's `front_matter_keys` reads `LOC_TMS_FRONT_MATTER_KEYS`: split at commas, blanks
+/// around a name dropped (Python `str.strip`), lower case, empty names dropped. `None` when the option is not set.
+pub(crate) fn fm_keys(options: &std::collections::BTreeMap<String, String>) -> Option<Vec<String>> {
+    let raw = options.get("markdown.fm_keys")?;
+    let mut keys: Vec<String> =
+        raw.split(',').map(|n| bilingua_model::pytext::py_strip(n).to_lowercase()).filter(|n| !n.is_empty()).collect();
+    keys.sort();
+    keys.dedup();
+    Some(keys)
+}
 
 impl Filter for MarkdownFilter {
     fn id(&self) -> &'static str {
@@ -57,7 +72,7 @@ impl Filter for MarkdownFilter {
         if opts.is_profile(profile::LOCOS) {
             return locos::extract(text, encoding, opts, std::mem::take(&mut dec.warnings));
         }
-        let ex = extract::extract(text, opts.include_locked);
+        let ex = extract::extract(text, opts.include_locked, fm_keys(&opts.format_options).as_deref());
         let doc = Document::new(ID, ex.units, Skeleton::text(ex.parts, encoding, bilingua_model::parser_info!())).with_options(opts);
         // Safety net: nothing translated must mean nothing changed.
         if self.merge(&doc)? != bytes {

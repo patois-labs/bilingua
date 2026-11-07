@@ -1,5 +1,6 @@
-//! YAML front matter: a block between `---` lines at the very start of the file. Only the keys in `KEYS`
-//! (top-level, one-line scalars) become units; everything else stays in the skeleton.
+//! YAML front matter: a block between `---` lines at the very start of the file. Only the keys in `KEYS`, or the
+//! keys `markdown.fm_keys` lists (case-insensitive), as top-level one-line scalars, become units; everything else
+//! stays in the skeleton.
 
 use std::ops::Range;
 
@@ -47,6 +48,11 @@ pub struct FrontMatter {
 }
 
 pub fn parse(text: &str) -> Option<FrontMatter> {
+    parse_with(text, None)
+}
+
+/// [`parse`] with the keys of `markdown.fm_keys` (lower case) in place of `KEYS`.
+pub fn parse_with(text: &str, keys: Option<&[String]>) -> Option<FrontMatter> {
     let first_len = if text.starts_with("---\r\n") {
         5
     } else if text.starts_with("---\n") {
@@ -66,7 +72,7 @@ pub fn parse(text: &str) -> Option<FrontMatter> {
         if bare == "---" || bare == "..." {
             return Some(FrontMatter { end: line_end, values });
         }
-        if let Some(v) = parse_line(text, pos, bare) {
+        if let Some(v) = parse_line(text, pos, bare, keys) {
             // a plain value that goes on over the next indented line is folded text: leave it alone
             if !(v.style == Style::Plain && plain_continues(&text[line_end..])) {
                 values.push(v);
@@ -76,10 +82,14 @@ pub fn parse(text: &str) -> Option<FrontMatter> {
     }
 }
 
-fn parse_line(text: &str, line_start: usize, line: &str) -> Option<Value> {
+fn parse_line(text: &str, line_start: usize, line: &str, keys: Option<&[String]>) -> Option<Value> {
     let colon = line.find(':')?;
     let key = &line[..colon];
-    if !KEYS.contains(&key) {
+    let allowed = match keys {
+        Some(k) => k.contains(&key.to_lowercase()),
+        None => KEYS.contains(&key),
+    };
+    if !allowed {
         return None;
     }
     let after = &line[colon + 1..];

@@ -131,6 +131,13 @@ fn done(u: &Unit) -> bool {
     u.segments.iter().all(|s| s.has_target() && matches!(s.state, SegState::Translated | SegState::Confirmed))
 }
 
+/// LocOS's PO budget (#571 gate): every escape is one replacement, so a file with more than 40 x `max_units`
+/// backslashes is refused as a limit before the entries are read.
+fn check_escape_budget(text: &str, opts: &ExtractOptions) -> Result<(), Error> {
+    let n = text.bytes().filter(|b| *b == b'\\').count();
+    bilingua_model::guard::check_budget(n, 40, "This PO file has far more escape sequences", &opts.limits())
+}
+
 impl Filter for Po {
     fn id(&self) -> &'static str {
         "po"
@@ -154,11 +161,13 @@ impl Filter for Po {
         bilingua_model::check_own_options(self, &opts.format_options)?;
         if opts.is_profile(profile::LOCOS) {
             let (text, tag, warnings) = locos::decode(bytes, opts)?;
+            check_escape_budget(&text, opts)?;
             return locos::extract(&text, &tag, opts, warnings);
         }
         let mut dec = bilingua_model::enc::decode_text(bytes, &bilingua_model::enc::DecodeOptions::new(opts).declared())?;
         let text_owned = std::mem::take(&mut dec.text);
         let text = text_owned.as_str();
+        check_escape_budget(text, opts)?;
         let parsed = parse(text)?;
 
         // Header: the first entry with an empty msgid.

@@ -716,7 +716,7 @@ pub fn decode(bytes: &[u8], opts: &ExtractOptions) -> Result<(String, String, Ve
     let latin1 = matches!(l.as_str(), "iso-8859-1" | "iso8859-1" | "iso88591" | "iso_8859-1" | "iso_8859-1:1987" | "latin1" | "latin-1" | "l1" | "cp819" | "ibm819" | "csisolatin1" | "iso-ir-100" | "8859");
     let ascii = matches!(l.as_str(), "us-ascii" | "ascii" | "us" | "646" | "ansi_x3.4-1968" | "iso646-us" | "cp367" | "ibm367" | "csascii");
     let same = |a: &str, b: &str| {
-        let e = |x: &str| bilingua_model::encoding_rs::Encoding::for_label(x.as_bytes());
+        let e = |x: &str| enc::label_encoding(x);
         e(a).is_some() && e(a) == e(b)
     };
     let tag = if latin1 && matches!(base.as_str(), "windows-1252" | "iso-8859-1") {
