@@ -149,7 +149,7 @@ pub fn to_locos_text_numbered(inl: &[Inline], pair_letter: char) -> (String, Loc
 fn reserved_numbers(inl: &[Inline]) -> std::collections::BTreeSet<usize> {
     let mut out = std::collections::BTreeSet::new();
     let mut run = String::new();
-    let mut flush = |run: &mut String, out: &mut std::collections::BTreeSet<usize>| {
+    let flush = |run: &mut String, out: &mut std::collections::BTreeSet<usize>| {
         let mut rest = run.as_str();
         while let Some(at) = rest.find(OPEN) {
             rest = &rest[at..];

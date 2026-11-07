@@ -179,6 +179,15 @@ fn matches_locos_on_random_pages_and_hostile_cases() {
                 continue;
             }
         };
+        // kept on purpose (LocOS issue 810): an orphan end tag is a point code here and is dropped from LocOS's
+        // units; a page that declares ISO-8859-8 is read as Hebrew here and as Windows-1252 mojibake by LocOS
+        let orphan_end = doc.units.iter().any(|u| {
+            u.source().iter().any(|i| matches!(i, Inline::Tag { kind: TagKind::Standalone, display, .. } if display.starts_with("</")))
+        });
+        if orphan_end || name.starts_with("legacy-iso-8859-8") {
+            kept.push(format!("{name}: {}", if orphan_end { "orphan end tag kept" } else { "ISO-8859-8 read" }));
+            continue;
+        }
         let want = c["units"].as_array().unwrap();
         if doc.units.len() != want.len() {
             bad.push(format!("{name}: {} units, LocOS {}: {:?} vs {:?}", doc.units.len(), want.len(), doc.units.iter().map(locos_text).collect::<Vec<_>>(), want.iter().map(|w| w["text"].as_str().unwrap()).collect::<Vec<_>>()));
