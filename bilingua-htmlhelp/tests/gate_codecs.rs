@@ -105,3 +105,13 @@ fn utf8_fallback_is_a_format_option() {
 }
 
 use bilingua_htmlhelp::HhkFilter;
+
+#[test]
+fn euc_kr_make_up_bytes_keep_their_bytes_under_windows_949() {
+    // gate check for issue 796: the Annex 3 make-up bytes are plain KS X 1001 jamo in Windows 949, so an untouched
+    // file keeps them byte for byte
+    let d = doc(b"euc-kr", b"\xa4\xd4\xa4\xa8\xa4\xc7\xa4\xb1 X");
+    assert_eq!(first(&d), [0x3164, 0x3138, 0x3157, 0x3141, 0x20, 0x58]);
+    assert_eq!(build(&HhcFilter, &d, &[]), d);
+    assert_eq!(build(&HhcFilter, &d, &[(1, "Two")]), d);
+}

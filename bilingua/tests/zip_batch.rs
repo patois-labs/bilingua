@@ -81,7 +81,7 @@ fn batch_extensions() {
 
 #[test]
 fn unsafe_paths_refuse_the_whole_archive() {
-    for bad in ["../evil.md", "docs/../../evil.md", "/etc/evil.md", "C:/evil.md", "C:\\evil.md", "docs\\..\\..\\evil.md", "a\u{1}b.md", "trail./x.md", " lead/x.md"] {
+    for bad in ["../evil.md", "docs/../../evil.md", "/etc/evil.md", "C:/evil.md", "C:\\evil.md", "docs\\..\\..\\evil.md", "a\u{1}b.md", "trail./x.md", " lead/x.md", "CON/a.md", "docs/aux.md", "Nul.txt.md", "com1.md", "x/LPT9.md", "prn .md", "COM\u{b2}.md"] {
         let z = zip_of(&[("ok.md", MD), (bad, MD)]);
         // every refusal of a real archive is a limit error with a message for the uploader (LocOS InputLimitError)
         match batch::expand(&z) {
@@ -95,6 +95,10 @@ fn unsafe_paths_refuse_the_whole_archive() {
     assert_eq!(batch::safe_member_path("a/./b//c.md").as_deref(), Some("a/b/c.md"));
     assert_eq!(batch::safe_member_path("a\\b\\c.md").as_deref(), Some("a/b/c.md"));
     assert_eq!(batch::document_name("a/b/c.md"), "a__b__c.md");
+    // issue 812: only the device names themselves, not names that start like them
+    for ok in ["console.md", "com10.md", "com0.md", "lpt.md", "docs/auxiliary.md", "nul_report.md"] {
+        assert_eq!(batch::safe_member_path(ok).as_deref(), Some(ok), "{ok:?}");
+    }
 }
 
 #[test]

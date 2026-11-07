@@ -9,8 +9,9 @@
 //! Untrusted input, so the archive is read with the zip guard every package format uses (`bilingua-zip`: entry
 //! count, unpacked size, expansion ratio, real sizes and checksums proven, names that climb out refused) before
 //! any member is used. Then, as LocOS:
-//! * a member path that is absolute, carries a drive letter, a `..` component, a control character, or a
-//!   component with surrounding spaces or a trailing dot refuses the WHOLE archive;
+//! * a member path that is absolute, carries a drive letter, a `..` component, a control character, a
+//!   component with surrounding spaces or a trailing dot, or a Windows device name (`CON`, `aux.md`, `COM1`)
+//!   refuses the WHOLE archive;
 //! * nested `.zip` members, OS junk (`__MACOSX/`, `.DS_Store`, `Thumbs.db`, `desktop.ini`), duplicate paths
 //!   (ignoring case), members larger than `Limits::max_input_bytes` and unsupported formats are skipped, and
 //!   every one is listed with its reason;
@@ -132,9 +133,22 @@ pub fn is_batch(file_name: &str) -> bool {
     }
 }
 
+/// A Windows device name (`CON`, `PRN`, `AUX`, `NUL`, `COM1` to `COM9`, `LPT1` to `LPT9`, and the superscript
+/// `COM¹` to `LPT³`), in any case, with or without an extension: Windows opens the device, not a file of that name.
+fn is_device_name(part: &str) -> bool {
+    let stem = part.split('.').next().unwrap_or("").trim_end_matches(' ').to_ascii_uppercase();
+    if matches!(stem.as_str(), "CON" | "PRN" | "AUX" | "NUL") {
+        return true;
+    }
+    let Some(n) = stem.strip_prefix("COM").or_else(|| stem.strip_prefix("LPT")) else { return false };
+    let mut c = n.chars();
+    matches!((c.next(), c.next()), (Some('1'..='9' | '\u{b9}' | '\u{b2}' | '\u{b3}'), None))
+}
+
 /// The normalised relative path of a member, or `None` when it is unsafe (absolute, drive-qualified, `..`, a
-/// control character, empty, or a component with surrounding spaces or a trailing dot, which Windows would drop
-/// so that two members collide). Use it again before writing a stored path anywhere.
+/// control character, empty, a component with surrounding spaces or a trailing dot, which Windows would drop
+/// so that two members collide, or a component that is a Windows device name). Use it again before writing a
+/// stored path anywhere.
 pub fn safe_member_path(raw: &str) -> Option<String> {
     if raw.is_empty() || raw.chars().any(|c| (c as u32) < 0x20 || c == '\u{7F}') {
         return None;
@@ -150,6 +164,10 @@ pub fn safe_member_path(raw: &str) -> Option<String> {
     }
     // Python's str.strip() (Unicode white space), as LocOS
     if parts.iter().any(|c| bilingua_model::py_strip(c) != *c || c.ends_with('.')) {
+        return None;
+    }
+    // the members go back to the user as files (issue 812): `CON/a.md` or `aux.md` would open a device on Windows
+    if parts.iter().any(|c| is_device_name(c)) {
         return None;
     }
     Some(parts.join("/"))
@@ -212,7 +230,7 @@ pub fn expand_with(bytes: &[u8], opts: &BatchOptions) -> Result<Batch, Error> {
         let Some(path) = safe_member_path(&e.name) else {
             let shown: String = e.name.chars().map(|c| if (c as u32) < 0x20 || c == '\u{7F}' { '?' } else { c }).take(120).collect();
             return Err(refuse(format!(
-                "This ZIP archive contains an unsafe path ({shown:?}): absolute, drive-qualified or climbing out with '..'. It was not processed."
+                "This ZIP archive contains an unsafe path ({shown:?}): absolute, drive-qualified, climbing out with '..', or a Windows device name. It was not processed."
             )));
         };
         let leaf = path.rsplit('/').next().unwrap_or("");

@@ -272,3 +272,19 @@ fn dos864_percent_is_a_percent() {
     let doc = extract(&data).unwrap();
     assert!(matches!(doc.units[0].source().last(), Some(Inline::Tag { .. })), "{:?}", doc.units[0].source());
 }
+
+#[test]
+fn dos864_percent_bytes_survive_untouched_and_translated_merges() {
+    // issue 805 item 3, gate check: byte 0x25 now reads as `%`; an unchanged merge keeps every byte, an edited value
+    // writes `%` (and an Arabic percent sign a translator types) back as 0x25
+    let mut pairs = header("AC1009", "DOS864");
+    pairs.extend(p(&[(0, "SECTION"), (2, "ENTITIES"), (0, "TEXT"), (1, "Rate 45% off"), (0, "TEXT"), (1, "Angle 45%%d"), (0, "ENDSEC"), (0, "EOF")]));
+    let data = dxf(&pairs, "\r\n", utf8);
+    let mut doc = extract(&data).unwrap();
+    assert_eq!(plain_text(&doc.units[0].source()), "Rate 45% off");
+    assert_eq!(Dxf.merge(&doc).unwrap(), data);
+    doc.units[0].segments[0].target = vec![Inline::text("Rate 45% off, now 50\u{66a}")];
+    let out = Dxf.merge(&doc).unwrap();
+    assert!(out.windows(23).any(|w| w == b"Rate 45% off, now 50%\r\n"), "{out:?}");
+    assert!(out.windows(11).any(|w| w == b"Angle 45%%d"), "{out:?}");
+}

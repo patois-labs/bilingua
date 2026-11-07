@@ -504,9 +504,15 @@ Bilingua fixes these first; LocOS gets the same changes next and its goldens are
 - **htmlhelp, issue 796**: a declared `gb2312`, `shift_jis`, `euc-kr` or `ks_c_5601-1987`, or `big5` label is read and
   written as GBK, Windows 932, Windows 949 or Windows 950, the way browsers and HTML Help Workshop read them. A
   localized CJK export now reads back (LocOS fell back to Windows-1252 for any character outside the strict subset).
-  The EUC-KR make-up sequence is no longer special.
-- **zip, issue 812 item 2**: a zip entry whose name has a path component that is a Windows device name (`CON`, `PRN`,
-  `AUX`, `NUL`, `COM1` to `COM9`, `LPT1` to `LPT9`, any case, any extension) is refused. A colon was refused already.
+  The EUC-KR make-up sequence is no longer special (it reads as the separate jamo, as browsers show it). A file
+  keeps its declared label: these are the labels HTML Help Workshop itself writes for code pages 936, 932, 949 and
+  950, so the superset bytes under them are what every reader expects. A `euc-kr` label is no longer rewritten to
+  `ks_c_5601-1987` in a localized Korean export.
+- **zip batch, issue 812 item 2**: a member of a ZIP batch (`bilingua::batch`) whose path has a component that is a
+  Windows device name (`CON`, `PRN`, `AUX`, `NUL`, `COM1` to `COM9`, `LPT1` to `LPT9`, the superscript `COM¹` to
+  `LPT³`, any case, any extension) refuses the whole archive, as the other unsafe paths do. The batch hands its
+  members back as files; the package formats (DOCX, EPUB, ...) never write a part to disk, so a part named
+  `aux.xhtml` there still opens. A colon was refused already.
 
 ## CAT OS core (note for the lead)
 
