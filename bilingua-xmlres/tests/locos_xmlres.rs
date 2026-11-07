@@ -260,3 +260,16 @@ fn encodings_and_newlines_are_kept() {
     let d = JavaXmlProperties.extract(crlf.as_bytes(), &opts("fr")).unwrap();
     assert_eq!(JavaXmlProperties.merge(&d).unwrap(), crlf.as_bytes());
 }
+
+#[test]
+fn sniff_survives_an_8_kb_cut_inside_a_multi_byte_character() {
+    // Wild file: the root is early, a long run of 3-byte characters follows, and the 8192-byte head ends inside one.
+    for pad in 0..4 {
+        let mut doc = format!("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!-- x -->\n<resources>{}\n", " ".repeat(pad)).into_bytes();
+        while doc.len() < 9000 {
+            doc.extend_from_slice("<string name=\"a\">\u{8bed}\u{8a00}</string>\n".as_bytes());
+        }
+        doc.extend_from_slice(b"</resources>");
+        assert!(AndroidStrings.sniff(&doc), "pad {pad}");
+    }
+}

@@ -339,7 +339,7 @@ pub fn scan(text: &str) -> Result<Scanned, String> {
                                     at = ne;
                                 }
                                 match runs.as_slice() {
-                                    [] => {}
+                                    [] => e.has_children = true,
                                     [(a, z)] => (from, to) = (*a, *z),
                                     _ => e.has_children = true,
                                 }

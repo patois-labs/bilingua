@@ -171,3 +171,15 @@ fn placeholders_are_tags_that_flatten_to_the_locos_text() {
     assert_eq!(show(&u.source()), "Hello, {0}! You have {1} new messages.");
     assert!(d.units[1].source().iter().all(|i| matches!(i, Inline::Text(_))));
 }
+
+#[test]
+fn sniff_survives_an_8_kb_cut_inside_a_multi_byte_character() {
+    for pad in 0..4 {
+        let mut doc = format!("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<root>{}<data name=\"a\"><value>x</value></data>\n", " ".repeat(pad)).into_bytes();
+        while doc.len() < 9000 {
+            doc.extend_from_slice("<!-- \u{8bed}\u{8a00} -->\n".as_bytes());
+        }
+        doc.extend_from_slice(b"</root>");
+        assert!(Resx.sniff(&doc), "pad {pad}");
+    }
+}

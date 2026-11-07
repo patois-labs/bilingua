@@ -661,7 +661,8 @@ fn root_of(bytes: &[u8]) -> Option<String> {
     let head = &bytes[..bytes.len().min(8192)];
     let o = ExtractOptions::default();
     let d = DecodeOptions::new(&o);
-    let t = enc::decode_text(head, &d).or_else(|_| enc::decode_text(&head[..head.len().saturating_sub(3)], &d)).ok()?;
+    // the 8 KB cut may split a multi-byte character (up to 3 bytes of a 4-byte one are left over): drop them one by one
+    let t = (0..4usize).find_map(|cut| enc::decode_text(&head[..head.len().saturating_sub(cut)], &d).ok())?;
     // cut at the first element's end so a file longer than the head still gives its root
     let text = t.text.trim_start_matches('\u{FEFF}');
     let mut s = text;

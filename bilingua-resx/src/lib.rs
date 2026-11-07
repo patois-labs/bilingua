@@ -246,7 +246,8 @@ impl Filter for Resx {
         let head = &bytes[..bytes.len().min(8192)];
         let o = ExtractOptions::default();
         let d = DecodeOptions::new(&o);
-        let Ok(t) = enc::decode_text(head, &d).or_else(|_| enc::decode_text(&head[..head.len().saturating_sub(3)], &d)) else { return false };
+        // the 8 KB cut may split a multi-byte character: drop the stray bytes one by one
+        let Some(t) = (0..4usize).find_map(|cut| enc::decode_text(&head[..head.len().saturating_sub(cut)], &d).ok()) else { return false };
         let t = t.text.to_ascii_lowercase();
         t.contains("<root") && (t.contains("<resheader") || t.contains("<data name=") || t.contains("microsoft-resx"))
     }
