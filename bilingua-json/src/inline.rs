@@ -136,6 +136,7 @@ fn skip_res() -> &'static Vec<Regex> {
             r"^[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+$",                                                // CONSTANT_CASE
             r"^[a-z]+(?:[A-Z][a-z0-9]*)+$",                                                    // camelCase
             r"^[a-z]{2,3}[-_][A-Z]{2}$",                                                       // locale code
+            r"^@(?:\.[a-z]+)?:\(?[A-Za-z0-9_.:\-]+\)?$",                                        // vue-i18n linked message (@:key)
         ]
         .iter()
         .map(|p| Regex::new(p).expect("skip regex"))
