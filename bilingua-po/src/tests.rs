@@ -401,8 +401,8 @@ fn cldr_only_targets_get_their_language_and_plural_rule_under_the_profile() {
 fn escape_flood_is_a_limit_like_locos() {
     // LocOS: more than 40 x max_units backslashes is refused before the entries are read
     let l = Limits::new().with_max_units(10);
-    let flood = format!("msgid \"{}\"\nmsgstr \"\"\n", "\n".repeat(401));
-    let ok = format!("msgid \"a{}\"\nmsgstr \"\"\n", "\n".repeat(400));
+    let flood = format!("msgid \"{}\"\nmsgstr \"\"\n", "\\n".repeat(401));
+    let ok = format!("msgid \"a{}\"\nmsgstr \"\"\n", "\\n".repeat(400));
     for profile in [None, Some(profile::LOCOS)] {
         let o = ExtractOptions::new().with_limits(l).with_profile(profile);
         match Po.extract(flood.as_bytes(), &o) {
@@ -420,7 +420,7 @@ fn escape_flood_is_a_limit_like_locos() {
 fn a_python_charset_name_is_read_and_kept_like_locos() {
     // charset=CP932 is Python's name for Windows-31J (no WHATWG label): LocOS reads the catalog in it whatever the
     // project language, and writes it back in it under the same label
-    let mut src = b"msgid \"\"\nmsgstr \"\"\n\"Content-Type: text/plain; charset=CP932\n\"\n\nmsgid \"Hello\"\nmsgstr \"".to_vec();
+    let mut src = b"msgid \"\"\nmsgstr \"\"\n\"Content-Type: text/plain; charset=CP932\\n\"\n\nmsgid \"Hello\"\nmsgstr \"".to_vec();
     src.extend_from_slice(&[0x93, 0xfa, 0x96, 0x7b]); // nihon
     src.extend_from_slice(b"\"\n\nmsgid \"World\"\nmsgstr \"\"\n");
     let mo = MergeOptions::new().with_profile(Some(profile::LOCOS));
