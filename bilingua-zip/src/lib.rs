@@ -58,7 +58,17 @@ fn invalid_sizes() -> Error {
 /// Runs the XML guard ([`bilingua_model::guard::check_xml`]) over every XML part of an unpacked package
 /// (`.xml`, `.rels`, `.vml`, `.xlf`, `.xliff`, `.sdlxliff`), so a reader never parses a part with an entity bomb.
 pub fn check_xml_parts(entries: &[RawEntry], limits: &Limits) -> Result<(), Error> {
+    check_xml_parts_except(entries, limits, &[])
+}
+
+/// [`check_xml_parts`] for the parts whose name starts with none of `skip_prefixes` (case-sensitive, as LocOS's
+/// `zip_guard` compares them): a DOCX's `customXml/` parts are never parsed into units, so their depth or size never
+/// refuses the document (LocOS only scans them for external links).
+pub fn check_xml_parts_except(entries: &[RawEntry], limits: &Limits, skip_prefixes: &[&str]) -> Result<(), Error> {
     for e in entries {
+        if skip_prefixes.iter().any(|p| e.name.starts_with(p)) {
+            continue;
+        }
         let n = e.name.to_ascii_lowercase();
         if !e.meta.dir && [".xml", ".rels", ".vml", ".xlf", ".xliff", ".sdlxliff"].iter().any(|x| n.ends_with(x)) {
             bilingua_model::guard::check_xml(&e.data, limits)?;

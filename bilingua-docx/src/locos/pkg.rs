@@ -336,7 +336,7 @@ impl Pkg {
     /// Opens a package the way python-docx does.
     pub fn load(bytes: &[u8], limits: &Limits) -> Result<Pkg, Error> {
         let entries: Vec<RawEntry> = zipio::read_zip(bytes, &ZipLimits::from(limits))?.into_iter().filter(|e| !e.meta.dir).collect();
-        bilingua_zip::check_xml_parts(&entries, limits)?;
+        bilingua_zip::check_xml_parts_except(&entries, limits, crate::UNPARSED_PARTS)?;
         // empty paragraphs count too (LocOS DOCX_MAX_PARAGRAPHS), before any tree is built
         let mut paragraphs = 0usize;
         for e in entries.iter().filter(|e| e.name.starts_with("word/") && e.name.ends_with(".xml")) {

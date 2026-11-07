@@ -78,3 +78,16 @@ proptest! {
         }
     }
 }
+
+/// W4 docx-5: under the LocOS profile the upload notice comes out too, with LocOS's counts and wording.
+#[test]
+fn the_locos_profile_gives_the_notice_too() {
+    let o = profile::locos().extract_options().with_granularity(Granularity::Paragraph);
+    let d = Docx.extract(EXPORT, &o).unwrap();
+    let native = Docx.extract(EXPORT, &ExtractOptions::default()).unwrap();
+    let w = d.warnings.iter().find(|w| w.kind == "docx_bilingual_table").expect("the upload notice under the profile");
+    let n = native.warnings.iter().find(|w| w.kind == "docx_bilingual_table").unwrap();
+    assert_eq!(w.message, n.message);
+    let g = Docx.extract(GUIDE, &o).unwrap();
+    assert!(!g.warnings.iter().any(|w| w.kind == "docx_bilingual_table"));
+}

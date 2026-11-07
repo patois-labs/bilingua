@@ -55,6 +55,10 @@ pub(crate) fn xml_member_err(member: &str, m: &str) -> Error {
     perr(format!("{member}: {m}"))
 }
 
+/// Parts never parsed into units: `customXml/` (data a Word add-in keeps). The XML guard skips them, so a deep or
+/// broken one never refuses the document (W4 docx-2, as LocOS `zip_guard.refuse_doctype` skips them).
+pub(crate) const UNPARSED_PARTS: &[&str] = &["customXml/"];
+
 fn perr(msg: impl Into<String>) -> Error {
     Error::Parse {
         format: "docx".into(),
@@ -202,7 +206,7 @@ fn extract_doc(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
 
 fn extract_doc_inner(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
     let entries = zipio::read_zip(bytes, &ZipLimits::from(&opts.limits()))?;
-    bilingua_zip::check_xml_parts(&entries, &opts.limits())?;
+    bilingua_zip::check_xml_parts_except(&entries, &opts.limits(), crate::UNPARSED_PARTS)?;
     {
         // empty paragraphs count too (LocOS DOCX_MAX_PARAGRAPHS), before any tree is built
         let l = opts.limits();

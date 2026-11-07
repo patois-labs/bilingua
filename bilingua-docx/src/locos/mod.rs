@@ -46,6 +46,10 @@ struct LUnit {
     part: usize,
     rprs: BTreeMap<String, Option<String>>,
     alt: bool,
+    /// LocOS's image inventory anchored at this unit: how many body drawings, and the missing-alt findings
+    /// (`kind`, `where`) among them, in file order.
+    images: usize,
+    missing_alt: Vec<(&'static str, String)>,
 }
 
 /// python-docx `BabelFish.internal2ui`.
@@ -94,8 +98,9 @@ fn style_names(pkg: &Pkg) -> (HashMap<String, String>, Option<String>) {
 }
 
 /// `docx_bilingual.translation_paragraphs`: the paragraphs of the Translation column of every Storyline
-/// "Export to Word" table, or None when the document has none (or more prose outside its tables).
-fn bilingual_paragraphs(d: &Dom) -> Option<HashSet<usize>> {
+/// "Export to Word" table and the notice's counts (tables, rows, rows with an empty Translation cell), or None when
+/// the document has none (or more prose outside its tables).
+fn bilingual_paragraphs(d: &Dom) -> Option<(HashSet<usize>, [usize; 3])> {
     let cell_text = |tc: usize| py_strip(&t_text(d, tc)).to_string();
     let norm = |t: &str| -> String {
         let joined = t.split(py_isspace_char).filter(|s| !s.is_empty()).collect::<Vec<_>>().join(" ");
@@ -103,6 +108,7 @@ fn bilingual_paragraphs(d: &Dom) -> Option<HashSet<usize>> {
     };
     let mut keep: HashSet<usize> = HashSet::new();
     let mut src_chars = 0usize;
+    let (mut tables, mut rows, mut empty) = (0usize, 0usize, 0usize);
     for tbl in d.iter(d.root).into_iter().filter(|&t| is_w(d, t, "tbl")) {
         let trs: Vec<usize> = d.element_children(tbl).filter(|&tr| is_w(d, tr, "tr")).collect();
         if trs.len() < 2 {
@@ -122,6 +128,7 @@ fn bilingual_paragraphs(d: &Dom) -> Option<HashSet<usize>> {
             }
         }
         let Some((src, tgt)) = cols else { continue };
+        let mut found = 0usize;
         for &tr in &trs[1..] {
             let cells: Vec<usize> = d.element_children(tr).filter(|&tc| is_w(d, tc, "tc")).collect();
             if cells.len() != head.len() {
@@ -131,10 +138,18 @@ fn bilingual_paragraphs(d: &Dom) -> Option<HashSet<usize>> {
                 continue;
             }
             if cell_text(cells[tgt]).is_empty() {
+                if !cell_text(cells[src]).is_empty() {
+                    empty += 1;
+                }
                 continue;
             }
             keep.extend(d.iter(cells[tgt]).into_iter().filter(|&p| is_w(d, p, "p")));
             src_chars += cell_text(cells[src]).chars().count();
+            found += 1;
+        }
+        if found > 0 {
+            tables += 1;
+            rows += found;
         }
     }
     if keep.is_empty() {
@@ -164,7 +179,7 @@ fn bilingual_paragraphs(d: &Dom) -> Option<HashSet<usize>> {
     if prose > src_chars {
         return None;
     }
-    Some(keep)
+    Some((keep, [tables, rows, empty]))
 }
 
 /// One translatable alt text or title (`_alt_units`).
@@ -196,6 +211,60 @@ fn alt_units(pkg: &Pkg, w: &Walk) -> Vec<Alt> {
     out
 }
 
+/// Word 365's decorative mark on a drawing (`adec:decorative val="1"`, any namespace), `_is_decorative`.
+fn is_decorative(d: &Dom, dp: usize) -> bool {
+    d.iter(dp).into_iter().any(|el| d.nodes[el].ns.is_some() && d.local_name(el) == "decorative" && matches!(d.get(el, "val").map(str::to_lowercase).as_deref(), Some("1" | "true")))
+}
+
+/// `_missing_alt_findings` with `a11y.anchor_for`: for every `wp:docPr` of the body, the `p_index` of the body unit
+/// it belongs to (its paragraph's unit, else the nearest unit before it, else the first; `None` without body units),
+/// and the finding when it is not decorative and its `descr` is absent (`missing`) or blank (`empty`), with the
+/// drawing's name (first 120 characters).
+fn image_inventory(pkg: &Pkg, w: &Walk, body: &[usize]) -> Vec<(Option<usize>, Option<(&'static str, String)>)> {
+    let main = pkg.main;
+    let d = pkg.parts[main].dom.as_ref().unwrap();
+    let Some(root) = find_w(d, d.root, "body") else { return Vec::new() };
+    let index_of: HashMap<usize, usize> = w.paras.iter().enumerate().filter(|(_, (part, _))| *part == main).map(|(i, &(_, p))| (p, i)).collect();
+    let anchor_for = |pos: usize| -> Option<usize> {
+        let mut before = None;
+        for &p in body {
+            if p == pos {
+                return Some(p);
+            }
+            if p < pos {
+                before = Some(p);
+            }
+        }
+        before.or_else(|| body.first().copied())
+    };
+    let mut out = Vec::new();
+    for dp in d.iter(root).into_iter().filter(|&x| d.is(x, WP, "docPr")) {
+        let mut p = d.nodes[dp].parent;
+        while let Some(x) = p {
+            if is_w(d, x, "p") {
+                break;
+            }
+            p = d.nodes[x].parent;
+        }
+        let anchor = match p.and_then(|p| index_of.get(&p)) {
+            Some(&pos) => anchor_for(pos),
+            None => body.first().copied(),
+        };
+        let finding = if is_decorative(d, dp) {
+            None
+        } else {
+            match d.get(dp, "descr") {
+                None => Some("missing"),
+                Some(v) if py_strip(v).is_empty() => Some("empty"),
+                Some(_) => None,
+            }
+        };
+        let name: String = d.get(dp, "name").unwrap_or("").chars().take(120).collect();
+        out.push((anchor, finding.map(|k| (k, name))));
+    }
+    out
+}
+
 /// `_set_alt`.
 fn set_alt(d: &mut Dom, dp: usize, attr: &str, new: &str) {
     let old = d.get(dp, attr).map(str::to_string);
@@ -209,7 +278,7 @@ fn set_alt(d: &mut Dom, dp: usize, attr: &str, new: &str) {
 }
 
 /// `DocxFilter.parse`: the LocOS units of a package.
-fn locos_units(pkg: &mut Pkg, comments: bool) -> Result<(Vec<LUnit>, Walk), Error> {
+fn locos_units(pkg: &mut Pkg, comments: bool) -> Result<(Vec<LUnit>, Walk, Option<[usize; 3]>), Error> {
     let w = walk::walk(pkg)?;
     let (names, default_name) = style_names(pkg);
     let mut units = Vec::new();
@@ -225,24 +294,31 @@ fn locos_units(pkg: &mut Pkg, comments: bool) -> Result<(Vec<LUnit>, Walk), Erro
         let style = sid.as_ref().and_then(|s| names.get(s)).cloned().unwrap_or_else(|| default_name.clone().unwrap_or_default());
         let tok = para::tokenize(d, p);
         let rprs = tok.rprs.iter().map(|(k, v)| (k.clone(), v.map(|r| d.serialize_node(r)))).collect();
-        units.push(LUnit { p: i, pieces: tok.pieces, style, part, rprs, alt: false });
+        units.push(LUnit { p: i, pieces: tok.pieces, style, part, rprs, alt: false, images: 0, missing_alt: Vec::new() });
     }
     let main = pkg.main;
     let bilingual = bilingual_paragraphs(pkg.parts[main].dom.as_ref().unwrap());
-    if let Some(keep) = &bilingual {
+    if let Some((keep, _)) = &bilingual {
         units.retain(|u| u.part == main && keep.contains(&w.paras[u.p].1));
     }
+    // the body units the image inventory anchors at (`body_indices`: after the bilingual filter, before the alt text)
+    let body: Vec<usize> = units.iter().filter(|u| u.part == main).map(|u| u.p).collect();
     if bilingual.is_none() {
         let base = w.paras.len();
         for (j, a) in alt_units(pkg, &w).into_iter().enumerate() {
-            units.push(LUnit { p: base + j, pieces: vec![Piece::Text(a.value)], style: a.style.to_string(), part: a.part, rprs: BTreeMap::new(), alt: true });
+            units.push(LUnit { p: base + j, pieces: vec![Piece::Text(a.value)], style: a.style.to_string(), part: a.part, rprs: BTreeMap::new(), alt: true, images: 0, missing_alt: Vec::new() });
         }
+    }
+    for (anchor, finding) in image_inventory(pkg, &w, &body) {
+        let Some(u) = anchor.and_then(|a| units.iter_mut().find(|u| u.p == a && !u.alt)) else { continue };
+        u.images += 1;
+        u.missing_alt.extend(finding);
     }
     if !comments {
         let comment_parts: HashSet<&str> = walk::extra_parts(pkg).into_iter().filter(|(k, _)| *k == "comments").map(|(_, p)| pkg.parts[p].name.as_str()).collect();
         units.retain(|u| !comment_parts.contains(pkg.parts[u.part].name.as_str()));
     }
-    Ok((units, w))
+    Ok((units, w, bilingual.map(|(_, counts)| counts)))
 }
 
 fn document_unit(u: LUnit, pkg: &Pkg) -> Unit {
@@ -271,6 +347,18 @@ fn document_unit(u: LUnit, pkg: &Pkg) -> Unit {
     }
     ctx.extra.insert(profile::P_INDEX.to_string(), u.p.to_string());
     ctx.extra.insert(PART.to_string(), pkg.parts[u.part].name.clone());
+    // LocOS `skeleton["a11y_images"]`, spread over the units it anchors at (W4 docx-1)
+    if u.images > 0 {
+        ctx.extra.insert(profile::A11Y_IMAGES.to_string(), u.images.to_string());
+    }
+    if !u.missing_alt.is_empty() {
+        let list: Vec<serde_json::Value> = u.missing_alt.iter().map(|(k, w)| serde_json::json!({"kind": k, "where": w})).collect();
+        ctx.extra.insert(profile::A11Y_MISSING_ALT.to_string(), serde_json::Value::Array(list).to_string());
+        let empty: Vec<&str> = u.missing_alt.iter().filter(|(k, _)| *k == "empty").map(|(_, w)| w.as_str()).collect();
+        if !empty.is_empty() {
+            ctx.extra.insert(profile::A11Y_EMPTY_ALT.to_string(), empty.join("\n"));
+        }
+    }
     unit.context = ctx;
     unit
 }
@@ -279,12 +367,18 @@ fn document_unit(u: LUnit, pkg: &Pkg) -> Unit {
 pub fn extract(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
     let mut pkg = Pkg::load(bytes, &opts.limits())?;
     let comments = opts.format_flag("docx.translate_comments") != Some(false);
-    let (units, _) = locos_units(&mut pkg, comments)?;
+    let (units, _, bilingual) = locos_units(&mut pkg, comments)?;
     let units = units.into_iter().map(|u| document_unit(u, &pkg)).collect();
-    Ok(Document::new("docx", units, Skeleton::binary(bytes.to_vec(), bilingua_model::parser_info!()))
+    let mut doc = Document::new("docx", units, Skeleton::binary(bytes.to_vec(), bilingua_model::parser_info!()))
         .with_source_lang(opts.source_lang.clone())
         .with_target_lang(opts.target_lang.clone())
-        .with_granularity(Granularity::Paragraph))
+        .with_granularity(Granularity::Paragraph);
+    // LocOS's upload notice for a Storyline "Export to Word" table, with its counts (W4 docx-5)
+    if let Some([tables, rows, empty_rows]) = bilingual {
+        let f = crate::storyline::Found { keep: HashSet::new(), tables, rows, empty_rows };
+        doc.warnings.push(bilingua_model::Warning::new("docx_bilingual_table", pkg.parts[pkg.main].name.clone(), crate::storyline::notice(&f)));
+    }
+    Ok(doc)
 }
 
 /// The LocOS text of inline content: tag ids are LocOS's run (`r`) and object (`x`) numbers.

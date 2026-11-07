@@ -381,3 +381,56 @@ fn a_typo_token_is_reported_and_written_as_text() {
     let xml = entry(&build(&d, None, &[(0, typed)]), "word/document.xml");
     assert!(xml.contains("Salut \u{27e6}x9\u{27e7}</w:t>"), "{xml}");
 }
+
+/// W4 docx-1: LocOS's image inventory (`skeleton["a11y_images"]`): every body drawing is counted on the unit it
+/// belongs to (its paragraph's, else the nearest one before it); a drawing with no `descr` is `missing`, a blank one
+/// `empty`, a decorative one only counted.
+#[test]
+fn image_inventory_for_missing_alt_prompts() {
+    let img = |id: u32, attrs: &str, extra: &str| format!("<w:r><w:drawing><wp:inline><wp:docPr id=\"{id}\" {attrs}>{extra}</wp:docPr></wp:inline></w:drawing></w:r>");
+    let deco = "<a:extLst xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\"><a:ext uri=\"x\"><adec:decorative xmlns:adec=\"http://schemas.microsoft.com/office/drawing/2017/decorative\" val=\"1\"/></a:ext></a:extLst>";
+    let body = format!(
+        "<w:p><w:r><w:t>First</w:t></w:r>{}{}</w:p><w:p>{}</w:p><w:p><w:r><w:t>Second</w:t></w:r>{}</w:p>",
+        img(1, "name=\"Picture 1\"", ""),
+        img(2, "name=\"Logo\" descr=\"Company logo\"", ""),
+        img(3, "name=\"Spacer\" descr=\"  \"", ""),
+        img(4, "name=\"Ornament\"", deco)
+    );
+    let d = docx(&body, NORMAL, &[]);
+    let doc = crate::Docx.extract(&d, &opts(None)).unwrap();
+    let ex = |p: &str, k: &str| doc.units.iter().find(|u| u.context.extra[profile::P_INDEX] == p).and_then(|u| u.context.extra.get(k).cloned());
+    // the picture-only paragraph (1) is no unit: its drawing belongs to the unit before it
+    assert_eq!(ex("0", profile::A11Y_IMAGES).as_deref(), Some("3"));
+    assert_eq!(ex("0", profile::A11Y_MISSING_ALT).as_deref(), Some(r#"[{"kind":"missing","where":"Picture 1"},{"kind":"empty","where":"Spacer"}]"#));
+    assert_eq!(ex("0", profile::A11Y_EMPTY_ALT).as_deref(), Some("Spacer"));
+    // the decorative drawing is counted, never flagged
+    assert_eq!(ex("2", profile::A11Y_IMAGES).as_deref(), Some("1"));
+    assert_eq!(ex("2", profile::A11Y_MISSING_ALT), None);
+    // the alt text unit carries no inventory; without the profile there is none at all
+    let alt = doc.units.iter().find(|u| u.context.kind.as_deref() == Some("alt-text")).unwrap();
+    assert!(!alt.context.extra.contains_key(profile::A11Y_IMAGES));
+    let plain = crate::Docx.extract(&d, &ExtractOptions::new()).unwrap();
+    assert!(plain.units.iter().all(|u| !u.context.extra.contains_key(profile::A11Y_IMAGES)));
+}
+
+/// W4 docx-2: a `customXml/` part is never parsed into units, so one nested past the XML guard's depth does not
+/// refuse the document (LocOS reads it and only warns); a deep part LocOS does parse still refuses.
+#[test]
+fn deep_custom_xml_part_does_not_refuse_the_document() {
+    let deep = format!("<r>{}{}</r>", "<a>".repeat(300), "</a>".repeat(300));
+    let d = docx("<w:p><w:r><w:t>Hello</w:t></w:r></w:p>", NORMAL, &[]);
+    let entries = bilingua_zip::read_zip("docx", &d, &bilingua_zip::ZipLimits::default()).unwrap();
+    let mut members: Vec<(String, Vec<u8>)> = entries.into_iter().map(|e| (e.name, e.data)).collect();
+    members.push(("customXml/broken.xml".into(), deep.clone().into_bytes()));
+    let refs: Vec<(&str, &[u8])> = members.iter().map(|(n, b)| (n.as_str(), b.as_slice())).collect();
+    let with_custom = zip_of(&refs);
+    for o in [opts(None), ExtractOptions::new()] {
+        let doc = crate::Docx.extract(&with_custom, &o).unwrap();
+        assert_eq!(doc.units.len(), 1);
+    }
+    let mut members2 = members.clone();
+    members2.pop();
+    members2.push(("word/broken.xml".into(), deep.into_bytes()));
+    let refs: Vec<(&str, &[u8])> = members2.iter().map(|(n, b)| (n.as_str(), b.as_slice())).collect();
+    assert!(crate::Docx.extract(&zip_of(&refs), &opts(None)).is_err());
+}
