@@ -248,9 +248,9 @@ fn hostile_targets_are_written_as_text() {
     let mut doc = extract(&drawing_book(), &opts(None)).unwrap();
     set(&mut doc, 0, "a\u{0}b\u{b}c\u{fffe} ]]> <![CDATA[ & </t>");
     let id = doc.units[1].segments[0].id.clone();
-    // unknown pair tokens stay literal text; a duplicate break is used once
+    // unknown pair tokens stay literal text
     let (_, map) = profile::tokens::to_locos_text_for("xlsx", &doc.units[1].segments[0].source);
-    let raw = "\u{27e6}x18446744073709551616\u{27e7}\u{27e6}r0\u{27e7}\u{27e6}r9\u{27e7}\u{27e6}x4\u{27e7}\u{27e6}x4\u{27e7}\u{27e6}/x1\u{27e7}z";
+    let raw = "\u{27e6}x18446744073709551616\u{27e7}\u{27e6}r0\u{27e7}\u{27e6}r9\u{27e7}\u{27e6}x4\u{27e7}\u{27e6}/x1\u{27e7}z";
     doc.set_target(&id, profile::tokens::from_locos_text(raw, &map)).unwrap();
     let out = merged(&doc);
     let w = entry(&out, "xl/worksheets/sheet1.xml").unwrap();

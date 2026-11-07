@@ -363,6 +363,7 @@ fn check(golden: &Path) -> (usize, usize, usize, Vec<String>) {
 /// file matches.
 const KNOWN: &[(&str, &str)] = &[
     ("export_output_escaping_13.html", "LocOS issue 810.1: an orphan end tag is a point code here and is lost in LocOS"),
+    ("hostile_tails.pptx", "LocOS issue 814: token look-alikes and tokens naming no code are text here, split or dropped in LocOS"),
     ("bom_crlf.md", "LocOS issue 813.1: the byte order mark is not part of the first heading here"),
 ];
 
