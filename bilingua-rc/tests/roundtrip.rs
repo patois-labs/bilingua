@@ -272,3 +272,38 @@ fn pragma_number_is_trimmed_like_python_bytes_strip() {
     assert_eq!(units(&data), vec!["\u{41f}\u{440}\u{438}".to_string()]);
     assert_identity(&data);
 }
+
+/// #791: a short escape followed by a translated digit would read as a longer escape (`\x4` + `1` is `\x41`, `A`;
+/// `\1` + `2` is `\12`). Such a merge is refused; a space between them, or a full-length escape, is fine.
+#[test]
+fn short_escape_before_a_translated_digit_is_refused() {
+    let merge = |src: &str, target: &str| {
+        let mut doc = extract(src.as_bytes()).unwrap();
+        let u = &doc.units[0];
+        let id = u.segments[0].id.clone();
+        let tg = target_of(u, target);
+        doc.set_target(&id, tg).unwrap();
+        Rc.merge(&doc)
+    };
+    for (src, target) in [
+        ("STRINGTABLE { 1 \"\x4 a\" }", "\u{27e6}x1\u{27e7}1 a"),
+        ("STRINGTABLE { 1 \"\x4 a\" }", "\u{27e6}x1\u{27e7}f a"),
+        ("STRINGTABLE { 1 \"\1 a\" }", "\u{27e6}x1\u{27e7}2 a"),
+        ("STRINGTABLE { 1 \"\12 a\" }", "\u{27e6}x1\u{27e7}7 a"),
+        ("STRINGTABLE { 1 L\"\x004 a\" }", "\u{27e6}x1\u{27e7}1 a"),
+    ] {
+        match merge(src, target) {
+            Err(Error::Unwritable { reason, .. }) => assert!(reason.contains("would join it"), "{reason}"),
+            other => panic!("expected a refusal for {src:?}, got {other:?}"),
+        }
+    }
+    // not refused: a space, a non-digit, a full-length escape, an octal escape before 8 or 9
+    for (src, target, out) in [
+        ("STRINGTABLE { 1 \"\x4 a\" }", "\u{27e6}x1\u{27e7} 1 a", "STRINGTABLE { 1 \"\x4 1 a\" }"),
+        ("STRINGTABLE { 1 \"\x4 a\" }", "\u{27e6}x1\u{27e7}z a", "STRINGTABLE { 1 \"\x4z a\" }"),
+        ("STRINGTABLE { 1 \"\x41 a\" }", "\u{27e6}x1\u{27e7}1 a", "STRINGTABLE { 1 \"\x411 a\" }"),
+        ("STRINGTABLE { 1 \"\1 a\" }", "\u{27e6}x1\u{27e7}8 a", "STRINGTABLE { 1 \"\18 a\" }"),
+    ] {
+        assert_eq!(merge(src, target).unwrap(), out.as_bytes(), "{src}");
+    }
+}

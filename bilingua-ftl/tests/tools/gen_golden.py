@@ -23,6 +23,23 @@ sys.path.insert(0, LOCOS)
 from app import filters as _f  # noqa: E402,F401
 from app.filters.base import get_filter  # noqa: E402
 
+# #811 item 1: the fix LocOS is getting. A run that starts its line (only spaces before it) writes its continuation
+# lines at that line's indent. Patched in here until app/filters/fluent_filter.py has it; drop this block then.
+from app.filters import fluent_filter as _ff  # noqa: E402
+
+_old_indent_of = _ff._indent_of
+
+
+def _indent_of(src, start, end):
+    bol = max(src.rfind("\n", 0, start), src.rfind("\r", 0, start)) + 1
+    line = src[bol:start]
+    if line and not line.strip(" "):
+        return line
+    return _old_indent_of(src, start, end)
+
+
+_ff._indent_of = _indent_of
+
 WORDS = [
     "Save", "Cancel", "Welcome back", "Hello, { $name }!", "{ $n } items", "Text { -brand } text", "{ $only }",
     "---", "Caf\u00e9", "\u65e5\u672c\u8a9e", "\u0645\u0631\u062d\u0628\u0627", "\ud55c\uad6d\uc5b4", "a { \"{\" } b",

@@ -74,6 +74,23 @@ fn check_rendered(u: &Unit, target: &[Item], s: &str) -> Result<(), Error> {
     if !one_literal {
         return Err(Error::Unwritable { unit: Some(u.id.clone()), reason: "the translation does not form one string literal".into() });
     }
+    // a short escape (`\x4`, `\1`) followed by a translated digit would read as a longer one (`\x41`, `\12`) (#791)
+    let maxd = if s.starts_with('L') { 4 } else { 2 };
+    for w in target.windows(2) {
+        let (Item::Code(id), Item::Ch(c)) = (&w[0], &w[1]) else { continue };
+        let Some(raw) = u.codes.get(id).and_then(|c| c.standalone.as_deref()) else { continue };
+        let joins = match raw.as_bytes() {
+            [b'\\', b'x' | b'X', d @ ..] => d.len() < maxd && c.is_ascii_hexdigit(),
+            [b'\\', o, d @ ..] if (b'0'..=b'7').contains(o) => d.len() + 1 < 3 && ('0'..='7').contains(c),
+            _ => false,
+        };
+        if joins {
+            return Err(Error::Unwritable {
+                unit: Some(u.id.clone()),
+                reason: format!("the character after the escape {raw} would join it into a different character; put a space or other text between them"),
+            });
+        }
+    }
     let has_text = target.iter().any(|it| matches!(it, Item::Ch(c) if c.is_alphanumeric()));
     let (pieces, _) = lit::pieces(s);
     let keeps_text = pieces.iter().any(|p| matches!(p, lit::Piece::Text(t) if t.chars().any(char::is_alphanumeric)));

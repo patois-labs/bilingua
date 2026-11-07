@@ -182,3 +182,28 @@ fn invalid_skeleton_is_refused() {
     doc.skeleton = Skeleton::zip(vec![], ParserInfo::new("bilingua-adoc", env!("CARGO_PKG_VERSION"), 1));
     assert!(Adoc.merge(&doc).is_err());
 }
+
+/// #788: a translated cell cannot change the table structure or start a preprocessor directive.
+#[test]
+fn translated_cells_cannot_inject_structure_or_directives() {
+    // a nested table cell: both `!` (its own separator) and `|` (the outer cell's) are escaped
+    let nested = "|===\na|\n!===\n!Widget\n!===\n|===\n";
+    let i = units(nested.as_bytes()).iter().position(|t| t == "Widget").expect("nested cell unit");
+    let out = build_str(nested.as_bytes(), &[(i, "a | b ! c")]);
+    assert!(out.contains("!a \| b \! c\n"), "{out}");
+    // an outer cell still escapes only its own separator
+    let flat = "|===\n|Widget\n|===\n";
+    let i = units(flat.as_bytes()).iter().position(|t| t == "Widget").expect("cell unit");
+    assert!(build_str(flat.as_bytes(), &[(i, "a | b ! c")]).contains("|a \| b ! c\n"));
+    // a cell on its own line: a directive or comment at its start gets the `{empty}` guard
+    let cont = "|===\n|first\nWidget\n|===\n";
+    let i = units(cont.as_bytes()).iter().position(|t| t.ends_with("Widget") || t == "Widget").expect("continuation cell");
+    for evil in ["ifdef::x[]", "include::other.adoc[]", "// hidden", "endif::[]"] {
+        let out = build_str(cont.as_bytes(), &[(i, evil)]);
+        assert!(out.contains(&format!("{{empty}}{evil}")), "{evil}: {out}");
+        assert!(!out.lines().any(|l| l.starts_with(evil)), "{evil}: {out}");
+    }
+    // a cell that follows a `|` on its line is not at a line start: no guard, bytes as before
+    let out = build_str(flat.as_bytes(), &[(units(flat.as_bytes()).iter().position(|t| t == "Widget").unwrap(), "include::x[]")]);
+    assert!(out.contains("|include::x[]\n"), "{out}");
+}
