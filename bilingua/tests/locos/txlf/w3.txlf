@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2" xmlns:gs4tr="http://www.gs4tr.org/schema/xliff-ext">
+  <file original="w3.html" source-language="en-US" target-language="de-DE">
+    <body>
+      <trans-unit id="1"><source>Pick a <g id="1">blue</g> pen.</source></trans-unit>
+      <trans-unit id="2"><source>Kept line.</source><target state="translated">Behalten.</target></trans-unit>
+      <trans-unit id="3"><source>Line one<x id="2"/>line two.</source><target state="needs-translation"></target></trans-unit>
+      <trans-unit id="4"><source>One. Two.</source><seg-source><mrk mtype="seg" mid="1">One.</mrk> <mrk mtype="seg" mid="2">Two.</mrk></seg-source><target><mrk mtype="seg" mid="1">Eins.</mrk> <mrk mtype="seg" mid="2"/></target></trans-unit>
+      <trans-unit id="5"><source>Last <g id="3">green</g> cup.</source></trans-unit>
+    </body>
+  </file>
+</xliff>

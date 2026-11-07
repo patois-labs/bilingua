@@ -101,8 +101,10 @@ pub fn check(name: Option<&str>) -> Result<(), Error> {
 /// properties (an ISO-8859-1 file stays ISO-8859-1, `\uXXXX` for the rest). The LocOS PO and subtitle writers keep
 /// the file's encoding themselves. XAML (LocOS `xaml_filter`: a UTF-16 file keeps its BOM and UTF-16, a declared
 /// legacy charset stays, with a character reference for what it cannot hold) and resjson (`resjson_filter`: the
-/// UTF-16 BOM and code units kept) too.
-const LOCOS_KEEPS_ENCODING: &[&str] = &["ini", "strings", "dxf", "txt", "properties", "xaml", "resjson"];
+/// UTF-16 BOM and code units kept) too, and the CAT XML files whose LocOS writer splices the translation into the
+/// file's own text and encodes it back in the file's codec (`ttx_filter.build_ttx`, `wordfast.build_txml`,
+/// `cat_xliff.build_units` for TXLF): a UTF-16 TTX, TXML or TXLF stays UTF-16 with its BOM.
+const LOCOS_KEEPS_ENCODING: &[&str] = &["ini", "strings", "dxf", "txt", "properties", "xaml", "resjson", "ttx", "txml", "txlf"];
 
 impl Profile {
     /// The oldest version of this profile the release can still produce.
@@ -126,7 +128,8 @@ impl Profile {
     }
 
     /// The merge options this profile uses for a document of `format` (a filter id). Localization OS: UTF-8 out,
-    /// except for the formats it writes in their own encoding (ini, strings, dxf, txt, properties, xaml and resjson: `Keep`), and the target language
+    /// except for the formats it writes in their own encoding (ini, strings, dxf, txt, properties, xaml, resjson, ttx,
+    /// txml and txlf: `Keep`), and the target language
     /// stamped and plurals filled even when nothing is translated (lead decision 11-04).
     pub fn merge_options(&self, format: &str) -> MergeOptions {
         let enc = if LOCOS_KEEPS_ENCODING.contains(&format) { OutputEncoding::Keep } else { OutputEncoding::Utf8 };
@@ -148,6 +151,11 @@ pub fn annotate(doc: &mut Document, profile: Option<&str>) {
         let p = match format.as_str() {
             "icml" => u.hidden("p").map(str::to_string),
             "idml" => u.id.strip_prefix('p').filter(|n| n.parse::<usize>().is_ok()).map(str::to_string),
+            // TXML: the position among every `<segment>` of a translatable or localizable block, protected ones
+            // counted (LocOS `wordfast.walk_txml`); TXLF: the cat_xliff slot key. Both are the crate's `key` code.
+            "txml" | "txlf" => u.hidden("key").map(str::to_string),
+            // TTX: the position among every `<Tu>` (LocOS `ttx_filter.walk`), the crate's context key
+            "ttx" => u.context.key.clone().filter(|k| k.parse::<usize>().is_ok()),
             // the formats that record LocOS's own index (odf, Qt ts, wxl)
             _ => u.context.extra.get("p_index").cloned(),
         };
@@ -172,7 +180,7 @@ pub fn annotate(doc: &mut Document, profile: Option<&str>) {
 }
 
 /// Formats whose LocOS units carry no style (`""`) where Bilingua sets `context.style`.
-const LOCOS_NO_STYLE: &[&str] = &["po", "wxl", "xaml", "resx", "strings", "properties", "json", "json5", "resjson", "arb", "yaml"];
+const LOCOS_NO_STYLE: &[&str] = &["po", "wxl", "xaml", "resx", "strings", "properties", "json", "json5", "resjson", "arb", "yaml", "txml", "txlf"];
 
 /// For the formats whose LocOS filter keeps (some) inline codes as plain unit text, which codes: every code in the
 /// key/value formats (placeholders such as `%@`, `{0}`, `[ProductName]`, and JSON's HTML), only `placeholder` codes
@@ -328,7 +336,28 @@ pub fn locos_units(doc: &Document) -> Vec<LocosUnit> {
 /// translation); anything else is [`Document::set_target`], except that a translation may repeat a standalone
 /// placeholder tag (`#` in ICU, Chrome `$x$`, go `{{..}}`: LocOS accepts it, where `set_target` refuses it as
 /// "tag appears more often"); paired tags keep the exactly-once rule and a tag the source lacks is still refused.
+/// For the formats whose LocOS writer repairs a translation's tags ([`tokens::locos_repairs_tags`]: the XLIFF
+/// family, TXML, TTX and the XLIFF packages) a target may hold any tag of the source more often than the source,
+/// or unbalanced: their writers apply LocOS's rule (`cat_xliff._render`): a code written more often than the source
+/// has it loses the extra tags (its text stays), a close that closes nothing is dropped, a pair left open is closed
+/// at the end ([`tokens::repair_locos_text_for`] lists each repair). A tag the source lacks is still refused.
 pub fn locos_set_target(doc: &mut Document, seg_id: &str, target: Vec<Inline>) -> Result<(), Error> {
+    if !tokens::locos_repairs_tags(&doc.format) {
+        return set_like_locos(doc, seg_id, target);
+    }
+    let Some((ui, si)) = doc.locate(seg_id) else { return Err(Error::UnknownSegment(seg_id.to_string())) };
+    let repaired = tokens::repair_tags(&doc.units[ui].segments[si].source, target.clone());
+    set_like_locos(doc, seg_id, repaired)?;
+    // the writers of these formats apply the rule themselves after stripping the target's edges (as LocOS's do), so
+    // the target keeps every tag as it came, repeated or unbalanced; the repaired copy only had to pass the checks
+    if target.iter().any(|i| matches!(i, Inline::Tag { .. })) {
+        doc.units[ui].segments[si].target = crate::merge_text(target);
+    }
+    Ok(())
+}
+
+/// The body of [`locos_set_target`] once the tags are repaired.
+fn set_like_locos(doc: &mut Document, seg_id: &str, target: Vec<Inline>) -> Result<(), Error> {
     if target.iter().all(|i| matches!(i, Inline::Text(t) if t.is_empty())) {
         return doc.set_target_empty(seg_id);
     }

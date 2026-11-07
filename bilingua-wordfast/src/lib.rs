@@ -158,7 +158,7 @@ fn extract(d: Dialect, load_targets: bool, bytes: &[u8], opts: &ExtractOptions, 
             regions.push((r.start, idx));
             ends.push(r.end);
         }
-        units.push(unit_of(it, text));
+        units.push(unit_of(it, text, opts.is_profile(profile::LOCOS)));
     }
     // the skeleton in file order
     let mut order: Vec<(usize, usize, usize)> = regions.iter().zip(&ends).map(|(&(s, i), &e)| (s, e, i)).collect();
@@ -183,7 +183,9 @@ fn extract(d: Dialect, load_targets: bool, bytes: &[u8], opts: &ExtractOptions, 
     guard::finish(doc, dec.warnings, limits)
 }
 
-fn unit_of(it: Item, text: &str) -> Unit {
+/// `locos`: under the LocOS profile a confirmed translation is protected like a lock (LocOS `wordfast._skip` and
+/// `cat_xliff._unit_skip` never extract it and never overwrite it at build).
+fn unit_of(it: Item, text: &str, locos: bool) -> Unit {
     let mut u = Unit::new(it.key.to_string(), it.source);
     let seg = &mut u.segments[0];
     seg.target = it.target;
@@ -197,7 +199,8 @@ fn unit_of(it: Item, text: &str) -> Unit {
     u.context.style = it.style;
     match it.status {
         // somebody's confirmed translation stays editable (its state says so); sign-off and locks are read-only
-        Status::Open | Status::Confirmed("confirmed") => {}
+        Status::Open => {}
+        Status::Confirmed("confirmed") if !locos => {}
         Status::Confirmed(r) | Status::Locked(r) => {
             u.translate = false;
             u.lock_reason = Some(r.to_string());

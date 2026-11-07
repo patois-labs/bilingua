@@ -306,7 +306,9 @@ fn check(golden: &Path) -> (usize, usize, usize, Vec<String>) {
         let mut set_fail = None;
         for n in numbered(&doc) {
             if let Some(t) = map.get(&n.p_index.to_string()).and_then(Value::as_str) {
-                let inl = tokens::from_locos_text(t, &n.map);
+                // the format's LocOS token rules, as the adapter reads them (`locos_set_targets`): the CAT formats
+                // repair a repeated, stray or unclosed tag
+                let (inl, _) = tokens::parse_locos_text_for(&doc.format, t, &n.map);
                 if let Err(e) = profile::locos_set_target(&mut doc, &n.segment_id, inl) {
                     set_fail = Some(format!("{label}: set_target {}: {e}", n.p_index));
                 }
@@ -340,11 +342,27 @@ const KNOWN: &[(&str, &str)] = &[];
 
 /// Builds of a golden that still differ, with the reason: only those builds' failures are printed, not fatal; the
 /// file's units and every other build must still match.
-const KNOWN_BUILDS: &[(&str, &[&str], &str)] = &[(
+const KNOWN_BUILDS: &[(&str, &[&str], &str)] = &[
+    (
+        "docx_po_fidelity_1.xliff",
+        &["repair-point", "repair-point-de-DE"],
+        PAIR_AS_POINT,
+    ),
+    (
+        "xliff_package_filter_1.xliff",
+        &["repair-point", "repair-point-de-DE"],
+        PAIR_AS_POINT,
+    ),
+    (
     "hostile_tails.pptx",
     &["prefix", "hostile", "hostile-ar-SA", "hostile-de-DE"],
     "token look-alikes and tokens naming no code: since LocOS 814 both keep them as text, but LocOS writes each one in a run of its own and Bilingua keeps it in its run's text (same text, other runs)",
 )];
+
+/// B-SIDE 8: a paired code named by a point token in a plain XLIFF. LocOS `xliff_filter._rebuild_target` writes a
+/// copy of the source element with its source text inside (text the translation does not have); Bilingua writes the
+/// element empty, as LocOS's `cat_xliff._render` does for every other CAT format.
+const PAIR_AS_POINT: &str = "pair named by a point token: LocOS's plain XLIFF writer copies the source element with its source text, Bilingua writes it empty as cat_xliff does";
 
 /// Formats whose goldens do not match yet: reported, not fatal. Remove a format when all its files match. Empty:
 /// every Track D format matches.

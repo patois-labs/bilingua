@@ -49,6 +49,22 @@
    "locale": "es_ES",
    "map": {},
    "out_b64": "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHhsaWZmIHhtbG5zPSJ1cm46b2FzaXM6bmFtZXM6dGM6eGxpZmY6ZG9jdW1lbnQ6MS4yIiB2ZXJzaW9uPSIxLjIiPgogPGZpbGUgb3JpZ2luYWw9ImEiIHNvdXJjZS1sYW5ndWFnZT0iZW4iIHRhcmdldC1sYW5ndWFnZT0iZXMtRVMiIGRhdGF0eXBlPSJwbGFpbnRleHQiPjxib2R5PgogIDx0cmFucy11bml0IGlkPSJ1MSI+PHNvdXJjZT5EZWxldGUgPHggaWQ9IjEiIGN0eXBlPSJ4LWZpbGUiLz4gZnJvbSA8cGggaWQ9IjIiPnswfTwvcGg+IG5vdyA8YnB0IGlkPSIzIj4mbHQ7YiZndDs8L2JwdD5ib2xkPGVwdCBpZD0iMyI+Jmx0Oy9iJmd0OzwvZXB0Pjwvc291cmNlPjwvdHJhbnMtdW5pdD4KIDwvYm9keT48L2ZpbGU+PC94bGlmZj4K"
+  },
+  {
+   "name": "repair-xrepeat",
+   "locale": null,
+   "map": {
+    "0": "Q Delete ⟦p1⟧ from ⟦p2⟧ now ⟦x3⟧bold⟦x4⟧ ⟦p1⟧"
+   },
+   "out_b64": "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHhsaWZmIHhtbG5zPSJ1cm46b2FzaXM6bmFtZXM6dGM6eGxpZmY6ZG9jdW1lbnQ6MS4yIiB2ZXJzaW9uPSIxLjIiPgogPGZpbGUgb3JpZ2luYWw9ImEiIHNvdXJjZS1sYW5ndWFnZT0iZW4iIHRhcmdldC1sYW5ndWFnZT0iamEiIGRhdGF0eXBlPSJwbGFpbnRleHQiPjxib2R5PgogIDx0cmFucy11bml0IGlkPSJ1MSI+PHNvdXJjZT5EZWxldGUgPHggaWQ9IjEiIGN0eXBlPSJ4LWZpbGUiLz4gZnJvbSA8cGggaWQ9IjIiPnswfTwvcGg+IG5vdyA8YnB0IGlkPSIzIj4mbHQ7YiZndDs8L2JwdD5ib2xkPGVwdCBpZD0iMyI+Jmx0Oy9iJmd0OzwvZXB0Pjwvc291cmNlPjx0YXJnZXQ+USBEZWxldGUgPHggaWQ9IjEiIGN0eXBlPSJ4LWZpbGUiLz4gZnJvbSA8cGggaWQ9IjIiPnswfTwvcGg+IG5vdyA8YnB0IGlkPSIzIj4mbHQ7YiZndDs8L2JwdD5ib2xkPGVwdCBpZD0iMyI+Jmx0Oy9iJmd0OzwvZXB0PiA8L3RhcmdldD48L3RyYW5zLXVuaXQ+CiA8L2JvZHk+PC9maWxlPjwveGxpZmY+Cg=="
+  },
+  {
+   "name": "repair-xrepeat-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Q Delete ⟦p1⟧ from ⟦p2⟧ now ⟦x3⟧bold⟦x4⟧ ⟦p1⟧"
+   },
+   "out_b64": "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHhsaWZmIHhtbG5zPSJ1cm46b2FzaXM6bmFtZXM6dGM6eGxpZmY6ZG9jdW1lbnQ6MS4yIiB2ZXJzaW9uPSIxLjIiPgogPGZpbGUgb3JpZ2luYWw9ImEiIHNvdXJjZS1sYW5ndWFnZT0iZW4iIHRhcmdldC1sYW5ndWFnZT0iZGUtREUiIGRhdGF0eXBlPSJwbGFpbnRleHQiPjxib2R5PgogIDx0cmFucy11bml0IGlkPSJ1MSI+PHNvdXJjZT5EZWxldGUgPHggaWQ9IjEiIGN0eXBlPSJ4LWZpbGUiLz4gZnJvbSA8cGggaWQ9IjIiPnswfTwvcGg+IG5vdyA8YnB0IGlkPSIzIj4mbHQ7YiZndDs8L2JwdD5ib2xkPGVwdCBpZD0iMyI+Jmx0Oy9iJmd0OzwvZXB0Pjwvc291cmNlPjx0YXJnZXQ+USBEZWxldGUgPHggaWQ9IjEiIGN0eXBlPSJ4LWZpbGUiLz4gZnJvbSA8cGggaWQ9IjIiPnswfTwvcGg+IG5vdyA8YnB0IGlkPSIzIj4mbHQ7YiZndDs8L2JwdD5ib2xkPGVwdCBpZD0iMyI+Jmx0Oy9iJmd0OzwvZXB0PiA8L3RhcmdldD48L3RyYW5zLXVuaXQ+CiA8L2JvZHk+PC9maWxlPjwveGxpZmY+Cg=="
   }
  ]
 }

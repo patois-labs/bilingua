@@ -1,0 +1,10 @@
+<?xml version='1.0' encoding='utf-8'?>
+<TRADOStag Version="2.0"><FrontMatter>
+<ToolSettings CreationDate="20261107T101500Z" CreationTool="TRADOS TagEditor" CreationToolVersion="7.0.0.615"></ToolSettings>
+<UserSettings DataType="HTML" O-Encoding="UTF-8" SettingsName="HTML" SettingsPath="" SourceLanguage="EN-US" TargetLanguage="DE-DE" TargetDefaultFont="" SourceDocumentPath="w3.htm" SettingsRelativePath="" PlugInInfo=""></UserSettings>
+</FrontMatter><Body><Raw>
+<ut Type="start" Style="external" RightEdge="angle" DisplayText="p">&lt;p&gt;</ut><Tu MatchPercent="0"><Tuv Lang="EN-US">Pick a <ut Type="start" RightEdge="angle" DisplayText="b">&lt;b&gt;</ut>blue<ut Type="end" LeftEdge="angle" DisplayText="b">&lt;/b&gt;</ut> pen.</Tuv><Tuv Lang="DE-DE"></Tuv></Tu><ut Type="end" Style="external" LeftEdge="angle" DisplayText="p">&lt;/p&gt;</ut>
+<ut Type="start" Style="external" RightEdge="angle" DisplayText="p">&lt;p&gt;</ut><Tu MatchPercent="100" Origin="manual"><Tuv Lang="EN-US">Kept line.</Tuv><Tuv Lang="DE-DE">Behalten.</Tuv></Tu><ut Type="end" Style="external" LeftEdge="angle" DisplayText="p">&lt;/p&gt;</ut>
+<ut Type="start" Style="external" RightEdge="angle" DisplayText="p">&lt;p&gt;</ut><Tu MatchPercent="0"><Tuv Lang="EN-US">Line one<ut DisplayText="br">&lt;br&gt;</ut>line two.</Tuv></Tu><ut Type="end" Style="external" LeftEdge="angle" DisplayText="p">&lt;/p&gt;</ut>
+<ut Type="start" Style="external" RightEdge="angle" DisplayText="p">&lt;p&gt;</ut><Tu MatchPercent="0"><Tuv Lang="EN-US">Last <ut Type="start" RightEdge="angle" DisplayText="i">&lt;i&gt;</ut>green<ut Type="end" LeftEdge="angle" DisplayText="i">&lt;/i&gt;</ut> cup.</Tuv><Tuv Lang="DE-DE"/></Tu><ut Type="end" Style="external" LeftEdge="angle" DisplayText="p">&lt;/p&gt;</ut>
+</Raw></Body></TRADOStag>

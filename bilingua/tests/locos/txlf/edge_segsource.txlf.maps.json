@@ -1,0 +1,86 @@
+[
+ {
+  "name": "repair-nested",
+  "locale": null,
+  "map": {
+   "3": "Q ⟦g1⟧A ⟦g1⟧B⟦/g1⟧ C⟦/g1⟧ ⟦g1⟧⟦g2⟧Nested⟦/g2⟧ text⟦/g1⟧"
+  }
+ },
+ {
+  "name": "repair-point",
+  "locale": null,
+  "map": {
+   "3": "Q ⟦x1⟧ ⟦g2⟧Nested⟦/g2⟧ text"
+  }
+ },
+ {
+  "name": "repair-repeat",
+  "locale": null,
+  "map": {
+   "3": "Q ⟦g1⟧⟦g2⟧Nested⟦/g2⟧ text⟦/g1⟧ ⟦g1⟧W⟦/g1⟧ E"
+  }
+ },
+ {
+  "name": "repair-stray",
+  "locale": null,
+  "map": {
+   "3": "⟦/g1⟧Q ⟦g1⟧⟦g2⟧Nested⟦/g2⟧ text⟦/g1⟧ ⟦/g1⟧"
+  }
+ },
+ {
+  "name": "repair-unclosed",
+  "locale": null,
+  "map": {
+   "3": "Q ⟦g1⟧⟦g2⟧Nested⟦/g2⟧ text"
+  }
+ },
+ {
+  "name": "repair-xrepeat",
+  "locale": null,
+  "map": {
+   "1000000001": "Q Two ⟦p1⟧three. ⟦p1⟧"
+  }
+ },
+ {
+  "name": "repair-nested-de-DE",
+  "locale": "de-DE",
+  "map": {
+   "3": "Q ⟦g1⟧A ⟦g1⟧B⟦/g1⟧ C⟦/g1⟧ ⟦g1⟧⟦g2⟧Nested⟦/g2⟧ text⟦/g1⟧"
+  }
+ },
+ {
+  "name": "repair-point-de-DE",
+  "locale": "de-DE",
+  "map": {
+   "3": "Q ⟦x1⟧ ⟦g2⟧Nested⟦/g2⟧ text"
+  }
+ },
+ {
+  "name": "repair-repeat-de-DE",
+  "locale": "de-DE",
+  "map": {
+   "3": "Q ⟦g1⟧⟦g2⟧Nested⟦/g2⟧ text⟦/g1⟧ ⟦g1⟧W⟦/g1⟧ E"
+  }
+ },
+ {
+  "name": "repair-stray-de-DE",
+  "locale": "de-DE",
+  "map": {
+   "3": "⟦/g1⟧Q ⟦g1⟧⟦g2⟧Nested⟦/g2⟧ text⟦/g1⟧ ⟦/g1⟧"
+  }
+ },
+ {
+  "name": "repair-unclosed-de-DE",
+  "locale": "de-DE",
+  "map": {
+   "3": "Q ⟦g1⟧⟦g2⟧Nested⟦/g2⟧ text"
+  }
+ },
+ {
+  "name": "repair-xrepeat-de-DE",
+  "locale": "de-DE",
+  "map": {
+   "1000000001": "Q Two ⟦p1⟧three. ⟦p1⟧"
+  }
+ }
+]

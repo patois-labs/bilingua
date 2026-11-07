@@ -1,0 +1,72 @@
+[
+ {
+  "name": "repair-nested",
+  "locale": null,
+  "map": {
+   "0": "Q ⟦g1⟧A ⟦g1⟧B⟦/g1⟧ C⟦/g1⟧ Hello ⟦g1⟧world⟦/g1⟧"
+  }
+ },
+ {
+  "name": "repair-point",
+  "locale": null,
+  "map": {
+   "0": "Q Hello ⟦x1⟧ world"
+  }
+ },
+ {
+  "name": "repair-repeat",
+  "locale": null,
+  "map": {
+   "0": "Q Hello ⟦g1⟧world⟦/g1⟧ ⟦g1⟧W⟦/g1⟧ E"
+  }
+ },
+ {
+  "name": "repair-stray",
+  "locale": null,
+  "map": {
+   "0": "⟦/g1⟧Q Hello ⟦g1⟧world⟦/g1⟧ ⟦/g1⟧"
+  }
+ },
+ {
+  "name": "repair-unclosed",
+  "locale": null,
+  "map": {
+   "0": "Q Hello ⟦g1⟧world"
+  }
+ },
+ {
+  "name": "repair-nested-de-DE",
+  "locale": "de-DE",
+  "map": {
+   "0": "Q ⟦g1⟧A ⟦g1⟧B⟦/g1⟧ C⟦/g1⟧ Hello ⟦g1⟧world⟦/g1⟧"
+  }
+ },
+ {
+  "name": "repair-point-de-DE",
+  "locale": "de-DE",
+  "map": {
+   "0": "Q Hello ⟦x1⟧ world"
+  }
+ },
+ {
+  "name": "repair-repeat-de-DE",
+  "locale": "de-DE",
+  "map": {
+   "0": "Q Hello ⟦g1⟧world⟦/g1⟧ ⟦g1⟧W⟦/g1⟧ E"
+  }
+ },
+ {
+  "name": "repair-stray-de-DE",
+  "locale": "de-DE",
+  "map": {
+   "0": "⟦/g1⟧Q Hello ⟦g1⟧world⟦/g1⟧ ⟦/g1⟧"
+  }
+ },
+ {
+  "name": "repair-unclosed-de-DE",
+  "locale": "de-DE",
+  "map": {
+   "0": "Q Hello ⟦g1⟧world"
+  }
+ }
+]

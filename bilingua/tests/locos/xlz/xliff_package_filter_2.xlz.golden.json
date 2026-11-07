@@ -142,6 +142,318 @@
      "same": true
     }
    ]
+  },
+  {
+   "name": "repair-nested",
+   "locale": null,
+   "map": {
+    "0": "Q ⟦g1⟧A ⟦g1⟧B⟦/g1⟧ C⟦/g1⟧ Open the ⟦g1⟧Settings⟦/g1⟧ menu.",
+    "8": "Q ⟦g1⟧A ⟦g1⟧B⟦/g1⟧ C⟦/g1⟧ Open the ⟦g1⟧Settings⟦/g1⟧ page."
+   },
+   "zip": [
+    {
+     "name": "tm/project.tmx",
+     "same": true
+    },
+    {
+     "name": "fr-FR/guide.docx.sdlxliff",
+     "sha1": "37396ae202599cab4cb36d77f51d74d98e372abe"
+    },
+    {
+     "name": "tb/terms.tbx",
+     "same": true
+    },
+    {
+     "name": "fr-FR/help.html.xlf",
+     "sha1": "559e2557d11659ec5c061178efcdd9754cbd035c"
+    }
+   ]
+  },
+  {
+   "name": "repair-point",
+   "locale": null,
+   "map": {
+    "0": "Q Open the ⟦x1⟧ Settings menu.",
+    "8": "Q Open the ⟦x1⟧ Settings page."
+   },
+   "zip": [
+    {
+     "name": "tm/project.tmx",
+     "same": true
+    },
+    {
+     "name": "fr-FR/guide.docx.sdlxliff",
+     "sha1": "520f3040f8be4f8bacca73d64d8256830b3892c6"
+    },
+    {
+     "name": "tb/terms.tbx",
+     "same": true
+    },
+    {
+     "name": "fr-FR/help.html.xlf",
+     "sha1": "d3b6bfce5ee20ec36f6c151e1654a165c646440c"
+    }
+   ]
+  },
+  {
+   "name": "repair-repeat",
+   "locale": null,
+   "map": {
+    "0": "Q Open the ⟦g1⟧Settings⟦/g1⟧ menu. ⟦g1⟧W⟦/g1⟧ E",
+    "8": "Q Open the ⟦g1⟧Settings⟦/g1⟧ page. ⟦g1⟧W⟦/g1⟧ E"
+   },
+   "zip": [
+    {
+     "name": "tm/project.tmx",
+     "same": true
+    },
+    {
+     "name": "fr-FR/guide.docx.sdlxliff",
+     "sha1": "2d2e691718c6825050cb6d2cec96083d2b1c5d83"
+    },
+    {
+     "name": "tb/terms.tbx",
+     "same": true
+    },
+    {
+     "name": "fr-FR/help.html.xlf",
+     "sha1": "a6b2de27d1be6e63da4916917a2161e086c39f5e"
+    }
+   ]
+  },
+  {
+   "name": "repair-stray",
+   "locale": null,
+   "map": {
+    "0": "⟦/g1⟧Q Open the ⟦g1⟧Settings⟦/g1⟧ menu. ⟦/g1⟧",
+    "8": "⟦/g1⟧Q Open the ⟦g1⟧Settings⟦/g1⟧ page. ⟦/g1⟧"
+   },
+   "zip": [
+    {
+     "name": "tm/project.tmx",
+     "same": true
+    },
+    {
+     "name": "fr-FR/guide.docx.sdlxliff",
+     "sha1": "9ac685b5485d0e5d0bbd95b4be3836529436ba62"
+    },
+    {
+     "name": "tb/terms.tbx",
+     "same": true
+    },
+    {
+     "name": "fr-FR/help.html.xlf",
+     "sha1": "ea7cdfd608ab6d37503387d600953621c643763c"
+    }
+   ]
+  },
+  {
+   "name": "repair-unclosed",
+   "locale": null,
+   "map": {
+    "0": "Q Open the ⟦g1⟧Settings menu.",
+    "8": "Q Open the ⟦g1⟧Settings page."
+   },
+   "zip": [
+    {
+     "name": "tm/project.tmx",
+     "same": true
+    },
+    {
+     "name": "fr-FR/guide.docx.sdlxliff",
+     "sha1": "305c62f340f7111a850aed26ad66c3e20164eca3"
+    },
+    {
+     "name": "tb/terms.tbx",
+     "same": true
+    },
+    {
+     "name": "fr-FR/help.html.xlf",
+     "sha1": "9e66b4d37640a61ca738b63e92395eef2dbbdb41"
+    }
+   ]
+  },
+  {
+   "name": "repair-xrepeat",
+   "locale": null,
+   "map": {
+    "2": "Q Line one⟦p1⟧line two & more text. ⟦p1⟧",
+    "11": "Q Use {0} items & ⟦p1⟧more. ⟦p1⟧"
+   },
+   "zip": [
+    {
+     "name": "tm/project.tmx",
+     "same": true
+    },
+    {
+     "name": "fr-FR/guide.docx.sdlxliff",
+     "sha1": "aed6e3f4113392c76f3203991460e4c4b5f7608a"
+    },
+    {
+     "name": "tb/terms.tbx",
+     "same": true
+    },
+    {
+     "name": "fr-FR/help.html.xlf",
+     "sha1": "2ae88e53b738c6360d15e4b0a8fd66435c5ec4ae"
+    }
+   ]
+  },
+  {
+   "name": "repair-nested-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Q ⟦g1⟧A ⟦g1⟧B⟦/g1⟧ C⟦/g1⟧ Open the ⟦g1⟧Settings⟦/g1⟧ menu.",
+    "8": "Q ⟦g1⟧A ⟦g1⟧B⟦/g1⟧ C⟦/g1⟧ Open the ⟦g1⟧Settings⟦/g1⟧ page."
+   },
+   "zip": [
+    {
+     "name": "tm/project.tmx",
+     "same": true
+    },
+    {
+     "name": "fr-FR/guide.docx.sdlxliff",
+     "sha1": "37396ae202599cab4cb36d77f51d74d98e372abe"
+    },
+    {
+     "name": "tb/terms.tbx",
+     "same": true
+    },
+    {
+     "name": "fr-FR/help.html.xlf",
+     "sha1": "559e2557d11659ec5c061178efcdd9754cbd035c"
+    }
+   ]
+  },
+  {
+   "name": "repair-point-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Q Open the ⟦x1⟧ Settings menu.",
+    "8": "Q Open the ⟦x1⟧ Settings page."
+   },
+   "zip": [
+    {
+     "name": "tm/project.tmx",
+     "same": true
+    },
+    {
+     "name": "fr-FR/guide.docx.sdlxliff",
+     "sha1": "520f3040f8be4f8bacca73d64d8256830b3892c6"
+    },
+    {
+     "name": "tb/terms.tbx",
+     "same": true
+    },
+    {
+     "name": "fr-FR/help.html.xlf",
+     "sha1": "d3b6bfce5ee20ec36f6c151e1654a165c646440c"
+    }
+   ]
+  },
+  {
+   "name": "repair-repeat-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Q Open the ⟦g1⟧Settings⟦/g1⟧ menu. ⟦g1⟧W⟦/g1⟧ E",
+    "8": "Q Open the ⟦g1⟧Settings⟦/g1⟧ page. ⟦g1⟧W⟦/g1⟧ E"
+   },
+   "zip": [
+    {
+     "name": "tm/project.tmx",
+     "same": true
+    },
+    {
+     "name": "fr-FR/guide.docx.sdlxliff",
+     "sha1": "2d2e691718c6825050cb6d2cec96083d2b1c5d83"
+    },
+    {
+     "name": "tb/terms.tbx",
+     "same": true
+    },
+    {
+     "name": "fr-FR/help.html.xlf",
+     "sha1": "a6b2de27d1be6e63da4916917a2161e086c39f5e"
+    }
+   ]
+  },
+  {
+   "name": "repair-stray-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "⟦/g1⟧Q Open the ⟦g1⟧Settings⟦/g1⟧ menu. ⟦/g1⟧",
+    "8": "⟦/g1⟧Q Open the ⟦g1⟧Settings⟦/g1⟧ page. ⟦/g1⟧"
+   },
+   "zip": [
+    {
+     "name": "tm/project.tmx",
+     "same": true
+    },
+    {
+     "name": "fr-FR/guide.docx.sdlxliff",
+     "sha1": "9ac685b5485d0e5d0bbd95b4be3836529436ba62"
+    },
+    {
+     "name": "tb/terms.tbx",
+     "same": true
+    },
+    {
+     "name": "fr-FR/help.html.xlf",
+     "sha1": "ea7cdfd608ab6d37503387d600953621c643763c"
+    }
+   ]
+  },
+  {
+   "name": "repair-unclosed-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Q Open the ⟦g1⟧Settings menu.",
+    "8": "Q Open the ⟦g1⟧Settings page."
+   },
+   "zip": [
+    {
+     "name": "tm/project.tmx",
+     "same": true
+    },
+    {
+     "name": "fr-FR/guide.docx.sdlxliff",
+     "sha1": "305c62f340f7111a850aed26ad66c3e20164eca3"
+    },
+    {
+     "name": "tb/terms.tbx",
+     "same": true
+    },
+    {
+     "name": "fr-FR/help.html.xlf",
+     "sha1": "9e66b4d37640a61ca738b63e92395eef2dbbdb41"
+    }
+   ]
+  },
+  {
+   "name": "repair-xrepeat-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "2": "Q Line one⟦p1⟧line two & more text. ⟦p1⟧",
+    "11": "Q Use {0} items & ⟦p1⟧more. ⟦p1⟧"
+   },
+   "zip": [
+    {
+     "name": "tm/project.tmx",
+     "same": true
+    },
+    {
+     "name": "fr-FR/guide.docx.sdlxliff",
+     "sha1": "aed6e3f4113392c76f3203991460e4c4b5f7608a"
+    },
+    {
+     "name": "tb/terms.tbx",
+     "same": true
+    },
+    {
+     "name": "fr-FR/help.html.xlf",
+     "sha1": "2ae88e53b738c6360d15e4b0a8fd66435c5ec4ae"
+    }
+   ]
   }
  ]
 }

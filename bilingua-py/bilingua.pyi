@@ -172,7 +172,7 @@ class LocosCode(TypedDict, total=False):
 LocosMap = dict[str, LocosCode]
 
 class TokenProblem(TypedDict, total=False):
-    kind: Literal["stray", "unknown", "kind_mismatch"]
+    kind: Literal["stray", "unknown", "kind_mismatch", "repeated", "stray_close", "unclosed", "pair_as_point"]
     token: str
     at: int
 
@@ -200,4 +200,6 @@ def locos_units(document: Mapping[str, Any]) -> list[LocosUnit]:
 def locos_set_targets(document: Mapping[str, Any], targets: Mapping[str, str]) -> tuple[Document, dict[str, list[TokenProblem]]]:
     """Sets LocOS-text translations by segment id the way Localization OS means them (empty = translated to
     nothing, white space kept, standalone placeholders may repeat). Returns the new Document and, per segment, the
-    tokens kept as text. A target the document cannot take raises BilinguaError naming the segment."""
+    tokens kept as text and, for the XLIFF family, TXML, TTX and the packages, each tag repair LocOS's writers make
+    (`repeated`, `stray_close`: the tag dropped, its text kept; `unclosed`: closed at the end; `pair_as_point`:
+    written empty). A target the document cannot take raises BilinguaError naming the segment."""

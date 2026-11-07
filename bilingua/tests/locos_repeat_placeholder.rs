@@ -31,11 +31,13 @@ fn corpus() -> Vec<(String, Vec<u8>)> {
 /// packages (`mqxlz`, `sdlppx`: LocOS writes their XLIFF through `cat_xliff._render`, which drops a used token).
 /// Server pages also write a tag that carries code once (`<a href="<?php x() ?>">`), on purpose, where LocOS writes
 /// such a tag twice. The Xcode bundle (`xcloc`) under the profile writes its members with the LocOS XLIFF writer,
-/// which drops a used token, as LocOS's xcloc build does (measured on the corpus bundles, 11-07). Every other format but those in [`LOCOS_REFUSES`] writes a repeated standalone placeholder each
+/// which drops a used token, as LocOS's xcloc build does (measured on the corpus bundles, 11-07). The XLIFF family
+/// (`xliff`, `sdlxliff`, `mqxliff`, `mxliff`): `locos_set_target` repairs the target as `cat_xliff._render` and
+/// `xliff_filter._rebuild_target` do, which drops a used point (B-SIDE 8, the `repair-xrepeat` goldens). Every other format but those in [`LOCOS_REFUSES`] writes a repeated standalone placeholder each
 /// time, as LocOS does.
 const LOCOS_KEEPS_ONCE: &[&str] = &[
-    "android", "aspx", "ass", "dita", "docbook", "docx", "erb", "icml", "idml", "jsp", "mif", "mqxlz", "odt", "phtml", "sdlppx", "shtml", "ts", "ttml",
-    "ttx", "txlf", "txml", "vsdx", "vtt", "xcloc", "xlz", "xmb", "xml", "xslt", "xtb", "xtg",
+    "android", "aspx", "ass", "dita", "docbook", "docx", "erb", "icml", "idml", "jsp", "mif", "mqxliff", "mqxlz", "mxliff", "odt", "phtml", "sdlppx",
+    "sdlxliff", "shtml", "ts", "ttml", "ttx", "txlf", "txml", "vsdx", "vtt", "xcloc", "xliff", "xlz", "xmb", "xml", "xslt", "xtb", "xtg",
 ];
 
 /// Formats whose LocOS writer refuses a repeated placeholder: the Contentful, Sanity Portable Text and Jira ADF

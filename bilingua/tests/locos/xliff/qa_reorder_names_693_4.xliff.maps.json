@@ -1,0 +1,16 @@
+[
+ {
+  "name": "repair-xrepeat",
+  "locale": null,
+  "map": {
+   "0": "Q A ⟦p1⟧ B ⟦x2⟧ C ⟦x3⟧ D ⟦p4⟧ ⟦p1⟧"
+  }
+ },
+ {
+  "name": "repair-xrepeat-de-DE",
+  "locale": "de-DE",
+  "map": {
+   "0": "Q A ⟦p1⟧ B ⟦x2⟧ C ⟦x3⟧ D ⟦p4⟧ ⟦p1⟧"
+  }
+ }
+]

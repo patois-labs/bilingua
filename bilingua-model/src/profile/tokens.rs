@@ -345,7 +345,233 @@ const LOCOS_DROPS_MISMATCH: &[&str] = &["toml", "js"];
 /// the wrong kind for a code of the unit is dropped (LocOS writes nothing for it) instead of kept as text; it is
 /// still listed as [`TokenProblem::KindMismatch`]. Every other format reads as [`parse_locos_text`].
 pub fn parse_locos_text_for(format: &str, text: &str, map: &LocosMap) -> (Vec<Inline>, Vec<TokenProblem>) {
-    parse_tokens(text, map, LOCOS_DROPS_MISMATCH.contains(&format))
+    let (inl, problems, _) = repair_locos_text_for(format, text, map);
+    (inl, problems)
+}
+
+/// Formats whose LocOS writer repairs the tags of a translation instead of refusing it (every CAT XML writer:
+/// `cat_xliff._render` for sdlxliff, mqxliff, mxliff, txlf, txml, ttx and the xlz, mqxlz and Trados package
+/// members, `xliff_filter._rebuild_target` for plain XLIFF). See [`repair_locos_text_for`].
+const LOCOS_REPAIRS_TAGS: &[&str] = &["xliff", "sdlxliff", "mqxliff", "mxliff", "txlf", "txml", "ttx", "xlz", "mqxlz", "sdlppx"];
+
+/// True when the LocOS writer of `format` repairs a translation's tags ([`repair_locos_text_for`]) rather than
+/// refusing them: the XLIFF family, TXML, TTX and the XLIFF packages.
+pub fn locos_repairs_tags(format: &str) -> bool {
+    LOCOS_REPAIRS_TAGS.contains(&format)
+}
+
+/// One repair [`repair_locos_text_for`] made to a translation's tokens. The text around a token always stays; only
+/// the token's tag is dropped, or a close added.
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum TagRepair {
+    /// A token whose code was already written: dropped (a repeated pair keeps its inner text, without the tags).
+    Repeated {
+        /// The token.
+        token: String,
+    },
+    /// A closing token with no open pair of its number on top (or a closing token for a standalone code): dropped.
+    StrayClose {
+        /// The token.
+        token: String,
+    },
+    /// A pair opened and never closed: closed at the end of the segment.
+    Unclosed {
+        /// The opening token.
+        token: String,
+    },
+    /// A pair code written as a point token (`\u{27E6}x1\u{27E7}` for `\u{27E6}g1\u{27E7}`): written empty, its open
+    /// and close tags side by side.
+    PairAsPoint {
+        /// The token.
+        token: String,
+    },
+}
+
+/// [`parse_locos_text_for`] that also lists the tag repairs. For the formats whose LocOS writer repairs tags
+/// ([`locos_repairs_tags`]: the XLIFF family, TXML, TTX, the XLIFF packages) every token whose number is in the map
+/// becomes its tag whatever its letter (a pair named by a point token becomes its open and close side by side, a
+/// closing token for a standalone code a close of its id), repeated or unbalanced as typed: their Bilingua writers
+/// apply LocOS's rule (`cat_xliff._render`) while writing, after the target's edges are stripped, so the white space
+/// next to a dropped tag comes out as LocOS writes it. The rule: a code is written at most once (a repeated pair
+/// loses its tags, its inner text stays in place; a repeated point is dropped); a closing token that does not close
+/// the pair on top is dropped; a pair still open at the end is closed there; a pair named by a point token is
+/// written empty. Every repair the writer will make is listed, so a caller can show it (LocOS's QA flags the same
+/// target through its placeholder check). A token whose number is not in the map stays text, as everywhere. Other
+/// formats: the plain reading, no repairs.
+pub fn repair_locos_text_for(format: &str, text: &str, map: &LocosMap) -> (Vec<Inline>, Vec<TokenProblem>, Vec<TagRepair>) {
+    if locos_repairs_tags(format) {
+        return parse_tokens_repairing(text, map);
+    }
+    let (inl, problems) = parse_tokens(text, map, LOCOS_DROPS_MISMATCH.contains(&format));
+    (inl, problems, Vec::new())
+}
+
+/// The tag a point token stands for (a standalone code, or an `Open` or `Close` with no partner).
+fn point_tag(code: &LocosCode) -> Inline {
+    match code.unpaired {
+        Some(TagKind::Close) => Inline::Tag { id: code.id.clone(), kind: TagKind::Close, display: code.close.clone().unwrap_or_default(), free: false },
+        Some(TagKind::Open) => Inline::Tag { id: code.id.clone(), kind: TagKind::Open, display: code.open.clone().unwrap_or_default(), free: false },
+        _ => Inline::Tag { id: code.id.clone(), kind: TagKind::Standalone, display: code.open.clone().unwrap_or_default(), free: code.free },
+    }
+}
+
+fn pair_tag(code: &LocosCode, kind: TagKind) -> Inline {
+    let display = if kind == TagKind::Close { code.close.clone() } else { code.open.clone() };
+    Inline::Tag { id: code.id.clone(), kind, display: display.unwrap_or_default(), free: false }
+}
+
+/// The CAT writers' token rule (`cat_xliff._render`), see [`repair_locos_text_for`]: every token as its tag (nothing
+/// dropped, the writer does that), the problems, and the repairs the writer will make.
+fn parse_tokens_repairing(text: &str, map: &LocosMap) -> (Vec<Inline>, Vec<TokenProblem>, Vec<TagRepair>) {
+    let mut out: Vec<Inline> = Vec::new();
+    let mut problems = Vec::new();
+    let mut repairs = Vec::new();
+    let mut lit = String::new();
+    let mut used: std::collections::BTreeSet<String> = Default::default();
+    // the pairs open now: (number, opening token, written); a pair not written (a repeat) only eats its close
+    let mut stack: Vec<(String, String, bool)> = Vec::new();
+    let mut rest = text;
+    let mut pos = 0usize;
+    while let Some(ch) = rest.chars().next() {
+        let len = ch.len_utf8();
+        if ch == OPEN {
+            if let Some((tok_len, closing, letter, num)) = scan_token(rest) {
+                let token = rest[..tok_len].to_string();
+                rest = &rest[tok_len..];
+                pos += tok_len;
+                let Some(code) = map.get(&num) else {
+                    problems.push(TokenProblem::Unknown { token: token.clone() });
+                    lit.push_str(&token);
+                    continue;
+                };
+                if !lit.is_empty() {
+                    out.push(Inline::Text(std::mem::take(&mut lit)));
+                }
+                let code_point = code.letter == POINT_LETTER || code.letter == FREE_LETTER;
+                let typed_point = letter.is_some_and(|l| l == POINT_LETTER || l == FREE_LETTER);
+                if closing {
+                    // a closing token for a standalone code is a close of its id: the writer drops it
+                    out.push(if code_point {
+                        Inline::Tag { id: code.id.clone(), kind: TagKind::Close, display: code.close.clone().unwrap_or_default(), free: false }
+                    } else {
+                        pair_tag(code, TagKind::Close)
+                    });
+                    if !code_point && stack.last().is_some_and(|f| f.0 == num) {
+                        stack.pop();
+                    } else {
+                        repairs.push(TagRepair::StrayClose { token });
+                    }
+                } else if code_point {
+                    out.push(point_tag(code));
+                    if !used.insert(num) {
+                        repairs.push(TagRepair::Repeated { token });
+                    }
+                } else if typed_point {
+                    // written empty (`cat_xliff._render`): an open and a close side by side read the same way
+                    out.push(pair_tag(code, TagKind::Open));
+                    out.push(pair_tag(code, TagKind::Close));
+                    repairs.push(if used.insert(num) { TagRepair::PairAsPoint { token } } else { TagRepair::Repeated { token } });
+                } else {
+                    out.push(pair_tag(code, TagKind::Open));
+                    let first = used.insert(num.clone());
+                    if !first {
+                        repairs.push(TagRepair::Repeated { token: token.clone() });
+                    }
+                    stack.push((num, token, first));
+                }
+                continue;
+            }
+            problems.push(TokenProblem::Stray { at: pos });
+        } else if ch == CLOSE {
+            problems.push(TokenProblem::Stray { at: pos });
+        }
+        lit.push(ch);
+        rest = &rest[len..];
+        pos += len;
+    }
+    if !lit.is_empty() {
+        out.push(Inline::Text(lit));
+    }
+    for (_, token, written) in stack.into_iter().rev() {
+        if written {
+            repairs.push(TagRepair::Unclosed { token });
+        }
+    }
+    (merge_text(out), problems, repairs)
+}
+
+/// The CAT writers' rule ([`repair_locos_text_for`]) on an inline list, for a target given as tags rather than
+/// LocOS text: each source code is written at most as often as the source has it (a repeated pair loses its tags,
+/// its text stays), a close that does not close the pair on top is dropped, a pair left open is closed at the end.
+/// A tag the source lacks is kept, so the model's check still refuses it.
+pub(crate) fn repair_tags(source: &[Inline], target: Vec<Inline>) -> Vec<Inline> {
+    use std::collections::HashMap;
+    let partner = pairs(source);
+    let mut pair_allowed: HashMap<&str, usize> = HashMap::new();
+    let mut point_allowed: HashMap<(&str, TagKind), usize> = HashMap::new();
+    let mut close_display: HashMap<&str, &str> = HashMap::new();
+    for (pos, i) in source.iter().enumerate() {
+        let Inline::Tag { id, kind, display, .. } = i else { continue };
+        match (kind, partner[pos]) {
+            (TagKind::Open, Some(_)) => *pair_allowed.entry(id.as_str()).or_default() += 1,
+            (TagKind::Close, Some(_)) => {
+                close_display.entry(id.as_str()).or_insert(display.as_str());
+            }
+            _ => *point_allowed.entry((id.as_str(), *kind)).or_default() += 1,
+        }
+    }
+    let known: std::collections::HashSet<&str> = source.iter().filter_map(|i| if let Inline::Tag { id, .. } = i { Some(id.as_str()) } else { None }).collect();
+    let mut pair_used: HashMap<String, usize> = HashMap::new();
+    let mut point_used: HashMap<(String, TagKind), usize> = HashMap::new();
+    let mut stack: Vec<(String, bool)> = Vec::new();
+    let mut out = Vec::with_capacity(target.len());
+    for i in target {
+        let Inline::Tag { id, kind, .. } = &i else {
+            out.push(i);
+            continue;
+        };
+        let paired = pair_allowed.get(id.as_str()).copied().unwrap_or(0);
+        match kind {
+            TagKind::Open if paired > 0 => {
+                let n = pair_used.entry(id.clone()).or_default();
+                let write = *n < paired;
+                if write {
+                    *n += 1;
+                }
+                stack.push((id.clone(), write));
+                if write {
+                    out.push(i);
+                }
+            }
+            TagKind::Close if paired > 0 && stack.last().is_some_and(|(top, _)| top == id) => {
+                if let Some((_, true)) = stack.pop() {
+                    out.push(i);
+                }
+            }
+            TagKind::Close if paired > 0 && !point_allowed.contains_key(&(id.as_str(), TagKind::Close)) => {}
+            _ => match point_allowed.get(&(id.as_str(), *kind)) {
+                // a code of the source written as another kind (a close for a standalone code): dropped
+                None if known.contains(id.as_str()) => {}
+                // not a code of the source: kept, the model's check names it
+                None => out.push(i),
+                Some(max) => {
+                    let n = point_used.entry((id.clone(), *kind)).or_default();
+                    if *n < *max {
+                        *n += 1;
+                        out.push(i);
+                    }
+                }
+            },
+        }
+    }
+    for (id, written) in stack.into_iter().rev() {
+        if written {
+            let display = close_display.get(id.as_str()).map(|d| d.to_string()).unwrap_or_default();
+            out.push(Inline::Tag { id, kind: TagKind::Close, display, free: false });
+        }
+    }
+    merge_text(out)
 }
 
 fn parse_tokens(text: &str, map: &LocosMap, drop_mismatch: bool) -> (Vec<Inline>, Vec<TokenProblem>) {
@@ -927,5 +1153,78 @@ mod tests {
         let (kept, _) = parse_locos_text_for("json", t, &map);
         assert_eq!(kept, parse_locos_text(t, &map).0);
         assert!(matches!(&kept[0], Inline::Text(x) if x.contains("\u{27E6}g1\u{27E7}Min")));
+    }
+
+    /// B-SIDE 8: the CAT writers' rule (LocOS `cat_xliff._render`): a repeated pair loses its tags and keeps its
+    /// text, a stray close is dropped, an unclosed pair is closed at the end, a pair named by a point token is
+    /// written empty, a repeated point is dropped; each repair is listed. Other formats read as before.
+    #[test]
+    fn cat_formats_repair_tags_like_locos() {
+        let open = Inline::tag("1", TagKind::Open, "<g id=\"1\">");
+        let close = Inline::tag("1", TagKind::Close, "</g>");
+        let x = Inline::tag("2", TagKind::Standalone, "<x id=\"2\"/>");
+        let src = vec![Inline::text("Click "), open.clone(), Inline::text("here"), close.clone(), x.clone()];
+        let (text, map) = to_locos_text(&src);
+        assert_eq!(text, "Click \u{27E6}g1\u{27E7}here\u{27E6}/g1\u{27E7}\u{27E6}x2\u{27E7}");
+        let cases: Vec<(&str, Vec<Inline>, Vec<&str>)> = vec![
+            // verify_filter_roundtrip_509: the second frame loses its tags, its text stays in place
+            (
+                "bitte \u{27E6}g1\u{27E7}Klick\u{27E6}/g1\u{27E7} hier \u{27E6}g1\u{27E7}doppelt\u{27E6}/g1\u{27E7} jetzt",
+                vec![Inline::text("bitte "), open.clone(), Inline::text("Klick"), close.clone(), Inline::text(" hier doppelt jetzt")],
+                vec!["repeated"],
+            ),
+            // verify_cat_xliff_filter 165: an open used again with no close of its own is dropped, the pair closed at the end
+            (
+                "\u{27E6}g1\u{27E7}A \u{27E6}x2\u{27E7}B \u{27E6}g1\u{27E7}C",
+                vec![open.clone(), Inline::text("A "), x.clone(), Inline::text("B C"), close.clone()],
+                vec!["repeated", "unclosed"],
+            ),
+            ("\u{27E6}/g1\u{27E7}Hi \u{27E6}/x2\u{27E7}", vec![Inline::text("Hi ")], vec!["stray_close", "stray_close"]),
+            ("Hi \u{27E6}x1\u{27E7} you", vec![Inline::text("Hi "), open.clone(), close.clone(), Inline::text(" you")], vec!["pair_as_point"]),
+            ("\u{27E6}x2\u{27E7}a\u{27E6}x2\u{27E7}b\u{27E6}g2\u{27E7}", vec![x.clone(), Inline::text("ab")], vec!["repeated", "repeated"]),
+            // the letter does not matter, only the number: a close typed with a point letter closes the pair
+            ("\u{27E6}g1\u{27E7}a\u{27E6}/x1\u{27E7}", vec![open.clone(), Inline::text("a"), close.clone()], vec![]),
+            // a number the map lacks stays text
+            ("a \u{27E6}g9\u{27E7}", vec![Inline::text("a \u{27E6}g9\u{27E7}")], vec![]),
+        ];
+        for (t, want, kinds) in cases {
+            for f in ["sdlxliff", "xliff", "mqxliff", "mxliff", "txlf", "txml", "ttx", "xlz", "mqxlz", "sdlppx"] {
+                let (inl, _, repairs) = repair_locos_text_for(f, t, &map);
+                // every token stays a tag (the writer applies the rule); the rule on the inlines gives LocOS's result
+                assert_eq!(repair_tags(&src, inl.clone()), want, "{f}: {t}");
+                let got: Vec<&str> = repairs
+                    .iter()
+                    .map(|r| match r {
+                        TagRepair::Repeated { .. } => "repeated",
+                        TagRepair::StrayClose { .. } => "stray_close",
+                        TagRepair::Unclosed { .. } => "unclosed",
+                        TagRepair::PairAsPoint { .. } => "pair_as_point",
+                    })
+                    .collect();
+                assert_eq!(got, kinds, "{f}: {t}");
+                // the inline repair leaves a repaired target as it is
+                assert_eq!(repair_tags(&src, want.clone()), want, "{f}: {t}");
+                assert_eq!(parse_locos_text_for(f, t, &map).0, inl, "{f}: {t}");
+            }
+            let (plain, _, none) = repair_locos_text_for("json", t, &map);
+            assert!(none.is_empty());
+            assert_eq!(plain, parse_locos_text(t, &map).0);
+        }
+    }
+
+    /// The inline repair (a target given as tags): the same rule by id; a source that repeats an id may repeat it
+    /// as often; an invented tag is kept for the model's check.
+    #[test]
+    fn inline_targets_are_repaired_by_id() {
+        let open = Inline::tag("1", TagKind::Open, "<b>");
+        let close = Inline::tag("1", TagKind::Close, "</b>");
+        let src = vec![open.clone(), Inline::text("a"), close.clone()];
+        let t = vec![open.clone(), Inline::text("x"), close.clone(), open.clone(), Inline::text("y"), close.clone(), close.clone(), open.clone()];
+        assert_eq!(repair_tags(&src, t), vec![open.clone(), Inline::text("x"), close.clone(), Inline::text("y")]);
+        assert_eq!(repair_tags(&src, vec![open.clone(), Inline::text("z")]), vec![open.clone(), Inline::text("z"), close.clone()]);
+        let twice = vec![open.clone(), Inline::text("a"), close.clone(), open.clone(), Inline::text("b"), close.clone()];
+        assert_eq!(repair_tags(&twice, twice.clone()), twice);
+        let invented = vec![Inline::tag("9", TagKind::Standalone, "<hr/>")];
+        assert_eq!(repair_tags(&src, invented.clone()), invented);
     }
 }

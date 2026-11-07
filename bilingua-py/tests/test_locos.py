@@ -20,7 +20,12 @@ GOLDEN_ROOT = pathlib.Path(__file__).resolve().parents[2] / "bilingua" / "tests"
 GOLDENS = sorted(GOLDEN_ROOT.glob("*/*.golden.json"))
 # Same lists as locos_golden.rs (KNOWN, KNOWN_BUILDS): files or builds that still differ from LocOS on purpose.
 KNOWN = {}
-KNOWN_BUILDS = {"hostile_tails.pptx": ("prefix", "hostile", "hostile-ar-SA", "hostile-de-DE")}
+KNOWN_BUILDS = {
+    "hostile_tails.pptx": ("prefix", "hostile", "hostile-ar-SA", "hostile-de-DE"),
+    # a pair named by a point token in a plain XLIFF: LocOS copies the source element with its source text
+    "docx_po_fidelity_1.xliff": ("repair-point", "repair-point-de-DE"),
+    "xliff_package_filter_1.xliff": ("repair-point", "repair-point-de-DE"),
+}
 
 
 def tag(id_, kind, display, free=False):
@@ -165,6 +170,26 @@ def test_repeated_placeholder_is_accepted_like_locos():
     new, problems = bilingua.locos_set_targets(doc, {u["segment_id"]: "{n} Dinge, {n}"})
     assert problems == {}
     assert json.loads(bilingua.merge(new, profile="locos"))["k"] == "{n} Dinge, {n}"
+
+
+def test_cat_formats_repair_tags_like_locos():
+    # W3 B-SIDE 8: a repeated, stray or unclosed pair token (common in MT output) is repaired as LocOS's CAT writers
+    # do and each repair is listed, where it used to raise duplicated_tag
+    data = (
+        b'<?xml version="1.0" encoding="UTF-8"?><xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">'
+        b'<file original="a" source-language="en" datatype="plaintext"><body>'
+        b'<trans-unit id="1"><source>Click <g id="1">here</g> now.</source></trans-unit></body></file></xliff>'
+    )
+    doc = bilingua.extract("a.xlf", data, profile="locos", target_lang="de")
+    (u,) = bilingua.locos_units(doc)
+    seg = u["segment_id"]
+    g1, c1 = tok("[g1]"), tok("[/g1]")
+    new, problems = bilingua.locos_set_targets(doc, {seg: f"bitte {g1}Klick{c1} hier {g1}doppelt{c1} jetzt"})
+    assert problems == {seg: [{"kind": "repeated", "token": g1}]}
+    assert '<target>bitte <g id="1">Klick</g> hier doppelt jetzt</target>' in bilingua.merge(new, profile="locos").decode()
+    new, problems = bilingua.locos_set_targets(doc, {seg: f"{c1}bitte {g1}Klick"})
+    assert [p["kind"] for p in problems[seg]] == ["stray_close", "unclosed"]
+    assert '<target>bitte <g id="1">Klick</g></target>' in bilingua.merge(new, profile="locos").decode()
 
 
 # --- the LocOS goldens ---------------------------------------------------------------------------------------------

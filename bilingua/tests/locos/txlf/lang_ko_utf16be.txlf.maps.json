@@ -1,0 +1,90 @@
+[
+ {
+  "name": "repair-nested",
+  "locale": null,
+  "map": {
+   "2": "Q ⟦g1⟧A ⟦g1⟧B⟦/g1⟧ C⟦/g1⟧ 메뉴를 여십시오. ⟦g1⟧⟦p2⟧설정⟦/g1⟧"
+  }
+ },
+ {
+  "name": "repair-point",
+  "locale": null,
+  "map": {
+   "2": "Q 메뉴를 여십시오. ⟦x1⟧ ⟦p2⟧설정"
+  }
+ },
+ {
+  "name": "repair-repeat",
+  "locale": null,
+  "map": {
+   "2": "Q 메뉴를 여십시오. ⟦g1⟧⟦p2⟧설정⟦/g1⟧ ⟦g1⟧W⟦/g1⟧ E"
+  }
+ },
+ {
+  "name": "repair-stray",
+  "locale": null,
+  "map": {
+   "2": "⟦/g1⟧Q 메뉴를 여십시오. ⟦g1⟧⟦p2⟧설정⟦/g1⟧ ⟦/g1⟧"
+  }
+ },
+ {
+  "name": "repair-unclosed",
+  "locale": null,
+  "map": {
+   "2": "Q 메뉴를 여십시오. ⟦g1⟧⟦p2⟧설정"
+  }
+ },
+ {
+  "name": "repair-xrepeat",
+  "locale": null,
+  "map": {
+   "0": "Q 계속하려면 ⟦x1⟧설정⟦x2⟧ 메뉴를 여십시오. ⟦x1⟧",
+   "1": "Q 파일을 저장하고 닫으십시오. ⟦p1⟧ 안녕하세요 세계! ⟦p1⟧",
+   "2": "Q 메뉴를 여십시오. ⟦g1⟧⟦p2⟧설정⟦/g1⟧ ⟦p2⟧"
+  }
+ },
+ {
+  "name": "repair-nested-de-DE",
+  "locale": "de-DE",
+  "map": {
+   "2": "Q ⟦g1⟧A ⟦g1⟧B⟦/g1⟧ C⟦/g1⟧ 메뉴를 여십시오. ⟦g1⟧⟦p2⟧설정⟦/g1⟧"
+  }
+ },
+ {
+  "name": "repair-point-de-DE",
+  "locale": "de-DE",
+  "map": {
+   "2": "Q 메뉴를 여십시오. ⟦x1⟧ ⟦p2⟧설정"
+  }
+ },
+ {
+  "name": "repair-repeat-de-DE",
+  "locale": "de-DE",
+  "map": {
+   "2": "Q 메뉴를 여십시오. ⟦g1⟧⟦p2⟧설정⟦/g1⟧ ⟦g1⟧W⟦/g1⟧ E"
+  }
+ },
+ {
+  "name": "repair-stray-de-DE",
+  "locale": "de-DE",
+  "map": {
+   "2": "⟦/g1⟧Q 메뉴를 여십시오. ⟦g1⟧⟦p2⟧설정⟦/g1⟧ ⟦/g1⟧"
+  }
+ },
+ {
+  "name": "repair-unclosed-de-DE",
+  "locale": "de-DE",
+  "map": {
+   "2": "Q 메뉴를 여십시오. ⟦g1⟧⟦p2⟧설정"
+  }
+ },
+ {
+  "name": "repair-xrepeat-de-DE",
+  "locale": "de-DE",
+  "map": {
+   "0": "Q 계속하려면 ⟦x1⟧설정⟦x2⟧ 메뉴를 여십시오. ⟦x1⟧",
+   "1": "Q 파일을 저장하고 닫으십시오. ⟦p1⟧ 안녕하세요 세계! ⟦p1⟧",
+   "2": "Q 메뉴를 여십시오. ⟦g1⟧⟦p2⟧설정⟦/g1⟧ ⟦p2⟧"
+  }
+ }
+]

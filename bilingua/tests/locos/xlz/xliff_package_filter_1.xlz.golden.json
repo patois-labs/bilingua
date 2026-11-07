@@ -84,6 +84,210 @@
      "same": true
     }
    ]
+  },
+  {
+   "name": "repair-nested",
+   "locale": null,
+   "map": {
+    "0": "Q ⟦g1⟧A ⟦g1⟧B⟦/g1⟧ C⟦/g1⟧ Open the ⟦g1⟧Settings⟦/g1⟧ page."
+   },
+   "zip": [
+    {
+     "name": "content.xlf",
+     "sha1": "559e2557d11659ec5c061178efcdd9754cbd035c"
+    },
+    {
+     "name": "content.skl",
+     "same": true
+    }
+   ]
+  },
+  {
+   "name": "repair-point",
+   "locale": null,
+   "map": {
+    "0": "Q Open the ⟦x1⟧ Settings page."
+   },
+   "zip": [
+    {
+     "name": "content.xlf",
+     "sha1": "d3b6bfce5ee20ec36f6c151e1654a165c646440c"
+    },
+    {
+     "name": "content.skl",
+     "same": true
+    }
+   ]
+  },
+  {
+   "name": "repair-repeat",
+   "locale": null,
+   "map": {
+    "0": "Q Open the ⟦g1⟧Settings⟦/g1⟧ page. ⟦g1⟧W⟦/g1⟧ E"
+   },
+   "zip": [
+    {
+     "name": "content.xlf",
+     "sha1": "a6b2de27d1be6e63da4916917a2161e086c39f5e"
+    },
+    {
+     "name": "content.skl",
+     "same": true
+    }
+   ]
+  },
+  {
+   "name": "repair-stray",
+   "locale": null,
+   "map": {
+    "0": "⟦/g1⟧Q Open the ⟦g1⟧Settings⟦/g1⟧ page. ⟦/g1⟧"
+   },
+   "zip": [
+    {
+     "name": "content.xlf",
+     "sha1": "ea7cdfd608ab6d37503387d600953621c643763c"
+    },
+    {
+     "name": "content.skl",
+     "same": true
+    }
+   ]
+  },
+  {
+   "name": "repair-unclosed",
+   "locale": null,
+   "map": {
+    "0": "Q Open the ⟦g1⟧Settings page."
+   },
+   "zip": [
+    {
+     "name": "content.xlf",
+     "sha1": "9e66b4d37640a61ca738b63e92395eef2dbbdb41"
+    },
+    {
+     "name": "content.skl",
+     "same": true
+    }
+   ]
+  },
+  {
+   "name": "repair-xrepeat",
+   "locale": null,
+   "map": {
+    "3": "Q Use {0} items & ⟦p1⟧more. ⟦p1⟧"
+   },
+   "zip": [
+    {
+     "name": "content.xlf",
+     "sha1": "2ae88e53b738c6360d15e4b0a8fd66435c5ec4ae"
+    },
+    {
+     "name": "content.skl",
+     "same": true
+    }
+   ]
+  },
+  {
+   "name": "repair-nested-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Q ⟦g1⟧A ⟦g1⟧B⟦/g1⟧ C⟦/g1⟧ Open the ⟦g1⟧Settings⟦/g1⟧ page."
+   },
+   "zip": [
+    {
+     "name": "content.xlf",
+     "sha1": "559e2557d11659ec5c061178efcdd9754cbd035c"
+    },
+    {
+     "name": "content.skl",
+     "same": true
+    }
+   ]
+  },
+  {
+   "name": "repair-point-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Q Open the ⟦x1⟧ Settings page."
+   },
+   "zip": [
+    {
+     "name": "content.xlf",
+     "sha1": "d3b6bfce5ee20ec36f6c151e1654a165c646440c"
+    },
+    {
+     "name": "content.skl",
+     "same": true
+    }
+   ]
+  },
+  {
+   "name": "repair-repeat-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Q Open the ⟦g1⟧Settings⟦/g1⟧ page. ⟦g1⟧W⟦/g1⟧ E"
+   },
+   "zip": [
+    {
+     "name": "content.xlf",
+     "sha1": "a6b2de27d1be6e63da4916917a2161e086c39f5e"
+    },
+    {
+     "name": "content.skl",
+     "same": true
+    }
+   ]
+  },
+  {
+   "name": "repair-stray-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "⟦/g1⟧Q Open the ⟦g1⟧Settings⟦/g1⟧ page. ⟦/g1⟧"
+   },
+   "zip": [
+    {
+     "name": "content.xlf",
+     "sha1": "ea7cdfd608ab6d37503387d600953621c643763c"
+    },
+    {
+     "name": "content.skl",
+     "same": true
+    }
+   ]
+  },
+  {
+   "name": "repair-unclosed-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Q Open the ⟦g1⟧Settings page."
+   },
+   "zip": [
+    {
+     "name": "content.xlf",
+     "sha1": "9e66b4d37640a61ca738b63e92395eef2dbbdb41"
+    },
+    {
+     "name": "content.skl",
+     "same": true
+    }
+   ]
+  },
+  {
+   "name": "repair-xrepeat-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "3": "Q Use {0} items & ⟦p1⟧more. ⟦p1⟧"
+   },
+   "zip": [
+    {
+     "name": "content.xlf",
+     "sha1": "2ae88e53b738c6360d15e4b0a8fd66435c5ec4ae"
+    },
+    {
+     "name": "content.skl",
+     "same": true
+    }
+   ]
   }
  ]
 }

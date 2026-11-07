@@ -90,6 +90,210 @@
      "same": true
     }
    ]
+  },
+  {
+   "name": "repair-nested",
+   "locale": null,
+   "map": {
+    "1000000000": "Q ⟦g1⟧A ⟦g1⟧B⟦/g1⟧ C⟦/g1⟧ Open the ⟦g1⟧Settings⟦/g1⟧ menu."
+   },
+   "zip": [
+    {
+     "name": "demo.sdlproj",
+     "sha1": "ad9fbeb7c3a27f8b1b2e29d12828c2d364442867"
+    },
+    {
+     "name": "de-DE/guide.docx.sdlxliff",
+     "sha1": "37396ae202599cab4cb36d77f51d74d98e372abe"
+    }
+   ]
+  },
+  {
+   "name": "repair-point",
+   "locale": null,
+   "map": {
+    "1000000000": "Q Open the ⟦x1⟧ Settings menu."
+   },
+   "zip": [
+    {
+     "name": "demo.sdlproj",
+     "sha1": "ad9fbeb7c3a27f8b1b2e29d12828c2d364442867"
+    },
+    {
+     "name": "de-DE/guide.docx.sdlxliff",
+     "sha1": "520f3040f8be4f8bacca73d64d8256830b3892c6"
+    }
+   ]
+  },
+  {
+   "name": "repair-repeat",
+   "locale": null,
+   "map": {
+    "1000000000": "Q Open the ⟦g1⟧Settings⟦/g1⟧ menu. ⟦g1⟧W⟦/g1⟧ E"
+   },
+   "zip": [
+    {
+     "name": "demo.sdlproj",
+     "sha1": "ad9fbeb7c3a27f8b1b2e29d12828c2d364442867"
+    },
+    {
+     "name": "de-DE/guide.docx.sdlxliff",
+     "sha1": "2d2e691718c6825050cb6d2cec96083d2b1c5d83"
+    }
+   ]
+  },
+  {
+   "name": "repair-stray",
+   "locale": null,
+   "map": {
+    "1000000000": "⟦/g1⟧Q Open the ⟦g1⟧Settings⟦/g1⟧ menu. ⟦/g1⟧"
+   },
+   "zip": [
+    {
+     "name": "demo.sdlproj",
+     "sha1": "ad9fbeb7c3a27f8b1b2e29d12828c2d364442867"
+    },
+    {
+     "name": "de-DE/guide.docx.sdlxliff",
+     "sha1": "9ac685b5485d0e5d0bbd95b4be3836529436ba62"
+    }
+   ]
+  },
+  {
+   "name": "repair-unclosed",
+   "locale": null,
+   "map": {
+    "1000000000": "Q Open the ⟦g1⟧Settings menu."
+   },
+   "zip": [
+    {
+     "name": "demo.sdlproj",
+     "sha1": "ad9fbeb7c3a27f8b1b2e29d12828c2d364442867"
+    },
+    {
+     "name": "de-DE/guide.docx.sdlxliff",
+     "sha1": "305c62f340f7111a850aed26ad66c3e20164eca3"
+    }
+   ]
+  },
+  {
+   "name": "repair-xrepeat",
+   "locale": null,
+   "map": {
+    "1000000002": "Q Line one⟦p1⟧line two & more text. ⟦p1⟧"
+   },
+   "zip": [
+    {
+     "name": "demo.sdlproj",
+     "sha1": "ad9fbeb7c3a27f8b1b2e29d12828c2d364442867"
+    },
+    {
+     "name": "de-DE/guide.docx.sdlxliff",
+     "sha1": "aed6e3f4113392c76f3203991460e4c4b5f7608a"
+    }
+   ]
+  },
+  {
+   "name": "repair-nested-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "1000000000": "Q ⟦g1⟧A ⟦g1⟧B⟦/g1⟧ C⟦/g1⟧ Open the ⟦g1⟧Settings⟦/g1⟧ menu."
+   },
+   "zip": [
+    {
+     "name": "demo.sdlproj",
+     "sha1": "ad9fbeb7c3a27f8b1b2e29d12828c2d364442867"
+    },
+    {
+     "name": "de-DE/guide.docx.sdlxliff",
+     "sha1": "37396ae202599cab4cb36d77f51d74d98e372abe"
+    }
+   ]
+  },
+  {
+   "name": "repair-point-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "1000000000": "Q Open the ⟦x1⟧ Settings menu."
+   },
+   "zip": [
+    {
+     "name": "demo.sdlproj",
+     "sha1": "ad9fbeb7c3a27f8b1b2e29d12828c2d364442867"
+    },
+    {
+     "name": "de-DE/guide.docx.sdlxliff",
+     "sha1": "520f3040f8be4f8bacca73d64d8256830b3892c6"
+    }
+   ]
+  },
+  {
+   "name": "repair-repeat-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "1000000000": "Q Open the ⟦g1⟧Settings⟦/g1⟧ menu. ⟦g1⟧W⟦/g1⟧ E"
+   },
+   "zip": [
+    {
+     "name": "demo.sdlproj",
+     "sha1": "ad9fbeb7c3a27f8b1b2e29d12828c2d364442867"
+    },
+    {
+     "name": "de-DE/guide.docx.sdlxliff",
+     "sha1": "2d2e691718c6825050cb6d2cec96083d2b1c5d83"
+    }
+   ]
+  },
+  {
+   "name": "repair-stray-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "1000000000": "⟦/g1⟧Q Open the ⟦g1⟧Settings⟦/g1⟧ menu. ⟦/g1⟧"
+   },
+   "zip": [
+    {
+     "name": "demo.sdlproj",
+     "sha1": "ad9fbeb7c3a27f8b1b2e29d12828c2d364442867"
+    },
+    {
+     "name": "de-DE/guide.docx.sdlxliff",
+     "sha1": "9ac685b5485d0e5d0bbd95b4be3836529436ba62"
+    }
+   ]
+  },
+  {
+   "name": "repair-unclosed-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "1000000000": "Q Open the ⟦g1⟧Settings menu."
+   },
+   "zip": [
+    {
+     "name": "demo.sdlproj",
+     "sha1": "ad9fbeb7c3a27f8b1b2e29d12828c2d364442867"
+    },
+    {
+     "name": "de-DE/guide.docx.sdlxliff",
+     "sha1": "305c62f340f7111a850aed26ad66c3e20164eca3"
+    }
+   ]
+  },
+  {
+   "name": "repair-xrepeat-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "1000000002": "Q Line one⟦p1⟧line two & more text. ⟦p1⟧"
+   },
+   "zip": [
+    {
+     "name": "demo.sdlproj",
+     "sha1": "ad9fbeb7c3a27f8b1b2e29d12828c2d364442867"
+    },
+    {
+     "name": "de-DE/guide.docx.sdlxliff",
+     "sha1": "aed6e3f4113392c76f3203991460e4c4b5f7608a"
+    }
+   ]
   }
  ]
 }

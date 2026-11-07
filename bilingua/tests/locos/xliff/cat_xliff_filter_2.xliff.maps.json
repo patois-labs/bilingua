@@ -1,0 +1,86 @@
+[
+ {
+  "name": "repair-nested",
+  "locale": null,
+  "map": {
+   "1000000000": "Q ⟦g1⟧A ⟦g1⟧B⟦/g1⟧ C⟦/g1⟧ Open the ⟦g1⟧Settings⟦/g1⟧ menu."
+  }
+ },
+ {
+  "name": "repair-point",
+  "locale": null,
+  "map": {
+   "1000000000": "Q Open the ⟦x1⟧ Settings menu."
+  }
+ },
+ {
+  "name": "repair-repeat",
+  "locale": null,
+  "map": {
+   "1000000000": "Q Open the ⟦g1⟧Settings⟦/g1⟧ menu. ⟦g1⟧W⟦/g1⟧ E"
+  }
+ },
+ {
+  "name": "repair-stray",
+  "locale": null,
+  "map": {
+   "1000000000": "⟦/g1⟧Q Open the ⟦g1⟧Settings⟦/g1⟧ menu. ⟦/g1⟧"
+  }
+ },
+ {
+  "name": "repair-unclosed",
+  "locale": null,
+  "map": {
+   "1000000000": "Q Open the ⟦g1⟧Settings menu."
+  }
+ },
+ {
+  "name": "repair-xrepeat",
+  "locale": null,
+  "map": {
+   "1000000002": "Q Line one⟦p1⟧line two & more text. ⟦p1⟧"
+  }
+ },
+ {
+  "name": "repair-nested-de-DE",
+  "locale": "de-DE",
+  "map": {
+   "1000000000": "Q ⟦g1⟧A ⟦g1⟧B⟦/g1⟧ C⟦/g1⟧ Open the ⟦g1⟧Settings⟦/g1⟧ menu."
+  }
+ },
+ {
+  "name": "repair-point-de-DE",
+  "locale": "de-DE",
+  "map": {
+   "1000000000": "Q Open the ⟦x1⟧ Settings menu."
+  }
+ },
+ {
+  "name": "repair-repeat-de-DE",
+  "locale": "de-DE",
+  "map": {
+   "1000000000": "Q Open the ⟦g1⟧Settings⟦/g1⟧ menu. ⟦g1⟧W⟦/g1⟧ E"
+  }
+ },
+ {
+  "name": "repair-stray-de-DE",
+  "locale": "de-DE",
+  "map": {
+   "1000000000": "⟦/g1⟧Q Open the ⟦g1⟧Settings⟦/g1⟧ menu. ⟦/g1⟧"
+  }
+ },
+ {
+  "name": "repair-unclosed-de-DE",
+  "locale": "de-DE",
+  "map": {
+   "1000000000": "Q Open the ⟦g1⟧Settings menu."
+  }
+ },
+ {
+  "name": "repair-xrepeat-de-DE",
+  "locale": "de-DE",
+  "map": {
+   "1000000002": "Q Line one⟦p1⟧line two & more text. ⟦p1⟧"
+  }
+ }
+]

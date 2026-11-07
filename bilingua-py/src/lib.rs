@@ -486,6 +486,18 @@ fn problem_value(p: &engine::profile::tokens::TokenProblem) -> Value {
     }
 }
 
+fn repair_value(r: &engine::profile::tokens::TagRepair) -> Value {
+    use engine::profile::tokens::TagRepair as R;
+    let (kind, token) = match r {
+        R::Repeated { token } => ("repeated", token.clone()),
+        R::StrayClose { token } => ("stray_close", token.clone()),
+        R::Unclosed { token } => ("unclosed", token.clone()),
+        R::PairAsPoint { token } => ("pair_as_point", token.clone()),
+        other => ("repaired", format!("{other:?}")),
+    };
+    serde_json::json!({"kind": kind, "token": token})
+}
+
 /// A segment's inline list as Localization OS text and its token map, numbered by the LocOS rule of `format`
 /// (pairs by id for html, tag ids as numbers for docx, pptx and xlsx, positional otherwise; look-alike text in the
 /// source keeps its number). The map is keyed by token number: `{id, letter, open, close, free, unpaired?}`.
@@ -528,7 +540,9 @@ fn locos_units(py: Python<'_>, document: &Bound<'_, PyAny>) -> PyResult<Py<PyAny
 /// means it (an empty text is a translation to nothing, white space only is kept, a standalone placeholder may
 /// repeat). Returns `(document, problems)`: the Document with the targets set (its parser record kept) and, per
 /// segment id, the tokens kept as text (see `from_locos_text`; for TOML and JS a token of the wrong kind that
-/// names a code of the unit is dropped, as LocOS drops it, and still listed); a segment with none is left out. A target the
+/// names a code of the unit is dropped, as LocOS drops it, and still listed) and, for the XLIFF family, TXML, TTX
+/// and the packages, each tag repair LocOS's writers make (`repeated`, `stray_close`, `unclosed`,
+/// `pair_as_point`: the tag dropped, closed at the end or written empty, the text kept); a segment with none is left out. A target the
 /// document cannot take raises BilinguaError (`unknown_segment`, `locked`, `invented_tag`, `duplicated_tag`) naming
 /// the segment.
 #[pyfunction]
@@ -558,13 +572,16 @@ fn locos_set_targets(py: Python<'_>, document: &Bound<'_, PyAny>, targets: &Boun
             // checks, with an empty map: they name the problem
             let map = maps.get(&seg).unwrap_or(&empty);
             // the format's LocOS token rules (TOML and JS drop a wrong-kind token naming a code, #814.1)
-            let (inl, found) = engine::profile::tokens::parse_locos_text_for(&doc.format, &text, map);
+            // the XLIFF family, TXML, TTX and the packages repair a repeated, stray or unclosed tag as LocOS's
+            // writers do; each repair is listed with the problems
+            let (inl, found, repairs) = engine::profile::tokens::repair_locos_text_for(&doc.format, &text, map);
             engine::profile::locos_set_target(&mut doc, &seg, inl).map_err(|e| {
                 let f = Fail::from(e);
                 Fail::new(f.code, format!("segment {seg}: {}", f.msg))
             })?;
-            if !found.is_empty() {
-                problems.insert(seg, Value::Array(found.iter().map(problem_value).collect()));
+            if !found.is_empty() || !repairs.is_empty() {
+                let all = found.iter().map(problem_value).chain(repairs.iter().map(repair_value)).collect();
+                problems.insert(seg, Value::Array(all));
             }
         }
         Ok((doc, Value::Object(problems)))

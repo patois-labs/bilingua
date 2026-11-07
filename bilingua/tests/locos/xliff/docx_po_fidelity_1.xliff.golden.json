@@ -49,6 +49,86 @@
    "locale": "es_ES",
    "map": {},
    "out_b64": "PHhsaWZmIHZlcnNpb249IjEuMiI+PGZpbGUgdGFyZ2V0LWxhbmd1YWdlPSJlcy1FUyI+PGJvZHk+PHRyYW5zLXVuaXQgaWQ9IjEiPjxzb3VyY2U+SGVsbG8gPGcgaWQ9ImciPndvcmxkPC9nPjwvc291cmNlPjwvdHJhbnMtdW5pdD48L2JvZHk+PC9maWxlPjwveGxpZmY+"
+  },
+  {
+   "name": "repair-nested",
+   "locale": null,
+   "map": {
+    "0": "Q ⟦g1⟧A ⟦g1⟧B⟦/g1⟧ C⟦/g1⟧ Hello ⟦g1⟧world⟦/g1⟧"
+   },
+   "out_b64": "PHhsaWZmIHZlcnNpb249IjEuMiI+PGZpbGU+PGJvZHk+PHRyYW5zLXVuaXQgaWQ9IjEiPjxzb3VyY2U+SGVsbG8gPGcgaWQ9ImciPndvcmxkPC9nPjwvc291cmNlPjx0YXJnZXQ+USA8ZyBpZD0iZyI+QSBCIEM8L2c+IEhlbGxvIHdvcmxkPC90YXJnZXQ+PC90cmFucy11bml0PjwvYm9keT48L2ZpbGU+PC94bGlmZj4="
+  },
+  {
+   "name": "repair-point",
+   "locale": null,
+   "map": {
+    "0": "Q Hello ⟦x1⟧ world"
+   },
+   "out_b64": "PHhsaWZmIHZlcnNpb249IjEuMiI+PGZpbGU+PGJvZHk+PHRyYW5zLXVuaXQgaWQ9IjEiPjxzb3VyY2U+SGVsbG8gPGcgaWQ9ImciPndvcmxkPC9nPjwvc291cmNlPjx0YXJnZXQ+USBIZWxsbyA8ZyBpZD0iZyI+d29ybGQ8L2c+IHdvcmxkPC90YXJnZXQ+PC90cmFucy11bml0PjwvYm9keT48L2ZpbGU+PC94bGlmZj4="
+  },
+  {
+   "name": "repair-repeat",
+   "locale": null,
+   "map": {
+    "0": "Q Hello ⟦g1⟧world⟦/g1⟧ ⟦g1⟧W⟦/g1⟧ E"
+   },
+   "out_b64": "PHhsaWZmIHZlcnNpb249IjEuMiI+PGZpbGU+PGJvZHk+PHRyYW5zLXVuaXQgaWQ9IjEiPjxzb3VyY2U+SGVsbG8gPGcgaWQ9ImciPndvcmxkPC9nPjwvc291cmNlPjx0YXJnZXQ+USBIZWxsbyA8ZyBpZD0iZyI+d29ybGQ8L2c+IFcgRTwvdGFyZ2V0PjwvdHJhbnMtdW5pdD48L2JvZHk+PC9maWxlPjwveGxpZmY+"
+  },
+  {
+   "name": "repair-stray",
+   "locale": null,
+   "map": {
+    "0": "⟦/g1⟧Q Hello ⟦g1⟧world⟦/g1⟧ ⟦/g1⟧"
+   },
+   "out_b64": "PHhsaWZmIHZlcnNpb249IjEuMiI+PGZpbGU+PGJvZHk+PHRyYW5zLXVuaXQgaWQ9IjEiPjxzb3VyY2U+SGVsbG8gPGcgaWQ9ImciPndvcmxkPC9nPjwvc291cmNlPjx0YXJnZXQ+USBIZWxsbyA8ZyBpZD0iZyI+d29ybGQ8L2c+IDwvdGFyZ2V0PjwvdHJhbnMtdW5pdD48L2JvZHk+PC9maWxlPjwveGxpZmY+"
+  },
+  {
+   "name": "repair-unclosed",
+   "locale": null,
+   "map": {
+    "0": "Q Hello ⟦g1⟧world"
+   },
+   "out_b64": "PHhsaWZmIHZlcnNpb249IjEuMiI+PGZpbGU+PGJvZHk+PHRyYW5zLXVuaXQgaWQ9IjEiPjxzb3VyY2U+SGVsbG8gPGcgaWQ9ImciPndvcmxkPC9nPjwvc291cmNlPjx0YXJnZXQ+USBIZWxsbyA8ZyBpZD0iZyI+d29ybGQ8L2c+PC90YXJnZXQ+PC90cmFucy11bml0PjwvYm9keT48L2ZpbGU+PC94bGlmZj4="
+  },
+  {
+   "name": "repair-nested-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Q ⟦g1⟧A ⟦g1⟧B⟦/g1⟧ C⟦/g1⟧ Hello ⟦g1⟧world⟦/g1⟧"
+   },
+   "out_b64": "PHhsaWZmIHZlcnNpb249IjEuMiI+PGZpbGUgdGFyZ2V0LWxhbmd1YWdlPSJkZS1ERSI+PGJvZHk+PHRyYW5zLXVuaXQgaWQ9IjEiPjxzb3VyY2U+SGVsbG8gPGcgaWQ9ImciPndvcmxkPC9nPjwvc291cmNlPjx0YXJnZXQ+USA8ZyBpZD0iZyI+QSBCIEM8L2c+IEhlbGxvIHdvcmxkPC90YXJnZXQ+PC90cmFucy11bml0PjwvYm9keT48L2ZpbGU+PC94bGlmZj4="
+  },
+  {
+   "name": "repair-point-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Q Hello ⟦x1⟧ world"
+   },
+   "out_b64": "PHhsaWZmIHZlcnNpb249IjEuMiI+PGZpbGUgdGFyZ2V0LWxhbmd1YWdlPSJkZS1ERSI+PGJvZHk+PHRyYW5zLXVuaXQgaWQ9IjEiPjxzb3VyY2U+SGVsbG8gPGcgaWQ9ImciPndvcmxkPC9nPjwvc291cmNlPjx0YXJnZXQ+USBIZWxsbyA8ZyBpZD0iZyI+d29ybGQ8L2c+IHdvcmxkPC90YXJnZXQ+PC90cmFucy11bml0PjwvYm9keT48L2ZpbGU+PC94bGlmZj4="
+  },
+  {
+   "name": "repair-repeat-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Q Hello ⟦g1⟧world⟦/g1⟧ ⟦g1⟧W⟦/g1⟧ E"
+   },
+   "out_b64": "PHhsaWZmIHZlcnNpb249IjEuMiI+PGZpbGUgdGFyZ2V0LWxhbmd1YWdlPSJkZS1ERSI+PGJvZHk+PHRyYW5zLXVuaXQgaWQ9IjEiPjxzb3VyY2U+SGVsbG8gPGcgaWQ9ImciPndvcmxkPC9nPjwvc291cmNlPjx0YXJnZXQ+USBIZWxsbyA8ZyBpZD0iZyI+d29ybGQ8L2c+IFcgRTwvdGFyZ2V0PjwvdHJhbnMtdW5pdD48L2JvZHk+PC9maWxlPjwveGxpZmY+"
+  },
+  {
+   "name": "repair-stray-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "⟦/g1⟧Q Hello ⟦g1⟧world⟦/g1⟧ ⟦/g1⟧"
+   },
+   "out_b64": "PHhsaWZmIHZlcnNpb249IjEuMiI+PGZpbGUgdGFyZ2V0LWxhbmd1YWdlPSJkZS1ERSI+PGJvZHk+PHRyYW5zLXVuaXQgaWQ9IjEiPjxzb3VyY2U+SGVsbG8gPGcgaWQ9ImciPndvcmxkPC9nPjwvc291cmNlPjx0YXJnZXQ+USBIZWxsbyA8ZyBpZD0iZyI+d29ybGQ8L2c+IDwvdGFyZ2V0PjwvdHJhbnMtdW5pdD48L2JvZHk+PC9maWxlPjwveGxpZmY+"
+  },
+  {
+   "name": "repair-unclosed-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Q Hello ⟦g1⟧world"
+   },
+   "out_b64": "PHhsaWZmIHZlcnNpb249IjEuMiI+PGZpbGUgdGFyZ2V0LWxhbmd1YWdlPSJkZS1ERSI+PGJvZHk+PHRyYW5zLXVuaXQgaWQ9IjEiPjxzb3VyY2U+SGVsbG8gPGcgaWQ9ImciPndvcmxkPC9nPjwvc291cmNlPjx0YXJnZXQ+USBIZWxsbyA8ZyBpZD0iZyI+d29ybGQ8L2c+PC90YXJnZXQ+PC90cmFucy11bml0PjwvYm9keT48L2ZpbGU+PC94bGlmZj4="
   }
  ]
 }
