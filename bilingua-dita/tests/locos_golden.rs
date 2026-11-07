@@ -65,7 +65,8 @@ fn matches_locos_dita_and_docbook_filters() {
         if let Some(err) = c.get("error") {
             // known difference: lxml refuses a repeated xml:id (an ID validity rule, not well-formedness)
             let err = err.as_str().unwrap();
-            assert!(err.contains("already defined") || err.contains("already de"), "{name}: LocOS refuses ({err}), we read it");
+            // and LocOS refuses a DTD internal subset, which Bilingua keeps (no entity is expanded)
+            assert!(err.contains("already defined") || err.contains("already de") || err.contains("internal subset"), "{name}: LocOS refuses ({err}), we read it");
             only_locos_refuses.push(name.to_string());
             continue;
         }

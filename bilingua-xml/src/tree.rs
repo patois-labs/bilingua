@@ -297,7 +297,8 @@ impl<'a> Tree<'a> {
         if text.starts_with('\u{FEFF}') {
             return Err(bad("a second byte order mark at the start of the file"));
         }
-        let mut rd = Reader::from_str(text);
+        let masked = mask_doctype(text);
+        let mut rd = Reader::from_str(masked.as_deref().unwrap_or(text));
         {
             let c = rd.config_mut();
             c.check_end_names = true;
@@ -645,6 +646,72 @@ fn split_qname(q: &str) -> Result<(&str, &str), Error> {
             Ok((p, l))
         }
     }
+}
+
+/// The reader stops a DOCTYPE at the first `>` it meets, even one inside a quoted identifier or a comment of the
+/// internal subset. This finds the real end (quotes, `[ ... ]`, comments and processing instructions skipped) and
+/// returns a copy of `text` whose DOCTYPE is blanked to `<!DOCTYPE   >` of the same length, so every offset stays
+/// the same. `None` when the DOCTYPE needs no help or there is none before the root element.
+fn mask_doctype(text: &str) -> Option<String> {
+    let b = text.as_bytes();
+    let mut i = 0usize;
+    // the prolog: white space, comments and processing instructions, then maybe the DOCTYPE
+    loop {
+        while i < b.len() && is_xml_ws(b[i]) {
+            i += 1;
+        }
+        if b[i..].starts_with(b"<?") {
+            i += 2 + text[i + 2..].find("?>")? + 2;
+        } else if b[i..].starts_with(b"<!--") {
+            i += 4 + text[i + 4..].find("-->")? + 3;
+        } else {
+            break;
+        }
+    }
+    if !b[i..].starts_with(b"<!DOCTYPE") {
+        return None;
+    }
+    let (mut j, mut quote, mut depth) = (i + 9, 0u8, 0usize);
+    while j < b.len() {
+        let c = b[j];
+        if quote != 0 {
+            if c == quote {
+                quote = 0;
+            }
+        } else if c == b'"' || c == b''' {
+            quote = c;
+        } else if depth > 0 && b[j..].starts_with(b"<!--") {
+            j += 4 + text[j + 4..].find("-->")? + 2;
+        } else if depth > 0 && b[j..].starts_with(b"<?") {
+            j += 2 + text[j + 2..].find("?>")? + 1;
+        } else if c == b'[' {
+            depth += 1;
+        } else if c == b']' {
+            depth = depth.saturating_sub(1);
+        } else if c == b'>' && depth == 0 {
+            break;
+        }
+        j += 1;
+    }
+    if j >= b.len() {
+        return None;
+    }
+    let mut out = String::with_capacity(text.len());
+    out.push_str(&text[..i]);
+    out.push_str("<!DOCTYPE");
+    for ch in text[i + 9..j].chars() {
+        // keep line breaks and the byte length; a blank is one byte, so a wide character is several
+        if ch == '
+' || ch == '' {
+            out.push(ch);
+        } else {
+            for _ in 0..ch.len_utf8() {
+                out.push(' ');
+            }
+        }
+    }
+    out.push_str(&text[j..]);
+    Some(out)
 }
 
 /// True when a `<!DOCTYPE ...>` declares an internal subset (`[` outside the quoted identifiers).
