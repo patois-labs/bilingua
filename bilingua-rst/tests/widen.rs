@@ -68,3 +68,13 @@ After.
 ";
     assert_eq!(out, want);
 }
+
+#[test]
+fn a_row_that_fills_the_first_column_alone() {
+    let t = "======  =====  =====\nfn      score  resp\n======  =====  =====\n**Head**\nmean    a b    c d\n======  =====  =====\n";
+    let out = merge(None, t, &[("Head", "Zq\ **Headline words**\ qZ")]).unwrap_or_else(|e| panic!("{e}"));
+    println!("{out}");
+    let d2 = Rst.extract(out.as_bytes(), &ExtractOptions::new()).unwrap();
+    let d1 = doc(None, t);
+    assert_eq!(d1.units.len(), d2.units.len(), "{out}");
+}
