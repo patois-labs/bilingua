@@ -57,6 +57,7 @@ For the facade (`bilingua/src/lib.rs`, `filters()`): `Box::new(bilingua_docx::Do
 
 | Not supported | What happens |
 |---|---|
+| Ruby text (`w:ruby`, phonetic guides) | The base text and the guide are not extracted; the run is kept as a code |
 | SmartArt, charts, embedded objects, text inside DrawingML shapes that are not text boxes | Left untouched, not extracted |
 | Right-to-left setup for a target language | Translating into Arabic, Hebrew etc. does not add `w:bidi` or `w:rtl`. Fix the paragraph direction in Word, or start from a template that has it |
 | `w:ins`/`w:del` inside a changed paragraph | Accepted (see above); the reviewer sees plain text |

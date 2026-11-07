@@ -33,7 +33,8 @@ let out = Icml.merge(&doc)?;
   paragraph are rewritten, spliced into the original bytes at their exact spans; inside such a story, every node the
   rebuild did not touch is copied from its source bytes too. Text can grow, shrink and reorder; a point or wrapper
   the translation dropped is kept at the end of its paragraph, never lost. A newline in a translation becomes a
-  space (a break would add a paragraph), XML-illegal characters are dropped.
+  space (a break would add a paragraph), except in a paragraph whose source already has line feeds in its `Content` (a
+  code block), where they stay, XML-illegal characters are dropped.
 - Target language (`Document::target_lang`): every rebuilt range gets `AppliedLanguage` set to the InDesign language
   the file itself declares for the target (`<Language Name="$ID/...">`); an undeclared language is never invented.
   A right-to-left target also sets `ParagraphDirection="RightToLeftDirection"` and the Adobe World-Ready composer
