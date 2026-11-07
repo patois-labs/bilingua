@@ -330,8 +330,7 @@ impl Filter for Wxl {
             unit.codes.insert(FORM_KEY.into(), code(form));
             let raw = &text[start..end];
             // (a value with a line break keeps its spelling: a merge writes the file's line break into changed values only)
-            if raw.contains(['', '
-']) || encode_value(form, &e.text, form == "c", "") != raw {
+            if raw.contains(['\r', '\n']) || encode_value(form, &e.text, form == "c", "") != raw {
                 unit.codes.insert(RAW_KEY.into(), code(raw));
             }
             fill_context(&mut unit, e, idx, form);
