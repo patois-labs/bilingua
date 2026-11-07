@@ -344,7 +344,7 @@ fn translation_line_breaks_follow_the_file() {
     let crlf = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\r\n<WixLocalization Culture=\"en-us\" xmlns=\"http://schemas.microsoft.com/wix/2006/localization\">\r\n  <String Id=\"A\">Hello there</String>\r\n  <String Id=\"B\" Value=\"Bye now\" />\r\n</WixLocalization>\r\n";
     let lf = crlf.replace("\r\n", "\n");
     let profile = bilingua_model::profile::locos().merge_options("wxl");
-    for (src, want) in [(crlf.as_str(), "\r\n"), (lf.as_str(), "\n")] {
+    for (src, want) in [(crlf, "\r\n"), (lf.as_str(), "\n")] {
         for mode in 0..2 {
             let mut d = ex(src.as_bytes());
             d.units[0].segments[0].target = vec![Inline::text("Line one\nline two\r\nline three\rend")];
