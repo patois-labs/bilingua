@@ -182,7 +182,7 @@ fn xliff_2() {
 
 #[test]
 fn resx_resources() {
-    let s = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<root>\n<data name=\"A\" xml:space=\"preserve\"><value>Open the door</value></data>\n<data name=\"B\" xml:space=\"preserve\"><value>Close it</value></data>\n</root>\n";
+    let s = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<root>\n<resheader name=\"resmimetype\"><value>text/microsoft-resx</value></resheader>\n<data name=\"A\" xml:space=\"preserve\"><value>Open the door</value></data>\n<data name=\"B\" xml:space=\"preserve\"><value>Close it</value></data>\n</root>\n";
     every_trick_is_refused("a.resx", s.as_bytes(), tight());
 }
 
