@@ -473,7 +473,7 @@ mod tests {
     #[test]
     fn refuses_what_it_should() {
         assert!(matches!(walk(b"%PDF-1.4 x", false), Err(WalkError::Refused(_))));
-        assert!(matches!(walk(b"Subject: x\nContent-Type: application/pkcs7-mime\n\nA\n"), Err(WalkError::Refused(_))));
+        assert!(matches!(walk(b"Subject: x\nContent-Type: application/pkcs7-mime\n\nA\n", false), Err(WalkError::Refused(_))));
         let mut deep = b"Subject: d\n".to_vec();
         for i in 0..MAX_DEPTH + 2 {
             deep.extend_from_slice(format!("Content-Type: multipart/mixed; boundary=\"b{i}\"\n\n--b{i}\n").as_bytes());
