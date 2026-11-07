@@ -90,13 +90,22 @@ fn matches_locos_on_random_pages_and_fixtures() {
     let text = std::fs::read_to_string(data_dir().join("locos_golden.json")).unwrap();
     let cases: Vec<serde_json::Value> = serde_json::from_str(&text).unwrap();
     assert!(cases.len() >= 700);
-    let (mut ok, mut refused_n, mut builds, mut with_units) = (0, 0, 0, 0);
+    let (mut ok, mut refused_n, mut builds, mut with_units, mut attr_code_opened) = (0, 0, 0, 0, 0);
     for c in &cases {
         let name = c["name"].as_str().unwrap();
         let fmt = c["fmt"].as_str().unwrap();
         let data = hex(c["hex"].as_str().unwrap());
         if let Some(err) = c.get("error") {
             match extract(fmt, &data) {
+                // DIFFERENCE FROM LOCOS (11-07, MIGRATION.md "Differences from LocOS"): LocOS refuses a page whose
+                // server code sits between the attributes of a tag (`<div <?php echo $a ?> class="x">`). Bilingua opens
+                // it and keeps the code as an opaque code of the tag. Only that refusal is allowed to differ, and the
+                // opened page must still merge back byte for byte. Every other refusal must match.
+                Ok(_) if err == "ServerPageRefused" && c["message"].as_str().unwrap().contains("code is used as a tag or attribute name") => {
+                    assert_identity(fmt, &data);
+                    attr_code_opened += 1;
+                    continue;
+                }
                 Ok(_) => panic!("{name}: LocOS refuses ({err}), so must we"),
                 Err(Error::Parse { msg, .. }) if err == "ServerPageRefused" => {
                     assert_eq!(msg, c["message"].as_str().unwrap(), "{name}: refusal text");
@@ -160,5 +169,5 @@ fn matches_locos_on_random_pages_and_fixtures() {
     }
     assert!(ok >= 500, "only {ok} pages opened");
     assert!(refused_n >= 40, "only {refused_n} refusals");
-    println!("{ok} pages ({with_units} with units) match LocOS, {builds} builds identical, {refused_n} refused by both");
+    println!("{ok} pages ({with_units} with units) match LocOS, {builds} builds identical, {refused_n} refused by both, {attr_code_opened} opened with code between attributes");
 }

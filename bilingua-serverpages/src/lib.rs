@@ -290,12 +290,77 @@ fn check_tag(d: Dialect, tok: &str, orig: &str, m: &Masked, masked_pos: usize) -
         let s = from + p;
         let e = tok[s..].find(S_CLOSE).map_or(tok.len(), |q| s + q + S_CLOSE.len_utf8());
         if !allowed.iter().any(|&(a, b)| a <= s && e <= b) {
-            let prefix = m.unmask(&m.text[..masked_pos + s], orig);
-            return Err(refused(d, &prefix, prefix.len(), "code is used as a tag or attribute name", HINT));
+            // Code BETWEEN attributes (after the tag name, between two attributes, before `>` or `/>`, or around a bare
+            // attribute) is an opaque code of the tag. It must not build a tag or attribute name, and the rest of the
+            // tag must read cleanly.
+            if !(bare_code_ok(tok, s, e, &allowed, m) && tag_is_clean(tok, &allowed)) {
+                let prefix = m.unmask(&m.text[..masked_pos + s], orig);
+                return Err(refused(d, &prefix, prefix.len(), "code is used as a tag or attribute name", HINT));
+            }
         }
         from = e;
     }
     Ok(())
+}
+
+const KNOWN_ELEMENTS: [&str; 40] = [
+    "a", "b", "i", "u", "p", "br", "hr", "li", "ul", "ol", "dl", "dt", "dd", "tr", "td", "th", "div", "span", "img", "input",
+    "label", "select", "option", "button", "table", "tbody", "thead", "tfoot", "form", "textarea", "section", "article",
+    "nav", "header", "footer", "main", "aside", "fieldset", "iframe", "link",
+];
+
+fn is_name_char(c: char) -> bool {
+    c.is_ascii_alphanumeric() || matches!(c, '_' | ':' | '.' | '-')
+}
+
+/// The code at `s..e` of `tok` (outside every attribute value) does not touch a tag name or an attribute name: before
+/// it comes white space, a closing quote, another code, or a bare attribute name that itself starts after a code; after
+/// it comes white space, `>`, `/`, the end, another code or a name that is not followed by `=`.
+fn bare_code_ok(tok: &str, s: usize, e: usize, allowed: &[(usize, usize)], m: &Masked) -> bool {
+    let before = &tok[..s];
+    let run = before.len() - before.trim_end_matches(is_name_char).len();
+    let head = &before[..before.len() - run];
+    let before_ok = if run == 0 {
+        before.chars().next_back().is_some_and(|c| is_space(c) || c == S_CLOSE) || allowed.iter().any(|&(_, b)| b == s)
+    } else if head.ends_with(S_CLOSE) {
+        true
+    } else {
+        // a name glued to the code: `<th<?php echo $attrs ?> id="a">` (a known element name), or a bare attribute
+        // followed by a STATEMENT (`selected<?php endif; ?>`). An output code could be the rest of the name.
+        let name = &before[before.len() - run..];
+        let k = tok[s + S_OPEN.len_utf8()..e - S_CLOSE.len_utf8()].parse::<usize>().ok();
+        let statement = k.and_then(|k| m.inline.get(k)).is_some_and(|il| !il);
+        (head == "<" && KNOWN_ELEMENTS.contains(&name.to_ascii_lowercase().as_str())) || (head != "<" && statement)
+    };
+    let after = &tok[e..];
+    let name = after.len() - after.trim_start_matches(is_name_char).len();
+    let after_ok = match after[name..].chars().next() {
+        None => true,
+        Some('=') => name > 0,
+        Some(c) => is_space(c) || matches!(c, '>' | '/' | S_OPEN),
+    };
+    before_ok && after_ok
+}
+
+/// A tag that holds code between its attributes must read cleanly: outside the attribute values and the codes there
+/// is no quote and no `<` (a tag nested inside a quoted value, such as `href="a<x:url value="${v}"/>b"`, would make the
+/// HTML tokenizer read junk, so such a page stays refused).
+fn tag_is_clean(tok: &str, allowed: &[(usize, usize)]) -> bool {
+    let mut i = 1;
+    for (j, c) in tok.char_indices().skip(1) {
+        if j < i {
+            continue;
+        }
+        i = j + c.len_utf8();
+        if let Some(&(_, b)) = allowed.iter().find(|&&(a, b)| a <= j && j < b) {
+            i = b;
+        } else if c == S_OPEN {
+            i = tok[j..].find(S_CLOSE).map_or(tok.len(), |q| j + q + S_CLOSE.len_utf8());
+        } else if matches!(c, '"' | '\'' | '<') {
+            return false;
+        }
+    }
+    true
 }
 
 /// The HTML tokens of the masked text, with islands in text split out as island tokens.
