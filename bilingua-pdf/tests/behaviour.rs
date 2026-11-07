@@ -168,3 +168,38 @@ fn legacy_encodings_and_cmaps() {
         assert!(t.contains(want), "{want} in {t}");
     }
 }
+
+#[test]
+fn line_end_hyphens_join_visible_hyphens_stay_and_unmapped_glyphs_are_dropped() {
+    // #808. PDFium marks a hyphen that breaks a word at a line end with U+FFFE; units join the word. A hyphen inside
+    // a line, or at a line end after a digit, is not marked and stays. page_texts keeps PDFium's text as it is.
+    let b = pages(&[text_page(&["A line ending with a hyphen-", "ated word, then a well-known page 12-", "14 of the book."])], false);
+    let p = page_texts(&b, &ExtractOptions::default()).unwrap();
+    assert!(p[0].text.contains("hyphen\u{fffe}ated"), "{:?}", p[0].text);
+    assert_eq!(texts(&ex(&b).unwrap()), vec!["A line ending with a hyphenated word, then a well-known page 12- 14 of the book.".to_string()]);
+
+    // A font whose ToUnicode maps `x` to U+0000: PDFium writes U+FFFE for it. Units drop the glyph (no `-` is
+    // invented) and keep the line break after it.
+    let objs = vec![
+        O::Plain("<</Type /Catalog /Pages 2 0 R>>".into()),
+        O::Plain("<</Type /Pages /Kids [3 0 R] /Count 1>>".into()),
+        O::Plain("<</Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources <</Font <</F1 5 0 R>>>> /Contents 4 0 R>>".into()),
+        O::Stream(String::new(), b"BT /F1 11 Tf 14 TL 72 740 Td (The oxce has an unmapped glyph x) Tj T* (and the following line ends it.) Tj ET".to_vec()),
+        O::Plain("<</Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding /ToUnicode 6 0 R>>".into()),
+        O::Stream(String::new(), b"1 beginbfchar <78> <0000> endbfchar".to_vec()),
+    ];
+    let b = pdf(&objs);
+    let p = page_texts(&b, &ExtractOptions::default()).unwrap();
+    assert!(p[0].text.contains("o\u{fffe}ce"), "{:?}", p[0].text);
+    assert_eq!(texts(&ex(&b).unwrap()), vec!["The oce has an unmapped glyph and the following line ends it.".to_string()]);
+
+    // A page of unmapped glyphs only has no printable text: it goes to OCR.
+    let objs2: Vec<O> = objs
+        .into_iter()
+        .enumerate()
+        .map(|(i, o)| if i == 3 { O::Stream(String::new(), b"BT /F1 11 Tf 72 740 Td (xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx) Tj ET".to_vec()) } else { o })
+        .collect();
+    let p = page_texts(&pdf(&objs2), &ExtractOptions::default()).unwrap();
+    assert_eq!(p[0].text.chars().filter(|&c| c == '\u{fffe}').count(), 30);
+    assert!(p[0].ocr);
+}

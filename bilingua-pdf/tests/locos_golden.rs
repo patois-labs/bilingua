@@ -66,6 +66,11 @@ fn every_fixture_matches_locos() {
         let got_units: Vec<String> = doc.units.iter().map(|u| plain_text(&u.source())).collect();
         let want_units: Vec<String> =
             want["units"].as_array().unwrap().iter().map(|v| v.as_str().unwrap().to_string()).filter(|u| !u.starts_with("<OCR page")).collect();
+        // LocOS keeps U+FFFE and C0 controls in units (#808); Bilingua cleans them, so clean the LocOS side the same way.
+        let want_units: Vec<String> = want_units.iter().flat_map(|u| bilingua_pdf::paragraphs(u)).collect();
+        if got_units.iter().any(|u| u.chars().any(|c| c == '\u{fffe}' || (c < ' ' && c != '\t'))) {
+            bad.push(format!("{name}: a unit holds U+FFFE or a C0 control"));
+        }
         if got_units != want_units {
             bad.push(format!("{name}: units differ\n    got  {got_units:?}\n    want {want_units:?}"));
         }

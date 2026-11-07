@@ -102,7 +102,7 @@ pub fn page_texts(bytes: &[u8], opts: &ExtractOptions) -> Result<Vec<PageInfo>, 
         let tp = textpage::TextPage::new(&objs, p.bbox().map(|v| v as f32), p.rotation(), rtl);
         let text = tp.text();
         let (w, h) = p.size();
-        let ocr = py_strip(&text).chars().count() < min_chars;
+        let ocr = printable_count(&text) < min_chars;
         // LocOS refuses, before any page is rendered, a document whose scanned pages render to too many pixels.
         if ocr {
             if let Some(scale) = ocr_render_scale(w, h, max_dim) {
@@ -217,9 +217,29 @@ fn open_error(e: doc::OpenError, budget: u64) -> Error {
     }
 }
 
+/// Clean PDFium's page text for units (#808). PDFium writes U+FFFE in two places, and both are dropped:
+/// - a hyphen at a line end that breaks a word (`textpage.rs`, `Gen::Hyphen`): PDFium puts no line break after it,
+///   the next line's text follows at once, so dropping the marker joins the word (`extraor` + `dinarily`);
+/// - a glyph whose font maps it to U+0000 (`textpage.rs`, `object_items`): it has no text, so it is removed.
+///
+/// A hyphen PDFium does not mark (inside a line, or at a line end before a non-letter) is an ordinary `-` and stays.
+/// The line break after an unmapped glyph stays too. C0 control characters (the raw char codes of a font with no
+/// mapping to Unicode) are removed, except tab and the line breaks `\n` and `\r`.
+fn clean_text(text: &str) -> String {
+    text.chars().filter(|&c| c != '\u{fffe}' && (c >= ' ' || matches!(c, '\t' | '\n' | '\r'))).collect()
+}
+
+/// The characters of a page that count toward the OCR threshold: the cleaned text, stripped, without U+FFFD.
+/// A page of garbage glyph codes counts as empty, so it goes to OCR.
+fn printable_count(text: &str) -> usize {
+    let kept: String = text.chars().filter(|&c| c != '\u{fffd}').collect();
+    py_strip(&clean_text(&kept)).chars().count()
+}
+
 /// LocOS `_paragraphs`: split on blank lines (`\n\s*\n`), join each block's stripped, non-empty lines with a space.
 pub fn paragraphs(text: &str) -> Vec<String> {
-    let t = py_strip(text);
+    let cleaned = clean_text(text);
+    let t = py_strip(&cleaned);
     let chars: Vec<char> = t.chars().collect();
     let mut blocks: Vec<String> = Vec::new();
     let mut start = 0;
@@ -366,9 +386,32 @@ mod tests {
         assert_eq!(paragraphs("Hello world.\r\nSecond line."), vec!["Hello world. Second line."]);
         assert_eq!(paragraphs("  a\n\n b \n c\n \n\nd  "), vec!["a", "b c", "d"]);
         assert_eq!(paragraphs("a\u{3000}\n\u{a0}\nb"), vec!["a", "b"]);
-        assert_eq!(paragraphs("extraor\u{fffe}dinarily"), vec!["extraor\u{fffe}dinarily"]);
+        assert_eq!(paragraphs("extraor\u{fffe}dinarily"), vec!["extraordinarily"]);
         assert!(paragraphs(" \r\n ").is_empty());
         assert_eq!(py_splitlines("a\r\nb\rc\x0bd\u{2028}e"), vec!["a", "b", "c", "d", "e"]);
+    }
+
+    #[test]
+    fn hyphen_marker_is_joined_and_unmapped_glyphs_are_dropped() {
+        // PDFium's line-end hyphen marker has the next line's text right after it: the word is joined.
+        assert_eq!(paragraphs("require extraor\u{fffe}dinarily long text"), vec!["require extraordinarily long text"]);
+        // An unmapped glyph mid-word is dropped: no hyphen is invented.
+        assert_eq!(paragraphs("o\u{fffe}ce work"), vec!["oce work"]);
+        // An unmapped glyph at a line end keeps the line break, so the words of the two lines stay apart.
+        assert_eq!(paragraphs("first\u{fffe}\r\nsecond"), vec!["first second"]);
+        // A visible hyphen stays.
+        assert_eq!(paragraphs("well-known\r\npage 12-\r\n14"), vec!["well-known page 12- 14"]);
+        assert!(paragraphs("a\u{fffe}\r\nb\u{fffe}c").iter().all(|p| !p.contains('\u{fffe}') && !p.contains('-')));
+    }
+
+    #[test]
+    fn c0_controls_are_removed_and_do_not_count_for_ocr() {
+        assert_eq!(paragraphs("ab\u{1}\u{5}c\u{b}d\u{1f}e\tf\r\ng"), vec!["abcde\tf g"]);
+        let garbage: String = "\u{1}\u{5}\u{7}".repeat(20);
+        assert!(paragraphs(&garbage).is_empty());
+        assert_eq!(printable_count(&garbage), 0);
+        assert_eq!(printable_count("\u{fffd}\u{fffe}\u{fffe}\u{fffd}"), 0);
+        assert_eq!(printable_count("  hello \u{3} world  "), 12);
     }
 
     #[test]
