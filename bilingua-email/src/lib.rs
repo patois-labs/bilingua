@@ -124,8 +124,8 @@ fn decode_body(data: &[u8], p: &Part) -> Result<(String, Codec, bool), Error> {
     Err(Error::Encoding("A text part of this email is not readable text.".into()))
 }
 
-fn parse_message(data: &[u8]) -> Result<Parsed, Error> {
-    let parts = mime::walk(data).map_err(walk_error)?;
+fn parse_message(data: &[u8], mbox_from: bool) -> Result<Parsed, Error> {
+    let parts = mime::walk(data, mbox_from).map_err(walk_error)?;
     let eol = if data[..parts[0].body_start].windows(2).any(|w| w == b"\r\n") { "\r\n" } else { "\n" };
     let mut slots = Vec::new();
     if let Some(s) = header::read_subject(data, parts[0].start, parts[0].hdr_end) {
@@ -441,7 +441,7 @@ impl Filter for Email {
         bilingua_model::check_own_options(self, &opts.format_options)?;
         let limits = opts.limits();
         guard::check_input(bytes, &limits)?;
-        let parsed = parse_message(bytes)?;
+        let parsed = parse_message(bytes, !opts.is_profile(bilingua_model::profile::LOCOS))?;
         let mut units: Vec<Unit> = Vec::new();
         for slot in &parsed.slots {
             let (local, _) = slot_units(slot, opts.source_lang.as_deref(), limits)?;
@@ -465,7 +465,7 @@ impl Filter for Email {
         bilingua_model::check_own_options(self, &opts.format_options)?;
         bilingua_model::check_parser_min(doc, &bilingua_model::parser_info!(), if doc.units.is_empty() { 1 } else { SKELETON_SCHEMA })?;
         let data = original_of(doc)?;
-        let parsed = parse_message(data)?;
+        let parsed = parse_message(data, !opts.is_profile(bilingua_model::profile::LOCOS))?;
         let limits = unlimited();
         let by_id: HashMap<&str, &Unit> = doc.units.iter().map(|u| (u.id.as_str(), u)).collect();
         let any_translated = doc.units.iter().any(|u| changed(u).is_some());

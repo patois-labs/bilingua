@@ -257,9 +257,11 @@ fn delimiter_at(data: &[u8], p: usize, end: usize, boundary: &[u8]) -> Option<(u
 
 /// Walks the whole message. The result is in document order (a part before its children); the first entry is the
 /// message itself.
-pub fn walk(data: &[u8]) -> Result<Vec<Part>, WalkError> {
+pub fn walk(data: &[u8], mbox_from: bool) -> Result<Vec<Part>, WalkError> {
     let first_end = data.iter().position(|b| *b == b'\n').map(|p| p + 1).unwrap_or(data.len());
-    if !is_field_start(&data[..first_end]) || data[..data.len().min(4096)].contains(&0) {
+    // a Unix mbox "From " line first (a message saved from a mail spool) is allowed outside the locos profile
+    let mbox = mbox_from && data.starts_with(b"From ");
+    if !(mbox || is_field_start(&data[..first_end])) || data[..data.len().min(4096)].contains(&0) {
         return Err(WalkError::Refused(
             "This file is not an email message (.eml): it must start with header lines such as From: and Subject:.".into(),
         ));
@@ -460,7 +462,7 @@ mod tests {
     #[test]
     fn walks_nested_and_open_ended() {
         let m = b"Subject: s\nContent-Type: multipart/mixed; boundary=q\n\npre\n--q\nContent-Type: text/plain\n\nbody\n--q\nContent-Type: multipart/alternative; boundary=r\n\n--r\n\nA\n--r--\n";
-        let p = walk(m).unwrap();
+        let p = walk(m, false).unwrap();
         assert_eq!(p.len(), 4);
         assert_eq!(p[0].children, vec![1, 2]);
         assert_eq!(p[2].children, vec![3]);
@@ -470,13 +472,13 @@ mod tests {
 
     #[test]
     fn refuses_what_it_should() {
-        assert!(matches!(walk(b"%PDF-1.4 x"), Err(WalkError::Refused(_))));
+        assert!(matches!(walk(b"%PDF-1.4 x", false), Err(WalkError::Refused(_))));
         assert!(matches!(walk(b"Subject: x\nContent-Type: application/pkcs7-mime\n\nA\n"), Err(WalkError::Refused(_))));
         let mut deep = b"Subject: d\n".to_vec();
         for i in 0..MAX_DEPTH + 2 {
             deep.extend_from_slice(format!("Content-Type: multipart/mixed; boundary=\"b{i}\"\n\n--b{i}\n").as_bytes());
         }
         deep.extend_from_slice(b"Content-Type: text/plain\n\nhi\n");
-        assert!(matches!(walk(&deep), Err(WalkError::Limit(Cap::Depth, _))));
+        assert!(matches!(walk(&deep, false), Err(WalkError::Limit(Cap::Depth, _))));
     }
 }
