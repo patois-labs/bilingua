@@ -336,6 +336,11 @@ keeps the encoding:
   `<!` declaration outside the DOCTYPE. Real files never have these (an XMB or XTB subset of `<!ELEMENT>` and
   `<!ATTLIST>` declarations still reads). LocOS reads some damaged SVGs of this kind (a stray quote in the DOCTYPE);
   Bilingua refuses them.
+- The XML guard (11-06) scans every reading a reader may give the bytes: a file that starts `<\0` or `\0<` without
+  a byte order mark is scanned as UTF-16 and as UTF-8, and bytes that are not UTF-8 are also scanned as Shift_JIS,
+  GB18030 and Big5 (their second byte can be `[` or `]`, so a CDATA section ends elsewhere than in the bytes). A
+  UTF-16 file without a byte order mark (which XML does not allow) is refused when it has more than
+  `max_xml_depth` tags.
 - Wave 12, item D (facade options and xmlres records): three new `format_options` keys. `xaml.view_attributes`
   (bool, default unset: the filter's own setting, which is off for `Xaml::new()`; LocOS's `XAML_VIEW_ATTRIBUTES`;
   an explicit `false` also beats `Xaml::with_view_attributes()`). `xml.its_rules` (text, default none: the content
