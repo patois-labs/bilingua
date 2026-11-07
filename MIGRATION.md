@@ -718,3 +718,7 @@ translation with the source.
   site in core passes limits today).
 - `catos-server/src/workspace.rs` builds its `ExtractOptions` with the builders; `catcore/src/inline.rs` maps a
   future `SegState` by `is_accepted()`.
+- Wild round 2 (xml group): ICML now reads a file whose root is a bare `<Story>` (LocOS and the old Bilingua refused it;
+  Okapi reads it). XSLT keeps a named entity reference as a protected token when the DOCTYPE has an external subset
+  (the subset is still never read). XSLT and WXL write the carriage returns of a translation as `&#13;` when the source
+  text had one (it can only have come from a character reference); LocOS turns them into LF.
