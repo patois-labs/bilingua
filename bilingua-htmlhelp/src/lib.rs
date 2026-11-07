@@ -86,8 +86,9 @@ pub fn hhp_code_page(bytes: &[u8]) -> Option<u16> {
     // report). The code page is a hint the caller passes on, never a decode of its own.
     let t = match load(bytes, &limits, None) {
         Ok((t, _)) => t,
-        Err(_) if bytes.len() as u64 <= limits.max_input_bytes => bytes.iter().map(|&b| b as char).collect(),
-        Err(_) => return None,
+        // a size, `<` count or line limit gives None, as LocOS does; only a code page the decode cannot read falls back
+        Err(Error::Limit(_)) => return None,
+        Err(_) => bytes.iter().map(|&b| b as char).collect(),
     };
     let (_, lang) = hhp::walk(&t, &limits).ok()?;
     lcid::code_page_of_language(&lang?.text)

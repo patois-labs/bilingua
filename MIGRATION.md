@@ -454,13 +454,28 @@ PDFium's own heuristic decides. There is no separate `locos` profile for PDF: bo
 
 LocOS is getting the same fixes, so these differences are temporary.
 
-- **STL, code table switch.** When a translation needs another EBU table, comment subtitles and text-less subtitles
+- **STL, code table switch (now the same in LocOS).** When a translation needs another EBU table, comment subtitles and text-less subtitles
   are re-encoded with the rest of the file, and the switch is refused when one cannot move (LocOS leaves their bytes
   in the old table). A byte kept raw (a control code, a byte the old table has no character for) moves only when the
   new table reads it the same way: 0xC0 (none in table 00, a letter in table 01) makes the switch refuse with a
   message naming the subtitles (LocOS copies it raw, and it reads as a letter of the new table); 0x7F (none in any
   table) moves. Tests: `a_code_table_switch_*` in `bilingua-stl/tests/behaviour.rs`. The other parts of issue 798
-  (letters with a floating mark, quadratic paths) were already fixed in Bilingua.
+  (letters with a floating mark, quadratic paths) were already fixed in Bilingua. LocOS build/issues-1107 now makes the
+  same refusals and builds, so the STL golden test has no exemption left.
+- **STL, base and mark pairs.** The locos profile writes a base letter and a floating mark with no single code as the
+  two-byte pair, as LocOS now does (it refused them before). A pair takes one cell when rows are measured (the mark
+  byte takes none), in both profiles. Only the wider-row allowance (a row may be as wide as the widest source row)
+  stays native. Test: `a_base_and_mark_pair_takes_one_cell_in_both_profiles`.
+- **STF, escapes a translator types.** The escapes for backslash, line feed, carriage return and tab in a loaded TRANSLATION cell
+  that the source row does not have are decoded to their character (they stayed raw text and were escaped a second time on merge). Other
+  placeholders the source lacks still stay text. Test: `an_escape_a_translator_typed_is_decoded_and_escaped_once_on_merge`.
+- **HTML Help, `.hhp` over a limit.** `hhp_code_page` returns `None` for a project over the size, `<` count or line
+  limit, as LocOS; only a code page the decode cannot read still falls back to the ASCII `Language=` line.
+- **SubViewer/MicroDVD, two kept differences.** LocOS now refuses a translation line that reads as a timecode or a MicroDVD
+  cue; Bilingua already did. LocOS still writes text that reads as a MicroDVD control code (`{y:i}`), where Bilingua
+  refuses (3 of the golden builds). A token that names no code of the unit (`⟦x99⟧`) stays text in SBV and SubViewer
+  in both (LocOS issue 814), but the LocOS MicroDVD build still drops it; the golden test names those builds (LocOS
+  to change, as 814).
 - **SCC, unknown inline code.** A translation with a code the caption does not have is refused, where LocOS drops it
   silently. Literal `⟦xN⟧` text was already refused (the characters are not CEA-608). The channel-2 loss and
   the quadratic character scan were already fixed in Bilingua.

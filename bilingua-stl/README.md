@@ -46,6 +46,6 @@ let out = Stl.merge(&doc)?;
 - Row, unit and block caps come from `Limits`; more than 99 999 blocks is `Error::Limit`.
 - Linear where LocOS is quadratic (gate 11-05): the list of refused subtitles, the unsupported-character check
   (100 000 distinct characters) and the row wrap (zero-width codes such as italics in long words). Same output.
-- Kept as LocOS for byte parity (LocOS issues, to fix in both together): a table switch leaves comment subtitles
-  and undefined upper-half bytes in the old table; a floating diacritic on a letter with no precomposed form (`C1 78`,
-  x with grave) reads as two code points and cannot be written back, so such a subtitle refuses when changed.
+- Since LocOS issue 798 (fixed in both): a table switch re-encodes comment subtitles and refuses bytes that would read as other
+  letters; a floating diacritic on a letter with no precomposed form (`C1 78`, x with grave) is a base and mark pair
+  that takes one cell and is written as its two bytes, in the locos profile too.

@@ -57,10 +57,12 @@ def map_text(name: str, i: int, t: str):
         return t.replace(" ", "\n")
     if name == "ws":
         return "  " + t + " \n"
+    if name == "unk":
+        return t + " ⟦x99⟧"
     raise ValueError(name)
 
 
-MAPS = ["echo", "mark", "all", "third", "cjk", "long", "short", "rev", "notok", "nl", "ws"]
+MAPS = ["echo", "mark", "all", "third", "cjk", "long", "short", "rev", "notok", "nl", "ws", "unk"]
 
 
 def run_case(fmt: str, data: bytes) -> dict:

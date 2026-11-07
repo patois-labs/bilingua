@@ -125,10 +125,10 @@ fn translated_round_trip() {
 #[test]
 fn translation_edge_cases() {
     let data = b"[Events]\nDialogue: 0,0:00:01.00,0:00:02.00,Default,,0,0,0,,One {\\b1}two{\\b0} three\n";
-    // a real newline in the translation becomes \N; unknown markers are dropped
+    // a real newline in the translation becomes \N; a marker that names no code stays text (LocOS issue 814)
     assert_eq!(units(data), vec!["One ⟦g1⟧two⟦/g1⟧ three"]);
     let out = s(build(data, &[(0, "Un ⟦g1⟧deux⟦/g1⟧\ntrois⟦x9⟧⟦g7⟧")]));
-    assert!(out.ends_with(",,Un {\\b1}deux{\\b0}\\Ntrois\n"), "{out}");
+    assert!(out.ends_with(",,Un {\\b1}deux{\\b0}\\Ntrois\u{27E6}x9\u{27E7}\u{27E6}g7\u{27E7}\n"), "{out}");
     // a Title translation never gets a line break
     let t = b"[Script Info]\nTitle: A\n";
     assert_eq!(build(t, &[(0, "B\nC")]), b"[Script Info]\nTitle: B C\n");

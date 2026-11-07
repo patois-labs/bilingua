@@ -220,6 +220,24 @@ fn a_letter_with_a_floating_diacritic_and_no_single_code_is_written_back() {
 }
 
 #[test]
+fn a_base_and_mark_pair_takes_one_cell_in_both_profiles() {
+    // MNC 4: four D + grave pairs are eight characters but four cells, so they fit one row (the mark byte takes no cell)
+    let data = cat(&[&gsi(b"00", b"09", b'1', b"04", 1), &t(1, &cat(&[DH, b"abcd", END]))]);
+    let word = "D\u{300}D\u{300}D\u{300}D\u{300}";
+    let locos = bilingua_model::profile::locos().merge_options("xml");
+    for use_locos in [false, true] {
+        let mut d = ex(&data);
+        set(&mut d, 0, word);
+        let out = if use_locos { Stl.merge_with(&d, &locos) } else { Stl.merge(&d) }.unwrap();
+        assert_eq!(texts(&ex(&out)), vec![word.to_string()], "locos {use_locos}");
+    }
+    // a fifth pair is five cells: refused (one word wider than the row)
+    let mut d = ex(&data);
+    set(&mut d, 0, &format!("{word}D\u{300}"));
+    assert!(Stl.merge_with(&d, &locos).is_err());
+}
+
+#[test]
 fn a_row_wider_than_the_header_mnc_takes_a_translation_as_long_as_its_source() {
     // the header says 20 characters per row, but the source row has 35: a translation of the same length fits
     let data = cat(&[&gsi(b"00", b"09", b'1', b"20", 1), &t(1, &cat(&[DH, b"The keeper waves from the old rocks", END]))]);
