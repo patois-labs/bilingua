@@ -229,7 +229,8 @@ Bilingua is built to open files from people you do not know.
 - **Refusals, not guesses.** A file over a limit, or one that uses a known attack, is refused with a typed error
   (`Error::Limit` with a `LimitKind` a program can branch on, and a short message safe to show to whoever uploaded
   the file). XML that declares an entity (internal or external, so the billion laughs and XXE families) is refused
-  before any parser sees it; DTDs are never read or fetched. Zip archives with names that escape a folder, names
+  before any parser sees it, except in plain XML, DITA and DocBook files, where a DOCTYPE with entities is normal:
+  those are kept as they are and every `&name;` stays a code, never expanded; DTDs are never read or fetched. Zip archives with names that escape a folder, names
   listed twice, encrypted entries, links, or sizes and checksums that do not match their directory are refused.
   Text that is not valid in the encoding a file declares is refused rather than silently re-read in another one.
 - **The writer never invents structure.** A translation that cannot be written in the format (it does not fit, a
