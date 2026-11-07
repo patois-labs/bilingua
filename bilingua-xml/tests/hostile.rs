@@ -202,8 +202,8 @@ fn entity_declarations_are_kept_as_codes_never_expanded() {
         assert!(d.units.iter().all(|u| !show(u).contains("lol lol") && !show(u).contains("root:")));
         assert_eq!(f.merge(&d).unwrap(), raw, "untouched = as uploaded");
     }
-    let d = f.extract(&bomb[..], &opts(None)).unwrap();
-    assert_eq!(show(&d.units[0]), "\u{27E6}x1\u{27E7}");
+    let with_text = br#"<!DOCTYPE lolz [<!ENTITY lol "lol"><!ENTITY lol2 "&lol;&lol;">]><lolz>A &lol2; B</lolz>"#;
+    assert_eq!(texts(&f, with_text), vec!["A \u{27E6}x1\u{27E7} B"]);
     // a comment with a quote or a ">" inside the subset does not hide what follows it
     let tricky = br#"<!DOCTYPE r [ <!-- don't > "x --> <!ENTITY a "x"> ]><r><p>Hi &a; there</p></r>"#;
     assert_eq!(texts(&f, tricky), vec!["Hi \u{27E6}x1\u{27E7} there"]);
