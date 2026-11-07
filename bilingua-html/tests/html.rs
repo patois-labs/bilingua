@@ -497,10 +497,13 @@ fn preview_declares_the_target_language_once_something_is_translated() {
     assert!(pv0.contains("<html lang=\"en-US\">"), "{pv0}");
     d.set_target("u2", vec![Inline::text("مصباح الميناء")]).unwrap();
     let pv = Html.preview(&d).unwrap();
-    assert!(pv.contains("<html lang=\"ar\" dir=\"rtl\">"), "{pv}");
+    let html_tag = |p: &str| p[p.find("<html").unwrap()..].split('>').next().unwrap().to_string();
+    let t = html_tag(&pv);
+    assert!(t.contains("lang=\"ar\"") && t.contains("dir=\"rtl\""), "{pv}");
     assert!(pv.contains("مصباح الميناء"), "{pv}");
     // the preview declares what the merge writes
-    assert!(merged(&d).contains("<html lang=\"ar\" dir=\"rtl\">"));
+    let m = html_tag(&merged(&d));
+    assert!(m.contains("lang=\"ar\"") && m.contains("dir=\"rtl\""), "{m}");
     // a left-to-right target only restamps the language
     let mut e = extract_to(src, "de");
     e.set_target("u2", vec![Inline::text("Hafenlampe")]).unwrap();
