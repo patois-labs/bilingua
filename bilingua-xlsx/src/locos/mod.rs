@@ -183,6 +183,9 @@ struct Package {
     dirty: BTreeSet<String>,
     added: Vec<String>,
     cells: HashMap<String, BTreeMap<(i64, i64), usize>>,
+    /// Per worksheet, the cells openpyxl reads as a `MergedCell` (under a merged range, not its top-left one): never
+    /// a unit in cell mode; the writer still finds them in `cells`.
+    covered: HashMap<String, std::collections::BTreeSet<(i64, i64)>>,
     /// Deferred shared-string edits: (sheet part, c element, string index, text).
     shared: Vec<(String, usize, usize, String)>,
     shared_strings: Option<String>,
@@ -233,6 +236,7 @@ impl Package {
             dirty: BTreeSet::new(),
             added: Vec::new(),
             cells: HashMap::new(),
+            covered: HashMap::new(),
             shared: Vec::new(),
             shared_strings: None,
             sheets: Vec::new(),
@@ -361,15 +365,14 @@ impl Package {
         }
         // openpyxl's `_clean_merge_range`: every cell of a merged range but its top-left one becomes a `MergedCell`
         // with no value, so a value Excel left under a merge is no unit (W4 xlsx-2, `01-stress002`)
+        let mut covered = std::collections::BTreeSet::new();
         for mc in d.iter_tag(d.root, M, "mergeCell") {
             let Some((a, b)) = d.get(mc, "ref").and_then(|r| r.split_once(':')) else { continue };
             let (Ok((r1, c1)), Ok((r2, c2))) = (coord(a, path), coord(b, path)) else { continue };
             let (top, bottom, left, right) = (r1.min(r2), r1.max(r2), c1.min(c2), c1.max(c2));
-            let covered: Vec<(i64, i64)> = cells.range((top, i64::MIN)..=(bottom, i64::MAX)).map(|(k, _)| *k).filter(|&(r, c)| c >= left && c <= right && (r, c) != (top, left)).collect();
-            for k in covered {
-                cells.remove(&k);
-            }
+            covered.extend(cells.range((top, i64::MIN)..=(bottom, i64::MAX)).map(|(k, _)| *k).filter(|&(r, c)| c >= left && c <= right && (r, c) != (top, left)));
         }
+        self.covered.insert(path.to_string(), covered);
         self.cells.insert(path.to_string(), cells);
         Ok(())
     }
@@ -392,7 +395,11 @@ impl Package {
         for (n, path) in self.sheets.clone().iter().enumerate() {
             self.ensure_index(path)?;
             let d = &self.roots[path];
+            let covered = self.covered.get(path);
             for (&(row, col), &c) in &self.cells[path] {
+                if covered.is_some_and(|s| s.contains(&(row, col))) {
+                    continue;
+                }
                 if let Some(v) = cell_value(d, c, &sst, path)? {
                     // LocOS `_iter_cells`: a string that starts with `=` is a formula look-alike, never a unit,
                     // even a shared or inline string (`= Mandatory fields`)

@@ -49,7 +49,7 @@ struct LUnit {
     /// LocOS's image inventory anchored at this unit: how many body drawings, and the missing-alt findings
     /// (`kind`, `where`) among them, in file order.
     images: usize,
-    missing_alt: Vec<(&'static str, String)>,
+    missing_alt: Vec<Finding>,
 }
 
 /// python-docx `BabelFish.internal2ui`.
@@ -100,7 +100,7 @@ fn style_names(pkg: &Pkg) -> (HashMap<String, String>, Option<String>) {
 /// `docx_bilingual.translation_paragraphs`: the paragraphs of the Translation column of every Storyline
 /// "Export to Word" table and the notice's counts (tables, rows, rows with an empty Translation cell), or None when
 /// the document has none (or more prose outside its tables).
-fn bilingual_paragraphs(d: &Dom) -> Option<(HashSet<usize>, [usize; 3])> {
+fn bilingual_paragraphs(d: &Dom) -> Option<(HashSet<usize>, BilingualCounts)> {
     let cell_text = |tc: usize| py_strip(&t_text(d, tc)).to_string();
     let norm = |t: &str| -> String {
         let joined = t.split(py_isspace_char).filter(|s| !s.is_empty()).collect::<Vec<_>>().join(" ");
@@ -220,7 +220,13 @@ fn is_decorative(d: &Dom, dp: usize) -> bool {
 /// it belongs to (its paragraph's unit, else the nearest unit before it, else the first; `None` without body units),
 /// and the finding when it is not decorative and its `descr` is absent (`missing`) or blank (`empty`), with the
 /// drawing's name (first 120 characters).
-fn image_inventory(pkg: &Pkg, w: &Walk, body: &[usize]) -> Vec<(Option<usize>, Option<(&'static str, String)>)> {
+/// One missing-alt finding: its kind (`missing`, `empty`) and the drawing's name.
+type Finding = (&'static str, String);
+
+/// The Storyline notice's counts: tables, rows, rows with an empty Translation cell.
+type BilingualCounts = [usize; 3];
+
+fn image_inventory(pkg: &Pkg, w: &Walk, body: &[usize]) -> Vec<(Option<usize>, Option<Finding>)> {
     let main = pkg.main;
     let d = pkg.parts[main].dom.as_ref().unwrap();
     let Some(root) = find_w(d, d.root, "body") else { return Vec::new() };
@@ -278,7 +284,7 @@ fn set_alt(d: &mut Dom, dp: usize, attr: &str, new: &str) {
 }
 
 /// `DocxFilter.parse`: the LocOS units of a package.
-fn locos_units(pkg: &mut Pkg, comments: bool) -> Result<(Vec<LUnit>, Walk, Option<[usize; 3]>), Error> {
+fn locos_units(pkg: &mut Pkg, comments: bool) -> Result<(Vec<LUnit>, Walk, Option<BilingualCounts>), Error> {
     let w = walk::walk(pkg)?;
     let (names, default_name) = style_names(pkg);
     let mut units = Vec::new();
