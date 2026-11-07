@@ -336,18 +336,11 @@ fn check(golden: &Path) -> (usize, usize, usize, Vec<String>) {
 
 /// Goldens that still differ, with the reason; their failures are printed, not fatal. Remove a line when its
 /// file matches.
-const KNOWN: &[(&str, &str)] = &[
-    ("export_output_escaping_13.html", "LocOS issue 810.1: an orphan end tag is a point code here and is lost in LocOS"),
-    ("bom_crlf.md", "LocOS issue 813.1: the byte order mark is not part of the first heading here"),
-];
+const KNOWN: &[(&str, &str)] = &[];
 
 /// Builds of a golden that still differ, with the reason: only those builds' failures are printed, not fatal; the
 /// file's units and every other build must still match.
-const KNOWN_BUILDS: &[(&str, &[&str], &str)] = &[(
-    "hostile_tails.pptx",
-    &["prefix", "hostile", "hostile-ar-SA", "hostile-de-DE"],
-    "LocOS issue 814: token look-alikes and tokens naming no code stay text in their run here; LocOS gives them a run of their own or drops them",
-)];
+const KNOWN_BUILDS: &[(&str, &[&str], &str)] = &[];
 
 /// Formats whose goldens do not match yet: reported, not fatal. Remove a format when all its files match. Empty:
 /// every Track D format matches.

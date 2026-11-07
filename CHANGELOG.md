@@ -7,6 +7,25 @@ is listed here).
 
 ## [Unreleased]
 
+### Added
+
+- Python: `to_locos_text(format, inlines)`, `from_locos_text(text, map)`, `locos_units(document)` and
+  `locos_set_targets(document, targets)` give the LocOS profile's token text, token numbering and target rules to a
+  Python caller (the Localization OS adapter), so they exist once, in Rust. `extract` and `merge` take
+  `profile_version` (or `profile="locos@1"`); a version the release cannot produce is code `parser_version`. The
+  Document from `extract` carries a `parser` record (release, format crate, its version and skeleton schema,
+  profile and its version); `merge` ignores it.
+- Rust: `profile::resolve`, `profile::LOCOS_OLDEST_VERSION`, `Profile::oldest`, `Profile::reads`,
+  `profile::locos_units` and `profile::LocosUnit`.
+- bilingua-py: optional `generate-import-lib` feature (a Windows abi3 wheel built off Windows);
+  `tools/build-wheel-m5.sh` builds and tests a manylinux_2_28 wheel on a Linux host.
+
+### Changed
+
+- Tests: the LocOS goldens were made again from Localization OS with its fixes for trackers 805, 810, 811, 813 and
+  814; the cases kept as known differences (html orphan end tag, Markdown BOM, PPTX look-alike tokens, 15 DXF
+  drawings) now match and their lists are gone.
+
 ### Fixed
 
 - html: the preview declares the target language again once something is translated (`lang`, and `dir="rtl"` for a

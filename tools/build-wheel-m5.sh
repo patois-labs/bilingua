@@ -48,7 +48,8 @@ exec 9>~/bili/wheel-runs/$name.lock; flock 9
     "$py" -m venv "$venv" && "$venv/bin/pip" install -q "maturin==$MATURIN" "ziglang==$ZIGLANG" || exit 1
   fi
   dest=~/bili/wheels/$tip; rm -rf "$dest"; mkdir -p "$dest"
-  CARGO_TARGET_DIR=~/bili/targets/$name "$venv/bin/maturin" build --release --locked --compatibility manylinux_2_28 --zig \
+  # maturin finds zig through `python3 -m ziglang`: the build venv's python must come first
+  PATH="$venv/bin:$PATH" CARGO_TARGET_DIR=~/bili/targets/$name "$venv/bin/maturin" build --release --locked --compatibility manylinux_2_28 --zig \
     -i "$venv/bin/python" -m "$ws/bilingua-py/Cargo.toml" -o "$dest" || { echo "build=1"; exit 1; }
   echo "build=0"
   whl=$(ls "$dest"/bilingua-*.whl) || exit 1

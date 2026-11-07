@@ -19,11 +19,8 @@ OPEN, CLOSE = "⟦", "⟧"
 GOLDEN_ROOT = pathlib.Path(__file__).resolve().parents[2] / "bilingua" / "tests" / "locos"
 GOLDENS = sorted(GOLDEN_ROOT.glob("*/*.golden.json"))
 # Same lists as locos_golden.rs (KNOWN, KNOWN_BUILDS): files or builds that still differ from LocOS on purpose.
-KNOWN = {
-    "export_output_escaping_13.html": "LocOS issue 810.1: an orphan end tag is a point code here",
-    "bom_crlf.md": "LocOS issue 813.1: the byte order mark is not part of the first heading here",
-}
-KNOWN_BUILDS = {"hostile_tails.pptx": ("prefix", "hostile", "hostile-ar-SA", "hostile-de-DE")}
+KNOWN = {}
+KNOWN_BUILDS = {}
 
 
 def tag(id_, kind, display, free=False):

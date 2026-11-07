@@ -3,7 +3,7 @@
  "units": [
   {
    "p_index": 0,
-   "text": "﻿# Title",
+   "text": "Title",
    "style": ""
   },
   {
@@ -23,16 +23,16 @@
    "name": "prefix",
    "locale": null,
    "map": {
-    "0": "Ü ﻿# Title",
+    "0": "Ü Title",
     "1": "Ü Text *with* **marks** and `code`."
    },
-   "out_b64": "w5wg77u/IyBUaXRsZQ0KDQrDnCBUZXh0ICp3aXRoKiAqKm1hcmtzKiogYW5kIGBjb2RlYC4NCg=="
+   "out_b64": "77u/IyDDnCBUaXRsZQ0KDQrDnCBUZXh0ICp3aXRoKiAqKm1hcmtzKiogYW5kIGBjb2RlYC4NCg=="
   },
   {
    "name": "escape-de-DE",
    "locale": "de-DE",
    "map": {
-    "0": "﻿# Title & <\"'>"
+    "0": "Title & <\"'>"
    },
    "out_b64": "77u/IyBUaXRsZSAmIDwiJz4NCg0KVGV4dCAqd2l0aCogKiptYXJrcyoqIGFuZCBgY29kZWAuDQo="
   },
