@@ -60,6 +60,15 @@ pub fn mqxlz() -> Box<dyn Filter> {
     Box::new(XliffPackage { id: "mqxlz", exts: &["mqxlz"] })
 }
 
+/// Warning kind, LocOS profile only: one per XLIFF member in package order, `part` its path and `message` its number
+/// of segment slots (protected ones included), so the adapter can write LocOS's member listing
+/// (`skeleton["package"]["xliff_files"]`: the offset of a member is the sum of the slots before it). Not shown to
+/// anyone: LocOS reports no warning for a package.
+pub const MEMBER_SLOTS: &str = "locos_member_slots";
+
+/// LocOS lists at most this many members (`xliff_package.MAX_LISTED`).
+const MAX_LISTED_MEMBERS: usize = 200;
+
 /// `<path>|`, the start of the ids of one member's segments.
 fn id_prefix(path: &str) -> String {
     format!("{}|", path.replace('%', "%25").replace('|', "%7C"))
@@ -116,6 +125,7 @@ impl XliffPackage {
         guard::check_input(bytes, &l)?;
         let opened = open_package(bytes, &l)?;
         let mut units: Vec<Unit> = Vec::new();
+        let mut warnings: Vec<Warning> = Vec::new();
         let mut offset = 0i64;
         for &i in &opened.members {
             let e = &opened.entries[i];
@@ -127,11 +137,16 @@ impl XliffPackage {
                 units.push(bilingua_xliff::locos::document_unit(u, self.id, Some((&e.name, p))));
             }
             guard::check_unit_count(units.len(), &l)?;
+            // LocOS lists each member with its offset (`skeleton["package"]`): the offset is the slot count of the
+            // members before it, protected slots included, which the units alone cannot give
+            if warnings.len() < MAX_LISTED_MEMBERS {
+                warnings.push(Warning::new(MEMBER_SLOTS, e.name.clone(), format!("{slots}")));
+            }
             offset += slots as i64;
         }
         let skeleton = Skeleton::binary(bytes.to_vec(), parser_info!());
         let doc = Document::new(self.id.to_string(), units, skeleton).with_target_lang(opts.target_lang.clone()).with_granularity(Granularity::Paragraph);
-        guard::finish(doc, vec![], &l)
+        guard::finish(doc, warnings, &l)
     }
 
     /// `xliff_package.build_package`: each member with something to write (or a target language to stamp) through
@@ -308,10 +323,8 @@ impl Filter for XliffPackage {
     }
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
         bilingua_model::check_own_options(self, &opts.format_options)?;
-        if opts.is_profile(profile::LOCOS) {
-            return self.extract_locos(bytes, opts);
-        }
-        self.extract_doc(bytes, opts)
+        let r = if opts.is_profile(profile::LOCOS) { self.extract_locos(bytes, opts) } else { self.extract_doc(bytes, opts) };
+        r.map_err(|e| self.named(e))
     }
     /// `stamp_target_always`: with a `target_lang`, every XLIFF member's `<file>` without a language is stamped even
     /// when nothing was translated (LocOS `build_localized`). `output_encoding: utf-8`: a rewritten UTF-16 member is
@@ -319,6 +332,16 @@ impl Filter for XliffPackage {
     /// raw-copied in their own encoding (the package itself is a zip, not text).
     fn merge_with(&self, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
         bilingua_model::check_own_options(self, &opts.format_options)?;
-        self.merge_doc(doc, opts)
+        self.merge_doc(doc, opts).map_err(|e| self.named(e))
+    }
+}
+
+impl XliffPackage {
+    /// A parse refusal names this filter (`mqxlz`), not the `xlz` the shared reader writes.
+    fn named(&self, e: Error) -> Error {
+        match e {
+            Error::Parse { format, msg } if format == "xlz" => Error::Parse { format: self.id.to_string(), msg },
+            e => e,
+        }
     }
 }

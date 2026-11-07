@@ -93,3 +93,29 @@ fn token_look_alikes_in_a_member_stay_text() {
     let out = f.merge_with(&d, &profile::locos().merge_options("xlz")).unwrap();
     assert!(text(&member_of(&out, "a.xlf")).contains("<target><g id=\"1\">B</g> \u{27e6}g1\u{27e7}x\u{27e6}/g1\u{27e7}</target>"), "{}", text(&member_of(&out, "a.xlf")));
 }
+
+/// B-SIDE 14: under the profile each XLIFF member's slot count (protected slots included) comes as a
+/// `locos_member_slots` warning in package order, so LocOS's listing (`{path, offset, units}`) can be written.
+#[test]
+fn members_are_listed_with_their_slots() {
+    let a = member(&["><source>One</source>", " approved=\"yes\"><source>Two</source>", "><source>Three</source>"]);
+    let b = member(&["><source>Four</source>"]);
+    let pkg = zip_of(&[("a.xlf", &a, true), ("skeleton.skl", b"opaque", true), ("b.xlf", &b, true)], b"");
+    let d = filter().extract(&pkg, &profile::locos().extract_options()).unwrap();
+    let listed: Vec<(String, String)> =
+        d.warnings.iter().filter(|w| w.kind == bilingua_xliffpkg::MEMBER_SLOTS).map(|w| (w.part.clone(), w.message.clone())).collect();
+    assert_eq!(listed, [("a.xlf".to_string(), "3".to_string()), ("b.xlf".to_string(), "1".to_string())]);
+    // Bilingua's own reading lists nothing
+    let native = filter().extract(&pkg, &bilingua_model::ExtractOptions::new()).unwrap();
+    assert!(native.warnings.iter().all(|w| w.kind != bilingua_xliffpkg::MEMBER_SLOTS));
+}
+
+/// B-SIDE 15: a memoQ package's refusal names `mqxlz`, not `xlz`.
+#[test]
+fn an_mqxlz_refusal_names_mqxlz() {
+    let f = bilingua_xliffpkg::mqxlz();
+    match f.extract(b"not a zip", &profile::locos().extract_options()) {
+        Err(bilingua_model::Error::Parse { format, .. }) => assert_eq!(format, "mqxlz"),
+        other => panic!("{other:?}"),
+    }
+}
