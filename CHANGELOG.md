@@ -9,11 +9,12 @@ is listed here).
 
 ### Fixed
 
-- pdf: the U+FFFE that PDFium puts at a hyphenated line end is no longer in unit text. With a line break after it,
-  the marker and the break are dropped and the word is joined (`extraordinarily`); anywhere else it becomes `-`.
-  C0 control characters (raw glyph codes of fonts with no Unicode map) are removed from units, except tab and line
-  breaks, and a page counts only printable characters (not C0, U+FFFD or U+FFFE) toward the OCR threshold, so a
-  page of garbage codes now goes to OCR. `page_texts` still returns PDFium's text unchanged (#808).
+- pdf: U+FFFE is no longer in unit text. PDFium writes it for a hyphen that breaks a word at a line end (the next
+  line follows right after it, so dropping it joins the word: `extraordinarily`) and for a glyph its font maps to
+  U+0000 (dropped, no hyphen is invented). A hyphen PDFium does not mark stays `-`. C0 control characters (raw glyph
+  codes of fonts with no Unicode map) are removed from units, except tab and line breaks, and a page counts only
+  printable characters (not C0, U+FFFD or U+FFFE) toward the OCR threshold, so a page of garbage codes now goes to
+  OCR. `page_texts` still returns PDFium's text unchanged (#808).
 - xcstrings: `stringSet` localizations (App Shortcuts phrases) are read as one unit per string and written back as a
   `stringSet` for the target language, one string per source string in order; a set with a phrase that has no
   new translation is marked `needs_review`. Such catalogs used to open with no units.

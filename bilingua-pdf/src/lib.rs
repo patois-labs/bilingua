@@ -217,39 +217,22 @@ fn open_error(e: doc::OpenError, budget: u64) -> Error {
     }
 }
 
-/// Clean PDFium's page text for units (#808). PDFium marks a hyphen at a line end with U+FFFE: that marker and the
-/// line break after it are dropped, so the word is joined (`extraor` + `dinarily`); any other U+FFFE becomes `-`.
-/// C0 control characters (the raw char codes of a font with no mapping to Unicode) are removed, except tab and the
-/// line breaks `\n` and `\r`.
+/// Clean PDFium's page text for units (#808). PDFium writes U+FFFE in two places, and both are dropped:
+/// - a hyphen at a line end that breaks a word (`textpage.rs`, `Gen::Hyphen`): PDFium puts no line break after it,
+///   the next line's text follows at once, so dropping the marker joins the word (`extraor` + `dinarily`);
+/// - a glyph whose font maps it to U+0000 (`textpage.rs`, `object_items`): it has no text, so it is removed.
+///
+/// A hyphen PDFium does not mark (inside a line, or at a line end before a non-letter) is an ordinary `-` and stays.
+/// The line break after an unmapped glyph stays too. C0 control characters (the raw char codes of a font with no
+/// mapping to Unicode) are removed, except tab and the line breaks `\n` and `\r`.
 fn clean_text(text: &str) -> String {
-    let mut out = String::with_capacity(text.len());
-    let mut it = text.chars().peekable();
-    while let Some(c) = it.next() {
-        match c {
-            '\u{fffe}' => match it.peek() {
-                Some('\r') => {
-                    it.next();
-                    if it.peek() == Some(&'\n') {
-                        it.next();
-                    }
-                }
-                Some('\n') => {
-                    it.next();
-                }
-                _ => out.push('-'),
-            },
-            '\t' | '\n' | '\r' => out.push(c),
-            c if (c as u32) < 0x20 => {}
-            c => out.push(c),
-        }
-    }
-    out
+    text.chars().filter(|&c| c != '\u{fffe}' && (c >= ' ' || matches!(c, '\t' | '\n' | '\r'))).collect()
 }
 
-/// The characters of a page that count toward the OCR threshold: the cleaned text, stripped, without U+FFFD and U+FFFE.
+/// The characters of a page that count toward the OCR threshold: the cleaned text, stripped, without U+FFFD.
 /// A page of garbage glyph codes counts as empty, so it goes to OCR.
 fn printable_count(text: &str) -> usize {
-    let kept: String = text.chars().filter(|&c| c != '\u{fffd}' && c != '\u{fffe}').collect();
+    let kept: String = text.chars().filter(|&c| c != '\u{fffd}').collect();
     py_strip(&clean_text(&kept)).chars().count()
 }
 
@@ -403,17 +386,22 @@ mod tests {
         assert_eq!(paragraphs("Hello world.\r\nSecond line."), vec!["Hello world. Second line."]);
         assert_eq!(paragraphs("  a\n\n b \n c\n \n\nd  "), vec!["a", "b c", "d"]);
         assert_eq!(paragraphs("a\u{3000}\n\u{a0}\nb"), vec!["a", "b"]);
-        assert_eq!(paragraphs("extraor\u{fffe}dinarily"), vec!["extraor-dinarily"]);
+        assert_eq!(paragraphs("extraor\u{fffe}dinarily"), vec!["extraordinarily"]);
         assert!(paragraphs(" \r\n ").is_empty());
         assert_eq!(py_splitlines("a\r\nb\rc\x0bd\u{2028}e"), vec!["a", "b", "c", "d", "e"]);
     }
 
     #[test]
-    fn hyphen_marker_is_joined() {
-        assert_eq!(paragraphs("require extraor\u{fffe}\r\ndinarily long text"), vec!["require extraordinarily long text"]);
-        assert_eq!(paragraphs("a extraor\u{fffe}\ndinarily"), vec!["a extraordinarily"]);
-        assert_eq!(paragraphs("end\u{fffe}"), vec!["end-"]);
-        assert!(paragraphs("a\u{fffe}\r\nb\u{fffe}c").iter().all(|p| !p.contains('\u{fffe}')));
+    fn hyphen_marker_is_joined_and_unmapped_glyphs_are_dropped() {
+        // PDFium's line-end hyphen marker has the next line's text right after it: the word is joined.
+        assert_eq!(paragraphs("require extraor\u{fffe}dinarily long text"), vec!["require extraordinarily long text"]);
+        // An unmapped glyph mid-word is dropped: no hyphen is invented.
+        assert_eq!(paragraphs("o\u{fffe}ce work"), vec!["oce work"]);
+        // An unmapped glyph at a line end keeps the line break, so the words of the two lines stay apart.
+        assert_eq!(paragraphs("first\u{fffe}\r\nsecond"), vec!["first second"]);
+        // A visible hyphen stays.
+        assert_eq!(paragraphs("well-known\r\npage 12-\r\n14"), vec!["well-known page 12- 14"]);
+        assert!(paragraphs("a\u{fffe}\r\nb\u{fffe}c").iter().all(|p| !p.contains('\u{fffe}') && !p.contains('-')));
     }
 
     #[test]

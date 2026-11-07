@@ -423,11 +423,13 @@ keeps the encoding:
 
 ## Differences from LocOS: PDF text cleaning (#808)
 
-Unit text from `bilingua-pdf` is cleaned after PDFium's page text: U+FFFE followed by a line break is dropped with the
-break (the hyphenated word is joined), other U+FFFE becomes `-`, and C0 controls other than tab and line breaks are
-removed. The OCR threshold counts only printable characters. LocOS gets the same change next (needs a new
-extraction version there); until then units differ from LocOS on those pages. There is no separate `locos` profile
-for PDF: both modes behave the same. `page_texts` text is still byte for byte PDFium's.
+Unit text from `bilingua-pdf` is cleaned after PDFium's page text: every U+FFFE is dropped (the line-end hyphen
+marker, so the hyphenated word is joined, and the marker for a glyph mapped to U+0000), and C0 controls other than
+tab and line breaks are removed. The OCR threshold counts only printable characters. LocOS gets the same change next
+(needs a new extraction version there); until then units differ from LocOS on those pages. A compound hyphen that
+PDFium takes for a line-end break (`well-` at a line end, `known` on the next) is joined too (`wellknown`), as
+PDFium's own heuristic decides. There is no separate `locos` profile for PDF: both modes behave the same.
+`page_texts` text is still byte for byte PDFium's.
 
 ## Differences from LocOS: empty HTML Help files (wild files, 11-07)
 

@@ -32,7 +32,8 @@ fn run_with(name: &str, b: &[u8], o: &ExtractOptions) -> Result<Document, Error>
             return r;
         }
         slow.push(took);
-        assert!(slow.len() < 3, "{name} took {slow:?}, over {BOUND:?} in every run");
+        assert!(slow.len() < 3, "{name}: over {BOUND:?} in each of {} runs (retried {} times, one after the other): {slow:?}", slow.len(), slow.len() - 1);
+        eprintln!("{name}: run {} took {took:?}, over {BOUND:?}; retrying", slow.len());
     }
 }
 
