@@ -62,8 +62,8 @@ pub fn prep(atoms: &[Atom], cct: Cct) -> Vec<Atom> {
 }
 
 /// The distinct characters of a text (after `prep`) the table cannot encode, in order of appearance.
-/// `pairs`: a base letter and its floating diacritic with no single code are written as a byte pair (LocOS refuses them).
-pub fn unsupported_with(atoms: &[Atom], cct: Cct, pairs: bool) -> Vec<char> {
+/// A base letter and its floating diacritic with no single code are written as a byte pair (LocOS does too, issue 798).
+pub fn unsupported_with(atoms: &[Atom], cct: Cct) -> Vec<char> {
     // a set beside the ordered list: a translation can hold 100 000 distinct characters (gate: was quadratic)
     let mut seen: Vec<char> = Vec::new();
     let mut set: BTreeSet<char> = BTreeSet::new();
@@ -71,7 +71,7 @@ pub fn unsupported_with(atoms: &[Atom], cct: Cct, pairs: bool) -> Vec<char> {
     for (i, a) in prepped.iter().enumerate() {
         if let Atom::C(c) = *a {
             // a base letter with no single code and its mark are written as a pair
-            if pairs && i > 0 && matches!(prepped[i - 1], Atom::C(b) if codec::encode_pair(b, c, cct).is_some()) {
+            if i > 0 && matches!(prepped[i - 1], Atom::C(b) if codec::encode_pair(b, c, cct).is_some()) {
                 continue;
             }
             if c != '\n' && !set.contains(&c) && codec::encode_char(c, cct).is_none() {
@@ -88,18 +88,26 @@ fn spacing(b: u8) -> bool {
 }
 
 fn width<'a>(it: impl Iterator<Item = &'a Atom>) -> usize {
-    let (mut n, mut prev_space) = (0, false);
+    // a base character and one floating mark after it are one cell (the pair is two bytes, the mark takes no cell)
+    let (mut n, mut prev_space, mut base_open) = (0, false, false);
     for a in it {
         match a {
             Atom::C(c) => {
+                let mark = codec::is_mark(*c);
+                if mark && base_open {
+                    base_open = false;
+                    continue;
+                }
                 n += 1;
                 prev_space = *c == ' ';
+                base_open = !mark;
             }
             Atom::T(b) => {
                 if spacing(*b) && !prev_space {
                     n += 1;
                 }
                 prev_space = false;
+                base_open = false;
             }
             Atom::U => {}
         }
@@ -179,7 +187,7 @@ pub fn layout(text: &[Atom], n_rows: usize, max_rows: usize, mnc: usize) -> Opti
     wrap(&words, &widths, &spaced, mnc, max_rows)
 }
 
-fn encode_atoms(atoms: &[Atom], cct: Cct, pairs: bool) -> Option<Vec<u8>> {
+fn encode_atoms(atoms: &[Atom], cct: Cct) -> Option<Vec<u8>> {
     let kept: Vec<&Atom> = atoms.iter().filter(|a| **a != Atom::U).collect();
     let mut out: Vec<u8> = Vec::with_capacity(kept.len());
     let mut skip_mark = false;
@@ -195,7 +203,7 @@ fn encode_atoms(atoms: &[Atom], cct: Cct, pairs: bool) -> Option<Vec<u8>> {
                 out.push(*b);
             }
             Atom::C(c) => {
-                if let (true, Some(Atom::C(m)), Some(_)) = (pairs, kept.get(i + 1), codec::encode_char(*c, cct)) {
+                if let (Some(Atom::C(m)), Some(_)) = (kept.get(i + 1), codec::encode_char(*c, cct)) {
                     if let Some(pair) = codec::encode_pair(*c, *m, cct) {
                         out.extend_from_slice(&pair);
                         skip_mark = true;
@@ -212,9 +220,9 @@ fn encode_atoms(atoms: &[Atom], cct: Cct, pairs: bool) -> Option<Vec<u8>> {
 }
 
 /// (TF bytes, row delta) or the reason it cannot be written.
-fn encode_subtitle(sub: &Sub, text: &[Atom], cct: Cct, mnc: usize, keep_rows: bool, pairs: bool) -> Result<(Vec<u8>, i64), String> {
+fn encode_subtitle(sub: &Sub, text: &[Atom], cct: Cct, mnc: usize, keep_rows: bool) -> Result<(Vec<u8>, i64), String> {
     let text = prep(text, cct);
-    let bad = unsupported_with(&text, cct, pairs);
+    let bad = unsupported_with(&text, cct);
     if !bad.is_empty() {
         let list: Vec<String> = bad.iter().take(8).map(|c| py_repr(*c)).collect();
         return Err(format!("characters the code table cannot encode: {}", list.join(" ")));
@@ -244,7 +252,7 @@ fn encode_subtitle(sub: &Sub, text: &[Atom], cct: Cct, mnc: usize, keep_rows: bo
             }
         }
         out.extend_from_slice(&tpl.prefix);
-        out.extend(encode_atoms(row_text, cct, pairs).ok_or("a character the code table cannot encode")?);
+        out.extend(encode_atoms(row_text, cct).ok_or("a character the code table cannot encode")?);
         out.extend_from_slice(&tpl.suffix);
     }
     out.extend_from_slice(&sub.tail);
@@ -319,12 +327,11 @@ pub struct UnitInfo {
 }
 
 /// Rebuild the file. `changed` maps unit index to the new text atoms; `lc` is the language byte to stamp.
-/// `pairs` is false under the locos profile (LocOS's behaviour); true adds the byte pairs of `unsupported_with` and
-/// lets a row be as wide as the widest source row of its subtitle when that is over the MNC.
-pub fn rebuild(raw: &[u8], parsed: &read::Parsed, units: &[UnitInfo], changed: &BTreeMap<usize, Vec<Atom>>, lc: Option<u8>, pairs: bool) -> Result<Vec<u8>, Error> {
+/// `native` is false under the locos profile (LocOS's behaviour); true lets a row be as wide as the widest source row of its subtitle when that is over the MNC.
+pub fn rebuild(raw: &[u8], parsed: &read::Parsed, units: &[UnitInfo], changed: &BTreeMap<usize, Vec<Atom>>, lc: Option<u8>, native: bool) -> Result<Vec<u8>, Error> {
     let cct = parsed.cct;
     let mnc = read::mnc(raw);
-    let fits = |cand: Cct| changed.values().all(|t| unsupported_with(t, cand, pairs).is_empty());
+    let fits = |cand: Cct| changed.values().all(|t| unsupported_with(t, cand).is_empty());
     // subtitles that are not units (comments, text-less) move with the file: they are re-encoded on a table switch
     let in_unit: BTreeSet<usize> = units.iter().map(|u| u.group).collect();
     let others: Vec<Other> = if fits(cct) {
@@ -352,12 +359,12 @@ pub fn rebuild(raw: &[u8], parsed: &read::Parsed, units: &[UnitInfo], changed: &
     } else {
         // the rest of the file (units kept as they are, comments, text-less subtitles) has characters in table c
         // the units kept as they are have characters in table c (LocOS's test for a usable table)
-        let units_cover = |c: Cct| units.iter().enumerate().all(|(k, u)| changed.contains_key(&k) || unsupported_with(&u.atoms, c, pairs).is_empty());
+        let units_cover = |c: Cct| units.iter().enumerate().all(|(k, u)| changed.contains_key(&k) || unsupported_with(&u.atoms, c).is_empty());
         // the comments and text-less subtitles that have characters table c lacks (they move with the file, issue 798)
         let others_lacking = |c: Cct| -> Vec<String> {
             others
                 .iter()
-                .filter(|o| !unsupported_with(&o.atoms, c, pairs).is_empty())
+                .filter(|o| !unsupported_with(&o.atoms, c).is_empty())
                 .map(|o| format!("comment subtitle at block {}", parsed.groups[o.group].blocks[0] + 1))
                 .collect()
         };
@@ -412,10 +419,10 @@ pub fn rebuild(raw: &[u8], parsed: &read::Parsed, units: &[UnitInfo], changed: &
                 }
                 // no table holds the translation: name its characters as LocOS does, for the table LocOS would pick
                 let usable: Vec<Cct> = std::iter::once(cct).chain(Cct::ALL.iter().copied().filter(|c| *c != cct && units_cover(*c))).collect();
-                let cost = |c: Cct| changed.values().map(|t| unsupported_with(t, c, pairs).len()).sum::<usize>();
+                let cost = |c: Cct| changed.values().map(|t| unsupported_with(t, c).len()).sum::<usize>();
                 let best = usable.iter().copied().min_by_key(|c| cost(*c)).unwrap_or(cct);
                 for (k, t) in changed {
-                    let bad = unsupported_with(t, best, pairs);
+                    let bad = unsupported_with(t, best);
                     if !bad.is_empty() {
                         reported.insert(*k);
                         let list: Vec<String> = bad.iter().take(8).map(|c| py_repr(*c)).collect();
@@ -436,10 +443,10 @@ pub fn rebuild(raw: &[u8], parsed: &read::Parsed, units: &[UnitInfo], changed: &
             // outside the locos profile a row may be as wide as the widest row of the source subtitle: a file
             // whose rows are wider than its own MNC (a header written by hand) still takes a translation as long
             // as its source
-            let row_mnc = if pairs { mnc.max(widest_row(&u.atoms)) } else { mnc };
-            encode_subtitle(&u.sub, t, chosen, row_mnc, false, pairs)
+            let row_mnc = if native { mnc.max(widest_row(&u.atoms)) } else { mnc };
+            encode_subtitle(&u.sub, t, chosen, row_mnc, false)
         } else if chosen != cct {
-            encode_subtitle(&u.sub, &u.atoms, chosen, mnc, true, pairs)
+            encode_subtitle(&u.sub, &u.atoms, chosen, mnc, true)
         } else {
             continue;
         };
@@ -462,7 +469,7 @@ pub fn rebuild(raw: &[u8], parsed: &read::Parsed, units: &[UnitInfo], changed: &
             if o.sub.rows.is_empty() {
                 continue;
             }
-            match encode_subtitle(&o.sub, &o.atoms, chosen, mnc, true, pairs) {
+            match encode_subtitle(&o.sub, &o.atoms, chosen, mnc, true) {
                 Ok((tf, dvp)) => {
                     new_tf.insert(first, (o.group, tf, dvp));
                 }

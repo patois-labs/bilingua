@@ -96,6 +96,11 @@ pub fn diacritic(b: u8) -> Option<char> {
     DIACRITICS.iter().find(|(x, _)| *x == b).map(|(_, c)| *c)
 }
 
+/// Whether a character is a floating diacritic (a combining mark of table 00).
+pub fn is_mark(c: char) -> bool {
+    diacritic_byte(c).is_some()
+}
+
 fn diacritic_byte(c: char) -> Option<u8> {
     DIACRITICS.iter().find(|(_, x)| *x == c).map(|(b, _)| *b)
 }
