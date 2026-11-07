@@ -29,6 +29,17 @@ pub struct Renderer<'a> {
     warned: HashSet<usize>,
 }
 
+/// How the runs of a changed unit are written.
+#[derive(Clone, Copy)]
+enum Runs<'k> {
+    /// Word runs (`w:r`)
+    Word,
+    /// DrawingML runs (`a:r`)
+    Dml,
+    /// A DrawingML unit written into its Word fallback copy number `k` (`w:r` with the fallback's `w:rPr`)
+    Mirror(&'k str),
+}
+
 struct Scope {
     base: String,
     fmts: Vec<String>,
@@ -85,7 +96,14 @@ impl<'a> Renderer<'a> {
         if u.codes.contains_key(C_SIMPLE) {
             return Ok(escape_text(&plain_text(&out)));
         }
-        self.rebuild(u, &out, depth)
+        if u.codes.contains_key(C_DML) {
+            let runs = match orig_key.strip_prefix("_m") {
+                Some(k) => Runs::Mirror(k),
+                None => Runs::Dml,
+            };
+            return self.rebuild(u, &out, depth, runs);
+        }
+        self.rebuild(u, &out, depth, Runs::Word)
     }
 
     fn code_str(u: &Unit, key: &str) -> String {
@@ -95,11 +113,15 @@ impl<'a> Renderer<'a> {
             .unwrap_or_default()
     }
 
-    fn rebuild(&mut self, u: &Unit, out: &[Inline], depth: usize) -> Result<String, Error> {
+    fn rebuild(&mut self, u: &Unit, out: &[Inline], depth: usize, runs: Runs) -> Result<String, Error> {
         let mut s = String::new();
         s.push_str(&self.resolve(&Self::code_str(u, C_LEAD), depth)?);
+        let base = match runs {
+            Runs::Mirror(k) => Self::code_str(u, &format!("_fb{k}")),
+            _ => Self::code_str(u, C_BASE),
+        };
         let mut scopes = vec![Scope {
-            base: Self::code_str(u, C_BASE),
+            base,
             fmts: vec![],
             close: String::new(),
         }];
@@ -108,7 +130,10 @@ impl<'a> Renderer<'a> {
                 Inline::Text(t) => {
                     let top = scopes.last().expect("scope stack is never empty");
                     let rpr = top.fmts.last().unwrap_or(&top.base).clone();
-                    self.push_text(&mut s, t, &rpr);
+                    match runs {
+                        Runs::Dml => self.push_dml(&mut s, t, &rpr),
+                        _ => self.push_text(&mut s, t, &rpr),
+                    }
                 }
                 Inline::Tag { id, kind, .. } => {
                     let Some(code) = u.codes.get(id) else {
@@ -125,11 +150,17 @@ impl<'a> Renderer<'a> {
                             });
                         }
                         TagKind::Open => {
-                            scopes
-                                .last_mut()
-                                .expect("scope stack is never empty")
-                                .fmts
-                                .push(code.open.clone().unwrap_or_default());
+                            let top = scopes.last_mut().expect("scope stack is never empty");
+                            let fmt = match runs {
+                                // the fallback copy uses its own w:rPr for this tag, or its base
+                                Runs::Mirror(k) => u
+                                    .codes
+                                    .get(&format!("_fb{k}.{id}"))
+                                    .and_then(|c| c.standalone.clone())
+                                    .unwrap_or_else(|| top.base.clone()),
+                                _ => code.open.clone().unwrap_or_default(),
+                            };
+                            top.fmts.push(fmt);
                         }
                         TagKind::Close if wrapper => {
                             if scopes.len() > 1 {
@@ -159,6 +190,27 @@ impl<'a> Renderer<'a> {
         }
         s.push_str(&self.resolve(&Self::code_str(u, C_TAIL), depth)?);
         Ok(s)
+    }
+
+    /// DrawingML runs: `a:t` keeps its spaces and tabs as they are; a line break is an `a:br`.
+    fn push_dml(&self, s: &mut String, t: &str, rpr: &str) {
+        let rpr = match &self.target_lang {
+            Some(l) => set_dml_lang(rpr, l),
+            None => rpr.to_string(),
+        };
+        for (i, line) in t.split('\n').enumerate() {
+            if i > 0 {
+                if rpr.is_empty() {
+                    s.push_str("<a:br/>");
+                } else {
+                    s.push_str(&format!("<a:br>{rpr}</a:br>"));
+                }
+            }
+            let line = line.replace('\r', "");
+            if !line.is_empty() {
+                s.push_str(&format!("<a:r>{rpr}<a:t>{}</a:t></a:r>", escape_text(&line)));
+            }
+        }
     }
 
     fn push_text(&self, s: &mut String, t: &str, rpr: &str) {
@@ -269,6 +321,14 @@ pub fn set_lang(rpr: &str, w: &str, lang: &str) -> String {
         new_tag = replace_attr(&new_tag, &format!("{w}bidi"), lang);
     }
     format!("{}{}{}", &rpr[..p], new_tag, &rpr[p + len + 1..])
+}
+
+/// Sets the `lang` attribute of a DrawingML `a:rPr` to the target language, when it has one.
+pub fn set_dml_lang(rpr: &str, lang: &str) -> String {
+    let Some(end) = rpr.find('>') else {
+        return rpr.to_string();
+    };
+    format!("{}{}", replace_attr(&rpr[..=end], "lang", lang), &rpr[end + 1..])
 }
 
 fn replace_attr(tag: &str, name: &str, value: &str) -> String {

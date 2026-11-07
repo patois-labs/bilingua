@@ -50,6 +50,12 @@ is listed here).
   4096 characters is read by the default path with a `text_encoding` warning that names the later charset.
 - HTML and server pages: a semicolon-less legacy reference the source wrote in text (`&nbsp&nbsp text`, `&copy`) is
   written back as it is in a translation, not as `&amp;nbsp` (which a browser shows as the letters). LocOS escapes it.
+- docx (native mode): the text of a DrawingML shape that is not a Word text box (`a:p` in a lockedCanvas or a group
+  shape) is a unit (`d1`, ...). Such a file opened with no units. Run formatting is kept as paired tags, and the VML
+  `mc:Fallback` copy is written from the same translation when it has the same text. Paragraphs with line breaks or
+  fields stay untouched.
+- srt (native mode): word-timing marks such as `<00:00:04.480>` (YouTube-style captions) are standalone codes, not text.
+
 - markdown (LocOS profile and native): a plain front matter value that goes on over the next indented line
   (`subtitle: A plain value that` and `  continues here`) is left alone. It was offered cut at the first line, and a
   translation would have replaced only that line. LocOS reads the whole block and skips such a key.

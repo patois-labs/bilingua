@@ -22,6 +22,8 @@ pub const C_LEAD: &str = "_lead";
 pub const C_TAIL: &str = "_tail";
 pub const C_SIMPLE: &str = "_simple";
 pub const C_TRACKED: &str = "_tracked";
+/// Marks a DrawingML text paragraph (`a:p` in a lockedCanvas or a group shape): its runs are written as `a:r`.
+pub const C_DML: &str = "_dml";
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum PartKind {
@@ -123,6 +125,8 @@ impl Styles {
 struct Pending {
     part: usize,
     ord: usize,
+    /// 0 for a Word paragraph; 1, 2, ... for DrawingML paragraphs found inside the paragraph numbered `ord`.
+    sub: usize,
     unit: Unit,
 }
 
@@ -142,6 +146,13 @@ pub struct Extractor {
     field: FieldState,
     last_heading: Option<String>,
     core_ord: usize,
+    dml_memo: HashMap<usize, String>,
+    /// DrawingML paragraph (by address) -> its unit id, for the AlternateContent fallback copy.
+    dml_ids: HashMap<usize, String>,
+    /// DrawingML unit id -> (text, formatting tag id or None for the base) per run, to pair with fallback runs.
+    dml_runs: HashMap<String, Vec<(String, Option<String>)>>,
+    dml_n: usize,
+    cur_ord: usize,
 }
 
 fn is_wrapper_local(l: &str) -> Option<(&'static str, &'static str)> {
@@ -172,6 +183,11 @@ impl Extractor {
             field: FieldState::default(),
             last_heading: None,
             core_ord: 0,
+            dml_memo: HashMap::new(),
+            dml_ids: HashMap::new(),
+            dml_runs: HashMap::new(),
+            dml_n: 0,
+            cur_ord: 0,
         }
     }
 
@@ -183,6 +199,11 @@ impl Extractor {
         self.ns = Rc::new(ns);
         self.memo.clear();
         self.alt_memo.clear();
+        self.dml_memo.clear();
+        self.dml_ids.clear();
+        self.dml_runs.clear();
+        self.dml_n = 0;
+        self.cur_ord = 0;
         self.field = FieldState::default();
         self.last_heading = None;
         self.nesting = 0;
@@ -198,7 +219,7 @@ impl Extractor {
 
     /// Units in document order (part order, then paragraph order).
     pub fn finish(mut self) -> Vec<Unit> {
-        self.pending.sort_by_key(|p| (p.part, p.ord));
+        self.pending.sort_by_key(|p| (p.part, p.ord, p.sub));
         self.pending.into_iter().map(|p| p.unit).collect()
     }
 
@@ -227,6 +248,11 @@ impl Extractor {
         if self.part_kind == PartKind::Core && (e.name == "dc:title" || e.name == "dc:subject") {
             return self.core_simple(e);
         }
+        if e.name == "a:p" && self.part_kind != PartKind::Core {
+            if let Some(s) = self.dml_paragraph(e) {
+                return s;
+            }
+        }
         self.emit_default(e, fl)
     }
 
@@ -246,6 +272,143 @@ impl Extractor {
         }
         s.push_str(&e.end);
         s
+    }
+
+    /// A DrawingML paragraph (`a:p`) inside a drawing that is not a Word text box (a lockedCanvas or a group shape
+    /// with `a:txBody`). Only the plain shape is taken: optional `a:pPr`, then runs that each hold an optional
+    /// `a:rPr` and one `a:t`, then an optional `a:endParaRPr`. Anything else (`a:br`, `a:fld`, ...) leaves the
+    /// paragraph as it is. The unit is the text of all runs; run formatting other than the most common one is a
+    /// paired tag holding that run's `a:rPr`, as for Word runs. Returns the template for the paragraph, or None to walk it as plain XML.
+    fn dml_paragraph(&mut self, e: &El) -> Option<String> {
+        let key = e as *const El as usize;
+        if let Some(s) = self.dml_memo.get(&key) {
+            return Some(s.clone());
+        }
+        if e.end.is_empty() {
+            return None;
+        }
+        let blank = |n: &Node| matches!(n, Node::Text(t) if t.trim().is_empty());
+        // (a:rPr element, formatting key, text) per run
+        let mut runs: Vec<(Option<&El>, String, String)> = Vec::new();
+        let mut start = 0;
+        let mut stop = e.children.len();
+        let mut seen_run = false;
+        for (i, n) in e.children.iter().enumerate() {
+            match n {
+                Node::Text(t) => {
+                    if !t.trim().is_empty() {
+                        return None;
+                    }
+                }
+                Node::Raw(_) => return None,
+                Node::El(c) => match c.name.as_str() {
+                    "a:pPr" if !seen_run && start == 0 => start = i + 1,
+                    "a:endParaRPr" if e.children[i + 1..].iter().all(blank) => stop = i,
+                    "a:r" if stop == e.children.len() => {
+                        let mut text: Option<String> = None;
+                        let mut rpr: Option<&El> = None;
+                        for k in &c.children {
+                            match k {
+                                Node::Text(t) if t.trim().is_empty() => {}
+                                Node::El(x) if x.name == "a:rPr" && text.is_none() && rpr.is_none() => rpr = Some(x),
+                                Node::El(x) if x.name == "a:t" && text.is_none() && !x.end.is_empty() && x.children.iter().all(|y| matches!(y, Node::Text(_))) => {
+                                    text = Some(x.text());
+                                }
+                                _ => return None,
+                            }
+                        }
+                        let text = text?;
+                        let key = rpr.map(canon_dml_rpr).unwrap_or_default();
+                        runs.push((rpr, key, text));
+                        seen_run = true;
+                    }
+                    _ => return None,
+                },
+            }
+        }
+        if !seen_run || runs.iter().all(|r| r.2.trim().is_empty()) {
+            return None;
+        }
+        let mut shell = e.start.clone();
+        for n in &e.children[..start] {
+            n.write_raw(&mut shell);
+        }
+        let mut orig = String::new();
+        for n in &e.children[start..stop] {
+            n.write_raw(&mut orig);
+        }
+        let mut tail = String::new();
+        for n in &e.children[stop..] {
+            n.write_raw(&mut tail);
+        }
+        // The base formatting is the most common one (by characters); every other formatting is a paired tag
+        // that keeps its run's a:rPr, as for Word runs.
+        let mut tally: Vec<(&str, usize, Option<&El>)> = Vec::new();
+        for (rpr, key, text) in &runs {
+            let n = text.chars().count();
+            match tally.iter_mut().find(|x| x.0 == key.as_str()) {
+                Some(x) => x.1 += n,
+                None => tally.push((key.as_str(), n, *rpr)),
+            }
+        }
+        let mut best = 0;
+        for (i, x) in tally.iter().enumerate() {
+            if x.1 > tally[best].1 {
+                best = i;
+            }
+        }
+        let (base_key, _, base_rpr) = tally[best];
+        let base_key = base_key.to_string();
+        let mut codes: BTreeMap<String, CodeData> = BTreeMap::new();
+        let mut inl: Vec<Inline> = Vec::new();
+        let mut run_codes: Vec<(String, Option<String>)> = Vec::new();
+        let mut cur: Option<(String, String, String)> = None; // key, id, close display
+        let mut n = 0usize;
+        for (rpr, key, text) in &runs {
+            if *key == base_key {
+                if let Some((_, cid, cd)) = cur.take() {
+                    inl.push(Inline::tag(cid, TagKind::Close, cd));
+                }
+                run_codes.push((text.clone(), None));
+            } else {
+                if !matches!(&cur, Some((k, _, _)) if k == key) {
+                    if let Some((_, cid, cd)) = cur.take() {
+                        inl.push(Inline::tag(cid, TagKind::Close, cd));
+                    }
+                    n += 1;
+                    let cid = n.to_string();
+                    let (d, cd, label) = dml_fmt_names(*rpr);
+                    codes.insert(
+                        cid.clone(),
+                        CodeData::new().with_open(rpr.map(|r| r.raw()).unwrap_or_default()).with_close(String::new()).with_label(label),
+                    );
+                    inl.push(Inline::tag(cid.clone(), TagKind::Open, d));
+                    cur = Some((key.clone(), cid, cd));
+                }
+                let cid = cur.as_ref().map(|c| c.1.clone());
+                run_codes.push((text.clone(), cid));
+            }
+            inl.push(Inline::text(text.clone()));
+        }
+        if let Some((_, cid, cd)) = cur.take() {
+            inl.push(Inline::tag(cid, TagKind::Close, cd));
+        }
+        self.dml_n += 1;
+        let id = format!("{}d{}", self.prefix, self.dml_n);
+        let mut u = Unit::new(id.clone(), merge_text(inl));
+        u.codes = codes;
+        u.codes.insert(C_ORIG.into(), CodeData::new().with_standalone(orig));
+        u.codes.insert(C_BASE.into(), CodeData::new().with_standalone(base_rpr.map(|r| r.raw()).unwrap_or_default()));
+        u.codes.insert(C_DML.into(), CodeData::default());
+        self.dml_ids.insert(key, id.clone());
+        self.dml_runs.insert(id.clone(), run_codes);
+        u.context.kind = Some("textbox".into());
+        u.context.location = Some(format!("{} drawing text {}", self.part_name, self.dml_n));
+        self.index.insert(id.clone(), self.pending.len());
+        self.pending.push(Pending { part: self.part_seq, ord: self.cur_ord, sub: self.dml_n, unit: u });
+        let out = format!("{shell}{M_UNIT}{id}{M_END}{tail}{}", e.end);
+        self.dml_memo.insert(key, out.clone());
+        Some(out)
     }
 
     fn core_simple(&mut self, e: &El) -> String {
@@ -281,6 +444,7 @@ impl Extractor {
         self.pending.push(Pending {
             part: self.part_seq,
             ord,
+            sub: 0,
             unit,
         });
     }
@@ -317,26 +481,51 @@ impl Extractor {
 
     fn collect_paras<'a>(&self, e: &'a El, out: &mut Vec<&'a El>) {
         for c in e.elements() {
-            if self.ns.is_w(&c.name, "p") {
+            if self.ns.is_w(&c.name, "p") || c.name == "a:p" {
                 out.push(c);
             }
             self.collect_paras(c, out);
         }
     }
 
+    /// The text of a Word paragraph (`w:t`) or of a DrawingML paragraph (`a:t`).
     fn para_text(&self, e: &El) -> String {
         let mut s = String::new();
-        fn walk(ns: &Ns, e: &El, s: &mut String) {
+        fn walk(ns: &Ns, e: &El, dml: bool, s: &mut String) {
             for c in e.elements() {
-                if ns.is_w(&c.name, "t") {
+                if (!dml && ns.is_w(&c.name, "t")) || (dml && c.name == "a:t") {
                     s.push_str(&c.text());
                 } else {
-                    walk(ns, c, s);
+                    walk(ns, c, dml, s);
                 }
             }
         }
-        walk(&self.ns, e, &mut s);
+        walk(&self.ns, e, e.name == "a:p", &mut s);
         s
+    }
+
+    /// The runs of a fallback Word paragraph that hold text: (text, `w:rPr` or "").
+    fn fallback_runs(&self, e: &El, out: &mut Vec<(String, String)>) {
+        let ns = &self.ns;
+        for c in e.elements() {
+            if ns.is_w(&c.name, "r") {
+                let text: String = c.elements().filter(|t| ns.is_w(&t.name, "t")).map(|t| t.text()).collect();
+                if !text.is_empty() {
+                    let rpr = c
+                        .elements()
+                        .find(|r| ns.is_w(&r.name, "rPr"))
+                        .filter(|r| r.elements().next().is_some())
+                        .map(|r| r.raw())
+                        .unwrap_or_default();
+                    out.push((text, rpr));
+                }
+            } else if ["hyperlink", "smartTag", "ins", "moveTo", "sdt", "sdtContent", "fldSimple"]
+                .iter()
+                .any(|l| ns.is_w(&c.name, l))
+            {
+                self.fallback_runs(c, out);
+            }
+        }
     }
 
     /// The fallback copy of a text box: each paragraph that pairs with a paragraph of the choice (same
@@ -355,7 +544,20 @@ impl Extractor {
                 .all(|(a, b)| self.para_text(a) == self.para_text(b))
         {
             for (a, b) in cp.iter().zip(&fp) {
-                let id = format!("{}p{}", self.prefix, a.ord);
+                // a DrawingML choice paragraph pairs only with a Word fallback paragraph
+                let id = if a.name == "a:p" {
+                    if b.name == "a:p" {
+                        continue;
+                    }
+                    match self.dml_ids.get(&(*a as *const El as usize)) {
+                        Some(id) => id.clone(),
+                        None => continue,
+                    }
+                } else if b.name == "a:p" {
+                    continue;
+                } else {
+                    format!("{}p{}", self.prefix, a.ord)
+                };
                 if self.index.contains_key(&id) {
                     map.insert(b.ord, id);
                 }
@@ -387,12 +589,41 @@ impl Extractor {
                     n.write_raw(&mut inner);
                 }
                 if let Some(&pi) = self.index.get(uid) {
+                    // A DrawingML unit mirrored into a Word paragraph: its runs are written as Word runs, with the
+                    // fallback's own w:rPr (per formatting tag when the runs line up one to one, else the first).
+                    let mut fb_codes: Vec<(String, String)> = Vec::new();
+                    if let Some(dml) = self.dml_runs.get(uid) {
+                        let mut fr = Vec::new();
+                        self.fallback_runs(e, &mut fr);
+                        let aligned = fr.len() == dml.len() && fr.iter().zip(dml).all(|(a, b)| a.0 == b.0);
+                        if aligned {
+                            for ((_, rpr), (_, cid)) in fr.iter().zip(dml) {
+                                let name = match cid {
+                                    Some(c) => format!(".{c}"),
+                                    None => String::new(),
+                                };
+                                if !fb_codes.iter().any(|x| x.0 == name) {
+                                    fb_codes.push((name, rpr.clone()));
+                                }
+                            }
+                        } else if let Some((_, rpr)) = fr.first() {
+                            fb_codes.push((String::new(), rpr.clone()));
+                        }
+                        if !fb_codes.iter().any(|x| x.0.is_empty()) {
+                            let first = fb_codes.first().map(|x| x.1.clone()).unwrap_or_default();
+                            fb_codes.push((String::new(), first));
+                        }
+                    }
                     let unit = &mut self.pending[pi].unit;
                     let k = unit.codes.keys().filter(|k| k.starts_with("_m")).count();
                     unit.codes.insert(
                         format!("_m{k}"),
                         CodeData::new().with_standalone(inner),
                     );
+                    for (name, rpr) in fb_codes {
+                        // `_fb{k}` is the base, `_fb{k}.{tag}` a formatting tag
+                        unit.codes.insert(format!("_fb{k}{name}"), CodeData::new().with_standalone(rpr));
+                    }
                     return format!("{shell}{M_MIRROR}{uid}:{k}{M_END}{}", e.end);
                 }
             }
@@ -435,6 +666,7 @@ impl Extractor {
         if p.end.is_empty() {
             return p.start.clone();
         }
+        self.cur_ord = p.ord;
         self.nesting += 1;
         let ns = self.ns.clone();
         let ppr_pos = p
@@ -1242,14 +1474,68 @@ fn fmt_names(rpr: &str) -> (String, String, String) {
             }
         }
     }
-    let label = if rpr.is_empty() {
+    names_of(&features, rpr.is_empty())
+}
+
+/// (open display, close display, label) for a formatting tag made from a DrawingML run's `a:rPr`: formatting
+/// is mostly attributes there (`b="1"`, `sz="2000"`), colours and fonts are children.
+fn dml_fmt_names(r: Option<&El>) -> (String, String, String) {
+    let mut features: Vec<String> = Vec::new();
+    if let Some(r) = r {
+        for (k, v) in r.attrs() {
+            let on = !matches!(v.as_str(), "0" | "false");
+            match k.as_str() {
+                "b" if on => features.push("bold".into()),
+                "i" if on => features.push("italic".into()),
+                "u" if v != "none" => features.push("underline".into()),
+                "strike" if v != "noStrike" => features.push("strike".into()),
+                "baseline" => match v.parse::<i64>() {
+                    Ok(n) if n > 0 => features.push("superscript".into()),
+                    Ok(n) if n < 0 => features.push("subscript".into()),
+                    _ => {}
+                },
+                "sz" => features.push("size".into()),
+                "cap" if v != "none" => features.push("caps".into()),
+                _ => {}
+            }
+        }
+        for c in r.elements() {
+            match local_name(&c.name) {
+                "solidFill" | "gradFill" => features.push("color".into()),
+                "highlight" => features.push("highlight".into()),
+                "latin" | "ea" | "cs" | "sym" if !features.iter().any(|f| f == "font") => features.push("font".into()),
+                _ => {}
+            }
+        }
+    }
+    names_of(&features, r.is_none())
+}
+
+/// Formatting key for comparing DrawingML runs: language, spell-check and smart-tag marks do not count.
+fn canon_dml_rpr(r: &El) -> String {
+    let mut attrs: Vec<String> = r
+        .attrs()
+        .into_iter()
+        .filter(|(k, _)| !matches!(k.as_str(), "lang" | "altLang" | "dirty" | "err" | "noProof" | "smtClean" | "smtId" | "bmk"))
+        .map(|(k, v)| format!("{k}={v}"))
+        .collect();
+    attrs.sort();
+    let mut inner = String::new();
+    for n in &r.children {
+        n.write_raw(&mut inner);
+    }
+    format!("[{}]{}", attrs.join(","), inner.trim())
+}
+
+fn names_of(features: &[String], empty: bool) -> (String, String, String) {
+    let label = if empty {
         "no formatting".to_string()
     } else if features.is_empty() {
         "formatting".to_string()
     } else {
         features.join(" ")
     };
-    let single = match features.as_slice() {
+    let single = match features {
         [f] if f == "bold" => Some("b"),
         [f] if f == "italic" => Some("i"),
         [f] if f == "underline" => Some("u"),
