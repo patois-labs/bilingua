@@ -692,6 +692,11 @@ fn decode_text_inner(data: &[u8], o: &DecodeOptions) -> Result<Decoded, Error> {
     if o.declared {
         // the label the file carries stays with it, so an untouched merge writes it back
         let label = declared_label(data);
+        if label.is_none() {
+            if let Some(m) = late_declaration(&text, enc) {
+                add(&mut warnings, m);
+            }
+        }
         return done(rewrite_declared(&text), &declared_base(enc, label.as_deref(), data), label.as_deref(), warnings, &o.limits);
     }
     done(text, &enc.name().to_ascii_lowercase(), None, warnings, &o.limits)
@@ -776,6 +781,23 @@ fn decode_legacy(
         );
     }
     Ok((text, primary))
+}
+
+/// A file with no declaration in its first 4 KB that names another legacy charset further down (a page whose
+/// `<meta charset>` comes after a long script): that later one is not the file's declaration (it may be content),
+/// so the file was read in `enc`; the warning says so, so a page that really is in the later charset is not
+/// silently read as the wrong one.
+fn late_declaration(text: &str, enc: &'static Encoding) -> Option<String> {
+    decl_re().captures_iter(text).find_map(|c| {
+        let name = c.get(2)?.as_str();
+        let e = label_encoding(name)?;
+        (e != enc && e != encoding_rs::UTF_8 && e != encoding_rs::UTF_16LE && e != encoding_rs::UTF_16BE).then(|| {
+            format!(
+                "This file is not UTF-8 and declares no encoding in its first 4096 characters, so it was read as {}. A declaration of {name} further down was not used. {RESAVE}",
+                cp_label(enc)
+            )
+        })
+    })
 }
 
 fn add(w: &mut Vec<Warning>, message: String) {
@@ -998,22 +1020,19 @@ fn encode_text_as_is(text: &str, encoding: &str) -> Result<Vec<u8>, Error> {
         "utf-8-bom" => return Ok(utf8(true)),
         _ => {}
     }
-    // a declared charset: each declaration parse rewrote to UTF-8 gets its own label back
+    // a declared charset: each declaration parse rewrote to UTF-8 gets its own label back. The whole text is
+    // looked at, not only its head: a longer translation before a declaration near the 4096th character moves it
+    // out of the head, and it must still say the charset the bytes are written in
     let restored = match env.label {
-        Some(l) => {
-            let (head, tail) = split_head(text);
-            let mut out = decl_re()
-                .replace_all(head, |c: &regex::Captures| {
-                    if c[2].eq_ignore_ascii_case("UTF-8") {
-                        format!("{}{l}", &c[1])
-                    } else {
-                        c[0].to_string()
-                    }
-                })
-                .into_owned();
-            out.push_str(tail);
-            out
-        }
+        Some(l) => decl_re()
+            .replace_all(text, |c: &regex::Captures| {
+                if c[2].eq_ignore_ascii_case("UTF-8") {
+                    format!("{}{l}", &c[1])
+                } else {
+                    c[0].to_string()
+                }
+            })
+            .into_owned(),
         None => text.to_string(),
     };
     let utf16 = match env.base {
@@ -1258,6 +1277,35 @@ mod tests {
         assert_eq!(d.encoding, "windows-1251;label=windows-1251");
         assert!(d.text.contains("charset=UTF-8\"") && d.text.contains("<meta charset=windows-1252>"));
         assert_eq!(encode_text(&d.text, &d.encoding).unwrap(), b);
+    }
+
+    #[test]
+    fn a_declaration_moved_past_the_head_by_a_longer_translation_still_gets_its_label_back() {
+        // the page's own declaration sits just inside the first 4096 characters, after a title
+        let pad = "x".repeat(3900);
+        let src = format!("<html><head><title>Hi</title><style>{pad}</style><meta charset=\"windows-1251\"></head><body>\u{41f}</body></html>");
+        let b = legacy(encoding_rs::WINDOWS_1251, &src);
+        let d = dec(&b, Some("en"), true).unwrap();
+        assert!(d.text.contains("charset=\"UTF-8\""));
+        let longer = d.text.replace("<title>Hi</title>", &format!("<title>{}</title>", "\u{41f}".repeat(400)));
+        let out = encode_text(&longer, &d.encoding).unwrap();
+        let back = encoding_rs::WINDOWS_1251.decode(&out).0.into_owned();
+        assert!(back.contains("charset=\"windows-1251\"") && !back.contains("UTF-8"), "the bytes are Windows-1251 and must say so");
+    }
+
+    #[test]
+    fn a_file_whose_only_declaration_is_past_the_head_is_read_with_a_warning() {
+        let pad = "<p>x</p>".repeat(600);
+        let src = format!("<html><head><script>{pad}</script><meta charset=\"windows-1251\"></head><body>\u{41f}\u{440}\u{438}</body></html>");
+        let b = legacy(encoding_rs::WINDOWS_1251, &src);
+        let d = dec(&b, Some("en"), true).unwrap();
+        // not the file's declaration (it may be content): read by the default path, never rewritten, and said so
+        assert!(d.text.contains("charset=\"windows-1251\""));
+        assert!(d.warnings.iter().any(|w| w.message.contains("windows-1251 further down")), "{:?}", d.warnings);
+        assert_eq!(encode_text(&d.text, &d.encoding).unwrap(), b);
+        // the same page in the code page it is read in: no warning
+        let d = dec(&b, Some("ru"), true).unwrap();
+        assert!(d.text.contains("\u{41f}\u{440}\u{438}") && d.warnings.is_empty(), "{:?}", d.warnings);
     }
 
     #[test]
