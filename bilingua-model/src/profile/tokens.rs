@@ -877,9 +877,9 @@ mod tests {
             assert_eq!(t, want, "{f}");
             assert_eq!(map["1"].letter, 'r');
             assert_eq!(from_locos_text(&t, &map), inl, "{f}");
-            // a translator who writes the run as `g` names no pair of the map: kept as text and reported
-            let (_, problems) = parse_locos_text(&t.replace("r1", "g1"), &map);
-            assert!(!problems.is_empty());
+            // the reader is lenient about a pair's letter (as before): a run written as `g` is still the run
+            let (back, problems) = parse_locos_text(&t.replace("r1", "g1"), &map);
+            assert!(problems.is_empty() && back == inl);
         }
         // other formats ignore the labels; without codes every pair is `g`, as before
         assert_eq!(to_locos_text_coded("odt", &inl, &codes), to_locos_text_for("odt", &inl));

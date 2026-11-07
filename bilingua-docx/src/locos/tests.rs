@@ -426,11 +426,15 @@ fn deep_custom_xml_part_does_not_refuse_the_document() {
     let with_custom = zip_of(&refs);
     for o in [opts(None), ExtractOptions::new()] {
         let doc = crate::Docx.extract(&with_custom, &o).unwrap();
-        assert_eq!(doc.units.len(), 1);
+        assert!(doc.units.iter().any(|u| plain(&u.segments[0].source) == "Hello"));
     }
     let mut members2 = members.clone();
     members2.pop();
     members2.push(("word/broken.xml".into(), deep.into_bytes()));
     let refs: Vec<(&str, &[u8])> = members2.iter().map(|(n, b)| (n.as_str(), b.as_slice())).collect();
     assert!(crate::Docx.extract(&zip_of(&refs), &opts(None)).is_err());
+}
+
+fn plain(inl: &[Inline]) -> String {
+    inl.iter().map(|i| if let Inline::Text(t) = i { t.as_str() } else { "" }).collect()
 }
