@@ -43,4 +43,4 @@ by a segment. The `#, fuzzy` line is a second skeleton reference to the first un
 
 - No `msgmerge`-style fuzzy matching, no `.mo` output, no wrapping of long lines.
 - Only the first `#,` line holding `fuzzy` is rewritten.
-- Non-UTF-8 PO files return `Error::Unsupported`.
+- Non-UTF-8 PO files return `Error::Encoding` (code `encoding`).

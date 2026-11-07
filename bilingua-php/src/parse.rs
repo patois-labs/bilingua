@@ -279,9 +279,11 @@ impl<'a> Parser<'a, '_> {
 
     fn value(&mut self, path: &mut Vec<String>, depth: usize) -> Result<(), Error> {
         if depth > MAX_DEPTH {
-            return Err(Error::Unsupported(
-                "This PHP file is nested too deeply.".into(),
-            ));
+            return Err(bilingua_model::LimitError::new(
+                bilingua_model::LimitKind::Depth,
+                "This PHP file is nested too deeply.",
+            )
+            .into());
         }
         let t = self.next()?;
         if t.kind == Kind::Str {

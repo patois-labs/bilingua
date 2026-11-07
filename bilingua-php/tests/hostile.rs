@@ -130,7 +130,7 @@ fn a_file_starting_with_two_byte_order_marks_merges_back_exactly() {
 fn deep_nesting_is_a_typed_error() {
     for depth in [33usize, 100, 5_000, 200_000] {
         let arr = format!("<?php return {}'x'{};", "[".repeat(depth), "]".repeat(depth));
-        assert!(matches!(extract_str(&arr), Err(Error::Unsupported(m)) if m.contains("nested")), "depth {depth}");
+        assert!(matches!(extract_str(&arr), Err(Error::Limit(l)) if l.msg.contains("nested")), "depth {depth}");
         let old = format!("<?php return {}'x'{};", "array(".repeat(depth), ")".repeat(depth));
         assert!(extract_str(&old).is_err(), "array() depth {depth}");
         let keyed = format!("<?php return {}'x'{};", "['a' => ".repeat(depth), "]".repeat(depth));
