@@ -213,16 +213,32 @@ fn plural_variants_filled_729() {
 #[test]
 fn refusals() {
     let latin1 = b"hello = caf\xe9\n";
-    assert!(matches!(extract(latin1), Err(Error::Unsupported(_))), "latin-1");
-    assert!(matches!(extract(b"\x00\x01\x02hello = x\x00"), Err(Error::Unsupported(_))), "binary");
+    // decode refusals are code `encoding` with LocOS's sentences (UnsupportedEncodingError)
+    assert!(
+        matches!(extract(latin1), Err(Error::Encoding(m)) if m == "Fluent .ftl files are UTF-8; byte 0xe9 at position 11 is not. Re-save the file as UTF-8."),
+        "latin-1"
+    );
+    assert!(
+        matches!(extract(b"\x00\x01\x02hello = x\x00"), Err(Error::Encoding(m)) if m.contains("looks like a binary file")),
+        "binary"
+    );
     let deep = format!("x = {}$a{}\n", "{ ".repeat(200), " }".repeat(200));
-    assert!(matches!(extract(deep.as_bytes()), Err(Error::Unsupported(_))), "deep nesting");
+    assert!(
+        matches!(extract(deep.as_bytes()), Err(Error::Limit(e)) if e.msg == "This Fluent file nests placeables more than 40 deep."),
+        "deep nesting"
+    );
     let small = { let mut built = Limits::default(); built.max_units = 3; built };
     let many: String = (0..10).map(|i| format!("m{i} = Message number {i}\n")).collect();
     assert!(FtlFilter.extract_with(many.as_bytes(), &opts(), &small).is_err(), "segment cap");
     let braces = format!("x = {}\n", "{ $a } ".repeat(100));
     let tiny = { let mut built = Limits::default(); built.max_units = 3; built };
-    assert!(FtlFilter.extract_with(braces.as_bytes(), &opts(), &tiny).is_err(), "placeable budget");
+    // the placeable budget is code `limit` with LocOS's sentence (InputLimitError naming MAX_DOCUMENT_SEGMENTS)
+    let err = FtlFilter.extract_with(braces.as_bytes(), &opts(), &tiny).unwrap_err();
+    assert!(
+        matches!(&err, Error::Limit(e) if e.kind == bilingua_model::LimitKind::Units
+            && e.msg == "This Fluent file has far more placeables than MAX_DOCUMENT_SEGMENTS allows (3). Split it into smaller files."),
+        "placeable budget: {err:?}"
+    );
     let chars = { let mut built = Limits::default(); built.max_value_chars = 1000; built };
     let long = format!("x = {}\n", "word ".repeat(400));
     assert!(FtlFilter.extract_with(long.as_bytes(), &opts(), &chars).is_err(), "segment length cap");

@@ -15,7 +15,7 @@
   never reads the environment, so the LocOS adapter passes it. `Filter::extract` takes its numbers from
   `ExtractOptions::limits` (B6 `bilingua_model::Limits`: 100 MB, 50000 units, 100000 characters per unit, the line
   budget) and refuses with `Error::Limit`; the 40-level nesting cap and the placeable budget (20 per allowed unit)
-  are the crate's own and refuse with `Error::Unsupported`, as LocOS.
+  are the crate's own and refuse with `Error::Limit` too (LocOS InputLimitError); a file that is not UTF-8 is `Error::Encoding`.
 - Target locale: `FtlFilter::merge_localized(doc, locale)` (locale defaults to `doc.target_lang`) also fills plural selects with the target
   language's missing CLDR categories (LocOS `build_localized`); plain `merge` never adds units (the oracle and the facade contract reopen a merged file and count units). The tables are the shared ones in `bilingua_model::cldr`
   (made from babel by `bilingua-model/tools/gen_cldr.py`).
