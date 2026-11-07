@@ -501,10 +501,21 @@ fn repair_value(r: &engine::profile::tokens::TagRepair) -> Value {
 /// A segment's inline list as Localization OS text and its token map, numbered by the LocOS rule of `format`
 /// (pairs by id for html, tag ids as numbers for docx, pptx and xlsx, positional otherwise; look-alike text in the
 /// source keeps its number). The map is keyed by token number: `{id, letter, open, close, free, unpaired?}`.
+/// `codes` (keyword, optional): the unit's `codes` dict; for idml and icml a pair whose code is labelled `run` is
+/// then an `r` pair, as LocOS writes it and as `locos_units` gives it (without `codes`, every pair is `g`).
 #[pyfunction]
-fn to_locos_text(py: Python<'_>, format: &str, inlines: &Bound<'_, PyAny>) -> PyResult<(String, Py<PyAny>)> {
+#[pyo3(signature = (format, inlines, *, codes=None))]
+fn to_locos_text(py: Python<'_>, format: &str, inlines: &Bound<'_, PyAny>, codes: Option<&Bound<'_, PyAny>>) -> PyResult<(String, Py<PyAny>)> {
     let inl = inlines_from_py(inlines).map_err(|f| to_py_err(py, f))?;
-    let (text, map) = engine::profile::tokens::to_locos_text_for(format, &inl);
+    let (text, map) = match codes.filter(|c| !c.is_none()) {
+        None => engine::profile::tokens::to_locos_text_for(format, &inl),
+        Some(c) => {
+            let v = from_py(c, 0).map_err(|f| to_py_err(py, f))?;
+            let codes: std::collections::BTreeMap<String, engine::CodeData> =
+                serde_json::from_value(v).map_err(|e| to_py_err(py, Fail::new("invalid_argument", format!("codes: {e}"))))?;
+            engine::profile::tokens::to_locos_text_coded(format, &inl, &codes)
+        }
+    };
     let m = serde_json::to_value(&map).map_err(|e| to_py_err(py, Fail::new("internal", e.to_string())))?;
     Ok((text, to_py(py, &m)?))
 }
@@ -530,9 +541,15 @@ fn locos_units(py: Python<'_>, document: &Bound<'_, PyAny>) -> PyResult<Py<PyAny
     let (doc, _) = doc_in(document).map_err(|f| to_py_err(py, f))?;
     let units = guarded(py, move || {
         let doc = doc.into_document()?;
-        serde_json::to_value(engine::profile::locos_units(&doc)).map_err(|e| Fail::new("internal", e.to_string()))
+        Ok(engine::profile::locos_units(&doc))
     })?;
-    to_py(py, &units)
+    // written straight into Python objects with sorted keys (the same dicts and lists as `to_value` + `to_py`, without
+    // the `Value` copy: W4 speed); if that ever fails, the old way gives the answer
+    if let Ok(obj) = pythonize::pythonize_custom::<SortedTypes, _>(py, &units) {
+        return Ok(obj.unbind());
+    }
+    let v = serde_json::to_value(&units).map_err(|e| to_py_err(py, Fail::new("internal", e.to_string())))?;
+    to_py(py, &v)
 }
 
 /// Sets Localization OS translations on a Document extracted with `profile="locos"`: `targets` maps a segment id to

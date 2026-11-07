@@ -30,6 +30,10 @@ pub const A11Y_IMAGES: &str = "locos.a11y_images";
 /// `UnitContext::extra` key, LocOS profile: the images anchored at this unit whose alt text is empty, one `where`
 /// (the image's file name) per line, in file order (LocOS `missing_alt` entries of kind `empty`). Unset: none.
 pub const A11Y_EMPTY_ALT: &str = "locos.a11y_empty_alt";
+/// `UnitContext::extra` key, LocOS profile: every missing-alt finding anchored at this unit, of both kinds, as a JSON
+/// list of `{"kind": "missing" | "empty", "where": <image name>}` in file order (LocOS `missing_alt` entries; their
+/// `unit` is this unit's `p_index`). Set by DOCX; unset: none.
+pub const A11Y_MISSING_ALT: &str = "locos.a11y_missing_alt";
 
 /// A named profile and its version.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -141,7 +145,8 @@ impl Profile {
 /// whose format knows LocOS's paragraph index (odf, Qt ts and wxl from their `p_index`, icml from its paragraph
 /// index, idml from its `p<n>` unit ids); the inline codes LocOS keeps as unit text turned back into that text (key
 /// and value formats, JSON, PO, ARB placeholders, FTL placeables); `context.style` cleared where LocOS has none and
-/// `locos.style` set where it has one (dtd). Nothing for other profiles. The `bilingua` facade calls this.
+/// `locos.style` set where it has one (dtd; ODF `heading` and `comment`, its paragraph styles cleared). Nothing for
+/// other profiles. The `bilingua` facade calls this.
 pub fn annotate(doc: &mut Document, profile: Option<&str>) {
     if profile != Some(LOCOS) {
         return;
@@ -174,6 +179,20 @@ pub fn annotate(doc: &mut Document, profile: Option<&str>) {
         if format == "dtd" {
             if let Some(k) = u.context.key.clone() {
                 u.context.extra.insert(STYLE.to_string(), format!("dtd:{k}"));
+            }
+        }
+        // ODF (`odf_filter.parse`): `heading` for a `text:h`, `comment` for a comment paragraph
+        // (`office_comments.COMMENT_STYLE`), nothing for every other paragraph (not its automatic or named style)
+        if matches!(format.as_str(), "odt" | "ods" | "odp" | "odg") {
+            u.context.style = None;
+            match u.context.kind.as_deref() {
+                Some("heading") => {
+                    u.context.extra.insert(STYLE.to_string(), "heading".to_string());
+                }
+                Some("comment") => {
+                    u.context.extra.insert(STYLE.to_string(), "comment".to_string());
+                }
+                _ => {}
             }
         }
     }
@@ -299,7 +318,7 @@ pub struct LocosUnit {
     pub p_index: i64,
     /// The Bilingua segment id the index stands for (what [`locos_set_target`] takes).
     pub segment_id: String,
-    /// The segment's source as LocOS text, tokens included ([`tokens::to_locos_text_for`]).
+    /// The segment's source as LocOS text, tokens included ([`tokens::to_locos_text_coded`]).
     pub text: String,
     /// The side map of the tokens in `text`, for [`tokens::from_locos_text`].
     pub map: tokens::LocosMap,
@@ -319,7 +338,7 @@ pub fn locos_units(doc: &Document) -> Vec<LocosUnit> {
     segs.iter()
         .enumerate()
         .map(|(i, (u, s))| {
-            let (text, map) = tokens::to_locos_text_for(&doc.format, &s.source);
+            let (text, map) = tokens::to_locos_text_coded(&doc.format, &s.source, &u.codes);
             let style = u.context.extra.get(STYLE).filter(|s| !s.is_empty()).cloned().or_else(|| u.context.style.clone()).unwrap_or_default();
             let p_index = match (use_meta, metas[i]) {
                 (true, Some(p)) => p,

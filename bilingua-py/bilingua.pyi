@@ -183,10 +183,11 @@ class LocosUnit(TypedDict):
     map: LocosMap
     style: str
 
-def to_locos_text(format: str, inlines: list[Inline]) -> tuple[str, LocosMap]:
+def to_locos_text(format: str, inlines: list[Inline], *, codes: dict[str, Any] | None = None) -> tuple[str, LocosMap]:
     """A segment's inline list as Localization OS text (tokens such as `⟦g1⟧`) and its token map,
     numbered by the LocOS rule of `format`: pairs by id for html, the tag ids as numbers for docx, pptx and xlsx,
-    in reading order otherwise; a number that look-alike text in the source uses is skipped."""
+    in reading order otherwise; a number that look-alike text in the source uses is skipped. With `codes` (the
+    unit's codes), an idml or icml pair whose code is labelled `run` is an `r` pair, as `locos_units` gives it."""
 
 def from_locos_text(text: str, map: LocosMap) -> tuple[list[Inline], list[TokenProblem]]:
     """Localization OS text back to inlines with the map `to_locos_text` gave. A malformed token, one naming no

@@ -22,7 +22,7 @@
 //! Damage is never silent and never loses text: a token that is malformed, or whose number is not in the map,
 //! stays in the text as it is and is reported by [`parse_locos_text`].
 
-use crate::{merge_text, Inline, TagKind};
+use crate::{merge_text, CodeData, Inline, TagKind};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
@@ -68,7 +68,7 @@ pub fn to_locos_text(inl: &[Inline]) -> (String, LocosMap) {
 /// Like [`to_locos_text`] with another kind letter for pairs (`r` for DOCX runs). `pair_letter` must be a
 /// lower-case ASCII letter other than `x` and `p`; anything else falls back to `g`.
 pub fn to_locos_text_as(inl: &[Inline], pair_letter: char) -> (String, LocosMap) {
-    convert(inl, pair_letter, pairs(inl), None)
+    convert(inl, pair_letter, pairs(inl), None, None)
 }
 
 /// The pair-token letter a format's LocOS filter uses (the adapter's `_PAIR_LETTER`): `r` for docx and pptx runs
@@ -104,12 +104,29 @@ const LOCOS_NUMBERED_BY_ID: &[&str] = &["docx", "pptx", "xlsx"];
 pub fn to_locos_text_for(format: &str, inl: &[Inline]) -> (String, LocosMap) {
     let letter = locos_pair_letter(format);
     if LOCOS_PAIRS_BY_ID.contains(&format) {
-        convert(inl, letter, pairs_by_id(inl), None)
+        convert(inl, letter, pairs_by_id(inl), None, None)
     } else if LOCOS_NUMBERED_BY_ID.contains(&format) {
         to_locos_text_numbered(inl, letter)
     } else {
         to_locos_text_as(inl, letter)
     }
+}
+
+/// Formats whose LocOS filter writes two pair letters (IDML and ICML, `idml_filter._tokenize`): a
+/// CharacterStyleRange is an `r` pair, every other wrap (hyperlink, XML tag, tracked change) a `g` pair. The
+/// Bilingua code of a range is labelled `run`.
+const LOCOS_RUN_PAIRS: &[&str] = &["idml", "icml"];
+
+/// A segment's inline codes as the LocOS filter of `format` writes them, knowing the unit's codes: what
+/// [`to_locos_text_for`] gives, except for IDML and ICML, where a pair whose code is labelled `run` (a
+/// CharacterStyleRange) is an `r` pair (`⟦r1⟧bold⟦/r1⟧`) and every other pair a `g` pair, as LocOS writes them.
+/// [`crate::profile::locos_units`] numbers every segment this way.
+pub fn to_locos_text_coded(format: &str, inl: &[Inline], codes: &BTreeMap<String, CodeData>) -> (String, LocosMap) {
+    if !LOCOS_RUN_PAIRS.contains(&format) {
+        return to_locos_text_for(format, inl);
+    }
+    let run = |id: &str| codes.get(id).filter(|c| c.label.as_deref() == Some("run")).map(|_| 'r');
+    convert(inl, PAIR_LETTER, pairs(inl), None, Some(&run))
 }
 
 /// Like [`to_locos_text_as`], but each token takes its number from its tag's id when the ids are LocOS's own token
@@ -139,7 +156,7 @@ pub fn to_locos_text_numbered(inl: &[Inline], pair_letter: char) -> (String, Loc
     if nums.iter().any(|n| reserved.contains(n)) {
         return to_locos_text_as(inl, pair_letter);
     }
-    convert(inl, pair_letter, partner, Some(&nums))
+    convert(inl, pair_letter, partner, Some(&nums), None)
 }
 
 /// The numbers of token-like text (`⟦x2⟧`, `⟦/g1⟧`, `⟦3⟧`) that the plain text of `inl` already holds. LocOS reads
@@ -176,7 +193,10 @@ fn reserved_numbers(inl: &[Inline]) -> std::collections::BTreeSet<usize> {
 }
 
 /// The shared body; `nums[k]` is the number of the k-th token (`None`: 1, 2, 3 ... in reading order).
-fn convert(inl: &[Inline], pair_letter: char, partner: Vec<Option<usize>>, nums: Option<&[usize]>) -> (String, LocosMap) {
+/// A pair's letter by its tag id, when it is not the format's one ([`to_locos_text_coded`]).
+type PairLetterOf<'a> = &'a dyn Fn(&str) -> Option<char>;
+
+fn convert(inl: &[Inline], pair_letter: char, partner: Vec<Option<usize>>, nums: Option<&[usize]>, letter_of: Option<PairLetterOf>) -> (String, LocosMap) {
     let pair = if pair_letter.is_ascii_lowercase() && pair_letter != POINT_LETTER && pair_letter != FREE_LETTER {
         pair_letter
     } else {
@@ -221,15 +241,19 @@ fn convert(inl: &[Inline], pair_letter: char, partner: Vec<Option<usize>>, nums:
                 k += 1;
                 let n = number(k);
                 open_num.insert(pos, n);
+                let pair = letter_of.and_then(|f| f(id)).unwrap_or(pair);
                 map.insert(n.to_string(), code(pair, Some(display), None, false, None));
                 text.push_str(&format!("{OPEN}{pair}{n}{CLOSE}"));
             }
             (TagKind::Close, Some(o)) => {
                 let num = open_num.get(&o).copied().unwrap_or_default();
+                // the close takes its open's letter
+                let mut letter = pair;
                 if let Some(c) = map.get_mut(&num.to_string()) {
                     c.close = Some(display.clone());
+                    letter = c.letter;
                 }
-                text.push_str(&format!("{OPEN}/{pair}{num}{CLOSE}"));
+                text.push_str(&format!("{OPEN}/{letter}{num}{CLOSE}"));
             }
             (TagKind::Open, None) => {
                 k += 1;
@@ -829,6 +853,37 @@ mod tests {
         assert_eq!(to_locos_text_for("docx", &dup).0, "\u{27e6}x1\u{27e7}\u{27e6}x2\u{27e7}");
         let odd = vec![Inline::tag("x", TagKind::Standalone, "o"), Inline::tag("07", TagKind::Standalone, "o")];
         assert_eq!(to_locos_text_for("docx", &odd).0, "\u{27e6}x1\u{27e7}\u{27e6}x2\u{27e7}");
+    }
+
+    /// W4 idml-1 / icml-1: LocOS writes a CharacterStyleRange as an `r` pair and every other wrap as a `g` pair.
+    #[test]
+    fn idml_and_icml_runs_are_r_pairs() {
+        let inl = vec![
+            Inline::tag("1", TagKind::Open, "<CharacterStyleRange>"),
+            Inline::text("bold "),
+            Inline::tag("2", TagKind::Open, "<HyperlinkTextSource>"),
+            Inline::text("link"),
+            Inline::tag("2", TagKind::Close, "</HyperlinkTextSource>"),
+            Inline::tag("3", TagKind::Standalone, "<Br/>"),
+            Inline::tag("1", TagKind::Close, "</CharacterStyleRange>"),
+        ];
+        let mut codes = BTreeMap::new();
+        codes.insert("1".to_string(), CodeData::paired("<CharacterStyleRange>", "</CharacterStyleRange>").with_label("run"));
+        codes.insert("2".to_string(), CodeData::paired("<HyperlinkTextSource>", "</HyperlinkTextSource>").with_label("link"));
+        codes.insert("3".to_string(), CodeData::standalone("<Br/>").with_label("br"));
+        let want = "\u{27e6}r1\u{27e7}bold \u{27e6}g2\u{27e7}link\u{27e6}/g2\u{27e7}\u{27e6}x3\u{27e7}\u{27e6}/r1\u{27e7}";
+        for f in ["idml", "icml"] {
+            let (t, map) = to_locos_text_coded(f, &inl, &codes);
+            assert_eq!(t, want, "{f}");
+            assert_eq!(map["1"].letter, 'r');
+            assert_eq!(from_locos_text(&t, &map), inl, "{f}");
+            // a translator who writes the run as `g` names no pair of the map: kept as text and reported
+            let (_, problems) = parse_locos_text(&t.replace("r1", "g1"), &map);
+            assert!(!problems.is_empty());
+        }
+        // other formats ignore the labels; without codes every pair is `g`, as before
+        assert_eq!(to_locos_text_coded("odt", &inl, &codes), to_locos_text_for("odt", &inl));
+        assert_eq!(to_locos_text_coded("idml", &inl, &BTreeMap::new()).0.matches("\u{27e6}g").count(), 2);
     }
 
     fn sample() -> Vec<Inline> {
