@@ -32,6 +32,32 @@ pub fn target(u: &Unit, t: &str) -> Vec<Inline> {
     from_locos_text(t, &map)
 }
 
+/// LocOS text to a target with the tokens that name no code dropped: what the LocOS MicroDVD build still does (its
+/// SBV and SubViewer builds keep them as text since issue 814). Only the golden test uses it, to name that difference.
+pub fn target_dropping_unknown(u: &Unit, t: &str) -> Vec<Inline> {
+    use bilingua_model::profile::tokens::{parse_locos_text, TokenProblem};
+    let (_, map) = to_locos_text(&u.source());
+    let mut t = t.to_string();
+    for p in parse_locos_text(&t.clone(), &map).1 {
+        if let TokenProblem::Unknown { token } | TokenProblem::KindMismatch { token } = p {
+            t = t.replace(&token, "");
+        }
+    }
+    from_locos_text(&t, &map)
+}
+
+/// A LocOS-adapter build with the MicroDVD token dropping of [`target_dropping_unknown`].
+pub fn try_build_dropping_unknown(fmt: &str, data: &[u8], tr: &[(usize, String)]) -> Result<Vec<u8>, Error> {
+    let mut doc = extract(fmt, data)?;
+    for (i, t) in tr {
+        let tg = target_dropping_unknown(&doc.units[*i], t);
+        let u = &mut doc.units[*i];
+        u.segments[0].target = tg;
+        u.segments[0].state = SegState::Draft;
+    }
+    filter(fmt).merge_with(&doc, &bilingua_model::profile::locos().merge_options("xml"))
+}
+
 pub fn try_build_with(fmt: &str, data: &[u8], tr: &[(usize, String)], mo: &MergeOptions) -> Result<Vec<u8>, Error> {
     let mut doc = extract(fmt, data)?;
     for (i, t) in tr {

@@ -471,9 +471,11 @@ LocOS is getting the same fixes, so these differences are temporary.
   placeholders the source lacks still stay text. Test: `an_escape_a_translator_typed_is_decoded_and_escaped_once_on_merge`.
 - **HTML Help, `.hhp` over a limit.** `hhp_code_page` returns `None` for a project over the size, `<` count or line
   limit, as LocOS; only a code page the decode cannot read still falls back to the ASCII `Language=` line.
-- **SubViewer/MicroDVD, one kept difference.** LocOS now refuses a translation line that reads as a timecode or a MicroDVD
+- **SubViewer/MicroDVD, two kept differences.** LocOS now refuses a translation line that reads as a timecode or a MicroDVD
   cue; Bilingua already did. LocOS still writes text that reads as a MicroDVD control code (`{y:i}`), where Bilingua
-  refuses (3 of the golden builds).
+  refuses (3 of the golden builds). A token that names no code of the unit (`⟦x99⟧`) stays text in SBV and SubViewer
+  in both (LocOS issue 814), but the LocOS MicroDVD build still drops it; the golden test names those builds (LocOS
+  to change, as 814).
 - **SCC, unknown inline code.** A translation with a code the caption does not have is refused, where LocOS drops it
   silently. Literal `⟦xN⟧` text was already refused (the characters are not CEA-608). The channel-2 loss and
   the quadratic character scan were already fixed in Bilingua.

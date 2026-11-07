@@ -68,7 +68,8 @@ fn microdvd() {
         &[
             (0, "\u{27E6}g1\u{27E7}Salut !\u{27E6}/g1\u{27E7}\nCa va ?"),
             (1, "Texte {0} simple"),
-            // the token brings back its code; an invented token stays text (LocOS issue 814)
+            // the token brings back its code; an invented token stays text (issue 814; the LocOS MicroDVD build
+            // still drops it, see locos_golden)
             (2, "\u{27E6}g1\u{27E7}Rouge\u{27E6}/g1\u{27E7}\n\u{27E6}g2\u{27E7}Ligne grasse\u{27E6}/g2\u{27E7} \u{27E6}x9\u{27E7}"),
         ],
     ));
@@ -110,7 +111,8 @@ fn microdvd_style_pairs_680() {
         ("Ca va ?\nSalut !", "{10}{20}Ca va ?|Salut !"),
         ("\u{27E6}/g1\u{27E7}Salut\u{27E6}g1\u{27E7} !", "{10}{20}Salut !"),
         ("\u{27E6}g1\u{27E7}a\u{27E6}/g1\u{27E7} \u{27E6}g1\u{27E7}b\u{27E6}/g1\u{27E7}", "{10}{20}{y:i}a b"),
-        ("\u{27E6}x1\u{27E7}Salut !\nCa va ?", "{10}{20}Salut !|Ca va ?"),
+        // a token of the wrong kind stays text (issue 814; the LocOS MicroDVD build still drops it)
+        ("\u{27E6}x1\u{27E7}Salut !\nCa va ?", "{10}{20}\u{27E6}x1\u{27E7}Salut !|Ca va ?"),
         ("Salut\u{27E6}g1\u{27E7} !", "{10}{20}Salut !"),
     ] {
         assert_eq!(line(&[(0, bad)], 1), want, "{bad:?}");

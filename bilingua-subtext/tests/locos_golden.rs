@@ -57,7 +57,7 @@ fn matches_locos_on_generated_files() {
     let cases: Vec<serde_json::Value> = serde_json::from_str(&text).unwrap();
     assert!(cases.len() >= 2600);
     let (mut files, mut builds, mut refused, mut units_n, mut codes_n) = (0, 0, 0, 0, 0);
-    let (mut bom_bad, mut both_refuse, mut hardened) = (0, 0, 0);
+    let (mut bom_bad, mut both_refuse, mut hardened, mut mdvd_drops) = (0, 0, 0, 0);
     let mut diffs: Vec<String> = Vec::new();
     for c in &cases {
         let name = c["name"].as_str().unwrap();
@@ -111,7 +111,12 @@ fn matches_locos_on_generated_files() {
             let tr: Vec<(usize, String)> = want.iter().enumerate().filter_map(|(i, t)| map_text(label, i, t).map(|m| (i, m))).collect();
             match (d.as_str(), try_build(fmt, &data, &tr)) {
                 (Some(dig), Ok(out)) => {
-                    if fnv(&out) != dig {
+                    // the second kept difference: the LocOS MicroDVD build still drops a token that names no code (its
+                    // SBV and SubViewer builds keep it as text since issue 814; Bilingua keeps it in every format)
+                    let microdvd = name.contains("mdvd") || name.starts_with("mix-");
+                    if fnv(&out) != dig && microdvd && try_build_dropping_unknown(fmt, &data, &tr).is_ok_and(|o| fnv(&o) == dig) {
+                        mdvd_drops += 1;
+                    } else if fnv(&out) != dig {
                         diffs.push(format!("{name}: build {label}\n  rust  {:?}", String::from_utf8_lossy(&out)));
                     }
                 }
@@ -132,5 +137,5 @@ fn matches_locos_on_generated_files() {
         eprintln!("{d}");
     }
     assert!(diffs.is_empty(), "{} differences from LocOS", diffs.len());
-    println!("golden: {bom_bad} BOM-with-bad-UTF-8 files skipped, {both_refuse} builds refused by both, {hardened} builds refused on purpose (text that reads as a MicroDVD control code); {files} files ({units_n} units, {codes_n} codes), {builds} builds identical to LocOS, {refused} identical refusals");
+    println!("golden: {bom_bad} BOM-with-bad-UTF-8 files skipped, {both_refuse} builds refused by both, {hardened} builds refused on purpose (text that reads as a MicroDVD control code); {mdvd_drops} MicroDVD builds where LocOS drops a token that names no code; {files} files ({units_n} units, {codes_n} codes), {builds} builds identical to LocOS, {refused} identical refusals");
 }
