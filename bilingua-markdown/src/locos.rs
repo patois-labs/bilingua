@@ -961,7 +961,7 @@ fn plain_continues(next: &[&str], tail: &[char]) -> bool {
     }
     next.iter()
         .find(|l| !py_strip(l).is_empty())
-        .is_some_and(|l| l.starts_with([' ', '	']) && !py_lstrip(l).starts_with('#'))
+        .is_some_and(|l| l.starts_with([' ', '\t']) && !py_lstrip(l).starts_with('#'))
 }
 
 /// LocOS `find_front_matter` with the default keys. The whole block is checked for what PyYAML / tomllib refuse
@@ -1737,8 +1737,7 @@ fn split(text: &str) -> (Vec<&str>, Vec<&str>) {
 
 /// The skeleton tag text: the decoder's tag, or `utf-8` when it has none a skeleton line can carry.
 fn enc_tag(encoding: &str) -> &str {
-    if encoding.is_empty() || encoding.contains('
-') {
+    if encoding.is_empty() || encoding.contains('\n') {
         "utf-8"
     } else {
         encoding
@@ -1776,8 +1775,7 @@ pub fn extract(text: &str, encoding: &str, opts: &ExtractOptions, warnings: Vec<
     let tag = enc_tag(encoding);
     let mut data = Vec::with_capacity(tag.len() + 1 + full.len());
     data.extend_from_slice(tag.as_bytes());
-    data.push(b'
-');
+    data.push(b'\n');
     data.extend_from_slice(full.as_bytes());
     let doc = Document::new("markdown", units, Skeleton::binary(data, bilingua_model::parser_info!())).with_options(opts);
     bilingua_model::guard::finish(doc, warnings, &opts.limits())

@@ -168,7 +168,7 @@ fn parse_line(text: &str, line_start: usize, line: &str) -> Option<Value> {
 fn plain_continues(rest: &str) -> bool {
     rest.lines()
         .find(|l| !l.trim().is_empty())
-        .is_some_and(|l| l.starts_with([' ', '	']) && !l.trim_start().starts_with('#'))
+        .is_some_and(|l| l.starts_with([' ', '\t']) && !l.trim_start().starts_with('#'))
 }
 
 fn tail_ok(t: &str) -> bool {
