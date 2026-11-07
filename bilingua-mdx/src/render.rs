@@ -358,8 +358,8 @@ fn render_line(doc: &Document, u: &Unit) -> Result<String, Error> {
     }
     let src = locos_ids(&u.source());
     let (raw, real) = locos_ids_at(&u.output());
-    // the emphasis repair reads look-alike text as LocOS does (a token: protected, punctuation); it only adds,
-    // drops or moves ASCII marks and never touches a token, so the n-th token match after it is the n-th before
+    // the emphasis repair reads look-alike text as LocOS does (a token: protected, punctuation); it adds, drops or
+    // moves ASCII marks, so while the token matches are unchanged the n-th one after it is the n-th before
     let flags = real_flags(&raw, &real);
     let mut new = raw.clone();
     if new != src {
@@ -370,7 +370,9 @@ fn render_line(doc: &Document, u: &Unit) -> Result<String, Error> {
         if block_ok {
             new = emph::escape_block_start(&src, &new);
         }
-        // a repair that changed the tokens (never seen) is dropped rather than let a look-alike pass for a code
+        // a repair that changed the tokens is dropped: the CJK emphasis repair can move a mark into a token
+        // (`_⟦x1⟧` to `⟦*x1⟧`), which would write the token as text and lose its code (LocOS does), and the flags
+        // would no longer line up
         let before: Vec<&str> = ph_re().find_iter(&raw).map(|m| m.as_str()).collect();
         let after: Vec<&str> = ph_re().find_iter(&new).map(|m| m.as_str()).collect();
         if before != after {

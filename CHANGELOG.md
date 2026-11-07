@@ -71,6 +71,13 @@ is listed here).
 - docx, pptx, xlsx (LocOS profile): look-alike text (`⟦x2⟧`) that a source or a translation holds as plain text is
   written back as text. The writers used to read it as a token, so it was dropped, turned into a break or object, or
   moved. A token in a translation that names no code of the unit is now kept as text, not dropped (#814).
+- xliff, sdlxliff, mqxliff, mxliff, xlz, mqxlz, sdlppx and sdlrpx (LocOS profile), mdx, srt and vtt (LocOS profile):
+  the same for their writers. Look-alike text in a source or a translation is written back as text, even one that
+  names a real code of the unit; it used to be dropped, become an empty code pair, or take the real code's place.
+  The MDX emphasis repair still reads such text the way LocOS does; a repair that would change a token (the CJK
+  emphasis repair can move a mark into one, `⟦*x1⟧`, which LocOS writes as text and so loses the code) is not
+  applied to that line. The public `bilingua_xliff::locos` functions
+  `target_text`, `written_texts` and `build_cat` keep their 0.9.0 behaviour (#814).
 - LocOS profile: a Markdown file with a byte order mark reads its first heading as a heading (the mark is not part of
   the line) and keeps the mark; ARB `@@locale` and plural keys use the file's CRLF; resx writes a translation's line
   breaks as CRLF in a CRLF file; the CJK autolink repair leaves a URL alone when the source already had it glued to

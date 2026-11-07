@@ -91,7 +91,8 @@ fn translate() {
     let src = b"# Hello {name}\n\nPress <Kbd>Ctrl</Kbd> + <Kbd>C</Kbd>.\n";
     assert_eq!(extract(src).unwrap().units.len(), 2);
     let out = build(src, &[(0, "Bonjour \u{27E6}x1\u{27E7}"), (1, "Appuyez \u{27E6}g2\u{27E7}C\u{27E6}/g2\u{27E7} puis \u{27E6}g1\u{27E7}Ctrl\u{27E6}/g1\u{27E7} \u{27E6}x9\u{27E7}.")]);
-    assert_eq!(s(&out), "# Bonjour {name}\n\nAppuyez <Kbd>C</Kbd> puis <Kbd>Ctrl</Kbd> .\n");
+    // a token that names no code is text (issue 814; LocOS drops it)
+    assert_eq!(s(&out), "# Bonjour {name}\n\nAppuyez <Kbd>C</Kbd> puis <Kbd>Ctrl</Kbd> \u{27E6}x9\u{27E7}.\n");
     // escaping: a brace / < the translation adds; code spans untouched; existing escapes kept
     let out = build(b"Plain text.\n", &[(0, "a {b} <c> `{d}` \\{e")]);
     assert_eq!(s(&out), "a \\{b\\} \\<c> `{d}` \\{e\n");

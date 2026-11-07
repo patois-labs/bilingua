@@ -334,6 +334,14 @@ keeps the encoding:
   be numbered with gaps) and an unknown token in a translation is kept; LocOS drops or moves it.
   DOCX, PPTX and XLSX text boxes under the profile do the same when they write: plain text that looks like a token
   (`⟦x2⟧`, a token for a code the unit does not have) stays text in the file; only the unit's real codes are tokens.
+  The XLIFF family (xliff, sdlxliff, mqxliff, mxliff), XLIFF packages (xlz, mqxlz), Trados packages (sdlppx,
+  sdlrpx), MDX and SubRip / WebVTT do the same: look-alike text in a source or a translation is written as text, even when it names a
+  real code of the unit (`⟦g2⟧` typed beside the code `g2`). LocOS reads it as that code, so it moves or doubles
+  the code and loses the text. Where a translation arrives as LocOS text (the adapter), a typed token of a real code
+  is that code by definition and nothing changes. The public `bilingua_xliff::locos::target_text`, `written_texts`
+  and `build_cat` still read plain LocOS text, every token a code, as in 0.9.0. MDX also skips the emphasis repair
+  of a line when the repair would change a token (LocOS's CJK repair can move a mark into one, `⟦*x1⟧`, and then
+  writes the broken token as text, losing its code).
 - XML, DITA and DocBook (11-06): Bilingua opens a file whose DOCTYPE has an internal subset (entity declarations,
   as in most DocBook 4 manuals); LocOS refuses it. The subset is kept byte for byte and never read: no entity
   (internal, external or parameter) is expanded or fetched, every `&name;` stays a code, and the depth and element

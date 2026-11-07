@@ -64,6 +64,13 @@ fn matches_locos_on_random_files() {
             let mapping: Vec<(usize, &str)> = m.iter().map(|(i, s)| (*i, s.as_str())).collect();
             let got = String::from_utf8_lossy(&build(&data, &mapping)).into_owned();
             let exp = c["builds"][label].as_str().unwrap();
+            // kept difference (issue 814): LocOS's CJK emphasis repair moves a mark into a token here (`⟦*x1⟧`) and
+            // writes the broken token as text, losing its code; Bilingua drops a repair that changes the tokens
+            if (name, label) == ("f-random-007", "cjk") {
+                assert_ne!(got, exp, "{name}: the kept difference is gone");
+                assert!(!got.contains('\u{27e6}') && extract(got.as_bytes()).is_ok(), "{name}: build {label}: {got}");
+                continue;
+            }
             assert_eq!(got, exp, "{name}: build {label}");
         }
         ok += 1;
