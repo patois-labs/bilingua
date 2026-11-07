@@ -679,20 +679,6 @@ pub(crate) fn same_lang(a: &str, b: &str) -> bool {
     !pa.is_empty() && pa == pb && both(sa, sb) && both(ra, rb)
 }
 
-#[cfg(test)]
-mod lang_tests {
-    use super::same_lang;
-
-    #[test]
-    fn same_language_rule() {
-        for (a, b) in [("en", "en"), ("en", "EN-us"), ("en-US", "en"), ("en_US", "en-us"), ("zh-Hant-TW", "zh-TW"), ("zh", "zh-Hans")] {
-            assert!(same_lang(a, b), "{a} {b}");
-        }
-        for (a, b) in [("en-GB", "en-US"), ("fr", "en"), ("zh-Hans", "zh-Hant"), ("", ""), ("en", "eng")] {
-            assert!(!same_lang(a, b), "{a} {b}");
-        }
-    }
-}
 
 /// The raw (still escaped) value of attribute `attr` in a start tag, if it has one.
 fn lang_value(stag: &str, attr: &str) -> Option<String> {
@@ -771,3 +757,17 @@ pub(crate) fn merge_parts<'d>(doc: &'d Document, parts: &'d [SkelPart], lang_tag
     Ok(m.out)
 }
 
+#[cfg(test)]
+mod lang_tests {
+    use super::same_lang;
+
+    #[test]
+    fn same_language_rule() {
+        for (a, b) in [("en", "en"), ("en", "EN-us"), ("en-US", "en"), ("en_US", "en-us"), ("zh-Hant-TW", "zh-TW"), ("zh", "zh-Hans")] {
+            assert!(same_lang(a, b), "{a} {b}");
+        }
+        for (a, b) in [("en-GB", "en-US"), ("fr", "en"), ("zh-Hans", "zh-Hant"), ("", ""), ("en", "eng")] {
+            assert!(!same_lang(a, b), "{a} {b}");
+        }
+    }
+}
