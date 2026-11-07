@@ -184,14 +184,14 @@ fn line_end_hyphens_join_visible_hyphens_stay_and_unmapped_glyphs_are_dropped() 
         O::Plain("<</Type /Catalog /Pages 2 0 R>>".into()),
         O::Plain("<</Type /Pages /Kids [3 0 R] /Count 1>>".into()),
         O::Plain("<</Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources <</Font <</F1 5 0 R>>>> /Contents 4 0 R>>".into()),
-        O::Stream(String::new(), b"BT /F1 11 Tf 14 TL 72 740 Td (The oxce has an unmapped glyph x) Tj T* (and the next line follows.) Tj ET".to_vec()),
+        O::Stream(String::new(), b"BT /F1 11 Tf 14 TL 72 740 Td (The oxce has an unmapped glyph x) Tj T* (and the following line ends it.) Tj ET".to_vec()),
         O::Plain("<</Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding /ToUnicode 6 0 R>>".into()),
         O::Stream(String::new(), b"1 beginbfchar <78> <0000> endbfchar".to_vec()),
     ];
     let b = pdf(&objs);
     let p = page_texts(&b, &ExtractOptions::default()).unwrap();
     assert!(p[0].text.contains("o\u{fffe}ce"), "{:?}", p[0].text);
-    assert_eq!(texts(&ex(&b).unwrap()), vec!["The oce has an unmapped glyph and the next line follows.".to_string()]);
+    assert_eq!(texts(&ex(&b).unwrap()), vec!["The oce has an unmapped glyph and the following line ends it.".to_string()]);
 
     // A page of unmapped glyphs only has no printable text: it goes to OCR.
     let objs2: Vec<O> = objs
