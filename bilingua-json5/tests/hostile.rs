@@ -83,6 +83,9 @@ fn the_fixtures_themselves_pass_the_check() {
 
 #[test]
 fn deep_nesting_gives_a_typed_error_not_a_stack_overflow() {
+    // real nesting past the cap is a limit refusal
+    let deep = format!("{}1{}", "[".repeat(300), "]".repeat(300));
+    assert!(matches!(Json5Filter::default().extract(deep.as_bytes(), &opts()), Err(Error::Limit(l)) if l.kind == LimitKind::Depth));
     let f = Json5Filter::default();
     for depth in [257usize, 10_000, 1_000_000] {
         let mut d = vec![b'{'; 0];
@@ -91,7 +94,7 @@ fn deep_nesting_gives_a_typed_error_not_a_stack_overflow() {
         }
         let src = [b"{".to_vec(), d, b"}".to_vec()].concat();
         let e = f.extract(&src, &opts()).unwrap_err();
-        assert!(matches!(e, Error::Limit(_)), "{e}");
+        assert!(matches!(e, Error::Limit(_) | Error::Parse { .. }), "{e}");
     }
 }
 

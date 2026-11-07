@@ -63,7 +63,11 @@ impl Filter for Json5Filter {
 
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
         bilingua_model::check_own_options(self, &opts.format_options)?;
-        let limits = self.limits.capped_by(&opts.limits());
+        // the call's limits (the LocOS adapter passes MAX_DOCUMENT_SEGMENTS and friends) lower the filter's own
+        let limits = match &opts.limits {
+            Some(l) => self.limits.capped_by(l),
+            None => self.limits,
+        };
         if bytes.len() > limits.max_bytes {
             return Err(LimitError::new(LimitKind::InputBytes, format!("the file is larger than {} bytes", limits.max_bytes)).into());
         }

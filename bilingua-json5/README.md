@@ -20,7 +20,7 @@ JSON5 and JSONC filter for Bilingua (`.json5`, `.jsonc`; format id `json5`).
   the encoding when every character fits and is UTF-8 when it does not. A file that looks binary, or whose legacy
   bytes do not decode and encode back to the same bytes, is refused (`Error::Encoding`, code `encoding`).
 - Limits (`Limits`, `Json5Filter::with_limits`): nesting 256, 500 000 strings, 100 000 characters per string,
-  256 MiB per file, lowered to `ExtractOptions::limits` where those are lower, plus the Localization OS pre-parse
+  256 MiB per file, lowered to `ExtractOptions::limits` (when set) where those are lower, plus the Localization OS pre-parse
   budgets (`check_json5_budget`: quotes and separators per allowed string). Over a limit is `Error::Limit` (code
   `limit`); anything malformed or truncated is `Error::Parse` with line and column; nothing panics, nothing recurses.
 - Portable: no file system, threads, network or clock. `cargo check --target wasm32-unknown-unknown` passes.

@@ -30,7 +30,8 @@ fn large_file_extract_and_merge() {
     let data = text.as_bytes();
     assert!(data.len() > 5_000_000, "{}", data.len());
     let t = Instant::now();
-    let mut doc = Arb.extract(data, &ExtractOptions::default()).unwrap();
+    // more messages than LocOS's MAX_DOCUMENT_SEGMENTS: the crate's own limits
+    let mut doc = Arb.extract_with(data, &ExtractOptions::default(), &bilingua_arb::Limits::default()).unwrap();
     let t_extract = t.elapsed();
     let t = Instant::now();
     let same = Arb.merge(&doc).unwrap();
