@@ -340,6 +340,23 @@ def test_limits_are_refused_with_the_limit_code():
     assert error_code(bilingua.extract, "a.txt", b"x", limits={"max_inputs": 1}) == "invalid_argument"
 
 
+def test_budget_and_decode_refusals_have_their_own_codes():
+    # W2 B-side: budgets are `limit` and byte-level decode refusals `encoding`, never `unsupported` / `parse`
+    assert error_code(bilingua.extract, "a.ftl", b"x = " + b"{ $a } " * 100 + b"\n", limits={"max_units": 3}) == "limit"
+    assert error_code(bilingua.extract, "a.toml", b'a = "' + b"'" * 200 + b'"\n', limits={"max_units": 3}) == "limit"
+    assert error_code(bilingua.extract, "a.properties", b"k = v\x00\x01\x02\x03\x04\x05" * 50) == "encoding"
+    with pytest.raises(bilingua.BilinguaError) as e:
+        bilingua.extract("a.dtd", b'<!ENTITY a "caf\xe9">')
+    assert e.value.code == "encoding"
+    assert e.value.detail == str(e.value)
+    # a parse error's `detail` is the parser's own sentence, without the "not a <format> file:" prefix
+    with pytest.raises(bilingua.BilinguaError) as e:
+        bilingua.extract("a.properties", b"k = bad \\u12G4\n")
+    assert e.value.code == "parse"
+    assert str(e.value).startswith("not a ") and not e.value.detail.startswith("not a ")
+    assert str(e.value).endswith(e.value.detail)
+
+
 def test_entity_bomb_in_xliff_is_a_limit_error():
     bomb = (
         b'<?xml version="1.0"?><!DOCTYPE x [<!ENTITY a "lol"><!ENTITY b "&a;&a;&a;">]>'

@@ -179,7 +179,7 @@ keeps the encoding:
 
 - Extract with `profile="locos"` (Rust: `ExtractOptions::new().with_profile("locos")` or
   `profile::locos().extract_options()`); merge with `profile::locos().merge_options(&doc.format)` (Python:
-  `merge(doc, profile="locos")`). The profile means UTF-8 out except ini, strings, dxf, txt and properties (kept
+  `merge(doc, profile="locos")`). The profile means UTF-8 out except ini, strings, dxf, txt, properties, xaml and resjson (kept
   in their own encoding, as LocOS does; po, srt and vtt keep theirs in their own LocOS writers) and the target language stamped even when nothing is translated. TTX under the profile
   skips `<Tu>`s with a finished translation, as LocOS does.
 - Under the profile, units carry `context.extra["locos.p_index"]` where the format knows LocOS's number (odf, Qt ts,

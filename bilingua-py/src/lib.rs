@@ -9,17 +9,24 @@ use pyo3::types::{PyBool, PyBytes, PyDict, PyFloat, PyInt, PyList, PyString, PyT
 use serde_json::{Map, Number, Value};
 use std::panic::{catch_unwind, AssertUnwindSafe};
 
-create_exception!(bilingua, BilinguaError, PyException, "Raised for every Bilingua failure. Has a `code` attribute.");
+create_exception!(
+    bilingua,
+    BilinguaError,
+    PyException,
+    "Raised for every Bilingua failure. Has a `code` attribute and a `detail` attribute (the parser's own sentence, without the `not a <format> file:` prefix a `parse` error's message carries)."
+);
 
 /// An error with a stable machine code.
 struct Fail {
     code: &'static str,
     msg: String,
+    /// The parser's own sentence (`Error::Parse` without its prefix); `msg` for every other error.
+    detail: Option<String>,
 }
 
 impl Fail {
     fn new(code: &'static str, msg: impl Into<String>) -> Fail {
-        Fail { code, msg: msg.into() }
+        Fail { code, msg: msg.into(), detail: None }
     }
 }
 
@@ -43,7 +50,11 @@ impl From<engine::Error> for Fail {
             E::FormatOption { .. } | E::UnknownProfile(_) => "invalid_argument",
             _ => "error",
         };
-        Fail::new(code, e.to_string())
+        let detail = match &e {
+            E::Parse { msg, .. } => msg.clone(),
+            other => other.to_string(),
+        };
+        Fail { code, msg: e.to_string(), detail: Some(detail) }
     }
 }
 
@@ -51,6 +62,7 @@ fn to_py_err(py: Python<'_>, f: Fail) -> PyErr {
     let err = BilinguaError::new_err(f.msg);
     // Setting an attribute on a fresh exception instance cannot fail in practice; ignore if it does.
     let _ = err.value(py).setattr("code", f.code);
+    let _ = err.value(py).setattr("detail", f.detail.as_deref().unwrap_or(&f.msg));
     err
 }
 
@@ -272,7 +284,7 @@ fn merge<'py>(
     let mut value = from_py(document, 0).map_err(|f| to_py_err(py, f))?;
     // the parser record extract adds is information for the caller, not part of the model's document
     let stamped = value.as_object_mut().and_then(|m| m.remove(PARSER_KEY));
-    // a profile gives the defaults (LocOS: UTF-8 out except ini, strings, dxf, txt and properties, stamp always);
+    // a profile gives the defaults (LocOS: UTF-8 out except ini, strings, dxf, txt, properties, xaml and resjson, stamp always);
     // keywords override them. Without a version in the call, the version the document was extracted under is used.
     let format = value.get("format").and_then(|f| f.as_str()).unwrap_or("").to_string();
     let base = profile.as_deref().map(|p| p.split('@').next().unwrap_or(p));
@@ -409,7 +421,8 @@ fn locos_units(py: Python<'_>, document: &Bound<'_, PyAny>) -> PyResult<Py<PyAny
 /// LocOS text (tokens as `to_locos_text` writes them for that segment's source). Each target is set the way LocOS
 /// means it (an empty text is a translation to nothing, white space only is kept, a standalone placeholder may
 /// repeat). Returns `(document, problems)`: the Document with the targets set (its parser record kept) and, per
-/// segment id, the tokens kept as text (see `from_locos_text`); a segment with none is left out. A target the
+/// segment id, the tokens kept as text (see `from_locos_text`; for TOML and JS a token of the wrong kind that
+/// names a code of the unit is dropped, as LocOS drops it, and still listed); a segment with none is left out. A target the
 /// document cannot take raises BilinguaError (`unknown_segment`, `locked`, `invented_tag`, `duplicated_tag`) naming
 /// the segment.
 #[pyfunction]
@@ -438,7 +451,8 @@ fn locos_set_targets(py: Python<'_>, document: &Bound<'_, PyAny>, targets: &Boun
             // a segment the numbering does not list (not translatable, or no such id) still goes to the model's
             // checks, with an empty map: they name the problem
             let map = maps.get(&seg).unwrap_or(&empty);
-            let (inl, found) = engine::profile::tokens::parse_locos_text(&text, map);
+            // the format's LocOS token rules (TOML and JS drop a wrong-kind token naming a code, #814.1)
+            let (inl, found) = engine::profile::tokens::parse_locos_text_for(&doc.format, &text, map);
             engine::profile::locos_set_target(&mut doc, &seg, inl).map_err(|e| {
                 let f = Fail::from(e);
                 Fail::new(f.code, format!("segment {seg}: {}", f.msg))

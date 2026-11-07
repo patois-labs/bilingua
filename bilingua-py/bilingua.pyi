@@ -104,9 +104,12 @@ class BilinguaError(Exception):
     "invented_tag", "duplicated_tag", "parser_version", "write" (a broken or foreign skeleton), "unwritable" (the
     translation cannot be written in this format: the translator has to change it), "limit", "encoding", "io",
     "invalid_argument" (also an unknown format option or profile), "invalid_document", "internal"; "error" for a
-    failure a later release gives its own code."""
+    failure a later release gives its own code. `detail` is the parser's own sentence: the message without the
+    `not a <format> file:` prefix of a "parse" error, the message itself for every other code. Size and budget
+    refusals are "limit", a file whose bytes cannot be read as text "encoding"."""
 
     code: str
+    detail: str
 
 def formats() -> list[FormatInfo]:
     """All formats, most specific first."""
