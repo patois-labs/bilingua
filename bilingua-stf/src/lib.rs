@@ -239,6 +239,17 @@ fn canon(inl: &[Inline]) -> String {
     s
 }
 
+/// The character an escape stands for (backslash pair, n, r or t), or `None` for any other placeholder.
+fn decoded_escape(raw: &str) -> Option<char> {
+    match raw {
+        r"\\" => Some('\\'),
+        r"\n" => Some('\n'),
+        r"\r" => Some('\r'),
+        r"\t" => Some('\t'),
+        _ => None,
+    }
+}
+
 /// A TRANSLATION cell as target inlines: each placeholder that matches an unused source placeholder (same text, in
 /// order) becomes that tag; any other placeholder stays text, so the cell renders back to the same bytes and the
 /// target never holds a tag its source lacks. Empty for a blank cell.
@@ -256,19 +267,27 @@ fn target_of(cell: &str, unit_codes: &std::collections::BTreeMap<String, CodeDat
         }
     }
     let mut out = Vec::new();
+    let mut pending = String::new(); // text since the last tag; an escape the source lacks is decoded into it
     let mut at = 0usize;
     for (s, e) in scan::token_spans(cell) {
         let raw = &cell[s..e];
         if let Some(id) = free.get_mut(raw).and_then(|q| q.pop_front()) {
-            if s > at {
-                out.push(Inline::text(&cell[at..s]));
+            pending.push_str(&cell[at..s]);
+            if !pending.is_empty() {
+                out.push(Inline::text(&std::mem::take(&mut pending)));
             }
             out.push(Inline::tag(id, TagKind::Standalone, raw));
             at = e;
+        } else if let Some(c) = decoded_escape(raw) {
+            // a translator's own `\` or `\n`: the character, so the merge escapes it exactly once
+            pending.push_str(&cell[at..s]);
+            pending.push(c);
+            at = e;
         }
     }
-    if at < cell.len() {
-        out.push(Inline::text(&cell[at..]));
+    pending.push_str(&cell[at..]);
+    if !pending.is_empty() {
+        out.push(Inline::text(&pending));
     }
     merge_text(out)
 }
