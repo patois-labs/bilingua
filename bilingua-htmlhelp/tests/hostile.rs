@@ -66,8 +66,9 @@ fn deep_and_huge_files() {
     let e = HhcFilter.extract(&vec![b'<'; 5_000_000], &ExtractOptions::default()).unwrap_err();
     assert!(matches!(e, Error::Limit(_)), "{e}");
     let junk = b"<a ".repeat(600_000);
-    // never a tag: nothing to translate, so zero units and a warning
-    assert!(HhcFilter.extract(&junk, &ExtractOptions::default()).is_ok_and(|d| d.units.is_empty() && d.warnings.len() == 1));
+    // never a tag: not a sitemap at all, so refused (not opened as an empty file)
+    let e = HhcFilter.extract(&junk, &ExtractOptions::default()).unwrap_err();
+    assert!(matches!(e, Error::Parse { .. }) && e.to_string().contains("not an HTML Help"), "{e}");
     // nesting without end: ten thousand open objects with a name each
     let mut deep = Vec::new();
     for i in 0..10_000 {

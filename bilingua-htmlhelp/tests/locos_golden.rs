@@ -77,10 +77,11 @@ fn matches_locos_on_random_files() {
         let f = filter(c["fmt"].as_str().unwrap());
         if c.get("error").is_some() {
             // Allowlisted difference (MIGRATION.md "Differences from LocOS: empty HTML Help files"): LocOS refuses a
-            // valid file with nothing to translate, Bilingua opens it with zero units and a warning. Any other file
-            // LocOS refuses must still be refused.
+            // valid file with nothing to translate (EmptyDocumentError), Bilingua opens it with zero units and a
+            // warning. Any other file LocOS refuses must still be refused.
             if let Ok(d) = extract(f.as_ref(), &data) {
-                if !(d.units.is_empty() && d.warnings.iter().any(|w| w.kind == "no_translatable_text")) {
+                let empty = c["error"].as_str() == Some("EmptyDocumentError");
+                if !(empty && d.units.is_empty() && d.warnings.iter().any(|w| w.kind == "no_translatable_text")) {
                     bad.push(format!("{name}: LocOS refuses, we accept"));
                 }
             }

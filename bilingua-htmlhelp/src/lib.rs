@@ -125,11 +125,31 @@ fn extract_impl(kind: Kind, bytes: &[u8], opts: &ExtractOptions, hint: Option<u1
     // A code page whose decode is not one to one (Shift_JIS NEC and IBM duplicates) cannot give the same bytes back
     // from the text: such a file keeps its bytes for an untouched merge.
     let keep_raw = enc::is_ansi(&tag) && original_bytes(&text, &tag) != bytes;
-    let spans = if kind == Kind::Hhp { hhp::walk(&text, &limits)?.0 } else { sitemap::walk(&text, &limits)?.units };
+    let (spans, structure) = if kind == Kind::Hhp {
+        (hhp::walk(&text, &limits)?.0, hhp::has_section(&text))
+    } else {
+        let w = sitemap::walk(&text, &limits)?;
+        (w.units, w.structure)
+    };
     // A valid file with nothing to translate opens with no units and a warning (Localization OS refuses it; see
-    // MIGRATION.md). A merge of it gives the original bytes back.
+    // MIGRATION.md). A merge of it gives the original bytes back. A file with no HTML Help structure at all (empty,
+    // whitespace, plain text, junk), or whose entry names a browser reads but the walker cannot, is still refused.
     let mut warnings = Vec::new();
     if spans.is_empty() {
+        let parse = |msg: String| Error::Parse { format: kind.id().into(), msg };
+        if !structure {
+            return Err(parse(if kind == Kind::Hhp {
+                "This is not an HTML Help project file: it has no [OPTIONS], [WINDOWS] or other [section] line.".to_string()
+            } else {
+                format!("This is not an HTML Help {} file: it has no <UL> list and no <OBJECT> entry.", kind.what())
+            }));
+        }
+        if kind != Kind::Hhp && browser::has_entry_name(&text) {
+            return Err(parse(format!(
+                "This HTML Help {} file has entry names (param Name / Keyword) that a browser reads but that sit inside markup the filter reads differently (for example an abrupt comment <!-->). Correct that markup in the file and open it again.",
+                kind.what()
+            )));
+        }
         let msg = if kind == Kind::Hhp {
             "This HTML Help project file has no Title= or window caption to translate.".to_string()
         } else {
@@ -255,9 +275,16 @@ fn original_bytes(orig: &str, tag: &str) -> Vec<u8> {
 fn merge_impl(kind: Kind, doc: &Document, mo: &MergeOptions) -> Result<Vec<u8>, Error> {
     bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
     if let Skeleton::Binary { data, .. } = &doc.skeleton {
-        if doc.units.is_empty() && mo.output_encoding == OutputEncoding::Keep {
+        // Only an empty file in a code page that does not round-trip has a binary skeleton (see extract_impl).
+        if !doc.units.is_empty() {
+            return Err(Error::Write("htmlhelp needs a text skeleton".into()));
+        }
+        if mo.output_encoding == OutputEncoding::Keep {
             return Ok(data.clone());
         }
+        return Err(Error::Unsupported(
+            "This HTML Help file has nothing to translate and is in a code page whose text does not convert back to the same bytes, so it cannot be rewritten as UTF-8; merge it with the file's own encoding (output encoding keep) to get the original file back.".into(),
+        ));
     }
     let Skeleton::Text { parts, encoding: tag, .. } = &doc.skeleton else {
         return Err(Error::Write("htmlhelp needs a text skeleton".into()));

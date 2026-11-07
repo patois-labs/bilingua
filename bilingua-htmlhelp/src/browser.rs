@@ -19,7 +19,7 @@
 //! points and breakout tags, `<select>`, `<noscript>`, `<frameset>`), with scripting on and off and the legacy and
 //! 2025 `<select>` rules. Offsets are byte offsets; every delimiter is ASCII, so they line up with the walker's.
 
-use crate::text::{py_trim, unescape};
+use crate::text::{has_alnum, py_trim, unescape};
 use std::collections::HashSet;
 
 const RCDATA: &[&str] = &["title", "textarea"];
@@ -532,6 +532,21 @@ pub fn agreed_value_spans(text: &str) -> HashSet<ValueSpan> {
         out.retain(|s| v.spans.contains(s));
     }
     out
+}
+
+/// True when some browser mode reads a `<param name="Name">` or `<param name="Keyword">` with text in its value:
+/// an entry name a browser shows. Used when the sitemap walker finds none, to tell an empty file from markup that
+/// hides its entries from the walker (an abrupt comment `<!-->`).
+pub fn has_entry_name(text: &str) -> bool {
+    views(text).iter().any(|v| {
+        v.starts.iter().any(|st| {
+            let get = |k: &str| st.attrs.iter().find(|(a, _)| a == k).and_then(|(_, v)| v.as_deref());
+            st.ns == "html"
+                && st.name == "param"
+                && get("name").is_some_and(|n| matches!(py_trim(&unescape(n)).to_lowercase().as_str(), "name" | "keyword"))
+                && get("value").is_some_and(|x| has_alnum(&unescape(x)))
+        })
+    })
 }
 
 const META_STYLES: &[&str] = &["description", "keywords"];

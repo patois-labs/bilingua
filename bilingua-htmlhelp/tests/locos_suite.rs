@@ -305,4 +305,58 @@ fn empty_file_in_a_code_page_that_does_not_round_trip_keeps_its_bytes() {
     let d = HhcFilter.extract(&raw, &o).unwrap();
     assert!(d.units.is_empty() && d.warnings.len() == 1);
     assert_eq!(HhcFilter.merge(&d).unwrap(), raw);
+    // UTF-8 output cannot be made from those bytes: a clean typed refusal, not a skeleton error
+    let mo = MergeOptions::new().with_output_encoding(OutputEncoding::Utf8);
+    let e = HhcFilter.merge_with(&d, &mo).unwrap_err();
+    assert!(matches!(e, Error::Unsupported(_)) && e.to_string().contains("keep"), "{e}");
+}
+
+#[test]
+fn empty_versus_malformed() {
+    let o = ExtractOptions::default();
+    // valid structure, nothing to translate: zero units and a warning
+    for (f, raw) in [
+        (&HhcFilter as &dyn Filter, &b"<UL></UL>"[..]),
+        (&HhcFilter, b"<HTML><BODY><OBJECT type=\"text/site properties\"><param name=\"ImageType\" value=\"Folder\"></OBJECT></BODY></HTML>"),
+        (&HhkFilter, b"<HTML><BODY>
+<UL>
+</UL>
+</BODY></HTML>
+"),
+        (&HhpFilter, b"[OPTIONS]
+"),
+        (&HhpFilter, b"[OPTIONS]
+Compiled file=x.chm
+[WINDOWS]
+main=,\"\",\"a.hhc\"
+"),
+    ] {
+        let d = f.extract(raw, &o).unwrap_or_else(|e| panic!("{:?}: {e}", String::from_utf8_lossy(raw)));
+        assert!(d.units.is_empty() && d.warnings.len() == 1 && d.warnings[0].kind == "no_translatable_text");
+        assert_eq!(f.merge(&d).unwrap(), raw);
+    }
+    // no HTML Help structure: zero bytes, whitespace, plain text, a page with no list or entry, junk
+    for (f, raw) in [
+        (&HhcFilter as &dyn Filter, &b""[..]),
+        (&HhkFilter, b""),
+        (&HhpFilter, b""),
+        (&HhcFilter, b" 
+	
+"),
+        (&HhpFilter, b"
+  
+"),
+        (&HhcFilter, b"Contents: Getting started, Printing"),
+        (&HhkFilter, b"<HTML><BODY><P>Index</P></BODY></HTML>"),
+        (&HhpFilter, b"Title=Not a project
+"),
+        (&HhpFilter, b"just some words"),
+        (&HhcFilter, b"<a <a <a <ul"),
+    ] {
+        let e = f.extract(raw, &o).expect_err(&String::from_utf8_lossy(raw));
+        assert!(matches!(e, Error::Parse { .. }) && e.to_string().contains("not an HTML Help"), "{e}");
+    }
+    // a browser reads an entry the walker cannot see (abrupt comment): refused, not opened as empty
+    let e = HhcFilter.extract(b"<UL><LI><OBJECT type=\"text/sitemap\"><!--><param name=\"Name\" value=\"Intro\"><!-- --></OBJECT></UL>", &o).unwrap_err();
+    assert!(e.to_string().contains("a browser reads"), "{e}");
 }
