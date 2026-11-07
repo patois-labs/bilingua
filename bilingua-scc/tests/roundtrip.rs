@@ -312,3 +312,23 @@ fn a_caption_that_would_read_back_on_channel_2_is_refused() {
     // an untouched or echoed merge is never checked against this and stays exact
     assert_identity(&data);
 }
+
+/// Plain text as SCC hex words (odd parity, two characters per word).
+fn hex_words(text: &str) -> String {
+    let par = |b: u8| if b.count_ones() % 2 == 0 { b | 0x80 } else { b };
+    text.as_bytes()
+        .chunks(2)
+        .map(|c| format!("{:02x}{:02x}", par(c[0]), if c.len() > 1 { par(c[1]) } else { 0x80 }))
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+#[test]
+fn rewrapped_rows_without_a_pac_do_not_run_together() {
+    // a caption with no positioning codes: the translation is longer than one row, so it is wrapped
+    let src = format!("Scenarist_SCC V1.0\n\n00:00:01:00\t{}\n", hex_words("Works on Mac or Windows."));
+    let out = try_build(src.as_bytes(), &[(0, "Zqdoes it work on Mac or Windowsqz".into())]).unwrap();
+    let again = units(&out);
+    assert_eq!(again.len(), 1);
+    assert_eq!(again[0], "Zqdoes it work on Mac or\nWindowsqz");
+}

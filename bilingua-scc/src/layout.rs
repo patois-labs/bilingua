@@ -326,7 +326,7 @@ fn encode_atoms(atoms: &[Atom], toks: &[&Ev]) -> Vec<Word> {
 }
 
 /// The words of a translated caption line, or the reason it cannot be written.
-pub fn encode_line(line: &Line, text: &[Atom]) -> Result<Vec<Word>, String> {
+pub fn encode_line(line: &Line, text: &[Atom], locos_glue: bool) -> Result<Vec<Word>, String> {
     let toks = line.tokens();
     // a token the line does not have is dropped, as LocOS does
     let kept: Vec<Atom> = text
@@ -377,7 +377,15 @@ pub fn encode_line(line: &Line, text: &[Atom]) -> Result<Vec<Word>, String> {
             words.extend(s.head.iter().flat_map(|e| e.words.iter().copied()));
         }
         match s.rnum {
-            None => words.extend(s.pos.iter().flat_map(|e| e.words.iter().copied())),
+            None => {
+                // (the locos profile keeps LocOS's glued rows, byte for byte)
+                // a row without a PAC has nothing that starts a new row: add a carriage return, or the
+                // rows of a re-wrapped caption would run together ("orWindows")
+                if i > 0 && !locos_glue && !(j >= 1 && s.head.iter().any(|e| e.name == Name::Cr)) && !(j < 1 && line.mode == Mode::RollUp) {
+                    words.extend_from_slice(&cr_words);
+                }
+                words.extend(s.pos.iter().flat_map(|e| e.words.iter().copied()));
+            }
             Some(rnum) => {
                 let mut new_r = rnum as usize;
                 if line.mode != Mode::RollUp && m != n {
