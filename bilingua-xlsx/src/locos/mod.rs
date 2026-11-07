@@ -359,6 +359,17 @@ impl Package {
                 cells.insert(key, c);
             }
         }
+        // openpyxl's `_clean_merge_range`: every cell of a merged range but its top-left one becomes a `MergedCell`
+        // with no value, so a value Excel left under a merge is no unit (W4 xlsx-2, `01-stress002`)
+        for mc in d.iter_tag(d.root, M, "mergeCell") {
+            let Some((a, b)) = d.get(mc, "ref").and_then(|r| r.split_once(':')) else { continue };
+            let (Ok((r1, c1)), Ok((r2, c2))) = (coord(a, path), coord(b, path)) else { continue };
+            let (top, bottom, left, right) = (r1.min(r2), r1.max(r2), c1.min(c2), c1.max(c2));
+            let covered: Vec<(i64, i64)> = cells.range((top, i64::MIN)..=(bottom, i64::MAX)).map(|(k, _)| *k).filter(|&(r, c)| c >= left && c <= right && (r, c) != (top, left)).collect();
+            for k in covered {
+                cells.remove(&k);
+            }
+        }
         self.cells.insert(path.to_string(), cells);
         Ok(())
     }

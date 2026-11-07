@@ -404,3 +404,17 @@ fn equals_sign_text_cells_are_not_units() {
     let w = entry(&out, "xl/worksheets/sheet1.xml").unwrap();
     assert!(w.contains("<is><t>=Optional</t></is>"), "{w}");
 }
+
+/// W4 xlsx-2: a value under a merged range (not its top-left cell) is no unit, as openpyxl reads it (a `MergedCell`
+/// with no value); the cells after it keep LocOS's numbers.
+#[test]
+fn values_under_a_merge_are_not_units() {
+    let sst = "<si><t>Medical</t></si><si><t>After</t></si>";
+    let sheet = "<sheetData><row r=\"16\"><c r=\"A16\" t=\"s\"><v>0</v></c><c r=\"B16\" t=\"s\"><v>0</v></c><c r=\"E16\" t=\"s\"><v>1</v></c></row></sheetData><mergeCells count=\"1\"><mergeCell ref=\"A16:D16\"/></mergeCells>";
+    let data = book(sheet, sst, &[], &[]);
+    let mut doc = extract(&data, &opts(None)).unwrap();
+    assert_eq!(unit_texts(&doc), ["Medical", "After"]);
+    set(&mut doc, 1, "Danach");
+    let w = entry(&merged(&doc), "xl/sharedStrings.xml").unwrap();
+    assert!(w.contains("Danach"), "{w}");
+}
