@@ -47,13 +47,13 @@ fn text_is_not_glued_to_a_trailing_control_space() {
 #[test]
 fn an_unclosed_environment_in_the_preamble_does_not_hide_the_document() {
     // a broken preamble: LocOS takes the first `\begin{document}`, and so do we
-    let src = b"\documentclass{article}\n\begin{equation}\n\begin{document}\nBody text.\n\end{document}\n";
+    let src = b"\\documentclass{article}\n\\begin{equation}\n\\begin{document}\nBody text.\n\\end{document}\n";
     assert_eq!(units(src), vec!["Body text.".to_string()]);
 }
 
 #[test]
 fn unchanged_merge_after_a_control_word_is_identical() {
-    let src = b"\medskip\noindent\nTo see this.\n";
+    let src = b"\\medskip\\noindent\nTo see this.\n";
     assert_eq!(build(src, &[]), src.to_vec());
     let u = units(src);
     let echo: Vec<(usize, &str)> = u.iter().enumerate().map(|(i, t)| (i, t.as_str())).collect();
