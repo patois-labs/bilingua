@@ -256,7 +256,7 @@ fn hostile_targets_are_written_as_text() {
     let w = entry(&out, "xl/worksheets/sheet1.xml").unwrap();
     assert!(w.contains("<t xml:space=\"preserve\">ab\nc ]]&gt; &lt;![CDATA[ &amp; &lt;/t&gt;</t>"), "{w}");
     let d = entry(&out, "xl/drawings/drawing1.xml").unwrap();
-    assert!(d.contains("<a:t>\u{27e6}r0\u{27e7}</a:t></a:r><a:r><a:rPr sz=\"1100\"/><a:t>\u{27e6}r9\u{27e7}</a:t>"), "{d}");
+    assert!(d.contains("<a:t>\u{27e6}x18446744073709551616\u{27e7}\u{27e6}r0\u{27e7}\u{27e6}r9\u{27e7}</a:t></a:r><a:br/>"), "{d}");
     // a token that names no code of the paragraph (an overflowing number too) is text, never dropped
     assert!(d.contains("18446744073709551616") && d.contains("\u{27e6}/x1\u{27e7}"), "{d}");
     assert_eq!(d.matches("<a:br/>").count(), 1, "{d}");
