@@ -23,6 +23,15 @@ is listed here).
   character. Octal escapes in `L"..."` strings are read up to 7 digits, as rc.exe does (was 3) (LocOS tracker #791).
 - ftl: a multi-line value whose first line is on its own line no longer gains two spaces of indent per merge;
   continuation lines use the indent of the line the value starts on (LocOS tracker #811 item 1).
+- scc: a translation that holds an inline code the caption does not have (an unknown tag id) is refused with a message
+  naming the code. It used to be dropped without a warning (as LocOS does; LocOS gets the same fix).
+- stl: a code table switch (a translation that needs another EBU table) re-encodes comment subtitles with the rest of
+  the file, and is refused when a comment cannot move. A byte kept raw (a control code, a byte the old table has no
+  character for) only moves when it means the same in the new table: 0xC0 (none in table 00, a letter in table 01)
+  makes the switch refuse with a message naming the subtitles, where it used to be copied raw and read back as a
+  letter of the new table. LocOS gets the same fix.
+- stf: a literal backslash in a translation is written as `\\`, so `C:\new` no longer reads back as a newline.
+  The bytes of such a build change (LocOS gets the same fix).
 - xcstrings: `stringSet` localizations (App Shortcuts phrases) are read as one unit per string and written back as a
   `stringSet` for the target language, one string per source string in order; a set with a phrase that has no
   new translation is marked `needs_review`. Such catalogs used to open with no units.

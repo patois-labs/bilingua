@@ -201,6 +201,7 @@ fn escape(s: &str, out: &mut String) {
             }
             '\n' => out.push_str("\\n"),
             '\t' => out.push_str("\\t"),
+            '\\' => out.push_str("\\\\"),
             c => out.push(c),
         }
     }
