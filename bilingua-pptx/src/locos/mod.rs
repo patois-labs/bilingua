@@ -13,7 +13,8 @@
 //!   (`N+1..`); `profile::tokens::to_locos_text_numbered` turns that into LocOS's `⟦r1⟧..⟦/r1⟧⟦x3⟧`.
 //! * Writing is LocOS's `_rebuild`: the target is turned back into LocOS text and split with LocOS's token rules
 //!   (a run token sets the run whose `a:rPr` is copied, a point token puts its break or field back once, a dropped
-//!   one is appended, new lines become `a:br`); the language is set on every run, break and field of a written
+//!   one is appended, new lines become `a:br`; literal text is escaped first, so a token look-alike in it stays
+//!   text, unlike LocOS); the language is set on every run, break and field of a written
 //!   paragraph (and `rtl="1"` for a right-to-left target); the SmartArt drawing cache follows its data part; the
 //!   parts that changed are re-serialised, every other entry keeps its bytes. A Strict Open XML file is read and
 //!   written through LocOS's namespace swap.
@@ -542,48 +543,9 @@ fn has_text(d: &Dom, p: usize) -> bool {
 }
 
 /// Literal text that looks like a LocOS token (`⟦x2⟧` written by the author or the translator) must not be read as
-/// one when a translation is written. Literal text is escaped on its way to the writer (the open bracket becomes
-/// U+E000 U+E001, U+E000 becomes U+E000 U+E000) and unescaped where the spans are cut, so only real codes are tokens.
-pub(crate) fn esc_lit(s: &str) -> String {
-    if !s.contains(['\u{27e6}', '\u{e000}']) {
-        return s.to_string();
-    }
-    let mut out = String::with_capacity(s.len() + 8);
-    for c in s.chars() {
-        match c {
-            '\u{27e6}' => out.push_str("\u{e000}\u{e001}"),
-            '\u{e000}' => out.push_str("\u{e000}\u{e000}"),
-            c => out.push(c),
-        }
-    }
-    out
-}
-
-/// The inverse of `esc_lit`.
-pub(crate) fn unesc_lit(s: &str) -> String {
-    if !s.contains('\u{e000}') {
-        return s.to_string();
-    }
-    let mut out = String::with_capacity(s.len());
-    let mut it = s.chars().peekable();
-    while let Some(c) = it.next() {
-        if c == '\u{e000}' {
-            match it.peek() {
-                Some('\u{e001}') => {
-                    it.next();
-                    out.push('\u{27e6}');
-                    continue;
-                }
-                Some('\u{e000}') => {
-                    it.next();
-                }
-                _ => {}
-            }
-        }
-        out.push(c)
-    }
-    out
-}
+/// one when a translation is written: literal text is escaped on its way to the writer and unescaped where the
+/// spans are cut, so only real codes are tokens (the shared helper in `bilingua_model::profile::tokens`).
+pub(crate) use bilingua_model::profile::tokens::{escape_literal as esc_lit, unescape_literal as unesc_lit};
 
 /// `tokenize(p)[0]`: the paragraph as LocOS text.
 fn tok_text(d: &Dom, p: usize) -> String {
@@ -944,10 +906,17 @@ fn unit(p_index: usize, source: Vec<Inline>, codes: BTreeMap<String, CodeData>, 
 
 /// The LocOS text of a target: run tags are `r` pairs, every other code an `x` point, numbered by tag id.
 pub fn target_text(target: &[Inline]) -> String {
+    tagged_text(target, false)
+}
+
+/// [`target_text`], with literal text escaped (`esc_lit`) when `esc`: what the writer takes, so a token look-alike
+/// in the text stays text.
+fn tagged_text(target: &[Inline], esc: bool) -> String {
     let mut s = String::new();
     for i in target {
         match i {
-            Inline::Text(t) => s.push_str(&esc_lit(t)),
+            Inline::Text(t) if esc => s.push_str(&esc_lit(t)),
+            Inline::Text(t) => s.push_str(t),
             Inline::Tag { id, kind: TagKind::Open, .. } => s.push_str(&format!("\u{27e6}r{id}\u{27e7}")),
             Inline::Tag { id, kind: TagKind::Close, .. } => s.push_str(&format!("\u{27e6}/r{id}\u{27e7}")),
             Inline::Tag { id, free: true, .. } => s.push_str(&format!("\u{27e6}p{id}\u{27e7}")),
@@ -965,13 +934,21 @@ fn written_texts(doc: &Document) -> Vec<(i64, String)> {
         if u.segments.is_empty() || !u.segments.iter().all(|s| s.has_target()) {
             continue;
         }
-        out.push((p, target_text(&u.output())));
+        out.push((p, tagged_text(&u.output(), true)));
     }
     out
 }
 
-/// `PptxFilter._rebuild`: the package with `texts` (`p_index` -> LocOS text) written.
+/// `PptxFilter._rebuild`: the package with `texts` (`p_index` -> LocOS text) written. Every well-formed token in
+/// `texts` is read as LocOS reads it.
 pub fn rebuild(original: &[u8], texts: &[(i64, String)], target: Option<&str>) -> Result<Vec<u8>, Error> {
+    // plain LocOS text has no escaped look-alike: doubling its own U+E000 is all the escape it needs
+    let texts: Vec<(i64, String)> = texts.iter().map(|(i, t)| (*i, t.replace('\u{e000}', "\u{e000}\u{e000}"))).collect();
+    rebuild_escaped(original, &texts, target)
+}
+
+/// [`rebuild`] for texts whose literal text is escaped (`esc_lit`).
+fn rebuild_escaped(original: &[u8], texts: &[(i64, String)], target: Option<&str>) -> Result<Vec<u8>, Error> {
     let werr = |e: Error| match e {
         Error::Parse { msg, .. } => Error::Write(msg),
         e => e,
@@ -1058,5 +1035,5 @@ pub fn merge(doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
         return Err(Error::Write("pptx: a LocOS-profile document needs its original file".into()));
     };
     let texts = written_texts(doc);
-    rebuild(data, &texts, opts.stamp_lang(doc, true))
+    rebuild_escaped(data, &texts, opts.stamp_lang(doc, true))
 }

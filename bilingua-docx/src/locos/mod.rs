@@ -314,9 +314,9 @@ fn written_texts(doc: &Document) -> BTreeMap<usize, (String, bool)> {
         let (mut text, mut source) = (String::new(), String::new());
         for (i, s) in u.segments.iter().enumerate() {
             if i > 0 {
-                let sep = u.separators.get(i - 1).map(String::as_str).unwrap_or("");
-                text.push_str(sep);
-                source.push_str(sep);
+                let sep = para::esc_lit(u.separators.get(i - 1).map(String::as_str).unwrap_or(""));
+                text.push_str(&sep);
+                source.push_str(&sep);
             }
             text.push_str(&locos_text(s.output()));
             source.push_str(&locos_text(&s.source));

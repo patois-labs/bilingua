@@ -370,3 +370,18 @@ fn literal_token_lookalikes_survive_a_text_box_merge() {
     let sheet = entry(&out, "xl/worksheets/sheet1.xml").unwrap();
     assert!(sheet.contains("Zelle \u{27e6}x1\u{27e7}"), "{sheet}");
 }
+
+#[test]
+fn private_use_characters_round_trip_in_a_text_box() {
+    const PUA: &str = "a\u{e000}\u{e001}b\u{e000}\u{e000}c\u{e000}\u{27e6}x1\u{27e7}\u{e001}d";
+    let drawing = DRAWING.replace("<a:t>world</a:t>", &format!("<a:t>w{PUA}</a:t>")).replace("<a:t>Second box</a:t>", &format!("<a:t>Second {PUA}</a:t>"));
+    let sheet = "<sheetData><row r=\"1\"><c r=\"A1\" t=\"inlineStr\"><is><t>Cell</t></is></c></row></sheetData><drawing r:id=\"rId1\"/>";
+    let data = book(sheet, "", &[], &[("xl/worksheets/_rels/sheet1.xml.rels", rel(&[("rId1", "drawing", "../drawings/drawing1.xml")])), ("xl/drawings/drawing1.xml", drawing)]);
+    let mut doc = extract(&data, &opts(Some("fr"))).unwrap();
+    for u in doc.units.clone() {
+        doc.set_target(&u.segments[0].id, u.segments[0].source.clone()).unwrap();
+    }
+    let d = entry(&merged(&doc), "xl/drawings/drawing1.xml").unwrap();
+    assert!(d.contains(&format!("<a:t>w{PUA}</a:t>")), "{d}");
+    assert!(d.contains(&format!("<a:t>Second {PUA}</a:t>")), "{d}");
+}

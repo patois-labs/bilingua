@@ -348,3 +348,36 @@ fn literal_lookalikes_survive_object_mode() {
     assert!(xml.contains("Voir \u{27e6}x3\u{27e7}</w:t></w:r><w:r><w:drawing>"), "{xml}");
     assert_eq!(xml.matches("<w:drawing>").count(), 1, "{xml}");
 }
+
+/// Private-use characters next to look-alikes, as the escape uses them: they must come back byte for byte.
+const PUA: &str = "a\u{e000}\u{e001}b\u{e000}\u{e000}c\u{e000}\u{27e6}x1\u{27e7}\u{e001}d";
+
+#[test]
+fn private_use_characters_round_trip_in_runs_and_alt_text() {
+    let body = format!("<w:p><w:r><w:t>{PUA}</w:t></w:r><w:r><w:rPr><w:b/></w:rPr><w:t>B{PUA}</w:t></w:r></w:p><w:p><w:r><w:t>One {PUA}</w:t></w:r><w:r><w:drawing><wp:inline><wp:docPr id=\"1\" name=\"P\" descr=\"Alt {PUA}\"/></wp:inline></w:drawing></w:r></w:p>");
+    let d = docx(&body, NORMAL, &[]);
+    let mut doc = crate::Docx.extract(&d, &opts(Some("fr"))).unwrap();
+    assert_eq!(doc.units.len(), 3);
+    // every unit is written with its own source as the target (the locale makes the merge write)
+    for u in doc.units.clone() {
+        profile::locos_set_target(&mut doc, &u.segments[0].id, u.segments[0].source.clone()).unwrap();
+    }
+    let xml = entry(&crate::Docx.merge_with(&doc, &profile::locos().merge_options("docx")).unwrap(), "word/document.xml");
+    assert!(xml.contains(&format!("<w:t>{PUA}</w:t>")), "{xml}");
+    assert!(xml.contains(&format!("<w:t>B{PUA}</w:t>")), "{xml}");
+    assert!(xml.contains(&format!("One {PUA}</w:t>")), "{xml}");
+    assert!(xml.contains(&format!("descr=\"Alt {PUA}\"")), "{xml}");
+}
+
+#[test]
+fn a_typo_token_is_reported_and_written_as_text() {
+    let d = docx("<w:p><w:r><w:t>Hi </w:t></w:r><w:r><w:rPr><w:b/></w:rPr><w:t>you</w:t></w:r></w:p>", NORMAL, &[]);
+    let doc = crate::Docx.extract(&d, &opts(None)).unwrap();
+    let (_, map) = tokens::to_locos_text_for("docx", &doc.units[0].segments[0].source);
+    // the translator typed x9 for a code the unit does not have: the token layer reports it, the writer keeps it
+    let typed = "\u{27e6}r1\u{27e7}Salut \u{27e6}x9\u{27e7}\u{27e6}/r1\u{27e7}\u{27e6}r2\u{27e7}toi\u{27e6}/r2\u{27e7}";
+    let (_, problems) = tokens::parse_locos_text(typed, &map);
+    assert_eq!(problems, vec![tokens::TokenProblem::Unknown { token: "\u{27e6}x9\u{27e7}".into() }]);
+    let xml = entry(&build(&d, None, &[(0, typed)]), "word/document.xml");
+    assert!(xml.contains("Salut \u{27e6}x9\u{27e7}</w:t>"), "{xml}");
+}

@@ -483,48 +483,9 @@ fn add_run(d: &mut Dom, p: usize, text: &str) -> usize {
 }
 
 /// Literal text that looks like a LocOS token (`⟦x2⟧` written by the author or the translator) must not be read as
-/// one when a translation is written. Literal text is escaped on its way to the writer (the open bracket becomes
-/// U+E000 U+E001, U+E000 becomes U+E000 U+E000) and unescaped where the spans are cut, so only real codes are tokens.
-pub(crate) fn esc_lit(s: &str) -> String {
-    if !s.contains(['\u{27e6}', '\u{e000}']) {
-        return s.to_string();
-    }
-    let mut out = String::with_capacity(s.len() + 8);
-    for c in s.chars() {
-        match c {
-            '\u{27e6}' => out.push_str("\u{e000}\u{e001}"),
-            '\u{e000}' => out.push_str("\u{e000}\u{e000}"),
-            c => out.push(c),
-        }
-    }
-    out
-}
-
-/// The inverse of `esc_lit`.
-pub(crate) fn unesc_lit(s: &str) -> String {
-    if !s.contains('\u{e000}') {
-        return s.to_string();
-    }
-    let mut out = String::with_capacity(s.len());
-    let mut it = s.chars().peekable();
-    while let Some(c) = it.next() {
-        if c == '\u{e000}' {
-            match it.peek() {
-                Some('\u{e001}') => {
-                    it.next();
-                    out.push('\u{27e6}');
-                    continue;
-                }
-                Some('\u{e000}') => {
-                    it.next();
-                }
-                _ => {}
-            }
-        }
-        out.push(c)
-    }
-    out
-}
+/// one when a translation is written: literal text is escaped on its way to the writer and unescaped where the
+/// spans are cut, so only real codes are tokens (the shared helper in `bilingua_model::profile::tokens`).
+pub(crate) use bilingua_model::profile::tokens::{escape_literal as esc_lit, unescape_literal as unesc_lit};
 
 /// Every well-formed LocOS token (`⟦/?[a-z]?\d+⟧`, ASCII digits): (start, end, the text between the brackets).
 pub fn find_tokens(text: &str) -> Vec<(usize, usize, &str)> {
