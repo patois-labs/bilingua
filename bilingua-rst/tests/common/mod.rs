@@ -31,7 +31,7 @@ pub fn try_build(data: &[u8], tr: &[(usize, String)]) -> Result<Vec<u8>, Error> 
         u.segments[0].target = from_locos_text(t, &map);
         u.segments[0].state = SegState::Draft;
     }
-    Rst.merge(&doc)
+    Rst.merge_with(&doc, &MergeOptions::new().with_profile(crate::PROFILE))
 }
 
 pub fn build(data: &[u8], tr: &[(usize, &str)]) -> Vec<u8> {
@@ -46,7 +46,7 @@ pub fn build_str(data: &[u8], tr: &[(usize, &str)]) -> String {
 /// An empty build and an echo build are both the original bytes.
 pub fn assert_identity(data: &[u8]) {
     let doc = extract(data).expect("extract");
-    assert_eq!(Rst.merge(&doc).unwrap(), data, "empty build must be byte-identical");
+    assert_eq!(Rst.merge_with(&doc, &MergeOptions::new().with_profile(crate::PROFILE)).unwrap(), data, "empty build must be byte-identical");
     let texts = units(data);
     let echo: Vec<(usize, String)> = texts.iter().cloned().enumerate().collect();
     assert_eq!(try_build(data, &echo).unwrap(), data, "echo build must be byte-identical");

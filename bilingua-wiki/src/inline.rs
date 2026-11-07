@@ -253,7 +253,7 @@ const FILE_NAMESPACES: &[&str] = &[
     "gambar", "fitxer", "arquivo", "αρχείο", "εικόνα", "ไฟล์", "ဖိုင်", "फ़ाइल", "फाइल", "चित्र", "मीडिया", "চিত্র", "ফাইল", "ಚಿತ್ರ", "ഫയൽ", "கோப்பு", "ឯកសារ", "файл", "суроат",
 ];
 
-fn file_ns(target: &str) -> bool {
+pub fn file_ns(target: &str) -> bool {
     let t = target.trim_start_matches([' ', '\t']);
     let Some((ns, _)) = t.split_once(':') else { return false };
     let ns = ns.trim_matches([' ', '\t']).replace('_', " ").to_lowercase();

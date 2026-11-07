@@ -444,6 +444,59 @@ impl<'a> Simple<'a> {
         true
     }
 
+    /// The columns (index into the top border's runs) that the new cells need wider, and by how much: a first
+    /// column cell is one line, so it needs its whole text; another column needs its longest word.
+    fn needs(&self, new_cells: &[(usize, String)]) -> Vec<usize> {
+        let mut need = vec![0usize; self.cols.len()];
+        for (ci, txt) in new_cells {
+            let cell = &self.cells[*ci];
+            let Some(b) = cell.b else { continue };
+            let Some(k) = self.cols.iter().position(|&c| c == (cell.a, b)) else { continue };
+            let width = b - cell.a;
+            let want = if cell.first {
+                wrap(txt, usize::MAX).map_or(0, |l| l.first().map_or(0, |x| column_width(x)))
+            } else if wrap(txt, width).is_none() {
+                split_ws(txt).map(column_width).max().unwrap_or(0)
+            } else {
+                0
+            };
+            if want > width {
+                need[k] = need[k].max(want - width);
+            }
+        }
+        need
+    }
+
+    /// Like [`Simple::render`], but a column that is too narrow for its new text is widened first: the border
+    /// lines and every row are redrawn with more columns in it (native profile). The table keeps its shape.
+    pub fn render_widening(&self, new_cells: &[(usize, String)], slot_line: usize) -> Result<Vec<String>, String> {
+        let need = self.needs(new_cells);
+        if need.iter().all(|n| *n == 0) {
+            return self.render(new_cells, slot_line);
+        }
+        let mut rows: Vec<Vec<String>> = self.rows.iter().map(|r| owned(r)).collect();
+        for k in (0..self.cols.len()).rev() {
+            let at = self.cols[k].1;
+            for (r, row) in rows.iter_mut().enumerate() {
+                if row.len() <= at {
+                    continue;
+                }
+                let edge = if r > 0 && !rx::simple_border(self.orig[r]) && !rx::simple_span(self.orig[r]) { " " } else { row[at - 1].as_str() };
+                let ch = if edge == "=" || edge == "-" { edge.to_string() } else { " ".to_string() };
+                for _ in 0..need[k] {
+                    row.insert(at, ch.clone());
+                }
+            }
+        }
+        let wide: Vec<String> = rows.iter().map(|r| r.concat()).collect();
+        let refs: Vec<&str> = wide.iter().map(String::as_str).collect();
+        let mut t = Simple::new(&refs);
+        if !t.parse() || t.cells.len() != self.cells.len() {
+            return self.render(new_cells, slot_line);
+        }
+        t.render(new_cells, slot_line)
+    }
+
     pub fn render(&self, new_cells: &[(usize, String)], slot_line: usize) -> Result<Vec<String>, String> {
         let mut rows: Vec<Vec<String>> = self.rows.iter().map(|r| owned(r)).collect();
         let mut inserts: HashMap<usize, usize> = HashMap::new();

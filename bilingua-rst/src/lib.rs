@@ -99,7 +99,7 @@ fn write_title(raw: &str, info: &str, rendered: &str) -> Result<String, Error> {
     Ok(out)
 }
 
-fn write_table(doc: &Document, i: usize, head: &Unit) -> Result<String, Error> {
+fn write_table(doc: &Document, i: usize, head: &Unit, widen: bool) -> Result<String, Error> {
     let bad = |m: &str| Error::Write(format!("rst: {m}"));
     let raw = get(head, RAW).ok_or_else(|| bad("table without its source"))?;
     let kind = get(head, KIND).unwrap_or("");
@@ -145,7 +145,11 @@ fn write_table(doc: &Document, i: usize, head: &Unit) -> Result<String, Error> {
         if cells.iter().any(|(ci, _)| *ci >= t.cells.len()) {
             return Err(bad("cell index out of range"));
         }
-        t.render(&cells, line)
+        if widen {
+            t.render_widening(&cells, line)
+        } else {
+            t.render(&cells, line)
+        }
     };
     let mut lines = rendered.map_err(Error::Write)?;
     if !pad.is_empty() {
@@ -161,13 +165,13 @@ fn write_table(doc: &Document, i: usize, head: &Unit) -> Result<String, Error> {
     Ok(lines.join(nl))
 }
 
-fn write_unit(doc: &Document, i: usize, out: &mut String) -> Result<(), Error> {
+fn write_unit(doc: &Document, i: usize, out: &mut String, widen: bool) -> Result<(), Error> {
     let u = doc.units.get(i).ok_or_else(|| Error::Write(format!("skeleton points at missing unit {i}")))?;
     let kind = get(u, KIND).unwrap_or("");
     match kind {
         "cell" => Ok(()),
         "grid" | "simple" => {
-            out.push_str(&write_table(doc, i, u)?);
+            out.push_str(&write_table(doc, i, u, widen)?);
             Ok(())
         }
         _ => {
@@ -425,11 +429,13 @@ impl Filter for Rst {
         let Skeleton::Text { parts, encoding, .. } = &doc.skeleton else {
             return Err(Error::Write("rst needs a text skeleton".into()));
         };
+        // the native profile widens a simple table column that a translation outgrows; LocOS refuses the merge
+        let widen = !opts.is_profile(profile::LOCOS);
         let mut out = String::new();
         for p in parts {
             match p {
                 SkelPart::Raw(s) => out.push_str(s),
-                SkelPart::Unit(i) => write_unit(doc, *i, &mut out)?,
+                SkelPart::Unit(i) => write_unit(doc, *i, &mut out, widen)?,
             }
         }
         match enc::utf8_output(&out, encoding, opts) {

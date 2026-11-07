@@ -86,6 +86,15 @@ impl<'a> Walk<'a> {
         crate::lex::any_letter_in(&v)
     }
 
+    /// A line inside a file link that closes on a later line: it joins the open paragraph whatever it looks like
+    /// (`----`, a list marker, a blank line), so the options and the closing brackets stay in the link.
+    fn para_force(&mut self, s: usize, e: usize) {
+        match &mut self.para {
+            None => self.para = Some((s, e)),
+            Some(p) => p.1 = e,
+        }
+    }
+
     fn para_line(&mut self, s: usize, e: usize) -> Result<(), Error> {
         if !self.words(s, e) {
             return self.flush();
@@ -168,6 +177,8 @@ pub fn mw_slots(w: &mut Walk, holes: &[Region]) -> Result<(), Error> {
     let mask = w.cx.mask;
     let mut table = 0usize;
     let mut hole_i = 0usize;
+    // end of a file link that started on an earlier line and has not closed yet
+    let mut link_open_until = 0usize;
     for (s, e) in lines(mask) {
         let body = &mask[s..e];
         let mut line_holes = Vec::new();
@@ -176,6 +187,10 @@ pub fn mw_slots(w: &mut Walk, holes: &[Region]) -> Result<(), Error> {
                 line_holes.push(holes[hole_i]);
             }
             hole_i += 1;
+        }
+        if s < link_open_until {
+            w.para_force(s, e);
+            continue;
         }
         let stripped = strip(body);
         if stripped.is_empty() {
@@ -257,8 +272,35 @@ pub fn mw_slots(w: &mut Walk, holes: &[Region]) -> Result<(), Error> {
             continue;
         }
         w.para_line(s, e)?;
+        if let Some(end) = multiline_file_link(w.cx, s, e) {
+            link_open_until = end;
+            w.para_force(s, e);
+        }
     }
     w.flush()
+}
+
+/// The end of a `[[File:..]]` link that starts on the line `[s, e)` and closes on a later line (a caption of several
+/// lines). The link ends within 200 lines and 20000 bytes, or it is not taken for one.
+fn multiline_file_link(cx: &Ctx, s: usize, e: usize) -> Option<usize> {
+    let m = cx.mask.as_bytes();
+    let mut i = s;
+    while i + 1 < e {
+        if m[i] == b'[' && m[i + 1] == b'[' {
+            if let Some(&end) = cx.links.get(&i).filter(|end| **end > e) {
+                let close = end + 2;
+                let inner = sl(cx.mask, i + 2, end);
+                let target = inner.split('|').next().unwrap_or("");
+                let far = close - e > 20000 || m[e..close].iter().filter(|c| **c == b'
+').count() > 200;
+                if inner.contains('|') && crate::inline::file_ns(target) && !far {
+                    return Some(close);
+                }
+            }
+        }
+        i += 1;
+    }
+    None
 }
 
 /// One MediaWiki table line: caption, header or data cells; row lines are skipped.

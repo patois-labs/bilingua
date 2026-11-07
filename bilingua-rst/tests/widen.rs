@@ -1,0 +1,79 @@
+//! A simple table column that a translation outgrows is widened in the native profile (bilingua#19); the LocOS
+//! profile keeps its refusal.
+use bilingua_model::*;
+use bilingua_rst::Rst;
+
+const TABLE: &str = "=====  =====\nName   Value\n=====  =====\nyes    1\nno     22\n=====  =====\n";
+
+fn doc(profile: Option<&str>, data: &str) -> Document {
+    Rst.extract(data.as_bytes(), &ExtractOptions::new().with_source_lang("en").with_granularity(Granularity::Paragraph).with_profile(profile)).unwrap()
+}
+
+fn txt(u: &Unit) -> String {
+    u.source().iter().map(|i| if let Inline::Text(t) = i { t.as_str() } else { "" }).collect()
+}
+
+fn merge(profile: Option<&str>, data: &str, set: &[(&str, &str)]) -> Result<String, Error> {
+    let mut d = doc(profile, data);
+    for u in d.units.iter_mut() {
+        if let Some((_, to)) = set.iter().find(|(from, _)| txt(u) == *from) {
+            u.segments[0].target = vec![Inline::text(*to)];
+            u.segments[0].state = SegState::Draft;
+        }
+    }
+    let o = MergeOptions::new().with_profile(profile);
+    Rst.merge_with(&d, &o).map(|b| String::from_utf8(b).unwrap())
+}
+
+#[test]
+fn first_column_grows() {
+    let out = merge(None, TABLE, &[("yes", "Si, claro, siempre")]).unwrap();
+    let want = "==================  =====\nName                Value\n==================  =====\nSi, claro, siempre  1\nno                  22\n==================  =====\n";
+    assert_eq!(out, want);
+    // the widened table reads back as the same table with the new text
+    let d2 = Rst.extract(out.as_bytes(), &ExtractOptions::new()).unwrap();
+    assert!(d2.units.iter().any(|u| txt(u) == "Si, claro, siempre"));
+}
+
+#[test]
+fn locos_profile_still_refuses() {
+    let e = merge(Some("locos"), TABLE, &[("yes", "Si, claro, siempre")]).unwrap_err();
+    assert!(e.to_string().contains("does not fit"), "{e}");
+}
+
+#[test]
+fn a_span_line_and_an_indented_table_are_redrawn() {
+    let t = "Intro text.
+
+  =====  =====  =====
+  One    Two    Three
+  =====  =====  =====
+  yes    a      b
+  -------------------
+  no     c      d
+  =====  =====  =====
+
+After.
+";
+    let out = merge(None, t, &[("yes", "Si, claro"), ("c", "Palabra")]).unwrap();
+    let want = "Intro text.
+
+  =========  =======  =====
+  One        Two      Three
+  =========  =======  =====
+  Si, claro  a        b
+  -------------------------
+  no         Palabra  d
+  =========  =======  =====
+
+After.
+";
+    assert_eq!(out, want);
+}
+
+#[test]
+fn a_long_word_in_a_later_column_widens_it() {
+    let out = merge(None, TABLE, &[("1", "Donaudampfschiff")]).unwrap();
+    assert!(out.starts_with("=====  ================\n"), "{out}");
+    assert!(out.contains("yes    Donaudampfschiff\n"), "{out}");
+}
