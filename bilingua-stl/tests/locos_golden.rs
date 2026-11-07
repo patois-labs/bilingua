@@ -63,10 +63,10 @@ fn mapping(m: &serde_json::Value) -> Vec<(usize, String)> {
 }
 
 /// Files where Bilingua deliberately refuses a code table switch that LocOS writes (issue 798): the file holds bytes that
-/// mean something else in another table (an undefined upper-half byte, a stray floating accent), or random bytes
+/// mean something else in another table (an undefined upper-half byte at the edge of a row: odd, cct02, cct04), or random bytes
 /// above 0x9F (the random files are fuzz and may hold the same). LocOS copies those bytes raw and corrupts them.
 fn switch_refused_on_purpose(name: &str, input: &[u8]) -> bool {
-    name == "odd" || (name.starts_with("rand-") && input.len() > 1024 && input[1024..].iter().any(|b| *b >= 0xA0))
+    matches!(name, "odd" | "cct02" | "cct04") || (name.starts_with("rand-") && input.len() > 1024 && input[1024..].iter().any(|b| *b >= 0xA0))
 }
 
 fn check(name: &str, what: &str, got: Result<Vec<u8>, Error>, want: &serde_json::Value, bad: &mut Vec<String>, dir: &Option<String>, input: &[u8]) {
