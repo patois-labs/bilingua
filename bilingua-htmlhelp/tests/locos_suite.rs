@@ -214,7 +214,7 @@ fn hostile_inputs() {
     // (Localization OS refuses it; MIGRATION.md "Differences from LocOS")
     for (f, raw, word) in [
         (&HhcFilter as &dyn Filter, &b"<OBJECT type=\"text/sitemap\"><param name=\"Local\" value=\"a.htm\"></OBJECT>"[..], "no entry names"),
-        (&HhpFilter, b"[FILES]\r\na.htm\r\n, "Title"),
+        (&HhpFilter, b"[FILES]\r\na.htm\r\n", "Title"),
     ] {
         let d = f.extract(raw, &ExtractOptions::default()).unwrap();
         assert!(d.units.is_empty() && d.warnings.len() == 1 && d.warnings[0].kind == "no_translatable_text" && d.warnings[0].message.contains(word), "{:?}", d.warnings);
