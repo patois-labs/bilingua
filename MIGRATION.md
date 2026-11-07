@@ -679,6 +679,59 @@ Found by running the LocOS suites with Bilingua switched on. Bilingua now gives 
   `Filter.build` guard and `export._nothing_written`, so the adapter keeps it (Bilingua's own merge of an untouched
   document under the profile writes UTF-8 too).
 
+## Wave 3 B-side: bilingual and CAT formats (W3, 11-07)
+
+Found by the W3 parity and diff runs with the adapter (`coder-comparison/2026-11-07-locos-issues/bili-core/W3/B-SIDE.md`).
+The goldens in `bilingua/tests/locos/{ttx,txml,txlf}` and the `repair-*` builds (`<file>.maps.json`) of the XLIFF family
+and packages compare these with LocOS's own builds.
+
+- **Tag repair in the CAT formats (B8).** A translation that repeats a pair token, closes a pair that is not open, leaves
+  a pair open or names a pair with a point token (common in MT output) was refused (`duplicated_tag`). Under the
+  profile, xliff, sdlxliff, mqxliff, mxliff, txlf, txml, ttx, xlz, mqxlz and sdlppx now take it and their writers apply
+  LocOS's rule (`cat_xliff._render`, `xliff_filter._rebuild_target`): a code is written once (a repeated pair loses its
+  tags and keeps its text in place; a repeated point is dropped), a stray close is dropped, a pair left open is closed
+  at the end of the segment, a pair named by a point token is written empty. The token letter does not matter, only
+  the number, as in LocOS. The target keeps every tag as typed, so the writers drop them after the target's edges are
+  stripped and the white space comes out byte for byte as LocOS writes it. A tag the source lacks is still refused.
+  Each repair is listed: `profile::tokens::repair_locos_text_for` returns `TagRepair`s and Python's
+  `locos_set_targets` adds them to the problems (`repeated`, `stray_close`, `unclosed`, `pair_as_point`), so the
+  adapter can show them; LocOS's QA flags the same target through its placeholder check. Native mode keeps the
+  exactly-once rule.
+- **Difference kept on purpose:** a pair named by a point token in a plain XLIFF. LocOS's `_rebuild_target` writes a
+  copy of the source element with its source text inside (text the translation never had); Bilingua writes it empty,
+  as `cat_xliff` does for every other CAT format (`KNOWN_BUILDS` in `locos_golden.rs`).
+- **Confirmed Wordfast work is protected (B1).** Under the profile a confirmed TXML or TXLF segment (LocOS
+  `wordfast._skip` and `cat_xliff._unit_skip`: a target that is not raw MT nor a fuzzy match, a gs4tr target past
+  `needs-*`) is not translatable and never written, like a lock. Native mode keeps it editable.
+- **p_index (B2, B6).** TXML: the position among every `<segment>` of a translatable or localizable block, protected
+  ones counted; TXLF: the slot key; TTX: the position among every `<Tu>`. They were positions among the translatable
+  units, so a skipped unit moved the ones after it.
+- **Style (B3).** txml and txlf units carry no style, as in LocOS.
+- **Encoding (B5).** TTX, TXML and TXLF are written in the file's own encoding (UTF-16 with its BOM stays UTF-16), as
+  LocOS's `build_ttx`, `build_txml` and `cat_xliff.build_units` do; they were written as UTF-8. An untouched build with
+  the target language already set returns the file.
+- **#571 inline copy budget (B10).** A plain XLIFF whose nested inline tags would cost LocOS more than ten element copies
+  per allowed segment is refused before any unit is made, code `limit` (`XmlElements`), with LocOS's sentence. Profile
+  only (Bilingua's own reader makes no copies).
+- **Invalid character references (B13).** `&#30;` and every other reference outside XML 1.0's `Char` make the file not
+  well-formed in `bilingua-xmltree` (the LocOS XLIFF port, the Trados and XLIFF packages, the docx and pptx LocOS
+  readers), with lxml's sentence (`xmlParseCharRef: invalid xmlChar value 30`), in text and in attributes. Bilingua's own
+  XLIFF reader no longer turns such a reference into the character: the text shows the reference as written, so no
+  writer can put the character in a file. TXML and TTX refused them already.
+- **Package member listing (B14).** Under the profile an xlz or mqxlz document carries one `locos_member_slots`
+  warning per XLIFF member, in package order (`part` the member path, `message` its slot count, protected slots
+  included; at most 200, LocOS's `MAX_LISTED`), so the adapter can write `skeleton["package"]["xliff_files"]` (offset =
+  the slots of the members before). LocOS shows no warning: the adapter turns them into the key and drops them, as it
+  does with `ttx_unsegmented_text`.
+- **mqxlz refusals (B15)** name `mqxlz`, not `xlz`.
+- **Nesting caps are `limit` (B16).** json ("nesting is too deep") and the docx, pptx and xlsx members ("elements nested
+  deeper than N") report `Error::Limit` with `LimitKind::Depth`, like every other crate; they were `parse`. The adapter's
+  `_DEPTH_AS_PARSE` table can go.
+- Not changed here: B4 (seg-source TXLF, now equal through B1 and B2), B4b (TXML build speed, re-measure), B7 (the TTX
+  unsegmented warning, kept), B9 (protected counts), B11 and B12 (sentence and code of the pre-parse budget and the
+  encoding refusal, masked by the adapter's gates).
+- No profile version bump: no LocOS document was ever stored by Bilingua in production.
+
 ## Wave 2 B-side: resource formats (W2, 11-07)
 
 Found by the W2 parity and diff runs with the adapter (`coder-comparison/2026-11-07-locos-issues/bili-core/W2/B-SIDE.md`).

@@ -9,6 +9,9 @@ is listed here).
 
 ### Added
 
+- Rust: `profile::tokens::repair_locos_text_for`, `profile::tokens::locos_repairs_tags` and `profile::tokens::TagRepair`
+  (the CAT formats' tag repair, below); `bilingua_xliffpkg::MEMBER_SLOTS`. Python: `locos_set_targets` lists tag
+  repairs as problems of kind `repeated`, `stray_close`, `unclosed` and `pair_as_point`.
 - Python: `BilinguaError.detail`, the parser's own sentence (a `parse` error's message without its
   `not a <format> file:` prefix; the message itself for every other code).
 - Rust: `profile::tokens::parse_locos_text_for(format, text, map)`: the token rules of a format's LocOS filter (TOML
@@ -34,6 +37,14 @@ is listed here).
   `tools/build-wheel-m5.sh` builds and tests a manylinux_2_28 wheel on a Linux host.
 
 ### Changed
+
+- LocOS profile, CAT formats (W3): a translation that repeats, leaves open or wrongly closes a pair tag is repaired as
+  LocOS's CAT writers do instead of refused (xliff, sdlxliff, mqxliff, mxliff, txlf, txml, ttx, xlz, mqxlz, sdlppx);
+  confirmed TXML and TXLF segments are protected; TXML, TXLF and TTX keep LocOS's `p_index`, no style, and are written
+  in their own encoding (UTF-16 stays UTF-16); plain XLIFF has LocOS's #571 inline copy budget; xlz and mqxlz list their
+  members' slot counts. See MIGRATION.md, "Wave 3 B-side".
+- Error codes: the json, docx, pptx and xlsx nesting caps are `limit` (`LimitKind::Depth`), not `parse`; an mqxlz
+  refusal names `mqxlz`.
 
 - Speed (no change in output): `detect` no longer sniffs every filter's bytes for a file whose extension already
   decides (the sniff result was thrown away), and `extract` and `resegment` compile the bundled SRX rules only for
@@ -71,6 +82,10 @@ is listed here).
   drawings) now match and their lists are gone.
 
 ### Fixed
+
+- XML: a character reference outside XML 1.0's `Char` (`&#30;`, `&#0;`) is not well-formed in `bilingua-xmltree`
+  (lxml's sentence); Bilingua's own XLIFF reader keeps it as the text it is instead of the character, so it is never
+  written into a file.
 
 - PDF: a Type 0 font with an Identity CMap, an Adobe CJK `CIDSystemInfo` (GB1, CNS1, Japan1, Korea1) and no
   ToUnicode now reads its CIDs through PDFium's CID to Unicode tables, as Localization OS does. Before, Latin text
