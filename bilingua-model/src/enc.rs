@@ -512,8 +512,19 @@ fn is_latin1_label(l: &str) -> bool {
     )
 }
 
+/// Declarations live at the top of a file: only those in the first 4096 characters are the file's own. A page that
+/// embeds another page (a forum export with a second `<meta charset>` deep in its body) has text there that looks
+/// like a declaration but is content, and must come back as it was.
+fn split_head(text: &str) -> (&str, &str) {
+    let cut = text.char_indices().nth(4096).map_or(text.len(), |(i, _)| i);
+    text.split_at(cut)
+}
+
 fn rewrite_declared(text: &str) -> String {
-    decl_re().replace_all(text, |c: &regex::Captures| format!("{}UTF-8", &c[1])).into_owned()
+    let (head, tail) = split_head(text);
+    let mut out = decl_re().replace_all(head, |c: &regex::Captures| format!("{}UTF-8", &c[1])).into_owned();
+    out.push_str(tail);
+    out
 }
 
 /// `text` with every charset declaration that names a charset other than UTF-8 (`<?xml encoding>`, `<meta
@@ -989,15 +1000,20 @@ fn encode_text_as_is(text: &str, encoding: &str) -> Result<Vec<u8>, Error> {
     }
     // a declared charset: each declaration parse rewrote to UTF-8 gets its own label back
     let restored = match env.label {
-        Some(l) => decl_re()
-            .replace_all(text, |c: &regex::Captures| {
-                if c[2].eq_ignore_ascii_case("UTF-8") {
-                    format!("{}{l}", &c[1])
-                } else {
-                    c[0].to_string()
-                }
-            })
-            .into_owned(),
+        Some(l) => {
+            let (head, tail) = split_head(text);
+            let mut out = decl_re()
+                .replace_all(head, |c: &regex::Captures| {
+                    if c[2].eq_ignore_ascii_case("UTF-8") {
+                        format!("{}{l}", &c[1])
+                    } else {
+                        c[0].to_string()
+                    }
+                })
+                .into_owned();
+            out.push_str(tail);
+            out
+        }
         None => text.to_string(),
     };
     let utf16 = match env.base {
@@ -1014,7 +1030,7 @@ fn encode_text_as_is(text: &str, encoding: &str) -> Result<Vec<u8>, Error> {
     }
     if env.base == LATIN1 {
         // true ISO-8859-1: every character must be U+0000..U+00FF, else UTF-8 under the UTF-8 labels
-        let agree = decl_re().captures_iter(&restored).all(|c| {
+        let agree = decl_re().captures_iter(split_head(&restored).0).all(|c| {
             let name = c.get(2).map_or("", |m| m.as_str());
             is_latin1_label(name) || name.eq_ignore_ascii_case("us-ascii")
         });
@@ -1027,7 +1043,7 @@ fn encode_text_as_is(text: &str, encoding: &str) -> Result<Vec<u8>, Error> {
         return Err(Error::Write(format!("unknown encoding {}", env.base)));
     };
     // the bytes and every declaration in the file must agree; if one does not, write UTF-8 under the UTF-8 labels
-    let agree = decl_re().captures_iter(&restored).all(|c| {
+    let agree = decl_re().captures_iter(split_head(&restored).0).all(|c| {
         let name = c.get(2).map_or("", |m| m.as_str());
         label_encoding(name) == Some(enc)
             || env.label.is_some_and(|l| l.eq_ignore_ascii_case(name))
@@ -1228,6 +1244,20 @@ mod tests {
         // text that does not fit is UTF-8 under the UTF-8 label
         let out = encode_text(&d.text.replace('\u{3b1}', "\u{4e2d}"), &d.encoding).unwrap();
         assert!(String::from_utf8(out).unwrap().contains("charset=\"UTF-8\""));
+    }
+
+    #[test]
+    fn a_declaration_deep_in_the_body_is_content_and_comes_back_as_written() {
+        // a page that embeds another page: the second charset name is text, not the file's declaration
+        let pad = "<p>x</p>".repeat(700);
+        let src = format!(
+            "<html><head><meta http-equiv=\"Content-Type\" content=\"text/html; charset=windows-1251\"></head><body>{pad}<p>\u{41f}\u{440}\u{438}</p><!-- <meta charset=windows-1252> --></body></html>"
+        );
+        let b = legacy(encoding_rs::WINDOWS_1251, &src);
+        let d = dec(&b, Some("en"), true).unwrap();
+        assert_eq!(d.encoding, "windows-1251;label=windows-1251");
+        assert!(d.text.contains("charset=UTF-8\"") && d.text.contains("<meta charset=windows-1252>"));
+        assert_eq!(encode_text(&d.text, &d.encoding).unwrap(), b);
     }
 
     #[test]
