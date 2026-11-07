@@ -228,8 +228,16 @@ def same_zip(golden_path, input_zip, want, have):
             assert a is not None and a == b, e["name"]
 
 
-def extract(name, data, locale=None):
-    return bilingua.extract(name, data, profile="locos", granularity="paragraph", target_lang=locale.replace("_", "-") if locale else None)
+def extract(name, data, locale=None, format_options=None):
+    return bilingua.extract(
+        name, data, profile="locos", granularity="paragraph", target_lang=locale.replace("_", "-") if locale else None, format_options=format_options
+    )
+
+
+def golden_options(inp):
+    """The Bilingua format options of a golden's `<file>.opts.json` (W4: comments), else None."""
+    side = pathlib.Path(str(inp) + ".opts.json")
+    return json.loads(side.read_text(encoding="utf-8")).get("format_options") if side.exists() else None
 
 
 @pytest.mark.parametrize("golden", GOLDENS, ids=[f"{g.parent.name}/{g.name[:-12]}" for g in GOLDENS])
@@ -237,16 +245,17 @@ def test_locos_golden(golden):
     g = json.loads(golden.read_text(encoding="utf-8"))
     inp = pathlib.Path(str(golden)[: -len(".golden.json")])
     name, data = inp.name, inp.read_bytes()
+    fo = golden_options(inp)
     if name in KNOWN:
         pytest.skip(KNOWN[name])
     if g.get("parse_error"):
         try:
-            doc = extract(name, data)
+            doc = extract(name, data, format_options=fo)
         except bilingua.BilinguaError:
             return
         assert g["parse_error"].startswith("EmptyDocumentError") and not bilingua.locos_units(doc)
         return
-    units = bilingua.locos_units(extract(name, data))
+    units = bilingua.locos_units(extract(name, data, format_options=fo))
     assert [(u["p_index"], u["text"], u["style"]) for u in units] == [(u["p_index"], u["text"], u["style"]) for u in g["units"]]
     input_zip = zip_entries(data) or []
     for b in g["builds"]:
@@ -260,7 +269,7 @@ def test_locos_golden(golden):
             untouched = len(want_zip) == len(input_zip) and all(e.get("same") for e in want_zip) if want_zip is not None else want == data
             if untouched:
                 continue
-        doc = extract(name, data, locale)
+        doc = extract(name, data, locale, fo)
         by_p = {str(u["p_index"]): u["segment_id"] for u in bilingua.locos_units(doc)}
         doc, _ = bilingua.locos_set_targets(doc, {by_p[k]: v for k, v in mapping.items() if k in by_p})
         out = bilingua.merge(doc, profile="locos")
@@ -272,3 +281,18 @@ def test_locos_golden(golden):
 
 def test_goldens_found():
     assert len(GOLDENS) > 100
+
+
+def test_idml_run_pairs_need_the_codes():
+    # W4 idml-1: with the unit's codes an IDML/ICML range is an `r` pair, as locos_units gives it
+    inl = [
+        {"tag": {"id": "1", "kind": "open", "display": "<CharacterStyleRange>"}},
+        {"text": "bold"},
+        {"tag": {"id": "1", "kind": "close", "display": "</CharacterStyleRange>"}},
+    ]
+    codes = {"1": {"open": "<CharacterStyleRange>", "close": "</CharacterStyleRange>", "standalone": None, "label": "run"}}
+    assert bilingua.to_locos_text("idml", inl)[0] == "\u27e6g1\u27e7bold\u27e6/g1\u27e7"
+    text, m = bilingua.to_locos_text("icml", inl, codes=codes)
+    assert text == "\u27e6r1\u27e7bold\u27e6/r1\u27e7" and m["1"]["letter"] == "r"
+    back, problems = bilingua.from_locos_text(text, m)
+    assert back == inl and problems == []

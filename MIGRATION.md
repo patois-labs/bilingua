@@ -296,8 +296,9 @@ keeps the encoding:
   LocOS's `_rebuild` (its token rules on the target text, run properties copied, a dropped break or field put back
   at the end, new lines as `a:br`, `lang` on every run of a written paragraph and `rtl="1"` for a right-to-left
   target, the SmartArt drawing cache mirrored), re-serialising only the parts that changed; Strict Open XML goes
-  through LocOS's namespace swap. The profile's documents carry the original as a `Skeleton::Binary`. Not ported:
-  slide comments (LocOS's `comments=True`), LocOS's markup budget, XML parts in a legacy code page.
+  through LocOS's namespace swap. The profile's documents carry the original as a `Skeleton::Binary`. Slide comments
+  (LocOS's `comments=True`, here `pptx.translate_comments`) are units since W4 (see "Wave 4 B-side"). Not ported:
+  LocOS's markup budget (the adapter's gate runs it), XML parts in a legacy code page.
 - Track D group B, DOCX (docx, docm, dotx, dotm): under the profile a port of LocOS's `docx_filter.py`, walk stamp 6
   (`bilingua_docx::locos`). Units are every paragraph with text in LocOS's numbering (the body in reading order
   with tables, content controls and text boxes, then headers, footers, footnotes, endnotes and comments), then the
@@ -311,9 +312,13 @@ keeps the encoding:
   Merging rebuilds each translated paragraph as LocOS does and, for a target language, declares it (docDefaults
   and the styles that had the old default get the target, untranslated runs that inherited the old default get it
   written on them, `w:bidi` on translated paragraphs for an RTL target, `dc:language` in core.xml, `w:bCs` /
-  `w:iCs` / `w:szCs` twins on translated runs for a complex-script target); the package is saved the way
+  `w:iCs` / `w:szCs` twins on translated runs for a complex-script target); the package is laid out the way
   python-docx saves it (new `[Content_Types].xml` and relationship files, unreachable parts dropped), Strict Open
-  XML mapped back to Strict. A plain build that writes nothing, or only each unit's own text, is the upload. The
+  XML mapped back to Strict. It is not byte for byte python-docx's (W4 docx-3): a rewritten part's XML declaration
+  has double quotes, and the parts python-docx re-serialises without changing them (`docProps/core.xml`,
+  `styles.xml`, `numbering.xml`, `settings.xml`, the `.rels` files, `comments.xml`) keep their bytes here. Every such
+  member is canonically equal to LocOS's and re-reads to the same units; it is a known rule for the diff harness,
+  not a difference a reader sees. A plain build that writes nothing, or only each unit's own text, is the upload. The
   XML tree the XLIFF and DOCX ports share is the internal crate `bilingua-xmltree`. Approximations: the bidi
   direction a re-created `w:bdo`/`w:dir` follows uses script blocks rather than Unicode's bidi table; tokens with
   non-ASCII digits are not read as tokens; a part in UTF-16 or UTF-8 only.
@@ -678,6 +683,67 @@ Found by running the LocOS suites with Bilingua switched on. Bilingua now gives 
   stored-Windows-1252 test says so). LocOS returns the upload byte for byte when nothing is written; that is its
   `Filter.build` guard and `export._nothing_written`, so the adapter keeps it (Bilingua's own merge of an untouched
   document under the profile writes UTF-8 too).
+
+## Wave 4 B-side: Office and DTP formats (W4, 11-07)
+
+Found by the W4 parity and diff runs with the adapter (`coder-comparison/2026-11-07-locos-issues/bili-core/W4/B-SIDE.md`).
+All under the LocOS profile; native extraction is unchanged unless said. The new goldens in
+`bilingua/tests/locos/{pptx,xlsx,docx,odt,ods,vsdx,idml,icml}` (inputs from `oracle/gen_locos_w4.py`; a `<file>.opts.json`
+gives LocOS's parse options, here `comments=True`) compare the units and every build with LocOS's own.
+
+- **PowerPoint slide comments (pptx-1).** `pptx.translate_comments=true` makes them units as LocOS's
+  `parse(comments=True)` does: per walked slide, in the order of its relationships, each `comments` part once; a
+  classic `p:cmLst` gives each `p:cm`'s `p:text` (stripped, kept when it has a letter or digit), any other root
+  (PowerPoint 365's modern comments) every `a:p` of every `p188:txBody`, comments and replies, with LocOS's run
+  tokens. `p_index` is `1000000 + j` (`j` counts every slot), style `"slide N comment"`. A merge writes each comment
+  with a target (a classic one keeps its own white space around the translation; a modern one gets the target
+  language like a slide paragraph); a broken comments part matters only when comments are wanted. Without the
+  profile the option still only adds a warning.
+- **Missing-alt inventory (docx-1).** Every unit LocOS's image scan anchors drawings at (the body unit of the
+  drawing's paragraph, else the nearest one before it, else the first) carries `locos.a11y_images` (how many) and
+  the new `locos.a11y_missing_alt` (`profile::A11Y_MISSING_ALT`): a JSON list of `{"kind": "missing" | "empty",
+  "where": <wp:docPr name>}`, a drawing with no `descr` being `missing`, a blank one `empty`, a decorative one
+  (`adec:decorative`) counted only. `locos.a11y_empty_alt` also lists the `empty` names, as for Markdown. Summed
+  over the units this is LocOS's `skeleton["a11y_images"]` (the goldens check it). The adapter's `a11y_images()`
+  needs a kind-aware branch to read `missing` findings.
+- **customXml parts (docx-2).** `customXml/` parts are no longer depth- or size-checked by the XML guard (native and
+  profile): Bilingua never parses them, LocOS only scans them for links, so a deep or broken one no longer refuses
+  the document.
+- **Storyline notice (docx-5).** The `docx_bilingual_table` warning (LocOS's counts and wording) comes out under the
+  profile too.
+- **RTL in notes (docx-4)** is kept: Bilingua writes `w:bidi` on translated footnote and endnote paragraphs for a
+  right-to-left target, as LocOS's code means to (LocOS loses it, its L1).
+- **`=` text cells (xlsx-1).** A cell whose string starts with `=` (shared, inline or `str`) is LocOS's formula
+  look-alike (`_iter_cells`): no unit, so every later cell keeps LocOS's number. A leading space before `=` is text.
+  Native extraction still offers such a cell.
+- **ODF style (odf-1, odf-2).** `heading` for a `text:h`, `comment` for a comment paragraph, nothing for every other
+  paragraph, as `odf_filter.parse` gives them (Bilingua gave the automatic or named style, `P1`, `Heading_20_1`).
+  Under the profile `context.style` is cleared and `locos.style` set.
+- **Visio numbering (vsdx-1, vsdx-2).** `locos.p_index` is LocOS's slot index: every page name, shape text and data
+  label counts, untranslatable ones too, so the numbers have gaps; a comment is `1000000 + j` (`j` counts every
+  `CommentEntry`). They were positions among the units.
+- **IDML and ICML run tokens (idml-1, icml-1).** A CharacterStyleRange (code label `run`) is an `r` pair
+  (`⟦r1⟧bold⟦/r1⟧`), every other wrap a `g` pair, as LocOS writes them; `profile::locos_units` (and so the adapter)
+  uses the new `profile::tokens::to_locos_text_coded(format, inlines, codes)`, and Python's `to_locos_text` takes
+  `codes=` for the same rule. The numbers were already LocOS's. The reader still accepts either letter for a pair.
+- **ICML line ends (icml-2).** A rebuilt story in a file that uses CRLF (or CR) throughout takes that line end, as
+  LocOS's `newline_like` does (native too).
+- **ICML root (icml-3).** A bare `<Story>` root is refused under the profile with LocOS's sentence; native mode
+  still reads it (as Okapi does).
+- **ICML block tables (icml-4).** A table written straight into a story or paragraph range (pandoc) is not walked
+  under the profile, as LocOS's walker does not, so the paragraphs after it keep LocOS's numbers; native mode still
+  reads its cells. A profile merge must use the profile's merge options (it walks the same way).
+- **Rebuilt ranges keep the text after `<Properties>` (idml-2, ICML too).** LocOS's `_shallow` deep-copies a range's
+  `Properties` with its tail, so the indentation before `<Content>` stays; Bilingua dropped it (native too). Under the
+  profile a rewritten IDML story also ends at `</idPkg:Story>` (lxml writes nothing after the root).
+- **Speed (no change in output).** `locos_units` in Python writes its result straight into Python objects (no
+  `serde_json::Value`), and the Document reader takes exact `str`, `dict` and `list` objects first.
+- Known rules, not changed: pptx-2 / xlsx-3 (a typed unknown token is kept as text, on purpose), pptx-3 / xlsx-4
+  (`<a:t/>`, `<t/>` for an emptied text, canonically equal), odf-3 and vsdx-3 (quote, declaration and `<x></x>`
+  serialisation, canonically equal), icml-5 (LocOS rewrites the story start tag on one line), docx-6 (the nesting
+  caps are `limit` since W3 B16). pptx-4 (LocOS's markup budget) stays in the adapter's gate. xlsx-2 (`01-stress002`):
+  see B-DONE.
+- No profile version bump: no LocOS document was ever stored by Bilingua in production.
 
 ## Wave 3 B-side: bilingual and CAT formats (W3, 11-07)
 
