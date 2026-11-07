@@ -249,14 +249,16 @@ fn hostile_targets_are_written_as_text() {
     set(&mut doc, 0, "a\u{0}b\u{b}c\u{fffe} ]]> <![CDATA[ & </t>");
     let id = doc.units[1].segments[0].id.clone();
     // unknown pair tokens stay literal text; a duplicate break is used once
-    doc.set_target(&id, vec![Inline::text("\u{27e6}x18446744073709551616\u{27e7}\u{27e6}r0\u{27e7}\u{27e6}r9\u{27e7}\u{27e6}x4\u{27e7}\u{27e6}x4\u{27e7}\u{27e6}/x1\u{27e7}z")]).unwrap();
+    let (_, map) = profile::tokens::to_locos_text_for("xlsx", &doc.units[1].segments[0].source);
+    let raw = "\u{27e6}x18446744073709551616\u{27e7}\u{27e6}r0\u{27e7}\u{27e6}r9\u{27e7}\u{27e6}x4\u{27e7}\u{27e6}x4\u{27e7}\u{27e6}/x1\u{27e7}z";
+    doc.set_target(&id, profile::tokens::from_locos_text(raw, &map)).unwrap();
     let out = merged(&doc);
     let w = entry(&out, "xl/worksheets/sheet1.xml").unwrap();
     assert!(w.contains("<t xml:space=\"preserve\">ab\nc ]]&gt; &lt;![CDATA[ &amp; &lt;/t&gt;</t>"), "{w}");
     let d = entry(&out, "xl/drawings/drawing1.xml").unwrap();
     assert!(d.contains("<a:t>\u{27e6}r0\u{27e7}</a:t></a:r><a:r><a:rPr sz=\"1100\"/><a:t>\u{27e6}r9\u{27e7}</a:t>"), "{d}");
-    // a point past the paragraph's own (an overflowing number too) is dropped, as Python's int() makes it
-    assert!(!d.contains("18446744073709551616") && d.contains("\u{27e6}/x1\u{27e7}"), "{d}");
+    // a token that names no code of the paragraph (an overflowing number too) is text, never dropped
+    assert!(d.contains("18446744073709551616") && d.contains("\u{27e6}/x1\u{27e7}"), "{d}");
     assert_eq!(d.matches("<a:br/>").count(), 1, "{d}");
     // the result reads back
     let again = extract(&out, &opts(None)).unwrap();

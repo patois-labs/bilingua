@@ -59,7 +59,9 @@ fn write(data: &[u8], lang: Option<&str>, set: &[(&str, &str)]) -> Result<Vec<u8
     let mut doc = crate::Pptx.extract(data, &opts(lang))?;
     for (p, t) in set {
         let id = doc.units.iter().find(|u| u.context.extra[profile::P_INDEX] == *p).unwrap().segments[0].id.clone();
-        profile::locos_set_target(&mut doc, &id, vec![Inline::text(*t)])?;
+        let u = doc.units.iter().find(|u| u.segments[0].id == id).unwrap();
+        let (_, map) = profile::tokens::to_locos_text_for("pptx", &u.segments[0].source);
+        profile::locos_set_target(&mut doc, &id, profile::tokens::from_locos_text(t, &map))?;
     }
     crate::Pptx.merge_with(&doc, &profile::locos().merge_options("pptx"))
 }

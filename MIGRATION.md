@@ -332,6 +332,8 @@ keeps the encoding:
   add or translate; LocOS wrote bare LF. The CJK autolink repair skips a URL that the source already had glued to text.
   Token-like text in a source (`⟦x2⟧`) stays text: Bilingua's real codes skip those numbers (so a unit's tokens can
   be numbered with gaps) and an unknown token in a translation is kept; LocOS drops or moves it.
+  DOCX, PPTX and XLSX text boxes under the profile do the same when they write: plain text that looks like a token
+  (`⟦x2⟧`, a token for a code the unit does not have) stays text in the file; only the unit's real codes are tokens.
 - XML, DITA and DocBook (11-06): Bilingua opens a file whose DOCTYPE has an internal subset (entity declarations,
   as in most DocBook 4 manuals); LocOS refuses it. The subset is kept byte for byte and never read: no entity
   (internal, external or parameter) is expanded or fetched, every `&name;` stays a code, and the depth and element

@@ -54,6 +54,9 @@ is listed here).
 - Token look-alikes: text in a source that looks like a LocOS token (`⟦x2⟧`, `⟦1⟧`) stays text. Real codes in the
   LocOS text skip those numbers, and an unknown token in a translation is kept, not deleted. WebVTT and SubRip builds
   used to drop such text.
+- docx, pptx, xlsx (LocOS profile): look-alike text (`⟦x2⟧`) that a source or a translation holds as plain text is
+  written back as text. The writers used to read it as a token, so it was dropped, turned into a break or object, or
+  moved. A token in a translation that names no code of the unit is now kept as text, not dropped (#814).
 - LocOS profile: a Markdown file with a byte order mark reads its first heading as a heading (the mark is not part of
   the line) and keeps the mark; ARB `@@locale` and plural keys use the file's CRLF; resx writes a translation's line
   breaks as CRLF in a CRLF file; the CJK autolink repair leaves a URL alone when the source already had it glued to
