@@ -5,6 +5,13 @@ All notable changes to Bilingua. Every crate shares one version number, so one e
 versions follow [semantic versioning](https://semver.org/) (before 1.0, a minor release may break the API; each break
 is listed here).
 
+## [Unreleased]
+
+### Fixed
+
+- xcstrings: `stringSet` localizations (App Shortcuts phrases) are read as one unit per string and written back as a
+  `stringSet` for the target language. Such catalogs used to open with no units.
+
 ## [0.9.0] - 2026-11-06
 
 The first public release.

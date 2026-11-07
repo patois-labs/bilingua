@@ -3,7 +3,8 @@
 //! **`Xcstrings`** (Localization OS `apple_filter.py`, xcstrings section). A catalog is JSON with a
 //! `sourceLanguage` and a `strings` object. Units are the source-language text of each key (or the key itself
 //! when the catalog has no source localization), including plural, device and substitution variations;
-//! entries with `shouldTranslate: false` or `extractionState: stale` and values with no letter or digit outside
+//! a `stringSet` localization (App Shortcuts phrases) gives one unit per string of its `values`, in order (context
+//! kind `stringSet`, location `...stringSet[i]`); entries with `shouldTranslate: false` or `extractionState: stale` and values with no letter or digit outside
 //! their placeholders are skipped (or come as locked units with `include_locked`). Apple format specifiers
 //! (`%@`, `%1$@`, `%lld`, `%.2f`, `%#@files@`, `%arg`) are inline codes: a numbered one is a free code (LocOS
 //! `p` token), the others keep their order (`x`). A catalog's `comment` is the unit's note.
@@ -13,7 +14,8 @@
 //! source text is rewritten in place. With a target language the translation is written as that language's
 //! localization next to the others: plural variations use the target's CLDR categories (a category the source
 //! lacks is filled from the source `other` form), `argNum` and `formatSpecifier` of substitutions are kept,
-//! state is `translated`, a unit without a translation keeps the target's existing text, and a new language is
+//! state is `translated`, a `stringSet` is written as a `stringSet` of the target's translations in the same order (a
+//! string without a translation keeps the target's old string at that position, else the source string), a unit without a translation keeps the target's existing text, and a new language is
 //! inserted in sorted position when the catalog's languages are sorted.
 //!
 //! **`Xcloc`** (Localization OS `xcloc_filter.py`). A bundle arrives as a zip under the `.xcloc` extension. Every
