@@ -274,7 +274,7 @@ fn target_of(cell: &str, unit_codes: &std::collections::BTreeMap<String, CodeDat
         if let Some(id) = free.get_mut(raw).and_then(|q| q.pop_front()) {
             pending.push_str(&cell[at..s]);
             if !pending.is_empty() {
-                out.push(Inline::text(&std::mem::take(&mut pending)));
+                out.push(Inline::text(std::mem::take(&mut pending)));
             }
             out.push(Inline::tag(id, TagKind::Standalone, raw));
             at = e;
