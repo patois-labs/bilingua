@@ -210,10 +210,16 @@ fn hhp_title_window_language() {
 fn hostile_inputs() {
     let e = HhcFilter.extract(&b"\x00\x01\x02\x03".repeat(50), &ExtractOptions::default()).unwrap_err();
     assert!(matches!(e, Error::Encoding(_)) && e.to_string().contains("binary"), "{e}");
-    let e = HhcFilter.extract(b"<OBJECT type=\"text/sitemap\"><param name=\"Local\" value=\"a.htm\"></OBJECT>", &ExtractOptions::default()).unwrap_err();
-    assert!(e.to_string().contains("no entry names"), "{e}");
-    let e = HhpFilter.extract(b"[FILES]\r\na.htm\r\n", &ExtractOptions::default()).unwrap_err();
-    assert!(e.to_string().contains("Title"), "{e}");
+    // a valid file with nothing to translate is not hostile: zero units, a warning, the original bytes back
+    // (Localization OS refuses it; MIGRATION.md "Differences from LocOS")
+    for (f, raw, word) in [
+        (&HhcFilter as &dyn Filter, &b"<OBJECT type=\"text/sitemap\"><param name=\"Local\" value=\"a.htm\"></OBJECT>"[..], "no entry names"),
+        (&HhpFilter, b"[FILES]\r\na.htm\r\n", "Title"),
+    ] {
+        let d = f.extract(raw, &ExtractOptions::default()).unwrap();
+        assert!(d.units.is_empty() && d.warnings.len() == 1 && d.warnings[0].kind == "no_translatable_text" && d.warnings[0].message.contains(word), "{:?}", d.warnings);
+        assert_eq!(f.merge(&d).unwrap(), raw);
+    }
     // unterminated comment, stray '<', unclosed tags: lenient, never crash or hang
     for raw in [
         &b"<!-- never closed <OBJECT type=text/sitemap><param name=Name value=X>"[..],
@@ -266,4 +272,77 @@ fn translate_and_merge_round_trip() {
     // the raw file has an e-acute that Windows-1251 cannot hold: a clean refusal
     let e = err_text(build_loc(&HhcFilter, &raw, &[(0, "[ru-RU] Getting started")], "ru-RU"));
     assert!(e.contains("Windows-1251"), "{e}");
+}
+
+#[test]
+fn empty_but_valid_files_open_with_zero_units() {
+    let hhc = b"<!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML//EN\">\r\n<HTML><HEAD><!-- Sitemap 1.0 --></HEAD>\r\n<BODY>\r\n<UL>\r\n</UL>\r\n</BODY></HTML>\r\n";
+    let hhk = b"<HTML><BODY><OBJECT type=\"text/site properties\"><param name=\"FrameName\" value=\"main\"></OBJECT><UL></UL></BODY></HTML>";
+    let hhp = b"[OPTIONS]\r\nLanguage=0x409 English (United States)\r\nContents file=a.hhc\r\n\r\n[FILES]\r\na.htm\r\n";
+    for (f, raw) in [(&HhcFilter as &dyn Filter, &hhc[..]), (&HhkFilter, &hhk[..]), (&HhpFilter, &hhp[..])] {
+        let mut d = f.extract(raw, &ExtractOptions::default()).unwrap();
+        assert!(d.units.is_empty(), "{}", d.format);
+        assert_eq!(d.warnings.len(), 1, "{}", d.format);
+        assert_eq!(d.warnings[0].kind, "no_translatable_text");
+        assert_eq!(f.merge(&d).unwrap(), raw, "{}", d.format);
+        // even with a target language the file is not stamped: nothing was translated
+        d.target_lang = Some("de".into());
+        assert_eq!(f.merge(&d).unwrap(), raw, "{} with target", d.format);
+    }
+    // malformed (not just empty) is still refused with a clear message
+    let e = HhcFilter.extract(&[0u8, 1, 2, 3].repeat(50), &ExtractOptions::default()).unwrap_err();
+    assert!(e.to_string().contains("binary"), "{e}");
+}
+
+#[test]
+fn empty_file_in_a_code_page_that_does_not_round_trip_keeps_its_bytes() {
+    // 0xFA 0x40 is an IBM extension row of Shift_JIS: decoded text writes back as other bytes
+    let mut raw = b"<HTML><!-- ".to_vec();
+    raw.extend_from_slice(&[0xFA, 0x40]);
+    raw.extend_from_slice(b" --><BODY><UL></UL></BODY></HTML>");
+    let mut o = ExtractOptions::default();
+    o.source_lang = Some("ja".into());
+    let d = HhcFilter.extract(&raw, &o).unwrap();
+    assert!(d.units.is_empty() && d.warnings.len() == 1);
+    assert_eq!(HhcFilter.merge(&d).unwrap(), raw);
+    // UTF-8 output cannot be made from those bytes: a clean typed refusal, not a skeleton error
+    let mo = MergeOptions::new().with_output_encoding(OutputEncoding::Utf8);
+    let e = HhcFilter.merge_with(&d, &mo).unwrap_err();
+    assert!(matches!(e, Error::Unsupported(_)) && e.to_string().contains("keep"), "{e}");
+}
+
+#[test]
+fn empty_versus_malformed() {
+    let o = ExtractOptions::default();
+    // valid structure, nothing to translate: zero units and a warning
+    for (f, raw) in [
+        (&HhcFilter as &dyn Filter, &b"<UL></UL>"[..]),
+        (&HhcFilter, b"<HTML><BODY><OBJECT type=\"text/site properties\"><param name=\"ImageType\" value=\"Folder\"></OBJECT></BODY></HTML>"),
+        (&HhkFilter, b"<HTML><BODY>\n<UL>\n</UL>\n</BODY></HTML>\n"),
+        (&HhpFilter, b"[OPTIONS]\r\n"),
+        (&HhpFilter, b"[OPTIONS]\r\nCompiled file=x.chm\r\n[WINDOWS]\r\nmain=,\"\",\"a.hhc\"\r\n"),
+    ] {
+        let d = f.extract(raw, &o).unwrap_or_else(|e| panic!("{:?}: {e}", String::from_utf8_lossy(raw)));
+        assert!(d.units.is_empty() && d.warnings.len() == 1 && d.warnings[0].kind == "no_translatable_text");
+        assert_eq!(f.merge(&d).unwrap(), raw);
+    }
+    // no HTML Help structure: zero bytes, whitespace, plain text, a page with no list or entry, junk
+    for (f, raw) in [
+        (&HhcFilter as &dyn Filter, &b""[..]),
+        (&HhkFilter, b""),
+        (&HhpFilter, b""),
+        (&HhcFilter, b" \r\n\t\n"),
+        (&HhpFilter, b"\r\n  \r\n"),
+        (&HhcFilter, b"Contents: Getting started, Printing"),
+        (&HhkFilter, b"<HTML><BODY><P>Index</P></BODY></HTML>"),
+        (&HhpFilter, b"Title=Not a project\r\n"),
+        (&HhpFilter, b"just some words"),
+        (&HhcFilter, b"<a <a <a <ul"),
+    ] {
+        let e = f.extract(raw, &o).expect_err(&String::from_utf8_lossy(raw));
+        assert!(matches!(e, Error::Parse { .. }) && e.to_string().contains("not an HTML Help"), "{e}");
+    }
+    // a browser reads an entry the walker cannot see (abrupt comment): refused, not opened as empty
+    let e = HhcFilter.extract(b"<UL><LI><OBJECT type=\"text/sitemap\"><!--><param name=\"Name\" value=\"Intro\"><!-- --></OBJECT></UL>", &o).unwrap_err();
+    assert!(e.to_string().contains("a browser reads"), "{e}");
 }

@@ -22,6 +22,8 @@ pub struct Walk {
     pub units: Vec<Span>,
     pub see_also: Vec<Span>,
     pub fonts: Vec<Span>,
+    /// A `<UL>` or `<OBJECT>` tag (open or close) outside comments: the file has sitemap structure.
+    pub structure: bool,
 }
 
 struct Attr {
@@ -161,6 +163,9 @@ pub fn walk(text: &str, limits: &Limits) -> Result<Walk, Error> {
             continue;
         };
         pos = tag.end;
+        if tag.name == "ul" || tag.name == "object" {
+            w.structure = true;
+        }
         if tag.name == "object" {
             obj = if tag.closing {
                 None

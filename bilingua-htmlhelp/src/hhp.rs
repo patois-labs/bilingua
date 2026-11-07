@@ -17,13 +17,9 @@ pub fn walk(text: &str, limits: &Limits) -> Result<(Vec<Span>, Option<Span>), Er
         pos += line.len();
         // [Section]
         let t = py_trim_start(body);
-        if let Some(inner) = t.strip_prefix('[') {
-            if let Some(close) = inner.find(']') {
-                if inner[close + 1..].chars().all(py_space) {
-                    section = py_trim(&inner[..close]).to_uppercase();
-                    continue;
-                }
-            }
+        if let Some(name) = section_name(t) {
+            section = name;
+            continue;
         }
         if t.starts_with(';') {
             continue;
@@ -59,6 +55,18 @@ pub fn walk(text: &str, limits: &Limits) -> Result<(Vec<Span>, Option<Span>), Er
         }
     }
     Ok((units, lang))
+}
+
+/// `[NAME]` on a line (leading whitespace already trimmed): the section name in upper case.
+fn section_name(t: &str) -> Option<String> {
+    let inner = t.strip_prefix('[')?;
+    let close = inner.find(']')?;
+    inner[close + 1..].chars().all(py_space).then(|| py_trim(&inner[..close]).to_uppercase())
+}
+
+/// True when some line is a `[Section]` header: the file is an INI-like project file, not plain text.
+pub fn has_section(text: &str) -> bool {
+    split_lines(text).iter().any(|line| section_name(py_trim_start(line.trim_end_matches(['\r', '\n']))).is_some())
 }
 
 /// What a translation is written as: one line, trimmed, and no double quote in a window caption.

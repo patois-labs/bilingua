@@ -37,7 +37,9 @@ fn hostile_translations_match_locos() {
     for c in cases {
         let got = HhcFilter.extract(c.source.as_bytes(), &ExtractOptions::default());
         if c.expect == "parse_error" {
-            assert!(got.is_err(), "{}: LocOS finds no unit", c.name);
+            // The walker finds no unit but a browser reads an entry name: not an empty file, so still refused
+            let e = got.err().unwrap_or_else(|| panic!("{}: LocOS finds no unit", c.name)).to_string();
+            assert!(e.contains("a browser reads"), "{}: {e}", c.name);
             continue;
         }
         let mut doc = got.unwrap_or_else(|e| panic!("{}: {e}", c.name));
