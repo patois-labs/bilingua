@@ -385,6 +385,7 @@ fn tokens<'m>(d: Dialect, m: &'m Masked, orig: &str, budget: &mut Option<i64>, l
         ri += 1;
         if kind == K::Markup {
             check_tag(d, s, orig, m, pos)?;
+            check_jsp_nested_tag(d, s, orig, m, pos)?;
             let (closing, name, sc) = html::parse_tag_str(s);
             if !skip_name.is_empty() {
                 if closing && name == skip_name {
@@ -551,11 +552,51 @@ fn attr_kind(style: &str) -> &'static str {
 }
 
 /// The attribute units a page offers: the accessibility and metadata attributes, without code in the value.
-fn attr_units(toks: &[Tok]) -> Vec<html::AttrUnit> {
+fn attr_units(d: Dialect, toks: &[Tok]) -> Vec<html::AttrUnit> {
     html::iter_page_attr_units(toks)
         .into_iter()
-        .filter(|a| !has_sentinel(&toks[a.ti].s[a.start..a.end]))
+        .filter(|a| {
+            let v = &toks[a.ti].s[a.start..a.end];
+            // a JSP custom tag in a value (`title="<fmt:message key='x'/>"`) is code the server runs, not text
+            !has_sentinel(v) && !(d == Dialect::Jsp && has_prefixed_tag(v))
+        })
         .collect()
+}
+
+/// `<prefix:name` or `</prefix:name` somewhere in `s` (a JSP custom action such as `<c:if`, `<fmt:message`).
+fn has_prefixed_tag(s: &str) -> bool {
+    s.match_indices('<').any(|(i, _)| starts_prefixed_tag(&s[i..]))
+}
+
+/// `s` starts with `<prefix:name` or `</prefix:name`.
+fn starts_prefixed_tag(s: &str) -> bool {
+    let Some(r) = s.strip_prefix('<') else { return false };
+    let r = r.strip_prefix('/').unwrap_or(r);
+    let p = r.find(|c: char| !(c.is_ascii_alphanumeric() || matches!(c, '_' | '-' | '.'))).unwrap_or(r.len());
+    p > 0 && r.as_bytes()[0].is_ascii_alphabetic() && r[p..].starts_with(':') && r[p + 1..].starts_with(|c: char| c.is_ascii_alphabetic())
+}
+
+/// JSP: a custom tag between the attributes of an HTML tag (`<input <c:if test="${x}">checked</c:if>>`). The HTML
+/// scanner ends the outer tag at the inner tag's `>` and would offer the rest of the outer tag as text, so the page is
+/// refused. A custom tag inside a quoted value is read correctly and is not offered (see `attr_units`).
+fn check_jsp_nested_tag(d: Dialect, tok: &str, orig: &str, m: &Masked, masked_pos: usize) -> Result<(), Error> {
+    if d != Dialect::Jsp || tok.starts_with("<!") || tok.starts_with("<?") || tok.starts_with("</") {
+        return Ok(());
+    }
+    let mut quote: Option<char> = None;
+    for (j, c) in tok.char_indices().skip(1) {
+        match quote {
+            Some(q) if c == q => quote = None,
+            Some(_) => {}
+            None if c == '"' || c == '\'' => quote = Some(c),
+            None if c == '<' && starts_prefixed_tag(&tok[j..]) => {
+                let prefix = m.unmask(&m.text[..masked_pos + j], orig);
+                return Err(refused(d, &prefix, prefix.len(), "code is used as a tag or attribute name", HINT));
+            }
+            None => {}
+        }
+    }
+    Ok(())
 }
 
 fn load(bytes: &[u8], opts: &ExtractOptions, limits: &Limits) -> Result<enc::Decoded, Error> {
@@ -595,7 +636,7 @@ fn extract_with(d: Dialect, bytes: &[u8], opts: &ExtractOptions, limits: &Limits
     for (i, u) in body.iter().enumerate() {
         units.push(body_unit(format!("u{}", i + 1), u, &m, text));
     }
-    for a in attr_units(&toks) {
+    for a in attr_units(d, &toks) {
         guard::check_unit_count(units.len() + 1, limits)?;
         let mut u = Unit::new(format!("u{}", units.len() + 1), vec![Inline::text(a.text.clone())]);
         u.context.kind = Some(attr_kind(&a.style).into());
@@ -749,7 +790,7 @@ fn merge_with(d: Dialect, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>
     }
     let before: String = toks.iter().map(|t| t.s.as_ref()).collect();
     let n_body = html::iter_units(&toks, None).map_err(|_| Error::Write("unit count".into()))?.len();
-    let attrs = attr_units(&toks);
+    let attrs = attr_units(d, &toks);
     if doc.units.len() != n_body + attrs.len() {
         return Err(Error::Write(format!(
             "the document has {} units but its page holds {}; open the file again",

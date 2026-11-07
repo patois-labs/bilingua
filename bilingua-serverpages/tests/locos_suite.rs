@@ -314,7 +314,6 @@ fn server_code_between_attributes() {
     let cases: &[(&str, &str)] = &[
         ("aspx", "<%@ Page Language=\"C#\" %><div <%= attrs %> class=\"a\" title=\"Hello there\">Text one</div>"),
         ("erb", "<div <%= attrs %> class=\"a\">Text one</div>\n<input checked <%= x %> />\n<p <%= y %>>Text two</p>"),
-        ("jsp", "<%@ page contentType=\"text/html\" %><div <c:if test=\"${a}\">class=\"x\"</c:if> id=\"d\">Text one</div>"),
         ("jsp", "<%@ page contentType=\"text/html\" %><input <% if (a) { %>disabled<% } %> value=\"v\"/><p>Text two</p>"),
         ("phtml", "<div <?php echo $a ?> class=\"x\">Text one</div><img src=\"a.png\" <?= $b ?> alt=\"A picture\"><p <?php echo $c; ?>>Text two</p>"),
         ("phtml", "<table><tr><th<?php echo $p ?> id=\"a\">Head text</th></tr></table><select><option value=\"a\"<?php if ($x): ?> selected<?php endif; ?>>Text two</option></select>"),
@@ -352,7 +351,6 @@ fn server_code_between_attributes_inline() {
     for (fmt, src) in [
         ("phtml", "<p>See <a href=\"x\" <?php echo $z ?>>this link</a> now<br <?= $q ?>/> ok</p>"),
         ("erb", "<p>See <b <%= x %>>bold</b> now</p>"),
-        ("jsp", "<%@ page contentType=\"text/html\" %><p>See <a href=\"x\" <c:if test=\"${a}\">class=\"c\"</c:if>>link</a> now</p>"),
     ] {
         assert_identity(fmt, src.as_bytes());
     }
@@ -380,4 +378,46 @@ fn server_code_in_names_and_nested_tags_stays_refused() {
     refused("phtml", "<div class<?= $k ?>>Hello</div>", "tag or attribute name");
     refused("phtml", "<div cl<?= $a ?>ass=\"x\">Hello</div>", "tag or attribute name");
     refused("jsp", "<a href=\"/x?u=<openmrs_tag:url value=\"${u}\"/>&amp;v=1\">Link text</a>", "tag or attribute name");
+}
+
+/// JSP custom tags in a tag. Between attributes (`<input <c:if ..>checked</c:if>>`) the scanner would end the outer tag
+/// at the inner `>` and offer `checked</c:if>>` as text: refused. Inside a quoted value (`title="<fmt:message ../>"`)
+/// the tag is read correctly but the value is code the server runs: kept byte for byte and never offered.
+#[test]
+fn jsp_custom_tags_in_a_tag() {
+    let head = "<%@ page contentType=\"text/html\" %>";
+    refused("jsp", &format!("{head}<div <c:if test=\"${{a}}\">class=\"x\"</c:if> id=\"d\">Text one</div>"), "tag or attribute name");
+    refused("jsp", &format!("{head}<p>See <a href=\"x\" <c:if test=\"${{a}}\">class=\"c\"</c:if>>link</a> now</p>"), "tag or attribute name");
+    refused("jsp", &format!("{head}<input type=\"checkbox\" <c:if test=\"true\">checked</c:if>/>"), "tag or attribute name");
+    let src = format!("{head}<a href=\"#\" title=\"<fmt:message key='a.b'/>\">Link one</a> <img alt=\"A real picture\" title='<x:out value=\"v\"/>'>");
+    let t = texts_str("jsp", &src);
+    assert!(t.iter().all(|u| !u.contains("fmt:") && !u.contains("x:out")), "{t:?}");
+    assert!(t.iter().any(|u| u == "A real picture"), "{t:?}");
+    assert_identity("jsp", src.as_bytes());
+    // the same value in a .phtml page has no JSP meaning and stays text (LocOS behaviour)
+    assert!(texts_str("phtml", "<?php $a = 1; ?><a title=\"<x:y/>\">Hi</a>").iter().any(|u| u.contains("x:y")));
+}
+
+/// A translation next to code in a tag can only change the translated value: quotes, `<`, `>` and `=` are escaped,
+/// the code stays byte for byte and no attribute or tag appears.
+#[test]
+fn server_code_between_attributes_cannot_inject() {
+    let evil = "x\" onerror=\"alert(1)\" a='b' <script>alert(2)</script> = > <?= $e ?>";
+    let src = "<p>Hi <?= $q ?></p><img <?= $a ?> alt=\"Hello\"<?php echo $b ?> title='Tip'>
+<a <?php if ($x) { ?> title=\"Click\" <?php } ?> href=\"u\">Go</a>";
+    let doc = extract_str("phtml", src).unwrap();
+    let t: Vec<String> = doc.units.iter().map(|u| plain_text(&u.source())).collect();
+    for want in ["Hello", "Tip", "Click"] {
+        let i = t.iter().position(|x| x == want).unwrap_or_else(|| panic!("{want} in {t:?}"));
+        let out = build_str("phtml", src, &[(i, evil)]);
+        let codes = |s: &str| Dialect::Phtml.code_islands(s).unwrap();
+        assert_eq!(codes(&out), codes(src), "{out}");
+        assert!(!out.contains("onerror=\"") && !out.contains("<script") && !out.contains("a='b'") && !out.contains("<?= $e"), "{out}");
+        assert_eq!(out.matches('"').count(), src.matches('"').count(), "{out}");
+        assert_eq!(out.matches('\'').count(), src.matches('\'').count(), "{out}");
+    }
+    // a code glued before an attribute name makes that attribute opaque (its name is not `title` to the scanner)
+    let glued = "<p>Hi <?= $q ?></p><a <?php if ($x) { ?>title=\"Click\"<?php } ?> href=\"u\">Go</a>";
+    assert!(!texts_str("phtml", glued).iter().any(|u| u.contains("Click")));
+    assert_identity("phtml", glued.as_bytes());
 }
