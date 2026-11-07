@@ -52,3 +52,16 @@ fn ordinary_links_keep_their_whole_text() {
     let t = one("Go to [[Berlin|links]] now.\n");
     assert!(t.contains("links"), "{t}");
 }
+
+#[test]
+fn hindi_file_namespace_hides_its_options() {
+    let t = one("x [[\u{91a}\u{93f}\u{924}\u{94d}\u{930}:a.jpg|\u{905}\u{902}\u{917}\u{942}\u{920}\u{93e}\u{915}\u{93e}\u{930}|\u{926}\u{93e}\u{90f}\u{901}|A small cat]] y\n");
+    assert!(t.contains("A small cat") && !t.contains("a.jpg") && !t.contains('|'), "{t}");
+}
+
+#[test]
+fn external_link_at_the_end_of_a_file_caption() {
+    // `]]]`: the first bracket ends the external link, the last two end the file link
+    let t = one("[[File:a.png|thumb|Cap from [https://example.org/a Site]]]\n");
+    assert!(t.contains("Cap from") && t.contains("Site") && !t.contains(']'), "{t:?}");
+}
