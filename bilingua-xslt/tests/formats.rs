@@ -230,3 +230,17 @@ fn carriage_return_from_a_character_reference_survives_a_translation() {
     let back = extract(out.as_bytes());
     assert!(back.units.iter().any(|u| u.source().iter().any(|x| matches!(x, Inline::Text(t) if t == "Zq\r\nqZ"))), "{out}");
 }
+
+#[test]
+fn entity_from_an_external_subset_is_a_protected_token() {
+    // the DOCTYPE points at an external subset that defines `&pfx;`; it is not read, the reference is kept as it is
+    let data = b"<?xml version=\"1.0\"?>\n<!DOCTYPE xsl:stylesheet SYSTEM \"prefixes.ent\">\n<xsl:stylesheet version=\"1.0\" xmlns:xsl=\"http://www.w3.org/1999/XSL/Transform\">\n<xsl:template match=\"/\"><p>See &pfx; for details</p></xsl:template>\n</xsl:stylesheet>\n";
+    let d = extract(data);
+    assert_eq!(units(data), ["See \u{27E6}x1\u{27E7} for details"]);
+    assert_eq!(Xslt.merge(&d).unwrap(), data);
+    let out = s(&translate(data, &[(0, "Siehe \u{27E6}x1\u{27E7} f\u{fc}r Details")]));
+    assert!(out.contains("<p>Siehe &pfx; f\u{fc}r Details</p>"), "{out}");
+    // without an external subset the same reference is still an error
+    let bad = b"<?xml version=\"1.0\"?>\n<xsl:stylesheet version=\"1.0\" xmlns:xsl=\"http://www.w3.org/1999/XSL/Transform\">\n<xsl:template match=\"/\"><p>See &pfx; now</p></xsl:template>\n</xsl:stylesheet>\n";
+    assert!(Xslt.extract(bad, &opts()).is_err());
+}

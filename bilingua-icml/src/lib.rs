@@ -107,8 +107,10 @@ fn prepare_text(text: String, limits: &Limits) -> Result<Prep, Error> {
     let root = dom.root;
     let is_doc = dom.local(root) == "Document";
     let woodwing = dom.local(root) == "Stories" && dom.ns_uri(root).starts_with("urn:SmartConnection");
-    if !is_doc && !woodwing {
-        return Err(parse_err("This XML file is not an InCopy or WoodWing document (its root is neither <Document> nor WoodWing's <ea:Stories>)."));
+    // a bare `<Story>` root: an InCopy story exported on its own (LocOS refuses it; Okapi reads it)
+    let bare_story = dom.is_plain(root, "Story");
+    if !is_doc && !woodwing && !bare_story {
+        return Err(parse_err("This XML file is not an InCopy or WoodWing document (its root is neither <Document>, <Story> nor WoodWing's <ea:Stories>)."));
     }
     let stories = find_stories(&dom);
     if stories.is_empty() {
@@ -126,7 +128,7 @@ fn prepare_text(text: String, limits: &Limits) -> Result<Prep, Error> {
 /// Every plain `<Story>` not inside another one, in document order; in a wrapped (WoodWing) file only those
 /// inside a snippet `<Document>`.
 fn find_stories(dom: &Dom) -> Vec<(Id, Id)> {
-    let wrapped = !dom.is_plain(dom.root, "Document");
+    let wrapped = !dom.is_plain(dom.root, "Document") && !dom.is_plain(dom.root, "Story");
     let mut out = Vec::new();
     let mut stack: Vec<(Id, bool, Id)> = vec![(dom.root, false, NIL)];
     while let Some((el, in_story, doc)) = stack.pop() {

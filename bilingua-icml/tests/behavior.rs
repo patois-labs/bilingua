@@ -294,3 +294,15 @@ fn a_table_written_straight_into_the_story_has_its_cells_read() {
     assert!(well_formed(&out));
     assert_eq!(units(&out), vec!["Before", "Kopf eins", "Head two"]);
 }
+
+#[test]
+fn bare_story_root_is_read_and_written() {
+    // an InCopy story exported on its own has <Story> as the root, with no <Document> around it
+    let data = b"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<?aid SnippetType=\"InCopyInterchange\"?>\n<Story Self=\"s1\"><ParagraphStyleRange AppliedParagraphStyle=\"ParagraphStyle/a\"><CharacterStyleRange AppliedCharacterStyle=\"CharacterStyle/b\"><Content>Contents here</Content></CharacterStyleRange></ParagraphStyleRange></Story>\n".to_vec();
+    let t = units(&data);
+    assert_eq!(t, ["Contents here"]);
+    assert_eq!(Icml.merge(&Icml.extract(&data, &opts()).unwrap()).unwrap(), data);
+    let out = translate(&data, &[(0, "Inhalt hier")]);
+    assert!(String::from_utf8_lossy(&out).contains("<Content>Inhalt hier</Content>"));
+    assert_eq!(units(&out), ["Inhalt hier"]);
+}

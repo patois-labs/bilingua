@@ -160,7 +160,8 @@ pub fn scan_refs(
                 return Err(wf(format!("character reference &{name}; is not an XML character")));
             }
         } else if !matches!(name, "lt" | "gt" | "amp" | "quot" | "apos") {
-            if !ncname(name) || !ents.contains(name) {
+            // "*" stands for a DOCTYPE with an external subset: the entities it defines are not read, so any name passes
+            if !ncname(name) || !(ents.contains(name) || ents.contains("*")) {
                 return Err(wf(format!("undefined entity &{name};")));
             }
             named(base + at, base + at + len + 2);
@@ -350,9 +351,15 @@ fn doctype(text: &str) -> Result<Option<Doctype<'_>>, Error> {
     j = skip_ws(text, j);
     let lb = text[j..].find('[').map(|p| p + j);
     let Some(gt) = text[j..].find('>').map(|p| p + j) else { return Err(bad_doctype()) };
-    let Some(lb) = lb.filter(|lb| *lb < gt) else { return Ok(Some((i, gt + 1, Vec::new()))) };
-    let mut pos = lb + 1;
+    // an external subset (`SYSTEM` / `PUBLIC`) may define the entities the file uses; it is never read, so its
+    // entity references are kept as protected tokens
+    let external = text[j..].starts_with("SYSTEM") || text[j..].starts_with("PUBLIC");
     let mut ents = Vec::new();
+    if external {
+        ents.push("*");
+    }
+    let Some(lb) = lb.filter(|lb| *lb < gt) else { return Ok(Some((i, gt + 1, ents))) };
+    let mut pos = lb + 1;
     loop {
         let w = skip_ws(text, pos);
         if w > pos {
