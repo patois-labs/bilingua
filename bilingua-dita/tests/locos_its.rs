@@ -327,7 +327,7 @@ fn nested_source_language_is_restamped() {
     let out3 = s(&merge_map(&f, d3, Some("de-DE"), &[(0, "Ae"), (1, "Farbe"), (2, "Farbe")]));
     assert!(out3.contains(r#"<topic id="a" xml:lang="de-DE">"#), "{out3}");
     assert!(out3.contains(r#"<p xml:lang="en-GB">"#), "another region is kept: {out3}");
-    assert!(out3.contains(r#"<p xml:lang="de-DE">Color"#), "{out3}");
+    assert!(out3.contains(r#"<p xml:lang="de-DE">Farbe"#), "{out3}");
     // no language on the root: the first declared language is the source
     let d2 = br#"<dita><topic id="a" xml:lang="en"><title>A</title></topic></dita>"#;
     let out2 = s(&merge_map(&f, d2, Some("de-DE"), &[(0, "Ae")]));
