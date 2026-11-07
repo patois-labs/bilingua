@@ -260,7 +260,19 @@ fn main() {
                         let w = format!("{PRE}{x}{POST}");
                         if xml_refs { bilingua_html::xml_named_refs(&w) } else { w }
                     };
-                    let same = |x: &String, y: &String| if md { want(x).replace('\\', "") == y.replace('\\', "") } else { want(x) == *y };
+                    // HTML pages and server pages keep character references as typed in unit text, and the writer
+                    // escapes `'`, `"`, `>` and `&` in a translation where a browser needs it (LocOS #672), so the
+                    // re-read unit holds `&#x27;` for `'`. Both render the same text: compare after decoding.
+                    let html_refs = matches!(doc.format.as_str(), "html" | "aspx" | "jsp" | "phtml" | "shtml" | "erb");
+                    let same = |x: &String, y: &String| {
+                        if md {
+                            want(x).replace('\\', "") == y.replace('\\', "")
+                        } else if html_refs {
+                            want(x) == *y || bilingua_htmlcore::pyx::unescape(&want(x)) == bilingua_htmlcore::pyx::unescape(y)
+                        } else {
+                            want(x) == *y
+                        }
+                    };
                     let beside = a.iter().zip(&b2).filter(|(x, y)| !same(x, y) && beside_ok && x == y).count();
                     let bad = a.iter().zip(&b2).filter(|(x, y)| !same(x, y) && (!beside_ok || x != y)).count();
                     if bad == 0 && set_errors == 0 && beside > 0 {

@@ -308,6 +308,7 @@ fn tokens<'m>(d: Dialect, m: &'m Masked, orig: &str, budget: &mut Option<i64>, l
     })?;
     let mut out: Vec<Tok<'m>> = Vec::with_capacity(raw.len() + m.codes.len() * 2);
     let mut skip_name = String::new();
+    let mut unclosed: std::collections::HashSet<String> = std::collections::HashSet::new();
     let mut pos = 0;
     let mut ri = 0;
     while ri < raw.len() {
@@ -326,13 +327,13 @@ fn tokens<'m>(d: Dialect, m: &'m Masked, orig: &str, budget: &mut Option<i64>, l
                 }
             } else if html::SKIP_CONTAINERS.contains(&name.as_str()) && !closing {
                 skip_name = name;
-            } else if !closing && !sc && prefixed_script(&name) {
+            } else if !closing && !sc && prefixed_script(&name) && !unclosed.contains(&name) {
                 // `<s:script>` / `<aui:script>`: a tag library's script or style element. Its body is code for a
                 // browser, not text, so it becomes one opaque run (no units, no attributes) up to the matching end tag.
-                out.push(Tok { k: K::Markup, s: Cow::Borrowed(s) });
-                pos += len;
-                let body_start = pos;
+                // Without an end tag the page does not compile on its server: read it as HTML (as 0.9.0 did) rather
+                // than lose the rest of the page's text. `unclosed` keeps a page of many such tags linear.
                 let mut j = ri;
+                let mut body_len = 0;
                 while j < raw.len() {
                     if raw[j].k == K::Markup {
                         let (c, n, _) = html::parse_tag_str(&raw[j].s);
@@ -340,9 +341,19 @@ fn tokens<'m>(d: Dialect, m: &'m Masked, orig: &str, budget: &mut Option<i64>, l
                             break;
                         }
                     }
-                    pos += raw[j].s.len();
+                    body_len += raw[j].s.len();
                     j += 1;
                 }
+                if j == raw.len() {
+                    unclosed.insert(name);
+                    out.push(Tok { k: K::Markup, s: Cow::Borrowed(s) });
+                    pos += len;
+                    continue;
+                }
+                out.push(Tok { k: K::Markup, s: Cow::Borrowed(s) });
+                pos += len;
+                let body_start = pos;
+                pos += body_len;
                 ri = j;
                 let mut body: &'m str = &m.text[body_start..pos];
                 // a run that starts with `<` would be read as a tag name: hand those over one by one
