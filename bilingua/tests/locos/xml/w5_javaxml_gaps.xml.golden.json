@@ -1,0 +1,59 @@
+{
+ "format": "xml",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Shop",
+   "style": ""
+  },
+  {
+   "p_index": 2,
+   "text": "42",
+   "style": ""
+  },
+  {
+   "p_index": 3,
+   "text": "Hello {0}, it's {1}",
+   "style": ""
+  },
+  {
+   "p_index": 4,
+   "text": "Goodbye",
+   "style": ""
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPCFET0NUWVBFIHByb3BlcnRpZXMgU1lTVEVNICJodHRwOi8vamF2YS5zdW4uY29tL2R0ZC9wcm9wZXJ0aWVzLmR0ZCI+Cjxwcm9wZXJ0aWVzPgo8Y29tbWVudD5TaG9wIG1lc3NhZ2VzPC9jb21tZW50Pgo8ZW50cnkga2V5PSJ0aXRsZSI+U2hvcDwvZW50cnk+CjxlbnRyeSBrZXk9ImVtcHR5Ij48L2VudHJ5Pgo8ZW50cnkga2V5PSJudW1iZXIiPjQyPC9lbnRyeT4KPGVudHJ5IGtleT0iaGVsbG8iPkhlbGxvIHswfSwgaXQnJ3MgezF9PC9lbnRyeT4KPGVudHJ5IGtleT0iZmFyZXdlbGwiPkdvb2RieWU8L2VudHJ5Pgo8L3Byb3BlcnRpZXM+Cg=="
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü Shop",
+    "2": "Ü 42",
+    "3": "Ü Hello {0}, it's {1}",
+    "4": "Ü Goodbye"
+   },
+   "out_b64": "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPCFET0NUWVBFIHByb3BlcnRpZXMgU1lTVEVNICJodHRwOi8vamF2YS5zdW4uY29tL2R0ZC9wcm9wZXJ0aWVzLmR0ZCI+Cjxwcm9wZXJ0aWVzPgo8Y29tbWVudD5TaG9wIG1lc3NhZ2VzPC9jb21tZW50Pgo8ZW50cnkga2V5PSJ0aXRsZSI+w5wgU2hvcDwvZW50cnk+CjxlbnRyeSBrZXk9ImVtcHR5Ij48L2VudHJ5Pgo8ZW50cnkga2V5PSJudW1iZXIiPsOcIDQyPC9lbnRyeT4KPGVudHJ5IGtleT0iaGVsbG8iPsOcIEhlbGxvIHswfSwgaXQnJ3MgezF9PC9lbnRyeT4KPGVudHJ5IGtleT0iZmFyZXdlbGwiPsOcIEdvb2RieWU8L2VudHJ5Pgo8L3Byb3BlcnRpZXM+Cg=="
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Shop & <\"'>",
+    "3": "Hello {0}, it's {1} & <\"'>"
+   },
+   "out_b64": "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPCFET0NUWVBFIHByb3BlcnRpZXMgU1lTVEVNICJodHRwOi8vamF2YS5zdW4uY29tL2R0ZC9wcm9wZXJ0aWVzLmR0ZCI+Cjxwcm9wZXJ0aWVzPgo8Y29tbWVudD5TaG9wIG1lc3NhZ2VzPC9jb21tZW50Pgo8ZW50cnkga2V5PSJ0aXRsZSI+U2hvcCAmYW1wOyAmbHQ7IicmZ3Q7PC9lbnRyeT4KPGVudHJ5IGtleT0iZW1wdHkiPjwvZW50cnk+CjxlbnRyeSBrZXk9Im51bWJlciI+NDI8L2VudHJ5Pgo8ZW50cnkga2V5PSJoZWxsbyI+SGVsbG8gezB9LCBpdCcncyB7MX0gJmFtcDsgJmx0OyInJyZndDs8L2VudHJ5Pgo8ZW50cnkga2V5PSJmYXJld2VsbCI+R29vZGJ5ZTwvZW50cnk+CjwvcHJvcGVydGllcz4K"
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "out_b64": "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPCFET0NUWVBFIHByb3BlcnRpZXMgU1lTVEVNICJodHRwOi8vamF2YS5zdW4uY29tL2R0ZC9wcm9wZXJ0aWVzLmR0ZCI+Cjxwcm9wZXJ0aWVzPgo8Y29tbWVudD5TaG9wIG1lc3NhZ2VzPC9jb21tZW50Pgo8ZW50cnkga2V5PSJ0aXRsZSI+U2hvcDwvZW50cnk+CjxlbnRyeSBrZXk9ImVtcHR5Ij48L2VudHJ5Pgo8ZW50cnkga2V5PSJudW1iZXIiPjQyPC9lbnRyeT4KPGVudHJ5IGtleT0iaGVsbG8iPkhlbGxvIHswfSwgaXQnJ3MgezF9PC9lbnRyeT4KPGVudHJ5IGtleT0iZmFyZXdlbGwiPkdvb2RieWU8L2VudHJ5Pgo8L3Byb3BlcnRpZXM+Cg=="
+  }
+ ]
+}

@@ -1,0 +1,12 @@
+<HTML><HEAD><meta charset="windows-1251"></HEAD><BODY>
+<UL>
+	<LI> <OBJECT type="text/sitemap">
+		<param name="Name" value="Кофе">
+		<param name="Local" value="a.htm">
+		</OBJECT>
+	<LI> <OBJECT type="text/sitemap">
+		<param name="Keyword" value="Чай">
+		<param name="See Also" value="Кофе">
+		</OBJECT>
+</UL>
+</BODY></HTML>

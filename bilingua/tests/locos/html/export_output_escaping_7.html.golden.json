@@ -42,5 +42,9 @@
    "map": {},
    "out_b64": "PHA+U2VlIDxpbWcgYWx0PSJhID4gYiI+IHRoZSBwaWN0dXJlPC9wPg=="
   }
- ]
+ ],
+ "a11y_images": {
+  "images": 1,
+  "missing_alt": []
+ }
 }

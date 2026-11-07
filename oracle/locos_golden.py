@@ -57,6 +57,9 @@ for _fmt in ("docx", "pptx", "xlsx"):
     LOCALES[_fmt] = ["de-DE", "ar-SA"]
 for _fmt in ("xliff", "sdlxliff", "mqxliff", "mxliff"):
     LOCALES[_fmt] = ["de-DE", "es_ES"]
+# W5: HTML Help also builds for a target whose ANSI code page is not the source's (Russian: Windows-1251)
+for _fmt in ("hhc", "hhk", "hhp"):
+    LOCALES[_fmt] = ["de-DE", "ru-RU"]
 
 
 def zip_entries(data: bytes):

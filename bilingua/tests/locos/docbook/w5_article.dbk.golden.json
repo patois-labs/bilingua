@@ -1,0 +1,75 @@
+{
+ "format": "docbook",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Guide",
+   "style": ""
+  },
+  {
+   "p_index": 1,
+   "text": "Press ⟦g1⟧Enter⟦/g1⟧ to ⟦g2⟧go⟦/g2⟧.",
+   "style": ""
+  },
+  {
+   "p_index": 2,
+   "text": "Nested same language",
+   "style": ""
+  },
+  {
+   "p_index": 3,
+   "text": "Bye.",
+   "style": ""
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPGFydGljbGUgeG1sbnM9Imh0dHA6Ly9kb2Nib29rLm9yZy9ucy9kb2Nib29rIiB2ZXJzaW9uPSI1LjAiIHhtbDpsYW5nPSJlbiI+CiAgPHRpdGxlPkd1aWRlPC90aXRsZT4KICA8cGFyYT5QcmVzcyA8ZW1waGFzaXM+RW50ZXI8L2VtcGhhc2lzPiB0byA8ZW1waGFzaXMgcm9sZT0iYm9sZCI+Z288L2VtcGhhc2lzPi48L3BhcmE+CiAgPHBhcmEgeG1sOmxhbmc9ImVuIj5OZXN0ZWQgc2FtZSBsYW5ndWFnZTwvcGFyYT4KICA8cGFyYT5CeWUuPC9wYXJhPgo8L2FydGljbGU+Cg=="
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü Guide",
+    "1": "Ü Press ⟦g1⟧Ü Enter⟦/g1⟧Ü  to ⟦g2⟧Ü go⟦/g2⟧Ü .",
+    "2": "Ü Nested same language",
+    "3": "Ü Bye."
+   },
+   "out_b64": "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPGFydGljbGUgeG1sbnM9Imh0dHA6Ly9kb2Nib29rLm9yZy9ucy9kb2Nib29rIiB2ZXJzaW9uPSI1LjAiIHhtbDpsYW5nPSJlbiI+CiAgPHRpdGxlPsOcIEd1aWRlPC90aXRsZT4KICA8cGFyYT7DnCBQcmVzcyA8ZW1waGFzaXM+w5wgRW50ZXI8L2VtcGhhc2lzPsOcICB0byA8ZW1waGFzaXMgcm9sZT0iYm9sZCI+w5wgZ288L2VtcGhhc2lzPsOcIC48L3BhcmE+CiAgPHBhcmEgeG1sOmxhbmc9ImVuIj7DnCBOZXN0ZWQgc2FtZSBsYW5ndWFnZTwvcGFyYT4KICA8cGFyYT7DnCBCeWUuPC9wYXJhPgo8L2FydGljbGU+Cg=="
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Guide & <\"'>",
+    "2": "Nested same language & <\"'>"
+   },
+   "out_b64": "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPGFydGljbGUgeG1sbnM9Imh0dHA6Ly9kb2Nib29rLm9yZy9ucy9kb2Nib29rIiB2ZXJzaW9uPSI1LjAiIHhtbDpsYW5nPSJkZS1ERSI+CiAgPHRpdGxlPkd1aWRlICZhbXA7ICZsdDsiJyZndDs8L3RpdGxlPgogIDxwYXJhPlByZXNzIDxlbXBoYXNpcz5FbnRlcjwvZW1waGFzaXM+IHRvIDxlbXBoYXNpcyByb2xlPSJib2xkIj5nbzwvZW1waGFzaXM+LjwvcGFyYT4KICA8cGFyYSB4bWw6bGFuZz0iZGUtREUiPk5lc3RlZCBzYW1lIGxhbmd1YWdlICZhbXA7ICZsdDsiJyZndDs8L3BhcmE+CiAgPHBhcmE+QnllLjwvcGFyYT4KPC9hcnRpY2xlPgo="
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "out_b64": "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPGFydGljbGUgeG1sbnM9Imh0dHA6Ly9kb2Nib29rLm9yZy9ucy9kb2Nib29rIiB2ZXJzaW9uPSI1LjAiIHhtbDpsYW5nPSJkZS1ERSI+CiAgPHRpdGxlPkd1aWRlPC90aXRsZT4KICA8cGFyYT5QcmVzcyA8ZW1waGFzaXM+RW50ZXI8L2VtcGhhc2lzPiB0byA8ZW1waGFzaXMgcm9sZT0iYm9sZCI+Z288L2VtcGhhc2lzPi48L3BhcmE+CiAgPHBhcmEgeG1sOmxhbmc9ImVuIj5OZXN0ZWQgc2FtZSBsYW5ndWFnZTwvcGFyYT4KICA8cGFyYT5CeWUuPC9wYXJhPgo8L2FydGljbGU+Cg=="
+  },
+  {
+   "name": "repeat",
+   "locale": null,
+   "map": {
+    "1": "Drücke ⟦g1⟧Enter⟦/g1⟧ ⟦g1⟧jetzt⟦/g1⟧ ⟦g2⟧los⟦/g2⟧."
+   },
+   "out_b64": "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPGFydGljbGUgeG1sbnM9Imh0dHA6Ly9kb2Nib29rLm9yZy9ucy9kb2Nib29rIiB2ZXJzaW9uPSI1LjAiIHhtbDpsYW5nPSJlbiI+CiAgPHRpdGxlPkd1aWRlPC90aXRsZT4KICA8cGFyYT5EcsO8Y2tlIDxlbXBoYXNpcz5FbnRlcjwvZW1waGFzaXM+IGpldHp0IDxlbXBoYXNpcyByb2xlPSJib2xkIj5sb3M8L2VtcGhhc2lzPi48L3BhcmE+CiAgPHBhcmEgeG1sOmxhbmc9ImVuIj5OZXN0ZWQgc2FtZSBsYW5ndWFnZTwvcGFyYT4KICA8cGFyYT5CeWUuPC9wYXJhPgo8L2FydGljbGU+Cg=="
+  },
+  {
+   "name": "repeat-de",
+   "locale": "de-DE",
+   "map": {
+    "1": "⟦g2⟧Los⟦/g2⟧ ⟦g2⟧los⟦/g2⟧ ⟦g1⟧Enter⟦/g1⟧."
+   },
+   "out_b64": "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPGFydGljbGUgeG1sbnM9Imh0dHA6Ly9kb2Nib29rLm9yZy9ucy9kb2Nib29rIiB2ZXJzaW9uPSI1LjAiIHhtbDpsYW5nPSJkZS1ERSI+CiAgPHRpdGxlPkd1aWRlPC90aXRsZT4KICA8cGFyYT48ZW1waGFzaXMgcm9sZT0iYm9sZCI+TG9zPC9lbXBoYXNpcz4gbG9zIDxlbXBoYXNpcz5FbnRlcjwvZW1waGFzaXM+LjwvcGFyYT4KICA8cGFyYSB4bWw6bGFuZz0iZW4iPk5lc3RlZCBzYW1lIGxhbmd1YWdlPC9wYXJhPgogIDxwYXJhPkJ5ZS48L3BhcmE+CjwvYXJ0aWNsZT4K"
+  }
+ ]
+}

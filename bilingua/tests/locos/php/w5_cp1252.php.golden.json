@@ -1,0 +1,46 @@
+{
+ "format": "php",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Café ünd",
+   "style": "php"
+  },
+  {
+   "p_index": 1,
+   "text": "Wait ⟦p1⟧ now seconds",
+   "style": "php"
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "PD9waHAKcmV0dXJuIFsKICAgICdhJyA9PiAnQ2Fm6SD8bmQnLAogICAgJ3Rocm90dGxlJyA9PiAnV2FpdCA6c2Vjb25kcyBub3cgc2Vjb25kcycsCl07Cg=="
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü Café ünd",
+    "1": "Ü Wait ⟦p1⟧Ü  now seconds"
+   },
+   "out_b64": "PD9waHAKcmV0dXJuIFsKICAgICdhJyA9PiAnw5wgQ2Fmw6kgw7xuZCcsCiAgICAndGhyb3R0bGUnID0+ICfDnCBXYWl0IDpzZWNvbmRzw5wgIG5vdyBzZWNvbmRzJywKXTsK"
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Café ünd & <\"'>"
+   },
+   "out_b64": "PD9waHAKcmV0dXJuIFsKICAgICdhJyA9PiAnQ2Fmw6kgw7xuZCAmIDwiXCc+JywKICAgICd0aHJvdHRsZScgPT4gJ1dhaXQgOnNlY29uZHMgbm93IHNlY29uZHMnLApdOwo="
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "out_b64": "PD9waHAKcmV0dXJuIFsKICAgICdhJyA9PiAnQ2Fm6SD8bmQnLAogICAgJ3Rocm90dGxlJyA9PiAnV2FpdCA6c2Vjb25kcyBub3cgc2Vjb25kcycsCl07Cg=="
+  }
+ ]
+}

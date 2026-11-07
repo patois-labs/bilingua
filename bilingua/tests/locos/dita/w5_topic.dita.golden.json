@@ -1,0 +1,77 @@
+{
+ "format": "dita",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Install ⟦g1⟧now⟦/g1⟧",
+   "style": ""
+  },
+  {
+   "p_index": 1,
+   "text": "Run the ⟦x1⟧ tool and ⟦g2⟧wait⟦/g2⟧.",
+   "style": ""
+  },
+  {
+   "p_index": 2,
+   "text": "Done.",
+   "style": ""
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHRvcGljIGlkPSJ0MSIgeG1sOmxhbmc9ImVuLVVTIj4KICA8dGl0bGU+SW5zdGFsbCA8Yj5ub3c8L2I+PC90aXRsZT4KICA8Ym9keT4KICAgIDxwPlJ1biB0aGUgPGNtZG5hbWU+c2V0dXA8L2NtZG5hbWU+IHRvb2wgYW5kIDxiPndhaXQ8L2I+LjwvcD4KICAgIDxwIHRyYW5zbGF0ZT0ibm8iPkRvIG5vdCB0b3VjaDwvcD4KICAgIDxwPkRvbmUuPC9wPgogIDwvYm9keT4KPC90b3BpYz4K"
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü Install ⟦g1⟧Ü now⟦/g1⟧",
+    "1": "Ü Run the ⟦x1⟧Ü  tool and ⟦g2⟧Ü wait⟦/g2⟧Ü .",
+    "2": "Ü Done."
+   },
+   "out_b64": "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHRvcGljIGlkPSJ0MSIgeG1sOmxhbmc9ImVuLVVTIj4KICA8dGl0bGU+w5wgSW5zdGFsbCA8Yj7DnCBub3c8L2I+PC90aXRsZT4KICA8Ym9keT4KICAgIDxwPsOcIFJ1biB0aGUgPGNtZG5hbWU+c2V0dXA8L2NtZG5hbWU+w5wgIHRvb2wgYW5kIDxiPsOcIHdhaXQ8L2I+w5wgLjwvcD4KICAgIDxwIHRyYW5zbGF0ZT0ibm8iPkRvIG5vdCB0b3VjaDwvcD4KICAgIDxwPsOcIERvbmUuPC9wPgogIDwvYm9keT4KPC90b3BpYz4K"
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Install  & <\"'>⟦g1⟧now & <\"'>⟦/g1⟧",
+    "2": "Done. & <\"'>"
+   },
+   "out_b64": "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHRvcGljIGlkPSJ0MSIgeG1sOmxhbmc9ImRlLURFIj4KICA8dGl0bGU+SW5zdGFsbCAgJmFtcDsgJmx0OyInJmd0OzxiPm5vdyAmYW1wOyAmbHQ7IicmZ3Q7PC9iPjwvdGl0bGU+CiAgPGJvZHk+CiAgICA8cD5SdW4gdGhlIDxjbWRuYW1lPnNldHVwPC9jbWRuYW1lPiB0b29sIGFuZCA8Yj53YWl0PC9iPi48L3A+CiAgICA8cCB0cmFuc2xhdGU9Im5vIj5EbyBub3QgdG91Y2g8L3A+CiAgICA8cD5Eb25lLiAmYW1wOyAmbHQ7IicmZ3Q7PC9wPgogIDwvYm9keT4KPC90b3BpYz4K"
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "out_b64": "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHRvcGljIGlkPSJ0MSIgeG1sOmxhbmc9ImRlLURFIj4KICA8dGl0bGU+SW5zdGFsbCA8Yj5ub3c8L2I+PC90aXRsZT4KICA8Ym9keT4KICAgIDxwPlJ1biB0aGUgPGNtZG5hbWU+c2V0dXA8L2NtZG5hbWU+IHRvb2wgYW5kIDxiPndhaXQ8L2I+LjwvcD4KICAgIDxwIHRyYW5zbGF0ZT0ibm8iPkRvIG5vdCB0b3VjaDwvcD4KICAgIDxwPkRvbmUuPC9wPgogIDwvYm9keT4KPC90b3BpYz4K"
+  },
+  {
+   "name": "repeat",
+   "locale": null,
+   "map": {
+    "1": "Starte ⟦x1⟧ und ⟦g2⟧warte⟦/g2⟧ ⟦g2⟧lang⟦/g2⟧."
+   },
+   "out_b64": "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHRvcGljIGlkPSJ0MSIgeG1sOmxhbmc9ImVuLVVTIj4KICA8dGl0bGU+SW5zdGFsbCA8Yj5ub3c8L2I+PC90aXRsZT4KICA8Ym9keT4KICAgIDxwPlN0YXJ0ZSA8Y21kbmFtZT5zZXR1cDwvY21kbmFtZT4gdW5kIDxiPndhcnRlPC9iPiBsYW5nLjwvcD4KICAgIDxwIHRyYW5zbGF0ZT0ibm8iPkRvIG5vdCB0b3VjaDwvcD4KICAgIDxwPkRvbmUuPC9wPgogIDwvYm9keT4KPC90b3BpYz4K"
+  },
+  {
+   "name": "point2",
+   "locale": null,
+   "map": {
+    "1": "Starte ⟦x1⟧ ⟦x1⟧ und ⟦g2⟧warte⟦/g2⟧."
+   },
+   "out_b64": "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHRvcGljIGlkPSJ0MSIgeG1sOmxhbmc9ImVuLVVTIj4KICA8dGl0bGU+SW5zdGFsbCA8Yj5ub3c8L2I+PC90aXRsZT4KICA8Ym9keT4KICAgIDxwPlN0YXJ0ZSA8Y21kbmFtZT5zZXR1cDwvY21kbmFtZT4gIHVuZCA8Yj53YXJ0ZTwvYj4uPC9wPgogICAgPHAgdHJhbnNsYXRlPSJubyI+RG8gbm90IHRvdWNoPC9wPgogICAgPHA+RG9uZS48L3A+CiAgPC9ib2R5Pgo8L3RvcGljPgo="
+  },
+  {
+   "name": "stray",
+   "locale": null,
+   "map": {
+    "1": "Starte ⟦x1⟧ ⟦/g2⟧und ⟦g2⟧warte."
+   },
+   "out_b64": "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHRvcGljIGlkPSJ0MSIgeG1sOmxhbmc9ImVuLVVTIj4KICA8dGl0bGU+SW5zdGFsbCA8Yj5ub3c8L2I+PC90aXRsZT4KICA8Ym9keT4KICAgIDxwPlN0YXJ0ZSA8Y21kbmFtZT5zZXR1cDwvY21kbmFtZT4gdW5kIDxiPndhcnRlLjwvYj48L3A+CiAgICA8cCB0cmFuc2xhdGU9Im5vIj5EbyBub3QgdG91Y2g8L3A+CiAgICA8cD5Eb25lLjwvcD4KICA8L2JvZHk+CjwvdG9waWM+Cg=="
+  }
+ ]
+}

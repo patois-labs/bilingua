@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<article xmlns="http://docbook.org/ns/docbook" version="5.0" xml:lang="en">
+  <title>Guide</title>
+  <para>Press <emphasis>Enter</emphasis> to <emphasis role="bold">go</emphasis>.</para>
+  <para xml:lang="en">Nested same language</para>
+  <para>Bye.</para>
+</article>

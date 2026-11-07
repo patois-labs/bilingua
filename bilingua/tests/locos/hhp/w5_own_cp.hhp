@@ -1,0 +1,11 @@
+[OPTIONS]
+Compatibility=1.1 or later
+Contents file=toc.hhc
+Language=0x419 Russian
+Title=Справка
+
+[WINDOWS]
+main="Главная","toc.hhc",,,,,,,,0x2520,,0x3006,,,,,,,,0
+
+[FILES]
+index.htm

@@ -1,0 +1,60 @@
+{
+ "format": "hhc",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Café menu",
+   "style": ""
+  },
+  {
+   "p_index": 1,
+   "text": "Tea & cake",
+   "style": ""
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "PCFET0NUWVBFIEhUTUwgUFVCTElDICItLy9JRVRGLy9EVEQgSFRNTC8vRU4iPg0KPEhUTUw+DQo8SEVBRD4NCjxtZXRhIGh0dHAtZXF1aXY9IkNvbnRlbnQtVHlwZSIgY29udGVudD0idGV4dC9odG1sOyBjaGFyc2V0PXdpbmRvd3MtMTI1MiI+DQo8L0hFQUQ+PEJPRFk+DQo8T0JKRUNUIHR5cGU9InRleHQvc2l0ZSBwcm9wZXJ0aWVzIj4NCgk8cGFyYW0gbmFtZT0iRm9udCIgdmFsdWU9IkFyaWFsLDgsMCI+DQo8L09CSkVDVD4NCjxVTD4NCgk8TEk+IDxPQkpFQ1QgdHlwZT0idGV4dC9zaXRlbWFwIj4NCgkJPHBhcmFtIG5hbWU9Ik5hbWUiIHZhbHVlPSJDYWbpIG1lbnUiPg0KCQk8cGFyYW0gbmFtZT0iTG9jYWwiIHZhbHVlPSJjYWZlLmh0bSI+DQoJCTwvT0JKRUNUPg0KCTxMST4gPE9CSkVDVCB0eXBlPSJ0ZXh0L3NpdGVtYXAiPg0KCQk8cGFyYW0gbmFtZT0iTmFtZSIgdmFsdWU9IlRlYSAmYW1wOyBjYWtlIj4NCgkJPHBhcmFtIG5hbWU9IkxvY2FsIiB2YWx1ZT0idGVhLmh0bSI+DQoJCTwvT0JKRUNUPg0KPC9VTD4NCjwvQk9EWT48L0hUTUw+DQo="
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü Café menu",
+    "1": "Ü Tea & cake"
+   },
+   "out_b64": "PCFET0NUWVBFIEhUTUwgUFVCTElDICItLy9JRVRGLy9EVEQgSFRNTC8vRU4iPg0KPEhUTUw+DQo8SEVBRD4NCjxtZXRhIGh0dHAtZXF1aXY9IkNvbnRlbnQtVHlwZSIgY29udGVudD0idGV4dC9odG1sOyBjaGFyc2V0PXdpbmRvd3MtMTI1MiI+DQo8L0hFQUQ+PEJPRFk+DQo8T0JKRUNUIHR5cGU9InRleHQvc2l0ZSBwcm9wZXJ0aWVzIj4NCgk8cGFyYW0gbmFtZT0iRm9udCIgdmFsdWU9IkFyaWFsLDgsMCI+DQo8L09CSkVDVD4NCjxVTD4NCgk8TEk+IDxPQkpFQ1QgdHlwZT0idGV4dC9zaXRlbWFwIj4NCgkJPHBhcmFtIG5hbWU9Ik5hbWUiIHZhbHVlPSLcIENhZukgbWVudSI+DQoJCTxwYXJhbSBuYW1lPSJMb2NhbCIgdmFsdWU9ImNhZmUuaHRtIj4NCgkJPC9PQkpFQ1Q+DQoJPExJPiA8T0JKRUNUIHR5cGU9InRleHQvc2l0ZW1hcCI+DQoJCTxwYXJhbSBuYW1lPSJOYW1lIiB2YWx1ZT0i3CBUZWEgJmFtcDsgY2FrZSI+DQoJCTxwYXJhbSBuYW1lPSJMb2NhbCIgdmFsdWU9InRlYS5odG0iPg0KCQk8L09CSkVDVD4NCjwvVUw+DQo8L0JPRFk+PC9IVE1MPg0K"
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Café menu & <\"'>"
+   },
+   "out_b64": "PCFET0NUWVBFIEhUTUwgUFVCTElDICItLy9JRVRGLy9EVEQgSFRNTC8vRU4iPg0KPEhUTUw+DQo8SEVBRD4NCjxtZXRhIGh0dHAtZXF1aXY9IkNvbnRlbnQtVHlwZSIgY29udGVudD0idGV4dC9odG1sOyBjaGFyc2V0PXdpbmRvd3MtMTI1MiI+DQo8L0hFQUQ+PEJPRFk+DQo8T0JKRUNUIHR5cGU9InRleHQvc2l0ZSBwcm9wZXJ0aWVzIj4NCgk8cGFyYW0gbmFtZT0iRm9udCIgdmFsdWU9IkFyaWFsLDgsMCI+DQo8L09CSkVDVD4NCjxVTD4NCgk8TEk+IDxPQkpFQ1QgdHlwZT0idGV4dC9zaXRlbWFwIj4NCgkJPHBhcmFtIG5hbWU9Ik5hbWUiIHZhbHVlPSJDYWbpIG1lbnUgJmFtcDsgJmx0OyZxdW90OycmZ3Q7Ij4NCgkJPHBhcmFtIG5hbWU9IkxvY2FsIiB2YWx1ZT0iY2FmZS5odG0iPg0KCQk8L09CSkVDVD4NCgk8TEk+IDxPQkpFQ1QgdHlwZT0idGV4dC9zaXRlbWFwIj4NCgkJPHBhcmFtIG5hbWU9Ik5hbWUiIHZhbHVlPSJUZWEgJmFtcDsgY2FrZSI+DQoJCTxwYXJhbSBuYW1lPSJMb2NhbCIgdmFsdWU9InRlYS5odG0iPg0KCQk8L09CSkVDVD4NCjwvVUw+DQo8L0JPRFk+PC9IVE1MPg0K"
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "out_b64": "PCFET0NUWVBFIEhUTUwgUFVCTElDICItLy9JRVRGLy9EVEQgSFRNTC8vRU4iPg0KPEhUTUw+DQo8SEVBRD4NCjxtZXRhIGh0dHAtZXF1aXY9IkNvbnRlbnQtVHlwZSIgY29udGVudD0idGV4dC9odG1sOyBjaGFyc2V0PXdpbmRvd3MtMTI1MiI+DQo8L0hFQUQ+PEJPRFk+DQo8T0JKRUNUIHR5cGU9InRleHQvc2l0ZSBwcm9wZXJ0aWVzIj4NCgk8cGFyYW0gbmFtZT0iRm9udCIgdmFsdWU9IkFyaWFsLDgsMCI+DQo8L09CSkVDVD4NCjxVTD4NCgk8TEk+IDxPQkpFQ1QgdHlwZT0idGV4dC9zaXRlbWFwIj4NCgkJPHBhcmFtIG5hbWU9Ik5hbWUiIHZhbHVlPSJDYWbpIG1lbnUiPg0KCQk8cGFyYW0gbmFtZT0iTG9jYWwiIHZhbHVlPSJjYWZlLmh0bSI+DQoJCTwvT0JKRUNUPg0KCTxMST4gPE9CSkVDVCB0eXBlPSJ0ZXh0L3NpdGVtYXAiPg0KCQk8cGFyYW0gbmFtZT0iTmFtZSIgdmFsdWU9IlRlYSAmYW1wOyBjYWtlIj4NCgkJPHBhcmFtIG5hbWU9IkxvY2FsIiB2YWx1ZT0idGVhLmh0bSI+DQoJCTwvT0JKRUNUPg0KPC9VTD4NCjwvQk9EWT48L0hUTUw+DQo="
+  },
+  {
+   "name": "escape-ru-RU",
+   "locale": "ru-RU",
+   "map": {
+    "0": "Café menu & <\"'>"
+   },
+   "error": "HtmlHelpEncodingError: The translated HTML Help file cannot be written in the Windows-1251 code page: the character 'é' (U+00E9) has no representation there, and HTML Help 1.x reads Contents, Index and project files in the help language's Windows ANSI code page. Fix the text (a translation or an untranslated value), or have the operator set HTMLHELP_UTF8_FALLBACK=1 to write UTF-8 instead (with a warning)."
+  },
+  {
+   "name": "none-ru-RU",
+   "locale": "ru-RU",
+   "map": {},
+   "error": "HtmlHelpEncodingError: The translated HTML Help file cannot be written in the Windows-1251 code page: the character 'é' (U+00E9) has no representation there, and HTML Help 1.x reads Contents, Index and project files in the help language's Windows ANSI code page. Fix the text (a translation or an untranslated value), or have the operator set HTMLHELP_UTF8_FALLBACK=1 to write UTF-8 instead (with a warning)."
+  }
+ ]
+}

@@ -1,0 +1,60 @@
+{
+ "format": "hhk",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Кофе",
+   "style": ""
+  },
+  {
+   "p_index": 1,
+   "text": "Чай",
+   "style": ""
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "PEhUTUw+PEhFQUQ+PG1ldGEgY2hhcnNldD0id2luZG93cy0xMjUxIj48L0hFQUQ+PEJPRFk+DQo8VUw+DQoJPExJPiA8T0JKRUNUIHR5cGU9InRleHQvc2l0ZW1hcCI+DQoJCTxwYXJhbSBuYW1lPSJOYW1lIiB2YWx1ZT0iyu705SI+DQoJCTxwYXJhbSBuYW1lPSJMb2NhbCIgdmFsdWU9ImEuaHRtIj4NCgkJPC9PQkpFQ1Q+DQoJPExJPiA8T0JKRUNUIHR5cGU9InRleHQvc2l0ZW1hcCI+DQoJCTxwYXJhbSBuYW1lPSJLZXl3b3JkIiB2YWx1ZT0i1+DpIj4NCgkJPHBhcmFtIG5hbWU9IlNlZSBBbHNvIiB2YWx1ZT0iyu705SI+DQoJCTwvT0JKRUNUPg0KPC9VTD4NCjwvQk9EWT48L0hUTUw+DQo="
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü Кофе",
+    "1": "Ü Чай"
+   },
+   "error": "HtmlHelpEncodingError: The translated HTML Help file cannot be written in the source (Windows 1251) code page: the character 'Ü' (U+00DC) has no representation there, and HTML Help 1.x reads Contents, Index and project files in the help language's Windows ANSI code page. Fix the text (a translation or an untranslated value), or have the operator set HTMLHELP_UTF8_FALLBACK=1 to write UTF-8 instead (with a warning)."
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Кофе & <\"'>"
+   },
+   "error": "HtmlHelpEncodingError: The translated HTML Help file cannot be written in the Windows-1252 code page: the character 'К' (U+041A) has no representation there, and HTML Help 1.x reads Contents, Index and project files in the help language's Windows ANSI code page. Fix the text (a translation or an untranslated value), or have the operator set HTMLHELP_UTF8_FALLBACK=1 to write UTF-8 instead (with a warning)."
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "error": "HtmlHelpEncodingError: The translated HTML Help file cannot be written in the Windows-1252 code page: the character 'К' (U+041A) has no representation there, and HTML Help 1.x reads Contents, Index and project files in the help language's Windows ANSI code page. Fix the text (a translation or an untranslated value), or have the operator set HTMLHELP_UTF8_FALLBACK=1 to write UTF-8 instead (with a warning)."
+  },
+  {
+   "name": "escape-ru-RU",
+   "locale": "ru-RU",
+   "map": {
+    "0": "Кофе & <\"'>"
+   },
+   "out_b64": "PEhUTUw+PEhFQUQ+PG1ldGEgY2hhcnNldD0id2luZG93cy0xMjUxIj48L0hFQUQ+PEJPRFk+DQo8VUw+DQoJPExJPiA8T0JKRUNUIHR5cGU9InRleHQvc2l0ZW1hcCI+DQoJCTxwYXJhbSBuYW1lPSJOYW1lIiB2YWx1ZT0iyu705SAmYW1wOyAmbHQ7JnF1b3Q7JyZndDsiPg0KCQk8cGFyYW0gbmFtZT0iTG9jYWwiIHZhbHVlPSJhLmh0bSI+DQoJCTwvT0JKRUNUPg0KCTxMST4gPE9CSkVDVCB0eXBlPSJ0ZXh0L3NpdGVtYXAiPg0KCQk8cGFyYW0gbmFtZT0iS2V5d29yZCIgdmFsdWU9Itfg6SI+DQoJCTxwYXJhbSBuYW1lPSJTZWUgQWxzbyIgdmFsdWU9Isru9OUgJmFtcDsgJmx0OyZxdW90OycmZ3Q7Ij4NCgkJPC9PQkpFQ1Q+DQo8L1VMPg0KPC9CT0RZPjwvSFRNTD4NCg=="
+  },
+  {
+   "name": "none-ru-RU",
+   "locale": "ru-RU",
+   "map": {},
+   "out_b64": "PEhUTUw+PEhFQUQ+PG1ldGEgY2hhcnNldD0id2luZG93cy0xMjUxIj48L0hFQUQ+PEJPRFk+DQo8VUw+DQoJPExJPiA8T0JKRUNUIHR5cGU9InRleHQvc2l0ZW1hcCI+DQoJCTxwYXJhbSBuYW1lPSJOYW1lIiB2YWx1ZT0iyu705SI+DQoJCTxwYXJhbSBuYW1lPSJMb2NhbCIgdmFsdWU9ImEuaHRtIj4NCgkJPC9PQkpFQ1Q+DQoJPExJPiA8T0JKRUNUIHR5cGU9InRleHQvc2l0ZW1hcCI+DQoJCTxwYXJhbSBuYW1lPSJLZXl3b3JkIiB2YWx1ZT0i1+DpIj4NCgkJPHBhcmFtIG5hbWU9IlNlZSBBbHNvIiB2YWx1ZT0iyu705SI+DQoJCTwvT0JKRUNUPg0KPC9VTD4NCjwvQk9EWT48L0hUTUw+DQo="
+  }
+ ]
+}
