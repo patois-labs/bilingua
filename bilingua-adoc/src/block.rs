@@ -230,7 +230,7 @@ pub fn slots(text: &str, limits: &Limits) -> Result<Vec<Slot>, Error> {
                 continue;
             }
             if tm == Some('!') && nested.is_none() {
-                nested = Some(Table { close: rs.to_string(), sep: '!', style: 'style: '\0' }', nested: true });
+                nested = Some(Table { close: rs.to_string(), sep: '!', style: '\0', nested: true });
                 continue;
             }
             let cur = if nested.is_some() { nested.as_mut() } else { table.as_mut() }.expect("a table is open");
@@ -243,7 +243,7 @@ pub fn slots(text: &str, limits: &Limits) -> Result<Vec<Slot>, Error> {
             if sep == ',' || sep == ':' || is_table_format_skip(&pending) {
                 verbatim = Some(rs.to_string());
             } else {
-                table = Some(Table { close: rs.to_string(), sep, style: 'style: '\0' }', nested: false });
+                table = Some(Table { close: rs.to_string(), sep, style: '\0', nested: false });
             }
             pending.clear();
             continue;
