@@ -475,9 +475,85 @@ pub fn is_named_placeholder(s: &str) -> bool {
     }
 }
 
+/// Hides the token brackets of literal text from a writer that cuts LocOS text at its tokens (the Office writers
+/// of the LocOS profile). `\u{27E6}` becomes U+E000 U+E001 and U+E000 becomes U+E000 U+E000, so the result holds
+/// no token and [`unescape_literal`] gives back the text byte for byte. Shared by the format crates; not part of
+/// the semver API.
+#[doc(hidden)]
+pub fn escape_literal(s: &str) -> String {
+    if !s.contains([OPEN, LIT_MARK]) {
+        return s.to_string();
+    }
+    let mut out = String::with_capacity(s.len() + 8);
+    for c in s.chars() {
+        match c {
+            OPEN => out.push_str("\u{e000}\u{e001}"),
+            LIT_MARK => out.push_str("\u{e000}\u{e000}"),
+            c => out.push(c),
+        }
+    }
+    out
+}
+
+/// The inverse of [`escape_literal`]. A U+E000 that starts no pair (only text that was not escaped holds one)
+/// stays as it is. Not part of the semver API.
+#[doc(hidden)]
+pub fn unescape_literal(s: &str) -> String {
+    if !s.contains(LIT_MARK) {
+        return s.to_string();
+    }
+    let mut out = String::with_capacity(s.len());
+    let mut it = s.chars().peekable();
+    while let Some(c) = it.next() {
+        if c == LIT_MARK {
+            match it.peek() {
+                Some('\u{e001}') => {
+                    it.next();
+                    out.push(OPEN);
+                    continue;
+                }
+                Some(&LIT_MARK) => {
+                    it.next();
+                }
+                _ => {}
+            }
+        }
+        out.push(c);
+    }
+    out
+}
+
+const LIT_MARK: char = '\u{e000}';
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn literal_escape_round_trips_every_short_string() {
+        // every string of up to six characters over the characters that matter: the escape never holds a token
+        // bracket and always comes back byte for byte
+        let alpha = ['\u{27e6}', '\u{27e7}', '\u{e000}', '\u{e001}', 'x', '1'];
+        let mut cur: Vec<String> = vec![String::new()];
+        for _ in 0..6 {
+            let mut next = Vec::new();
+            for s in &cur {
+                for c in alpha {
+                    let mut t = s.clone();
+                    t.push(c);
+                    let e = escape_literal(&t);
+                    assert!(!e.contains('\u{27e6}'), "{t:?}");
+                    assert_eq!(unescape_literal(&e), t, "{t:?}");
+                    next.push(t);
+                }
+            }
+            cur = next;
+        }
+        // the escape of a concatenation is the concatenation of the escapes, so text cut at a token unescapes
+        // piece by piece
+        assert_eq!(escape_literal("a\u{e000}\u{27e6}x1\u{27e7}\u{e001}"), "a\u{e000}\u{e000}\u{e000}\u{e001}x1\u{27e7}\u{e001}");
+        assert_eq!(unescape_literal("lone \u{e000} mark"), "lone \u{e000} mark");
+    }
 
     #[test]
     fn docx_tokens_carry_locos_numbers() {

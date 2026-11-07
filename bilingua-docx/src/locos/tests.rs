@@ -282,3 +282,102 @@ proptest! {
         }
     }
 }
+
+/// Sets `target` on unit `i` and merges under the profile.
+fn build_inl(data: &[u8], target: Option<&str>, i: usize, t: Vec<Inline>) -> Vec<u8> {
+    let mut doc = crate::Docx.extract(data, &opts(target)).unwrap();
+    let id = doc.units[i].segments[0].id.clone();
+    profile::locos_set_target(&mut doc, &id, t).unwrap();
+    crate::Docx.merge_with(&doc, &profile::locos().merge_options("docx")).unwrap()
+}
+
+const LIKE: &str = "\u{27e6}x2\u{27e7}";
+
+#[test]
+fn literal_token_lookalikes_survive_a_merge() {
+    let body = format!("<w:p><w:r><w:t xml:space=\"preserve\">Hi {LIKE} </w:t></w:r><w:r><w:rPr><w:b/></w:rPr><w:t>there</w:t></w:r></w:p>");
+    let d = docx(&body, NORMAL, &[]);
+    let doc = crate::Docx.extract(&d, &opts(None)).unwrap();
+    let src = doc.units[0].segments[0].source.clone();
+    assert!(src.iter().any(|i| matches!(i, Inline::Text(t) if t.contains(LIKE))));
+    // the translation keeps the look-alike where it was
+    let kept = vec![
+        Inline::tag("1", TagKind::Open, ""),
+        Inline::text(format!("Salut {LIKE} ")),
+        Inline::tag("1", TagKind::Close, ""),
+        Inline::tag("2", TagKind::Open, ""),
+        Inline::text("la"),
+        Inline::tag("2", TagKind::Close, ""),
+    ];
+    let xml = entry(&build_inl(&d, Some("fr"), 0, kept), "word/document.xml");
+    assert!(xml.contains(&format!("Salut {LIKE} </w:t>")), "{xml}");
+    // real codes reordered around it: the look-alike is text of run 1, run 2 (bold) comes first
+    let moved = vec![
+        Inline::tag("2", TagKind::Open, ""),
+        Inline::text("la"),
+        Inline::tag("2", TagKind::Close, ""),
+        Inline::tag("1", TagKind::Open, ""),
+        Inline::text(format!(" Salut {LIKE}")),
+        Inline::tag("1", TagKind::Close, ""),
+    ];
+    let xml = entry(&build_inl(&d, Some("fr"), 0, moved), "word/document.xml");
+    let (a, b) = (xml.find("<w:b/>").expect("bold"), xml.find(&format!("Salut {LIKE}")).expect("look-alike kept"));
+    assert!(a < b, "{xml}");
+    assert!(xml.contains("<w:t>la</w:t>"), "{xml}");
+    // a lone literal token in a one-run paragraph is text too
+    let d1 = docx("<w:p><w:r><w:t>Plain</w:t></w:r></w:p>", NORMAL, &[]);
+    let xml = entry(&build_inl(&d1, Some("fr"), 0, vec![Inline::text(format!("A{LIKE}\u{27e6}r1\u{27e7}"))]), "word/document.xml");
+    assert!(xml.contains(&format!("A{LIKE}\u{27e6}r1\u{27e7}")), "{xml}");
+}
+
+#[test]
+fn literal_lookalikes_survive_object_mode() {
+    let body = "<w:p><w:r><w:t>See \u{27e6}x3\u{27e7}</w:t></w:r><w:r><w:drawing><wp:inline><wp:docPr id=\"1\" name=\"P\"/></wp:inline></w:drawing></w:r><w:r><w:t> here</w:t></w:r></w:p>";
+    let d = docx(body, NORMAL, &[]);
+    // the object is the real x3 and the text holds a look-alike x3; the object moves in front of run 2
+    let t = vec![
+        Inline::tag("1", TagKind::Open, ""),
+        Inline::text("Voir \u{27e6}x3\u{27e7}"),
+        Inline::tag("1", TagKind::Close, ""),
+        Inline::tag("3", TagKind::Standalone, ""),
+        Inline::tag("2", TagKind::Open, ""),
+        Inline::text(" ici"),
+        Inline::tag("2", TagKind::Close, ""),
+    ];
+    let xml = entry(&build_inl(&d, Some("fr"), 0, t), "word/document.xml");
+    assert!(xml.contains("Voir \u{27e6}x3\u{27e7}</w:t></w:r><w:r><w:drawing>"), "{xml}");
+    assert_eq!(xml.matches("<w:drawing>").count(), 1, "{xml}");
+}
+
+/// Private-use characters next to look-alikes, as the escape uses them: they must come back byte for byte.
+const PUA: &str = "a\u{e000}\u{e001}b\u{e000}\u{e000}c\u{e000}\u{27e6}x1\u{27e7}\u{e001}d";
+
+#[test]
+fn private_use_characters_round_trip_in_runs_and_alt_text() {
+    let body = format!("<w:p><w:r><w:t>{PUA}</w:t></w:r><w:r><w:rPr><w:b/></w:rPr><w:t>B{PUA}</w:t></w:r></w:p><w:p><w:r><w:t>One {PUA}</w:t></w:r><w:r><w:drawing><wp:inline><wp:docPr id=\"1\" name=\"P\" descr=\"Alt {PUA}\"/></wp:inline></w:drawing></w:r></w:p>");
+    let d = docx(&body, NORMAL, &[]);
+    let mut doc = crate::Docx.extract(&d, &opts(Some("fr"))).unwrap();
+    assert_eq!(doc.units.len(), 3);
+    // every unit is written with its own source as the target (the locale makes the merge write)
+    for u in doc.units.clone() {
+        profile::locos_set_target(&mut doc, &u.segments[0].id, u.segments[0].source.clone()).unwrap();
+    }
+    let xml = entry(&crate::Docx.merge_with(&doc, &profile::locos().merge_options("docx")).unwrap(), "word/document.xml");
+    assert!(xml.contains(&format!("<w:t>{PUA}</w:t>")), "{xml}");
+    assert!(xml.contains(&format!("<w:t>B{PUA}</w:t>")), "{xml}");
+    assert!(xml.contains(&format!("One {PUA}</w:t>")), "{xml}");
+    assert!(xml.contains(&format!("descr=\"Alt {PUA}\"")), "{xml}");
+}
+
+#[test]
+fn a_typo_token_is_reported_and_written_as_text() {
+    let d = docx("<w:p><w:r><w:t>Hi </w:t></w:r><w:r><w:rPr><w:b/></w:rPr><w:t>you</w:t></w:r></w:p>", NORMAL, &[]);
+    let doc = crate::Docx.extract(&d, &opts(None)).unwrap();
+    let (_, map) = tokens::to_locos_text_for("docx", &doc.units[0].segments[0].source);
+    // the translator typed x9 for a code the unit does not have: the token layer reports it, the writer keeps it
+    let typed = "\u{27e6}r1\u{27e7}Salut \u{27e6}x9\u{27e7}\u{27e6}/r1\u{27e7}\u{27e6}r2\u{27e7}toi\u{27e6}/r2\u{27e7}";
+    let (_, problems) = tokens::parse_locos_text(typed, &map);
+    assert_eq!(problems, vec![tokens::TokenProblem::Unknown { token: "\u{27e6}x9\u{27e7}".into() }]);
+    let xml = entry(&build(&d, None, &[(0, typed)]), "word/document.xml");
+    assert!(xml.contains("Salut \u{27e6}x9\u{27e7}</w:t>"), "{xml}");
+}

@@ -59,7 +59,9 @@ fn write(data: &[u8], lang: Option<&str>, set: &[(&str, &str)]) -> Result<Vec<u8
     let mut doc = crate::Pptx.extract(data, &opts(lang))?;
     for (p, t) in set {
         let id = doc.units.iter().find(|u| u.context.extra[profile::P_INDEX] == *p).unwrap().segments[0].id.clone();
-        profile::locos_set_target(&mut doc, &id, vec![Inline::text(*t)])?;
+        let u = doc.units.iter().find(|u| u.segments[0].id == id).unwrap();
+        let (_, map) = profile::tokens::to_locos_text_for("pptx", &u.segments[0].source);
+        profile::locos_set_target(&mut doc, &id, profile::tokens::from_locos_text(t, &map))?;
     }
     crate::Pptx.merge_with(&doc, &profile::locos().merge_options("pptx"))
 }
@@ -241,4 +243,70 @@ proptest! {
             let _ = crate::Pptx.merge_with(&doc, &profile::locos().merge_options("pptx"));
         }
     }
+}
+
+fn write_inl(data: &[u8], lang: Option<&str>, t: Vec<Inline>) -> Vec<u8> {
+    let mut doc = crate::Pptx.extract(data, &opts(lang)).unwrap();
+    let id = doc.units[0].segments[0].id.clone();
+    profile::locos_set_target(&mut doc, &id, t).unwrap();
+    crate::Pptx.merge_with(&doc, &profile::locos().merge_options("pptx")).unwrap()
+}
+
+#[test]
+fn literal_token_lookalikes_survive_a_merge() {
+    // run 1 holds a look-alike of the real break x3; the translation keeps it, then reorders the real codes
+    let d = deck(&sp(&format!("<a:p><a:r><a:t>Go {O}x3{Z}</a:t></a:r><a:br/><a:r><a:rPr b=\"1\"/><a:t>B</a:t></a:r></a:p>")));
+    let like = format!("{O}x3{Z}");
+    let t = |first: bool| {
+        let one = vec![Inline::tag("1", TagKind::Open, ""), Inline::text(format!("Va {like}")), Inline::tag("1", TagKind::Close, "")];
+        let two = vec![Inline::tag("2", TagKind::Open, ""), Inline::text("B"), Inline::tag("2", TagKind::Close, "")];
+        let br = vec![Inline::tag("3", TagKind::Standalone, "")];
+        if first { [one, br, two].concat() } else { [two, br, one].concat() }
+    };
+    for first in [true, false] {
+        let out = write_inl(&d, Some("fr"), t(first));
+        well_formed(&out);
+        let s = part(&out, "ppt/slides/slide1.xml");
+        assert!(s.contains(&format!("<a:t>Va {like}</a:t>")), "{s}");
+        assert_eq!(s.matches("<a:br").count(), 1, "{s}");
+        assert_eq!(s.find("Va ").unwrap() < s.find("<a:br").unwrap(), first, "{s}");
+    }
+    // a one-run paragraph keeps a look-alike too
+    let d1 = deck(&sp("<a:p><a:r><a:t>Plain</a:t></a:r></a:p>"));
+    let out = write_inl(&d1, Some("fr"), vec![Inline::text(format!("A {O}r1{Z} {O}x1{Z}"))]);
+    assert!(part(&out, "ppt/slides/slide1.xml").contains(&format!("<a:t>A {O}r1{Z} {O}x1{Z}</a:t>")));
+}
+
+const PUA: &str = "a\u{e000}\u{e001}b\u{e000}\u{e000}c\u{e000}\u{27e6}x1\u{27e7}\u{e001}d";
+
+#[test]
+fn private_use_characters_round_trip_in_runs_and_alt_text() {
+    let body = format!(
+        "<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"S\" descr=\"Alt {PUA}\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:p><a:r><a:t>{PUA}</a:t></a:r><a:br/><a:r><a:rPr b=\"1\"/><a:t>B{PUA}</a:t></a:r></a:p><a:p><a:r><a:t>One {PUA}</a:t></a:r></a:p></p:txBody></p:sp>"
+    );
+    let d = deck(&body);
+    let mut doc = crate::Pptx.extract(&d, &opts(Some("fr"))).unwrap();
+    assert_eq!(doc.units.len(), 3);
+    for u in doc.units.clone() {
+        profile::locos_set_target(&mut doc, &u.segments[0].id, u.segments[0].source.clone()).unwrap();
+    }
+    let out = crate::Pptx.merge_with(&doc, &profile::locos().merge_options("pptx")).unwrap();
+    well_formed(&out);
+    let s = part(&out, "ppt/slides/slide1.xml");
+    assert!(s.contains(&format!("<a:t>{PUA}</a:t>")), "{s}");
+    assert!(s.contains(&format!("<a:t>B{PUA}</a:t>")), "{s}");
+    assert!(s.contains(&format!("<a:t>One {PUA}</a:t>")), "{s}");
+    assert!(s.contains(&format!("descr=\"Alt {PUA}\"")), "{s}");
+}
+
+#[test]
+fn public_rebuild_still_reads_plain_locos_text() {
+    // `rebuild` takes LocOS text: its tokens are read as tokens and its private-use characters are kept
+    let d = deck(&sp("<a:p><a:r><a:t>A</a:t></a:r><a:br/><a:r><a:rPr b=\"1\"/><a:t>B</a:t></a:r></a:p>"));
+    let text = format!("{O}r2{Z}Y{O}/r2{Z}{O}x3{Z}{O}r1{Z}X \u{e000}\u{e001}\u{e000}\u{e000}{O}/r1{Z}");
+    let out = rebuild(&d, &[(0, text)], None).unwrap();
+    let s = part(&out, "ppt/slides/slide1.xml");
+    assert!(s.contains("<a:rPr b=\"1\"/><a:t>Y</a:t></a:r><a:br/><a:r><a:t>X \u{e000}\u{e001}\u{e000}\u{e000}</a:t>"), "{s}");
+    // and `target_text` is still plain LocOS text
+    assert_eq!(target_text(&[Inline::text(format!("{O}x1{Z}\u{e000}"))]), format!("{O}x1{Z}\u{e000}"));
 }

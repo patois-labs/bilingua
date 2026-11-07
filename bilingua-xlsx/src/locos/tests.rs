@@ -248,15 +248,17 @@ fn hostile_targets_are_written_as_text() {
     let mut doc = extract(&drawing_book(), &opts(None)).unwrap();
     set(&mut doc, 0, "a\u{0}b\u{b}c\u{fffe} ]]> <![CDATA[ & </t>");
     let id = doc.units[1].segments[0].id.clone();
-    // unknown pair tokens stay literal text; a duplicate break is used once
-    doc.set_target(&id, vec![Inline::text("\u{27e6}x18446744073709551616\u{27e7}\u{27e6}r0\u{27e7}\u{27e6}r9\u{27e7}\u{27e6}x4\u{27e7}\u{27e6}x4\u{27e7}\u{27e6}/x1\u{27e7}z")]).unwrap();
+    // unknown pair tokens stay literal text
+    let (_, map) = profile::tokens::to_locos_text_for("xlsx", &doc.units[1].segments[0].source);
+    let raw = "\u{27e6}x18446744073709551616\u{27e7}\u{27e6}r0\u{27e7}\u{27e6}r9\u{27e7}\u{27e6}x4\u{27e7}\u{27e6}/x1\u{27e7}z";
+    doc.set_target(&id, profile::tokens::from_locos_text(raw, &map)).unwrap();
     let out = merged(&doc);
     let w = entry(&out, "xl/worksheets/sheet1.xml").unwrap();
     assert!(w.contains("<t xml:space=\"preserve\">ab\nc ]]&gt; &lt;![CDATA[ &amp; &lt;/t&gt;</t>"), "{w}");
     let d = entry(&out, "xl/drawings/drawing1.xml").unwrap();
-    assert!(d.contains("<a:t>\u{27e6}r0\u{27e7}</a:t></a:r><a:r><a:rPr sz=\"1100\"/><a:t>\u{27e6}r9\u{27e7}</a:t>"), "{d}");
-    // a point past the paragraph's own (an overflowing number too) is dropped, as Python's int() makes it
-    assert!(!d.contains("18446744073709551616") && d.contains("\u{27e6}/x1\u{27e7}"), "{d}");
+    assert!(d.contains("<a:t>\u{27e6}x18446744073709551616\u{27e7}\u{27e6}r0\u{27e7}\u{27e6}r9\u{27e7}</a:t></a:r><a:br/>"), "{d}");
+    // a token that names no code of the paragraph (an overflowing number too) is text, never dropped
+    assert!(d.contains("18446744073709551616") && d.contains("\u{27e6}/x1\u{27e7}"), "{d}");
     assert_eq!(d.matches("<a:br/>").count(), 1, "{d}");
     // the result reads back
     let again = extract(&out, &opts(None)).unwrap();
@@ -340,4 +342,46 @@ proptest! {
         let breaks = kids.iter().filter(|&&k| reparsed.is(k, A, "br")).count();
         prop_assert!(breaks >= 1);
     }
+}
+
+#[test]
+fn literal_token_lookalikes_survive_a_text_box_merge() {
+    // the break of the text box is the real x4; the translation holds a look-alike x4 and reorders the runs
+    let mut doc = extract(&drawing_book(), &opts(Some("fr"))).unwrap();
+    let id = doc.units[1].segments[0].id.clone();
+    let t = vec![
+        Inline::tag("2", TagKind::Open, ""),
+        Inline::text("Welt \u{27e6}x4\u{27e7}"),
+        Inline::tag("2", TagKind::Close, ""),
+        Inline::tag("4", TagKind::Standalone, ""),
+        Inline::tag("1", TagKind::Open, ""),
+        Inline::text("Hallo"),
+        Inline::tag("1", TagKind::Close, ""),
+    ];
+    doc.set_target(&id, t).unwrap();
+    let d = entry(&merged(&doc), "xl/drawings/drawing1.xml").unwrap();
+    assert!(d.contains("<a:t>Welt \u{27e6}x4\u{27e7}</a:t>"), "{d}");
+    assert_eq!(d.matches("<a:br").count(), 1, "{d}");
+    assert!(d.find("Welt").unwrap() < d.find("<a:br").unwrap() && d.find("<a:br").unwrap() < d.find("Hallo").unwrap(), "{d}");
+    // a cell keeps look-alike text as it is
+    let mut doc = extract(&drawing_book(), &opts(None)).unwrap();
+    set(&mut doc, 0, "Zelle \u{27e6}x1\u{27e7}");
+    let out = merged(&doc);
+    let sheet = entry(&out, "xl/worksheets/sheet1.xml").unwrap();
+    assert!(sheet.contains("Zelle \u{27e6}x1\u{27e7}"), "{sheet}");
+}
+
+#[test]
+fn private_use_characters_round_trip_in_a_text_box() {
+    const PUA: &str = "a\u{e000}\u{e001}b\u{e000}\u{e000}c\u{e000}\u{27e6}x1\u{27e7}\u{e001}d";
+    let drawing = DRAWING.replace("<a:t>world</a:t>", &format!("<a:t>w{PUA}</a:t>")).replace("<a:t>Second box</a:t>", &format!("<a:t>Second {PUA}</a:t>"));
+    let sheet = "<sheetData><row r=\"1\"><c r=\"A1\" t=\"inlineStr\"><is><t>Cell</t></is></c></row></sheetData><drawing r:id=\"rId1\"/>";
+    let data = book(sheet, "", &[], &[("xl/worksheets/_rels/sheet1.xml.rels", rel(&[("rId1", "drawing", "../drawings/drawing1.xml")])), ("xl/drawings/drawing1.xml", drawing)]);
+    let mut doc = extract(&data, &opts(Some("fr"))).unwrap();
+    for u in doc.units.clone() {
+        doc.set_target(&u.segments[0].id, u.segments[0].source.clone()).unwrap();
+    }
+    let d = entry(&merged(&doc), "xl/drawings/drawing1.xml").unwrap();
+    assert!(d.contains(&format!("<a:t>w{PUA}</a:t>")), "{d}");
+    assert!(d.contains(&format!("<a:t>Second {PUA}</a:t>")), "{d}");
 }

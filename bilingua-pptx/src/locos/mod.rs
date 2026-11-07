@@ -13,7 +13,8 @@
 //!   (`N+1..`); `profile::tokens::to_locos_text_numbered` turns that into LocOS's `⟦r1⟧..⟦/r1⟧⟦x3⟧`.
 //! * Writing is LocOS's `_rebuild`: the target is turned back into LocOS text and split with LocOS's token rules
 //!   (a run token sets the run whose `a:rPr` is copied, a point token puts its break or field back once, a dropped
-//!   one is appended, new lines become `a:br`); the language is set on every run, break and field of a written
+//!   one is appended, new lines become `a:br`; literal text is escaped first, so a token look-alike in it stays
+//!   text, unlike LocOS); the language is set on every run, break and field of a written
 //!   paragraph (and `rtl="1"` for a right-to-left target); the SmartArt drawing cache follows its data part; the
 //!   parts that changed are re-serialised, every other entry keeps its bytes. A Strict Open XML file is read and
 //!   written through LocOS's namespace swap.
@@ -541,19 +542,24 @@ fn has_text(d: &Dom, p: usize) -> bool {
     items(d, p).into_iter().any(|(run, el)| run && !py_strip(&run_text(d, el)).is_empty())
 }
 
+/// Literal text that looks like a LocOS token (`⟦x2⟧` written by the author or the translator) must not be read as
+/// one when a translation is written: literal text is escaped on its way to the writer and unescaped where the
+/// spans are cut, so only real codes are tokens (the shared helper in `bilingua_model::profile::tokens`).
+pub(crate) use bilingua_model::profile::tokens::{escape_literal as esc_lit, unescape_literal as unesc_lit};
+
 /// `tokenize(p)[0]`: the paragraph as LocOS text.
 fn tok_text(d: &Dom, p: usize) -> String {
     let it = items(d, p);
     let runs = it.iter().filter(|(r, _)| *r).count();
     if it.len() == 1 && runs == 1 {
-        return run_text(d, it[0].1);
+        return esc_lit(&run_text(d, it[0].1));
     }
     let (mut rn, mut xn) = (0, runs);
     let mut s = String::new();
     for (run, el) in it {
         if run {
             rn += 1;
-            s.push_str(&format!("\u{27e6}r{rn}\u{27e7}{}\u{27e6}/r{rn}\u{27e7}", run_text(d, el)));
+            s.push_str(&format!("\u{27e6}r{rn}\u{27e7}{}\u{27e6}/r{rn}\u{27e7}", esc_lit(&run_text(d, el))));
         } else {
             xn += 1;
             s.push_str(&format!("\u{27e6}x{xn}\u{27e7}"));
@@ -657,7 +663,7 @@ fn spans(text: &str, n_runs: usize) -> Vec<Span> {
     while i < text.len() {
         if let Some((close, letter, value, len)) = token_at(&text[i..]) {
             if !lit.is_empty() {
-                out.push(Span::T(cur, std::mem::take(&mut lit)));
+                out.push(Span::T(cur, unesc_lit(&std::mem::take(&mut lit))));
             }
             match (letter, value) {
                 (Some('r'), Some(v)) if (1..=n_runs as u64).contains(&v) => cur = if close { None } else { Some(v as usize - 1) },
@@ -672,7 +678,7 @@ fn spans(text: &str, n_runs: usize) -> Vec<Span> {
         i += c.len_utf8();
     }
     if !lit.is_empty() {
-        out.push(Span::T(cur, lit));
+        out.push(Span::T(cur, unesc_lit(&lit)));
     }
     out
 }
@@ -900,9 +906,16 @@ fn unit(p_index: usize, source: Vec<Inline>, codes: BTreeMap<String, CodeData>, 
 
 /// The LocOS text of a target: run tags are `r` pairs, every other code an `x` point, numbered by tag id.
 pub fn target_text(target: &[Inline]) -> String {
+    tagged_text(target, false)
+}
+
+/// [`target_text`], with literal text escaped (`esc_lit`) when `esc`: what the writer takes, so a token look-alike
+/// in the text stays text.
+fn tagged_text(target: &[Inline], esc: bool) -> String {
     let mut s = String::new();
     for i in target {
         match i {
+            Inline::Text(t) if esc => s.push_str(&esc_lit(t)),
             Inline::Text(t) => s.push_str(t),
             Inline::Tag { id, kind: TagKind::Open, .. } => s.push_str(&format!("\u{27e6}r{id}\u{27e7}")),
             Inline::Tag { id, kind: TagKind::Close, .. } => s.push_str(&format!("\u{27e6}/r{id}\u{27e7}")),
@@ -921,13 +934,21 @@ fn written_texts(doc: &Document) -> Vec<(i64, String)> {
         if u.segments.is_empty() || !u.segments.iter().all(|s| s.has_target()) {
             continue;
         }
-        out.push((p, target_text(&u.output())));
+        out.push((p, tagged_text(&u.output(), true)));
     }
     out
 }
 
-/// `PptxFilter._rebuild`: the package with `texts` (`p_index` -> LocOS text) written.
+/// `PptxFilter._rebuild`: the package with `texts` (`p_index` -> LocOS text) written. Every well-formed token in
+/// `texts` is read as LocOS reads it.
 pub fn rebuild(original: &[u8], texts: &[(i64, String)], target: Option<&str>) -> Result<Vec<u8>, Error> {
+    // plain LocOS text has no escaped look-alike: doubling its own U+E000 is all the escape it needs
+    let texts: Vec<(i64, String)> = texts.iter().map(|(i, t)| (*i, t.replace('\u{e000}', "\u{e000}\u{e000}"))).collect();
+    rebuild_escaped(original, &texts, target)
+}
+
+/// [`rebuild`] for texts whose literal text is escaped (`esc_lit`).
+fn rebuild_escaped(original: &[u8], texts: &[(i64, String)], target: Option<&str>) -> Result<Vec<u8>, Error> {
     let werr = |e: Error| match e {
         Error::Parse { msg, .. } => Error::Write(msg),
         e => e,
@@ -957,7 +978,7 @@ pub fn rebuild(original: &[u8], texts: &[(i64, String)], target: Option<&str>) -
             touched.insert(part.clone());
         } else if (base..base + walk.alts.len() as i64).contains(i) {
             let a = &walk.alts[(i - base) as usize];
-            pkg.doms.get_mut(&a.part).unwrap().set(a.node, a.attr, &text);
+            pkg.doms.get_mut(&a.part).unwrap().set(a.node, a.attr, &unesc_lit(&text));
             touched.insert(a.part.clone());
         }
     }
@@ -1014,5 +1035,5 @@ pub fn merge(doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
         return Err(Error::Write("pptx: a LocOS-profile document needs its original file".into()));
     };
     let texts = written_texts(doc);
-    rebuild(data, &texts, opts.stamp_lang(doc, true))
+    rebuild_escaped(data, &texts, opts.stamp_lang(doc, true))
 }

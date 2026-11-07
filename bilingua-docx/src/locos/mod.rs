@@ -292,7 +292,7 @@ fn locos_text(inl: &[Inline]) -> String {
     let mut s = String::new();
     for i in inl {
         match i {
-            Inline::Text(t) => s.push_str(t),
+            Inline::Text(t) => s.push_str(&para::esc_lit(t)),
             Inline::Tag { id, kind, .. } => s.push_str(&match kind {
                 TagKind::Open => format!("\u{27e6}r{id}\u{27e7}"),
                 TagKind::Close => format!("\u{27e6}/r{id}\u{27e7}"),
@@ -314,9 +314,9 @@ fn written_texts(doc: &Document) -> BTreeMap<usize, (String, bool)> {
         let (mut text, mut source) = (String::new(), String::new());
         for (i, s) in u.segments.iter().enumerate() {
             if i > 0 {
-                let sep = u.separators.get(i - 1).map(String::as_str).unwrap_or("");
-                text.push_str(sep);
-                source.push_str(sep);
+                let sep = para::esc_lit(u.separators.get(i - 1).map(String::as_str).unwrap_or(""));
+                text.push_str(&sep);
+                source.push_str(&sep);
             }
             text.push_str(&locos_text(s.output()));
             source.push_str(&locos_text(&s.source));
@@ -379,7 +379,7 @@ pub fn merge(doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
                 }
             }
         } else if let Some(a) = alts.get(i - w.paras.len()) {
-            set_alt(pkg.parts[a.part].dom.as_mut().unwrap(), a.dp, a.attr, &text);
+            set_alt(pkg.parts[a.part].dom.as_mut().unwrap(), a.dp, a.attr, &para::unesc_lit(&text));
             touched.insert(a.part);
         }
     }
