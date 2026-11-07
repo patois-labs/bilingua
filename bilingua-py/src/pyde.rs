@@ -70,6 +70,19 @@ impl<'py> De<'py> {
         if obj.is_none() {
             return Ok(Kind::Null);
         }
+        // W4 speed: an object of exactly `str`, `dict` or `list` (what `extract` gives, nearly every value of a
+        // Document) is none of the types checked before it below, so it takes its branch at once; anything else
+        // (a subclass, a number, bytes) goes through the checks in `from_py`'s order
+        if obj.is_exact_instance_of::<PyString>() {
+            let s = obj.downcast::<PyString>().map_err(|e| DeError(e.to_string()))?;
+            return Ok(Kind::Str(Cow::Borrowed(s.to_str().map_err(|e| DeError(e.to_string()))?)));
+        }
+        if obj.is_exact_instance_of::<PyDict>() {
+            return Ok(Kind::Dict);
+        }
+        if obj.is_exact_instance_of::<PyList>() {
+            return Ok(Kind::Seq);
+        }
         if let Ok(b) = obj.downcast::<PyBool>() {
             return Ok(Kind::Bool(b.is_true()));
         }
