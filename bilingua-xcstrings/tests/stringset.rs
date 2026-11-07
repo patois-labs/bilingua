@@ -25,7 +25,7 @@ const SET: &str = r#"{
             "values" : [
               "Start workout",
               "Begin workout",
-              "123"
+              "---"
             ]
           }
         }
@@ -73,7 +73,7 @@ fn each_value_is_a_unit() {
 fn stale_set_is_locked_not_extracted() {
     let d = Xcstrings.extract(SET.as_bytes(), &opts(None).with_include_locked(true)).unwrap();
     let l: Vec<_> = d.units.iter().filter(|u| !u.translate).map(locos_text).collect();
-    assert_eq!(l, ["123", "Old one"]);
+    assert_eq!(l, ["---", "Old one"]);
 }
 
 #[test]
@@ -101,7 +101,7 @@ fn target_language_gets_a_string_set_in_order() {
     let fr = &v["strings"]["Start workout"]["localizations"]["fr"];
     assert_eq!(fr["stringSet"]["state"], "translated");
     // the non-translatable third source string is carried over so the positions stay aligned
-    assert_eq!(fr["stringSet"]["values"], serde_json::json!(["FR Start workout", "FR Begin workout", "123"]));
+    assert_eq!(fr["stringSet"]["values"], serde_json::json!(["FR Start workout", "FR Begin workout", "---"]));
     assert!(fr.get("stringUnit").is_none());
     assert_eq!(v["strings"]["Plain"]["localizations"]["fr"]["stringUnit"]["value"], "FR Plain text");
     // the stale entry gets nothing
@@ -115,7 +115,7 @@ fn existing_target_set_is_replaced_and_untranslated_values_keep_old() {
     set_all(&mut d, &[(0, "Los geht es")]);
     let v = json(&Xcstrings.merge(&d).unwrap());
     let de = &v["strings"]["Start workout"]["localizations"]["de"]["stringSet"];
-    assert_eq!(de["values"], serde_json::json!(["Los geht es", "Training beginnen", "123"]));
+    assert_eq!(de["values"], serde_json::json!(["Los geht es", "Training beginnen", "---"]));
     // a unit with no translation at all leaves the target untouched
     let d = ex(SET.as_bytes(), Some("de"));
     assert_eq!(Xcstrings.merge(&d).unwrap(), SET.as_bytes());
