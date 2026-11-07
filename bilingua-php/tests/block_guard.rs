@@ -25,7 +25,7 @@ fn block_guard_is_accepted_and_merge_is_exact() {
             u.segments[0].target = t;
         }
         let out = String::from_utf8(Php.merge(&doc).unwrap()).unwrap();
-        assert!(out.contains("'a' => 'ZqHelloqZ'") && out.contains("{guard_ok}".replace("{guard_ok}", "'c' => 'ZqWorldqZ'").as_str()), "{out}");
+        assert!(out.contains("'a' => 'ZqHelloqZ'") && out.contains("'c' => 'ZqWorldqZ'"), "{out}");
         assert!(out.starts_with(&format!("<?php\n{guard}\n")), "guard text unchanged");
     }
 }
