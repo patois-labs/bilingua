@@ -489,6 +489,22 @@ commented list in the test.
 - **`${name}` parameters** (App Intents and App Shortcuts, `${applicationName}`) are free inline codes in every value;
   LocOS offered them as text. A value that is only parameters is not a unit.
 
+## Differences from LocOS: XML fixes made in Bilingua first (issues 794, 809, 813, 792)
+
+Both modes (native and the `locos` profile) carry these fixes; LocOS gets the same change next, so the goldens in
+`bilingua-dita/tests/locos_golden.rs` list them as known differences.
+
+- 794: a comment or processing instruction inside an XLIFF `<source>` is not text and takes no token number
+  (LocOS `cat_xliff.py` makes an empty `g` pair out of the comment text).
+- 809.2: nested `xml:lang` (DocBook 4.x `lang`) equal to the source language on an element with translated text is
+  restamped on a target build. The source language is the document's `source_lang`, else the first language the
+  file declares. Comparison ignores case and `_` against `-`.
+- 809.3: no attribute unit under an explicit `translate="no"` (own attribute, ancestor, ITS rule) or on an element
+  with `conref` / `conkeyref`. Elements the dialect lists by name (DITA `image`) still give their `alt`.
+- 813 item 6, wxl: a changed element text value gets the file's line break. An unchanged value keeps its bytes.
+  Attribute values keep `&#10;`.
+- 792: xmltree, xml, xmlres and wxl scan thousands of attributes or namespace declarations in one tag in linear time.
+
 ## CAT OS core (note for the lead)
 
 - `catcore` re-exported `bilingua_sdl::ZipLimits`; it now re-exports `bilingua_model::Limits as PackageLimits`
