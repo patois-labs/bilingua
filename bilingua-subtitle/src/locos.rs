@@ -693,7 +693,7 @@ mod tests {
         let tr = format!("X {}", core_text(&core));
         assert_eq!(vtt_cue(cue, &tr), "X <i>a</i> ref \u{27E6}1\u{27E7} b \u{27E6}x2\u{27E7}");
         // the same for a SubRip override block
-        let srt = "{\i1}a{\i0} \u{27E6}x1\u{27E7} z";
+        let srt = "{\\i1}a{\\i0}\u{27E6}x1\u{27E7} z";
         let (_, core, _, _) = srt_tokenize(srt);
         assert_eq!(srt_cue(srt, &core_text(&core)), srt);
     }
