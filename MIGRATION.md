@@ -430,7 +430,11 @@ commented list in the test.
   the last part and loses a caption that comes before options. Golden list `CAPTION_BEFORE_OPTIONS`.
 - **reStructuredText, blocks under a list item.** After the first blank line, a list item's body is dedented to the
   column of the item's text, so a literal block under an item stays literal (LocOS dedented it to column 0 and its
-  lines leaked as text). Lines that directly continue the item's first paragraph are read as LocOS reads them.
+  lines leaked as text). Lines that directly continue the item's first paragraph are read as LocOS reads them. Golden list
+  `LITERAL_UNDER_ITEM`.
+- **reStructuredText, a literal that ends in a backtick.** A run of exactly three backticks ends the literal
+  (``` ``:role:`x``` ``` is one literal, as docutils reads it); LocOS ends it at the first pair and offers the last
+  backtick as text. Any other run still closes at its first pair. Golden list `LITERAL_BACKTICK`.
 
 ## CAT OS core (note for the lead)
 

@@ -46,9 +46,10 @@ fn deeper_continuation_lines_of_an_item_stay_one_paragraph() {
 }
 
 #[test]
-fn literal_with_no_later_close_ends_at_the_first_pair() {
-    // LocOS parity: with no later closing pair, ``lit`` ends where LocOS ends it
-    let u = units(b"See ``lit```x` here.\n");
-    assert_eq!(u.len(), 1);
-    assert!(u[0].starts_with("See \u{27E6}x1\u{27E7}`x` here"), "{u:?}");
+fn other_backtick_runs_close_at_the_first_pair() {
+    // LocOS parity: only a run of exactly three backticks ends the literal at its end
+    let u = units(b"See ``lit```x`:py:class: here.\n");
+    assert_eq!(u, vec!["See \u{27E6}x1\u{27E7}`x`:py:class: here.".to_string()]);
+    let u = units(b"See ``a`b````lit`` here.\n");
+    assert_eq!(u, vec!["See \u{27E6}x1\u{27E7}\u{27E6}x2\u{27E7} here.".to_string()]);
 }

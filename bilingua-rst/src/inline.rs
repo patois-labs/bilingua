@@ -109,25 +109,24 @@ fn m_lit(s: &str, i: usize) -> Option<M> {
         return None;
     }
     let mut j = a;
-    // a closing pair followed by a backtick is part of the literal when a later pair closes it (``:role:`x```), as
-    // docutils reads it; with no later close the first pair closes, as LocOS reads it
-    let mut glued: Option<usize> = None;
     for (k, ch) in s[a..].chars().enumerate() {
         j += ch.len_utf8();
         if k >= 2000 {
-            break;
+            return None;
         }
         if is_space(ch) {
             continue;
         }
+        // a run of exactly three backticks ends a literal that ends in a backtick (``:role:`x```), as docutils
+        // reads it; any other run closes at its first pair, as LocOS reads it
+        if s[j..].starts_with("```") && !s[j..].starts_with("````") && not_word_at(s, j + 3) {
+            return Some(M { start: 0, end: j + 3, kind: Kind::Other });
+        }
         if s[j..].starts_with("``") && not_word_at(s, j + 2) {
-            if at(s, j + 2) != Some('`') {
-                return Some(M { start: 0, end: j + 2, kind: Kind::Other });
-            }
-            glued.get_or_insert(j + 2);
+            return Some(M { start: 0, end: j + 2, kind: Kind::Other });
         }
     }
-    glued.map(|end| M { start: 0, end, kind: Kind::Other })
+    None
 }
 
 fn m_role(s: &str, i: usize) -> Option<M> {
