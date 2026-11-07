@@ -155,8 +155,17 @@ fn cmd_merge(a: &Args, out: &mut dyn Write) -> Result<(), String> {
     if doc.target_lang.is_none() {
         doc.target_lang = read.target_lang.clone();
     }
+    // Locked units and locked segments keep what the file has: the XLIFF carries their targets for context only.
+    let frozen: std::collections::HashSet<String> = doc
+        .units
+        .iter()
+        .flat_map(|u| u.segments.iter().filter(move |s| !u.translate || s.state == SegState::Locked).map(|s| s.id.clone()))
+        .collect();
     let mut n = 0usize;
     for (id, target, state) in read.targets {
+        if frozen.contains(&id) {
+            continue;
+        }
         doc.set_target(&id, target).map_err(|e| format!("segment {id}: {e}"))?;
         doc.set_state(&id, state).map_err(|e| format!("segment {id}: {e}"))?;
         n += 1;
@@ -206,7 +215,12 @@ fn cmd_wordcount(a: &Args, out: &mut dyn Write) -> Result<(), String> {
 fn cmd_pseudo(a: &Args, out: &mut dyn Write) -> Result<(), String> {
     let path = one_file(a)?;
     let (mut doc, name) = open(a, path)?;
-    let ids: Vec<(String, Vec<Inline>)> = doc.units.iter().filter(|u| u.translate).flat_map(|u| u.segments.iter().map(|s| (s.id.clone(), s.source.clone()))).collect();
+    let ids: Vec<(String, Vec<Inline>)> = doc
+        .units
+        .iter()
+        .filter(|u| u.translate)
+        .flat_map(|u| u.segments.iter().filter(|s| s.state != SegState::Locked).map(|s| (s.id.clone(), s.source.clone())))
+        .collect();
     let mut n = 0usize;
     for (id, source) in ids {
         let chars = plain_text(&source).chars().count();

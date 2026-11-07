@@ -251,3 +251,34 @@ fn format_options_are_listed_and_checked() {
     assert!(e.contains("docx.translate_coments"), "{e}");
     assert!(run(&["segment", &f, "--option", "novalue"]).is_err());
 }
+
+const SDL_SEG_LOCK: &str = "<?xml version=\"1.0\" encoding=\"utf-8\"?>
+<xliff version=\"1.2\" xmlns=\"urn:oasis:names:tc:xliff:document:1.2\" xmlns:sdl=\"http://sdl.com/FileTypes/SdlXliff/1.0\" sdl:version=\"1.0\">
+<file original=\"a.txt\" source-language=\"en-US\" target-language=\"de-DE\" datatype=\"x-sdlfilterframework2\"><body>
+<trans-unit id=\"t1\"><source>Open it. Keep this. Close it.</source><seg-source><mrk mtype=\"seg\" mid=\"1\">Open it.</mrk> <mrk mtype=\"seg\" mid=\"2\">Keep this.</mrk> <mrk mtype=\"seg\" mid=\"3\">Close it.</mrk></seg-source><target><mrk mtype=\"seg\" mid=\"1\"></mrk> <mrk mtype=\"seg\" mid=\"2\">Behalten.</mrk> <mrk mtype=\"seg\" mid=\"3\"></mrk></target><sdl:seg-defs><sdl:seg id=\"2\" conf=\"Translated\" locked=\"true\"/></sdl:seg-defs></trans-unit>
+</body></file></xliff>
+";
+
+#[test]
+fn pseudo_and_merge_skip_a_locked_segment_in_an_open_unit() {
+    let d = tmp("seglock");
+    std::fs::write(d.join("a.sdlxliff"), SDL_SEG_LOCK).unwrap();
+    let o = p(&d, "ps.sdlxliff");
+    let msg = run(&["pseudo", &p(&d, "a.sdlxliff"), "-o", &o]).unwrap();
+    assert!(msg.contains("pseudo-translated"), "{msg}");
+    let out = std::fs::read_to_string(&o).unwrap();
+    assert!(out.contains("<mrk mtype=\"seg\" mid=\"2\">Behalten.</mrk>"), "{out}");
+    assert!(out.contains("<mrk mtype=\"seg\" mid=\"1\">[") && out.contains("<mrk mtype=\"seg\" mid=\"3\">["), "{out}");
+    // extract to XLIFF 2 carries the locked target; merging it back leaves the locked segment alone
+    let xlf = p(&d, "a.xlf");
+    run(&["extract", &p(&d, "a.sdlxliff"), "--target", "de-DE", "-o", &xlf]).unwrap();
+    let x = std::fs::read_to_string(&xlf).unwrap();
+    assert!(x.contains("Behalten."), "{x}");
+    let x = x.replace("<source xml:space=\"preserve\">Open it.</source>\n", "<source xml:space=\"preserve\">Open it.</source>\n        <target>Offnen.</target>\n");
+    std::fs::write(&xlf, x).unwrap();
+    let outp = p(&d, "out.sdlxliff");
+    let msg = run(&["merge", &xlf, "-o", &outp]).unwrap();
+    assert!(msg.starts_with("1 targets merged"), "{msg}");
+    let out = std::fs::read_to_string(&outp).unwrap();
+    assert!(out.contains(">Offnen.</mrk>") && out.contains("<mrk mtype=\"seg\" mid=\"2\">Behalten.</mrk>"), "{out}");
+}
