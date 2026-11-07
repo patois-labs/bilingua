@@ -299,3 +299,16 @@ a.htm
     let e = HhcFilter.extract(&[0u8, 1, 2, 3].repeat(50), &ExtractOptions::default()).unwrap_err();
     assert!(e.to_string().contains("binary"), "{e}");
 }
+
+#[test]
+fn empty_file_in_a_code_page_that_does_not_round_trip_keeps_its_bytes() {
+    // 0xFA 0x40 is an IBM extension row of Shift_JIS: decoded text writes back as other bytes
+    let mut raw = b"<HTML><!-- ".to_vec();
+    raw.extend_from_slice(&[0xFA, 0x40]);
+    raw.extend_from_slice(b" --><BODY><UL></UL></BODY></HTML>");
+    let mut o = ExtractOptions::default();
+    o.source_lang = Some("ja".into());
+    let d = HhcFilter.extract(&raw, &o).unwrap();
+    assert!(d.units.is_empty() && d.warnings.len() == 1);
+    assert_eq!(HhcFilter.merge(&d).unwrap(), raw);
+}

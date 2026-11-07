@@ -161,8 +161,14 @@ fn extract_impl(kind: Kind, bytes: &[u8], opts: &ExtractOptions, hint: Option<u1
         units.push(unit);
     }
     parts.push(SkelPart::Raw(text[pos..].to_string()));
+    // No unit to carry the original bytes of a file that does not round-trip through its code page: keep them whole.
+    let skeleton = if units.is_empty() && keep_raw {
+        Skeleton::binary(bytes.to_vec(), bilingua_model::parser_info!())
+    } else {
+        Skeleton::text(parts, tag, bilingua_model::parser_info!())
+    };
     guard::finish(
-        Document::new(kind.id(), units, Skeleton::text(parts, tag, bilingua_model::parser_info!())).with_options(opts),
+        Document::new(kind.id(), units, skeleton).with_options(opts),
         warnings,
         &limits,
     )
@@ -248,6 +254,11 @@ fn original_bytes(orig: &str, tag: &str) -> Vec<u8> {
 
 fn merge_impl(kind: Kind, doc: &Document, mo: &MergeOptions) -> Result<Vec<u8>, Error> {
     bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
+    if let Skeleton::Binary { data, .. } = &doc.skeleton {
+        if doc.units.is_empty() && mo.output_encoding == OutputEncoding::Keep {
+            return Ok(data.clone());
+        }
+    }
     let Skeleton::Text { parts, encoding: tag, .. } = &doc.skeleton else {
         return Err(Error::Write("htmlhelp needs a text skeleton".into()));
     };
