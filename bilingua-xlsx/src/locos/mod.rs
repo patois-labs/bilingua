@@ -935,6 +935,50 @@ fn token_at(s: &str) -> Option<(bool, Option<char>, &str, usize)> {
     Some((closing, kind, &rest[..digits], len))
 }
 
+/// Literal text that looks like a LocOS token (`⟦x2⟧` written by the author or the translator) must not be read as
+/// one when a translation is written. Literal text is escaped on its way to the writer (the open bracket becomes
+/// U+E000 U+E001, U+E000 becomes U+E000 U+E000) and unescaped where the spans are cut, so only real codes are tokens.
+pub(crate) fn esc_lit(s: &str) -> String {
+    if !s.contains(['\u{27e6}', '\u{e000}']) {
+        return s.to_string();
+    }
+    let mut out = String::with_capacity(s.len() + 8);
+    for c in s.chars() {
+        match c {
+            '\u{27e6}' => out.push_str("\u{e000}\u{e001}"),
+            '\u{e000}' => out.push_str("\u{e000}\u{e000}"),
+            c => out.push(c),
+        }
+    }
+    out
+}
+
+/// The inverse of `esc_lit`.
+pub(crate) fn unesc_lit(s: &str) -> String {
+    if !s.contains('\u{e000}') {
+        return s.to_string();
+    }
+    let mut out = String::with_capacity(s.len());
+    let mut it = s.chars().peekable();
+    while let Some(c) = it.next() {
+        if c == '\u{e000}' {
+            match it.peek() {
+                Some('\u{e001}') => {
+                    it.next();
+                    out.push('\u{27e6}');
+                    continue;
+                }
+                Some('\u{e000}') => {
+                    it.next();
+                }
+                _ => {}
+            }
+        }
+        out.push(c)
+    }
+    out
+}
+
 fn spans(text: &str, n_runs: usize) -> Vec<Span> {
     let mut out = Vec::new();
     let mut cur: Option<usize> = None;
@@ -942,7 +986,7 @@ fn spans(text: &str, n_runs: usize) -> Vec<Span> {
     let mut i = 0;
     let flush = |out: &mut Vec<Span>, buf: &mut String, cur: Option<usize>| {
         if !buf.is_empty() {
-            out.push(Span::Text(cur, std::mem::take(buf)));
+            out.push(Span::Text(cur, unesc_lit(&std::mem::take(buf))));
         }
     };
     while i < text.len() {
@@ -1147,10 +1191,11 @@ fn xml_target_text(text: &str) -> String {
 }
 
 /// The LocOS text of a translation: run pairs are `r` tokens and points `x` tokens, numbered by tag id.
-fn target_text(target: &[Inline]) -> String {
+fn target_text(target: &[Inline], esc: bool) -> String {
     let mut s = String::new();
     for i in target {
         match i {
+            Inline::Text(t) if esc => s.push_str(&esc_lit(t)),
             Inline::Text(t) => s.push_str(t),
             Inline::Tag { id, kind, .. } => s.push_str(&match kind {
                 TagKind::Open => format!("{OPEN}r{id}{CLOSE}"),
@@ -1164,7 +1209,9 @@ fn target_text(target: &[Inline]) -> String {
 
 /// The translations by LocOS number: a unit counts when every segment has a target (the segments joined with
 /// their separators).
-fn written_texts(doc: &Document) -> BTreeMap<usize, String> {
+/// With `esc`, literal text is escaped for the paragraph writer (`spans` unescapes it); cells and comments take the
+/// plain text.
+fn written_texts(doc: &Document, esc: bool) -> BTreeMap<usize, String> {
     let mut out = BTreeMap::new();
     for u in doc.units.iter().filter(|u| u.translate) {
         let Some(k) = u.hidden(KEY).and_then(|k| k.parse::<usize>().ok()) else { continue };
@@ -1178,7 +1225,7 @@ fn written_texts(doc: &Document) -> BTreeMap<usize, String> {
             }
             inl.extend(s.target.iter().cloned());
         }
-        out.insert(k, target_text(&inl));
+        out.insert(k, target_text(&inl, esc));
     }
     out
 }
@@ -1189,7 +1236,8 @@ pub fn merge(doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
     let Skeleton::Binary { data, .. } = &doc.skeleton else {
         return Err(Error::Write("xlsx: a LocOS-profile document needs its original file".into()));
     };
-    let texts = written_texts(doc);
+    let texts = written_texts(doc, false);
+    let box_texts = written_texts(doc, true);
     let table = table::is_table(doc);
     let tag = opts.stamp_lang(doc, !texts.is_empty()).and_then(profile::lang_tag);
     if texts.is_empty() && tag.is_none() {
@@ -1212,7 +1260,7 @@ pub fn merge(doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
         }
         let base = cells.len();
         for (j, (_, part, p)) in pkg.drawing_paragraphs()?.into_iter().enumerate() {
-            let Some(tr) = texts.get(&(base + j)) else { continue };
+            let Some(tr) = box_texts.get(&(base + j)) else { continue };
             let tr = xml_target_text(tr);
             pkg.load(&part)?;
             let d = pkg.dom(&part);

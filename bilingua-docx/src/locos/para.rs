@@ -482,6 +482,50 @@ fn add_run(d: &mut Dom, p: usize, text: &str) -> usize {
     r
 }
 
+/// Literal text that looks like a LocOS token (`⟦x2⟧` written by the author or the translator) must not be read as
+/// one when a translation is written. Literal text is escaped on its way to the writer (the open bracket becomes
+/// U+E000 U+E001, U+E000 becomes U+E000 U+E000) and unescaped where the spans are cut, so only real codes are tokens.
+pub(crate) fn esc_lit(s: &str) -> String {
+    if !s.contains(['\u{27e6}', '\u{e000}']) {
+        return s.to_string();
+    }
+    let mut out = String::with_capacity(s.len() + 8);
+    for c in s.chars() {
+        match c {
+            '\u{27e6}' => out.push_str("\u{e000}\u{e001}"),
+            '\u{e000}' => out.push_str("\u{e000}\u{e000}"),
+            c => out.push(c),
+        }
+    }
+    out
+}
+
+/// The inverse of `esc_lit`.
+pub(crate) fn unesc_lit(s: &str) -> String {
+    if !s.contains('\u{e000}') {
+        return s.to_string();
+    }
+    let mut out = String::with_capacity(s.len());
+    let mut it = s.chars().peekable();
+    while let Some(c) = it.next() {
+        if c == '\u{e000}' {
+            match it.peek() {
+                Some('\u{e001}') => {
+                    it.next();
+                    out.push('\u{27e6}');
+                    continue;
+                }
+                Some('\u{e000}') => {
+                    it.next();
+                }
+                _ => {}
+            }
+        }
+        out.push(c)
+    }
+    out
+}
+
 /// Every well-formed LocOS token (`⟦/?[a-z]?\d+⟧`, ASCII digits): (start, end, the text between the brackets).
 pub fn find_tokens(text: &str) -> Vec<(usize, usize, &str)> {
     const OPEN: &str = "\u{27e6}";
@@ -519,7 +563,7 @@ fn split_on_run_tokens(text: &str) -> Vec<(Option<String>, String)> {
     let mut cur: Option<String> = None;
     let mut pos = 0;
     for (s, e, inner) in find_tokens(text) {
-        spans.push((cur.clone(), text[pos..s].to_string()));
+        spans.push((cur.clone(), unesc_lit(&text[pos..s])));
         pos = e;
         if inner.starts_with('/') {
             cur = None;
@@ -528,7 +572,7 @@ fn split_on_run_tokens(text: &str) -> Vec<(Option<String>, String)> {
             cur = (!key.is_empty() && key.bytes().all(|b| b.is_ascii_digit())).then(|| key.to_string());
         }
     }
-    spans.push((cur, text[pos..].to_string()));
+    spans.push((cur, unesc_lit(&text[pos..])));
     spans
 }
 
@@ -734,7 +778,7 @@ fn split_object_tokens(text: &str, lay: &Layout) -> Vec<Item> {
     let mut pos = 0;
     for (s, e, inner) in find_tokens(text) {
         if s > pos {
-            raw.push(Raw::T(text[pos..s].to_string()));
+            raw.push(Raw::T(unesc_lit(&text[pos..s])));
         }
         pos = e;
         let num = |rest: &str| -> Option<Option<usize>> { (!rest.is_empty() && rest.bytes().all(|b| b.is_ascii_digit())).then(|| rest.parse::<usize>().ok()) };
@@ -747,7 +791,7 @@ fn split_object_tokens(text: &str, lay: &Layout) -> Vec<Item> {
         }
     }
     if pos < text.len() {
-        raw.push(Raw::T(text[pos..].to_string()));
+        raw.push(Raw::T(unesc_lit(&text[pos..])));
     }
     let ngroups = lay.groups.len();
     let x_ok = |v: Option<usize>, base: usize| v.is_some_and(|v| v >= base && v - base < ngroups);

@@ -242,3 +242,35 @@ proptest! {
         }
     }
 }
+
+fn write_inl(data: &[u8], lang: Option<&str>, t: Vec<Inline>) -> Vec<u8> {
+    let mut doc = crate::Pptx.extract(data, &opts(lang)).unwrap();
+    let id = doc.units[0].segments[0].id.clone();
+    profile::locos_set_target(&mut doc, &id, t).unwrap();
+    crate::Pptx.merge_with(&doc, &profile::locos().merge_options("pptx")).unwrap()
+}
+
+#[test]
+fn literal_token_lookalikes_survive_a_merge() {
+    // run 1 holds a look-alike of the real break x3; the translation keeps it, then reorders the real codes
+    let d = deck(&sp(&format!("<a:p><a:r><a:t>Go {O}x3{Z}</a:t></a:r><a:br/><a:r><a:rPr b=\"1\"/><a:t>B</a:t></a:r></a:p>")));
+    let like = format!("{O}x3{Z}");
+    let t = |first: bool| {
+        let one = vec![Inline::tag("1", TagKind::Open, ""), Inline::text(format!("Va {like}")), Inline::tag("1", TagKind::Close, "")];
+        let two = vec![Inline::tag("2", TagKind::Open, ""), Inline::text("B"), Inline::tag("2", TagKind::Close, "")];
+        let br = vec![Inline::tag("3", TagKind::Standalone, "")];
+        if first { [one, br, two].concat() } else { [two, br, one].concat() }
+    };
+    for first in [true, false] {
+        let out = write_inl(&d, Some("fr"), t(first));
+        well_formed(&out);
+        let s = part(&out, "ppt/slides/slide1.xml");
+        assert!(s.contains(&format!("<a:t>Va {like}</a:t>")), "{s}");
+        assert_eq!(s.matches("<a:br").count(), 1, "{s}");
+        assert_eq!(s.find("Va ").unwrap() < s.find("<a:br").unwrap(), first, "{s}");
+    }
+    // a one-run paragraph keeps a look-alike too
+    let d1 = deck(&sp("<a:p><a:r><a:t>Plain</a:t></a:r></a:p>"));
+    let out = write_inl(&d1, Some("fr"), vec![Inline::text(format!("A {O}r1{Z} {O}x1{Z}"))]);
+    assert!(part(&out, "ppt/slides/slide1.xml").contains(&format!("<a:t>A {O}r1{Z} {O}x1{Z}</a:t>")));
+}

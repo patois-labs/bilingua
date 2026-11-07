@@ -341,3 +341,30 @@ proptest! {
         prop_assert!(breaks >= 1);
     }
 }
+
+#[test]
+fn literal_token_lookalikes_survive_a_text_box_merge() {
+    // the break of the text box is the real x4; the translation holds a look-alike x4 and reorders the runs
+    let mut doc = extract(&drawing_book(), &opts(Some("fr"))).unwrap();
+    let id = doc.units[1].segments[0].id.clone();
+    let t = vec![
+        Inline::tag("2", TagKind::Open, ""),
+        Inline::text("Welt \u{27e6}x4\u{27e7}"),
+        Inline::tag("2", TagKind::Close, ""),
+        Inline::tag("4", TagKind::Standalone, ""),
+        Inline::tag("1", TagKind::Open, ""),
+        Inline::text("Hallo"),
+        Inline::tag("1", TagKind::Close, ""),
+    ];
+    doc.set_target(&id, t).unwrap();
+    let d = entry(&merged(&doc), "xl/drawings/drawing1.xml").unwrap();
+    assert!(d.contains("<a:t>Welt \u{27e6}x4\u{27e7}</a:t>"), "{d}");
+    assert_eq!(d.matches("<a:br").count(), 1, "{d}");
+    assert!(d.find("Welt").unwrap() < d.find("<a:br").unwrap() && d.find("<a:br").unwrap() < d.find("Hallo").unwrap(), "{d}");
+    // a cell keeps look-alike text as it is
+    let mut doc = extract(&drawing_book(), &opts(None)).unwrap();
+    set(&mut doc, 0, "Zelle \u{27e6}x1\u{27e7}");
+    let out = merged(&doc);
+    let sheet = entry(&out, "xl/worksheets/sheet1.xml").unwrap();
+    assert!(sheet.contains("Zelle \u{27e6}x1\u{27e7}"), "{sheet}");
+}

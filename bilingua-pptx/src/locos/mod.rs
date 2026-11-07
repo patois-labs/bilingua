@@ -541,19 +541,63 @@ fn has_text(d: &Dom, p: usize) -> bool {
     items(d, p).into_iter().any(|(run, el)| run && !py_strip(&run_text(d, el)).is_empty())
 }
 
+/// Literal text that looks like a LocOS token (`⟦x2⟧` written by the author or the translator) must not be read as
+/// one when a translation is written. Literal text is escaped on its way to the writer (the open bracket becomes
+/// U+E000 U+E001, U+E000 becomes U+E000 U+E000) and unescaped where the spans are cut, so only real codes are tokens.
+pub(crate) fn esc_lit(s: &str) -> String {
+    if !s.contains(['\u{27e6}', '\u{e000}']) {
+        return s.to_string();
+    }
+    let mut out = String::with_capacity(s.len() + 8);
+    for c in s.chars() {
+        match c {
+            '\u{27e6}' => out.push_str("\u{e000}\u{e001}"),
+            '\u{e000}' => out.push_str("\u{e000}\u{e000}"),
+            c => out.push(c),
+        }
+    }
+    out
+}
+
+/// The inverse of `esc_lit`.
+pub(crate) fn unesc_lit(s: &str) -> String {
+    if !s.contains('\u{e000}') {
+        return s.to_string();
+    }
+    let mut out = String::with_capacity(s.len());
+    let mut it = s.chars().peekable();
+    while let Some(c) = it.next() {
+        if c == '\u{e000}' {
+            match it.peek() {
+                Some('\u{e001}') => {
+                    it.next();
+                    out.push('\u{27e6}');
+                    continue;
+                }
+                Some('\u{e000}') => {
+                    it.next();
+                }
+                _ => {}
+            }
+        }
+        out.push(c)
+    }
+    out
+}
+
 /// `tokenize(p)[0]`: the paragraph as LocOS text.
 fn tok_text(d: &Dom, p: usize) -> String {
     let it = items(d, p);
     let runs = it.iter().filter(|(r, _)| *r).count();
     if it.len() == 1 && runs == 1 {
-        return run_text(d, it[0].1);
+        return esc_lit(&run_text(d, it[0].1));
     }
     let (mut rn, mut xn) = (0, runs);
     let mut s = String::new();
     for (run, el) in it {
         if run {
             rn += 1;
-            s.push_str(&format!("\u{27e6}r{rn}\u{27e7}{}\u{27e6}/r{rn}\u{27e7}", run_text(d, el)));
+            s.push_str(&format!("\u{27e6}r{rn}\u{27e7}{}\u{27e6}/r{rn}\u{27e7}", esc_lit(&run_text(d, el))));
         } else {
             xn += 1;
             s.push_str(&format!("\u{27e6}x{xn}\u{27e7}"));
@@ -657,7 +701,7 @@ fn spans(text: &str, n_runs: usize) -> Vec<Span> {
     while i < text.len() {
         if let Some((close, letter, value, len)) = token_at(&text[i..]) {
             if !lit.is_empty() {
-                out.push(Span::T(cur, std::mem::take(&mut lit)));
+                out.push(Span::T(cur, unesc_lit(&std::mem::take(&mut lit))));
             }
             match (letter, value) {
                 (Some('r'), Some(v)) if (1..=n_runs as u64).contains(&v) => cur = if close { None } else { Some(v as usize - 1) },
@@ -672,7 +716,7 @@ fn spans(text: &str, n_runs: usize) -> Vec<Span> {
         i += c.len_utf8();
     }
     if !lit.is_empty() {
-        out.push(Span::T(cur, lit));
+        out.push(Span::T(cur, unesc_lit(&lit)));
     }
     out
 }
@@ -903,7 +947,7 @@ pub fn target_text(target: &[Inline]) -> String {
     let mut s = String::new();
     for i in target {
         match i {
-            Inline::Text(t) => s.push_str(t),
+            Inline::Text(t) => s.push_str(&esc_lit(t)),
             Inline::Tag { id, kind: TagKind::Open, .. } => s.push_str(&format!("\u{27e6}r{id}\u{27e7}")),
             Inline::Tag { id, kind: TagKind::Close, .. } => s.push_str(&format!("\u{27e6}/r{id}\u{27e7}")),
             Inline::Tag { id, free: true, .. } => s.push_str(&format!("\u{27e6}p{id}\u{27e7}")),
@@ -957,7 +1001,7 @@ pub fn rebuild(original: &[u8], texts: &[(i64, String)], target: Option<&str>) -
             touched.insert(part.clone());
         } else if (base..base + walk.alts.len() as i64).contains(i) {
             let a = &walk.alts[(i - base) as usize];
-            pkg.doms.get_mut(&a.part).unwrap().set(a.node, a.attr, &text);
+            pkg.doms.get_mut(&a.part).unwrap().set(a.node, a.attr, &unesc_lit(&text));
             touched.insert(a.part.clone());
         }
     }

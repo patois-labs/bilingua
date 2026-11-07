@@ -292,7 +292,7 @@ fn locos_text(inl: &[Inline]) -> String {
     let mut s = String::new();
     for i in inl {
         match i {
-            Inline::Text(t) => s.push_str(t),
+            Inline::Text(t) => s.push_str(&para::esc_lit(t)),
             Inline::Tag { id, kind, .. } => s.push_str(&match kind {
                 TagKind::Open => format!("\u{27e6}r{id}\u{27e7}"),
                 TagKind::Close => format!("\u{27e6}/r{id}\u{27e7}"),
@@ -379,7 +379,7 @@ pub fn merge(doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
                 }
             }
         } else if let Some(a) = alts.get(i - w.paras.len()) {
-            set_alt(pkg.parts[a.part].dom.as_mut().unwrap(), a.dp, a.attr, &text);
+            set_alt(pkg.parts[a.part].dom.as_mut().unwrap(), a.dp, a.attr, &para::unesc_lit(&text));
             touched.insert(a.part);
         }
     }
