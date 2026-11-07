@@ -241,7 +241,8 @@ fn resource_suite_hostile_cases() {
     assert_eq!(xml.merge(&d).unwrap(), lol);
     // a ">" inside a quoted system id must not hide the internal subset
     let hidden = br#"<?xml version="1.0"?><!DOCTYPE resources SYSTEM "a>b" [<!ENTITY a "x">]><resources><string name="x" y="&a;">hi</string></resources>"#;
-    assert!(xml.extract(hidden, &opts(None)).is_ok());
+    let d = xml.extract(hidden, &opts(None)).unwrap();
+    assert_eq!(xml.merge(&d).unwrap(), hidden, "the subset and the y=\"&a;\" reference are kept, not expanded");
     let xxe = br#"<?xml version="1.0"?><!DOCTYPE resources SYSTEM "file:///etc/passwd"><resources><string name="x">a &xxe; b</string></resources>"#;
     match xml.extract(xxe, &opts(None)) {
         Err(Error::Parse { .. }) | Ok(_) => {}

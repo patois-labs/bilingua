@@ -3,10 +3,11 @@
 //! The text is tokenised with `quick-xml` (which never expands an entity or reads a DTD); this module adds what a
 //! translation tool needs on top: the span of every start tag, end tag, attribute value and text run (so a merge can
 //! rewrite only what changed), XML 1.0 well-formedness checks of the kind libxml2 makes (names, characters,
-//! duplicate attributes, undefined namespace prefixes, undefined entities, a DTD internal subset), and namespace
-//! resolution. Nothing here allocates per character.
+//! duplicate attributes, undefined namespace prefixes, undefined entities), and namespace resolution. A DTD internal
+//! subset is kept as raw bytes and never read: no entity is ever expanded or fetched. The depth and element limits
+//! are counted here exactly, on the same tokens the reader sees. Nothing here allocates per character.
 
-use bilingua_model::Error;
+use bilingua_model::{Error, LimitError, LimitKind, Limits};
 use quick_xml::events::Event;
 use quick_xml::Reader;
 use std::collections::HashMap;
@@ -292,12 +293,15 @@ struct Scope<'a> {
 }
 
 impl<'a> Tree<'a> {
-    /// Parses `text` (already decoded, no BOM).
-    pub(crate) fn parse(text: &'a str) -> Result<Tree<'a>, Error> {
+    /// Parses `text` (already decoded, no BOM), refusing more than `limits.max_xml_elements` elements or a nesting
+    /// deeper than `limits.max_xml_depth`.
+    pub(crate) fn parse(text: &'a str, limits: &Limits) -> Result<Tree<'a>, Error> {
         if text.starts_with('\u{FEFF}') {
             return Err(bad("a second byte order mark at the start of the file"));
         }
-        let masked = mask_doctype(text);
+        // where the DOCTYPE really ends; the reader must agree, or the file is refused
+        let dt_span = doctype_span(text);
+        let masked = dt_span.and_then(|(i, j)| mask_doctype(text, i, j));
         let mut rd = Reader::from_str(masked.as_deref().unwrap_or(text));
         {
             let c = rd.config_mut();
@@ -441,6 +445,20 @@ impl<'a> Tree<'a> {
                             }
                         }
                     }
+                    if t.els.len() >= limits.max_xml_elements {
+                        return Err(LimitError::new(
+                            LimitKind::XmlElements,
+                            format!("This file has more than {} XML elements in one part. It was not processed.", limits.max_xml_elements),
+                        )
+                        .into());
+                    }
+                    if !empty && stack.len() >= limits.max_xml_depth {
+                        return Err(LimitError::new(
+                            LimitKind::XmlDepth,
+                            format!("This file nests XML elements more than {} deep. It was not processed.", limits.max_xml_depth),
+                        )
+                        .into());
+                    }
                     let parent = stack.last().copied().unwrap_or(NONE);
                     t.els.push(El {
                         s0: start,
@@ -503,6 +521,11 @@ impl<'a> Tree<'a> {
                 Event::DocType(_) => {
                     if !stack.is_empty() || seen_root || t.has_doctype {
                         return Err(bad("misplaced DOCTYPE"));
+                    }
+                    // the reader stops a DOCTYPE at the first '>' outside a '<' ... '>' pair; it must stop where the
+                    // quotes, brackets and comments say, or the subset could hide document content (or the reverse)
+                    if dt_span.map(|(i, j)| (i, j + 1)) != Some((start, end)) {
+                        return Err(bad("the DOCTYPE does not end where its quotes, brackets and comments say it does; refused"));
                     }
                     let raw = &text[start..end];
                     // XML characters only: a NUL here would also be read as a skeleton marker
@@ -652,14 +675,13 @@ fn is_ws_char(c: char) -> bool {
     c.is_ascii() && is_xml_ws(c as u8)
 }
 
-/// The reader stops a DOCTYPE at the first `>` it meets, even one inside a quoted identifier or a comment of the
-/// internal subset. This finds the real end (quotes, `[ ... ]`, comments and processing instructions skipped) and
-/// returns a copy of `text` whose DOCTYPE is blanked (after its name) to the same length, so every offset stays
-/// the same. `None` when the DOCTYPE needs no help or there is none before the root element.
-fn mask_doctype(text: &str) -> Option<String> {
+/// The DOCTYPE of the prolog (after white space, comments and processing instructions; `<!DOCTYPE` in any case, as
+/// the reader takes it): `(start, j)` where `j` is the index of its closing `>`, found with quoted strings, the
+/// `[ ... ]` internal subset and the comments and processing instructions inside it skipped (the same scan as
+/// `bilingua_model::guard`). `None` when there is no DOCTYPE there or it never ends.
+fn doctype_span(text: &str) -> Option<(usize, usize)> {
     let b = text.as_bytes();
     let mut i = 0usize;
-    // the prolog: white space, comments and processing instructions, then maybe the DOCTYPE
     loop {
         while i < b.len() && is_xml_ws(b[i]) {
             i += 1;
@@ -672,7 +694,7 @@ fn mask_doctype(text: &str) -> Option<String> {
             break;
         }
     }
-    if !b[i..].starts_with(b"<!DOCTYPE") {
+    if b.len() < i + 9 || !b[i..i + 9].eq_ignore_ascii_case(b"<!DOCTYPE") {
         return None;
     }
     let (mut j, mut quote, mut depth) = (i + 9, 0u8, 0usize);
@@ -693,20 +715,25 @@ fn mask_doctype(text: &str) -> Option<String> {
         } else if c == b']' {
             depth = depth.saturating_sub(1);
         } else if c == b'>' && depth == 0 {
-            break;
+            return Some((i, j));
         }
         j += 1;
     }
-    if j >= b.len() {
-        return None;
-    }
+    None
+}
+
+/// The reader stops a DOCTYPE at the first `>` outside a `<` ... `>` pair, even one inside a quoted identifier or
+/// a comment of the internal subset. For the DOCTYPE at `i..=j` (from [`doctype_span`]) this returns a copy of
+/// `text` whose DOCTYPE is blanked (after its name) to the same length, so every offset stays the same and the
+/// reader stops at `j`. `None` when the DOCTYPE needs no help.
+fn mask_doctype(text: &str, i: usize, j: usize) -> Option<String> {
     let inner = &text[i + 9..j];
-    if !inner.contains(['[', '"', '\'']) {
+    if !inner.contains(['[', '"', '\'', '<']) {
         return None;
     }
     // keep the white space and the document type name; blank what follows
     let lead = inner.len() - inner.trim_start_matches(is_ws_char).len();
-    let name = inner[lead..].find(is_ws_char).unwrap_or(inner.len() - lead);
+    let name = inner[lead..].find(|c: char| is_ws_char(c) || matches!(c, '[' | '"' | '\'' | '<' | '>')).unwrap_or(inner.len() - lead);
     let keep = lead + name;
     let mut out = String::with_capacity(text.len());
     out.push_str(&text[..i + 9 + keep]);

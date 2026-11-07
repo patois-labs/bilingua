@@ -252,7 +252,8 @@ fn hostile() {
     let d = f().extract(bomb, &opts(None)).unwrap();
     assert_eq!(f().merge(&d).unwrap(), bomb);
     let xxe = br#"<?xml version="1.0"?><!DOCTYPE r [<!ENTITY x SYSTEM "file:///etc/passwd">]><r/>"#;
-    assert!(f().extract(xxe, &opts(None)).is_ok());
+    let d = f().extract(xxe, &opts(None)).unwrap();
+    assert_eq!(f().merge(&d).unwrap(), xxe, "nothing is fetched or expanded");
     // an unvalidated language code never reaches the XPath or the output
     let d = data("xpath-pi.xml");
     let mut doc = ex_to(&f(), &d, "fr'] | //*[@a='");

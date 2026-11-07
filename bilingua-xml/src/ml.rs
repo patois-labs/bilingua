@@ -910,7 +910,7 @@ fn strip_ids(stag: &str) -> String {
 /// Merges translations into a multilingual file. `texts[k]` is unit k's rendered body (None = untranslated).
 pub(crate) fn merge(doc: &Document, text: &str, cfg_blob: &str, target: Option<&str>, limits: &Limits) -> Result<String, Error> {
     let cfg = MlConfig::decode(cfg_blob).ok_or_else(|| Error::Write("bad multilingual skeleton".into()))?;
-    let t = Tree::parse(text)?;
+    let t = Tree::parse(text, limits)?;
     let mp = plan(&t, Some(&cfg), limits, false, false)?.ok_or_else(|| Error::Write("the multilingual layout no longer matches the file".into()))?;
     let lay = &mp.layout;
     if mp.unit_src.len() != doc.units.len() {

@@ -579,6 +579,24 @@ mod tests {
     }
 
     #[test]
+    fn keeping_dtd_allows_declarations_but_not_more_elements_or_depth() {
+        let l = Limits { max_xml_depth: 8, max_xml_elements: 20, ..Limits::default() };
+        let bomb = br#"<!DOCTYPE lolz [<!ENTITY lol "lol"><!ENTITY lol2 "&lol;&lol;&lol;"><!ENTITY % p SYSTEM "http://example.invalid/x.dtd"> %p;]><lolz>&lol2;</lolz>"#;
+        assert!(check_xml_keeping_dtd(bomb, &l).is_ok());
+        assert_eq!(kind(check_xml(bomb, &l)), Some(LimitKind::XmlEntities), "the strict check still refuses it");
+        // a quote, a '>' or a ']' in a comment or a PI of the subset does not end the DOCTYPE early or late
+        for dt in [r#"<!DOCTYPE r [ <!-- ' ]> --> <!ENTITY a "x"> ]>"#, r#"<!DOCTYPE r [ <?pi ]> " ?> <!ENTITY a "]>"> ]>"#] {
+            let deep = format!("{dt}{}{}", "<a>".repeat(9), "</a>".repeat(9));
+            assert_eq!(kind(check_xml_keeping_dtd(deep.as_bytes(), &l)), Some(LimitKind::XmlDepth), "{dt}");
+            let wide = format!("{dt}<r>{}</r>", "<b/>".repeat(30));
+            assert_eq!(kind(check_xml_keeping_dtd(wide.as_bytes(), &l)), Some(LimitKind::XmlElements), "{dt}");
+            assert_eq!(kind(check_xml(deep.as_bytes(), &l)), Some(LimitKind::XmlEntities), "{dt}");
+        }
+        // an ENTITY declaration outside a DOCTYPE is refused in both modes
+        assert_eq!(kind(check_xml_keeping_dtd(br#"<!ENTITY a "x"><r/>"#, &l)), Some(LimitKind::XmlEntities));
+    }
+
+    #[test]
     fn a_plain_doctype_and_predefined_entities_pass() {
         let ok = br#"<?xml version="1.0"?><!DOCTYPE xliff PUBLIC "-//OASIS//DTD XLIFF 1.2//EN" "xliff.dtd"><a>x &amp; y &#233;</a>"#;
         assert!(check_xml(ok, &Limits::default()).is_ok());

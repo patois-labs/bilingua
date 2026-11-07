@@ -173,7 +173,7 @@ impl XmlFilter {
         guard::check_input(bytes, &limits)?;
         guard::check_xml_keeping_dtd(bytes, &limits)?;
         let dec = read_xml(bytes, &opts)?;
-        let t = Tree::parse(&dec.text)?;
+        let t = Tree::parse(&dec.text, &limits)?;
         if !matches!(self.ml, MlPolicy::Off) {
             if let Some(mp) = ml::plan(&t, self.ml_config().as_ref(), &limits, true, true)? {
                 return Ok(Inspection {
@@ -190,7 +190,7 @@ impl XmlFilter {
         guard::check_input(bytes, &limits)?;
         guard::check_xml_keeping_dtd(bytes, &limits)?;
         let dec = read_xml(bytes, opts)?;
-        let t = Tree::parse(&dec.text)?;
+        let t = Tree::parse(&dec.text, &limits)?;
         if !matches!(self.ml, MlPolicy::Off) {
             if let Some(mp) = ml::plan(&t, self.ml_config().as_ref(), &limits, true, true)? {
                 let mut doc = skel::build_document(&t, &mp.planned, &[String::new()], &HashSet::new(), opts, dec.encoding.clone(), None, self.id);
@@ -258,7 +258,7 @@ impl Filter for XmlFilter {
         }
         match read_xml(bytes, &opts) {
             // well-formed XHTML is the HTML filter's (it comes after this one)
-            Ok(d) => Tree::parse(&d.text).is_ok_and(|t| !t.local(t.root).eq_ignore_ascii_case("html")),
+            Ok(d) => Tree::parse(&d.text, &opts.limits()).is_ok_and(|t| !t.local(t.root).eq_ignore_ascii_case("html")),
             Err(_) => false,
         }
     }
