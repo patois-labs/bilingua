@@ -1,6 +1,8 @@
 //! Round trips on the fixtures and on the generated corpus: an untouched merge is the original bytes; a
 //! pseudo-translated merge reads back with the same units and tags; eleven languages; the encodings LocOS reads.
 mod common;
+/// The profile the shared helpers extract with.
+const PROFILE: Option<&str> = None;
 use bilingua_model::*;
 use bilingua_rst::Rst;
 use common::*;

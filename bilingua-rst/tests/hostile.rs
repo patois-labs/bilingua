@@ -2,6 +2,8 @@
 //! huge files. Nothing panics; a file that is accepted merges back to its exact bytes, and a translated merge
 //! reads back (a table that cannot fit is a typed refusal).
 mod common;
+/// The profile the shared helpers extract with.
+const PROFILE: Option<&str> = None;
 use bilingua_model::*;
 use bilingua_rst::Rst;
 use common::*;

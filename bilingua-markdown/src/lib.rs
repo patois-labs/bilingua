@@ -103,6 +103,8 @@ impl Filter for MarkdownFilter {
                         let text = render::inlines_md(doc, unit, &render::escape_link_text(unit, &unit.output()));
                         let line = &out[out.rfind('\n').map_or(0, |p| p + 1)..];
                         let src = render::inlines_md(doc, unit, &unit.source());
+                        // emphasis marks the translation left unable to open or close (CJK text glued to them)
+                        let text = locos_emphasis::fix_emphasis_native(&src, &text);
                         let mut text = render::guard_block_starts(line, &src, &text);
                         match unit.context.kind.as_deref() {
                             Some("cell") => text = render::guard_cell(&text),

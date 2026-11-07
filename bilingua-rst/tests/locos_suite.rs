@@ -1,6 +1,8 @@
 //! The LocOS `verify_rst_filter` suite, ported case by case (9 test functions there, 9 here). Fixtures are the
 //! suite's own hand-written documents, kept under `data/` and repeated inline where the suite builds them.
 mod common;
+/// The profile the shared helpers extract with.
+const PROFILE: Option<&str> = Some("locos");
 use bilingua_model::*;
 use bilingua_rst::{display_width, Rst};
 use common::*;

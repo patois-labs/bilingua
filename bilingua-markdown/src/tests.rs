@@ -526,3 +526,29 @@ fn image_inventory_under_the_locos_profile() {
     assert_eq!(extra(3, profile::A11Y_IMAGES).as_deref(), Some("1"));
     assert_eq!(extra(3, profile::A11Y_EMPTY_ALT), None);
 }
+
+#[test]
+fn emphasis_that_would_not_flank_in_the_translation_is_repaired() {
+    // a bold run that ends in punctuation and is followed by a letter does not close in CommonMark: the edge
+    // punctuation moves outside the marks (LocOS #695), which every renderer reads the same
+    let mut d = extract("Intro text\n\n**Note (1)**\n");
+    let src = d.units[1].source();
+    d.set_target("u2", vec![src[0].clone(), Inline::text("\u{ff08}1\u{ff09}"), src[2].clone(), Inline::text("abc")]).unwrap();
+    assert_eq!(merged(&d), "Intro text\n\n\u{ff08}**1**\u{ff09}abc\n");
+    // no rearrangement works (a blank inside the punctuation): the pair is written as HTML
+    d.set_target("u2", vec![src[0].clone(), Inline::text("( x)"), src[2].clone(), Inline::text("abc")]).unwrap();
+    assert_eq!(merged(&d), "Intro text\n\n<strong>( x)</strong>abc\n");
+    // marks inside a code span are not emphasis: the pair around `( x)` closes before the backtick and stays
+    d.set_target("u2", vec![src[0].clone(), Inline::text("( x)"), src[2].clone(), Inline::text("`a**`")]).unwrap();
+    assert_eq!(merged(&d), "Intro text\n\n**( x)**`a**`\n");
+    // a translation that keeps good flanking keeps its stars
+    d.set_target("u2", vec![src[0].clone(), Inline::text("Nota"), src[2].clone(), Inline::text(" abc")]).unwrap();
+    assert_eq!(merged(&d), "Intro text\n\n**Nota** abc\n");
+    let d2 = extract(&merged(&d));
+    assert_eq!(d2.units.len(), 2);
+    // `_` glued to letters on both sides becomes `*`
+    let mut d = extract("Intro text\n\nsee _this_ one\n");
+    let src = d.units[1].source();
+    d.set_target("u2", vec![Inline::text("\u{898b}"), src[1].clone(), Inline::text("\u{3053}\u{308c}"), src[3].clone(), Inline::text("\u{3092}")]).unwrap();
+    assert_eq!(merged(&d), "Intro text\n\n\u{898b}*\u{3053}\u{308c}*\u{3092}\n");
+}

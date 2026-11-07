@@ -183,10 +183,12 @@ fn rebuild(evs: &[Ev], tokens: &BTreeMap<u32, Token>) -> Option<Vec<Value>> {
                         }
                     }
                     Token::W(mut shell) => {
-                        if f.children.is_empty() {
-                            return None;
+                        // a link with no text (an empty hyperlink around an image) keeps its one empty text node
+                        let mut children = f.children;
+                        if children.is_empty() {
+                            children.push(text_node("", None));
                         }
-                        shell.set("content", Value::Arr(f.children));
+                        shell.set("content", Value::Arr(children));
                         cur(&mut root, &mut stack).push(shell);
                     }
                     Token::X(_) => return None,

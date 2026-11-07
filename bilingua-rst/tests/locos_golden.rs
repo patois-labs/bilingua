@@ -3,6 +3,8 @@
 //! texts, styles, skipped tables and build digests LocOS produced in `data/locos_golden.json` (made by
 //! `tools/gen_golden.py`).
 mod common;
+/// The profile the shared helpers extract with.
+const PROFILE: Option<&str> = Some("locos");
 use bilingua_model::{Error, Filter};
 use bilingua_rst::Rst;
 use common::*;

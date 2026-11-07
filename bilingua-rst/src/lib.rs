@@ -328,6 +328,8 @@ impl Filter for Rst {
         let limits = opts.limits();
         let d = enc::decode_text(bytes, &enc::DecodeOptions::new(opts))?;
         let text = d.text.as_str();
+        // the LocOS profile keeps LocOS's reading of a backslash that ends a unit (text, golden inline-40)
+        let native = !opts.is_profile(profile::LOCOS);
         let ls = blocks::lines(text);
         let mut w = Walk::new(text, limits);
         w.walk(&ls, 0)?;
@@ -343,7 +345,7 @@ impl Filter for Rst {
                     let mut idxs: Vec<usize> = Vec::new();
                     for (ci, raw) in slot.cells.iter().enumerate() {
                         let Some(raw) = raw else { continue };
-                        let tok = inline::tokenize(raw);
+                        let tok = if native { inline::tokenize_native(raw) } else { inline::tokenize(raw) };
                         if !tok.translatable() {
                             continue;
                         }
@@ -360,7 +362,7 @@ impl Filter for Rst {
                 }
                 _ => {
                     let raw = &text[slot.start..slot.end];
-                    let tok = inline::tokenize(raw);
+                    let tok = if native { inline::tokenize_native(raw) } else { inline::tokenize(raw) };
                     if !tok.translatable() {
                         continue;
                     }

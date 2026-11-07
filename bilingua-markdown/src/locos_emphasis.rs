@@ -288,17 +288,21 @@ fn pairs(s: &[char]) -> Vec<(String, Vec<(Run, Run)>)> {
 }
 
 /// `_try`: the region `o.0..c.1` rewritten with `mark` (moving the punctuation at the inner edges outside when
-/// `mv`), when CommonMark then reads the pair; written into `s` in place (the length does not change).
-fn try_pair(s: &mut [char], o: Run, c: Run, mark: char, mv: bool) -> bool {
+/// `mv`), when CommonMark then reads the pair; written into `s` in place (the length does not change). With
+/// `guard` (native Markdown, beyond LocOS), a character of a protected region (the `>` of an autolink, a link
+/// destination) is never moved.
+fn try_pair(s: &mut [char], o: Run, c: Run, mark: char, mv: bool, guard: Option<&[bool]>) -> bool {
     let len = o.1 - o.0;
     let inner: Vec<char> = s[o.1..c.0].to_vec();
     let (mut i, mut j) = (0, inner.len());
     if mv {
-        let movable = |x: char| punct(Some(x)) && !matches!(x, '*' | '_' | '\\' | '`');
-        while i < j && movable(inner[i]) {
+        // guarded: link and image brackets, tags and entity starts stay where they are too
+        let held = |k: usize| guard.is_some_and(|g| g.get(o.1 + k).copied().unwrap_or(false) || matches!(inner[k], '[' | ']' | '!' | '<' | '>' | '&'));
+        let movable = |k: usize| punct(Some(inner[k])) && !matches!(inner[k], '*' | '_' | '\\' | '`') && !held(k);
+        while i < j && movable(i) {
             i += 1;
         }
-        while j > i && movable(inner[j - 1]) {
+        while j > i && movable(j - 1) {
             j -= 1;
         }
         let core = &inner[i..j];
@@ -323,18 +327,73 @@ fn try_pair(s: &mut [char], o: Run, c: Run, mark: char, mv: bool) -> bool {
     false
 }
 
-/// LocOS `fix_cjk_emphasis`: rewrites the emphasis pairs of a translation that CommonMark would print as literal
-/// marks, for the kinds of emphasis the source has; unchanged when nothing needs it.
-pub fn fix_cjk_emphasis(src: &str, new: &str) -> String {
-    if new.is_empty() || (!new.contains('*') && !new.contains('_')) {
-        return new.to_string();
-    }
+/// `_source_kinds`: the emphasis kinds of which CommonMark reads at least one pair in the source.
+fn source_kinds(src: &str) -> Vec<String> {
     let sv: Vec<char> = src.chars().collect();
-    let wanted: Vec<String> = pairs(&sv)
+    pairs(&sv)
         .into_iter()
         .filter(|(_, ps)| ps.iter().any(|(o, c)| can_open(&sv, o.0, o.1) && can_close(&sv, c.0, c.1)))
         .map(|(k, _)| k)
-        .collect();
+        .collect()
+}
+
+/// Native Markdown (beyond LocOS): `fix_cjk_emphasis` first, never moving a character of an autolink or a link
+/// destination (`_` to `*`, then the punctuation at the inner edges
+/// moved outside the marks: plain CommonMark, read the same by every renderer); a pair of a kind the source reads
+/// that still would not parse (its text starts or ends with a blank once the edge punctuation is out: `*( x)*y`)
+/// is then written as `<em>` / `<strong>`, so its marks never print as stars. Code spans, tags, link destinations
+/// and escaped marks are never touched.
+pub fn fix_emphasis_native(src: &str, new: &str) -> String {
+    let fixed = fix_emphasis(src, new, true);
+    if !fixed.contains('*') && !fixed.contains('_') {
+        return fixed;
+    }
+    let wanted = source_kinds(src);
+    let s: Vec<char> = fixed.chars().collect();
+    let mut cuts: Vec<(Run, &str)> = Vec::new();
+    for (kind, ps) in pairs(&s) {
+        if !wanted.contains(&kind) {
+            continue;
+        }
+        let (open, close) = if kind.len() == 2 { ("<strong>", "</strong>") } else { ("<em>", "</em>") };
+        for (o, c) in ps {
+            // a blank just inside a mark (`**a **`) is literal text in any reading: it is never made emphasis
+            let blank = |k: Option<usize>| k.and_then(|k| s.get(k)).is_none_or(|&x| py_isspace_char(x));
+            if blank(Some(o.1)) || blank(c.0.checked_sub(1)) {
+                continue;
+            }
+            if !(can_open(&s, o.0, o.1) && can_close(&s, c.0, c.1)) {
+                cuts.push((o, open));
+                cuts.push((c, close));
+            }
+        }
+    }
+    if cuts.is_empty() {
+        return fixed;
+    }
+    cuts.sort_by_key(|(r, _)| r.0);
+    let mut out = String::with_capacity(fixed.len() + cuts.len() * 8);
+    let mut p = 0;
+    for ((a, b), tag) in cuts {
+        out.extend(&s[p..a]);
+        out.push_str(tag);
+        p = b;
+    }
+    out.extend(&s[p..]);
+    out
+}
+
+/// LocOS `fix_cjk_emphasis`: rewrites the emphasis pairs of a translation that CommonMark would print as literal
+/// marks, for the kinds of emphasis the source has; unchanged when nothing needs it.
+pub fn fix_cjk_emphasis(src: &str, new: &str) -> String {
+    fix_emphasis(src, new, false)
+}
+
+fn fix_emphasis(src: &str, new: &str, guarded: bool) -> String {
+    if new.is_empty() || (!new.contains('*') && !new.contains('_')) {
+        return new.to_string();
+    }
+    let wanted = source_kinds(src);
     if wanted.is_empty() {
         return new.to_string();
     }
@@ -351,10 +410,11 @@ pub fn fix_cjk_emphasis(src: &str, new: &str) -> String {
         }
     }
     todo.sort();
+    let guard = guarded.then(|| mask(s.len(), &protected(&s)));
     for (o, c, kind) in todo.into_iter().rev() {
         let underscore = kind.starts_with('_');
-        if !(underscore && try_pair(&mut s, o, c, '*', false)) {
-            try_pair(&mut s, o, c, '*', true);
+        if !(underscore && try_pair(&mut s, o, c, '*', false, None)) {
+            try_pair(&mut s, o, c, '*', true, guard.as_deref());
         }
     }
     s.into_iter().collect()
@@ -518,6 +578,28 @@ mod tests {
         // punctuation at the inner edges moves outside
         assert_eq!(fix_cjk_emphasis("Click **\"Save\"** now", "**「変更を保存」**をクリック"), "「**変更を保存**」をクリック");
         assert_eq!(fix_cjk_emphasis("no marks", "**x**"), "**x**");
+    }
+
+    #[test]
+    fn native_repair_falls_back_to_html() {
+        // plain Markdown repairs first
+        assert_eq!(fix_emphasis_native("Click **\"Save\"** now", "**「保存」**を"), "「**保存**」を");
+        assert_eq!(fix_emphasis_native("Click __Save__ now", "__保存__を"), "**保存**を");
+        // nothing else works: HTML for that pair only
+        assert_eq!(fix_emphasis_native("a *b* c", "x *( y)*z *w* v"), "x <em>( y)</em>z *w* v");
+        assert_eq!(fix_emphasis_native("a __b__ c", "__( y)__z"), "<strong>( y)</strong>z");
+        // escaped marks, code spans and kinds the source does not read are left as written
+        assert_eq!(fix_emphasis_native("a *b* c", "x \\*( y)\\*z"), "x \\*( y)\\*z");
+        assert_eq!(fix_emphasis_native("a *b* c", "x `*( y)*z`"), "x `*( y)*z`");
+        assert_eq!(fix_emphasis_native("no marks", "*( y)*z"), "*( y)*z");
+        assert_eq!(fix_emphasis_native("a *b* c", "**( y)**z"), "**( y)**z");
+        // the `>` of an autolink stays inside it (LocOS moves it out and breaks the link)
+        assert_eq!(fix_emphasis_native("**On <https://e.org>.**", "x**On <https://e.org>.**y"), "x**On <https://e.org>**.y");
+        assert_eq!(fix_cjk_emphasis("**On <https://e.org>.**", "x**On <https://e.org>.**y"), "x**On <https://e.org**>.y");
+        // a mark never moves into a link's text: the pair is written as HTML instead
+        assert_eq!(fix_emphasis_native("*[a](u) b*", "x*[a](u) b*"), "x<em>[a](u) b</em>");
+        // marks with a blank inside are literal text, never made emphasis
+        assert_eq!(fix_emphasis_native("**a:** b", "**a:** **c and **d"), "**a:** **c and **d");
     }
 
     #[test]

@@ -4,8 +4,9 @@ use bilingua_model::profile::tokens::{from_locos_text, to_locos_text};
 use bilingua_model::*;
 use bilingua_rst::Rst;
 
+/// The options of every helper: the test file's `PROFILE` (`Some("locos")` for the LocOS comparisons).
 pub fn opts() -> ExtractOptions {
-    ExtractOptions::new().with_source_lang("en").with_granularity(Granularity::Paragraph)
+    ExtractOptions::new().with_source_lang("en").with_granularity(Granularity::Paragraph).with_profile(crate::PROFILE)
 }
 
 pub fn extract(data: &[u8]) -> Result<Document, Error> {

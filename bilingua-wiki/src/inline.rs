@@ -250,7 +250,7 @@ const FILE_NAMESPACES: &[&str] = &[
     "файл", "изображение", "медиа", "зображення", "ファイル", "画像", "メディア", "文件", "檔案", "档案", "图像", "圖像", "媒体", "ملف", "صورة", "وسائط",
     "bestand", "afbeelding", "plik", "grafika", "fil", "billede", "bilde", "tiedosto", "kuva", "soubor", "obrázek", "súbor", "obrázok", "fájl", "kép",
     "fișier", "imagine", "datoteka", "slika", "dosya", "resim", "파일", "그림", "קובץ", "תמונה", "پرونده", "تصویر", "tập tin", "hình", "berkas",
-    "gambar", "fitxer", "arquivo", "αρχείο", "εικόνα", "ไฟล์", "ဖိုင်", "फ़ाइल", "চিত্র", "ফাইল", "ಚಿತ್ರ", "ഫയൽ", "கோப்பு", "ឯកសារ", "файл", "суроат",
+    "gambar", "fitxer", "arquivo", "αρχείο", "εικόνα", "ไฟล์", "ဖိုင်", "फ़ाइल", "फाइल", "चित्र", "मीडिया", "চিত্র", "ফাইল", "ಚಿತ್ರ", "ഫയൽ", "கோப்பு", "ឯកសារ", "файл", "суроат",
 ];
 
 fn file_ns(target: &str) -> bool {
@@ -271,7 +271,7 @@ const LOCAL_OPTIONS: &[&str] = &[
     "بندانگشتی", "چپ", "راست", "وسط", "بدون‌قاب", "thumbnail", "trái", "phải", "giữa", "không", "khung", "bingkai", "kiri", "kanan", "tengah",
     "miniatyr", "vänster", "höger", "centrerad", "ingen", "ram", "pienoiskuva", "vasen", "oikea", "keskitetty", "pienoiskuva", "ei", "kehys",
     "náhled", "vlevo", "vpravo", "střed", "bez", "rámeček", "bélyegkép", "balra", "jobbra", "középre", "nincs", "keret", "μικρογραφία", "αριστερά",
-    "δεξιά", "κέντρο", "χωρίς", "πλαίσιο", "миниатюрa", "ліворуч", "праворуч", "центр", "міні", "мініатюра", "рамка",
+    "δεξιά", "κέντρο", "χωρίς", "πλαίσιο", "अंगूठाकार", "अंगूठा", "बाएँ", "बाएं", "बायें", "दाएँ", "दाएं", "दायें", "केन्द्र", "केंद्र", "केंद्रित", "केन्द्रित", "कोई_नहीं", "कोई नहीं", "फ्रेम", "फ़्रेम", "फ़्रेमहीन", "फ्रेमहीन", "миниатюрa", "ліворуч", "праворуч", "центр", "міні", "мініатюра", "рамка",
 ];
 
 /// Localized spellings of the `px` size unit (`250بك`).
@@ -599,11 +599,24 @@ pub fn link_match(mask: &str) -> HashMap<usize, usize> {
     let b = mask.as_bytes();
     let mut out = HashMap::new();
     let mut stack = Vec::new();
+    // external links (`[http://x label]`) opened inside the current link and not closed yet
+    let mut ext = 0usize;
     let mut i = 0;
     while i + 1 < b.len() {
         if b[i] == b'[' && b[i + 1] == b'[' {
             stack.push(i);
+            ext = 0;
             i += 2;
+        } else if b[i] == b'[' && !stack.is_empty() && ["http:", "https:", "ftp:", "ftps:", "mailto:", "//"].iter().any(|p| b[i + 1..].starts_with(p.as_bytes())) {
+            ext += 1;
+            i += 1;
+        } else if b[i] == b']' && ext > 0 && b.get(i + 1) == Some(&b']') && b.get(i + 2) == Some(&b']') {
+            // `]]]` after an open external link: the first `]` ends that link, the last two end the file link
+            ext -= 1;
+            i += 1;
+        } else if b[i] == b']' && ext > 0 && b[i + 1] != b']' {
+            ext -= 1;
+            i += 1;
         } else if b[i] == b']' && b[i + 1] == b']' {
             if let Some(o) = stack.pop() {
                 out.insert(o, i);
