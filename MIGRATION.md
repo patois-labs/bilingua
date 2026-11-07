@@ -538,6 +538,44 @@ commented list in the test.
   merge back byte for byte); `refusals` and `html_with_server_code_is_protected` in `tests/locos_suite.rs` say so in
   comments.
 
+## Differences from LocOS: structure fuzz (issues 788 and 790, 11-07)
+
+A round-trip structure fuzz on the LocOS side found four ways a translation changes a file's structure; LocOS
+gets the same fixes (its gate commits for #790 and #788), so the first four items are not differences once both
+have shipped. Bilingua's own fuzz (`bilingua/tests/structure_fuzz.rs`) then found the rest, which go beyond LocOS.
+Each golden test relaxes exactly the cases named here, through a commented rule or list in the test.
+
+- **MDX, code spans in a translation (security).** The `{`, `}` and `<` a translation adds are escaped outside code
+  spans, and the spans are now found the CommonMark way: a whole backtick run opens one (never a suffix of a
+  longer run, `` w ``<z` ``), a backslash-escaped backtick is a literal (`` \`{x}` ``), and in a table row no span
+  crosses a cell `|`. LocOS's old regex left the `{x}` or `<z` live (a JavaScript expression or JSX).
+- **MDX and Markdown (LocOS profile), a translated code fence.** A translated line start that opens a fence
+  (```` ``` ```` or `~~~`) gets a backslash, as the other block markers do (#704): a fence swallowed the rest of
+  the file.
+- **MDX, a translated ESM line.** A translated line that starts with `import ` or `export ` writes its first letter
+  as a character reference (`&#105;mport`), which prints the same; it would have been compiled as JavaScript.
+- **AsciiDoc, description list delimiters.** `x:: w` (also `:::`, `::::`, `;;`) in a translation is written with
+  `{two-colons}` / `{two-semicolons}`, so a paragraph, admonition or term does not become a list item. Golden: the
+  `block` builds (`term:: `) compare with the references read back as `::`.
+- **Markdown (native), block starts, cells and links.** A translated unit that would open a block its source did
+  not (a fence, `# `, `- `, `1. `, `> `, a rule or setext underline) at a block start gets a backslash before the
+  marker; a translated cell escapes `|`; a `[` or `]` inside a link's text is escaped; an ATX heading that ends in
+  ` #` escapes it (the reader drops a closing sequence). Unit text stays Markdown source otherwise.
+- **MDX and Markdown (LocOS profile), heading text.** The block-start escape also runs on heading text: LocOS's
+  prefix takes a translated `# `, `- ` or `1. ` after the heading's `#` (`## 1. Zwei` reads back as `Zwei`).
+  Escaped, it prints the same. `locos_suite::block_start` expects `## 1\. Überschrift zwei`. A translated line
+  start with four or more columns of indent (an indented code block) loses the blanks, in native Markdown too.
+- **MDX, backticks and backslashes around codes.** In a changed line with codes, a backtick run that closes no span
+  of its own text run is escaped: two backticks on either side of `{count}` paired into a code span and the
+  expression was read back as text. A text run that ends in an odd run of backslashes before a code gets one more
+  backslash, so the code's first character (`<Badge>`) is not escaped into text. Golden: builds that differ only by
+  `` \` `` are counted (fewer than 40 allowed).
+- **AsciiDoc, marks next to codes, terms and titles.** A translated mark character next to a code's mark of the
+  same character (`*p*` + `*`), and a translated `[...]` right before a mark (it would be the mark's attribute
+  list), is written as a character reference (`&#42;`, `&#93;`). A term that ends in `:` or `;` gets `{empty}`
+  before its delimiter (`w:` + `::` read as a `:::` delimiter). A section title that ends in its own marker
+  (`== w ==`) gets `{empty}` after it. Golden list `MARK_REF` (2 `zh` builds).
+
 ## Differences from LocOS: xcstrings (11-06)
 
 - **`stringSet` (App Shortcuts phrases).** LocOS does not read it, so such a catalog had no units. Bilingua gives

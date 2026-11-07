@@ -12,6 +12,27 @@ is listed here).
 - html: the preview declares the target language again once something is translated (`lang`, and `dir="rtl"` for a
   right-to-left target), as the merge does. The htmlcore rebuild had dropped it, so an Arabic preview showed left
   to right.
+- mdx: a translation's backtick no longer opens a code span that leaves `{x}` or `<X>` live: spans are found the
+  CommonMark way (a whole backtick run, a backslash-escaped backtick is a literal, no span across a table cell `|`)
+  (security; LocOS tracker #790).
+- mdx, markdown: a translated line start that opens a code fence (```` ``` ````, `~~~`) is escaped; the fence
+  swallowed the rest of the file (LocOS tracker #790). In native Markdown every block marker a translated unit
+  would open at a block start (`# `, `- `, `1. `, `> `, a rule, a setext underline) is escaped too, a translated
+  table cell escapes `|`, a bracket in a link's text is escaped and a heading's trailing ` #` is kept.
+- mdx: a translated line that starts with `import ` or `export ` writes its first letter as a character reference,
+  so it is not compiled as an ES module (LocOS tracker #790).
+- mdx, markdown: a translated line start indented four columns or more (an indented code block) loses the blanks.
+- mdx, markdown (LocOS profile): heading text gets the block-start escape too (`## 1. x` read back as `x`). MDX
+  escapes a stray backtick in a changed line with codes and doubles a backslash right before a code, so a code is
+  never read back as text.
+- adoc: `x:: w` (also `:::`, `::::`, `;;`) in a translation is written with `{two-colons}` / `{two-semicolons}`, so
+  a paragraph, admonition or term does not become a description list item (LocOS tracker #788). A term ending in
+  `:` keeps its delimiter, a title ending in its own marker keeps it, and a translated mark next to a code's mark of
+  the same character (or a `[...]` right before a mark) is written as a character reference.
+- New structure fuzz (`bilingua/tests/structure_fuzz.rs`, proptest with a fixed seed): random translations from each
+  format's special characters (MDX, Markdown native and LocOS profile, AsciiDoc, HTML, MediaWiki, JS modules, PHP,
+  JSP, SVG) must keep the unit count and kinds, the skeleton, and read back as set.
+
 - pdf: U+FFFE is no longer in unit text. PDFium writes it for a hyphen that breaks a word at a line end (the next
   line follows right after it, so dropping it joins the word: `extraordinarily`) and for a glyph its font maps to
   U+0000 (dropped, no hyphen is invented). A hyphen PDFium does not mark stays `-`. C0 control characters (raw glyph

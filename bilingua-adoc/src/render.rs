@@ -84,8 +84,43 @@ fn bad_after(mark: char, c: char) -> bool {
     mark == '`' && "\"'`".contains(c)
 }
 
+/// `x:: w` (also `:::`, `::::`, `;;`) would turn a paragraph, admonition or term into a description list item: a
+/// run of two or more `:` or `;` followed by a blank or the end is written with AsciiDoc's built-in `{two-colons}` /
+/// `{two-semicolons}`, which print the same characters (LocOS `_inert_dlist`, tracker #788).
+fn inert_dlist(s: &str) -> String {
+    let b = s.as_bytes();
+    let mut out = String::with_capacity(s.len());
+    let mut pos = 0;
+    let mut i = 0;
+    while i < b.len() {
+        let c = b[i];
+        if c != b':' && c != b';' {
+            i += 1;
+            continue;
+        }
+        let st = i;
+        while i < b.len() && b[i] == c {
+            i += 1;
+        }
+        let n = i - st;
+        if n >= 2 && matches!(b.get(i), None | Some(b' ') | Some(b'\t')) {
+            out.push_str(&s[pos..st]);
+            let pair = if c == b':' { "{two-colons}" } else { "{two-semicolons}" };
+            for _ in 0..n / 2 {
+                out.push_str(pair);
+            }
+            if n % 2 == 1 {
+                out.push(c as char);
+            }
+            pos = i;
+        }
+    }
+    out.push_str(&s[pos..]);
+    out
+}
+
 fn text_part(s: &str, sep: Option<char>, nested: bool) -> String {
-    let t = plain(s);
+    let t = inert_dlist(&plain(s));
     match sep {
         None => t,
         Some(sc) => {
@@ -194,10 +229,51 @@ pub fn render(unit: &Unit, target: &[Inline], sep: Option<char>, nested: bool, a
     let mut marks: Vec<(usize, usize, char)> = Vec::new();
     let mut links: Vec<usize> = Vec::new();
     let mut prev_text = false;
-    for inl in &t {
+    let markup = |i: Option<&Inline>| -> Option<&str> {
+        let Some(Inline::Tag { id, kind, .. }) = i else { return None };
+        let c = unit.codes.get(id)?;
+        match kind {
+            TagKind::Open => c.open.as_deref(),
+            TagKind::Close => c.close.as_deref(),
+            TagKind::Standalone => c.standalone.as_deref(),
+        }
+    };
+    // the character the source has right before (`true`) or after a code, to keep what the source already had
+    let src = unit.source();
+    let src_side = |tag: Option<&Inline>, before: bool| -> Option<char> {
+        let Some(Inline::Tag { id, kind, .. }) = tag else { return None };
+        let at = src.iter().position(|x| matches!(x, Inline::Tag { id: i, kind: k, .. } if i == id && k == kind))?;
+        let side = if before { at.checked_sub(1).and_then(|j| src.get(j)) } else { src.get(at + 1) };
+        match side {
+            Some(Inline::Text(s)) if before => s.chars().next_back(),
+            Some(Inline::Text(s)) => s.chars().next(),
+            _ => None,
+        }
+    };
+    for (k, inl) in t.iter().enumerate() {
         match inl {
             Inline::Text(s) => {
-                out.push(text_part(s, sep, nested));
+                let mut piece = text_part(s, sep, nested);
+                // a translated mark character next to a code's own mark of the same character would join its run
+                // (`*p*` + `*` reads as `*p**`): it is written as a character reference, which prints the same
+                // (structure fuzz). What the source already had next to the code is kept.
+                const MARKS: &[char] = &['*', '_', '`', '#', '+', '^', '~'];
+                let prev = k.checked_sub(1).and_then(|j| t.get(j));
+                if let Some(c) = markup(prev).and_then(|m| m.chars().last()).filter(|c| MARKS.contains(c)) {
+                    if piece.starts_with(c) && src_side(prev, false) != Some(c) {
+                        piece.replace_range(..1, &format!("&#{};", c as u32));
+                    }
+                }
+                let next = t.get(k + 1);
+                if let Some(c) = markup(next).and_then(|m| m.chars().next()).filter(|c| MARKS.contains(c)) {
+                    // a `]` right before a mark makes a translated `[...]` the mark's attribute list
+                    if let Some(last) = piece.chars().next_back().filter(|&l| l == c || (l == ']' && piece.contains('['))) {
+                        if src_side(next, true) != Some(last) {
+                            piece.replace_range(piece.len() - 1.., &format!("&#{};", last as u32));
+                        }
+                    }
+                }
+                out.push(piece);
                 prev_text = true;
             }
             Inline::Tag { id, kind, .. } => {

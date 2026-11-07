@@ -226,6 +226,21 @@ impl Filter for Adoc {
                         if flag(u, LS) && lex::is_block_start(&r) {
                             r.insert_str(0, "{empty}");
                         }
+                        // a section title that ends in its own marker (`== w ==`) would lose it: the reader takes it as
+                        // the symmetric closing marker (structure fuzz)
+                        // a term that ends in `:` or `;` would join the delimiter after it (`w:` + `::` reads as the
+                        // term `w` with a `:::` delimiter) (structure fuzz)
+                        if u.context.kind.as_deref() == Some("term") && r.ends_with([':', ';']) {
+                            r.push_str("{empty}");
+                        }
+                        if u.context.kind.as_deref() == Some("heading") {
+                            let line = &out[out.rfind('\n').map_or(0, |p| p + 1)..];
+                            let marker = &line[..line.len() - line.trim_start_matches('=').len()];
+                            let body = r.trim_end_matches([' ', '\t']);
+                            if !marker.is_empty() && body.strip_suffix(marker).is_some_and(|b| b.ends_with([' ', '\t'])) {
+                                r = format!("{body}{{empty}}{}", &r[body.len()..]);
+                            }
+                        }
                         // only a title that starts its line can be a setext title (not `.Block title` or `* item`)
                         let line_start = pi == 0 || matches!(parts.get(pi - 1), Some(SkelPart::Raw(b)) if b.is_empty() || b.ends_with(char::from(10)));
                         if let (true, Some(SkelPart::Raw(after))) = (line_start, parts.get(pi + 1)) {

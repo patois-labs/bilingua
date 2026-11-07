@@ -197,7 +197,9 @@ fn block_start() {
         (5, "> Zitierte Zeile."),
         (6, "Behalte 1984\\. hier."),
     ];
-    let want = "1984\\. Das war das Jahr.\n\n\\# Keine Überschrift\n\n- 1\\. Punkt eins\n\n## 1. Überschrift zwei\n\n\\- Einfache Zeile.\n\n> \\> Zitierte Zeile.\n\nBehalte 1984\\. hier.\n";
+    // heading text is escaped too (beyond LocOS, found by the structure fuzz): LocOS's prefix takes `## 1. ` and
+    // reads the heading back as `Überschrift zwei`
+    let want = "1984\\. Das war das Jahr.\n\n\\# Keine Überschrift\n\n- 1\\. Punkt eins\n\n## 1\\. Überschrift zwei\n\n\\- Einfache Zeile.\n\n> \\> Zitierte Zeile.\n\nBehalte 1984\\. hier.\n";
     assert_eq!(texts(src).len(), 7);
     assert_eq!(s(&build(src, &tr)), want);
     // an escape the engine kept, a number with no delimiter, a source that already starts with a marker-looking run

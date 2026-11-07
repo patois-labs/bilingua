@@ -120,7 +120,7 @@ pub(crate) fn build_document(w: &Walk, l: &Loaded, opts: &ExtractOptions) -> Res
         }
         let u = &mut units[i];
         u.codes = codes;
-        u.codes.insert(HIDDEN.into(), hidden_code("line", core, if lu.block_ok { "1" } else { "0" }));
+        u.codes.insert(HIDDEN.into(), hidden_code("line", core, &format!("{}{}", if lu.block_ok { "1" } else { "0" }, if lu.esm_ok { "e" } else { "" })));
         u.context.kind = Some(
             if lu.prefix.contains('#') {
                 "heading"
@@ -271,11 +271,17 @@ fn escape_attr(s: &str, quote: char) -> String {
 /// A `{ } <` is already escaped only after an odd run of backslashes: after `\\` (an escaped backslash) it would
 /// open live JSX or an expression, so it is escaped too. (LocOS looks at one preceding backslash only, so a
 /// translation holding `\\{...}` or `\\<X/>` puts code into its build; this is a deliberate difference.)
-fn escape_special(seg: &str, out: &mut String) {
+///
+/// With `ticks`, a backtick outside a code span of its own text run is escaped too. The text between two inline
+/// codes is escaped on its own, so a backtick before a code and one after it would otherwise pair into a code span
+/// around the code (```` `` ```` + `{count}` + ```` `` ````), and the code would be read back as text (found by the
+/// structure fuzz; LocOS writes such a backtick plain). `ticks` is set only for a changed line with codes, the only
+/// place this can happen.
+fn escape_special(seg: &str, out: &mut String, ticks: bool) {
     // true right after an odd run of backslashes
     let mut escaped = false;
     for c in seg.chars() {
-        if matches!(c, '{' | '}' | '<') && !escaped {
+        if (matches!(c, '{' | '}' | '<') || (ticks && c == '`')) && !escaped {
             out.push('\\');
         }
         out.push(c);
@@ -283,17 +289,36 @@ fn escape_special(seg: &str, out: &mut String) {
     }
 }
 
-/// Backslash-escapes `{`, `}` and `<` a translation introduced (outside code spans).
-fn escape_text(s: &str) -> String {
+/// Backslash-escapes `{`, `}` and `<` a translation introduced (outside code spans, found the CommonMark way;
+/// `row`: a table row, where a span must not cross a cell `|`).
+fn escape_text(s: &str, row: bool, ticks: bool) -> String {
     let mut out = String::with_capacity(s.len() + 8);
     let mut pos = 0;
-    for (a, b) in codespan::find_all(s, true) {
-        escape_special(&s[pos..a], &mut out);
+    for (a, b) in codespan::text_spans(s, row) {
+        escape_special(&s[pos..a], &mut out, ticks);
         out.push_str(&s[a..b]);
         pos = b;
     }
-    escape_special(&s[pos..], &mut out);
+    escape_special(&s[pos..], &mut out, ticks);
     out
+}
+
+/// `import ` / `export ` (then a blank) at the start of a line is an ESM block in MDX.
+fn is_esm(s: &str) -> bool {
+    let b = s.trim_start_matches([' ', '\t']).as_bytes();
+    (b.starts_with(b"import") || b.starts_with(b"export")) && matches!(b.get(6), Some(b' ') | Some(b'\t'))
+}
+
+/// A translated line that starts with `import ` / `export ` would be compiled as an ESM block (JavaScript) where its
+/// source was prose: its first letter is written as a character reference, which MDX prints as the same letter
+/// (LocOS `_inert_esm`, tracker #790).
+fn inert_esm(src: &str, new: &str) -> String {
+    if !is_esm(new) || is_esm(src) {
+        return new.to_string();
+    }
+    let at = new.len() - new.trim_start_matches([' ', '\t']).len();
+    let first = new.as_bytes()[at];
+    format!("{}&#{};{}", &new[..at], first, &new[at + 1..])
 }
 
 struct Attr {
@@ -326,7 +351,9 @@ fn ph_re() -> &'static Regex {
 fn render_line(doc: &Document, u: &Unit) -> Result<String, Error> {
     let h = hidden(u).ok_or_else(|| Error::Write(format!("unit {} lost its source text", u.id)))?;
     let core = h.standalone.as_deref().unwrap_or_default();
-    let block_ok = h.close.as_deref() == Some("1");
+    let line_flags = h.close.as_deref().unwrap_or_default();
+    let block_ok = line_flags.starts_with('1');
+    let esm_ok = line_flags.ends_with('e');
     let mut attrs: Vec<Attr> = Vec::new();
     for (k, c) in &u.codes {
         if !k.starts_with("$a") {
@@ -370,6 +397,9 @@ fn render_line(doc: &Document, u: &Unit) -> Result<String, Error> {
         if block_ok {
             new = emph::escape_block_start(&src, &new);
         }
+        if esm_ok {
+            new = inert_esm(&src, &new);
+        }
         // a repair that changed the tokens is dropped: the CJK emphasis repair can move a mark into a token
         // (`_⟦x1⟧` to `⟦*x1⟧`), which would write the token as text and lose its code (LocOS does), and the flags
         // would no longer line up
@@ -391,6 +421,10 @@ fn render_line(doc: &Document, u: &Unit) -> Result<String, Error> {
             }
         }
     }
+    // a table row (LocOS: an unescaped `|` in the source line): its cells are split before code spans are read
+    let row = src.as_bytes().iter().enumerate().any(|(i, &c)| c == b'|' && (i == 0 || src.as_bytes()[i - 1] != b'\\'));
+    // a backtick can pair with one across a code only when the line has codes
+    let ticks = new != src && flags.iter().any(|&f| f);
     let mut out = String::new();
     let mut pos = 0;
     for (m, is_code) in ph_re().find_iter(&new).zip(flags) {
@@ -398,22 +432,27 @@ fn render_line(doc: &Document, u: &Unit) -> Result<String, Error> {
         if !is_code {
             continue;
         }
-        out.push_str(&escape_text(&new[pos..m.start()]));
+        let text = escape_text(&new[pos..m.start()], row, ticks);
+        out.push_str(&text);
         pos = m.end();
         let inner = &new[m.start() + 3..m.end() - 3];
-        if let Some(rest) = inner.strip_prefix('/') {
+        let code = if let Some(rest) = inner.strip_prefix('/') {
             let key = rest.strip_prefix(|c: char| c.is_ascii_lowercase()).unwrap_or(rest);
-            if let Some((_, Some(c))) = toks.get(key) {
-                out.push_str(&splice(core, &attrs, c.0, c.1));
-            }
+            toks.get(key).and_then(|(_, c)| *c)
         } else {
             let key = inner.strip_prefix(|c: char| c.is_ascii_lowercase()).unwrap_or(inner);
-            if let Some((o, _)) = toks.get(key) {
-                out.push_str(&splice(core, &attrs, o.0, o.1));
+            toks.get(key).map(|(o, _)| *o)
+        };
+        if let Some(c) = code {
+            // a text run that ends in an odd run of backslashes would escape the code's first character (`\<X>`
+            // is text, the component is lost): its last backslash is written as `\\` (found by the structure fuzz)
+            if text.bytes().rev().take_while(|&b| b == b'\\').count() % 2 == 1 {
+                out.push('\\');
             }
+            out.push_str(&splice(core, &attrs, c.0, c.1));
         }
     }
-    out.push_str(&escape_text(&new[pos..]));
+    out.push_str(&escape_text(&new[pos..], row, ticks));
     Ok(out)
 }
 

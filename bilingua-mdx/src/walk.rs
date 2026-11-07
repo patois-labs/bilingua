@@ -42,6 +42,9 @@ pub(crate) struct LineUnit {
     pub prefix: String,
     /// A translated line start may need a block-start escape (#704).
     pub block_ok: bool,
+    /// Nothing but blanks before the unit on its line: a translated `import ` / `export ` start needs an escape
+    /// (LocOS tracker #790).
+    pub esm_ok: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -223,6 +226,7 @@ impl<'a> Walk<'a> {
                             title,
                             prefix: String::new(),
                             block_ok: false,
+                            esm_ok: false,
                         });
                         self.cap()?;
                     }
@@ -378,8 +382,13 @@ impl<'a> Walk<'a> {
             // a lead this long cannot be a markup prefix in any real file (LocOS would still test it)
             let block_ok = lead.len() <= MAX_LEAD && {
                 let lead = mdline::strip_footnote_lead(lead);
-                !(lead.contains('#') || self.bom && lead_start == 0) && mdline::prefix_full(&lead)
+                // heading text too (beyond LocOS, structure fuzz): `# # w` would read back as the heading `w`
+                !(self.bom && lead_start == 0) && mdline::prefix_full(&lead)
             };
+            // LocOS `not lead.strip()` (after the footnote mark); a long lead is blank only if it is all blanks
+            let blank = |s: &str| s.chars().all(|c| c.is_whitespace() || ('\u{1c}'..='\u{1f}').contains(&c));
+            let esm_ok = !(self.bom && lead_start == 0)
+                && if lead.len() <= MAX_LEAD { blank(&mdline::strip_footnote_lead(lead)) } else { blank(lead) };
             let _ = line_bs;
             self.units.push(LineUnit {
                 start: cs,
@@ -390,6 +399,7 @@ impl<'a> Walk<'a> {
                 title: String::new(),
                 prefix: prefix.to_string(),
                 block_ok,
+                esm_ok,
             });
             self.cap()?;
         }
