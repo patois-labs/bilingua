@@ -86,6 +86,8 @@ pub fn parse_attrs(s: &[u8], from: usize, to: usize) -> Result<(usize, Vec<Attr>
     }
     let name_end = i;
     let mut out: Vec<Attr> = Vec::new();
+    // a set, not a scan of `out`: thousands of attributes on one tag must not cost quadratic time
+    let mut seen: std::collections::HashSet<&[u8]> = std::collections::HashSet::new();
     loop {
         while i < to && is_ws(s[i]) {
             i += 1;
@@ -123,7 +125,7 @@ pub fn parse_attrs(s: &[u8], from: usize, to: usize) -> Result<(usize, Vec<Attr>
         if j >= to {
             return Err(bad(format!("the value of attribute {name} is not closed")));
         }
-        if out.iter().any(|a| a.name == name) {
+        if !seen.insert(&s[ns..ns + name.len()]) {
             return Err(bad(format!("attribute {name} is repeated")));
         }
         check_refs(&s[vs..j])?;

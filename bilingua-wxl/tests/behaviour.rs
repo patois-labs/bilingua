@@ -337,3 +337,25 @@ fn comment_before_or_after_the_text_is_not_a_mixed_string() {
     assert!(out.contains("\u{bb}<!-- note --></String>"), "{out}");
     assert!(out.contains("Before<!-- c -->after"), "{out}");
 }
+
+/// Issue 813.6: a translation's line breaks take the file's style in element text, in both modes.
+#[test]
+fn translation_line_breaks_follow_the_file() {
+    let crlf = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\r\n<WixLocalization Culture=\"en-us\" xmlns=\"http://schemas.microsoft.com/wix/2006/localization\">\r\n  <String Id=\"A\">Hello there</String>\r\n  <String Id=\"B\" Value=\"Bye now\" />\r\n</WixLocalization>\r\n";
+    let lf = crlf.replace("\r\n", "\n");
+    let profile = bilingua_model::profile::locos().merge_options("wxl");
+    for (src, want) in [(crlf, "\r\n"), (lf.as_str(), "\n")] {
+        for mode in 0..2 {
+            let mut d = ex(src.as_bytes());
+            d.units[0].segments[0].target = vec![Inline::text("Line one\nline two\r\nline three\rend")];
+            d.units[1].segments[0].target = vec![Inline::text("a\nb")];
+            let out = if mode == 0 { merged(&d) } else { Wxl.merge_with(&d, &profile).unwrap() };
+            let out = s(&out);
+            let text = format!("<String Id=\"A\">Line one{want}line two{want}line three{want}end</String>");
+            assert!(out.contains(&text), "mode {mode}: {out:?}");
+            assert!(out.contains("Value=\"a&#10;b\""), "attribute breaks stay character references: {out:?}");
+            let bare = out.replace("\r\n", "");
+            assert_eq!(bare.contains('\n'), want == "\n" && out.contains('\n'), "mode {mode}: {out:?}");
+        }
+    }
+}

@@ -38,6 +38,20 @@ fn plain_xliff_is_written_like_lxml() {
     assert_eq!(String::from_utf8(out).unwrap(), want);
 }
 
+/// Issue 794: a comment or processing instruction inside a source is not text and takes no code number.
+#[test]
+fn comment_in_a_source_is_dropped() {
+    let x = "<xliff version=\"1.2\"><file><body>\
+        <trans-unit id=\"1\"><source>Open <!-- SECRET --> the <?pi hidden?>file<g id=\"1\">!</g></source></trans-unit>\
+        </body></file></xliff>";
+    let doc = filter("xliff").extract(x.as_bytes(), &opts(Some("fr_FR"))).unwrap();
+    let t = texts(&doc);
+    assert_eq!(t[0].1, "Open  the file\u{27e6}g1\u{27e7}!\u{27e6}/g1\u{27e7}", "{t:?}");
+    let out = merge_with("xliff", x.as_bytes(), Some("fr_FR"), &[("0", "Ouvrir le fichier\u{27e6}g1\u{27e7}!\u{27e6}/g1\u{27e7}")]).unwrap();
+    let out = String::from_utf8(out).unwrap();
+    assert!(out.contains("<target>Ouvrir le fichier<g id=\"1\">!</g></target>"), "{out}");
+}
+
 #[test]
 fn begin_end_codes_are_points_and_protected_units_keep_their_number() {
     let x = "<xliff version=\"1.2\"><file><body>\

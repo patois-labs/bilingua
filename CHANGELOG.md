@@ -37,6 +37,18 @@ is listed here).
   new translation is marked `needs_review`. Such catalogs used to open with no units.
 - xcstrings: App Intents parameters (`${applicationName}`, `${place}`) are inline codes a translation may move. They
   used to be offered as text (LocOS does the same).
+- xliff (LocOS profile): a comment or processing instruction inside a `<source>` is dropped (its tail text stays) and
+  takes no code number. It used to become a code pair whose content was the comment text.
+- dita, docbook: on a target-language merge, a nested element that holds translated text and still declares the source
+  language in `xml:lang` (DocBook 4.x: `lang`) is restamped with the target language; other languages (a foreign
+  passage, another region such as `en-GB` in an `en-US` file) are left alone. Only the root used to be stamped.
+- dita, docbook: no attribute unit (`navtitle`, `title`, `alt`) on an element under `translate="no"` or with a `conref`
+  or `conkeyref`. They used to be offered for translation.
+- wxl: the line breaks of a changed element text value take the file's line break (the first one it uses). A CRLF file
+  used to get bare LF in a multi-line translation under the LocOS profile.
+- xml, xmltree, xmlres, wxl: a start tag with tens of thousands of `xmlns:pN` declarations or attributes no longer
+  makes the scan quadratic. xmltree refuses more than 1,024 namespace declarations in scope at one element, and a file
+  whose namespace scopes would hold more than 4,194,304 entries in all.
 
 - dxf: a lone `%` before a `%%d` style code keeps the code (it was written `%%%d`); a CRLF drawing gets the same group
   code budget as an LF one; DOS864 drawings read byte 0x25 as `%`; a code that ends at the value end is closed before

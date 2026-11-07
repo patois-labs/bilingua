@@ -145,8 +145,13 @@ struct Attrs {
 
 fn attrs(d: Dialect, e: &BytesStart) -> Result<Attrs, Error> {
     let mut a = Attrs::default();
-    for at in e.attributes() {
+    // quick-xml's own repeated-attribute check compares every pair (quadratic in the attributes of one tag): use a set
+    let mut seen: std::collections::HashSet<Vec<u8>> = std::collections::HashSet::new();
+    for at in e.attributes().with_checks(false) {
         let at = at.map_err(|x| parse_err(d, format!("{} is not well-formed XML: bad attribute: {x}", d.what())))?;
+        if !seen.insert(at.key.as_ref().to_vec()) {
+            return Err(parse_err(d, format!("{} is not well-formed XML: bad attribute: duplicated attribute", d.what())));
+        }
         let raw = std::str::from_utf8(&at.value).map_err(|_| parse_err(d, "an attribute value is not UTF-8"))?;
         // undefined entities in attributes are refused too (LocOS refuses any entity left in the tree)
         let mut v = String::new();

@@ -564,6 +564,28 @@ Bilingua fixes these first; LocOS gets the same changes next and its goldens are
   members back as files; the package formats (DOCX, EPUB, ...) never write a part to disk, so a part named
   `aux.xhtml` there still opens. A colon was refused already.
 
+## Differences from LocOS: XML fixes made in Bilingua first (issues 794, 809, 813, 792)
+
+Both modes (native and the `locos` profile) carry these fixes; LocOS gets the same change next, so the goldens in
+`bilingua-dita/tests/locos_golden.rs` list them as known differences.
+
+- 794: a comment or processing instruction inside an XLIFF `<source>` is not text and takes no token number
+  (LocOS `cat_xliff.py` makes an empty `g` pair out of the comment text).
+- 809.2: nested `xml:lang` (DocBook 4.x `lang`) equal to the source language on an element with translated text is
+  restamped on a target build. The source language is the document's `source_lang`, else the first language the
+  file declares. Same language: the primary subtag matches, and the script and region too when both tags have one
+  (`en` matches `en-US` either way, `en-GB` does not match `en-US`); case and `_` against `-` are ignored.
+- 809.3: no attribute unit under an explicit `translate="no"` (own attribute, ancestor, ITS rule) or on an element
+  with `conref` / `conkeyref`. Elements the dialect lists by name (DITA `codeph`) still give their attributes, unless
+  `translate="no"` is set on them too. Note: by DITA conref rules the referencing element's own attributes usually
+  win over the referenced element's, so a `navtitle` attribute on a conref `topicref` can reach the output; Bilingua
+  does not offer it (its `topicmeta` content is replaced and is not offered either).
+- 813 item 6, wxl: a changed element text value gets the file's line break. An unchanged value keeps its bytes.
+  Attribute values keep `&#10;`.
+- 792: xmltree, xml, xmlres and wxl scan thousands of attributes or namespace declarations in one tag in linear time.
+  xmltree refuses more than 1,024 declarations in scope at one element, and a file whose per-element scope copies
+  would hold more than 4,194,304 entries in all (a memory denial of service); real files hold far fewer.
+
 ## CAT OS core (note for the lead)
 
 - `catcore` re-exported `bilingua_sdl::ZipLimits`; it now re-exports `bilingua_model::Limits as PackageLimits`

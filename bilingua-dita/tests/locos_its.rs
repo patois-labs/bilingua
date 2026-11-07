@@ -311,6 +311,55 @@ fn localized_language_stamp() {
     );
 }
 
+/// Issue 809.2: a nested topic that still declares the source language is restamped; a foreign passage and an
+/// element with no translated unit are left alone.
+#[test]
+fn nested_source_language_is_restamped() {
+    let f = dita();
+    let d = br#"<dita xml:lang="en"><topic id="a" xml:lang="en"><title>A</title><body><p xml:lang="fr">Bonjour</p><p xml:lang="en-US">Hi</p></body></topic><topic id="b" xml:lang="en"><title/></topic></dita>"#;
+    let out = s(&merge_map(&f, d, Some("de-DE"), &[(0, "Ae")]));
+    assert!(out.starts_with(r#"<dita xml:lang="de-DE"><topic id="a" xml:lang="de-DE">"#), "{out}");
+    assert!(out.contains(r#"<p xml:lang="fr">"#), "foreign passage kept: {out}");
+    assert!(out.contains(r#"<topic id="b" xml:lang="en">"#), "no translated unit below: {out}");
+    assert!(out.contains(r#"<p xml:lang="de-DE">"#), "en-US inside an en document is the source language: {out}");
+    // a region on both sides must match; a bare language matches any region of it
+    let d3 = br#"<dita xml:lang="en-US"><topic id="a" xml:lang="en"><title>A</title><p xml:lang="en-GB">Colour</p><p xml:lang="EN_us">Color</p></topic></dita>"#;
+    let out3 = s(&merge_map(&f, d3, Some("de-DE"), &[(0, "Ae")]));
+    assert!(out3.contains(r#"<topic id="a" xml:lang="de-DE">"#), "{out3}");
+    assert!(out3.contains(r#"<p xml:lang="en-GB">"#), "another region is kept: {out3}");
+    assert!(out3.contains(r#"<p xml:lang="de-DE">Color"#), "{out3}");
+    // no language on the root: the first declared language is the source
+    let d2 = br#"<dita><topic id="a" xml:lang="en"><title>A</title></topic></dita>"#;
+    let out2 = s(&merge_map(&f, d2, Some("de-DE"), &[(0, "Ae")]));
+    assert_eq!(out2, r#"<dita xml:lang="de-DE"><topic id="a" xml:lang="de-DE"><title>Ae</title></topic></dita>"#);
+    // nothing translated: untouched
+    assert_eq!(f.merge(&ex_to(&f, d2, "de-DE")).unwrap(), d2);
+}
+
+/// Issue 809.3: no attribute unit on an element under translate="no" (DITA navtitle included).
+#[test]
+fn navtitle_under_translate_no_is_not_translatable() {
+    let f = dita();
+    let d = br#"<map><topicref href="a.dita" navtitle="On"/><topicref href="b.dita" navtitle="Off" translate="no"/><topicref translate="no"><topicref navtitle="Inner"/></topicref></map>"#;
+    let doc = ex(&f, d);
+    let texts: Vec<String> = doc.units.iter().map(show).collect();
+    assert_eq!(texts, vec!["On".to_string()]);
+    // an element the dialect lists by name (codeph) keeps its navtitle, unless translate="no" is set on it as well
+    let d = br#"<topic id="t"><title>T</title><body><p><codeph navtitle="Kept">x</codeph><codeph navtitle="Dropped" translate="no">y</codeph></p></body></topic>"#;
+    let texts: Vec<String> = ex(&f, d).units.iter().map(show).collect();
+    assert!(texts.contains(&"Kept".to_string()) && !texts.iter().any(|t| t.contains("Dropped")), "{texts:?}");
+}
+
+/// A topicref with a conref (or conkeyref) is replaced by the referenced element, so neither its local navtitle
+/// attribute nor its topicmeta navtitle is offered for translation (the referenced map is translated instead).
+#[test]
+fn conref_topicref_offers_no_navtitle() {
+    let f = dita();
+    let d = br#"<map><topicref href="a.dita" navtitle="Own"/><topicref conref="m.ditamap#m/r" navtitle="Local"><topicmeta><navtitle>Meta</navtitle></topicmeta></topicref><topicref conkeyref="k/r" navtitle="Keyed"/></map>"#;
+    let texts: Vec<String> = ex(&f, d).units.iter().map(show).collect();
+    assert_eq!(texts, vec!["Own".to_string()]);
+}
+
 /// LocOS `xml_text.xml_target_text` (used by the XML emitter): vertical tab and form feed become line breaks,
 /// characters XML 1.0 forbids are dropped from a translation.
 #[test]

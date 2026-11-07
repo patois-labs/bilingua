@@ -6,7 +6,9 @@
 //! * `\0U<n>\0`  the content of unit `n` (a nested unit inside a protected element), rendered where it stands;
 //! * `\0A<n>\0`  the value of translatable attribute unit `n`, inside a start tag;
 //! * `\0L<attr>|<0 or 1>\0 ... \0l\0`  around the root start tag: the language attribute to update (or add, `1`) on a
-//!   target-language merge.
+//!   target-language merge;
+//! * `\0N<attr>\0 ... \0l\0`  around the start tag of a nested element that holds translated units and declares a
+//!   language itself: on a target-language merge the attribute is changed only if it still names the source language.
 //!
 //! Markers appear in `Raw` parts and in the markup strings of a unit's codes (`open`, `close`, `standalone`).
 //! Hidden values (`Unit::hidden`): `raw` the original markup of the run (or the raw value of an attribute),
@@ -43,6 +45,8 @@ pub(crate) struct Emit<'a, 'b> {
     /// attribute index -> unit index
     pub attr_unit: HashMap<u32, usize>,
     pub lang: Option<(String, bool)>,
+    /// Nested elements whose own language attribute is restamped (see the `N` marker).
+    pub restamp: std::collections::HashSet<u32>,
 }
 
 impl Emit<'_, '_> {
@@ -51,8 +55,13 @@ impl Emit<'_, '_> {
         let e = &t.els[el as usize];
         let is_root = el == t.root;
         let stamp = if is_root { self.lang.as_ref() } else { None };
+        let nested = !is_root && self.restamp.contains(&el);
         if let Some((a, add)) = stamp {
             out.push_str(&format!("\0L{a}|{}\0", u8::from(*add)));
+        } else if nested {
+            if let Some((a, _)) = &self.lang {
+                out.push_str(&format!("\0N{a}\0"));
+            }
         }
         let mut pos = e.s0;
         for ai in e.attr_lo..e.attr_hi {
@@ -64,7 +73,7 @@ impl Emit<'_, '_> {
             }
         }
         out.push_str(&t.text[pos..e.s1]);
-        if stamp.is_some() {
+        if stamp.is_some() || (nested && self.lang.is_some()) {
             out.push_str("\0l\0");
         }
     }
@@ -173,7 +182,23 @@ pub(crate) fn build_document(t: &Tree, p: &Planned, notes: &[String], alt: &std:
             attr_unit.insert(a.attr, i);
         }
     }
-    let em = Emit { t, p, attr_unit, lang };
+    // nested elements that hold translated text and carry their own language attribute
+    let mut restamp = std::collections::HashSet::new();
+    if let Some((a, _)) = &lang {
+        let mut mark = |mut el: u32| {
+            while el != crate::tree::NONE && el != t.root {
+                if !restamp.insert(el) {
+                    break;
+                }
+                el = t.els[el as usize].parent;
+            }
+        };
+        for u in &p.units {
+            mark(u.attr.as_ref().map_or(u.owner, |x| x.el));
+        }
+        restamp.retain(|&el| t.attrs_of(el).iter().any(|x| t.attr_qname(x) == a.as_str()));
+    }
+    let em = Emit { t, p, attr_unit, lang, restamp };
     // skeleton parts
     let mut whole = String::with_capacity(t.text.len() + 64);
     for it in &t.prolog {
@@ -404,7 +429,9 @@ pub(crate) struct Merger<'d> {
     pub doc: &'d Document,
     pub out: String,
     pub lang_tag: Option<String>,
-    lang_start: Option<(usize, String, bool)>,
+    lang_start: Option<(usize, String, bool, bool)>,
+    /// The language the root declared in the source (the stand-in for the source language when the document has none).
+    root_lang: Option<String>,
     /// Units already written: a well-formed skeleton names each unit once, so a second use (a hand-edited or
     /// hostile document, possibly a cycle or an exponential fan-out) is refused.
     seen: Vec<bool>,
@@ -423,7 +450,7 @@ enum Work<'d> {
 
 impl<'d> Merger<'d> {
     pub(crate) fn new(doc: &'d Document, lang_tag: Option<String>) -> Merger<'d> {
-        Merger { doc, out: String::new(), lang_tag, lang_start: None, seen: vec![false; doc.units.len()] }
+        Merger { doc, out: String::new(), lang_tag, lang_start: None, root_lang: None, seen: vec![false; doc.units.len()] }
     }
 
     pub(crate) fn unit(&self, i: usize) -> Result<&'d Unit, Error> {
@@ -491,14 +518,34 @@ impl<'d> Merger<'d> {
                 }
                 "L" => {
                     if let (Some(_), Some((a, add))) = (&self.lang_tag, arg.split_once('|')) {
-                        self.lang_start = Some((self.out.len(), a.to_string(), add == "1"));
+                        self.lang_start = Some((self.out.len(), a.to_string(), add == "1", false));
+                    }
+                }
+                "N" => {
+                    if self.lang_tag.is_some() {
+                        self.lang_start = Some((self.out.len(), arg.to_string(), false, true));
                     }
                 }
                 "l" => {
-                    if let (Some((at, attr, add)), Some(tag)) = (self.lang_start.take(), self.lang_tag.clone()) {
+                    if let (Some((at, attr, add, nested)), Some(tag)) = (self.lang_start.take(), self.lang_tag.clone()) {
                         if at <= self.out.len() && self.out.is_char_boundary(at) {
                             let stag = self.out.split_off(at);
-                            let edited = set_lang(&stag, &attr, &tag, add);
+                            let old = lang_value(&stag, &attr);
+                            let edited = if nested {
+                                // only a language that is still the source language: a foreign passage stays as it is
+                                // (no source language anywhere: the first language the file declares is its source)
+                                if self.doc.source_lang.is_none() && self.root_lang.is_none() {
+                                    self.root_lang = old.clone();
+                                }
+                                let src = self.doc.source_lang.clone().or_else(|| self.root_lang.clone());
+                                match (old, src) {
+                                    (Some(o), Some(s)) if same_lang(&o, &s) => set_lang(&stag, &attr, &tag, false),
+                                    _ => stag,
+                                }
+                            } else {
+                                self.root_lang = old;
+                                set_lang(&stag, &attr, &tag, add)
+                            };
                             self.out.push_str(&edited);
                         }
                     }
@@ -602,8 +649,61 @@ impl<'d> Merger<'d> {
     }
 }
 
+/// Whether two language tags name the same language for a restamp: the primary subtag must match, and the script and
+/// the region too when both tags have one (`en` and `en-US` match, `en-GB` and `en-US` do not, `zh-Hans` and `zh-Hant`
+/// do not). Case and `_` against `-` are ignored.
+pub(crate) fn same_lang(a: &str, b: &str) -> bool {
+    fn parts(s: &str) -> (String, Option<String>, Option<String>) {
+        let s = s.trim().replace('_', "-").to_ascii_lowercase();
+        let mut it = s.split('-');
+        let primary = it.next().unwrap_or("").to_string();
+        let (mut script, mut region) = (None, None);
+        for p in it {
+            let alpha = p.bytes().all(|c| c.is_ascii_alphabetic());
+            if script.is_none() && region.is_none() && p.len() == 4 && alpha {
+                script = Some(p.to_string());
+            } else if region.is_none() && ((p.len() == 2 && alpha) || (p.len() == 3 && p.bytes().all(|c| c.is_ascii_digit()))) {
+                region = Some(p.to_string());
+            } else {
+                break;
+            }
+        }
+        (primary, script, region)
+    }
+    let (pa, sa, ra) = parts(a);
+    let (pb, sb, rb) = parts(b);
+    let both = |x: Option<String>, y: Option<String>| match (x, y) {
+        (Some(x), Some(y)) => x == y,
+        _ => true,
+    };
+    !pa.is_empty() && pa == pb && both(sa, sb) && both(ra, rb)
+}
+
+
+/// The raw (still escaped) value of attribute `attr` in a start tag, if it has one.
+fn lang_value(stag: &str, attr: &str) -> Option<String> {
+    let probe = set_lang_scan(stag, attr)?;
+    Some(stag[probe.0..probe.1].to_string())
+}
+
 /// Sets (or adds) the language attribute in a start tag, keeping everything else.
 pub(crate) fn set_lang(stag: &str, attr: &str, value: &str, add: bool) -> String {
+    if let Some((s, e, q)) = set_lang_scan_q(stag, attr) {
+        return format!("{}{}{}", &stag[..s], esc_attr(value, q), &stag[e..]);
+    }
+    if add {
+        let at = stag.len() - if stag.ends_with("/>") { 2 } else { 1 };
+        return format!("{} {attr}=\"{}\"{}", &stag[..at], esc_attr(value, '"'), &stag[at..]);
+    }
+    stag.to_string()
+}
+
+fn set_lang_scan(stag: &str, attr: &str) -> Option<(usize, usize)> {
+    set_lang_scan_q(stag, attr).map(|(s, e, _)| (s, e))
+}
+
+/// The value range and quote of the last `attr` attribute of a start tag.
+fn set_lang_scan_q(stag: &str, attr: &str) -> Option<(usize, usize, char)> {
     let b = stag.as_bytes();
     let mut i = 1;
     while i < b.len() && !matches!(b[i], b' ' | b'\t' | b'\r' | b'\n' | b'/' | b'>') {
@@ -643,14 +743,7 @@ pub(crate) fn set_lang(stag: &str, attr: &str, value: &str, add: bool) -> String
         }
         i = vs + len + 1;
     }
-    if let Some((s, e, q)) = hit {
-        return format!("{}{}{}", &stag[..s], esc_attr(value, q), &stag[e..]);
-    }
-    if add {
-        let at = stag.len() - if stag.ends_with("/>") { 2 } else { 1 };
-        return format!("{} {attr}=\"{}\"{}", &stag[..at], esc_attr(value, '"'), &stag[at..]);
-    }
-    stag.to_string()
+    hit
 }
 
 pub(crate) fn merge_parts<'d>(doc: &'d Document, parts: &'d [SkelPart], lang_tag: Option<String>) -> Result<String, Error> {
@@ -664,3 +757,17 @@ pub(crate) fn merge_parts<'d>(doc: &'d Document, parts: &'d [SkelPart], lang_tag
     Ok(m.out)
 }
 
+#[cfg(test)]
+mod lang_tests {
+    use super::same_lang;
+
+    #[test]
+    fn same_language_rule() {
+        for (a, b) in [("en", "en"), ("en", "EN-us"), ("en-US", "en"), ("en_US", "en-us"), ("zh-Hant-TW", "zh-TW"), ("zh", "zh-Hans")] {
+            assert!(same_lang(a, b), "{a} {b}");
+        }
+        for (a, b) in [("en-GB", "en-US"), ("fr", "en"), ("zh-Hans", "zh-Hant"), ("", ""), ("en", "eng")] {
+            assert!(!same_lang(a, b), "{a} {b}");
+        }
+    }
+}
