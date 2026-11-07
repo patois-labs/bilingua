@@ -1,5 +1,7 @@
 //! Differential test against the LocOS Fluent filter: 260 random files plus the corpus, with the units and the
-//! bytes LocOS builds recorded in `data/locos_golden.json` (made by `tools/gen_golden.py`).
+//! bytes LocOS builds recorded in `data/locos_golden.json` (made by `tools/gen_golden.py`). The generator runs LocOS
+//! with the #811 item 1 fix patched in (each case's `locos_patch` field says so): those outputs are LocOS plus that
+//! fix, not what LocOS itself produces until it gets the fix.
 mod common;
 use bilingua_ftl::{FtlFilter, Limits};
 use bilingua_model::*;
