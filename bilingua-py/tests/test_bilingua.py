@@ -442,15 +442,27 @@ def test_stubs_match_the_module():
 
     stub = ast.parse((pathlib.Path(__file__).resolve().parents[1] / "bilingua.pyi").read_text(encoding="utf-8"))
     funcs = {n.name: n for n in stub.body if isinstance(n, ast.FunctionDef)}
+    classes = {n.name: n for n in stub.body if isinstance(n, ast.ClassDef) and n.name in ("DocumentHandle",)}
     public = {n for n in dir(bilingua) if not n.startswith("_") and callable(getattr(bilingua, n)) and n != "BilinguaError"}
-    assert set(funcs) == public, (sorted(funcs), sorted(public))
-    for name, node in funcs.items():
-        real = inspect.signature(getattr(bilingua, name))
+    assert set(funcs) | set(classes) == public, (sorted(funcs), sorted(public))
+    # the classes' methods too (bound to an instance, so `self` is not in the real signature)
+    items = [(name, node, getattr(bilingua, name), False) for name, node in funcs.items()]
+    h = bilingua.extract_handle("a.txt", b"Hi.")
+    for cname, cnode in classes.items():
+        methods = {n.name: n for n in cnode.body if isinstance(n, ast.FunctionDef) and not any(isinstance(d, ast.Name) and d.id == "property" for d in n.decorator_list)}
+        real_names = {n for n in dir(h) if not n.startswith("_") and callable(getattr(h, n))} | {"__len__"}
+        assert set(methods) == real_names, (cname, sorted(methods), sorted(real_names))
+        for mname, mnode in methods.items():
+            static = any(isinstance(d, ast.Name) and d.id == "staticmethod" for d in mnode.decorator_list)
+            items.append((f"{cname}.{mname}", mnode, getattr(h, mname), not static))
+    for name, node, fn, bound in items:
+        real = inspect.signature(fn)
         a = node.args
-        want = [(p.arg, "POSITIONAL_OR_KEYWORD") for p in a.posonlyargs + a.args] + [(p.arg, "KEYWORD_ONLY") for p in a.kwonlyargs]
+        args = (a.posonlyargs + a.args)[1:] if bound else a.posonlyargs + a.args
+        want = [(p.arg, "POSITIONAL_OR_KEYWORD") for p in args] + [(p.arg, "KEYWORD_ONLY") for p in a.kwonlyargs]
         got = [(p.name, p.kind.name) for p in real.parameters.values()]
         assert got == want, (name, got, want)
-        defaults = [None] * (len(a.args) - len(a.defaults)) + list(a.defaults) + list(a.kw_defaults)
+        defaults = [None] * (len(args) - len(a.defaults)) + list(a.defaults) + list(a.kw_defaults)
         for p, d in zip(real.parameters.values(), defaults):
             if d is None:
                 assert p.default is inspect.Parameter.empty, (name, p.name)
