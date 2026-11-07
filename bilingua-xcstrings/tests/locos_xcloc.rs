@@ -192,3 +192,26 @@ fn hostile() {
     let e = err(Xcloc.extract(&Bundle { xliffs: vec![("fr.xliff", many.as_bytes())], ..Default::default() }.build(), &small));
     assert_eq!(lk(&e), LimitKind::Units);
 }
+
+/// B-side 15 to 18 (verify_xcloc_filter:164 and :192): under the LocOS profile each member is read with the LocOS
+/// XLIFF reader (unit text trimmed), `p_index` is offset by the `<source>` elements of the members before it (the
+/// empty source leaves a gap), and a translated member is written by the LocOS XLIFF writer (declaration line
+/// break kept, a new `<target>` with no state).
+#[test]
+fn locos_profile_numbers_and_writes_like_locos() {
+    let padded = XLIFF2.to_vec();
+    let padded = String::from_utf8(padded).unwrap().replace("<source>My App</source>", "<source> My App </source>");
+    let two = Bundle { xliffs: vec![("fr.xliff", XLIFF), ("fr2.xliff", padded.as_bytes())], ..Default::default() }.build();
+    let opts = profile::locos().extract_options().with_target_lang("fr");
+    let mut d = Xcloc.extract(&two, &opts).unwrap();
+    profile::annotate(&mut d, Some("locos"));
+    let units = profile::locos_units(&d);
+    assert_eq!(units.iter().map(|u| u.p_index).collect::<Vec<_>>(), [0, 1, 2, 4]);
+    assert_eq!(units[3].text, "My App");
+    let u = units.iter().find(|u| u.p_index == 4).unwrap();
+    profile::locos_set_target(&mut d, &u.segment_id, vec![Inline::text("Mon appli")]).unwrap();
+    let out = Xcloc.merge_with(&d, &profile::locos().merge_options("xcloc")).unwrap();
+    let m = String::from_utf8(member(&out, "fr.xcloc/Localized Contents/fr2.xliff")).unwrap();
+    assert!(m.starts_with("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<xliff"), "{m}");
+    assert!(m.contains("</source><target>") && m.contains("Mon appli") && !m.contains("state=\"translated\""), "{m}");
+}

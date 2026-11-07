@@ -1391,17 +1391,59 @@ pub fn merge(doc: &Document, format: &str, opts: &MergeOptions) -> Result<Vec<u8
     if format != "xliff" {
         return build_cat_escaped(data, &texts, tag.as_deref());
     }
+    build_xliff_escaped(data, &texts, tag.as_deref())
+}
+
+/// The number of `<source>` elements of a plain XLIFF file (LocOS `xcloc_filter._source_count`, which offsets the
+/// `p_index` of each bundle member by the sources of the members before it). Not part of the semver API.
+#[doc(hidden)]
+pub fn source_count(raw: &[u8]) -> Result<usize, Error> {
+    let text = decode_plain(raw, "xliff")?;
+    let d = dom::parse(&text).map_err(|e| perr("xliff", format!("XLIFF is not well-formed XML: {e}")))?;
+    Ok(source_elements(&d).len())
+}
+
+/// LocOS `xcloc_filter._mark_translated`: a target written for one of the `written` sources that carries a
+/// `state` other than `translated` gets `state="translated"`; the file is then serialised as lxml's
+/// `etree.tostring(root, xml_declaration=True, encoding="UTF-8")`. Unchanged when no target needed it. Not part of
+/// the semver API.
+#[doc(hidden)]
+pub fn mark_translated(raw: &[u8], written: &std::collections::HashSet<i64>) -> Result<Vec<u8>, Error> {
+    let text = decode_plain(raw, "xliff").map_err(werr)?;
+    let mut d = dom::parse(&text).map_err(|e| werr(format!("XLIFF is not well-formed XML: {e}")))?;
+    let mut changed = false;
+    for (k, src) in source_elements(&d).into_iter().enumerate() {
+        if !written.contains(&(k as i64)) {
+            continue;
+        }
+        let Some(tgt) = d.nodes[src].parent.and_then(|tu| d.child(tu, "target")) else { continue };
+        if d.get(tgt, "state").is_some_and(|s| s != "translated") {
+            d.set(tgt, "state", "translated");
+            changed = true;
+        }
+    }
+    if !changed {
+        return Ok(raw.to_vec());
+    }
+    Ok(format!("<?xml version='1.0' encoding='UTF-8'?>\n{}", d.serialize()).into_bytes())
+}
+
+/// `XliffFilter.build` / `build_localized` of a plain `.xliff` (with or without seg-source) for texts keyed by their
+/// unit key and escaped ([`written_texts_escaped`]). Not part of the semver API.
+#[doc(hidden)]
+pub fn build_xliff_escaped(data: &[u8], texts: &HashMap<i64, String>, tag: Option<&str>) -> Result<Vec<u8>, Error> {
+    let format = "xliff";
     let text = decode_plain(data, format).map_err(werr)?;
     let d = dom::parse(&text).map_err(|e| werr(format!("XLIFF is not well-formed XML: {e}")))?;
     if !has_seg_source(&d) {
-        return build_plain(data, &text, &texts, tag.as_deref());
+        return build_plain(data, &text, texts, tag);
     }
     // XLIFF 1.2 with seg-source: LocOS splices, then sets `target-language` on every <file> through lxml
-    let out = build_cat_escaped(data, &texts, None)?;
+    let out = build_cat_escaped(data, texts, None)?;
     let Some(tag) = tag else { return Ok(out) };
     let text = decode_plain(&out, format).map_err(werr)?;
     let mut d = dom::parse(&text).map_err(|e| werr(format!("XLIFF is not well-formed XML: {e}")))?;
-    stamp_dom(&mut d, &tag);
+    stamp_dom(&mut d, tag);
     Ok(xml_like(data, &d.serialize()))
 }
 

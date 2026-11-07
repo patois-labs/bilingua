@@ -17,6 +17,9 @@ const LOCALIZED: &str = "Localized Contents/";
 const MAX_CONTENTS_BYTES: usize = 1024 * 1024;
 /// The skeleton keeps the whole archive under this name.
 const ARCHIVE: &str = "\0bilingua-xcloc-archive";
+/// A document extracted under the LocOS profile carries this (empty) skeleton entry: its members were read with the
+/// LocOS XLIFF reader and are written with the LocOS XLIFF writer.
+const LOCOS_MARK: &str = "\0bilingua-xcloc-locos";
 
 /// The Xcode localization bundle filter.
 #[derive(Debug, Default, Clone, Copy)]
@@ -160,9 +163,37 @@ impl Filter for Xcloc {
         let entries = read_bundle(bytes, &limits)?;
         let lay = layout(&entries)?;
         let contents = read_contents(&entries[lay.contents], &limits)?;
+        let locos = opts.is_profile(bilingua_model::profile::LOCOS);
         let mut units = Vec::new();
         let mut warnings = Vec::new();
+        // LocOS `XclocFilter.parse`: each member through the LocOS XLIFF reader (trimmed unit text, its skips), and
+        // `p_index` offset by the `<source>` elements of the members before it, so skipped sources leave gaps
+        let mut offset = 0i64;
         for (k, &ei) in lay.xliffs.iter().enumerate() {
+            if !locos {
+                break;
+            }
+            let e = &entries[ei];
+            guard::check_xml(&e.data, &limits)?;
+            let d = bilingua_xliff::locos::extract(&e.data, "xliff", opts).map_err(|er| member_err(&e.name, er))?;
+            let prefix = format!("x{}/", k + 1);
+            for mut u in d.units {
+                let key: i64 = u.context.extra.get(bilingua_xliff::locos::KEY).and_then(|v| v.parse().ok()).unwrap_or(0);
+                u.id = format!("{prefix}{}", u.id);
+                for s in &mut u.segments {
+                    s.id = format!("{prefix}{}", s.id);
+                }
+                u.context.extra.insert(bilingua_model::profile::P_INDEX.to_string(), (offset + key).to_string());
+                u.context.location = Some(format!("{} {}", e.name, u.context.key.as_deref().unwrap_or("")).trim().to_string());
+                units.push(u);
+                guard::check_unit_count(units.len(), &limits)?;
+            }
+            offset += bilingua_xliff::locos::source_count(&e.data).map_err(|er| member_err(&e.name, er))? as i64;
+        }
+        for (k, &ei) in lay.xliffs.iter().enumerate() {
+            if locos {
+                break;
+            }
             let e = &entries[ei];
             let doc = xliff_doc(e, &limits)?;
             let mut d = bilingua_xliff::to_document(&doc, "xliff", opts)?;
@@ -182,7 +213,11 @@ impl Filter for Xcloc {
                 guard::check_unit_count(units.len(), &limits)?;
             }
         }
-        let d = Document::new(FORMAT, units, Skeleton::zip(vec![ZipEntry::raw(ARCHIVE, bytes.to_vec())], bilingua_model::parser_info!())).with_source_lang(opts.source_lang.clone().or_else(|| (!contents.development_region.is_empty()).then(|| contents.development_region.clone()))).with_target_lang(opts.target_lang.clone()).with_granularity(Granularity::Paragraph);
+        let mut skel = vec![ZipEntry::raw(ARCHIVE, bytes.to_vec())];
+        if locos {
+            skel.push(ZipEntry::raw(LOCOS_MARK, Vec::new()));
+        }
+        let d = Document::new(FORMAT, units, Skeleton::zip(skel, bilingua_model::parser_info!())).with_source_lang(opts.source_lang.clone().or_else(|| (!contents.development_region.is_empty()).then(|| contents.development_region.clone()))).with_target_lang(opts.target_lang.clone()).with_granularity(Granularity::Paragraph);
         guard::finish(d, warnings, &limits)
     }
 
@@ -204,6 +239,9 @@ impl Filter for Xcloc {
         let lay = layout(&entries)?;
         let tag = doc.target_lang.as_deref().and_then(canonical_tag);
         let mut replaced: Vec<Option<Vec<u8>>> = vec![None; entries.len()];
+        if skel.iter().any(|e| e.name == LOCOS_MARK) {
+            return merge_locos(doc, opts, original, &entries, &lay, replaced);
+        }
         let mut any_touched = false;
         for (k, &ei) in lay.xliffs.iter().enumerate() {
             let e = &entries[ei];
@@ -259,27 +297,80 @@ impl Filter for Xcloc {
                 replaced[lay.contents] = Some(b);
             }
         }
-        if replaced.iter().all(Option::is_none) {
-            return Ok(original.to_vec());
-        }
-        let parts: Vec<(bilingua_zip::EntryMeta, Body<'_>)> = entries
-            .iter()
-            .zip(replaced)
-            .map(|(e, r)| {
-                let body = match (r, &e.packed) {
-                    (Some(b), _) => Body::Owned(b),
-                    (None, Some((p, bytes))) => Body::Packed(p, bytes),
-                    (None, None) => Body::Plain(&e.data),
-                };
-                (e.meta.clone(), body)
-            })
-            .collect();
-        let mut out = write_zip_parts(&parts)?;
-        if let Some(c) = archive_comment(original) {
-            add_comment(&mut out, c);
-        }
-        Ok(out)
+        write_bundle(original, &entries, replaced)
     }
+}
+
+fn member_err(name: &str, e: Error) -> Error {
+    match e {
+        Error::Parse { msg, .. } => Error::Parse { format: FORMAT.into(), msg: format!("{name}: {msg}") },
+        e => e,
+    }
+}
+
+/// The archive with the `replaced` member bodies (the original when nothing changed).
+fn write_bundle(original: &[u8], entries: &[RawEntry], replaced: Vec<Option<Vec<u8>>>) -> Result<Vec<u8>, Error> {
+    if replaced.iter().all(Option::is_none) {
+        return Ok(original.to_vec());
+    }
+    let parts: Vec<(bilingua_zip::EntryMeta, Body<'_>)> = entries
+        .iter()
+        .zip(replaced)
+        .map(|(e, r)| {
+            let body = match (r, &e.packed) {
+                (Some(b), _) => Body::Owned(b),
+                (None, Some((p, bytes))) => Body::Packed(p, bytes),
+                (None, None) => Body::Plain(&e.data),
+            };
+            (e.meta.clone(), body)
+        })
+        .collect();
+    let mut out = write_zip_parts(&parts)?;
+    if let Some(c) = archive_comment(original) {
+        add_comment(&mut out, c);
+    }
+    Ok(out)
+}
+
+/// LocOS `XclocFilter._build` for a document extracted under the profile: each member that receives a translation
+/// (or every member, when a target language is stamped) through the LocOS XLIFF writer, then `_mark_translated`;
+/// `targetLocale` in `contents.json` set to the target language.
+fn merge_locos(
+    doc: &Document,
+    opts: &bilingua_model::MergeOptions,
+    original: &[u8],
+    entries: &[RawEntry],
+    lay: &Layout,
+    mut replaced: Vec<Option<Vec<u8>>>,
+) -> Result<Vec<u8>, Error> {
+    use bilingua_xliff::locos;
+    let mut per_member: Vec<std::collections::HashMap<i64, String>> = vec![Default::default(); lay.xliffs.len()];
+    for (k, texts) in per_member.iter_mut().enumerate() {
+        let prefix = format!("x{}/", k + 1);
+        *texts = locos::written_texts_escaped(doc.units.iter().filter(|u| u.id.starts_with(&prefix)));
+    }
+    let any = per_member.iter().any(|t| !t.is_empty());
+    let tag = opts.stamp_lang(doc, any).and_then(bilingua_model::profile::lang_tag);
+    for (k, &ei) in lay.xliffs.iter().enumerate() {
+        let raw = &entries[ei].data;
+        let sub = &per_member[k];
+        if tag.is_none() && sub.is_empty() {
+            continue;
+        }
+        let mut new = locos::build_xliff_escaped(raw, sub, tag.as_deref())?;
+        if !sub.is_empty() {
+            new = locos::mark_translated(&new, &sub.keys().copied().collect())?;
+        }
+        if new != *raw {
+            replaced[ei] = Some(new);
+        }
+    }
+    if let Some(t) = &tag {
+        if let Some(b) = set_target_locale(&entries[lay.contents].data, t) {
+            replaced[lay.contents] = Some(b);
+        }
+    }
+    write_bundle(original, entries, replaced)
 }
 
 // ---------------------------------------------------------------------------------------------------------
