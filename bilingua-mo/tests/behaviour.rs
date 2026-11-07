@@ -389,3 +389,14 @@ fn tampered_documents_are_typed_errors() {
     extra.units.push(Unit::new("e99", vec![Inline::text("ghost")]));
     assert_eq!(merged(&extra), mo_le());
 }
+
+#[test]
+fn a_catalog_in_a_code_page_outside_the_short_list_is_read() {
+    // ISO-8859-13 (Baltic): byte 0xFE is a z with a caron
+    let header = b"Language: lt\nContent-Type: text/plain; charset=iso-8859-13\n".to_vec();
+    let data = pack(&[(Vec::new(), header), (b"Open file".to_vec(), vec![b'a', 0xFE])]);
+    let d = ex(&data);
+    assert_eq!(texts(&d), ["Open file"]);
+    assert_eq!(plain_text(&d.units[0].segments[0].target), "a\u{17e}");
+    assert_eq!(merged(&d), data);
+}
