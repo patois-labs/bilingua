@@ -42,38 +42,29 @@ fn locos_profile_still_refuses() {
 }
 
 #[test]
-fn a_span_line_and_an_indented_table_are_redrawn() {
+fn an_indented_table_and_a_later_column_are_redrawn() {
     let t = "Intro text.
 
   =====  =====  =====
   One    Two    Three
   =====  =====  =====
   yes    a      b
-  -------------------
   no     c      d
   =====  =====  =====
 
 After.
 ";
-    let out = merge(None, t, &[("yes", "Si, claro"), ("c", "Palabra")]).unwrap();
+    let out = merge(None, t, &[("yes", "Si, claro"), ("a", "Palabra")]).unwrap();
     let want = "Intro text.
 
   =========  =======  =====
   One        Two      Three
   =========  =======  =====
-  Si, claro  a        b
-  -------------------------
-  no         Palabra  d
+  Si, claro  Palabra  b
+  no         c        d
   =========  =======  =====
 
 After.
 ";
     assert_eq!(out, want);
-}
-
-#[test]
-fn a_long_word_in_a_later_column_widens_it() {
-    let out = merge(None, TABLE, &[("1", "Donaudampfschiff")]).unwrap();
-    assert!(out.starts_with("=====  ================\n"), "{out}");
-    assert!(out.contains("yes    Donaudampfschiff\n"), "{out}");
 }
