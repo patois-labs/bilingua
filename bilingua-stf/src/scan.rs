@@ -154,6 +154,8 @@ pub struct Walker<'t> {
     /// per column line, not per row: a column line of 200 000 names over a million rows must stay linear.
     columns: Option<(usize, usize)>,
     pub seen_data: bool,
+    /// Lines that are not comments, section lines, headers or data rows and hold no tab.
+    pub stray: usize,
     pub type_: String,
     /// First span of each header, by lowercased name.
     pub headers: Vec<(String, Header)>,
@@ -161,7 +163,7 @@ pub struct Walker<'t> {
 
 impl<'t> Walker<'t> {
     pub fn new(text: &'t str, pos: usize) -> Walker<'t> {
-        Walker { text, pos, section: Rc::from(""), columns: None, seen_data: false, type_: String::new(), headers: Vec::new() }
+        Walker { text, pos, section: Rc::from(""), columns: None, seen_data: false, stray: 0, type_: String::new(), headers: Vec::new() }
     }
 
     pub fn header(&self, name: &str) -> Option<&Header> {
@@ -216,6 +218,7 @@ impl<'t> Walker<'t> {
             }
         }
         if !line.contains('\t') {
+            self.stray += 1;
             return Some(None); // stray line: kept byte for byte, never a unit
         }
         self.seen_data = true;

@@ -325,7 +325,7 @@ pub fn over_limit(doc: &Document) -> Vec<OverLimit> {
 impl StfFilter {
     /// `extract` with explicit size limits.
     pub fn extract_with(&self, bytes: &[u8], opts: &ExtractOptions, limits: &Limits) -> Result<Document, Error> {
-        let dec = decode(bytes, opts, limits)?;
+        let mut dec = decode(bytes, opts, limits)?;
         let load = opts.format_flag(LOAD_TARGETS).unwrap_or(true);
         let text = dec.text.as_str();
         let mut w = Walker::new(text, lead(text, &dec.encoding));
@@ -402,6 +402,16 @@ impl StfFilter {
             parts.push(SkelPart::Raw(text[pos..].to_string()));
         }
         let doc = Document::new(ID, units, Skeleton::text(parts, dec.encoding, bilingua_model::parser_info!())).with_options(opts);
+        if doc.units.is_empty() && w.stray > 0 {
+            dec.warnings.push(Warning::new(
+                "no_tab_rows",
+                "rows",
+                format!(
+                    "{} line(s) have no tab between the key and the label, so no row was read. A Salesforce translation file separates its columns with tabs.",
+                    w.stray
+                ),
+            ));
+        }
         guard::finish(doc, dec.warnings, limits)
     }
 }

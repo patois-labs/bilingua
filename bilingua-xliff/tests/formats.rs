@@ -274,3 +274,89 @@ fn a_schema_1_sdlxliff_document_still_merges_by_mid() {
     let out = String::from_utf8(f.merge(&d).unwrap()).unwrap();
     assert!(out.contains("mid=\"1\">Speichern.</mrk>") && out.contains("mid=\"4\">Schliessen.</mrk>"), "{out}");
 }
+
+// ---- wild-file fixes (11-06) ----
+
+/// A prefixed `version` attribute on the root (`its:version`, Phrase's `m:version`) is not the XLIFF version.
+#[test]
+fn prefixed_version_attributes_do_not_make_a_1_2_file_xliff_2() {
+    let its = "<?xml version=\"1.0\"?>\n<xliff xmlns=\"urn:oasis:names:tc:xliff:document:1.2\" xmlns:its=\"http://www.w3.org/2005/11/its\" its:version=\"2.0\" version=\"1.2\">\n<file original=\"a.txt\" source-language=\"en\" target-language=\"fr\" datatype=\"plaintext\"><body>\n<trans-unit id=\"1\"><source>Hello</source></trans-unit>\n</body></file></xliff>\n";
+    let d = filter("xliff").extract(its.as_bytes(), &opts()).unwrap();
+    assert_eq!(d.segment_count(), 1);
+    let mx = "<?xml version=\"1.0\"?><xliff xmlns=\"urn:oasis:names:tc:xliff:document:1.2\" xmlns:m=\"http://www.memsource.com/mxlf/2.0\" version=\"1.2\" m:level=\"2\" m:version=\"2.9\">\n<file original=\"a.txt\" source-language=\"en\" target-language=\"lo\" datatype=\"x-undefined\"><body>\n<group id=\"0\"><trans-unit id=\"t:0\" m:confirmed=\"0\"><source>Hello</source><target/></trans-unit></group>\n</body></file></xliff>\n";
+    let d = filter("mxliff").extract(mx.as_bytes(), &opts()).unwrap();
+    assert_eq!(d.format, "mxliff");
+    assert_eq!(d.segment_count(), 1);
+    // spaces around the equals sign and single quotes still count as the real version
+    assert_eq!(Doc::from_bytes(b"<xliff version = '2.0' xmlns='urn:oasis:names:tc:xliff:document:2.0' srcLang='en'><file id='f'><unit id='1'><segment><source>x</source></segment></unit></file></xliff>".to_vec()).unwrap().format(), Format::Xliff2);
+}
+
+/// A 1.2 `<target>` that wraps its whole text in one `<mrk mtype="seg">` (no `seg-source`): writing a translation
+/// must replace the content of the target, not leave an unclosed `<mrk>`.
+#[test]
+fn target_wrapped_in_a_seg_mrk_without_seg_source_survives_a_write() {
+    let src = "<?xml version=\"1.0\"?>\n<xliff version=\"1.2\" xmlns=\"urn:oasis:names:tc:xliff:document:1.2\">\n<file original=\"a.po\" source-language=\"en\" target-language=\"fr\" datatype=\"plaintext\"><body>\n<trans-unit id=\"1\"><source>Hello</source><target><mrk mid=\"0\" mtype=\"seg\">Bonjour</mrk></target></trans-unit>\n</body></file></xliff>\n";
+    for id in ["xliff", "sdlxliff"] {
+        let f = filter(id);
+        let mut d = f.extract(src.as_bytes(), &opts()).unwrap();
+        assert_eq!(f.merge(&d).unwrap(), src.as_bytes());
+        d.set_target("1", vec![Inline::text("Salut")]).unwrap();
+        let out = f.merge(&d).unwrap();
+        let text = String::from_utf8(out.clone()).unwrap();
+        assert!(text.contains("Salut"), "{text}");
+        assert_eq!(text.matches("<mrk").count(), text.matches("</mrk>").count(), "{text}");
+        let again = f.extract(&out, &opts()).unwrap();
+        assert_eq!(tgt(&again, "1"), "Salut");
+    }
+}
+
+/// Gate (11-06): the root version check reads only the root's own `version`, wherever it sits and however it is
+/// quoted or spaced. A namespace that disagrees with it does not win (LocOS reads `root.get("version")` too).
+#[test]
+fn detect_reads_the_root_version_attribute_only() {
+    let d = |s: &str| bilingua_xliff::detect(s.as_bytes()).unwrap();
+    const NS1: &str = "urn:oasis:names:tc:xliff:document:1.2";
+    const NS2: &str = "urn:oasis:names:tc:xliff:document:2.0";
+    // xmlns plus a prefixed ITS version, in single quotes
+    assert_eq!(d(&format!("<xliff xmlns='{NS1}' xmlns:its='http://www.w3.org/2005/11/its' its:version='2.0' version='1.2'>")), Format::Xliff12);
+    // the real version after a prefixed one
+    assert_eq!(d(&format!("<xliff xmlns=\"{NS2}\" its:version=\"2.0\" version=\"2.0\" srcLang=\"en\">")), Format::Xliff2);
+    assert_eq!(d(&format!("<xliff xmlns=\"{NS2}\" its:version=\"1.0\" version=\"2.1\">")), Format::Xliff2);
+    // srcLang before version, tabs and new lines around the equals sign
+    assert_eq!(d(&format!("<xliff xmlns=\"{NS2}\" srcLang=\"en\" trgLang=\"fr\"\n\tversion\n=\t\"2.0\">")), Format::Xliff2);
+    // a name that only ends in `version` is not the version
+    assert_eq!(d(&format!("<xliff xmlns=\"{NS1}\" xversion=\"2.0\" version=\"1.2\">")), Format::Xliff12);
+    // the attribute wins over a namespace that disagrees, both ways
+    assert_eq!(d(&format!("<xliff xmlns=\"{NS2}\" version=\"1.2\">")), Format::Xliff12);
+    assert_eq!(d(&format!("<xliff xmlns=\"{NS1}\" version=\"2.0\">")), Format::Xliff2);
+    // a Phrase file with only its own m:version stays MXLIFF
+    assert_eq!(d(&format!("<xliff xmlns=\"{NS1}\" xmlns:m=\"http://www.memsource.com/mxlf/2.0\" m:version=\"2.9\">")), Format::Mxliff);
+}
+
+/// Gate (11-06): a seg `mrk` that holds a protected `mrk` and a `g` still spans its whole content, with and without
+/// `seg-source`; writing one segment leaves the others and every closing tag in place.
+#[test]
+fn seg_mrks_holding_other_inline_markup_keep_their_spans() {
+    let plain = "<?xml version=\"1.0\"?>\n<xliff version=\"1.2\" xmlns=\"urn:oasis:names:tc:xliff:document:1.2\">\n<file original=\"a\" source-language=\"en\" target-language=\"fr\" datatype=\"plaintext\"><body>\n<trans-unit id=\"1\"><source>A <g id=\"1\">B</g> C</source><target><mrk mtype=\"seg\" mid=\"0\">a <g id=\"1\">b</g> <mrk mtype=\"protected\" mid=\"p\">c</mrk></mrk></target></trans-unit>\n</body></file></xliff>\n";
+    let f = filter("xliff");
+    let mut d = f.extract(plain.as_bytes(), &opts()).unwrap();
+    assert_eq!(f.merge(&d).unwrap(), plain.as_bytes());
+    d.set_target("1", vec![Inline::text("Z")]).unwrap();
+    let out = String::from_utf8(f.merge(&d).unwrap()).unwrap();
+    assert!(out.contains("<target>Z</target>"), "{out}");
+    assert_eq!(tgt(&f.extract(out.as_bytes(), &opts()).unwrap(), "1"), "Z");
+
+    let sdl = "<?xml version=\"1.0\"?>\n<xliff xmlns:sdl=\"http://sdl.com/FileTypes/SdlXliff/1.0\" xmlns=\"urn:oasis:names:tc:xliff:document:1.2\" version=\"1.2\" sdl:version=\"1.0\">\n<file original=\"a\" source-language=\"en\" target-language=\"fr\" datatype=\"x-sdlfilterframework2\"><body>\n<trans-unit id=\"t\"><source>One <g id=\"1\">two</g>. Three.</source><seg-source><mrk mtype=\"seg\" mid=\"1\">One <g id=\"1\">two</g>.</mrk> <mrk mtype=\"seg\" mid=\"2\">Three <mrk mtype=\"protected\" mid=\"p\">x</mrk>.</mrk></seg-source><target><mrk mtype=\"seg\" mid=\"1\">Un <g id=\"1\">deux</g>.</mrk> <mrk mtype=\"seg\" mid=\"2\">Trois <mrk mtype=\"protected\" mid=\"p\">x</mrk>.</mrk></target></trans-unit>\n</body></file></xliff>\n";
+    let f = filter("sdlxliff");
+    let mut d = f.extract(sdl.as_bytes(), &opts()).unwrap();
+    assert_eq!(f.merge(&d).unwrap(), sdl.as_bytes());
+    let ids: Vec<String> = d.units.iter().flat_map(|u| u.segments.iter().map(|s| s.id.clone())).collect();
+    assert_eq!(ids.len(), 2, "{ids:?}");
+    assert_eq!(tgt(&d, &ids[1]), "Trois x.");
+    d.set_target(&ids[1], vec![Inline::text("Quatre.")]).unwrap();
+    let out = String::from_utf8(f.merge(&d).unwrap()).unwrap();
+    assert!(out.contains("<mrk mtype=\"seg\" mid=\"1\">Un <g id=\"1\">deux</g>.</mrk> <mrk mtype=\"seg\" mid=\"2\">Quatre.</mrk></target>"), "{out}");
+    let again = f.extract(out.as_bytes(), &opts()).unwrap();
+    assert_eq!(tgt(&again, &ids[0]), "Un deux.");
+    assert_eq!(tgt(&again, &ids[1]), "Quatre.");
+}

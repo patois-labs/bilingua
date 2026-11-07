@@ -422,6 +422,7 @@ fn parse_inner(buf: &[u8], format: Format, unsegmented: bool) -> Result<(ParsedD
     let mut tu_depth = 0usize;
     let mut region: Option<Region> = None;
     let mut content_start = 0usize;
+    let mut mrk_start = 0usize;
     let mut elem_start = 0usize;
     let mut ss_start = 0usize;
     let mut mrk_mid = String::new();
@@ -504,7 +505,8 @@ fn parse_inner(buf: &[u8], format: Format, unsegmented: bool) -> Result<(ParsedD
                     let tag = TagInfo::parse(buf, start, end);
                     if is_seg_mrk(buf, &tag) {
                         mrk_mid = mid_of(buf, &tag).unwrap_or_default();
-                        content_start = end;
+                        // not `content_start`: a `<target>` that wraps its text in one `mrk` still spans the whole element
+                        mrk_start = end;
                         K::MrkSeg
                     } else {
                         K::Other
@@ -594,8 +596,8 @@ fn parse_inner(buf: &[u8], format: Format, unsegmented: bool) -> Result<(ParsedD
                         if let Some(a) = acc.as_mut() {
                             let mid = std::mem::take(&mut mrk_mid);
                             match region {
-                                Some(Region::SegSource) => a.src_mrks.push((mid, content_start..start)),
-                                _ => a.tgt_mrks.push((mid, TgtSlot::Content(content_start..start))),
+                                Some(Region::SegSource) => a.src_mrks.push((mid, mrk_start..start)),
+                                _ => a.tgt_mrks.push((mid, TgtSlot::Content(mrk_start..start))),
                             }
                         }
                     }
