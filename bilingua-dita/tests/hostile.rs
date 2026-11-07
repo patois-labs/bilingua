@@ -4,6 +4,7 @@
 
 mod common;
 
+use bilingua_dita::{Dita, DocBook};
 use bilingua_model::*;
 use common::*;
 use proptest::prelude::*;
@@ -147,15 +148,16 @@ fn dtds_are_never_fetched_and_internal_subsets_are_refused() {
             assert_eq!(show(&d.units[0]), "A \u{27E6}x1\u{27E7} and & B", "an entity of the DTD stays a code");
             assert_eq!(f.merge(&d).unwrap(), doc.as_bytes());
         }
-        // an internal subset (entity bombs, external entities, parameter entities) is refused before parsing
+        // an internal subset (entity bombs, external entities, parameter entities) is kept as it is: nothing is
+        // expanded or fetched, an entity stays a code and the file is written back unchanged
         for raw in [
             &br#"<!DOCTYPE topic [<!ENTITY a "aaaaaaaaaa"><!ENTITY b "&a;&a;&a;&a;&a;&a;&a;&a;&a;&a;">]><topic><title>&b;</title></topic>"#[..],
             br#"<!DOCTYPE topic PUBLIC "-//OASIS//DTD DITA Topic//EN" "topic.dtd" [<!ENTITY x SYSTEM "http://127.0.0.1:9/x">]><topic><title>&x;</title></topic>"#,
             br#"<!DOCTYPE topic [<!ENTITY % p SYSTEM "http://127.0.0.1:9/p.dtd"> %p;]><topic/>"#,
             br#"<!DOCTYPE book [<!ELEMENT book ANY>]><book><para>x</para></book>"#,
         ] {
-            assert!(matches!(f.extract(raw, &opts(None)), Err(Error::Limit(_) | Error::Parse { .. })), "{}", String::from_utf8_lossy(raw));
-            assert!(!f.sniff(raw));
+            let d = f.extract(raw, &opts(None)).unwrap_or_else(|e| panic!("{}: {e}", String::from_utf8_lossy(raw)));
+            assert_eq!(f.merge(&d).unwrap(), raw, "untouched = as uploaded");
         }
         // XInclude is not followed: the element stays markup
         let xi = br#"<topic id="t" xmlns:xi="http://www.w3.org/2001/XInclude"><title>T <xi:include href="file:///etc/passwd"/></title></topic>"#;
@@ -231,4 +233,18 @@ fn unknown_format_options_are_refused() {
     // an option for another format is not ours to judge
     let o = ExtractOptions::new().with_format_option("po.something", "1");
     assert!(Dita::new().extract(&data("task.dita"), &o).is_ok());
+}
+
+#[test]
+fn docbook4_file_with_an_entity_subset_and_latin1_opens() {
+    // the shape of a DocBook 4 manual: public DOCTYPE with an internal subset (parameter entity, text entity,
+    // include entity), ISO-8859-1 text. Nothing is fetched; entities stay codes; the bytes come back unchanged.
+    let mut raw = b"<?xml version='1.0' encoding='ISO-8859-1'?>\n<!DOCTYPE refentry PUBLIC \"-//OASIS//DTD DocBook XML V4.2//EN\"\n  \"http://www.oasis-open.org/docbook/xml/4.2/docbookx.dtd\" [\n<!-- it's a comment with > and quotes -->\n<!ENTITY % defs SYSTEM \"defs.ent\"> %defs;\n<!ENTITY prog \"tool\">\n<!ENTITY part SYSTEM \"part.xml\">\n]>\n<refentry><refnamediv><refpurpose>Caf".to_vec();
+    raw.push(0xE9);
+    raw.extend_from_slice(b" for &prog; users</refpurpose></refnamediv>&part;</refentry>\n");
+    for f in [&DocBook::new() as &dyn Filter, &Dita::new()] {
+        let d = ex(f, &raw);
+        assert_eq!(show(&d.units[0]), "Caf\u{e9} for \u{27E6}x1\u{27E7} users");
+        assert_eq!(f.merge(&d).unwrap(), raw);
+    }
 }

@@ -236,10 +236,13 @@ fn unknown_root_falls_back_to_its() {
 fn resource_suite_hostile_cases() {
     let xml = f();
     let lol = br#"<?xml version="1.0"?><!DOCTYPE resources [<!ENTITY a "aaaaaaaaaa"><!ENTITY b "&a;&a;&a;&a;&a;&a;&a;&a;&a;&a;">]><resources><string name="x">&b;</string></resources>"#;
-    assert!(matches!(xml.extract(lol, &opts(None)), Err(Error::Limit(_))));
+    // (a plain .xml keeps the DTD and never expands it; the entity is a code)
+    let d = xml.extract(lol, &opts(None)).unwrap();
+    assert_eq!(xml.merge(&d).unwrap(), lol);
     // a ">" inside a quoted system id must not hide the internal subset
     let hidden = br#"<?xml version="1.0"?><!DOCTYPE resources SYSTEM "a>b" [<!ENTITY a "x">]><resources><string name="x" y="&a;">hi</string></resources>"#;
-    assert!(matches!(xml.extract(hidden, &opts(None)), Err(Error::Limit(_))));
+    let d = xml.extract(hidden, &opts(None)).unwrap();
+    assert_eq!(xml.merge(&d).unwrap(), hidden, "the subset and the y=\"&a;\" reference are kept, not expanded");
     let xxe = br#"<?xml version="1.0"?><!DOCTYPE resources SYSTEM "file:///etc/passwd"><resources><string name="x">a &xxe; b</string></resources>"#;
     match xml.extract(xxe, &opts(None)) {
         Err(Error::Parse { .. }) | Ok(_) => {}

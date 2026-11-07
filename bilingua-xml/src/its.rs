@@ -56,7 +56,10 @@ impl ItsRules {
             return Err(bad("ITS rules file is larger than 1 MB; refused."));
         }
         bilingua_model::guard::check_xml(bytes, &Limits::default())?;
-        let t = Tree::parse(&dec.text)?;
+        let t = Tree::parse(&dec.text, &Limits::default())?;
+        if t.has_subset {
+            return Err(bad("An ITS rules file must not have a DTD internal subset; refused."));
+        }
         if t.local(t.root) != "rules" || t.el_ns(t.root) != ITS_NS {
             return Err(bad("An ITS rules file must have <its:rules> as its root element."));
         }

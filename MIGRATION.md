@@ -323,6 +323,11 @@ keeps the encoding:
   refuse it), and a DTD in a DOCX part (LocOS's DOCX reader takes one; its PPTX and XLSX readers refuse it). LocOS
   also reads LocOS-token look-alikes (`⟦x2⟧`) in source text as tokens and drops or moves them on export; the
   profile keeps them as text, so such a unit's build differs.
+- XML, DITA and DocBook (11-06): Bilingua opens a file whose DOCTYPE has an internal subset (entity declarations,
+  as in most DocBook 4 manuals); LocOS refuses it. The subset is kept byte for byte and never read: no entity
+  (internal, external or parameter) is expanded or fetched, every `&name;` stays a code, and the depth and element
+  limits still apply. Every other XML format (ITS rules files, XLIFF, Office parts, resx, SVG, TTML and the rest)
+  still refuses entity declarations.
 - Wave 12, item D (facade options and xmlres records): three new `format_options` keys. `xaml.view_attributes`
   (bool, default unset: the filter's own setting, which is off for `Xaml::new()`; LocOS's `XAML_VIEW_ATTRIBUTES`;
   an explicit `false` also beats `Xaml::with_view_attributes()`). `xml.its_rules` (text, default none: the content

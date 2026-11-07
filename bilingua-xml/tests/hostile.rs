@@ -190,24 +190,118 @@ fn malformed_files_are_typed_errors() {
 }
 
 #[test]
-fn entity_declarations_are_refused() {
+fn entity_declarations_are_kept_as_codes_never_expanded() {
     let f = XmlFilter::new();
     let bomb = br#"<?xml version="1.0"?><!DOCTYPE lolz [<!ENTITY lol "lol"><!ENTITY lol2 "&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;"><!ENTITY lol3 "&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;">]><lolz>&lol3;</lolz>"#;
     let xxe = br#"<?xml version="1.0"?><!DOCTYPE r [<!ENTITY xxe SYSTEM "file:///etc/passwd">]><r>&xxe;</r>"#;
     let param = br#"<?xml version="1.0"?><!DOCTYPE r [<!ENTITY % p SYSTEM "http://127.0.0.1:9/x.dtd"> %p;]><r/>"#;
     let in_attr = br#"<!DOCTYPE r SYSTEM "a>b" [<!ENTITY a "x">]><r y="&a;">hi</r>"#;
+    // The DTD is kept byte for byte and no entity is ever expanded or fetched: a `&name;` is a code.
     for raw in [&bomb[..], &xxe[..], &param[..], &in_attr[..]] {
-        assert!(matches!(f.extract(raw, &opts(None)), Err(Error::Limit(_) | Error::Parse { .. })), "{}", String::from_utf8_lossy(raw));
+        let d = f.extract(raw, &opts(None)).unwrap_or_else(|e| panic!("{}: {e}", String::from_utf8_lossy(raw)));
+        assert!(d.units.iter().all(|u| !show(u).contains("lol lol") && !show(u).contains("root:")));
+        assert_eq!(f.merge(&d).unwrap(), raw, "untouched = as uploaded");
     }
-    // entities in a UTF-16 file are found too
+    let with_text = br#"<!DOCTYPE lolz [<!ENTITY lol "lol"><!ENTITY lol2 "&lol;&lol;">]><lolz>A &lol2; B</lolz>"#;
+    assert_eq!(texts(&f, with_text), vec!["A \u{27E6}x1\u{27E7} B"]);
+    // a comment with a quote or a ">" inside the subset does not hide what follows it
+    let tricky = br#"<!DOCTYPE r [ <!-- don't > "x --> <!ENTITY a "x"> ]><r><p>Hi &a; there</p></r>"#;
+    assert_eq!(texts(&f, tricky), vec!["Hi \u{27E6}x1\u{27E7} there"]);
+    // entities in a UTF-16 file are handled too
     let mut u16 = vec![0xFF, 0xFE];
     for c in String::from_utf8_lossy(&bomb[..]).encode_utf16() {
         u16.extend_from_slice(&c.to_le_bytes());
     }
-    assert!(matches!(f.extract(&u16, &opts(None)), Err(Error::Limit(_))));
+    assert!(f.extract(&u16, &opts(None)).is_ok());
+    // the depth limit still applies behind a DOCTYPE with entities
+    let deep = format!("<!DOCTYPE r [<!ENTITY a \"x\">]>{}x{}", "<a>".repeat(5000), "</a>".repeat(5000));
+    assert!(matches!(f.extract(deep.as_bytes(), &opts(None)), Err(Error::Limit(e)) if e.kind == LimitKind::XmlDepth));
     // the five predefined entities and character references are all a document needs
     let ok = br#"<r>&amp;&lt;&gt;&quot;&apos;&#65;&#x42;</r>"#;
     assert_eq!(texts(&f, ok), vec![r#"&<>"'AB"#]);
+}
+
+/// A kept internal subset, attacked: nothing in it is ever expanded, fetched or read, and it can never hide
+/// document content from the limits (or show subset content as document content).
+#[test]
+fn a_kept_subset_is_never_expanded_fetched_or_misread() {
+    let f = XmlFilter::new();
+    // nested definitions 60 deep: expanding even once would never finish
+    let mut nested = String::from("<!DOCTYPE r [<!ENTITY e0 \"lol\">");
+    for k in 1..60 {
+        nested.push_str(&format!("<!ENTITY e{k} \"&e{p};&e{p};&e{p};&e{p};&e{p};&e{p};&e{p};&e{p};&e{p};&e{p};\">", p = k - 1));
+    }
+    nested.push_str("]><r><p>A &e59; B</p></r>");
+    assert_eq!(texts(&f, nested.as_bytes()), vec!["A \u{27E6}x1\u{27E7} B"]);
+    let mut doc = ex(&f, nested.as_bytes());
+    set(&mut doc, 0, "C \u{27E6}x1\u{27E7} D &e0;");
+    let out = s(&f.merge(&doc).unwrap());
+    assert!(out.starts_with(&nested[..nested.find("]>").unwrap() + 2]), "the DOCTYPE is written back byte for byte");
+    assert!(out.contains("<p>C &e59; D &amp;e0;</p>"), "the code stays a reference, a typed `&` is escaped: {out}");
+    assert!(!out.contains("lollol"));
+
+    // many references and a huge subset: linear work, no expansion
+    let many = format!("<!DOCTYPE r [<!ENTITY a \"aaaaaaaaaaaaaaaaaaaa\">]><r>{}</r>", "&a; ".repeat(200_000));
+    match f.extract(many.as_bytes(), &opts(None)) {
+        Ok(d) => assert!(d.units.iter().all(|u| !show(u).contains("aaaa"))),
+        Err(e) => assert!(matches!(e, Error::Limit(_)), "{e}"),
+    }
+    let huge = format!("<!DOCTYPE r [{}]><r><p>Hi</p></r>", (0..100_000).map(|k| format!("<!ENTITY n{k} \"&n{};\">", k + 1)).collect::<String>());
+    assert_eq!(texts(&f, huge.as_bytes()), vec!["Hi"]);
+
+    // external entities and parameter entities, file and http: never fetched, never read
+    let secret = std::env::temp_dir().join(format!("bili-xmldoc-secret-{}.txt", std::process::id()));
+    std::fs::write(&secret, "TOPSECRET").unwrap();
+    let url = format!("file://{}", secret.display().to_string().replace('\\', "/"));
+    for raw in [
+        format!("<!DOCTYPE r [<!ENTITY x SYSTEM \"{url}\">]><r><p>Hi &x;</p></r>"),
+        format!("<!DOCTYPE r [<!ENTITY % p SYSTEM \"{url}\"> %p;]><r><p>Hi &x;</p></r>"),
+        "<!DOCTYPE r SYSTEM \"http://127.0.0.1:9/r.dtd\" [<!ENTITY x SYSTEM \"http://127.0.0.1:9/x\">]><r><p>Hi &x;</p></r>".to_string(),
+    ] {
+        let d = ex(&f, raw.as_bytes());
+        assert_eq!(d.units.iter().map(show).collect::<Vec<_>>(), vec!["Hi \u{27E6}x1\u{27E7}"], "{raw}");
+        let out = translate_all(&f, raw.as_bytes(), None);
+        assert!(!s(&out).contains("TOPSECRET") && s(&out).contains("&x;"), "{raw}");
+    }
+    let _ = std::fs::remove_file(&secret);
+
+    // the DOCTYPE end: quotes in comments, comments in quotes, '>' in PIs, conditional sections, ']]>' games
+    for (raw, want) in [
+        (r#"<!DOCTYPE r [ <!ENTITY a "<!-- "> <!ENTITY b "-->"> ]><r><p>Hi &a;&b;</p></r>"#, "Hi \u{27E6}x1\u{27E7}\u{27E6}x2\u{27E7}"),
+        (r#"<!DOCTYPE r [ <!-- it's "here" ]> --> <!ENTITY a "x"> ]><r><p>Hi &a;</p></r>"#, "Hi \u{27E6}x1\u{27E7}"),
+        (r#"<!DOCTYPE r [ <?pi ]> " ' > ?> <!ENTITY a "x"> ]><r><p>Hi &a;</p></r>"#, "Hi \u{27E6}x1\u{27E7}"),
+        (r#"<!DOCTYPE r [ <![INCLUDE[ <!ENTITY a "</r><r>"> ]]> ]><r><p>Hi &a;</p></r>"#, "Hi \u{27E6}x1\u{27E7}"),
+        (r#"<!DOCTYPE r [ <!ENTITY a "]]>"> ]><r><p>Hi &a;</p></r>"#, "Hi \u{27E6}x1\u{27E7}"),
+        (r#"<!doctype r [ <!ENTITY a "x>y"> ]><r><p>Hi &a;</p></r>"#, "Hi \u{27E6}x1\u{27E7}"),
+        (r#"<!DOCTYPE r[<!ENTITY a "x>y">]><r><p>Hi &a;</p></r>"#, "Hi \u{27E6}x1\u{27E7}"),
+    ] {
+        assert_eq!(texts(&f, raw.as_bytes()), vec![want], "{raw}");
+        assert_eq!(f.merge(&ex(&f, raw.as_bytes())).unwrap(), raw.as_bytes(), "{raw}");
+    }
+    // a subset that never closes (quote, comment, PI, bracket) is refused, never read as document content
+    for raw in [
+        r#"<!DOCTYPE r [ <!ENTITY a "x> ]><r><p>Hi</p></r>"#,
+        r#"<!DOCTYPE r [ <!-- ]><r><p>Hi</p></r>"#,
+        r#"<!DOCTYPE r [ <?pi ]><r><p>Hi</p></r>"#,
+        r#"<!DOCTYPE r [ <!ENTITY a "x"> <r><p>Hi</p></r>"#,
+    ] {
+        assert!(f.extract(raw.as_bytes(), &opts(None)).is_err(), "{raw}");
+    }
+    // an ITS rules file keeps refusing any internal subset, with or without entities
+    for dt in [r#"<!DOCTYPE its:rules [<!ELEMENT x ANY>]>"#, r#"<!DOCTYPE its:rules [<!ENTITY a "x">]>"#] {
+        let rules = format!(r#"{dt}<its:rules xmlns:its="http://www.w3.org/2005/11/its" version="2.0"><its:translateRule selector="//t" translate="no"/></its:rules>"#);
+        assert!(bilingua_xml::ItsRules::parse(rules.as_bytes()).is_err(), "{dt}");
+    }
+    // a quoted '>' must not let the reader end the DOCTYPE early and slip deep nesting past the limits (in any case)
+    let l = ExtractOptions::new().with_granularity(Granularity::Paragraph).with_limits(Limits::new().with_max_xml_depth(8).with_max_xml_elements(50));
+    for dt in ["<!DOCTYPE", "<!doctype", "<!DocType"] {
+        let sneaky = format!("{dt} r SYSTEM '><r>{}x{}<z q='>'/></r>", "<a>".repeat(20), "</a>".repeat(20));
+        assert!(f.extract(sneaky.as_bytes(), &l).is_err(), "{sneaky}");
+        let wide = format!("{dt} r [<!ENTITY a \"x>\">]><r>{}</r>", "<b/>".repeat(60));
+        assert!(matches!(f.extract(wide.as_bytes(), &l), Err(Error::Limit(e)) if e.kind == LimitKind::XmlElements), "{wide}");
+        let deep = format!("{dt} r [<!-- ' --><!ENTITY a \"x\">]><r>{}x{}</r>", "<a>".repeat(20), "</a>".repeat(20));
+        assert!(matches!(f.extract(deep.as_bytes(), &l), Err(Error::Limit(e)) if e.kind == LimitKind::XmlDepth), "{deep}");
+    }
 }
 
 #[test]

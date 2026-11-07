@@ -296,15 +296,15 @@ fn hostile_inputs() {
     let f = generic();
     let laughs = br#"<?xml version="1.0"?><!DOCTYPE lolz [<!ENTITY lol "lol"><!ENTITY lol2 "&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;">]><lolz>&lol2;</lolz>"#;
     let xxe = br#"<!DOCTYPE r [<!ENTITY x SYSTEM "file:///etc/passwd">]><r><p>&x;</p></r>"#;
+    // Bilingua keeps an internal subset (LocOS refuses it): Okapi opens such files, and real DocBook 4 and DITA
+    // files have them. Nothing is expanded or fetched; every entity stays a code and the DOCTYPE is written back.
     for raw in [&laughs[..], &xxe[..]] {
-        match f.extract(raw, &opts(None)) {
-            Err(Error::Limit(e)) => assert_eq!(e.kind, LimitKind::XmlEntities),
-            other => panic!("internal subset accepted: {:?}", other.map(|d| d.units.len())),
-        }
+        let d = f.extract(raw, &opts(None)).unwrap();
+        assert_eq!(f.merge(&d).unwrap(), raw);
+        assert!(d.units.iter().all(|u| !show(u).contains("root:")));
     }
-    // an internal subset with no ENTITY is refused too (as LocOS)
     let subset = br#"<!DOCTYPE r [<!ELEMENT r (#PCDATA)>]><r>x</r>"#;
-    assert!(matches!(f.extract(subset, &opts(None)), Err(Error::Parse { .. })));
+    assert_eq!(texts(&f, subset), vec!["x"]);
 
     let ext = br#"<!DOCTYPE r SYSTEM "http://127.0.0.1:9/evil.dtd"><r><p>Hi &ent; there</p></r>"#;
     assert_eq!(texts(&f, ext), vec!["Hi \u{27E6}x1\u{27E7} there"], "entity kept as a token");

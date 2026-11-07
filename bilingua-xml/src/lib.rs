@@ -171,9 +171,9 @@ impl XmlFilter {
         let opts = ExtractOptions::default();
         let limits = opts.limits();
         guard::check_input(bytes, &limits)?;
-        guard::check_xml(bytes, &limits)?;
+        guard::check_xml_keeping_dtd(bytes, &limits)?;
         let dec = read_xml(bytes, &opts)?;
-        let t = Tree::parse(&dec.text)?;
+        let t = Tree::parse(&dec.text, &limits)?;
         if !matches!(self.ml, MlPolicy::Off) {
             if let Some(mp) = ml::plan(&t, self.ml_config().as_ref(), &limits, true, true)? {
                 return Ok(Inspection {
@@ -188,9 +188,9 @@ impl XmlFilter {
     fn do_extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
         let limits = opts.limits();
         guard::check_input(bytes, &limits)?;
-        guard::check_xml(bytes, &limits)?;
+        guard::check_xml_keeping_dtd(bytes, &limits)?;
         let dec = read_xml(bytes, opts)?;
-        let t = Tree::parse(&dec.text)?;
+        let t = Tree::parse(&dec.text, &limits)?;
         if !matches!(self.ml, MlPolicy::Off) {
             if let Some(mp) = ml::plan(&t, self.ml_config().as_ref(), &limits, true, true)? {
                 let mut doc = skel::build_document(&t, &mp.planned, &[String::new()], &HashSet::new(), opts, dec.encoding.clone(), None, self.id);
@@ -245,7 +245,7 @@ impl Filter for XmlFilter {
         self.exts
     }
 
-    /// Loose: any well-formed XML document without a DTD internal subset (XHTML, root `html`, excepted). Put this filter after every filter
+    /// Loose: any well-formed XML document (a DTD internal subset is allowed and kept as it is; XHTML, root `html`, excepted). Put this filter after every filter
     /// that owns a specific XML vocabulary.
     fn sniff(&self, bytes: &[u8]) -> bool {
         let head = bytes.iter().copied().find(|b| !(b.is_ascii_whitespace() || matches!(*b, 0xEF | 0xBB | 0xBF | 0xFF | 0xFE | 0)));
@@ -253,12 +253,12 @@ impl Filter for XmlFilter {
             return false;
         }
         let opts = ExtractOptions::default();
-        if guard::check_xml(bytes, &opts.limits()).is_err() {
+        if guard::check_xml_keeping_dtd(bytes, &opts.limits()).is_err() {
             return false;
         }
         match read_xml(bytes, &opts) {
             // well-formed XHTML is the HTML filter's (it comes after this one)
-            Ok(d) => Tree::parse(&d.text).is_ok_and(|t| !t.local(t.root).eq_ignore_ascii_case("html")),
+            Ok(d) => Tree::parse(&d.text, &opts.limits()).is_ok_and(|t| !t.local(t.root).eq_ignore_ascii_case("html")),
             Err(_) => false,
         }
     }
