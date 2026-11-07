@@ -541,14 +541,14 @@ fn emphasis_that_would_not_flank_in_the_translation_is_repaired() {
     // marks inside a code span are not emphasis: the pair around `( x)` closes before the backtick and stays
     d.set_target("u2", vec![src[0].clone(), Inline::text("( x)"), src[2].clone(), Inline::text("`a**`")]).unwrap();
     assert_eq!(merged(&d), "Intro text\n\n**( x)**`a**`\n");
-    // `_` glued to letters on both sides becomes `*`
-    let mut d = extract("Intro text\n\nsee _this_ one\n");
-    let src = d.units[1].source();
-    d.set_target("u2", vec![Inline::text("\u{898b}"), src[1].clone(), Inline::text("\u{3053}\u{308c}"), src[3].clone(), Inline::text("\u{3092}")]).unwrap();
-    assert_eq!(merged(&d), "Intro text\n\n\u{898b}*\u{3053}\u{308c}*\u{3092}\n");
     // a translation that keeps good flanking keeps its stars
     d.set_target("u2", vec![src[0].clone(), Inline::text("Nota"), src[2].clone(), Inline::text(" abc")]).unwrap();
     assert_eq!(merged(&d), "Intro text\n\n**Nota** abc\n");
     let d2 = extract(&merged(&d));
     assert_eq!(d2.units.len(), 2);
+    // `_` glued to letters on both sides becomes `*`
+    let mut d = extract("Intro text\n\nsee _this_ one\n");
+    let src = d.units[1].source();
+    d.set_target("u2", vec![Inline::text("\u{898b}"), src[1].clone(), Inline::text("\u{3053}\u{308c}"), src[3].clone(), Inline::text("\u{3092}")]).unwrap();
+    assert_eq!(merged(&d), "Intro text\n\n\u{898b}*\u{3053}\u{308c}*\u{3092}\n");
 }
