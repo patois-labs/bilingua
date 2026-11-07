@@ -19,18 +19,65 @@ fn filter(cfg: &str) -> HtmlFilter {
     }
 }
 
-/// The unit text the way LocOS shows it: `g` pairs and `x` points numbered by the unit's own token ids.
+/// The unit text the way LocOS shows it: `g` pairs and `x` points numbered by the unit's own token ids. An orphan
+/// end tag (kept on purpose, LocOS issue 810) has no token in LocOS: it is left out and the ids after it are
+/// renumbered the way LocOS counts ([`locos_id`]).
 fn locos_text(u: &Unit) -> String {
+    let orphans = orphan_ids(u);
     let mut s = String::new();
     for i in u.source() {
         match i {
             Inline::Text(t) => s.push_str(&t),
-            Inline::Tag { id, kind: TagKind::Open, .. } => s.push_str(&format!("\u{27E6}g{id}\u{27E7}")),
-            Inline::Tag { id, kind: TagKind::Close, .. } => s.push_str(&format!("\u{27E6}/g{id}\u{27E7}")),
-            Inline::Tag { id, kind: TagKind::Standalone, .. } => s.push_str(&format!("\u{27E6}x{id}\u{27E7}")),
+            Inline::Tag { id, .. } if orphans.contains(&id) => {}
+            Inline::Tag { id, kind: TagKind::Open, .. } => s.push_str(&format!("\u{27E6}g{}\u{27E7}", locos_id(&id, &orphans))),
+            Inline::Tag { id, kind: TagKind::Close, .. } => s.push_str(&format!("\u{27E6}/g{}\u{27E7}", locos_id(&id, &orphans))),
+            Inline::Tag { id, kind: TagKind::Standalone, .. } => s.push_str(&format!("\u{27E6}x{}\u{27E7}", locos_id(&id, &orphans))),
         }
     }
     s
+}
+
+/// The ids of a unit's orphan end tags: point codes whose markup is an end tag (`</b>` with no `<b>`). Bilingua
+/// keeps them on purpose (LocOS issue 810); LocOS drops them from the unit and gives them no token number.
+fn orphan_ids(u: &Unit) -> Vec<String> {
+    u.source()
+        .iter()
+        .filter_map(|i| match i {
+            Inline::Tag { id, kind: TagKind::Standalone, .. }
+                if u.codes.get(id).and_then(|c| c.standalone.as_deref()).is_some_and(|t| t.starts_with("</")) =>
+            {
+                Some(id.clone())
+            }
+            _ => None,
+        })
+        .collect()
+}
+
+/// A token id as LocOS numbers it: one counter for every token and no number for an orphan end tag, so each id
+/// after an orphan is one lower.
+fn locos_id(id: &str, orphans: &[String]) -> String {
+    match id.parse::<usize>() {
+        Ok(n) => (n - orphans.iter().filter(|o| o.parse::<usize>().is_ok_and(|m| m < n)).count()).to_string(),
+        Err(_) => id.to_string(),
+    }
+}
+
+/// LocOS reads a page that declares ISO-8859-8 as Windows-1252 (LocOS issue 810.3; Bilingua reads it as Hebrew).
+/// The page, and LocOS's builds of it, with the declaration saying Windows-1252, which Bilingua reads the LocOS way.
+fn as_locos_1252(b: &[u8]) -> Vec<u8> {
+    let (from, to): (&[u8], &[u8]) = (b"charset=\"iso-8859-8\"", b"charset=\"windows-1252\"");
+    let mut out = Vec::with_capacity(b.len() + 8);
+    let mut i = 0;
+    while i < b.len() {
+        if b[i..].starts_with(from) {
+            out.extend_from_slice(to);
+            i += from.len();
+        } else {
+            out.push(b[i]);
+            i += 1;
+        }
+    }
+    out
 }
 
 /// What the LocOS adapter does with a translated text: `x`, `g` and `/g` tokens name the source tag with that
@@ -152,7 +199,17 @@ fn matches_locos_on_random_pages_and_hostile_cases() {
         let name = c["name"].as_str().unwrap();
         let cfg = c["cfg"].as_str().unwrap();
         let f = filter(cfg);
-        let data = hex(c["hex"].as_str().unwrap());
+        let mut data = hex(c["hex"].as_str().unwrap());
+        // kept on purpose (LocOS issue 810.3): Bilingua reads the declared ISO-8859-8 and writes it back unchanged;
+        // the rest of the comparison reads the page the LocOS way (as Windows-1252)
+        let hebrew = name.starts_with("legacy-iso-8859-8");
+        if hebrew {
+            let d = f.extract(&data, &ExtractOptions::default()).expect("ISO-8859-8 page");
+            let he = |u: &Unit| u.source().iter().any(|i| matches!(i, Inline::Text(t) if t.chars().any(|c| ('\u{5d0}'..='\u{5ea}').contains(&c))));
+            assert!(d.units.iter().any(he), "{name}: not read as Hebrew");
+            assert_eq!(f.merge(&d).unwrap(), data, "{name}: unchanged merge");
+            data = as_locos_1252(&data);
+        }
         if let Some(err) = c.get("error") {
             match f.extract(&data, &ExtractOptions::default()) {
                 Ok(_) => bad.push(format!("{name}: LocOS refuses ({err}), Bilingua opens it")),
@@ -179,18 +236,9 @@ fn matches_locos_on_random_pages_and_hostile_cases() {
                 continue;
             }
         };
-        // kept on purpose (LocOS issue 810): an orphan end tag is a point code here and is dropped from LocOS's
-        // units; a page that declares ISO-8859-8 is read as Hebrew here and as Windows-1252 mojibake by LocOS
-        let orphan_end = doc.units.iter().any(|u| {
-            u.source().iter().any(|i| match i {
-                Inline::Tag { id, kind: TagKind::Standalone, .. } => u.codes.get(id).and_then(|c| c.standalone.as_deref()).is_some_and(|t| t.starts_with("</")),
-                _ => false,
-            })
-        });
-        if orphan_end || name.starts_with("legacy-iso-8859-8") {
-            kept.push(format!("{name}: {}", if orphan_end { "orphan end tag kept" } else { "ISO-8859-8 read" }));
-            continue;
-        }
+        // kept on purpose (LocOS issue 810): an orphan end tag is a point code here; LocOS drops it from the unit
+        // (compared without it, see `locos_text`) and blanks it from a build (such a page's builds are not compared)
+        let orphan_end = doc.units.iter().any(|u| !orphan_ids(u).is_empty());
         let want = c["units"].as_array().unwrap();
         if doc.units.len() != want.len() {
             bad.push(format!("{name}: {} units, LocOS {}: {:?} vs {:?}", doc.units.len(), want.len(), doc.units.iter().map(locos_text).collect::<Vec<_>>(), want.iter().map(|w| w["text"].as_str().unwrap()).collect::<Vec<_>>()));
@@ -208,9 +256,13 @@ fn matches_locos_on_random_pages_and_hostile_cases() {
             }
             let map = w["map"].as_object().unwrap();
             let mut seen = 0;
+            let orphans = orphan_ids(u);
             for i in u.source() {
                 let Inline::Tag { id, kind, .. } = i else { continue };
-                let (Some(entry), Some(code)) = (map.get(&id), u.codes.get(&id)) else {
+                if orphans.contains(&id) {
+                    continue;
+                }
+                let (Some(entry), Some(code)) = (map.get(&locos_id(&id, &orphans)), u.codes.get(&id)) else {
                     bad.push(format!("{name}: unit {k}: token {id} missing"));
                     unit_bad = true;
                     break;
@@ -246,6 +298,10 @@ fn matches_locos_on_random_pages_and_hostile_cases() {
         }
         pages += 1;
         units_n += want.len();
+        if orphan_end {
+            kept.push(format!("{name}: orphan end tag kept (units match without it, builds not compared)"));
+            continue;
+        }
         let n = want.len();
         let jsp = c["server_code"].as_str() == Some("jsp");
         let mut runs: Vec<(String, Option<&str>, &serde_json::Value)> = ["all", "third", "tok", "swap"].iter().map(|l| (l.to_string(), None, &c["builds"][*l])).collect();
@@ -258,7 +314,7 @@ fn matches_locos_on_random_pages_and_hostile_cases() {
             let what = format!("{label}{}", loc.map(|l| format!(" {l}")).unwrap_or_default());
             match (exp, got) {
                 (serde_json::Value::String(h), Ok(g)) => {
-                    let e = hex(h);
+                    let e = if hebrew { as_locos_1252(&hex(h)) } else { hex(h) };
                     // kept (bilingua-serverpages): a JSP translation ending in a backslash before `${` gets the
                     // backslash as `&#92;` so the expression stays live; LocOS writes it raw
                     let g = if jsp { String::from_utf8_lossy(&g).replace("&#92;", "\\").into_bytes() } else { g };

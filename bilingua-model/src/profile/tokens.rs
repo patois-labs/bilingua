@@ -563,6 +563,35 @@ mod tests {
             let back = from_locos_text(&moved, &map);
             assert!(matches!(&back[0], Inline::Text(x) if x.starts_with("Use \u{27E6}x2\u{27E7} and \u{27E6}g1\u{27E7}")), "{f}");
         }
+        // numbers with gaps: a translator who swaps the codes gets each tag back by its own number
+        let inl = vec![
+            Inline::text("\u{27E6}x2\u{27E7} "),
+            Inline::tag("1", TagKind::Open, "<b>"),
+            Inline::text("one"),
+            Inline::tag("1", TagKind::Close, "</b>"),
+            Inline::tag("3", TagKind::Standalone, "<br/>"),
+            Inline::text("two"),
+        ];
+        for f in ["html", "docx"] {
+            let (t, map) = to_locos_text_for(f, &inl);
+            let p = locos_pair_letter(f);
+            let (n_pair, n_point) = (map.iter().find(|(_, c)| c.id == "1").unwrap().0, map.iter().find(|(_, c)| c.id == "3").unwrap().0);
+            assert!(!map.contains_key("2"), "{f}: {map:?}");
+            let swapped = format!("\u{27E6}x2\u{27E7} two\u{27E6}x{n_point}\u{27E7}\u{27E6}{p}{n_pair}\u{27E7}one\u{27E6}/{p}{n_pair}\u{27E7}");
+            let (back, problems) = parse_locos_text(&swapped, &map);
+            assert_eq!(problems.len(), 1, "{f}: only the look-alike is unknown: {problems:?} ({t})");
+            assert_eq!(
+                back,
+                vec![
+                    Inline::text("\u{27E6}x2\u{27E7} two"),
+                    Inline::tag("3", TagKind::Standalone, "<br/>"),
+                    Inline::tag("1", TagKind::Open, "<b>"),
+                    Inline::text("one"),
+                    Inline::tag("1", TagKind::Close, "</b>"),
+                ],
+                "{f}"
+            );
+        }
         // a letterless look-alike ("⟦1⟧") also keeps its number free
         let inl = vec![Inline::text("\u{27E6}1\u{27E7} "), Inline::tag("a", TagKind::Standalone, "<br/>")];
         let (t, map) = to_locos_text(&inl);
