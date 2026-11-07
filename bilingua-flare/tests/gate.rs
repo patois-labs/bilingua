@@ -84,15 +84,15 @@ fn madcap_inline_elements_match_locos_and_round_trip() {
         let again = extract(&merge(&d));
         assert_eq!(again.units.len(), d.units.len(), "{out}");
     }
-    // an orphan end tag: LocOS drops it from the unit text and from a translated build (the HTML filter does the
-    // same since D4); an untouched merge keeps it
+    // an orphan end tag is a point code (LocOS issue 810, kept on purpose): LocOS drops it from the unit text and
+    // from a translated build; here an untouched and a translated merge both keep it
     let src_topic = t("<p>A </MadCap:xref> B</p>");
     let src = proj(&src_topic);
     let mut d = extract(&src);
-    assert_eq!(&loc_texts(&d)[1..], ["A  B"]);
+    assert_eq!(&loc_texts(&d)[1..], ["A \u{27E6}x1\u{27E7} B"]);
     assert_eq!(merge(&d), src);
     translate_all(&mut d);
-    assert_eq!(count(&out_topic(&merge(&d)), "</MadCap:"), 0);
+    assert_eq!(count(&out_topic(&merge(&d)), "</MadCap:"), 1);
 }
 
 #[test]
