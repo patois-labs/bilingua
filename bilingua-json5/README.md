@@ -18,10 +18,11 @@ JSON5 and JSONC filter for Bilingua (`.json5`, `.jsonc`; format id `json5`).
 - Encodings: UTF-8 (BOM kept), UTF-16 with a BOM (kept), otherwise the Windows code page of the source language
   (Windows-1250 to 1258, 874, Shift_JIS, GBK, Big5, EUC-KR; Windows-1252 when the language has none). The output keeps
   the encoding when every character fits and is UTF-8 when it does not. A file that looks binary, or whose legacy
-  bytes do not decode and encode back to the same bytes, is refused (`Error::Unsupported`).
+  bytes do not decode and encode back to the same bytes, is refused (`Error::Encoding`, code `encoding`).
 - Limits (`Limits`, `Json5Filter::with_limits`): nesting 256, 500 000 strings, 100 000 characters per string,
-  256 MiB per file, plus the Localization OS pre-parse budgets (quotes and separators per allowed string). Anything
-  malformed, truncated or over a limit is `Error::Parse` with line and column; nothing panics, nothing recurses.
+  256 MiB per file, lowered to `ExtractOptions::limits` where those are lower, plus the Localization OS pre-parse
+  budgets (`check_json5_budget`: quotes and separators per allowed string). Over a limit is `Error::Limit` (code
+  `limit`); anything malformed or truncated is `Error::Parse` with line and column; nothing panics, nothing recurses.
 - Portable: no file system, threads, network or clock. `cargo check --target wasm32-unknown-unknown` passes.
 
 ```rust

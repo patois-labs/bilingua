@@ -16,7 +16,8 @@
 //! page of the source language (Windows-1252 by default). The output keeps the encoding when every character fits.
 //!
 //! Limits (see [`Limits`]): nesting 256, 500 000 strings, 100 000 characters per string, 256 MiB. Malformed,
-//! truncated, deep and oversized files return [`Error::Parse`] or [`Error::Unsupported`]; nothing panics.
+//! truncated files return [`Error::Parse`], deep and oversized ones [`Error::Limit`], unreadable bytes
+//! [`Error::Encoding`]; nothing panics.
 
 /// Skeleton schema number: bump only when this crate's skeleton layout changes (see `bilingua_model::check_parser`).
 pub const SKELETON_SCHEMA: u32 = 1;
@@ -62,11 +63,12 @@ impl Filter for Json5Filter {
 
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
         bilingua_model::check_own_options(self, &opts.format_options)?;
-        if bytes.len() > self.limits.max_bytes {
-            return Err(Error::Parse { format: ID.into(), msg: format!("the file is larger than {} bytes", self.limits.max_bytes) });
+        let limits = self.limits.capped_by(&opts.limits());
+        if bytes.len() > limits.max_bytes {
+            return Err(LimitError::new(LimitKind::InputBytes, format!("the file is larger than {} bytes", limits.max_bytes)).into());
         }
         let (text, enc) = encoding::decode(bytes, opts.source_lang.as_deref())?;
-        let vals = scan::scan(&text, &self.limits)?;
+        let vals = scan::scan(&text, &limits)?;
 
         let mut parts: Vec<SkelPart> = Vec::new();
         let mut units: Vec<Unit> = Vec::new();

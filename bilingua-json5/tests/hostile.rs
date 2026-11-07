@@ -91,7 +91,7 @@ fn deep_nesting_gives_a_typed_error_not_a_stack_overflow() {
         }
         let src = [b"{".to_vec(), d, b"}".to_vec()].concat();
         let e = f.extract(&src, &opts()).unwrap_err();
-        assert!(matches!(e, Error::Parse { .. }), "{e}");
+        assert!(matches!(e, Error::Limit(_)), "{e}");
     }
 }
 
@@ -108,7 +108,7 @@ fn a_huge_file_over_the_byte_limit_is_refused() {
     let f = Json5Filter::with_limits({ let mut built = Limits::default(); built.max_bytes = 1000; built });
     let big = format!("[{}]", "'word',".repeat(1000));
     let e = f.extract(big.as_bytes(), &opts()).unwrap_err();
-    assert!(matches!(e, Error::Parse { .. }));
+    assert!(matches!(e, Error::Limit(_)));
 }
 
 #[test]

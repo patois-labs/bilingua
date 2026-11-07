@@ -214,12 +214,14 @@ fn plural_variants_filled_729() {
 fn refusals() {
     let latin1 = b"hello = caf\xe9\n";
     // decode refusals are code `encoding` with LocOS's sentences (UnsupportedEncodingError)
+    let bin = b"k = \xff\x01\x02\x03\x04\x05\x06";
+    assert!(matches!(extract(bin), Err(Error::Encoding(m)) if m.contains("looks like a binary file")), "binary");
     assert!(
         matches!(extract(latin1), Err(Error::Encoding(m)) if m == "Fluent .ftl files are UTF-8; byte 0xe9 at position 11 is not. Re-save the file as UTF-8."),
         "latin-1"
     );
     assert!(
-        matches!(extract(b"\x00\x01\x02hello = x\x00"), Err(Error::Encoding(m)) if m.contains("looks like a binary file")),
+        matches!(extract(b"\x00\x01\x02hello = x\x00"), Err(Error::Encoding(m)) if m.contains("NUL bytes")),
         "binary"
     );
     let deep = format!("x = {}$a{}\n", "{ ".repeat(200), " }".repeat(200));

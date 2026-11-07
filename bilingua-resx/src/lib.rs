@@ -62,6 +62,8 @@ fn parse(bytes: &[u8], opts: &ExtractOptions) -> Result<Parsed, Error> {
     let l = opts.limits();
     guard::check_input(bytes, &l)?;
     let dec = enc::decode_text(bytes, &DecodeOptions::new(opts).declared())?;
+    // LocOS `xml_resource_common.check_xml_budget` (#571 pattern): `<` over 40 x MAX_DOCUMENT_SEGMENTS, before the parse
+    guard::check_budget(dec.text.bytes().filter(|&b| b == b'<').count(), 40, "This RESX file has far more entries", &l)?;
     guard::check_xml(dec.text.as_bytes(), &l)?;
     let scan = xml::scan(&dec.text)?;
     Ok(Parsed { text: dec.text, enc: dec.encoding, warnings: dec.warnings, scan })

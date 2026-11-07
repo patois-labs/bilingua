@@ -96,6 +96,8 @@ impl QtTs {
         }
         let dec = enc::decode_text(bytes, &enc::DecodeOptions::with_limits(*limits).with_source_lang(opts.source_lang.as_deref()).declared())?;
         let text = dec.text.as_str();
+        // LocOS `xml_resource_common.check_xml_budget` (#571 pattern): `<` over 40 x MAX_DOCUMENT_SEGMENTS
+        guard::check_budget(text.bytes().filter(|&b| b == b'<').count(), 40, "This Qt Linguist .ts file has far more entries", limits)?;
         if !matches!(enc::base(&dec.encoding), "utf-8" | "utf-8-bom" | "utf-16le" | "utf-16be") && textenc::encode(text, &dec.encoding, &bilingua_model::MergeOptions::default())? != bytes {
             // bytes of a legacy code page that read to the same character as another spelling cannot be written
             // back unchanged: refuse rather than alter the file

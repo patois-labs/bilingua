@@ -12,8 +12,9 @@ pub const UTF8_BOM: &str = "utf-8-bom";
 pub const UTF16LE: &str = "utf-16le";
 pub const UTF16BE: &str = "utf-16be";
 
+/// A decode refusal: code `encoding` (LocOS UnsupportedEncodingError).
 fn refuse(msg: impl Into<String>) -> Error {
-    Error::Unsupported(msg.into())
+    Error::Encoding(msg.into())
 }
 
 fn looks_binary(data: &[u8]) -> bool {
@@ -94,7 +95,7 @@ pub fn decode(data: &[u8], source_lang: Option<&str>) -> Result<(String, String)
         }
     }
     if looks_binary(data) {
-        return Err(refuse("the file is not valid UTF-8 and looks like a binary file, not text; re-save it as UTF-8"));
+        return Err(refuse("file is not valid UTF-8 and looks like a binary file, not text; re-save the file as UTF-8."));
     }
     let primary = code_page_for(source_lang).unwrap_or(encoding_rs::WINDOWS_1252);
     let attempts = if primary == encoding_rs::WINDOWS_1252 { vec![primary] } else { vec![primary, encoding_rs::WINDOWS_1252] };

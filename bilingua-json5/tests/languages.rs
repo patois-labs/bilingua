@@ -176,7 +176,7 @@ fn undefined_windows_1252_bytes_and_unreadable_files_are_refused() {
     let mut file = b"{a: 'x".to_vec();
     file.push(0x81);
     file.extend(b"y'}");
-    assert!(matches!(f.extract(&file, &opts("en")), Err(Error::Unsupported(_))));
+    assert!(matches!(f.extract(&file, &opts("en")), Err(Error::Encoding(_))));
 }
 
 #[test]

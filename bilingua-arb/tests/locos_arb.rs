@@ -225,13 +225,13 @@ fn hostile_inputs() {
     }
     // non-UTF-8 is refused with an honest message, not decoded with replacement characters
     match ex(b"{\"a\": \"caf\xe9\"}") {
-        Err(Error::Parse { msg, .. }) => assert!(msg.contains("UTF-8"), "{msg}"),
+        Err(Error::Encoding(msg)) => assert!(msg.contains("UTF-8"), "{msg}"),
         other => panic!("{other:?}"),
     }
-    assert!(matches!(ex(&[0xFF, 0xFE, b'{', 0]), Err(Error::Unsupported(_))));
+    assert!(matches!(ex(&[0xFF, 0xFE, b'{', 0]), Err(Error::Encoding(_))));
     // nesting deeper than any resource file
     let deep = format!("{{{}{}}}", "\"a\": {".repeat(300), "}".repeat(300));
-    assert!(matches!(ex(deep.as_bytes()), Err(Error::Parse { .. })));
+    assert!(matches!(ex(deep.as_bytes()), Err(Error::Limit(e)) if e.msg.contains("nested deeper than")));
     // malformed ICU: one opaque unit, written back verbatim
     let src = r#"{"bad": "{count, plural, one{# x} other{# y}", "@bad": {}}"#;
     let d = ex(src.as_bytes()).unwrap();
@@ -244,9 +244,9 @@ fn hostile_inputs() {
     // limits: too many units and too large a file are typed errors (the LocOS suite lowers MAX_DOCUMENT_SEGMENTS)
     let many: String = format!("{{{}}}", (0..10).map(|i| format!("\"k{i}\": \"word {i}\"")).collect::<Vec<_>>().join(", "));
     let small = { let mut built = Limits::default(); built.max_units = 3; built };
-    assert!(matches!(Arb.extract_with(many.as_bytes(), &ExtractOptions::default(), &small), Err(Error::Parse { .. })));
+    assert!(matches!(Arb.extract_with(many.as_bytes(), &ExtractOptions::default(), &small), Err(Error::Limit(_))));
     let tiny = { let mut built = Limits::default(); built.max_bytes = 20; built };
-    assert!(matches!(Arb.extract_with(many.as_bytes(), &ExtractOptions::default(), &tiny), Err(Error::Parse { .. })));
+    assert!(matches!(Arb.extract_with(many.as_bytes(), &ExtractOptions::default(), &tiny), Err(Error::Limit(_))));
     // plural branches count as units
     let branches = format!("{{\"p\": \"{{n, plural, {}}}\"}}", (0..6).map(|i| format!("={i}{{w{i}}}")).collect::<Vec<_>>().join(" "));
     let four = { let mut built = Limits::default(); built.max_units = 4; built };
@@ -284,4 +284,22 @@ fn localized_plural_arb_gains_the_targets_categories() {
     assert_eq!(ru["@@locale"], "ru");
     assert!(ru["n"].as_str().unwrap().contains("few{"), "{ru}");
     assert_eq!(extract(src).units.len(), 3);
+}
+
+/// B-side 7 (verify_json_dialects_filter test_hostile_inputs:523-532): with MAX_DOCUMENT_SEGMENTS=3 LocOS's
+/// `check_json_budget` refuses 200 empty strings before parsing; so does `Filter::extract` with those limits.
+#[test]
+fn json_budget_before_parsing() {
+    let mut o = ExtractOptions::default();
+    o.limits = Some(bilingua_model::Limits::new().with_max_units(3));
+    let empties = format!("{{{}}}", (0..200).map(|i| format!("\"k{i}\": \"\"")).collect::<Vec<_>>().join(", "));
+    let e = Arb.extract(empties.as_bytes(), &o).unwrap_err();
+    assert!(matches!(&e, Error::Limit(l) if l.kind == LimitKind::Units && l.msg.contains("far more strings")), "{e:?}");
+    let values = format!("{{\"a\": [{}]}}", vec!["1"; 100].join(","));
+    let e = Arb.extract(values.as_bytes(), &o).unwrap_err();
+    assert!(matches!(&e, Error::Limit(l) if l.msg.contains("far more values")), "{e:?}");
+    // more messages than the cap: code `limit`
+    let four = r#"{"a": "One", "b": "Two", "c": "Three", "d": "Four"}"#;
+    assert!(matches!(Arb.extract(four.as_bytes(), &o), Err(Error::Limit(_))));
+    assert_eq!(Arb.extract(br#"{"a": "One", "b": "Two"}"#, &o).unwrap().units.len(), 2);
 }
