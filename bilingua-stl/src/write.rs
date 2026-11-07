@@ -280,28 +280,29 @@ fn blocks_for(tf: &[u8], headers: &[[u8; 16]], cct: Cct) -> Option<Vec<u8>> {
     Some(out)
 }
 
-/// A byte that means the same in every code table: a control code (0x00-0x1F, the space, and 0x80-0x9F).
-/// Upper-half bytes a table has no character for (0xC0, 0xC9 in table 00, many in 8859-6) are table specific:
-/// copied raw into another table they could become letters, so a table switch must not move them.
-fn movable_byte(b: u8) -> bool {
-    b <= 0x20 || (0x80..=0x9F).contains(&b)
+/// A byte kept raw (a control code, a row-edge space, a byte the old table has no character for) means the same in
+/// table `to`: control codes (0x00-0x1F, 0x80-0x9F) always do. An upper-half byte the old table has no character
+/// for (0xC0 in table 00) is only movable when `to` has no character for it either: copied raw it would read as a
+/// letter there. A floating diacritic of table 00 never moves into table 00 (it would join the next letter).
+fn movable_byte(b: u8, from: Cct, to: Cct) -> bool {
+    codec::table(from).char_of(b) == codec::table(to).char_of(b) && !(to.is_latin() && codec::diacritic(b).is_some())
 }
 
-/// The subtitle can move to another code table: every byte it keeps raw (head, tail, row breaks, row edges) and every
-/// control code in its text means the same there.
-fn sub_movable(sub: &Sub, atoms: &[Atom]) -> bool {
-    structure_movable(sub) && atoms_movable(atoms)
+/// The subtitle can move to table `to`: every byte it keeps raw (head, tail, row breaks, row edges) and every control
+/// code in `atoms` means the same there.
+fn sub_movable(sub: &Sub, atoms: &[Atom], from: Cct, to: Cct) -> bool {
+    structure_movable(sub, from, to) && atoms_movable(atoms, from, to)
 }
 
 /// The bytes a rewritten subtitle keeps from the original (head, tail, row breaks, row edges) can move.
-fn structure_movable(sub: &Sub) -> bool {
-    let raw_ok = |v: &Vec<u8>| v.iter().all(|b| movable_byte(*b));
+fn structure_movable(sub: &Sub, from: Cct, to: Cct) -> bool {
+    let raw_ok = |v: &Vec<u8>| v.iter().all(|b| movable_byte(*b, from, to));
     raw_ok(&sub.head) && raw_ok(&sub.tail) && sub.seps.iter().all(raw_ok) && sub.rows.iter().all(|r| raw_ok(&r.prefix) && raw_ok(&r.suffix))
 }
 
-/// A translation's control codes can move to another code table.
-fn atoms_movable(atoms: &[Atom]) -> bool {
-    atoms.iter().all(|a| !matches!(a, Atom::T(b) if !movable_byte(*b)))
+/// A text's control codes can move to table `to`.
+fn atoms_movable(atoms: &[Atom], from: Cct, to: Cct) -> bool {
+    atoms.iter().all(|a| !matches!(a, Atom::T(b) if !movable_byte(*b, from, to)))
 }
 
 /// A subtitle that is not a unit (a comment, or one with no text): its row structure and atoms.
@@ -323,7 +324,7 @@ pub struct UnitInfo {
 pub fn rebuild(raw: &[u8], parsed: &read::Parsed, units: &[UnitInfo], changed: &BTreeMap<usize, Vec<Atom>>, lc: Option<u8>, pairs: bool) -> Result<Vec<u8>, Error> {
     let cct = parsed.cct;
     let mnc = read::mnc(raw);
-    let fits = |cand: Cct| changed.values().all(|t| unsupported_with(t, cand, pairs).is_empty() && (cand == cct || atoms_movable(t)));
+    let fits = |cand: Cct| changed.values().all(|t| unsupported_with(t, cand, pairs).is_empty());
     // subtitles that are not units (comments, text-less) move with the file: they are re-encoded on a table switch
     let in_unit: BTreeSet<usize> = units.iter().map(|u| u.group).collect();
     let others: Vec<Other> = if fits(cct) {
@@ -347,19 +348,48 @@ pub fn rebuild(raw: &[u8], parsed: &read::Parsed, units: &[UnitInfo], changed: &
     let chosen = if fits(cct) {
         cct
     } else {
+        // the rest of the file (units kept as they are, comments, text-less subtitles) has characters in table c
+        let covers = |c: Cct| {
+            units.iter().enumerate().all(|(k, u)| changed.contains_key(&k) || unsupported_with(&u.atoms, c, pairs).is_empty())
+                && others.iter().all(|o| unsupported_with(&o.atoms, c, pairs).is_empty())
+        };
+        // the bytes of each subtitle that would read as other characters in table c (issue 798)
+        let unmovable = |c: Cct| -> Vec<String> {
+            let mut v: Vec<String> = Vec::new();
+            for (k, u) in units.iter().enumerate() {
+                if !sub_movable(&u.sub, changed.get(&k).map_or(&u.atoms, |t| t), cct, c) {
+                    v.push(format!("subtitle {}", k + 1));
+                }
+            }
+            for o in &others {
+                if !sub_movable(&o.sub, &o.atoms, cct, c) {
+                    v.push(format!("comment subtitle at block {}", parsed.groups[o.group].blocks[0] + 1));
+                }
+            }
+            v
+        };
         let mut usable = vec![cct];
         for c in Cct::ALL {
-            let units_ok = !units.iter().enumerate().any(|(k, u)| {
-                !structure_movable(&u.sub) || !(changed.contains_key(&k) || atoms_movable(&u.atoms) && unsupported_with(&u.atoms, c, pairs).is_empty())
-            });
-            let others_ok = others.iter().all(|o| sub_movable(&o.sub, &o.atoms) && unsupported_with(&o.atoms, c, pairs).is_empty());
-            if c != cct && units_ok && others_ok {
+            if c != cct && covers(c) && unmovable(c).is_empty() {
                 usable.push(c);
             }
         }
         match usable.iter().copied().find(|c| fits(*c)) {
             Some(c) => c,
             None => {
+                // a table holds every character, but the file has bytes it would turn into other characters
+                if let Some(c) = Cct::ALL.iter().copied().find(|c| *c != cct && covers(*c) && fits(*c)) {
+                    let bad = unmovable(c);
+                    let more = if bad.len() > 10 { format!(" (and {} more)", bad.len() - 10) } else { String::new() };
+                    return Err(refuse(format!(
+                        "The EBU STL file was not exported: the translation needs code table {}{}, but these subtitles hold bytes with no equivalent in that table (they would read as other characters): {}{more}. Remove those bytes or keep the translation in code table {}{}.",
+                        c.digits()[0] as char,
+                        c.digits()[1] as char,
+                        bad.iter().take(10).cloned().collect::<Vec<_>>().join(", "),
+                        cct.digits()[0] as char,
+                        cct.digits()[1] as char,
+                    )));
+                }
                 let cost = |c: Cct| changed.values().map(|t| unsupported_with(t, c, pairs).len()).sum::<usize>();
                 let best = usable.iter().copied().min_by_key(|c| cost(*c)).unwrap_or(cct);
                 for (k, t) in changed {
@@ -380,12 +410,6 @@ pub fn rebuild(raw: &[u8], parsed: &read::Parsed, units: &[UnitInfo], changed: &
     };
     let mut new_tf: BTreeMap<usize, (usize, Vec<u8>, i64)> = BTreeMap::new(); // first block -> (group, tf, dvp)
     for (k, u) in units.iter().enumerate() {
-        if chosen != cct && (!structure_movable(&u.sub) || !atoms_movable(changed.get(&k).map_or(&u.atoms, |t| t))) {
-            if reported.insert(k) {
-                problems.push(format!("subtitle {}: a control code or byte of this subtitle has no equivalent in the other code table", k + 1));
-            }
-            continue;
-        }
         let r = if let Some(t) = changed.get(&k) {
             // outside the locos profile a row may be as wide as the widest row of the source subtitle: a file
             // whose rows are wider than its own MNC (a header written by hand) still takes a translation as long
@@ -410,12 +434,9 @@ pub fn rebuild(raw: &[u8], parsed: &read::Parsed, units: &[UnitInfo], changed: &
         }
     }
     if chosen != cct {
+        // every subtitle can move here: `chosen` is only another table when `unmovable(chosen)` is empty
         for o in &others {
             let first = parsed.groups[o.group].blocks[0];
-            if !sub_movable(&o.sub, &o.atoms) {
-                problems.push(format!("comment subtitle at block {}: a byte of it has no equivalent in the other code table", first + 1));
-                continue;
-            }
             if o.sub.rows.is_empty() {
                 continue;
             }

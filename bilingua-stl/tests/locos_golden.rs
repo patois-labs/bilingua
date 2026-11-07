@@ -62,15 +62,63 @@ fn mapping(m: &serde_json::Value) -> Vec<(usize, String)> {
     v
 }
 
-/// Files where Bilingua deliberately refuses a code table switch that LocOS writes (issue 798): the file holds bytes that
-/// mean something else in another table (an undefined upper-half byte at the edge of a row: odd, cct02, cct04), or random bytes
-/// above 0x9F (the random files are fuzz and may hold the same). LocOS copies those bytes raw and corrupts them.
-fn switch_refused_on_purpose(name: &str, input: &[u8]) -> bool {
-    matches!(name, "odd" | "cct02" | "cct04") || (name.starts_with("rand-") && input.len() > 1024 && input[1024..].iter().any(|b| *b >= 0xA0))
+/// The code tables, read from the crate's generated table file (the test keeps its own decoder).
+#[allow(dead_code)]
+#[path = "../src/tables.rs"]
+mod tables;
+
+/// byte -> has a character, for table `n` (0-4); floating diacritics of table 00 count as having none.
+fn defined(n: u8) -> [bool; 256] {
+    let mut d = [false; 256];
+    for b in 0x20..0x7F {
+        d[b] = true;
+    }
+    if n == 0 {
+        for &(b, _) in tables::T00_HIGH {
+            d[b as usize] = true;
+        }
+    } else {
+        let high = [&tables::HIGH_01, &tables::HIGH_02, &tables::HIGH_03, &tables::HIGH_04][n as usize - 1];
+        for (i, c) in high.iter().enumerate() {
+            d[0xA0 + i] = *c != '\0';
+        }
+    }
+    d
+}
+
+/// The only accepted difference from LocOS (issue 798): a code table switch LocOS writes, refused by Bilingua with its
+/// table-switch message, in a file whose subtitle text really holds a byte the old table has no character for (or a
+/// table 00 floating diacritic) that the other table reads as a character. LocOS copies such a byte raw and it turns
+/// into a letter. Any other refusal, and any refusal of a file without such a byte, still counts as a difference.
+fn switch_refused_on_purpose(got: &Result<Vec<u8>, Error>, want: &serde_json::Value, input: &[u8]) -> bool {
+    let Err(Error::Unwritable { reason, .. }) = got else { return false };
+    if want.get("err").is_some() || !reason.contains("hold bytes with no equivalent in that table") {
+        return false;
+    }
+    let Some(pos) = reason.find("needs code table 0") else { return false };
+    let to = reason.as_bytes()[pos + "needs code table 0".len()].wrapping_sub(b'0');
+    let from = match &input[12..14] {
+        [a, b] if a.is_ascii_whitespace() && b.is_ascii_whitespace() => 0,
+        [b'0', d @ b'0'..=b'4'] => d - b'0',
+        _ => return false,
+    };
+    if to > 4 || to == from {
+        return false;
+    }
+    let (old, new) = (defined(from), defined(to));
+    let diacritic = |b: u8| tables::DIACRITICS.iter().any(|(x, _)| *x == b);
+    input[1024..].chunks(128).filter(|blk| blk.len() == 128 && blk[3] != 0xFE && !(0xF0..=0xFD).contains(&blk[3])).any(|blk| {
+        blk[16..].iter().any(|&b| {
+            let ctl_old = !old[b as usize] || (from == 0 && diacritic(b));
+            let reads_new = new[b as usize] || (to == 0 && diacritic(b));
+            ctl_old && reads_new && b >= 0x7F
+        })
+    })
 }
 
 fn check(name: &str, what: &str, got: Result<Vec<u8>, Error>, want: &serde_json::Value, bad: &mut Vec<String>, dir: &Option<String>, input: &[u8]) {
-    if matches!(&got, Err(Error::Unwritable { reason, .. }) if reason.starts_with("The EBU STL file was not exported")) && switch_refused_on_purpose(name, input) {
+    if switch_refused_on_purpose(&got, want, input) {
+        println!("accepted 798 refusal: {name}: {what}");
         return;
     }
     if let Some(err) = want.get("err") {

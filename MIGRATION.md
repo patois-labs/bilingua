@@ -427,14 +427,15 @@ LocOS is getting the same fixes, so these differences are temporary.
 
 - **STL, code table switch.** When a translation needs another EBU table, comment subtitles and text-less subtitles
   are re-encoded with the rest of the file, and the switch is refused when one cannot move (LocOS leaves their bytes
-  in the old table). Only control bytes (0x00-0x20, 0x80-0x9F) move between tables; a byte the old table has no
-  character for (0xC0 in table 00) makes the switch refuse (LocOS copies it raw, and it reads as a letter of the new
-  table). Tests: `a_code_table_switch_*` in `bilingua-stl/tests/behaviour.rs`. The other parts of issue 798
+  in the old table). A byte kept raw (a control code, a byte the old table has no character for) moves only when the
+  new table reads it the same way: 0xC0 (none in table 00, a letter in table 01) makes the switch refuse with a
+  message naming the subtitles (LocOS copies it raw, and it reads as a letter of the new table); 0x7F (none in any
+  table) moves. Tests: `a_code_table_switch_*` in `bilingua-stl/tests/behaviour.rs`. The other parts of issue 798
   (letters with a floating mark, quadratic paths) were already fixed in Bilingua.
 - **SCC, unknown inline code.** A translation with a code the caption does not have is refused, where LocOS drops it
   silently. Literal `⟦xN⟧` text was already refused (the characters are not CEA-608). The channel-2 loss and
   the quadratic character scan were already fixed in Bilingua.
-- **STF, backslash.** A literal backslash in a translation is written as `\` so Salesforce reads it back as a
+- **STF, backslash.** A literal backslash in a translation is written as `\\` so Salesforce reads it back as a
   backslash. Build bytes change for such translations. Test: `literal_backslash_in_a_translation_is_escaped`.
 
 ## Differences from LocOS: empty HTML Help files (wild files, 11-07)

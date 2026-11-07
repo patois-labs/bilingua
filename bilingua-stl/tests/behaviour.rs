@@ -288,3 +288,30 @@ fn a_code_table_switch_does_not_copy_bytes_the_old_table_has_no_character_for() 
     set(&mut d, 0, "Bonjour");
     assert!(Stl.merge(&d).is_ok());
 }
+
+#[test]
+fn a_code_table_switch_names_the_subtitles_whose_bytes_cannot_move() {
+    // unit 2 holds C0 (no character in table 00, a letter in table 01): the refusal says why, not "characters"
+    let data = comment_file(b"note", b"ab\xc0cd");
+    let mut d = ex(&data);
+    set(&mut d, 0, "\u{41f}\u{440}\u{438}\u{432}\u{435}\u{442}");
+    let e = Stl.merge(&d).unwrap_err().to_string();
+    assert!(e.contains("needs code table 01") && e.contains("hold bytes with no equivalent in that table (they would read as other characters): subtitle 2."), "{e}");
+    assert!(!e.contains("subtitle 1") && !e.contains("comment"), "{e}");
+}
+
+#[test]
+fn a_code_table_switch_keeps_bytes_no_table_has_a_character_for() {
+    // 7F has no character in any table: it means the same in table 01, so the switch goes ahead; the unchanged
+    // unit's section sign (A7 in table 00) is re-encoded as FD
+    let data = comment_file(b"x\x7fy", b"\xa7 2");
+    for profile in [false, true] {
+        let mut d = ex(&data);
+        set(&mut d, 0, "\u{41f}\u{440}\u{438}\u{432}\u{435}\u{442}");
+        let out = if profile { Stl.merge_with(&d, &bilingua_model::profile::locos().merge_options("xml")) } else { Stl.merge(&d) }.unwrap();
+        assert_eq!(&out[12..14], b"01");
+        assert_eq!(&blocks(&out)[0][16..19], b"x\x7fy", "profile={profile}");
+        assert_eq!(texts(&ex(&out))[1], "\u{a7} 2");
+        assert!(blocks(&out)[2][16..].contains(&0xFD));
+    }
+}
