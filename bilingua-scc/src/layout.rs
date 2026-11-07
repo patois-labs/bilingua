@@ -328,13 +328,19 @@ fn encode_atoms(atoms: &[Atom], toks: &[&Ev]) -> Vec<Word> {
 /// The words of a translated caption line, or the reason it cannot be written.
 pub fn encode_line(line: &Line, text: &[Atom], locos_glue: bool) -> Result<Vec<Word>, String> {
     let toks = line.tokens();
-    // a token the line does not have is dropped, as LocOS does
-    let kept: Vec<Atom> = text
+    // a code the line does not have is refused: dropped silently it would vanish without a warning (LocOS does that)
+    let unknown: Vec<String> = text
         .iter()
-        .copied()
-        .filter(|a| !matches!(a, Atom::T(n) if *n == 0 || *n as usize > toks.len()))
+        .filter_map(|a| match a {
+            Atom::T(n) if *n == 0 || *n as usize > toks.len() => Some(format!("\u{27E6}x{n}\u{27E7}")),
+            _ => None,
+        })
+        .take(8)
         .collect();
-    let text = normalize_608(&kept);
+    if !unknown.is_empty() {
+        return Err(format!("has inline codes this caption does not have: {}", unknown.join(" ")));
+    }
+    let text = normalize_608(text);
     let bad = unsupported_chars(&text, 8);
     if !bad.is_empty() {
         let shown: Vec<String> = bad.iter().map(|c| py_repr(*c)).collect();

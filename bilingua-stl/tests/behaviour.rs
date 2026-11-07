@@ -239,3 +239,52 @@ fn a_row_wider_than_the_header_mnc_takes_a_translation_as_long_as_its_source() {
     let out = Stl.merge_with(&d, &bilingua_model::profile::locos().merge_options("xml")).unwrap();
     assert!(texts(&ex(&out))[0].contains('\n'));
 }
+
+fn comment_file(comment: &[u8], other: &[u8]) -> Vec<u8> {
+    cat(&[
+        &gsi_default(3),
+        &tti(&Tti { sn: 1, cf: 1, ..Default::default() }, comment),
+        &t(2, &cat(&[DH, b"Hello", END])),
+        &t(3, &cat(&[DH, other, END])),
+    ])
+}
+
+#[test]
+fn a_code_table_switch_moves_comment_subtitles_too() {
+    // table 00 holds the section sign at A7; table 01 (Cyrillic) holds it at FD. A comment must move with the file.
+    let data = comment_file(b"a\xa7b", b"Bye");
+    let ru = "\u{41f}\u{440}\u{438}\u{432}\u{435}\u{442}";
+    for profile in [false, true] {
+        let mut d = ex(&data);
+        set(&mut d, 0, ru);
+        let out = if profile { Stl.merge_with(&d, &bilingua_model::profile::locos().merge_options("xml")) } else { Stl.merge(&d) }.unwrap();
+        assert_eq!(&out[12..14], b"01");
+        let comment = blocks(&out)[0];
+        assert_eq!(&comment[16..19], b"a\xfdb", "profile={profile}: the comment is re-encoded in the new table");
+        assert_eq!(texts(&ex(&out)), vec![ru.to_string(), "Bye".to_string()]);
+    }
+}
+
+#[test]
+fn a_code_table_switch_is_refused_when_a_comment_cannot_move() {
+    // e with an acute accent exists in table 00 but not in 8859-5: the comment would read back as other letters
+    let data = comment_file(b"caf\xc2e", b"Bye");
+    let mut d = ex(&data);
+    set(&mut d, 0, "\u{41f}\u{440}\u{438}\u{432}\u{435}\u{442}");
+    assert!(Stl.merge(&d).is_err());
+    assert!(Stl.merge_with(&d, &bilingua_model::profile::locos().merge_options("xml")).is_err());
+}
+
+#[test]
+fn a_code_table_switch_does_not_copy_bytes_the_old_table_has_no_character_for() {
+    // C0 is undefined in table 00 (a token); in table 01 it is a Cyrillic letter, so the file must not switch
+    let data = comment_file(b"note", b"ab\xc0cd");
+    let mut d = ex(&data);
+    set(&mut d, 0, "\u{41f}\u{440}\u{438}\u{432}\u{435}\u{442}");
+    assert!(Stl.merge(&d).is_err());
+    assert!(Stl.merge_with(&d, &bilingua_model::profile::locos().merge_options("xml")).is_err());
+    // the same file without a switch still takes a Latin translation
+    let mut d = ex(&data);
+    set(&mut d, 0, "Bonjour");
+    assert!(Stl.merge(&d).is_ok());
+}

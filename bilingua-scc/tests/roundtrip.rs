@@ -223,10 +223,10 @@ fn a_translation_cannot_add_captions_codes_or_header_fields() {
     doc.units[1].segments[0].target = vec![Inline::text("Je dis \u{27e6}x1\u{27e7}salut")];
     let e = SccFilter.merge(&doc).unwrap_err().to_string();
     assert!(e.contains("cannot show"), "{e}");
-    // a tag the line never had is dropped, never written
+    // a tag the line never had is refused, never silently dropped
     doc.units[1].segments[0].target = vec![Inline::text("Salut "), Inline::tag("99", TagKind::Standalone, "x")];
-    let out = SccFilter.merge(&doc).unwrap();
-    assert_eq!(units(&out)[1], "Salut");
+    let e = SccFilter.merge(&doc).unwrap_err().to_string();
+    assert!(e.contains("inline codes this caption does not have") && e.contains("x99"), "{e}");
 }
 
 #[test]

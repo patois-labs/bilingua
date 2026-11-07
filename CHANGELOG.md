@@ -9,6 +9,15 @@ is listed here).
 
 ### Fixed
 
+- scc: a translation that holds an inline code the caption does not have (an unknown tag id) is refused with a message
+  naming the code. It used to be dropped without a warning (as LocOS does; LocOS gets the same fix).
+- stl: a code table switch (a translation that needs another EBU table) re-encodes comment subtitles with the rest of
+  the file, and is refused when a comment cannot move. Only control codes (0x00-0x20, 0x80-0x9F) move between tables:
+  a byte the old table has no character for (0xC0 in table 00) makes the switch refuse, where it used to be copied
+  raw and read back as a letter of the new table. LocOS gets the same fix.
+- stf: a literal backslash in a translation is written as `\`, so `C:
+ew` no longer reads back as a newline.
+  The bytes of such a build change (LocOS gets the same fix).
 - xcstrings: `stringSet` localizations (App Shortcuts phrases) are read as one unit per string and written back as a
   `stringSet` for the target language, one string per source string in order; a set with a phrase that has no
   new translation is marked `needs_review`. Such catalogs used to open with no units.

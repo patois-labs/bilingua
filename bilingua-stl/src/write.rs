@@ -280,6 +280,36 @@ fn blocks_for(tf: &[u8], headers: &[[u8; 16]], cct: Cct) -> Option<Vec<u8>> {
     Some(out)
 }
 
+/// A byte that means the same in every code table: a control code (0x00-0x1F, the space, and 0x80-0x9F).
+/// Upper-half bytes a table has no character for (0xC0, 0xC9 in table 00, many in 8859-6) are table specific:
+/// copied raw into another table they could become letters, so a table switch must not move them.
+fn movable_byte(b: u8) -> bool {
+    b <= 0x20 || (0x80..=0x9F).contains(&b)
+}
+
+/// The subtitle can move to another code table: every byte it keeps raw (head, tail, row breaks, row edges) and every
+/// control code in its text means the same there.
+fn sub_movable(sub: &Sub, atoms: &[Atom]) -> bool {
+    let raw_ok = |v: &Vec<u8>| v.iter().all(|b| movable_byte(*b));
+    raw_ok(&sub.head)
+        && raw_ok(&sub.tail)
+        && sub.seps.iter().all(raw_ok)
+        && sub.rows.iter().all(|r| raw_ok(&r.prefix) && raw_ok(&r.suffix))
+        && atoms.iter().all(|a| !matches!(a, Atom::T(b) if !movable_byte(*b)))
+}
+
+/// A translation's control codes can move to another code table.
+fn atoms_movable(atoms: &[Atom]) -> bool {
+    atoms.iter().all(|a| !matches!(a, Atom::T(b) if !movable_byte(*b)))
+}
+
+/// A subtitle that is not a unit (a comment, or one with no text): its row structure and atoms.
+struct Other {
+    group: usize,
+    sub: Sub,
+    atoms: Vec<Atom>,
+}
+
 pub struct UnitInfo {
     pub group: usize,
     pub sub: Sub,
@@ -292,7 +322,24 @@ pub struct UnitInfo {
 pub fn rebuild(raw: &[u8], parsed: &read::Parsed, units: &[UnitInfo], changed: &BTreeMap<usize, Vec<Atom>>, lc: Option<u8>, pairs: bool) -> Result<Vec<u8>, Error> {
     let cct = parsed.cct;
     let mnc = read::mnc(raw);
-    let fits = |cand: Cct| changed.values().all(|t| unsupported_with(t, cand, pairs).is_empty());
+    let fits = |cand: Cct| changed.values().all(|t| unsupported_with(t, cand, pairs).is_empty() && (cand == cct || atoms_movable(t)));
+    // subtitles that are not units (comments, text-less) move with the file: they are re-encoded on a table switch
+    let in_unit: BTreeSet<usize> = units.iter().map(|u| u.group).collect();
+    let others: Vec<Other> = if fits(cct) {
+        Vec::new()
+    } else {
+        parsed
+            .groups
+            .iter()
+            .enumerate()
+            .filter(|(gi, _)| !in_unit.contains(gi))
+            .map(|(gi, g)| {
+                let sub = Sub::new(&g.tf, cct);
+                let atoms = sub.atoms().0;
+                Other { group: gi, sub, atoms }
+            })
+            .collect()
+    };
     let mut problems: Vec<String> = Vec::new();
     // the units already named in `problems` (gate: a prefix search of `problems` per refused unit was quadratic)
     let mut reported: BTreeSet<usize> = BTreeSet::new();
@@ -301,7 +348,11 @@ pub fn rebuild(raw: &[u8], parsed: &read::Parsed, units: &[UnitInfo], changed: &
     } else {
         let mut usable = vec![cct];
         for c in Cct::ALL {
-            if c != cct && !units.iter().enumerate().any(|(k, u)| !changed.contains_key(&k) && !unsupported_with(&u.atoms, c, pairs).is_empty()) {
+            let units_ok = !units.iter().enumerate().any(|(k, u)| {
+                !sub_movable(&u.sub, &u.atoms) || (!changed.contains_key(&k) && !unsupported_with(&u.atoms, c, pairs).is_empty())
+            });
+            let others_ok = others.iter().all(|o| sub_movable(&o.sub, &o.atoms) && unsupported_with(&o.atoms, c, pairs).is_empty());
+            if c != cct && units_ok && others_ok {
                 usable.push(c);
             }
         }
@@ -326,8 +377,14 @@ pub fn rebuild(raw: &[u8], parsed: &read::Parsed, units: &[UnitInfo], changed: &
             }
         }
     };
-    let mut new_tf: BTreeMap<usize, (usize, Vec<u8>, i64)> = BTreeMap::new(); // first block -> (unit, tf, dvp)
+    let mut new_tf: BTreeMap<usize, (usize, Vec<u8>, i64)> = BTreeMap::new(); // first block -> (group, tf, dvp)
     for (k, u) in units.iter().enumerate() {
+        if chosen != cct && (!sub_movable(&u.sub, &u.atoms) || changed.get(&k).is_some_and(|t| !atoms_movable(t))) {
+            if reported.insert(k) {
+                problems.push(format!("subtitle {}: a control code or byte of this subtitle has no equivalent in the other code table", k + 1));
+            }
+            continue;
+        }
         let r = if let Some(t) = changed.get(&k) {
             // outside the locos profile a row may be as wide as the widest row of the source subtitle: a file
             // whose rows are wider than its own MNC (a header written by hand) still takes a translation as long
@@ -342,12 +399,30 @@ pub fn rebuild(raw: &[u8], parsed: &read::Parsed, units: &[UnitInfo], changed: &
         match r {
             Ok((tf, dvp)) => {
                 let first = parsed.groups[u.group].blocks[0];
-                new_tf.insert(first, (k, tf, dvp));
+                new_tf.insert(first, (u.group, tf, dvp));
             }
             Err(why) => {
                 if reported.insert(k) {
                     problems.push(format!("subtitle {}: {why}", k + 1));
                 }
+            }
+        }
+    }
+    if chosen != cct {
+        for o in &others {
+            let first = parsed.groups[o.group].blocks[0];
+            if !sub_movable(&o.sub, &o.atoms) {
+                problems.push(format!("comment subtitle at block {}: a byte of it has no equivalent in the other code table", first + 1));
+                continue;
+            }
+            if o.sub.rows.is_empty() {
+                continue;
+            }
+            match encode_subtitle(&o.sub, &o.atoms, chosen, mnc, true, pairs) {
+                Ok((tf, dvp)) => {
+                    new_tf.insert(first, (o.group, tf, dvp));
+                }
+                Err(why) => problems.push(format!("comment subtitle at block {}: {why}", first + 1)),
             }
         }
     }
@@ -366,8 +441,8 @@ pub fn rebuild(raw: &[u8], parsed: &read::Parsed, units: &[UnitInfo], changed: &
         if skip.contains(&i) {
             continue;
         }
-        if let Some((k, tf, dvp)) = new_tf.get(&i) {
-            let g = &parsed.groups[units[*k].group];
+        if let Some((gi, tf, dvp)) = new_tf.get(&i) {
+            let g = &parsed.groups[*gi];
             let mut headers: Vec<[u8; 16]> = g
                 .blocks
                 .iter()
