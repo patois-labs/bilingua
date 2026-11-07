@@ -62,10 +62,6 @@ pub fn prep(atoms: &[Atom], cct: Cct) -> Vec<Atom> {
 }
 
 /// The distinct characters of a text (after `prep`) the table cannot encode, in order of appearance.
-pub fn unsupported(atoms: &[Atom], cct: Cct) -> Vec<char> {
-    unsupported_with(atoms, cct, false)
-}
-
 /// `pairs`: a base letter and its floating diacritic with no single code are written as a byte pair (LocOS refuses them).
 pub fn unsupported_with(atoms: &[Atom], cct: Cct, pairs: bool) -> Vec<char> {
     // a set beside the ordered list: a translation can hold 100 000 distinct characters (gate: was quadratic)
