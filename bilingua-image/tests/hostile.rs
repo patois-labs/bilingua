@@ -35,6 +35,24 @@ fn entity_bombs_and_external_entities_are_refused_before_any_parsing() {
 }
 
 #[test]
+fn plain_internal_entities_for_namespaces_are_kept_and_never_expanded() {
+    // the shape editors write: a few literal entities, used only in namespace attributes
+    let svg = "<?xml version=\"1.0\"?>
+<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN\" \"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd\" [
+	<!ENTITY ns_a \"http://ns.example.invalid/a/1.0/\">
+	<!ENTITY co \"Acme\">
+]>
+<svg xmlns=\"http://www.w3.org/2000/svg\" xmlns:a=\"&ns_a;\"><text>Hello</text><text>&co; Ltd</text><title>Logo</title></svg>";
+    let d = extract(svg.as_bytes());
+    // a text that uses a declared entity is not offered: writing it back would break the reference
+    assert_eq!(texts(&d), ["Hello", "Logo"]);
+    assert_eq!(s(build(svg.as_bytes(), &[]).unwrap()), svg);
+    let out = s(build(svg.as_bytes(), &[(0, "Bonjour"), (1, "Titre")]).unwrap());
+    assert!(out.contains("<text>Bonjour</text><text>&co; Ltd</text><title>Titre</title>") && out.contains("[
+	<!ENTITY ns_a"), "{out}");
+}
+
+#[test]
 fn deep_and_wide_documents_are_refused_with_a_typed_error() {
     let deep = format!("<svg>{}x{}</svg>", "<g>".repeat(300), "</g>".repeat(300));
     assert_eq!(kind(&SvgFilter.extract(deep.as_bytes(), &opts()).unwrap_err()), Some(LimitKind::XmlDepth));
