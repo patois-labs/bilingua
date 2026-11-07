@@ -52,6 +52,10 @@ impl Ttml {
             return Err(Error::Encoding("This TTML file uses byte sequences of its legacy encoding that cannot be written back unchanged. Re-save the file as UTF-8.".into()));
         }
         let sc = scan::scan(text, limits, &std::collections::HashSet::new())?;
+        if sc.root_ns == scan::DRAFT_2004 && opts.is_profile(profile::LOCOS) {
+            // LocOS knows only the 2006 DFXP drafts and TTML: its profile keeps the refusal
+            return Err(scan::perr("not a TTML/DFXP document: the root element must be <tt> in the TTML namespace (http://www.w3.org/ns/ttml)."));
+        }
         let mut units: Vec<Unit> = Vec::new();
         let mut parts: Vec<SkelPart> = Vec::new();
         let (mut pos, mut line, mut counted) = (0usize, 1usize, 0usize);
@@ -105,7 +109,7 @@ impl Filter for Ttml {
     /// Tight: XML whose first 4 KB names a TTML or DFXP namespace. Put it before generic XML and `Html`.
     fn sniff(&self, bytes: &[u8]) -> bool {
         let h = head_text(bytes);
-        h.trim_start().starts_with('<') && ["www.w3.org/ns/ttml", "www.w3.org/2006/10/ttaf1", "www.w3.org/2006/04/ttaf1"].iter().any(|n| h.contains(n))
+        h.trim_start().starts_with('<') && ["www.w3.org/ns/ttml", "www.w3.org/2006/10/ttaf1", "www.w3.org/2006/04/ttaf1", "www.w3.org/2004/11/ttaf1"].iter().any(|n| h.contains(n))
     }
 
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {

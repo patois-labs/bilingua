@@ -248,3 +248,21 @@ fn every_prefix_of_a_file_is_safe() {
         }
     }
 }
+
+#[test]
+fn cr_cr_lf_line_endings_keep_a_cue_in_one_piece() {
+    // a file saved twice has CR CR LF endings; a cue is still one cue, and a longer translation stays in it
+    let s = "1\r\r\n00:00:01,000 --> 00:00:03,000\r\r\nFirst line\r\r\nsecond line\r\r\n\r\r\n2\r\r\n00:00:04,000 --> 00:00:05,000\r\r\nOnly\r\r\n";
+    let mut d = srt(s);
+    assert_eq!(d.units.len(), 2);
+    assert_eq!(String::from_utf8(Srt.merge(&d).unwrap()).unwrap(), s);
+    let id = d.units[0].segments[0].id.clone();
+    let mut t = d.units[0].segments[0].source.clone();
+    t.insert(0, Inline::text("Zq"));
+    t.push(Inline::text("qZ"));
+    d.set_target(&id, t).unwrap();
+    let out = Srt.merge(&d).unwrap();
+    let back = srt(&String::from_utf8(out).unwrap());
+    assert_eq!(back.units.len(), 2);
+    assert!(plain_text(&back.units[0].segments[0].source).starts_with("ZqFirst line"));
+}

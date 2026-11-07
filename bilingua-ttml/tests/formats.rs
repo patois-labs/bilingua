@@ -130,3 +130,26 @@ fn edge_file_units() {
     assert_eq!(got[3].1, "⟦x1⟧after br pair");
     assert_eq!(got[4].1, "⟦g1⟧Colour⟦/g1⟧ at 5 > 3");
 }
+
+#[test]
+fn the_2004_dfxp_draft_namespace_is_read_outside_the_locos_profile() {
+    // the first DFXP working draft (2004-11) namespace, with its #styling namespace
+    let data = br#"<tt xml:lang="en" xmlns="http://www.w3.org/2004/11/ttaf1">
+  <head><styling xmlns:tts="http://www.w3.org/2004/11/ttaf1#styling"><style id="a" tts:color="white"/></styling></head>
+  <body><div>
+    <p begin="1.0" end="2.5" id="c1">The lighthouse keeper<br/>waves from the rocks.</p>
+    <p begin="3.0" end="4.0" id="c2">Good night.</p>
+  </div></body>
+</tt>
+"#;
+    assert!(F.sniff(data));
+    assert_eq!(texts(data).len(), 2);
+    assert_identity(data);
+    let mut d = extract(data);
+    set(&mut d, 1, "Buenas noches.");
+    let out = F.merge(&d).expect("merge");
+    assert_eq!(texts(&out)[1], "Buenas noches.");
+    // the locos profile keeps LocOS's refusal
+    let locos = opts().with_profile("locos");
+    assert!(F.extract(data, &locos).is_err());
+}

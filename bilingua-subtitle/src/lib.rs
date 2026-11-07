@@ -91,7 +91,8 @@ fn lines(s: &str) -> Vec<Line<'_>> {
     let mut pos = 0;
     for raw in s.split_inclusive('\n') {
         let t = raw.strip_suffix('\n').unwrap_or(raw);
-        let t = t.strip_suffix('\r').unwrap_or(t);
+        // every CR before the LF belongs to the terminator (a file saved twice has CR CR LF endings)
+        let t = t.trim_end_matches('\r');
         out.push(Line { start: pos, end: pos + t.len(), text: t });
         pos += raw.len();
     }
@@ -273,7 +274,12 @@ fn scan(k: Kind, raw: &str) -> Vec<Tok<'_>> {
     while i < b.len() {
         let c = b[i];
         if c == b'\r' || c == b'\n' {
-            let end = if c == b'\r' && b.get(i + 1) == Some(&b'\n') { i + 2 } else { i + 1 };
+            // CR CR LF is one break, as `lines` reads it
+            let mut j = i;
+            while c == b'\r' && b.get(j + 1) == Some(&b'\r') {
+                j += 1;
+            }
+            let end = if c == b'\r' && b.get(j + 1) == Some(&b'\n') { j + 2 } else { i + 1 };
             flush(&mut text, &mut out);
             out.push(Tok::Break(&raw[i..end]));
             i = end;

@@ -264,7 +264,7 @@ impl Filter for SccFilter {
 }
 
 /// The new text of a changed caption line, or the reason it was refused.
-fn rebuild(u: &Unit) -> Result<Option<String>, String> {
+fn rebuild(u: &Unit, locos_glue: bool) -> Result<Option<String>, String> {
     let raw = u.hidden(RAW).ok_or("the unit lost its original line")?;
     let st = u.hidden(STATE)
         .and_then(State::from_text)
@@ -278,7 +278,7 @@ fn rebuild(u: &Unit) -> Result<Option<String>, String> {
     if new == src {
         return Ok(None);
     }
-    let words = encode_line(&line, &new)?;
+    let words = encode_line(&line, &new, locos_glue)?;
     Ok(Some(format!("{}{}{}{}", cap.lead, cap.tc, cap.sep, words_text(&words))))
 }
 
@@ -353,7 +353,7 @@ fn merge(doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
                     out.push_str(raw);
                     continue;
                 }
-                match rebuild(u) {
+                match rebuild(u, opts.is_profile(profile::LOCOS)) {
                     Ok(Some(l)) => {
                         rewritten = true;
                         out.push_str(&l);

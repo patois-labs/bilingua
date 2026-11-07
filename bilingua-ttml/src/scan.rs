@@ -12,17 +12,23 @@ use quick_xml::events::Event;
 use quick_xml::Reader;
 use std::collections::{HashMap, HashSet};
 
-/// TTML 1/2 (and IMSC1), then the two DFXP candidate-recommendation drafts older `.dfxp` files still carry.
-pub const TTML_NS: [&str; 3] = ["http://www.w3.org/ns/ttml", "http://www.w3.org/2006/10/ttaf1", "http://www.w3.org/2006/04/ttaf1"];
+/// TTML 1/2 (and IMSC1), then the two DFXP candidate-recommendation drafts older `.dfxp` files still carry, then
+/// the first DFXP working draft (2004-11), read outside the locos profile only (LocOS refuses it; see `DRAFT_2004`).
+/// (`scan` is a private module: these lists are not public API.)
+pub const TTML_NS: [&str; 4] =
+    ["http://www.w3.org/ns/ttml", "http://www.w3.org/2006/10/ttaf1", "http://www.w3.org/2006/04/ttaf1", "http://www.w3.org/2004/11/ttaf1"];
+/// The index in `TTML_NS` of the 2004-11 DFXP working draft namespace.
+pub const DRAFT_2004: usize = 3;
 const XML_NS: &str = "http://www.w3.org/XML/1998/namespace";
 const XMLNS_NS: &str = "http://www.w3.org/2000/xmlns/";
 
 /// TT Style namespaces for each TTML namespace, preferred first. TTML1/2 and IMSC1 use `ns/ttml#styling`; the DFXP
 /// drafts define `ttaf1#style`, and some tools wrote `ttaf1#styling`: both are recognised.
-pub const STYLING_NS: [&[&str]; 3] = [
+pub const STYLING_NS: [&[&str]; 4] = [
     &["http://www.w3.org/ns/ttml#styling"],
     &["http://www.w3.org/2006/10/ttaf1#style", "http://www.w3.org/2006/10/ttaf1#styling"],
     &["http://www.w3.org/2006/04/ttaf1#style", "http://www.w3.org/2006/04/ttaf1#styling"],
+    &["http://www.w3.org/2004/11/ttaf1#styling", "http://www.w3.org/2004/11/ttaf1#style"],
 ];
 
 fn is_styling(uri: &str) -> bool {

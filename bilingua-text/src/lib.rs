@@ -16,6 +16,8 @@ pub struct TextFilter;
 
 const ID: &str = "txt";
 const BOM: &[u8] = &[0xEF, 0xBB, 0xBF];
+/// Most lines in one piece of a paragraph the unit size limit would refuse.
+const CUT_LINES: usize = 500;
 
 impl Filter for TextFilter {
     fn id(&self) -> &'static str {
@@ -63,15 +65,39 @@ impl Filter for TextFilter {
             group.clear();
         };
 
+        // a paragraph the unit size limit would refuse (a list with no blank lines) is cut at line breaks into
+        // pieces of at most CUT_LINES lines and half the limit, so the file is read as several units rather than
+        // refused; a paragraph within the limit stays one unit, as before. The line count is what decides on most
+        // files, so a translated file (longer lines) reopens with the same pieces.
+        let max = opts.limits().max_unit_chars;
+        let cap = (max / 2).max(1);
+        let emit = |group: &mut Vec<&str>, raw: &mut String, parts: &mut Vec<SkelPart>, units: &mut Vec<Unit>| {
+            if group.is_empty() || unit_chars(group) <= max {
+                flush(group, raw, parts, units);
+                return;
+            }
+            let all = std::mem::take(group);
+            let mut chunk_chars = 0usize;
+            for line in all {
+                let n = split_eol(line).0.chars().count() + 1;
+                if !group.is_empty() && (chunk_chars + n > cap || group.len() >= CUT_LINES) {
+                    flush(group, raw, parts, units);
+                    chunk_chars = 0;
+                }
+                group.push(line);
+                chunk_chars += n;
+            }
+            flush(group, raw, parts, units);
+        };
         for line in text.split_inclusive('\n') {
             if line.trim().is_empty() {
-                flush(&mut group, &mut raw, &mut parts, &mut units);
+                emit(&mut group, &mut raw, &mut parts, &mut units);
                 raw.push_str(line);
             } else {
                 group.push(line);
             }
         }
-        flush(&mut group, &mut raw, &mut parts, &mut units);
+        emit(&mut group, &mut raw, &mut parts, &mut units);
         if !raw.is_empty() {
             parts.push(SkelPart::Raw(raw));
         }
@@ -139,6 +165,26 @@ fn split_eol(line: &str) -> (&str, &str) {
     } else {
         (line, "")
     }
+}
+
+/// The characters `check_document` counts for the unit `build_unit` makes of these lines: the text (first line
+/// without its indentation, last line without its trailing spaces) plus one per line break tag.
+fn unit_chars(lines: &[&str]) -> usize {
+    let last = lines.len().saturating_sub(1);
+    lines
+        .iter()
+        .enumerate()
+        .map(|(i, line)| {
+            let mut c = split_eol(line).0;
+            if i == 0 {
+                c = c.trim_start();
+            }
+            if i == last {
+                c = c.trim_end();
+            }
+            c.chars().count() + usize::from(i < last)
+        })
+        .sum()
 }
 
 /// Builds the unit for a paragraph. Returns (skeleton before, unit, skeleton after).
@@ -220,6 +266,56 @@ mod tests {
             ("ko", "\u{b77c}\u{cc58}\u{baa8}\u{c5b4}\u{c5d0} \u{c624}\u{c2e0} \u{ac83}\u{c744} \u{d658}\u{c601}\u{d569}\u{b2c8}\u{b2e4}.\n\n\u{ac8c}\u{c774}\u{bc8c}\u{c774} \u{c379}\u{c600}\u{c2b5}\u{b2c8}\u{b2e4}.\n"),
             ("ar", "\u{645}\u{631}\u{62d}\u{628}\u{627} \u{628}\u{643}\u{645} \u{641}\u{64a} \u{644}\u{627}\u{631}\u{62a}\u{634}\u{645}\u{648}\u{631}.\n\n\u{627}\u{644}\u{645}\u{62f}\u{62c}\u{632}\u{631} \u{645}\u{646}\u{62e}\u{641}\u{636}.\n"),
         ]
+    }
+
+    #[test]
+    fn a_huge_paragraph_without_blank_lines_is_cut_at_line_breaks() {
+        let line = format!("{}\n", "word ".repeat(100));
+        let src = line.repeat(1000); // 500 000 characters, no blank line
+        let d = extract(src.as_bytes());
+        assert!(d.units.len() >= 10, "{}", d.units.len());
+        assert_eq!(TextFilter.merge(&d).unwrap(), src.as_bytes());
+    }
+
+    #[test]
+    fn a_paragraph_within_the_limit_is_not_cut() {
+        // 70 000 characters: over half the limit but within it, so still one unit (ids as in 0.9.0)
+        let src = format!("Intro.\n\n{}\nEnd.\n", "word word\n".repeat(7_000));
+        let d = extract(src.as_bytes());
+        assert_eq!(d.units.len(), 3);
+        assert_eq!(d.units[2].id, "p3");
+        assert_eq!(TextFilter.merge(&d).unwrap(), src.as_bytes());
+    }
+
+    #[test]
+    fn a_cut_never_splits_a_crlf_or_a_character() {
+        // CRLF lines of multi-byte text, no blank line, over the limit
+        let src = "Gr\u{fc}\u{df}e aus K\u{f6}ln, \u{6771}\u{4eac}\u{3068}\u{5927}\u{962a}\u{3002}\r\n".repeat(8_000);
+        let d = extract(src.as_bytes());
+        assert!(d.units.len() >= 2, "{}", d.units.len());
+        for u in &d.units {
+            let t = plain_text(&u.source());
+            assert!(t.starts_with("Gr\u{fc}\u{df}e") && t.ends_with("\u{962a}\u{3002}"), "{t:?}");
+            assert!(!t.contains('\r'));
+        }
+        assert_eq!(TextFilter.merge(&d).unwrap(), src.as_bytes());
+        let ids: Vec<String> = d.units.iter().map(|u| u.id.clone()).collect();
+        let want: Vec<String> = (1..=d.units.len()).map(|i| format!("p{i}")).collect();
+        assert_eq!(ids, want);
+        assert_eq!(extract(src.as_bytes()).units.len(), d.units.len());
+        // a longer translation of every piece reopens with the same pieces
+        let para = ExtractOptions::default().with_granularity(Granularity::Paragraph);
+        let d = TextFilter.extract(src.as_bytes(), &para).unwrap();
+        let mut t = d.clone();
+        for u in &d.units {
+            let mut v = vec![Inline::text("Zq")];
+            v.extend(u.segments[0].source.iter().cloned());
+            v.push(Inline::text("qZ"));
+            t.set_target(&u.segments[0].id, v).unwrap();
+        }
+        let back = TextFilter.extract(&TextFilter.merge(&t).unwrap(), &para).unwrap();
+        assert_eq!(back.units.len(), d.units.len());
+        assert!(back.units.iter().all(|u| plain_text(&u.source()).starts_with("ZqGr")));
     }
 
     #[test]

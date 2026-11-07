@@ -125,6 +125,15 @@ pub fn encode_char(c: char, cct: Cct) -> Option<([u8; 2], usize)> {
     None
 }
 
+/// A base letter and a floating diacritic that have no single code (`D` + U+0300): the two bytes of the pair.
+pub fn encode_pair(base: char, mark: char, cct: Cct) -> Option<[u8; 2]> {
+    if !cct.is_latin() {
+        return None;
+    }
+    let (mb, ab) = (diacritic_byte(mark)?, table(cct).byte_of(base)?);
+    (ab < 0x80).then_some([mb, ab])
+}
+
 /// NFC of a text run (ASCII is returned as it is).
 pub fn nfc(s: &str) -> String {
     if s.is_ascii() {

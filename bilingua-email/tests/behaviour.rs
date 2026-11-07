@@ -290,3 +290,18 @@ fn line_endings_survive_a_translation() {
     let want = String::from_utf8(crlf.to_vec()).unwrap().replace("Line one.", "Zeile eins.").replace("Line two.", "Zeile zwei.");
     assert_eq!(String::from_utf8(out).unwrap(), want);
 }
+
+#[test]
+fn a_message_saved_from_a_mail_spool_with_a_from_line_is_read_and_kept() {
+    let data = b"From someone@example.com Tue May 10 11:28:07 2005\nSubject: Hello there\nContent-Type: text/plain\n\nHow are you today?\n".to_vec();
+    let mut d = ex(&data);
+    assert_eq!(d.units.len(), 2);
+    assert_eq!(merged(&d), data);
+    pseudo(&mut d);
+    let out = merged(&d);
+    assert!(out.starts_with(b"From someone@example.com Tue May 10 11:28:07 2005\n"));
+    assert_eq!(ex(&out).units.len(), 2);
+    // the locos profile keeps LocOS's refusal
+    let o = opts(None).with_profile("locos");
+    assert!(Email.extract(&data, &o).is_err());
+}
