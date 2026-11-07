@@ -152,7 +152,7 @@ fn project_language_gives_the_code_page_of_the_other_files() {
     assert_eq!(hhp_code_page(b"[OPTIONS]\r\nTitle=x\r\n"), None);
     // a project over the line limit is not read at all (None, as Localization OS), not scanned from its raw bytes
     let mut long = b"[OPTIONS]\r\nLanguage=0x419 Russian\r\n".to_vec();
-    long.extend(std::iter::repeat(b'\n').take(1_000_001));
+    long.extend(std::iter::repeat_n(b'\n', 1_000_001));
     assert_eq!(hhp_code_page(&long), None);
     let ru = "<OBJECT type=\"text/sitemap\"><param name=\"Name\" value=\"\u{41f}\u{440}\u{438}\u{432}\u{435}\u{442}\">".to_string();
     let bytes = common::enc(WINDOWS_1251, &ru);
