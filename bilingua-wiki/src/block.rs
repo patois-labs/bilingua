@@ -291,8 +291,7 @@ fn multiline_file_link(cx: &Ctx, s: usize, e: usize) -> Option<usize> {
                 let close = end + 2;
                 let inner = sl(cx.mask, i + 2, end);
                 let target = inner.split('|').next().unwrap_or("");
-                let far = close - e > 20000 || m[e..close].iter().filter(|c| **c == b'
-').count() > 200;
+                let far = close - e > 20000 || m[e..close].iter().filter(|c| **c == 10).count() > 200;
                 if inner.contains('|') && crate::inline::file_ns(target) && !far {
                     return Some(close);
                 }
