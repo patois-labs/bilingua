@@ -55,7 +55,7 @@ fn matches_locos_on_generated_files() {
     let cases: Vec<serde_json::Value> = serde_json::from_str(&text).unwrap();
     assert!(cases.len() >= 2600);
     let (mut files, mut builds, mut refused, mut units_n, mut codes_n) = (0, 0, 0, 0, 0);
-    let (mut bom_bad, mut hardened) = (0, 0);
+    let (mut bom_bad, mut both_refuse) = (0, 0);
     let mut diffs: Vec<String> = Vec::new();
     for c in &cases {
         let name = c["name"].as_str().unwrap();
@@ -113,7 +113,8 @@ fn matches_locos_on_generated_files() {
                         diffs.push(format!("{name}: build {label}\n  rust  {:?}", String::from_utf8_lossy(&out)));
                     }
                 }
-                (Some(_), Err(e)) if e.to_string().contains("reads as a") => hardened += 1,
+                // LocOS refuses these too since issue 805; the message differs, the refusal is the same
+                (None, Err(_)) => both_refuse += 1,
                 (want, Err(e)) => diffs.push(format!("{name}: build {label}: LocOS {want:?}, Rust refuses: {e}")),
                 (None, Ok(_)) => diffs.push(format!("{name}: build {label}: LocOS refuses")),
             }
@@ -126,5 +127,5 @@ fn matches_locos_on_generated_files() {
         eprintln!("{d}");
     }
     assert!(diffs.is_empty(), "{} differences from LocOS", diffs.len());
-    println!("golden: {bom_bad} BOM-with-bad-UTF-8 files skipped, {hardened} builds refused on purpose (a line of the translation reads as a timecode, a MicroDVD cue or a control code); {files} files ({units_n} units, {codes_n} codes), {builds} builds identical to LocOS, {refused} identical refusals");
+    println!("golden: {bom_bad} BOM-with-bad-UTF-8 files skipped, {both_refuse} builds refused by both; {files} files ({units_n} units, {codes_n} codes), {builds} builds identical to LocOS, {refused} identical refusals");
 }

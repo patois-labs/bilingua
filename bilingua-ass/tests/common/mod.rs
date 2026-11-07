@@ -2,7 +2,7 @@
 //! Helpers shared by the test files: the LocOS view of a document (unit texts with `\u{27E6}..\u{27E7}` tokens, builds
 //! from a `{index: text}` mapping) on top of the Bilingua model.
 use bilingua_ass::AssFilter;
-use bilingua_model::profile::tokens::{from_locos_text, parse_locos_text, to_locos_text, TokenProblem};
+use bilingua_model::profile::tokens::{from_locos_text, to_locos_text};
 use bilingua_model::*;
 
 pub fn opts() -> ExtractOptions {
@@ -22,19 +22,11 @@ pub fn units(data: &[u8]) -> Vec<String> {
     extract(data).expect("extract").units.iter().map(|u| to_locos_text(&u.source()).0).collect()
 }
 
-/// A translation written the LocOS way, as inline codes: tokens that name no code of the unit are dropped, as the
-/// LocOS build drops them.
+/// A translation written the LocOS way, as inline codes: a token that names no code of the unit stays text, as the
+/// LocOS build keeps it (issue 814).
 pub fn inlines_for(u: &Unit, locos_text: &str) -> Vec<Inline> {
     let (_src, map) = to_locos_text(&u.source());
-    let mut text = locos_text.to_string();
-    let (_, problems) = parse_locos_text(&text, &map);
-    for p in problems {
-        match p {
-            TokenProblem::Unknown { token } | TokenProblem::KindMismatch { token } => text = text.replace(&token, ""),
-            TokenProblem::Stray { .. } => {}
-        }
-    }
-    from_locos_text(&text, &map)
+    from_locos_text(locos_text, &map)
 }
 
 /// Sets targets by unit index (as the LocOS mapping does) and merges with the default options.
