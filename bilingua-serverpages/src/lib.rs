@@ -558,7 +558,7 @@ fn attr_units(d: Dialect, toks: &[Tok]) -> Vec<html::AttrUnit> {
         .filter(|a| {
             let v = &toks[a.ti].s[a.start..a.end];
             // a JSP custom tag in a value (`title="<fmt:message key='x'/>"`) is code the server runs, not text
-            !has_sentinel(v) && !(d == Dialect::Jsp && has_prefixed_tag(v))
+            !(has_sentinel(v) || d == Dialect::Jsp && has_prefixed_tag(v))
         })
         .collect()
 }
