@@ -210,3 +210,25 @@ fn untranslated_phrase_without_old_target_uses_source_and_needs_review() {
     assert_eq!(fr["state"], "needs_review");
     assert_eq!(fr["values"], serde_json::json!(["Commencer", "Begin workout", "---"]));
 }
+
+#[test]
+fn a_huge_set_merges_in_linear_time() {
+    // one entry with 40,000 phrases: the merge must not compare every translation with every phrase
+    let n = 40_000;
+    let vals: Vec<String> = (0..n).map(|i| format!("\"Phrase {i}\"")).collect();
+    let cat = format!(
+        "{{\"sourceLanguage\":\"en\",\"strings\":{{\"k\":{{\"localizations\":{{\"en\":{{\"stringSet\":{{\"state\":\"translated\",\"values\":[{}]}}}}}}}}}}}}",
+        vals.join(",")
+    );
+    let started = std::time::Instant::now();
+    for t in [None, Some("fr")] {
+        let mut d = ex(cat.as_bytes(), t);
+        assert_eq!(d.units.len(), n);
+        translate_all(&mut d, |s| format!("X {s}"));
+        let out = Xcstrings.merge(&d).unwrap();
+        let v = json(&out);
+        let lang = t.unwrap_or("en");
+        assert_eq!(v["strings"]["k"]["localizations"][lang]["stringSet"]["values"][n - 1], format!("X Phrase {}", n - 1));
+    }
+    assert!(started.elapsed().as_secs() < 60, "took {:?}", started.elapsed());
+}

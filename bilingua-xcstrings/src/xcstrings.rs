@@ -468,17 +468,21 @@ fn mirror(shape: &Shape, old: Option<&J>, trans: &Trans, path: &mut Vec<String>,
                     Some(J::Arr(a)) => a.iter().map(|x| if let J::Str(s) = x { Some(s.as_str()) } else { None }).collect(),
                     _ => Vec::new(),
                 };
-                let n = path.len();
-                path.push("stringSet".into());
+                // translations of this set by position, found in one pass (a set can hold many values)
+                let mut by_pos: std::collections::HashMap<usize, &str> = std::collections::HashMap::new();
+                for (p, v) in trans {
+                    if p.len() == path.len() + 2 && p[..path.len()] == path[..] && p[path.len()] == "stringSet" {
+                        if let Ok(i) = p[path.len() + 1].parse::<usize>() {
+                            by_pos.insert(i, v.as_str());
+                        }
+                    }
+                }
                 let (mut any, mut review) = (false, false);
                 let mut vals: Vec<J> = Vec::with_capacity(src.len());
                 for (i, sv) in src.iter().enumerate() {
                     // a value that is not a string is not a phrase (malformed source): nothing to write
                     let Some(sv) = sv else { continue };
-                    path.push(i.to_string());
-                    let t = lookup(trans, path);
-                    path.pop();
-                    let v = match t {
+                    let v = match by_pos.get(&i).copied() {
                         Some(t) => {
                             any = true;
                             t
@@ -491,7 +495,6 @@ fn mirror(shape: &Shape, old: Option<&J>, trans: &Trans, path: &mut Vec<String>,
                     };
                     vals.push(J::Str(v.to_string()));
                 }
-                path.truncate(n);
                 if any {
                     let state = if review { "needs_review" } else { "translated" };
                     out.push(("stringSet".into(), J::Obj(vec![("state".into(), J::Str(state.into())), ("values".into(), J::Arr(vals))])));
@@ -652,6 +655,8 @@ fn apply(cat: &Catalog, entries: &[Entry<'_>], doc: &Document) -> Result<String,
     let mut edits: Vec<Edit> = Vec::new();
     for e in entries {
         let mut trans: Trans = Vec::new();
+        // the leaf of each translation, by the same index (a `stringSet` can make an entry with many leaves)
+        let mut trans_leaf: Vec<&Leaf> = Vec::new();
         for leaf in &e.leaves {
             let Some(idx) = leaf.idx else { continue };
             let Some(u) = by_idx.get(&idx) else { continue };
@@ -659,6 +664,7 @@ fn apply(cat: &Catalog, entries: &[Entry<'_>], doc: &Document) -> Result<String,
             let new_core = ph::render(u, &u.output());
             let full = if new_core == core { leaf.value.clone() } else { format!("{lead}{new_core}{trail}") };
             trans.push((leaf.path.clone(), full));
+            trans_leaf.push(leaf);
         }
         if trans.is_empty() {
             continue;
@@ -667,11 +673,9 @@ fn apply(cat: &Catalog, entries: &[Entry<'_>], doc: &Document) -> Result<String,
         let locs_obj = locs_member.and_then(|m| m.val.obj());
         if in_source {
             if e.src.is_some() {
-                for (path, value) in &trans {
-                    if let Some(leaf) = e.leaves.iter().find(|l| &l.path == path) {
-                        if leaf.value != *value {
-                            edits.push(Edit { start: leaf.span.0, end: leaf.span.1, text: st.string(value) });
-                        }
+                for ((_, value), leaf) in trans.iter().zip(&trans_leaf) {
+                    if leaf.value != *value {
+                        edits.push(Edit { start: leaf.span.0, end: leaf.span.1, text: st.string(value) });
                     }
                 }
             } else if let Some((_, value)) = trans.iter().find(|(p, _)| p.len() == 1 && p[0] == "stringUnit") {
