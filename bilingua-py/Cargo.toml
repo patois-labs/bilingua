@@ -18,8 +18,12 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 engine = { package = "bilingua", path = "../bilingua" }
+serde = { workspace = true }
 serde_json = { workspace = true }
 pyo3 = { version = "0.26", features = ["abi3-py311"] }
+# Document to Python objects without a serde_json::Value copy in between (T8, BILI-18). MIT licence. Its
+# version pairs with pyo3's; the exact release is pinned in Cargo.lock.
+pythonize = "0.26"
 
 [features]
 # maturin turns this on for wheels; plain cargo test and cargo clippy leave it off so they link.

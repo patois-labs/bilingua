@@ -1,5 +1,9 @@
-//! Python bindings for Bilingua. The Document crosses the boundary as plain Python dicts and lists, built from
-//! its serde JSON form, so new model fields flow through without changes here.
+//! Python bindings for Bilingua. The Document crosses the boundary as plain Python dicts and lists, in its serde
+//! JSON form, so new model fields flow through without changes here. It is written straight into Python objects and
+//! read straight from them (`doc_to_py`, `doc_in`), with no `serde_json::Value` copy in between; the objects, key
+//! order and errors are the ones the `Value` path gives.
+
+mod pyde;
 
 use engine::{Document, ExtractOptions, Granularity};
 use pyo3::create_exception;
@@ -257,13 +261,122 @@ fn extract(
             .with_format_options(format_options)
             .with_profile(prof.map(|p| p.name));
         let doc = engine::extract(&name, &data, &opts)?;
-        let mut v = serde_json::to_value(&doc).map_err(|e| Fail::new("internal", e.to_string()))?;
-        if let Value::Object(m) = &mut v {
-            m.insert(PARSER_KEY.to_string(), parser_info(&doc, prof));
-        }
-        Ok(v)
+        let parser = parser_info(&doc, prof);
+        Ok((doc, parser))
     })?;
-    to_py(py, &value)
+    doc_to_py(py, &value.0, Some(&value.1))
+}
+
+/// Python dicts that come out with their keys sorted, as `to_py` writes a `Value` object (serde_json's map is a
+/// BTreeMap here): the same objects in the same order as the old `to_value` + `to_py` path.
+struct SortedDict;
+
+impl pythonize::PythonizeMappingType for SortedDict {
+    type Builder<'py> = (Python<'py>, Vec<(Bound<'py, PyString>, Bound<'py, PyAny>)>);
+
+    fn builder<'py>(py: Python<'py>, len: Option<usize>) -> PyResult<Self::Builder<'py>> {
+        Ok((py, Vec::with_capacity(len.unwrap_or(0))))
+    }
+
+    fn push_item<'py>(builder: &mut Self::Builder<'py>, key: Bound<'py, PyAny>, value: Bound<'py, PyAny>) -> PyResult<()> {
+        // a key that is not a str fails the fast path; doc_to_py then takes the Value path
+        builder.1.push((key.downcast_into::<PyString>()?, value));
+        Ok(())
+    }
+
+    fn finish<'py>(builder: Self::Builder<'py>) -> PyResult<Bound<'py, pyo3::types::PyMapping>> {
+        let (py, items) = builder;
+        let mut keyed = Vec::with_capacity(items.len());
+        for (k, v) in items {
+            keyed.push((k.to_str()?.to_owned(), k, v));
+        }
+        // byte order, as BTreeMap<String, _> orders; a struct never repeats a key
+        keyed.sort_by(|a, b| a.0.cmp(&b.0));
+        let d = PyDict::new(py);
+        for (_, k, v) in keyed {
+            d.set_item(k, v)?;
+        }
+        Ok(d.into_mapping())
+    }
+}
+
+struct SortedTypes;
+
+impl pythonize::PythonizeTypes for SortedTypes {
+    type Map = SortedDict;
+    type NamedMap = pythonize::PythonizeUnnamedMappingAdapter<SortedDict>;
+    type List = PyList;
+}
+
+/// A Document with the parser record as one more top-level key (sorted in with the others).
+#[derive(serde::Serialize)]
+struct WithParser<'a> {
+    #[serde(flatten)]
+    doc: &'a Document,
+    parser: &'a Value,
+}
+
+/// The Document as Python dicts and lists, with the parser record when there is one. Written straight into Python
+/// objects; if that ever fails, the old way (`to_value`, then `to_py`) gives the answer.
+fn doc_to_py(py: Python<'_>, doc: &Document, parser: Option<&Value>) -> PyResult<Py<PyAny>> {
+    let fast = match parser {
+        Some(p) => pythonize::pythonize_custom::<SortedTypes, _>(py, &WithParser { doc, parser: p }),
+        None => pythonize::pythonize_custom::<SortedTypes, _>(py, doc),
+    };
+    if let Ok(obj) = fast {
+        return Ok(obj.unbind());
+    }
+    let mut v = serde_json::to_value(doc).map_err(|e| to_py_err(py, Fail::new("internal", e.to_string())))?;
+    if let (Value::Object(m), Some(p)) = (&mut v, parser) {
+        m.insert(PARSER_KEY.to_string(), p.clone());
+    }
+    to_py(py, &v)
+}
+
+/// A Document handed in by the caller: read already, or (the old path) a `Value` still to be read, so that a
+/// malformed document fails at the same step, with the same error, as before.
+enum DocIn {
+    Ready(Box<Document>),
+    Raw(Value),
+}
+
+impl DocIn {
+    /// The document's `format` string ("" when it has none), as the old path read it from the `Value`.
+    fn format(&self) -> String {
+        match self {
+            DocIn::Ready(d) => d.format.clone(),
+            DocIn::Raw(v) => v.get("format").and_then(|f| f.as_str()).unwrap_or("").to_string(),
+        }
+    }
+
+    fn into_document(self) -> Result<Document, Fail> {
+        match self {
+            DocIn::Ready(d) => Ok(*d),
+            DocIn::Raw(v) => serde_json::from_value(v).map_err(|e| Fail::new("invalid_document", e.to_string())),
+        }
+    }
+}
+
+/// Reads a Document dict and the parser record `extract` added. The fast path reads the Python objects directly
+/// (`pyde`); anything it does not take goes the old way, `from_py` (whose conversion errors are raised here, as
+/// before) and a `Value` read later by `DocIn::into_document`.
+fn doc_in(obj: &Bound<'_, PyAny>) -> Result<(DocIn, Option<Value>), Fail> {
+    if let Ok(d) = obj.downcast::<PyDict>() {
+        let stamped = match d.get_item(PARSER_KEY) {
+            // the record sits one level down, as it did inside the whole document's from_py
+            Ok(Some(p)) => from_py(&p, 1).ok().map(Some),
+            Ok(None) => Some(None),
+            Err(_) => None,
+        };
+        if let Some(stamped) = stamped {
+            if let Ok(doc) = <Document as serde::Deserialize>::deserialize(pyde::De::new(obj.clone())) {
+                return Ok((DocIn::Ready(Box::new(doc)), stamped));
+            }
+        }
+    }
+    let mut value = from_py(obj, 0)?;
+    let stamped = value.as_object_mut().and_then(|m| m.remove(PARSER_KEY));
+    Ok((DocIn::Raw(value), stamped))
 }
 
 /// Writes a Document (as returned by `extract`, with targets filled in) back to file bytes.
@@ -282,12 +395,11 @@ fn merge<'py>(
     format_options: Option<&Bound<'py, PyAny>>,
     profile_version: Option<u32>,
 ) -> PyResult<Bound<'py, PyBytes>> {
-    let mut value = from_py(document, 0).map_err(|f| to_py_err(py, f))?;
     // the parser record extract adds is information for the caller, not part of the model's document
-    let stamped = value.as_object_mut().and_then(|m| m.remove(PARSER_KEY));
+    let (doc, stamped) = doc_in(document).map_err(|f| to_py_err(py, f))?;
     // a profile gives the defaults (LocOS: UTF-8 out except ini, strings, dxf, txt, properties, xaml and resjson, stamp always);
     // keywords override them. Without a version in the call, the version the document was extracted under is used.
-    let format = value.get("format").and_then(|f| f.as_str()).unwrap_or("").to_string();
+    let format = doc.format();
     let base = profile.as_deref().map(|p| p.split('@').next().unwrap_or(p));
     let stamped_version = stamped
         .as_ref()
@@ -313,7 +425,7 @@ fn merge<'py>(
         opts = opts.with_stamp_target_always(b);
     }
     let bytes = guarded(py, move || {
-        let doc: Document = serde_json::from_value(value).map_err(|e| Fail::new("invalid_document", e.to_string()))?;
+        let doc = doc.into_document()?;
         Ok(engine::merge_with(&doc, &opts)?)
     })?;
     Ok(PyBytes::new(py, &bytes))
@@ -353,13 +465,6 @@ fn parser_info(doc: &Document, prof: Option<engine::profile::Profile>) -> Value 
         "profile": prof.map(|p| p.name),
         "profile_version": prof.map(|p| p.version),
     })
-}
-
-/// A Document from its dict, the parser record dropped; also returns that record.
-fn document_from_value(mut value: Value) -> Result<(Document, Option<Value>), Fail> {
-    let stamped = value.as_object_mut().and_then(|m| m.remove(PARSER_KEY));
-    let doc = serde_json::from_value(value).map_err(|e| Fail::new("invalid_document", e.to_string()))?;
-    Ok((doc, stamped))
 }
 
 fn inlines_from_py(obj: &Bound<'_, PyAny>) -> Result<Vec<engine::Inline>, Fail> {
@@ -410,9 +515,9 @@ fn from_locos_text(py: Python<'_>, text: &str, map: &Bound<'_, PyAny>) -> PyResu
 /// `to_locos_text`).
 #[pyfunction]
 fn locos_units(py: Python<'_>, document: &Bound<'_, PyAny>) -> PyResult<Py<PyAny>> {
-    let value = from_py(document, 0).map_err(|f| to_py_err(py, f))?;
+    let (doc, _) = doc_in(document).map_err(|f| to_py_err(py, f))?;
     let units = guarded(py, move || {
-        let (doc, _) = document_from_value(value)?;
+        let doc = doc.into_document()?;
         serde_json::to_value(engine::profile::locos_units(&doc)).map_err(|e| Fail::new("internal", e.to_string()))
     })?;
     to_py(py, &units)
@@ -428,7 +533,7 @@ fn locos_units(py: Python<'_>, document: &Bound<'_, PyAny>) -> PyResult<Py<PyAny
 /// the segment.
 #[pyfunction]
 fn locos_set_targets(py: Python<'_>, document: &Bound<'_, PyAny>, targets: &Bound<'_, PyAny>) -> PyResult<(Py<PyAny>, Py<PyAny>)> {
-    let value = from_py(document, 0).map_err(|f| to_py_err(py, f))?;
+    let (doc, stamped) = doc_in(document).map_err(|f| to_py_err(py, f))?;
     let targets = match from_py(targets, 0).map_err(|f| to_py_err(py, f))? {
         Value::Object(m) => {
             let mut out = Vec::with_capacity(m.len());
@@ -443,7 +548,7 @@ fn locos_set_targets(py: Python<'_>, document: &Bound<'_, PyAny>, targets: &Boun
         _ => return Err(to_py_err(py, Fail::new("invalid_argument", "targets must be a dict of segment id to text"))),
     };
     let (doc, problems) = guarded(py, move || {
-        let (mut doc, stamped) = document_from_value(value)?;
+        let mut doc = doc.into_document()?;
         let maps: std::collections::HashMap<String, engine::profile::tokens::LocosMap> =
             engine::profile::locos_units(&doc).into_iter().map(|u| (u.segment_id, u.map)).collect();
         let empty = engine::profile::tokens::LocosMap::new();
@@ -462,13 +567,9 @@ fn locos_set_targets(py: Python<'_>, document: &Bound<'_, PyAny>, targets: &Boun
                 problems.insert(seg, Value::Array(found.iter().map(problem_value).collect()));
             }
         }
-        let mut v = serde_json::to_value(&doc).map_err(|e| Fail::new("internal", e.to_string()))?;
-        if let (Value::Object(m), Some(p)) = (&mut v, stamped) {
-            m.insert(PARSER_KEY.to_string(), p);
-        }
-        Ok((v, Value::Object(problems)))
+        Ok((doc, Value::Object(problems)))
     })?;
-    Ok((to_py(py, &doc)?, to_py(py, &problems)?))
+    Ok((doc_to_py(py, &doc, stamped.as_ref())?, to_py(py, &problems)?))
 }
 
 /// The profiles Bilingua knows, as `{name: version}` (`{"locos": 1}`).

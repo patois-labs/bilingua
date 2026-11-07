@@ -38,6 +38,9 @@ is listed here).
 - Speed (no change in output): `detect` no longer sniffs every filter's bytes for a file whose extension already
   decides (the sniff result was thrown away), and `extract` and `resegment` compile the bundled SRX rules only for
   sentence segmentation (3 to 4 ms on the first call of a process). Rust: `bilingua_seg::Rules::empty()`.
+- Python, speed (same objects, key order and errors): the Document is written straight into Python objects and read
+  straight from them, with no `serde_json::Value` copy in between (about half the time of `extract`, `merge`,
+  `locos_units` and `locos_set_targets` on small files). New dependency of the wheel: `pythonize` (MIT).
 - Error codes (W2): every size, budget and nesting refusal is code `limit` (`Error::Limit` with a `LimitKind`) and
   every byte-level decode refusal code `encoding` (`Error::Encoding`), with LocOS's sentence where LocOS has one, in
   arb, dtd, ftl, ini, jsmodule, json5, properties, resjson, strings, toml and yaml. They were `unsupported` or

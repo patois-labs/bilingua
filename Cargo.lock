@@ -504,6 +504,8 @@ version = "0.9.0"
 dependencies = [
  "bilingua",
  "pyo3",
+ "pythonize",
+ "serde",
  "serde_json",
 ]
 
@@ -1443,6 +1445,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d80ba7540edb18890d444c5aa8e1f1f99b1bdf26fb26ae383135325f4a36042b"
 dependencies = [
  "cc",
+]
+
+[[package]]
+name = "pythonize"
+version = "0.26.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "11e06e4cff9be2bbf2bddf28a486ae619172ea57e79787f856572878c62dcfe2"
+dependencies = [
+ "pyo3",
+ "serde",
 ]
 
 [[package]]
