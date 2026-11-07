@@ -354,7 +354,7 @@ pub(crate) fn fix_cjk_autolinks(src: &str, new: &str, mdx: bool) -> String {
     out
 }
 
-/// A block marker (ordered number, ATX hash, bullet, quote) at the start of `s`: (marker start, escape point).
+/// A block marker (ordered number, ATX hash, bullet, quote, code fence) at the start of `s`: (marker start, escape point).
 fn block_start(s: &str) -> Option<usize> {
     let lead = s.len() - s.trim_start_matches([' ', '\t']).len();
     if lead > 3 {
@@ -388,11 +388,30 @@ fn block_start(s: &str) -> Option<usize> {
     if b.get(lead) == Some(&b'>') {
         return Some(lead);
     }
+    // a code fence would swallow the rest of the file (LocOS tracker #790)
+    if b[lead..].starts_with(b"```") || b[lead..].starts_with(b"~~~") {
+        return Some(lead);
+    }
     None
+}
+
+/// The indent of `s` in columns (a tab to the next multiple of four).
+fn indent(s: &str) -> usize {
+    let mut w = 0;
+    for c in s.chars() {
+        match c {
+            ' ' => w += 1,
+            '\t' => w += 4 - w % 4,
+            _ => break,
+        }
+    }
+    w
 }
 
 /// A translated line-start unit must not open a block its source did not.
 pub(crate) fn escape_block_start(src: &str, new: &str) -> String {
+    // four columns of indent would make the line an indented code block (structure fuzz): the blanks go
+    let new = if indent(new) >= 4 && indent(src) < 4 { new.trim_start_matches([' ', '\t']) } else { new };
     match block_start(new) {
         Some(at) if block_start(src).is_none() => format!("{}\\{}", &new[..at], &new[at..]),
         _ => new.to_string(),
@@ -518,8 +537,16 @@ mod tests {
         assert_eq!(escape_block_start("Plain", "# Titel"), "\\# Titel");
         assert_eq!(escape_block_start("1984. x", "1984. y"), "1984. y");
         assert_eq!(escape_block_start("Plain", "-5 Grad"), "-5 Grad");
-        assert_eq!(escape_block_start("Plain", "      deep"), "      deep");
+        // four columns of indent would be an indented code block: the blanks go (structure fuzz)
+        assert_eq!(escape_block_start("Plain", "      deep"), "deep");
+        assert_eq!(escape_block_start("Plain", "\tdeep"), "deep");
+        assert_eq!(escape_block_start("Plain", "   ok"), "   ok");
+        assert_eq!(escape_block_start("    code", "    kept"), "    kept");
         assert_eq!(escape_block_start("Plain", "1234567890. x"), "1234567890. x");
+        assert_eq!(escape_block_start("Plain", "```js x"), "\\```js x");
+        assert_eq!(escape_block_start("Plain", "  ~~~~ x"), "  \\~~~~ x");
+        assert_eq!(escape_block_start("```a", "```b"), "```b");
+        assert_eq!(escape_block_start("Plain", "`` x"), "`` x");
     }
 
     #[test]

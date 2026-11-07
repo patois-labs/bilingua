@@ -21,7 +21,7 @@ fn matches_locos_on_random_files() {
     let text = std::fs::read_to_string(path).unwrap();
     let cases: Vec<serde_json::Value> = serde_json::from_str(&text).unwrap();
     assert!(cases.len() >= 260);
-    let (mut ok, mut refused) = (0, 0);
+    let (mut ok, mut refused, mut ticks) = (0, 0, 0);
     for c in &cases {
         let name = c["name"].as_str().unwrap();
         let data = c["text"].as_str().unwrap().as_bytes().to_vec();
@@ -71,10 +71,17 @@ fn matches_locos_on_random_files() {
                 assert!(!got.contains('\u{27e6}') && extract(got.as_bytes()).is_ok(), "{name}: build {label}: {got}");
                 continue;
             }
+            // kept difference (structure fuzz): in a changed line with codes, a backtick run that closes no code span
+            // of its own text run is escaped, so it cannot pair with one across a code; LocOS writes it plain
+            if got != exp && got.replace("\\`", "`") == exp.replace("\\`", "`") {
+                ticks += 1;
+                continue;
+            }
             assert_eq!(got, exp, "{name}: build {label}");
         }
         ok += 1;
     }
     assert!(ok >= 260, "only {ok} files opened");
-    println!("{ok} files match LocOS, {refused} refused by both");
+    println!("{ok} files match LocOS, {refused} refused by both, {ticks} builds differ only by escaped backticks");
+    assert!(ticks < 40, "{ticks} builds differ by escaped backticks");
 }

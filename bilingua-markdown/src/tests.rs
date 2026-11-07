@@ -375,3 +375,74 @@ fn fuzz_fragments_always_round_trip() {
         }
     }
 }
+
+/// One unit translated to plain text, merged, and read again: the kinds stay.
+fn one(src: &str, id: &str, t: &str) -> String {
+    let mut d = extract(src);
+    d.set_target(id, vec![Inline::text(t)]).unwrap();
+    let out = merged(&d);
+    assert_eq!(kinds(&extract(&out)), kinds(&d), "the units keep their kinds: {out}");
+    out
+}
+
+#[test]
+fn a_translation_opens_no_fence_or_block() {
+    // LocOS trackers #790 (a fence swallows the rest of the file) and #704 (a marker turns the block into another)
+    let src = "Para one.\n\nPara two.\n";
+    for (t, want) in [
+        ("```js x", r"\```js x"),
+        ("~~~ x", r"\~~~ x"),
+        ("# x", r"\# x"),
+        ("- x", r"\- x"),
+        ("1984. x", r"1984\. x"),
+        ("> x", r"\> x"),
+        ("a\n---", "a\n\\---"),
+        ("a\n=", "a\n\\="),
+        ("a\n# b", "a\n\\# b"),
+    ] {
+        assert_eq!(one(src, "u1", t), format!("{want}\n\nPara two.\n"), "{t}");
+    }
+    // a code span with three backticks is no fence, and plain text is untouched
+    assert_eq!(one(src, "u1", "```a``` x"), "```a``` x\n\nPara two.\n");
+    assert_eq!(one(src, "u1", "x - y # z"), "x - y # z\n\nPara two.\n");
+    // four columns of indent would be an indented code block
+    assert_eq!(one(src, "u1", "    x"), "x\n\nPara two.\n");
+}
+
+#[test]
+fn a_list_item_or_quote_translation_opens_no_block() {
+    assert_eq!(one("- item one\n", "u1", "# x"), "- \\# x\n");
+    assert_eq!(one("> quoted\n", "u1", "```x"), "> \\```x\n");
+    // heading text is inline
+    assert_eq!(one("# Title\n", "u1", "# x"), "# # x\n");
+    // a closing sequence would be dropped by the reader
+    assert_eq!(one("# Title\n", "u1", "w #"), "# w \\#\n");
+    assert_eq!(one("# Title\n", "u1", "w#"), "# w#\n");
+}
+
+#[test]
+fn a_bracket_in_link_text_keeps_the_link() {
+    let mut d = extract("See [the guide](https://x.test/g) now.\n");
+    let tgt: Vec<Inline> = d.units[0]
+        .source()
+        .into_iter()
+        .map(|i| match i {
+            Inline::Text(t) if t == "the guide" => Inline::text("p[ ]q"),
+            other => other,
+        })
+        .collect();
+    d.set_target("u1", tgt).unwrap();
+    let out = merged(&d);
+    assert_eq!(out, "See [p\\[ \\]q](https://x.test/g) now.\n");
+    assert_eq!(extract(&out).units.len(), d.units.len());
+}
+
+#[test]
+fn a_cell_translation_does_not_split_the_cell() {
+    let src = "| Name | Note |\n|---|---|\n| Lamp | Warm |\n";
+    let mut d = extract(src);
+    d.set_target("u3", vec![Inline::text(r"a | b \| c")]).unwrap();
+    let out = merged(&d);
+    assert_eq!(out, "| Name | Note |\n|---|---|\n| a \\| b \\| c | Warm |\n");
+    assert_eq!(extract(&out).units.len(), d.units.len());
+}

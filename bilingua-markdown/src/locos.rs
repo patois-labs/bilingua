@@ -1618,11 +1618,19 @@ fn block_start(s: &str) -> Option<usize> {
     if v.get(lead).is_some_and(|c| matches!(c, '-' | '+' | '*')) && ends(lead + 1) {
         return Some(lead);
     }
-    (v.get(lead) == Some(&'>')).then_some(lead)
+    if v.get(lead) == Some(&'>') {
+        return Some(lead);
+    }
+    // a code fence would swallow the rest of the file (LocOS tracker #790)
+    let fence = |c: char| v[lead..].iter().take(3).filter(|x| **x == c).count() == 3;
+    (fence('`') || fence('~')).then_some(lead)
 }
 
 /// LocOS `escape_block_start`.
 fn escape_block_start(src: &str, new: &str) -> String {
+    // four columns of indent would make the line an indented code block (structure fuzz): the blanks go
+    let indent = |s: &str| s.chars().take_while(|c| matches!(c, ' ' | '\t')).fold(0, |w, c| if c == '\t' { w + 4 - w % 4 } else { w + 1 });
+    let new = if indent(new) >= 4 && indent(src) < 4 { new.trim_start_matches([' ', '\t']) } else { new };
     match block_start(new) {
         Some(at) if block_start(src).is_none() => {
             let v = chars(new);
@@ -1785,9 +1793,9 @@ pub fn merge(doc: &Document, data: &[u8]) -> Result<Vec<u8>, Error> {
             new = crate::locos_emphasis::fix_cjk_emphasis(&it.text, &new);
             new = crate::locos_emphasis::fix_cjk_autolinks(&it.text, &new);
             new = restore_cell_escapes(&it.text, &new);
-            if !it.prefix.contains('#') {
-                new = escape_block_start(&it.text, &new);
-            }
+            // heading text too (beyond LocOS, structure fuzz): `# # w` reads back as the heading `w`, the prefix
+            // having taken the translated `# `; escaped, it prints the same and reads back as written
+            new = escape_block_start(&it.text, &new);
         }
         out[it.line] = format!("{}{new}{tail}{ending}", it.prefix);
     }
@@ -1908,5 +1916,11 @@ mod tests {
     fn block_start_is_escaped() {
         assert_eq!(escape_block_start("In 1984. we", "1984. haben"), "1984\\. haben");
         assert_eq!(escape_block_start("- a", "- b"), "- b");
+        // a code fence would swallow the rest of the file (#790)
+        assert_eq!(escape_block_start("Plain", "```x"), "\\```x");
+        assert_eq!(escape_block_start("Plain", " ~~~ x"), " \\~~~ x");
+        assert_eq!(escape_block_start("Plain", "``x"), "``x");
+        // four columns of indent would be an indented code block
+        assert_eq!(escape_block_start("Plain", "    x"), "x");
     }
 }
