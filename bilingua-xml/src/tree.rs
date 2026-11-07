@@ -678,7 +678,7 @@ fn mask_doctype(text: &str) -> Option<String> {
             if c == quote {
                 quote = 0;
             }
-        } else if c == b'"' || c == b''' {
+        } else if c == b'"' || c == b'\'' {
             quote = c;
         } else if depth > 0 && b[j..].starts_with(b"<!--") {
             j += 4 + text[j + 4..].find("-->")? + 2;
@@ -701,8 +701,7 @@ fn mask_doctype(text: &str) -> Option<String> {
     out.push_str("<!DOCTYPE");
     for ch in text[i + 9..j].chars() {
         // keep line breaks and the byte length; a blank is one byte, so a wide character is several
-        if ch == '
-' || ch == '' {
+        if ch == '\n' || ch == '\r' {
             out.push(ch);
         } else {
             for _ in 0..ch.len_utf8() {
