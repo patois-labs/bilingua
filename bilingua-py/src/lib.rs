@@ -59,10 +59,11 @@ impl From<engine::Error> for Fail {
 }
 
 fn to_py_err(py: Python<'_>, f: Fail) -> PyErr {
+    let detail = f.detail.unwrap_or_else(|| f.msg.clone());
     let err = BilinguaError::new_err(f.msg);
     // Setting an attribute on a fresh exception instance cannot fail in practice; ignore if it does.
     let _ = err.value(py).setattr("code", f.code);
-    let _ = err.value(py).setattr("detail", f.detail.as_deref().unwrap_or(&f.msg));
+    let _ = err.value(py).setattr("detail", detail);
     err
 }
 
