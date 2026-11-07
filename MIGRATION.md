@@ -670,6 +670,44 @@ Found by running the LocOS suites with Bilingua switched on. Bilingua now gives 
   `Filter.build` guard and `export._nothing_written`, so the adapter keeps it (Bilingua's own merge of an untouched
   document under the profile writes UTF-8 too).
 
+## Wave 2 B-side: resource formats (W2, 11-07)
+
+Found by the W2 parity and diff runs with the adapter (`coder-comparison/2026-11-07-locos-issues/bili-core/W2/B-SIDE.md`).
+
+- **Error codes the adapter can branch on.** Size, budget and nesting refusals are code `limit` and byte-level decode
+  refusals code `encoding` (both codes existed already) in arb, dtd, ftl, ini, jsmodule, json5, properties, resjson,
+  strings, toml and yaml; they were `unsupported` or `parse`, so the adapter matched message text. The sentence is
+  LocOS's where LocOS has one (properties binary file, ftl, dtd and toml decode refusals, ftl placeables, jsmodule and
+  json5 budgets). `BilinguaError.detail` (Python) is the parser's own sentence without the `not a <format> file:`
+  prefix a `parse` error carries. A js file that is not a static module stays `parse` (LocOS: InputLimitError).
+- **Budgets follow the call's limits.** arb, jsmodule, resjson, toml and yaml took their crate defaults in
+  `Filter::extract`, so a lowered `MAX_DOCUMENT_SEGMENTS` never reached them; json5 lowers its own limits to the call's
+  when they are set. New pre-parse budgets: arb (`check_json_budget`), toml (`_budget`: quotes over 40 x, `= , [ {`
+  over 20 x), resx, wxl, Android strings, Java XML properties and Qt ts (`check_xml_budget`: `<` over 40 x). Native
+  mode too. arb's `Filter::extract` now caps at 50,000 units (LocOS) where its own `Limits` allow 1,000,000;
+  `Arb.extract_with` keeps the crate's numbers.
+- **Wrong-kind tokens (toml, js, #814.1).** A pair token naming a point code (`⟦g1⟧` for
+  `{{ .Count }}`) is dropped, as LocOS drops it; a token naming no code stays text. Other formats keep such a token
+  as text, as before (`profile::tokens::parse_locos_text_for`).
+- **Encodings kept under the profile.** xaml and resjson are written in their own encoding: a UTF-16 file keeps its
+  BOM and UTF-16, a declared legacy charset stays with a character reference for what it cannot hold.
+- **yaml under the profile.** Values are plain text (Rails `%{name}`, `{name}`, HTML and `%d` are no longer codes) and
+  the style is empty: LocOS's yaml filter has no inline map and no style. Native mode is unchanged.
+- **xcloc under the profile.** Members go through the LocOS XLIFF reader and writer: trimmed unit text, `p_index`
+  offset by the `<source>` elements of the earlier members (skipped sources leave gaps, so segment ids match LocOS),
+  a new `<target>` without a state, the declaration line break kept, `_mark_translated` and `targetLocale`. A repeated
+  token is written once, as LocOS does. The profile document carries an empty skeleton entry naming this writer; a
+  native document merges as before.
+- **xaml DOCTYPE wording** is LocOS's, UTF-16 files included.
+- **xcstrings under the profile.** LocOS writes a changed catalog with `json.dumps` (`_dump`), which spells an empty
+  object `{}` where Xcode writes `{
+
+    }`. A profile merge that changes the file now writes empty objects and
+  arrays the same way; Bilingua still splices everything else (an Xcode file is otherwise already in `json.dumps`
+  style). Native mode keeps every byte. A catalog that LocOS's `_dump` would re-escape (`ensure_ascii`, `\/`) is
+  not rewritten that way.
+- No profile version bump: no LocOS document was ever stored by Bilingua in production.
+
 ## Wave 1 switch blockers: Markdown, JSON and PO (W1, 11-07)
 
 Found by the LocOS suites and the differential test with Bilingua switched on. Bilingua now does what LocOS does.

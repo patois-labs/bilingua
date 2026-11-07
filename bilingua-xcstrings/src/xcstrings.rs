@@ -352,7 +352,12 @@ impl Filter for Xcstrings {
         // The file was accepted when it was extracted: no unit cap here.
         let unlimited = limits.with_max_units(usize::MAX);
         let entries = cat.walk(&unlimited)?;
-        let out = apply(&cat, &entries, doc)?;
+        let mut out = apply(&cat, &entries, doc)?;
+        if opts.is_profile(bilingua_model::profile::LOCOS) && out != cat.text {
+            // LocOS `_dump` writes a changed catalog with `json.dumps`, which spells an empty object `{}` where
+            // Xcode writes `{\n\n    }`; everything else of an Xcode file is already in that style
+            out = compact_empty(&out);
+        }
         let mut bytes = Vec::with_capacity(out.len() + 3);
         if bom {
             bytes.extend_from_slice(BOM);
@@ -360,6 +365,41 @@ impl Filter for Xcstrings {
         bytes.extend_from_slice(out.as_bytes());
         Ok(bytes)
     }
+}
+
+/// Every object or array whose inside is only white space (outside strings) written as `{}` / `[]`, as Python's
+/// `json.dumps` writes an empty container.
+fn compact_empty(text: &str) -> String {
+    let b = text.as_bytes();
+    let mut out = String::with_capacity(text.len());
+    let (mut i, mut from) = (0usize, 0usize);
+    while i < b.len() {
+        match b[i] {
+            b'"' => {
+                i += 1;
+                while i < b.len() && b[i] != b'"' {
+                    i += if b[i] == b'\\' { 2 } else { 1 };
+                }
+                i += 1;
+            }
+            open @ (b'{' | b'[') => {
+                let close = if open == b'{' { b'}' } else { b']' };
+                let mut j = i + 1;
+                while j < b.len() && matches!(b[j], b' ' | b'\t' | b'\r' | b'\n') {
+                    j += 1;
+                }
+                if j > i + 1 && b.get(j) == Some(&close) {
+                    out.push_str(&text[from..=i]);
+                    from = j;
+                    i = j;
+                }
+                i += 1;
+            }
+            _ => i += 1,
+        }
+    }
+    out.push_str(&text[from.min(text.len())..]);
+    out
 }
 
 // ---------------------------------------------------------------------------------------------------------

@@ -237,4 +237,13 @@ fn empty_entry_objects_are_kept_byte_for_byte() {
     assert!(out.starts_with("{\n  \"sourceLanguage\" : \"en\",\n  \"strings\" : {\n    \"\" : {\n\n    },\n    \"#\" : {\n\n    },\n    \"Hello\" : {"), "{out}");
     assert!(out.contains("\"value\" : \"Hallo\""), "{out}");
     assert!(out.ends_with("\n  },\n  \"version\" : \"1.0\"\n}"), "{out}");
+    // under the LocOS profile a changed catalog is written as LocOS's `json.dumps` writes it: `{}` for an empty object
+    let mut d = Xcstrings.extract(src.as_bytes(), &profile::locos().extract_options().with_target_lang("de")).unwrap();
+    set_all(&mut d, &[(0, "Hallo")]);
+    let out = String::from_utf8(Xcstrings.merge_with(&d, &profile::locos().merge_options("xcstrings")).unwrap()).unwrap();
+    assert!(out.starts_with("{\n  \"sourceLanguage\" : \"en\",\n  \"strings\" : {\n    \"\" : {},\n    \"#\" : {},\n    \"Hello\" : {\n"), "{out}");
+    assert!(out.contains("\"value\" : \"Hallo\""), "{out}");
+    // nothing translated: the original bytes
+    let d = Xcstrings.extract(src.as_bytes(), &profile::locos().extract_options().with_target_lang("de")).unwrap();
+    assert_eq!(Xcstrings.merge_with(&d, &profile::locos().merge_options("xcstrings")).unwrap(), src.as_bytes());
 }
