@@ -22,6 +22,13 @@ is listed here).
 
 ### Changed
 
+- markdown: `markdown.fm_keys` is applied (front matter keys to translate, LocOS's `LOC_TMS_FRONT_MATTER_KEYS`), in
+  native mode and under the LocOS profile; the profile's units carry LocOS's image inventory as unit extras
+  (`profile::A11Y_IMAGES`, `profile::A11Y_EMPTY_ALT`).
+- Encodings: a declared charset may use Python's codec names (`CP932`, `cp936`, `uhc`, ...) as LocOS reads them
+  (`enc::label_encoding`, new); a PO declaring CP932 is read and written in Shift_JIS under its label.
+- json, po: LocOS's pre-parse budgets (`guard::check_budget`, new): a quote, value or escape flood is a `limit`
+  error, not an empty file.
 - markdown: the LocOS-profile skeleton schema is 2 (the skeleton starts with the file's encoding tag, as po and
   srt do). A stored schema 1 Document (no tag line) still merges as before; its `source_encoding` stays as stored.
 - Tests: the LocOS goldens were made again from Localization OS with its fixes for trackers 805, 810, 811, 813 and

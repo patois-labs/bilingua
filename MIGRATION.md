@@ -653,6 +653,31 @@ Found by running the LocOS suites with Bilingua switched on. Bilingua now gives 
   `Filter.build` guard and `export._nothing_written`, so the adapter keeps it (Bilingua's own merge of an untouched
   document under the profile writes UTF-8 too).
 
+## Wave 1 switch blockers: Markdown, JSON and PO (W1, 11-07)
+
+Found by the LocOS suites and the differential test with Bilingua switched on. Bilingua now does what LocOS does.
+
+- **`markdown.fm_keys` is applied** (it was accepted and ignored). It is LocOS's `LOC_TMS_FRONT_MATTER_KEYS`: comma
+  separated, blanks around a name dropped, case-insensitive, empty = no front matter key is translated. Under the
+  profile it replaces LocOS's default list; in native mode it replaces `title` and `description` (unset: as before).
+  The profile skeleton tag carries the list (`;fm=a:b`), so the merge walks the file with the keys it was extracted
+  with. A skeleton tag may now be up to 4096 bytes (was 200).
+- **Markdown image inventory (LocOS `a11y_images`).** Under the profile each unit carries LocOS's image scan as unit
+  extras: `locos.a11y_images` (how many images `a11y.anchor_for` puts on it) and `locos.a11y_empty_alt` (the file
+  names of those with an empty alt, one per line). The adapter sums them into `skeleton["a11y_images"]`. Units and
+  their text do not change.
+- **Python charset names in a declaration** (`enc::label_encoding`). A file that declares `charset=CP932` (or `cp936`,
+  `cp949`, `uhc`, `ujis`, `sjis`, `ms_kanji`, `iso8859_2`, ...) is read in that charset, as LocOS's `codecs.lookup`
+  reads it: the WHATWG label first, then Python's codec names and aliases of the legacy charsets LocOS reads from a
+  declaration. A PO file declaring CP932 is read as Shift_JIS whatever the source language and written back in it
+  under its own label (it was read as Windows-1252 and refused, or written as UTF-8). This applies to every format
+  that honours a declaration (HTML, XML, PO).
+- **Flood budgets (LocOS #571 gate).** A JSON file with more than 40 x `max_units` quotes, or 20 x `max_units` commas
+  and brackets, and a PO file with more than 40 x `max_units` backslashes, are refused as a `limit` error before they
+  are read (they were read, found to hold no text, and refused as empty). Native mode too.
+- **No profile version bump.** These change what the locos profile reads, but no LocOS document was ever stored by
+  Bilingua in production, so the profile stays at its version.
+
 ## Differences from LocOS: unknown tokens in rst, ARB and JSON (#814 item 1, 11-07)
 
 Both engines now follow one rule: a token in a translation that names no code of the unit is typed text. It is kept,
