@@ -675,6 +675,8 @@ Found by the LocOS suites and the differential test with Bilingua switched on. B
 - **Flood budgets (LocOS #571 gate).** A JSON file with more than 40 x `max_units` quotes, or 20 x `max_units` commas
   and brackets, and a PO file with more than 40 x `max_units` backslashes, are refused as a `limit` error before they
   are read (they were read, found to hold no text, and refused as empty). Native mode too.
+- **JSON nesting under the profile.** LocOS reads JSON as deep as `json.loads` does (Python's recursion limit, about
+  990 levels); the profile now reads 900 levels (was 200) and refuses past that. Native mode keeps 200.
 - **No profile version bump.** These change what the locos profile reads, but no LocOS document was ever stored by
   Bilingua in production, so the profile stays at its version.
 
