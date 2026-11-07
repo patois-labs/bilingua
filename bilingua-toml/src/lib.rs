@@ -41,29 +41,41 @@ fn parse_err(msg: impl Into<String>) -> Error {
 fn scan_err(e: ScanError) -> Error {
     match e {
         ScanError::Syntax(m) => parse_err(format!("this TOML file could not be read ({m})")),
-        ScanError::Limit(m) => Error::Unsupported(m),
+        // LocOS: InputLimitError ("This TOML file is nested too deeply.")
+        ScanError::Limit(m) => {
+            let kind = if m.contains("nested") { LimitKind::Depth } else { LimitKind::Units };
+            LimitError::new(kind, m).into()
+        }
     }
 }
 
 /// UTF-8 text of a TOML file and whether it had a BOM.
-fn decode(bytes: &[u8]) -> Result<(&str, bool), Error> {
+/// Size refusals are code `limit`, decode refusals code `encoding` with LocOS's `_decode` sentences.
+fn decode<'a>(bytes: &'a [u8], l: &Limits) -> Result<(&'a str, bool), Error> {
     if bytes.len() > MAX_BYTES {
-        return Err(Error::Unsupported("TOML files larger than 256 MB".into()));
+        return Err(LimitError::new(LimitKind::InputBytes, "This TOML file is larger than 256 MB. Split it into smaller files.").into());
     }
+    guard::check_input(bytes, l)?;
     let (body, bom) = match bytes.strip_prefix(BOM) {
         Some(r) => (r, true),
         None => (bytes, false),
     };
     if body.starts_with(&[0xFF, 0xFE]) || body.starts_with(&[0xFE, 0xFF]) || looks_binary(body) {
-        return Err(Error::Unsupported("this TOML file is not UTF-8 text (TOML files must be UTF-8); save it as UTF-8".into()));
+        return Err(Error::Encoding("This TOML file is not UTF-8 text (TOML files must be UTF-8); re-save the file as UTF-8.".into()));
     }
-    let text = std::str::from_utf8(body)
-        .map_err(|e| Error::Unsupported(format!("this TOML file is not valid UTF-8 (byte {}); save it as UTF-8", e.valid_up_to())))?;
-    // A line budget before any per-line work.
-    let lines = body.iter().filter(|&&c| c == b'\n' || c == b'\r').count();
-    if lines > 20 * MAX_UNITS {
-        return Err(Error::Unsupported("this TOML file has far too many lines; split it".into()));
-    }
+    let text = std::str::from_utf8(body).map_err(|e| {
+        Error::Encoding(format!(
+            "This TOML file is not valid UTF-8 (byte 0x{:02x} at position {}); re-save the file as UTF-8.",
+            body[e.valid_up_to()],
+            e.valid_up_to()
+        ))
+    })?;
+    // LocOS `_budget` (#571): lines, then quotes and value markers, at C speed before the scanner builds anything
+    guard::check_lines(text, l)?;
+    let quotes = text.bytes().filter(|&c| c == b'"' || c == b'\'').count();
+    guard::check_budget(quotes, 40, "This TOML file has far more strings", l)?;
+    let values = text.bytes().filter(|&c| matches!(c, b'=' | b',' | b'[' | b'{')).count();
+    guard::check_budget(values, 20, "This TOML file has far more values", l)?;
     Ok((text, bom))
 }
 
@@ -221,13 +233,14 @@ impl Filter for TomlFilter {
     }
 
     fn sniff(&self, bytes: &[u8]) -> bool {
-        let Ok((text, _)) = decode(bytes) else { return false };
+        let Ok((text, _)) = decode(bytes, &Limits::default()) else { return false };
         scan::scan(text).is_ok_and(|s| s.has_content)
     }
 
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
         bilingua_model::check_own_options(self, &opts.format_options)?;
-        let (text, bom) = decode(bytes)?;
+        let limits = opts.limits();
+        let (text, bom) = decode(bytes, &limits)?;
         let scan = scan::scan(text).map_err(scan_err)?;
         let nl = match text.find('\n') {
             Some(i) if i > 0 && text.as_bytes()[i - 1] == b'\r' => 'r',
@@ -258,11 +271,13 @@ impl Filter for TomlFilter {
                 continue;
             }
             if units.len() >= MAX_UNITS {
-                return Err(Error::Unsupported(format!("this TOML file has more than {MAX_UNITS} translatable strings; split it")));
+                return Err(LimitError::new(LimitKind::Units, format!("this TOML file has more than {MAX_UNITS} translatable strings; split it")).into());
             }
+            guard::check_unit_count(units.len() + 1, &limits)?;
             if v.chars().count() > MAX_UNIT_CHARS {
-                return Err(Error::Unsupported(format!("a string in this TOML file is longer than {MAX_UNIT_CHARS} characters")));
+                return Err(LimitError::new(LimitKind::UnitChars, format!("a string in this TOML file is longer than {MAX_UNIT_CHARS} characters")).into());
             }
+            guard::check_unit_chars(v.chars().count(), &limits)?;
             if s.start > pos {
                 parts.push(SkelPart::Raw(text[pos..s.start].to_string()));
             }

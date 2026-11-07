@@ -136,7 +136,7 @@ fn encodings_other_than_utf8_are_refused() {
     let gbk: Vec<u8> = b"a = \"\xd6\xd0\xce\xc4\"\n".to_vec();
     for (n, data) in [("utf-16le", le), ("utf-16be", be), ("latin-1", latin1), ("shift-jis", sjis), ("gbk", gbk)] {
         match try_extract(&data) {
-            Err(Error::Unsupported(m)) => assert!(m.contains("UTF-8"), "{n}: {m}"),
+            Err(Error::Encoding(m)) => assert!(m.contains("UTF-8"), "{n}: {m}"),
             other => panic!("{n}: {other:?}"),
         }
     }
