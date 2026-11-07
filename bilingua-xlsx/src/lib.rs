@@ -123,6 +123,15 @@ impl Xlsx {
     }
 }
 
+/// A member's XML refused by `xml::parse`: the nesting cap is a limit (`LimitKind::Depth`), like every other
+/// crate's; anything else is a parse error.
+pub(crate) fn xml_member_err(member: &str, m: &str) -> Error {
+    if m.starts_with("elements nested deeper than") {
+        return bilingua_model::LimitError::new(bilingua_model::LimitKind::Depth, format!("{member}: {m}")).into();
+    }
+    perr(format!("{member}: {m}"))
+}
+
 pub(crate) fn perr(msg: impl Into<String>) -> Error {
     Error::Parse { format: "xlsx".into(), msg: msg.into() }
 }
@@ -240,3 +249,24 @@ mod fixtures;
 mod tests;
 #[cfg(test)]
 mod tests_oracle;
+
+/// B-SIDE 16: a member nested past the cap is a limit (`LimitKind::Depth`), not a parse error; other XML damage
+/// stays a parse error.
+#[cfg(test)]
+mod depth_is_a_limit {
+    #[test]
+    fn nesting_cap_is_coded_limit() {
+        let deep = "<a>".repeat(xml::MAX_DEPTH + 5) + &"</a>".repeat(xml::MAX_DEPTH + 5);
+        let m = crate::xml::parse(&deep).unwrap_err();
+        match crate::xml_member_err("word/document.xml", &m) {
+            bilingua_model::Error::Limit(e) => {
+                assert_eq!(e.kind, bilingua_model::LimitKind::Depth);
+                assert!(e.msg.starts_with("word/document.xml: elements nested deeper than"), "{}", e.msg);
+            }
+            other => panic!("{other:?}"),
+        }
+        let bad = crate::xml::parse("<a><b></a>").unwrap_err();
+        assert!(matches!(crate::xml_member_err("m.xml", &bad), bilingua_model::Error::Parse { .. }));
+    }
+    use crate::xml;
+}

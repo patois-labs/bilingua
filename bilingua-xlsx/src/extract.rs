@@ -864,7 +864,7 @@ fn extract_doc_inner(bytes: &[u8], opts: &ExtractOptions, xo: &XlsxOptions) -> R
         if has_marker_chars(text) {
             return Err(Error::Unsupported(format!("{file} uses private-use characters U+E000 to U+E005")));
         }
-        let mut nodes = parse(text).map_err(|m| perr(format!("{file}: {m}")))?;
+        let mut nodes = parse(text).map_err(|m| crate::xml_member_err(file, &m))?;
         ex.process_sheet(&sh, &mut nodes);
         if let Some(e) = ex.refused.take() {
             return Err(e);
@@ -885,7 +885,7 @@ fn extract_doc_inner(bytes: &[u8], opts: &ExtractOptions, xo: &XlsxOptions) -> R
         if has_marker_chars(text) {
             return Err(Error::Unsupported("sharedStrings uses private-use characters U+E000 to U+E005".into()));
         }
-        let mut nodes = parse(text).map_err(|m| perr(format!("{sst_name}: {m}")))?;
+        let mut nodes = parse(text).map_err(|m| crate::xml_member_err(&sst_name, &m))?;
         let ns = Ns::detect(&nodes, SS_URIS, "");
         if let Some(root) = root_mut(&mut nodes) {
             let mut n = 0usize;

@@ -168,7 +168,9 @@ impl Scan<'_> {
         self.depth += 1;
         let cap = if self.python { PYTHON_MAX_DEPTH } else { MAX_DEPTH };
         if self.depth > cap {
-            return Err(self.err("nesting is too deep"));
+            // the nesting cap is a limit like every other crate's (`LimitKind::Depth`), not a parse error
+            let Error::Parse { msg, .. } = self.err("nesting is too deep") else { unreachable!("err gives Parse") };
+            return Err(bilingua_model::LimitError::new(bilingua_model::LimitKind::Depth, msg).into());
         }
         Ok(())
     }

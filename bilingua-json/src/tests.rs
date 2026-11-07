@@ -247,7 +247,8 @@ fn invalid_json_is_an_error_with_a_position() {
 #[test]
 fn deep_nesting_is_refused_not_crashed() {
     let deep = format!("{}{}", "[".repeat(500), "]".repeat(500));
-    assert!(matches!(JsonFilter.extract(deep.as_bytes(), &Default::default()), Err(Error::Parse { .. })));
+    // the nesting cap is a limit, as in every other crate (B-SIDE 16)
+    assert!(matches!(JsonFilter.extract(deep.as_bytes(), &Default::default()), Err(Error::Limit(e)) if e.kind == bilingua_model::LimitKind::Depth));
     let ok = format!("{}\"fine text\"{}", "[".repeat(100), "]".repeat(100));
     assert_eq!(extract(&ok).units.len(), 1);
     // the LocOS profile reads 300 levels (text to json.loads), refusing past 400
@@ -257,7 +258,7 @@ fn deep_nesting_is_refused_not_crashed() {
     let edge = format!("{}\"edge text\"{}", "[".repeat(400), "]".repeat(400));
     assert_eq!(JsonFilter.extract(edge.as_bytes(), &o).unwrap().units.len(), 1);
     let deeper = format!("{}{}", "[".repeat(401), "]".repeat(401));
-    assert!(matches!(JsonFilter.extract(deeper.as_bytes(), &o), Err(Error::Parse { .. })));
+    assert!(matches!(JsonFilter.extract(deeper.as_bytes(), &o), Err(Error::Limit(e)) if e.kind == bilingua_model::LimitKind::Depth));
 }
 
 #[test]

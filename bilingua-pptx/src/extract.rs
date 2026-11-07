@@ -659,7 +659,7 @@ fn extract_doc_inner(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Er
         }
         let mut nodes = match parse(text) {
             Ok(n) => n,
-            Err(m) if pi.kind == Kind::Slide => return Err(perr(format!("{}: {m}", e.name))),
+            Err(m) if pi.kind == Kind::Slide => return Err(crate::xml_member_err(&e.name, &m)),
             Err(_) => continue,
         };
         let ns = Nss {

@@ -46,6 +46,15 @@ struct Meta {
 
 pub struct Docx;
 
+/// A member's XML refused by `xml::parse`: the nesting cap is a limit (`LimitKind::Depth`), like every other
+/// crate's; anything else is a parse error.
+pub(crate) fn xml_member_err(member: &str, m: &str) -> Error {
+    if m.starts_with("elements nested deeper than") {
+        return bilingua_model::LimitError::new(bilingua_model::LimitKind::Depth, format!("{member}: {m}")).into();
+    }
+    perr(format!("{member}: {m}"))
+}
+
 fn perr(msg: impl Into<String>) -> Error {
     Error::Parse {
         format: "docx".into(),
@@ -281,7 +290,7 @@ fn extract_doc_inner(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Er
         }
         let mut nodes = match xml::parse(text) {
             Ok(n) => n,
-            Err(m) if is_main => return Err(perr(format!("{}: {m}", e.name))),
+            Err(m) if is_main => return Err(xml_member_err(&e.name, &m)),
             Err(_) => continue,
         };
         let ns = xml::Ns::detect(&nodes);
@@ -478,3 +487,24 @@ impl Filter for Docx {
 mod tests;
 #[cfg(test)]
 mod tests_features;
+
+/// B-SIDE 16: a member nested past the cap is a limit (`LimitKind::Depth`), not a parse error; other XML damage
+/// stays a parse error.
+#[cfg(test)]
+mod depth_is_a_limit {
+    #[test]
+    fn nesting_cap_is_coded_limit() {
+        let deep = "<a>".repeat(xml::MAX_DEPTH + 5) + &"</a>".repeat(xml::MAX_DEPTH + 5);
+        let m = crate::xml::parse(&deep).unwrap_err();
+        match crate::xml_member_err("word/document.xml", &m) {
+            bilingua_model::Error::Limit(e) => {
+                assert_eq!(e.kind, bilingua_model::LimitKind::Depth);
+                assert!(e.msg.starts_with("word/document.xml: elements nested deeper than"), "{}", e.msg);
+            }
+            other => panic!("{other:?}"),
+        }
+        let bad = crate::xml::parse("<a><b></a>").unwrap_err();
+        assert!(matches!(crate::xml_member_err("m.xml", &bad), bilingua_model::Error::Parse { .. }));
+    }
+    use crate::xml;
+}
