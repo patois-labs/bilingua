@@ -36,9 +36,9 @@ fn try_build(data: &[u8], mapping: &[(usize, String)]) -> Result<Vec<u8>, Error>
 }
 
 /// Cases where Bilingua now differs from the recorded LocOS output on purpose (issues 805 and 811): a code before white
-/// space is closed (`trail\\ ` instead of `trail\ `), and DOS864 reads byte 0x25 as `%`. LocOS gets the same fixes next;
+/// space is closed (`trail\\ ` instead of `trail\ `), and DOS864 reads byte 0x25 as `%` and writes `%` back as 0x25 (LocOS wrote `\U+0025`). LocOS gets the same fixes next;
 /// then these goldens are regenerated and this list goes away. The test fails if a listed case stops differing.
-const FIXED_ON_PURPOSE: &[&str] = &["random-12", "random-17", "random-45", "random-52", "random-69", "random-70", "random-82", "random-88", "random-93", "random-97", "random-104", "mutated-14", "mutated-47", "escapes.dxf"];
+const FIXED_ON_PURPOSE: &[&str] = &["random-12", "random-17", "random-19", "random-45", "random-52", "random-69", "random-70", "random-82", "random-88", "random-93", "random-97", "random-104", "mutated-14", "mutated-47", "escapes.dxf"];
 
 #[test]
 fn matches_locos_on_random_files_and_corpus() {
