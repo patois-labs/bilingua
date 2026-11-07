@@ -522,7 +522,7 @@ pub(crate) fn merge(doc: &Document, opts: &MergeOptions, cfg: Cfg) -> Result<Vec
         }
         for (k, u) in body.iter().enumerate() {
             if let Some(t) = &targets[k] {
-                let protected = protected_of(cfg.template, &core_text(u));
+                let protected = protected_for(cfg, u);
                 repl.push((u.start, u.end, format!("{}{}{}", u.lead, materialize(t, &u.map, quotes, &protected), u.trail)));
             }
         }
@@ -565,6 +565,11 @@ pub(crate) fn quotes_for(text: &str, cfg: Cfg) -> bool {
     cfg.template.is_some() || !browser::raw_quotes_safe(text)
 }
 
+/// The template spans of the unit, then the semicolon-less legacy references its source holds (`&nbsp`), which a
+/// target writes as they are, not as `&amp;nbsp`.
 pub(crate) fn protected_for(cfg: Cfg, u: &html::BodyUnit) -> Vec<String> {
-    protected_of(cfg.template, &core_text(u))
+    let core = core_text(u);
+    let mut p = protected_of(cfg.template, &core);
+    p.extend(bilingua_htmlcore::pyx::legacy_refs(&core));
+    p
 }

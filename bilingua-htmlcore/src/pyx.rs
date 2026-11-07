@@ -260,6 +260,31 @@ pub fn escape_text_with(s: &str, quotes: bool, out: &mut String) {
     out.push_str(&s[last..]);
 }
 
+/// The legacy named references written without `;` in `s` (`&nbsp` in `&nbsp&nbsp text`: HTML5 reads the names of
+/// its legacy list as references in text even without the `;`), each once, as `&name` with the longest such name
+/// (as [`unescape`] matches them). A writer keeps these as written in a target whose source had them
+/// ([`escape_protected`]); [`escape_text_with`] alone would write `&amp;nbsp` and the page would show the letters.
+pub fn legacy_refs(s: &str) -> Vec<String> {
+    let mut out: Vec<String> = Vec::new();
+    let b = s.as_bytes();
+    let mut i = 0;
+    while let Some(p) = s[i..].find('&') {
+        let at = i + p;
+        i = at + 1;
+        let run = b[at + 1..].iter().take(32).take_while(|c| c.is_ascii_alphanumeric()).count();
+        if run == 0 || !b[at + 1].is_ascii_alphabetic() || b.get(at + 1 + run) == Some(&b';') {
+            continue;
+        }
+        if let Some(n) = (2..=run).rev().find(|&n| lookup(&s[at + 1..at + 1 + n]).is_some()) {
+            let r = &s[at..at + 1 + n];
+            if !out.iter().any(|x| x == r) {
+                out.push(r.to_string());
+            }
+        }
+    }
+    out
+}
+
 /// After `&`: `#[0-9]+;`, `#[xX][0-9a-fA-F]+;` or `[a-zA-Z][a-zA-Z0-9]+;`.
 fn entity_follows(b: &[u8]) -> bool {
     let run = |from: usize, ok: fn(&u8) -> bool| b[from..].iter().take_while(|c| ok(c)).count();
@@ -343,6 +368,15 @@ pub fn find_bytes(hay: &[u8], from: usize, needle: &[u8]) -> Option<usize> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn legacy_references_without_a_semicolon_are_found() {
+        assert_eq!(legacy_refs("&nbsp&nbsp a &copy2024 &nbsp; &amp b &foo &notin x &AMP"), ["&nbsp", "&copy", "&amp", "&not", "&AMP"]);
+        assert!(legacy_refs("AT&T R&D &nbsp; &#160 &").is_empty());
+        let mut o = String::new();
+        escape_protected("&nbsp&nbsp a & b &nbsp", &legacy_refs("&nbsp x"), false, &mut o);
+        assert_eq!(o, "&nbsp&nbsp a &amp; b &nbsp");
+    }
 
     #[test]
     fn unescape_like_python() {

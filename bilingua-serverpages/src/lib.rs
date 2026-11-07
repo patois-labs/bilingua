@@ -683,7 +683,7 @@ fn strip_sentinels(s: &str) -> Cow<'_, str> {
 
 /// The markup text of a translated unit: text escaped, every inline code rebuilt from the original markup, every
 /// output island exactly once (a dropped one is appended, a repeated one written once).
-fn materialize(d: Dialect, target: &[Inline], map: &[Entry], m: &Masked, orig: &str) -> String {
+fn materialize(d: Dialect, target: &[Inline], map: &[Entry], m: &Masked, orig: &str, legacy: &[String]) -> String {
     let mut out = String::new();
     let mut seen: std::collections::HashSet<u32> = std::collections::HashSet::new();
     let entry = |id: &str| id.parse::<u32>().ok().filter(|n| *n >= 1).and_then(|n| map.get(n as usize - 1).map(|e| (n, e)));
@@ -698,9 +698,9 @@ fn materialize(d: Dialect, target: &[Inline], map: &[Entry], m: &Masked, orig: &
         if d == Dialect::Jsp {
             let mut el = String::with_capacity(pending.len());
             escape_el(pending, &mut el);
-            escape_text(&el, out);
+            escape_protected(&el, legacy, true, out);
         } else {
-            escape_text(pending, out);
+            escape_protected(pending, legacy, true, out);
         }
         pending.clear();
     };
@@ -842,7 +842,9 @@ fn merge_with(d: Dialect, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>
         }
         for (k, u) in body.iter().enumerate() {
             if let Some(t) = &targets[k] {
-                let mat = materialize(d, t, &u.map, &m, &text);
+                // the semicolon-less legacy references of the source (`&nbsp`) are written as they are
+                let src: String = u.parts.iter().filter_map(|p| if let Piece::Text(s) = p { Some(*s) } else { None }).collect();
+                let mat = materialize(d, t, &u.map, &m, &text, &legacy_refs(&src));
                 repl.push((u.start, u.end, format!("{}{}{}", u.lead, mat, u.trail)));
             }
         }
