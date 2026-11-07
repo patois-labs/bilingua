@@ -1,5 +1,5 @@
-//! Notion blocks: a list of block objects (or a list response with `results`), each with its content under the key of
-//! its `type`. One unit per `text` run of a `rich_text` array, a `caption` or a table row cell, as Localization OS
+//! Notion blocks: a list of block objects (bare, or under `results`, `children` or `blocks` of an object; a page
+//! object's `title` property runs come first), or one block, each with its content under the key of its `type`. One unit per `text` run of a `rich_text` array, a `caption` or a table row cell, as Localization OS
 //! reads them: the run's annotations and link are kept as they are, so a bold word is its own unit. Mentions and
 //! equations are kept. The `rich_text` of a code block (and of anything inside one) is never a unit; its caption is.
 //! A translation longer than Notion's 2000 character cap is written as several runs with the same annotations.

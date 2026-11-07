@@ -399,4 +399,15 @@ fn a_catalog_in_a_code_page_outside_the_short_list_is_read() {
     assert_eq!(texts(&d), ["Open file"]);
     assert_eq!(plain_text(&d.units[0].segments[0].target), "a\u{17e}");
     assert_eq!(merged(&d), data);
+    // a translation that fits keeps the code page; one that does not makes the file UTF-8, as for the short list
+    let mut t = ex(&data);
+    set(&mut t, "e2", "\u{17e}\u{161}");
+    let g = Gettext::parse(&merged(&t));
+    assert_eq!(g.charset.to_ascii_lowercase(), "iso-8859-13");
+    assert_eq!(g.messages[&b"Open file"[..]], vec![0xFE, 0xF0]);
+    let mut t = ex(&data);
+    set(&mut t, "e2", "\u{65e5}\u{672c}");
+    let g = Gettext::parse(&merged(&t));
+    assert_eq!(g.charset.to_ascii_lowercase(), "utf-8");
+    assert_eq!(g.gettext("Open file"), "\u{65e5}\u{672c}");
 }

@@ -9,7 +9,7 @@ text field.
 | `contentful` | `.contentful` | a Rich Text `{"nodeType": "document", ...}` | one per paragraph or heading (list items and table cells hold paragraphs) |
 | `sanity` | `.portabletext` | a Portable Text array of blocks | one per text block |
 | `adf` | `.adf` | a Jira ADF `{"type": "doc", ...}` | one per inline container (`adf.units=leaf`: one per text leaf) |
-| `notion` | `.notion` | a Notion block array, or a list response with `results` | one per text run (rich_text, caption, table cell) |
+| `notion` | `.notion` | a Notion block array, or the blocks under `results`, `children` or `blocks` (a page's `title` property first), or one block | one per text run (rich_text, caption, table cell, page title) |
 
 - Marks and links are paired inline tags (`bold`, `link`, `strong link`), embedded entries, mentions, emoji, inline
   objects and code spans are standalone tags; the tag ids are the LocOS token numbers (`g1`, `x2`). A translation may

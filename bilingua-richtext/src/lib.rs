@@ -41,7 +41,7 @@ pub struct Sanity;
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Adf;
 
-/// Notion blocks (an array of block objects, or a list response with `results`).
+/// Notion blocks (an array of block objects, a list response with `results`, an append body, a page with blocks, or one block).
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Notion;
 
