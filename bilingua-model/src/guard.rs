@@ -410,8 +410,7 @@ fn only_plain_internal_entities(doctype: &[u8]) -> bool {
         let mut j = from + p + 8;
         let ws = |j: &mut usize| {
             let s = *j;
-            while *j < doctype.len() && matches!(doctype[*j], b' ' | b'	' | b'' | b'
-') {
+            while *j < doctype.len() && matches!(doctype[*j], b' ' | b'\t' | b'\r' | b'\n') {
                 *j += 1;
             }
             *j > s
@@ -427,7 +426,7 @@ fn only_plain_internal_entities(doctype: &[u8]) -> bool {
             return false;
         }
         let q = doctype[j];
-        if q != b'"' && q != b''' {
+        if q != b'"' && q != b'\'' {
             return false;
         }
         let Some(len) = doctype[j + 1..].iter().position(|c| *c == q) else { return false };
