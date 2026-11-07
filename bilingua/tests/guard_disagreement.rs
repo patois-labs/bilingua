@@ -232,3 +232,61 @@ fn real_doctypes_still_read() {
     let d = bilingua::extract("a.xmb", xmb.as_bytes(), &opts(Limits::default()));
     assert!(d.is_ok(), "{:?}", d.err());
 }
+
+/// `t` with a CDATA section right after the root start tag whose `]]>` is, for a double-byte code page, the second
+/// byte of a character (0x81 0x5D) followed by `]>`, then a comment that hides the whole body for a scan of the bytes.
+fn cdata_trick(t: &str, lead: u8) -> Vec<u8> {
+    let b = t.as_bytes();
+    let root = b.windows(2).position(|w| w[0] == b'<' && w[1].is_ascii_alphabetic()).unwrap();
+    let s = root + b[root..].iter().position(|c| *c == b'>').unwrap() + 1;
+    let e = b.windows(2).rposition(|w| w == b"</").unwrap();
+    let mut x = b[..s].to_vec();
+    x.extend_from_slice(b"<![CDATA[");
+    x.push(lead);
+    x.extend_from_slice(b"]]><!--]]>");
+    x.extend_from_slice(&b[s..e]);
+    x.extend_from_slice(b"-->");
+    x.extend_from_slice(&b[e..]);
+    x
+}
+
+/// A declared Shift_JIS, GBK or Big5 file is scanned as the reader decodes it, not only as bytes.
+#[test]
+fn a_double_byte_code_page_does_not_hide_a_cdata_end() {
+    let svg = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"10\" height=\"10\"><g><g><text x=\"1\" y=\"2\">Open the door</text></g></g></svg>\n".to_string();
+    let ttml = String::from_utf8(fixture("bilingua-ttml/tests/data/lang_en.ttml")).unwrap();
+    let xaml = String::from_utf8(fixture("bilingua-xaml/tests/data/lang_de.xaml")).unwrap().replace("encoding=\"utf-8\"", "encoding=\"UTF-8\"");
+    let mut read = Vec::new();
+    for (name, t) in [("a.svg", &svg), ("a.ttml", &ttml), ("a.xaml", &xaml)] {
+        assert!(over_limit(&bilingua::extract(name, t.as_bytes(), &opts(tight()))), "{name}: the plain file must break the tight limits");
+        for (enc, lead, lang) in [("Shift_JIS", 0x81u8, "ja"), ("GBK", 0x81, "zh-CN"), ("Big5", 0xA4, "zh-TW")] {
+            let hostile = cdata_trick(&t.replace("encoding=\"UTF-8\"", &format!("encoding=\"{enc}\"")), lead);
+            let o = ExtractOptions::new().with_source_lang(lang).with_target_lang("es").with_limits(tight());
+            match std::panic::catch_unwind(|| bilingua::extract(name, &hostile, &o)) {
+                Err(_) => read.push(format!("{name} {enc}: PANIC")),
+                Ok(Ok(d)) => read.push(format!("{name} {enc}: read, {} units", d.units.len())),
+                Ok(Err(_)) => {}
+            }
+        }
+    }
+    assert!(read.is_empty(), "the limits were bypassed by {read:#?}");
+}
+
+/// A NUL before the first `<` reads as UTF-16 to a sniffing reader and as UTF-8 to the others: both are scanned.
+#[test]
+fn a_leading_nul_does_not_turn_the_scan_into_utf16() {
+    let svg = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"10\" height=\"10\"><g><g><text x=\"1\" y=\"2\">Open the door</text></g></g></svg>\n";
+    let xlf = "<xliff version=\"1.2\" xmlns=\"urn:oasis:names:tc:xliff:document:1.2\"><file original=\"a.txt\" source-language=\"en\" target-language=\"es\" datatype=\"plaintext\"><body><trans-unit id=\"1\"><source>Open the door</source></trans-unit></body></file></xliff>\n";
+    let mut read = Vec::new();
+    for (name, t) in [("a.svg", svg), ("a.xlf", xlf)] {
+        assert!(over_limit(&bilingua::extract(name, t.as_bytes(), &opts(tight()))), "{name}: the plain file must break the tight limits");
+        let mut hostile = vec![0u8];
+        hostile.extend_from_slice(t.as_bytes());
+        match std::panic::catch_unwind(|| bilingua::extract(name, &hostile, &opts(tight()))) {
+            Err(_) => read.push(format!("{name}: PANIC")),
+            Ok(Ok(d)) => read.push(format!("{name}: read, {} units", d.units.len())),
+            Ok(Err(_)) => {}
+        }
+    }
+    assert!(read.is_empty(), "the limits were bypassed by {read:#?}");
+}
