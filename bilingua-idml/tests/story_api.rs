@@ -42,3 +42,22 @@ fn bare_story_round_trip_through_the_public_api() {
     let tok2 = story::tokenize(&again, &paras2[0]);
     assert_eq!(tok2.core_inlines().len(), 4);
 }
+
+#[test]
+fn loose_text_after_the_last_run_stays_after_it() {
+    // three ranges inside one XML element, as InDesign exports a tagged title
+    let icml = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<Document DOMVersion=\"20.0\" Self=\"d\">\n<Story Self=\"u1\">\n<ParagraphStyleRange AppliedParagraphStyle=\"ParagraphStyle/Head\">\n<XMLElement Self=\"x1\" MarkupTag=\"XMLTag/title\">\n<CharacterStyleRange AppliedCharacterStyle=\"CharacterStyle/$ID/[No character style]\"><Content>My Main </Content></CharacterStyleRange>\n<CharacterStyleRange AppliedCharacterStyle=\"CharacterStyle/Bold\"><Content>Article</Content></CharacterStyleRange>\n<CharacterStyleRange AppliedCharacterStyle=\"CharacterStyle/$ID/[No character style]\"><Content> Title</Content></CharacterStyleRange>\n</XMLElement>\n</ParagraphStyleRange>\n</Story>\n</Document>\n";
+    let mut tree = Tree::parse(icml, &ParseLimits::default()).unwrap();
+    let paras = story::collect(&mut tree, &Opts::default());
+    let tok = story::tokenize(&tree, &paras[0]);
+    let mut target = vec![Inline::text("Zq")];
+    target.extend(tok.core_inlines());
+    target.push(Inline::text("qZ"));
+    story::rebuild(&mut tree, &paras[0], &tok, &target);
+    let xml = tree.to_xml();
+    let mut again = Tree::parse(&xml, &ParseLimits::default()).unwrap();
+    let paras2 = story::collect(&mut again, &Opts::default());
+    let tok2 = story::tokenize(&again, &paras2[0]);
+    let text: String = tok2.core_inlines().iter().filter_map(|i| if let Inline::Text(t) = i { Some(t.as_str()) } else { None }).collect();
+    assert_eq!(text, "ZqMy Main Article TitleqZ", "{xml}");
+}

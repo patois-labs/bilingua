@@ -265,3 +265,29 @@ fn text_after_hidden_range_stays_after_it() {
     let back = units(&out);
     assert_eq!(back, vec!["\u{27E6}r1\u{27E7}ZqVisible \u{27E6}/r1\u{27E7}\u{27E6}r2\u{27E7} tailqZ\u{27E6}/r2\u{27E7}"]);
 }
+
+#[test]
+fn line_feeds_in_a_code_block_survive_a_translation() {
+    // pandoc writes a code block as one Content with real line feeds
+    let body = psr(&csr("<Content>if x {\n    run();\n}</Content>"));
+    let data = icml(&body, "", "");
+    assert_eq!(units(&data), vec!["if x {\n    run();\n}"]);
+    let out = translate(&data, &[(0, "if y {\n    go();\n}")]);
+    assert_eq!(units(&out), vec!["if y {\n    go();\n}"]);
+    // a paragraph without line feeds in its source still gets spaces
+    let plain = icml(&psr(&csr("<Content>Hello</Content>")), "", "");
+    let out = translate(&plain, &[(0, "A\nB")]);
+    assert_eq!(units(&out), vec!["A B"]);
+}
+
+#[test]
+fn a_table_written_straight_into_the_story_has_its_cells_read() {
+    let cell = |n: &str, t: &str| format!("<Cell Name=\"{n}\">{}</Cell>", psr(&csr(&format!("<Content>{t}</Content>"))));
+    let table = format!("<Table AppliedTableStyle=\"TableStyle/T\" ColumnCount=\"2\">{}{}</Table>", cell("0:0", "Head one"), cell("1:0", "Head two"));
+    let body = format!("{}{}", psr(&csr("<Content>Before</Content>")), table);
+    let data = icml(&body, "", "");
+    assert_eq!(units(&data), vec!["Before", "Head one", "Head two"]);
+    let out = translate(&data, &[(1, "Kopf eins")]);
+    assert!(well_formed(&out));
+    assert_eq!(units(&out), vec!["Before", "Kopf eins", "Head two"]);
+}

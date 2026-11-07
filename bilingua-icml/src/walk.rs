@@ -151,6 +151,11 @@ impl Walker<'_> {
                 self.block(child);
             } else if name == "CharacterStyleRange" {
                 self.csr(child);
+            } else if name == "Table" {
+                // a table written straight into the story or a paragraph range (pandoc does this): its cells
+                // are read after the body, as for a table inside a range
+                let cells: Vec<Id> = self.dom.kids(child).into_iter().filter(|c| self.dom.local(*c) == "Cell").collect();
+                self.subs.extend(cells);
             }
         }
     }
