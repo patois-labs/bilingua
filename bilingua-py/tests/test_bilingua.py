@@ -68,7 +68,8 @@ def test_version_and_formats():
     ids = {f["id"] for f in fmts}
     assert {"docx", "xlsx", "pptx", "html", "po", "srt", "vtt"} <= ids
     for f in fmts:
-        assert isinstance(f["extensions"], list) and f["extensions"]
+        # the XML dialects found by their content (Android strings, Java XML properties) claim no extension
+        assert isinstance(f["extensions"], list) and (f["extensions"] or f["id"] in {"android", "javaxml"})
         assert isinstance(f["bilingual"], bool)
     assert next(f for f in fmts if f["id"] == "po")["bilingual"] is True
     assert next(f for f in fmts if f["id"] == "docx")["bilingual"] is False
@@ -93,6 +94,10 @@ def test_pseudo_translation_roundtrip(path):
     data = path.read_bytes()
     doc = bilingua.extract(path.name, data, source_lang="en", target_lang="xx")
     n = pseudo(doc)
+    if doc["format"] == "pdf" and n:
+        # a translated PDF is re-typeset by the caller (Localization OS uses typst): refused, never half written
+        assert error_code(bilingua.merge, doc) == "unsupported"
+        return
     out = bilingua.merge(doc)
     assert isinstance(out, bytes)
     if n == 0:

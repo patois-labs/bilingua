@@ -20,7 +20,7 @@ GOLDEN_ROOT = pathlib.Path(__file__).resolve().parents[2] / "bilingua" / "tests"
 GOLDENS = sorted(GOLDEN_ROOT.glob("*/*.golden.json"))
 # Same lists as locos_golden.rs (KNOWN, KNOWN_BUILDS): files or builds that still differ from LocOS on purpose.
 KNOWN = {}
-KNOWN_BUILDS = {}
+KNOWN_BUILDS = {"hostile_tails.pptx": ("prefix", "hostile", "hostile-ar-SA", "hostile-de-DE")}
 
 
 def tag(id_, kind, display, free=False):
@@ -95,7 +95,7 @@ def test_damaged_tokens_are_kept_as_text_and_listed():
 def test_parser_record():
     doc = bilingua.extract("a.md", b"# Hi\n\nText.\n", profile="locos")
     p = doc["parser"]
-    assert p["bilingua"] == bilingua.version() and p["format"] == "md"
+    assert p["bilingua"] == bilingua.version() and p["format"] == "markdown"
     assert p["crate"] == "bilingua-markdown" and p["crate_version"] and isinstance(p["schema"], int)
     assert p["profile"] == "locos" and p["profile_version"] == bilingua.profiles()["locos"]
     plain = bilingua.extract("a.md", b"# Hi\n")["parser"]
@@ -130,8 +130,8 @@ def test_profile_version_selection():
 
 
 def test_locos_units_and_set_targets():
-    data = b"# Title\n\nSome **bold** text.\n"
-    doc = bilingua.extract("a.md", data, profile="locos", target_lang="de")
+    data = b"<html><body><h1>Title</h1><p>Some <b>bold</b> text.</p></body></html>"
+    doc = bilingua.extract("a.html", data, profile="locos", target_lang="de")
     units = bilingua.locos_units(doc)
     assert [u["p_index"] for u in units] == list(range(len(units)))
     body = next(u for u in units if "bold" in u["text"])
@@ -140,7 +140,7 @@ def test_locos_units_and_set_targets():
     new, problems = bilingua.locos_set_targets(doc, targets)
     assert problems == {} and new["parser"] == doc["parser"]
     out = bilingua.merge(new, profile="locos").decode("utf-8")
-    assert "Titel" in out and "**fett**" in out
+    assert "Titel" in out and "<b>fett</b>" in out
     # a look-alike typed by the translator stays text and is listed
     seg = body["segment_id"]
     new, problems = bilingua.locos_set_targets(doc, {seg: body["text"] + tok(" [x9]")})

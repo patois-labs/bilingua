@@ -340,7 +340,11 @@ const KNOWN: &[(&str, &str)] = &[];
 
 /// Builds of a golden that still differ, with the reason: only those builds' failures are printed, not fatal; the
 /// file's units and every other build must still match.
-const KNOWN_BUILDS: &[(&str, &[&str], &str)] = &[];
+const KNOWN_BUILDS: &[(&str, &[&str], &str)] = &[(
+    "hostile_tails.pptx",
+    &["prefix", "hostile", "hostile-ar-SA", "hostile-de-DE"],
+    "token look-alikes and tokens naming no code: since LocOS 814 both keep them as text, but LocOS writes each one in a run of its own and Bilingua keeps it in its run's text (same text, other runs)",
+)];
 
 /// Formats whose goldens do not match yet: reported, not fatal. Remove a format when all its files match. Empty:
 /// every Track D format matches.
