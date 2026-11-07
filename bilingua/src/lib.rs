@@ -202,7 +202,10 @@ fn own_segmentation(id: &str) -> bool {
     matches!(id, "xliff" | "sdlxliff" | "mqxliff" | "mxliff" | "txml" | "txlf" | "sdlppx" | "mqxlz" | "xcloc" | "ttx" | "xlz")
 }
 
-/// The filter for a file: by extension first, then by sniffing the bytes.
+/// The filter for a file. The extension decides; the bytes are sniffed only where one extension is shared by
+/// several formats (`.ts`: Qt Linguist or TypeScript; `.json`: ARB or JSON; `.xml`: Android strings, Java XML
+/// properties or generic XML; `.xlf`/`.xliff`: TXLF or XLIFF) and for a file with no extension at all. A file
+/// whose extension no filter claims gets `None`, whatever its bytes look like.
 pub fn detect(name: &str, bytes: &[u8]) -> Option<Box<dyn Filter>> {
     detect_with(name, bytes, None)
 }
@@ -238,23 +241,14 @@ pub fn detect_with(name: &str, bytes: &[u8], prof: Option<&str>) -> Option<Box<d
     if matches!(ext.as_str(), "xlf" | "xliff") && bilingua_wordfast::Txlf::default().sniff(bytes) {
         return Some(Box::new(bilingua_wordfast::Txlf::default()));
     }
-    let all = filters();
-    let mut by_ext = None;
-    let mut sniffed = None;
-    for f in all {
-        if by_ext.is_none() && f.extensions().contains(&ext.as_str()) {
-            by_ext = Some(f);
-        } else if sniffed.is_none() && f.sniff(bytes) {
-            sniffed = Some(f);
-        }
-    }
     // A file with an extension no parser claims is refused rather than guessed: plain text and HTML sniff
     // loosely, and opening a YAML or config file as plain text would let translators change its keys.
-    // Sniffing only decides for files with no extension.
-    if by_ext.is_none() && !ext.is_empty() {
-        return None;
+    // Sniffing only decides for files with no extension, so a file with one is never sniffed here (sniffing
+    // every filter over the bytes was up to half of extract's time on small files).
+    if !ext.is_empty() {
+        return filters().into_iter().find(|f| f.extensions().contains(&ext.as_str()));
     }
-    by_ext.or(sniffed)
+    filters().into_iter().find(|f| f.sniff(bytes))
 }
 
 /// Extracts and segments a file. The returned document's `format` names the filter that `merge` will use.
@@ -276,7 +270,7 @@ pub fn extract(name: &str, bytes: &[u8], opts: &ExtractOptions) -> Result<Docume
         return Ok(doc);
     }
     let lang = opts.source_lang.as_deref().unwrap_or("en");
-    bilingua_seg::segment(&mut doc, lang, opts.granularity, Rules::bundled());
+    bilingua_seg::segment(&mut doc, lang, opts.granularity, rules_for(opts.granularity));
     // sentences count against the segment cap too (LocOS checks again after splitting)
     bilingua_model::guard::check_document(&doc, &opts.limits())?;
     Ok(doc)
@@ -289,7 +283,18 @@ pub fn resegment(doc: &mut Document, source_lang: &str, mode: Granularity) {
     if own_segmentation(&doc.format) {
         return;
     }
-    bilingua_seg::segment(doc, source_lang, mode, Rules::bundled());
+    bilingua_seg::segment(doc, source_lang, mode, rules_for(mode));
+}
+
+/// The sentence rules a granularity needs. Only sentence splitting reads them; compiling the bundled SRX costs
+/// 3 to 4 ms on the first call of a process, which paragraph and document extraction never pay now.
+fn rules_for(mode: Granularity) -> &'static Rules {
+    static NONE: std::sync::OnceLock<Rules> = std::sync::OnceLock::new();
+    if mode == Granularity::Sentence {
+        Rules::bundled()
+    } else {
+        NONE.get_or_init(Rules::empty)
+    }
 }
 
 fn filter_for(doc: &Document) -> Result<Box<dyn Filter>, Error> {

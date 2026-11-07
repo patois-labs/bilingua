@@ -54,6 +54,12 @@ impl Rules {
         BUNDLED.get_or_init(|| Rules::from_srx(include_str!("../rules/default.srx")).expect("bundled SRX is valid"))
     }
 
+    /// No rules at all: no position is a break. For callers that segment by paragraph or document, where the
+    /// rules are never read and compiling the bundled ones would be wasted.
+    pub fn empty() -> Rules {
+        Rules { sets: Vec::new(), maps: Vec::new() }
+    }
+
     /// Reads an SRX 2.0 document.
     pub fn from_srx(xml: &str) -> Result<Rules, SrxError> {
         let mut reader = Reader::from_str(xml);
