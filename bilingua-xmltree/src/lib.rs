@@ -75,6 +75,12 @@ pub const MAX_DEPTH: usize = 1024;
 /// that declares tens of thousands of prefixes (slow-input denial of service) is refused; real files declare a few.
 const MAX_SCOPE: usize = 1024;
 
+/// Most scope entries kept for the whole document. Every element that declares a namespace keeps its own copy of the
+/// scope, so a root with a thousand declarations above a million children that each declare one more would hold a
+/// billion entries (memory denial of service). Real files stay far below: a large Word document holds a few hundred
+/// thousand.
+const MAX_SCOPE_ENTRIES: usize = 1 << 22;
+
 #[derive(Debug)]
 pub struct XmlError(pub String);
 
@@ -205,6 +211,7 @@ fn parse_with(text: &str, noblanks: bool) -> Result<Dom, XmlError> {
     r.config_mut().check_end_names = true;
     let mut dom = Dom { nodes: Vec::new(), scopes: vec![vec![("xml".into(), "http://www.w3.org/XML/1998/namespace".into())]], root: usize::MAX };
     let mut stack: Vec<usize> = Vec::new();
+    let mut scope_entries = 0usize;
     // xml:space="preserve" in effect, per open element
     let mut preserve: Vec<bool> = Vec::new();
     let mut pending = Pending { text: String::new(), plain: true };
@@ -249,8 +256,15 @@ fn parse_with(text: &str, noblanks: bool) -> Result<Dom, XmlError> {
                 let scope = if decls.is_empty() {
                     parent_scope
                 } else {
-                    if dom.scopes[parent_scope].len() + decls.len() > MAX_SCOPE {
-                        return Err(err(format!("more than {MAX_SCOPE} namespace declarations in scope")));
+                    let size = dom.scopes[parent_scope].len() + decls.len();
+                    if size > MAX_SCOPE {
+                        return Err(err(format!("more than {MAX_SCOPE} namespace declarations in scope at one element; refused")));
+                    }
+                    scope_entries += size;
+                    if scope_entries > MAX_SCOPE_ENTRIES {
+                        return Err(err(format!(
+                            "too many namespace declarations: the file's namespace scopes would hold more than {MAX_SCOPE_ENTRIES} entries; refused"
+                        )));
                     }
                     let mut s = dom.scopes[parent_scope].clone();
                     s.extend(decls);
@@ -892,6 +906,22 @@ mod tests {
         assert!(t.elapsed().as_secs() < 5, "took {:?}", t.elapsed());
         assert!(parse("<a xmlns:p='P' p:x='1' p:x='2'/>").is_err(), "repeated attribute");
         assert!(parse("<a x='1' x='2'/>").is_err());
+        let e = parse(&format!("<a{}/>", (0..=MAX_SCOPE).map(|i| format!(" xmlns:p{i}='u'")).collect::<String>())).unwrap_err();
+        assert!(e.0.contains("namespace declarations in scope"), "{}", e.0);
+    }
+
+    /// A root with a thousand declarations above many children that each declare one more: every child copies the
+    /// scope, so the total is capped (memory), while the same shape with a few declarations reads fine.
+    #[test]
+    fn scope_copies_are_capped_for_the_whole_document() {
+        let decls: String = (0..1000).map(|i| format!(" xmlns:p{i}='u{i}'")).collect();
+        let kids = "<k xmlns:q='q'/>".repeat(5000);
+        let t = std::time::Instant::now();
+        let e = parse(&format!("<a{decls}>{kids}</a>")).unwrap_err();
+        assert!(e.0.contains("too many namespace declarations"), "{}", e.0);
+        assert!(t.elapsed().as_secs() < 5, "took {:?}", t.elapsed());
+        let few: String = (0..40).map(|i| format!(" xmlns:p{i}='u{i}'")).collect();
+        assert!(parse(&format!("<a{few}>{kids}</a>")).is_ok());
     }
 
     #[test]

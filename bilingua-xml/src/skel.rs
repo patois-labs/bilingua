@@ -649,11 +649,52 @@ impl<'d> Merger<'d> {
     }
 }
 
-fn same_lang(a: &str, b: &str) -> bool {
-    a.replace('_', "-").eq_ignore_ascii_case(&b.replace('_', "-"))
+/// Whether two language tags name the same language for a restamp: the primary subtag must match, and the script and
+/// the region too when both tags have one (`en` and `en-US` match, `en-GB` and `en-US` do not, `zh-Hans` and `zh-Hant`
+/// do not). Case and `_` against `-` are ignored.
+pub(crate) fn same_lang(a: &str, b: &str) -> bool {
+    fn parts(s: &str) -> (String, Option<String>, Option<String>) {
+        let s = s.trim().replace('_', "-").to_ascii_lowercase();
+        let mut it = s.split('-');
+        let primary = it.next().unwrap_or("").to_string();
+        let (mut script, mut region) = (None, None);
+        for p in it {
+            let alpha = p.bytes().all(|c| c.is_ascii_alphabetic());
+            if script.is_none() && region.is_none() && p.len() == 4 && alpha {
+                script = Some(p.to_string());
+            } else if region.is_none() && ((p.len() == 2 && alpha) || (p.len() == 3 && p.bytes().all(|c| c.is_ascii_digit()))) {
+                region = Some(p.to_string());
+            } else {
+                break;
+            }
+        }
+        (primary, script, region)
+    }
+    let (pa, sa, ra) = parts(a);
+    let (pb, sb, rb) = parts(b);
+    let both = |x: Option<String>, y: Option<String>| match (x, y) {
+        (Some(x), Some(y)) => x == y,
+        _ => true,
+    };
+    !pa.is_empty() && pa == pb && both(sa, sb) && both(ra, rb)
 }
 
-/// The (unescaped) value of attribute `attr` in a start tag, if it has one.
+#[cfg(test)]
+mod lang_tests {
+    use super::same_lang;
+
+    #[test]
+    fn same_language_rule() {
+        for (a, b) in [("en", "en"), ("en", "EN-us"), ("en-US", "en"), ("en_US", "en-us"), ("zh-Hant-TW", "zh-TW"), ("zh", "zh-Hans")] {
+            assert!(same_lang(a, b), "{a} {b}");
+        }
+        for (a, b) in [("en-GB", "en-US"), ("fr", "en"), ("zh-Hans", "zh-Hant"), ("", ""), ("en", "eng")] {
+            assert!(!same_lang(a, b), "{a} {b}");
+        }
+    }
+}
+
+/// The raw (still escaped) value of attribute `attr` in a start tag, if it has one.
 fn lang_value(stag: &str, attr: &str) -> Option<String> {
     let probe = set_lang_scan(stag, attr)?;
     Some(stag[probe.0..probe.1].to_string())

@@ -207,7 +207,8 @@ fn note_for(t: &Tree, rule: &Rule, el: u32, budget: &mut Budget) -> String {
 pub(crate) fn eval_props(t: &Tree, dialect: Option<&Dialect>, extra: &[Rule], limits: &Limits) -> Result<Props, Error> {
     let n = t.els.len();
     let mut tr_x = vec![0u8; n]; // 0 unset, 1 no, 2 yes
-    // elements the dialect itself lists as not translatable (DITA image): their attributes are still translated
+    // elements the dialect itself lists as not translatable (DITA image): their attributes are still translated,
+    // unless a translate attribute, an ITS rule or ITS markup also says "no" (any of those clears this flag)
     let mut name_no = vec![false; n];
     let mut wt_x = vec![255u8; n];
     let mut pre_x = vec![0u8; n];
@@ -252,13 +253,13 @@ pub(crate) fn eval_props(t: &Tree, dialect: Option<&Dialect>, extra: &[Rule], li
             }
             if let Some(ta) = &d.translate_attr {
                 match t.attr_value(i, "", ta).as_deref() {
-                    Some("yes") => tr_x[i as usize] = 2,
-                    Some("no") => tr_x[i as usize] = 1,
+                    Some("yes") => (tr_x[i as usize], name_no[i as usize]) = (2, false),
+                    Some("no") => (tr_x[i as usize], name_no[i as usize]) = (1, false),
                     _ => {}
                 }
             }
             if d.no_translate_if_attr.iter().any(|a| t.find_attr(i, "", a).is_some()) {
-                tr_x[i as usize] = 1;
+                (tr_x[i as usize], name_no[i as usize]) = (1, false);
             }
         }
     }
@@ -302,7 +303,7 @@ pub(crate) fn eval_props(t: &Tree, dialect: Option<&Dialect>, extra: &[Rule], li
                 Node::El(e) => {
                     let i = e as usize;
                     match rule.kind {
-                        RuleKind::Translate => tr_x[i] = if rule.value == "yes" { 2 } else { 1 },
+                        RuleKind::Translate => (tr_x[i], name_no[i]) = (if rule.value == "yes" { 2 } else { 1 }, false),
                         RuleKind::WithinText => {
                             wt_x[i] = match rule.value.as_str() {
                                 "yes" => 1,
@@ -350,8 +351,8 @@ pub(crate) fn eval_props(t: &Tree, dialect: Option<&Dialect>, extra: &[Rule], li
         let local = |name: &str| if has_its { t.attr_value(i, ITS_NS, name) } else { None };
         if t.els[iu].attr_lo != t.els[iu].attr_hi && (has_its || has_xml) {
             match local("translate").as_deref() {
-                Some("yes") => tr_x[iu] = 2,
-                Some("no") => tr_x[iu] = 1,
+                Some("yes") => (tr_x[iu], name_no[iu]) = (2, false),
+                Some("no") => (tr_x[iu], name_no[iu]) = (1, false),
                 _ => {}
             }
             match local("withinText").as_deref() {
@@ -373,7 +374,7 @@ pub(crate) fn eval_props(t: &Tree, dialect: Option<&Dialect>, extra: &[Rule], li
             }
         }
         if t.el_ns(i) == ITS_NS {
-            tr_x[iu] = 1;
+            (tr_x[iu], name_no[iu]) = (1, false);
         }
     }
 
