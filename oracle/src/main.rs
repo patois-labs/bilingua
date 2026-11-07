@@ -260,7 +260,17 @@ fn main() {
                         let w = format!("{PRE}{x}{POST}");
                         if xml_refs { bilingua_html::xml_named_refs(&w) } else { w }
                     };
-                    let same = |x: &String, y: &String| if md { want(x).replace('\\', "") == y.replace('\\', "") } else { want(x) == *y };
+                    // These writers may fold or rewrap white space (a reflowed paragraph, a table cell, a list
+                    // item), which is not a difference in text: runs of white space compare as one blank.
+                    let ws = matches!(doc.format.as_str(), "rst" | "dokuwiki" | "wiki" | "markdown" | "mdx");
+                    let fold = |t: String| if ws { t.split_whitespace().collect::<Vec<_>>().join(" ") } else { t };
+                    let same = |x: &String, y: &String| {
+                        if md {
+                            fold(want(x).replace('\\', "")) == fold(y.replace('\\', ""))
+                        } else {
+                            fold(want(x)) == fold(y.clone())
+                        }
+                    };
                     let beside = a.iter().zip(&b2).filter(|(x, y)| !same(x, y) && beside_ok && x == y).count();
                     let bad = a.iter().zip(&b2).filter(|(x, y)| !same(x, y) && (!beside_ok || x != y)).count();
                     if bad == 0 && set_errors == 0 && beside > 0 {
