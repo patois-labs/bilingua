@@ -213,5 +213,5 @@ fn locos_profile_numbers_and_writes_like_locos() {
     let out = Xcloc.merge_with(&d, &profile::locos().merge_options("xcloc")).unwrap();
     let m = String::from_utf8(member(&out, "fr.xcloc/Localized Contents/fr2.xliff")).unwrap();
     assert!(m.starts_with("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<xliff"), "{m}");
-    assert!(m.contains("</source><target>") && m.contains("Mon appli") && !m.contains("state=\"translated\""), "{m}");
+    assert!(m.contains("<target>Mon appli</target>") && !m.contains("state=\"translated\""), "{m}");
 }

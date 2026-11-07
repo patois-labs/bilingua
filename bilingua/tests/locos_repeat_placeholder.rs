@@ -30,11 +30,12 @@ fn corpus() -> Vec<(String, Vec<u8>)> {
 /// Qt Linguist (`ts`) is one of them (LocOS `render_inner` drops a duplicated token), and so are the memoQ and Trados
 /// packages (`mqxlz`, `sdlppx`: LocOS writes their XLIFF through `cat_xliff._render`, which drops a used token).
 /// Server pages also write a tag that carries code once (`<a href="<?php x() ?>">`), on purpose, where LocOS writes
-/// such a tag twice. Every other format but those in [`LOCOS_REFUSES`] writes a repeated standalone placeholder each
+/// such a tag twice. The Xcode bundle (`xcloc`) under the profile writes its members with the LocOS XLIFF writer,
+/// which drops a used token, as LocOS's xcloc build does (measured on the corpus bundles, 11-07). Every other format but those in [`LOCOS_REFUSES`] writes a repeated standalone placeholder each
 /// time, as LocOS does.
 const LOCOS_KEEPS_ONCE: &[&str] = &[
     "android", "aspx", "ass", "dita", "docbook", "docx", "erb", "icml", "idml", "jsp", "mif", "mqxlz", "odt", "phtml", "sdlppx", "shtml", "ts", "ttml",
-    "ttx", "txlf", "txml", "vsdx", "vtt", "xlz", "xmb", "xml", "xslt", "xtb", "xtg",
+    "ttx", "txlf", "txml", "vsdx", "vtt", "xcloc", "xlz", "xmb", "xml", "xslt", "xtb", "xtg",
 ];
 
 /// Formats whose LocOS writer refuses a repeated placeholder: the Contentful, Sanity Portable Text and Jira ADF
