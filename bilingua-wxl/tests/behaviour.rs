@@ -338,6 +338,22 @@ fn comment_before_or_after_the_text_is_not_a_mixed_string() {
     assert!(out.contains("Before<!-- c -->after"), "{out}");
 }
 
+#[test]
+fn blank_runs_beside_comments_are_not_a_second_run() {
+    // LocOS G13 strips each run as Python does: a non-breaking space, a space reference or a blank CDATA section
+    // beside the comments is no text, so the one real run is the value (it used to make a skipped mixed string)
+    let src = b"<WixLocalization Culture=\"en-US\" xmlns=\"urn:x\">\n<String Id=\"A\">Finish<!-- c -->&#160;</String>\n<String Id=\"B\">&#32;<!-- c -->Repair it</String>\n<String Id=\"C\"><![CDATA[ ]]><!-- c -->Remove all</String>\n<String Id=\"D\">One<!-- c -->&#65;</String>\n</WixLocalization>";
+    let mut d = ex(src);
+    assert_eq!(texts(&d), ["Finish", "Repair it", "Remove all"]);
+    assert_eq!(s(&merged(&d)), s(src));
+    pseudo(&mut d);
+    let out = s(&merged(&d));
+    assert!(out.contains("<!-- c -->&#160;</String>"), "{out}");
+    assert!(out.contains("&#32;<!-- c -->\u{ab}"), "{out}");
+    assert!(out.contains("<![CDATA[ ]]><!-- c -->\u{ab}"), "{out}");
+    assert!(out.contains("One<!-- c -->&#65;"), "{out}");
+}
+
 /// Issue 813.6: a translation's line breaks take the file's style in element text, in both modes.
 #[test]
 fn translation_line_breaks_follow_the_file() {

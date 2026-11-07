@@ -293,3 +293,36 @@ fn partial_translation_keeps_the_rest() {
     assert_eq!(tu(&out, "5"), tu(SAMPLE_TXLF, "5"));
     assert_eq!(tu(&out, "3"), tu(SAMPLE_TXLF, "3"));
 }
+
+// Parity (11-07): under the LocOS profile a TXLF translation equal to the target the file already had is still
+// written, and its `needs-translation` state becomes `translated`, as LocOS's cat_xliff writes it. A segment nobody
+// sets keeps its bytes.
+#[test]
+fn txlf_profile_resets_the_state_of_a_target_equal_to_the_old_one() {
+    let src = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<xliff version=\"1.2\" xmlns=\"urn:oasis:names:tc:xliff:document:1.2\" xmlns:gs4tr=\"http://www.gs4tr.org/schema/xliff-ext\">\n<file original=\"a\" source-language=\"en-US\" target-language=\"nl-NL\" datatype=\"plaintext\"><body>\n<trans-unit id=\"1\"><source>Entry #1</source><target gs4tr:score=\"-1\" state=\"needs-translation\" state-qualifier=\"x-no-match\">Entry #1</target></trans-unit>\n<trans-unit id=\"2\"><source>Plan ahead</source><target state=\"needs-translation\">Plan ahead</target></trans-unit>\n<trans-unit id=\"3\"><source>Ship it</source><target state=\"needs-translation\">Ship it</target></trans-unit>\n</body></file></xliff>\n";
+    let o = ExtractOptions::new().with_granularity(Granularity::Paragraph).with_profile(Some(profile::LOCOS));
+    let m = MergeOptions::new().with_profile(Some(profile::LOCOS));
+    let d = TXLF_T.extract(src.as_bytes(), &o).unwrap();
+    // untouched: the original bytes
+    assert_eq!(TXLF_T.merge_with(&d, &m).unwrap(), src.as_bytes());
+    let mut d2 = d.clone();
+    let units = profile::locos_units(&d2);
+    assert_eq!(units.len(), 3);
+    // the first two set to the text they already have, the third left alone
+    for u in &units[..2] {
+        let src_inl = d.units.iter().flat_map(|x| &x.segments).find(|s| s.id == u.segment_id).unwrap().source.clone();
+        profile::locos_set_target(&mut d2, &u.segment_id, src_inl).unwrap();
+    }
+    let out = String::from_utf8(TXLF_T.merge_with(&d2, &m).unwrap()).unwrap();
+    assert!(out.contains("state=\"translated\" state-qualifier=\"x-no-match\">Entry #1</target>"), "{out}");
+    assert!(out.contains("<target state=\"translated\">Plan ahead</target>"), "{out}");
+    assert!(out.contains("<target state=\"needs-translation\">Ship it</target>"), "{out}");
+    // without the profile a target equal to the old one is no change: the file keeps its bytes
+    let n = TXLF_T.extract(src.as_bytes(), &ExtractOptions::new().with_granularity(Granularity::Paragraph)).unwrap();
+    let mut n2 = n.clone();
+    for u in n2.units.iter_mut() {
+        let t = u.segments[0].source.clone();
+        u.segments[0].target = t;
+    }
+    assert_eq!(TXLF_T.merge(&n2).unwrap(), src.as_bytes());
+}

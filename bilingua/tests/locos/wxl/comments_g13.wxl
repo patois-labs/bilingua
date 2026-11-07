@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<WixLocalization Culture="en-us" xmlns="http://schemas.microsoft.com/wix/2006/localization">
+  <String Id="Before"><!-- _locID_text="Before" _locComment="a note" -->Go &amp;back</String>
+  <String Id="After">Next step<!-- _locID_text="After" --></String>
+  <String Id="Around">
+    <!-- _locID_text="Around" -->
+    Cancel the setup
+    <!-- second note -->
+  </String>
+  <String Id="TwoRuns">First<!-- c -->second</String>
+  <String Id="Kid">Has <b>kids</b><!-- c --></String>
+  <String Id="OnlyNote"><!-- nothing here --></String>
+  <String Id="Pi"><?wix keep?>Install now</String>
+  <String Id="NbspRun">Finish the wizard<!-- c -->&#160;</String>
+  <String Id="SpaceRef">&#32;<!-- c -->Repair it</String>
+  <String Id="CdataBlank"><![CDATA[ ]]><!-- c -->Remove all</String>
+  <String Id="CdataText"><!-- c --><![CDATA[Read <this> first]]></String>
+  <String Id="Plain">Welcome</String>
+</WixLocalization>

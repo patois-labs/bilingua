@@ -67,6 +67,19 @@ fn is_ws(c: u8) -> bool {
     matches!(c, b' ' | b'\t' | b'\r' | b'\n')
 }
 
+/// A run of element content between comments that holds text: anything but white space by Python's `str.isspace`
+/// once references and CDATA are read (LocOS G13 `r.strip()`). A run that does not read (a bad reference) counts,
+/// so the reader still reports it.
+fn live_run(raw: &str) -> bool {
+    if raw.bytes().all(is_ws) {
+        return false;
+    }
+    match unescape_content(raw) {
+        Ok(s) => !s.chars().all(bilingua_model::py_isspace_char),
+        Err(_) => true,
+    }
+}
+
 /// One attribute of a start tag: name, byte range of the raw value, quote.
 #[derive(Debug, Clone)]
 pub struct Attr {
@@ -335,7 +348,10 @@ pub fn scan(text: &str) -> Result<Scanned, String> {
                                 let mut runs: Vec<(usize, usize)> = Vec::new();
                                 let mut at = content_start;
                                 for &(ns, ne) in e.notes.iter().chain(std::iter::once(&(start, start))) {
-                                    if text[at..ns].bytes().any(|c| !is_ws(c)) {
+                                    // a run counts when its text, as a parser reads it, is not white space
+                                    // by Python's `str.strip` (LocOS G13): `&#160;`, `&#32;` or a blank
+                                    // CDATA section beside the comments is no second run
+                                    if live_run(&text[at..ns]) {
                                         runs.push((at, ns));
                                     }
                                     at = ne;

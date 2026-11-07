@@ -1,0 +1,30 @@
+[
+ {
+  "name": "identity",
+  "locale": null,
+  "map": {
+   "0": "Entry #1",
+   "1": "Plan the ⟦g1⟧next⟦/g1⟧ step",
+   "2": "Ship it",
+   "3": "Kept as it is"
+  }
+ },
+ {
+  "name": "identity-some",
+  "locale": null,
+  "map": {
+   "0": "Entry #1",
+   "1": "Plan the ⟦g1⟧next⟦/g1⟧ step"
+  }
+ },
+ {
+  "name": "identity-de-DE",
+  "locale": "de-DE",
+  "map": {
+   "0": "Entry #1",
+   "1": "Plan the ⟦g1⟧next⟦/g1⟧ step",
+   "2": "Ship it",
+   "3": "Kept as it is"
+  }
+ }
+]

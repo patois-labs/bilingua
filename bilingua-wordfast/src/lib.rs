@@ -158,7 +158,7 @@ fn extract(d: Dialect, load_targets: bool, bytes: &[u8], opts: &ExtractOptions, 
             regions.push((r.start, idx));
             ends.push(r.end);
         }
-        units.push(unit_of(it, text, opts.is_profile(profile::LOCOS)));
+        units.push(unit_of(it, text, opts.is_profile(profile::LOCOS), d == Dialect::Txlf));
     }
     // the skeleton in file order
     let mut order: Vec<(usize, usize, usize)> = regions.iter().zip(&ends).map(|(&(s, i), &e)| (s, e, i)).collect();
@@ -185,11 +185,19 @@ fn extract(d: Dialect, load_targets: bool, bytes: &[u8], opts: &ExtractOptions, 
 
 /// `locos`: under the LocOS profile a confirmed translation is protected like a lock (LocOS `wordfast._skip` and
 /// `cat_xliff._unit_skip` never extract it and never overwrite it at build).
-fn unit_of(it: Item, text: &str, locos: bool) -> Unit {
+///
+/// `txlf`: under the profile an open TXLF segment does not carry the file's target. LocOS (`cat_xliff`) writes every
+/// translation it is given and resets a `new` / `needs-*` state to `translated`, also when the translation is the
+/// text the file already had; with the file's target in the Document such a translation looked unchanged and kept
+/// `needs-translation`. A segment nobody sets is still written back as it was.
+fn unit_of(it: Item, text: &str, locos: bool, txlf: bool) -> Unit {
+    let open = matches!(it.status, Status::Open);
     let mut u = Unit::new(it.key.to_string(), it.source);
     let seg = &mut u.segments[0];
-    seg.target = it.target;
-    seg.state = it.state;
+    if !(locos && txlf && open) {
+        seg.target = it.target;
+        seg.state = it.state;
+    }
     seg.origin = it.origin;
     let t0 = (seg.has_target()).then(|| inline::flat(&seg.target));
     u.codes = it.codes;
