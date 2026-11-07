@@ -320,3 +320,15 @@ fn legacy_byte_mutations_refuse_or_round_trip_exactly() {
     }
     assert!(refused > 0, "some mutation must be refused (double-mapped Shift_JIS sequences)");
 }
+
+/// B-side 9 (verify_xml_resource_filters:410, MAX_DOCUMENT_SEGMENTS=3): LocOS `check_xml_budget` refuses a file
+/// with more than 40 x MAX_DOCUMENT_SEGMENTS `<` before parsing, code `limit`.
+#[test]
+fn xml_budget_before_parsing() {
+    let mut o = ExtractOptions::default();
+    o.limits = Some(Limits::new().with_max_units(3));
+    let flood = format!("<WixLocalization>{}</WixLocalization>", "<x/>".repeat(300));
+    let e = Wxl.extract(flood.as_bytes(), &o).unwrap_err();
+    assert!(matches!(&e, Error::Limit(l) if l.kind == LimitKind::Units && l.msg.contains("far more entries")), "{e:?}");
+    assert!(!matches!(Wxl.extract(flood.as_bytes(), &ExtractOptions::default()), Err(Error::Limit(_))));
+}
