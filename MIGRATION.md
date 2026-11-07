@@ -459,6 +459,9 @@ commented list in the test.
   keep their normal handling, and the merge writes the code back byte for byte. Still refused, as in LocOS: code that
   is the tag name or builds an attribute name (`<<?= $t ?>>`, `<div<?= $a ?> ..>`, `data-<?= $k ?>="v"`), and a tag
   nested in a quoted attribute value that would make the tokenizer read junk (`href="..<x:url value="${v}"/>.."`).
+  JSP custom tags in a tag: inside a quoted value (`title="<fmt:message key='x'/>"`) the value is not offered (LocOS
+  offers the tag as text); between attributes (`<input <c:if ..>checked</c:if>>`) the page is refused (LocOS and 0.9.0
+  opened it and offered the rest of the outer tag as text).
   Golden test `matches_locos_on_random_pages_and_fixtures` lets exactly this refusal differ (the opened page must
   merge back byte for byte); `refusals` and `html_with_server_code_is_protected` in `tests/locos_suite.rs` say so in
   comments.
