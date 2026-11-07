@@ -418,6 +418,31 @@ keeps the encoding:
   - Known difference: a message with a lone surrogate escape is left alone (no unit), since a Rust string cannot
     hold it.
 
+## The adapter's fast path: DocumentHandle (BILI-18, 11-07)
+
+- The dict calls move the whole Document across the PyO3 boundary each time (`extract` writes it out, `locos_units`,
+  `locos_set_targets` and `merge` read it back): at 400 units that is most of each call. `extract_handle` keeps the
+  Document in Rust; parse is `h = extract_handle(...)` + `h.locos_units()`, build is `h.locos_set_targets(targets)`
+  + `merge(profile="locos")` on the new handle. The adapter's other reads of the Document have handle getters:
+  `h.parser`, `h.format`, `h.warnings`, `h.source_encoding` and `h.unit_extras(names)` (the image inventory, the
+  JSON dialect). `h.to_dict()` gives the full dict for anything else.
+- Same answers: `bilingua-py/tests/test_handle.py` checks dicts (key order too), units, problems, merged bytes and
+  errors against the dict path over the oracle corpus, the golden inputs and the wild files. A handle is immutable,
+  so the adapter's parse memo can keep one handle for the build; it cannot be pickled (store the original bytes, as
+  the adapter does, not the handle).
+
+## Differences from LocOS: TXLF state and WiX comment runs (11-07)
+
+- TXLF under the profile: an identity build (each unit set to its own text) left `state="needs-translation"` on a
+  target that already held that text, where LocOS writes `translated` (wild file `02-OpenAI-Markdown...`, 4 units).
+  Under the profile an open segment no longer carries the file's target, so whatever the adapter sets is written and
+  the state reset applies; a segment nobody sets keeps its bytes. Golden `txlf/state_reset.txlf` (identity builds).
+- WiX (native too): LocOS G13 (iss-int c91157801) reads a `<String>` whose children are only comments or PIs when
+  exactly one run of text is left once each run is stripped as Python strips it. Bilingua already read those
+  strings, but counted a run of `&#160;`, `&#32;` or a blank CDATA section as text and skipped the string. Now the
+  run is read first. Golden `wxl/comments_g13.wxl`. LocOS's versioned old read (a document stored before G13 keeps
+  skipping) is LocOS's own; Bilingua has no old read for it.
+
 ## Follow-ups (item G, 11-06)
 
 - **Detection under the LocOS profile.** `bilingua::detect_with(name, bytes, profile)` is new (`detect(name, bytes)`

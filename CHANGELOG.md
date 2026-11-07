@@ -9,6 +9,12 @@ is listed here).
 
 ### Added
 
+- Python (BILI-18, speed): `extract_handle(name, data, ...)` returns a `DocumentHandle`, a Document kept on the Rust
+  side: `locos_units()`, `locos_set_targets(targets)` (a new handle and the problems), `merge(...)`, `to_dict()`,
+  `DocumentHandle.from_dict(document)`, the read-only `format`, `parser`, `warnings`, `source_encoding`, `len()` and
+  `unit_extras(names=None)`. Each gives what the dict function gives; the Document never crosses to Python unless
+  asked. `extract(..., locos_units=True)` returns `(document, units)` in one call. Nothing existing changed.
+
 - Rust: `profile::tokens::to_locos_text_coded(format, inlines, codes)` (IDML and ICML ranges as `r` pairs, the rule
   `profile::locos_units` now uses), `profile::A11Y_MISSING_ALT` (DOCX missing-alt findings of both kinds),
   `bilingua_zip::check_xml_parts_except`, `bilingua_pptx::locos::COMMENT_BASE`. Python: `to_locos_text(..., codes=)`.
@@ -95,6 +101,12 @@ is listed here).
   drawings) now match and their lists are gone.
 
 ### Fixed
+
+- LocOS profile, TXLF: a translation equal to the target the file already had is written, and its `new` or
+  `needs-*` state becomes `translated`, as LocOS writes it (it kept `needs-translation`). An open segment's Document
+  under the profile no longer carries the file's target; native reading is unchanged.
+- WiX (native and profile): a run of white space beside a string's comments (`&#160;`, `&#32;`, a blank CDATA
+  section) no longer makes a skipped mixed string; the one run of text is the value, as LocOS G13 reads it.
 
 - XML: a character reference outside XML 1.0's `Char` (`&#30;`, `&#0;`) is not well-formed in `bilingua-xmltree`
   (lxml's sentence); Bilingua's own XLIFF reader keeps it as the text it is instead of the character, so it is never
