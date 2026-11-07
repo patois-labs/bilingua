@@ -3,7 +3,10 @@
 //! read straight from them (`doc_to_py`, `doc_in`), with no `serde_json::Value` copy in between; the objects, key
 //! order and errors are the ones the `Value` path gives.
 
+mod handle;
 mod pyde;
+
+use handle::DocumentHandle;
 
 use engine::{Document, ExtractOptions, Granularity};
 use pyo3::create_exception;
@@ -214,11 +217,9 @@ fn format_option_map(v: Value) -> Result<std::collections::BTreeMap<String, Stri
     Ok(out)
 }
 
-/// Opens a file and returns the Document as dicts and lists.
-#[pyfunction]
+/// The arguments `extract` and `extract_handle` share, read and checked in `extract`'s order.
 #[allow(clippy::too_many_arguments)] // one keyword argument per option
-#[pyo3(signature = (name, data, *, source_lang=None, target_lang=None, granularity="paragraph", limits=None, format_options=None, profile=None, profile_version=None))]
-fn extract(
+fn extract_doc(
     py: Python<'_>,
     name: &str,
     data: &[u8],
@@ -229,7 +230,8 @@ fn extract(
     format_options: Option<&Bound<'_, PyAny>>,
     profile: Option<String>,
     profile_version: Option<u32>,
-) -> PyResult<Py<PyAny>> {
+    with_units: bool,
+) -> PyResult<Extracted> {
     let g = parse_granularity(granularity).map_err(|f| to_py_err(py, f))?;
     let prof = resolve_profile(profile.as_deref(), profile_version).map_err(|f| to_py_err(py, f))?;
     // A dict of limit names (see `Limits`); anything left out keeps Localization OS's default.
@@ -252,7 +254,7 @@ fn extract(
         }
     };
     let (name, data) = (name.to_string(), data.to_vec());
-    let value = guarded(py, move || {
+    guarded(py, move || {
         let opts = ExtractOptions::new()
             .with_source_lang(source_lang)
             .with_target_lang(target_lang)
@@ -262,9 +264,67 @@ fn extract(
             .with_profile(prof.map(|p| p.name));
         let doc = engine::extract(&name, &data, &opts)?;
         let parser = parser_info(&doc, prof);
-        Ok((doc, parser))
-    })?;
-    doc_to_py(py, &value.0, Some(&value.1))
+        let units = with_units.then(|| engine::profile::locos_units(&doc));
+        Ok(Extracted { doc, parser, units })
+    })
+}
+
+/// What `extract_doc` gives: the Document, its parser record and, when asked for, its LocOS units.
+struct Extracted {
+    doc: Document,
+    parser: Value,
+    units: Option<Vec<engine::profile::LocosUnit>>,
+}
+
+/// Opens a file and returns the Document as dicts and lists. With `locos_units=True` it returns
+/// `(document, units)`: the Document and what `locos_units(document)` gives for it, in one call (the units are
+/// numbered before the Document crosses to Python, so it is not read back).
+#[pyfunction]
+#[allow(clippy::too_many_arguments)] // one keyword argument per option
+#[pyo3(signature = (name, data, *, source_lang=None, target_lang=None, granularity="paragraph", limits=None, format_options=None, profile=None, profile_version=None, locos_units=false))]
+fn extract(
+    py: Python<'_>,
+    name: &str,
+    data: &[u8],
+    source_lang: Option<String>,
+    target_lang: Option<String>,
+    granularity: &str,
+    limits: Option<&Bound<'_, PyAny>>,
+    format_options: Option<&Bound<'_, PyAny>>,
+    profile: Option<String>,
+    profile_version: Option<u32>,
+    locos_units: bool,
+) -> PyResult<Py<PyAny>> {
+    let x = extract_doc(py, name, data, source_lang, target_lang, granularity, limits, format_options, profile, profile_version, locos_units)?;
+    let d = doc_to_py(py, &x.doc, Some(&x.parser))?;
+    match x.units {
+        None => Ok(d),
+        Some(u) => {
+            let u = units_to_py(py, &u)?;
+            Ok(PyTuple::new(py, [d, u])?.into_any().unbind())
+        }
+    }
+}
+
+/// Opens a file and keeps the Document on the Rust side: a `DocumentHandle` (same arguments as `extract`). The
+/// Document never crosses to Python unless asked for (`DocumentHandle.to_dict`).
+#[pyfunction]
+#[allow(clippy::too_many_arguments)] // one keyword argument per option
+#[pyo3(signature = (name, data, *, source_lang=None, target_lang=None, granularity="paragraph", limits=None, format_options=None, profile=None, profile_version=None))]
+fn extract_handle(
+    py: Python<'_>,
+    name: &str,
+    data: &[u8],
+    source_lang: Option<String>,
+    target_lang: Option<String>,
+    granularity: &str,
+    limits: Option<&Bound<'_, PyAny>>,
+    format_options: Option<&Bound<'_, PyAny>>,
+    profile: Option<String>,
+    profile_version: Option<u32>,
+) -> PyResult<DocumentHandle> {
+    let x = extract_doc(py, name, data, source_lang, target_lang, granularity, limits, format_options, profile, profile_version, false)?;
+    Ok(DocumentHandle::new(x.doc, Some(x.parser)))
 }
 
 /// Python dicts that come out with their keys sorted, as `to_py` writes a `Value` object (serde_json's map is a
@@ -397,12 +457,30 @@ fn merge<'py>(
 ) -> PyResult<Bound<'py, PyBytes>> {
     // the parser record extract adds is information for the caller, not part of the model's document
     let (doc, stamped) = doc_in(document).map_err(|f| to_py_err(py, f))?;
+    let opts = merge_options(py, &doc.format(), stamped.as_ref(), output_encoding, stamp_target_always, profile, format_options, profile_version)?;
+    let bytes = guarded(py, move || {
+        let doc = doc.into_document()?;
+        Ok(engine::merge_with(&doc, &opts)?)
+    })?;
+    Ok(PyBytes::new(py, &bytes))
+}
+
+/// `merge`'s keywords as MergeOptions, for a document of `format` whose parser record is `stamped`.
+#[allow(clippy::too_many_arguments)] // one keyword argument per option
+fn merge_options(
+    py: Python<'_>,
+    format: &str,
+    stamped: Option<&Value>,
+    output_encoding: Option<&str>,
+    stamp_target_always: Option<bool>,
+    profile: Option<String>,
+    format_options: Option<&Bound<'_, PyAny>>,
+    profile_version: Option<u32>,
+) -> PyResult<engine::MergeOptions> {
     // a profile gives the defaults (LocOS: UTF-8 out except ini, strings, dxf, txt, properties, xaml and resjson, stamp always);
     // keywords override them. Without a version in the call, the version the document was extracted under is used.
-    let format = doc.format();
     let base = profile.as_deref().map(|p| p.split('@').next().unwrap_or(p));
     let stamped_version = stamped
-        .as_ref()
         .filter(|p| base.is_some() && p.get("profile").and_then(Value::as_str) == base)
         .and_then(|p| p.get("profile_version"))
         .and_then(Value::as_u64)
@@ -412,7 +490,7 @@ fn merge<'py>(
     let prof = resolve_profile(profile.as_deref(), want).map_err(|f| to_py_err(py, f))?;
     let mut opts = match prof {
         None => engine::MergeOptions::new(),
-        Some(p) => p.merge_options(&format),
+        Some(p) => p.merge_options(format),
     };
     if let Some(o) = format_options.filter(|o| !o.is_none()) {
         let v = from_py(o, 0).map_err(|f| to_py_err(py, f))?;
@@ -424,11 +502,7 @@ fn merge<'py>(
     if let Some(b) = stamp_target_always {
         opts = opts.with_stamp_target_always(b);
     }
-    let bytes = guarded(py, move || {
-        let doc = doc.into_document()?;
-        Ok(engine::merge_with(&doc, &opts)?)
-    })?;
-    Ok(PyBytes::new(py, &bytes))
+    Ok(opts)
 }
 
 fn parse_output_encoding(s: &str) -> Result<engine::OutputEncoding, Fail> {
@@ -543,12 +617,16 @@ fn locos_units(py: Python<'_>, document: &Bound<'_, PyAny>) -> PyResult<Py<PyAny
         let doc = doc.into_document()?;
         Ok(engine::profile::locos_units(&doc))
     })?;
-    // written straight into Python objects with sorted keys (the same dicts and lists as `to_value` + `to_py`, without
-    // the `Value` copy: W4 speed); if that ever fails, the old way gives the answer
+    units_to_py(py, &units)
+}
+
+/// The `locos_units` list as Python objects: written straight into them with sorted keys (the same dicts and lists
+/// as `to_value` + `to_py`, without the `Value` copy: W4 speed); if that ever fails, the old way gives the answer.
+fn units_to_py(py: Python<'_>, units: &[engine::profile::LocosUnit]) -> PyResult<Py<PyAny>> {
     if let Ok(obj) = pythonize::pythonize_custom::<SortedTypes, _>(py, &units) {
         return Ok(obj.unbind());
     }
-    let v = serde_json::to_value(&units).map_err(|e| to_py_err(py, Fail::new("internal", e.to_string())))?;
+    let v = serde_json::to_value(units).map_err(|e| to_py_err(py, Fail::new("internal", e.to_string())))?;
     to_py(py, &v)
 }
 
@@ -565,7 +643,18 @@ fn locos_units(py: Python<'_>, document: &Bound<'_, PyAny>) -> PyResult<Py<PyAny
 #[pyfunction]
 fn locos_set_targets(py: Python<'_>, document: &Bound<'_, PyAny>, targets: &Bound<'_, PyAny>) -> PyResult<(Py<PyAny>, Py<PyAny>)> {
     let (doc, stamped) = doc_in(document).map_err(|f| to_py_err(py, f))?;
-    let targets = match from_py(targets, 0).map_err(|f| to_py_err(py, f))? {
+    let targets = targets_from_py(py, targets)?;
+    let (doc, problems) = guarded(py, move || {
+        let mut doc = doc.into_document()?;
+        let problems = apply_locos_targets(&mut doc, targets)?;
+        Ok((doc, problems))
+    })?;
+    Ok((doc_to_py(py, &doc, stamped.as_ref())?, to_py(py, &problems)?))
+}
+
+/// `targets` (a dict of segment id to LocOS text) as pairs, in the order `from_py` reads the dict.
+fn targets_from_py(py: Python<'_>, targets: &Bound<'_, PyAny>) -> PyResult<Vec<(String, String)>> {
+    match from_py(targets, 0).map_err(|f| to_py_err(py, f))? {
         Value::Object(m) => {
             let mut out = Vec::with_capacity(m.len());
             for (k, v) in m {
@@ -574,36 +663,36 @@ fn locos_set_targets(py: Python<'_>, document: &Bound<'_, PyAny>, targets: &Boun
                     other => return Err(to_py_err(py, Fail::new("invalid_argument", format!("targets[{k:?}] must be str, not {other}")))),
                 }
             }
-            out
+            Ok(out)
         }
-        _ => return Err(to_py_err(py, Fail::new("invalid_argument", "targets must be a dict of segment id to text"))),
-    };
-    let (doc, problems) = guarded(py, move || {
-        let mut doc = doc.into_document()?;
-        let maps: std::collections::HashMap<String, engine::profile::tokens::LocosMap> =
-            engine::profile::locos_units(&doc).into_iter().map(|u| (u.segment_id, u.map)).collect();
-        let empty = engine::profile::tokens::LocosMap::new();
-        let mut problems = Map::new();
-        for (seg, text) in targets {
-            // a segment the numbering does not list (not translatable, or no such id) still goes to the model's
-            // checks, with an empty map: they name the problem
-            let map = maps.get(&seg).unwrap_or(&empty);
-            // the format's LocOS token rules (TOML and JS drop a wrong-kind token naming a code, #814.1)
-            // the XLIFF family, TXML, TTX and the packages repair a repeated, stray or unclosed tag as LocOS's
-            // writers do; each repair is listed with the problems
-            let (inl, found, repairs) = engine::profile::tokens::repair_locos_text_for(&doc.format, &text, map);
-            engine::profile::locos_set_target(&mut doc, &seg, inl).map_err(|e| {
-                let f = Fail::from(e);
-                Fail::new(f.code, format!("segment {seg}: {}", f.msg))
-            })?;
-            if !found.is_empty() || !repairs.is_empty() {
-                let all = found.iter().map(problem_value).chain(repairs.iter().map(repair_value)).collect();
-                problems.insert(seg, Value::Array(all));
-            }
+        _ => Err(to_py_err(py, Fail::new("invalid_argument", "targets must be a dict of segment id to text"))),
+    }
+}
+
+/// Sets each target on `doc` the way `locos_set_targets` documents; returns the problems per segment id.
+fn apply_locos_targets(doc: &mut Document, targets: Vec<(String, String)>) -> Result<Value, Fail> {
+    let maps: std::collections::HashMap<String, engine::profile::tokens::LocosMap> =
+        engine::profile::locos_units(doc).into_iter().map(|u| (u.segment_id, u.map)).collect();
+    let empty = engine::profile::tokens::LocosMap::new();
+    let mut problems = Map::new();
+    for (seg, text) in targets {
+        // a segment the numbering does not list (not translatable, or no such id) still goes to the model's
+        // checks, with an empty map: they name the problem
+        let map = maps.get(&seg).unwrap_or(&empty);
+        // the format's LocOS token rules (TOML and JS drop a wrong-kind token naming a code, #814.1)
+        // the XLIFF family, TXML, TTX and the packages repair a repeated, stray or unclosed tag as LocOS's
+        // writers do; each repair is listed with the problems
+        let (inl, found, repairs) = engine::profile::tokens::repair_locos_text_for(&doc.format, &text, map);
+        engine::profile::locos_set_target(doc, &seg, inl).map_err(|e| {
+            let f = Fail::from(e);
+            Fail::new(f.code, format!("segment {seg}: {}", f.msg))
+        })?;
+        if !found.is_empty() || !repairs.is_empty() {
+            let all = found.iter().map(problem_value).chain(repairs.iter().map(repair_value)).collect();
+            problems.insert(seg, Value::Array(all));
         }
-        Ok((doc, Value::Object(problems)))
-    })?;
-    Ok((doc_to_py(py, &doc, stamped.as_ref())?, to_py(py, &problems)?))
+    }
+    Ok(Value::Object(problems))
 }
 
 /// The profiles Bilingua knows, as `{name: version}` (`{"locos": 1}`).
@@ -631,6 +720,8 @@ fn init_module(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(from_locos_text, m)?)?;
     m.add_function(wrap_pyfunction!(locos_units, m)?)?;
     m.add_function(wrap_pyfunction!(locos_set_targets, m)?)?;
+    m.add_function(wrap_pyfunction!(extract_handle, m)?)?;
+    m.add_class::<DocumentHandle>()?;
     m.add("BilinguaError", py.get_type::<BilinguaError>())?;
     m.add("__version__", env!("CARGO_PKG_VERSION"))?;
     Ok(())

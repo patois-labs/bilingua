@@ -5,7 +5,7 @@ below name the keys a caller reads and writes; any key may be missing in an olde
 added in a 1.x release (`total=False`).
 """
 
-from typing import Any, Literal, Mapping, TypedDict
+from typing import Any, Literal, Mapping, TypedDict, final, overload
 
 __version__: str
 
@@ -117,6 +117,7 @@ def formats() -> list[FormatInfo]:
 def detect(name: str, data: bytes) -> str | None:
     """The format id for a file name and its bytes, or None when no parser accepts it."""
 
+@overload
 def extract(
     name: str,
     data: bytes,
@@ -128,14 +129,43 @@ def extract(
     format_options: Mapping[str, FormatOptionValue] | None = None,
     profile: str | None = None,
     profile_version: int | None = None,
-) -> Document:
+    locos_units: Literal[False] = False,
+) -> Document: ...
+@overload
+def extract(
+    name: str,
+    data: bytes,
+    *,
+    source_lang: str | None = None,
+    target_lang: str | None = None,
+    granularity: Granularity = "paragraph",
+    limits: Mapping[str, int] | None = None,
+    format_options: Mapping[str, FormatOptionValue] | None = None,
+    profile: str | None = None,
+    profile_version: int | None = None,
+    locos_units: Literal[True],
+) -> tuple[Document, list[LocosUnit]]: ...
+def extract(
+    name: str,
+    data: bytes,
+    *,
+    source_lang: str | None = None,
+    target_lang: str | None = None,
+    granularity: Granularity = "paragraph",
+    limits: Mapping[str, int] | None = None,
+    format_options: Mapping[str, FormatOptionValue] | None = None,
+    profile: str | None = None,
+    profile_version: int | None = None,
+    locos_units: bool = False,
+) -> Document | tuple[Document, list[LocosUnit]]:
     """Opens a file. `limits` changes any of the safety limits by name (`max_units`, ...). `format_options` are
     `"<format>.<name>"` keys (`"csv.columns"`, `"odf.translate_comments"`) to str, bool or int; a key no format
     declares, a value of the wrong kind, or an unknown `profile` raises BilinguaError with code
     "invalid_argument". `profile="locos"` gives Localization OS's behaviour; `profile="locos@1"` or
     `profile_version=1` asks for that version of the profile (a version this release cannot produce raises code
     "parser_version"). The Document carries `parser`: the Bilingua release, the format crate, its version and
-    skeleton schema, and the profile and its version, for the caller to stamp."""
+    skeleton schema, and the profile and its version, for the caller to stamp. With `locos_units=True` the result
+    is `(document, locos_units(document))`, made in one call."""
 
 def merge(
     document: Mapping[str, Any],
@@ -204,3 +234,59 @@ def locos_set_targets(document: Mapping[str, Any], targets: Mapping[str, str]) -
     tokens kept as text and, for the XLIFF family, TXML, TTX and the packages, each tag repair LocOS's writers make
     (`repeated`, `stray_close`: the tag dropped, its text kept; `unclosed`: closed at the end; `pair_as_point`:
     written empty). A target the document cannot take raises BilinguaError naming the segment."""
+
+@final
+class DocumentHandle:
+    """A Document kept by Bilingua, never converted unless asked (`to_dict`). Made by `extract_handle` or
+    `DocumentHandle.from_dict`. Each method gives what the function of the same name gives for `to_dict()`. A handle
+    is immutable (`locos_set_targets` returns a new one), so threads may share it; it cannot be pickled."""
+
+    @staticmethod
+    def from_dict(document: Mapping[str, Any]) -> DocumentHandle:
+        """A handle for a Document dict; refuses a malformed one with the error `merge` gives."""
+    def to_dict(self) -> Document:
+        """Exactly the dict `extract` (or `locos_set_targets`) returns, parser record included."""
+    def locos_units(self) -> list[LocosUnit]: ...
+    def locos_set_targets(self, targets: Mapping[str, str]) -> tuple[DocumentHandle, dict[str, list[TokenProblem]]]:
+        """A new handle with the targets set, and the problems; this handle is unchanged."""
+    def merge(
+        self,
+        *,
+        output_encoding: OutputEncoding | None = None,
+        stamp_target_always: bool | None = None,
+        profile: str | None = None,
+        format_options: Mapping[str, FormatOptionValue] | None = None,
+        profile_version: int | None = None,
+    ) -> bytes: ...
+    @property
+    def format(self) -> str: ...
+    @property
+    def parser(self) -> ParserRecord | None: ...
+    @property
+    def warnings(self) -> list[Warning]: ...
+    @property
+    def source_encoding(self) -> str | None: ...
+    def __len__(self) -> int:
+        """The number of units, translatable or not."""
+    def unit_extras(self, names: list[str] | None = None) -> list[UnitExtras]:
+        """`context.extra` of each unit that has one (only `names`, when given), in file order."""
+
+class UnitExtras(TypedDict):
+    unit: str
+    segments: list[str]
+    translate: bool
+    extra: dict[str, str]
+
+def extract_handle(
+    name: str,
+    data: bytes,
+    *,
+    source_lang: str | None = None,
+    target_lang: str | None = None,
+    granularity: Granularity = "paragraph",
+    limits: Mapping[str, int] | None = None,
+    format_options: Mapping[str, FormatOptionValue] | None = None,
+    profile: str | None = None,
+    profile_version: int | None = None,
+) -> DocumentHandle:
+    """`extract`, with the Document kept on the Rust side. Refuses a file as `extract` does."""

@@ -41,6 +41,14 @@ open("messages.es.po", "wb").write(bilingua.merge(doc))
   wrong kind, raises `invalid_argument`.
 - `extract(..., limits=None)`: a dict of limit names to override (see `bilingua-model/README.md`); the rest keep the
   defaults. The Document has a `warnings` list (e.g. `text_encoding`) when a file was read but looks garbled.
+- `extract(..., locos_units=True) -> (dict, list)`: the Document and `locos_units(document)` in one call.
+- `extract_handle(name, data, **same keywords as extract) -> DocumentHandle`: the Document kept on the Rust side, for
+  callers that do not need the dicts (the Localization OS adapter). Its methods give what the functions give for the
+  dict: `locos_units()`, `locos_set_targets(targets) -> (DocumentHandle, problems)` (a new handle; the old one is
+  unchanged), `merge(**same keywords as merge)`, `to_dict()` (exactly `extract`'s dict) and
+  `DocumentHandle.from_dict(document)`; the read-only `format`, `parser`, `warnings` and `source_encoding`, `len()` (the
+  number of units) and `unit_extras(names=None)` (each unit's `context.extra` with its unit and segment ids). A handle
+  is immutable, so threads may share it; it is freed with its last reference and cannot be pickled.
 - Type stubs: `bilingua.pyi` ships in the wheel (with `py.typed`), so editors and type checkers see the API.
 - `version() -> str`.
 
