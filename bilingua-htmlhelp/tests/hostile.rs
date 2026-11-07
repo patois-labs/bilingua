@@ -66,7 +66,8 @@ fn deep_and_huge_files() {
     let e = HhcFilter.extract(&vec![b'<'; 5_000_000], &ExtractOptions::default()).unwrap_err();
     assert!(matches!(e, Error::Limit(_)), "{e}");
     let junk = b"<a ".repeat(600_000);
-    assert!(HhcFilter.extract(&junk, &ExtractOptions::default()).is_err());
+    // never a tag: nothing to translate, so zero units and a warning
+    assert!(HhcFilter.extract(&junk, &ExtractOptions::default()).is_ok_and(|d| d.units.is_empty() && d.warnings.len() == 1));
     // nesting without end: ten thousand open objects with a name each
     let mut deep = Vec::new();
     for i in 0..10_000 {
@@ -160,7 +161,8 @@ fn fixtures() -> Vec<Vec<u8>> {
 fn exercise(f: &dyn Filter, data: &[u8]) {
     let Ok(mut doc) = f.extract(data, &ExtractOptions::default()) else { return };
     let n = doc.units.len();
-    assert!(n > 0);
+    // a file with nothing to translate opens with zero units and a warning
+    assert!(n > 0 || !doc.warnings.is_empty());
     let unit_ids: Vec<String> = doc.units.iter().map(|u| u.id.clone()).collect();
     let untouched = f.merge(&doc).expect("untouched merge");
     if std::str::from_utf8(data).is_ok() || data.starts_with(&[0xFF, 0xFE]) || data.starts_with(&[0xFE, 0xFF]) {

@@ -37,7 +37,8 @@ fn hostile_translations_match_locos() {
     for c in cases {
         let got = HhcFilter.extract(c.source.as_bytes(), &ExtractOptions::default());
         if c.expect == "parse_error" {
-            assert!(got.is_err(), "{}: LocOS finds no unit", c.name);
+            // LocOS refuses a file with no unit; Bilingua opens it with zero units and a warning (MIGRATION.md)
+            assert!(got.as_ref().map_or(true, |d| d.units.is_empty() && !d.warnings.is_empty()), "{}: LocOS finds no unit", c.name);
             continue;
         }
         let mut doc = got.unwrap_or_else(|e| panic!("{}: {e}", c.name));
