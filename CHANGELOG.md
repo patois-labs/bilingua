@@ -9,6 +9,11 @@ is listed here).
 
 ### Added
 
+- Rust: `profile::tokens::to_locos_text_coded(format, inlines, codes)` (IDML and ICML ranges as `r` pairs, the rule
+  `profile::locos_units` now uses), `profile::A11Y_MISSING_ALT` (DOCX missing-alt findings of both kinds),
+  `bilingua_zip::check_xml_parts_except`, `bilingua_pptx::locos::COMMENT_BASE`. Python: `to_locos_text(..., codes=)`.
+- LocOS profile, PowerPoint: slide comments (classic and modern, with replies) are units with
+  `pptx.translate_comments`, numbered and written as LocOS does (W4).
 - Rust: `profile::tokens::repair_locos_text_for`, `profile::tokens::locos_repairs_tags` and `profile::tokens::TagRepair`
   (the CAT formats' tag repair, below); `bilingua_xliffpkg::MEMBER_SLOTS`. Python: `locos_set_targets` lists tag
   repairs as problems of kind `repeated`, `stray_close`, `unclosed` and `pair_as_point`.
@@ -38,6 +43,14 @@ is listed here).
 
 ### Changed
 
+- LocOS profile, Office and DTP formats (W4): DOCX units carry LocOS's image inventory for the missing-alt prompts
+  and give the Storyline notice; XLSX text cells starting with `=` are not units; ODF styles are `heading`, `comment`
+  or none; Visio `p_index` is LocOS's slot index (with gaps) and comments are `1000000 + j`; IDML and ICML ranges
+  are `r` pairs; ICML refuses a bare `<Story>` root and skips story-level tables, as LocOS does. Native and profile:
+  a DOCX `customXml/` part is no longer depth-checked; a rebuilt ICML story keeps the file's CRLF line ends; a
+  rebuilt IDML or ICML range keeps the text after its `<Properties>`. See MIGRATION.md, "Wave 4 B-side".
+- Python, speed (same objects and errors): `locos_units` writes its result straight into Python objects, and the
+  Document reader takes exact `str`, `dict` and `list` objects first.
 - LocOS profile, CAT formats (W3): a translation that repeats, leaves open or wrongly closes a pair tag is repaired as
   LocOS's CAT writers do instead of refused (xliff, sdlxliff, mqxliff, mxliff, txlf, txml, ttx, xlz, mqxlz, sdlppx);
   confirmed TXML and TXLF segments are protected; TXML, TXLF and TTX keep LocOS's `p_index`, no style, and are written
