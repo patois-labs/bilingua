@@ -233,9 +233,9 @@ impl Filter for Xaml {
                 }
             }
         }
-        // LocOS writes the line breaks a translation brings in as they are
-        let tag = if opts.is_profile(profile::LOCOS) { enc::keep_newlines(encoding) } else { encoding.to_string() };
-        textenc::encode(&out, &tag, opts)
+        // a CRLF file gets CRLF for the line breaks a translation brings in, under the LocOS profile too (LocOS issue
+        // 813.6: LocOS wrote them as LF unless the string's own text already held a CRLF)
+        textenc::encode(&out, encoding, opts)
     }
 }
 

@@ -328,8 +328,8 @@ keeps the encoding:
   the unit text and in the build; LocOS drops it from the unit and blanks it from a translated build. A file that
   declares ISO-8859-8 (or -3, -4, -6, -10, -13, -14, -16, Windows-874) is read in that code page; LocOS reads it as
   Windows-1252. Under the profile a Markdown BOM is not part of the first line, so `# Title` is a heading and the
-  unit text is `Title`; LocOS lists the mark and `# Title` as text. ARB and resx follow the file's CRLF for what they add or
-  translate; LocOS wrote bare LF. The CJK autolink repair skips a URL that the source already had glued to text.
+  unit text is `Title`; LocOS lists the mark and `# Title` as text. ARB, resx and XAML follow the file's CRLF for what they
+  add or translate; LocOS wrote bare LF. The CJK autolink repair skips a URL that the source already had glued to text.
   Token-like text in a source (`⟦x2⟧`) stays text: Bilingua's real codes skip those numbers (so a unit's tokens can
   be numbered with gaps) and an unknown token in a translation is kept; LocOS drops or moves it.
 - XML, DITA and DocBook (11-06): Bilingua opens a file whose DOCTYPE has an internal subset (entity declarations,
