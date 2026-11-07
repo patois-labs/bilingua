@@ -63,12 +63,23 @@ impl Filter for TextFilter {
             group.clear();
         };
 
+        // a paragraph over half the unit size limit (a list with no blank lines) is cut at a line break, so the
+        // file is read as several units rather than refused
+        let cap = (opts.limits().max_unit_chars / 2).max(1);
+        let mut group_chars = 0usize;
         for line in text.split_inclusive('\n') {
             if line.trim().is_empty() {
                 flush(&mut group, &mut raw, &mut parts, &mut units);
+                group_chars = 0;
                 raw.push_str(line);
             } else {
+                let n = line.chars().count();
+                if !group.is_empty() && group_chars + n > cap {
+                    flush(&mut group, &mut raw, &mut parts, &mut units);
+                    group_chars = 0;
+                }
                 group.push(line);
+                group_chars += n;
             }
         }
         flush(&mut group, &mut raw, &mut parts, &mut units);
@@ -220,6 +231,15 @@ mod tests {
             ("ko", "\u{b77c}\u{cc58}\u{baa8}\u{c5b4}\u{c5d0} \u{c624}\u{c2e0} \u{ac83}\u{c744} \u{d658}\u{c601}\u{d569}\u{b2c8}\u{b2e4}.\n\n\u{ac8c}\u{c774}\u{bc8c}\u{c774} \u{c379}\u{c600}\u{c2b5}\u{b2c8}\u{b2e4}.\n"),
             ("ar", "\u{645}\u{631}\u{62d}\u{628}\u{627} \u{628}\u{643}\u{645} \u{641}\u{64a} \u{644}\u{627}\u{631}\u{62a}\u{634}\u{645}\u{648}\u{631}.\n\n\u{627}\u{644}\u{645}\u{62f}\u{62c}\u{632}\u{631} \u{645}\u{646}\u{62e}\u{641}\u{636}.\n"),
         ]
+    }
+
+    #[test]
+    fn a_huge_paragraph_without_blank_lines_is_cut_at_line_breaks() {
+        let line = format!("{}\n", "word ".repeat(100));
+        let src = line.repeat(1000); // 500 000 characters, no blank line
+        let d = extract(src.as_bytes());
+        assert!(d.units.len() >= 10, "{}", d.units.len());
+        assert_eq!(TextFilter.merge(&d).unwrap(), src.as_bytes());
     }
 
     #[test]
