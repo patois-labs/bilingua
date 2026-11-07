@@ -345,8 +345,10 @@ keeps the encoding:
 - XML, DITA and DocBook (11-06): Bilingua opens a file whose DOCTYPE has an internal subset (entity declarations,
   as in most DocBook 4 manuals); LocOS refuses it. The subset is kept byte for byte and never read: no entity
   (internal, external or parameter) is expanded or fetched, every `&name;` stays a code, and the depth and element
-  limits still apply. Every other XML format (ITS rules files, XLIFF, Office parts, resx, SVG, TTML and the rest)
-  still refuses entity declarations.
+  limits still apply. Every other XML format (ITS rules files, XLIFF, Office parts, resx, TTML and the rest)
+  still refuses entity declarations. SVG (11-07) accepts plain internal ones only (`<!ENTITY name "literal">`, no `&` in
+  the literal, at most 64, as Illustrator and Inkscape write for namespace URIs; external, parameter and nested
+  entities are still refused); a text node that uses a declared entity is not offered as a unit.
 - Every XML format that refuses entity declarations (11-06): Bilingua also refuses a part whose DOCTYPE, comment or
   processing instruction the XML readers would end in different places, so the depth, element and entity checks
   always cover what the reader builds: a DOCTYPE that is not closed, a `<`, `>` or bracket inside a quoted string of

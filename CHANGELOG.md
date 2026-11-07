@@ -9,6 +9,12 @@ is listed here).
 
 ### Added
 
+- PHP arrays: the block form of the direct-access guard, `if (!defined('X') || !X) { die('...'); }` (SugarCRM, vtiger),
+  is accepted like `defined('X') OR die(...)`. Anything else in the block is still refused.
+- SVG: a DOCTYPE that declares plain internal entities (`<!ENTITY ns "http://...">`, as Illustrator and Inkscape
+  write them) is accepted; external, parameter and nested entities are still refused. A text that uses a declared
+  entity is left alone.
+
 - Python: `to_locos_text(format, inlines)`, `from_locos_text(text, map)`, `locos_units(document)` and
   `locos_set_targets(document, targets)` give the LocOS profile's token text, token numbering and target rules to a
   Python caller (the Localization OS adapter), so they exist once, in Rust. `extract` and `merge` take
@@ -37,6 +43,9 @@ is listed here).
 
 ### Fixed
 
+- HTML, XML-like and PO files with two charset declarations (a forum page that embeds another page): only the
+  declarations in the first 4096 characters are the file's own, so the second no longer makes an untouched merge
+  differ and the file is no longer refused as "cannot be written back unchanged".
 - markdown (LocOS profile and native): a plain front matter value that goes on over the next indented line
   (`subtitle: A plain value that` and `  continues here`) is left alone. It was offered cut at the first line, and a
   translation would have replaced only that line. LocOS reads the whole block and skips such a key.
