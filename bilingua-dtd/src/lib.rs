@@ -34,21 +34,26 @@ const HIDDEN: &str = "$dtd";
 /// `max_lines`, `max_units` (also the declaration budget: at most four `<!` per allowed unit) and `max_unit_chars`.
 pub use bilingua_model::Limits;
 
-fn parse_err(msg: String) -> Error {
-    Error::Parse { format: ID.into(), msg }
-}
-
 fn read<'a>(bytes: &'a [u8], l: &Limits) -> Result<(&'a str, &'static str, Vec<scan::Entity>), Error> {
     guard::check_input(bytes, l)?;
     let (body, enc) = match bytes.strip_prefix(BOM8) {
         Some(b) => (b, "utf-8-bom"),
         None => (bytes, "utf-8"),
     };
+    // decode refusals: code `encoding`, LocOS `dtd_filter._decode`'s sentences (UnsupportedEncodingError)
     let text = std::str::from_utf8(body).map_err(|e| {
-        parse_err(format!("Mozilla .dtd files are UTF-8; byte {} is not valid. Re-save the file as UTF-8.", e.valid_up_to() + bytes.len() - body.len()))
+        if bilingua_model::enc::looks_binary(body) {
+            return Error::Encoding("file is not valid UTF-8 and looks like a binary file, not text; re-save the file as UTF-8.".into());
+        }
+        let at = e.valid_up_to();
+        Error::Encoding(format!(
+            "Mozilla .dtd files are UTF-8; byte 0x{:02x} at position {} is not. Re-save the file as UTF-8.",
+            body[at],
+            at + bytes.len() - body.len()
+        ))
     })?;
     if text.contains('\0') {
-        return Err(parse_err("the file holds NUL bytes, so it is not UTF-8 text; re-save the file as UTF-8".into()));
+        return Err(Error::Encoding("file is not valid UTF-8 text (it holds NUL bytes); re-save the file as UTF-8.".into()));
     }
     guard::check_lines(text, l)?;
     let decls = text.matches("<!").count();

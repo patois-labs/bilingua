@@ -253,6 +253,12 @@ fn limits_and_quirks() {
     // ... and then `c"x"` is no quoted value, so LocOS keeps the declaration as it is (no unit)
     assert!(units("<!ENTITY b\u{3000}c\"x\">".as_bytes()).is_empty());
     // Latin-1 and UTF-16 are refused with a typed error
-    assert!(matches!(extract(b"<!ENTITY a \"caf\xe9\">"), Err(Error::Parse { .. })));
+    // B-side 1: an encoding refusal is code `encoding` with LocOS's sentence, not `parse` ("not a dtd file: ...")
+    assert!(matches!(
+        extract(b"<!ENTITY a \"caf\xe9\">"),
+        Err(Error::Encoding(m)) if m == "Mozilla .dtd files are UTF-8; byte 0xe9 at position 15 is not. Re-save the file as UTF-8."
+    ));
+    assert!(matches!(extract(b"<!ENTITY a \"x\0y\">"), Err(Error::Encoding(m)) if m.contains("NUL bytes")));
+    assert!(matches!(extract(b"\x00\x01\x02\xff<!ENTITY a \"x\">"), Err(Error::Encoding(m)) if m.contains("binary file")));
     assert!(extract(b"\xff\xfe<\x00!\x00").is_err());
 }
