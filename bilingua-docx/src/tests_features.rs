@@ -890,17 +890,91 @@ fn drawingml_text_in_a_canvas_is_a_unit() {
     assert_eq!(src(&doc, "p1"), "Before");
     assert_eq!(src(&doc, "d1"), "Young ecologists & co");
     assert_eq!(doc.units[1].context.kind.as_deref(), Some("textbox"));
+    // the larger first run is a formatting tag; the most common formatting is the base
+    let s = seg_of(&doc, "d1");
+    assert_eq!(tag_displays(s), vec!["<fmt>", "</fmt>"]);
+    assert_eq!(doc.units[1].codes["1"].label.as_deref(), Some("size"));
     doc.target_lang = Some("de-DE".into());
-    doc.set_target("d1", vec![Inline::text("Junge <Oekologen>")]).unwrap();
+    doc.set_target(
+        "d1",
+        vec![
+            Inline::text("Junge <Oekologen> "),
+            Inline::tag("1", TagKind::Open, "<fmt>"),
+            Inline::text("und Co"),
+            Inline::tag("1", TagKind::Close, "</fmt>"),
+        ],
+    )
+    .unwrap();
     let out = Docx.merge(&doc).unwrap();
     let x = xml_of(&out, "word/document.xml");
     assert!(
-        x.contains("<a:pPr algn=\"ctr\"/><a:r><a:rPr lang=\"ru-RU\" sz=\"2000\"/><a:t>Junge &lt;Oekologen&gt;</a:t></a:r><a:endParaRPr lang=\"ru-RU\"/></a:p>"),
+        x.contains("<a:pPr algn=\"ctr\"/><a:r><a:rPr lang=\"de-DE\"/><a:t>Junge &lt;Oekologen&gt; </a:t></a:r><a:r><a:rPr lang=\"de-DE\" sz=\"2000\"/><a:t>und Co</a:t></a:r><a:endParaRPr lang=\"ru-RU\"/></a:p>"),
         "{x}"
     );
-    assert_eq!(src(&extract(&out), "d1"), "Junge <Oekologen>");
+    let again = extract(&out);
+    assert_eq!(src(&again, "d1"), "Junge <Oekologen> und Co");
+    assert_eq!(tag_displays(seg_of(&again, "d1")), vec!["<fmt>", "</fmt>"]);
+    // spelling and language marks do not split the text into tags; bold is <b>
+    let marks = "<w:p><w:r><w:drawing><a:p><a:r><a:rPr lang=\"en-US\" dirty=\"0\"/><a:t>Plain </a:t></a:r>\
+<a:r><a:rPr lang=\"en-GB\" err=\"1\"/><a:t>text </a:t></a:r><a:r><a:rPr lang=\"en-US\" b=\"1\"/><a:t>here</a:t></a:r></a:p></w:drawing></w:r></w:p>";
+    let m = round_trip(&doc_of(marks));
+    assert_eq!(tag_displays(seg_of(&m, "d1")), vec!["<b>", "</b>"]);
+    assert_eq!(m.find("d1").unwrap().0.codes["1"].label.as_deref(), Some("bold"));
     // a line break in the paragraph: left alone
     let br = "<w:p><w:r><w:drawing><a:p><a:r><a:t>One</a:t></a:r><a:br/><a:r><a:t>Two</a:t></a:r></a:p></w:drawing></w:r></w:p>";
     let none = round_trip(&doc_of(br));
     assert!(none.find("d1").is_none());
+}
+
+#[test]
+fn drawingml_canvas_with_a_vml_fallback_is_translated_in_both_copies() {
+    // Word writes a canvas as mc:Choice (DrawingML a:p) with a VML mc:Fallback (w:p in a v:textbox)
+    let choice = "<a:p><a:r><a:rPr lang=\"en-US\"/><a:t>Press </a:t></a:r><a:r><a:rPr lang=\"en-US\" b=\"1\"/><a:t>Save</a:t></a:r>\
+<a:r><a:rPr lang=\"en-US\"/><a:t> to keep it</a:t></a:r></a:p>";
+    let fb_runs = "<w:r><w:t xml:space=\"preserve\">Press </w:t></w:r><w:r><w:rPr><w:b/></w:rPr><w:t>Save</w:t></w:r>\
+<w:r><w:t xml:space=\"preserve\"> to keep it</w:t></w:r>";
+    let alt = |fb: &str| {
+        format!(
+            "<w:p><w:r><w:t>Before</w:t></w:r><w:r><mc:AlternateContent><mc:Choice Requires=\"wpc\"><w:drawing><wp:inline><a:graphic><a:graphicData uri=\"urn:x\">\
+<a:sp><a:txSp><a:txBody><a:bodyPr/>{choice}</a:txBody></a:txSp></a:sp></a:graphicData></a:graphic></wp:inline></w:drawing></mc:Choice>\
+<mc:Fallback><w:pict><v:shape><v:textbox><w:txbxContent><w:p>{fb}</w:p></w:txbxContent></v:textbox></v:shape></w:pict></mc:Fallback></mc:AlternateContent></w:r></w:p>"
+        )
+    };
+    let t = vec![
+        Inline::tag("1", TagKind::Open, "<b>"),
+        Inline::text("Guardar"),
+        Inline::tag("1", TagKind::Close, "</b>"),
+        Inline::text(" para conservarlo"),
+    ];
+    // runs line up one to one: the fallback keeps its own w:rPr per tag
+    let mut doc = round_trip(&doc_of(&alt(fb_runs)));
+    let ids: Vec<String> = doc.units.iter().map(|u| u.id.clone()).collect();
+    assert_eq!(ids, vec!["p1", "d1"]);
+    assert_eq!(src(&doc, "d1"), "Press Save to keep it");
+    doc.set_target("d1", t.clone()).unwrap();
+    let x = xml_of(&Docx.merge(&doc).unwrap(), "word/document.xml");
+    assert!(x.contains("<a:r><a:rPr lang=\"en-US\" b=\"1\"/><a:t>Guardar</a:t></a:r><a:r><a:rPr lang=\"en-US\"/><a:t> para conservarlo</a:t></a:r>"), "{x}");
+    assert!(
+        x.contains("<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>Guardar</w:t></w:r><w:r><w:t xml:space=\"preserve\"> para conservarlo</w:t></w:r></w:p>"),
+        "{x}"
+    );
+    assert!(!x.contains("Press") && !x.contains("keep it"), "{x}");
+    assert_eq!(src(&extract(&Docx.merge(&doc).unwrap()), "d1"), "Guardar para conservarlo");
+
+    // same text in one fallback run: mirrored with that run's formatting for everything
+    let one = "<w:r><w:rPr><w:i/></w:rPr><w:t>Press Save to keep it</w:t></w:r>";
+    let mut doc = round_trip(&doc_of(&alt(one)));
+    doc.set_target("d1", t.clone()).unwrap();
+    let x = xml_of(&Docx.merge(&doc).unwrap(), "word/document.xml");
+    assert!(
+        x.contains("<w:p><w:r><w:rPr><w:i/></w:rPr><w:t>Guardar</w:t></w:r><w:r><w:rPr><w:i/></w:rPr><w:t xml:space=\"preserve\"> para conservarlo</w:t></w:r></w:p>"),
+        "{x}"
+    );
+
+    // a fallback with other text is left as it was
+    let other = "<w:r><w:t>Something else</w:t></w:r>";
+    let mut doc = round_trip(&doc_of(&alt(other)));
+    doc.set_target("d1", t).unwrap();
+    let x = xml_of(&Docx.merge(&doc).unwrap(), "word/document.xml");
+    assert!(x.contains("Guardar") && x.contains("<w:t>Something else</w:t>"), "{x}");
 }

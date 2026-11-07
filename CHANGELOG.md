@@ -38,7 +38,9 @@ is listed here).
 ### Fixed
 
 - docx (native mode): the text of a DrawingML shape that is not a Word text box (`a:p` in a lockedCanvas or a group
-  shape) is a unit (`d1`, ...). Such a file opened with no units. Paragraphs with line breaks or fields stay untouched.
+  shape) is a unit (`d1`, ...). Such a file opened with no units. Run formatting is kept as paired tags, and the VML
+  `mc:Fallback` copy is written from the same translation when it has the same text. Paragraphs with line breaks or
+  fields stay untouched.
 - srt (native mode): word-timing marks such as `<00:00:04.480>` (YouTube-style captions) are standalone codes, not text.
 
 - markdown (LocOS profile and native): a plain front matter value that goes on over the next indented line

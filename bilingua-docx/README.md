@@ -59,7 +59,7 @@ For the facade (`bilingua/src/lib.rs`, `filters()`): `Box::new(bilingua_docx::Do
 | Not supported | What happens |
 |---|---|
 | SmartArt, charts, embedded objects | Left untouched, not extracted |
-| Text inside DrawingML shapes that are not text boxes (`a:p` in a lockedCanvas or group shape) | A paragraph of plain runs is a unit (id `d1`, `d2`, ...; native mode only, not the LocOS profile). A changed unit is written as one run with the first run's properties. A paragraph with `a:br`, `a:fld` or anything else is left untouched |
+| Text inside DrawingML shapes that are not text boxes (`a:p` in a lockedCanvas or group shape) | A paragraph of plain runs is a unit (id `d1`, `d2`, ...; native mode only, not the LocOS profile). Run formatting other than the most common one is a paired tag, as for Word runs. In `mc:AlternateContent` the VML `Fallback` paragraph with the same text is written from the same translation (with its own `w:rPr` per tag when its runs line up with the shape's runs). A paragraph with `a:br`, `a:fld` or anything else is left untouched |
 | Right-to-left setup for a target language | Translating into Arabic, Hebrew etc. does not add `w:bidi` or `w:rtl`. Fix the paragraph direction in Word, or start from a template that has it |
 | `w:ins`/`w:del` inside a changed paragraph | Accepted (see above); the reviewer sees plain text |
 | A field that starts inside a hyperlink or content control and ends outside it | Both parts stay valid XML but the order of the pieces in a rebuilt paragraph may differ from the original |
