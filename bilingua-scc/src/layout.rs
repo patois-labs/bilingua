@@ -386,7 +386,7 @@ pub fn encode_line(line: &Line, text: &[Atom], locos_glue: bool) -> Result<Vec<W
                 }
                 // the first row's mode and style codes are not repeated on an added row (a second mode code
                 // makes the row read back as another caption)
-                if i == 0 || j >= 1 {
+                if i == 0 || j >= 1 || locos_glue {
                     words.extend(s.pos.iter().flat_map(|e| e.words.iter().copied()));
                 }
             }
