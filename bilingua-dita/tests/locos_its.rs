@@ -311,20 +311,20 @@ fn localized_language_stamp() {
     );
 }
 
-/// Issue 809.2: a nested topic that still declares the source language is restamped; a foreign passage and an
-/// element with no translated unit are left alone.
+/// Issue 809.2: a nested topic that still declares the source language is restamped when a unit inside it gets a
+/// target that differs from its source; a foreign passage and an element with no changed unit are left alone.
 #[test]
 fn nested_source_language_is_restamped() {
     let f = dita();
     let d = br#"<dita xml:lang="en"><topic id="a" xml:lang="en"><title>A</title><body><p xml:lang="fr">Bonjour</p><p xml:lang="en-US">Hi</p></body></topic><topic id="b" xml:lang="en"><title/></topic></dita>"#;
-    let out = s(&merge_map(&f, d, Some("de-DE"), &[(0, "Ae")]));
+    let out = s(&merge_map(&f, d, Some("de-DE"), &[(0, "Ae"), (1, "Salut"), (2, "Hallo")]));
     assert!(out.starts_with(r#"<dita xml:lang="de-DE"><topic id="a" xml:lang="de-DE">"#), "{out}");
     assert!(out.contains(r#"<p xml:lang="fr">"#), "foreign passage kept: {out}");
     assert!(out.contains(r#"<topic id="b" xml:lang="en">"#), "no translated unit below: {out}");
     assert!(out.contains(r#"<p xml:lang="de-DE">"#), "en-US inside an en document is the source language: {out}");
     // a region on both sides must match; a bare language matches any region of it
     let d3 = br#"<dita xml:lang="en-US"><topic id="a" xml:lang="en"><title>A</title><p xml:lang="en-GB">Colour</p><p xml:lang="EN_us">Color</p></topic></dita>"#;
-    let out3 = s(&merge_map(&f, d3, Some("de-DE"), &[(0, "Ae")]));
+    let out3 = s(&merge_map(&f, d3, Some("de-DE"), &[(0, "Ae"), (1, "Farbe"), (2, "Farbe")]));
     assert!(out3.contains(r#"<topic id="a" xml:lang="de-DE">"#), "{out3}");
     assert!(out3.contains(r#"<p xml:lang="en-GB">"#), "another region is kept: {out3}");
     assert!(out3.contains(r#"<p xml:lang="de-DE">Color"#), "{out3}");
@@ -334,6 +334,30 @@ fn nested_source_language_is_restamped() {
     assert_eq!(out2, r#"<dita xml:lang="de-DE"><topic id="a" xml:lang="de-DE"><title>Ae</title></topic></dita>"#);
     // nothing translated: untouched
     assert_eq!(f.merge(&ex_to(&f, d2, "de-DE")).unwrap(), d2);
+}
+
+/// Issue 809.2: only an element holding a unit whose target differs from its source is restamped. A unit left
+/// untranslated, or translated with its source text, does not count; a changed attribute unit does.
+#[test]
+fn nested_restamp_needs_a_changed_target() {
+    let f = dita();
+    let d = br#"<dita xml:lang="en"><topic id="a" xml:lang="en"><title>Same</title><body><p xml:lang="en">Hi</p></body></topic><topic id="b" xml:lang="en"><title>Two</title></topic></dita>"#;
+    // unit 0 (Same) echoed, unit 1 (Hi) untranslated, unit 2 (Two) changed
+    let out = s(&merge_map(&f, d, Some("de-DE"), &[(0, "Same"), (2, "Zwei")]));
+    assert!(out.starts_with(r#"<dita xml:lang="de-DE"><topic id="a" xml:lang="en">"#), "echo only: {out}");
+    assert!(out.contains(r#"<p xml:lang="en">Hi</p>"#), "untranslated: {out}");
+    assert!(out.contains(r#"<topic id="b" xml:lang="de-DE"><title>Zwei</title>"#), "{out}");
+    // the change is deep inside: every element up to the root that still names the source is restamped
+    let out = s(&merge_map(&f, d, Some("de-DE"), &[(0, "Same"), (1, "Hallo")]));
+    assert!(out.contains(r#"<topic id="a" xml:lang="de-DE"><title>Same</title><body><p xml:lang="de-DE">Hallo</p>"#), "{out}");
+    assert!(out.contains(r#"<topic id="b" xml:lang="en">"#), "{out}");
+    // a changed attribute unit of the element itself (an empty element) and of a child
+    let m = br#"<map xml:lang="en"><topicref href="a.dita" navtitle="A" xml:lang="en"/><topicref href="b.dita" navtitle="B" xml:lang="en"/><topichead xml:lang="en"><topicref href="c.dita" navtitle="C"/></topichead></map>"#;
+    let out = s(&merge_map(&f, m, Some("fr"), &[(0, "Ah"), (1, "B"), (2, "Ce")]));
+    assert_eq!(
+        out,
+        r#"<map xml:lang="fr"><topicref href="a.dita" navtitle="Ah" xml:lang="fr"/><topicref href="b.dita" navtitle="B" xml:lang="en"/><topichead xml:lang="fr"><topicref href="c.dita" navtitle="Ce"/></topichead></map>"#
+    );
 }
 
 /// Issue 809.3: no attribute unit on an element under translate="no" (DITA navtitle included).
@@ -350,14 +374,27 @@ fn navtitle_under_translate_no_is_not_translatable() {
     assert!(texts.contains(&"Kept".to_string()) && !texts.iter().any(|t| t.contains("Dropped")), "{texts:?}");
 }
 
-/// A topicref with a conref (or conkeyref) is replaced by the referenced element, so neither its local navtitle
-/// attribute nor its topicmeta navtitle is offered for translation (the referenced map is translated instead).
+/// DITA 1.3 part 3, 2.4.2.3 "Processing attributes when resolving conrefs": the referencing element's own attributes
+/// win over the referenced element's, except those set to `-dita-use-conref-target`; its content is replaced. So a
+/// navtitle attribute on a conref (or conkeyref) topicref reaches the output and is offered; the topicmeta navtitle
+/// inside it, attributes of its descendants and a `-dita-use-conref-target` value are not.
 #[test]
-fn conref_topicref_offers_no_navtitle() {
+fn conref_topicref_keeps_its_own_navtitle_attribute() {
     let f = dita();
-    let d = br#"<map><topicref href="a.dita" navtitle="Own"/><topicref conref="m.ditamap#m/r" navtitle="Local"><topicmeta><navtitle>Meta</navtitle></topicmeta></topicref><topicref conkeyref="k/r" navtitle="Keyed"/></map>"#;
+    let d = br#"<map><topicref href="a.dita" navtitle="Own"/><topicref conref="m.ditamap#m/r" navtitle="Local"><topicmeta><navtitle>Meta</navtitle></topicmeta><topicref href="x.dita" navtitle="Inner"/></topicref><topicref conkeyref="k/r" navtitle="Keyed"/><topicref conref="m.ditamap#m/s" navtitle="-dita-use-conref-target"/><topicref conref="m.ditamap#m/t" navtitle="Off" translate="no"/></map>"#;
     let texts: Vec<String> = ex(&f, d).units.iter().map(show).collect();
-    assert_eq!(texts, vec!["Own".to_string()]);
+    assert_eq!(texts, vec!["Own".to_string(), "Local".to_string(), "Keyed".to_string()]);
+    // the attribute unit merges back; the replaced content stays as written
+    let out = s(&merge_map(&f, d, None, &[(1, "Lokal"), (2, "Schluessel")]));
+    assert!(out.contains(r#"<topicref conref="m.ditamap#m/r" navtitle="Lokal"><topicmeta><navtitle>Meta</navtitle></topicmeta><topicref href="x.dita" navtitle="Inner"/>"#), "{out}");
+    assert!(out.contains(r#"<topicref conkeyref="k/r" navtitle="Schluessel"/>"#), "{out}");
+    // an image with a conref keeps its own alt text too
+    let t = br#"<topic id="t"><title>T</title><body><image conref="i.dita#i/logo" alt="Logo"/><image conref="i.dita#i/x" alt="-dita-use-conref-target"/></body></topic>"#;
+    assert_eq!(texts_of(&f, t), vec!["T".to_string(), "Logo".to_string()]);
+}
+
+fn texts_of(f: &Dita, d: &[u8]) -> Vec<String> {
+    ex(f, d).units.iter().map(show).collect()
 }
 
 /// LocOS `xml_text.xml_target_text` (used by the XML emitter): vertical tab and form feed become line breaks,

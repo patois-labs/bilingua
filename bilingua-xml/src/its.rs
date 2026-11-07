@@ -203,13 +203,21 @@ fn note_for(t: &Tree, rule: &Rule, el: u32, budget: &mut Budget) -> String {
     }
 }
 
+const SOFT_NONE: u8 = 0;
+const SOFT_NAME: u8 = 1;
+const SOFT_CONREF: u8 = 2;
+/// The DITA attribute value that means "take this attribute from the conref target".
+const USE_CONREF_TARGET: &str = "-dita-use-conref-target";
+
 /// Works out the properties. `extra` are rules given to the filter; rules inside the document come after them.
 pub(crate) fn eval_props(t: &Tree, dialect: Option<&Dialect>, extra: &[Rule], limits: &Limits) -> Result<Props, Error> {
     let n = t.els.len();
     let mut tr_x = vec![0u8; n]; // 0 unset, 1 no, 2 yes
-    // elements the dialect itself lists as not translatable (DITA image): their attributes are still translated,
-    // unless a translate attribute, an ITS rule or ITS markup also says "no" (any of those clears this flag)
-    let mut name_no = vec![false; n];
+    // why an element is "no" (`tr_x` 1) when it is not an explicit translate="no": SOFT_NAME the dialect lists it by
+    // name (DITA image), SOFT_CONREF it pulls its content from elsewhere (DITA conref). The attributes of such an
+    // element are still translated, unless a translate attribute, an ITS rule or ITS markup also says "no" (any of
+    // those sets SOFT_NONE). Descendants of a conref element are replaced with it, so their attributes are not.
+    let mut soft_no = vec![SOFT_NONE; n];
     let mut wt_x = vec![255u8; n];
     let mut pre_x = vec![0u8; n];
     let mut note_x = vec![0u32; n];
@@ -231,7 +239,7 @@ pub(crate) fn eval_props(t: &Tree, dialect: Option<&Dialect>, extra: &[Rule], li
             let ln = t.local(i);
             if d.no_translate.contains(ln) {
                 tr_x[i as usize] = 1;
-                name_no[i as usize] = true;
+                soft_no[i as usize] = SOFT_NAME;
             }
             if d.inline.contains(ln) {
                 wt_x[i as usize] = 1;
@@ -245,6 +253,10 @@ pub(crate) fn eval_props(t: &Tree, dialect: Option<&Dialect>, extra: &[Rule], li
             for r in &d.attrs {
                 if r.elements.is_empty() || r.elements.iter().any(|e| e == "*" || e == ln) {
                     if let Some(a) = t.find_attr(i, "", &r.attr) {
+                        // DITA 1.3 (2.4.2.3): this value takes the attribute from the conref target; it is no text
+                        if t.attr_value(i, "", &r.attr).as_deref().map(str::trim) == Some(USE_CONREF_TARGET) {
+                            continue;
+                        }
                         let idx = (a as *const _ as usize - t.attrs.as_ptr() as usize) / std::mem::size_of::<crate::tree::Attr>();
                         attr_yes.insert(idx as u32, i);
                         dialect_attrs.insert(idx as u32);
@@ -253,13 +265,15 @@ pub(crate) fn eval_props(t: &Tree, dialect: Option<&Dialect>, extra: &[Rule], li
             }
             if let Some(ta) = &d.translate_attr {
                 match t.attr_value(i, "", ta).as_deref() {
-                    Some("yes") => (tr_x[i as usize], name_no[i as usize]) = (2, false),
-                    Some("no") => (tr_x[i as usize], name_no[i as usize]) = (1, false),
+                    Some("yes") => (tr_x[i as usize], soft_no[i as usize]) = (2, SOFT_NONE),
+                    Some("no") => (tr_x[i as usize], soft_no[i as usize]) = (1, SOFT_NONE),
                     _ => {}
                 }
             }
-            if d.no_translate_if_attr.iter().any(|a| t.find_attr(i, "", a).is_some()) {
-                (tr_x[i as usize], name_no[i as usize]) = (1, false);
+            // DITA 1.3 (2.4.2.3): the content is replaced by the referenced element's, but the referencing element's
+            // own attributes win over the referenced one's, so they stay translatable (an explicit "no" is kept)
+            if d.no_translate_if_attr.iter().any(|a| t.find_attr(i, "", a).is_some()) && !(tr_x[i as usize] == 1 && soft_no[i as usize] == SOFT_NONE) {
+                (tr_x[i as usize], soft_no[i as usize]) = (1, SOFT_CONREF);
             }
         }
     }
@@ -303,7 +317,7 @@ pub(crate) fn eval_props(t: &Tree, dialect: Option<&Dialect>, extra: &[Rule], li
                 Node::El(e) => {
                     let i = e as usize;
                     match rule.kind {
-                        RuleKind::Translate => (tr_x[i], name_no[i]) = (if rule.value == "yes" { 2 } else { 1 }, false),
+                        RuleKind::Translate => (tr_x[i], soft_no[i]) = (if rule.value == "yes" { 2 } else { 1 }, SOFT_NONE),
                         RuleKind::WithinText => {
                             wt_x[i] = match rule.value.as_str() {
                                 "yes" => 1,
@@ -351,8 +365,8 @@ pub(crate) fn eval_props(t: &Tree, dialect: Option<&Dialect>, extra: &[Rule], li
         let local = |name: &str| if has_its { t.attr_value(i, ITS_NS, name) } else { None };
         if t.els[iu].attr_lo != t.els[iu].attr_hi && (has_its || has_xml) {
             match local("translate").as_deref() {
-                Some("yes") => (tr_x[iu], name_no[iu]) = (2, false),
-                Some("no") => (tr_x[iu], name_no[iu]) = (1, false),
+                Some("yes") => (tr_x[iu], soft_no[iu]) = (2, SOFT_NONE),
+                Some("no") => (tr_x[iu], soft_no[iu]) = (1, SOFT_NONE),
                 _ => {}
             }
             match local("withinText").as_deref() {
@@ -374,7 +388,7 @@ pub(crate) fn eval_props(t: &Tree, dialect: Option<&Dialect>, extra: &[Rule], li
             }
         }
         if t.el_ns(i) == ITS_NS {
-            (tr_x[iu], name_no[iu]) = (1, false);
+            (tr_x[iu], soft_no[iu]) = (1, SOFT_NONE);
         }
     }
 
@@ -399,20 +413,30 @@ pub(crate) fn eval_props(t: &Tree, dialect: Option<&Dialect>, extra: &[Rule], li
             v => v,
         };
     }
-    // translate="no" set on the element or an ancestor by a rule, ITS markup or the dialect's translate attribute
+    // translate="no" set on the element or an ancestor by a rule, ITS markup or the dialect's translate attribute, or
+    // a conref on the element or an ancestor (what its descendants inherit)
     let mut explicit_no = vec![false; n];
     for i in 0..n {
         let parent = t.els[i].parent;
         explicit_no[i] = match tr_x[i] {
             2 => false,
-            1 if !name_no[i] => true,
+            1 if soft_no[i] != SOFT_NAME => true,
             _ if parent == NONE => false,
             _ => explicit_no[parent as usize],
         };
     }
+    // the same for the element's own attributes: its own conref does not count
+    let attr_blocked = |el: u32| {
+        let i = el as usize;
+        match tr_x[i] {
+            2 => false,
+            1 if soft_no[i] == SOFT_NONE => true,
+            _ => t.els[i].parent != NONE && explicit_no[t.els[i].parent as usize],
+        }
+    };
     for (a, owner) in attr_yes {
         // ITS: nothing under translate="no" is translatable, a dialect attribute (DITA navtitle) included
-        if dialect_attrs.contains(&a) && explicit_no[owner as usize] {
+        if dialect_attrs.contains(&a) && attr_blocked(owner) {
             continue;
         }
         let note = match attr_note.get(&a) {

@@ -7,8 +7,10 @@
 //! * `\0A<n>\0`  the value of translatable attribute unit `n`, inside a start tag;
 //! * `\0L<attr>|<0 or 1>\0 ... \0l\0`  around the root start tag: the language attribute to update (or add, `1`) on a
 //!   target-language merge;
-//! * `\0N<attr>\0 ... \0l\0`  around the start tag of a nested element that holds translated units and declares a
-//!   language itself: on a target-language merge the attribute is changed only if it still names the source language.
+//! * `\0N<attr>\0 ... \0l\0 ... \0n\0`  around the start tag, and after the end tag, of a nested (not inline) element
+//!   that holds units and declares a language itself: on a target-language merge the attribute is changed only if
+//!   it still names the source language and at least one unit between the markers is written with a target that
+//!   differs from its source.
 //!
 //! Markers appear in `Raw` parts and in the markup strings of a unit's codes (`open`, `close`, `standalone`).
 //! Hidden values (`Unit::hidden`): `raw` the original markup of the run (or the raw value of an attribute),
@@ -37,6 +39,8 @@ enum Job {
     Unit(usize),
     Item(Item),
     Node(u32),
+    /// A fixed marker.
+    Lit(&'static str),
 }
 
 pub(crate) struct Emit<'a, 'b> {
@@ -96,6 +100,7 @@ impl Emit<'_, '_> {
         while let Some(job) = jobs.pop() {
             match job {
                 Job::Text(s, e) => out.push_str(&t.text[s..e]),
+                Job::Lit(s) => out.push_str(s),
                 Job::Unit(u) => {
                     out.push_str("\0U");
                     out.push_str(&u.to_string());
@@ -121,8 +126,16 @@ impl Emit<'_, '_> {
                 Job::Node(el) => {
                     self.stag(el, out);
                     let e = &t.els[el as usize];
+                    // the end of a restamped element (the stag wrote the N marker)
+                    let close = el != t.root && self.lang.is_some() && self.restamp.contains(&el);
                     if e.empty {
+                        if close {
+                            out.push_str("\0n\0");
+                        }
                         continue;
+                    }
+                    if close {
+                        jobs.push(Job::Lit("\0n\0"));
                     }
                     jobs.push(Job::Text(e.e0, e.e1));
                     for entry in self.p.plans[el as usize].iter().rev() {
@@ -182,7 +195,8 @@ pub(crate) fn build_document(t: &Tree, p: &Planned, notes: &[String], alt: &std:
             attr_unit.insert(a.attr, i);
         }
     }
-    // nested elements that hold translated text and carry their own language attribute
+    // nested (not inline) elements that hold units and carry their own language attribute; the merge restamps one
+    // only when a unit inside it is written with a changed target
     let mut restamp = std::collections::HashSet::new();
     if let Some((a, _)) = &lang {
         let mut mark = |mut el: u32| {
@@ -196,7 +210,8 @@ pub(crate) fn build_document(t: &Tree, p: &Planned, notes: &[String], alt: &std:
         for u in &p.units {
             mark(u.attr.as_ref().map_or(u.owner, |x| x.el));
         }
-        restamp.retain(|&el| t.attrs_of(el).iter().any(|x| t.attr_qname(x) == a.as_str()));
+        // an inline element's tags are unit codes, which carry no end marker: never restamped
+        restamp.retain(|&el| p.role[el as usize] != ROLE_INLINE && t.attrs_of(el).iter().any(|x| t.attr_qname(x) == a.as_str()));
     }
     let em = Emit { t, p, attr_unit, lang, restamp };
     // skeleton parts
@@ -435,6 +450,22 @@ pub(crate) struct Merger<'d> {
     /// Units already written: a well-formed skeleton names each unit once, so a second use (a hand-edited or
     /// hostile document, possibly a cycle or an exponential fan-out) is refused.
     seen: Vec<bool>,
+    /// Open restamp candidates (`N` ... `n`), innermost last.
+    frames: Vec<Frame>,
+    /// A unit with a changed target was written inside the start tag being read (an attribute unit).
+    stag_changed: bool,
+    /// Restamps to apply when the merge ends: output range of the start tag, the attribute.
+    edits: Vec<(usize, usize, String)>,
+}
+
+/// A nested element that may be restamped: where its start tag sits in the output and whether its language is still
+/// the source language.
+struct Frame {
+    s: usize,
+    e: usize,
+    attr: String,
+    source: bool,
+    changed: bool,
 }
 
 /// One step of the merge (an explicit stack, so nested units cost heap, not call stack).
@@ -450,7 +481,49 @@ enum Work<'d> {
 
 impl<'d> Merger<'d> {
     pub(crate) fn new(doc: &'d Document, lang_tag: Option<String>) -> Merger<'d> {
-        Merger { doc, out: String::new(), lang_tag, lang_start: None, root_lang: None, seen: vec![false; doc.units.len()] }
+        Merger {
+            doc,
+            out: String::new(),
+            lang_tag,
+            lang_start: None,
+            root_lang: None,
+            seen: vec![false; doc.units.len()],
+            frames: Vec::new(),
+            stag_changed: false,
+            edits: Vec::new(),
+        }
+    }
+
+    /// A unit was written with a target that differs from its source: the elements around it are restamped.
+    fn note_changed(&mut self) {
+        if matches!(self.lang_start, Some((_, _, _, true))) {
+            self.stag_changed = true;
+        } else if let Some(f) = self.frames.last_mut() {
+            f.changed = true;
+        }
+    }
+
+    /// Applies the restamps collected during the merge, in one pass over the output.
+    fn finish(mut self) -> String {
+        if self.edits.is_empty() {
+            return self.out;
+        }
+        self.edits.sort_by_key(|e| e.0);
+        let mut out = String::with_capacity(self.out.len() + 16 * self.edits.len());
+        let mut pos = 0;
+        for (s, e, attr) in &self.edits {
+            let (s, e) = (*s, *e);
+            // ranges come from this merge, so they are in order and on char boundaries; check all the same
+            if s < pos || e > self.out.len() || s > e || !self.out.is_char_boundary(s) || !self.out.is_char_boundary(e) {
+                continue;
+            }
+            let Some(tag) = self.lang_tag.as_deref() else { break };
+            out.push_str(&self.out[pos..s]);
+            out.push_str(&set_lang(&self.out[s..e], attr, tag, false));
+            pos = e;
+        }
+        out.push_str(&self.out[pos..]);
+        out
     }
 
     pub(crate) fn unit(&self, i: usize) -> Result<&'d Unit, Error> {
@@ -484,6 +557,7 @@ impl<'d> Merger<'d> {
                         return Err(Error::Write(format!("skeleton uses unit {i} more than once")));
                     }
                     if translated(u) && u.output() != u.source() {
+                        self.note_changed();
                         self.translated_work(i, &mut work)?;
                     } else {
                         work.push(Work::Marked(code_str(u, RAW).unwrap_or("")));
@@ -524,29 +598,41 @@ impl<'d> Merger<'d> {
                 "N" => {
                     if self.lang_tag.is_some() {
                         self.lang_start = Some((self.out.len(), arg.to_string(), false, true));
+                        self.stag_changed = false;
                     }
                 }
                 "l" => {
                     if let (Some((at, attr, add, nested)), Some(tag)) = (self.lang_start.take(), self.lang_tag.clone()) {
                         if at <= self.out.len() && self.out.is_char_boundary(at) {
-                            let stag = self.out.split_off(at);
-                            let old = lang_value(&stag, &attr);
-                            let edited = if nested {
+                            if nested {
                                 // only a language that is still the source language: a foreign passage stays as it is
-                                // (no source language anywhere: the first language the file declares is its source)
+                                // (no source language anywhere: the first language the file declares is its source);
+                                // the edit waits for the end marker, which knows whether anything inside was changed
+                                let old = lang_value(&self.out[at..], &attr);
                                 if self.doc.source_lang.is_none() && self.root_lang.is_none() {
                                     self.root_lang = old.clone();
                                 }
                                 let src = self.doc.source_lang.clone().or_else(|| self.root_lang.clone());
-                                match (old, src) {
-                                    (Some(o), Some(s)) if same_lang(&o, &s) => set_lang(&stag, &attr, &tag, false),
-                                    _ => stag,
-                                }
+                                let source = matches!((old, src), (Some(o), Some(s)) if same_lang(&o, &s));
+                                let changed = std::mem::take(&mut self.stag_changed);
+                                self.frames.push(Frame { s: at, e: self.out.len(), attr, source, changed });
                             } else {
-                                self.root_lang = old;
-                                set_lang(&stag, &attr, &tag, add)
-                            };
-                            self.out.push_str(&edited);
+                                let stag = self.out.split_off(at);
+                                self.root_lang = lang_value(&stag, &attr);
+                                self.out.push_str(&set_lang(&stag, &attr, &tag, add));
+                            }
+                        }
+                    }
+                }
+                "n" => {
+                    if let Some(f) = self.frames.pop() {
+                        if f.changed {
+                            if let Some(parent) = self.frames.last_mut() {
+                                parent.changed = true;
+                            }
+                            if f.source {
+                                self.edits.push((f.s, f.e, f.attr));
+                            }
                         }
                     }
                 }
@@ -570,6 +656,7 @@ impl<'d> Merger<'d> {
             return Ok(());
         }
         let q = code_str(u, QUOTE).and_then(|s| s.chars().next()).unwrap_or('"');
+        self.note_changed();
         self.out.push_str(&esc_attr(&new, q));
         Ok(())
     }
@@ -754,7 +841,7 @@ pub(crate) fn merge_parts<'d>(doc: &'d Document, parts: &'d [SkelPart], lang_tag
             SkelPart::Unit(i) => m.render_unit(*i)?,
         }
     }
-    Ok(m.out)
+    Ok(m.finish())
 }
 
 #[cfg(test)]

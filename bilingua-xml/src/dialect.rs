@@ -112,7 +112,9 @@ pub struct Dialect {
     pub alt_attrs: HashSet<String>,
     /// An attribute on any element that says `yes` or `no` (DITA `translate`).
     pub translate_attr: Option<String>,
-    /// Elements carrying one of these attributes pull their content from elsewhere: not translated.
+    /// Elements carrying one of these attributes pull their content from elsewhere: their content and descendants are
+    /// not translated; their own translatable attributes still are (DITA 1.3 conref attribute rules), unless set to
+    /// `-dita-use-conref-target`.
     pub no_translate_if_attr: Vec<String>,
     pub lang: LangStamp,
     pub detect: Detect,

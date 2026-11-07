@@ -39,11 +39,13 @@ is listed here).
   used to be offered as text (LocOS does the same).
 - xliff (LocOS profile): a comment or processing instruction inside a `<source>` is dropped (its tail text stays) and
   takes no code number. It used to become a code pair whose content was the comment text.
-- dita, docbook: on a target-language merge, a nested element that holds translated text and still declares the source
-  language in `xml:lang` (DocBook 4.x: `lang`) is restamped with the target language; other languages (a foreign
+- dita, docbook: on a target-language merge, a nested element that holds translated text (a unit whose target
+  differs from its source) and still declares the source language in `xml:lang` (DocBook 4.x: `lang`) is restamped
+  with the target language; other languages (a foreign
   passage, another region such as `en-GB` in an `en-US` file) are left alone. Only the root used to be stamped.
-- dita, docbook: no attribute unit (`navtitle`, `title`, `alt`) on an element under `translate="no"` or with a `conref`
-  or `conkeyref`. They used to be offered for translation.
+- dita, docbook: no attribute unit (`navtitle`, `title`, `alt`) on an element under `translate="no"`, inside an element
+  with a `conref` or `conkeyref`, or with the value `-dita-use-conref-target`. They used to be offered for
+  translation. The conref element's own attributes stay translatable (DITA 1.3 conref attribute rules).
 - wxl: the line breaks of a changed element text value take the file's line break (the first one it uses). A CRLF file
   used to get bare LF in a multi-line translation under the LocOS profile.
 - xml, xmltree, xmlres, wxl: a start tag with tens of thousands of `xmlns:pN` declarations or attributes no longer

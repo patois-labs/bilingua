@@ -78,8 +78,8 @@ fn matches_locos_dita_and_docbook_filters() {
             .collect();
         let got: Vec<(String, String, String)> =
             doc.units.iter().map(|u| (show(u), u.context.style.clone().unwrap_or_default(), u.notes.first().map(|n| n.text.clone()).unwrap_or_default())).collect();
-        // known difference (issue 809.3, fixed in Bilingua first): no attribute unit on an element under translate="no"
-        // or with a conref / conkeyref. Only such LocOS attribute units may be missing from ours, everything else in
+        // known difference (issue 809.3, fixed in Bilingua first): no attribute unit on an element under translate="no",
+        // inside an element with a conref / conkeyref, or with the value `-dita-use-conref-target`. Only such LocOS attribute units may be missing from ours, everything else in
         // order; the builds are not comparable then (LocOS translates the extra attributes)
         let known_809 = got != want && {
             let blocked = blocked_attrs(&data);
@@ -225,8 +225,9 @@ fn decode(v: &str) -> String {
 }
 
 /// `(attribute local name, value as a unit shows it)` for every attribute of an element under `translate="no"` (its
-/// own or an ancestor's) or with a `conref` / `conkeyref` (which the element's descendants inherit): the attribute
-/// units LocOS still offers there and Bilingua does not (issue 809.3). A small scanner for the golden inputs.
+/// own or an ancestor's) or inside an element with a `conref` / `conkeyref` (the conref element's own attributes stay
+/// translatable, DITA 1.3 part 3, 2.4.2.3), and every attribute set to `-dita-use-conref-target`: the attribute units
+/// LocOS still offers there and Bilingua does not (issue 809.3). A small scanner for the golden inputs.
 fn blocked_attrs(data: &[u8]) -> Vec<(String, String)> {
     let s = String::from_utf8_lossy(data).into_owned();
     let mut out = Vec::new();
@@ -299,19 +300,19 @@ fn blocked_attrs(data: &[u8]) -> Vec<(String, String)> {
             i = (lt + k + 1).min(s.len());
             let local = |n: &str| n.rsplit(':').next().unwrap_or(n).to_string();
             let parent = stack.last().copied().unwrap_or(false);
-            let mut blocked = match attrs.iter().find(|(n, _)| local(n) == "translate").map(|(_, v)| v.as_str()) {
+            let own = match attrs.iter().find(|(n, _)| local(n) == "translate").map(|(_, v)| v.as_str()) {
                 Some("no") => true,
                 Some("yes") => false,
                 _ => parent,
             };
-            blocked |= attrs.iter().any(|(n, _)| n == "conref" || n == "conkeyref");
-            if blocked {
-                for (n, v) in &attrs {
-                    out.push((local(n), decode(v).split_whitespace().collect::<Vec<_>>().join(" ")));
+            for (n, v) in &attrs {
+                let v = decode(v).split_whitespace().collect::<Vec<_>>().join(" ");
+                if own || v == "-dita-use-conref-target" {
+                    out.push((local(n), v));
                 }
             }
             if !empty {
-                stack.push(blocked);
+                stack.push(own || attrs.iter().any(|(n, _)| n == "conref" || n == "conkeyref"));
             }
         }
     }

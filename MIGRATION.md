@@ -571,15 +571,18 @@ Both modes (native and the `locos` profile) carry these fixes; LocOS gets the sa
 
 - 794: a comment or processing instruction inside an XLIFF `<source>` is not text and takes no token number
   (LocOS `cat_xliff.py` makes an empty `g` pair out of the comment text).
-- 809.2: nested `xml:lang` (DocBook 4.x `lang`) equal to the source language on an element with translated text is
-  restamped on a target build. The source language is the document's `source_lang`, else the first language the
+- 809.2: nested `xml:lang` (DocBook 4.x `lang`) equal to the source language is restamped on a target build when the
+  element (not an inline phrase) holds at least one unit whose target differs from its source; an untranslated unit
+  or a target equal to the source does not count. This is the rule LocOS's fix copies. The source language is the document's `source_lang`, else the first language the
   file declares. Same language: the primary subtag matches, and the script and region too when both tags have one
   (`en` matches `en-US` either way, `en-GB` does not match `en-US`); case and `_` against `-` are ignored.
-- 809.3: no attribute unit under an explicit `translate="no"` (own attribute, ancestor, ITS rule) or on an element
+- 809.3: no attribute unit under an explicit `translate="no"` (own attribute, ancestor, ITS rule) or inside an element
   with `conref` / `conkeyref`. Elements the dialect lists by name (DITA `codeph`) still give their attributes, unless
-  `translate="no"` is set on them too. Note: by DITA conref rules the referencing element's own attributes usually
-  win over the referenced element's, so a `navtitle` attribute on a conref `topicref` can reach the output; Bilingua
-  does not offer it (its `topicmeta` content is replaced and is not offered either).
+  `translate="no"` is set on them too. The conref element's own attributes stay translatable: by DITA 1.3 part 3,
+  2.4.2.3 "Processing attributes when resolving conrefs", the referencing element's attributes win over the
+  referenced element's, except those set to `-dita-use-conref-target`. So a `navtitle` (or image `alt`) attribute on a
+  conref element is a unit; its content (a `topicmeta` navtitle) and the attributes of its descendants are replaced
+  and are not; a value `-dita-use-conref-target` is never a unit.
 - 813 item 6, wxl: a changed element text value gets the file's line break. An unchanged value keeps its bytes.
   Attribute values keep `&#10;`.
 - 792: xmltree, xml, xmlres and wxl scan thousands of attributes or namespace declarations in one tag in linear time.
