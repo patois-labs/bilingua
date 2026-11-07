@@ -366,3 +366,33 @@ fn placeholders_in_targets_map_to_source_tags() {
     let d = ex("msgid \"Hi\"\nmsgstr \"Hola %s\"\n");
     assert_eq!(plain_text(&d.units[0].segments[0].target), "Hola %s");
 }
+
+#[test]
+fn cldr_only_targets_get_their_language_and_plural_rule_under_the_profile() {
+    let src = "msgid \"\"\nmsgstr \"\"\n\"Language: \n\"\n\"Content-Type: text/plain; charset=UTF-8\n\"\n\"Plural-Forms: nplurals=2; plural=(n != 1);\n\"\n\nmsgid \"One file\"\nmsgid_plural \"%d files\"\nmsgstr[0] \"\"\nmsgstr[1] \"\"\n";
+    let want = [
+        ("tl", "nplurals=2; plural=(n == 1 || n == 2 || n == 3 || (n % 10 != 4 && n % 10 != 6 && n % 10 != 9) ? 0 : 1);"),
+        ("tgl", "nplurals=2; plural=(n == 1 || n == 2 || n == 3 || (n % 10 != 4 && n % 10 != 6 && n % 10 != 9) ? 0 : 1);"),
+        ("fil", "nplurals=2; plural=(n == 1 || n == 2 || n == 3 || (n % 10 != 4 && n % 10 != 6 && n % 10 != 9) ? 0 : 1);"),
+        ("id", "nplurals=1; plural=0;"),
+        ("in", "nplurals=1; plural=0;"),
+        ("ta", "nplurals=2; plural=(n != 1);"),
+        ("zu", "nplurals=2; plural=(n > 1);"),
+        ("mk", "nplurals=2; plural=(n%10==1 && n%100!=11 ? 0 : 1);"),
+    ];
+    let o = ExtractOptions::new().with_profile(Some(profile::LOCOS));
+    for (lang, rule) in want {
+        let mut doc = PoFilter.extract(src.as_bytes(), &o).unwrap().with_target_lang(lang);
+        let id = doc.units[0].segments[0].id.clone();
+        doc.set_target(&id, vec![Inline::text("Eins")]).unwrap();
+        let out = String::from_utf8(PoFilter.merge_with(&doc, &MergeOptions::new().with_profile(Some(profile::LOCOS))).unwrap()).unwrap();
+        assert!(out.contains(&format!("\"Language: {lang}\n\"")), "{lang}: {out}");
+        let got = out.lines().find(|l| l.contains("Plural-Forms:")).unwrap();
+        if lang == "mk" {
+            // the exact spelling is the generated table's; only the slot numbers matter
+            assert!(got.contains("nplurals=2"), "{lang}: {got}");
+        } else {
+            assert!(got.contains(rule), "{lang}: {got}");
+        }
+    }
+}

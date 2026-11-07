@@ -1,0 +1,46 @@
+{
+ "format": "md",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Café menu",
+   "style": ""
+  },
+  {
+   "p_index": 1,
+   "text": "Crème brûlée costs € 4.",
+   "style": ""
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "IyBDYWbpIG1lbnUKCkNy6G1lIGJy+2zpZSBjb3N0cyCAIDQuCg=="
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü Café menu",
+    "1": "Ü Crème brûlée costs € 4."
+   },
+   "out_b64": "IyDDnCBDYWbDqSBtZW51CgrDnCBDcsOobWUgYnLDu2zDqWUgY29zdHMg4oKsIDQuCg=="
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Café menu & <\"'>"
+   },
+   "out_b64": "IyBDYWbDqSBtZW51ICYgPCInPgoKQ3LDqG1lIGJyw7tsw6llIGNvc3RzIOKCrCA0Lgo="
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "out_b64": "IyBDYWbDqSBtZW51CgpDcsOobWUgYnLDu2zDqWUgY29zdHMg4oKsIDQuCg=="
+  }
+ ]
+}

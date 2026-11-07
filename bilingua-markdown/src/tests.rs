@@ -446,3 +446,16 @@ fn a_cell_translation_does_not_split_the_cell() {
     assert_eq!(out, "| Name | Note |\n|---|---|\n| a \\| b \\| c | Warm |\n");
     assert_eq!(extract(&out).units.len(), d.units.len());
 }
+
+#[test]
+fn a_plain_front_matter_value_that_goes_on_is_left_alone() {
+    let src = "---\ntitle: A plain title that\n  goes on over two lines\ndescription: A one line summary\n---\nBody text here.\n";
+    let d = extract(src);
+    assert_eq!(texts(&d), vec!["A one line summary", "Body text here."]);
+    assert_eq!(merged(&d), src);
+    // a blank line before the continuation still folds into the value; a comment line ends it
+    let d = extract("---\ntitle: First part\n\n  second part\n---\nBody text here.\n");
+    assert_eq!(texts(&d), vec!["Body text here."]);
+    let d = extract("---\ntitle: Whole value\n# a comment\nauthor: x\n---\nBody text here.\n");
+    assert_eq!(texts(&d), vec!["Whole value", "Body text here."]);
+}

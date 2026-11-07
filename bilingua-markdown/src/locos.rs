@@ -952,6 +952,18 @@ fn toml_block_ok(body: &[&str]) -> bool {
     true
 }
 
+/// A plain YAML value that goes on over the next line(s): nothing but blanks after it on its line, and the next
+/// non-blank line is indented and not a comment. The whole block then reads the key as the folded text, not
+/// the first line, so the key is left alone (LocOS: `data.get(key) != val`).
+fn plain_continues(next: &[&str], tail: &[char]) -> bool {
+    if tail.iter().any(|c| !sp(*c)) {
+        return false;
+    }
+    next.iter()
+        .find(|l| !py_strip(l).is_empty())
+        .is_some_and(|l| l.starts_with([' ', '	']) && !py_lstrip(l).starts_with('#'))
+}
+
 /// LocOS `find_front_matter` with the default keys. The whole block is checked for what PyYAML / tomllib refuse
 /// (`yaml_block_ok`, `toml_block_ok`), not parsed: a key's last top-level one-line value stands for what the block
 /// gives it (YAML keeps the last of a repeated key), and TOML keys after
@@ -1001,6 +1013,7 @@ fn find_front_matter(lines: &[&str]) -> Option<FrontMatter> {
         }
         let val = (if toml { toml_span(&v, at) } else { yaml_span(&v, at) })
             .filter(|(_, style)| !(*style == "plain" && "&!*|>".contains(v[at])))
+            .filter(|(end, style)| !(!toml && *style == "plain" && plain_continues(&lines[i + 1..close], &v[*end..])))
             .and_then(|(end, style)| scalar_value(toml, style, &cs(&v, at, end)));
         last.insert(key, val);
     }
@@ -1722,6 +1735,16 @@ fn split(text: &str) -> (Vec<&str>, Vec<&str>) {
     (bare, raw)
 }
 
+/// The skeleton tag text: the decoder's tag, or `utf-8` when it has none a skeleton line can carry.
+fn enc_tag(encoding: &str) -> &str {
+    if encoding.is_empty() || encoding.contains('
+') {
+        "utf-8"
+    } else {
+        encoding
+    }
+}
+
 /// Extracts a Markdown file the LocOS way (see the module notes).
 pub fn extract(text: &str, encoding: &str, opts: &ExtractOptions, warnings: Vec<Warning>) -> Result<Document, Error> {
     let mut full = String::with_capacity(text.len() + 3);
@@ -1748,13 +1771,21 @@ pub fn extract(text: &str, encoding: &str, opts: &ExtractOptions, warnings: Vec<
         let image = it.delim.is_none() && has_image(&it.text);
         add(it.text, image);
     }
-    let doc = Document::new("markdown", units, Skeleton::binary(full.into_bytes(), bilingua_model::parser_info!())).with_options(opts);
+    // the file's skeleton tag, a line break, then the decoded text (a UTF-8 BOM kept in it): the tag is what
+    // `source_encoding` reports; the file is written as UTF-8, as LocOS writes it
+    let tag = enc_tag(encoding);
+    let mut data = Vec::with_capacity(tag.len() + 1 + full.len());
+    data.extend_from_slice(tag.as_bytes());
+    data.push(b'
+');
+    data.extend_from_slice(full.as_bytes());
+    let doc = Document::new("markdown", units, Skeleton::binary(data, bilingua_model::parser_info!())).with_options(opts);
     bilingua_model::guard::finish(doc, warnings, &opts.limits())
 }
 
 /// LocOS `build` (Markdown has no language declaration, so `build_localized` is the same).
 pub fn merge(doc: &Document, data: &[u8]) -> Result<Vec<u8>, Error> {
-    let text = std::str::from_utf8(data).map_err(|_| Error::Write("markdown: the LocOS skeleton is not UTF-8".into()))?;
+    let (_, text) = bilingua_model::enc::locos_skeleton_parts(data).ok_or_else(|| Error::Write("markdown: not a LocOS profile skeleton".into()))?;
     let mut texts: HashMap<usize, String> = HashMap::new();
     for (k, u) in doc.units.iter().enumerate() {
         if u.segments.iter().any(Segment::has_target) {

@@ -1,0 +1,46 @@
+{
+ "format": "md",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "A one line summary",
+   "style": ""
+  },
+  {
+   "p_index": 1,
+   "text": "Body text for the page.",
+   "style": ""
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "LS0tCnRpdGxlOiBBIHBsYWluIHRpdGxlIHRoYXQKICBnb2VzIG9uIG92ZXIgdHdvIGxpbmVzCmRlc2NyaXB0aW9uOiBBIG9uZSBsaW5lIHN1bW1hcnkKc3VidGl0bGU6IEEgcGxhaW4gdmFsdWUgdGhhdAogIGNvbnRpbnVlcyBoZXJlCi0tLQoKQm9keSB0ZXh0IGZvciB0aGUgcGFnZS4K"
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü A one line summary",
+    "1": "Ü Body text for the page."
+   },
+   "out_b64": "LS0tCnRpdGxlOiBBIHBsYWluIHRpdGxlIHRoYXQKICBnb2VzIG9uIG92ZXIgdHdvIGxpbmVzCmRlc2NyaXB0aW9uOiDDnCBBIG9uZSBsaW5lIHN1bW1hcnkKc3VidGl0bGU6IEEgcGxhaW4gdmFsdWUgdGhhdAogIGNvbnRpbnVlcyBoZXJlCi0tLQoKw5wgQm9keSB0ZXh0IGZvciB0aGUgcGFnZS4K"
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "A one line summary & <\"'>"
+   },
+   "out_b64": "LS0tCnRpdGxlOiBBIHBsYWluIHRpdGxlIHRoYXQKICBnb2VzIG9uIG92ZXIgdHdvIGxpbmVzCmRlc2NyaXB0aW9uOiBBIG9uZSBsaW5lIHN1bW1hcnkgJiA8Iic+CnN1YnRpdGxlOiBBIHBsYWluIHZhbHVlIHRoYXQKICBjb250aW51ZXMgaGVyZQotLS0KCkJvZHkgdGV4dCBmb3IgdGhlIHBhZ2UuCg=="
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "out_b64": "LS0tCnRpdGxlOiBBIHBsYWluIHRpdGxlIHRoYXQKICBnb2VzIG9uIG92ZXIgdHdvIGxpbmVzCmRlc2NyaXB0aW9uOiBBIG9uZSBsaW5lIHN1bW1hcnkKc3VidGl0bGU6IEEgcGxhaW4gdmFsdWUgdGhhdAogIGNvbnRpbnVlcyBoZXJlCi0tLQoKQm9keSB0ZXh0IGZvciB0aGUgcGFnZS4K"
+  }
+ ]
+}

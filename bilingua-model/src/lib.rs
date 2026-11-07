@@ -1051,10 +1051,16 @@ impl Document {
         self.granularity = granularity;
         self
     }
-    /// The encoding of a text skeleton, when it is not UTF-8: the base of its tag (`utf-16le-bom` and `utf-16le`
+    /// The encoding of a text skeleton (or of a LocOS-profile markdown, po or subtitle skeleton), when it is not
+    /// UTF-8: the base of its tag (`utf-16le-bom` and `utf-16le`
     /// both give `utf-16le`). `None` for UTF-8, binary plists, zip and binary skeletons.
     pub fn detected_source_encoding(&self) -> Option<String> {
-        let Skeleton::Text { encoding, .. } = &self.skeleton else { return None };
+        let encoding = match &self.skeleton {
+            Skeleton::Text { encoding, .. } => encoding.as_str(),
+            // the LocOS-profile text formats keep the decoded file under a first line with the skeleton tag
+            Skeleton::Binary { data, .. } if matches!(self.format.as_str(), "markdown" | "po" | "srt" | "vtt") => enc::locos_skeleton_parts(data)?.0,
+            _ => return None,
+        };
         let base = encoding.split(';').next().unwrap_or("").to_ascii_lowercase();
         let base = base.strip_suffix("-bom").or_else(|| base.strip_suffix("-nobom")).unwrap_or(&base).to_string();
         (!matches!(base.as_str(), "" | "utf-8" | "utf8" | "bplist")).then_some(base)

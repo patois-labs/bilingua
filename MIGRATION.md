@@ -637,6 +637,22 @@ Both modes (native and the `locos` profile) carry these fixes; LocOS gets the sa
   xmltree refuses more than 1,024 declarations in scope at one element, and a file whose per-element scope copies
   would hold more than 4,194,304 entries in all (a memory denial of service); real files hold far fewer.
 
+## Differences from LocOS: Markdown and PO (wave 1 follow-up, 11-07)
+
+Found by running the LocOS suites with Bilingua switched on. Bilingua now gives what LocOS gives.
+
+- **Markdown front matter, multi-line plain values.** A plain YAML value that continues on the next indented line is
+  not offered (LocOS: the whole block reads it as the folded text, not the first line). Native Markdown does the same.
+- **PO, CLDR-only targets.** The plural table holds every locale LocOS resolves through babel, aliases included.
+  Known remaining difference: LocOS leaves a header alone for a language and region that babel does not know
+  (`sr-XX`, `zh-US`); Bilingua takes the language's rule and ignores the region.
+- **`source_encoding` for md, po and srt** under the profile: the Python codec name is the adapter's to derive from the
+  Bilingua name (`windows-1252` is LocOS's `cp1252`).
+- **Markdown read from Windows-1252 is written as UTF-8** when something is translated, as LocOS's `build` does (its
+  stored-Windows-1252 test says so). LocOS returns the upload byte for byte when nothing is written; that is its
+  `Filter.build` guard and `export._nothing_written`, so the adapter keeps it (Bilingua's own merge of an untouched
+  document under the profile writes UTF-8 too).
+
 ## CAT OS core (note for the lead)
 
 - `catcore` re-exported `bilingua_sdl::ZipLimits`; it now re-exports `bilingua_model::Limits as PackageLimits`

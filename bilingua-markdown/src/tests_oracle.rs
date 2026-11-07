@@ -36,3 +36,22 @@ fn a_byte_order_mark_is_not_part_of_the_first_heading_under_the_profile() {
     let out = MarkdownFilter.merge_with(&d, &MergeOptions::new().with_profile(Some(profile::LOCOS))).unwrap();
     assert_eq!(String::from_utf8(out).unwrap(), "\u{feff}# Titel\n\nText\n");
 }
+
+fn locos_extract(s: &[u8]) -> Document {
+    MarkdownFilter.extract(s, &ExtractOptions::new().with_profile(Some(profile::LOCOS))).unwrap()
+}
+
+#[test]
+fn a_multi_line_plain_front_matter_value_is_not_offered_under_the_profile() {
+    // LocOS offers a key only when the whole block reads it as the one line: the folded value differs
+    let src = b"---\ntitle: A plain title that\n  goes on over two lines\nsubtitle: A plain value that\n  continues here\ndescription: A one line summary\n---\n\nBody text.\n";
+    let d = locos_extract(src);
+    let texts: Vec<String> = d.units.iter().map(|u| plain_text(&u.source())).collect();
+    assert_eq!(texts, vec!["A one line summary".to_string(), "Body text.".to_string()]);
+    let out = MarkdownFilter.merge_with(&d, &MergeOptions::new().with_profile(Some(profile::LOCOS))).unwrap();
+    assert_eq!(out, src);
+    // a quoted value, a value with a trailing comment and a value followed by a key stay offered
+    let src = b"---\ntitle: \"Quoted\"\nsubtitle: Plain # note\ndescription: Next\nlayout: post\n---\nBody.\n";
+    let texts: Vec<String> = locos_extract(src).units.iter().map(|u| plain_text(&u.source())).collect();
+    assert_eq!(texts, vec!["Quoted".to_string(), "Plain".to_string(), "Next".to_string(), "Body.".to_string()]);
+}

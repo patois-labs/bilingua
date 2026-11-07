@@ -22,11 +22,23 @@ is listed here).
 
 ### Changed
 
+- markdown: the LocOS-profile skeleton schema is 2 (the skeleton starts with the file's encoding tag, as po and
+  srt do). A Document imported before this release is refused as `parser_version`: extract it again.
 - Tests: the LocOS goldens were made again from Localization OS with its fixes for trackers 805, 810, 811, 813 and
   814; the cases kept as known differences (html orphan end tag, Markdown BOM, PPTX look-alike tokens, 15 DXF
   drawings) now match and their lists are gone.
 
 ### Fixed
+
+- markdown (LocOS profile and native): a plain front matter value that goes on over the next indented line
+  (`subtitle: A plain value that` and `  continues here`) is left alone. It was offered cut at the first line, and a
+  translation would have replaced only that line. LocOS reads the whole block and skips such a key.
+- po (LocOS profile): every target language LocOS knows through CLDR but babel's gettext table lacks now gets its
+  `Language` header and its plural rule: `tl` (Tagalog), the three-letter ISO 639-2 and 639-3 forms (`tgl`, `ind`,
+  `tur`, ...), the old codes (`in`, `iw`, `ji`, `jw`, `mo`) and the other aliases babel resolves (232 more table rows).
+  `tl` had an empty `Language` and the source file's plural rule.
+- markdown, po, srt (LocOS profile): `Document::source_encoding` reports the encoding the file was read from
+  (`windows-1252`, `utf-16le`, ...), as it does for the other text formats. It was always `None`.
 
 - html: the preview declares the target language again once something is translated (`lang`, and `dir="rtl"` for a
   right-to-left target), as the merge does. The htmlcore rebuild had dropped it, so an Arabic preview showed left

@@ -1,0 +1,16 @@
+msgid ""
+msgstr ""
+"Language: 
+"
+"Content-Type: text/plain; charset=UTF-8
+"
+"Plural-Forms: nplurals=2; plural=(n != 1);
+"
+
+msgid "Open"
+msgstr ""
+
+msgid "One file"
+msgid_plural "%d files"
+msgstr[0] ""
+msgstr[1] ""

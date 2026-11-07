@@ -67,7 +67,10 @@ pub fn parse(text: &str) -> Option<FrontMatter> {
             return Some(FrontMatter { end: line_end, values });
         }
         if let Some(v) = parse_line(text, pos, bare) {
-            values.push(v);
+            // a plain value that goes on over the next indented line is folded text: leave it alone
+            if !(v.style == Style::Plain && plain_continues(&text[line_end..])) {
+                values.push(v);
+            }
         }
         pos = line_end;
     }
@@ -159,6 +162,13 @@ fn parse_line(text: &str, line_start: usize, line: &str) -> Option<Value> {
             Some(Value { key: key.into(), range: vstart..vstart + scalar.len(), style: Style::Plain, text: scalar.to_string() })
         }
     }
+}
+
+/// Whether the next non-blank line of `rest` is an indented, non-comment line (a plain scalar's continuation).
+fn plain_continues(rest: &str) -> bool {
+    rest.lines()
+        .find(|l| !l.trim().is_empty())
+        .is_some_and(|l| l.starts_with([' ', '	']) && !l.trim_start().starts_with('#'))
 }
 
 fn tail_ok(t: &str) -> bool {

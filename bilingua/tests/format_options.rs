@@ -185,3 +185,28 @@ fn a_filter_called_directly_refuses_its_own_unknown_keys() {
     let bad = ExtractOptions::new().with_format_option("ftl.translate_terms", "maybe");
     assert!(matches!(FtlFilter.extract(b"hello = Hello\n", &bad), Err(Error::FormatOption { .. })));
 }
+
+#[test]
+fn the_locos_profile_reports_the_source_encoding_of_markdown_po_and_srt() {
+    let o = profile::locos().extract_options();
+    let md = extract("a.md", b"# Caf\xe9 menu\n\nCr\xe8me br\xfbl\xe9e.\n", &o).unwrap();
+    assert_eq!(md.source_encoding.as_deref(), Some("windows-1252"));
+    let po = extract("a.po", b"msgid \"Caf\xe9\"\nmsgstr \"\"\n", &o).unwrap();
+    assert_eq!(po.source_encoding.as_deref(), Some("windows-1252"));
+    let srt = extract("a.srt", b"1\n00:00:01,000 --> 00:00:02,000\nCaf\xe9 au lait\n", &o).unwrap();
+    assert_eq!(srt.source_encoding.as_deref(), Some("windows-1252"));
+    // UTF-8 (with or without a byte order mark) reports nothing
+    for (name, bytes) in [("a.md", "# Caf\u{e9} menu\n".as_bytes()), ("b.md", "\u{feff}# Caf\u{e9} menu\n".as_bytes()), ("a.po", "msgid \"Caf\u{e9}\"\nmsgstr \"\"\n".as_bytes())] {
+        assert_eq!(extract(name, bytes, &o).unwrap().source_encoding, None, "{name}");
+    }
+    // a changed Markdown file is written as UTF-8, whatever it was read as (LocOS)
+    let mut doc = extract("a.md", b"# Caf\xe9 menu\n\nCr\xe8me br\xfbl\xe9e.\n", &o).unwrap();
+    let id = doc.units[0].segments[0].id.clone();
+    doc.set_target(&id, vec![Inline::text("Men\u{fc}")]).unwrap();
+    let out = merge_with(&doc, &profile::locos().merge_options("markdown")).unwrap();
+    assert_eq!(String::from_utf8(out).unwrap(), "# Men\u{fc}\n\nCr\u{e8}me br\u{fb}l\u{e9}e.\n");
+    // the report survives a JSON round trip, and so does the merge
+    let again: Document = serde_json::from_str(&serde_json::to_string(&doc).unwrap()).unwrap();
+    assert_eq!(again.source_encoding.as_deref(), Some("windows-1252"));
+    assert_eq!(merge_with(&again, &profile::locos().merge_options("markdown")).unwrap(), merge_with(&doc, &profile::locos().merge_options("markdown")).unwrap());
+}

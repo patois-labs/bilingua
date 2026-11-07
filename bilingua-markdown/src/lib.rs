@@ -10,7 +10,7 @@
 //! back byte for byte. YAML front matter keys `title` and `description` (one-line values) are units too.
 
 /// Skeleton schema number: bump only when this crate's skeleton layout changes (see `bilingua_model::check_parser`).
-pub const SKELETON_SCHEMA: u32 = 1;
+pub const SKELETON_SCHEMA: u32 = 2;
 
 mod extract;
 mod frontmatter;
