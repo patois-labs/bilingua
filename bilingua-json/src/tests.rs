@@ -285,3 +285,10 @@ fn works_with_segmentation_separators() {
     d.units[0].separators = vec![" ".into()];
     assert_eq!(merged(&d), r#"{"a": "Uno. Two."}"#);
 }
+
+#[test]
+fn a_vue_i18n_linked_message_is_not_text() {
+    // "Zq@:a.bqZ" would look like an e-mail address, so the reference must be skipped before it is wrapped
+    let d = extract(r#"{"a": "Save", "b": "@:common.save", "c": "@.lower:(common.save)", "d": "Press @:common.save now"}"#);
+    assert_eq!(texts(&d), ["Save", "Press @:common.save now"]);
+}

@@ -457,3 +457,34 @@ fn notion_code_children_and_list_response() {
     assert_eq!(out["results"][0]["code"]["children"][0]["paragraph"]["rich_text"][0]["text"]["content"], "nested in code");
     assert!(matches!(f.extract(b"{\"a\": 1}", &opts()), Err(Error::Parse { .. })));
 }
+
+#[test]
+fn notion_single_block_children_body_and_page_with_blocks() {
+    let f = Notion;
+    // one block as the root (a "retrieve block" response)
+    let one = bytes(&json!({"object": "block", "id": "h", "type": "heading_2", "heading_2": {"rich_text": [run("Title", false)], "children": [{"object": "block", "id": "p", "type": "paragraph", "paragraph": {"rich_text": [run("Inner", false)]}}]}}));
+    let mut d = open(&f, &one);
+    assert_eq!(texts(&d), ["Title", "Inner"]);
+    prefix_all(&mut d, "~");
+    let out = json(&f.merge(&d).unwrap());
+    assert_eq!(out["heading_2"]["rich_text"][0]["text"]["content"], "~Title");
+    assert_eq!(out["heading_2"]["children"][0]["paragraph"]["rich_text"][0]["text"]["content"], "~Inner");
+    assert!(f.sniff(&one));
+    // an append-children body, and a page object that holds its blocks under `blocks`, with its title
+    let body = bytes(&json!({"children": [{"object": "block", "type": "paragraph", "paragraph": {"rich_text": [run("Body", false)]}}], "properties": {}}));
+    let d = open(&f, &body);
+    assert_eq!(texts(&d), ["Body"]);
+    let title = json!({"title": {"id": "title", "type": "title", "title": [run("Page name", false)]}, "Tags": {"type": "multi_select", "multi_select": []}});
+    let page = bytes(&json!({"object": "page", "id": "pg", "properties": title, "blocks": [{"object": "block", "id": "p", "type": "paragraph", "paragraph": {"rich_text": [run("Text", false)]}}]}));
+    let mut d = open(&f, &page);
+    assert_eq!(texts(&d), ["Page name", "Text"]);
+    prefix_all(&mut d, "~");
+    let out = json(&f.merge(&d).unwrap());
+    assert_eq!(out["properties"]["title"]["title"][0]["text"]["content"], "~Page name");
+    assert_eq!(out["blocks"][0]["paragraph"]["rich_text"][0]["text"]["content"], "~Text");
+    // the new shapes open by extension or format id only: a sniff does not claim them or look-alike JSON
+    assert!(!f.sniff(&body) && !f.sniff(&page));
+    assert!(!f.sniff(br#"{"type": "menu", "menu": {"label": "File"}}"#));
+    assert!(!f.sniff(br#"{"children": [{"type": "item", "item": {"id": 1}}]}"#));
+    assert!(matches!(f.extract(b"{\"a\": 1}", &opts()), Err(Error::Parse { .. })));
+}

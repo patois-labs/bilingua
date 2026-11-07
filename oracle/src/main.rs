@@ -227,6 +227,31 @@ fn main() {
                     json!({"status": format!("source changed after merge ({} units, {} set_target errors)", a.len(), set_errors)})
                 }
             }
+            Ok(d2) if doc.format == "arb" => {
+                // ARB: a merge with a target language follows the target's CLDR plural categories (es-ES gains
+                // `many`, an Arabic source loses `zero`, `two`, `few`) and adds suffix plurals (`itemCountMany`).
+                // A unit is its message key plus its ICU branch path; compare the units both files have.
+                type Label = (Option<String>, Option<String>);
+                let label = |u: &bilingua::Unit| -> Label { (u.context.key.clone(), u.context.extra.get("icu").cloned()) };
+                let before: std::collections::BTreeSet<Label> = doc.units.iter().map(label).collect();
+                let after: std::collections::BTreeSet<Label> = d2.units.iter().map(label).collect();
+                let a: Vec<String> = doc.units.iter().filter(|u| u.translate && after.contains(&label(u))).map(|u| no_tags(&render(u).0)).collect();
+                let b2: Vec<String> = d2.units.iter().filter(|u| u.translate && before.contains(&label(u))).map(|u| no_tags(&render(u).0)).collect();
+                if a.len() != b2.len() {
+                    json!({"status": format!("reopened with {} units, expected {}", b2.len(), a.len())})
+                } else {
+                    let bad: Vec<(&String, &String)> = a.iter().zip(&b2).filter(|(x, y)| format!("{PRE}{x}{POST}") != **y).collect();
+                    let dropped = doc.units.iter().filter(|u| u.translate && !after.contains(&label(u))).count();
+                    if !bad.is_empty() || set_errors > 0 {
+                        let first = bad.first().map(|(x, y)| format!("{x:?} -> {y:?}"));
+                        json!({"status": format!("{} units differ, {set_errors} set_target errors", bad.len()), "first": first})
+                    } else if dropped > 0 {
+                        json!({"status": format!("ok ({dropped} plural forms the target language does not use were dropped)")})
+                    } else {
+                        json!({"status": "ok"})
+                    }
+                }
+            }
             Ok(d2) => {
                 let labels: std::collections::BTreeSet<(Option<String>, String)> = doc.units.iter().filter_map(plural_label).collect();
                 // Android drops the plural forms the target never uses (es-ES has no "two"), as LocOS

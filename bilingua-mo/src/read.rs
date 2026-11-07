@@ -127,7 +127,9 @@ pub fn codec_for_label(label: &str) -> Codec {
         _ => {}
     }
     match Encoding::for_label(l.as_bytes()) {
+        // a catalog may declare any other code page too (iso-8859-4, -13, -16, mac, ibm866 ...)
         Some(e) if enc::is_declared_legacy(e) || e == encoding_rs::WINDOWS_1252 => Codec::Legacy(e),
+        Some(e) if !matches!(e.name(), "UTF-8" | "UTF-16LE" | "UTF-16BE" | "replacement" | "x-user-defined") => Codec::Legacy(e),
         _ => Codec::Utf8,
     }
 }

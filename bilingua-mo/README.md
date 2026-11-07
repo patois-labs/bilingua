@@ -24,7 +24,8 @@ let out = Mo.merge(&doc)?;
 - printf, Python and brace placeholders are standalone tags, `label` `placeholder` with the exact text as display,
   free (movable) when they name their argument.
 - Strings are decoded with the charset the header declares: UTF-8, ASCII, ISO-8859-1, the Windows code pages, KOI8,
-  Shift_JIS, EUC-JP, GBK, GB18030, Big5, EUC-KR. Anything else, and the template word `CHARSET`, is UTF-8.
+  Shift_JIS, EUC-JP, GBK, GB18030, Big5, EUC-KR, and any other code page the WHATWG Encoding Standard names
+  (ISO-8859-4, -13, -16, Mac, IBM866 ...). An unknown label, and the template word `CHARSET`, is UTF-8.
 - Every count, offset and length is checked against the file size before use; a file whose strings overlap so that
   they decode to more than twice its size is refused. Typed errors: `Parse` (damaged), `Unsupported` (revision 2 or
   later, system-dependent strings), `Limit` (more strings than `max_units`, a string over 8 x `max_unit_chars`
