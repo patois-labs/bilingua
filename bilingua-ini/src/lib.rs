@@ -60,15 +60,15 @@ pub struct Record {
     pub duplicate: bool,
 }
 
-fn limit_err(msg: String) -> Error {
-    Error::Unsupported(msg)
+fn limit_err(kind: LimitKind, msg: String) -> Error {
+    LimitError::new(kind, msg).into()
 }
 
 fn read(bytes: &[u8], limits: &Limits) -> Result<(String, &'static str, Vec<scan::Entry>), Error> {
     let (text, encoding) = enc::decode(bytes)?;
     let lines = text.bytes().filter(|&b| b == b'\n' || b == b'\r').count();
     if lines > limits.max_lines {
-        return Err(limit_err(format!("this file has more than {} lines; split it into smaller files", limits.max_lines)));
+        return Err(limit_err(LimitKind::Lines, format!("this file has more than {} lines; split it into smaller files", limits.max_lines)));
     }
     let entries = scan::scan(&text);
     Ok((text, encoding, entries))
@@ -117,10 +117,10 @@ impl IniFilter {
             }
             let (lead, core, trail) = split_ws(&e.value);
             if core.chars().take(limits.max_value_chars + 1).count() > limits.max_value_chars {
-                return Err(limit_err(format!("this file has a value longer than {} characters; break it into shorter values", limits.max_value_chars)));
+                return Err(limit_err(LimitKind::UnitChars, format!("this file has a value longer than {} characters; break it into shorter values", limits.max_value_chars)));
             }
             if translatable && units.len() >= limits.max_units {
-                return Err(limit_err(format!("this file has more than {} segments; split it into smaller files", limits.max_units)));
+                return Err(limit_err(LimitKind::Units, format!("this file has more than {} segments; split it into smaller files", limits.max_units)));
             }
             if e.start > pos {
                 parts.push(SkelPart::Raw(text[pos..e.start].to_string()));

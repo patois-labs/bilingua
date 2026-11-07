@@ -24,7 +24,7 @@ let out = Strings.merge(&doc)?;
   (`%1$@`, `%#@x@`) are free and may move in the translation; the others keep their order. `%%` stays text.
 - Encodings: UTF-8, UTF-8 with BOM, UTF-16 LE/BE with BOM, and BOM-less UTF-16 (sniffed from the NUL pattern).
   The merge writes the same encoding, BOM and byte order. Binary plists, UTF-32 and other code pages return
-  `Error::Unsupported`.
+  `Error::Encoding` (code `encoding`).
 - Merge writes only the changed values (`\ " newline CR tab` are escaped; leading and trailing white space of the
   value is kept). Everything else, comments, key spelling, line endings (LF/CRLF), the trailing newline and the
   BOM, comes back byte for byte; an untouched or unchanged value keeps its original spelling. A translated
@@ -37,7 +37,7 @@ let out = Strings.merge(&doc)?;
 
 `Limits::default()` matches Localization OS: 50,000 units, 100,000 characters per value; also 64 MiB of input,
 20 lines and 8 quotes per allowed unit. `Strings.extract_with(bytes, opts, &Limits { .. })` sets your own. Over a
-limit gives `Error::Unsupported`, malformed text `Error::Parse`. A translation with a NUL character is refused
+limit gives `Error::Limit` (code `limit`), malformed text `Error::Parse`. A translation with a NUL character is refused
 at merge unless the file is UTF-16 with a BOM.
 
 ## Differences from LocOS

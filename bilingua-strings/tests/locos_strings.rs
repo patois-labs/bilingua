@@ -145,15 +145,15 @@ fn assert_refused(b: &[u8], needle: &str) {
 fn test_hostile_inputs() {
     assert_refused(b"\"a\" = \"never closed;\n", "never closed");
     assert_refused(b"/* open comment\n\"a\" = \"b\";\n", "never closed");
-    assert!(matches!(Strings.extract(BPLIST, &opts()), Err(Error::Unsupported(m)) if m.contains("binary property list")));
-    assert!(matches!(Strings.extract(CP1252, &opts()), Err(Error::Unsupported(m)) if m.contains("UTF-8")));
+    assert!(matches!(Strings.extract(BPLIST, &opts()), Err(Error::Encoding(m)) if m.contains("binary property list")));
+    assert!(matches!(Strings.extract(CP1252, &opts()), Err(Error::Encoding(m)) if m.contains("UTF-8")));
     assert_refused(b"\"a\" = \"b\"\n\"c\" = \"d\";\n", "missing ';'");
     assert_refused(b"\"a\" = \"b\"; <script>\n", "unexpected");
     assert_refused(b"\"a\" = \"b\";\n\"c\" =", "");
     // Segment cap: more entries than the limit are refused.
     let data: Vec<u8> = (0..30).flat_map(|i| format!("\"k{i}\" = \"Value number {i}\";\n").into_bytes()).collect();
     let small = { let mut built = Limits::default(); built.max_units = 10; built };
-    assert!(matches!(Strings.extract_with(&data, &opts(), &small), Err(Error::Unsupported(_))));
+    assert!(matches!(Strings.extract_with(&data, &opts(), &small), Err(Error::Limit(e)) if e.kind == LimitKind::Units));
     assert!(Strings.extract_with(&data, &opts(), &Limits::default()).is_ok());
 }
 

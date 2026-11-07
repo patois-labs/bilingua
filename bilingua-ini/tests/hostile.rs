@@ -21,7 +21,7 @@ fn check(data: &[u8]) {
             let out = IniFilter.merge(&doc).unwrap();
             assert_eq!(units(&out).len(), n, "unit count after translation {:?} -> {:?}", String::from_utf8_lossy(data), String::from_utf8_lossy(&out));
         }
-        Err(Error::Parse { .. } | Error::Unsupported(_)) => {}
+        Err(Error::Parse { .. } | Error::Unsupported(_) | Error::Limit(_) | Error::Encoding(_)) => {}
         Err(e) => panic!("unexpected error kind: {e}"),
     }
 }
@@ -77,17 +77,17 @@ fn deep_and_huge_inputs_give_typed_errors() {
     check(brackets.as_bytes());
     // one value over the cap: refused, not truncated
     let big = format!("k={}\n", "a".repeat(100_001));
-    assert!(matches!(extract(big.as_bytes()), Err(Error::Unsupported(_))));
+    assert!(matches!(extract(big.as_bytes()), Err(Error::Limit(_))));
     // more entries than the unit cap: refused
     let mut many = String::new();
     for i in 0..50_001 {
         many.push_str(&format!("k{i}=v{i}\n"));
     }
-    assert!(matches!(extract(many.as_bytes()), Err(Error::Unsupported(_))));
+    assert!(matches!(extract(many.as_bytes()), Err(Error::Limit(_))));
     assert!(IniFilter.extract_with(many.as_bytes(), &ExtractOptions::default(), &{ let mut built = Limits::default(); built.max_units = 60_000; built }).is_ok());
     // more lines than the line cap: refused before any scan
     let lines = "\n".repeat(1_000_001);
-    assert!(matches!(extract(lines.as_bytes()), Err(Error::Unsupported(_))));
+    assert!(matches!(extract(lines.as_bytes()), Err(Error::Limit(_))));
     // truncated multi-byte and UTF-16 files
     let mut s = "k=日本語\n".as_bytes().to_vec();
     s.pop();

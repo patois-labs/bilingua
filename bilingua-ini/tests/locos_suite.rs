@@ -115,14 +115,14 @@ fn encodings() {
 fn hostile_inputs() {
     // binary bytes are refused
     let bin: Vec<u8> = b"k=\x81\x00\x00\x00\x01\x02".iter().copied().cycle().take(6 * 40).collect();
-    assert!(matches!(extract(&bin), Err(Error::Parse { .. })));
+    assert!(matches!(extract(&bin), Err(Error::Encoding(m)) if m.contains("binary")));
     // the segment cap (lowered, like the LocOS test lowers MAX_DOCUMENT_SEGMENTS)
     let mut data = Vec::new();
     for i in 0..30 {
         data.extend_from_slice(format!("KEY_{i}=\"Value number {i}\"\n").as_bytes());
     }
     let tight = { let mut built = Limits::default(); built.max_units = 10; built };
-    assert!(matches!(IniFilter.extract_with(&data, &opts(), &tight), Err(Error::Unsupported(_))));
+    assert!(matches!(IniFilter.extract_with(&data, &opts(), &tight), Err(Error::Limit(_))));
     assert!(IniFilter.extract(&data, &opts()).is_ok());
     // degenerate lines are tolerated
     assert!(units(b"=\n= =\n[]\n[unclosed\n;\n").is_empty());

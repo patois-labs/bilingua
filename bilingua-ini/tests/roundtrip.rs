@@ -201,7 +201,7 @@ fn limits_and_quirks() {
     let tight = { let mut built = Limits::default(); built.max_lines = 20; built };
     assert!(IniFilter.extract_with(many.as_bytes(), &ExtractOptions::default(), &tight).is_err());
     // UTF-32 and broken UTF-16 are typed errors
-    assert!(matches!(extract(b"\xff\xfe\x00\x00a\x00\x00\x00"), Err(Error::Unsupported(_))));
+    assert!(matches!(extract(b"\xff\xfe\x00\x00a\x00\x00\x00"), Err(Error::Encoding(_))));
     assert!(extract(b"\xff\xfea\x00b").is_err());
     // empty file
     assert!(units(b"").is_empty());

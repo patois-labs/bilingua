@@ -42,21 +42,24 @@ fn code(u: &Unit, key: &str) -> Option<String> {
     u.hidden(key).map(str::to_string)
 }
 
-fn limit_err(msg: String) -> Error {
-    Error::Unsupported(msg)
+fn limit_err(kind: LimitKind, msg: String) -> Error {
+    LimitError::new(kind, msg).into()
 }
 
 fn read(bytes: &[u8], limits: &Limits) -> Result<(String, Enc, Vec<Entry>), Error> {
     if bytes.len() > limits.max_bytes {
-        return Err(limit_err(format!("this .strings file is larger than {} bytes; split it into smaller files", limits.max_bytes)));
+        return Err(limit_err(LimitKind::InputBytes, format!("this .strings file is larger than {} bytes; split it into smaller files", limits.max_bytes)));
     }
     let (text, enc) = decode(bytes)?;
     let lines = text.bytes().filter(|&c| c == b'\n' || c == b'\r').count();
     if lines > 20 * limits.max_units {
-        return Err(limit_err(format!("this .strings file has more than {} lines; split it into smaller files", 20 * limits.max_units)));
+        return Err(limit_err(LimitKind::Lines, format!("this .strings file has more than {} lines; split it into smaller files", 20 * limits.max_units)));
     }
     if text.bytes().filter(|&c| c == b'"').count() > 8 * limits.max_units {
-        return Err(limit_err(format!("this .strings file has far more strings than the limit of {} units; split it", limits.max_units)));
+        return Err(limit_err(
+            LimitKind::Units,
+            format!("This .strings file has far more strings than MAX_DOCUMENT_SEGMENTS allows ({}). Split it into smaller files.", limits.max_units),
+        ));
     }
     let mut entries = Vec::new();
     scan(&text, &mut entries).map_err(|msg| Error::Parse { format: "strings".into(), msg })?;
@@ -165,10 +168,10 @@ impl Strings {
             if translatable {
                 counted += 1;
                 if counted > limits.max_units {
-                    return Err(limit_err(format!("this .strings file has more than {} units; split it into smaller files", limits.max_units)));
+                    return Err(limit_err(LimitKind::Units, format!("this .strings file has more than {} units; split it into smaller files", limits.max_units)));
                 }
                 if core.chars().count() > limits.max_value_chars {
-                    return Err(limit_err(format!("this .strings file has a value longer than {} characters; break it into shorter values", limits.max_value_chars)));
+                    return Err(limit_err(LimitKind::UnitChars, format!("this .strings file has a value longer than {} characters; break it into shorter values", limits.max_value_chars)));
                 }
             }
             let (src, codes, _) = source_inlines(core);

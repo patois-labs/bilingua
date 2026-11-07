@@ -58,8 +58,10 @@ impl Enc {
     }
 }
 
+/// A decode refusal: code `encoding` (LocOS UnsupportedEncodingError; the binary plist is an InputLimitError there,
+/// which the encoding class is a kind of).
 fn unsupported(msg: &str) -> Error {
-    Error::Unsupported(msg.into())
+    Error::Encoding(msg.into())
 }
 
 fn utf16(body: &[u8], big: bool) -> Result<String, Error> {
@@ -119,7 +121,7 @@ pub fn decode(data: &[u8]) -> Result<(String, Enc), Error> {
     } else if let Ok(t) = std::str::from_utf8(data) {
         return Ok((t.to_string(), Enc::Utf8));
     }
-    Err(unsupported("this .strings file is neither UTF-8 nor UTF-16, the encodings Xcode reads; re-save the file as UTF-8"))
+    Err(unsupported("This .strings file is neither UTF-8 nor UTF-16, the encodings Xcode reads; re-save the file as UTF-8."))
 }
 
 /// Python `str.strip` white space (what LocOS trims around a value).
