@@ -1,0 +1,8 @@
+{
+ "parse": {
+  "comments": true
+ },
+ "format_options": {
+  "pptx.translate_comments": true
+ }
+}

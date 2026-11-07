@@ -16,6 +16,10 @@ the sidecar `<file>.golden.zip` (deflated, shared by every build of the file). T
 name: an untouched entry byte for byte, a rewritten one as canonical XML (zip compression, dates and LocOS's own XML
 serialiser are not the point).
 
+A `<file>.opts.json` next to an input gives the parse options (`{"parse": {"comments": true}}` for LocOS,
+`"format_options"` for Bilingua, written by `oracle/gen_locos_w4.py`); a DOCX golden also records LocOS's
+`a11y_images` inventory when the file has images.
+
 A `<file>.maps.json` next to an input lists extra builds made the same way (`[{"name": ..., "locale": ...,
 "map": {...}}]`): hostile targets, written by `oracle/gen_locos_pptx.py` for the PPTX decks it makes.
 
@@ -86,7 +90,12 @@ def golden(fmt: str, path: str, blobs: dict | None = None) -> dict:
     with open(path, "rb") as fh:
         data = fh.read()
     filt = get_filter(fmt)
-    pr = filt.parse(data)
+    # `<file>.opts.json` (W4): LocOS parse options of this golden, e.g. {"parse": {"comments": true}}
+    opts = {}
+    if os.path.exists(path + ".opts.json"):
+        with open(path + ".opts.json", encoding="utf-8") as fh:
+            opts = json.load(fh)
+    pr = filt.parse(data, **opts.get("parse", {}))
     units = [{"p_index": u.p_index, "text": u.text, "style": u.style or ""} for u in pr.units]
     builds = []
     original = dict(zip_entries(data) or [])
@@ -125,7 +134,12 @@ def golden(fmt: str, path: str, blobs: dict | None = None) -> dict:
         with open(path + ".maps.json", encoding="utf-8") as fh:
             for m in json.load(fh):
                 add(m["name"], m["locale"], m["map"])
-    return {"format": fmt, "units": units, "builds": builds}
+    out = {"format": fmt, "units": units, "builds": builds}
+    # the DOCX image inventory the missing-alt prompts come from (W4 docx-1)
+    a11y = (pr.skeleton or {}).get("a11y_images")
+    if a11y:
+        out["a11y_images"] = a11y
+    return out
 
 
 def main() -> None:
@@ -135,7 +149,7 @@ def main() -> None:
         if not os.path.isdir(d) or (want and fmt not in want):
             continue
         for name in sorted(os.listdir(d)):
-            if name.endswith((".golden.json", ".golden.zip", ".maps.json")):
+            if name.endswith((".golden.json", ".golden.zip", ".maps.json", ".opts.json")):
                 continue
             blobs: dict = {}
             g = golden(fmt, os.path.join(d, name), blobs)

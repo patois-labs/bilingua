@@ -1,0 +1,118 @@
+{
+ "format": "odt",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Getting started",
+   "style": "heading"
+  },
+  {
+   "p_index": 1,
+   "text": "First paragraph⟦x1⟧ of the text.",
+   "style": ""
+  },
+  {
+   "p_index": 2,
+   "text": "Second ⟦g1⟧styled⟦/g1⟧ paragraph.",
+   "style": ""
+  },
+  {
+   "p_index": 1000000,
+   "text": "Rephrase this, please.",
+   "style": "comment"
+  },
+  {
+   "p_index": 1000002,
+   "text": "Second note paragraph.",
+   "style": "comment"
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "zip": [
+    {
+     "name": "mimetype",
+     "same": true
+    },
+    {
+     "name": "content.xml",
+     "same": true
+    },
+    {
+     "name": "META-INF/manifest.xml",
+     "same": true
+    }
+   ]
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü Getting started",
+    "1": "Ü First paragraph⟦x1⟧Ü  of the text.",
+    "2": "Ü Second ⟦g1⟧Ü styled⟦/g1⟧Ü  paragraph.",
+    "1000000": "Ü Rephrase this, please.",
+    "1000002": "Ü Second note paragraph."
+   },
+   "zip": [
+    {
+     "name": "mimetype",
+     "same": true
+    },
+    {
+     "name": "content.xml",
+     "sha1": "754ad0be60e6cc50f007685289ccf0b002efa885"
+    },
+    {
+     "name": "META-INF/manifest.xml",
+     "same": true
+    }
+   ]
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Getting started & <\"'>",
+    "2": "Second  & <\"'>⟦g1⟧styled & <\"'>⟦/g1⟧ paragraph. & <\"'>",
+    "1000002": "Second note paragraph. & <\"'>"
+   },
+   "zip": [
+    {
+     "name": "mimetype",
+     "same": true
+    },
+    {
+     "name": "content.xml",
+     "sha1": "c52f06c204dbaba9e758c95d6e3a5f5dc19021af"
+    },
+    {
+     "name": "META-INF/manifest.xml",
+     "same": true
+    }
+   ]
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "zip": [
+    {
+     "name": "mimetype",
+     "same": true
+    },
+    {
+     "name": "content.xml",
+     "same": true
+    },
+    {
+     "name": "META-INF/manifest.xml",
+     "same": true
+    }
+   ]
+  }
+ ]
+}

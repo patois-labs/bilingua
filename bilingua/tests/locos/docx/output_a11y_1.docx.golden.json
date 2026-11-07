@@ -508,5 +508,15 @@
     }
    ]
   }
- ]
+ ],
+ "a11y_images": {
+  "images": 2,
+  "missing_alt": [
+   {
+    "kind": "missing",
+    "unit": 2,
+    "where": "Picture 2"
+   }
+  ]
+ }
 }

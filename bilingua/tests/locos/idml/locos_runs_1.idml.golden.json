@@ -1,0 +1,153 @@
+{
+ "format": "idml",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Press ⟦r1⟧Save⟦/r1⟧ to keep the file.",
+   "style": "NormalParagraphStyle"
+  },
+  {
+   "p_index": 1,
+   "text": "Leading kept.",
+   "style": "NormalParagraphStyle"
+  },
+  {
+   "p_index": 2,
+   "text": "Read the ⟦g1⟧guide⟦/g1⟧ first.",
+   "style": "NormalParagraphStyle"
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "zip": [
+    {
+     "name": "mimetype",
+     "same": true
+    },
+    {
+     "name": "designmap.xml",
+     "same": true
+    },
+    {
+     "name": "META-INF/container.xml",
+     "same": true
+    },
+    {
+     "name": "Resources/Graphic.xml",
+     "same": true
+    },
+    {
+     "name": "Spreads/Spread_s1.xml",
+     "same": true
+    },
+    {
+     "name": "Stories/Story_a.xml",
+     "same": true
+    }
+   ]
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü Press ⟦r1⟧Ü Save⟦/r1⟧Ü  to keep the file.",
+    "1": "Ü Leading kept.",
+    "2": "Ü Read the ⟦g1⟧Ü guide⟦/g1⟧Ü  first."
+   },
+   "zip": [
+    {
+     "name": "mimetype",
+     "same": true
+    },
+    {
+     "name": "designmap.xml",
+     "same": true
+    },
+    {
+     "name": "META-INF/container.xml",
+     "same": true
+    },
+    {
+     "name": "Resources/Graphic.xml",
+     "same": true
+    },
+    {
+     "name": "Spreads/Spread_s1.xml",
+     "same": true
+    },
+    {
+     "name": "Stories/Story_a.xml",
+     "sha1": "6f2501cb5d90f3925ba99e005fea90a5b7271bb9"
+    }
+   ]
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Press  & <\"'>⟦r1⟧Save & <\"'>⟦/r1⟧ to keep the file. & <\"'>",
+    "2": "Read the  & <\"'>⟦g1⟧guide & <\"'>⟦/g1⟧ first. & <\"'>"
+   },
+   "zip": [
+    {
+     "name": "mimetype",
+     "same": true
+    },
+    {
+     "name": "designmap.xml",
+     "same": true
+    },
+    {
+     "name": "META-INF/container.xml",
+     "same": true
+    },
+    {
+     "name": "Resources/Graphic.xml",
+     "same": true
+    },
+    {
+     "name": "Spreads/Spread_s1.xml",
+     "same": true
+    },
+    {
+     "name": "Stories/Story_a.xml",
+     "sha1": "ef71e3f9d1aa012b45ecaf6ccead9155375e786c"
+    }
+   ]
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "zip": [
+    {
+     "name": "mimetype",
+     "same": true
+    },
+    {
+     "name": "designmap.xml",
+     "same": true
+    },
+    {
+     "name": "META-INF/container.xml",
+     "same": true
+    },
+    {
+     "name": "Resources/Graphic.xml",
+     "same": true
+    },
+    {
+     "name": "Spreads/Spread_s1.xml",
+     "same": true
+    },
+    {
+     "name": "Stories/Story_a.xml",
+     "same": true
+    }
+   ]
+  }
+ ]
+}

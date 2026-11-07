@@ -234,11 +234,48 @@ fn sidecar(golden: &Path) -> HashMap<String, Vec<u8>> {
 }
 
 /// Checks one golden; returns the failures as text (empty when it matches).
+/// The extract options of a golden: the profile's, plus the `format_options` of a `<file>.opts.json` (W4: comments).
+fn golden_opts(input: &Path, locale: Option<&str>) -> ExtractOptions {
+    let mut o = opts(locale);
+    let side = PathBuf::from(format!("{}.opts.json", input.to_string_lossy()));
+    if let Ok(text) = std::fs::read_to_string(side) {
+        let v: Value = serde_json::from_str(&text).unwrap();
+        for (k, val) in v["format_options"].as_object().cloned().unwrap_or_default() {
+            let s = match val {
+                Value::Bool(b) => b.to_string(),
+                Value::String(s) => s,
+                other => other.to_string(),
+            };
+            o = o.with_format_option(k, s);
+        }
+    }
+    o
+}
+
+/// LocOS's `skeleton["a11y_images"]` as the units carry it (W4 docx-1): the image count summed over the units and
+/// every finding `(kind, unit p_index, where)` in unit order.
+fn a11y_inventory(doc: &Document) -> (u64, Vec<(String, i64, String)>) {
+    let mut images = 0u64;
+    let mut found = Vec::new();
+    for n in numbered(doc) {
+        let Some(u) = doc.units.iter().find(|u| u.segments.iter().any(|s| s.id == n.segment_id)) else { continue };
+        images += u.context.extra.get(profile::A11Y_IMAGES).and_then(|c| c.parse::<u64>().ok()).unwrap_or(0);
+        if let Some(list) = u.context.extra.get(profile::A11Y_MISSING_ALT) {
+            let v: Value = serde_json::from_str(list).unwrap();
+            for f in v.as_array().unwrap() {
+                found.push((f["kind"].as_str().unwrap().to_string(), n.p_index, f["where"].as_str().unwrap().to_string()));
+            }
+        }
+    }
+    (images, found)
+}
+
 fn check(golden: &Path) -> (usize, usize, usize, Vec<String>) {
     let g: Value = serde_json::from_str(&std::fs::read_to_string(golden).unwrap()).unwrap();
     let input = PathBuf::from(golden.to_string_lossy().trim_end_matches(".golden.json"));
     let name = input.file_name().unwrap().to_string_lossy().to_string();
     let data = std::fs::read(&input).unwrap();
+    let opts = |locale: Option<&str>| golden_opts(&input, locale);
     let mut fails = Vec::new();
     // LocOS refused the file (fuzz corpus): Bilingua must refuse it too, or say so
     if let Some(e) = g["parse_error"].as_str() {
@@ -260,9 +297,25 @@ fn check(golden: &Path) -> (usize, usize, usize, Vec<String>) {
         .iter()
         .map(|u| (u["p_index"].as_i64().unwrap(), u["text"].as_str().unwrap().to_string(), u["style"].as_str().unwrap().to_string()))
         .collect();
-    let units_ok = have == want;
+    let mut units_ok = have == want;
     if !units_ok {
         fails.push(format!("{name}: units differ\n  locos:    {want:?}\n  bilingua: {have:?}"));
+    }
+    if let Some(a) = g.get("a11y_images") {
+        let want_a: (u64, Vec<(String, i64, String)>) = (
+            a["images"].as_u64().unwrap(),
+            a["missing_alt"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|f| (f["kind"].as_str().unwrap().to_string(), f["unit"].as_i64().unwrap_or(-1), f["where"].as_str().unwrap().to_string()))
+                .collect(),
+        );
+        let have_a = a11y_inventory(&doc);
+        if have_a != want_a {
+            units_ok = false;
+            fails.push(format!("{name}: a11y_images differ\n  locos:    {want_a:?}\n  bilingua: {have_a:?}"));
+        }
     }
     let (mut builds, mut built) = (0, 0);
     let input_zip = zip_entries(&data).unwrap_or_default();

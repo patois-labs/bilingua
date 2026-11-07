@@ -352,5 +352,15 @@
     }
    ]
   }
- ]
+ ],
+ "a11y_images": {
+  "images": 1,
+  "missing_alt": [
+   {
+    "kind": "missing",
+    "unit": 0,
+    "where": "Box"
+   }
+  ]
+ }
 }

@@ -1,0 +1,240 @@
+{
+ "format": "xlsx",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Name",
+   "style": ""
+  },
+  {
+   "p_index": 1,
+   "text": "Comments",
+   "style": ""
+  },
+  {
+   "p_index": 2,
+   "text": " =spaced",
+   "style": ""
+  },
+  {
+   "p_index": 3,
+   "text": "Last cell",
+   "style": ""
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "zip": [
+    {
+     "name": "[Content_Types].xml",
+     "same": true
+    },
+    {
+     "name": "_rels/.rels",
+     "same": true
+    },
+    {
+     "name": "xl/workbook.xml",
+     "same": true
+    },
+    {
+     "name": "xl/_rels/workbook.xml.rels",
+     "same": true
+    },
+    {
+     "name": "xl/sharedStrings.xml",
+     "same": true
+    },
+    {
+     "name": "xl/worksheets/sheet1.xml",
+     "same": true
+    }
+   ]
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü Name",
+    "1": "Ü Comments",
+    "2": "Ü  =spaced",
+    "3": "Ü Last cell"
+   },
+   "zip": [
+    {
+     "name": "[Content_Types].xml",
+     "same": true
+    },
+    {
+     "name": "_rels/.rels",
+     "same": true
+    },
+    {
+     "name": "xl/workbook.xml",
+     "same": true
+    },
+    {
+     "name": "xl/_rels/workbook.xml.rels",
+     "same": true
+    },
+    {
+     "name": "xl/sharedStrings.xml",
+     "sha1": "345200f355e473f6b030d4a96d6c48fe28f0e24b"
+    },
+    {
+     "name": "xl/worksheets/sheet1.xml",
+     "sha1": "f4cf9c29e7803fc0327fbb0af13052cd4b7fdffc"
+    }
+   ]
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Name & <\"'>",
+    "2": " =spaced & <\"'>"
+   },
+   "zip": [
+    {
+     "name": "[Content_Types].xml",
+     "sha1": "bb96c0fe0f67fd9eba12846818ca8f9738d68819"
+    },
+    {
+     "name": "_rels/.rels",
+     "sha1": "7cead3ea5086de49fd5b4385c9ddf6d475d9588e"
+    },
+    {
+     "name": "xl/workbook.xml",
+     "same": true
+    },
+    {
+     "name": "xl/_rels/workbook.xml.rels",
+     "same": true
+    },
+    {
+     "name": "xl/sharedStrings.xml",
+     "sha1": "b2582d6467a1a16396f42e681dcca11085149d5c"
+    },
+    {
+     "name": "xl/worksheets/sheet1.xml",
+     "sha1": "6a5176618b45903d29e551e38366f1d67b207c18"
+    },
+    {
+     "name": "docProps/core.xml",
+     "sha1": "e3456a9c0e47ba59de9a8d729a2b15ae38ce4832"
+    }
+   ]
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "zip": [
+    {
+     "name": "[Content_Types].xml",
+     "sha1": "bb96c0fe0f67fd9eba12846818ca8f9738d68819"
+    },
+    {
+     "name": "_rels/.rels",
+     "sha1": "7cead3ea5086de49fd5b4385c9ddf6d475d9588e"
+    },
+    {
+     "name": "xl/workbook.xml",
+     "same": true
+    },
+    {
+     "name": "xl/_rels/workbook.xml.rels",
+     "same": true
+    },
+    {
+     "name": "xl/sharedStrings.xml",
+     "same": true
+    },
+    {
+     "name": "xl/worksheets/sheet1.xml",
+     "same": true
+    },
+    {
+     "name": "docProps/core.xml",
+     "sha1": "e3456a9c0e47ba59de9a8d729a2b15ae38ce4832"
+    }
+   ]
+  },
+  {
+   "name": "escape-ar-SA",
+   "locale": "ar-SA",
+   "map": {
+    "0": "Name & <\"'>",
+    "2": " =spaced & <\"'>"
+   },
+   "zip": [
+    {
+     "name": "[Content_Types].xml",
+     "sha1": "bb96c0fe0f67fd9eba12846818ca8f9738d68819"
+    },
+    {
+     "name": "_rels/.rels",
+     "sha1": "7cead3ea5086de49fd5b4385c9ddf6d475d9588e"
+    },
+    {
+     "name": "xl/workbook.xml",
+     "same": true
+    },
+    {
+     "name": "xl/_rels/workbook.xml.rels",
+     "same": true
+    },
+    {
+     "name": "xl/sharedStrings.xml",
+     "sha1": "b2582d6467a1a16396f42e681dcca11085149d5c"
+    },
+    {
+     "name": "xl/worksheets/sheet1.xml",
+     "sha1": "802bf9edea72aeffa1f7a740fda1ef3e4c48297d"
+    },
+    {
+     "name": "docProps/core.xml",
+     "sha1": "876cbd99e9e1ae90359934057023188208905cf9"
+    }
+   ]
+  },
+  {
+   "name": "none-ar-SA",
+   "locale": "ar-SA",
+   "map": {},
+   "zip": [
+    {
+     "name": "[Content_Types].xml",
+     "sha1": "bb96c0fe0f67fd9eba12846818ca8f9738d68819"
+    },
+    {
+     "name": "_rels/.rels",
+     "sha1": "7cead3ea5086de49fd5b4385c9ddf6d475d9588e"
+    },
+    {
+     "name": "xl/workbook.xml",
+     "same": true
+    },
+    {
+     "name": "xl/_rels/workbook.xml.rels",
+     "same": true
+    },
+    {
+     "name": "xl/sharedStrings.xml",
+     "same": true
+    },
+    {
+     "name": "xl/worksheets/sheet1.xml",
+     "sha1": "802bf9edea72aeffa1f7a740fda1ef3e4c48297d"
+    },
+    {
+     "name": "docProps/core.xml",
+     "sha1": "876cbd99e9e1ae90359934057023188208905cf9"
+    }
+   ]
+  }
+ ]
+}

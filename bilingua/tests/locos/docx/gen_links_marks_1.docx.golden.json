@@ -262,5 +262,9 @@
     }
    ]
   }
- ]
+ ],
+ "a11y_images": {
+  "images": 1,
+  "missing_alt": []
+ }
 }
