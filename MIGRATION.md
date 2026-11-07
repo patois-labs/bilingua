@@ -459,8 +459,7 @@ commented list in the test.
 - **Fluent, multi-line indent.** A value that starts on its own line writes its continuation lines at that line's
   indent. LocOS used the first deeper-indented line, so the value gained two spaces per merge (issue 811, item 1).
   The golden file was regenerated with that one LocOS function patched in `tests/tools/gen_golden.py` (every golden
-  case says so in its `locos_patch` field); drop the
-  patch when LocOS has the fix.
+  case says so in its `locos_patch` field); drop the patch when LocOS has the fix.
 - **LaTeX, text after a control word.** When a translation that starts with a letter follows a control word of the
   skeleton, Bilingua writes `\chapter{}Text`; LocOS writes `\chapterText`, another (undefined) control word. A text
   after a control space at a line end gets a blank for the same reason. Golden list `GLUED_WORD` (49 cases, each
