@@ -185,14 +185,63 @@ fn flatten(v: &[Inline]) -> String {
 }
 
 /// What goes into the file for a full value (lead + text + trail) in a given form.
-fn encode_value(form: &str, value: &str, original_cdata_ok: bool) -> String {
-    let v = clean_target(value);
+fn encode_value(form: &str, value: &str, original_cdata_ok: bool, nl: &str) -> String {
+    let mut v = clean_target(value);
+    // element text and CDATA: the translation's line breaks take the file's style (an attribute holds them as
+    // character references, which keep their own value)
+    if !nl.is_empty() && !form.starts_with('a') && v.contains(['', '
+']) {
+        v = with_newlines(&v, nl);
+    }
     match form {
         "a\"" => attr_escape(&v, b'"'),
         "a'" => attr_escape(&v, b'\''),
         "c" if original_cdata_ok && !v.contains("]]>") => format!("<![CDATA[{v}]]>"),
         _ => text_escape(&v),
     }
+}
+
+/// Every line break of `s` (CRLF, CR or LF) as `nl`.
+fn with_newlines(s: &str, nl: &str) -> String {
+    let mut o = String::with_capacity(s.len() + 8);
+    let mut it = s.chars().peekable();
+    while let Some(c) = it.next() {
+        match c {
+            '' => {
+                if it.peek() == Some(&'
+') {
+                    it.next();
+                }
+                o.push_str(nl);
+            }
+            '
+' => o.push_str(nl),
+            c => o.push(c),
+        }
+    }
+    o
+}
+
+/// The line break the file uses: that of its first line break (empty when it has none).
+fn file_newline<'a>(parts: &'a [SkelPart]) -> &'static str {
+    for p in parts {
+        if let SkelPart::Raw(s) = p {
+            if let Some(i) = s.find(['', '
+']) {
+                return if s[i..].starts_with("
+") {
+                    "
+"
+                } else if s[i..].starts_with('') {
+                    ""
+                } else {
+                    "
+"
+                };
+            }
+        }
+    }
+    ""
 }
 
 fn parse_err(msg: String) -> Error {
@@ -287,7 +336,7 @@ impl Filter for Wxl {
             }
             unit.codes.insert(FORM_KEY.into(), code(form));
             let raw = &text[start..end];
-            if encode_value(form, &e.text, form == "c") != raw {
+            if encode_value(form, &e.text, form == "c", "") != raw {
                 unit.codes.insert(RAW_KEY.into(), code(raw));
             }
             fill_context(&mut unit, e, idx, form);
@@ -313,6 +362,7 @@ impl Filter for Wxl {
         };
         let changed = doc.units.iter().any(|u| u.translate && flatten(&u.output()) != flatten(&u.source()));
         let culture = opts.stamp_lang(doc, changed).and_then(culture_of);
+        let nl = file_newline(parts);
         let mut out = String::new();
         let mut first = true;
         for p in parts {
@@ -326,7 +376,7 @@ impl Filter for Wxl {
                 }
                 SkelPart::Unit(i) => {
                     let unit = doc.units.get(*i).ok_or_else(|| Error::Write(format!("no unit {i}")))?;
-                    out.push_str(&render(unit));
+                    out.push_str(&render(unit, nl));
                     first = false;
                 }
             }
@@ -373,7 +423,7 @@ fn hidden<'a>(u: &'a Unit, key: &str) -> &'a str {
 }
 
 /// What goes between the quotes (or between the tags) for a unit.
-fn render(unit: &Unit) -> String {
+fn render(unit: &Unit, nl: &str) -> String {
     let out = flatten(&unit.output());
     let form = hidden(unit, FORM_KEY);
     if out == flatten(&unit.source()) {
@@ -382,7 +432,7 @@ fn render(unit: &Unit) -> String {
         }
     }
     let full = format!("{}{}{}", hidden(unit, LEAD_KEY), out, hidden(unit, TRAIL_KEY));
-    encode_value(form, &full, form == "c")
+    encode_value(form, &full, form == "c", nl)
 }
 
 /// The culture to write for a target locale: LocOS `html_lang(...).lower()`, or `None` when the tag is unusable.

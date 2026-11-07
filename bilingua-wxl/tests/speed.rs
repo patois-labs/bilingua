@@ -66,3 +66,16 @@ fn large_file_round_trips_and_is_timed() {
         t_extract + t_merge
     );
 }
+
+/// Issue 792 (same family): thousands of attributes on one tag stay linear.
+#[test]
+fn many_attributes_on_one_tag_stay_fast() {
+    let mut s = String::from("<WixLocalization Culture=\"en-us\" xmlns=\"http://wixtoolset.org/schemas/v4/wxl\"><String Id=\"a\" Value=\"Hello\"");
+    for i in 0..40_000 {
+        s.push_str(&format!(" x{i}=\"v\""));
+    }
+    s.push_str("/></WixLocalization>");
+    let t = Instant::now();
+    let _ = Wxl.extract(s.as_bytes(), &opts(false));
+    assert!(t.elapsed().as_secs() < 5, "took {:?}", t.elapsed());
+}

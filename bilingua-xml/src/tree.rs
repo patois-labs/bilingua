@@ -292,6 +292,39 @@ struct Scope<'a> {
     uri: u32,
 }
 
+/// The namespace declarations in scope. A map from each prefix to its innermost binding keeps a lookup constant, so a
+/// start tag with thousands of `xmlns:pN` declarations and as many `pN:a` attributes (or a root with thousands of
+/// declarations above many elements) does not make the scan quadratic.
+#[derive(Default)]
+struct ScopeStack<'a> {
+    items: Vec<Scope<'a>>,
+    /// per item: the binding of its prefix before it was pushed
+    prev: Vec<Option<u32>>,
+    now: HashMap<&'a str, u32>,
+}
+
+impl<'a> ScopeStack<'a> {
+    fn len(&self) -> usize {
+        self.items.len()
+    }
+    fn push(&mut self, s: Scope<'a>) {
+        self.prev.push(self.now.insert(s.prefix, s.uri));
+        self.items.push(s);
+    }
+    fn truncate(&mut self, n: usize) {
+        while self.items.len() > n {
+            let s = self.items.pop().expect("len checked");
+            match self.prev.pop().flatten() {
+                Some(u) => self.now.insert(s.prefix, u),
+                None => self.now.remove(s.prefix),
+            };
+        }
+    }
+    fn get(&self, prefix: &str) -> Option<u32> {
+        self.now.get(prefix).copied()
+    }
+}
+
 impl<'a> Tree<'a> {
     /// Parses `text` (already decoded, no BOM), refusing more than `limits.max_xml_elements` elements or a nesting
     /// deeper than `limits.max_xml_depth`.
@@ -322,7 +355,7 @@ impl<'a> Tree<'a> {
         };
         let mut uri_ids: HashMap<String, u32> = HashMap::new();
         let mut stack: Vec<u32> = Vec::new();
-        let mut scopes: Vec<Scope<'a>> = Vec::new();
+        let mut scopes: ScopeStack<'a> = ScopeStack::default();
         let mut scope_marks: Vec<usize> = Vec::new();
         let mut pos = 0usize;
         let mut seen_root = false;
@@ -391,14 +424,14 @@ impl<'a> Tree<'a> {
                             scopes.push(Scope { prefix, uri: id });
                         }
                     }
-                    let lookup = |prefix: &str, scopes: &[Scope<'a>], uris: &mut Vec<String>, ids: &mut HashMap<String, u32>| -> Option<u32> {
+                    let lookup = |prefix: &str, scopes: &ScopeStack<'a>, uris: &mut Vec<String>, ids: &mut HashMap<String, u32>| -> Option<u32> {
                         if prefix == "xml" {
                             return Some(*ids.entry(XML_NS.to_string()).or_insert_with(|| {
                                 uris.push(XML_NS.to_string());
                                 (uris.len() - 1) as u32
                             }));
                         }
-                        scopes.iter().rev().find(|s| s.prefix == prefix).map(|s| s.uri)
+                        scopes.get(prefix)
                     };
                     let qname = &text[start + 1..raw.name_e];
                     let (el_prefix, local) = split_qname(qname)?;
@@ -614,11 +647,12 @@ impl<'a> Tree<'a> {
     /// left out (XPath name tests never use it).
     pub(crate) fn nsmap(&self, el: u32) -> Vec<(String, String)> {
         let mut out: Vec<(String, String)> = Vec::new();
+        let mut seen: std::collections::HashSet<&str> = std::collections::HashSet::new();
         let mut cur = el;
         while cur != NONE {
             for a in self.attrs_of(cur) {
                 if let Some(p) = self.attr_qname(a).strip_prefix("xmlns:") {
-                    if !out.iter().any(|(q, _)| q == p) {
+                    if seen.insert(p) {
                         out.push((p.to_string(), decode_refs(self.attr_raw(a), |_| None)));
                     }
                 }

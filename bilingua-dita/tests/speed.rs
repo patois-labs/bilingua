@@ -32,3 +32,21 @@ fn five_megabytes_round_trip() {
     eprintln!("5 MB DITA: {} units, extract + merge + translated merge in {took:.2} s (this build)", d.units.len());
     assert!(took < 120.0, "far too slow: {took:.1} s");
 }
+
+/// Issue 792: one start tag with tens of thousands of `xmlns:pN` declarations and as many `pN:a` attributes must not
+/// make the scan quadratic (libxml2 took 27 s on 40 000).
+#[test]
+fn many_namespace_declarations_on_one_tag_stay_fast() {
+    let n = 40_000;
+    let mut s = String::from("<topic id=\"t\"");
+    for i in 0..n {
+        s.push_str(&format!(" xmlns:p{i}=\"u{i}\""));
+    }
+    for i in 0..n {
+        s.push_str(&format!(" p{i}:a=\"v\""));
+    }
+    s.push_str("><title>Hi</title></topic>");
+    let t = std::time::Instant::now();
+    let _ = Dita::new().extract(s.as_bytes(), &ExtractOptions::new());
+    assert!(t.elapsed().as_secs() < 5, "took {:?}", t.elapsed());
+}

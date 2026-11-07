@@ -221,6 +221,8 @@ pub(crate) fn eval_props(t: &Tree, dialect: Option<&Dialect>, extra: &[Rule], li
         (notes.len() - 1) as u32
     };
 
+    // attributes the dialect marks translatable (an ITS rule that names the attribute takes the decision over)
+    let mut dialect_attrs: std::collections::HashSet<u32> = std::collections::HashSet::new();
     if let Some(d) = dialect {
         for i in 0..n as u32 {
             let ln = t.local(i);
@@ -241,6 +243,7 @@ pub(crate) fn eval_props(t: &Tree, dialect: Option<&Dialect>, extra: &[Rule], li
                     if let Some(a) = t.find_attr(i, "", &r.attr) {
                         let idx = (a as *const _ as usize - t.attrs.as_ptr() as usize) / std::mem::size_of::<crate::tree::Attr>();
                         attr_yes.insert(idx as u32, i);
+                        dialect_attrs.insert(idx as u32);
                     }
                 }
             }
@@ -316,6 +319,7 @@ pub(crate) fn eval_props(t: &Tree, dialect: Option<&Dialect>, extra: &[Rule], li
                 }
                 Node::At(e, a) => match rule.kind {
                     RuleKind::Translate => {
+                        dialect_attrs.remove(&a);
                         if rule.value == "yes" {
                             attr_yes.insert(a, e);
                         } else {
@@ -392,6 +396,10 @@ pub(crate) fn eval_props(t: &Tree, dialect: Option<&Dialect>, extra: &[Rule], li
         };
     }
     for (a, owner) in attr_yes {
+        // ITS: nothing under translate="no" is translatable, a dialect attribute (DITA navtitle) included
+        if dialect_attrs.contains(&a) && !p.tr[owner as usize] {
+            continue;
+        }
         let note = match attr_note.get(&a) {
             Some(&u32::MAX) => 0,
             Some(&v) => v,

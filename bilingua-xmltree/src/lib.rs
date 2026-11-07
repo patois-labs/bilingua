@@ -71,6 +71,10 @@ pub struct Dom {
 /// any skeleton handed to merge).
 pub const MAX_DEPTH: usize = 1024;
 
+/// Most namespace declarations in scope at one element. Every lookup and every scope copy costs this much, so a file
+/// that declares tens of thousands of prefixes (slow-input denial of service) is refused; real files declare a few.
+const MAX_SCOPE: usize = 1024;
+
 #[derive(Debug)]
 pub struct XmlError(pub String);
 
@@ -220,10 +224,12 @@ fn parse_with(text: &str, noblanks: bool) -> Result<Dom, XmlError> {
                 let empty = matches!(ev, Event::Empty(_));
                 let name = std::str::from_utf8(e.name().as_ref()).map_err(|_| err("bad element name"))?.to_string();
                 let mut attrs = Vec::new();
-                for a in e.attributes() {
+                // sets, not scans: thousands of attributes or declarations on one tag must not cost quadratic time
+                let mut seen: std::collections::HashSet<String> = std::collections::HashSet::new();
+                for a in e.attributes().with_checks(false) {
                     let a = a.map_err(|e| err(format!("bad attribute: {e}")))?;
                     let k = std::str::from_utf8(a.key.as_ref()).map_err(|_| err("bad attribute name"))?.to_string();
-                    if attrs.iter().any(|(x, _): &(String, String)| *x == k) {
+                    if !seen.insert(k.clone()) {
                         return Err(err(format!("duplicate attribute {k}")));
                     }
                     let raw = std::str::from_utf8(&a.value).map_err(|_| err("bad attribute value"))?;
@@ -243,6 +249,9 @@ fn parse_with(text: &str, noblanks: bool) -> Result<Dom, XmlError> {
                 let scope = if decls.is_empty() {
                     parent_scope
                 } else {
+                    if dom.scopes[parent_scope].len() + decls.len() > MAX_SCOPE {
+                        return Err(err(format!("more than {MAX_SCOPE} namespace declarations in scope")));
+                    }
                     let mut s = dom.scopes[parent_scope].clone();
                     s.extend(decls);
                     dom.scopes.push(s);
@@ -863,6 +872,27 @@ pub fn esc_attr(s: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Issue 792: many declarations / attributes on one tag are fast, and an absurd scope is refused.
+    #[test]
+    fn many_namespace_declarations_are_not_quadratic() {
+        let mut s = String::from("<a");
+        for i in 0..40_000 {
+            s.push_str(&format!(" xmlns:p{i}=\"u{i}\""));
+        }
+        s.push_str("/>");
+        let t = std::time::Instant::now();
+        assert!(parse(&s).is_err());
+        let mut s = String::from("<a");
+        for i in 0..40_000 {
+            s.push_str(&format!(" x{i}=\"v\""));
+        }
+        s.push_str("/>");
+        assert!(parse(&s).is_ok());
+        assert!(t.elapsed().as_secs() < 5, "took {:?}", t.elapsed());
+        assert!(parse("<a xmlns:p='P' p:x='1' p:x='2'/>").is_err(), "repeated attribute");
+        assert!(parse("<a x='1' x='2'/>").is_err());
+    }
 
     #[test]
     fn serializes_like_lxml() {

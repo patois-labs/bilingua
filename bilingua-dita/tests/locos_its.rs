@@ -311,6 +311,34 @@ fn localized_language_stamp() {
     );
 }
 
+/// Issue 809.2: a nested topic that still declares the source language is restamped; a foreign passage and an
+/// element with no translated unit are left alone.
+#[test]
+fn nested_source_language_is_restamped() {
+    let f = dita();
+    let d = br#"<dita xml:lang="en"><topic id="a" xml:lang="en"><title>A</title><body><p xml:lang="fr">Bonjour</p><p xml:lang="en-US">Hi</p></body></topic><topic id="b" xml:lang="en"><title/></topic></dita>"#;
+    let out = s(&merge_map(&f, d, Some("de-DE"), &[(0, "Ae")]));
+    assert!(out.starts_with(r#"<dita xml:lang="de-DE"><topic id="a" xml:lang="de-DE">"#), "{out}");
+    assert!(out.contains(r#"<p xml:lang="fr">"#), "foreign passage kept: {out}");
+    assert!(out.contains(r#"<topic id="b" xml:lang="en">"#), "no translated unit below: {out}");
+    // no language on the root: the first declared language is the source
+    let d2 = br#"<dita><topic id="a" xml:lang="en"><title>A</title></topic></dita>"#;
+    let out2 = s(&merge_map(&f, d2, Some("de-DE"), &[(0, "Ae")]));
+    assert_eq!(out2, r#"<dita xml:lang="de-DE"><topic id="a" xml:lang="de-DE"><title>Ae</title></topic></dita>"#);
+    // nothing translated: untouched
+    assert_eq!(f.merge(&ex_to(&f, d2, "de-DE")).unwrap(), d2);
+}
+
+/// Issue 809.3: no attribute unit on an element under translate="no" (DITA navtitle included).
+#[test]
+fn navtitle_under_translate_no_is_not_translatable() {
+    let f = dita();
+    let d = br#"<map><topicref href="a.dita" navtitle="On"/><topicref href="b.dita" navtitle="Off" translate="no"/><topicref translate="no"><topicref navtitle="Inner"/></topicref></map>"#;
+    let doc = ex(&f, d);
+    let texts: Vec<String> = doc.units.iter().map(show).collect();
+    assert_eq!(texts, vec!["On".to_string()]);
+}
+
 /// LocOS `xml_text.xml_target_text` (used by the XML emitter): vertical tab and form feed become line breaks,
 /// characters XML 1.0 forbids are dropped from a translation.
 #[test]

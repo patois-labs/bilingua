@@ -7,7 +7,7 @@
 //!   sources that hold only inline codes. `locos.p_index` is LocOS's key: the `<source>` position for a
 //!   whole-source unit, `SEG_BASE` plus the position among every seg `mrk` for a segment unit; skipped units keep
 //!   their number.
-//! * Inline codes are numbered as LocOS numbers them (every child of the source, comments included, in document
+//! * Inline codes are numbered as LocOS numbers them (every element child of the source, in document
 //!   order; point elements are not entered): `x`, `ph`, `bpt`, `ept`, `it`, `sc`, `ec`, `sm`, `em` are standalone
 //!   codes (an `<x id>` / `<ph id>` that stands for no markup side and no unnumbered argument is free), anything
 //!   else is a pair. A tag's id is its LocOS token number. Phrase MXLIFF text marks (`{1}`, `{2>..<2}`) are codes
@@ -216,6 +216,10 @@ fn tokenize_source(d: &Dom, src: usize) -> (Vec<Tok>, Vec<Code>) {
                 toks.push(Tok::Text(n.value.clone()));
                 continue;
             }
+            // a comment or processing instruction is dropped (its tail text stays): never translatable text, no number
+            if n.kind != Kind::Element {
+                continue;
+            }
             codes.push(Code::Node(c));
             let num = codes.len();
             let local = d.local(c);
@@ -224,11 +228,7 @@ fn tokenize_source(d: &Dom, src: usize) -> (Vec<Tok>, Vec<Code>) {
                 continue;
             }
             toks.push(Tok::Open(num));
-            match n.kind {
-                Kind::Element => walk(d, c, toks, codes),
-                // lxml: a comment's or PI's `.text` is its content
-                _ => toks.push(Tok::Text(n.value.clone())),
-            }
+            walk(d, c, toks, codes);
             toks.push(Tok::Close(num));
         }
     }

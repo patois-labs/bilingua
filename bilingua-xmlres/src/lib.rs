@@ -741,6 +741,20 @@ filter_impl!(JavaXmlProperties, Dialect::JavaProps);
 mod tests {
     use super::*;
 
+    /// Issue 792 (same family): thousands of attributes on one tag are fast; a repeated attribute is still refused.
+    #[test]
+    fn many_attributes_on_one_tag_stay_fast() {
+        let mut s = String::from("<resources><string name=\"a\"");
+        for i in 0..40_000 {
+            s.push_str(&format!(" x{i}=\"v\""));
+        }
+        s.push_str(">Hello</string></resources>");
+        let t = std::time::Instant::now();
+        assert!(records(s.as_bytes()).is_ok());
+        assert!(t.elapsed().as_secs() < 5, "took {:?}", t.elapsed());
+        assert!(records(br#"<resources><string name="a" name="b">x</string></resources>"#).is_err());
+    }
+
     #[test]
     fn escapes_match_locos() {
         assert_eq!(android_unescape(r#"Can\'t open \"%s\" \n A \\ \@x"#), r#"Can't open "%s" \n A \\ @x"#);
