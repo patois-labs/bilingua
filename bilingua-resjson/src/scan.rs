@@ -151,10 +151,11 @@ pub fn scan(text: &str, limits: &Limits) -> Result<Scanned, Error> {
                 match tok {
                     Tok::P(c @ (b'{' | b'[')) => {
                         if stack.len() >= limits.max_depth {
-                            return Err(Error::Unsupported(format!(
-                                "this .resjson file is nested too deeply (limit {} levels)",
-                                limits.max_depth
-                            )));
+                            return Err(bilingua_model::LimitError::new(
+                                bilingua_model::LimitKind::Depth,
+                                format!("this .resjson file is nested too deeply (limit {} levels)", limits.max_depth),
+                            )
+                            .into());
                         }
                         let top = stack.last_mut().expect("checked above");
                         let context = if top.obj {

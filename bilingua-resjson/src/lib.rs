@@ -61,6 +61,20 @@ impl Default for Limits {
     }
 }
 
+impl Limits {
+    /// The crate's limits from the call's `ExtractOptions::limits` (LocOS's `MAX_DOCUMENT_SEGMENTS`,
+    /// `MAX_SEGMENT_CHARS` and upload size); the nesting cap stays the crate's own.
+    pub fn from_model(l: &bilingua_model::Limits) -> Limits {
+        let d = Limits::default();
+        Limits {
+            max_units: l.max_units,
+            max_unit_chars: l.max_unit_chars,
+            max_depth: d.max_depth,
+            max_bytes: d.max_bytes.min(usize::try_from(l.max_input_bytes).unwrap_or(usize::MAX)),
+        }
+    }
+}
+
 /// The Windows `.resjson` filter.
 #[derive(Debug, Default, Clone, Copy)]
 pub struct Resjson;
@@ -95,16 +109,16 @@ impl Enc {
 
 fn decode_bytes(bytes: &[u8]) -> Result<(String, Enc), Error> {
     if bytes.starts_with(&[0xFF, 0xFE, 0, 0]) || bytes.starts_with(&[0, 0, 0xFE, 0xFF]) {
-        return Err(Error::Unsupported("UTF-32 files; save the file as UTF-8".into()));
+        return Err(Error::Encoding("UTF-32 files are not supported; re-save the file as UTF-8.".into()));
     }
     let utf16 = |body: &[u8], le: bool| -> Result<String, Error> {
         if !body.len().is_multiple_of(2) {
-            return Err(Error::Unsupported("the file is not valid UTF-16 (it ends in the middle of a character)".into()));
+            return Err(Error::Encoding("the file is not valid UTF-16 (it ends in the middle of a character); re-save the file as UTF-8.".into()));
         }
         let units = body.chunks_exact(2).map(|p| if le { u16::from_le_bytes([p[0], p[1]]) } else { u16::from_be_bytes([p[0], p[1]]) });
         char::decode_utf16(units)
             .collect::<Result<String, _>>()
-            .map_err(|_| Error::Unsupported("the file is not valid UTF-16 (unpaired surrogate)".into()))
+            .map_err(|_| Error::Encoding("the file is not valid UTF-16 (unpaired surrogate); re-save the file as UTF-8.".into()))
     };
     if let Some(body) = bytes.strip_prefix(&[0xFF, 0xFE][..]) {
         return Ok((utf16(body, true)?, Enc::Utf16Le));
@@ -117,7 +131,7 @@ fn decode_bytes(bytes: &[u8]) -> Result<(String, Enc), Error> {
         None => (bytes, Enc::Utf8),
     };
     let text = std::str::from_utf8(body).map_err(|e| {
-        Error::Unsupported(format!("the file is not valid UTF-8 (byte {}); save the file as UTF-8", e.valid_up_to() + (bytes.len() - body.len())))
+        Error::Encoding(format!("the file is not valid UTF-8 (byte {}); re-save the file as UTF-8.", e.valid_up_to() + (bytes.len() - body.len())))
     })?;
     Ok((text.to_string(), enc))
 }
@@ -156,7 +170,11 @@ fn check_budget(text: &str, limits: &Limits) -> Result<(), Error> {
     }
     let over = |what: &str, n: usize, max: usize| {
         if n > max {
-            Err(Error::Unsupported(format!("this .resjson file has more {what} than {} units allow; split it into smaller files", limits.max_units)))
+            Err(LimitError::new(
+                if what == "lines" { LimitKind::Lines } else { LimitKind::Units },
+                format!("this .resjson file has more {what} than {} units allow; split it into smaller files", limits.max_units),
+            )
+            .into())
         } else {
             Ok(())
         }
@@ -202,7 +220,7 @@ impl Resjson {
     /// Like `extract`, with explicit limits.
     pub fn extract_with(&self, bytes: &[u8], opts: &ExtractOptions, limits: &Limits) -> Result<Document, Error> {
         if bytes.len() > limits.max_bytes {
-            return Err(Error::Unsupported(format!("this .resjson file is larger than {} bytes", limits.max_bytes)));
+            return Err(LimitError::new(LimitKind::InputBytes, format!("this .resjson file is larger than {} bytes", limits.max_bytes)).into());
         }
         let (text, enc) = decode_bytes(bytes)?;
         check_budget(&text, limits)?;
@@ -251,10 +269,10 @@ impl Resjson {
             }
             if translatable {
                 if core.len() > limits.max_unit_chars && core.chars().count() > limits.max_unit_chars {
-                    return Err(Error::Unsupported(format!("this .resjson file has a value longer than {} characters", limits.max_unit_chars)));
+                    return Err(LimitError::new(LimitKind::UnitChars, format!("this .resjson file has a value longer than {} characters", limits.max_unit_chars)).into());
                 }
                 if counted >= limits.max_units {
-                    return Err(Error::Unsupported(format!("this .resjson file has more than {} units", limits.max_units)));
+                    return Err(LimitError::new(LimitKind::Units, format!("this .resjson file has more than {} units", limits.max_units)).into());
                 }
             }
             if translatable {
@@ -363,7 +381,7 @@ impl Filter for Resjson {
 
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
         bilingua_model::check_own_options(self, &opts.format_options)?;
-        self.extract_with(bytes, opts, &Limits::default())
+        self.extract_with(bytes, opts, &Limits::from_model(&opts.limits()))
     }
 
     fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
