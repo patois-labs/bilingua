@@ -239,8 +239,7 @@ impl Filter for Rc {
         let Skeleton::Text { parts, encoding, .. } = &doc.skeleton else {
             return Err(Error::Write("rc needs a text skeleton".into()));
         };
-        let known = matches!(encoding.as_str(), "utf-8" | "utf-8-bom" | "utf-16le" | "utf-16be" | "utf-16le-nobom")
-            || codec::page_for_label(encoding).is_some();
+        let known = codec::known_tag(encoding);
         if !known {
             return Err(Error::Write(format!("unknown encoding {encoding}")));
         }

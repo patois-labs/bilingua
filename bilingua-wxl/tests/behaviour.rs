@@ -320,3 +320,20 @@ fn okapi_wix_config_reads_a_subset_of_what_locos_and_bilingua_read() {
     assert_eq!(unit_by_key(&d, "No").context.extra["overridable"], "no");
     assert_eq!(merged(&d), V3_OVERRIDABLE);
 }
+
+#[test]
+fn comment_before_or_after_the_text_is_not_a_mixed_string() {
+    // Wild file: WiX loc tools put `_locID_text` comments inside the string. One run of text around the comments is
+    // the value, the comments stay; two runs of text stay a skipped mixed string.
+    let src = b"<WixLocalization Culture=\"en-US\" xmlns=\"urn:x\">\n<String Id=\"A\" Overridable=\"yes\">\n<!-- _locID_text=\"A\" -->Click Install to continue.\n</String>\n<String Id=\"B\">Hello &amp; welcome<!-- note --></String>\n<String Id=\"C\">Before<!-- c -->after</String>\n<String Id=\"D\"><!-- only a note --></String>\n</WixLocalization>";
+    let mut d = ex(src);
+    assert_eq!(texts(&d), ["Click Install to continue.", "Hello & welcome"]);
+    assert_eq!(unit_by_key(&d, "A").id, "u1");
+    assert_eq!(unit_by_key(&d, "B").id, "u2");
+    assert_eq!(s(&merged(&d)), s(src));
+    pseudo(&mut d);
+    let out = s(&merged(&d));
+    assert!(out.contains("<!-- _locID_text=\"A\" -->\u{ab}"), "{out}");
+    assert!(out.contains("\u{bb}<!-- note --></String>"), "{out}");
+    assert!(out.contains("Before<!-- c -->after"), "{out}");
+}

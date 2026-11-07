@@ -41,8 +41,11 @@ pub struct Entry {
     /// The text as an XML parser reads it (references resolved, line ends normalised). Empty for `Place::None`
     /// and for an element that has child nodes.
     pub text: String,
-    /// The element has a child element, comment or processing instruction (LocOS skips it).
+    /// The element has a child element (LocOS skips it), or comments / processing instructions around more than one
+    /// run of text.
     pub has_children: bool,
+    /// Byte ranges of the comments and processing instructions directly inside the element.
+    pub notes: Vec<(usize, usize)>,
 }
 
 pub struct Scanned {
@@ -289,6 +292,7 @@ pub fn scan(text: &str) -> Result<Scanned, String> {
                             place: Place::None,
                             text: String::new(),
                             has_children: false,
+                            notes: Vec::new(),
                         };
                         if let Some(a) = attrs.iter().find(|a| a.name == attr_name) {
                             e.text = unescape_attr(&text[a.start..a.end]).map_err(|m| err(start, &m))?;
@@ -321,11 +325,30 @@ pub fn scan(text: &str) -> Result<Scanned, String> {
                 } else if depth == 1 {
                     if let Some((mut e, content_start)) = cur.take() {
                         if !matches!(e.place, Place::Attr { .. }) {
-                            let raw = &text[content_start..start];
-                            if !e.has_children {
-                                e.text = unescape_content(raw).map_err(|m| err(content_start, &m))?;
+                            let (mut from, mut to) = (content_start, start);
+                            if !e.has_children && !e.notes.is_empty() {
+                                // Comments (WiX loc tools write `<!-- _locID_text=.. -->` first) do not make the
+                                // string a mixed one: when exactly one run of text is left between them, that run
+                                // is the value and the comments stay where they are.
+                                let mut runs: Vec<(usize, usize)> = Vec::new();
+                                let mut at = content_start;
+                                for &(ns, ne) in e.notes.iter().chain(std::iter::once(&(start, start))) {
+                                    if text[at..ns].bytes().any(|c| !is_ws(c)) {
+                                        runs.push((at, ns));
+                                    }
+                                    at = ne;
+                                }
+                                match runs.as_slice() {
+                                    [] => {}
+                                    [(a, z)] => (from, to) = (*a, *z),
+                                    _ => e.has_children = true,
+                                }
                             }
-                            e.place = Place::Content { start: content_start, end: start, cdata: raw.contains("<![CDATA[") };
+                            let raw = &text[from..to];
+                            if !e.has_children {
+                                e.text = unescape_content(raw).map_err(|m| err(from, &m))?;
+                            }
+                            e.place = Place::Content { start: from, end: to, cdata: raw.contains("<![CDATA[") };
                         } else if !e.has_children {
                             // the Value attribute wins; the content is not read, but must still be well formed
                             // (the parser has checked that)
@@ -362,7 +385,7 @@ pub fn scan(text: &str) -> Result<Scanned, String> {
                 }
                 if depth == 2 {
                     if let Some((e, _)) = cur.as_mut() {
-                        e.has_children = true;
+                        e.notes.push((start, end));
                     }
                 }
             }

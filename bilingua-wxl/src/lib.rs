@@ -8,7 +8,7 @@
 //!
 //! Also translated: the `Text` attribute of `<UI Dialog=".." Control=".." Text=".."/>` (dialog control text).
 //! `Localizable="no"` (or `false`) marks a value that is not text (a GUID, a path): skipped. Only direct
-//! children of the root are read; a `<String>` with child nodes (comment, element) is skipped.
+//! children of the root are read; a `<String>` with a child element, or with comments around two runs of text, is skipped (comments around a single run of text are not: the text is the value).
 //!
 //! Behaviour that goes beyond the LocOS filter or differs from it:
 //!

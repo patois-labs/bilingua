@@ -16,7 +16,8 @@ let out = Wxl.merge(&doc)?; // Culture="de-de" on the root, everything else as i
 - Reads `<String Id=".." Value=".."/>` (WiX 4 and later), `<String Id="..">text</String>` (WiX 3) and the `Text`
   attribute of `<UI Dialog=".." Control=".." Text=".."/>`, as direct children of the root. Any namespace and any
   prefix. `Localizable="no"` / `"false"` is skipped (a locked unit with `include_locked`). A `<String>` with a child
-  element or comment is skipped. Values with no letter or digit are not units.
+  element is skipped; so is one with comments between two runs of text. Comments around a single run of text
+  (the `_locID_text` comments WiX loc tools write) are left in place and the text is the value (LocOS skips these). Values with no letter or digit are not units.
 - `context.key` is the `Id` (or `Dialog.Control`), `extra["overridable"]` and `extra["localizable"]` are the
   attributes, `extra["p_index"]` is the LocOS slot index. Unit ids are `u<p_index + 1>`.
 - `[ProductName]`, `[#File]`, `[!File]`, `[$Comp]`, `[%ENV]`, `[1]`, `[~]`, `[\c]` are free standalone tags

@@ -210,9 +210,7 @@ pub fn decode(data: &[u8]) -> Result<Decoded, Error> {
         }
     }
     if pages.len() > 1 {
-        return Err(refuse(
-            "This .rc file switches between several code pages (#pragma code_page); one file can only be read in one encoding.",
-        ));
+        return decode_pragmas(data);
     }
     if let Some(p) = pages.pop() {
         let num = String::from_utf8_lossy(&p).into_owned();
@@ -251,6 +249,104 @@ pub fn decode(data: &[u8]) -> Result<Decoded, Error> {
             data.get(pos).copied().unwrap_or(0)
         ))),
     }
+}
+
+/// Prefix of the tag of a file that switches code pages: the rest is the page of the text before the first
+/// `#pragma code_page` (`utf-8` or `windows-1252`).
+const PRAGMAS: &str = "pragmas-";
+
+/// The number a pragma names (`None` for `DEFAULT`, which goes back to the page of the beginning of the file).
+fn page_number(raw: &[u8]) -> Option<String> {
+    let ws = |b: &u8| matches!(b, b' ' | b'\t' | b'\n' | b'\r' | 0x0B | 0x0C);
+    let (a, z) = (raw.iter().position(|b| !ws(b)).unwrap_or(raw.len()), raw.iter().rposition(|b| !ws(b)).map_or(0, |p| p + 1));
+    let v = raw[a..z.max(a)].to_ascii_uppercase();
+    (v != b"DEFAULT").then(|| String::from_utf8_lossy(&v).into_owned())
+}
+
+/// A file with several different `#pragma code_page` lines (a Visual Studio script with one section per language):
+/// rc.exe reads each section in the page of the pragma before it, so each is decoded the same way. The beginning of
+/// the file, before the first pragma, is UTF-8 or Windows-1252.
+fn decode_pragmas(data: &[u8]) -> Result<Decoded, Error> {
+    let starts: Vec<(usize, Option<String>)> =
+        pragma_re().captures_iter(data).map(|c| (c.get(0).map_or(0, |m| m.start()), page_number(&c[1]))).collect();
+    let first = starts.first().map_or(data.len(), |s| s.0);
+    let head = &data[..first];
+    let (mut text, base) = match std::str::from_utf8(head) {
+        Ok(s) => (s.to_string(), "utf-8"),
+        Err(_) => {
+            let page = page_for_label("windows-1252").expect("1252");
+            match decode_page(&page, head) {
+                Ok(t) => (t, "windows-1252"),
+                Err(pos) => {
+                    return Err(refuse(format!(
+                        "This .rc file is not valid UTF-8 and could not be read as Windows-1252 before its first code page pragma (byte 0x{:02x} at position {pos}).",
+                        head.get(pos).copied().unwrap_or(0)
+                    )))
+                }
+            }
+        }
+    };
+    for (i, (from, num)) in starts.iter().enumerate() {
+        let to = starts.get(i + 1).map_or(data.len(), |s| s.0);
+        let part = &data[*from..to];
+        let num = num.as_deref();
+        let decoded = match num {
+            Some("65001") => std::str::from_utf8(part).map(str::to_string).map_err(|e| e.valid_up_to()),
+            Some(n) => {
+                let Some(page) = page_for_number(n) else {
+                    return Err(refuse(format!("This .rc file declares code page {n}, which is not supported.")));
+                };
+                decode_page(&page, part)
+            }
+            None if base == "utf-8" => std::str::from_utf8(part).map(str::to_string).map_err(|e| e.valid_up_to()),
+            None => decode_page(&page_for_label("windows-1252").expect("1252"), part),
+        };
+        match decoded {
+            Ok(t) => text.push_str(&t),
+            Err(pos) => {
+                return Err(refuse(format!(
+                    "This .rc file declares code page {} but byte 0x{:02x} at position {} is not valid in it.",
+                    num.unwrap_or("DEFAULT"),
+                    part.get(pos).copied().unwrap_or(0),
+                    from + pos
+                )))
+            }
+        }
+    }
+    Ok(Decoded { text, tag: format!("{PRAGMAS}{base}") })
+}
+
+/// Writes text read by `decode_pragmas` section by section; `None` when a character does not fit its section's page.
+fn encode_pragmas(text: &str, base: &str) -> Option<Vec<u8>> {
+    let starts: Vec<(usize, Option<String>)> =
+        pragma_text_re().captures_iter(text).map(|c| (c.get(0).map_or(0, |m| m.start()), page_number(c[2].as_bytes()))).collect();
+    let first = starts.first().map_or(text.len(), |s| s.0);
+    let page_of = |part: &str| -> Option<Vec<u8>> {
+        if base == "utf-8" {
+            Some(part.as_bytes().to_vec())
+        } else {
+            encode_page(&page_for_label(base)?, part)
+        }
+    };
+    let mut out = page_of(&text[..first])?;
+    for (i, (from, num)) in starts.iter().enumerate() {
+        let to = starts.get(i + 1).map_or(text.len(), |s| s.0);
+        let part = &text[*from..to];
+        let bytes = match num.as_deref() {
+            Some("65001") => part.as_bytes().to_vec(),
+            Some(n) => encode_page(&page_for_number(n)?, part)?,
+            None => page_of(part)?,
+        };
+        out.extend_from_slice(&bytes);
+    }
+    Some(out)
+}
+
+/// True when `tag` is a skeleton tag this module can write.
+pub fn known_tag(tag: &str) -> bool {
+    matches!(tag, "utf-8" | "utf-8-bom" | "utf-16le" | "utf-16be" | "utf-16le-nobom")
+        || tag.strip_prefix(PRAGMAS).is_some_and(|b| matches!(b, "utf-8" | "windows-1252"))
+        || page_for_label(tag).is_some()
 }
 
 /// The text in a page, or `None` when a character does not fit.
@@ -351,6 +447,10 @@ pub fn encode(text: &str, tag: &str, changed: bool) -> Vec<u8> {
                 text.as_bytes().to_vec()
             }
         }
+        other if other.starts_with(PRAGMAS) => match encode_pragmas(text, &other[PRAGMAS.len()..]) {
+            Some(b) => b,
+            None => utf8_with_pragma(text),
+        },
         other => match page_for_label(other).and_then(|p| encode_page(&p, text)) {
             Some(b) => b,
             // the translation does not fit the ANSI code page: write UTF-8 and say so to rc.exe
@@ -361,6 +461,9 @@ pub fn encode(text: &str, tag: &str, changed: bool) -> Vec<u8> {
 
 /// True when re-encoding the decoded text gives back different bytes (a multi-byte page with duplicate mappings).
 pub fn round_trip_differs(tag: &str, text: &str, data: &[u8]) -> bool {
+    if let Some(base) = tag.strip_prefix(PRAGMAS) {
+        return encode_pragmas(text, base).is_none_or(|b| b != data);
+    }
     match page_for_label(tag) {
         Some(p) if matches!(p.kind, Kind::Multi(_)) => encode_page(&p, text).is_none_or(|b| b != data),
         _ => false,

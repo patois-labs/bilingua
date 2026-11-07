@@ -187,10 +187,8 @@ fn declared_code_page() {
     let (back, _) = bilingua_model::encoding_rs::SHIFT_JIS.decode_without_bom_handling(&out);
     assert_eq!(back.matches("ファイルを開く").count(), 1);
     let mixed = b"#pragma code_page(1252)\n#pragma code_page(932)\nSTRINGTABLE BEGIN 1 \"x\" END\n";
-    match extract(mixed) {
-        Err(Error::Encoding(m)) => assert!(m.contains("code page"), "{m}"),
-        other => panic!("mixed code pages must be refused: {other:?}"),
-    }
+    // LocOS refuses several different pragmas; Bilingua reads each section in its own page (next test)
+    assert_eq!(units(mixed), vec!["x"]);
     let bad = b"#pragma code_page(1234)\nSTRINGTABLE BEGIN 1 \"x\" END\n";
     assert!(matches!(extract(bad), Err(Error::Encoding(_))));
 }
@@ -301,4 +299,32 @@ fn end_to_end_upload_export() {
     assert!(st.contains("CAPTION \"Info zu Sample\""), "{}", &st[..300]);
     assert!(st.contains("MENUITEM \"&Info\""));
     assert!(st.contains("LANGUAGE 0x07, 0x01") && st.contains("BLOCK \"040704b0\""));
+}
+
+#[test]
+fn sections_with_different_code_pages_are_read_each_in_its_own_page() {
+    // A Visual Studio script has one section per language: Russian text in 1251, then a neutral section in 1252.
+    let hello = "\u{41f}\u{440}\u{438}\u{432}\u{435}\u{442}";
+    let mut data: Vec<u8> = Vec::new();
+    data.extend_from_slice(b"// head\r\n#pragma code_page(1251)\r\nSTRINGTABLE\r\nBEGIN\r\n IDS_A \"");
+    let (ru, _, bad) = bilingua_model::encoding_rs::WINDOWS_1251.encode(hello);
+    assert!(!bad);
+    data.extend_from_slice(&ru);
+    data.extend_from_slice(b"\"\r\nEND\r\n#pragma code_page(1252)\r\nSTRINGTABLE\r\nBEGIN\r\n IDS_B \"Caf\xe9\"\r\nEND\r\n");
+    let doc = extract(&data).expect("several pragmas are read section by section");
+    assert_eq!(doc.units.iter().map(token_text).collect::<Vec<_>>(), vec![hello, "Caf\u{e9}"]);
+    assert_eq!(Rc.merge(&doc).unwrap(), data, "unchanged merge is the original bytes");
+    // a translation that fits both pages is written in each section's own page
+    let out = build(&data, &[(0, "\u{41f}\u{43e}\u{43a}\u{430}"), (1, "Th\u{e9}")]);
+    assert!(out.windows(2).any(|w| w == b"\"\xcf"), "1251 section keeps its page");
+    assert!(out.windows(3).any(|w| w == b"Th\xe9"), "1252 section keeps its page");
+    // a text neither page holds makes the whole file UTF-8 with every pragma 65001
+    let text = String::from_utf8(build(&data, &[(1, "\u{65e5}\u{672c}")])).expect("utf-8");
+    assert_eq!(text.matches("#pragma code_page(65001)").count(), 2, "{text}");
+    // a byte the section's page rejects is refused, and says which page
+    let bad = b"#pragma code_page(1252)\n#pragma code_page(932)\nSTRINGTABLE BEGIN 1 \"\x85\" END\n";
+    match extract(bad) {
+        Err(Error::Encoding(m)) => assert!(m.contains("932"), "{m}"),
+        other => panic!("{other:?}"),
+    }
 }

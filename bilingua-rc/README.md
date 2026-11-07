@@ -21,7 +21,9 @@ and at least one translated unit, the LANGUAGE statements (when they all name on
 and the `Translation` language are set to the target's Windows LANGID.
 
 **Encodings** (as LocOS): UTF-16 with a BOM, BOM-less UTF-16 LE (found by its zero bytes), UTF-8 with a BOM, the code page
-a `#pragma code_page(N)` declares (several different ones are refused), UTF-8, then Windows-1252. The file is written
+a `#pragma code_page(N)` declares, UTF-8, then Windows-1252. A file with several different pragmas (one section per
+language) is read section by section, each in the page of the pragma before it (the text before the first one in
+UTF-8 or Windows-1252); LocOS refuses these. The file is written
 back in the same encoding; a translation that does not fit an ANSI code page makes the file UTF-8 with every pragma
 set to 65001 (one is added at the top when there was none).
 
