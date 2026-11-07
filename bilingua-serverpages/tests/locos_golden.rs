@@ -190,7 +190,7 @@ fn matches_locos_on_random_pages_and_fixtures() {
             let got = build_doc(fmt, &data, &mp, None);
             match &c["builds"][label] {
                 serde_json::Value::String(h) => {
-                    let exp = hex(h);
+                    let exp = legacy_kept(&data, hex(h));
                     let got = got.unwrap_or_else(|e| panic!("{name}: build {label}: {e}"));
                     assert_eq!(nobom(&got), nobom(&exp), "{name}: build {label}");
                     builds += 1;
@@ -207,7 +207,7 @@ fn matches_locos_on_random_pages_and_fixtures() {
             let got = build_doc(fmt, &data, &mp, Some(loc));
             match &c["loc"][loc] {
                 serde_json::Value::String(h) => {
-                    let exp = hex(h);
+                    let exp = legacy_kept(&data, hex(h));
                     let got = got.unwrap_or_else(|e| panic!("{name}: localized {loc}: {e}"));
                     assert_eq!(nobom(&got), nobom(&exp), "{name}: localized {loc}");
                     builds += 1;
@@ -220,4 +220,14 @@ fn matches_locos_on_random_pages_and_fixtures() {
     assert!(ok >= 500, "only {ok} pages opened");
     assert!(refused_n >= 40, "only {refused_n} refusals");
     println!("{ok} pages ({with_units} with units) match LocOS, {builds} builds identical, {refused_n} refused by both, {attr_code_opened} opened with code between attributes");
+}
+
+/// LocOS's build with the one kept difference undone (MIGRATION.md, web group 11-07): a semicolon-less legacy
+/// reference the source wrote (`&amp text`, `&nbsp`) is written as it is; LocOS writes `&amp;amp text`.
+fn legacy_kept(data: &[u8], exp: Vec<u8>) -> Vec<u8> {
+    let (Ok(src), Ok(mut e)) = (std::str::from_utf8(data), String::from_utf8(exp.clone())) else { return exp };
+    for r in bilingua_htmlcore::pyx::legacy_refs(src) {
+        e = e.replace(&format!("&amp;{}", &r[1..]), &r);
+    }
+    e.into_bytes()
 }

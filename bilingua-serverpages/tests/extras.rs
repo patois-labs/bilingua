@@ -131,3 +131,10 @@ fn a_tag_library_script_element_is_code_not_text() {
     assert_eq!(t.first().map(String::as_str), Some("Top"));
     assert_eq!(t.last().map(String::as_str), Some("End"));
 }
+
+#[test]
+fn a_semicolon_less_legacy_reference_of_the_source_is_kept_as_written() {
+    let src = "<p>&nbsp&nbsp Hello <?= $x ?> &nbsp</p>";
+    let out = build_str("phtml", src, &[(0, &format!("&nbsp&nbsp Bonjour {X1} &nbsp & co"))]);
+    assert!(out.contains("<p>&nbsp&nbsp Bonjour <?= $x ?> &nbsp &amp; co</p>"), "{out}");
+}

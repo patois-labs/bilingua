@@ -628,3 +628,18 @@ fn an_orphan_end_tag_survives_a_translated_build() {
     assert!(out.contains("</b>"), "orphan end tag lost: {out}");
     assert!(out.contains("<i>"), "{out}");
 }
+
+#[test]
+fn a_semicolon_less_legacy_reference_of_the_source_is_kept_as_written() {
+    // HTML5 reads `&nbsp` (no `;`) in text as a no-break space; escaping its `&` would show the letters
+    let src = "<p>&nbsp&nbsp Hello &nbsp (more) &copy2024 AT&T</p>";
+    let mut d = round_trip(src);
+    translate_all(&mut d);
+    let out = merged(&d);
+    assert!(out.contains("&nbsp&nbsp Hello &nbsp (more) &copy2024 AT&amp;T~"), "{out}");
+    // a legacy name the source did not write without `;` is escaped as before
+    let mut d = extract("<p>Hello</p>");
+    let id = d.segments().next().unwrap().1.id.clone();
+    d.set_target(&id, vec![Inline::text("Bonjour &nbsp toi")]).unwrap();
+    assert!(merged(&d).contains("Bonjour &amp;nbsp toi"));
+}

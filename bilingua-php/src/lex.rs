@@ -523,7 +523,7 @@ pub fn lex<'a>(text: &'a str, mut pos: usize, limits: &Limits) -> Result<Vec<Tok
                 pos += 2;
                 continue;
             }
-            b'[' | b']' | b'(' | b')' | b',' | b';' | b'=' | b'.' | b'-' | b'+' => {
+            b'[' | b']' | b'(' | b')' | b',' | b';' | b'=' | b'.' | b'-' | b'+' | b'!' | b'{' | b'}' => {
                 toks.push(tok(Kind::Punct, pos, pos + 1, Quote::Single));
                 pos += 1;
                 continue;

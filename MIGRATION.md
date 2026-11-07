@@ -345,8 +345,10 @@ keeps the encoding:
 - XML, DITA and DocBook (11-06): Bilingua opens a file whose DOCTYPE has an internal subset (entity declarations,
   as in most DocBook 4 manuals); LocOS refuses it. The subset is kept byte for byte and never read: no entity
   (internal, external or parameter) is expanded or fetched, every `&name;` stays a code, and the depth and element
-  limits still apply. Every other XML format (ITS rules files, XLIFF, Office parts, resx, SVG, TTML and the rest)
-  still refuses entity declarations.
+  limits still apply. Every other XML format (ITS rules files, XLIFF, Office parts, resx, TTML and the rest)
+  still refuses entity declarations. SVG (11-07) accepts plain internal ones only (`<!ENTITY name "literal">`, no `&` in
+  the literal, at most 1024 bytes, at most 64, as Illustrator and Inkscape write for namespace URIs; external, parameter and nested
+  entities are still refused); a text node that uses a declared entity is not offered as a unit.
 - Every XML format that refuses entity declarations (11-06): Bilingua also refuses a part whose DOCTYPE, comment or
   processing instruction the XML readers would end in different places, so the depth, element and entity checks
   always cover what the reader builds: a DOCTYPE that is not closed, a `<`, `>` or bracket inside a quoted string of
@@ -708,6 +710,20 @@ translation with the source.
   `⟦xN⟧` its unit did not have was written as the source (LocOS `_tokens_ok`). The translation is written, token
   included. The native profile already did this.
 - The adapter needs no change. A repeated or wrong-kind real code is handled as before.
+
+## Differences from LocOS: web group (wild files round 2, 11-07)
+
+- PHP: the block guard `if (!defined('X') || !X) { die('...'); }` (with or without braces, the second test and a
+  plain string message) is skipped like `defined('X') OR die(...)`; LocOS refuses the file. Anything else in the block,
+  any call, interpolation or concatenation, and any statement after it still refuses the file.
+- HTML and server pages: a semicolon-less legacy reference that the unit's source wrote (`&nbsp`, `&copy`) is
+  written as it is in a target; LocOS `_escape_text` writes `&amp;nbsp`. A semicolon-less name the source did not
+  have is escaped as before.
+- Declared charsets (HTML, XML family, PO and the rest of the formats that read one): only the declarations in the
+  first 4096 characters are the file's own, so a later one is content and comes back as written; LocOS rewrites every
+  one it finds. A legacy file whose only declaration is further down is read by the default path (HTML used to refuse
+  it as "cannot be written back unchanged") with a
+  `text_encoding` warning that names the later charset.
 
 ## CAT OS core (note for the lead)
 

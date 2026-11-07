@@ -60,6 +60,28 @@ struct Found {
     left_alone: usize,
 }
 
+fn has_entity_declaration(text: &str) -> bool {
+    text.as_bytes().windows(8).any(|w| w.eq_ignore_ascii_case(b"<!ENTITY"))
+}
+
+/// True when the text holds `&name;` for any name but the five predefined XML entities.
+fn uses_custom_entity(s: &str) -> bool {
+    let mut rest = s;
+    while let Some(p) = rest.find('&') {
+        rest = &rest[p + 1..];
+        let Some(semi) = rest.find(';') else { return false };
+        let name = &rest[..semi];
+        if !name.is_empty()
+            && !name.starts_with('#')
+            && !matches!(name, "amp" | "lt" | "gt" | "quot" | "apos")
+            && name.chars().all(|c| c.is_alphanumeric() || matches!(c, '_' | '-' | '.' | ':'))
+        {
+            return true;
+        }
+    }
+    false
+}
+
 /// The units of an SVG text, as LocOS finds them, minus the text nodes that lie inside a comment, CDATA section,
 /// processing instruction, DOCTYPE or attribute value (see `xmlscan`).
 fn find_nodes(text: &str, limits: Option<&Limits>) -> Result<Found, Error> {
@@ -86,6 +108,14 @@ fn find_nodes(text: &str, limits: Option<&Limits>) -> Result<Found, Error> {
         let (s, e) = ranges[n.ti];
         !regions.overlaps(s, e)
     });
+    // A DOCTYPE with entity declarations: a text node that uses one of them (`&name;`) is not edited, because a
+    // translation written back would turn the reference into the letters `&amp;name;`.
+    if has_entity_declaration(text) {
+        nodes.retain(|n| {
+            let (s, e) = ranges[n.ti];
+            !uses_custom_entity(&text[s..e])
+        });
+    }
     let left_alone = before - nodes.len();
     Ok(Found { ranges, nodes, left_alone })
 }
@@ -107,7 +137,7 @@ fn svg_extract(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
 fn svg_read(bytes: &[u8], opts: &ExtractOptions, keep_whole: bool) -> Result<Document, Error> {
     let limits = opts.limits();
     guard::check_input(bytes, &limits)?;
-    guard::check_xml(bytes, &limits)?;
+    guard::check_xml_internal_entities(bytes, &limits)?;
     let dec = enc::decode_text(bytes, &DecodeOptions::new(opts).declared())?;
     let text = &dec.text;
     // twenty markup characters per allowed segment, as LocOS does before it splits a tag at a time

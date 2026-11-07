@@ -385,7 +385,59 @@ fn markup_bytes(bytes: &[u8]) -> std::borrow::Cow<'_, [u8]> {
 /// bytes is scanned: UTF-16 and UTF-8 for `<\0` without a byte order mark, and the double-byte code pages for
 /// bytes that are not UTF-8.
 pub fn check_xml(bytes: &[u8], l: &Limits) -> Result<(), Error> {
-    check_xml_with(bytes, l, false)
+    check_xml_with(bytes, l, false, false)
+}
+
+/// Like [`check_xml`], but a DOCTYPE may declare plain internal entities: `<!ENTITY name "literal">` with a literal
+/// that holds no `&` (so no entity expands into another), at most 1024 bytes long, and at most 64 of them. Adobe Illustrator, Inkscape and
+/// Sodipodi SVGs declare a few of these for namespace URIs. External (`SYSTEM`, `PUBLIC`) and parameter (`%`)
+/// entities are refused as before, and every other check of [`check_xml`] still applies. For a reader that never
+/// expands an entity (the SVG filter keeps every `&name;` as typed).
+pub fn check_xml_internal_entities(bytes: &[u8], l: &Limits) -> Result<(), Error> {
+    check_xml_with(bytes, l, false, true)
+}
+
+/// True when every `<!ENTITY` declaration in a DOCTYPE is `<!ENTITY name "literal">` (or single quotes) and the
+/// literal has no `&`; false for an external or parameter entity, a malformed one, or more than 64.
+fn only_plain_internal_entities(doctype: &[u8]) -> bool {
+    let mut n = 0usize;
+    let mut from = 0usize;
+    while let Some(p) = doctype[from..].windows(8).position(|w| w.eq_ignore_ascii_case(b"<!ENTITY")) {
+        n += 1;
+        if n > 64 {
+            return false;
+        }
+        let mut j = from + p + 8;
+        let ws = |j: &mut usize| {
+            let s = *j;
+            while *j < doctype.len() && matches!(doctype[*j], b' ' | b'\t' | b'\r' | b'\n') {
+                *j += 1;
+            }
+            *j > s
+        };
+        if !ws(&mut j) {
+            return false;
+        }
+        let name_start = j;
+        while j < doctype.len() && (doctype[j].is_ascii_alphanumeric() || matches!(doctype[j], b'_' | b'-' | b'.' | b':')) {
+            j += 1;
+        }
+        if j == name_start || !ws(&mut j) || j >= doctype.len() {
+            return false;
+        }
+        let q = doctype[j];
+        if q != b'"' && q != b'\'' {
+            return false;
+        }
+        let Some(len) = doctype[j + 1..].iter().position(|c| *c == q) else { return false };
+        // no `&`: nothing expands into anything; at most 1024 bytes: a few references cannot blow up a reader
+        // that does expand them (the file is written back as it is, for browsers and editors to read)
+        if len > 1024 || doctype[j + 1..j + 1 + len].contains(&b'&') {
+            return false;
+        }
+        from = j + 1 + len + 1;
+    }
+    true
 }
 
 /// Like [`check_xml`] for document formats where a DTD with entity declarations is normal (DocBook, DITA, plain
@@ -393,7 +445,7 @@ pub fn check_xml(bytes: &[u8], l: &Limits) -> Result<(), Error> {
 /// that never expands or fetches an entity, as the XML filter family does: it keeps every `&name;` as an opaque
 /// code and writes the DOCTYPE back byte for byte.
 pub fn check_xml_keeping_dtd(bytes: &[u8], l: &Limits) -> Result<(), Error> {
-    check_xml_with(bytes, l, true)
+    check_xml_with(bytes, l, true, false)
 }
 
 /// End of a `<!DOCTYPE ...>` that starts at `i`: the index of its closing `>` (or `b.len()`). Quoted strings, the
@@ -523,14 +575,14 @@ fn markup_views(bytes: &[u8]) -> Vec<std::borrow::Cow<'_, [u8]>> {
     v
 }
 
-fn check_xml_with(bytes: &[u8], l: &Limits, keep_dtd: bool) -> Result<(), Error> {
+fn check_xml_with(bytes: &[u8], l: &Limits, keep_dtd: bool, internal_ok: bool) -> Result<(), Error> {
     for view in markup_views(bytes) {
-        scan_xml(&view, l, keep_dtd)?;
+        scan_xml(&view, l, keep_dtd, internal_ok)?;
     }
     Ok(())
 }
 
-fn scan_xml(b: &[u8], l: &Limits, keep_dtd: bool) -> Result<(), Error> {
+fn scan_xml(b: &[u8], l: &Limits, keep_dtd: bool, internal_ok: bool) -> Result<(), Error> {
     let strict = !keep_dtd;
     let (mut i, mut depth, mut elements) = (0usize, 0usize, 0usize);
     while i < b.len() {
@@ -563,7 +615,7 @@ fn scan_xml(b: &[u8], l: &Limits, keep_dtd: bool) -> Result<(), Error> {
             }
         } else if rest.len() >= 9 && rest[..9].eq_ignore_ascii_case(b"<!DOCTYPE") {
             let end = doctype_end(b, i);
-            if !keep_dtd && contains_ci(&b[i..end], b"<!ENTITY") {
+            if !keep_dtd && contains_ci(&b[i..end], b"<!ENTITY") && !(internal_ok && only_plain_internal_entities(&b[i..end])) {
                 return Err(unsafe_xml(
                     "This file declares XML entities (a DTD), which could expand without limit or read other files. It was not processed.",
                 ));
@@ -730,6 +782,37 @@ mod tests {
         assert_eq!(kind(check_xml(xxe, &Limits::default())), Some(LimitKind::XmlEntities));
         let param = br#"<!doctype r [ <!entity % p SYSTEM "http://example.invalid/x.dtd"> %p; ]><r/>"#;
         assert_eq!(kind(check_xml(param, &Limits::default())), Some(LimitKind::XmlEntities));
+    }
+
+    #[test]
+    fn internal_entities_mode_allows_only_plain_literals() {
+        let l = Limits::default();
+        let ok = br#"<?xml version="1.0"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd" [ <!ENTITY ns_a "http://ns.example.invalid/a/1.0/"> <!ENTITY b 'x'> ]><svg xmlns:a="&ns_a;"/>"#;
+        assert!(check_xml_internal_entities(ok, &l).is_ok());
+        assert_eq!(kind(check_xml(ok, &l)), Some(LimitKind::XmlEntities), "the strict check still refuses it");
+        for bad in [
+            r#"<!DOCTYPE r [<!ENTITY lol "lol"><!ENTITY lol2 "&lol;&lol;">]><r/>"#,
+            r#"<!DOCTYPE r [<!ENTITY x SYSTEM "file:///etc/hosts">]><r/>"#,
+            r#"<!DOCTYPE r [<!ENTITY x PUBLIC "a" "b">]><r/>"#,
+            r#"<!DOCTYPE r [<!ENTITY % p "x">]><r/>"#,
+            r#"<!DOCTYPE r [<!ENTITY x>]><r/>"#,
+            r#"<!DOCTYPE r [<!ENTITY x "unclosed>]><r/>"#,
+            r#"<!ENTITY x "y"><r/>"#,
+        ] {
+            assert_eq!(kind(check_xml_internal_entities(bad.as_bytes(), &l)), Some(LimitKind::XmlEntities), "{bad}");
+        }
+        let long = format!("<!DOCTYPE r [<!ENTITY x \"{}\">]><r/>", "a".repeat(1025));
+        assert_eq!(kind(check_xml_internal_entities(long.as_bytes(), &l)), Some(LimitKind::XmlEntities));
+        // a literal never carries markup: a quoted '<' or '>' in the DOCTYPE is refused
+        for bad in [r#"<!DOCTYPE r [<!ENTITY x "<g/>">]><r/>"#, r#"<!DOCTYPE r [<!ENTITY x "a>b">]><r/>"#] {
+            assert!(check_xml_internal_entities(bad.as_bytes(), &l).is_err(), "{bad}");
+        }
+        // declared entities do not lift the depth and element limits
+        let tight = Limits { max_xml_depth: 2, max_xml_elements: 3, ..Limits::default() };
+        let deep = r#"<!DOCTYPE r [<!ENTITY x "y">]><r><a><b>&x;</b></a></r>"#;
+        assert!(check_xml_internal_entities(deep.as_bytes(), &tight).is_err());
+        let many: String = (0..65).map(|k| format!("<!ENTITY e{k} \"v\">")).collect();
+        assert!(check_xml_internal_entities(format!("<!DOCTYPE r [{many}]><r/>").as_bytes(), &l).is_err());
     }
 
     #[test]
