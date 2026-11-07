@@ -603,6 +603,14 @@ impl Tree {
         s
     }
 
+    /// Drops the text after the root element when it is only white space (lxml's `tostring` of the tree writes
+    /// none, so LocOS's rewritten story ends at `</idPkg:Story>`).
+    pub fn drop_blank_epilog(&mut self) {
+        if self.epilog.chars().all(|c| matches!(c, ' ' | '\t' | '\r' | '\n')) {
+            self.epilog.clear();
+        }
+    }
+
     /// The text before the root element (declaration, comments, instructions).
     pub fn prolog(&self) -> &str {
         &self.prolog

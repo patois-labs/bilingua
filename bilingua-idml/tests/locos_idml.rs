@@ -486,3 +486,21 @@ fn token_shuffle_fuzz() {
         assert_eq!(units_of(&out).last().unwrap(), "Next para.", "{text}");
     }
 }
+
+/// W4 idml-2: a rebuilt range keeps the indentation after its `<Properties>` (LocOS's `_shallow` deep-copies it
+/// with its tail), and under the LocOS profile a rewritten story ends at `</idPkg:Story>` as lxml writes it.
+#[test]
+fn rebuilt_range_keeps_properties_tail_and_profile_drops_the_epilog() {
+    let props = "<Properties><Leading type=\"unit\">12</Leading></Properties>\n\t\t\t\t";
+    let data = package(psr(&csr(&format!("{props}<Content>Hello.</Content>"))));
+    for profile_on in [false, true] {
+        let mut doc = extract(&data);
+        let id = doc.units[0].id.clone();
+        translate(&mut doc, &[(&id, "Hallo.".to_string())]);
+        let out = if profile_on { Idml.merge_with(&doc, &profile::locos().merge_options("idml")).unwrap() } else { merge(&doc) };
+        let s = raw_story(&out, "a");
+        assert!(s.contains("</Properties>\n\t\t\t\t<Content>Hallo.</Content>"), "{s}");
+        assert_eq!(s.ends_with("</idPkg:Story>"), profile_on, "{s:?}");
+        assert_eq!(s.ends_with("</idPkg:Story>\n"), !profile_on, "{s:?}");
+    }
+}

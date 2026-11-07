@@ -137,6 +137,10 @@ fn merge_doc(doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
                         story::stamp_rtl(&mut tree, &ranges);
                     }
                 }
+                if opts.is_profile(bilingua_model::profile::LOCOS) {
+                    // LocOS re-serialises the story with lxml: nothing after `</idPkg:Story>` (W4 idml-2)
+                    tree.drop_blank_epilog();
+                }
                 replaced.insert(member.as_str(), encode_xml(&tree.to_xml(), enc));
             }
         }

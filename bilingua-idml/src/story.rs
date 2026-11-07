@@ -611,13 +611,18 @@ pub fn normalize(t: &mut Tree, paras: &[Para]) {
     }
 }
 
+/// LocOS `_shallow`: a copy of the element with only its `Properties` and `XMLAttribute` children. Those are
+/// `deepcopy`'d, which keeps each one's tail, so the indentation between `</Properties>` and the content that follows
+/// stays as LocOS writes it (W4 idml-2); the clone itself has no tail.
 fn shallow(t: &mut Tree, el: Id) -> Id {
     let name = t.name(el).to_string();
     let attrs = t.attrs(el).to_vec();
     let clone = t.new_element(&name, &attrs);
     for c in t.children(el).to_vec() {
         if t.is_element(c) && KEEP_ON_CLONE.contains(&t.local(c)) {
+            let tail = t.tail_raw(c).to_string();
             let cp = t.deep_copy(c);
+            t.set_tail_raw(cp, &tail);
             t.append(clone, cp);
         }
     }
