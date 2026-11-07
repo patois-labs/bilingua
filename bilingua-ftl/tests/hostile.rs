@@ -26,7 +26,7 @@ fn check(data: &[u8]) {
             assert_eq!(structure(&filled).unwrap().junk, structure(&out).unwrap().junk, "plural fill must not add Junk");
             assert_eq!(units(&out).len(), n, "unit count after translation {:?} -> {:?}", String::from_utf8_lossy(data), String::from_utf8_lossy(&out));
         }
-        Err(Error::Parse { .. } | Error::Unsupported(_) | Error::Limit(_)) => {}
+        Err(Error::Parse { .. } | Error::Unsupported(_) | Error::Limit(_) | Error::Encoding(_)) => {}
         Err(e) => panic!("unexpected error kind: {e}"),
     }
 }
@@ -78,7 +78,7 @@ fn deep_and_huge_inputs_give_typed_errors() {
     // nesting: refused before the parser
     for n in [41usize, 200, 100_000] {
         let deep = format!("x = {}$a{}\n", "{ ".repeat(n), " }".repeat(n));
-        assert!(matches!(extract(deep.as_bytes()), Err(Error::Unsupported(_))), "{n}");
+        assert!(matches!(extract(deep.as_bytes()), Err(Error::Limit(_))), "{n}");
     }
     // nesting at the limit still parses
     let ok = format!("x = {}$a{}\n", "{ ".repeat(40), " }".repeat(40));

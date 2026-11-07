@@ -77,8 +77,14 @@ impl Limits {
     }
 }
 
-fn limit_err(msg: String) -> Error {
-    Error::Unsupported(msg)
+/// A budget refusal: code `limit` (LocOS InputLimitError).
+fn limit_err(kind: bilingua_model::LimitKind, msg: String) -> Error {
+    bilingua_model::LimitError::new(kind, msg).into()
+}
+
+/// A decode refusal: code `encoding` (LocOS UnsupportedEncodingError).
+fn enc_err(msg: &str) -> Error {
+    Error::Encoding(msg.into())
 }
 
 /// Python `str.isspace` (Rust's `White_Space` plus the four separators U+001C to U+001F).
@@ -96,10 +102,10 @@ fn decode(bytes: &[u8]) -> Result<(&str, bool), Error> {
         None => (bytes, false),
     };
     let text = std::str::from_utf8(body).map_err(|e| {
-        if body.contains(&0) {
-            limit_err("this file is not valid UTF-8 and looks like a binary file, not text; re-save it as UTF-8".into())
+        if bilingua_model::enc::looks_binary(body) {
+            enc_err("file is not valid UTF-8 and looks like a binary file, not text; re-save the file as UTF-8.")
         } else {
-            limit_err(format!(
+            Error::Encoding(format!(
                 "Fluent .ftl files are UTF-8; byte 0x{:02x} at position {} is not. Re-save the file as UTF-8.",
                 body[e.valid_up_to()],
                 e.valid_up_to() + if bom { 3 } else { 0 }
@@ -107,7 +113,7 @@ fn decode(bytes: &[u8]) -> Result<(&str, bool), Error> {
         }
     })?;
     if text.contains('\0') {
-        return Err(limit_err("this file is not valid UTF-8 text (it holds NUL bytes); re-save it as UTF-8".into()));
+        return Err(enc_err("file is not valid UTF-8 text (it holds NUL bytes); re-save the file as UTF-8."));
     }
     Ok((text, bom))
 }
@@ -115,23 +121,29 @@ fn decode(bytes: &[u8]) -> Result<(&str, bool), Error> {
 /// Line count, placeable count and nesting depth, before the parser builds anything.
 fn check_budget(text: &str, l: &Limits) -> Result<(), Error> {
     bilingua_model::guard::check_lines(text, &l.model())?;
+    // LocOS check_ftl_budget: the placeable count first, then the nesting depth, with its sentences
     let budget = l.max_units.saturating_mul(20);
-    let (mut opens, mut depth) = (0usize, 0usize);
+    if text.bytes().filter(|&b| b == b'{').count() > budget {
+        return Err(limit_err(
+            bilingua_model::LimitKind::Units,
+            format!(
+                "This Fluent file has far more placeables than MAX_DOCUMENT_SEGMENTS allows ({}). Split it into smaller files.",
+                l.max_units
+            ),
+        ));
+    }
+    let mut depth = 0usize;
     for &b in text.as_bytes() {
         match b {
             b'{' => {
-                opens += 1;
                 depth += 1;
                 if depth > MAX_NESTING {
-                    return Err(limit_err(format!("this Fluent file nests placeables more than {MAX_NESTING} deep")));
+                    return Err(limit_err(bilingua_model::LimitKind::Depth, format!("This Fluent file nests placeables more than {MAX_NESTING} deep.")));
                 }
             }
             b'}' => depth = depth.saturating_sub(1),
             _ => {}
         }
-    }
-    if opens > budget {
-        return Err(limit_err(format!("this Fluent file has more than {budget} placeables; split it into smaller files")));
     }
     Ok(())
 }

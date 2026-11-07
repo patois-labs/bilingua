@@ -9,6 +9,13 @@ is listed here).
 
 ### Added
 
+- Python: `BilinguaError.detail`, the parser's own sentence (a `parse` error's message without its
+  `not a <format> file:` prefix; the message itself for every other code).
+- Rust: `profile::tokens::parse_locos_text_for(format, text, map)`: the token rules of a format's LocOS filter (TOML
+  and JavaScript modules drop a wrong-kind token that names a code of the unit, LocOS #814.1); `locos_set_targets`
+  in Python uses it. `Limits::from_model` in bilingua-arb, -jsmodule, -resjson and -yaml, `Limits::capped_by` in
+  bilingua-json5.
+
 - PHP arrays: the block form of the direct-access guard, `if (!defined('X') || !X) { die('...'); }` (SugarCRM, vtiger),
   is accepted like `defined('X') OR die(...)`. Anything else in the block is still refused.
 - SVG: a DOCTYPE that declares plain internal entities (`<!ENTITY ns "http://...">`, as Illustrator and Inkscape
@@ -27,6 +34,22 @@ is listed here).
   `tools/build-wheel-m5.sh` builds and tests a manylinux_2_28 wheel on a Linux host.
 
 ### Changed
+
+- Error codes (W2): every size, budget and nesting refusal is code `limit` (`Error::Limit` with a `LimitKind`) and
+  every byte-level decode refusal code `encoding` (`Error::Encoding`), with LocOS's sentence where LocOS has one, in
+  arb, dtd, ftl, ini, jsmodule, json5, properties, resjson, strings, toml and yaml. They were `unsupported` or
+  `parse`. No code was added or removed.
+- arb, jsmodule, resjson, toml, yaml: `Filter::extract` takes its limits from `ExtractOptions::limits` (LocOS's
+  numbers by default), so the adapter's `MAX_DOCUMENT_SEGMENTS` reaches their budgets; json5 lowers its own limits to
+  them when they are set. LocOS's pre-parse budgets added: arb (`check_json_budget`), toml (`_budget`), resx, wxl,
+  Android strings, Java XML properties and Qt ts (`check_xml_budget`).
+- LocOS profile: xaml and resjson keep their encoding (UTF-16 with its BOM, a declared legacy charset) as LocOS does;
+  yaml values are plain text with no style (LocOS's yaml filter has no inline map); an xcloc bundle's members are read
+  and written by the LocOS XLIFF port (trimmed text, `p_index` offset by the sources of the earlier members, LocOS's
+  writer and `_mark_translated`).
+- xcstrings (LocOS profile): a changed catalog writes empty objects as `{}`, as LocOS's `json.dumps` does.
+- xaml: a DOCTYPE is refused with LocOS's sentence, "This XAML file declares a DOCTYPE / DTD; refused (XAML never
+  needs one)."
 
 - markdown: `markdown.fm_keys` is applied (front matter keys to translate, LocOS's `LOC_TMS_FRONT_MATTER_KEYS`), in
   native mode and under the LocOS profile; the profile's units carry LocOS's image inventory as unit extras

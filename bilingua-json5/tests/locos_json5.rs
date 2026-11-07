@@ -297,7 +297,9 @@ fn encodings_utf16_is_read_and_written_back_as_utf16() {
 #[test]
 fn encodings_binary_is_refused() {
     let bin = b"\xff\xd8\xff\x00\x81binary\x00".repeat(10);
-    assert!(matches!(open(&bin), Err(Error::Unsupported(_))));
+    assert!(
+        matches!(open(&bin), Err(Error::Encoding(m)) if m == "file is not valid UTF-8 and looks like a binary file, not text; re-save the file as UTF-8.")
+    );
 }
 
 // ---------------------------------------------------------------- hostile
@@ -375,11 +377,32 @@ fn hostile_budgets_and_caps() {
     let commas = format!("[{}]", vec!["1"; 200].join(","));
     for bad in [many, quotes, commas] {
         let e = five.extract(bad.as_bytes(), &opts()).unwrap_err();
-        assert!(matches!(e, Error::Parse { .. }), "{e}");
+        assert!(matches!(e, Error::Limit(_)), "{e}");
     }
     let short = Json5Filter::with_limits({ let mut built = Limits::default(); built.max_unit_chars = 50; built });
     let long = format!("{{a: '{}'}}", "word ".repeat(40));
     assert!(short.extract(long.as_bytes(), &opts()).is_err());
     let tiny = Json5Filter::with_limits({ let mut built = Limits::default(); built.max_bytes = 10; built });
     assert!(tiny.extract(b"{a: 'hello world'}", &opts()).is_err());
+}
+
+/// B-side 8 (verify_json5_filter:243-246, MAX_DOCUMENT_SEGMENTS=3): LocOS `check_json5_budget` refuses the quote
+/// and comma floods before parsing; `Filter::extract` follows `ExtractOptions::limits` and does too, code `limit`.
+#[test]
+fn json5_budget_follows_the_call_limits() {
+    let mut o = opts();
+    o.limits = Some(bilingua_model::Limits::new().with_max_units(3));
+    let f = Json5Filter::default();
+    let quotes = format!("[{}]", "''".repeat(200));
+    let e = f.extract(quotes.as_bytes(), &o).unwrap_err();
+    assert!(
+        matches!(&e, Error::Limit(l) if l.msg == "This JSON5/JSONC file has far more strings than MAX_DOCUMENT_SEGMENTS allows (3). Split it into smaller files."),
+        "{e:?}"
+    );
+    let ones = format!("[{}]", "1,".repeat(200));
+    let e = f.extract(ones.as_bytes(), &o).unwrap_err();
+    assert!(matches!(&e, Error::Limit(l) if l.msg.contains("far more values")), "{e:?}");
+    let many = format!("{{{}}}", (0..10).map(|i| format!("k{i}: 'Value {i}'")).collect::<Vec<_>>().join(","));
+    assert!(matches!(f.extract(many.as_bytes(), &o), Err(Error::Limit(_))));
+    assert_eq!(f.extract(b"{a: 'One', b: 'Two'}", &o).unwrap().units.len(), 2);
 }

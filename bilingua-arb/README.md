@@ -37,8 +37,11 @@ before them, `@@` keys are file-wide (`@@locale`). This crate follows Localizati
 
 ## Limits
 
-`Limits::default()`: 256 MiB, 1,000,000 units, JSON nesting 200. `Arb.extract_with(bytes, opts, &limits)` lowers them.
-Input must be UTF-8 (a BOM is kept); anything else is a typed error, never decoded with replacement characters.
+`Filter::extract` takes the unit cap and file size from `ExtractOptions::limits` (LocOS's numbers by default) and runs
+LocOS's `check_json_budget` before parsing (quotes over 40 x the unit cap, `, [ {` over 20 x). `Limits::default()` (256 MiB,
+1,000,000 units, JSON nesting 200) is for `Arb.extract_with(bytes, opts, &limits)`. Every refusal is `Error::Limit`
+(code `limit`). Input must be UTF-8 (a BOM is kept); anything else is `Error::Encoding` (code `encoding`), never decoded
+with replacement characters.
 
 ## Differences from Localization OS
 

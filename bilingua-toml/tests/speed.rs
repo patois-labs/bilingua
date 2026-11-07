@@ -27,7 +27,10 @@ fn five_megabytes_extract_and_merge() {
     let s = generate();
     assert!(s.len() >= 5_000_000);
     let t = Instant::now();
-    let mut d = TomlFilter.extract(s.as_bytes(), &ExtractOptions::default()).unwrap();
+    // more units than LocOS's default MAX_DOCUMENT_SEGMENTS (50000): raise it, as a desktop caller would
+    let mut o = ExtractOptions::default();
+    o.limits = Some(Limits::new().with_max_units(200_000).with_max_lines(20 * 200_000));
+    let mut d = TomlFilter.extract(s.as_bytes(), &o).unwrap();
     let extract = t.elapsed();
     assert!(d.units.len() > 50_000);
     assert_eq!(TomlFilter.merge(&d).unwrap(), s.as_bytes());

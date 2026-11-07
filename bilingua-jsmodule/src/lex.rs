@@ -485,7 +485,7 @@ pub fn lex(text: &str, limits: &Limits) -> Result<Vec<Tok>, ModuleError> {
         }
         if toks.len() > cap {
             return Err(ModuleError::Limit(format!(
-                "This file has far more tokens than the limit allows ({} units). Split it into smaller files.",
+                "This file has far more tokens than MAX_DOCUMENT_SEGMENTS allows ({}). Split it into smaller files.",
                 limits.max_units
             )));
         }

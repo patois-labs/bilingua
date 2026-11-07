@@ -24,12 +24,14 @@ let out = Resjson.merge(&doc)?;
   the LocOS context (`menu`) and key (`open`; empty for an array element). A repeated key is marked
   `extra["duplicate"] = "true"`.
 - UTF-8 (with or without BOM) and UTF-16 with a BOM are read and written back the same way. UTF-32 and other
-  encodings are refused (`Error::Unsupported`).
+  encodings are refused (`Error::Encoding`, code `encoding`). Under the LocOS profile a UTF-16 file is
+  written back as UTF-16 with its BOM, as LocOS does.
 - Placeholders stay plain text (no inline tags): LocOS does not tokenise them in its filter and neither does
   Okapi's JSON filter.
 - A value with a lone surrogate escape (`"\ud800"`) cannot be a Rust string: it is left in the file, not a unit.
 - Limits (`Limits`, LocOS defaults): 50 000 units, 100 000 characters per unit, 64 levels, 256 MiB; the LocOS
   budgets of lines, quotes and separators relative to the unit limit. Nothing recurses, so deep input cannot
-  overflow the stack. `Resjson.extract_with(bytes, opts, &limits)` takes custom limits.
+  overflow the stack. `Filter::extract` takes them from `ExtractOptions::limits`; `Resjson.extract_with(bytes,
+  opts, &limits)` takes custom ones. Every refusal is `Error::Limit` (code `limit`).
 - `sniff` is true only for a file that parses and has a JavaScript comment or an `_id.comment` member, so plain
   JSON stays JSON.

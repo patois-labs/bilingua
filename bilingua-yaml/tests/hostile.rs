@@ -17,7 +17,7 @@ fn check(bytes: &[u8]) {
             let again = Yaml.extract(&out, &opts(None)).expect("a pseudo-translated merge must parse");
             assert_eq!(again.units.len(), d.units.len());
         }
-        Err(Error::Parse { .. } | Error::Unsupported(_)) => {}
+        Err(Error::Parse { .. } | Error::Unsupported(_) | Error::Limit(_) | Error::Encoding(_)) => {}
         Err(e) => panic!("unexpected error kind {e:?}"),
     }
 }
@@ -77,7 +77,7 @@ fn deep_huge_and_odd_files_return_errors_fast() {
     ];
     for c in &cases {
         match Yaml.extract(c, &opts(None)) {
-            Ok(_) | Err(Error::Parse { .. }) | Err(Error::Unsupported(_)) => {}
+            Ok(_) | Err(Error::Parse { .. }) | Err(Error::Limit(_)) | Err(Error::Encoding(_)) => {}
             Err(e) => panic!("{e:?}"),
         }
     }
@@ -87,7 +87,7 @@ fn deep_huge_and_odd_files_return_errors_fast() {
 #[test]
 fn deeply_nested_blocks_are_refused_not_overflowed() {
     let deep: String = (0..250).map(|i| format!("{}k:\n", " ".repeat(i))).collect::<String>() + &" ".repeat(250) + "v: x\n";
-    assert!(matches!(Yaml.extract(deep.as_bytes(), &opts(None)), Err(Error::Unsupported(_))));
+    assert!(matches!(Yaml.extract(deep.as_bytes(), &opts(None)), Err(Error::Limit(_))));
     let ok: String = (0..150).map(|i| format!("{}k:\n", " ".repeat(i))).collect::<String>() + &" ".repeat(150) + "v: x\n";
     assert_eq!(Yaml.extract(ok.as_bytes(), &opts(None)).unwrap().units.len(), 1);
 }

@@ -169,7 +169,7 @@ pub fn to_document_in(
         None => (false, original),
     };
     let text = std::str::from_utf8(body)
-        .map_err(|e| bilingua_model::Error::Parse { format: id.to_string(), msg: format!("not valid UTF-8: {e}") })?;
+        .map_err(|e| bilingua_model::Error::Encoding(format!("This {id} file is not valid UTF-8: {e}")))?;
     let mut units: Vec<Unit> = Vec::new();
     let mut unit_of: Vec<Option<usize>> = vec![None; doc.unit_count()];
     let (unit_ids, seg_ids) = segment_ids(doc);

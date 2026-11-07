@@ -53,7 +53,7 @@ let out = Php.merge(&doc)?;
   its body is refused (PHP closes it at a label after that CR, LocOS reads code between two heredocs as text); `$`
   before any non-ASCII character is interpolation (LocOS misses characters above U+FFFF). See
   `tests/gate_adversarial.rs`.
-- "Nested too deeply" (more than 32 levels) is `Error::Unsupported`; `bilingua-model` has no depth `LimitKind`.
+- "Nested too deeply" (more than 32 levels) is `Error::Limit` with `LimitKind::Depth` (code `limit`).
 
 ## Differences from Okapi `okf_phpcontent`
 

@@ -185,7 +185,7 @@ impl Filter for Po {
             .and_then(|l| l.to_ascii_lowercase().split("charset=").nth(1).map(|c| c.trim().to_string()))
             .is_none_or(|c| c.is_empty() || c == "utf-8" || c == "utf8" || c == "ascii" || c == "us-ascii" || c == "charset");
         if !charset_ok {
-            return Err(Error::Unsupported("PO files that are not UTF-8".into()));
+            return Err(Error::Encoding("PO files that are not UTF-8 are not supported here; re-save the file as UTF-8.".into()));
         }
         let header_lang = header_text
             .lines()

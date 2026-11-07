@@ -125,13 +125,13 @@ fn truncated_escape_is_a_typed_error() {
 fn limits_give_typed_errors() {
     let small = { let mut built = Limits::default(); built.max_input_bytes = 100; built };
     let err = Properties.extract_with(&[b'a'; 200], &opts(), &small).unwrap_err();
-    assert!(matches!(err, Error::Unsupported(m) if m.contains("limit")));
+    assert!(matches!(&err, Error::Limit(e) if e.msg.contains("limit") && e.kind == LimitKind::InputBytes), "{err:?}");
     let l = { let mut built = Limits::default(); built.max_value_chars = 1000; built };
     let long = format!("k = {}\n", "word ".repeat(400));
-    assert!(matches!(Properties.extract_with(long.as_bytes(), &opts(), &l), Err(Error::Unsupported(_))));
+    assert!(matches!(Properties.extract_with(long.as_bytes(), &opts(), &l), Err(Error::Limit(_))));
     // a flood of blank lines is refused before any per-line work
     let l = { let mut built = Limits::default(); built.max_units = 5; built };
-    assert!(matches!(Properties.extract_with("\n".repeat(500).as_bytes(), &opts(), &l), Err(Error::Unsupported(_))));
+    assert!(matches!(Properties.extract_with("\n".repeat(500).as_bytes(), &opts(), &l), Err(Error::Limit(_))));
 }
 
 #[test]

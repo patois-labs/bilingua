@@ -175,12 +175,12 @@ fn bom_and_crlf_are_kept_and_locale_insertion_follows_the_line_ending() {
 #[test]
 fn only_utf8_is_read() {
     let latin1 = b"{\"a\": \"caf\xe9\"}";
-    assert!(matches!(Arb.extract(latin1, &ExtractOptions::default()), Err(Error::Parse { .. })));
+    assert!(matches!(Arb.extract(latin1, &ExtractOptions::default()), Err(Error::Encoding(_))));
     let mut utf16 = vec![0xFF, 0xFE];
     for c in "{\"a\": \"b\"}".encode_utf16() {
         utf16.extend(c.to_le_bytes());
     }
-    assert!(matches!(Arb.extract(&utf16, &ExtractOptions::default()), Err(Error::Unsupported(_))));
+    assert!(matches!(Arb.extract(&utf16, &ExtractOptions::default()), Err(Error::Encoding(_))));
 }
 
 #[test]

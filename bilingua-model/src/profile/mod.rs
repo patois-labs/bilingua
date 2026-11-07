@@ -99,8 +99,10 @@ pub fn check(name: Option<&str>) -> Result<(), Error> {
 /// Formats whose files Localization OS writes back in their own encoding (UTF-16 included) rather than as UTF-8:
 /// ini, strings and dxf; plain text (LocOS `encode_like`: its BOM, UTF-16, or Windows-1252 when the text fits);
 /// properties (an ISO-8859-1 file stays ISO-8859-1, `\uXXXX` for the rest). The LocOS PO and subtitle writers keep
-/// the file's encoding themselves.
-const LOCOS_KEEPS_ENCODING: &[&str] = &["ini", "strings", "dxf", "txt", "properties"];
+/// the file's encoding themselves. XAML (LocOS `xaml_filter`: a UTF-16 file keeps its BOM and UTF-16, a declared
+/// legacy charset stays, with a character reference for what it cannot hold) and resjson (`resjson_filter`: the
+/// UTF-16 BOM and code units kept) too.
+const LOCOS_KEEPS_ENCODING: &[&str] = &["ini", "strings", "dxf", "txt", "properties", "xaml", "resjson"];
 
 impl Profile {
     /// The oldest version of this profile the release can still produce.
@@ -124,7 +126,7 @@ impl Profile {
     }
 
     /// The merge options this profile uses for a document of `format` (a filter id). Localization OS: UTF-8 out,
-    /// except for the formats it writes in their own encoding (ini, strings, dxf, txt and properties: `Keep`), and the target language
+    /// except for the formats it writes in their own encoding (ini, strings, dxf, txt, properties, xaml and resjson: `Keep`), and the target language
     /// stamped and plurals filled even when nothing is translated (lead decision 11-04).
     pub fn merge_options(&self, format: &str) -> MergeOptions {
         let enc = if LOCOS_KEEPS_ENCODING.contains(&format) { OutputEncoding::Keep } else { OutputEncoding::Utf8 };
@@ -170,14 +172,16 @@ pub fn annotate(doc: &mut Document, profile: Option<&str>) {
 }
 
 /// Formats whose LocOS units carry no style (`""`) where Bilingua sets `context.style`.
-const LOCOS_NO_STYLE: &[&str] = &["po", "wxl", "xaml", "resx", "strings", "properties", "json", "json5", "resjson", "arb"];
+const LOCOS_NO_STYLE: &[&str] = &["po", "wxl", "xaml", "resx", "strings", "properties", "json", "json5", "resjson", "arb", "yaml"];
 
 /// For the formats whose LocOS filter keeps (some) inline codes as plain unit text, which codes: every code in the
 /// key/value formats (placeholders such as `%@`, `{0}`, `[ProductName]`, and JSON's HTML), only `placeholder` codes
-/// in ARB (LocOS keeps its ICU plural and select arguments as tokens) and FTL (its placeables).
+/// in ARB (LocOS keeps its ICU plural and select arguments as tokens) and FTL (its placeables). YAML: every code
+/// (LocOS's yaml filter has no inline map at all).
 fn locos_text_codes(format: &str) -> Option<fn(&CodeData) -> bool> {
     match format {
-        "po" | "strings" | "properties" | "dtd" | "wxl" | "xaml" | "resx" | "json" | "json5" | "resjson" => Some(|_| true),
+        // yaml: LocOS `yaml_filter` offers the plain value (no inline map): Rails `%{name}`, `{name}`, HTML, `%d`
+        "po" | "strings" | "properties" | "dtd" | "wxl" | "xaml" | "resx" | "json" | "json5" | "resjson" | "yaml" => Some(|_| true),
         "arb" | "ftl" => Some(|c| c.label.as_deref() == Some("placeholder")),
         _ => None,
     }

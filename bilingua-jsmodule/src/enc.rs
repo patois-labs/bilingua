@@ -13,11 +13,9 @@ pub const UTF16LE: &str = "utf-16le-bom";
 pub const UTF16BE: &str = "utf-16be-bom";
 pub const CP1252: &str = "cp1252";
 
-fn parse_err(msg: String) -> Error {
-    Error::Parse {
-        format: "js".into(),
-        msg,
-    }
+/// A decode refusal: code `encoding` (LocOS UnsupportedEncodingError).
+fn enc_err(msg: String) -> Error {
+    Error::Encoding(msg)
 }
 
 /// Windows-1252 bytes 0x80..=0x9F as characters (`None` for the five bytes the code page leaves undefined).
@@ -63,7 +61,7 @@ fn cp1252_decode(data: &[u8]) -> Result<String, Error> {
             0x80..=0x9F => match CP1252_HIGH[(b - 0x80) as usize] {
                 Some(c) => s.push(c),
                 None => {
-                    return Err(parse_err(format!(
+                    return Err(enc_err(format!(
                         "file is not valid UTF-8 and could not be read as Windows-1252 either (byte 0x{b:02x} at position {i}); re-save the file as UTF-8"
                     )))
                 }
@@ -109,7 +107,7 @@ fn looks_binary(data: &[u8]) -> bool {
 
 fn utf16(body: &[u8], big: bool) -> Result<String, Error> {
     if !body.len().is_multiple_of(2) {
-        return Err(parse_err(
+        return Err(enc_err(
             "the UTF-16 file has an odd number of bytes; re-save the file as UTF-8".into(),
         ));
     }
@@ -125,7 +123,7 @@ fn utf16(body: &[u8], big: bool) -> Result<String, Error> {
         match r {
             Ok(c) => s.push(c),
             Err(_) => {
-                return Err(parse_err(format!(
+                return Err(enc_err(format!(
                 "file is not valid UTF-16 (bad surrogate near unit {n}); re-save the file as UTF-8"
             )))
             }
@@ -138,9 +136,7 @@ fn utf16(body: &[u8], big: bool) -> Result<String, Error> {
 pub fn decode(data: &[u8]) -> Result<(String, &'static str), Error> {
     // UTF-32 BOMs start with a UTF-16 one; nobody ships UTF-32 resources.
     if data.starts_with(&[0xFF, 0xFE, 0x00, 0x00]) || data.starts_with(&[0x00, 0x00, 0xFE, 0xFF]) {
-        return Err(Error::Unsupported(
-            "UTF-32 files; re-save the file as UTF-8".into(),
-        ));
+        return Err(Error::Encoding("UTF-32 files are not supported; re-save the file as UTF-8.".into()));
     }
     if let Some(body) = data.strip_prefix(BOM8) {
         return utf8(body, 0).map(|t| (t, UTF8_BOM));
@@ -155,14 +151,14 @@ pub fn decode(data: &[u8]) -> Result<(String, &'static str), Error> {
         return Ok((t.to_string(), UTF8));
     }
     if looks_binary(data) {
-        return Err(parse_err("file is not valid UTF-8 and looks like a binary file, not text; re-save the file as UTF-8".into()));
+        return Err(enc_err("file is not valid UTF-8 and looks like a binary file, not text; re-save the file as UTF-8".into()));
     }
     cp1252_decode(data).map(|t| (t, CP1252))
 }
 
 fn utf8(body: &[u8], skipped: usize) -> Result<String, Error> {
     std::str::from_utf8(body).map(str::to_string).map_err(|e| {
-        parse_err(format!(
+        enc_err(format!(
             "file is not valid UTF-8 (at byte {}); re-save the file as UTF-8",
             e.valid_up_to() + skipped
         ))

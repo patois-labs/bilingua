@@ -225,28 +225,35 @@ fn refused(data: &[u8], needle: &str) -> Error {
 fn hostile_inputs() {
     assert!(matches!(refused(b"a = \"unterminated\n", "could not be read"), Error::Parse { .. }));
     assert!(matches!(refused(b"a = 1\na = 2\n", "could not be read"), Error::Parse { .. }));
-    refused(b"a = 'caf\xe9'", "UTF-8");
-    refused(b"\xff\xfea\x00 \x00=\x00", "UTF-8");
-    refused(b"a = '\x00\x00\x00'", "UTF-8");
+    // decode refusals: code `encoding`, LocOS `_decode` sentences
+    assert!(matches!(
+        refused(b"a = 'caf\xe9'", "UTF-8"),
+        Error::Encoding(m) if m == "This TOML file is not valid UTF-8 (byte 0xe9 at position 8); re-save the file as UTF-8."
+    ));
+    assert!(matches!(refused(b"\xff\xfea\x00 \x00=\x00", "UTF-8"), Error::Encoding(_)));
+    assert!(matches!(
+        refused(b"a = '\x00\x00\x00'", "UTF-8"),
+        Error::Encoding(m) if m == "This TOML file is not UTF-8 text (TOML files must be UTF-8); re-save the file as UTF-8."
+    ));
     let mut deep = b"a = ".to_vec();
     deep.extend(std::iter::repeat_n(b'[', 5000));
     deep.extend(std::iter::repeat_n(b']', 5000));
-    assert!(matches!(refused(&deep, "nested"), Error::Unsupported(_)));
+    assert!(matches!(refused(&deep, "nested"), Error::Limit(e) if e.kind == LimitKind::Depth));
     let mut n70 = b"a = ".to_vec();
     n70.extend(std::iter::repeat_n(b'[', 70));
     n70.extend_from_slice(b"\"x\"");
     n70.extend(std::iter::repeat_n(b']', 70));
     n70.push(b'\n');
     refused(&n70, "nested");
-    // more translatable strings than the cap
+    // more translatable strings than the cap (MAX_DOCUMENT_SEGMENTS, 50000 by default)
     let mut many = String::new();
-    for i in 0..=bilingua_toml::MAX_UNITS {
+    for i in 0..=50_000 {
         many.push_str(&format!("k{i} = \"v\"\n"));
     }
-    assert!(matches!(refused(many.as_bytes(), "translatable strings"), Error::Unsupported(_)));
+    assert!(matches!(refused(many.as_bytes(), "segments"), Error::Limit(e) if e.kind == LimitKind::Units));
     // one string over the length cap
     let long = format!("a = \"{}\"", "x".repeat(bilingua_toml::MAX_UNIT_CHARS + 1));
-    refused(long.as_bytes(), "longer");
+    assert!(matches!(refused(long.as_bytes(), "longer"), Error::Limit(e) if e.kind == LimitKind::UnitChars));
     // pathological template text stays linear
     let big = format!("a = \"{}\"\n", "x{{".repeat(30000));
     let t0 = std::time::Instant::now();
@@ -291,4 +298,44 @@ fn many_edits_linear_splice() {
 fn extension_and_sniff_lists() {
     // stands in for the LocOS upload accept list and connector map
     assert_eq!(TomlFilter.extensions(), &["toml"]);
+}
+
+/// LocOS `_budget` (verify_toml_filter test_hostile_inputs, MAX_DOCUMENT_SEGMENTS=3): the quote and value budgets
+/// refuse before the scan, code `limit`; a file under them still reads.
+#[test]
+fn pre_parse_budgets_with_a_small_segment_cap() {
+    let mut opts = ExtractOptions::default();
+    opts.limits = Some(Limits::new().with_max_units(3));
+    let ex = |b: &[u8]| TomlFilter.extract(b, &opts);
+    // 200 apostrophes inside one string: 202 quotes > 40 x 3
+    let quotes = format!("a = \"{}\"\n", "'".repeat(200));
+    let e = ex(quotes.as_bytes()).unwrap_err();
+    assert!(matches!(&e, Error::Limit(l) if l.kind == LimitKind::Units && l.msg.contains("far more strings")), "{e:?}");
+    // 100 array values: 100 commas and brackets > 20 x 3
+    let values = format!("a = [{}]\n", vec!["1"; 100].join(","));
+    let e = ex(values.as_bytes()).unwrap_err();
+    assert!(matches!(&e, Error::Limit(l) if l.msg.contains("far more values")), "{e:?}");
+    // more strings than the cap: code `limit`, not `unsupported`
+    let e = ex(b"a = \"one\"\nb = \"two\"\nc = \"three\"\nd = \"four\"\n").unwrap_err();
+    assert!(matches!(&e, Error::Limit(l) if l.kind == LimitKind::Units), "{e:?}");
+    // a string over MAX_SEGMENT_CHARS
+    let mut o = ExtractOptions::default();
+    o.limits = Some(Limits::new().with_max_unit_chars(10));
+    let e = TomlFilter.extract(b"a = \"a much longer string\"\n", &o).unwrap_err();
+    assert!(matches!(&e, Error::Limit(l) if l.kind == LimitKind::UnitChars), "{e:?}");
+    assert_eq!(ex(b"a = \"one\"\nb = \"two\"\n").unwrap().units.len(), 2);
+}
+
+/// verify_toml_filter test_translated_round_trip:147 (B-side 10, #814.1): a pair token naming the point code
+/// `{{ .Count }}` is dropped, the unknown `x9` stays text.
+#[test]
+fn wrong_kind_token_naming_a_point_code_is_dropped() {
+    use bilingua_model::profile::{locos_set_target, locos_units, tokens::parse_locos_text_for};
+    let mut doc = extract(b"readingTime = \"{{ .Count }} min read\"\n");
+    let u = locos_units(&doc).remove(0);
+    let t = "Lesezeit \u{27E6}x9\u{27E7} \u{27E6}g1\u{27E7}Min\u{27E6}/g1\u{27E7} \u{27E6}x1\u{27E7}";
+    let (inl, _) = parse_locos_text_for(&doc.format, t, &u.map);
+    locos_set_target(&mut doc, &u.segment_id, inl).unwrap();
+    let out = String::from_utf8(merge(&doc)).unwrap();
+    assert_eq!(out, "readingTime = \"Lesezeit \u{27E6}x9\u{27E7} Min {{ .Count }}\"\n");
 }

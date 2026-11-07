@@ -93,11 +93,12 @@ fn every_truncation_of_every_fixture_is_handled() {
 
 #[test]
 fn deep_and_huge_inputs_give_typed_errors() {
-    let ex = |b: &[u8]| Arb.extract(b, &ExtractOptions::default());
+    // the crate's own limits (1,000,000 units): LocOS's MAX_DOCUMENT_SEGMENTS budget would refuse the floods below
+    let ex = |b: &[u8]| Arb.extract_with(b, &ExtractOptions::default(), &bilingua_arb::Limits::default());
     // 200k open brackets and braces: refused at the nesting limit, no stack overflow
     for open in ["[", "{\"a\":"] {
         let deep = format!("{{\"k\": {}", open.repeat(200_000));
-        assert!(matches!(ex(deep.as_bytes()), Err(Error::Parse { .. })));
+        assert!(matches!(ex(deep.as_bytes()), Err(Error::Limit(e)) if e.kind == LimitKind::Depth));
     }
     // a message nested 100k deep in ICU is one opaque unit
     let icu = format!("{}x{}", "{a, plural, other{".repeat(100_000), "}".repeat(100_000));

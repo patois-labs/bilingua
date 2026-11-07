@@ -332,6 +332,23 @@ pub fn from_locos_text(text: &str, map: &LocosMap) -> Vec<Inline> {
 
 /// Like [`from_locos_text`], and lists every token that could not be resolved.
 pub fn parse_locos_text(text: &str, map: &LocosMap) -> (Vec<Inline>, Vec<TokenProblem>) {
+    parse_tokens(text, map, false)
+}
+
+/// Formats whose LocOS filter drops a token of the wrong kind that names one of the unit's codes (a pair token
+/// `\u{27E6}g1\u{27E7}`, `\u{27E6}/g1\u{27E7}` for a point code), where other formats keep it as text: LocOS
+/// `toml_filter._detokenize` and `js_module_filter._render` (#814.1, g12). A token whose number names no code stays
+/// text in every format.
+const LOCOS_DROPS_MISMATCH: &[&str] = &["toml", "js"];
+
+/// [`parse_locos_text`] with the token rules of `format`'s LocOS filter: for TOML and JavaScript modules a token of
+/// the wrong kind for a code of the unit is dropped (LocOS writes nothing for it) instead of kept as text; it is
+/// still listed as [`TokenProblem::KindMismatch`]. Every other format reads as [`parse_locos_text`].
+pub fn parse_locos_text_for(format: &str, text: &str, map: &LocosMap) -> (Vec<Inline>, Vec<TokenProblem>) {
+    parse_tokens(text, map, LOCOS_DROPS_MISMATCH.contains(&format))
+}
+
+fn parse_tokens(text: &str, map: &LocosMap, drop_mismatch: bool) -> (Vec<Inline>, Vec<TokenProblem>) {
     let mut out: Vec<Inline> = Vec::new();
     let mut problems = Vec::new();
     let mut lit = String::new();
@@ -355,7 +372,9 @@ pub fn parse_locos_text(text: &str, map: &LocosMap) -> (Vec<Inline>, Vec<TokenPr
                     }
                     Resolved::Mismatch => {
                         problems.push(TokenProblem::KindMismatch { token: token.to_string() });
-                        lit.push_str(token);
+                        if !drop_mismatch {
+                            lit.push_str(token);
+                        }
                     }
                 }
                 rest = &rest[tok_len..];
@@ -886,5 +905,27 @@ mod tests {
         for no in ["%s", "%d", "%.2f", "{}", "{ x }", "<b>", "%%", "%5d", "{{}}", "${}", "%(x"] {
             assert!(!is_named_placeholder(no), "{no}");
         }
+    }
+
+    /// #814.1 (g12): TOML and JS drop a pair token naming a point code; an unknown number stays text; other
+    /// formats keep the wrong-kind token as text.
+    #[test]
+    fn wrong_kind_tokens_are_dropped_for_toml_and_js() {
+        let src = vec![Inline::text("Reading time "), Inline::tag("1", TagKind::Standalone, "{{ .Count }}"), Inline::text(" min")];
+        let (_, map) = to_locos_text(&src);
+        let t = "Lesezeit \u{27E6}x9\u{27E7} \u{27E6}g1\u{27E7}Min\u{27E6}/g1\u{27E7} \u{27E6}x1\u{27E7}";
+        for f in ["toml", "js"] {
+            let (inl, problems) = parse_locos_text_for(f, t, &map);
+            assert_eq!(
+                inl,
+                vec![Inline::text("Lesezeit \u{27E6}x9\u{27E7} Min "), Inline::tag("1", TagKind::Standalone, "{{ .Count }}")],
+                "{f}"
+            );
+            assert_eq!(problems.iter().filter(|p| matches!(p, TokenProblem::KindMismatch { .. })).count(), 2, "{f}");
+            assert!(problems.contains(&TokenProblem::Unknown { token: "\u{27E6}x9\u{27E7}".into() }), "{f}");
+        }
+        let (kept, _) = parse_locos_text_for("json", t, &map);
+        assert_eq!(kept, parse_locos_text(t, &map).0);
+        assert!(matches!(&kept[0], Inline::Text(x) if x.contains("\u{27E6}g1\u{27E7}Min")));
     }
 }

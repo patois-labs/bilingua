@@ -69,7 +69,7 @@ fn hostile_inputs() {
     deep.extend(std::iter::repeat_n(b']', 200));
     deep.push(b'}');
     let err = try_ex(&deep).unwrap_err();
-    assert!(matches!(err, Error::Unsupported(_)), "{err:?}");
+    assert!(matches!(err, Error::Limit(_)), "{err:?}");
     assert!(err.to_string().contains("nested"));
     refuse(b"{\"a\": \"caf\xe9\"}", "UTF-8");
 
@@ -83,7 +83,7 @@ fn hostile_inputs() {
         data.push(if i == 29 { b'}' } else { b',' });
     }
     let err = Resjson.extract_with(&data, &opts(false), &small_limits(10)).unwrap_err();
-    assert!(matches!(err, Error::Unsupported(_)), "{err:?}");
+    assert!(matches!(err, Error::Limit(_)), "{err:?}");
     // Exactly at the cap is fine.
     assert_eq!(Resjson.extract_with(&data, &opts(false), &small_limits(30)).unwrap().units.len(), 30);
 }
@@ -119,4 +119,31 @@ fn records_and_placeholders() {
     // A placeholder stays plain text inside the unit (the LocOS filter does not tokenise it).
     let count = &by("", "count").1;
     assert_eq!(count.segments[0].source, vec![Inline::text("{0} new messages")]);
+}
+
+/// B-side 6 (oracle `resjson/languages_utf16le.resjson`): under the LocOS profile's merge options a UTF-16 file
+/// keeps its BOM and UTF-16 code units (LocOS `resjson_filter`, ResourceEncoding label utf-16).
+#[test]
+fn locos_profile_keeps_utf16() {
+    let src = "{\"greeting\": \"Hello\", \"bye\": \"Goodbye\"}\r\n";
+    let mut le = vec![0xFF, 0xFE];
+    le.extend(src.encode_utf16().flat_map(|u| u.to_le_bytes()));
+    let mut d = Resjson.extract(&le, &opts(false)).unwrap();
+    let id = d.units[0].segments[0].id.clone();
+    d.set_target(&id, vec![Inline::text("Hallo \u{2713}")]).unwrap();
+    let out = Resjson.merge_with(&d, &profile::locos().merge_options("resjson")).unwrap();
+    let mut want = vec![0xFF, 0xFE];
+    want.extend(src.replace("Hello", "Hallo \u{2713}").encode_utf16().flat_map(|u| u.to_le_bytes()));
+    assert_eq!(out, want);
+}
+
+/// `Filter::extract` follows `ExtractOptions::limits` (the adapter's MAX_DOCUMENT_SEGMENTS) and a budget refusal
+/// is code `limit`.
+#[test]
+fn extract_follows_the_call_limits() {
+    let mut o = opts(false);
+    o.limits = Some(bilingua_model::Limits::new().with_max_units(2));
+    let e = Resjson.extract(br#"{"a": "One", "b": "Two", "c": "Three"}"#, &o).unwrap_err();
+    assert!(matches!(e, Error::Limit(_)), "{e:?}");
+    assert_eq!(Resjson.extract(br#"{"a": "One", "b": "Two"}"#, &o).unwrap().units.len(), 2);
 }

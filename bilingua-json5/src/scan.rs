@@ -63,8 +63,22 @@ fn perr(text: &str, pos: usize, msg: &str) -> Error {
     Error::Parse { format: "json5".into(), msg: format!("Invalid JSON5/JSONC at line {line} column {col}: {msg}") }
 }
 
-fn limit_err(msg: String) -> Error {
-    Error::Parse { format: "json5".into(), msg: format!("This JSON5/JSONC file is over a limit: {msg}") }
+/// A budget or cap refusal: code `limit` (LocOS InputLimitError).
+fn limit_err(kind: bilingua_model::LimitKind, msg: String) -> Error {
+    bilingua_model::LimitError::new(kind, format!("This JSON5/JSONC file is over a limit: {msg}")).into()
+}
+
+impl Limits {
+    /// These limits, lowered to the call's `ExtractOptions::limits` (LocOS's `MAX_DOCUMENT_SEGMENTS`,
+    /// `MAX_SEGMENT_CHARS` and upload size) where those are lower.
+    pub fn capped_by(&self, l: &bilingua_model::Limits) -> Limits {
+        Limits {
+            max_depth: self.max_depth,
+            max_units: self.max_units.min(l.max_units),
+            max_unit_chars: self.max_unit_chars.min(l.max_unit_chars),
+            max_bytes: self.max_bytes.min(usize::try_from(l.max_input_bytes).unwrap_or(usize::MAX)),
+        }
+    }
 }
 
 fn is_line_end(c: char) -> bool {
@@ -86,7 +100,7 @@ fn char_at(text: &str, p: usize) -> Option<char> {
 /// Pre-parse budget: refuse far above any real resource file before any per-token work.
 fn check_budget(text: &str, lim: &Limits) -> Result<(), Error> {
     if text.len() > lim.max_bytes {
-        return Err(limit_err(format!("{} bytes (limit {})", text.len(), lim.max_bytes)));
+        return Err(limit_err(bilingua_model::LimitKind::InputBytes, format!("{} bytes (limit {})", text.len(), lim.max_bytes)));
     }
     let (mut quotes, mut others) = (0usize, 0usize);
     for &b in text.as_bytes() {
@@ -96,11 +110,20 @@ fn check_budget(text: &str, lim: &Limits) -> Result<(), Error> {
             _ => {}
         }
     }
-    if quotes > 40 * lim.max_units {
-        return Err(limit_err(format!("far more strings than {} allowed", lim.max_units)));
+    // LocOS `check_json5_budget`, its sentences
+    if quotes > 40usize.saturating_mul(lim.max_units) {
+        return Err(bilingua_model::LimitError::new(
+            bilingua_model::LimitKind::Units,
+            format!("This JSON5/JSONC file has far more strings than MAX_DOCUMENT_SEGMENTS allows ({}). Split it into smaller files.", lim.max_units),
+        )
+        .into());
     }
-    if others > 20 * lim.max_units {
-        return Err(limit_err(format!("far more values than {} allowed", lim.max_units)));
+    if others > 20usize.saturating_mul(lim.max_units) {
+        return Err(bilingua_model::LimitError::new(
+            bilingua_model::LimitKind::Units,
+            format!("This JSON5/JSONC file has far more values than MAX_DOCUMENT_SEGMENTS allows ({}). Split it into smaller files.", lim.max_units),
+        )
+        .into());
     }
     Ok(())
 }
@@ -488,7 +511,7 @@ pub fn scan<'a>(text: &'a str, lim: &Limits) -> Result<Vec<StrVal>, Error> {
                 match c {
                     Some(o @ (b'{' | b'[')) => {
                         if stack.len() >= lim.max_depth {
-                            return Err(limit_err(format!("nested deeper than {}", lim.max_depth)));
+                            return Err(limit_err(bilingua_model::LimitKind::Depth, format!("nested deeper than {}", lim.max_depth)));
                         }
                         let base = match stack.last() {
                             Some(top) => join_path(&top.base, &seg),
@@ -507,10 +530,10 @@ pub fn scan<'a>(text: &'a str, lim: &Limits) -> Result<Vec<StrVal>, Error> {
                         if ok {
                             translatable += 1;
                             if translatable > lim.max_units {
-                                return Err(limit_err(format!("more than {} strings", lim.max_units)));
+                                return Err(limit_err(bilingua_model::LimitKind::Units, format!("more than {} strings", lim.max_units)));
                             }
                             if value.len() > lim.max_unit_chars && value.chars().count() > lim.max_unit_chars {
-                                return Err(limit_err(format!("a string longer than {} characters", lim.max_unit_chars)));
+                                return Err(limit_err(bilingua_model::LimitKind::UnitChars, format!("a string longer than {} characters", lim.max_unit_chars)));
                             }
                         }
                         let key = match stack.last() {

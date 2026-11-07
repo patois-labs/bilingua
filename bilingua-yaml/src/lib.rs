@@ -61,7 +61,15 @@ fn style_name(s: Style) -> &'static str {
 
 fn parse_err(text: &str, e: &scan::ScanError) -> Error {
     if e.limit {
-        return Error::Unsupported(format!("This YAML file is over a safety limit: {}.", e.msg));
+        // LocOS InputLimitError ("This YAML file is nested too deeply.", the segment cap): code `limit`
+        let kind = if e.msg.contains("nested") {
+            LimitKind::Depth
+        } else if e.msg.contains("longer") {
+            LimitKind::UnitChars
+        } else {
+            LimitKind::Units
+        };
+        return LimitError::new(kind, format!("This YAML file is over a safety limit: {}.", e.msg)).into();
     }
     let pos = e.pos.min(text.len());
     let line = text.as_bytes()[..pos].iter().filter(|&&c| c == b'\n').count() + 1;
@@ -152,11 +160,16 @@ fn count_budget(text: &str, limits: &Limits) -> Result<(), Error> {
     let lines = text.bytes().filter(|&c| c == b'\n' || c == b'\r').count();
     let cap = limits.max_units.saturating_mul(20);
     if lines > cap {
-        return Err(Error::Unsupported(format!("This YAML file has more than {cap} lines; split it into smaller files.")));
+        return Err(LimitError::new(LimitKind::Lines, format!("This YAML file has more than {cap} lines; split it into smaller files.")).into());
     }
     let flow = text.bytes().filter(|&c| matches!(c, b',' | b'[' | b'{')).count();
     if flow > cap {
-        return Err(Error::Unsupported("This YAML file has far more values than the segment limit allows; split it into smaller files.".into()));
+        // LocOS `_budget`'s sentence
+        return Err(LimitError::new(
+            LimitKind::Units,
+            format!("This YAML file has far more values than MAX_DOCUMENT_SEGMENTS allows ({}). Split it into smaller files.", limits.max_units),
+        )
+        .into());
     }
     Ok(())
 }
@@ -165,7 +178,7 @@ impl Yaml {
     /// Like `extract`, with explicit limits (`Limits::unlimited()` lifts the segment and size caps).
     pub fn extract_with(&self, bytes: &[u8], opts: &ExtractOptions, limits: &Limits) -> Result<Document, Error> {
         if bytes.len() > limits.max_bytes {
-            return Err(Error::Unsupported("This YAML file is larger than the size limit.".into()));
+            return Err(LimitError::new(LimitKind::InputBytes, "This YAML file is larger than the size limit.").into());
         }
         let (text, enc) = text::decode(bytes)?;
         count_budget(&text, limits)?;
@@ -321,7 +334,7 @@ impl Filter for Yaml {
 
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
         bilingua_model::check_own_options(self, &opts.format_options)?;
-        self.extract_with(bytes, opts, &Limits::default())
+        self.extract_with(bytes, opts, &Limits::from_model(&opts.limits()))
     }
 
     fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {

@@ -89,6 +89,18 @@ impl Default for Limits {
 }
 
 impl Limits {
+    /// The crate's limits from the call's `ExtractOptions::limits` (LocOS's `MAX_DOCUMENT_SEGMENTS`,
+    /// `MAX_SEGMENT_CHARS` and upload size); the nesting cap stays the crate's own.
+    pub fn from_model(l: &bilingua_model::Limits) -> Limits {
+        let d = Limits::default();
+        Limits {
+            max_units: l.max_units,
+            max_unit_chars: l.max_unit_chars,
+            max_depth: d.max_depth,
+            max_bytes: d.max_bytes.min(usize::try_from(l.max_input_bytes).unwrap_or(usize::MAX)),
+        }
+    }
+
     pub fn unlimited() -> Limits {
         Limits { max_units: usize::MAX / 64, max_unit_chars: usize::MAX / 64, max_depth: 200, max_bytes: usize::MAX / 64 }
     }

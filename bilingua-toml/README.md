@@ -24,9 +24,12 @@ LocOS (`app/filters/toml_filter.py`) is the baseline; Okapi has no TOML filter.
 - Reading: an own validating scanner (no TOML library) covering the whole TOML 1.0 grammar and the table rules
   (duplicate keys, redefined tables, arrays of tables, inline tables are closed). It agrees with the `toml` crate on
   tens of thousands of random and mutated inputs (`tests/hostile.rs`). TOML 1.1 syntax is refused, like LocOS does.
-- Only UTF-8 (a BOM is kept). UTF-16, Latin-1, Shift-JIS and so on give `Error::Unsupported`.
-- Limits (this crate; B6 limits are not in the tree): 256 MB file, 200,000 units, 100,000 characters per unit,
-  nesting 64 (LocOS's own number), 2 million strings, 8 million values.
+- Only UTF-8 (a BOM is kept). UTF-16, Latin-1, Shift-JIS and so on give `Error::Encoding` (code `encoding`), with
+  LocOS's sentences.
+- Limits: `ExtractOptions::limits` (LocOS's numbers by default: 50,000 units, 100,000 characters per unit, 20 lines
+  per unit) plus LocOS's pre-parse budget (quotes over 40 x the unit cap, `= , [ {` over 20 x the unit cap); the
+  crate's own hard caps stay (256 MB file, nesting 64, 2 million strings, 8 million values). Every refusal is
+  `Error::Limit` (code `limit`).
 - TOML has no language field, so a target locale changes nothing but the values.
 
 Tests: `tests/locos_toml.rs` (the 10 LocOS cases), `roundtrip.rs` (corpus, 11 languages, encodings), `hostile.rs`

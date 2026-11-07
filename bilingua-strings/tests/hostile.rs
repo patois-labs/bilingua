@@ -70,19 +70,19 @@ fn deep_and_huge() {
     assert!(Strings.extract(big.as_bytes(), &opts()).is_ok());
     // A value over the character limit is refused.
     let over = format!("\"k\" = \"{}\";\n", "v".repeat(100_001));
-    assert!(matches!(Strings.extract(over.as_bytes(), &opts()), Err(Error::Unsupported(_))));
+    assert!(matches!(Strings.extract(over.as_bytes(), &opts()), Err(Error::Limit(_))));
     // Over the byte cap.
     let small = { let mut built = Limits::default(); built.max_bytes = 100; built };
-    assert!(matches!(Strings.extract_with(&[b' '; 101], &opts(), &small), Err(Error::Unsupported(_))));
+    assert!(matches!(Strings.extract_with(&[b' '; 101], &opts(), &small), Err(Error::Limit(_))));
     // A newline bomb is refused before any work.
     let nl = vec![b'\n'; 20 * 50_000 + 1];
-    assert!(matches!(Strings.extract(&nl, &opts()), Err(Error::Unsupported(_))));
+    assert!(matches!(Strings.extract(&nl, &opts()), Err(Error::Limit(_))));
     // Quote bomb.
     let q = vec![b'"'; 8 * 50_000 + 1];
-    assert!(matches!(Strings.extract(&q, &opts()), Err(Error::Unsupported(_))));
+    assert!(matches!(Strings.extract(&q, &opts()), Err(Error::Limit(_))));
     // Many entries: refused at the unit limit.
     let many: String = (0..50_001).map(|i| format!("k{i}=v{i};\n")).collect();
-    assert!(matches!(Strings.extract(many.as_bytes(), &opts()), Err(Error::Unsupported(_))));
+    assert!(matches!(Strings.extract(many.as_bytes(), &opts()), Err(Error::Limit(_))));
 }
 
 #[test]
@@ -97,7 +97,7 @@ fn bad_encodings_are_typed_errors() {
         &b"\xe9=\xe9;"[..],                      // Latin-1
         &b"bplist00"[..],
     ] {
-        assert!(matches!(Strings.extract(b, &opts()), Err(Error::Unsupported(_))), "{b:?}");
+        assert!(matches!(Strings.extract(b, &opts()), Err(Error::Encoding(_))), "{b:?}");
     }
     // Malformed text.
     for b in [&b"="[..], b";", b"\"a\"", b"\"a\" =", b"\"a\" = ;", b"a b = c;", b"\"a\" = \"b\" \"c\";", b"/*", b"\"", b"@", b"\"a\" = \"b\"; }}} = ;"] {

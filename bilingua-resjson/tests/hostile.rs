@@ -8,7 +8,7 @@ use common::*;
 use proptest::prelude::*;
 
 fn is_typed(e: &Error) -> bool {
-    matches!(e, Error::Parse { .. } | Error::Unsupported(_))
+    matches!(e, Error::Parse { .. } | Error::Unsupported(_) | Error::Limit(_) | Error::Encoding(_))
 }
 
 #[test]
@@ -76,7 +76,7 @@ fn encoding_errors_are_typed() {
         (&b"\xef\xbb\xbf{\"a\": \"\xc3\"}"[..], "UTF-8"),
     ] {
         let e = try_ex(data).unwrap_err();
-        assert!(matches!(e, Error::Unsupported(_)), "{e:?}");
+        assert!(matches!(e, Error::Encoding(_)), "{e:?}");
         assert!(e.to_string().contains(needle), "{e}");
     }
 }
@@ -92,7 +92,7 @@ fn deep_nesting_is_refused_without_a_stack_overflow() {
     };
     // The top-level object is level 1: 63 arrays inside it is the deepest allowed.
     assert!(try_ex(&boundary(63)).is_ok());
-    assert!(matches!(try_ex(&boundary(64)), Err(Error::Unsupported(_))));
+    assert!(matches!(try_ex(&boundary(64)), Err(Error::Limit(_))));
     // A million brackets, and a million unclosed ones.
     let mut huge = b"{\"a\":".to_vec();
     huge.extend(std::iter::repeat_n(b'[', 1_000_000));
@@ -115,11 +115,11 @@ fn oversized_files_are_refused() {
     lines.extend(std::iter::repeat_n(b'\n', 1_000_001));
     lines.push(b'}');
     let e = try_ex(&lines).unwrap_err();
-    assert!(matches!(e, Error::Unsupported(_)) && e.to_string().contains("lines"), "{e}");
+    assert!(matches!(e, Error::Limit(_)) && e.to_string().contains("lines"), "{e}");
     // Too many quotes (40 per allowed unit): 2 000 001 in a few MB.
     let mut quotes = b"{\"a\": \"b\", \"c\": ".to_vec();
     quotes.extend(std::iter::repeat_n(b'"', 2_000_001));
-    assert!(matches!(try_ex(&quotes), Err(Error::Unsupported(_))));
+    assert!(matches!(try_ex(&quotes), Err(Error::Limit(_))));
     // Too many values: commas, brackets and braces.
     let mut arr = b"{\"a\": [".to_vec();
     arr.extend(std::iter::repeat_n(b'1', 1));
@@ -127,14 +127,14 @@ fn oversized_files_are_refused() {
         arr.extend_from_slice(b",1");
     }
     arr.extend_from_slice(b"]}");
-    assert!(matches!(try_ex(&arr), Err(Error::Unsupported(_))));
+    assert!(matches!(try_ex(&arr), Err(Error::Limit(_))));
     // More bytes than the byte limit.
     let lim = { let mut built = Limits::default(); built.max_bytes = 10; built };
-    assert!(matches!(Resjson.extract_with(b"{\"a\": \"Hello there\"}", &opts(false), &lim), Err(Error::Unsupported(_))));
+    assert!(matches!(Resjson.extract_with(b"{\"a\": \"Hello there\"}", &opts(false), &lim), Err(Error::Limit(_))));
     // A value longer than the character limit.
     let lim = { let mut built = Limits::default(); built.max_unit_chars = 20; built };
     let long = format!("{{\"a\": \"{}\"}}", "x".repeat(21));
-    assert!(matches!(Resjson.extract_with(long.as_bytes(), &opts(false), &lim), Err(Error::Unsupported(_))));
+    assert!(matches!(Resjson.extract_with(long.as_bytes(), &opts(false), &lim), Err(Error::Limit(_))));
     assert!(Resjson.extract_with(long.replace("x".repeat(21).as_str(), &"x".repeat(20)).as_bytes(), &opts(false), &lim).is_ok());
     // Limits count translatable units; locked ones do not use them up.
     let src = br#"{"a": "{0}", "b": "{1}", "c": "Text"}"#;

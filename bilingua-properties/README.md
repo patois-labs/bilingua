@@ -21,7 +21,7 @@ let out = Properties.merge(&doc)?;
   backslashes continues the line; `\t \n \r \f \uXXXX` (exactly four hex digits, else a typed error) and `\x`.
   Surrogate pairs are joined; a lone surrogate reads as U+FFFD (the file is not changed unless that value is).
 - Encoding like Java's `PropertyResourceBundle`: UTF-8 first (a BOM is kept), ISO-8859-1 when the bytes are not UTF-8
-  (never Windows-1252). UTF-16, UTF-32 and binary files return `Error::Unsupported`.
+  (never Windows-1252). UTF-16, UTF-32 and binary files return `Error::Encoding` (code `encoding`).
 - Writing: an all-ASCII file stays ASCII (everything above U+007E becomes `\uXXXX`, surrogate pairs for emoji); an
   ISO-8859-1 file stays ISO-8859-1 (only characters above U+00FF are escaped); a UTF-8 file with non-ASCII text, and a
   Mozilla-dialect file, are written as literal UTF-8. A leading blank, `=` or `:` in a value is escaped.
@@ -35,7 +35,7 @@ let out = Properties.merge(&doc)?;
   LocOS `records()` does. `include_locked` lists the values left alone (numbers only, `---`, `{0}` only) as
   locked units.
 - Limits (`Limits`, `extract_with`): input 256 MiB, 1,000,000 units, 1,000,000 characters in one value, and no more
-  than 20 line ends per allowed unit. They return `Error::Unsupported("input limit: ...")`.
+  than 20 line ends per allowed unit. They return `Error::Limit` (code `limit`, message "input limit: ...").
 
 ## Not done
 

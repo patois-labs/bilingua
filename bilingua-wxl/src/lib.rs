@@ -302,6 +302,8 @@ impl Filter for Wxl {
                 "This WiX localization file uses byte sequences of its legacy encoding that cannot be written back unchanged. Re-save the file as UTF-8.".into(),
             ));
         }
+        // LocOS `xml_resource_common.check_xml_budget` (#571 pattern): `<` over 40 x MAX_DOCUMENT_SEGMENTS
+        guard::check_budget(text.bytes().filter(|&b| b == b'<').count(), 40, "This WiX localization file has far more entries", &limits)?;
         guard::check_xml(text.as_bytes(), &limits)?;
         let scanned = scan::scan(&text).map_err(|m| parse_err(format!("this file is not well-formed XML: {m}")))?;
 

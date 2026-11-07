@@ -55,11 +55,11 @@ pub fn decode(name: &str, raw: &[u8]) -> Result<(Vec<u8>, Enc), Error> {
     let utf16 = |le: bool| -> Result<(Vec<u8>, Enc), Error> {
         let body = &raw[2..];
         if !body.len().is_multiple_of(2) {
-            return Err(perr(format!("The XLIFF file {name:?} has a truncated UTF-16 body.")));
+            return Err(Error::Encoding(format!("The XLIFF file {name:?} has a truncated UTF-16 body.")));
         }
         let units = body.chunks_exact(2).map(|c| if le { u16::from_le_bytes([c[0], c[1]]) } else { u16::from_be_bytes([c[0], c[1]]) });
         let text: Result<String, _> = char::decode_utf16(units).collect();
-        let mut text = text.map_err(|_| perr(format!("The XLIFF file {name:?} is not valid UTF-16.")))?;
+        let mut text = text.map_err(|_| Error::Encoding(format!("The XLIFF file {name:?} is not valid UTF-16.")))?;
         let mut label = None;
         if let Some((a, b)) = label_span(&text) {
             label = Some(text[a..b].to_string());
@@ -77,13 +77,13 @@ pub fn decode(name: &str, raw: &[u8]) -> Result<(Vec<u8>, Enc), Error> {
     if let Some(label) = declared_encoding(body) {
         let l = label.to_ascii_lowercase().replace('_', "-");
         if l != "utf-8" && l != "utf8" {
-            return Err(perr(format!(
+            return Err(Error::Encoding(format!(
                 "The XLIFF file {name:?} is encoded as {label}; only UTF-8 and UTF-16 are supported. Re-save it as UTF-8 in the CAT tool."
             )));
         }
     }
     if std::str::from_utf8(body).is_err() {
-        return Err(perr(format!("The XLIFF file {name:?} is not valid UTF-8. Re-save it as UTF-8.")));
+        return Err(Error::Encoding(format!("The XLIFF file {name:?} is not valid UTF-8. Re-save it as UTF-8.")));
     }
     Ok((raw.to_vec(), Enc::Utf8))
 }

@@ -225,3 +225,25 @@ fn test_api_and_cli_surfaces_file_level() {
     assert!(obj["strings"]["Hello, %@!"]["localizations"].get("ru").is_some());
     assert_eq!(obj["strings"]["Open Settings"]["localizations"]["de"], before["strings"]["Open Settings"]["localizations"]["de"]);
 }
+
+/// B-side 14 (5 wild files, e.g. a catalog that starts with `"" : {\n\n    }`): a translated build splices the
+/// translated entries and keeps every other byte, empty entry objects included (LocOS splices values).
+#[test]
+fn empty_entry_objects_are_kept_byte_for_byte() {
+    let src = "{\n  \"sourceLanguage\" : \"en\",\n  \"strings\" : {\n    \"\" : {\n\n    },\n    \"#\" : {\n\n    },\n    \"Hello\" : {\n\n    }\n  },\n  \"version\" : \"1.0\"\n}";
+    let d = ex(src.as_bytes(), Some("de"));
+    assert_eq!(texts(&d), ["Hello"]);
+    let out = String::from_utf8(build(src.as_bytes(), &[(0, "Hallo")], Some("de"))).unwrap();
+    assert!(out.starts_with("{\n  \"sourceLanguage\" : \"en\",\n  \"strings\" : {\n    \"\" : {\n\n    },\n    \"#\" : {\n\n    },\n    \"Hello\" : {"), "{out}");
+    assert!(out.contains("\"value\" : \"Hallo\""), "{out}");
+    assert!(out.ends_with("\n  },\n  \"version\" : \"1.0\"\n}"), "{out}");
+    // under the LocOS profile a changed catalog is written as LocOS's `json.dumps` writes it: `{}` for an empty object
+    let mut d = Xcstrings.extract(src.as_bytes(), &profile::locos().extract_options().with_target_lang("de")).unwrap();
+    set_all(&mut d, &[(0, "Hallo")]);
+    let out = String::from_utf8(Xcstrings.merge_with(&d, &profile::locos().merge_options("xcstrings")).unwrap()).unwrap();
+    assert!(out.starts_with("{\n  \"sourceLanguage\" : \"en\",\n  \"strings\" : {\n    \"\" : {},\n    \"#\" : {},\n    \"Hello\" : {\n"), "{out}");
+    assert!(out.contains("\"value\" : \"Hallo\""), "{out}");
+    // nothing translated: the original bytes
+    let d = Xcstrings.extract(src.as_bytes(), &profile::locos().extract_options().with_target_lang("de")).unwrap();
+    assert_eq!(Xcstrings.merge_with(&d, &profile::locos().merge_options("xcstrings")).unwrap(), src.as_bytes());
+}

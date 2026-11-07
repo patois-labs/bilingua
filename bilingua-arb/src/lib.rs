@@ -46,6 +46,23 @@ impl Default for Limits {
     }
 }
 
+impl Limits {
+    /// The crate's limits from the call's `ExtractOptions::limits` (LocOS's `MAX_DOCUMENT_SEGMENTS` and upload
+    /// size); the nesting cap stays the crate's own.
+    pub fn from_model(l: &bilingua_model::Limits) -> Limits {
+        let d = Limits::default();
+        Limits {
+            max_bytes: d.max_bytes.min(usize::try_from(l.max_input_bytes).unwrap_or(usize::MAX)),
+            max_units: l.max_units,
+            max_depth: d.max_depth,
+        }
+    }
+
+    fn model(&self) -> bilingua_model::Limits {
+        bilingua_model::Limits::new().with_max_units(self.max_units)
+    }
+}
+
 /// The Flutter ARB filter.
 pub struct Arb;
 
@@ -53,17 +70,23 @@ impl Arb {
     /// Like [`Filter::extract`] with explicit limits.
     pub fn extract_with(&self, bytes: &[u8], opts: &ExtractOptions, limits: &Limits) -> Result<Document, Error> {
         if bytes.len() > limits.max_bytes {
-            return Err(parse_err(format!("the file is larger than {} bytes", limits.max_bytes)));
+            return Err(LimitError::new(LimitKind::InputBytes, format!("the file is larger than {} bytes", limits.max_bytes)).into());
         }
         if bytes.starts_with(&[0xFF, 0xFE]) || bytes.starts_with(&[0xFE, 0xFF]) {
-            return Err(Error::Unsupported("UTF-16 ARB files; save the file as UTF-8".into()));
+            return Err(Error::Encoding("UTF-16 ARB files are not supported; re-save the file as UTF-8.".into()));
         }
         let (body, encoding) = match bytes.strip_prefix(BOM) {
             Some(rest) => (rest, "utf-8-bom"),
             None => (bytes, "utf-8"),
         };
         let text = std::str::from_utf8(body)
-            .map_err(|e| parse_err(format!("the file is not valid UTF-8 (at byte {}); re-save it as UTF-8", e.valid_up_to())))?;
+            .map_err(|e| Error::Encoding(format!("the file is not valid UTF-8 (at byte {}); re-save the file as UTF-8.", e.valid_up_to())))?;
+        // LocOS `check_json_budget` (#571 and its gate), as bilingua-json: quotes, and the commas and brackets of
+        // values that are not strings, bound the work before any value is read
+        let quotes = text.bytes().filter(|b| *b == b'"').count();
+        guard::check_budget(quotes, 40, "This JSON file has far more strings", &limits.model())?;
+        let values = text.bytes().filter(|b| matches!(b, b',' | b'[' | b'{')).count();
+        guard::check_budget(values, 20, "This JSON file has far more values", &limits.model())?;
         let root = scan_root(text, limits)?;
         let msgs = messages(text, &root, opts.is_profile(profile::LOCOS));
 
@@ -72,7 +95,7 @@ impl Arb {
         let mut pos = 0usize;
         for m in msgs.into_iter().filter(|m| !m.plan.units.is_empty()) {
             if units.len() + m.plan.units.len() > limits.max_units {
-                return Err(parse_err(format!("the file has more than {} units", limits.max_units)));
+                return Err(LimitError::new(LimitKind::Units, format!("the file has more than {} units", limits.max_units)).into());
             }
             if m.start > pos {
                 parts.push(SkelPart::Raw(text[pos..m.start].to_string()));
@@ -111,7 +134,12 @@ fn parse_err(msg: String) -> Error {
 fn scan_root(text: &str, limits: &Limits) -> Result<scan::Node, Error> {
     let root = scan::scan(text, limits.max_depth).map_err(|e| {
         let (l, c) = scan::line_col(text, e.pos);
-        parse_err(format!("{} (line {l}, column {c})", e.msg))
+        let msg = format!("{} (line {l}, column {c})", e.msg);
+        if e.msg.starts_with("nested deeper than") {
+            // a safety cap, not a syntax error: code `limit`
+            return LimitError::new(LimitKind::Depth, msg).into();
+        }
+        parse_err(msg)
     })?;
     if !matches!(root, Node::Obj { .. }) {
         return Err(parse_err("an ARB file must be a JSON object of messages".into()));
@@ -142,7 +170,7 @@ impl Filter for Arb {
 
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
         bilingua_model::check_own_options(self, &opts.format_options)?;
-        self.extract_with(bytes, opts, &Limits::default())
+        self.extract_with(bytes, opts, &Limits::from_model(&opts.limits()))
     }
 
     fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {

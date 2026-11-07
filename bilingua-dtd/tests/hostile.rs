@@ -24,7 +24,7 @@ fn check(data: &[u8]) {
             let back = extract(&out).unwrap_or_else(|e| panic!("translated output must read back: {e}\n{:?}\n{:?}", String::from_utf8_lossy(data), String::from_utf8_lossy(&out)));
             assert_eq!(back.units.len(), n, "unit count after translation {:?} -> {:?}", String::from_utf8_lossy(data), String::from_utf8_lossy(&out));
         }
-        Err(Error::Parse { .. } | Error::Limit(_)) => {}
+        Err(Error::Parse { .. } | Error::Limit(_) | Error::Encoding(_)) => {}
         Err(e) => panic!("unexpected error kind: {e}"),
     }
 }

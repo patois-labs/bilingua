@@ -62,17 +62,18 @@ fn looks_binary(data: &[u8]) -> bool {
 }
 
 fn binary_error() -> Error {
-    Error::Unsupported("this .properties file looks like a binary file, not text; save it as UTF-8 and try again".into())
+    // LocOS kv_resource.refuse_binary: UnsupportedEncodingError, the same sentence
+    Error::Encoding("file is not valid UTF-8 and looks like a binary file, not text; re-save the file as UTF-8.".into())
 }
 
 /// Bytes to text the way Java reads a bundle: UTF-8 first (a byte-order mark is kept), ISO-8859-1 when the bytes
 /// are not UTF-8. UTF-16 and UTF-32 are refused.
 pub(crate) fn decode(data: &[u8]) -> Result<Decoded<'_>, Error> {
     if data.starts_with(&[0xFF, 0xFE, 0, 0]) || data.starts_with(&[0, 0, 0xFE, 0xFF]) {
-        return Err(Error::Unsupported("UTF-32 files; save the file as UTF-8".into()));
+        return Err(Error::Encoding("UTF-32 files are not supported; re-save the file as UTF-8.".into()));
     }
     if data.starts_with(&[0xFF, 0xFE]) || data.starts_with(&[0xFE, 0xFF]) {
-        return Err(Error::Unsupported(
+        return Err(Error::Encoding(
             "this .properties file is UTF-16; Java reads .properties as UTF-8 or ISO-8859-1 only, so save it as UTF-8".into(),
         ));
     }
