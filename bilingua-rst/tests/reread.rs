@@ -81,8 +81,9 @@ fn a_one_line_footnote_stays_on_its_marker_line() {
 
 #[test]
 fn a_letter_enumerator_without_its_successor_is_not_a_list() {
-    // docutils: `I.` needs `II.` (or `#.`) on the next line; `B.` is not it, so this is one paragraph
-    let t = ".. [Ref] I. Writer, K. Other, N. Name,\n   B. Last, A Title of a Paper, 2015.\n";
+    // `B.` starts a line of paragraph text (its next line is plain text), so `I.` is not a list either: one
+    // paragraph, as docutils reads it (`I.` would need `II.` next)
+    let t = ".. [Ref] I. Writer, K. Other, N. Name,\n   B. Last, A Title of a Paper,\n   in a Journal, 2015.\n";
     let t1 = texts(None, t);
     assert_eq!(t1.len(), 1, "{t1:?}");
     assert!(t1[0].starts_with("I. Writer") && t1[0].contains("B. Last"), "{t1:?}");
@@ -91,6 +92,10 @@ fn a_letter_enumerator_without_its_successor_is_not_a_list() {
     let l = "a. first item\nb. second item\n";
     assert_eq!(texts(None, l), vec!["first item", "second item"]);
     same_units_after_pseudo(l);
+    // an item whose body went on over an indented line, then a number item: joined, the line after it is `2)`
+    let m = "A. first words\n   more words\n2) second item\n";
+    assert_eq!(texts(None, m).len(), 2);
+    same_units_after_pseudo(m);
     // LocOS takes any enumerator line
     assert_eq!(texts(Some("locos"), t).len(), 2);
 }

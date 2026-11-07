@@ -51,9 +51,34 @@ pub struct Walk<'a> {
     count: usize,
     limits: Limits,
     nl: Vec<usize>,
-    /// The native profile: a letter enumerator followed by an enumerator line starts a list only when that line
-    /// holds the next enumerator (docutils); LocOS takes any enumerator line.
+    /// The native profile: a letter enumerator followed by an enumerator line starts a list only when that line is
+    /// itself read as a list item (see `item_line`); LocOS takes any enumerator line.
     pub native: bool,
+}
+
+/// Whether the enumerator line `vl[j]` is read as a list item (the walk's own rule, followed down a run of letter
+/// enumerator lines). A letter item that only counts because the next line looks like an enumerator must not lean
+/// on a line that is really paragraph text (`I. Name,` over `B. Name,` over more text): the enumerator of that line
+/// is then part of a unit, a translation moves it, and the first line would read differently on the way back.
+fn item_line(vl: &[Line], mut j: usize) -> bool {
+    for _ in 0..64 {
+        let Some(e) = rx::enum_match(vl[j].s) else { return false };
+        if e.paren && e.g3 != ')' {
+            return false;
+        }
+        if e.g2.is_empty() || !e.g2.chars().all(is_alpha) {
+            return true;
+        }
+        let Some(nx) = vl.get(j + 1) else { return true };
+        if blank(nx.s) || indent(nx.s) > 0 {
+            return true;
+        }
+        if rx::enum_match(nx.s).is_none() {
+            return false;
+        }
+        j += 1;
+    }
+    true
 }
 
 /// `_lines(text)`.
@@ -240,10 +265,7 @@ impl<'a> Walk<'a> {
             }
             if em.as_ref().is_some_and(|e| !e.g2.is_empty() && e.g2.chars().all(is_alpha)) && i + 1 < n {
                 let nxt = vl[i + 1].s;
-                let follows = match (rx::enum_match(nxt), em.as_ref()) {
-                    (Some(n), Some(e)) => !self.native || rx::enum_follows(e, &n),
-                    _ => false,
-                };
+                let follows = rx::enum_match(nxt).is_some() && (!self.native || item_line(vl, i + 1));
                 if !blank(nxt) && indent(nxt) == 0 && !follows {
                     em = None;
                 }
