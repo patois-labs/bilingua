@@ -382,10 +382,10 @@ fn cldr_only_targets_get_their_language_and_plural_rule_under_the_profile() {
     ];
     let o = ExtractOptions::new().with_profile(Some(profile::LOCOS));
     for (lang, rule) in want {
-        let mut doc = PoFilter.extract(src.as_bytes(), &o).unwrap().with_target_lang(lang);
+        let mut doc = Po.extract(src.as_bytes(), &o).unwrap().with_target_lang(lang);
         let id = doc.units[0].segments[0].id.clone();
         doc.set_target(&id, vec![Inline::text("Eins")]).unwrap();
-        let out = String::from_utf8(PoFilter.merge_with(&doc, &MergeOptions::new().with_profile(Some(profile::LOCOS))).unwrap()).unwrap();
+        let out = String::from_utf8(Po.merge_with(&doc, &MergeOptions::new().with_profile(Some(profile::LOCOS))).unwrap()).unwrap();
         assert!(out.contains(&format!("\"Language: {lang}\n\"")), "{lang}: {out}");
         let got = out.lines().find(|l| l.contains("Plural-Forms:")).unwrap();
         if lang == "mk" {
