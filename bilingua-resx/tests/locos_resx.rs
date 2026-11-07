@@ -77,15 +77,10 @@ fn resw_is_the_same_format_and_keeps_bom_and_crlf() {
 
 #[test]
 fn a_multi_line_translation_in_a_crlf_file_gets_crlf() {
-    let resx = s(STRINGS).replace('
-', "
-");
-    let out = translate(resx.as_bytes(), &[(1, "line one
-line two")]);
-    assert!(!out.windows(2).any(|w| w[1] == b'
-' && w[0] != b''), "bare LF in a CRLF file");
-    assert!(String::from_utf8_lossy(&out).contains("line one
-line two"));
+    let resx = s(STRINGS).replace('\n', "\r\n");
+    let out = translate(resx.as_bytes(), &[(1, "line one\nline two")]);
+    assert!(!out.windows(2).any(|w| w[1] == b'\n' && w[0] != b'\r'), "bare LF in a CRLF file");
+    assert!(String::from_utf8_lossy(&out).contains("line one\r\nline two"));
 }
 
 #[test]
