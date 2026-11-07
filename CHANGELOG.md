@@ -9,6 +9,10 @@ is listed here).
 
 ### Fixed
 
+- stl: the locos profile writes a base letter and its floating mark as a byte pair (as LocOS now does), and the pair
+  takes one cell in row width. stf: an escape (backslash, line feed, carriage return, tab) the source row lacks is decoded in a loaded translation,
+  so an edit and merge escapes it once. htmlhelp: `hhp_code_page` gives `None` over a size, `<` or line limit, as LocOS.
+  Golden tests for stl, ass and subtext regenerated from LocOS build/issues-1107 (LocOS tracker #798, #805, #814, #797).
 - pdf: U+FFFE is no longer in unit text. PDFium writes it for a hyphen that breaks a word at a line end (the next
   line follows right after it, so dropping it joins the word: `extraordinarily`) and for a glyph its font maps to
   U+0000 (dropped, no hyphen is invented). A hyphen PDFium does not mark stays `-`. C0 control characters (raw glyph
