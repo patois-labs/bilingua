@@ -318,18 +318,9 @@ fn empty_versus_malformed() {
     for (f, raw) in [
         (&HhcFilter as &dyn Filter, &b"<UL></UL>"[..]),
         (&HhcFilter, b"<HTML><BODY><OBJECT type=\"text/site properties\"><param name=\"ImageType\" value=\"Folder\"></OBJECT></BODY></HTML>"),
-        (&HhkFilter, b"<HTML><BODY>
-<UL>
-</UL>
-</BODY></HTML>
-"),
-        (&HhpFilter, b"[OPTIONS]
-"),
-        (&HhpFilter, b"[OPTIONS]
-Compiled file=x.chm
-[WINDOWS]
-main=,\"\",\"a.hhc\"
-"),
+        (&HhkFilter, b"<HTML><BODY>\n<UL>\n</UL>\n</BODY></HTML>\n"),
+        (&HhpFilter, b"[OPTIONS]\r\n"),
+        (&HhpFilter, b"[OPTIONS]\r\nCompiled file=x.chm\r\n[WINDOWS]\r\nmain=,\"\",\"a.hhc\"\r\n"),
     ] {
         let d = f.extract(raw, &o).unwrap_or_else(|e| panic!("{:?}: {e}", String::from_utf8_lossy(raw)));
         assert!(d.units.is_empty() && d.warnings.len() == 1 && d.warnings[0].kind == "no_translatable_text");
@@ -340,16 +331,11 @@ main=,\"\",\"a.hhc\"
         (&HhcFilter as &dyn Filter, &b""[..]),
         (&HhkFilter, b""),
         (&HhpFilter, b""),
-        (&HhcFilter, b" 
-	
-"),
-        (&HhpFilter, b"
-  
-"),
+        (&HhcFilter, b" \r\n\t\n"),
+        (&HhpFilter, b"\r\n  \r\n"),
         (&HhcFilter, b"Contents: Getting started, Printing"),
         (&HhkFilter, b"<HTML><BODY><P>Index</P></BODY></HTML>"),
-        (&HhpFilter, b"Title=Not a project
-"),
+        (&HhpFilter, b"Title=Not a project\r\n"),
         (&HhpFilter, b"just some words"),
         (&HhcFilter, b"<a <a <a <ul"),
     ] {

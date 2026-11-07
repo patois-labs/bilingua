@@ -66,8 +66,7 @@ fn section_name(t: &str) -> Option<String> {
 
 /// True when some line is a `[Section]` header: the file is an INI-like project file, not plain text.
 pub fn has_section(text: &str) -> bool {
-    split_lines(text).iter().any(|line| section_name(py_trim_start(line.trim_end_matches(['', '
-']))).is_some())
+    split_lines(text).iter().any(|line| section_name(py_trim_start(line.trim_end_matches(['\r', '\n']))).is_some())
 }
 
 /// What a translation is written as: one line, trimmed, and no double quote in a window caption.
