@@ -374,6 +374,9 @@ pub fn render(target: &[Inline], codes: &BTreeMap<String, CodeData>, kind: Kind)
     let mut out = String::new();
     // What to write after an open-ended code before anything follows it (see `open_end`).
     let mut seal: Option<&'static str> = None;
+    // The last piece was text that ends in one single `%`: written as is, it would join a `%%d` that follows into
+    // `%%%d` (the literal `%` code and a stray `d`).
+    let mut lone_pct = false;
     let mut piece = String::new();
     for i in target {
         piece.clear();
@@ -396,10 +399,12 @@ pub fn render(target: &[Inline], codes: &BTreeMap<String, CodeData>, kind: Kind)
             continue;
         }
         if let Some(s) = seal.take() {
-            if !piece.starts_with(char::is_whitespace) {
-                out.push_str(s);
-            }
+            out.push_str(s);
         }
+        if lone_pct && piece.starts_with('%') {
+            out.push_str("%%");
+        }
+        lone_pct = code.is_none() && piece.ends_with('%') && !piece.ends_with("%%");
         out.push_str(&piece);
         seal = code.and_then(|raw| open_end(raw, kind));
     }
@@ -409,9 +414,8 @@ pub fn render(target: &[Inline], codes: &BTreeMap<String, CodeData>, kind: Kind)
 /// A code that only ended where its value ended (a lone trailing `\`, a `\A1` with no `;`) would join whatever a
 /// translation puts after it (`\` + `q` reads back as the `\q` code). What closes it then: a second `\` makes the
 /// lone backslash the escaped one it shows as, `;` ends the format code. A code at the end of the value is written as is,
-/// so untouched and normal translations keep their bytes. Kept for LocOS byte parity (its goldens pin it): before
-/// white space nothing is added, so `\` + space still reads back as the `\ ` code and an open `\A1` still runs on to
-/// the next `;` (LocOS writes the joined form everywhere).
+/// so untouched and normal translations keep their bytes. This holds before white space too (`\` + space would read
+/// back as the `\ ` code, and an open `\A1` would run on to the next `;`); LocOS joined those and gets the same fix.
 fn open_end(raw: &str, kind: Kind) -> Option<&'static str> {
     if kind == Kind::Text {
         return None;

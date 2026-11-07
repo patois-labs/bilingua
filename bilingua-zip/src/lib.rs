@@ -136,6 +136,16 @@ fn as_format(e: Error, format: &str) -> Error {
     }
 }
 
+/// A Windows device name (`CON`, `PRN`, `AUX`, `NUL`, `COM1` to `COM9`, `LPT1` to `LPT9`), with any extension and any
+/// case: Windows opens the device instead of a file of that name.
+fn is_device_name(part: &str) -> bool {
+    let stem = part.split('.').next().unwrap_or("").trim_end_matches(' ').to_ascii_uppercase();
+    matches!(stem.as_str(), "CON" | "PRN" | "AUX" | "NUL")
+        || ((stem.starts_with("COM") || stem.starts_with("LPT"))
+            && stem.len() == 4
+            && matches!(stem.as_bytes()[3], b'1'..=b'9'))
+}
+
 pub fn safe_name(raw: &str) -> Result<String, Error> {
     if raw.is_empty() {
         return Err(bad("an entry has an empty name"));
@@ -163,6 +173,11 @@ pub fn safe_name(raw: &str) -> Result<String, Error> {
                 if p.trim_end_matches(['.', ' ']).is_empty() {
                     return Err(bad(format!(
                         "entry name {raw:?} has a component made of dots or spaces"
+                    )));
+                }
+                if is_device_name(p) {
+                    return Err(bad(format!(
+                        "entry name {raw:?} uses a reserved Windows device name ({p})"
                     )));
                 }
                 parts.push(p);
@@ -542,12 +557,20 @@ mod tests {
             "/etc/passwd",
             "C:\\x",
             "a/b:stream",
+            "CON",
+            "docs/aux.md",
+            "x/Nul.txt/y",
+            "com1.xml",
+            "LPT9",
             "a\0b",
             "",
             "..",
             "a/ ../b",
         ] {
             assert!(safe_name(bad).is_err(), "{bad:?} must be refused");
+        }
+        for ok in ["console.xml", "com10.xml", "com0", "word/lpt.xml", "a/auxiliary"] {
+            assert!(safe_name(ok).is_ok(), "{ok:?} must pass");
         }
     }
 }

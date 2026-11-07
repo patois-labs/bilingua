@@ -28,15 +28,27 @@ fn cp932_nec_duplicates_keep_their_bytes_untouched_and_normalise_when_edited() {
 }
 
 #[test]
-fn euc_kr_make_up_sequences_read_and_write_as_python() {
-    let d = doc(b"euc-kr", b"\xa4\xd4\xa4\xa8\xa4\xc7\xa4\xb1 X");
+fn euc_kr_label_reads_as_windows_949_so_a_localized_korean_export_reads_back() {
+    // Browsers and HTML Help Workshop read euc-kr and ks_c_5601-1987 as Windows-949; LocOS's strict euc_kr could not
+    // read the UHC syllables its own export writes (issue 796). The Annex 3 make-up sequence is no longer special.
+    let d = doc(b"euc-kr", b"\x8c\x63 X");
     assert_eq!(first(&d), [0xb620, 0x20, 0x58]);
     assert_eq!(build(&HhcFilter, &d, &[]), d);
+    let d = doc(b"ks_c_5601-1987", b"\x8c\x63 X");
+    assert_eq!(first(&d), [0xb620, 0x20, 0x58]);
     let out = build(&HhcFilter, &d, &[(1, "\u{b620}")]);
-    assert_eq!(out, b"<meta charset=euc-kr><OBJECT type=\"text/sitemap\"><param name=\"Name\" value=\"\xa4\xd4\xa4\xa8\xa4\xc7\xa4\xb1 X\"><param name=\"Name\" value=\"\xa4\xd4\xa4\xa8\xa4\xc7\xa4\xb1\"></OBJECT>");
-    // a broken make-up sequence is not EUC-KR (Python refuses it), so the file reads as Windows-1252
-    let bad = doc(b"euc-kr", b"\xa4\xd4\xa4\xa8 X");
-    assert_eq!(tag_of(&bad), "windows-1252");
+    assert_eq!(out, b"<meta charset=ks_c_5601-1987><OBJECT type=\"text/sitemap\"><param name=\"Name\" value=\"\x8cc X\"><param name=\"Name\" value=\"\x8cc\"></OBJECT>");
+}
+
+#[test]
+fn gb2312_shift_jis_and_big5_labels_read_the_windows_supersets() {
+    // a GBK-only hanzi, NEC row 13 U+2460, and the cp950 euro sign
+    let d = doc(b"gb2312", b"\x84\x4a");
+    assert!(first(&d)[0] > 0x3000, "{:?}", first(&d));
+    let d = doc(b"shift_jis", b"\x87\x40");
+    assert_eq!(first(&d), [0x2460]);
+    let d = doc(b"big5", b"\xa3\xe1");
+    assert_eq!(first(&d), [0x20ac]);
 }
 
 fn tag_of(data: &[u8]) -> String {
@@ -44,14 +56,6 @@ fn tag_of(data: &[u8]) -> String {
         Skeleton::Text { encoding, .. } => encoding,
         _ => unreachable!(),
     }
-}
-
-#[test]
-fn a_uhc_byte_under_a_ks_c_5601_label_reads_as_windows_1252_as_in_locos() {
-    // Python maps ks_c_5601-1987 to its strict euc_kr codec, which has no UHC extension (LocOS bug, see the report)
-    let d = doc(b"ks_c_5601-1987", b"\x8c\x63 X");
-    assert_eq!(first(&d), [0x152, 0x63, 0x20, 0x58]);
-    assert_eq!(build(&HhcFilter, &d, &[(1, "x")]), b"<meta charset=ks_c_5601-1987><OBJECT type=\"text/sitemap\"><param name=\"Name\" value=\"\x8cc X\"><param name=\"Name\" value=\"x\"></OBJECT>");
 }
 
 #[test]

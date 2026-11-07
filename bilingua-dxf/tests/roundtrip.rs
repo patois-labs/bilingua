@@ -220,3 +220,54 @@ fn code_at_value_end_does_not_join_the_next_letter() {
     let s = String::from_utf8(Dxf.merge(&doc).unwrap()).unwrap();
     assert!(s.contains("\r\nZqNote \\\r\n") && s.contains("\r\nZqBig \\H2.5x\r\n"), "{s}");
 }
+
+#[test]
+fn a_percent_before_a_code_token_keeps_the_code() {
+    // issue 805: "45%" + the `%%d` code was written `%%%d`, which reads back as a literal `%` and a stray `d`
+    let data = dxf(&p(&[(0, "SECTION"), (2, "ENTITIES"), (0, "TEXT"), (1, "Angle 45%%d"), (0, "ENDSEC"), (0, "EOF")]), "\n", utf8);
+    let mut doc = extract(&data).unwrap();
+    let u = &mut doc.units[0];
+    let mut t = vec![Inline::text("Winkel 45%")];
+    t.extend(u.source().into_iter().filter(|i| matches!(i, Inline::Tag { .. })));
+    u.segments[0].target = t;
+    let out = Dxf.merge(&doc).unwrap();
+    let s = String::from_utf8(out.clone()).unwrap();
+    assert!(s.contains("Winkel 45%%%%%d"), "{s}");
+    let back = extract(&out).unwrap();
+    assert!(matches!(back.units[0].source().last(), Some(Inline::Tag { .. })), "{:?}", back.units[0].source());
+    assert_eq!(plain_text(&back.units[0].source()), "Winkel 45%");
+}
+
+#[test]
+fn code_before_white_space_is_closed_too() {
+    // issue 811 item 3: `\` then a space read back as the `\ ` code; an open `\A1` ran on to the next `;`
+    let data = dxf(&p(&[(0, "SECTION"), (2, "ENTITIES"), (0, "MTEXT"), (5, "1"), (1, r"Note \"), (0, "ENDSEC"), (0, "EOF")]), "\n", utf8);
+    let mut doc = extract(&data).unwrap();
+    let u = &mut doc.units[0];
+    let mut t = u.source();
+    t.push(Inline::text(" tail"));
+    u.segments[0].target = t;
+    let s = String::from_utf8(Dxf.merge(&doc).unwrap()).unwrap();
+    assert!(s.contains("Note \\ tail"), "{s}");
+}
+
+#[test]
+fn crlf_counts_one_line_per_line_end() {
+    // issue 805 item 2: a CRLF file was refused at half the group codes an LF file may hold
+    let o = ExtractOptions::new().with_limits(Limits::new().with_max_units(2));
+    let body = |nl: &str, n: usize| format!("999{nl}x{nl}").repeat(n);
+    for nl in ["\n", "\r\n"] {
+        assert!(Dxf.extract(body(nl, 400).as_bytes(), &o).is_ok(), "{nl:?}");
+        assert!(matches!(Dxf.extract(body(nl, 401).as_bytes(), &o), Err(Error::Limit(_))), "{nl:?}");
+    }
+}
+
+#[test]
+fn dos864_percent_is_a_percent() {
+    // issue 805 item 3: cp864 reads byte 0x25 as the Arabic percent sign, so `%%d` was plain text
+    let mut pairs = header("AC1009", "DOS864");
+    pairs.extend(p(&[(0, "SECTION"), (2, "ENTITIES"), (0, "TEXT"), (1, "Angle 45%%d"), (0, "ENDSEC"), (0, "EOF")]));
+    let data = dxf(&pairs, "\n", utf8);
+    let doc = extract(&data).unwrap();
+    assert!(matches!(doc.units[0].source().last(), Some(Inline::Tag { .. })), "{:?}", doc.units[0].source());
+}

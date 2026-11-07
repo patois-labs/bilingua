@@ -123,7 +123,16 @@ fn source_ok(label: &str) -> Option<Codec> {
     let n = py_normalize(label);
     let key = |k: &str| ALIASES.binary_search_by(|(a, _)| a.as_bytes().cmp(k.as_bytes())).ok();
     let i = key(&n).or_else(|| key(&n.replace('.', "_")))?;
-    py_codec(ALIASES[i].1)
+    // Browsers and HTML Help Workshop read these labels as the Windows supersets, and that is what a localized export
+    // is written in, so a character outside the strict subset (GBK-only hanzi, NEC rows, UHC syllables) must read back.
+    let name = match ALIASES[i].1 {
+        "gb2312" => "gbk",
+        "shift_jis" => "cp932",
+        "euc_kr" => "cp949",
+        "big5" => "cp950",
+        other => other,
+    };
+    py_codec(name)
 }
 
 impl Codec {

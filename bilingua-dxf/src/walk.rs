@@ -130,7 +130,8 @@ pub fn walk(data: &[u8], limits: &Limits) -> Result<Walked, Error> {
         ));
     }
     let budget = 200 * limits.max_units;
-    let breaks = data.iter().filter(|&&b| b == b'\n' || b == b'\r').count();
+    // a CRLF line end is one line, not two
+    let breaks = data.iter().filter(|&&b| b == b'\n' || b == b'\r').count() - data.windows(2).filter(|w| w == b"\r\n").count();
     if breaks > 2 * budget {
         return Err(LimitError::new(
             LimitKind::Lines,

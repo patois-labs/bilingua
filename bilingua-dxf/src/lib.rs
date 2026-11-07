@@ -118,14 +118,16 @@ struct Slot {
 }
 
 fn decode_value(raw: &[u8], codec: Codec, at: usize) -> Result<String, Error> {
-    codec.decode(raw).map_err(|p| {
+    let text = codec.decode(raw).map_err(|p| {
         refuse(format!(
             "Byte 0x{:02x} at position {} is not valid in this drawing's encoding ({}).",
             raw[p],
             at + p,
             codec.name()
         ))
-    })
+    })?;
+    // DOS 864 shows byte 0x25 as the Arabic percent sign; AutoCAD reads it as `%`, so `%%d` stays a code
+    Ok(if codec.name() == "cp864" && text.contains('\u{66a}') { text.replace('\u{66a}', "%") } else { text })
 }
 
 impl Filter for Dxf {
