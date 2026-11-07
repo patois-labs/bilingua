@@ -22,6 +22,13 @@ fn is_typed(e: &Error) -> bool {
     matches!(e, Error::Parse { .. } | Error::Unsupported(_) | Error::Limit(_) | Error::Encoding(_))
 }
 
+/// A translated HTML part may be refused: a parse refusal, or the browser-safety guard (a `Write` error) when the
+/// mutated source has markup a browser would read differently after translation.
+fn html_refusal(e: &Error) -> bool {
+    matches!(e, Error::Parse { format, .. } if format == "html")
+        || matches!(e, Error::Write(msg) if msg.contains("cannot be exported safely"))
+}
+
 /// The invariants of any message that extracts.
 fn check_file(bytes: &[u8]) {
     for target in [None, Some("ar-SA"), Some("ja")] {
@@ -37,7 +44,7 @@ fn check_file(bytes: &[u8]) {
         let out = match Email.merge(&d) {
             Ok(o) => o,
             Err(e) => {
-                assert!(matches!(&e, Error::Parse { format, .. } if format == "html"), "{e:?}");
+                assert!(html_refusal(&e), "{e:?}");
                 continue;
             }
         };
@@ -309,7 +316,7 @@ proptest! {
         let out = match Email.merge(&d) {
             Ok(o) => o,
             Err(e) => {
-                prop_assert!(matches!(&e, Error::Parse { format, .. } if format == "html"), "{e:?}");
+                prop_assert!(html_refusal(&e), "{e:?}");
                 return Ok(());
             }
         };
