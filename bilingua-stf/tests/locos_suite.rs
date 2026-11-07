@@ -238,14 +238,14 @@ fn gate_row_and_header_edges() {
 #[test]
 fn literal_backslash_in_a_translation_is_escaped() {
     let src = "Language code: en_US\nType: Source\n# KEY\tLABEL\nCustomLabel.A\tPath\n";
-    let out = s(build(src.as_bytes(), &[(0, "C:\new\temp")], None));
-    assert!(out.contains("CustomLabel.A\tC:\\new\\temp\n"), "{out}");
+    let out = s(build(src.as_bytes(), &[(0, "C:\\new\\temp")], None));
+    assert!(out.contains("CustomLabel.A\tC:\\\\new\\\\temp\n"), "{out}");
     // read back: the doubled backslashes are Salesforce escapes (point tokens), not a newline or a tab
     let doc = extract(out.as_bytes()).unwrap();
     let text = plain_text(&doc.units[0].source());
     assert!(!text.contains('\n') && !text.contains('\t'), "{text:?}");
-    // a backslash escape the source already holds is rebuilt from its token and not doubled again
-    let src2 = "Language code: en_US\nType: Source\n# KEY\tLABEL\nCustomLabel.B\tA\\B\n";
-    let out2 = s(build(src2.as_bytes(), &[(0, "X \u{27E6}x1\u{27E7} Y")], None));
-    assert!(out2.contains("CustomLabel.B\tX \\ Y\n"), "{out2}");
+    // an escape the source already holds is rebuilt from its token and not doubled again
+    let out2 = s(build(BILINGUAL.as_bytes(), &[(1, "Verkauf \u{27E6}x1\u{27E7} Eins")], None));
+    assert!(out2.contains("Verkauf \\n Eins"), "{out2}");
+    assert!(!out2.contains("Verkauf \\\\n"), "{out2}");
 }

@@ -69,6 +69,12 @@ fn matches_locos_on_random_files_and_corpus() {
             for (mode, eo) in [("locos", locos_opts()), ("default", common::opts())] {
                 let eo = eo.with_target_lang(target.map(String::from));
                 let got = build_opts(&data, &m, &eo, &opts);
+                // the one deliberate difference: a literal backslash in a translation is written as two (issue 804),
+                // which LocOS does not do yet; such a build must still read back with the same unit count
+                if m.iter().any(|(_, t)| t.contains('\\')) {
+                    assert_eq!(common::extract(&got).unwrap().units.len(), common::extract(&data).unwrap().units.len(), "{name}: build {label} ({mode})");
+                    continue;
+                }
                 assert_eq!(got, want_bytes, "{name}: build {label} ({mode})");
                 builds += 1;
             }

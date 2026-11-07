@@ -290,12 +290,13 @@ fn movable_byte(b: u8) -> bool {
 /// The subtitle can move to another code table: every byte it keeps raw (head, tail, row breaks, row edges) and every
 /// control code in its text means the same there.
 fn sub_movable(sub: &Sub, atoms: &[Atom]) -> bool {
+    structure_movable(sub) && atoms_movable(atoms)
+}
+
+/// The bytes a rewritten subtitle keeps from the original (head, tail, row breaks, row edges) can move.
+fn structure_movable(sub: &Sub) -> bool {
     let raw_ok = |v: &Vec<u8>| v.iter().all(|b| movable_byte(*b));
-    raw_ok(&sub.head)
-        && raw_ok(&sub.tail)
-        && sub.seps.iter().all(raw_ok)
-        && sub.rows.iter().all(|r| raw_ok(&r.prefix) && raw_ok(&r.suffix))
-        && atoms.iter().all(|a| !matches!(a, Atom::T(b) if !movable_byte(*b)))
+    raw_ok(&sub.head) && raw_ok(&sub.tail) && sub.seps.iter().all(raw_ok) && sub.rows.iter().all(|r| raw_ok(&r.prefix) && raw_ok(&r.suffix))
 }
 
 /// A translation's control codes can move to another code table.
@@ -349,7 +350,7 @@ pub fn rebuild(raw: &[u8], parsed: &read::Parsed, units: &[UnitInfo], changed: &
         let mut usable = vec![cct];
         for c in Cct::ALL {
             let units_ok = !units.iter().enumerate().any(|(k, u)| {
-                !sub_movable(&u.sub, &u.atoms) || (!changed.contains_key(&k) && !unsupported_with(&u.atoms, c, pairs).is_empty())
+                !structure_movable(&u.sub) || (!changed.contains_key(&k) && !(atoms_movable(&u.atoms) && unsupported_with(&u.atoms, c, pairs).is_empty()))
             });
             let others_ok = others.iter().all(|o| sub_movable(&o.sub, &o.atoms) && unsupported_with(&o.atoms, c, pairs).is_empty());
             if c != cct && units_ok && others_ok {
@@ -379,7 +380,7 @@ pub fn rebuild(raw: &[u8], parsed: &read::Parsed, units: &[UnitInfo], changed: &
     };
     let mut new_tf: BTreeMap<usize, (usize, Vec<u8>, i64)> = BTreeMap::new(); // first block -> (group, tf, dvp)
     for (k, u) in units.iter().enumerate() {
-        if chosen != cct && (!sub_movable(&u.sub, &u.atoms) || changed.get(&k).is_some_and(|t| !atoms_movable(t))) {
+        if chosen != cct && (!structure_movable(&u.sub) || !atoms_movable(changed.get(&k).map_or(&u.atoms, |t| t))) {
             if reported.insert(k) {
                 problems.push(format!("subtitle {}: a control code or byte of this subtitle has no equivalent in the other code table", k + 1));
             }
