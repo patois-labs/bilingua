@@ -50,6 +50,7 @@ fn matches_locos_on_random_files() {
     let cases: Vec<serde_json::Value> = serde_json::from_str(&text).unwrap();
     assert!(cases.len() >= 780);
     let (mut refused, mut nunits, mut builds, mut svgs, mut pngs, mut enc_refused) = (0, 0, 0, 0, 0, 0);
+    let mut ambiguous = 0;
     let mut bad: Vec<String> = Vec::new();
     for c in &cases {
         let name = c["name"].as_str().unwrap();
@@ -70,6 +71,12 @@ fn matches_locos_on_random_files() {
             // a declared encoding is binding in Bilingua (bytes invalid in it are refused); LocOS falls back to Windows-1252
             Err(Error::Encoding(_)) => {
                 enc_refused += 1;
+                continue;
+            }
+            // a damaged DOCTYPE (a stray quote) that LocOS's tag splitter reads past but the XML guard would end
+            // elsewhere: refused on purpose, or the guard could not count what the reader builds (MIGRATION.md)
+            Err(Error::Limit(e)) if e.msg.contains("XML readers do not agree on") || e.msg.contains("DOCTYPE that is not closed") => {
+                ambiguous += 1;
                 continue;
             }
             Err(e) => {
@@ -135,7 +142,7 @@ fn matches_locos_on_random_files() {
             }
         }
     }
-    println!("{} cases ({svgs} svg, {pngs} png), {refused} refused, {enc_refused} refused for a declared encoding LocOS reads anyway, {nunits} units, {builds} builds, {} differences", cases.len(), bad.len());
+    println!("{} cases ({svgs} svg, {pngs} png), {refused} refused, {enc_refused} refused for a declared encoding LocOS reads anyway, {ambiguous} refused for a DOCTYPE the XML readers end in different places, {nunits} units, {builds} builds, {} differences", cases.len(), bad.len());
     let mut groups: std::collections::BTreeMap<String, (usize, Vec<String>)> = Default::default();
     for b in &bad {
         let rest = b.split_once(": ").map_or(b.as_str(), |x| x.1);

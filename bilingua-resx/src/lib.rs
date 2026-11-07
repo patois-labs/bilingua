@@ -254,7 +254,8 @@ impl Filter for Resx {
 
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
         bilingua_model::check_own_options(self, &opts.format_options)?;
-        self.extract_with(bytes, opts, &Limits::default())
+        // the caller's limits, not the defaults (they were ignored, so a caller could not tighten them)
+        self.extract_with(bytes, opts, &opts.limits())
     }
 
     fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {

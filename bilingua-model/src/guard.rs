@@ -362,6 +362,13 @@ fn markup_bytes(bytes: &[u8]) -> std::borrow::Cow<'_, [u8]> {
 /// * more than `max_xml_elements` elements.
 ///
 /// Comments, CDATA sections and processing instructions are skipped, so markup inside them is not counted.
+///
+/// The count is only as good as the reader's agreement on where those regions end, so a part is also refused when
+/// the readers would not agree: a DOCTYPE that never ends, has a `<`, `>` or bracket in a quoted string, a quote or
+/// bracket in a comment of its internal subset, or a `<`/`>` that `quick-xml` pairs differently; a comment that
+/// starts with `>` or `->`; `<?>`; a `<!` declaration outside the DOCTYPE. Every reading a reader may give the
+/// bytes is scanned: UTF-16 and UTF-8 for `<\0` without a byte order mark, and the double-byte code pages for
+/// bytes that are not UTF-8.
 pub fn check_xml(bytes: &[u8], l: &Limits) -> Result<(), Error> {
     check_xml_with(bytes, l, false)
 }
@@ -408,15 +415,119 @@ fn doctype_end(b: &[u8], i: usize) -> usize {
     j.min(b.len())
 }
 
+/// Where `quick-xml` ends the `<!DOCTYPE` that starts at `i`: the first `>` outside a `<` ... `>` pair, quotes,
+/// brackets and comments not looked at (the index of that `>`, or `None` when there is none).
+fn reader_doctype_end(b: &[u8], i: usize) -> Option<usize> {
+    let mut balance = 0usize;
+    for (j, c) in b.iter().enumerate().skip(i + 2) {
+        match c {
+            b'<' => balance += 1,
+            b'>' if balance == 0 => return Some(j),
+            b'>' => balance -= 1,
+            _ => {}
+        }
+    }
+    None
+}
+
+/// True when every XML reader in the workspace ends the DOCTYPE at `i..=end` (`end` from [`doctype_end`]) at the
+/// same `>`. The readers differ in what they skip: `quick-xml` only pairs `<` with `>`; the hand-written scanners
+/// skip quoted strings, some also the `[ ... ]` subset, some the comments or processing instructions inside it. They
+/// all agree when no quoted string holds a `<`, `>`, `[` or `]`, no comment or processing instruction of the subset
+/// holds a quote, a bracket or an angle bracket of its own, and `quick-xml` stops at the same place. Real files meet
+/// that easily (`<!DOCTYPE plist PUBLIC "..." "...">`, an XMB subset of `<!ELEMENT>` and `<!ATTLIST>` declarations).
+fn doctype_is_unambiguous(b: &[u8], i: usize, end: usize) -> bool {
+    if end >= b.len() || reader_doctype_end(b, i) != Some(end) {
+        return false;
+    }
+    let special = |s: &[u8], also_quotes: bool| s.iter().any(|c| matches!(c, b'<' | b'>' | b'[' | b']') || (also_quotes && matches!(c, b'"' | b'\'')));
+    let (mut j, mut subset) = (i + 9, 0usize);
+    while j < end {
+        let c = b[j];
+        if c == b'"' || c == b'\'' {
+            let Some(q) = b[j + 1..end].iter().position(|x| *x == c) else { return false };
+            if special(&b[j + 1..j + 1 + q], false) {
+                return false;
+            }
+            j += q + 2;
+            continue;
+        }
+        if subset > 0 && b[j..].starts_with(b"<!--") {
+            let Some(e) = find(b, j + 4, b"-->").filter(|e| *e < end) else { return false };
+            if special(&b[j + 4..e], true) {
+                return false;
+            }
+            j = e + 3;
+            continue;
+        }
+        if subset > 0 && b[j..].starts_with(b"<?") {
+            let Some(e) = find(b, j + 2, b"?>").filter(|e| *e < end) else { return false };
+            if special(&b[j + 2..e], true) {
+                return false;
+            }
+            j = e + 2;
+            continue;
+        }
+        if c == b'[' {
+            subset += 1;
+        } else if c == b']' {
+            subset = subset.saturating_sub(1);
+        }
+        j += 1;
+    }
+    true
+}
+
+fn ambiguous_markup(what: &str) -> Error {
+    LimitError::new(
+        LimitKind::XmlElements,
+        format!("This file has {what}, which XML readers do not agree on, so its elements could not be counted safely. It was not processed."),
+    )
+    .into()
+}
+
+/// Every way a reader in the workspace may read `bytes` as markup. A UTF-16 byte order mark leaves one reading.
+/// Without one, `<\0` or `\0<` is UTF-16 for the readers that sniff it (EPUB, IDML) but UTF-8 with a NUL for the
+/// ones that decode with [`crate::enc::decode_text`], so both are scanned. Bytes that are not UTF-8 may be read
+/// in a double-byte code page whose second byte can be `[` or `]` (Shift_JIS, GBK/GB18030, Big5: a CDATA section
+/// then ends at another `]]>` than in the bytes), so each of those readings is scanned too.
+fn markup_views(bytes: &[u8]) -> Vec<std::borrow::Cow<'_, [u8]>> {
+    use std::borrow::Cow;
+    let decode = |e: &'static encoding_rs::Encoding| Cow::Owned(e.decode_without_bom_handling(bytes).0.into_owned().into_bytes());
+    if (bytes.starts_with(&[0xFF, 0xFE]) && !bytes.starts_with(&[0xFF, 0xFE, 0, 0])) || bytes.starts_with(&[0xFE, 0xFF]) {
+        return vec![markup_bytes(bytes)];
+    }
+    let mut v = vec![Cow::Borrowed(bytes)];
+    if bytes.starts_with(&[b'<', 0]) || bytes.starts_with(&[0, b'<']) {
+        v.push(markup_bytes(bytes));
+    } else if std::str::from_utf8(bytes.strip_prefix(&[0xEF, 0xBB, 0xBF]).unwrap_or(bytes)).is_err() {
+        for e in [encoding_rs::SHIFT_JIS, encoding_rs::GB18030, encoding_rs::BIG5] {
+            v.push(decode(e));
+        }
+    }
+    v
+}
+
 fn check_xml_with(bytes: &[u8], l: &Limits, keep_dtd: bool) -> Result<(), Error> {
-    let data = markup_bytes(bytes);
-    let b: &[u8] = &data;
+    for view in markup_views(bytes) {
+        scan_xml(&view, l, keep_dtd)?;
+    }
+    Ok(())
+}
+
+fn scan_xml(b: &[u8], l: &Limits, keep_dtd: bool) -> Result<(), Error> {
+    let strict = !keep_dtd;
     let (mut i, mut depth, mut elements) = (0usize, 0usize, 0usize);
     while i < b.len() {
         let Some(p) = b[i..].iter().position(|c| *c == b'<') else { break };
         i += p;
         let rest = &b[i..];
         if rest.starts_with(b"<!--") {
+            // `<!-->` and `<!--->` open a comment for XML, but a scanner that looks for `-->` from the `<` reads them
+            // as a whole comment and goes on with what XML still calls comment text
+            if strict && (rest[4..].starts_with(b">") || rest[4..].starts_with(b"->")) {
+                return Err(ambiguous_markup("a comment that starts with '>' or '->'"));
+            }
             match find(b, i + 4, b"-->") {
                 Some(e) => i = e + 3,
                 None => break,
@@ -427,6 +538,10 @@ fn check_xml_with(bytes: &[u8], l: &Limits, keep_dtd: bool) -> Result<(), Error>
                 None => break,
             }
         } else if rest.starts_with(b"<?") {
+            // `<?>` is no processing instruction; a scanner that looks for `?>` from the `<` reads it as one
+            if strict && rest[2..].starts_with(b">") {
+                return Err(ambiguous_markup("a processing instruction with no name ('<?>')"));
+            }
             match find(b, i + 2, b"?>") {
                 Some(e) => i = e + 2,
                 None => break,
@@ -438,11 +553,25 @@ fn check_xml_with(bytes: &[u8], l: &Limits, keep_dtd: bool) -> Result<(), Error>
                     "This file declares XML entities (a DTD), which could expand without limit or read other files. It was not processed.",
                 ));
             }
+            // the readers must all end the DOCTYPE where this scan does, or elements (or an ENTITY) could hide in
+            // what one of them calls the DOCTYPE. The keep-DTD readers (the XML filter family) check that themselves.
+            if strict && end >= b.len() {
+                return Err(unsafe_xml("This file has a DOCTYPE that is not closed. It was not processed."));
+            }
+            if strict && !doctype_is_unambiguous(b, i, end) {
+                return Err(unsafe_xml(
+                    "This file has a DOCTYPE with a quoted '<', '>' or bracket, or a comment in its DTD with quotes or brackets, which XML readers do not agree on. It was not processed.",
+                ));
+            }
             i = end + 1;
         } else if rest.starts_with(b"<!") {
             // another declaration outside a DOCTYPE
             if rest.len() >= 8 && rest[..8].eq_ignore_ascii_case(b"<!ENTITY") {
                 return Err(unsafe_xml("This file declares XML entities, which are not allowed. It was not processed."));
+            }
+            // `quick-xml` reads `<![` to `]]>` and `<!-` to `-->`; XML has no other declaration outside a DOCTYPE
+            if strict {
+                return Err(ambiguous_markup("a markup declaration outside the DOCTYPE"));
             }
             match find(b, i + 2, b">") {
                 Some(e) => i = e + 1,
@@ -594,6 +723,77 @@ mod tests {
         }
         // an ENTITY declaration outside a DOCTYPE is refused in both modes
         assert_eq!(kind(check_xml_keeping_dtd(br#"<!ENTITY a "x"><r/>"#, &l)), Some(LimitKind::XmlEntities));
+    }
+
+    #[test]
+    fn a_doctype_the_readers_end_elsewhere_is_refused() {
+        let l = Limits { max_xml_depth: 2, max_xml_elements: 3, ..Limits::default() };
+        let body = "<r><a><b><c/></b></a></r>";
+        assert_eq!(kind(check_xml(body.as_bytes(), &l)), Some(LimitKind::XmlDepth));
+        for pre in [
+            "<!doctype r SYSTEM '>",
+            "<!DOCTYPE r SYSTEM \">",
+            "<!DoCtYpE r PUBLIC 'a>b' 'c'>",
+            "<!DOCTYPE r [>",
+            "<!DOCTYPE r [<!-- > -->",
+            "<!DOCTYPE r [<!-- ] --> <x><y>",
+            "<!DOCTYPE r [<!-- ' --> <?p ' ?> ]>",
+            "<!DOCTYPE r SYSTEM 'a[b'>",
+            "<!DOCTYPE r < >",
+            "<!DOCTYPE r [ > ]>",
+            "<!DOCTYPE r",
+        ] {
+            let k = kind(check_xml(format!("{pre}{body}").as_bytes(), &l));
+            assert!(matches!(k, Some(LimitKind::XmlEntities | LimitKind::XmlDepth)), "{pre}: {k:?}");
+            assert!(kind(check_xml(format!("{pre}{body}").as_bytes(), &Limits::default())).is_some(), "{pre} refused even with room");
+        }
+        // what real files carry still passes
+        for ok in [
+            "<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">",
+            "<!doctype html>",
+            "<!DOCTYPE r []>",
+            "<!DOCTYPE mb [ <!ELEMENT mb (msg)*> <!ATTLIST msg id CDATA #IMPLIED d CDATA 'x'> <!-- a note --> <?pi data?> ]>",
+            "<!DOCTYPE r [ <!---->]>",
+        ] {
+            assert!(check_xml(format!("{ok}<r/>").as_bytes(), &Limits::default()).is_ok(), "{ok}");
+        }
+        // the keep-DTD check leaves this to its reader (the XML filter family refuses a mismatch itself)
+        assert!(check_xml_keeping_dtd(b"<!DOCTYPE r [<!-- > --> ]><r/>", &Limits::default()).is_ok());
+    }
+
+    #[test]
+    fn every_reading_of_the_bytes_is_scanned() {
+        let l = Limits { max_xml_depth: 2, max_xml_elements: 3, ..Limits::default() };
+        let body = "<a><b><c/></b></a>";
+        // 0x81 0x5D is one Shift_JIS / GBK character: the bytes end the CDATA at `]]>`, the decoded text later
+        let sjis = format!("<?xml version=\"1.0\" encoding=\"Shift_JIS\"?><r><![CDATA[\u{1}]]><!--]]>{body}--></r>");
+        let mut bytes = sjis.into_bytes();
+        let p = bytes.iter().position(|c| *c == 1).unwrap();
+        bytes[p] = 0x81;
+        assert!(check_xml(&bytes, &l).is_err());
+        // a valid double-byte file still passes
+        let ok = b"<?xml version=\"1.0\" encoding=\"Shift_JIS\"?><r><![CDATA[\x93\xfa]]>\x96\x7b</r>";
+        assert!(check_xml(ok, &Limits::default()).is_ok());
+        // a NUL first: UTF-16BE for one reader, UTF-8 for another
+        let nul = format!("\0<r>{body}</r>");
+        assert!(check_xml(nul.as_bytes(), &l).is_err());
+        let mut le = Vec::new();
+        for u in format!("<r>{body}</r>").encode_utf16() {
+            le.extend(u.to_le_bytes());
+        }
+        assert!(check_xml(&le, &l).is_err());
+        assert!(check_xml(&le, &Limits::default()).is_ok());
+    }
+
+    #[test]
+    fn a_comment_or_pi_a_scanner_ends_early_is_refused() {
+        let l = Limits::default();
+        for bad in ["<!--><r><a/></r><!-- -->", "<!---><r/><!-- -->", "<?><r/><?x?>", "<r><![IGNORE[ <a/> ]]></r>", "<!ELEMENT r ANY><r/>"] {
+            assert_eq!(kind(check_xml(bad.as_bytes(), &l)), Some(LimitKind::XmlElements), "{bad}");
+        }
+        for ok in ["<r><!----></r>", "<r><!-- - --></r>", "<r><??></r>", "<r><?pi x?></r>"] {
+            assert!(check_xml(ok.as_bytes(), &l).is_ok(), "{ok}");
+        }
     }
 
     #[test]

@@ -328,6 +328,19 @@ keeps the encoding:
   (internal, external or parameter) is expanded or fetched, every `&name;` stays a code, and the depth and element
   limits still apply. Every other XML format (ITS rules files, XLIFF, Office parts, resx, SVG, TTML and the rest)
   still refuses entity declarations.
+- Every XML format that refuses entity declarations (11-06): Bilingua also refuses a part whose DOCTYPE, comment or
+  processing instruction the XML readers would end in different places, so the depth, element and entity checks
+  always cover what the reader builds: a DOCTYPE that is not closed, a `<`, `>` or bracket inside a quoted string of
+  the DOCTYPE, a quote or bracket inside a comment or processing instruction of the internal subset, a `<`/`>` that
+  `quick-xml` pairs differently from the quotes and brackets, a comment that starts with `>` or `->`, `<?>`, and a
+  `<!` declaration outside the DOCTYPE. Real files never have these (an XMB or XTB subset of `<!ELEMENT>` and
+  `<!ATTLIST>` declarations still reads). LocOS reads some damaged SVGs of this kind (a stray quote in the DOCTYPE);
+  Bilingua refuses them.
+- The XML guard (11-06) scans every reading a reader may give the bytes: a file that starts `<\0` or `\0<` without
+  a byte order mark is scanned as UTF-16 and as UTF-8, and bytes that are not UTF-8 are also scanned as Shift_JIS,
+  GB18030 and Big5 (their second byte can be `[` or `]`, so a CDATA section ends elsewhere than in the bytes). A
+  UTF-16 file without a byte order mark (which XML does not allow) is refused when it has more than
+  `max_xml_depth` tags.
 - Wave 12, item D (facade options and xmlres records): three new `format_options` keys. `xaml.view_attributes`
   (bool, default unset: the filter's own setting, which is off for `Xaml::new()`; LocOS's `XAML_VIEW_ATTRIBUTES`;
   an explicit `false` also beats `Xaml::with_view_attributes()`). `xml.its_rules` (text, default none: the content
