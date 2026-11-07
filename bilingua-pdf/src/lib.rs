@@ -102,7 +102,7 @@ pub fn page_texts(bytes: &[u8], opts: &ExtractOptions) -> Result<Vec<PageInfo>, 
         let tp = textpage::TextPage::new(&objs, p.bbox().map(|v| v as f32), p.rotation(), rtl);
         let text = tp.text();
         let (w, h) = p.size();
-        let ocr = py_strip(&text).chars().count() < min_chars;
+        let ocr = printable_count(&text) < min_chars;
         // LocOS refuses, before any page is rendered, a document whose scanned pages render to too many pixels.
         if ocr {
             if let Some(scale) = ocr_render_scale(w, h, max_dim) {
@@ -217,9 +217,45 @@ fn open_error(e: doc::OpenError, budget: u64) -> Error {
     }
 }
 
+/// Clean PDFium's page text for units (#808). PDFium marks a hyphen at a line end with U+FFFE: that marker and the
+/// line break after it are dropped, so the word is joined (`extraor` + `dinarily`); any other U+FFFE becomes `-`.
+/// C0 control characters (the raw char codes of a font with no mapping to Unicode) are removed, except tab and the
+/// line breaks `\n` and `\r`.
+fn clean_text(text: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    let mut it = text.chars().peekable();
+    while let Some(c) = it.next() {
+        match c {
+            '\u{fffe}' => match it.peek() {
+                Some('\r') => {
+                    it.next();
+                    if it.peek() == Some(&'\n') {
+                        it.next();
+                    }
+                }
+                Some('\n') => {
+                    it.next();
+                }
+                _ => out.push('-'),
+            },
+            '\t' | '\n' | '\r' => out.push(c),
+            c if (c as u32) < 0x20 => {}
+            c => out.push(c),
+        }
+    }
+    out
+}
+
+/// The characters of a page that count toward the OCR threshold: the cleaned text, stripped, without U+FFFD.
+/// A page of garbage glyph codes counts as empty, so it goes to OCR.
+fn printable_count(text: &str) -> usize {
+    py_strip(&clean_text(text)).chars().filter(|&c| c != '\u{fffd}').count()
+}
+
 /// LocOS `_paragraphs`: split on blank lines (`\n\s*\n`), join each block's stripped, non-empty lines with a space.
 pub fn paragraphs(text: &str) -> Vec<String> {
-    let t = py_strip(text);
+    let cleaned = clean_text(text);
+    let t = py_strip(&cleaned);
     let chars: Vec<char> = t.chars().collect();
     let mut blocks: Vec<String> = Vec::new();
     let mut start = 0;
@@ -366,9 +402,27 @@ mod tests {
         assert_eq!(paragraphs("Hello world.\r\nSecond line."), vec!["Hello world. Second line."]);
         assert_eq!(paragraphs("  a\n\n b \n c\n \n\nd  "), vec!["a", "b c", "d"]);
         assert_eq!(paragraphs("a\u{3000}\n\u{a0}\nb"), vec!["a", "b"]);
-        assert_eq!(paragraphs("extraor\u{fffe}dinarily"), vec!["extraor\u{fffe}dinarily"]);
+        assert_eq!(paragraphs("extraor\u{fffe}dinarily"), vec!["extraor-dinarily"]);
         assert!(paragraphs(" \r\n ").is_empty());
         assert_eq!(py_splitlines("a\r\nb\rc\x0bd\u{2028}e"), vec!["a", "b", "c", "d", "e"]);
+    }
+
+    #[test]
+    fn hyphen_marker_is_joined() {
+        assert_eq!(paragraphs("require extraor\u{fffe}\r\ndinarily long text"), vec!["require extraordinarily long text"]);
+        assert_eq!(paragraphs("a extraor\u{fffe}\ndinarily"), vec!["a extraordinarily"]);
+        assert_eq!(paragraphs("end\u{fffe}"), vec!["end-"]);
+        assert!(paragraphs("a\u{fffe}\r\nb\u{fffe}c").iter().all(|p| !p.contains('\u{fffe}')));
+    }
+
+    #[test]
+    fn c0_controls_are_removed_and_do_not_count_for_ocr() {
+        assert_eq!(paragraphs("ab\u{1}\u{5}c\u{b}d\u{1f}e\tf\r\ng"), vec!["abcde\tf g"]);
+        let garbage: String = "\u{1}\u{5}\u{7}".repeat(20);
+        assert!(paragraphs(&garbage).is_empty());
+        assert_eq!(printable_count(&garbage), 0);
+        assert_eq!(printable_count("\u{fffd}\u{fffe}\u{fffe}\u{fffd}"), 2);
+        assert_eq!(printable_count("  hello \u{3} world  "), 11);
     }
 
     #[test]

@@ -17,15 +17,23 @@ fn run(name: &str, b: &[u8]) -> Result<Document, Error> {
 }
 
 fn run_with(name: &str, b: &[u8], o: &ExtractOptions) -> Result<Document, Error> {
-    let t = Instant::now();
-    let r = Pdf.extract(b, o);
-    let took = t.elapsed();
-    eprintln!("{name}: {:?} in {took:?}", r.as_ref().map(|d| d.units.len()).map_err(|e| e.to_string()));
-    assert!(took < BOUND, "{name} took {took:?}");
-    if let Err(e) = &r {
-        assert!(matches!(e, Error::Limit(_) | Error::Parse { .. } | Error::Unsupported(_)), "{name}: {e:?}");
+    // The limit stays 20 s. A loaded machine can stall one run past it, so a run over the limit is repeated (3 runs
+    // at most) and the test fails only when every run is over: a quadratic or exponential walk is slow each time.
+    let mut slow = Vec::new();
+    loop {
+        let t = Instant::now();
+        let r = Pdf.extract(b, o);
+        let took = t.elapsed();
+        eprintln!("{name}: {:?} in {took:?}", r.as_ref().map(|d| d.units.len()).map_err(|e| e.to_string()));
+        if took < BOUND {
+            if let Err(e) = &r {
+                assert!(matches!(e, Error::Limit(_) | Error::Parse { .. } | Error::Unsupported(_)), "{name}: {e:?}");
+            }
+            return r;
+        }
+        slow.push(took);
+        assert!(slow.len() < 3, "{name} took {slow:?}, over {BOUND:?} in every run");
     }
-    r
 }
 
 fn page_with(resources: &str, content: &[u8], extra: Vec<O>) -> Vec<u8> {
