@@ -700,10 +700,8 @@ Found by the W2 parity and diff runs with the adapter (`coder-comparison/2026-11
   native document merges as before.
 - **xaml DOCTYPE wording** is LocOS's, UTF-16 files included.
 - **xcstrings under the profile.** LocOS writes a changed catalog with `json.dumps` (`_dump`), which spells an empty
-  object `{}` where Xcode writes `{
-
-    }`. A profile merge that changes the file now writes empty objects and
-  arrays the same way; Bilingua still splices everything else (an Xcode file is otherwise already in `json.dumps`
+  object `{}` where Xcode writes an opening brace, a blank line and the closing brace. A profile merge that changes
+  the file now writes empty objects and arrays the same way; Bilingua still splices everything else (an Xcode file is otherwise already in `json.dumps`
   style). Native mode keeps every byte. A catalog that LocOS's `_dump` would re-escape (`ensure_ascii`, `\/`) is
   not rewritten that way.
 - No profile version bump: no LocOS document was ever stored by Bilingua in production.
