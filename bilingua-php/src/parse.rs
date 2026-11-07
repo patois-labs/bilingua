@@ -142,6 +142,8 @@ impl<'a> Parser<'a, '_> {
                 self.declare()?;
             } else if Self::is(Some(t), Kind::Ident, Some("defined")) {
                 self.guard()?;
+            } else if Self::is(Some(t), Kind::Ident, Some("if")) {
+                self.if_guard()?;
             } else if t.kind == Kind::Var {
                 self.assign()?;
             } else {
@@ -191,6 +193,45 @@ impl<'a> Parser<'a, '_> {
             self.punct(")")?;
         }
         self.end_statement()
+    }
+
+    /// The block form of the direct-access guard (SugarCRM, vtiger and others):
+    /// `if (!defined('X') || !X) { die('...'); }`, with or without the braces and the second test.
+    fn if_guard(&mut self) -> Result<(), Error> {
+        self.i += 1;
+        let only = "only `if (!defined(...)) { die(...); }` is allowed";
+        self.punct("(")?;
+        self.punct("!")?;
+        self.expect(Kind::Ident, Some("defined"), only)?;
+        self.punct("(")?;
+        self.expect(Kind::Str, None, "a constant name")?;
+        self.punct(")")?;
+        if Self::is(self.peek(), Kind::Punct, Some("||")) || Self::is(self.peek(), Kind::Ident, Some("or")) {
+            self.i += 1;
+            self.punct("!")?;
+            self.expect(Kind::Ident, None, "a constant name")?;
+        }
+        self.punct(")")?;
+        let braces = Self::is(self.peek(), Kind::Punct, Some("{"));
+        if braces {
+            self.i += 1;
+        }
+        let t = self.next()?;
+        if !(Self::is(Some(&t), Kind::Ident, Some("exit")) || Self::is(Some(&t), Kind::Ident, Some("die"))) {
+            return Err(refuse(self.text, t.start, only));
+        }
+        if Self::is(self.peek(), Kind::Punct, Some("(")) {
+            self.i += 1;
+            if Self::is(self.peek(), Kind::Str, None) {
+                self.i += 1;
+            }
+            self.punct(")")?;
+        }
+        self.punct(";")?;
+        if braces {
+            self.punct("}")?;
+        }
+        Ok(())
     }
 
     fn assign(&mut self) -> Result<(), Error> {
