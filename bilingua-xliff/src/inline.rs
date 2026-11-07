@@ -234,10 +234,14 @@ pub fn parse_inlines(
             }
             Event::GeneralRef(r) => {
                 if atom.is_none() {
+                    let name = r.decode().map_err(|e| xml_err(start, e))?;
+                    // a character reference XML 1.0 does not allow (`&#30;`, `&#0;`) makes the file not well-formed
+                    if let Some(v) = crate::attrs::char_ref_number(&name).filter(|v| !char::from_u32(*v).is_some_and(crate::attrs::is_xml_char)) {
+                        return Err(xml_err(start, format!("xmlParseCharRef: invalid xmlChar value {v}")));
+                    }
                     if let Ok(Some(c)) = r.resolve_char_ref() {
                         b.text.push(c);
                     } else {
-                        let name = r.decode().map_err(|e| xml_err(start, e))?;
                         match decode_entity(&name) {
                             Some(c) => b.text.push(c),
                             None => {

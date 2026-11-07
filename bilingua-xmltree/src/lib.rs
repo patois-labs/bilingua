@@ -113,17 +113,30 @@ fn predefined(name: &str) -> Option<char> {
     })
 }
 
-fn char_ref(name: &str) -> Option<char> {
+/// The number of a character reference (`#30`, `#x1E`), digits only.
+fn char_ref_value(name: &str) -> Option<u32> {
     let n = name.strip_prefix('#')?;
-    let v = match n.strip_prefix('x') {
-        Some(h) => u32::from_str_radix(h, 16).ok()?,
-        None => n.parse::<u32>().ok()?,
-    };
-    char::from_u32(v)
+    match n.strip_prefix('x') {
+        Some(h) if !h.is_empty() && h.bytes().all(|b| b.is_ascii_hexdigit()) => u32::from_str_radix(h, 16).ok(),
+        None if !n.is_empty() && n.bytes().all(|b| b.is_ascii_digit()) => n.parse::<u32>().ok(),
+        _ => None,
+    }
+}
+
+/// True for an XML 1.0 `Char`: `#x9 | #xA | #xD | [#x20-#xD7FF] | [#xE000-#xFFFD] | [#x10000-#x10FFFF]`.
+fn is_xml_char(c: char) -> bool {
+    matches!(c, '\t' | '\n' | '\r' | '\u{20}'..='\u{D7FF}' | '\u{E000}'..='\u{FFFD}' | '\u{10000}'..='\u{10FFFF}')
 }
 
 fn reference(name: &str) -> Result<char, XmlError> {
-    predefined(name).or_else(|| char_ref(name)).ok_or_else(|| err(format!("undefined entity &{name};")))
+    if let Some(c) = predefined(name) {
+        return Ok(c);
+    }
+    match char_ref_value(name) {
+        // a reference to a character XML 1.0 does not allow (`&#30;`, `&#0;`) is not well-formed, as lxml says
+        Some(v) => char::from_u32(v).filter(|c| is_xml_char(*c)).ok_or_else(|| err(format!("xmlParseCharRef: invalid xmlChar value {v}"))),
+        None => Err(err(format!("undefined entity &{name};"))),
+    }
 }
 
 /// An attribute value as a parser reports it: line ends normalised, literal tab and newline as a space,
@@ -908,6 +921,19 @@ mod tests {
         assert!(parse("<a x='1' x='2'/>").is_err());
         let e = parse(&format!("<a{}/>", (0..=MAX_SCOPE).map(|i| format!(" xmlns:p{i}='u'")).collect::<String>())).unwrap_err();
         assert!(e.0.contains("namespace declarations in scope"), "{}", e.0);
+    }
+
+    /// B-SIDE 13: a character reference outside XML 1.0's `Char` is not well-formed (lxml's message); in text and in
+    /// attributes. Allowed references still read; a malformed number is an undefined entity.
+    #[test]
+    fn invalid_character_references_are_refused() {
+        for bad in ["&#30;", "&#x1E;", "&#0;", "&#xFFFE;", "&#xD800;", "&#x110000;"] {
+            let e = parse(&format!("<a>x{bad}y</a>")).unwrap_err();
+            assert!(e.0.contains("xmlParseCharRef: invalid xmlChar value"), "{bad}: {}", e.0);
+            assert!(parse(&format!("<a b='{bad}'/>")).is_err(), "{bad} in an attribute");
+        }
+        assert_eq!(parse("<a>&#9;&#xE9;&#x10000;&#13;</a>").unwrap().serialize(), "<a>\t\u{e9}\u{10000}&#13;</a>");
+        assert!(parse("<a>&#+30;</a>").unwrap_err().0.contains("undefined entity"));
     }
 
     /// A root with a thousand declarations above many children that each declare one more: every child copies the

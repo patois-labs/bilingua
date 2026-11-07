@@ -146,9 +146,25 @@ pub fn decode_entity(name: &str) -> Option<char> {
             } else {
                 num.parse::<u32>().ok()?
             };
-            char::from_u32(cp)
+            // never a character XML 1.0 does not allow (`&#30;`): written back it would make the file unreadable
+            char::from_u32(cp).filter(|c| is_xml_char(*c))
         }
     }
+}
+
+/// The number of a character reference name (`#30`, `#x1E`, the text between `&` and `;`), digits only.
+pub fn char_ref_number(name: &str) -> Option<u32> {
+    let num = name.strip_prefix('#')?;
+    match num.strip_prefix('x') {
+        Some(h) if !h.is_empty() && h.bytes().all(|b| b.is_ascii_hexdigit()) => u32::from_str_radix(h, 16).ok(),
+        None if !num.is_empty() && num.bytes().all(|b| b.is_ascii_digit()) => num.parse().ok(),
+        _ => None,
+    }
+}
+
+/// True for an XML 1.0 `Char`.
+pub fn is_xml_char(c: char) -> bool {
+    matches!(c, '\t' | '\n' | '\r' | '\u{20}'..='\u{D7FF}' | '\u{E000}'..='\u{FFFD}' | '\u{10000}'..='\u{10FFFF}')
 }
 
 /// Escape for element text.

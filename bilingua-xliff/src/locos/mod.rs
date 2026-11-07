@@ -712,12 +712,37 @@ pub fn cat_units(raw: &[u8], format: &str, need_ns: Option<&str>) -> Result<(Vec
 }
 
 /// The units of a plain XLIFF without seg-source (`XliffFilter.parse`).
-fn plain_units(d: &Dom, text: &str) -> Vec<LocosUnit> {
+/// `_copy_work`: how many element copies LocOS's tokenizer makes for this `<source>` (each inline element is
+/// copied once for itself and once for every inline ancestor), counted until it passes `limit` (#571).
+fn copy_work(d: &Dom, src: usize, limit: i64) -> i64 {
+    let elements = |el: usize| d.nodes[el].children.iter().copied().filter(|&c| d.nodes[c].kind == Kind::Element);
+    let mut work = 0i64;
+    let mut stack: Vec<(usize, i64)> = elements(src).map(|c| (c, 1)).collect();
+    while work <= limit {
+        let Some((el, depth)) = stack.pop() else { break };
+        work += depth;
+        stack.extend(elements(el).map(|c| (c, depth + 1)));
+    }
+    work
+}
+
+fn plain_units(d: &Dom, text: &str, max_units: usize) -> Result<Vec<LocosUnit>, Error> {
     let mut units = Vec::new();
+    // #571: nested inline tags multiply LocOS's element copies; ten copies per allowed segment, counted before
+    // any unit is made (LocOS `XliffFilter.parse`)
+    let mut budget = (max_units as i64).saturating_mul(10);
     for (idx, src) in source_elements(d).into_iter().enumerate() {
         let tu = d.nodes[src].parent.unwrap();
         if !unit_skip(d, tu, d.child(tu, "target")).is_empty() {
             continue;
+        }
+        budget -= copy_work(d, src, budget);
+        if budget < 0 {
+            return Err(bilingua_model::guard::LimitError::new(
+                bilingua_model::LimitKind::XmlElements,
+                format!("This XLIFF file has far more inline tags than MAX_DOCUMENT_SEGMENTS allows ({max_units} segments). Split it into smaller files."),
+            )
+            .into());
         }
         let (toks, codes) = tokenize_source(d, src);
         let toks = strip_toks(toks);
@@ -730,7 +755,7 @@ fn plain_units(d: &Dom, text: &str) -> Vec<LocosUnit> {
         }
         units.push(to_unit(d, text, idx as i64, idx, tu, &toks, &codes));
     }
-    units
+    Ok(units)
 }
 
 /// Extracts an XLIFF family file the way Localization OS does (`format`: xliff, sdlxliff, mqxliff or mxliff).
@@ -741,7 +766,7 @@ pub fn extract(bytes: &[u8], format: &str, opts: &ExtractOptions) -> Result<Docu
         if has_seg_source(&d) {
             cat_units(bytes, format, None)?.0
         } else {
-            plain_units(&d, &text)
+            plain_units(&d, &text, opts.limits().max_units)?
         }
     } else {
         cat_units(bytes, format, require_ns(format))?.0
