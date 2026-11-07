@@ -31,7 +31,7 @@ pub use doc::{detect, Doc, SegView};
 pub use error::Error;
 pub use inline::{RawTag, TagDef, TagDefs};
 
-use bilingua_model::{Document, ExtractOptions, Filter, Granularity, Inline, MergeOptions, Segment, SkelPart, Skeleton, TagKind, Unit};
+use bilingua_model::{Document, ExtractOptions, Filter, Granularity, Inline, MergeOptions, SegState, Segment, SkelPart, Skeleton, TagKind, Unit};
 use std::collections::{HashMap, HashSet};
 
 /// The unit ids and segment ids [`to_document`] gives an open file, one unit id per trans-unit (`Doc` unit
@@ -173,6 +173,8 @@ pub fn to_document_in(
     let mut units: Vec<Unit> = Vec::new();
     let mut unit_of: Vec<Option<usize>> = vec![None; doc.unit_count()];
     let (unit_ids, seg_ids) = segment_ids(doc);
+    // locked segments per unit: (index in the unit, reason)
+    let mut locked_segs: HashMap<usize, Vec<(usize, Option<String>)>> = HashMap::new();
     for (i, sid) in seg_ids.iter().enumerate() {
         let v = doc.seg(i);
         let ui = match unit_of[v.unit_ix] {
@@ -205,10 +207,27 @@ pub fn to_document_in(
             }
         }
         if v.locked {
-            u.translate = false;
-            u.lock_reason = v.lock_reason.map(str::to_string);
+            locked_segs.entry(ui).or_default().push((u.segments.len(), v.lock_reason.map(str::to_string)));
         }
         u.segments.push(Segment::new(sid.clone(), v.source.to_vec()).with_target(v.target.to_vec()).with_state(v.state).with_origin(v.origin.cloned()));
+    }
+    // A unit whose segments are all locked is not translatable. When only some are locked (SDLXLIFF `sdl:seg`
+    // locked), the unit stays translatable and the locked segments get `SegState::Locked`, which the model
+    // refuses a target for.
+    for (ui, locked) in locked_segs {
+        let u = &mut units[ui];
+        if locked.len() == u.segments.len() {
+            u.translate = false;
+            u.lock_reason = locked[0].1.clone();
+        } else {
+            for (si, reason) in locked {
+                let sid = u.segments[si].id.clone();
+                u.segments[si].state = SegState::Locked;
+                if let Some(r) = reason {
+                    u.context.extra.insert(format!("xliff.lock.{sid}"), r);
+                }
+            }
+        }
     }
     let lang = |s: &str, fallback: &Option<String>| (!s.trim().is_empty()).then(|| s.to_string()).or_else(|| fallback.clone());
     bilingua_model::guard::finish(Document::new(id.to_string(), units, Skeleton::text(

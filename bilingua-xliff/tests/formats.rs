@@ -79,8 +79,10 @@ fn japanese_sdlxliff_with_bom_reads_conf_origin_and_lock_and_writes_back() {
     let o = s1.origin.as_ref().unwrap();
     assert_eq!((o.kind, o.name.as_deref(), o.match_pct), (OriginKind::Tm, Some("Acme TM"), Some(87)));
     assert_eq!(f.merge(&d).unwrap(), JA_SDL.as_bytes());
-    // The file locks segment 2 at the segment level, which the unit shows as locked.
-    assert!(!d.units[0].translate);
+    // The file locks segment 2 at the segment level: segment 1 stays editable, so the unit stays translatable.
+    assert!(d.units[0].translate);
+    assert_eq!(d.units[0].segments[0].state, SegState::SignedOff);
+    assert_eq!(d.units[0].segments[1].state, SegState::Locked);
     // Unlocked file: edit segment 1 through the open handle path.
     let mut doc = Doc::from_bytes(JA_SDL.as_bytes().to_vec()).unwrap();
     assert_eq!(doc.format(), Format::Sdlxliff);
@@ -359,4 +361,43 @@ fn seg_mrks_holding_other_inline_markup_keep_their_spans() {
     let again = f.extract(out.as_bytes(), &opts()).unwrap();
     assert_eq!(tgt(&again, &ids[0]), "Un deux.");
     assert_eq!(tgt(&again, &ids[1]), "Quatre.");
+}
+
+const SEG_LOCK: &str = "<?xml version=\"1.0\" encoding=\"utf-8\"?>
+<xliff version=\"1.2\" xmlns=\"urn:oasis:names:tc:xliff:document:1.2\" xmlns:sdl=\"http://sdl.com/FileTypes/SdlXliff/1.0\" sdl:version=\"1.0\">
+<file original=\"a.txt\" source-language=\"en-US\" target-language=\"de-DE\" datatype=\"x-sdlfilterframework2\"><body>
+<trans-unit id=\"t1\"><source>One. Two. Three.</source><seg-source><mrk mtype=\"seg\" mid=\"1\">One.</mrk> <mrk mtype=\"seg\" mid=\"2\">Two.</mrk> <mrk mtype=\"seg\" mid=\"3\">Three.</mrk></seg-source><target><mrk mtype=\"seg\" mid=\"1\"></mrk> <mrk mtype=\"seg\" mid=\"2\">Zwei.</mrk> <mrk mtype=\"seg\" mid=\"3\"></mrk></target><sdl:seg-defs><sdl:seg id=\"2\" conf=\"Translated\" locked=\"true\"/></sdl:seg-defs></trans-unit>
+<trans-unit id=\"t2\"><source>A. B.</source><seg-source><mrk mtype=\"seg\" mid=\"4\">A.</mrk> <mrk mtype=\"seg\" mid=\"5\">B.</mrk></seg-source><target><mrk mtype=\"seg\" mid=\"4\"></mrk> <mrk mtype=\"seg\" mid=\"5\"></mrk></target><sdl:seg-defs><sdl:seg id=\"4\" locked=\"true\"/><sdl:seg id=\"5\" locked=\"true\"/></sdl:seg-defs></trans-unit>
+</body></file></xliff>
+";
+
+#[test]
+fn sdlxliff_one_locked_segment_does_not_lock_the_unit() {
+    let f = filter("sdlxliff");
+    let mut d = f.extract(SEG_LOCK.as_bytes(), &opts()).unwrap();
+    assert_eq!(f.merge(&d).unwrap(), SEG_LOCK.as_bytes());
+    let u = &d.units[0];
+    assert!(u.translate);
+    assert!(u.lock_reason.is_none());
+    let states: Vec<SegState> = u.segments.iter().map(|s| s.state).collect();
+    assert_eq!(states[1], SegState::Locked);
+    assert_ne!(states[0], SegState::Locked);
+    assert_ne!(states[2], SegState::Locked);
+    // The locked segment refuses a target; the others take one.
+    assert!(d.set_target("2", vec![Inline::text("Nein.")]).is_err());
+    d.set_target("1", vec![Inline::text("Eins.")]).unwrap();
+    d.set_target("3", vec![Inline::text("Drei.")]).unwrap();
+    let out = String::from_utf8(f.merge(&d).unwrap()).unwrap();
+    assert!(out.contains("Eins.") && out.contains("Drei."));
+    assert!(out.contains("<mrk mtype=\"seg\" mid=\"2\">Zwei.</mrk>"), "locked target must stay: {out}");
+    assert!(!out.contains("Nein."));
+    // A target forced into the model on the locked segment is ignored by the writer.
+    d.units[0].segments[1].target = vec![Inline::text("Forced.")];
+    let out = String::from_utf8(f.merge(&d).unwrap()).unwrap();
+    assert!(!out.contains("Forced."));
+    // All segments locked: the unit stays untranslatable, as before.
+    let u2 = &d.units[1];
+    assert!(!u2.translate);
+    assert!(u2.lock_reason.is_some());
+    assert!(d.set_target("4", vec![Inline::text("x")]).is_err());
 }

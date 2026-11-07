@@ -1,7 +1,7 @@
 //! `bl-dump FILE`: prints one JSON object with Bilingua's units for FILE and the result of its own round-trip
 //! checks. Used by `oracle/run.py` to compare Bilingua with other filters. Not shipped.
 
-use bilingua::{Granularity, Inline, TagKind};
+use bilingua::{Granularity, Inline, SegState, TagKind};
 use serde_json::{json, Value};
 use std::collections::BTreeMap;
 use std::io::Read;
@@ -41,7 +41,7 @@ fn units(doc: &bilingua::Document) -> Vec<Value> {
                 one.segments = vec![s.clone()];
                 one.separators.clear();
                 let (text, tags) = render(&one);
-                out.push(json!({"id": s.id, "text": text, "tags": tags, "locked": !u.translate, "kind": u.context.kind, "state": s.state}));
+                out.push(json!({"id": s.id, "text": text, "tags": tags, "locked": !u.translate || s.state == SegState::Locked, "kind": u.context.kind, "state": s.state}));
             }
         } else {
             let (text, tags) = render(u);
@@ -173,7 +173,8 @@ fn main() {
         .units
         .iter()
         .filter(|u| u.translate)
-        .flat_map(|u| u.segments.iter().map(|s| (s.id.clone(), s.source.clone())))
+        // a locked segment in an open unit (an SDLXLIFF `sdl:seg` lock) refuses a target by design
+        .flat_map(|u| u.segments.iter().filter(|s| s.state != SegState::Locked).map(|s| (s.id.clone(), s.source.clone())))
         .collect();
     for (id, src) in &ids {
         if p.set_target(id, pseudo(src)).is_err() {
@@ -199,13 +200,13 @@ fn main() {
                     .units
                     .iter()
                     .filter(|u| u.translate)
-                    .flat_map(|u| u.segments.iter().map(|s| format!("{PRE}{}{POST}", bilingua::plain_text(&s.source))))
+                    .flat_map(|u| u.segments.iter().filter(|s| s.state != SegState::Locked).map(|s| format!("{PRE}{}{POST}", bilingua::plain_text(&s.source))))
                     .collect();
                 let got: Vec<String> = d2
                     .units
                     .iter()
                     .filter(|u| u.translate)
-                    .flat_map(|u| u.segments.iter().map(|s| bilingua::plain_text(&s.target)))
+                    .flat_map(|u| u.segments.iter().filter(|s| s.state != SegState::Locked).map(|s| bilingua::plain_text(&s.target)))
                     .collect();
                 if a != b2 {
                     json!({"status": "sources changed after merge"})

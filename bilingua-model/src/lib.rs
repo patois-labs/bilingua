@@ -1080,8 +1080,8 @@ impl Document {
         self.segments().find(|(_, s)| s.id == seg_id)
     }
 
-    /// Sets a segment's target. Rejects unknown segments, untranslatable units, and tags the source lacks or
-    /// repeats. A missing tag is allowed (the writer leaves it out), as in catcore.
+    /// Sets a segment's target. Rejects unknown segments, untranslatable units, segments in state
+    /// [`SegState::Locked`], and tags the source lacks or repeats. A missing tag is allowed (the writer leaves it out), as in catcore.
     ///
     /// The first call builds an index of segment ids (one pass over the document); later calls find the segment
     /// through it, so setting every segment of a 12 000 unit file is linear, not quadratic. The index is checked
@@ -1166,6 +1166,9 @@ impl Document {
             return Err(Error::Locked(seg_id.to_string()));
         }
         let seg = &mut unit.segments[si];
+        if seg.state == SegState::Locked {
+            return Err(Error::Locked(seg_id.to_string()));
+        }
         check_tags(&seg.source, &target, repeat_standalone)?;
         // The free flag belongs to the source code: a target tag takes it from the source tag with its id, so a
         // caller (an editor, a LocOS adapter) that does not know the flag cannot drop or invent it.
@@ -1190,7 +1193,8 @@ impl Document {
     }
 
     /// Marks a segment as translated to nothing on purpose (see [`Segment::empty_target`]): the writer writes an
-    /// empty value for it. State `Draft`, as for any new target. Rejects unknown segments and untranslatable units.
+    /// empty value for it. State `Draft`, as for any new target. Rejects unknown segments, untranslatable units
+    /// and locked segments.
     pub fn set_target_empty(&mut self, seg_id: &str) -> Result<(), Error> {
         let (ui, si) = self
             .units
@@ -1203,6 +1207,9 @@ impl Document {
             return Err(Error::Locked(seg_id.to_string()));
         }
         let seg = &mut unit.segments[si];
+        if seg.state == SegState::Locked {
+            return Err(Error::Locked(seg_id.to_string()));
+        }
         seg.target.clear();
         seg.empty_target = true;
         seg.state = SegState::Draft;
@@ -1577,7 +1584,7 @@ pub enum Error {
     /// No segment has this id.
     UnknownSegment(String),
     #[error("segment {0} is locked")]
-    /// The segment belongs to a locked unit.
+    /// The segment is locked, or belongs to a locked unit.
     Locked(String),
     #[error("tag {0} is not in the source")]
     /// The target uses a tag the source does not have.
