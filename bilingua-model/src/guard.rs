@@ -384,7 +384,7 @@ fn doctype_end(b: &[u8], i: usize) -> usize {
             if c == sq {
                 sq = 0;
             }
-        } else if c == b'"' || c == b''' {
+        } else if c == b'"' || c == b'\'' {
             sq = c;
         } else if subset > 0 && b[j..].starts_with(b"<!--") {
             match find(b, j + 4, b"-->") {
