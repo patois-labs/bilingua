@@ -290,12 +290,77 @@ fn check_tag(d: Dialect, tok: &str, orig: &str, m: &Masked, masked_pos: usize) -
         let s = from + p;
         let e = tok[s..].find(S_CLOSE).map_or(tok.len(), |q| s + q + S_CLOSE.len_utf8());
         if !allowed.iter().any(|&(a, b)| a <= s && e <= b) {
-            let prefix = m.unmask(&m.text[..masked_pos + s], orig);
-            return Err(refused(d, &prefix, prefix.len(), "code is used as a tag or attribute name", HINT));
+            // Code BETWEEN attributes (after the tag name, between two attributes, before `>` or `/>`, or around a bare
+            // attribute) is an opaque code of the tag. It must not build a tag or attribute name, and the rest of the
+            // tag must read cleanly.
+            if !(bare_code_ok(tok, s, e, &allowed, m) && tag_is_clean(tok, &allowed)) {
+                let prefix = m.unmask(&m.text[..masked_pos + s], orig);
+                return Err(refused(d, &prefix, prefix.len(), "code is used as a tag or attribute name", HINT));
+            }
         }
         from = e;
     }
     Ok(())
+}
+
+const KNOWN_ELEMENTS: [&str; 40] = [
+    "a", "b", "i", "u", "p", "br", "hr", "li", "ul", "ol", "dl", "dt", "dd", "tr", "td", "th", "div", "span", "img", "input",
+    "label", "select", "option", "button", "table", "tbody", "thead", "tfoot", "form", "textarea", "section", "article",
+    "nav", "header", "footer", "main", "aside", "fieldset", "iframe", "link",
+];
+
+fn is_name_char(c: char) -> bool {
+    c.is_ascii_alphanumeric() || matches!(c, '_' | ':' | '.' | '-')
+}
+
+/// The code at `s..e` of `tok` (outside every attribute value) does not touch a tag name or an attribute name: before
+/// it comes white space, a closing quote, another code, or a bare attribute name that itself starts after a code; after
+/// it comes white space, `>`, `/`, the end, another code or a name that is not followed by `=`.
+fn bare_code_ok(tok: &str, s: usize, e: usize, allowed: &[(usize, usize)], m: &Masked) -> bool {
+    let before = &tok[..s];
+    let run = before.len() - before.trim_end_matches(is_name_char).len();
+    let head = &before[..before.len() - run];
+    let before_ok = if run == 0 {
+        before.chars().next_back().is_some_and(|c| is_space(c) || c == S_CLOSE) || allowed.iter().any(|&(_, b)| b == s)
+    } else if head.ends_with(S_CLOSE) {
+        true
+    } else {
+        // a name glued to the code: `<th<?php echo $attrs ?> id="a">` (a known element name), or a bare attribute
+        // followed by a STATEMENT (`selected<?php endif; ?>`). An output code could be the rest of the name.
+        let name = &before[before.len() - run..];
+        let k = tok[s + S_OPEN.len_utf8()..e - S_CLOSE.len_utf8()].parse::<usize>().ok();
+        let statement = k.and_then(|k| m.inline.get(k)).is_some_and(|il| !il);
+        (head == "<" && KNOWN_ELEMENTS.contains(&name.to_ascii_lowercase().as_str())) || (head != "<" && statement)
+    };
+    let after = &tok[e..];
+    let name = after.len() - after.trim_start_matches(is_name_char).len();
+    let after_ok = match after[name..].chars().next() {
+        None => true,
+        Some('=') => name > 0,
+        Some(c) => is_space(c) || matches!(c, '>' | '/' | S_OPEN),
+    };
+    before_ok && after_ok
+}
+
+/// A tag that holds code between its attributes must read cleanly: outside the attribute values and the codes there
+/// is no quote and no `<` (a tag nested inside a quoted value, such as `href="a<x:url value="${v}"/>b"`, would make the
+/// HTML tokenizer read junk, so such a page stays refused).
+fn tag_is_clean(tok: &str, allowed: &[(usize, usize)]) -> bool {
+    let mut i = 1;
+    for (j, c) in tok.char_indices().skip(1) {
+        if j < i {
+            continue;
+        }
+        i = j + c.len_utf8();
+        if let Some(&(_, b)) = allowed.iter().find(|&&(a, b)| a <= j && j < b) {
+            i = b;
+        } else if c == S_OPEN {
+            i = tok[j..].find(S_CLOSE).map_or(tok.len(), |q| j + q + S_CLOSE.len_utf8());
+        } else if matches!(c, '"' | '\'' | '<') {
+            return false;
+        }
+    }
+    true
 }
 
 /// The HTML tokens of the masked text, with islands in text split out as island tokens.
@@ -320,6 +385,7 @@ fn tokens<'m>(d: Dialect, m: &'m Masked, orig: &str, budget: &mut Option<i64>, l
         ri += 1;
         if kind == K::Markup {
             check_tag(d, s, orig, m, pos)?;
+            check_jsp_nested_tag(d, s, orig, m, pos)?;
             let (closing, name, sc) = html::parse_tag_str(s);
             if !skip_name.is_empty() {
                 if closing && name == skip_name {
@@ -486,11 +552,51 @@ fn attr_kind(style: &str) -> &'static str {
 }
 
 /// The attribute units a page offers: the accessibility and metadata attributes, without code in the value.
-fn attr_units(toks: &[Tok]) -> Vec<html::AttrUnit> {
+fn attr_units(d: Dialect, toks: &[Tok]) -> Vec<html::AttrUnit> {
     html::iter_page_attr_units(toks)
         .into_iter()
-        .filter(|a| !has_sentinel(&toks[a.ti].s[a.start..a.end]))
+        .filter(|a| {
+            let v = &toks[a.ti].s[a.start..a.end];
+            // a JSP custom tag in a value (`title="<fmt:message key='x'/>"`) is code the server runs, not text
+            !(has_sentinel(v) || d == Dialect::Jsp && has_prefixed_tag(v))
+        })
         .collect()
+}
+
+/// `<prefix:name` or `</prefix:name` somewhere in `s` (a JSP custom action such as `<c:if`, `<fmt:message`).
+fn has_prefixed_tag(s: &str) -> bool {
+    s.match_indices('<').any(|(i, _)| starts_prefixed_tag(&s[i..]))
+}
+
+/// `s` starts with `<prefix:name` or `</prefix:name`.
+fn starts_prefixed_tag(s: &str) -> bool {
+    let Some(r) = s.strip_prefix('<') else { return false };
+    let r = r.strip_prefix('/').unwrap_or(r);
+    let p = r.find(|c: char| !(c.is_ascii_alphanumeric() || matches!(c, '_' | '-' | '.'))).unwrap_or(r.len());
+    p > 0 && r.as_bytes()[0].is_ascii_alphabetic() && r[p..].starts_with(':') && r[p + 1..].starts_with(|c: char| c.is_ascii_alphabetic())
+}
+
+/// JSP: a custom tag between the attributes of an HTML tag (`<input <c:if test="${x}">checked</c:if>>`). The HTML
+/// scanner ends the outer tag at the inner tag's `>` and would offer the rest of the outer tag as text, so the page is
+/// refused. A custom tag inside a quoted value is read correctly and is not offered (see `attr_units`).
+fn check_jsp_nested_tag(d: Dialect, tok: &str, orig: &str, m: &Masked, masked_pos: usize) -> Result<(), Error> {
+    if d != Dialect::Jsp || tok.starts_with("<!") || tok.starts_with("<?") || tok.starts_with("</") {
+        return Ok(());
+    }
+    let mut quote: Option<char> = None;
+    for (j, c) in tok.char_indices().skip(1) {
+        match quote {
+            Some(q) if c == q => quote = None,
+            Some(_) => {}
+            None if c == '"' || c == '\'' => quote = Some(c),
+            None if c == '<' && starts_prefixed_tag(&tok[j..]) => {
+                let prefix = m.unmask(&m.text[..masked_pos + j], orig);
+                return Err(refused(d, &prefix, prefix.len(), "code is used as a tag or attribute name", HINT));
+            }
+            None => {}
+        }
+    }
+    Ok(())
 }
 
 fn load(bytes: &[u8], opts: &ExtractOptions, limits: &Limits) -> Result<enc::Decoded, Error> {
@@ -530,7 +636,7 @@ fn extract_with(d: Dialect, bytes: &[u8], opts: &ExtractOptions, limits: &Limits
     for (i, u) in body.iter().enumerate() {
         units.push(body_unit(format!("u{}", i + 1), u, &m, text));
     }
-    for a in attr_units(&toks) {
+    for a in attr_units(d, &toks) {
         guard::check_unit_count(units.len() + 1, limits)?;
         let mut u = Unit::new(format!("u{}", units.len() + 1), vec![Inline::text(a.text.clone())]);
         u.context.kind = Some(attr_kind(&a.style).into());
@@ -684,7 +790,7 @@ fn merge_with(d: Dialect, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>
     }
     let before: String = toks.iter().map(|t| t.s.as_ref()).collect();
     let n_body = html::iter_units(&toks, None).map_err(|_| Error::Write("unit count".into()))?.len();
-    let attrs = attr_units(&toks);
+    let attrs = attr_units(d, &toks);
     if doc.units.len() != n_body + attrs.len() {
         return Err(Error::Write(format!(
             "the document has {} units but its page holds {}; open the file again",

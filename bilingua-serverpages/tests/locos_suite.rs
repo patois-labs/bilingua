@@ -159,8 +159,11 @@ fn tokens_cannot_lose_or_inject_code() {
 fn refusals() {
     // 6) unsafe islands refuse the file with a line number (13 cases)
     refused("phtml", "<p>Hi</p>\n<<?= $tag ?> class='x'>Hello</<?= $tag ?>>", "tag name (line 2)");
-    refused("phtml", "<div <?php echo $attrs ?>>Hello</div>", "tag or attribute name");
-    refused("aspx", "<input <%= disabled %> value=\"x\">", "tag or attribute name");
+    // Code between the attributes of a tag: LocOS refuses these two ("tag or attribute name"), Bilingua opens them
+    // (MIGRATION.md "Differences from LocOS"); see `server_code_between_attributes` below. Code that makes the tag
+    // name or an attribute name itself stays refused:
+    refused("phtml", "<widget<?php echo $attrs ?> class=\"x\">Hello</widget>", "tag or attribute name");
+    refused("aspx", "<input a<%= n %>=\"x\">", "tag or attribute name");
     refused("phtml", "<?php echo \"<div\"; ?> class=\"x\">Hello</div>", "start of an HTML tag");
     refused("phtml", "<p>Hi <?php echo 'oops ?></p>", "string is never closed");
     refused("phtml", "<p>Hi <?php /* never ?></p>", "comment is never closed");
@@ -275,8 +278,10 @@ fn html_with_server_code_is_protected() {
         Err(Error::Parse { msg, .. }) => assert!(msg.contains("mixes PHP code and <% %> code"), "{msg}"),
         other => panic!("{other:?}"),
     }
-    // An island the server-page rules cannot keep safe refuses the .html as well.
-    refused("aspx", "<input <%= disabled %> value=\"x\">", "tag or attribute name");
+    // An island the server-page rules cannot keep safe refuses the .html as well (the code is part of a name).
+    refused("aspx", "<input a<%= disabled %>=\"x\">", "tag or attribute name");
+    // (code between attributes is opened, unlike LocOS: see `server_code_between_attributes`)
+    assert!(extract_str("aspx", "<%@ Page Language=\"C#\" %><input <%= disabled %> value=\"x\">").is_ok());
 }
 
 #[test]
@@ -298,8 +303,121 @@ fn ingest_export_of_a_jsp() {
         assert!(out.contains(code), "{code} in {out}");
     }
     assert!(out.contains("FR ") && !out.contains('\u{27E6}'), "{out}");
-    match extract_str("phtml", "<div <?php echo $a ?>>x</div>") {
-        Err(Error::Parse { msg, .. }) => assert!(msg.contains("attribute name"), "{msg}"),
-        other => panic!("{other:?}"),
+    // LocOS refused this ("attribute name"); Bilingua opens it and keeps the code
+    let doc = extract_str("phtml", "<div <?php echo $a ?>>x</div>").unwrap();
+    assert_eq!(doc.units.len(), 1);
+}
+
+/// DIFFERENCE FROM LOCOS: server code between attributes opens as an opaque code of the tag.
+#[test]
+fn server_code_between_attributes() {
+    let cases: &[(&str, &str)] = &[
+        ("aspx", "<%@ Page Language=\"C#\" %><div <%= attrs %> class=\"a\" title=\"Hello there\">Text one</div>"),
+        ("erb", "<div <%= attrs %> class=\"a\">Text one</div>\n<input checked <%= x %> />\n<p <%= y %>>Text two</p>"),
+        ("jsp", "<%@ page contentType=\"text/html\" %><input <% if (a) { %>disabled<% } %> value=\"v\"/><p>Text two</p>"),
+        ("phtml", "<div <?php echo $a ?> class=\"x\">Text one</div><img src=\"a.png\" <?= $b ?> alt=\"A picture\"><p <?php echo $c; ?>>Text two</p>"),
+        ("phtml", "<table><tr><th<?php echo $p ?> id=\"a\">Head text</th></tr></table><select><option value=\"a\"<?php if ($x): ?> selected<?php endif; ?>>Text two</option></select>"),
+        ("phtml", "<ul <?php echo $z ?>><li class=\"a\"<?php if ($q): ?> selected=\"selected\"<?php endif ?>>Text one</li></ul>"),
+    ];
+    for (fmt, src) in cases {
+        let data = src.as_bytes();
+        let doc = extract_str(fmt, src).unwrap_or_else(|e| panic!("{fmt} {src:?}: {e}"));
+        assert!(!doc.units.is_empty(), "{src:?}");
+        // the code is never offered as text
+        for u in &doc.units {
+            let t = plain_text(&u.source());
+            assert!(!t.contains("<?") && !t.contains("<%") && !t.contains('\u{FDD0}'), "{src:?}: {t:?}");
+        }
+        assert_identity(fmt, data);
+        // translate every unit: the code stays byte for byte, in order
+        let m: Vec<(usize, String)> = (0..doc.units.len()).map(|i| (i, format!("Zq{i}qZ"))).collect();
+        let mp: Vec<(usize, &str)> = m.iter().map(|(i, s)| (*i, s.as_str())).collect();
+        let out = String::from_utf8(build(fmt, data, &mp)).unwrap();
+        let codes = |s: &str| -> Vec<String> { Dialect::from_extension(fmt).unwrap().code_islands(s).unwrap() };
+        assert_eq!(codes(&out), codes(src), "{src:?} -> {out:?}");
+        assert!(out.contains("Zq0qZ"), "{out}");
+        // and the pseudo round trip re-reads as Zq..qZ with the same unit count
+        let again = extract_str(fmt, &out).unwrap();
+        assert_eq!(again.units.len(), doc.units.len(), "{out}");
+        for (i, u) in again.units.iter().enumerate() {
+            assert_eq!(plain_text(&u.source()), format!("Zq{i}qZ"), "{out}");
+        }
     }
+}
+
+/// A tag with code between attributes inside running text is an inline code; the echo merge keeps it byte for byte.
+#[test]
+fn server_code_between_attributes_inline() {
+    for (fmt, src) in [
+        ("phtml", "<p>See <a href=\"x\" <?php echo $z ?>>this link</a> now<br <?= $q ?>/> ok</p>"),
+        ("erb", "<p>See <b <%= x %>>bold</b> now</p>"),
+    ] {
+        assert_identity(fmt, src.as_bytes());
+    }
+}
+
+/// An attribute VALUE next to code in the tag is still translatable.
+#[test]
+fn server_code_between_attributes_keeps_values_translatable() {
+    let src = "<img <?= $b ?> src=\"a.png\" alt=\"A picture\" <?php echo $c ?>>";
+    let doc = extract_str("phtml", src).unwrap();
+    let texts: Vec<String> = doc.units.iter().map(|u| plain_text(&u.source())).collect();
+    let i = texts.iter().position(|t| t == "A picture").unwrap_or_else(|| panic!("{texts:?}"));
+    let out = build_str("phtml", src, &[(i, "Une image")]);
+    assert_eq!(out, "<img <?= $b ?> src=\"a.png\" alt=\"Une image\" <?php echo $c ?>>");
+}
+
+/// Code that is the tag name or part of an attribute name stays refused, and so does a tag nested inside a quoted
+/// attribute value (the tokenizer would read junk): no junk text units.
+#[test]
+fn server_code_in_names_and_nested_tags_stays_refused() {
+    refused("phtml", "<<?= $tag ?> class=\"x\">Hello</div>", "tag");
+    refused("phtml", "<widget<?= $a ?> class=\"x\">Hello</widget>", "tag or attribute name");
+    refused("phtml", "<h<?= $n ?>>Title</h<?= $n ?>>", "tag or attribute name");
+    refused("phtml", "<div data-<?= $k ?>=\"v\">Hello</div>", "tag or attribute name");
+    refused("phtml", "<div class<?= $k ?>>Hello</div>", "tag or attribute name");
+    refused("phtml", "<div cl<?= $a ?>ass=\"x\">Hello</div>", "tag or attribute name");
+    refused("jsp", "<a href=\"/x?u=<openmrs_tag:url value=\"${u}\"/>&amp;v=1\">Link text</a>", "tag or attribute name");
+}
+
+/// JSP custom tags in a tag. Between attributes (`<input <c:if ..>checked</c:if>>`) the scanner would end the outer tag
+/// at the inner `>` and offer `checked</c:if>>` as text: refused. Inside a quoted value (`title="<fmt:message ../>"`)
+/// the tag is read correctly but the value is code the server runs: kept byte for byte and never offered.
+#[test]
+fn jsp_custom_tags_in_a_tag() {
+    let head = "<%@ page contentType=\"text/html\" %>";
+    refused("jsp", &format!("{head}<div <c:if test=\"${{a}}\">class=\"x\"</c:if> id=\"d\">Text one</div>"), "tag or attribute name");
+    refused("jsp", &format!("{head}<p>See <a href=\"x\" <c:if test=\"${{a}}\">class=\"c\"</c:if>>link</a> now</p>"), "tag or attribute name");
+    refused("jsp", &format!("{head}<input type=\"checkbox\" <c:if test=\"true\">checked</c:if>/>"), "tag or attribute name");
+    let src = format!("{head}<a href=\"#\" title=\"<fmt:message key='a.b'/>\">Link one</a> <img alt=\"A real picture\" title='<x:out value=\"v\"/>'>");
+    let t = texts_str("jsp", &src);
+    assert!(t.iter().all(|u| !u.contains("fmt:") && !u.contains("x:out")), "{t:?}");
+    assert!(t.iter().any(|u| u == "A real picture"), "{t:?}");
+    assert_identity("jsp", src.as_bytes());
+    // the same value in a .phtml page has no JSP meaning and stays text (LocOS behaviour)
+    assert!(texts_str("phtml", "<?php $a = 1; ?><a title=\"<x:y/>\">Hi</a>").iter().any(|u| u.contains("x:y")));
+}
+
+/// A translation next to code in a tag can only change the translated value: quotes, `<`, `>` and `=` are escaped,
+/// the code stays byte for byte and no attribute or tag appears.
+#[test]
+fn server_code_between_attributes_cannot_inject() {
+    let evil = "x\" onerror=\"alert(1)\" a='b' <script>alert(2)</script> = > <?= $e ?>";
+    let src = "<p>Hi <?= $q ?></p><img <?= $a ?> alt=\"Hello\"<?php echo $b ?> title='Tip'>
+<a <?php if ($x) { ?> title=\"Click\" <?php } ?> href=\"u\">Go</a>";
+    let doc = extract_str("phtml", src).unwrap();
+    let t: Vec<String> = doc.units.iter().map(|u| plain_text(&u.source())).collect();
+    for want in ["Hello", "Tip", "Click"] {
+        let i = t.iter().position(|x| x == want).unwrap_or_else(|| panic!("{want} in {t:?}"));
+        let out = build_str("phtml", src, &[(i, evil)]);
+        let codes = |s: &str| Dialect::Phtml.code_islands(s).unwrap();
+        assert_eq!(codes(&out), codes(src), "{out}");
+        assert!(!out.contains("onerror=\"") && !out.contains("<script") && !out.contains("a='b'") && !out.contains("<?= $e"), "{out}");
+        assert_eq!(out.matches('"').count(), src.matches('"').count(), "{out}");
+        assert_eq!(out.matches('\'').count(), src.matches('\'').count(), "{out}");
+    }
+    // a code glued before an attribute name makes that attribute opaque (its name is not `title` to the scanner)
+    let glued = "<p>Hi <?= $q ?></p><a <?php if ($x) { ?>title=\"Click\"<?php } ?> href=\"u\">Go</a>";
+    assert!(!texts_str("phtml", glued).iter().any(|u| u.contains("Click")));
+    assert_identity("phtml", glued.as_bytes());
 }

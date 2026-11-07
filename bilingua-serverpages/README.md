@@ -39,10 +39,22 @@ fails with `Error::Write`.
 With `target_lang` set and a unit translated, `<html lang>` (and `xml:lang`), `dir` (`rtl` for Arabic, Hebrew, ...) and
 `<meta http-equiv="content-language">` are written, except where the value is code (`lang="<?= $l ?>"`).
 
+## Code between attributes (differs from LocOS)
+
+Server code between two attributes, after the tag name or before `>` / `/>` (`<div <%= attrs %> class="a">`,
+`<input checked <?php echo $x ?> />`, `<option<?php if ($s): ?> selected="selected"<?php endif ?>>`) is an opaque code
+of the tag. Attribute values keep their normal handling and the merge writes the code back byte for byte. LocOS refuses
+these pages; Bilingua opens them (MIGRATION.md, "Differences from LocOS").
+
+A code glued to the front of an attribute name (`<?php if ($x) { ?>title="a"<?php } ?>`) makes that attribute opaque:
+its value is kept, not offered. In JSP, a custom tag inside a quoted value (`title="<fmt:message key='x'/>"`) is code the
+server runs and is not offered either; a custom tag between attributes (`<input <c:if test="${x}">checked</c:if>>`) is
+refused, because the HTML scanner would end the outer tag at the inner `>`.
+
 ## Refused, never guessed
 
-An unterminated island, an island used as a tag or attribute name (`<<?= $tag ?>>`, `<div <?php echo $a ?>>`), code
-that prints the start of an HTML tag the page finishes, a file that holds U+FDD0 or U+FDD1 (the masks) -> `Error::Parse`
+An unterminated island, an island used as a tag name or inside an attribute name (`<<?= $tag ?>>`,
+`<div data-<?= $k ?>="v">`), a tag nested in a quoted attribute value around code, code that prints the start of an HTML tag the page finishes, a file that holds U+FDD0 or U+FDD1 (the masks) -> `Error::Parse`
 with the LocOS message and line.
 
 ## API beyond `Filter`

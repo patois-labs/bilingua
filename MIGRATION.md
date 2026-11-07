@@ -466,6 +466,18 @@ commented list in the test.
 - **reStructuredText, a literal that ends in a backtick.** A run of exactly three backticks ends the literal
   (``` ``:role:`x``` ``` is one literal, as docutils reads it); LocOS ends it at the first pair and offers the last
   backtick as text. Any other run still closes at its first pair. Golden list `LITERAL_BACKTICK`.
+- **Server pages, code between attributes (11-07).** `<div <%= attrs %> class="a">`, `<input checked <%= x %> />`,
+  `<option<?php if ($s): ?> selected="selected"<?php endif ?>>` and JSP code around a bare attribute are opened; LocOS
+  refuses them ("code is used as a tag or attribute name"). The code is an opaque code of the tag, attribute values
+  keep their normal handling, and the merge writes the code back byte for byte. Still refused, as in LocOS: code that
+  is the tag name or builds an attribute name (`<<?= $t ?>>`, `<div<?= $a ?> ..>`, `data-<?= $k ?>="v"`), and a tag
+  nested in a quoted attribute value that would make the tokenizer read junk (`href="..<x:url value="${v}"/>.."`).
+  JSP custom tags in a tag: inside a quoted value (`title="<fmt:message key='x'/>"`) the value is not offered (LocOS
+  offers the tag as text); between attributes (`<input <c:if ..>checked</c:if>>`) the page is refused (LocOS and 0.9.0
+  opened it and offered the rest of the outer tag as text).
+  Golden test `matches_locos_on_random_pages_and_fixtures` lets exactly this refusal differ (the opened page must
+  merge back byte for byte); `refusals` and `html_with_server_code_is_protected` in `tests/locos_suite.rs` say so in
+  comments.
 
 ## Differences from LocOS: xcstrings (11-06)
 
