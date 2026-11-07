@@ -526,9 +526,12 @@ fn check_xml_with(bytes: &[u8], l: &Limits, keep_dtd: bool) -> Result<(), Error>
             }
             // the readers must all end the DOCTYPE where this scan does, or elements (or an ENTITY) could hide in
             // what one of them calls the DOCTYPE. The keep-DTD readers (the XML filter family) check that themselves.
+            if strict && end >= b.len() {
+                return Err(unsafe_xml("This file has a DOCTYPE that is not closed. It was not processed."));
+            }
             if strict && !doctype_is_unambiguous(b, i, end) {
                 return Err(unsafe_xml(
-                    "This file has a DOCTYPE that never ends, or has a quoted '<', '>' or bracket, or a comment in its DTD with quotes or brackets, which XML readers do not agree on. It was not processed.",
+                    "This file has a DOCTYPE with a quoted '<', '>' or bracket, or a comment in its DTD with quotes or brackets, which XML readers do not agree on. It was not processed.",
                 ));
             }
             i = end + 1;
