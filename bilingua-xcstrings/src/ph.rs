@@ -1,4 +1,5 @@
-//! Apple format specifiers as inline codes, and the LocOS rules for what counts as translatable text.
+//! Apple format specifiers and App Intents `${name}` parameters as inline codes, and the LocOS rules for what
+//! counts as translatable text.
 
 use bilingua_model::{CodeData, Inline, TagKind, Unit};
 use regex::Regex;
@@ -7,6 +8,7 @@ use std::sync::OnceLock;
 struct Res {
     var: Regex,
     spec: Regex,
+    param: Regex,
 }
 
 fn res() -> &'static Res {
@@ -17,6 +19,8 @@ fn res() -> &'static Res {
         // printf and Foundation: positional, flags, width, precision, length, conversion (including `@`)
         spec: Regex::new(r"\A%(?:\d+\$)?[-+ #0']*(?:\d+|\*)?(?:\.(?:\d+|\*))?(?:hh|h|ll|l|q|L|z|t|j)?[@diouxXcCsSpaAeEfFgGD]")
             .expect("static pattern"),
+        // App Intents and App Shortcuts parameters: `${applicationName}`, `${country}`
+        param: Regex::new(r"\A\$\{[A-Za-z_][A-Za-z0-9_]*\}").expect("static pattern"),
     })
 }
 
@@ -36,18 +40,24 @@ fn spec_end(s: &str, at: usize) -> Option<usize> {
     r.spec.find(rest).map(|m| at + m.end())
 }
 
+/// End of an App Intents parameter `${name}` starting at `at` (a `$`). Not in LocOS, which leaves it as text.
+fn param_end(s: &str, at: usize) -> Option<usize> {
+    res().param.find(&s[at..]).map(|m| at + m.end())
+}
+
 /// Splits a value into text and specifiers. `%%` is a literal percent and never starts a specifier.
 pub fn split(s: &str) -> Vec<Piece<'_>> {
     let mut out = Vec::new();
     let b = s.as_bytes();
     let (mut i, mut text_start) = (0, 0);
     while i < b.len() {
-        if b[i] == b'%' {
-            if b.get(i + 1) == Some(&b'%') {
+        if b[i] == b'%' || (b[i] == b'$' && b.get(i + 1) == Some(&b'{')) {
+            if b[i] == b'%' && b.get(i + 1) == Some(&b'%') {
                 i += 2;
                 continue;
             }
-            if let Some(end) = spec_end(s, i) {
+            let end = if b[i] == b'%' { spec_end(s, i) } else { param_end(s, i) };
+            if let Some(end) = end {
                 if text_start < i {
                     out.push(Piece::Text(&s[text_start..i]));
                 }
@@ -71,8 +81,12 @@ pub enum Piece<'a> {
     Ph(&'a str),
 }
 
-/// A positional specifier (`%1$@`) names its argument, so a translation may move it (LocOS token `p`).
+/// A positional specifier (`%1$@`) names its argument, so a translation may move it (LocOS token `p`). A
+/// `${name}` parameter is named too.
 pub fn is_positional(spec: &str) -> bool {
+    if spec.starts_with("${") {
+        return true;
+    }
     let b = spec.as_bytes();
     let mut i = 1;
     while i < b.len() && b[i].is_ascii_digit() {

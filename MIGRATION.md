@@ -454,6 +454,16 @@ commented list in the test.
   (``` ``:role:`x``` ``` is one literal, as docutils reads it); LocOS ends it at the first pair and offers the last
   backtick as text. Any other run still closes at its first pair. Golden list `LITERAL_BACKTICK`.
 
+## Differences from LocOS: xcstrings (11-06)
+
+- **`stringSet` (App Shortcuts phrases).** LocOS does not read it, so such a catalog had no units. Bilingua gives
+  one unit per source string. The target set always has the source's count and order. A phrase without a new
+  translation keeps the target's old string at that position, else the source string, and the set is then
+  `needs_review`; a phrase with no letter or digit is copied. Extra old target phrases beyond the source count are
+  dropped once any phrase of the set is translated.
+- **`${name}` parameters** (App Intents and App Shortcuts, `${applicationName}`) are free inline codes in every value;
+  LocOS offered them as text. A value that is only parameters is not a unit.
+
 ## CAT OS core (note for the lead)
 
 - `catcore` re-exported `bilingua_sdl::ZipLimits`; it now re-exports `bilingua_model::Limits as PackageLimits`

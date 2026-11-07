@@ -10,7 +10,10 @@ is listed here).
 ### Fixed
 
 - xcstrings: `stringSet` localizations (App Shortcuts phrases) are read as one unit per string and written back as a
-  `stringSet` for the target language. Such catalogs used to open with no units.
+  `stringSet` for the target language, one string per source string in order; a set with a phrase that has no
+  new translation is marked `needs_review`. Such catalogs used to open with no units.
+- xcstrings: App Intents parameters (`${applicationName}`, `${place}`) are inline codes a translation may move. They
+  used to be offered as text (LocOS does the same).
 
 ## [0.9.0] - 2026-11-06
 

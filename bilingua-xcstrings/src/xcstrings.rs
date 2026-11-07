@@ -382,8 +382,8 @@ type Substitution = (String, Shape, Vec<(String, J)>);
 
 enum ShapeItem {
     StringUnit,
-    /// The source strings of a `stringSet`.
-    StringSet(Vec<String>),
+    /// The source values of a `stringSet`, by position (`None` for a value that is not a string).
+    StringSet(Vec<Option<String>>),
     /// variation type -> (category, shape or None for a value that is not an object)
     Variations(Vec<(String, Vec<Category>)>),
     /// name, shape, copied `argNum` / `formatSpecifier`
@@ -398,7 +398,7 @@ fn shape_of(text: &str, loc: &Node) -> Shape {
                 "stringUnit" if val.obj().is_some() => items.push(ShapeItem::StringUnit),
                 "stringSet" => {
                     if let Some(Kind::Arr(vals)) = val.obj().and_then(|so| so.get("values")).map(|v| &v.kind) {
-                        items.push(ShapeItem::StringSet(vals.iter().filter_map(|v| v.str().map(str::to_string)).collect()));
+                        items.push(ShapeItem::StringSet(vals.iter().map(|v| v.str().map(str::to_string)).collect()));
                     }
                 }
                 "variations" => {
@@ -458,26 +458,43 @@ fn mirror(shape: &Shape, old: Option<&J>, trans: &Trans, path: &mut Vec<String>,
                 }
             }
             ShapeItem::StringSet(src) => {
+                // App Shortcuts phrases. The target set always has one string per source string, in source order.
+                // A phrase with a new translation gets it; a phrase with no letter or digit is copied from the
+                // source; any other phrase keeps the target's old string at that position, else the source string,
+                // and the set is then marked `needs_review` so nobody ships it as done. A set with no new
+                // translation at all keeps the target's existing set as it is.
                 let oset = old.and_then(|o| o.get("stringSet")).filter(|o| matches!(o, J::Obj(_)));
-                let oldv: Vec<&str> = match oset.and_then(|o| o.get("values")) {
-                    Some(J::Arr(a)) => a.iter().filter_map(|x| if let J::Str(s) = x { Some(s.as_str()) } else { None }).collect(),
+                let oldv: Vec<Option<&str>> = match oset.and_then(|o| o.get("values")) {
+                    Some(J::Arr(a)) => a.iter().map(|x| if let J::Str(s) = x { Some(s.as_str()) } else { None }).collect(),
                     _ => Vec::new(),
                 };
                 let n = path.len();
                 path.push("stringSet".into());
-                let mut any = false;
+                let (mut any, mut review) = (false, false);
                 let mut vals: Vec<J> = Vec::with_capacity(src.len());
                 for (i, sv) in src.iter().enumerate() {
+                    // a value that is not a string is not a phrase (malformed source): nothing to write
+                    let Some(sv) = sv else { continue };
                     path.push(i.to_string());
                     let t = lookup(trans, path);
                     path.pop();
-                    any |= t.is_some();
-                    // values are positional: a string without a translation keeps the target's old string, else the source
-                    vals.push(J::Str(t.or_else(|| oldv.get(i).copied()).unwrap_or(sv).to_string()));
+                    let v = match t {
+                        Some(t) => {
+                            any = true;
+                            t
+                        }
+                        None if !ph::is_translatable(sv) => sv.as_str(),
+                        None => {
+                            review = true;
+                            oldv.get(i).copied().flatten().unwrap_or(sv)
+                        }
+                    };
+                    vals.push(J::Str(v.to_string()));
                 }
                 path.truncate(n);
                 if any {
-                    out.push(("stringSet".into(), J::Obj(vec![("state".into(), J::Str("translated".into())), ("values".into(), J::Arr(vals))])));
+                    let state = if review { "needs_review" } else { "translated" };
+                    out.push(("stringSet".into(), J::Obj(vec![("state".into(), J::Str(state.into())), ("values".into(), J::Arr(vals))])));
                 } else if let Some(o) = oset {
                     out.push(("stringSet".into(), o.clone()));
                 }

@@ -116,6 +116,8 @@ fn existing_target_set_is_replaced_and_untranslated_values_keep_old() {
     let v = json(&Xcstrings.merge(&d).unwrap());
     let de = &v["strings"]["Start workout"]["localizations"]["de"]["stringSet"];
     assert_eq!(de["values"], serde_json::json!(["Los geht es", "Training beginnen", "---"]));
+    // a phrase fell back to an old string: the set is flagged for review
+    assert_eq!(de["state"], "needs_review");
     // a unit with no translation at all leaves the target untouched
     let d = ex(SET.as_bytes(), Some("de"));
     assert_eq!(Xcstrings.merge(&d).unwrap(), SET.as_bytes());
@@ -150,4 +152,61 @@ fn string_set_inside_a_plural_variation() {
     let p = &v["strings"]["k"]["localizations"]["fr"]["variations"]["plural"];
     assert_eq!(p["one"]["stringSet"]["values"], serde_json::json!(["FR One file", "FR A file"]));
     assert_eq!(p["many"]["stringSet"]["values"], serde_json::json!(["FR Many files", "FR Files"]));
+}
+
+const PARAMS: &str = r#"{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "Open ${applicationName}" : {
+      "localizations" : {
+        "en" : {
+          "stringSet" : {
+            "state" : "translated",
+            "values" : [
+              "Open ${applicationName}",
+              "${applicationName}",
+              "Go to ${place} in ${applicationName}"
+            ]
+          }
+        }
+      }
+    }
+  }
+}
+"#;
+
+#[test]
+fn app_intents_parameters_are_free_codes() {
+    let d = ex(PARAMS.as_bytes(), Some("fr"));
+    // a phrase that is only the parameter has no text to translate
+    assert_eq!(d.units.len(), 2);
+    let u = &d.units[0];
+    assert_eq!(u.codes.len(), 1);
+    assert!(u.source().iter().any(|i| i.is_free()));
+    assert!(!u.source().iter().any(|i| matches!(i, Inline::Text(t) if t.contains("applicationName"))));
+    assert_eq!(d.units[1].codes.len(), 2);
+    // a translation may move the parameters; the parameter-only phrase is copied
+    let mut d = d;
+    for u in &mut d.units {
+        let codes: Vec<Inline> = u.source().iter().filter(|i| !matches!(i, Inline::Text(_))).cloned().collect();
+        let mut t = codes.clone();
+        t.reverse();
+        t.insert(0, Inline::text("FR "));
+        u.segments[0].target = t;
+        u.segments[0].state = SegState::Draft;
+    }
+    let v = json(&Xcstrings.merge(&d).unwrap());
+    let fr = &v["strings"]["Open ${applicationName}"]["localizations"]["fr"]["stringSet"];
+    assert_eq!(fr["state"], "translated");
+    assert_eq!(fr["values"], serde_json::json!(["FR ${applicationName}", "${applicationName}", "FR ${applicationName}${place}"]));
+}
+
+#[test]
+fn untranslated_phrase_without_old_target_uses_source_and_needs_review() {
+    let mut d = ex(SET.as_bytes(), Some("fr"));
+    set_all(&mut d, &[(0, "Commencer")]);
+    let v = json(&Xcstrings.merge(&d).unwrap());
+    let fr = &v["strings"]["Start workout"]["localizations"]["fr"]["stringSet"];
+    assert_eq!(fr["state"], "needs_review");
+    assert_eq!(fr["values"], serde_json::json!(["Commencer", "Begin workout", "---"]));
 }
