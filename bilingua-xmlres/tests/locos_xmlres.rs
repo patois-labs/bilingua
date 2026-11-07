@@ -264,12 +264,19 @@ fn encodings_and_newlines_are_kept() {
 #[test]
 fn sniff_survives_an_8_kb_cut_inside_a_multi_byte_character() {
     // Wild file: the root is early, a long run of 3-byte characters follows, and the 8192-byte head ends inside one.
+    // One string of nothing but 3-byte characters: two of every three pads put the cut inside a character.
+    let mut cut_inside = 0;
     for pad in 0..4 {
-        let mut doc = format!("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!-- x -->\n<resources>{}\n", " ".repeat(pad)).into_bytes();
+        let mut doc =
+            format!("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!-- x -->\n<resources>{}\n<string name=\"a\">", " ".repeat(pad)).into_bytes();
         while doc.len() < 9000 {
-            doc.extend_from_slice("<string name=\"a\">\u{8bed}\u{8a00}</string>\n".as_bytes());
+            doc.extend_from_slice("\u{8bed}".as_bytes());
         }
-        doc.extend_from_slice(b"</resources>");
+        doc.extend_from_slice(b"</string>\n</resources>");
+        if std::str::from_utf8(&doc[..8192]).is_err() {
+            cut_inside += 1;
+        }
         assert!(AndroidStrings.sniff(&doc), "pad {pad}");
     }
+    assert!(cut_inside >= 2, "the test must cut inside a character");
 }

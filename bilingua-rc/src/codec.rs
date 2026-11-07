@@ -447,10 +447,24 @@ pub fn encode(text: &str, tag: &str, changed: bool) -> Vec<u8> {
                 text.as_bytes().to_vec()
             }
         }
-        other if other.starts_with(PRAGMAS) => match encode_pragmas(text, &other[PRAGMAS.len()..]) {
-            Some(b) => b,
-            None => utf8_with_pragma(text),
-        },
+        other if other.starts_with(PRAGMAS) => {
+            let base = &other[PRAGMAS.len()..];
+            // rc.exe reads the text before the first pragma in the ANSI page: when that text is written as UTF-8
+            // and is not plain ASCII, a 65001 pragma goes in front of it
+            let head_end = pragma_text_re().find(text).map_or(text.len(), |m| m.start());
+            let head_utf8 = !text[..head_end].is_ascii();
+            let (bytes, utf8_head) = match encode_pragmas(text, base) {
+                Some(b) => (b, changed && base == "utf-8"),
+                None => (utf8_with_pragma(text), true),
+            };
+            if utf8_head && head_utf8 {
+                let mut v = format!("#pragma code_page(65001){}", nl_of(text)).into_bytes();
+                v.extend_from_slice(&bytes);
+                v
+            } else {
+                bytes
+            }
+        }
         other => match page_for_label(other).and_then(|p| encode_page(&p, text)) {
             Some(b) => b,
             // the translation does not fit the ANSI code page: write UTF-8 and say so to rc.exe

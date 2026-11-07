@@ -328,3 +328,34 @@ fn sections_with_different_code_pages_are_read_each_in_its_own_page() {
         other => panic!("{other:?}"),
     }
 }
+
+#[test]
+fn several_code_pages_edge_cases() {
+    // DEFAULT goes back to the page of the head; a pragma in a block comment still opens a section (as with one
+    // pragma); both read and write back byte for byte, and an echo merge too.
+    let mut data: Vec<u8> = b"/* Caf\xe9 */\r\n#pragma code_page(1251)\r\nSTRINGTABLE BEGIN 1 \"\xcf\xf0\xe8\" END\r\n".to_vec();
+    data.extend_from_slice(b"#pragma code_page(DEFAULT)\r\nSTRINGTABLE BEGIN 2 \"Cr\xe8me\" END\r\n");
+    data.extend_from_slice(b"/*\r\n#pragma code_page(1250)\r\n*/\r\nSTRINGTABLE BEGIN 3 \"\x8akoda\" END\r\n");
+    data.extend_from_slice(b"#pragma code_page(1252)\r\nSTRINGTABLE BEGIN 4 \"na\xefve\" END\r\n");
+    assert_eq!(units(&data), vec!["\u{41f}\u{440}\u{438}", "Cr\u{e8}me", "\u{160}koda", "na\u{ef}ve"]);
+    assert_identity(&data);
+    // a translation that does not fit: every pragma becomes 65001, and the head (a Windows-1252 comment before the
+    // first pragma, now UTF-8) gets a 65001 pragma in front of it
+    let out = String::from_utf8(build(&data, &[(3, "\u{65e5}\u{672c}")])).expect("utf-8");
+    assert!(out.starts_with("#pragma code_page(65001)\r\n/* Caf\u{e9} */"), "{out}");
+    assert_eq!(out.matches("#pragma code_page(65001)").count(), 5, "{out}");
+    assert_eq!(units(out.as_bytes()), vec!["\u{41f}\u{440}\u{438}", "Cr\u{e8}me", "\u{160}koda", "\u{65e5}\u{672c}"]);
+}
+
+#[test]
+fn several_code_pages_with_a_translated_utf8_head() {
+    // The head (no pragma before it) is UTF-8 and holds a string: a non-ASCII translation there gets a 65001
+    // pragma in front, so rc.exe does not read it as ANSI; the sections keep their own pages.
+    let mut data: Vec<u8> = b"STRINGTABLE BEGIN 1 \"Cafe\" END\n#pragma code_page(1251)\nSTRINGTABLE BEGIN 2 \"\xcf\" END\n".to_vec();
+    data.extend_from_slice(b"#pragma code_page(1252)\nSTRINGTABLE BEGIN 3 \"x\" END\n");
+    assert_identity(&data);
+    let out = build(&data, &[(0, "Caf\u{e9}")]);
+    assert!(out.starts_with(b"#pragma code_page(65001)\nSTRINGTABLE BEGIN 1 \"Caf\xc3\xa9\""), "{}", String::from_utf8_lossy(&out));
+    assert!(out.windows(3).any(|w| w == b"\"\xcf\""), "the 1251 section keeps its page");
+    assert_eq!(units(&out), vec!["Caf\u{e9}", "\u{41f}", "x"]);
+}
