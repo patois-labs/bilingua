@@ -648,9 +648,13 @@ fn split_qname(q: &str) -> Result<(&str, &str), Error> {
     }
 }
 
+fn is_ws_char(c: char) -> bool {
+    c.is_ascii() && is_xml_ws(c as u8)
+}
+
 /// The reader stops a DOCTYPE at the first `>` it meets, even one inside a quoted identifier or a comment of the
 /// internal subset. This finds the real end (quotes, `[ ... ]`, comments and processing instructions skipped) and
-/// returns a copy of `text` whose DOCTYPE is blanked to `<!DOCTYPE   >` of the same length, so every offset stays
+/// returns a copy of `text` whose DOCTYPE is blanked (after its name) to the same length, so every offset stays
 /// the same. `None` when the DOCTYPE needs no help or there is none before the root element.
 fn mask_doctype(text: &str) -> Option<String> {
     let b = text.as_bytes();
@@ -696,10 +700,17 @@ fn mask_doctype(text: &str) -> Option<String> {
     if j >= b.len() {
         return None;
     }
+    let inner = &text[i + 9..j];
+    if !inner.contains(['[', '"', ''']) {
+        return None;
+    }
+    // keep the white space and the document type name; blank what follows
+    let lead = inner.len() - inner.trim_start_matches(is_ws_char).len();
+    let name = inner[lead..].find(is_ws_char).unwrap_or(inner.len() - lead);
+    let keep = lead + name;
     let mut out = String::with_capacity(text.len());
-    out.push_str(&text[..i]);
-    out.push_str("<!DOCTYPE");
-    for ch in text[i + 9..j].chars() {
+    out.push_str(&text[..i + 9 + keep]);
+    for ch in text[i + 9 + keep..j].chars() {
         // keep line breaks and the byte length; a blank is one byte, so a wide character is several
         if ch == '\n' || ch == '\r' {
             out.push(ch);
