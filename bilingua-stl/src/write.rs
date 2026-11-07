@@ -63,6 +63,11 @@ pub fn prep(atoms: &[Atom], cct: Cct) -> Vec<Atom> {
 
 /// The distinct characters of a text (after `prep`) the table cannot encode, in order of appearance.
 pub fn unsupported(atoms: &[Atom], cct: Cct) -> Vec<char> {
+    unsupported_with(atoms, cct, false)
+}
+
+/// `pairs`: a base letter and its floating diacritic with no single code are written as a byte pair (LocOS refuses them).
+pub fn unsupported_with(atoms: &[Atom], cct: Cct, pairs: bool) -> Vec<char> {
     // a set beside the ordered list: a translation can hold 100 000 distinct characters (gate: was quadratic)
     let mut seen: Vec<char> = Vec::new();
     let mut set: BTreeSet<char> = BTreeSet::new();
@@ -70,7 +75,7 @@ pub fn unsupported(atoms: &[Atom], cct: Cct) -> Vec<char> {
     for (i, a) in prepped.iter().enumerate() {
         if let Atom::C(c) = *a {
             // a base letter with no single code and its mark are written as a pair
-            if i > 0 && matches!(prepped[i - 1], Atom::C(b) if codec::encode_pair(b, c, cct).is_some()) {
+            if pairs && i > 0 && matches!(prepped[i - 1], Atom::C(b) if codec::encode_pair(b, c, cct).is_some()) {
                 continue;
             }
             if c != '\n' &&!set.contains(&c) && codec::encode_char(c, cct).is_none() {
@@ -173,7 +178,7 @@ pub fn layout(text: &[Atom], n_rows: usize, max_rows: usize, mnc: usize) -> Opti
     wrap(&words, &widths, &spaced, mnc, max_rows)
 }
 
-fn encode_atoms(atoms: &[Atom], cct: Cct) -> Option<Vec<u8>> {
+fn encode_atoms(atoms: &[Atom], cct: Cct, pairs: bool) -> Option<Vec<u8>> {
     let kept: Vec<&Atom> = atoms.iter().filter(|a| **a != Atom::U).collect();
     let mut out: Vec<u8> = Vec::with_capacity(kept.len());
     let mut skip_mark = false;
@@ -189,7 +194,7 @@ fn encode_atoms(atoms: &[Atom], cct: Cct) -> Option<Vec<u8>> {
                 out.push(*b);
             }
             Atom::C(c) => {
-                if let (Some(Atom::C(m)), Some(_)) = (kept.get(i + 1), codec::encode_char(*c, cct)) {
+                if let (true, Some(Atom::C(m)), Some(_)) = (pairs, kept.get(i + 1), codec::encode_char(*c, cct)) {
                     if let Some(pair) = codec::encode_pair(*c, *m, cct) {
                         out.extend_from_slice(&pair);
                         skip_mark = true;
@@ -206,9 +211,9 @@ fn encode_atoms(atoms: &[Atom], cct: Cct) -> Option<Vec<u8>> {
 }
 
 /// (TF bytes, row delta) or the reason it cannot be written.
-fn encode_subtitle(sub: &Sub, text: &[Atom], cct: Cct, mnc: usize, keep_rows: bool) -> Result<(Vec<u8>, i64), String> {
+fn encode_subtitle(sub: &Sub, text: &[Atom], cct: Cct, mnc: usize, keep_rows: bool, pairs: bool) -> Result<(Vec<u8>, i64), String> {
     let text = prep(text, cct);
-    let bad = unsupported(&text, cct);
+    let bad = unsupported_with(&text, cct, pairs);
     if !bad.is_empty() {
         let list: Vec<String> = bad.iter().take(8).map(|c| py_repr(*c)).collect();
         return Err(format!("characters the code table cannot encode: {}", list.join(" ")));
@@ -238,7 +243,7 @@ fn encode_subtitle(sub: &Sub, text: &[Atom], cct: Cct, mnc: usize, keep_rows: bo
             }
         }
         out.extend_from_slice(&tpl.prefix);
-        out.extend(encode_atoms(row_text, cct).ok_or("a character the code table cannot encode")?);
+        out.extend(encode_atoms(row_text, cct, pairs).ok_or("a character the code table cannot encode")?);
         out.extend_from_slice(&tpl.suffix);
     }
     out.extend_from_slice(&sub.tail);
@@ -281,10 +286,10 @@ pub struct UnitInfo {
 }
 
 /// Rebuild the file. `changed` maps unit index to the new text atoms; `lc` is the language byte to stamp.
-pub fn rebuild(raw: &[u8], parsed: &read::Parsed, units: &[UnitInfo], changed: &BTreeMap<usize, Vec<Atom>>, lc: Option<u8>) -> Result<Vec<u8>, Error> {
+pub fn rebuild(raw: &[u8], parsed: &read::Parsed, units: &[UnitInfo], changed: &BTreeMap<usize, Vec<Atom>>, lc: Option<u8>, pairs: bool) -> Result<Vec<u8>, Error> {
     let cct = parsed.cct;
     let mnc = read::mnc(raw);
-    let fits = |cand: Cct| changed.values().all(|t| unsupported(t, cand).is_empty());
+    let fits = |cand: Cct| changed.values().all(|t| unsupported_with(t, cand, pairs).is_empty());
     let mut problems: Vec<String> = Vec::new();
     // the units already named in `problems` (gate: a prefix search of `problems` per refused unit was quadratic)
     let mut reported: BTreeSet<usize> = BTreeSet::new();
@@ -293,17 +298,17 @@ pub fn rebuild(raw: &[u8], parsed: &read::Parsed, units: &[UnitInfo], changed: &
     } else {
         let mut usable = vec![cct];
         for c in Cct::ALL {
-            if c != cct && !units.iter().enumerate().any(|(k, u)| !changed.contains_key(&k) && !unsupported(&u.atoms, c).is_empty()) {
+            if c != cct && !units.iter().enumerate().any(|(k, u)| !changed.contains_key(&k) && !unsupported_with(&u.atoms, c, pairs).is_empty()) {
                 usable.push(c);
             }
         }
         match usable.iter().copied().find(|c| fits(*c)) {
             Some(c) => c,
             None => {
-                let cost = |c: Cct| changed.values().map(|t| unsupported(t, c).len()).sum::<usize>();
+                let cost = |c: Cct| changed.values().map(|t| unsupported_with(t, c, pairs).len()).sum::<usize>();
                 let best = usable.iter().copied().min_by_key(|c| cost(*c)).unwrap_or(cct);
                 for (k, t) in changed {
-                    let bad = unsupported(t, best);
+                    let bad = unsupported_with(t, best, pairs);
                     if !bad.is_empty() {
                         reported.insert(*k);
                         let list: Vec<String> = bad.iter().take(8).map(|c| py_repr(*c)).collect();
@@ -321,9 +326,9 @@ pub fn rebuild(raw: &[u8], parsed: &read::Parsed, units: &[UnitInfo], changed: &
     let mut new_tf: BTreeMap<usize, (usize, Vec<u8>, i64)> = BTreeMap::new(); // first block -> (unit, tf, dvp)
     for (k, u) in units.iter().enumerate() {
         let r = if let Some(t) = changed.get(&k) {
-            encode_subtitle(&u.sub, t, chosen, mnc, false)
+            encode_subtitle(&u.sub, t, chosen, mnc, false, pairs)
         } else if chosen != cct {
-            encode_subtitle(&u.sub, &u.atoms, chosen, mnc, true)
+            encode_subtitle(&u.sub, &u.atoms, chosen, mnc, true, pairs)
         } else {
             continue;
         };
