@@ -50,8 +50,9 @@ let same = Pdf.merge(&doc)?; // untouched: the original bytes
 - Glyph boxes of Type 1 font programs (FontFile) are not read; they are approximated from the descriptor and the
   advance, or Helvetica's metrics for a non-embedded font (PDFium uses its substitute face). Rarely changes a line
   break.
-- CID to Unicode tables of the Adobe CJK collections are not included: a CJK font with no ToUnicode and Identity
-  encoding gives the CID as text, where PDFium can name the character.
+- A Type 0 font with a predefined legacy CMap (`GB-EUC-H`, `90ms-RKSJ-H` and the like) and no ToUnicode decodes
+  its bytes as that charset; PDFium goes through the collection's CID to Unicode table. An Identity CMap uses the
+  same tables as PDFium (Adobe-GB1, -CNS1, -Japan1, -Korea1, `src/cid2uni.bin`).
 - TrueType `post` glyph names and the built-in encoding of symbolic TrueType programs are not read.
 - On 146 real PDFs (2671 pages) two pages differ: a superscript footnote mark and a dash in a Type 1 font.
 

@@ -15,6 +15,7 @@
 use bilingua_model::guard;
 use bilingua_model::*;
 
+mod cid2uni;
 mod content;
 mod crypt;
 mod decode;

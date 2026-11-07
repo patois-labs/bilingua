@@ -15,7 +15,8 @@ Python's codecs implement them.
 bilingua-pdf follows the text extraction rules of PDFium and its source holds tables taken from PDFium, from
 Adobe's glyph list and from Adobe's core 14 AFM font metrics:
 - PDFium: Copyright 2014 The PDFium Authors (original code copyright 2014 Foxit Software Inc.), BSD 3-Clause
-  licence, reproduced verbatim below.
+  licence, reproduced verbatim below. This covers the CID to Unicode tables of the Adobe-GB1, -CNS1, -Japan1 and
+  -Korea1 collections in bilingua-pdf/src/cid2uni.bin (made by tools/gen-pdf-cid2uni.py).
 - Adobe Glyph List: Copyright 1997-2010 Adobe Systems Incorporated, BSD 3-Clause licence, reproduced below.
 - The AFM metrics carry Adobe's AFM notice, which bilingua-pdf/src/tables.rs keeps unmodified with the data.
 

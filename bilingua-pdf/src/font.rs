@@ -10,6 +10,7 @@
 use crate::obj::{Dict, Lexer, Obj, Tok};
 use bilingua_model::encoding_rs;
 use crate::fontprog::{Program, Work};
+use crate::cid2uni::CidSet;
 use crate::tables;
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -432,11 +433,13 @@ pub struct CMap {
     pub vertical: bool,
     /// Embedded CMap code to CID ranges (start code, end code, start cid); empty means code == CID.
     cid_ranges: Vec<(u32, u32, u32)>,
+    /// The predefined `Identity-H`/`-V` (PDFium's only `kCID` coding; an embedded CMap is `kUNKNOWN` there).
+    identity: bool,
 }
 
 impl CMap {
     fn identity(vertical: bool) -> CMap {
-        CMap { scheme: Scheme::TwoBytes, coding: Coding::Cid, vertical, cid_ranges: vec![] }
+        CMap { scheme: Scheme::TwoBytes, coding: Coding::Cid, vertical, cid_ranges: vec![], identity: true }
     }
 
     fn predefined(name: &[u8]) -> Option<CMap> {
@@ -476,7 +479,7 @@ impl CMap {
                 Scheme::MixedTwo(Box::new(lead))
             }
         };
-        Some(CMap { scheme, coding, vertical, cid_ranges: vec![] })
+        Some(CMap { scheme, coding, vertical, cid_ranges: vec![], identity: false })
     }
 
     /// An embedded CMap stream: codespace ranges, cidrange/cidchar, `usecmap` of a predefined CMap.
@@ -554,6 +557,8 @@ impl CMap {
             m.cid_ranges = ranges;
         }
         m.vertical |= vertical;
+        // PDFium ignores `usecmap`: an embedded CMap never maps through the CID to Unicode tables.
+        m.identity = false;
         m
     }
 
@@ -668,6 +673,8 @@ pub enum Kind {
         prog: Option<Rc<Program>>,
         cid_to_gid: Option<Vec<u16>>,
         boxes: RefCell<HashMap<u32, [i32; 4]>>,
+        /// The Adobe collection whose CID to Unicode table maps the codes without a ToUnicode entry.
+        cid2uni: Option<CidSet>,
     },
 }
 
@@ -1145,9 +1152,15 @@ impl Loader<'_> {
         let Obj::Dict(cf) = (self.resolve)(&desc_fonts[0]) else { return None };
         let enc = self.get(fd, b"Encoding");
         let cmap = match &enc {
-            Obj::Name(n) => CMap::predefined(n).unwrap_or(CMap { scheme: Scheme::TwoBytes, coding: Coding::Unknown, vertical: n.last() == Some(&b'V'), cid_ranges: vec![] }),
+            Obj::Name(n) => CMap::predefined(n).unwrap_or(CMap { scheme: Scheme::TwoBytes, coding: Coding::Unknown, vertical: n.last() == Some(&b'V'), cid_ranges: vec![], identity: false }),
             s @ Obj::Stream(_) => CMap::embedded(&(self.stream)(s).unwrap_or_default()),
             _ => return None,
+        };
+        // PDFium's `charset_`: the CMap's collection, else `CIDSystemInfo /Ordering`. Only the Identity CMap reads
+        // codes through the table (predefined legacy CMaps decode their charset, embedded ones have no table).
+        let cid2uni = match self.get(&cf, b"CIDSystemInfo") {
+            Obj::Dict(info) if cmap.identity => CidSet::from_ordering(&self.name(&info, b"Ordering")),
+            _ => None,
         };
         let (_desc, _flags, mut ascent, mut descent, fbbox, file) = self.descriptor(&cf);
         let prog = file.as_ref().and_then(|f| (self.stream)(f)).as_deref().and_then(|d| Program::parse(d, self.work)).map(Rc::new);
@@ -1181,7 +1194,7 @@ impl Loader<'_> {
             descent = if fbbox[1] != 0 { fbbox[1] } else { -120 };
         }
         Some(Font {
-            kind: Kind::Cid { cmap, default_width, widths, vert, dw2, prog, cid_to_gid, boxes: RefCell::new(HashMap::new()) },
+            kind: Kind::Cid { cmap, default_width, widths, vert, dw2, prog, cid_to_gid, boxes: RefCell::new(HashMap::new()), cid2uni },
             to_unicode,
             ascent,
             descent,
@@ -1416,7 +1429,12 @@ impl Font {
                     vec![u]
                 }
             }
-            Kind::Cid { cmap, .. } => match cmap.coding {
+            Kind::Cid { cmap, cid2uni, .. } => match cmap.coding {
+                // `GetUnicodeFromCharCode`, kCID: the table of the collection (0 = none; .notdef reads U+FFFD).
+                Coding::Cid => match cid2uni.map(|s| s.unicode(code as u16)) {
+                    Some(u) if u != 0 => vec![u],
+                    _ => vec![],
+                },
                 Coding::Ucs2 | Coding::Utf16 => {
                     if code & 0xFFFF == 0 {
                         vec![]
@@ -1449,10 +1467,18 @@ impl Font {
         }
         match &self.kind {
             Kind::Simple { unicode, .. } => unicode.iter().position(|x| *x == u).map(|p| p as u32).unwrap_or(INVALID_CODE),
-            Kind::Cid { cmap, .. } => match cmap.coding {
+            Kind::Cid { cmap, cid2uni, .. } => match cmap.coding {
                 Coding::Unknown => 0,
                 Coding::Ucs2 | Coding::Utf16 => u as u32,
-                Coding::Cid => 0,
+                // `CharCodeFromUnicode`, kCID: the first CID with that code point, else ASCII as itself.
+                Coding::Cid => match cid2uni {
+                    Some(s) => match s.table().iter().position(|x| *x == u) {
+                        Some(cid) => cid as u32,
+                        None if u < 0x80 => u as u32,
+                        None => 0,
+                    },
+                    None => 0,
+                },
                 Coding::Legacy(_) => {
                     if u < 0x80 {
                         u as u32

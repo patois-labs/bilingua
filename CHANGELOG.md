@@ -43,6 +43,11 @@ is listed here).
 
 ### Fixed
 
+- PDF: a Type 0 font with an Identity CMap, an Adobe CJK `CIDSystemInfo` (GB1, CNS1, Japan1, Korea1) and no
+  ToUnicode now reads its CIDs through PDFium's CID to Unicode tables, as Localization OS does. Before, Latin text
+  in such a font came out shifted (`Computer Science` read as `$PNQVUFS4DJFODF`) and CJK text as unrelated
+  characters. The tables add about 75 KB to the crate (compressed, inflated on first use).
+
 - HTML, XML-like and PO files with two charset declarations (a forum page that embeds another page): only the
   declarations in the first 4096 characters are the file's own, so the second no longer makes an untouched merge
   differ and the file is no longer refused as "cannot be written back unchanged". The file's own declarations get
