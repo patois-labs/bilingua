@@ -426,8 +426,12 @@ keeps the encoding:
 - **HTML Help, valid file with nothing to translate.** A `.hhc` or `.hhk` with an empty `<UL>` (no `Name` or `Keyword`
   entries) and a `.hhp` with no `Title=` and no window caption open with zero units and one warning of kind
   `no_translatable_text`, like the other Bilingua formats; a merge gives the original bytes back. LocOS refuses these
-  files (`EmptyDocumentError`). The LocOS adapter can map zero units to that error. Malformed files (binary, unreadable
-  code page, limits) are still refused. Hand-written tests: `empty_but_valid_files_open_with_zero_units` and
+  files (`EmptyDocumentError`). The LocOS adapter can map zero units to that error. Still refused: a file with no HTML
+  Help structure (zero bytes, only whitespace, plain text, junk: a `.hhc` / `.hhk` needs a `<UL>` or `<OBJECT>` tag, a
+  `.hhp` a `[section]` line), a sitemap whose entry names a browser reads but the walker cannot (an abrupt comment
+  `<!-->`), and malformed files (binary, unreadable code page, limits). An empty file in a code page that does not
+  round-trip (Shift_JIS IBM extension rows) merges back to its original bytes; asked for UTF-8 output it is refused with
+  `Error::Unsupported`. Hand-written tests: `empty_but_valid_files_open_with_zero_units`, `empty_versus_malformed` and
   `hostile_inputs` in `bilingua-htmlhelp/tests/locos_suite.rs`.
 
 ## Differences from LocOS: markup formats (wild files, 11-06)
