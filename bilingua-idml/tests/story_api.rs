@@ -42,3 +42,26 @@ fn bare_story_round_trip_through_the_public_api() {
     let tok2 = story::tokenize(&again, &paras2[0]);
     assert_eq!(tok2.core_inlines().len(), 4);
 }
+
+#[test]
+fn loose_text_after_the_last_run_stays_after_it() {
+    // three ranges inside one XML element, with an empty range before it and the break range after it outside the
+    // element, as InDesign exports a tagged heading: the ranges have different parents, so each is rebuilt in place
+    let icml = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<Document DOMVersion=\"20.0\" Self=\"d\">\n<Story Self=\"u1\">\n<ParagraphStyleRange AppliedParagraphStyle=\"ParagraphStyle/Head\">\n<CharacterStyleRange AppliedCharacterStyle=\"CharacterStyle/$ID/[No character style]\"><Properties><AppliedFont type=\"string\">Serif</AppliedFont></Properties></CharacterStyleRange>\n<XMLElement Self=\"x1\" MarkupTag=\"XMLTag/heading\">\n<CharacterStyleRange AppliedCharacterStyle=\"CharacterStyle/$ID/[No character style]\"><Content>Our first </Content></CharacterStyleRange>\n<CharacterStyleRange AppliedCharacterStyle=\"CharacterStyle/$ID/[No character style]\" FontStyle=\"Bold\"><Content>big</Content></CharacterStyleRange>\n<CharacterStyleRange AppliedCharacterStyle=\"CharacterStyle/$ID/[No character style]\"><Content> heading</Content></CharacterStyleRange>\n</XMLElement>\n<CharacterStyleRange AppliedCharacterStyle=\"CharacterStyle/$ID/[No character style]\"><Br/></CharacterStyleRange>\n<XMLElement Self=\"x2\" MarkupTag=\"XMLTag/sub\">\n<CharacterStyleRange AppliedCharacterStyle=\"CharacterStyle/$ID/[No character style]\"><Content>Next line</Content></CharacterStyleRange>\n</XMLElement>\n</ParagraphStyleRange>\n</Story>\n</Document>\n";
+    let mut tree = Tree::parse(icml, &ParseLimits::default()).unwrap();
+    let paras = story::collect(&mut tree, &Opts::default());
+    let tok = story::tokenize(&tree, &paras[0]);
+    let mut target = vec![Inline::text("Zq")];
+    target.extend(tok.core_inlines());
+    target.push(Inline::text("qZ"));
+    story::rebuild(&mut tree, &paras[0], &tok, &target);
+    let xml = tree.to_xml();
+    let mut again = Tree::parse(&xml, &ParseLimits::default()).unwrap();
+    let paras2 = story::collect(&mut again, &Opts::default());
+    let tok2 = story::tokenize(&again, &paras2[0]);
+    let text: String = tok2.core_inlines().iter().filter_map(|i| if let Inline::Text(t) = i { Some(t.as_str()) } else { None }).collect();
+    assert_eq!(text, "ZqOur first big headingqZ", "{xml}");
+    // each word stays in its own range: the bold one still holds only "big"
+    assert!(xml.contains("FontStyle=\"Bold\"><Content>big</Content>"), "{xml}");
+    assert!(xml.contains("<Content> headingqZ</Content>"), "{xml}");
+}

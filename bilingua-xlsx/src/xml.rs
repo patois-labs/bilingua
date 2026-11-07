@@ -253,6 +253,14 @@ pub fn unescape(s: &str) -> String {
     {
         return inner.to_string();
     }
+    // XML readers turn a literal CR or CRLF into LF before anything else; a written `&#13;` stays a CR.
+    let norm;
+    let s = if s.contains('\r') {
+        norm = s.replace("\r\n", "\n").replace('\r', "\n");
+        norm.as_str()
+    } else {
+        s
+    };
     if !s.contains('&') {
         return s.to_string();
     }
@@ -343,6 +351,11 @@ mod tests {
         );
         assert_eq!(unescape("<![CDATA[x < y]]>"), "x < y");
         assert_eq!(escape_text("a<b&c\u{1}"), "a&lt;b&amp;c");
+    }
+
+    #[test]
+    fn literal_line_ends_become_lf_but_a_written_cr_stays() {
+        assert_eq!(unescape("a\r\nb\rc&#13;d"), "a\nb\nc\rd");
     }
 
     #[test]

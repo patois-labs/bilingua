@@ -311,9 +311,11 @@ fn p_index_of(u: &Unit) -> Option<usize> {
 }
 
 /// A target as translated pieces; XML-illegal characters dropped, line ends turned into spaces (a newline is
-/// never a paragraph break here).
-fn to_tp(v: &[Inline]) -> Vec<TP> {
-    fn clean(t: &str) -> String {
+/// never a paragraph break here). `keep_nl`: the paragraph's source text has literal line feeds in its `Content`
+/// (a code block written by pandoc, for instance), so a line feed in the target stays one instead of being
+/// flattened to a space.
+fn to_tp(v: &[Inline], keep_nl: bool) -> Vec<TP> {
+    fn clean(t: &str, keep_nl: bool) -> String {
         let mut s = String::with_capacity(t.len());
         let mut it = t.chars().peekable();
         while let Some(c) = it.next() {
@@ -325,9 +327,9 @@ fn to_tp(v: &[Inline]) -> Vec<TP> {
                 if it.peek() == Some(&'\n') {
                     it.next();
                 }
-                s.push(' ');
+                s.push(if keep_nl { '\n' } else { ' ' });
             } else if c == '\n' {
-                s.push(' ');
+                s.push(if keep_nl { '\n' } else { ' ' });
             } else {
                 s.push(c);
             }
@@ -337,7 +339,7 @@ fn to_tp(v: &[Inline]) -> Vec<TP> {
     let mut out = Vec::new();
     for i in v {
         match i {
-            Inline::Text(t) => out.push(TP::Text(clean(t))),
+            Inline::Text(t) => out.push(TP::Text(clean(t, keep_nl))),
             Inline::Tag { id, kind: TagKind::Open, .. } => out.push(TP::Open(id.clone())),
             Inline::Tag { id, kind: TagKind::Close, .. } => out.push(TP::Close(id.clone())),
             Inline::Tag { id, kind: TagKind::Standalone, .. } => out.push(TP::Point(id.clone())),
@@ -422,7 +424,8 @@ impl Filter for Icml {
                 continue;
             }
             let Some(p) = p_index_of(u) else { continue };
-            wanted.insert(p, to_tp(&u.output()));
+            let keep_nl = u.source().iter().any(|i| matches!(i, Inline::Text(t) if t.contains('\n')));
+            wanted.insert(p, to_tp(&u.output(), keep_nl));
         }
         if wanted.is_empty() {
             return Ok(finish(&text));

@@ -637,6 +637,8 @@ struct Piece {
     kind: PK,
     text: String,
     key: usize,
+    /// Inside a character-style run of the translation (not loose text before, between or after the runs).
+    inside: bool,
 }
 
 enum Frame {
@@ -650,6 +652,7 @@ fn pieces(parts: &[Part], tok: &Tok) -> Vec<Piece> {
     let mut used: HashSet<usize> = HashSet::new();
     let mut stack: Vec<(usize, Frame)> = vec![];
     let first_run = tok.reg.values().find_map(|r| if let Reg::Run(i) = r { Some(*i) } else { None });
+    let in_run = |stack: &[(usize, Frame)]| stack.iter().any(|(_, f)| matches!(f, Frame::Run(_)));
     let ctx = |stack: &[(usize, Frame)]| -> (Option<usize>, Vec<usize>) {
         let mut run = tok.dominant;
         let mut chain = vec![];
@@ -670,7 +673,8 @@ fn pieces(parts: &[Part], tok: &Tok) -> Vec<Piece> {
             Part::Text(s) => {
                 if !s.is_empty() {
                     let (run, chain) = ctx(&stack);
-                    out.push(Piece { run, chain, kind: PK::T, text: s.clone(), key: 0 });
+                    let inside = in_run(&stack);
+                    out.push(Piece { run, chain, kind: PK::T, text: s.clone(), key: 0, inside });
                 }
             }
             Part::Close(k) => {
@@ -695,13 +699,15 @@ fn pieces(parts: &[Part], tok: &Tok) -> Vec<Piece> {
                 match entry.expect("checked") {
                     Reg::Point(..) => {
                         let (run, chain) = ctx(&stack);
-                        out.push(Piece { run, chain, kind: PK::P, text: String::new(), key: *k });
+                        let inside = in_run(&stack);
+                        out.push(Piece { run, chain, kind: PK::P, text: String::new(), key: *k, inside });
                     }
                     Reg::Run(r) => stack.push((*k, Frame::Run(*r))),
                     Reg::Wrap(..) => {
                         stack.push((*k, Frame::Wrap));
                         let (run, chain) = ctx(&stack);
-                        out.push(Piece { run, chain, kind: PK::W, text: String::new(), key: *k });
+                        let inside = in_run(&stack);
+                        out.push(Piece { run, chain, kind: PK::W, text: String::new(), key: *k, inside });
                     }
                 }
             }
@@ -712,7 +718,7 @@ fn pieces(parts: &[Part], tok: &Tok) -> Vec<Piece> {
         if !used.contains(k) {
             let e = &tok.reg[k];
             let kind = if matches!(e, Reg::Point(..)) { PK::P } else { PK::W };
-            out.push(Piece { run: Some(e.run()), chain: vec![], kind, text: String::new(), key: *k });
+            out.push(Piece { run: Some(e.run()), chain: vec![], kind, text: String::new(), key: *k, inside: true });
         }
     }
     out
@@ -973,11 +979,19 @@ pub fn rebuild(t: &mut Tree, para: &Para, tok: &Tok, target: &[Inline]) -> Vec<I
     let Some(&first) = live.first() else { return vec![] };
     let mut by_run: HashMap<usize, Vec<&Piece>> = live.iter().map(|i| (*i, vec![])).collect();
     let mut opened = HashSet::new();
+    // loose text after the last run of the translation stays after it (it would otherwise join the dominant run
+    // and jump in front of the other runs)
+    let mut last_in: Option<usize> = None;
     for p in &pcs {
-        let target = match p.run {
+        let mut target = match p.run {
             Some(r) if by_run.contains_key(&r) => r,
             _ => first,
         };
+        if p.inside {
+            last_in = Some(target);
+        } else if let (PK::T, Some(l)) = (&p.kind, last_in) {
+            target = l;
+        }
         by_run.get_mut(&target).expect("live run").push(p);
     }
     for &ri in &live {

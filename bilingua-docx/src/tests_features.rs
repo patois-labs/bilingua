@@ -836,3 +836,38 @@ fn empty_run_properties_are_not_written() {
     assert!(!x.contains("<w:rPr></w:rPr>"), "{x}");
     assert!(!x.contains("<w:rPr/>"), "{x}");
 }
+
+#[test]
+fn ruby_base_text_is_the_unit_text_and_the_guide_is_kept() {
+    let ruby = "<w:r><w:ruby><w:rubyPr><w:rubyAlign w:val=\"distributeSpace\"/><w:hps w:val=\"10\"/><w:lid w:val=\"ja-JP\"/></w:rubyPr>\
+<w:rt><w:r><w:rPr><w:sz w:val=\"10\"/></w:rPr><w:t>\u{3068}\u{3046}\u{304D}\u{3087}\u{3046}</w:t></w:r></w:rt>\
+<w:rubyBase><w:r><w:t>\u{6771}\u{4EAC}</w:t></w:r></w:rubyBase></w:ruby></w:r>";
+    let inner = format!("<w:p><w:r><w:t xml:space=\"preserve\">Visit </w:t></w:r>{ruby}<w:r><w:t xml:space=\"preserve\"> soon.</w:t></w:r></w:p>");
+    // unchanged: byte identical (round_trip checks it)
+    let mut doc = round_trip(&doc_of(&inner));
+    let s = seg_of(&doc, "p1");
+    assert_eq!(plain_text(&s.source), "Visit \u{6771}\u{4EAC} soon.");
+    assert_eq!(tag_displays(s), vec!["<ruby>", "</ruby>"]);
+    assert_eq!(doc.units[0].codes["1"].label.as_deref(), Some("ruby"));
+    doc.set_target(
+        "p1",
+        vec![
+            Inline::text("Visita "),
+            Inline::tag("1", TagKind::Open, "<ruby>"),
+            Inline::text("Tokio"),
+            Inline::tag("1", TagKind::Close, "</ruby>"),
+            Inline::text(" pronto."),
+        ],
+    )
+    .unwrap();
+    let out = Docx.merge(&doc).unwrap();
+    let x = xml_of(&out, "word/document.xml");
+    assert!(
+        x.contains("<w:rt><w:r><w:rPr><w:sz w:val=\"10\"/></w:rPr><w:t>\u{3068}\u{3046}\u{304D}\u{3087}\u{3046}</w:t></w:r></w:rt><w:rubyBase><w:r><w:t>Tokio</w:t></w:r></w:rubyBase></w:ruby></w:r>"),
+        "{x}"
+    );
+    assert_eq!(src(&extract(&out), "p1"), "Visita Tokio pronto.");
+    // a paragraph that is only ruby is a unit too
+    let only = round_trip(&doc_of(&format!("<w:p>{ruby}</w:p>")));
+    assert_eq!(src(&only, "p1"), "\u{6771}\u{4EAC}");
+}
