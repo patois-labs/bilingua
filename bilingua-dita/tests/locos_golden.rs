@@ -70,6 +70,9 @@ fn matches_locos_dita_and_docbook_filters() {
             only_locos_refuses.push(name.to_string());
             continue;
         }
+        // known difference (issue 809.3, fixed in Bilingua first): no attribute unit on a `translate="no"` or `conref`
+        // element, so LocOS's "Off" and "Ref" navtitle units are not ours and the builds are not comparable
+        let known_809 = name == "gate_attrs.ditamap";
         let want: Vec<(String, String, String)> = c["units"]
             .as_array()
             .unwrap()
@@ -78,12 +81,16 @@ fn matches_locos_dita_and_docbook_filters() {
             .collect();
         let got: Vec<(String, String, String)> =
             doc.units.iter().map(|u| (show(u), u.context.style.clone().unwrap_or_default(), u.notes.first().map(|n| n.text.clone()).unwrap_or_default())).collect();
+        let want: Vec<_> = if known_809 { want.into_iter().filter(|u| u.0 != "Off" && u.0 != "Ref").collect() } else { want };
         if got != want {
             fails.push(format!("{name}: units differ\n  ours  {got:?}\n  locos {want:?}"));
             continue;
         }
         units_ok += 1;
         unit_count += got.len();
+        if known_809 {
+            continue;
+        }
         for (key, golden) in c["builds"].as_object().unwrap() {
             let (kind, target) = match key.split_once('@') {
                 Some((k, t)) => (k, Some(t)),

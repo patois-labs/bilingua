@@ -207,6 +207,8 @@ fn note_for(t: &Tree, rule: &Rule, el: u32, budget: &mut Budget) -> String {
 pub(crate) fn eval_props(t: &Tree, dialect: Option<&Dialect>, extra: &[Rule], limits: &Limits) -> Result<Props, Error> {
     let n = t.els.len();
     let mut tr_x = vec![0u8; n]; // 0 unset, 1 no, 2 yes
+    // elements the dialect itself lists as not translatable (DITA image): their attributes are still translated
+    let mut name_no = vec![false; n];
     let mut wt_x = vec![255u8; n];
     let mut pre_x = vec![0u8; n];
     let mut note_x = vec![0u32; n];
@@ -228,6 +230,7 @@ pub(crate) fn eval_props(t: &Tree, dialect: Option<&Dialect>, extra: &[Rule], li
             let ln = t.local(i);
             if d.no_translate.contains(ln) {
                 tr_x[i as usize] = 1;
+                name_no[i as usize] = true;
             }
             if d.inline.contains(ln) {
                 wt_x[i as usize] = 1;
@@ -395,9 +398,20 @@ pub(crate) fn eval_props(t: &Tree, dialect: Option<&Dialect>, extra: &[Rule], li
             v => v,
         };
     }
+    // translate="no" set on the element or an ancestor by a rule, ITS markup or the dialect's translate attribute
+    let mut explicit_no = vec![false; n];
+    for i in 0..n {
+        let parent = t.els[i].parent;
+        explicit_no[i] = match tr_x[i] {
+            2 => false,
+            1 if !name_no[i] => true,
+            _ if parent == NONE => false,
+            _ => explicit_no[parent as usize],
+        };
+    }
     for (a, owner) in attr_yes {
         // ITS: nothing under translate="no" is translatable, a dialect attribute (DITA navtitle) included
-        if dialect_attrs.contains(&a) && !p.tr[owner as usize] {
+        if dialect_attrs.contains(&a) && explicit_no[owner as usize] {
             continue;
         }
         let note = match attr_note.get(&a) {
