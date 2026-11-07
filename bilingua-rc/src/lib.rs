@@ -48,13 +48,26 @@ fn raw_of(u: &Unit, id: &str) -> Option<String> {
 fn render(u: &Unit, items: &[Item], wide: bool) -> String {
     let mut s = String::with_capacity(items.len() + 4);
     s.push_str(if wide { "L\"" } else { "\"" });
+    // the last code written, while nothing has been written after it
+    let mut last: Option<&str> = None;
     for it in items {
         match it {
-            Item::Ch(c) => lit::escape_char(*c, wide, &mut s),
+            Item::Ch(c) => {
+                // a short escape before a digit would read as a longer one (`\x4` + `1` is `\x41`): pad it (#791)
+                if let Some(raw) = last.take() {
+                    let padded = lit::pad_escape(raw, *c, wide);
+                    if padded != raw {
+                        s.truncate(s.len() - raw.len());
+                        s.push_str(&padded);
+                    }
+                }
+                lit::escape_char(*c, wide, &mut s)
+            }
             // an unknown code is dropped (same tolerance as the other formats)
             Item::Code(id) => {
                 if let Some(raw) = u.codes.get(id).and_then(|c| c.standalone.as_deref()) {
-                    s.push_str(raw)
+                    s.push_str(raw);
+                    last = Some(raw);
                 }
             }
         }
@@ -73,23 +86,6 @@ fn check_rendered(u: &Unit, target: &[Item], s: &str) -> Result<(), Error> {
     let one_literal = matches!(toks.as_slice(), [t] if t.kind == lex::Kind::Str && t.start == 0 && t.end == s.len());
     if !one_literal {
         return Err(Error::Unwritable { unit: Some(u.id.clone()), reason: "the translation does not form one string literal".into() });
-    }
-    // a short escape (`\x4`, `\1`) followed by a translated digit would read as a longer one (`\x41`, `\12`) (#791)
-    let maxd = if s.starts_with('L') { 4 } else { 2 };
-    for w in target.windows(2) {
-        let (Item::Code(id), Item::Ch(c)) = (&w[0], &w[1]) else { continue };
-        let Some(raw) = u.codes.get(id).and_then(|c| c.standalone.as_deref()) else { continue };
-        let joins = match raw.as_bytes() {
-            [b'\\', b'x' | b'X', d @ ..] => d.len() < maxd && c.is_ascii_hexdigit(),
-            [b'\\', o, d @ ..] if (b'0'..=b'7').contains(o) => d.len() + 1 < 3 && ('0'..='7').contains(c),
-            _ => false,
-        };
-        if joins {
-            return Err(Error::Unwritable {
-                unit: Some(u.id.clone()),
-                reason: format!("the character after the escape {raw} would join it into a different character; put a space or other text between them"),
-            });
-        }
     }
     let has_text = target.iter().any(|it| matches!(it, Item::Ch(c) if c.is_alphanumeric()));
     let (pieces, _) = lit::pieces(s);

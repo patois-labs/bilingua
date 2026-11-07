@@ -13,7 +13,8 @@ is listed here).
   starts a line and a translation that opens with block syntax or a directive (`ifdef::`, `include::`, `//`) is
   written after `{empty}`, as paragraphs already were (security; LocOS tracker #788).
 - rc: a translated character right after a short escape (`\x4` + `1`, `\1` + `2`) would join it into another
-  character; the merge is refused with a typed error (LocOS tracker #791).
+  character; the escape is now padded with leading zeros to the width rc.exe reads (`\x04`, `\001`), the same
+  character. Octal escapes in `L"..."` strings are read up to 7 digits, as rc.exe does (was 3) (LocOS tracker #791).
 - ftl: a multi-line value whose first line is on its own line no longer gains two spaces of indent per merge;
   continuation lines use the indent of the line the value starts on (LocOS tracker #811 item 1).
 - xcstrings: `stringSet` localizations (App Shortcuts phrases) are read as one unit per string and written back as a

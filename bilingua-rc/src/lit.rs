@@ -108,7 +108,7 @@ pub fn pieces(lit: &str) -> (Vec<Piece>, bool) {
             _ => {}
         }
         let code: &str = if d == 'x' || d == 'X' {
-            let maxd = if wide { 4 } else { 2 };
+            let maxd = max_hex(wide);
             let digits = bs[i + 2..].iter().take(maxd).take_while(|c| c.is_ascii_hexdigit()).count();
             let code = &body[i..i + 2 + digits];
             if wide && digits > 0 {
@@ -122,7 +122,8 @@ pub fn pieces(lit: &str) -> (Vec<Piece>, bool) {
             }
             code
         } else if ('0'..='7').contains(&d) {
-            let digits = bs[i + 1..].iter().take(3).take_while(|c| (b'0'..=b'7').contains(c)).count();
+            // rc.exe reads up to 3 octal digits in a narrow string and up to 7 in a wide one (#791)
+            let digits = bs[i + 1..].iter().take(max_octal(wide)).take_while(|c| (b'0'..=b'7').contains(c)).count();
             &body[i..i + 1 + digits]
         } else {
             &body[i..i + 1 + dl]
@@ -155,6 +156,37 @@ pub fn pieces(lit: &str) -> (Vec<Piece>, bool) {
         }
     }
     (out, wide)
+}
+
+/// The most hex digits rc.exe reads after `\x`: 2 in a narrow string, 4 in a wide one.
+pub fn max_hex(wide: bool) -> usize {
+    if wide { 4 } else { 2 }
+}
+
+/// The most octal digits rc.exe reads after a backslash: 3 in a narrow string, 7 in a wide one.
+pub fn max_octal(wide: bool) -> usize {
+    if wide { 7 } else { 3 }
+}
+
+/// A numeric escape (`\x4`, `\1`) written so that `next`, the character after it, cannot be read as one more digit
+/// of it: when it is shorter than the most digits rc.exe reads, it gets leading zeros (`\x04`, `\001`), which is the
+/// same character (#791). Any other code, or one that `next` cannot join, comes back as it is.
+pub fn pad_escape(code: &str, next: char, wide: bool) -> std::borrow::Cow<'_, str> {
+    let b = code.as_bytes();
+    if b.len() < 2 || b[0] != b'\\' {
+        return code.into();
+    }
+    let (head, digits, max, ok, joins) = if matches!(b[1], b'x' | b'X') {
+        let d = &code[2..];
+        (&code[..2], d, max_hex(wide), d.bytes().all(|c| c.is_ascii_hexdigit()), next.is_ascii_hexdigit())
+    } else {
+        let d = &code[1..];
+        (&code[..1], d, max_octal(wide), d.bytes().all(|c| (b'0'..=b'7').contains(&c)), ('0'..='7').contains(&next))
+    };
+    if !ok || !joins || digits.len() >= max {
+        return code.into();
+    }
+    format!("{head}{}{digits}", "0".repeat(max - digits.len())).into()
 }
 
 /// True when a code names its argument (`%1`, `%2!s!`): a translation may move it.

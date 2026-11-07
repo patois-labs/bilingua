@@ -13,7 +13,9 @@ names, user types, preprocessor lines) stays in the skeleton. `#include`, `#defi
 **Inline codes**: escapes (`\t`, `\n`, `\x41`, octal) and printf / FormatMessage placeholders are standalone tags that
 keep their written form. `%1` and `%2!s!` are free (they may move); the others keep their order. `""` and `\"` are
 quotes, `\\` a backslash, a backslash at the end of a line a continuation. In `L"..."` strings `\xhhhh` of a
-printable character is shown as that character.
+printable character is shown as that character. Escapes are read as rc.exe reads them: up to 2 hex or 3 octal
+digits in a narrow string, 4 hex or 7 octal in a wide one. On merge, a shorter escape right before a digit that would
+join it gets leading zeros (`\x4` then `1` is written `\x041`).
 
 **Merge**: only changed units are rewritten (the L prefix is kept); every other byte is identical. A menu item or
 control whose source has exactly one `&` accelerator keeps exactly one in the translation. With a target language

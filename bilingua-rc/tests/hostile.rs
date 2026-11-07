@@ -28,7 +28,7 @@ fn check(data: &[u8]) {
             let out = match Rc.merge(&doc) {
                 Ok(out) => out,
                 // a translation that would not read back as the same unit is refused, never written
-                Err(Error::Unwritable { reason, .. }) if reason.contains("format placeholder") || reason.contains("would join it") => return,
+                Err(Error::Unwritable { reason, .. }) if reason.contains("format placeholder") => return,
                 Err(e) => panic!("translated merge failed: {e}"),
             };
             // a BOM-less UTF-16 file is found by its zero bytes; a translation may change that, so only

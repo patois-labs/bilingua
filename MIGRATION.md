@@ -452,7 +452,10 @@ commented list in the test.
   translation opens with block syntax or a directive (`ifdef::`, `include::`, `//`), as paragraphs do. LocOS does
   neither (issue 788); the fix is going into LocOS too.
 - **rc, a short escape before a translated digit.** `\x4` followed by `1`, or `\1` followed by `2`, would be read by
-  rc.exe as `\x41` and `\12`. Bilingua refuses the merge (`Unwritable`); LocOS writes the merged escape (issue 791).
+  rc.exe as `\x41` and `\12`. Bilingua pads the escape with leading zeros to the most digits rc.exe reads (2 hex or
+  3 octal in a narrow string, 4 hex or 7 octal in an `L"..."` one): `\x041`, `\0012`. LocOS writes the merged escape
+  (issue 791). Bilingua also reads octal escapes in wide strings up to 7 digits, as rc.exe does; LocOS stops at 3,
+  so a wide string with 4 or more octal digits in a row extracts differently.
 - **Fluent, multi-line indent.** A value that starts on its own line writes its continuation lines at that line's
   indent. LocOS used the first deeper-indented line, so the value gained two spaces per merge (issue 811, item 1).
   The golden file was regenerated with that one LocOS function patched in `tests/tools/gen_golden.py`; drop the
