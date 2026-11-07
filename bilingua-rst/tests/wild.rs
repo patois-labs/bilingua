@@ -36,3 +36,11 @@ fn indented_simple_table_can_be_written() {
     assert!(out.contains("  Abs        one"), "{out}");
     assert!(out.starts_with("Intro:\n\n  ========="), "{out}");
 }
+
+#[test]
+fn deeper_continuation_lines_of_an_item_stay_one_paragraph() {
+    // LocOS parity: lines that continue the item's first paragraph are not cut into a definition list
+    let src = b"- First line of the item\n    goes on here\n";
+    assert_eq!(units(src), vec!["First line of the item goes on here".to_string()]);
+    assert_identity(src);
+}

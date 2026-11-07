@@ -43,3 +43,19 @@ fn text_is_not_glued_to_a_trailing_control_space() {
     let out = String::from_utf8(build(src, &[(0, "Zqvs.\u{27E6}x1\u{27E7}qZ")])).unwrap_or_default();
     assert!(!out.contains("\\qZ"), "{out}");
 }
+
+#[test]
+fn an_unclosed_environment_in_the_preamble_does_not_hide_the_document() {
+    // a broken preamble: LocOS takes the first `\begin{document}`, and so do we
+    let src = b"\documentclass{article}\n\begin{equation}\n\begin{document}\nBody text.\n\end{document}\n";
+    assert_eq!(units(src), vec!["Body text.".to_string()]);
+}
+
+#[test]
+fn unchanged_merge_after_a_control_word_is_identical() {
+    let src = b"\medskip\noindent\nTo see this.\n";
+    assert_eq!(build(src, &[]), src.to_vec());
+    let u = units(src);
+    let echo: Vec<(usize, &str)> = u.iter().enumerate().map(|(i, t)| (i, t.as_str())).collect();
+    assert_eq!(build(src, &echo), src.to_vec());
+}

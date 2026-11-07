@@ -24,6 +24,26 @@ fn map_text(name: &str, i: usize, t: &str) -> Option<String> {
     }
 }
 
+/// Documented difference from LocOS (MIGRATION.md "Differences from LocOS", crate README). GLUED_WORD: when a
+/// translation that starts with a letter follows a control word of the skeleton (`\chapter` + `T2 ...`), LocOS writes
+/// `\chapterT2`, a different (undefined) control word. Bilingua writes `\chapter{}T2`. In these cases the build is
+/// compared with that `{}` taken out again, so every other byte must still match LocOS.
+const GLUED_WORD: &[&str] = &[
+    "random-3", "random-13", "random-17", "random-26", "random-54", "random-61", "random-72", "random-88",
+    "random-120", "random-125", "random-132", "random-155", "random-156", "random-159", "random-165", "random-177",
+    "random-192", "random-196", "random-211", "random-223", "random-226", "random-242", "random-259", "random-263",
+    "random-274", "random-281", "random-282", "random-288", "random-296", "random-304", "random-308", "random-324",
+    "random-343", "random-368", "random-386", "random-402", "random-407", "random-440", "random-444", "random-462",
+    "random-469", "random-494", "random-509", "random-553", "random-556", "random-566", "random-567", "random-573",
+    "random-596",
+];
+
+/// Our build with each `{}` that Bilingua puts between a control word and a letter taken out (the GLUED_WORD cases).
+fn unglued(b: &[u8]) -> Vec<u8> {
+    let re = regex::bytes::Regex::new(r"(\\[A-Za-z]+)\{\}([A-Za-z])").unwrap();
+    re.replace_all(b, &b"$1$2"[..]).into_owned()
+}
+
 #[test]
 fn matches_locos_on_random_files_corpus_and_okapi_files() {
     let text = std::fs::read_to_string(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/data/locos_golden.json")).unwrap();
@@ -41,14 +61,22 @@ fn matches_locos_on_random_files_corpus_and_okapi_files() {
         let want: Vec<String> = c["units"].as_array().unwrap().iter().map(|u| u.as_str().unwrap().to_string()).collect();
         assert_eq!(units(&data), want, "{name}: units");
         if c["builds_compared"].as_bool() == Some(true) {
+            let glued = GLUED_WORD.contains(&name);
+            let mut differs = false;
             for (label, d) in c["builds"].as_object().unwrap() {
                 let map: Vec<(usize, String)> =
                     want.iter().enumerate().filter_map(|(i, t)| map_text(label, i, t).map(|m| (i, m))).collect();
                 let m: Vec<(usize, &str)> = map.iter().map(|(i, s)| (*i, s.as_str())).collect();
                 let got = build(&data, &m);
-                assert_eq!(fnv(&got), d.as_str().unwrap(), "{name}: build {label}");
+                if glued && fnv(&got) != d.as_str().unwrap() {
+                    differs = true;
+                    assert_eq!(fnv(&unglued(&got)), d.as_str().unwrap(), "{name}: build {label} (GLUED_WORD)");
+                } else {
+                    assert_eq!(fnv(&got), d.as_str().unwrap(), "{name}: build {label}");
+                }
                 builds += 1;
             }
+            assert!(!glued || differs, "{name}: in GLUED_WORD but now matches LocOS: take it off the list");
         }
         ok += 1;
     }

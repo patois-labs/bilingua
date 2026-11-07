@@ -66,5 +66,9 @@ rewrites the same line inside a `verbatim` example in the body). The model's "al
 * Unicode letters: where LocOS asks "is this a letter" it uses Python `isalpha`; this crate uses `\p{L}`, the same
   set, and Python's `isspace`, which also counts U+001C to U+001F. The known Rust `is_alphanumeric` difference for
   combining marks does not arise.
+* Text after a control word: a translation that starts with a letter after a skeleton control word is written as
+  `\chapter{}Text` (LocOS: `\chapterText`, another control word); golden list `GLUED_WORD`. The document starts at
+  the first `egin{document}` outside other environments and verbatim bodies (LocOS: the first one anywhere, so a
+  manual's example cut the document short); an environment never closed does not count. See MIGRATION.md.
 * Not guessed: babel and polyglossia language options are never changed on a target-locale merge (LocOS:
   `build_localized` is `build`).

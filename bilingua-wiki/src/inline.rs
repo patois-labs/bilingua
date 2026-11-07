@@ -274,6 +274,9 @@ const LOCAL_OPTIONS: &[&str] = &[
     "δεξιά", "κέντρο", "χωρίς", "πλαίσιο", "миниатюрa", "ліворуч", "праворуч", "центр", "міні", "мініатюра", "рамка",
 ];
 
+/// Localized spellings of the `px` size unit (`250بك`).
+const LOCAL_PX: &[&str] = &["بك", "بكسل", "پیکسل", "像素", "픽셀", "пкс", "ピクセル"];
+
 /// A file link part that is an option (`thumb`, `200px`, `alt=..`), not a caption.
 fn file_option(cap: &str) -> bool {
     let s = strip(cap).to_lowercase();
@@ -281,14 +284,16 @@ fn file_option(cap: &str) -> bool {
         "thumb", "thumbnail", "frame", "framed", "frameless", "border", "left", "right", "center", "centre", "none", "upright", "baseline", "sub",
         "super", "top", "text-top", "middle", "bottom", "text-bottom", "loop", "muted",
     ];
-    if WORDS.contains(&s.as_str()) || LOCAL_OPTIONS.contains(&s.as_str()) {
+    // the local words are matched as written (MediaWiki's image options are case sensitive), so a one-word
+    // caption such as `Marco` or `Links` stays a caption
+    if WORDS.contains(&s.as_str()) || LOCAL_OPTIONS.contains(&strip(cap)) {
         return true;
     }
-    // a size with a local unit, as in `250بك`
+    // a size with a local unit, as in `250بك` (the units of the larger wikis only: `2010年` is a caption)
     {
         let digits = s.trim_start_matches(is_decimal);
         let unit = digits.strip_prefix('x').map_or(digits, |r| r.trim_start_matches(is_decimal));
-        if unit.len() < s.len() && !unit.is_empty() && unit.chars().count() <= 3 && unit.chars().all(|c| !c.is_ascii() && c.is_alphabetic()) {
+        if unit.len() < s.len() && LOCAL_PX.contains(&unit) {
             return true;
         }
     }

@@ -40,7 +40,10 @@ Known differences from LocOS: Unicode categories come from Rust (`isalpha`, `isa
 for a file that was not UTF-8 and Bilingua keeps the file's encoding (B6) unless `merge_with` asks for UTF-8; LocOS's
 case-insensitive tag and namespace names also fold `ı` (U+0131), `ſ` (U+017F) and `K` (U+212A) onto ASCII (a Python `re`
 quirk; MediaWiki and Bilingua compare ASCII only); an unclosed `<nowiki>` or `<pre>` in a page that is already broken can
-be closed by the inert `<nowiki>` a translation needs, moving unit boundaries (as in LocOS).
+be closed by the inert `<nowiki>` a translation needs, moving unit boundaries (as in LocOS). On purpose (see
+MIGRATION.md): localized File namespaces and image options of the larger wikis are read, local option words case
+sensitive, and a file link's caption is its last part that is not an option, where LocOS takes only the last part
+(golden list `CAPTION_BEFORE_OPTIONS`).
 
 **Okapi** (`okf_wiki`, its only test file `dokuwiki.txt`, gate run 11-05): Bilingua's 188 units are LocOS's exactly; 156 of
 Okapi's 189 units with letters are identical in order. The rest are design differences where LocOS wins: Okapi makes
