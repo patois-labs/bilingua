@@ -353,7 +353,7 @@ fn merge(doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
                     out.push_str(raw);
                     continue;
                 }
-                match rebuild(u, opts.profile.as_deref() == Some("locos")) {
+                match rebuild(u, opts.is_profile(profile::LOCOS)) {
                     Ok(Some(l)) => {
                         rewritten = true;
                         out.push_str(&l);

@@ -74,7 +74,7 @@ pub fn unsupported_with(atoms: &[Atom], cct: Cct, pairs: bool) -> Vec<char> {
             if pairs && i > 0 && matches!(prepped[i - 1], Atom::C(b) if codec::encode_pair(b, c, cct).is_some()) {
                 continue;
             }
-            if c != '\n' &&!set.contains(&c) && codec::encode_char(c, cct).is_none() {
+            if c != '\n' && !set.contains(&c) && codec::encode_char(c, cct).is_none() {
                 set.insert(c);
                 seen.push(c);
             }

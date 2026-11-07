@@ -215,5 +215,5 @@ fn merge(doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
     if changed.is_empty() && lc.is_none() {
         return Ok(raw.to_vec());
     }
-    write::rebuild(raw, &parsed, &infos, &changed, lc, opts.profile.as_deref() != Some("locos"))
+    write::rebuild(raw, &parsed, &infos, &changed, lc, !opts.is_profile(bilingua_model::profile::LOCOS))
 }
