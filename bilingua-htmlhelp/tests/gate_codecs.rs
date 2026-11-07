@@ -51,13 +51,6 @@ fn gb2312_shift_jis_and_big5_labels_read_the_windows_supersets() {
     assert_eq!(first(&d), [0x20ac, 0x20, 0x58]);
 }
 
-fn tag_of(data: &[u8]) -> String {
-    match extract(&HhcFilter, data).unwrap().skeleton {
-        Skeleton::Text { encoding, .. } => encoding,
-        _ => unreachable!(),
-    }
-}
-
 #[test]
 fn iso_8859_9_is_not_windows_1254() {
     let d = doc(b"iso-8859-9", b"\x80\xdd X");
