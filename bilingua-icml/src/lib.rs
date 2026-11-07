@@ -36,6 +36,8 @@ struct Prep {
     dom: Dom,
     stories: Vec<(Id, Id)>,
     hidden: HashMap<Id, BTreeSet<String>>,
+    /// The root is a bare `<Story>` (read natively; LocOS refuses it, so the LocOS profile does too).
+    bare_story: bool,
 }
 
 fn find_doctype(b: &[u8]) -> bool {
@@ -122,7 +124,7 @@ fn prepare_text(text: String, limits: &Limits) -> Result<Prep, Error> {
             hidden.insert(*d, hidden_conditions(&dom, *d));
         }
     }
-    Ok(Prep { dom, stories, hidden })
+    Ok(Prep { dom, stories, hidden, bare_story })
 }
 
 /// Every plain `<Story>` not inside another one, in document order; in a wrapped (WoodWing) file only those
@@ -284,12 +286,18 @@ impl Icml {
         guard::check_input(bytes, limits)?;
         let (text, bom) = decode(bytes)?;
         let mut prep = prepare_text(text, limits)?;
+        // the LocOS profile walks as LocOS does: no table cells straight under a story or paragraph range
+        let block_tables = !opts.is_profile(bilingua_model::profile::LOCOS);
+        if prep.bare_story && !block_tables {
+            // LocOS `icml_filter._parse` reads only a `<Document>` or WoodWing `<ea:Stories>` root
+            return Err(parse_err("This XML file is not an InCopy or WoodWing document (its root is neither <Document> nor WoodWing's <ea:Stories>)."));
+        }
         let mut units: Vec<Unit> = Vec::new();
         let mut idx = 0usize;
         let stories = prep.stories.clone();
         for (story, d) in stories {
             let hidden = prep.hidden.get(&d).cloned().unwrap_or_default();
-            let paras = walk(&mut prep.dom, &hidden, story);
+            let paras = walk(&mut prep.dom, &hidden, story, block_tables);
             for para in &paras {
                 let tok = tokenize(&prep.dom, para);
                 if has_text(&tok.parts) {
@@ -372,6 +380,41 @@ fn fit_ws(tp: &mut Vec<TP>, lead: &str, trail: &str) {
     }
 }
 
+/// LocOS `base._newline_style`: `\r\n` when every line end of `text` is CRLF, `\r` when there are only bare CRs,
+/// else `None` (LF, or mixed: the piece is left as it is).
+fn newline_style(text: &str) -> Option<&'static str> {
+    let b = text.as_bytes();
+    let crlf = b.windows(2).filter(|w| *w == b"\r\n").count();
+    let lf = b.iter().filter(|&&c| c == b'\n').count();
+    let cr = b.iter().filter(|&&c| c == b'\r').count();
+    if crlf > 0 && crlf == lf && lf == cr {
+        Some("\r\n")
+    } else if cr > 0 && lf == 0 {
+        Some("\r")
+    } else {
+        None
+    }
+}
+
+/// Every line end of `piece` (`\r\n`, `\r` or `\n`) written as `nl` (LocOS `newline_like`).
+fn with_newlines(piece: &str, nl: &str) -> String {
+    let mut out = String::with_capacity(piece.len() + piece.len() / 32);
+    let mut it = piece.chars().peekable();
+    while let Some(c) = it.next() {
+        match c {
+            '\r' => {
+                if it.peek() == Some(&'\n') {
+                    it.next();
+                }
+                out.push_str(nl);
+            }
+            '\n' => out.push_str(nl),
+            c => out.push(c),
+        }
+    }
+    out
+}
+
 fn skeleton_text(doc: &Document) -> Result<(String, bool), Error> {
     bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
     let Skeleton::Text { parts, encoding, .. } = &doc.skeleton else {
@@ -434,6 +477,8 @@ impl Filter for Icml {
         }
         let limits = Limits::default();
         let mut prep = prepare_text(text, &limits)?;
+        // the walk the document was extracted with (the profile's has no block-level tables)
+        let block_tables = !opts.is_profile(bilingua_model::profile::LOCOS);
         // the language is set per rewritten (translated) paragraph, so `stamp_target_always` adds nothing; ICML is
         // UTF-8 XML, so `output_encoding` has nothing to change either
         let tag = opts.stamp_lang(doc, true).and_then(lang::html_lang);
@@ -445,11 +490,11 @@ impl Filter for Icml {
         for (story, d) in stories {
             let hidden = prep.hidden.get(&d).cloned().unwrap_or_default();
             let dom = &mut prep.dom;
-            let paras = walk(dom, &hidden, story);
+            let paras = walk(dom, &hidden, story, block_tables);
             let n = paras.len();
             if (idx..idx + n).any(|k| wanted.contains_key(&k)) {
                 normalize(dom, &paras);
-                let paras2 = walk(dom, &hidden, story);
+                let paras2 = walk(dom, &hidden, story, block_tables);
                 if paras2.len() != n {
                     return Err(Error::Write("story paragraph structure changed on rebuild".into()));
                 }
@@ -494,6 +539,13 @@ impl Filter for Icml {
         }
         changes.sort_by_key(|c| c.0);
         let src = &prep.dom.text;
+        // LocOS `newline_like`: a rebuilt story takes the file's line endings when it uses one style throughout
+        // (CRLF from InCopy on Windows), so no bare LF lands in a CRLF file
+        if let Some(nl) = newline_style(src) {
+            for c in &mut changes {
+                c.2 = with_newlines(&c.2, nl);
+            }
+        }
         let mut out = String::with_capacity(src.len() + 1024);
         let mut pos = 0usize;
         for (s, e, new) in &changes {

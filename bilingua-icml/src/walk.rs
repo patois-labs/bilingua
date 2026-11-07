@@ -103,9 +103,11 @@ pub fn sibling_elem(dom: &mut Dom, like: Id, name: &str, attrs: Vec<(String, Str
     dom.new_elem(&qn, ns, attrs, Vec::new())
 }
 
-/// The story walk. `hidden` is the set of hidden condition ids of the story's document.
-pub fn walk(dom: &mut Dom, hidden: &BTreeSet<String>, story: Id) -> Vec<Para> {
-    let mut w = Walker { dom, hidden, paras: Vec::new(), cur: None, subs: Vec::new() };
+/// The story walk. `hidden` is the set of hidden condition ids of the story's document. `block_tables`: read the
+/// cells of a table written straight into the story or a paragraph range (pandoc does this); LocOS does not
+/// (`idml_filter._Walker._block`), so the LocOS profile walks without them.
+pub fn walk(dom: &mut Dom, hidden: &BTreeSet<String>, story: Id, block_tables: bool) -> Vec<Para> {
+    let mut w = Walker { dom, hidden, paras: Vec::new(), cur: None, subs: Vec::new(), block_tables };
     let mut queue = vec![story];
     let mut i = 0;
     while i < queue.len() {
@@ -125,6 +127,7 @@ struct Walker<'a> {
     paras: Vec<Para>,
     cur: Option<Para>,
     subs: Vec<Id>,
+    block_tables: bool,
 }
 
 impl Walker<'_> {
@@ -151,7 +154,7 @@ impl Walker<'_> {
                 self.block(child);
             } else if name == "CharacterStyleRange" {
                 self.csr(child);
-            } else if name == "Table" {
+            } else if name == "Table" && self.block_tables {
                 // a table written straight into the story or a paragraph range (pandoc does this): its cells
                 // are read after the body, as for a table inside a range
                 let cells: Vec<Id> = self.dom.kids(child).into_iter().filter(|c| self.dom.local(*c) == "Cell").collect();

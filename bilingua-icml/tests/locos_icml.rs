@@ -346,3 +346,63 @@ fn surfaces_translate_and_export() {
     // junk is refused
     refused(b"<Document><Story>", "junk");
 }
+
+/// W4 icml-2: a rebuilt paragraph in a CRLF file keeps CRLF everywhere (LocOS `newline_like`); an LF file stays LF.
+#[test]
+fn crlf_file_stays_crlf_after_a_rebuild() {
+    let body = psr(&format!("{}\n{}", csr("<Content>Plain </Content>"), csr_with("<Content>bold</Content>", BOLD, "")));
+    let lf = icml(&body, "", "");
+    let crlf = String::from_utf8(lf.clone()).unwrap().replace('\n', "\r\n").into_bytes();
+    for (data, want_crlf) in [(crlf, true), (lf, false)] {
+        let us = units(&data);
+        assert_eq!(us, vec!["Plain \u{27E6}r1\u{27E7}bold\u{27E6}/r1\u{27E7}"]);
+        let out = translate(&data, &[(0, "\u{27E6}r1\u{27E7}fett\u{27E6}/r1\u{27E7} schlicht")]);
+        assert!(well_formed(&out));
+        let s = String::from_utf8(out).unwrap();
+        assert!(s.contains("fett") && s.contains("schlicht"), "{s}");
+        let bare_lf = s.as_bytes().iter().enumerate().filter(|(i, c)| **c == b'\n' && (*i == 0 || s.as_bytes()[i - 1] != b'\r')).count();
+        let crs = s.matches('\r').count();
+        if want_crlf {
+            assert_eq!(bare_lf, 0, "a bare LF in a CRLF file:\n{s:?}");
+        } else {
+            assert_eq!(crs, 0, "a CR in an LF file:\n{s:?}");
+        }
+    }
+}
+
+/// W4 icml-3: a bare `<Story>` root is read natively (as Okapi does) but refused under the LocOS profile, as LocOS
+/// refuses it.
+#[test]
+fn bare_story_root_refused_under_the_locos_profile() {
+    let data = format!("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n{}", story("u1", &psr(&csr("<Content>Alone.</Content>")))).into_bytes();
+    assert_eq!(units(&data), vec!["Alone."]);
+    let err = Icml.extract(&data, &profile::locos().extract_options()).unwrap_err();
+    assert!(err.to_string().contains("its root is neither <Document> nor WoodWing"), "{err}");
+    // a normal file is still read under the profile
+    assert!(Icml.extract(&icml(&psr(&csr("<Content>Fine.</Content>")), "", ""), &profile::locos().extract_options()).is_ok());
+}
+
+/// W4 icml-4: a table written straight into the story (pandoc) is read natively, but not under the LocOS profile
+/// (LocOS's walker reads tables only inside a range), so the paragraphs after it keep LocOS's numbers; a profile
+/// merge walks the same way.
+#[test]
+fn story_level_table_is_skipped_under_the_locos_profile() {
+    let cell = |n: &str, t: &str| format!("<Cell Name=\"{n}\">{}</Cell>", psr(&csr(&format!("<Content>{t}</Content>"))));
+    let body = format!(
+        "{}\n<Table ColumnCount=\"2\">{}{}</Table>\n{}",
+        psr(&csr("<Content>Before.</Content>")),
+        cell("0:0", "Head"),
+        cell("1:0", "Cell"),
+        psr(&csr("<Content>After.</Content>"))
+    );
+    let data = icml(&body, "", "");
+    assert_eq!(units(&data), vec!["Before.", "After.", "Head", "Cell"]);
+    let lo = profile::locos().extract_options().with_granularity(Granularity::Paragraph);
+    let mut d = Icml.extract(&data, &lo).unwrap();
+    let got: Vec<(usize, String)> = d.units.iter().map(|u| (p_index(u), tok_text(u, &u.source()))).collect();
+    assert_eq!(got, vec![(0, "Before.".to_string()), (1, "After.".to_string())]);
+    d.units[1].segments[0].target = vec![Inline::text("Danach.")];
+    let out = Icml.merge_with(&d, &profile::locos().merge_options("icml")).unwrap();
+    let s = String::from_utf8(out).unwrap();
+    assert!(s.contains("Danach.") && s.contains("<Content>Head</Content>") && s.contains("<Content>Before.</Content>"), "{s}");
+}
