@@ -145,11 +145,11 @@ impl XliffPackage {
         for &i in &opened.members {
             let e = &opened.entries[i];
             guard::check_xml(&e.data, &l)?;
-            let texts = bilingua_xliff::locos::written_texts(document.units.iter().filter(|u| u.context.location.as_deref() == Some(e.name.as_str())));
+            let texts = bilingua_xliff::locos::written_texts_escaped(document.units.iter().filter(|u| u.context.location.as_deref() == Some(e.name.as_str())));
             if texts.is_empty() && tag.is_none() {
                 continue;
             }
-            let new = bilingua_xliff::locos::build_cat(&e.data, &texts, tag.as_deref())?;
+            let new = bilingua_xliff::locos::build_cat_escaped(&e.data, &texts, tag.as_deref())?;
             if new != e.data {
                 replaced.insert(i, new);
             }

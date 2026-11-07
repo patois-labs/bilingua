@@ -15,6 +15,11 @@ use regex::Regex;
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::sync::OnceLock;
 
+// A translation reaches the writer with its literal text escaped (`esc_lit`), so text that looks like a token
+// (`⟦x2⟧` typed by a translator, even the name of a real code of the cue) is never read as one; the writer
+// unescapes each text run it cuts out (issue 814).
+use bilingua_model::profile::tokens::{escape_literal as esc_lit, unescape_literal as unesc_lit};
+
 fn re(cell: &'static OnceLock<Regex>, pat: &str) -> &'static Regex {
     cell.get_or_init(|| Regex::new(pat).expect("subtitle pattern"))
 }
@@ -418,7 +423,7 @@ fn vtt_detokenize(translated: &str, tokens: &HashMap<String, String>) -> String 
     let mut used: HashSet<String> = HashSet::new();
     let mut pos = 0;
     for m in any_marker().find_iter(translated) {
-        out.push_str(&vtt_escape(&translated[pos..m.start()]));
+        out.push_str(&vtt_escape(&unesc_lit(&translated[pos..m.start()])));
         pos = m.end();
         let s = m.as_str();
         let name = &s['\u{27E6}'.len_utf8()..s.len() - '\u{27E7}'.len_utf8()];
@@ -444,7 +449,7 @@ fn vtt_detokenize(translated: &str, tokens: &HashMap<String, String>) -> String 
             }
         }
     }
-    out.push_str(&vtt_escape(&translated[pos..]));
+    out.push_str(&vtt_escape(&unesc_lit(&translated[pos..])));
     while let Some(n) = stack.pop() {
         if let Some(t) = tokens.get(&format!("/{n}")) {
             out.push_str(t);
@@ -457,7 +462,7 @@ fn vtt_cue(text: &str, translated: &str) -> String {
     let (prefix, _, suffix, tokens) = vtt_tokenize(text);
     let tagged = !tokens.is_empty() || !py_strip(&prefix).is_empty() || !py_strip(&suffix).is_empty();
     if tagged && !any_marker().is_match(translated) && vtt_known().is_match(translated) {
-        return cue_text(&vtt_escape(translated), text);
+        return cue_text(&vtt_escape(&unesc_lit(translated)), text);
     }
     cue_text(&format!("{prefix}{}{suffix}", vtt_detokenize(translated, &tokens)), text)
 }
@@ -465,16 +470,16 @@ fn vtt_cue(text: &str, translated: &str) -> String {
 fn srt_cue(text: &str, translated: &str) -> String {
     let (prefix, _, suffix, tokens) = srt_tokenize(text);
     if tokens.is_empty() && prefix.is_empty() && suffix.is_empty() {
-        return cue_text(translated, text);
+        return cue_text(&unesc_lit(translated), text);
     }
     if !any_marker().is_match(translated) && srt_override().is_match(translated) {
-        return cue_text(translated, text);
+        return cue_text(&unesc_lit(translated), text);
     }
     let mut out = String::new();
     let mut used = HashSet::new();
     let mut pos = 0;
     for m in any_marker().find_iter(translated) {
-        out.push_str(&translated[pos..m.start()]);
+        out.push_str(&unesc_lit(&translated[pos..m.start()]));
         pos = m.end();
         let s = m.as_str();
         let name = &s['\u{27E6}'.len_utf8()..s.len() - '\u{27E7}'.len_utf8()];
@@ -487,7 +492,7 @@ fn srt_cue(text: &str, translated: &str) -> String {
             None => out.push_str(s),
         }
     }
-    out.push_str(&translated[pos..]);
+    out.push_str(&unesc_lit(&translated[pos..]));
     cue_text(&format!("{prefix}{out}{suffix}"), text)
 }
 
@@ -573,7 +578,7 @@ fn rebuild(s: &str, texts: &BTreeMap<usize, String>, locale: Option<&str>) -> St
                 None => lines.push(text.clone()),
                 Some(n) => {
                     let core = if cue.vtt { core_text(&vtt_tokenize(&text).1) } else { core_text(&srt_tokenize(&text).1) };
-                    if *n == core {
+                    if *n == esc_lit(&core) {
                         lines.push(text.clone());
                     } else {
                         lines.push(if cue.vtt { vtt_cue(&text, n) } else { srt_cue(&text, n) });
@@ -642,12 +647,12 @@ pub fn extract(format: &'static str, text: &str, encoding: &str, opts: &ExtractO
     bilingua_model::guard::finish(doc, warnings, &opts.limits())
 }
 
-/// A unit's translation as LocOS text: its codes as their token names.
+/// A unit's translation as LocOS text: its codes as their token names, its literal text escaped (`esc_lit`).
 fn locos_text(v: &[Inline]) -> String {
     let mut s = String::new();
     for i in v {
         match i {
-            Inline::Text(t) => s.push_str(t),
+            Inline::Text(t) => s.push_str(&esc_lit(t)),
             Inline::Tag { id, kind: TagKind::Close, .. } => s.push_str(&format!("\u{27E6}/{id}\u{27E7}")),
             Inline::Tag { id, .. } => s.push_str(&format!("\u{27E6}{id}\u{27E7}")),
         }
@@ -696,6 +701,50 @@ mod tests {
         let srt = "{\\i1}a{\\i0}\u{27E6}x1\u{27E7} z";
         let (_, core, _, _) = srt_tokenize(srt);
         assert_eq!(srt_cue(srt, &core_text(&core)), srt);
+    }
+
+    /// Issue 814 item 1 (and item 3): a translator who types the token of a real code (`⟦g1⟧`) as text does not
+    /// move or drop that code; the typed text stays text. U+E000 / U+E001 in a cue come back byte for byte.
+    #[test]
+    fn typed_tokens_of_real_codes_stay_text() {
+        let file = |cue: &str| format!("WEBVTT\n\n00:00.000 --> 00:01.000\n{cue}\n");
+        let build = |src: &str, target: Vec<Inline>| rebuild(&file(src), &BTreeMap::from([(0, locos_text(&target))]), None);
+        let src = "x <i>a</i> b \u{e000}\u{e001}\u{27E6}x9\u{27E7} c <b>d</b> e";
+        let (_, core, _, tokens) = vtt_tokenize(src);
+        assert!(tokens.contains_key("g1") && tokens.contains_key("g2"), "{tokens:?}");
+        let tag = |id: &str, kind| Inline::tag(id, kind, "");
+        // the cue as it is: byte for byte
+        let same: Vec<Inline> = core
+            .iter()
+            .map(|p| match p {
+                Piece::Text(t) => Inline::text(t.clone()),
+                Piece::Open(n, _) => tag(n, TagKind::Open),
+                Piece::Close(n, _) => tag(n, TagKind::Close),
+                Piece::Point(n, _) => tag(n, TagKind::Standalone),
+            })
+            .collect();
+        assert_eq!(build(src, same), file(src));
+        // typed tokens after the real ones, and before them
+        let t = vec![
+            Inline::text("\u{27E6}g2\u{27E7}D\u{27E6}/g2\u{27E7} "),
+            tag("g1", TagKind::Open),
+            Inline::text("A"),
+            tag("g1", TagKind::Close),
+            Inline::text(" \u{27E6}g1\u{27E7}x\u{27E6}/g1\u{27E7} "),
+            tag("g2", TagKind::Open),
+            Inline::text("B"),
+            tag("g2", TagKind::Close),
+            Inline::text(" \u{e000}"),
+        ];
+        assert_eq!(build(src, t.clone()), file("\u{27E6}g2\u{27E7}D\u{27E6}/g2\u{27E7} <i>A</i> \u{27E6}g1\u{27E7}x\u{27E6}/g1\u{27E7} <b>B</b> \u{e000}"));
+        // SubRip: an override block's token typed as text
+        let srt = |cue: &str| format!("1\n00:00:00,000 --> 00:00:01,000\n{cue}\n");
+        let s = "{\\i1}a{\\i0} b";
+        let (_, core, _, tokens) = srt_tokenize(s);
+        assert!(tokens.contains_key("x1") && tokens.contains_key("x2"), "{tokens:?} {:?}", core_text(&core));
+        let t = vec![Inline::text("\u{27E6}x2\u{27E7} "), tag("x1", TagKind::Standalone), Inline::text("A"), tag("x2", TagKind::Standalone), Inline::text(" B \u{27E6}x1\u{27E7}")];
+        let out = rebuild(&srt(s), &BTreeMap::from([(0, locos_text(&t))]), None);
+        assert_eq!(out, srt("\u{27E6}x2\u{27E7} {\\i1}A{\\i0} B \u{27E6}x1\u{27E7}"));
     }
 
     #[test]

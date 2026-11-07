@@ -146,9 +146,9 @@ pub(crate) fn merge(document: &Document, original: &[u8], opts: &MergeOptions) -
     let l = bilingua_model::Limits::default();
     let entries = read_zip(original, &ZipLimits::of(&l, true)).map_err(|e| crate::perr("sdlppx", e))?;
     let (p, member) = inspect(&entries)?;
-    let texts = bilingua_xliff::locos::written_texts(document.units.iter());
+    let texts = bilingua_xliff::locos::written_texts_escaped(document.units.iter());
     let tag = opts.stamp_lang(document, !texts.is_empty()).and_then(profile::lang_tag);
-    let built = bilingua_xliff::locos::build_cat(&entries[member].data, &texts, tag.as_deref())?;
+    let built = bilingua_xliff::locos::build_cat_escaped(&entries[member].data, &texts, tag.as_deref())?;
     let mut parts = vec![(p, flip_package_type(&entries[p].data)), (member, built)];
     parts.sort_by_key(|(i, _)| *i);
     let out: Vec<Entry> = parts.into_iter().map(|(i, data)| Entry { name: entries[i].name.clone(), data, modified: entries[i].modified }).collect();
@@ -197,5 +197,22 @@ mod tests {
         assert_eq!(back.iter().map(|e| e.name.as_str()).collect::<Vec<_>>(), ["p.sdlproj", "de-DE/a.sdlxliff"]);
         assert!(String::from_utf8_lossy(&back[0].data).contains("ReturnPackage"));
         assert!(String::from_utf8_lossy(&back[1].data).contains("<target>Hallo</target>"));
+    }
+
+    /// Issue 814 item 1: token look-alike text in the member is written back as text, not read as a code.
+    #[test]
+    fn token_look_alikes_stay_text() {
+        let proj = b"<PackageProject PackageType=\"ProjectPackage\"><LanguageDirection SourceLanguageCode=\"en-US\" TargetLanguageCode=\"de-DE\"/></PackageProject>";
+        let body = "Hi \u{27e6}g1\u{27e7}<g id=\"7\">b</g>\u{27e6}/g1\u{27e7} \u{e000}\u{e001}";
+        let sdl = format!("<xliff xmlns:sdl=\"http://sdl.com/FileTypes/SdlXliff/1.0\" version=\"1.2\"><file><body><trans-unit id=\"1\"><source>{body}</source></trans-unit></body></file></xliff>");
+        let pkg = zip(&[("p.sdlproj", proj), ("de-DE/a.sdlxliff", sdl.as_bytes())]);
+        let o = profile::locos().extract_options();
+        let mut doc = extract(&pkg, &o).unwrap();
+        let seg = doc.units[0].segments[0].clone();
+        profile::locos_set_target(&mut doc, &seg.id, seg.source.clone()).unwrap();
+        let out = merge(&doc, &pkg, &profile::locos().merge_options("sdlppx")).unwrap();
+        let back = read_zip(&out, &ZipLimits::unlimited()).unwrap();
+        let x = String::from_utf8_lossy(&back[1].data).to_string();
+        assert!(x.contains(&format!("<target>{body}</target>")), "{x}");
     }
 }

@@ -208,3 +208,102 @@ proptest! {
         prop_assert!(f.extract(out.as_bytes(), &opts(None)).is_ok());
     }
 }
+
+// ---------------------------------------------------------------- token look-alikes (issue 814 item 1)
+
+/// A source whose text holds the very tokens its codes get (`⟦g2⟧`, `⟦/g2⟧`, `⟦x1⟧`), an unknown one (`⟦7⟧`), a
+/// stray bracket and the private-use characters the escape uses. Codes: `<x id="a"/>` is 1, `<g id="b">` is 2.
+const LOOK: &str = "Use \u{27e6}g2\u{27e7} and \u{27e6}/g2\u{27e7} <x id=\"a\"/> <g id=\"b\">bold</g> \u{27e6}x1\u{27e7} \u{e000}\u{e001}\u{27e6}7\u{27e7} \u{27e6}";
+
+fn look_files() -> Vec<(&'static str, String)> {
+    vec![
+        ("xliff", format!("<xliff version=\"1.2\"><file><body><trans-unit id=\"1\"><source>{LOOK}</source></trans-unit></body></file></xliff>")),
+        (
+            "sdlxliff",
+            format!(
+                "<xliff xmlns:sdl=\"http://sdl.com/FileTypes/SdlXliff/1.0\" xmlns=\"urn:oasis:names:tc:xliff:document:1.2\" version=\"1.2\"><file><body><trans-unit id=\"1\"><source>{LOOK}</source><seg-source><mrk mtype=\"seg\" mid=\"1\">{LOOK}</mrk></seg-source></trans-unit></body></file></xliff>"
+            ),
+        ),
+    ]
+}
+
+/// The source's tag with this id and kind (its display and free flag as extracted).
+fn tag_of(src: &[Inline], id: &str, kind: TagKind) -> Inline {
+    src.iter().find(|i| matches!(i, Inline::Tag { id: t, kind: k, .. } if t == id && *k == kind)).cloned().unwrap()
+}
+
+fn set_inlines(id: &str, data: &[u8], target: impl Fn(&[Inline]) -> Vec<Inline>) -> String {
+    let f = filter(id);
+    let mut doc = f.extract(data, &opts(None)).unwrap();
+    let seg = doc.units[0].segments[0].clone();
+    profile::locos_set_target(&mut doc, &seg.id, target(&seg.source)).unwrap();
+    String::from_utf8(f.merge_with(&doc, &profile::locos().merge_options(id)).unwrap()).unwrap()
+}
+
+#[test]
+fn look_alikes_in_the_source_come_back_byte_for_byte() {
+    for (id, x) in look_files() {
+        let doc = filter(id).extract(x.as_bytes(), &opts(None)).unwrap();
+        let src = &doc.units[0].segments[0].source;
+        // two real codes, and every look-alike is text
+        assert_eq!(src.iter().filter(|i| matches!(i, Inline::Tag { .. })).count(), 3, "{id}: {src:?}");
+        let out = set_inlines(id, x.as_bytes(), |s| s.to_vec());
+        let want = if id == "xliff" { format!("<target>{LOOK}</target>") } else { format!("<target><mrk mtype=\"seg\" mid=\"1\">{LOOK}</mrk></target>") };
+        assert!(out.contains(&want), "{id}: {out}");
+    }
+}
+
+#[test]
+fn look_alikes_in_a_translation_stay_text_when_codes_move() {
+    for (id, x) in look_files() {
+        let out = set_inlines(id, x.as_bytes(), |s| {
+            vec![
+                tag_of(s, "2", TagKind::Open),
+                Inline::text("gras"),
+                tag_of(s, "2", TagKind::Close),
+                Inline::text(" \u{27e6}x1\u{27e7} "),
+                tag_of(s, "1", TagKind::Standalone),
+                Inline::text(" utiliser \u{27e6}g2\u{27e7} et \u{27e6}/g2\u{27e7} \u{e000}\u{e001}\u{27e6}7\u{27e7} \u{27e6}p1\u{27e7}"),
+            ]
+        });
+        let body = "<g id=\"b\">gras</g> \u{27e6}x1\u{27e7} <x id=\"a\"/> utiliser \u{27e6}g2\u{27e7} et \u{27e6}/g2\u{27e7} \u{e000}\u{e001}\u{27e6}7\u{27e7} \u{27e6}p1\u{27e7}";
+        let want = if id == "xliff" { format!("<target>{body}</target>") } else { format!("<target><mrk mtype=\"seg\" mid=\"1\">{body}</mrk></target>") };
+        assert!(out.contains(&want), "{id}: {out}");
+        assert!(dom::parse(&out).is_ok(), "{id}: {out}");
+    }
+}
+
+#[test]
+fn mxliff_look_alikes_beside_text_marks() {
+    let x = "<xliff xmlns:m=\"http://www.memsource.com/mxlf/2.0\" version=\"1.2\"><file><body><trans-unit id=\"1\"><source>Click {1&gt;Save&lt;1} \u{27e6}g1\u{27e7}\u{27e6}/g1\u{27e7} {2} \u{27e6}x2\u{27e7}.</source></trans-unit></body></file></xliff>";
+    let out = set_inlines("mxliff", x.as_bytes(), |s| {
+        vec![
+            tag_of(s, "2", TagKind::Standalone),
+            Inline::text(" \u{27e6}x2\u{27e7} \u{27e6}g1\u{27e7} "),
+            tag_of(s, "1", TagKind::Open),
+            Inline::text("Sichern"),
+            tag_of(s, "1", TagKind::Close),
+            Inline::text("\u{27e6}/g1\u{27e7}."),
+        ]
+    });
+    assert!(out.contains("<target>{2} \u{27e6}x2\u{27e7} \u{27e6}g1\u{27e7} {1>Sichern&lt;1}\u{27e6}/g1\u{27e7}.</target>"), "{out}");
+}
+
+#[test]
+fn public_writers_still_read_plain_locos_text() {
+    // `target_text`, `written_texts` and `build_cat` keep their 0.9.0 behaviour: a token in the text is a code,
+    // and U+E000 / U+E001 are written as they are
+    let t = vec![Inline::text("\u{27e6}x1\u{27e7} \u{e000}\u{e001}"), Inline::tag("2", TagKind::Open, ""), Inline::tag("2", TagKind::Close, "")];
+    assert_eq!(target_text(&t), "\u{27e6}x1\u{27e7} \u{e000}\u{e001}\u{27e6}g2\u{27e7}\u{27e6}/g2\u{27e7}");
+    assert_eq!(target_text_escaped(&t), "\u{e000}\u{e001}x1\u{27e7} \u{e000}\u{e000}\u{e001}\u{27e6}g2\u{27e7}\u{27e6}/g2\u{27e7}");
+    let (_, x) = look_files().remove(1);
+    let texts: HashMap<i64, String> = [(SEG_BASE, "\u{27e6}g2\u{27e7}fett\u{27e6}/g2\u{27e7} \u{27e6}x1\u{27e7} \u{e000}\u{e001}".to_string())].into();
+    let out = String::from_utf8(build_cat(x.as_bytes(), &texts, None).unwrap()).unwrap();
+    assert!(out.contains("<mrk mtype=\"seg\" mid=\"1\"><g id=\"b\">fett</g> <x id=\"a\"/> \u{e000}\u{e001}</mrk></target>"), "{out}");
+    let doc = filter("sdlxliff").extract(x.as_bytes(), &opts(None)).unwrap();
+    let mut doc2 = doc.clone();
+    let seg = doc.units[0].segments[0].clone();
+    profile::locos_set_target(&mut doc2, &seg.id, vec![Inline::text("\u{27e6}x1\u{27e7}")]).unwrap();
+    assert_eq!(written_texts(doc2.units.iter())[&SEG_BASE], "\u{27e6}x1\u{27e7}");
+    assert_eq!(written_texts_escaped(doc2.units.iter())[&SEG_BASE], "\u{e000}\u{e001}x1\u{27e7}");
+}

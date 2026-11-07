@@ -9,7 +9,7 @@ use crate::walk::{tag_raw, Item, Span, Walk};
 use crate::{Loaded, HIDDEN};
 use bilingua_model::*;
 use regex::Regex;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::OnceLock;
 
 fn hidden_code(kind: &str, orig: &str, extra: &str) -> CodeData {
@@ -220,8 +220,18 @@ fn translated(u: &Unit) -> Option<String> {
 
 /// LocOS text of inlines keyed by tag id: `⟦g1⟧ ⟦/g1⟧ ⟦x2⟧`.
 fn locos_ids(v: &[Inline]) -> String {
+    locos_ids_at(v).0
+}
+
+/// [`locos_ids`], and the byte offsets where the tokens of real codes start. Text that looks like a token (`⟦x2⟧`
+/// typed in a source or a translation) is a token match too but starts at no such offset (issue 814).
+fn locos_ids_at(v: &[Inline]) -> (String, HashSet<usize>) {
     let mut s = String::new();
+    let mut real = HashSet::new();
     for i in v {
+        if matches!(i, Inline::Tag { .. }) {
+            real.insert(s.len());
+        }
         match i {
             Inline::Text(t) => s.push_str(t),
             Inline::Tag { id, kind, .. } => match kind {
@@ -231,7 +241,12 @@ fn locos_ids(v: &[Inline]) -> String {
             },
         }
     }
-    s
+    (s, real)
+}
+
+/// For each token match of `s` in order (`ph_re`), whether it is a real code's token.
+fn real_flags(s: &str, real: &HashSet<usize>) -> Vec<bool> {
+    ph_re().find_iter(s).map(|m| real.contains(&m.start())).collect()
 }
 
 fn escape_attr(s: &str, quote: char) -> String {
@@ -342,7 +357,11 @@ fn render_line(doc: &Document, u: &Unit) -> Result<String, Error> {
         return Ok(splice(core, &attrs, 0, core.len()));
     }
     let src = locos_ids(&u.source());
-    let mut new = locos_ids(&u.output());
+    let (raw, real) = locos_ids_at(&u.output());
+    // the emphasis repair reads look-alike text as LocOS does (a token: protected, punctuation); it only adds,
+    // drops or moves ASCII marks and never touches a token, so the n-th token match after it is the n-th before
+    let flags = real_flags(&raw, &real);
+    let mut new = raw.clone();
     if new != src {
         new = emph::fold_line_breaks(&src, &new);
         new = emph::fix_cjk_emphasis(&src, &new);
@@ -350,6 +369,12 @@ fn render_line(doc: &Document, u: &Unit) -> Result<String, Error> {
         new = emph::restore_cell_escapes(&src, &new);
         if block_ok {
             new = emph::escape_block_start(&src, &new);
+        }
+        // a repair that changed the tokens (never seen) is dropped rather than let a look-alike pass for a code
+        let before: Vec<&str> = ph_re().find_iter(&raw).map(|m| m.as_str()).collect();
+        let after: Vec<&str> = ph_re().find_iter(&new).map(|m| m.as_str()).collect();
+        if before != after {
+            new = raw.clone();
         }
     }
     let mut toks: HashMap<String, (Span, Option<Span>)> = HashMap::new();
@@ -366,7 +391,11 @@ fn render_line(doc: &Document, u: &Unit) -> Result<String, Error> {
     }
     let mut out = String::new();
     let mut pos = 0;
-    for m in ph_re().find_iter(&new) {
+    for (m, is_code) in ph_re().find_iter(&new).zip(flags) {
+        // a look-alike is text: it stays in the next text run
+        if !is_code {
+            continue;
+        }
         out.push_str(&escape_text(&new[pos..m.start()]));
         pos = m.end();
         let inner = &new[m.start() + 3..m.end() - 3];

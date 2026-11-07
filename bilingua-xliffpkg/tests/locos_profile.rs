@@ -70,3 +70,26 @@ proptest! {
         prop_assert!(f.extract(&out, &profile::locos().extract_options()).is_ok());
     }
 }
+
+/// Issue 814 item 1: text in a member that looks like a token (here the very token its code gets) is written back
+/// as text, and the private-use characters of the escape come back byte for byte.
+#[test]
+fn token_look_alikes_in_a_member_stay_text() {
+    let body = "A \u{27e6}g1\u{27e7} <g id=\"1\">b</g> \u{27e6}/g1\u{27e7}\u{e000}\u{e001}";
+    let a = member(&[&format!("><source>{body}</source>")]);
+    let pkg = zip_of(&[("a.xlf", &a, true)], b"");
+    let f = filter();
+    let mut d = f.extract(&pkg, &profile::locos().extract_options()).unwrap();
+    let seg = d.units[0].segments[0].clone();
+    profile::locos_set_target(&mut d, &seg.id, seg.source.clone()).unwrap();
+    let out = f.merge_with(&d, &profile::locos().merge_options("xlz")).unwrap();
+    assert!(text(&member_of(&out, "a.xlf")).contains(&format!("<source>{body}</source><target>{body}</target>")), "{}", text(&member_of(&out, "a.xlf")));
+    // the code moved, the look-alikes stay where the translation put them
+    let mut d = f.extract(&pkg, &profile::locos().extract_options()).unwrap();
+    let mut t: Vec<Inline> = seg.source.iter().filter(|i| matches!(i, Inline::Tag { .. })).cloned().collect();
+    t.insert(1, Inline::text("B"));
+    t.push(Inline::text(" \u{27e6}g1\u{27e7}x\u{27e6}/g1\u{27e7}"));
+    profile::locos_set_target(&mut d, &seg.id, t).unwrap();
+    let out = f.merge_with(&d, &profile::locos().merge_options("xlz")).unwrap();
+    assert!(text(&member_of(&out, "a.xlf")).contains("<target><g id=\"1\">B</g> \u{27e6}g1\u{27e7}x\u{27e6}/g1\u{27e7}</target>"), "{}", text(&member_of(&out, "a.xlf")));
+}

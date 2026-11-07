@@ -792,11 +792,28 @@ pub fn document_unit(u: LocosUnit, format: &str, location: Option<(&str, i64)>) 
 
 // --------------------------------------------------------------------------------------- writing
 
-/// The LocOS text of a target: tag ids are token numbers.
+// Hides token look-alikes in literal text from the writers, and gives them back where the text is cut at its
+// tokens: only a unit's real codes are tokens when a translation is written (issue 814).
+use bilingua_model::profile::tokens::{escape_literal as esc_lit, unescape_literal as unesc_lit};
+
+/// The LocOS text of a target: tag ids are token numbers. Literal text is copied as it is, so text that looks like
+/// a token reads as one ([`build_cat`] takes such text).
 pub fn target_text(target: &[Inline]) -> String {
+    tagged_text(target, false)
+}
+
+/// [`target_text`] with literal text escaped (`esc_lit`): what the writers take, so a token look-alike in the text
+/// stays text. Not part of the semver API.
+#[doc(hidden)]
+pub fn target_text_escaped(target: &[Inline]) -> String {
+    tagged_text(target, true)
+}
+
+fn tagged_text(target: &[Inline], esc: bool) -> String {
     let mut s = String::new();
     for i in target {
         match i {
+            Inline::Text(t) if esc => s.push_str(&esc_lit(t)),
             Inline::Text(t) => s.push_str(t),
             Inline::Tag { id, kind, free, .. } => {
                 let tok = match kind {
@@ -820,7 +837,8 @@ fn xml_target_text(s: &str) -> String {
         .collect()
 }
 
-/// `_rebuild_target`: fills `tgt` from translated LocOS text and the source's inline elements.
+/// `_rebuild_target`: fills `tgt` from translated LocOS text (literal text escaped, `esc_lit`) and the source's
+/// inline elements.
 fn rebuild_target(d: &mut Dom, tgt: usize, text: &str, codes: &[Code]) {
     d.clear(tgt);
     let mut used: std::collections::HashSet<String> = std::collections::HashSet::new();
@@ -831,7 +849,7 @@ fn rebuild_target(d: &mut Dom, tgt: usize, text: &str, codes: &[Code]) {
         match piece {
             Ok(t) => {
                 let c = container(&stack);
-                d.append_text(c, &t);
+                d.append_text(c, &unesc_lit(&t));
             }
             Err((true, _, key)) => {
                 if stack.last().is_some_and(|(_, k)| *k == key) {
@@ -948,7 +966,8 @@ fn stamp_dom(d: &mut Dom, tag: &str) {
     }
 }
 
-/// `XliffFilter.build` (plain XLIFF without seg-source) plus the target language.
+/// `XliffFilter.build` (plain XLIFF without seg-source) plus the target language; `texts` are escaped
+/// ([`written_texts_escaped`]).
 fn build_plain(original: &[u8], text: &str, texts: &HashMap<i64, String>, tag: Option<&str>) -> Result<Vec<u8>, Error> {
     let mut d = dom::parse(text).map_err(|e| werr(format!("XLIFF is not well-formed XML: {e}")))?;
     for (k, src) in source_elements(&d).into_iter().enumerate() {
@@ -1082,14 +1101,15 @@ fn literals(d: &Dom, text: &str, codes: &[Code]) -> Vec<Lit> {
         .collect()
 }
 
-/// `_render`: translated LocOS text as XML content, using the source's own tag bytes.
+/// `_render`: translated LocOS text (literal text escaped, `esc_lit`) as XML content, using the source's own tag
+/// bytes.
 fn render(text: &str, lits: &[Lit]) -> String {
     let mut out = String::new();
     let mut used: std::collections::HashSet<String> = std::collections::HashSet::new();
     let mut stack: Vec<(String, Option<String>)> = Vec::new();
     for piece in split_tokens(text) {
         match piece {
-            Ok(t) => out.push_str(&esc_text(&t)),
+            Ok(t) => out.push_str(&esc_text(&unesc_lit(&t))),
             Err((true, _, key)) => {
                 if stack.last().is_some_and(|(k, _)| *k == key) {
                     if let Some((_, Some(close))) = stack.pop() {
@@ -1145,8 +1165,20 @@ fn qname_for(d: &Dom, el: usize, ns: &str, local: &str) -> Option<String> {
 }
 
 /// `cat_xliff.build_units`: the byte splice of a vendor or seg-source file. `tag`: the target language to put on
-/// a `<file>` that has none.
+/// a `<file>` that has none. Every well-formed token in `texts` is read as LocOS reads it.
 pub fn build_cat(raw: &[u8], texts: &HashMap<i64, String>, tag: Option<&str>) -> Result<Vec<u8>, Error> {
+    build_cat_escaped(raw, &plain_to_escaped(texts), tag)
+}
+
+/// Plain LocOS text holds no escaped look-alike: doubling its own U+E000 is all the escape it needs.
+fn plain_to_escaped(texts: &HashMap<i64, String>) -> HashMap<i64, String> {
+    texts.iter().map(|(k, t)| (*k, t.replace('\u{e000}', "\u{e000}\u{e000}"))).collect()
+}
+
+/// [`build_cat`] for texts whose literal text is escaped ([`written_texts_escaped`]), so only real codes are
+/// tokens. Not part of the semver API.
+#[doc(hidden)]
+pub fn build_cat_escaped(raw: &[u8], texts: &HashMap<i64, String>, tag: Option<&str>) -> Result<Vec<u8>, Error> {
     let (text, codec, bom) = decode_cat(raw).map_err(werr)?;
     let d = dom::parse(&text).map_err(|e| werr(format!("XLIFF is not well-formed XML: {e}")))?;
     let marks = marks_on(&d);
@@ -1329,11 +1361,21 @@ pub const KEY: &str = "xliff.locos_key";
 
 /// The LocOS texts some units write, by their key inside their file ([`KEY`]): every segment with a target.
 pub fn written_texts<'a>(units: impl Iterator<Item = &'a Unit>) -> HashMap<i64, String> {
+    texts_of(units, false)
+}
+
+/// [`written_texts`] with literal text escaped, for [`build_cat_escaped`]. Not part of the semver API.
+#[doc(hidden)]
+pub fn written_texts_escaped<'a>(units: impl Iterator<Item = &'a Unit>) -> HashMap<i64, String> {
+    texts_of(units, true)
+}
+
+fn texts_of<'a>(units: impl Iterator<Item = &'a Unit>, esc: bool) -> HashMap<i64, String> {
     let mut out = HashMap::new();
     for u in units.filter(|u| u.translate) {
         let Some(p) = u.context.extra.get(KEY).and_then(|p| p.parse::<i64>().ok()) else { continue };
         if let Some(s) = u.segments.first().filter(|s| s.has_target()) {
-            out.insert(p, target_text(&s.target));
+            out.insert(p, tagged_text(&s.target, esc));
         }
     }
     out
@@ -1344,10 +1386,10 @@ pub fn merge(doc: &Document, format: &str, opts: &MergeOptions) -> Result<Vec<u8
     let Skeleton::Binary { data, .. } = &doc.skeleton else {
         return Err(werr(format!("{format}: a LocOS-profile document needs its original file")));
     };
-    let texts = written_texts(doc.units.iter());
+    let texts = written_texts_escaped(doc.units.iter());
     let tag = opts.stamp_lang(doc, !texts.is_empty()).and_then(profile::lang_tag);
     if format != "xliff" {
-        return build_cat(data, &texts, tag.as_deref());
+        return build_cat_escaped(data, &texts, tag.as_deref());
     }
     let text = decode_plain(data, format).map_err(werr)?;
     let d = dom::parse(&text).map_err(|e| werr(format!("XLIFF is not well-formed XML: {e}")))?;
@@ -1355,7 +1397,7 @@ pub fn merge(doc: &Document, format: &str, opts: &MergeOptions) -> Result<Vec<u8
         return build_plain(data, &text, &texts, tag.as_deref());
     }
     // XLIFF 1.2 with seg-source: LocOS splices, then sets `target-language` on every <file> through lxml
-    let out = build_cat(data, &texts, None)?;
+    let out = build_cat_escaped(data, &texts, None)?;
     let Some(tag) = tag else { return Ok(out) };
     let text = decode_plain(&out, format).map_err(werr)?;
     let mut d = dom::parse(&text).map_err(|e| werr(format!("XLIFF is not well-formed XML: {e}")))?;
