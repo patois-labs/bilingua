@@ -195,6 +195,35 @@ fn only_nested_restamps(ours: &[u8], locos: &[u8], input: &[u8]) -> bool {
         && o_vals.iter().zip(&l_vals).skip(1).all(|(o, l)| o == l || (*o == o_vals[0] && same_lang(l, &src)))
 }
 
+/// The predefined entities and character references of an attribute value decoded (anything else kept as written).
+fn decode(v: &str) -> String {
+    let mut out = String::new();
+    let mut rest = v;
+    while let Some(a) = rest.find('&') {
+        out.push_str(&rest[..a]);
+        let Some(e) = rest[a..].find(';').map(|e| a + e) else { break };
+        let body = &rest[a + 1..e];
+        let c = match body {
+            "lt" => Some('<'),
+            "gt" => Some('>'),
+            "amp" => Some('&'),
+            "quot" => Some('"'),
+            "apos" => Some('\''),
+            _ => match body.strip_prefix("#x").or_else(|| body.strip_prefix("#X")) {
+                Some(h) => u32::from_str_radix(h, 16).ok().and_then(char::from_u32),
+                None => body.strip_prefix('#').and_then(|d| d.parse().ok()).and_then(char::from_u32),
+            },
+        };
+        match c {
+            Some(c) => out.push(c),
+            None => out.push_str(&rest[a..=e]),
+        }
+        rest = &rest[e + 1..];
+    }
+    out.push_str(rest);
+    out
+}
+
 /// `(attribute local name, value as a unit shows it)` for every attribute of an element under `translate="no"` (its
 /// own or an ancestor's) or with a `conref` / `conkeyref` (which the element's descendants inherit): the attribute
 /// units LocOS still offers there and Bilingua does not (issue 809.3). A small scanner for the golden inputs.
@@ -278,8 +307,7 @@ fn blocked_attrs(data: &[u8]) -> Vec<(String, String)> {
             blocked |= attrs.iter().any(|(n, _)| n == "conref" || n == "conkeyref");
             if blocked {
                 for (n, v) in &attrs {
-                    let v = v.replace("&lt;", "<").replace("&gt;", ">").replace("&quot;", "\"").replace("&apos;", "'").replace("&amp;", "&");
-                    out.push((local(n), v.split_whitespace().collect::<Vec<_>>().join(" ")));
+                    out.push((local(n), decode(v).split_whitespace().collect::<Vec<_>>().join(" ")));
                 }
             }
             if !empty {
