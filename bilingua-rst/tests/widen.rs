@@ -78,3 +78,30 @@ fn a_row_that_fills_the_first_column_alone() {
     let d1 = doc(None, t);
     assert_eq!(d1.units.len(), d2.units.len(), "{out}");
 }
+
+#[test]
+fn pseudo_all_cells_keeps_the_unit_count() {
+    let t = "==================  ===================================  ==============  ==========
+functional          scoring or loss function             response y      prediction
+==================  ===================================  ==============  ==========
+**Classification**
+mean                :ref:`Brier score <brier>` :sup:`1`  multi-class     ``predict_proba``
+mode                :ref:`zero-one loss <zo>` :sup:`2`   multi-class     ``predict``, categorical
+**Regression**
+mean                :ref:`squared error <mse>` :sup:`3`  all reals       ``predict``, all reals
+mode                no consistent one exists             reals
+==================  ===================================  ==============  ==========
+";
+    let d1 = doc(None, t);
+    let mut d = doc(None, t);
+    for u in d.units.iter_mut() {
+        let mut v = vec![Inline::text("Zq")];
+        v.extend(u.source());
+        v.push(Inline::text("qZ"));
+        u.segments[0].target = v;
+        u.segments[0].state = SegState::Draft;
+    }
+    let out = String::from_utf8(Rst.merge(&d).unwrap_or_else(|e| panic!("{e}"))).unwrap();
+    let d2 = Rst.extract(out.as_bytes(), &ExtractOptions::new().with_source_lang("en").with_granularity(Granularity::Paragraph)).unwrap();
+    assert_eq!(d1.units.len(), d2.units.len(), "{out}");
+}
