@@ -124,13 +124,15 @@ def xlsx():
         '<sst ' + X_NS + ' count="5" uniqueCount="5"><si><t>= Mandatory fields</t></si><si><t>Name</t></si>'
         "<si><t> =spaced</t></si><si><t>=Optional fields</t></si><si><t>Comments</t></si></sst>"
     )
+    # row 5: a value under a merge (B5 inside A5:B5) is no unit, as openpyxl reads it
     sheet = (
         f"<worksheet {X_NS}><sheetData>"
         '<row r="1"><c r="A1" t="s"><v>1</v></c><c r="B1" t="s"><v>4</v></c></row>'
         '<row r="2"><c r="A2" t="s"><v>0</v></c><c r="B2" t="inlineStr"><is><t>=inline look-alike</t></is></c></row>'
         '<row r="3"><c r="A3" t="s"><v>3</v></c><c r="B3" t="s"><v>2</v></c></row>'
         '<row r="4"><c r="A4"><f>1+1</f><v>2</v></c><c r="B4" t="inlineStr"><is><t>Last cell</t></is></c></row>'
-        "</sheetData></worksheet>"
+        '<row r="5"><c r="A5" t="s"><v>1</v></c><c r="B5" t="s"><v>4</v></c><c r="C5" t="inlineStr"><is><t>After the merge</t></is></c></row>'
+        '</sheetData><mergeCells count="1"><mergeCell ref="A5:B5"/></mergeCells></worksheet>'
     )
     ct = (
         '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="xml" ContentType="application/xml"/>'

@@ -20,6 +20,16 @@
    "p_index": 3,
    "text": "Last cell",
    "style": ""
+  },
+  {
+   "p_index": 4,
+   "text": "Name",
+   "style": ""
+  },
+  {
+   "p_index": 5,
+   "text": "After the merge",
+   "style": ""
   }
  ],
  "builds": [
@@ -61,7 +71,9 @@
     "0": "Ü Name",
     "1": "Ü Comments",
     "2": "Ü  =spaced",
-    "3": "Ü Last cell"
+    "3": "Ü Last cell",
+    "4": "Ü Name",
+    "5": "Ü After the merge"
    },
    "zip": [
     {
@@ -82,11 +94,11 @@
     },
     {
      "name": "xl/sharedStrings.xml",
-     "sha1": "345200f355e473f6b030d4a96d6c48fe28f0e24b"
+     "sha1": "f20051a50836d65b677b7f90d7a9d97b51e0cfef"
     },
     {
      "name": "xl/worksheets/sheet1.xml",
-     "sha1": "f4cf9c29e7803fc0327fbb0af13052cd4b7fdffc"
+     "sha1": "a3eaa64aebdab3756339ac4aa24e9959d9700005"
     }
    ]
   },
@@ -95,7 +107,8 @@
    "locale": "de-DE",
    "map": {
     "0": "Name & <\"'>",
-    "2": " =spaced & <\"'>"
+    "2": " =spaced & <\"'>",
+    "4": "Name & <\"'>"
    },
    "zip": [
     {
@@ -120,7 +133,7 @@
     },
     {
      "name": "xl/worksheets/sheet1.xml",
-     "sha1": "6a5176618b45903d29e551e38366f1d67b207c18"
+     "sha1": "042911908e9b4e8ffbd681d1e97d1ec1cae660f8"
     },
     {
      "name": "docProps/core.xml",
@@ -168,7 +181,8 @@
    "locale": "ar-SA",
    "map": {
     "0": "Name & <\"'>",
-    "2": " =spaced & <\"'>"
+    "2": " =spaced & <\"'>",
+    "4": "Name & <\"'>"
    },
    "zip": [
     {
@@ -193,7 +207,7 @@
     },
     {
      "name": "xl/worksheets/sheet1.xml",
-     "sha1": "802bf9edea72aeffa1f7a740fda1ef3e4c48297d"
+     "sha1": "ec6a25202dab98d5bf651ce12cf592d2beb0a3aa"
     },
     {
      "name": "docProps/core.xml",
@@ -228,7 +242,7 @@
     },
     {
      "name": "xl/worksheets/sheet1.xml",
-     "sha1": "802bf9edea72aeffa1f7a740fda1ef3e4c48297d"
+     "sha1": "ec6a25202dab98d5bf651ce12cf592d2beb0a3aa"
     },
     {
      "name": "docProps/core.xml",
