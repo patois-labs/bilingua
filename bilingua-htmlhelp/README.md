@@ -14,6 +14,9 @@ Microsoft HTML Help 1.x project files for Bilingua: contents (`.hhc`), index (`.
   refuses the merge unless the format option `htmlhelp.utf8_fallback` was set at extract. `bilingua_model::MergeOptions`:
   `stamp_target_always` localizes with nothing translated (LocOS `build_localized`), `output_encoding: Utf8` writes
   UTF-8 with the meta charset rewritten (LocOS writes the ANSI code page instead).
+- **Empty files**: a valid `.hhc` / `.hhk` with no entry names, or a `.hhp` with no `Title=` and no window caption, opens
+  with zero units and a `no_translatable_text` warning, and merges back to the original bytes (LocOS refuses it as an
+  empty document). Malformed files are still refused.
 - **Browser check** (LocOS `html_guard`, #676): a translated value is written opaque where a browser would not read
   it as that attribute value, and a merge whose sitemap a browser would read into different elements is refused.
 - Python's codecs (what Localization OS reads and writes) are reproduced where encoding_rs differs, both ways, for all

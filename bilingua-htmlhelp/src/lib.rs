@@ -126,13 +126,16 @@ fn extract_impl(kind: Kind, bytes: &[u8], opts: &ExtractOptions, hint: Option<u1
     // from the text: such a file keeps its bytes for an untouched merge.
     let keep_raw = enc::is_ansi(&tag) && original_bytes(&text, &tag) != bytes;
     let spans = if kind == Kind::Hhp { hhp::walk(&text, &limits)?.0 } else { sitemap::walk(&text, &limits)?.units };
+    // A valid file with nothing to translate opens with no units and a warning (Localization OS refuses it; see
+    // MIGRATION.md). A merge of it gives the original bytes back.
+    let mut warnings = Vec::new();
     if spans.is_empty() {
         let msg = if kind == Kind::Hhp {
             "This HTML Help project file has no Title= or window caption to translate.".to_string()
         } else {
             format!("This HTML Help {} file has no entry names (param Name / Keyword inside OBJECT type=\"text/sitemap\") to translate.", kind.what())
         };
-        return Err(Error::Parse { format: kind.id().into(), msg });
+        warnings.push(bilingua_model::Warning::new("no_translatable_text", kind.id(), msg));
     }
     let mut parts: Vec<SkelPart> = Vec::with_capacity(spans.len() * 2 + 1);
     let mut units: Vec<Unit> = Vec::with_capacity(spans.len());
@@ -160,7 +163,7 @@ fn extract_impl(kind: Kind, bytes: &[u8], opts: &ExtractOptions, hint: Option<u1
     parts.push(SkelPart::Raw(text[pos..].to_string()));
     guard::finish(
         Document::new(kind.id(), units, Skeleton::text(parts, tag, bilingua_model::parser_info!())).with_options(opts),
-        Vec::new(),
+        warnings,
         &limits,
     )
 }
@@ -276,6 +279,9 @@ fn merge_impl(kind: Kind, doc: &Document, mo: &MergeOptions) -> Result<Vec<u8>, 
     };
     if spans.len() != order.len() || spans.iter().zip(&at).any(|(s, a)| (s.start, s.end) != *a) {
         return Err(Error::Write("the skeleton does not match its file; open the file again with the current parser".into()));
+    }
+    if order.is_empty() && mo.output_encoding == OutputEncoding::Keep {
+        return Ok(original_bytes(&orig, tag));
     }
     let translated = order.iter().any(|&i| doc.units[i].translate && doc.units[i].segments.iter().any(|s| s.has_target()));
     let target = doc.target_lang.as_deref().filter(|t| !t.trim().is_empty());

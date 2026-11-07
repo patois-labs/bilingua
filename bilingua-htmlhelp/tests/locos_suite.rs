@@ -267,3 +267,35 @@ fn translate_and_merge_round_trip() {
     let e = err_text(build_loc(&HhcFilter, &raw, &[(0, "[ru-RU] Getting started")], "ru-RU"));
     assert!(e.contains("Windows-1251"), "{e}");
 }
+
+#[test]
+fn empty_but_valid_files_open_with_zero_units() {
+    let hhc = b"<!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML//EN\">
+<HTML><HEAD><!-- Sitemap 1.0 --></HEAD>
+<BODY>
+<UL>
+</UL>
+</BODY></HTML>
+";
+    let hhk = b"<HTML><BODY><OBJECT type=\"text/site properties\"><param name=\"FrameName\" value=\"main\"></OBJECT><UL></UL></BODY></HTML>";
+    let hhp = b"[OPTIONS]
+Language=0x409 English (United States)
+Contents file=a.hhc
+
+[FILES]
+a.htm
+";
+    for (f, raw) in [(&HhcFilter as &dyn Filter, &hhc[..]), (&HhkFilter, &hhk[..]), (&HhpFilter, &hhp[..])] {
+        let mut d = f.extract(raw, &ExtractOptions::default()).unwrap();
+        assert!(d.units.is_empty(), "{}", d.format);
+        assert_eq!(d.warnings.len(), 1, "{}", d.format);
+        assert_eq!(d.warnings[0].kind, "no_translatable_text");
+        assert_eq!(f.merge(&d).unwrap(), raw, "{}", d.format);
+        // even with a target language the file is not stamped: nothing was translated
+        d.target_lang = Some("de".into());
+        assert_eq!(f.merge(&d).unwrap(), raw, "{} with target", d.format);
+    }
+    // malformed (not just empty) is still refused with a clear message
+    let e = HhcFilter.extract(&[0u8, 1, 2, 3].repeat(50), &ExtractOptions::default()).unwrap_err();
+    assert!(e.to_string().contains("binary"), "{e}");
+}
