@@ -9,6 +9,9 @@ is listed here).
 
 ### Fixed
 
+- html: the preview declares the target language again once something is translated (`lang`, and `dir="rtl"` for a
+  right-to-left target), as the merge does. The htmlcore rebuild had dropped it, so an Arabic preview showed left
+  to right.
 - pdf: U+FFFE is no longer in unit text. PDFium writes it for a hyphen that breaks a word at a line end (the next
   line follows right after it, so dropping it joins the word: `extraordinarily`) and for a glyph its font maps to
   U+0000 (dropped, no hyphen is invented). A hyphen PDFium does not mark stays `-`. C0 control characters (raw glyph

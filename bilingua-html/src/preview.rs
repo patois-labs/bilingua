@@ -48,6 +48,12 @@ fn mark(tok: &str, marks: &[(String, String)]) -> String {
 pub(crate) fn render(doc: &Document, cfg: Cfg, want: Option<&str>) -> Option<String> {
     let text = page::skeleton_page(doc)?;
     let mut toks: Vec<Tok> = page::preview_tokens(&text, cfg)?;
+    // the target language and direction are declared as the merge declares them: once something is translated,
+    // a right-to-left target previews right to left
+    let translated = doc.units.iter().any(|u| page::translated_value(u).is_some());
+    if let Some(tag) = MergeOptions::default().stamp_lang(doc, translated).and_then(html::html_lang) {
+        html::declare_language(&mut toks, &tag, html::text_direction(&tag));
+    }
     let quotes = page::quotes_for(&text, cfg);
     let attr_tis: Vec<usize> = html::iter_page_attr_units_with(&toks, cfg.page_meta).into_iter().map(|a| a.ti).collect();
     let n_body = page::apply_attrs(&mut toks, doc, cfg.page_meta, page::translated_value).ok()?;

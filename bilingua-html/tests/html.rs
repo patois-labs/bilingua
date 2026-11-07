@@ -489,6 +489,25 @@ fn render_segment_is_safe_and_escaped() {
 }
 
 #[test]
+fn preview_declares_the_target_language_once_something_is_translated() {
+    let src = "<!DOCTYPE html>\n<html lang=\"en-US\">\n<head><title>Lamp</title></head>\n<body><h1>Harbor lamp</h1><p>It glows.</p></body>\n</html>\n";
+    let mut d = extract_to(src, "ar");
+    // nothing translated: the page is still the source page
+    let pv0 = Html.preview(&d).unwrap();
+    assert!(pv0.contains("<html lang=\"en-US\">"), "{pv0}");
+    d.set_target("u2", vec![Inline::text("مصباح الميناء")]).unwrap();
+    let pv = Html.preview(&d).unwrap();
+    assert!(pv.contains("<html lang=\"ar\" dir=\"rtl\">"), "{pv}");
+    assert!(pv.contains("مصباح الميناء"), "{pv}");
+    // the preview declares what the merge writes
+    assert!(merged(&d).contains("<html lang=\"ar\" dir=\"rtl\">"));
+    // a left-to-right target only restamps the language
+    let mut e = extract_to(src, "de");
+    e.set_target("u2", vec![Inline::text("Hafenlampe")]).unwrap();
+    assert!(Html.preview(&e).unwrap().contains("<html lang=\"de\">"));
+}
+
+#[test]
 fn preview_marks_two_attributes_on_one_element() {
     let d = extract("<a href=\"#\" title=\"Tip one\" aria-label=\"Label two\"></a>");
     let pv = Html.preview(&d).unwrap();
