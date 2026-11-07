@@ -163,9 +163,12 @@ fn switch_refused_on_purpose(got: &Result<Vec<u8>, Error>, want: &serde_json::Va
         };
         tf.is_some_and(|tf| tf.iter().any(|b| turns(*b)))
     });
-    // a comment that lacks characters: an upper-half character of the old table that the new table does not have
+    // a comment that lacks characters: an upper-half character of the old table that the new table does not have, or
+    // a table 00 accented letter (a floating mark before its letter) when the new table is not Latin
     let lacking_ok = lacking.iter().all(|item| {
-        comment(item).is_some_and(|g| g.1 && g.2.iter().any(|b| *b >= 0xA0 && old[*b as usize].is_some_and(|c| !new.contains(&Some(c)))))
+        comment(item).is_some_and(|g| {
+            g.1 && g.2.iter().any(|b| (*b >= 0xA0 && old[*b as usize].is_some_and(|c| !new.contains(&Some(c)))) || (from == 0 && to != 0 && diacritic(*b)))
+        })
     });
     bytes_ok && lacking_ok
 }
