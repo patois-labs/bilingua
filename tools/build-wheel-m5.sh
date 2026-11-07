@@ -48,6 +48,9 @@ exec 9>~/bili/wheel-runs/$name.lock; flock 9
     "$py" -m venv "$venv" && "$venv/bin/pip" install -q "maturin==$MATURIN" "ziglang==$ZIGLANG" || exit 1
   fi
   dest=~/bili/wheels/$tip; rm -rf "$dest"; mkdir -p "$dest"
+  # zig's linker opens every object file of the workspace at once (well over 1,024): raise the soft limit to the
+  # hard one for this build only
+  ulimit -n "$(ulimit -Hn)" 2>/dev/null || ulimit -n 65536 2>/dev/null || true
   # maturin finds zig through `python3 -m ziglang`: the build venv's python must come first
   PATH="$venv/bin:$PATH" CARGO_TARGET_DIR=~/bili/targets/$name "$venv/bin/maturin" build --release --locked --compatibility manylinux_2_28 --zig \
     -i "$venv/bin/python" -m "$ws/bilingua-py/Cargo.toml" -o "$dest" || { echo "build=1"; exit 1; }
