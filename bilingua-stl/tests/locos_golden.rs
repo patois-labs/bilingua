@@ -67,20 +67,20 @@ fn mapping(m: &serde_json::Value) -> Vec<(usize, String)> {
 #[path = "../src/tables.rs"]
 mod tables;
 
-/// byte -> has a character, for table `n` (0-4); floating diacritics of table 00 count as having none.
-fn defined(n: u8) -> [bool; 256] {
-    let mut d = [false; 256];
-    for b in 0x20..0x7F {
-        d[b] = true;
+/// byte -> character, for table `n` (0-4); floating diacritics of table 00 have none here.
+fn chars(n: u8) -> [Option<char>; 256] {
+    let mut d = [None; 256];
+    for b in 0x20u8..0x7F {
+        d[b as usize] = Some(b as char);
     }
     if n == 0 {
-        for &(b, _) in tables::T00_HIGH {
-            d[b as usize] = true;
+        for &(b, c) in tables::T00_HIGH {
+            d[b as usize] = Some(c);
         }
     } else {
         let high = [&tables::HIGH_01, &tables::HIGH_02, &tables::HIGH_03, &tables::HIGH_04][n as usize - 1];
         for (i, c) in high.iter().enumerate() {
-            d[0xA0 + i] = *c != '\0';
+            d[0xA0 + i] = (*c != '\0').then_some(*c);
         }
     }
     d
@@ -97,19 +97,11 @@ fn defined(n: u8) -> [bool; 256] {
 /// Any other refusal, and any refusal of a file that is not such a case, still counts as a difference.
 fn switch_refused_on_purpose(got: &Result<Vec<u8>, Error>, want: &serde_json::Value, input: &[u8]) -> bool {
     let Err(Error::Unwritable { reason, .. }) = got else { return false };
-    if want.get("err").is_some_and(|e| e != "CaptionTargetError") || !reason.starts_with("The EBU STL file was not exported: the translation needs code table 0") {
+    let head = "The EBU STL file was not exported: the translation needs code table 0";
+    if want.get("err").is_some_and(|e| e != "CaptionTargetError") || !reason.starts_with(head) {
         return false;
     }
-    let tti = || input[1024..].chunks(128).filter(|blk| blk.len() == 128 && blk[3] != 0xFE && !(0xF0..=0xFD).contains(&blk[3]));
-    let comments_ok = !reason.contains("comment subtitles hold characters") || tti().any(|blk| blk[15] == 1 && blk[16..].iter().any(|b| *b >= 0xA0));
-    if !comments_ok {
-        return false;
-    }
-    if !reason.contains("hold bytes with no equivalent in that table") {
-        return true;
-    }
-    let Some(pos) = reason.find("needs code table 0") else { return false };
-    let to = reason.as_bytes()[pos + "needs code table 0".len()].wrapping_sub(b'0');
+    let to = reason.as_bytes()[head.len()].wrapping_sub(b'0');
     let from = match &input[12..14] {
         [a, b] if a.is_ascii_whitespace() && b.is_ascii_whitespace() => 0,
         [b'0', d @ b'0'..=b'4'] => d - b'0',
@@ -118,15 +110,64 @@ fn switch_refused_on_purpose(got: &Result<Vec<u8>, Error>, want: &serde_json::Va
     if to > 4 || to == from {
         return false;
     }
-    let (old, new) = (defined(from), defined(to));
+    let (old, new) = (chars(from), chars(to));
     let diacritic = |b: u8| tables::DIACRITICS.iter().any(|(x, _)| *x == b);
-    tti().any(|blk| {
-        blk[16..].iter().any(|&b| {
-            let ctl_old = !old[b as usize] || (from == 0 && diacritic(b));
-            let reads_new = new[b as usize] || (to == 0 && diacritic(b));
-            ctl_old && reads_new && b >= 0x7F
+    // a byte the old table reads as no character (a control code here) that the new table reads as a character
+    let turns = |b: u8| (old[b as usize].is_none() || (from == 0 && diacritic(b))) && (new[b as usize].is_some() || (to == 0 && diacritic(b)));
+    // the subtitles as the crate groups them: (first block, comment, text field)
+    let mut groups: Vec<(usize, bool, Vec<u8>)> = Vec::new();
+    let mut open = false;
+    for (i, blk) in input[1024..].chunks(128).enumerate() {
+        if blk.len() < 128 || blk[3] == 0xFE || (0xF0..=0xFD).contains(&blk[3]) {
+            continue;
+        }
+        let first_sn = groups.last().map(|g| &input[1024 + g.0 * 128 + 1..1024 + g.0 * 128 + 3]);
+        if open && first_sn == Some(&blk[1..3]) {
+            groups.last_mut().unwrap().2.extend_from_slice(&blk[16..]);
+        } else {
+            groups.push((i, blk[15] == 1, blk[16..].to_vec()));
+        }
+        open = blk[3] != 0xFF;
+    }
+    // units: subtitles that are not comments and have a character other than a space (a floating mark counts)
+    let has_text = |tf: &[u8]| {
+        tf.iter().enumerate().any(|(i, &b)| match old[b as usize] {
+            Some(c) => !c.is_whitespace(),
+            None => from == 0 && diacritic(b) && tf.get(i + 1).is_some_and(|n| *n < 0x80 && old[*n as usize].is_some()),
         })
-    })
+    };
+    let units: Vec<&[u8]> = groups.iter().filter(|g| !g.1 && has_text(&g.2)).map(|g| g.2.as_slice()).collect();
+    if Stl.extract(input, &opts(None)).map(|d| d.units.len()).ok() != Some(units.len()) {
+        return false;
+    }
+    // every subtitle the message names must really be the case it names
+    let named = |part: &str| -> Vec<String> {
+        let Some(at) = reason.find(part) else { return Vec::new() };
+        let rest = &reason[at + part.len()..];
+        let end = [". Remove", "; and ", " (and "].iter().filter_map(|m| rest.find(m)).min().unwrap_or(rest.len());
+        rest[..end].split(", ").map(String::from).collect()
+    };
+    let bytes = named("(they would read as other characters): ");
+    let lacking = named("comment subtitles hold characters that table does not have: ");
+    if bytes.is_empty() && lacking.is_empty() {
+        return false;
+    }
+    let comment = |item: &str| {
+        let n = item.strip_prefix("comment subtitle at block ")?.parse::<usize>().ok()?;
+        groups.iter().find(|g| g.0 + 1 == n)
+    };
+    let bytes_ok = bytes.iter().all(|item| {
+        let tf = match item.strip_prefix("subtitle ").and_then(|n| n.parse::<usize>().ok()) {
+            Some(k) => units.get(k.wrapping_sub(1)).copied(),
+            None => comment(item).map(|g| g.2.as_slice()),
+        };
+        tf.is_some_and(|tf| tf.iter().any(|b| turns(*b)))
+    });
+    // a comment that lacks characters: an upper-half character of the old table that the new table does not have
+    let lacking_ok = lacking.iter().all(|item| {
+        comment(item).is_some_and(|g| g.1 && g.2.iter().any(|b| *b >= 0xA0 && old[*b as usize].is_some_and(|c| !new.contains(&Some(c)))))
+    });
+    bytes_ok && lacking_ok
 }
 
 fn check(name: &str, what: &str, got: Result<Vec<u8>, Error>, want: &serde_json::Value, bad: &mut Vec<String>, dir: &Option<String>, input: &[u8]) {

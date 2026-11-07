@@ -271,7 +271,8 @@ fn a_code_table_switch_is_refused_when_a_comment_cannot_move() {
     let data = comment_file(b"caf\xc2e", b"Bye");
     let mut d = ex(&data);
     set(&mut d, 0, "\u{41f}\u{440}\u{438}\u{432}\u{435}\u{442}");
-    assert!(Stl.merge(&d).is_err());
+    let e = Stl.merge(&d).unwrap_err().to_string();
+    assert!(e.contains("needs code table 01") && e.contains("comment subtitles hold characters that table does not have: comment subtitle at block 1."), "{e}");
     assert!(Stl.merge_with(&d, &bilingua_model::profile::locos().merge_options("xml")).is_err());
 }
 
