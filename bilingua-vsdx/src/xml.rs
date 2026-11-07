@@ -434,12 +434,13 @@ fn parse_inner(s: &str, max_depth: usize, fragment: bool) -> Result<Parsed, Stri
             push(&mut stack, &mut top, Node::Text(rest[..e].to_string()));
             i += e;
         } else if let Some(inner) = rest.strip_prefix("<?") {
-            let e = rest.find("?>").ok_or("unterminated processing instruction")? + 2;
+            // `?>` is looked for after the `<?`, so `<?>` is no processing instruction (and no slice runs backwards)
+            let e = inner.find("?>").ok_or("unterminated processing instruction")? + 4;
             let target: String = inner.chars().take_while(|c| !c.is_whitespace() && *c != '?').collect();
             if target.eq_ignore_ascii_case("xml") && i != 0 {
                 return Err("an XML declaration that is not at the very start".into());
             }
-            if target.is_empty() {
+            if !valid_name(&target) {
                 return Err("a processing instruction with no target".into());
             }
             check_chars(&rest[2..e - 2], true).or_else(|m| if m.contains("'<'") { Ok(()) } else { Err(m) })?;
@@ -550,6 +551,15 @@ mod tests {
         let s = "<?xml version='1.0' encoding='utf-8' ?>\r\n<a x='1' y=\"2>\"><!-- c --><b/>t &amp; u<c>\n</c><![CDATA[x<y]]></a>\n<!-- end -->";
         let p = ok(s);
         assert_eq!(raw_of(&p.nodes), s);
+    }
+
+    #[test]
+    fn an_empty_processing_instruction_is_refused_not_a_panic() {
+        for bad in ["<?><a/>?>", "<a><?></a>?>", "<?>"] {
+            assert!(parse(bad, 256).is_err(), "{bad}");
+            assert!(parse_fragment(bad, 256).is_err(), "{bad}");
+        }
+        assert!(parse("<a><?pi x?></a>", 256).is_ok());
     }
 
     #[test]
