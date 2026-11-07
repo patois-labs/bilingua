@@ -701,7 +701,7 @@ fn mask_doctype(text: &str) -> Option<String> {
         return None;
     }
     let inner = &text[i + 9..j];
-    if !inner.contains(['[', '"', ''']) {
+    if !inner.contains(['[', '"', '\'']) {
         return None;
     }
     // keep the white space and the document type name; blank what follows
