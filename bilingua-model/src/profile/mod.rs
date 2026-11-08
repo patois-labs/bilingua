@@ -374,14 +374,15 @@ pub fn locos_units(doc: &Document) -> Vec<LocosUnit> {
 pub fn locos_set_target(doc: &mut Document, seg_id: &str, target: Vec<Inline>) -> Result<(), Error> {
     if LOCOS_WRITES_REPAIRED.contains(&doc.format.as_str()) {
         let Some((ui, si)) = doc.locate(seg_id) else { return Err(Error::UnknownSegment(seg_id.to_string())) };
-        let repaired = tokens::repair_tags(&doc.units[ui].segments[si].source, target);
+        // pairs only: a repeated standalone placeholder is still written each time
+        let repaired = tokens::repair_tags(&doc.units[ui].segments[si].source, target, false);
         return set_like_locos(doc, seg_id, repaired);
     }
     if !tokens::locos_repairs_tags(&doc.format) {
         return set_like_locos(doc, seg_id, target);
     }
     let Some((ui, si)) = doc.locate(seg_id) else { return Err(Error::UnknownSegment(seg_id.to_string())) };
-    let repaired = tokens::repair_tags(&doc.units[ui].segments[si].source, target.clone());
+    let repaired = tokens::repair_tags(&doc.units[ui].segments[si].source, target.clone(), true);
     set_like_locos(doc, seg_id, repaired)?;
     // the writers of these formats apply the rule themselves after stripping the target's edges (as LocOS's do), so
     // the target keeps every tag as it came, repeated or unbalanced; the repaired copy only had to pass the checks

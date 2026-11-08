@@ -1021,7 +1021,7 @@ pub fn legacy_output_or_utf8(out: Vec<u8>, text: &str, encoding: &str) -> Result
 fn encode_text_as_is(text: &str, encoding: &str) -> Result<Vec<u8>, Error> {
     let mut out = encode_text_unmarked(text, encoding)?;
     // a mark read before the legacy bytes goes back in front of whatever was written (UTF-8 or the code page)
-    if parse_tag(encoding).bom8 && !out.starts_with(BOM8) {
+    if parse_tag(encoding).bom8 {
         out.splice(0..0, BOM8.iter().copied());
     }
     Ok(out)

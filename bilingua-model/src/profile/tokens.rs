@@ -534,8 +534,9 @@ fn parse_tokens_repairing(text: &str, map: &LocosMap) -> (Vec<Inline>, Vec<Token
 /// The CAT writers' rule ([`repair_locos_text_for`]) on an inline list, for a target given as tags rather than
 /// LocOS text: each source code is written at most as often as the source has it (a repeated pair loses its tags,
 /// its text stays), a close that does not close the pair on top is dropped, a pair left open is closed at the end.
-/// A tag the source lacks is kept, so the model's check still refuses it.
-pub(crate) fn repair_tags(source: &[Inline], target: Vec<Inline>) -> Vec<Inline> {
+/// A tag the source lacks is kept, so the model's check still refuses it. With `points` false a standalone code
+/// is never dropped for being repeated (the formats whose writer writes a repeated placeholder each time).
+pub(crate) fn repair_tags(source: &[Inline], target: Vec<Inline>, points: bool) -> Vec<Inline> {
     use std::collections::HashMap;
     let partner = pairs(source);
     let mut pair_allowed: HashMap<&str, usize> = HashMap::new();
@@ -585,6 +586,7 @@ pub(crate) fn repair_tags(source: &[Inline], target: Vec<Inline>) -> Vec<Inline>
                 None if known.contains(id.as_str()) => {}
                 // not a code of the source: kept, the model's check names it
                 None => out.push(i),
+                Some(_) if !points => out.push(i),
                 Some(max) => {
                     let n = point_used.entry((id.clone(), *kind)).or_default();
                     if *n < *max {
@@ -1277,7 +1279,7 @@ mod tests {
             for f in ["sdlxliff", "xliff", "mqxliff", "mxliff", "txlf", "txml", "ttx", "xlz", "mqxlz", "sdlppx"] {
                 let (inl, _, repairs) = repair_locos_text_for(f, t, &map);
                 // every token stays a tag (the writer applies the rule); the rule on the inlines gives LocOS's result
-                assert_eq!(repair_tags(&src, inl.clone()), want, "{f}: {t}");
+                assert_eq!(repair_tags(&src, inl.clone(), true), want, "{f}: {t}");
                 let got: Vec<&str> = repairs
                     .iter()
                     .map(|r| match r {
@@ -1289,7 +1291,7 @@ mod tests {
                     .collect();
                 assert_eq!(got, kinds, "{f}: {t}");
                 // the inline repair leaves a repaired target as it is
-                assert_eq!(repair_tags(&src, want.clone()), want, "{f}: {t}");
+                assert_eq!(repair_tags(&src, want.clone(), true), want, "{f}: {t}");
                 assert_eq!(parse_locos_text_for(f, t, &map).0, inl, "{f}: {t}");
             }
             let (plain, _, none) = repair_locos_text_for("json", t, &map);
@@ -1306,11 +1308,11 @@ mod tests {
         let close = Inline::tag("1", TagKind::Close, "</b>");
         let src = vec![open.clone(), Inline::text("a"), close.clone()];
         let t = vec![open.clone(), Inline::text("x"), close.clone(), open.clone(), Inline::text("y"), close.clone(), close.clone(), open.clone()];
-        assert_eq!(repair_tags(&src, t), vec![open.clone(), Inline::text("x"), close.clone(), Inline::text("y")]);
-        assert_eq!(repair_tags(&src, vec![open.clone(), Inline::text("z")]), vec![open.clone(), Inline::text("z"), close.clone()]);
+        assert_eq!(repair_tags(&src, t, true), vec![open.clone(), Inline::text("x"), close.clone(), Inline::text("y")]);
+        assert_eq!(repair_tags(&src, vec![open.clone(), Inline::text("z")], true), vec![open.clone(), Inline::text("z"), close.clone()]);
         let twice = vec![open.clone(), Inline::text("a"), close.clone(), open.clone(), Inline::text("b"), close.clone()];
-        assert_eq!(repair_tags(&twice, twice.clone()), twice);
+        assert_eq!(repair_tags(&twice, twice.clone(), true), twice);
         let invented = vec![Inline::tag("9", TagKind::Standalone, "<hr/>")];
-        assert_eq!(repair_tags(&src, invented.clone()), invented);
+        assert_eq!(repair_tags(&src, invented.clone(), true), invented);
     }
 }

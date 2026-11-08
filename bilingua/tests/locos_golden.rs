@@ -406,11 +406,18 @@ const KNOWN_BUILDS: &[(&str, &[&str], &str)] = &[
         &["repair-point", "repair-point-de-DE"],
         PAIR_AS_POINT,
     ),
+    ("w6_bom_cp1252.sbv", &["none-de-DE"], BOM_EMPTY_LOCALIZED),
+    ("w6_bom_cp1252.sub", &["none-de-DE"], BOM_EMPTY_LOCALIZED),
     (
     "hostile_tails.pptx",
     &["prefix", "hostile", "hostile-ar-SA", "hostile-de-DE"],
     "token look-alikes and tokens naming no code: since LocOS 814 both keep them as text, but LocOS writes each one in a run of its own and Bilingua keeps it in its run's text (same text, other runs)",
 )];
+
+/// B-SIDE W6 st-1: a UTF-8 BOM before Windows-1252 bytes, a localized export with nothing translated. Bilingua writes
+/// nothing, so the upload comes back as it was (the mark, then the code page's bytes); LocOS's B-bytes guard does
+/// not see the build as untouched there and writes the mark, then UTF-8. Both read back to the same cues.
+const BOM_EMPTY_LOCALIZED: &str = "BOM before Windows-1252, localized export with nothing translated: Bilingua returns the upload, LocOS writes it as UTF-8 (same cues)";
 
 /// B-SIDE 8: a paired code named by a point token in a plain XLIFF. LocOS `xliff_filter._rebuild_target` writes a
 /// copy of the source element with its source text inside (text the translation does not have); Bilingua writes the
