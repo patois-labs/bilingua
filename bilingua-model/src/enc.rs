@@ -727,6 +727,18 @@ fn decode_text_inner(data: &[u8], o: &DecodeOptions) -> Result<Decoded, Error> {
     done(text, &enc.name().to_ascii_lowercase(), None, warnings, &o.limits)
 }
 
+/// For a reader with its own BOM and UTF-8 handling (ini, yaml, js modules): the last step of [`decode_text`] for
+/// bytes that are not UTF-8 and carry no byte order mark. Returns `None` when `source_lang` has no code page of its
+/// own (the caller keeps its Windows-1252 path); else the text, the code page it was read in and the warnings
+/// (the letters look wrong in it, or it did not read and Windows-1252 was used). The caller has already refused
+/// binary files.
+pub fn decode_source_legacy(data: &[u8], source_lang: Option<&str>) -> Option<Result<(String, &'static Encoding, Vec<Warning>), Error>> {
+    let locale = source_lang.unwrap_or("");
+    let hint = source_encoding(locale)?;
+    let mut warnings = Vec::new();
+    Some(decode_legacy(data, Some(hint), locale, &mut warnings).map(|(t, e)| (t, e, warnings)))
+}
+
 fn where_(hint: Option<&'static Encoding>, locale: &str) -> String {
     if hint.is_some() && !locale.is_empty() {
         format!(", the code page of the project's source language {locale},")

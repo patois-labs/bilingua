@@ -1,6 +1,6 @@
 //! Reading and writing the encodings a JavaScript module may have: UTF-8 (BOM kept), UTF-16 with a BOM, Windows-1252.
 
-use bilingua_model::Error;
+use bilingua_model::{Error, Warning};
 
 pub const BOM8: &[u8] = &[0xEF, 0xBB, 0xBF];
 pub const BOM16LE: &[u8] = &[0xFF, 0xFE];
@@ -133,27 +133,35 @@ fn utf16(body: &[u8], big: bool) -> Result<String, Error> {
 }
 
 /// Bytes to text and the encoding name the writer must use.
-pub fn decode(data: &[u8]) -> Result<(String, &'static str), Error> {
+/// Bytes to text, the encoding name the writer must use, and what the reader noticed. A file that is not UTF-8 and
+/// has no byte order mark is read in the code page of `source_lang` (LocOS decision 22), Windows-1252 when the
+/// language has none.
+pub fn decode(data: &[u8], source_lang: Option<&str>) -> Result<(String, &'static str, Vec<Warning>), Error> {
     // UTF-32 BOMs start with a UTF-16 one; nobody ships UTF-32 resources.
     if data.starts_with(&[0xFF, 0xFE, 0x00, 0x00]) || data.starts_with(&[0x00, 0x00, 0xFE, 0xFF]) {
         return Err(Error::Encoding("UTF-32 files are not supported; re-save the file as UTF-8.".into()));
     }
     if let Some(body) = data.strip_prefix(BOM8) {
-        return utf8(body, 0).map(|t| (t, UTF8_BOM));
+        return utf8(body, 0).map(|t| (t, UTF8_BOM, Vec::new()));
     }
     if let Some(body) = data.strip_prefix(BOM16LE) {
-        return utf16(body, false).map(|t| (t, UTF16LE));
+        return utf16(body, false).map(|t| (t, UTF16LE, Vec::new()));
     }
     if let Some(body) = data.strip_prefix(BOM16BE) {
-        return utf16(body, true).map(|t| (t, UTF16BE));
+        return utf16(body, true).map(|t| (t, UTF16BE, Vec::new()));
     }
     if let Ok(t) = std::str::from_utf8(data) {
-        return Ok((t.to_string(), UTF8));
+        return Ok((t.to_string(), UTF8, Vec::new()));
     }
     if looks_binary(data) {
         return Err(enc_err("file is not valid UTF-8 and looks like a binary file, not text; re-save the file as UTF-8".into()));
     }
-    cp1252_decode(data).map(|t| (t, CP1252))
+    if let Some(r) = bilingua_model::enc::decode_source_legacy(data, source_lang) {
+        let (text, e, warnings) = r?;
+        let name = if e == bilingua_model::encoding_rs::WINDOWS_1252 { CP1252 } else { e.name() };
+        return Ok((text, name, warnings));
+    }
+    cp1252_decode(data).map(|t| (t, CP1252, Vec::new()))
 }
 
 fn utf8(body: &[u8], skipped: usize) -> Result<String, Error> {
@@ -188,8 +196,13 @@ pub fn encode(text: &str, encoding: &str) -> Result<Vec<u8>, Error> {
             Ok(v)
         }
         CP1252 => Ok(cp1252_encode(text).unwrap_or_else(|| text.as_bytes().to_vec())),
-        other => Err(Error::Write(format!(
-            "unknown encoding {other:?} in the js skeleton"
-        ))),
+        other => match bilingua_model::encoding_rs::Encoding::for_label(other.as_bytes()) {
+            // a source-language code page: back in it when every character fits, else UTF-8
+            Some(e) => {
+                let (bytes, _, bad) = e.encode(text);
+                Ok(if bad { text.as_bytes().to_vec() } else { bytes.into_owned() })
+            }
+            None => Err(Error::Write(format!("unknown encoding {other:?} in the js skeleton"))),
+        },
     }
 }

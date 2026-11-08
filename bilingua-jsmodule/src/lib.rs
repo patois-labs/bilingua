@@ -118,9 +118,10 @@ fn is_xml(data: &[u8]) -> bool {
 struct Loaded {
     text: String,
     encoding: &'static str,
+    warnings: Vec<bilingua_model::Warning>,
 }
 
-fn load(bytes: &[u8], limits: &Limits) -> Result<Loaded, Error> {
+fn load(bytes: &[u8], limits: &Limits, source_lang: Option<&str>) -> Result<Loaded, Error> {
     if bytes.len() > limits.max_bytes {
         return Err(LimitError::new(
             LimitKind::InputBytes,
@@ -134,7 +135,7 @@ fn load(bytes: &[u8], limits: &Limits) -> Result<Loaded, Error> {
             msg: "This file is XML (a Qt Linguist .ts file?), not a JavaScript/TypeScript locale module.".into(),
         });
     }
-    let (text, encoding) = enc::decode(bytes)?;
+    let (text, encoding, warnings) = enc::decode(bytes, source_lang)?;
     let lim = limits.max_units;
     let (mut lines, mut quotes, mut values) = (0usize, 0usize, 0usize);
     for &b in text.as_bytes() {
@@ -167,7 +168,7 @@ fn load(bytes: &[u8], limits: &Limits) -> Result<Loaded, Error> {
         )
         .into());
     }
-    Ok(Loaded { text, encoding })
+    Ok(Loaded { text, encoding, warnings })
 }
 
 fn key_of(path: &str, root: &str, default_ref: Option<&str>) -> String {
@@ -187,7 +188,7 @@ fn key_of(path: &str, root: &str, default_ref: Option<&str>) -> String {
 /// Every translatable string with its dotted key, in order (the LocOS `records()` view).
 pub fn records(bytes: &[u8]) -> Result<Vec<Record>, Error> {
     let limits = Limits::default();
-    let l = load(bytes, &limits)?;
+    let l = load(bytes, &limits, None)?;
     let parsed = parse::parse(&l.text, &limits)?;
     let mut out = Vec::new();
     for ru in &parsed.units {
@@ -280,7 +281,7 @@ impl JsModule {
         opts: &ExtractOptions,
         limits: &Limits,
     ) -> Result<Document, Error> {
-        let l = load(bytes, limits)?;
+        let l = load(bytes, limits, opts.source_lang.as_deref())?;
         let text = l.text.as_str();
         let parsed = parse::parse(text, limits)?;
         let mut parts: Vec<SkelPart> = Vec::new();
@@ -331,7 +332,9 @@ impl JsModule {
         if pos < text.len() {
             parts.push(SkelPart::Raw(text[pos..].to_string()));
         }
-        Ok(Document::new(ID, units, Skeleton::text(parts, l.encoding, bilingua_model::parser_info!())).with_options(opts))
+        let mut doc = Document::new(ID, units, Skeleton::text(parts, l.encoding, bilingua_model::parser_info!())).with_options(opts);
+        doc.warnings.extend(l.warnings);
+        Ok(doc)
     }
 }
 
@@ -348,7 +351,7 @@ impl Filter for JsModule {
     /// with no export or declaration at all (an empty or prose file).
     fn sniff(&self, bytes: &[u8]) -> bool {
         let limits = Limits::default();
-        let Ok(l) = load(bytes, &limits) else {
+        let Ok(l) = load(bytes, &limits, None) else {
             return false;
         };
         parse::parse(&l.text, &limits).is_ok_and(|p| p.statements > 0)
