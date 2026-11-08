@@ -174,6 +174,9 @@ pub(crate) fn build_document(w: &Walk, l: &Loaded, opts: &ExtractOptions) -> Res
     Ok((doc, warnings))
 }
 
+/// Per anchor unit: how many images, and the findings `(kind, where)`.
+type ImagesAt = (usize, Vec<(&'static str, String)>);
+
 /// LocOS `mdx_filter.parse`'s image inventory: every Markdown image of a line unit and every `<img>` / `<Image>` tag,
 /// anchored at a line unit (`a11y.anchor_for`: the line holding it, else the nearest before, else the first), with a
 /// finding for an empty Markdown alt and a JSX image whose `alt` is missing or blank; written on the anchor units as
@@ -225,7 +228,7 @@ fn image_inventory(w: &Walk, fm_len: usize, units: &mut [Unit]) {
         let place = src.map_or(lname.clone(), |s| trim(&text[s.1..s.2]).rsplit('/').next().unwrap_or("").to_string());
         seen.push((anchor, kind, place));
     }
-    let mut by_unit: std::collections::BTreeMap<usize, (usize, Vec<(&'static str, String)>)> = Default::default();
+    let mut by_unit: std::collections::BTreeMap<usize, ImagesAt> = Default::default();
     for (anchor, kind, place) in seen {
         let Some(k) = anchor else { continue };
         let e = by_unit.entry(fm_len + k).or_default();
