@@ -105,10 +105,17 @@ fn a_character_the_code_page_cannot_hold_becomes_a_character_reference() {
 #[test]
 fn a_declared_legacy_file_is_read_whatever_the_source_language() {
     let bytes = data("lang_de_latin1.ts");
+    let plain = ex(&bytes);
+    let tag = |d: &Document| match &d.skeleton {
+        Skeleton::Text { encoding, .. } => enc::base(encoding).to_string(),
+        _ => String::new(),
+    };
+    assert_eq!(tag(&plain), "iso-8859-1");
     for lang in ["ja", "ja-JP", "zh-CN", "ru", "de"] {
         let o = opts(None).with_source_lang(lang);
         let d = QtTs.extract(&bytes, &o).unwrap_or_else(|e| panic!("{lang}: {e}"));
-        assert!(d.units.iter().any(|u| u.segments.iter().any(|s| s.target.iter().any(|i| matches!(i, Inline::Text(t) if t.contains('\u{f6}'))))), "{lang}");
+        assert_eq!(serde_json::to_value(&d.units).unwrap(), serde_json::to_value(&plain.units).unwrap(), "{lang}: the same units as without a source language");
+        assert_eq!(tag(&d), "iso-8859-1", "{lang}");
         assert_eq!(merged(&d), bytes, "{lang}: untouched merge");
     }
 }
