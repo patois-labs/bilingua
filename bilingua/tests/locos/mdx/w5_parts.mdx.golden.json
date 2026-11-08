@@ -1,0 +1,113 @@
+{
+ "format": "mdx",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Getting started",
+   "style": ""
+  },
+  {
+   "p_index": 1,
+   "text": "A short guide",
+   "style": ""
+  },
+  {
+   "p_index": 2,
+   "text": "Welcome",
+   "style": ""
+  },
+  {
+   "p_index": 3,
+   "text": "Read the **docs** and the [guide](https://example.com \"Back\\slash and \\\" quote\").",
+   "style": ""
+  },
+  {
+   "p_index": 4,
+   "text": "![](img/empty.png)",
+   "style": ""
+  },
+  {
+   "p_index": 5,
+   "text": "![A chart](img/chart.png)",
+   "style": ""
+  },
+  {
+   "p_index": 6,
+   "text": "⟦g1⟧Keep *this* safe.⟦/g1⟧",
+   "style": ""
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "LS0tCnRpdGxlOiBHZXR0aW5nIHN0YXJ0ZWQKc3VtbWFyeTogQSBzaG9ydCBndWlkZQotLS0KCmltcG9ydCB7IE5vdGUgfSBmcm9tICcuL25vdGUnCgojIFdlbGNvbWUKClJlYWQgdGhlICoqZG9jcyoqIGFuZCB0aGUgW2d1aWRlXShodHRwczovL2V4YW1wbGUuY29tICJCYWNrXHNsYXNoIGFuZCBcIiBxdW90ZSIpLgoKIVtdKGltZy9lbXB0eS5wbmcpCgohW0EgY2hhcnRdKGltZy9jaGFydC5wbmcpCgo8Tm90ZT5LZWVwICp0aGlzKiBzYWZlLjwvTm90ZT4K"
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü Getting started",
+    "1": "Ü A short guide",
+    "2": "Ü Welcome",
+    "3": "Ü Read the **docs** and the [guide](https://example.com \"Back\\slash and \\\" quote\").",
+    "4": "Ü ![](img/empty.png)",
+    "5": "Ü ![A chart](img/chart.png)",
+    "6": "⟦g1⟧Ü Keep *this* safe.⟦/g1⟧"
+   },
+   "out_b64": "LS0tCnRpdGxlOiDDnCBHZXR0aW5nIHN0YXJ0ZWQKc3VtbWFyeTogw5wgQSBzaG9ydCBndWlkZQotLS0KCmltcG9ydCB7IE5vdGUgfSBmcm9tICcuL25vdGUnCgojIMOcIFdlbGNvbWUKCsOcIFJlYWQgdGhlICoqZG9jcyoqIGFuZCB0aGUgW2d1aWRlXShodHRwczovL2V4YW1wbGUuY29tICJCYWNrXHNsYXNoIGFuZCBcIiBxdW90ZSIpLgoKw5wgIVtdKGltZy9lbXB0eS5wbmcpCgrDnCAhW0EgY2hhcnRdKGltZy9jaGFydC5wbmcpCgo8Tm90ZT7DnCBLZWVwICp0aGlzKiBzYWZlLjwvTm90ZT4K"
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Getting started & <\"'>",
+    "2": "Welcome & <\"'>",
+    "4": "![](img/empty.png) & <\"'>",
+    "6": "⟦g1⟧Keep *this* safe. & <\"'>⟦/g1⟧"
+   },
+   "out_b64": "LS0tCnRpdGxlOiBHZXR0aW5nIHN0YXJ0ZWQgJiA8Iic+CnN1bW1hcnk6IEEgc2hvcnQgZ3VpZGUKLS0tCgppbXBvcnQgeyBOb3RlIH0gZnJvbSAnLi9ub3RlJwoKIyBXZWxjb21lICYgXDwiJz4KClJlYWQgdGhlICoqZG9jcyoqIGFuZCB0aGUgW2d1aWRlXShodHRwczovL2V4YW1wbGUuY29tICJCYWNrXHNsYXNoIGFuZCBcIiBxdW90ZSIpLgoKIVtdKGltZy9lbXB0eS5wbmcpICYgXDwiJz4KCiFbQSBjaGFydF0oaW1nL2NoYXJ0LnBuZykKCjxOb3RlPktlZXAgKnRoaXMqIHNhZmUuICYgXDwiJz48L05vdGU+Cg=="
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "out_b64": "LS0tCnRpdGxlOiBHZXR0aW5nIHN0YXJ0ZWQKc3VtbWFyeTogQSBzaG9ydCBndWlkZQotLS0KCmltcG9ydCB7IE5vdGUgfSBmcm9tICcuL25vdGUnCgojIFdlbGNvbWUKClJlYWQgdGhlICoqZG9jcyoqIGFuZCB0aGUgW2d1aWRlXShodHRwczovL2V4YW1wbGUuY29tICJCYWNrXHNsYXNoIGFuZCBcIiBxdW90ZSIpLgoKIVtdKGltZy9lbXB0eS5wbmcpCgohW0EgY2hhcnRdKGltZy9jaGFydC5wbmcpCgo8Tm90ZT5LZWVwICp0aGlzKiBzYWZlLjwvTm90ZT4K"
+  },
+  {
+   "name": "tab",
+   "locale": null,
+   "map": {
+    "0": "tab\there"
+   },
+   "out_b64": "LS0tCnRpdGxlOiAndGFiCWhlcmUnCnN1bW1hcnk6IEEgc2hvcnQgZ3VpZGUKLS0tCgppbXBvcnQgeyBOb3RlIH0gZnJvbSAnLi9ub3RlJwoKIyBXZWxjb21lCgpSZWFkIHRoZSAqKmRvY3MqKiBhbmQgdGhlIFtndWlkZV0oaHR0cHM6Ly9leGFtcGxlLmNvbSAiQmFja1xzbGFzaCBhbmQgXCIgcXVvdGUiKS4KCiFbXShpbWcvZW1wdHkucG5nKQoKIVtBIGNoYXJ0XShpbWcvY2hhcnQucG5nKQoKPE5vdGU+S2VlcCAqdGhpcyogc2FmZS48L05vdGU+Cg=="
+  },
+  {
+   "name": "title",
+   "locale": null,
+   "map": {
+    "3": "Lies die **Doku** und den [Leitfaden](https://example.com \"Back\\slash and \\\" quote\")."
+   },
+   "out_b64": "LS0tCnRpdGxlOiBHZXR0aW5nIHN0YXJ0ZWQKc3VtbWFyeTogQSBzaG9ydCBndWlkZQotLS0KCmltcG9ydCB7IE5vdGUgfSBmcm9tICcuL25vdGUnCgojIFdlbGNvbWUKCkxpZXMgZGllICoqRG9rdSoqIHVuZCBkZW4gW0xlaXRmYWRlbl0oaHR0cHM6Ly9leGFtcGxlLmNvbSAiQmFja1xzbGFzaCBhbmQgXCIgcXVvdGUiKS4KCiFbXShpbWcvZW1wdHkucG5nKQoKIVtBIGNoYXJ0XShpbWcvY2hhcnQucG5nKQoKPE5vdGU+S2VlcCAqdGhpcyogc2FmZS48L05vdGU+Cg=="
+  },
+  {
+   "name": "repeat",
+   "locale": null,
+   "map": {
+    "6": "⟦g1⟧Halt⟦/g1⟧ ⟦g1⟧sicher⟦/g1⟧"
+   },
+   "out_b64": "LS0tCnRpdGxlOiBHZXR0aW5nIHN0YXJ0ZWQKc3VtbWFyeTogQSBzaG9ydCBndWlkZQotLS0KCmltcG9ydCB7IE5vdGUgfSBmcm9tICcuL25vdGUnCgojIFdlbGNvbWUKClJlYWQgdGhlICoqZG9jcyoqIGFuZCB0aGUgW2d1aWRlXShodHRwczovL2V4YW1wbGUuY29tICJCYWNrXHNsYXNoIGFuZCBcIiBxdW90ZSIpLgoKIVtdKGltZy9lbXB0eS5wbmcpCgohW0EgY2hhcnRdKGltZy9jaGFydC5wbmcpCgo8Tm90ZT5IYWx0PC9Ob3RlPiA8Tm90ZT5zaWNoZXI8L05vdGU+Cg=="
+  }
+ ],
+ "a11y_images": {
+  "images": 2,
+  "missing_alt": [
+   {
+    "kind": "empty",
+    "unit": 4,
+    "where": "empty.png"
+   }
+  ]
+ }
+}

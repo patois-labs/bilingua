@@ -277,6 +277,7 @@ impl Filter for Php {
             return Err(Error::Write("php needs a text skeleton".into()));
         };
         let mut out = String::new();
+        let mut rewritten = false;
         for p in parts {
             match p {
                 SkelPart::Raw(s) => out.push_str(s),
@@ -286,7 +287,10 @@ impl Filter for Php {
                         .get(*i)
                         .ok_or_else(|| Error::Write(format!("skeleton points at missing unit {i}")))?;
                     match new_literal(u) {
-                        Some(lit) => out.push_str(&lit),
+                        Some(lit) => {
+                            rewritten = true;
+                            out.push_str(&lit)
+                        }
                         None => out.push_str(
                             hidden(u).and_then(|h| h.standalone.as_deref()).ok_or_else(
                                 || Error::Write(format!("unit {} lost its literal", u.id)),
@@ -301,6 +305,11 @@ impl Filter for Php {
         // in front of it to survive an untouched merge.
         if out.starts_with('\u{feff}') {
             out.insert(0, '\u{feff}');
+        }
+        if !rewritten && opts.is_profile(bilingua_model::profile::LOCOS) {
+            // LocOS `PhpArrayFilter.build`: with no value rewritten the file comes back as it was (its own code page),
+            // a localized build included; only a rewritten file is written as UTF-8
+            return enc::encode_text(&out, encoding);
         }
         enc::encode_text_with(&out, encoding, opts)
     }

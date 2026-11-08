@@ -300,7 +300,8 @@ fn extract(d: Dialect, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, 
     let mut pos = 0usize;
     let (mut n_tr, mut n_lock) = (0usize, 0usize);
     let (mut line, mut line_at) = (1usize, 0usize);
-    for s in &p.scan.slots {
+    let locos = opts.is_profile(profile::LOCOS);
+    for (slot_index, s) in p.scan.slots.iter().enumerate() {
         let Some((a, b)) = s.inner else { continue };
         // Android: a value that is a resource or theme reference (@string/x, ?attr/x) is not text
         let reference = d == Dialect::Android
@@ -360,6 +361,11 @@ fn extract(d: Dialect, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, 
         unit.context.location = Some(format!("line {line}"));
         if let Some((k, v)) = extra {
             unit.context.extra.insert(k.into(), v);
+        }
+        if locos {
+            // LocOS `XmlResourceFilter.parse`: p_index is the slot's position among every slot of the file (skipped,
+            // reference and empty ones counted), so a skipped resource never renumbers the ones after it
+            unit.context.extra.insert(profile::P_INDEX.into(), slot_index.to_string());
         }
         if !s.comment.is_empty() {
             unit.context.notes = vec![s.comment.clone()];

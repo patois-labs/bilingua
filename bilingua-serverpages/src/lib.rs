@@ -644,6 +644,11 @@ fn extract_with(d: Dialect, bytes: &[u8], opts: &ExtractOptions, limits: &Limits
         u.context.key = html::parse_tag(&toks[a.ti]).1.into();
         units.push(u);
     }
+    if opts.is_profile(bilingua_model::profile::LOCOS) {
+        // LocOS `skeleton["a11y_images"]` (server_page_filter.parse, as html_filter), for its missing-alt prompts
+        let (anchors, found) = html::missing_alt_findings(&toks, &body);
+        html::put_image_inventory(&mut units, &anchors, &found);
+    }
     let doc = Document::new(d.id(), units, Skeleton::text(vec![SkelPart::Raw(text.to_string())], dec.encoding.clone(), bilingua_model::parser_info!())).with_options(opts);
     guard::finish(doc, dec.warnings, limits)
 }

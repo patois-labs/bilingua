@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- the app name stays -->
+    <string name="app_name" translatable="false">Harbor</string>
+    <string name="greet">Hello, %1$s!</string>
+    <string name="ref">@string/greet</string>
+    <string name="blank"></string>
+    <string name="dots">...</string>
+    <string name="bye">See you <b>soon</b>.</string>
+    <plurals name="files">
+        <item quantity="one">%d file</item>
+        <item quantity="other">%d files</item>
+    </plurals>
+    <string-array name="days">
+        <item>Monday</item>
+        <item>@string/ref</item>
+        <item>Tuesday</item>
+    </string-array>
+    <string name="last">Can\'t stop now</string>
+</resources>

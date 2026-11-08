@@ -1125,3 +1125,131 @@ mod tests {
         assert_eq!(html_lang("pt_br").as_deref(), None.or(Some("pt-BR")));
     }
 }
+
+/// One `<img>` whose alternative text is missing or blank (LocOS `a11y.missing_alt`): `kind` is `"missing"` (no
+/// `alt` at all) or `"empty"` (blank), `anchor` the index of the body unit it belongs to (`a11y.anchor_for`: the unit
+/// whose token span holds it, else the nearest one before it, else the first; `None` with no body unit), `place`
+/// the image's file name (the last path part of its unescaped `src`, at most 120 characters).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AltFinding {
+    pub kind: &'static str,
+    pub anchor: Option<usize>,
+    pub place: String,
+}
+
+/// LocOS `html_filter._missing_alt_findings`: the number of `<img>` start tags outside `<script>`/`<style>`, and a
+/// finding for each whose `alt` is missing or blank. The anchor of an image with no finding is given too, so a
+/// caller can place the image count: `(anchors of every image, findings)`.
+pub fn missing_alt_findings(tokens: &[Tok], body: &[BodyUnit]) -> (Vec<Option<usize>>, Vec<AltFinding>) {
+    let anchor_for = |ti: usize| -> Option<usize> {
+        let mut before = None;
+        for (k, u) in body.iter().enumerate() {
+            if u.start <= ti && ti <= u.end {
+                return Some(k);
+            }
+            if u.end < ti {
+                before = Some(k);
+            }
+        }
+        before.or(if body.is_empty() { None } else { Some(0) })
+    };
+    let mut anchors = Vec::new();
+    let mut found = Vec::new();
+    for (ti, name) in iter_start_tags(tokens, false) {
+        if name != "img" {
+            continue;
+        }
+        let tok = tokens[ti].s.as_ref();
+        let anchor = anchor_for(ti);
+        anchors.push(anchor);
+        // a dict of the quoted attributes: the last of a repeated name wins, as in Python
+        let mut attrs: HashMap<String, String> = HashMap::new();
+        for (n, _, _, raw) in tag_attrs(tok) {
+            attrs.insert(n, raw);
+        }
+        let src = unescape(attrs.get("src").map_or("", String::as_str));
+        let place: String = src.rsplit('/').next().unwrap_or("").chars().take(120).collect();
+        let lower = tok.to_ascii_lowercase();
+        let b = lower.as_bytes();
+        // `\salt(?=[\s/>=])` and `\salt\s*=\s*[^\s"'>]` (case-insensitive), on the whole tag
+        let ws = |c: u8| matches!(c, b' ' | b'\t' | b'\n' | b'\r' | 0x0b | 0x0c);
+        let mut bare = false;
+        let mut unquoted = false;
+        let mut i = 0;
+        while let Some(at) = find_bytes(b, i, b"alt") {
+            i = at + 1;
+            if at == 0 || !ws(b[at - 1]) {
+                continue;
+            }
+            let after = at + 3;
+            if !b.get(after).is_some_and(|c| ws(*c) || matches!(c, b'/' | b'>' | b'=')) {
+                continue;
+            }
+            bare = true;
+            let mut j = after;
+            while b.get(j).is_some_and(|c| ws(*c)) {
+                j += 1;
+            }
+            if b.get(j) == Some(&b'=') {
+                j += 1;
+                while b.get(j).is_some_and(|c| ws(*c)) {
+                    j += 1;
+                }
+                if b.get(j).is_some_and(|c| !ws(*c) && !matches!(c, b'"' | b'\'' | b'>')) {
+                    unquoted = true;
+                }
+            }
+        }
+        let kind = match attrs.get("alt") {
+            None if !bare => Some("missing"),
+            None if unquoted => None,
+            alt => trim(&unescape(alt.map_or("", String::as_str))).is_empty().then_some("empty"),
+        };
+        if let Some(kind) = kind {
+            found.push(AltFinding { kind, anchor, place });
+        }
+    }
+    (anchors, found)
+}
+
+/// Puts LocOS's image inventory on the body units (`units[k]` is body unit `k`) as the LocOS profile's unit extras:
+/// [`bilingua_model::profile::A11Y_IMAGES`] (how many images anchor there), `A11Y_MISSING_ALT` (every finding, JSON)
+/// and `A11Y_EMPTY_ALT` (the file names of the blank ones). Summed over the units they are LocOS's
+/// `skeleton["a11y_images"]`; an image with no unit to anchor at (a page without text) is counted nowhere.
+pub fn put_image_inventory(units: &mut [bilingua_model::Unit], anchors: &[Option<usize>], found: &[AltFinding]) {
+    use bilingua_model::profile;
+    let mut count: std::collections::BTreeMap<usize, usize> = Default::default();
+    for k in anchors.iter().flatten() {
+        *count.entry(*k).or_default() += 1;
+    }
+    for (k, n) in count {
+        let Some(u) = units.get_mut(k) else { continue };
+        u.context.extra.insert(profile::A11Y_IMAGES.into(), n.to_string());
+        let mine: Vec<&AltFinding> = found.iter().filter(|f| f.anchor == Some(k)).collect();
+        if mine.is_empty() {
+            continue;
+        }
+        let list: Vec<String> = mine.iter().map(|f| format!("{{\"kind\":{},\"where\":{}}}", json_str(f.kind), json_str(&f.place))).collect();
+        u.context.extra.insert(profile::A11Y_MISSING_ALT.into(), format!("[{}]", list.join(",")));
+        let empty: Vec<&str> = mine.iter().filter(|f| f.kind == "empty").map(|f| f.place.as_str()).collect();
+        if !empty.is_empty() {
+            u.context.extra.insert(profile::A11Y_EMPTY_ALT.into(), empty.join("\n"));
+        }
+    }
+}
+
+/// A JSON string literal.
+fn json_str(s: &str) -> String {
+    let mut o = String::with_capacity(s.len() + 2);
+    o.push('"');
+    for c in s.chars() {
+        match c {
+            '"' => o.push_str("\\\""),
+            '\\' => o.push_str("\\\\"),
+            c if (c as u32) < 0x20 => o.push_str(&format!("\\u{:04x}", c as u32)),
+            c => o.push(c),
+        }
+    }
+    o.push('"');
+    o
+}

@@ -107,8 +107,12 @@ pub fn check(name: Option<&str>) -> Result<(), Error> {
 /// legacy charset stays, with a character reference for what it cannot hold) and resjson (`resjson_filter`: the
 /// UTF-16 BOM and code units kept) too, and the CAT XML files whose LocOS writer splices the translation into the
 /// file's own text and encodes it back in the file's codec (`ttx_filter.build_ttx`, `wordfast.build_txml`,
-/// `cat_xliff.build_units` for TXLF): a UTF-16 TTX, TXML or TXLF stays UTF-16 with its BOM.
-const LOCOS_KEEPS_ENCODING: &[&str] = &["ini", "strings", "dxf", "txt", "properties", "xaml", "resjson", "ttx", "txml", "txlf"];
+/// `cat_xliff.build_units` for TXLF): a UTF-16 TTX, TXML or TXLF stays UTF-16 with its BOM. W5: HTML (LocOS
+/// `encode_like`: a page in a declared legacy code page goes back in it, its meta charset too, when every character
+/// fits, else UTF-8), XSLT (`xslt_filter`: its UTF-16 or legacy codec, a character reference for what it cannot hold)
+/// and the HTML Help files (`htmlhelp_filter`: the source's ANSI code page, a localized build the target's, a
+/// character neither holds refused).
+const LOCOS_KEEPS_ENCODING: &[&str] = &["ini", "strings", "dxf", "txt", "properties", "xaml", "resjson", "ttx", "txml", "txlf", "html", "xslt", "hhc", "hhk", "hhp"];
 
 impl Profile {
     /// The oldest version of this profile the release can still produce.
@@ -133,7 +137,7 @@ impl Profile {
 
     /// The merge options this profile uses for a document of `format` (a filter id). Localization OS: UTF-8 out,
     /// except for the formats it writes in their own encoding (ini, strings, dxf, txt, properties, xaml, resjson, ttx,
-    /// txml and txlf: `Keep`), and the target language
+    /// txml, txlf, html, xslt, hhc, hhk and hhp: `Keep`), and the target language
     /// stamped and plurals filled even when nothing is translated (lead decision 11-04).
     pub fn merge_options(&self, format: &str) -> MergeOptions {
         let enc = if LOCOS_KEEPS_ENCODING.contains(&format) { OutputEncoding::Keep } else { OutputEncoding::Utf8 };
@@ -176,6 +180,11 @@ pub fn annotate(doc: &mut Document, profile: Option<&str>) {
         if LOCOS_NO_STYLE.contains(&format.as_str()) {
             u.context.style = None;
         }
+        // e-mail (`email_filter`): the Subject and the plain-text paragraphs have no style; an HTML part keeps the
+        // html filter's own (`a11y:img-alt`, ...)
+        if format == "eml" && matches!(u.context.style.as_deref(), Some("Subject" | "text/plain")) {
+            u.context.style = None;
+        }
         if format == "dtd" {
             if let Some(k) = u.context.key.clone() {
                 u.context.extra.insert(STYLE.to_string(), format!("dtd:{k}"));
@@ -199,7 +208,8 @@ pub fn annotate(doc: &mut Document, profile: Option<&str>) {
 }
 
 /// Formats whose LocOS units carry no style (`""`) where Bilingua sets `context.style`.
-const LOCOS_NO_STYLE: &[&str] = &["po", "wxl", "xaml", "resx", "strings", "properties", "json", "json5", "resjson", "arb", "yaml", "txml", "txlf"];
+/// TTML: LocOS's units have no style (`ttml_filter`), where Bilingua keeps the caption's `style` attribute.
+const LOCOS_NO_STYLE: &[&str] = &["po", "wxl", "xaml", "resx", "strings", "properties", "json", "json5", "resjson", "arb", "yaml", "txml", "txlf", "ttml"];
 
 /// For the formats whose LocOS filter keeps (some) inline codes as plain unit text, which codes: every code in the
 /// key/value formats (placeholders such as `%@`, `{0}`, `[ProductName]`, and JSON's HTML), only `placeholder` codes
@@ -356,10 +366,11 @@ pub fn locos_units(doc: &Document) -> Vec<LocosUnit> {
 /// placeholder tag (`#` in ICU, Chrome `$x$`, go `{{..}}`: LocOS accepts it, where `set_target` refuses it as
 /// "tag appears more often"); paired tags keep the exactly-once rule and a tag the source lacks is still refused.
 /// For the formats whose LocOS writer repairs a translation's tags ([`tokens::locos_repairs_tags`]: the XLIFF
-/// family, TXML, TTX and the XLIFF packages) a target may hold any tag of the source more often than the source,
-/// or unbalanced: their writers apply LocOS's rule (`cat_xliff._render`): a code written more often than the source
-/// has it loses the extra tags (its text stays), a close that closes nothing is dropped, a pair left open is closed
-/// at the end ([`tokens::repair_locos_text_for`] lists each repair). A tag the source lacks is still refused.
+/// family, TXML, TTX, the XLIFF packages, and since W5 the XML formats and MDX) a target may hold any tag of the
+/// source more often than the source, or unbalanced: LocOS's rule (`cat_xliff._render`, the `xml_its` render): a code
+/// written more often than the source has it loses the extra tags (its text stays), a close that closes nothing is
+/// dropped, a pair left open is closed at the end ([`tokens::repair_locos_text_for`] lists each repair); MDX writes
+/// a repeated tag again, as LocOS's `_rematerialize` does. A tag the source lacks is still refused.
 pub fn locos_set_target(doc: &mut Document, seg_id: &str, target: Vec<Inline>) -> Result<(), Error> {
     if !tokens::locos_repairs_tags(&doc.format) {
         return set_like_locos(doc, seg_id, target);
@@ -367,9 +378,10 @@ pub fn locos_set_target(doc: &mut Document, seg_id: &str, target: Vec<Inline>) -
     let Some((ui, si)) = doc.locate(seg_id) else { return Err(Error::UnknownSegment(seg_id.to_string())) };
     let repaired = tokens::repair_tags(&doc.units[ui].segments[si].source, target.clone());
     set_like_locos(doc, seg_id, repaired)?;
-    // the writers of these formats apply the rule themselves after stripping the target's edges (as LocOS's do), so
-    // the target keeps every tag as it came, repeated or unbalanced; the repaired copy only had to pass the checks
-    if target.iter().any(|i| matches!(i, Inline::Tag { .. })) {
+    // the CAT writers apply the rule themselves after stripping the target's edges (as LocOS's do), and MDX writes
+    // each tag as typed, so there the target keeps every tag as it came, repeated or unbalanced; the repaired copy
+    // only had to pass the checks. The XML writers (W5) get the repaired target.
+    if tokens::locos_keeps_typed_tags(&doc.format) && target.iter().any(|i| matches!(i, Inline::Tag { .. })) {
         doc.units[ui].segments[si].target = crate::merge_text(target);
     }
     Ok(())

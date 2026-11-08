@@ -709,6 +709,58 @@ Found by running the LocOS suites with Bilingua switched on. Bilingua now gives 
   `Filter.build` guard and `export._nothing_written`, so the adapter keeps it (Bilingua's own merge of an untouched
   document under the profile writes UTF-8 too).
 
+## Wave 5 B-side: HTML and XML family (W5, 11-07)
+
+Found by the W5 parity and diff runs with the adapter (`coder-comparison/2026-11-07-locos-issues/bili-core/W5/B-SIDE.md`).
+All under the LocOS profile; native extraction is unchanged unless said. The new goldens in
+`bilingua/tests/locos/{xml,xmb,xtb,ttml,html,eml,mdx,dita,docbook,hhc,hhk,hhp,xslt,php,jsp}` (hand-written inputs,
+written by `oracle/locos_golden.py` from LocOS iss-int; HTML Help also builds for ru-RU) compare the units, the image
+inventory and every build with LocOS's own; `bilingua/tests/locos_w5.rs` pins each item.
+
+- **Segment ids (xml-1, xmb-2, tt-4).** `locos.p_index` is LocOS's number: an Android string or Java XML property
+  is its slot among every slot of the file (a `translatable="false"` string, a resource reference, an empty value
+  counted), an XMB or XTB message its position among every message (a repeated id and a placeholder-only message
+  counted), a TTML caption its position among every caption `<p>` (a blank one counted). Before, the adapter numbered
+  by position and every id after the first skipped entry moved.
+- **XMB untouched build (xmb-1).** A merge of an XMB under the profile is the XTB, also with nothing translated, as
+  LocOS's writer always makes one. Native merge of an untouched XMB is still the XMB.
+- **Styles (em-1, tt-1).** The e-mail Subject and plain-text paragraphs have no style (an HTML part keeps the html
+  filter's `a11y:*` styles); TTML captions have none (Bilingua's own reading keeps the `style` attribute).
+- **Code pages (html-1, hh-1, hh-2, xs-2).** The profile's merge options keep the file's encoding for html, xslt, hhc,
+  hhk and hhp. HTML: a page in a declared legacy code page goes back in it, its meta charset too, when every character
+  fits, else UTF-8 under a UTF-8 declaration (LocOS `encode_like`). XSLT: UTF-16 stays UTF-16 with its BOM. HTML Help:
+  the source's ANSI code page, a localized build the target language's (Russian: Windows-1251), a character that code
+  page cannot hold refused (the `htmlhelp.utf8_fallback` option writes UTF-8 instead). New format option
+  `htmlhelp.code_page` (a Windows code page number, LocOS's `hhp_code_page`): the code page of the project's
+  `Language=`, used for a file that declares no charset; the adapter passes it. A project file (.hhp) is now read in
+  the code page of its own `Language=` (LocOS #797, also natively). Under the profile there is no other rule: an
+  undeclared file is Windows-1252 even for a Russian source (Bilingua's own reading still falls back to the source
+  language's code page).
+- **Repeated tags (xml-2, mdx-1).** `locos_set_target` repairs a translation's tags for the XML formats too (generic
+  XML, DITA, DocBook, Android strings, Java XML properties, TTML, XMB, XTB), as their LocOS writers do (`xml_its`
+  render, `render_inner`, `_render`): a repeated pair loses its tags and keeps its text, a repeated point is dropped,
+  a stray close is dropped, a pair left open is closed at the end; the target is stored repaired and Python's
+  `locos_set_targets` lists each repair as a problem (`repeated`, `stray_close`, `unclosed`), so QA can show it. MDX
+  takes a repeated tag and writes it again, as LocOS's `_rematerialize` does. A tag the source lacks is still refused;
+  native `set_target` is unchanged. Kept difference: an `x` token typed for a pair code is written as an empty pair
+  (the CAT rule); LocOS's ITS writer opens the pair and closes it at the end of the unit.
+- **Image inventory (html-3, mdx-2).** HTML, the server pages (aspx, jsp, erb, phtml, shtml) and MDX put LocOS's
+  `skeleton["a11y_images"]` on the units: `locos.a11y_images` (how many images anchor there), `locos.a11y_missing_alt`
+  (JSON `[{kind, where}]`, both kinds) and `locos.a11y_empty_alt`, at the unit LocOS anchors each image to (the body
+  unit holding it, else the nearest before it, else the first). HTML: every `<img>` outside script and style, `where`
+  the file name of a quoted `src` (an unquoted one gives an empty name, as LocOS reads quoted values only); an unquoted
+  `alt=x` counts as text, a bare `alt` as empty. MDX: every Markdown image of a line unit and every `<img>` /
+  `<Image>` tag; under the profile these are no longer `missing_alt` warnings. EPUB and Flare chapters and e-mail HTML
+  parts are not scanned (LocOS sums EPUB chapters; not ported).
+- **Front matter with a tab (mdx-3).** A YAML value with a tab is not a plain scalar (PyYAML refuses it), so a
+  translation with a tab is single-quoted. Natively too.
+- **PHP arrays (php-2).** With no value rewritten, the file comes back as it was, in its own code page, a localized
+  build included (LocOS returns the original); a rewritten file is still UTF-8.
+- Not changed: html-2, html-4, xs-1, xmb-3 and mdx-4 did not reproduce with hand-written files (the goldens of those
+  cases match LocOS); html-5 (Shift_JIS table) waits on LocOS L4; html-6 (a page declared UTF-8 that is not) and
+  html-7 (a code of its own for the #676 refusal, an API and Python change) are open; sp-2, php-1, xml-3, xml-4,
+  fl-1, fl-2 are open (see the W5 B-DONE report).
+
 ## Wave 4 B-side: Office and DTP formats (W4, 11-07)
 
 Found by the W4 parity and diff runs with the adapter (`coder-comparison/2026-11-07-locos-issues/bili-core/W4/B-SIDE.md`).

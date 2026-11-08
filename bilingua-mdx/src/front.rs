@@ -173,6 +173,12 @@ pub(crate) fn scalar(text: &str) -> Scalar {
         _ => {
             let cut = t.match_indices('#').find(|&(i, _)| i > 0 && matches!(t.as_bytes()[i - 1], b' ' | b'\t')).map_or(t.len(), |(i, _)| i);
             let plain = t[..cut].trim_end_matches([' ', '\t']);
+            // PyYAML's scanner refuses a tab anywhere around or inside a plain scalar (`k: tab<TAB>here`, a leading
+            // or a trailing tab): such a value is not a plain scalar, so a translation with a tab gets quoted
+            let lead = text.len() - text.trim_start_matches(is_space).len();
+            if text[..lead + cut].contains('\t') {
+                return Scalar::Err;
+            }
             if plain.contains(": ") || plain.contains(":\t") || plain.ends_with(':') {
                 return Scalar::Err;
             }
