@@ -107,9 +107,10 @@ fn the_locos_profile() {
     // the profile's merge options: UTF-8 out, except where LocOS keeps the encoding
     let m = profile::locos().merge_options("ini");
     assert_eq!((m.output_encoding, m.stamp_target_always, m.profile.as_deref()), (OutputEncoding::Keep, true, Some("locos")));
-    assert_eq!(profile::locos().merge_options("html").output_encoding, OutputEncoding::Utf8);
-    // a drawing declares its code page and AutoCAD before 2007 has no UTF-8: LocOS keeps it (lead decision 11-05)
-    for keep in ["strings", "dxf"] {
+    assert_eq!(profile::locos().merge_options("json").output_encoding, OutputEncoding::Utf8);
+    // a drawing declares its code page and AutoCAD before 2007 has no UTF-8: LocOS keeps it (lead decision 11-05);
+    // W5: html (legacy code page when the text fits), xslt and the HTML Help files keep theirs too
+    for keep in ["strings", "dxf", "html", "xslt", "hhc", "hhk", "hhp"] {
         assert_eq!(profile::locos().merge_options(keep).output_encoding, OutputEncoding::Keep, "{keep}");
     }
     let doc = extract("a.txt", b"Hi.\n", &ExtractOptions::new()).unwrap();
