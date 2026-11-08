@@ -9,6 +9,11 @@ is listed here).
 
 ### Added
 
+- LaTeX: the format option `tex.text_commands` (comma-separated inline text commands for one call, LocOS
+  `LATEX_TEXT_COMMANDS`; adds to `Latex::with_inline_commands`). Model: `enc::DecodeOptions::mark_before_legacy`
+  (LocOS BOM read version 2: a UTF-8 BOM before code-page bytes is a mark; the envelope tag gets `;bom8` and the
+  mark is written back). W6 B side.
+
 - Python (BILI-18, speed): `extract_handle(name, data, ...)` returns a `DocumentHandle`, a Document kept on the Rust
   side: `locos_units()`, `locos_set_targets(targets)` (a new handle and the problems), `merge(...)`, `to_dict()`,
   `DocumentHandle.from_dict(document)`, the read-only `format`, `parser`, `warnings`, `source_encoding`, `len()` and
@@ -48,6 +53,18 @@ is listed here).
   `tools/build-wheel-m5.sh` builds and tests a manylinux_2_28 wheel on a Linux host.
 
 ### Changed
+
+- LocOS profile, wave 6 (W6 B side): units of ASS, LaTeX, plist, stringsdict and MO have LocOS's empty style; MO
+  placeholders (`%d`, `{name}`) are unit text, as LocOS's PO reading of an MO gives them; rc, plist, CSV, TSV and
+  XPress Tags keep their encoding on merge as LocOS does (UTF-16, a code page when the text fits, rc's `#pragma
+  code_page(65001)` and UTF-8 when it does not); a UTF-16 ASS file is written as UTF-8 with a BOM; `stf.load_targets`
+  defaults to false; MicroDVD and XPress Tags translations that repeat a style pair are written with the repeat's
+  tags dropped (its text kept), as LocOS does, where they were refused; a pair token for a point code in rc is
+  dropped (LocOS `rc_filter`); a DXF `p` token is not a code (LocOS reads only `x` and `g`) and is dropped by the
+  DXF writer, each side of it escaped on its own; a localized SBV/SubViewer/MicroDVD export with nothing translated
+  is written (as UTF-8), as LocOS does; a CSV/TSV read without `csv.target_locales` or `csv.columns` is not planned
+  by the export's target language. Native and profile: a subtitle refusal names the cue in LocOS's sentence
+  ("Cue 3 was not exported: ..."); an rST table cell that cannot fit is `unwritable`, not `write`.
 
 - LocOS profile, Office and DTP formats (W4): DOCX units carry LocOS's image inventory for the missing-alt prompts
   and give the Storyline notice; XLSX text cells starting with `=` and values under a merged range are not units; ODF styles are `heading`, `comment`
@@ -101,6 +118,14 @@ is listed here).
   drawings) now match and their lists are gone.
 
 ### Fixed
+
+- LaTeX (native and profile): a token look-alike that names no code of the unit (`⟦x7⟧`) was deleted from the
+  export; it is text and is kept (#814.1, W6 tex-1). One that names a code but was left as text (a closing mark of
+  a standalone code) is still dropped, as LocOS does.
+- SBV, SubViewer, MicroDVD and ASS (native and profile): a UTF-8 BOM before Windows-1252 bytes lost the first cue
+  or the `[Script Info]` Title; the BOM is read as a mark and the rest in the code page (LocOS #799.4 / #800.4).
+- Declared Windows-1252 / ISO-8859-1 XML (Qt Linguist and the other declared readers): a project with a CJK source
+  language read it as that language's code page and refused it; the declaration decides (W6 ts-1).
 
 - LocOS profile, TXLF: a translation equal to the target the file already had is written, and its `new` or
   `needs-*` state becomes `translated`, as LocOS writes it (it kept `needs-translation`). An open segment's Document
