@@ -9,6 +9,11 @@ is listed here).
 
 ### Added
 
+- Rust: the HTML Help format option `htmlhelp.code_page` (`bilingua_htmlhelp::CODE_PAGE`), the code page of the
+  project's `Language=` for a file that declares none (LocOS `hhp_code_page`); `bilingua_htmlcore::html::missing_alt_findings`.
+- LocOS profile (W5): LocOS's image inventory (`locos.a11y_images`, `locos.a11y_missing_alt`, `locos.a11y_empty_alt`)
+  on HTML, server-page and MDX units, for the missing-alt prompts.
+
 - Rust: `profile::tokens::to_locos_text_coded(format, inlines, codes)` (IDML and ICML ranges as `r` pairs, the rule
   `profile::locos_units` now uses), `profile::A11Y_MISSING_ALT` (DOCX missing-alt findings of both kinds),
   `bilingua_zip::check_xml_parts_except`, `bilingua_pptx::locos::COMMENT_BASE`. Python: `to_locos_text(..., codes=)`.
@@ -42,6 +47,14 @@ is listed here).
   `tools/build-wheel-m5.sh` builds and tests a manylinux_2_28 wheel on a Linux host.
 
 ### Changed
+
+- LocOS profile (W5): `locos.p_index` for Android strings, Java XML properties, XMB, XTB and TTML is LocOS's number
+  (skipped entries counted); an untouched XMB merges to the XTB; e-mail and TTML units have no style; html, xslt and
+  the HTML Help files keep their encoding (legacy code page, UTF-16, ANSI code page with a refusal for what does not
+  fit); `locos_set_target` repairs repeated, stray and unclosed tags for the XML formats and takes a repeated tag in
+  MDX; an untouched PHP array keeps its bytes. See MIGRATION.md, "Wave 5 B-side".
+- HTML Help: a project file (.hhp) is read in the code page of its own `Language=` (LocOS #797). MDX: a front matter
+  translation with a tab is quoted.
 
 - LocOS profile, Office and DTP formats (W4): DOCX units carry LocOS's image inventory for the missing-alt prompts
   and give the Storyline notice; XLSX text cells starting with `=` and values under a merged range are not units; ODF styles are `heading`, `comment`
