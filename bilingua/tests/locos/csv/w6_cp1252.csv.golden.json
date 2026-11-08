@@ -1,0 +1,63 @@
+{
+ "format": "csv",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Café water",
+   "style": ""
+  },
+  {
+   "p_index": 1,
+   "text": "Naïve map",
+   "style": ""
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "a2V5LGVuDQp3YXRlcixDYWbpIHdhdGVyDQptYXAsTmHvdmUgbWFwDQo="
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü Café water",
+    "1": "Ü Naïve map"
+   },
+   "out_b64": "a2V5LGVuDQp3YXRlcizcIENhZukgd2F0ZXINCm1hcCzcIE5h73ZlIG1hcA0K"
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Café water & <\"'>"
+   },
+   "out_b64": "a2V5LGVuDQp3YXRlciwiQ2Fm6SB3YXRlciAmIDwiIic+Ig0KbWFwLE5h73ZlIG1hcA0K"
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "out_b64": "a2V5LGVuDQp3YXRlcixDYWbpIHdhdGVyDQptYXAsTmHvdmUgbWFwDQo="
+  },
+  {
+   "name": "w6-fits",
+   "locale": null,
+   "map": {
+    "0": "Café Wasser",
+    "1": "Karte ü"
+   },
+   "out_b64": "a2V5LGVuDQp3YXRlcixDYWbpIFdhc3Nlcg0KbWFwLEthcnRlIPwNCg=="
+  },
+  {
+   "name": "w6-overflow",
+   "locale": null,
+   "map": {
+    "0": "水"
+   },
+   "out_b64": "77u/a2V5LGVuDQp3YXRlcizmsLQNCm1hcCxOYcOvdmUgbWFwDQo="
+  }
+ ]
+}

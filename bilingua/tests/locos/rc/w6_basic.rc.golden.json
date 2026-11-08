@@ -1,0 +1,95 @@
+{
+ "format": "rc",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Bring water with you",
+   "style": "rc:string"
+  },
+  {
+   "p_index": 1,
+   "text": "⟦x1⟧ files in ⟦x2⟧",
+   "style": "rc:string"
+  },
+  {
+   "p_index": 2,
+   "text": "&File",
+   "style": "rc:menu"
+  },
+  {
+   "p_index": 3,
+   "text": "&Open trail map⟦x1⟧Ctrl+O",
+   "style": "rc:menu"
+  },
+  {
+   "p_index": 4,
+   "text": "About the guide",
+   "style": "rc:caption"
+  },
+  {
+   "p_index": 5,
+   "text": "Field guide 1.0",
+   "style": "rc:control"
+  },
+  {
+   "p_index": 6,
+   "text": "OK",
+   "style": "rc:control"
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "I2luY2x1ZGUgInJlc291cmNlLmgiCgpTVFJJTkdUQUJMRQpCRUdJTgogICAgSURTX0hFTExPICJCcmluZyB3YXRlciB3aXRoIHlvdSIKICAgIElEU19DT1VOVCAiJWQgZmlsZXMgaW4gJXMiCkVORAoKSURSX01FTlUxIE1FTlUKQkVHSU4KICAgIFBPUFVQICImRmlsZSIKICAgIEJFR0lOCiAgICAgICAgTUVOVUlURU0gIiZPcGVuIHRyYWlsIG1hcFx0Q3RybCtPIiwgSURfRklMRV9PUEVOCiAgICBFTkQKRU5ECgpJRERfQUJPVVQgRElBTE9HRVggMCwgMCwgMTg2LCA5NQpDQVBUSU9OICJBYm91dCB0aGUgZ3VpZGUiCkJFR0lOCiAgICBMVEVYVCAiRmllbGQgZ3VpZGUgMS4wIiwgSURDX1NUQVRJQywgNywgNywgMTAwLCA4CiAgICBERUZQVVNIQlVUVE9OICJPSyIsIElET0ssIDEyOSwgNzQsIDUwLCAxNApFTkQK"
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü Bring water with you",
+    "1": "⟦x1⟧Ü  files in ⟦x2⟧",
+    "2": "Ü &File",
+    "3": "Ü &Open trail map⟦x1⟧Ü Ctrl+O",
+    "4": "Ü About the guide",
+    "5": "Ü Field guide 1.0",
+    "6": "Ü OK"
+   },
+   "out_b64": "I3ByYWdtYSBjb2RlX3BhZ2UoNjUwMDEpCiNpbmNsdWRlICJyZXNvdXJjZS5oIgoKU1RSSU5HVEFCTEUKQkVHSU4KICAgIElEU19IRUxMTyAiw5wgQnJpbmcgd2F0ZXIgd2l0aCB5b3UiCiAgICBJRFNfQ09VTlQgIiVkw5wgIGZpbGVzIGluICVzIgpFTkQKCklEUl9NRU5VMSBNRU5VCkJFR0lOCiAgICBQT1BVUCAiw5wgJkZpbGUiCiAgICBCRUdJTgogICAgICAgIE1FTlVJVEVNICLDnCAmT3BlbiB0cmFpbCBtYXBcdMOcIEN0cmwrTyIsIElEX0ZJTEVfT1BFTgogICAgRU5ECkVORAoKSUREX0FCT1VUIERJQUxPR0VYIDAsIDAsIDE4NiwgOTUKQ0FQVElPTiAiw5wgQWJvdXQgdGhlIGd1aWRlIgpCRUdJTgogICAgTFRFWFQgIsOcIEZpZWxkIGd1aWRlIDEuMCIsIElEQ19TVEFUSUMsIDcsIDcsIDEwMCwgOAogICAgREVGUFVTSEJVVFRPTiAiw5wgT0siLCBJRE9LLCAxMjksIDc0LCA1MCwgMTQKRU5ECg=="
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Bring water with you & <\"'>",
+    "2": "&File & <\"'>",
+    "4": "About the guide & <\"'>",
+    "6": "OK & <\"'>"
+   },
+   "out_b64": "I2luY2x1ZGUgInJlc291cmNlLmgiCgpTVFJJTkdUQUJMRQpCRUdJTgogICAgSURTX0hFTExPICJCcmluZyB3YXRlciB3aXRoIHlvdSAmIDwiIic+IgogICAgSURTX0NPVU5UICIlZCBmaWxlcyBpbiAlcyIKRU5ECgpJRFJfTUVOVTEgTUVOVQpCRUdJTgogICAgUE9QVVAgIiZGaWxlICYgPCIiJz4iCiAgICBCRUdJTgogICAgICAgIE1FTlVJVEVNICImT3BlbiB0cmFpbCBtYXBcdEN0cmwrTyIsIElEX0ZJTEVfT1BFTgogICAgRU5ECkVORAoKSUREX0FCT1VUIERJQUxPR0VYIDAsIDAsIDE4NiwgOTUKQ0FQVElPTiAiQWJvdXQgdGhlIGd1aWRlICYgPCIiJz4iCkJFR0lOCiAgICBMVEVYVCAiRmllbGQgZ3VpZGUgMS4wIiwgSURDX1NUQVRJQywgNywgNywgMTAwLCA4CiAgICBERUZQVVNIQlVUVE9OICJPSyAmIDwiIic+IiwgSURPSywgMTI5LCA3NCwgNTAsIDE0CkVORAo="
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "out_b64": "I2luY2x1ZGUgInJlc291cmNlLmgiCgpTVFJJTkdUQUJMRQpCRUdJTgogICAgSURTX0hFTExPICJCcmluZyB3YXRlciB3aXRoIHlvdSIKICAgIElEU19DT1VOVCAiJWQgZmlsZXMgaW4gJXMiCkVORAoKSURSX01FTlUxIE1FTlUKQkVHSU4KICAgIFBPUFVQICImRmlsZSIKICAgIEJFR0lOCiAgICAgICAgTUVOVUlURU0gIiZPcGVuIHRyYWlsIG1hcFx0Q3RybCtPIiwgSURfRklMRV9PUEVOCiAgICBFTkQKRU5ECgpJRERfQUJPVVQgRElBTE9HRVggMCwgMCwgMTg2LCA5NQpDQVBUSU9OICJBYm91dCB0aGUgZ3VpZGUiCkJFR0lOCiAgICBMVEVYVCAiRmllbGQgZ3VpZGUgMS4wIiwgSURDX1NUQVRJQywgNywgNywgMTAwLCA4CiAgICBERUZQVVNIQlVUVE9OICJPSyIsIElET0ssIDEyOSwgNzQsIDUwLCAxNApFTkQK"
+  },
+  {
+   "name": "w6-pair-for-point",
+   "locale": null,
+   "map": {
+    "1": "⟦x1⟧ / ⟦x2⟧ ⟦x7⟧ ⟦g1⟧x⟦/g1⟧"
+   },
+   "out_b64": "I3ByYWdtYSBjb2RlX3BhZ2UoNjUwMDEpCiNpbmNsdWRlICJyZXNvdXJjZS5oIgoKU1RSSU5HVEFCTEUKQkVHSU4KICAgIElEU19IRUxMTyAiQnJpbmcgd2F0ZXIgd2l0aCB5b3UiCiAgICBJRFNfQ09VTlQgIiVkIC8gJXMg4p+meDfin6cgeCIKRU5ECgpJRFJfTUVOVTEgTUVOVQpCRUdJTgogICAgUE9QVVAgIiZGaWxlIgogICAgQkVHSU4KICAgICAgICBNRU5VSVRFTSAiJk9wZW4gdHJhaWwgbWFwXHRDdHJsK08iLCBJRF9GSUxFX09QRU4KICAgIEVORApFTkQKCklERF9BQk9VVCBESUFMT0dFWCAwLCAwLCAxODYsIDk1CkNBUFRJT04gIkFib3V0IHRoZSBndWlkZSIKQkVHSU4KICAgIExURVhUICJGaWVsZCBndWlkZSAxLjAiLCBJRENfU1RBVElDLCA3LCA3LCAxMDAsIDgKICAgIERFRlBVU0hCVVRUT04gIk9LIiwgSURPSywgMTI5LCA3NCwgNTAsIDE0CkVORAo="
+  },
+  {
+   "name": "w6-p-letter",
+   "locale": null,
+   "map": {
+    "1": "⟦p1⟧ Dateien in ⟦p2⟧"
+   },
+   "out_b64": "I2luY2x1ZGUgInJlc291cmNlLmgiCgpTVFJJTkdUQUJMRQpCRUdJTgogICAgSURTX0hFTExPICJCcmluZyB3YXRlciB3aXRoIHlvdSIKICAgIElEU19DT1VOVCAiJWQgRGF0ZWllbiBpbiAlcyIKRU5ECgpJRFJfTUVOVTEgTUVOVQpCRUdJTgogICAgUE9QVVAgIiZGaWxlIgogICAgQkVHSU4KICAgICAgICBNRU5VSVRFTSAiJk9wZW4gdHJhaWwgbWFwXHRDdHJsK08iLCBJRF9GSUxFX09QRU4KICAgIEVORApFTkQKCklERF9BQk9VVCBESUFMT0dFWCAwLCAwLCAxODYsIDk1CkNBUFRJT04gIkFib3V0IHRoZSBndWlkZSIKQkVHSU4KICAgIExURVhUICJGaWVsZCBndWlkZSAxLjAiLCBJRENfU1RBVElDLCA3LCA3LCAxMDAsIDgKICAgIERFRlBVU0hCVVRUT04gIk9LIiwgSURPSywgMTI5LCA3NCwgNTAsIDE0CkVORAo="
+  }
+ ]
+}

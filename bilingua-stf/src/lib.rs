@@ -10,8 +10,8 @@
 //!
 //! Existing translations (the TRANSLATION cell of a Bilingual file's TRANSLATED section) are loaded as segment
 //! targets by default, as Okapi does: `Translated`, or `Draft` when the OUT OF DATE cell is `*`. The format option
-//! `stf.load_targets` = `false` turns this off and gives exactly the Localization OS unit list with no targets (the
-//! LocOS adapter sets it). A loaded target that is merged back unchanged writes the original cell bytes.
+//! `stf.load_targets` = `false` turns this off and gives exactly the Localization OS unit list with no targets; under
+//! the `locos` profile `false` is the default. A loaded target that is merged back unchanged writes the original cell bytes.
 //!
 //! Placeholders are inline tags (standalone codes, label `placeholder`, display = the source text), the LocOS `x` token, because
 //! Localization OS keeps them as point tokens: the escapes `\t \n \r \\`, `{0}` style arguments and `{!merge.fields}`.
@@ -53,7 +53,7 @@ pub const LOAD_TARGETS: &str = "stf.load_targets";
 
 /// The `format_options` keys of the STF filter.
 pub const FORMAT_OPTIONS: &[FormatOptionKey] =
-    &[FormatOptionKey::bool(LOAD_TARGETS, "Load the translations of a Bilingual STF file as targets (default true).")];
+    &[FormatOptionKey::bool(LOAD_TARGETS, "Load the translations of a Bilingual STF file as targets (default true; false under the locos profile).")];
 
 /// Salesforce label limits by key type, never enforced by truncation.
 pub fn max_length_for_key(key: &str) -> Option<usize> {
@@ -346,7 +346,8 @@ impl StfFilter {
     /// `extract` with explicit size limits.
     pub fn extract_with(&self, bytes: &[u8], opts: &ExtractOptions, limits: &Limits) -> Result<Document, Error> {
         let mut dec = decode(bytes, opts, limits)?;
-        let load = opts.format_flag(LOAD_TARGETS).unwrap_or(true);
+        // LocOS's unit list has no targets: under the `locos` profile the default is false (B-SIDE W6 stf)
+        let load = opts.format_flag(LOAD_TARGETS).unwrap_or(!opts.is_profile(profile::LOCOS));
         let text = dec.text.as_str();
         let mut w = Walker::new(text, lead(text, &dec.encoding));
         let mut parts: Vec<SkelPart> = Vec::new();

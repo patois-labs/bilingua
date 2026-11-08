@@ -1,0 +1,82 @@
+{
+ "format": "tex",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Field Guide",
+   "style": ""
+  },
+  {
+   "p_index": 1,
+   "text": "A short ⟦g1⟧field⟦/g1⟧ guide for ⟦g2⟧new⟦/g2⟧ hikers.",
+   "style": ""
+  },
+  {
+   "p_index": 2,
+   "text": "Bring water.",
+   "style": ""
+  },
+  {
+   "p_index": 3,
+   "text": "Bring a map⟦g1⟧A paper one.⟦/g1⟧.",
+   "style": ""
+  },
+  {
+   "p_index": 4,
+   "text": "Display math stays out:",
+   "style": ""
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "XGRvY3VtZW50Y2xhc3N7YXJ0aWNsZX0KXGJlZ2lue2RvY3VtZW50fQpcc2VjdGlvbntGaWVsZCBHdWlkZX0KQSBzaG9ydCBcdGV4dGJme2ZpZWxkfSBndWlkZSBmb3IgXGVtcGh7bmV3fSBoaWtlcnMuCgpcYmVnaW57aXRlbWl6ZX0KICBcaXRlbSBCcmluZyB3YXRlci4KICBcaXRlbSBCcmluZyBhIG1hcFxmb290bm90ZXtBIHBhcGVyIG9uZS59LgpcZW5ke2l0ZW1pemV9CgpEaXNwbGF5IG1hdGggc3RheXMgb3V0OgpcWyBhXjIgKyBiXjIgPSBjXjIgXF0KXGVuZHtkb2N1bWVudH0K"
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü Field Guide",
+    "1": "Ü A short ⟦g1⟧Ü field⟦/g1⟧Ü  guide for ⟦g2⟧Ü new⟦/g2⟧Ü  hikers.",
+    "2": "Ü Bring water.",
+    "3": "Ü Bring a map⟦g1⟧Ü A paper one.⟦/g1⟧Ü .",
+    "4": "Ü Display math stays out:"
+   },
+   "out_b64": "XGRvY3VtZW50Y2xhc3N7YXJ0aWNsZX0KXGJlZ2lue2RvY3VtZW50fQpcc2VjdGlvbnvDnCBGaWVsZCBHdWlkZX0Kw5wgQSBzaG9ydCBcdGV4dGJme8OcIGZpZWxkfcOcICBndWlkZSBmb3IgXGVtcGh7w5wgbmV3fcOcICBoaWtlcnMuCgpcYmVnaW57aXRlbWl6ZX0KICBcaXRlbSDDnCBCcmluZyB3YXRlci4KICBcaXRlbSDDnCBCcmluZyBhIG1hcFxmb290bm90ZXvDnCBBIHBhcGVyIG9uZS59w5wgLgpcZW5ke2l0ZW1pemV9CgrDnCBEaXNwbGF5IG1hdGggc3RheXMgb3V0OgpcWyBhXjIgKyBiXjIgPSBjXjIgXF0KXGVuZHtkb2N1bWVudH0K"
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Field Guide & <\"'>",
+    "2": "Bring water. & <\"'>",
+    "4": "Display math stays out: & <\"'>"
+   },
+   "out_b64": "XGRvY3VtZW50Y2xhc3N7YXJ0aWNsZX0KXGJlZ2lue2RvY3VtZW50fQpcc2VjdGlvbntGaWVsZCBHdWlkZSBcJiA8Iic+fQpBIHNob3J0IFx0ZXh0YmZ7ZmllbGR9IGd1aWRlIGZvciBcZW1waHtuZXd9IGhpa2Vycy4KClxiZWdpbntpdGVtaXplfQogIFxpdGVtIEJyaW5nIHdhdGVyLiBcJiA8Iic+CiAgXGl0ZW0gQnJpbmcgYSBtYXBcZm9vdG5vdGV7QSBwYXBlciBvbmUufS4KXGVuZHtpdGVtaXplfQoKRGlzcGxheSBtYXRoIHN0YXlzIG91dDogXCYgPCInPgpcWyBhXjIgKyBiXjIgPSBjXjIgXF0KXGVuZHtkb2N1bWVudH0K"
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "out_b64": "XGRvY3VtZW50Y2xhc3N7YXJ0aWNsZX0KXGJlZ2lue2RvY3VtZW50fQpcc2VjdGlvbntGaWVsZCBHdWlkZX0KQSBzaG9ydCBcdGV4dGJme2ZpZWxkfSBndWlkZSBmb3IgXGVtcGh7bmV3fSBoaWtlcnMuCgpcYmVnaW57aXRlbWl6ZX0KICBcaXRlbSBCcmluZyB3YXRlci4KICBcaXRlbSBCcmluZyBhIG1hcFxmb290bm90ZXtBIHBhcGVyIG9uZS59LgpcZW5ke2l0ZW1pemV9CgpEaXNwbGF5IG1hdGggc3RheXMgb3V0OgpcWyBhXjIgKyBiXjIgPSBjXjIgXF0KXGVuZHtkb2N1bWVudH0K"
+  },
+  {
+   "name": "w6-unknown-token",
+   "locale": null,
+   "map": {
+    "1": "Ein ⟦g1⟧fettes⟦/g1⟧ Wort ⟦x7⟧."
+   },
+   "out_b64": "XGRvY3VtZW50Y2xhc3N7YXJ0aWNsZX0KXGJlZ2lue2RvY3VtZW50fQpcc2VjdGlvbntGaWVsZCBHdWlkZX0KRWluIFx0ZXh0YmZ7ZmV0dGVzfSBXb3J0IOKfpng34p+nLgoKXGJlZ2lue2l0ZW1pemV9CiAgXGl0ZW0gQnJpbmcgd2F0ZXIuCiAgXGl0ZW0gQnJpbmcgYSBtYXBcZm9vdG5vdGV7QSBwYXBlciBvbmUufS4KXGVuZHtpdGVtaXplfQoKRGlzcGxheSBtYXRoIHN0YXlzIG91dDoKXFsgYV4yICsgYl4yID0gY14yIFxdClxlbmR7ZG9jdW1lbnR9Cg=="
+  },
+  {
+   "name": "w6-close-of-point",
+   "locale": null,
+   "map": {
+    "3": "Karte⟦g1⟧Papier⟦/g1⟧ ⟦/x5⟧ ⟦x05⟧."
+   },
+   "out_b64": "XGRvY3VtZW50Y2xhc3N7YXJ0aWNsZX0KXGJlZ2lue2RvY3VtZW50fQpcc2VjdGlvbntGaWVsZCBHdWlkZX0KQSBzaG9ydCBcdGV4dGJme2ZpZWxkfSBndWlkZSBmb3IgXGVtcGh7bmV3fSBoaWtlcnMuCgpcYmVnaW57aXRlbWl6ZX0KICBcaXRlbSBCcmluZyB3YXRlci4KICBcaXRlbSBLYXJ0ZVxmb290bm90ZXtQYXBpZXJ9IOKfpi94NeKfpyDin6Z4MDXin6cuClxlbmR7aXRlbWl6ZX0KCkRpc3BsYXkgbWF0aCBzdGF5cyBvdXQ6ClxbIGFeMiArIGJeMiA9IGNeMiBcXQpcZW5ke2RvY3VtZW50fQo="
+  }
+ ]
+}

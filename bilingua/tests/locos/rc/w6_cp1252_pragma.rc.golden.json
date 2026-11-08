@@ -1,0 +1,63 @@
+{
+ "format": "rc",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Bring water with you",
+   "style": "rc:string"
+  },
+  {
+   "p_index": 1,
+   "text": "Café open",
+   "style": "rc:string"
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "I3ByYWdtYSBjb2RlX3BhZ2UoMTI1MikNClNUUklOR1RBQkxFDQpCRUdJTg0KICAgIElEU19IRUxMTyAiQnJpbmcgd2F0ZXIgd2l0aCB5b3UiDQogICAgSURTX0NBRkUgIkNhZukgb3BlbiINCkVORA0K"
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü Bring water with you",
+    "1": "Ü Café open"
+   },
+   "out_b64": "I3ByYWdtYSBjb2RlX3BhZ2UoMTI1MikNClNUUklOR1RBQkxFDQpCRUdJTg0KICAgIElEU19IRUxMTyAi3CBCcmluZyB3YXRlciB3aXRoIHlvdSINCiAgICBJRFNfQ0FGRSAi3CBDYWbpIG9wZW4iDQpFTkQNCg=="
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Bring water with you & <\"'>"
+   },
+   "out_b64": "I3ByYWdtYSBjb2RlX3BhZ2UoMTI1MikNClNUUklOR1RBQkxFDQpCRUdJTg0KICAgIElEU19IRUxMTyAiQnJpbmcgd2F0ZXIgd2l0aCB5b3UgJiA8IiInPiINCiAgICBJRFNfQ0FGRSAiQ2Fm6SBvcGVuIg0KRU5EDQo="
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "out_b64": "I3ByYWdtYSBjb2RlX3BhZ2UoMTI1MikNClNUUklOR1RBQkxFDQpCRUdJTg0KICAgIElEU19IRUxMTyAiQnJpbmcgd2F0ZXIgd2l0aCB5b3UiDQogICAgSURTX0NBRkUgIkNhZukgb3BlbiINCkVORA0K"
+  },
+  {
+   "name": "w6-overflow",
+   "locale": null,
+   "map": {
+    "0": "水を持参",
+    "1": "Café offen"
+   },
+   "out_b64": "I3ByYWdtYSBjb2RlX3BhZ2UoNjUwMDEpDQpTVFJJTkdUQUJMRQ0KQkVHSU4NCiAgICBJRFNfSEVMTE8gIuawtOOCkuaMgeWPgiINCiAgICBJRFNfQ0FGRSAiQ2Fmw6kgb2ZmZW4iDQpFTkQNCg=="
+  },
+  {
+   "name": "w6-fits",
+   "locale": null,
+   "map": {
+    "0": "Wasser mitnehmen ä"
+   },
+   "out_b64": "I3ByYWdtYSBjb2RlX3BhZ2UoMTI1MikNClNUUklOR1RBQkxFDQpCRUdJTg0KICAgIElEU19IRUxMTyAiV2Fzc2VyIG1pdG5laG1lbiDkIg0KICAgIElEU19DQUZFICJDYWbpIG9wZW4iDQpFTkQNCg=="
+  }
+ ]
+}

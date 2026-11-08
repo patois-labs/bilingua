@@ -198,8 +198,11 @@ pub fn annotate(doc: &mut Document, profile: Option<&str>) {
     }
 }
 
-/// Formats whose LocOS units carry no style (`""`) where Bilingua sets `context.style`.
-const LOCOS_NO_STYLE: &[&str] = &["po", "wxl", "xaml", "resx", "strings", "properties", "json", "json5", "resjson", "arb", "yaml", "txml", "txlf"];
+/// Formats whose LocOS units carry no style (`""`) where Bilingua sets `context.style`. Wave 6 (B-SIDE ass-2,
+/// tex-2, pl-1, mo-2): LocOS `ass_filter`, `latex_filter`, `apple_filter` (plist, stringsdict) and the PO filter
+/// behind `mo_filter` give every unit an empty style.
+const LOCOS_NO_STYLE: &[&str] =
+    &["po", "wxl", "xaml", "resx", "strings", "properties", "json", "json5", "resjson", "arb", "yaml", "txml", "txlf", "ass", "tex", "plist", "stringsdict", "mo"];
 
 /// For the formats whose LocOS filter keeps (some) inline codes as plain unit text, which codes: every code in the
 /// key/value formats (placeholders such as `%@`, `{0}`, `[ProductName]`, and JSON's HTML), only `placeholder` codes

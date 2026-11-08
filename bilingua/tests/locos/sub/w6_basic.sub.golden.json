@@ -1,0 +1,54 @@
+{
+ "format": "sub",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Bring water with you.",
+   "style": ""
+  },
+  {
+   "p_index": 1,
+   "text": "⟦g1⟧The trail closes⟦/g1⟧\nafter dark.",
+   "style": ""
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "ezEwfXs1MH1CcmluZyB3YXRlciB3aXRoIHlvdS4KezYwfXsxMjB9e3k6aX1UaGUgdHJhaWwgY2xvc2VzfGFmdGVyIGRhcmsuCg=="
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü Bring water with you.",
+    "1": "⟦g1⟧Ü The trail closes⟦/g1⟧Ü \nafter dark."
+   },
+   "out_b64": "ezEwfXs1MH3DnCBCcmluZyB3YXRlciB3aXRoIHlvdS4KezYwfXsxMjB9e3k6aX3DnCBUaGUgdHJhaWwgY2xvc2Vzw5x8YWZ0ZXIgZGFyay4K"
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Bring water with you. & <\"'>"
+   },
+   "out_b64": "ezEwfXs1MH1CcmluZyB3YXRlciB3aXRoIHlvdS4gJiA8Iic+Cns2MH17MTIwfXt5Oml9VGhlIHRyYWlsIGNsb3Nlc3xhZnRlciBkYXJrLgo="
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "out_b64": "ezEwfXs1MH1CcmluZyB3YXRlciB3aXRoIHlvdS4KezYwfXsxMjB9e3k6aX1UaGUgdHJhaWwgY2xvc2VzfGFmdGVyIGRhcmsuCg=="
+  },
+  {
+   "name": "w6-repeated-pair",
+   "locale": null,
+   "map": {
+    "1": "⟦g1⟧Der Weg⟦/g1⟧ ⟦g1⟧schließt⟦/g1⟧\nnachts."
+   },
+   "out_b64": "ezEwfXs1MH1CcmluZyB3YXRlciB3aXRoIHlvdS4KezYwfXsxMjB9e3k6aX1EZXIgV2VnIHNjaGxpZcOfdHxuYWNodHMuCg=="
+  }
+ ]
+}

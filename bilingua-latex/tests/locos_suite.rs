@@ -130,10 +130,15 @@ fn escaping() {
     );
     let out = build(data.as_bytes(), &[(0, "zwei\n\nAbs\u{e4}tze")]);
     assert_eq!(text_of(&out), "\\begin{document}\nzwei Abs\u{e4}tze\n\\end{document}\n");
-    // a translation that drops or invents tokens keeps the markup balanced
+    // a translation that drops or invents tokens keeps the markup balanced; a token naming no code of the unit is
+    // text and stays (#814.1, B-SIDE tex-1: it was deleted)
     let data = format!("{BODY}A \\textbf{{bold}} word.\n{END}");
     let out = text_of(&build(data.as_bytes(), &[(0, "Ein \u{27E6}g1\u{27E7}fettes\u{27E6}/g1\u{27E7} Wort \u{27E6}x7\u{27E7}.")]));
-    assert!(out.contains("Ein \\textbf{fettes} Wort ."), "{out}");
+    assert!(out.contains("Ein \\textbf{fettes} Wort \u{27E6}x7\u{27E7}."), "{out}");
+    // a token that names a code but cannot be one (a closing mark of a standalone code) is still dropped
+    let data = format!("{BODY}A \\LaTeX{{}} word here.\n{END}");
+    let out = text_of(&build(data.as_bytes(), &[(0, "Ein \u{27E6}/x1\u{27E7}Wort \u{27E6}x01\u{27E7} hier.")]));
+    assert!(out.contains("Ein Wort \u{27E6}x01\u{27E7} hier."), "{out}");
     // gate: a dropped, missing or out-of-order close never unbalances the braces
     let data = format!("{BODY}A \\textbf{{bold \\emph{{very}} word}} end.\n{END}");
     assert_eq!(units(data.as_bytes()), vec!["A \u{27E6}g1\u{27E7}bold \u{27E6}g2\u{27E7}very\u{27E6}/g2\u{27E7} word\u{27E6}/g1\u{27E7} end."]);

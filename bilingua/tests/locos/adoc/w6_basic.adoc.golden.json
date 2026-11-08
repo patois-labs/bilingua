@@ -1,0 +1,98 @@
+{
+ "format": "adoc",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Field Guide",
+   "style": ""
+  },
+  {
+   "p_index": 1,
+   "text": "A short ⟦g1⟧field⟦/g1⟧ guide for ⟦g2⟧new⟦/g2⟧ hikers.",
+   "style": ""
+  },
+  {
+   "p_index": 2,
+   "text": "Packing",
+   "style": ""
+  },
+  {
+   "p_index": 3,
+   "text": "Bring water and a map.",
+   "style": ""
+  },
+  {
+   "p_index": 4,
+   "text": "First item with ⟦x1⟧ inside.",
+   "style": ""
+  },
+  {
+   "p_index": 5,
+   "text": "Second item.",
+   "style": ""
+  },
+  {
+   "p_index": 6,
+   "text": "Name",
+   "style": ""
+  },
+  {
+   "p_index": 7,
+   "text": "Use",
+   "style": ""
+  },
+  {
+   "p_index": 8,
+   "text": "Rope",
+   "style": ""
+  },
+  {
+   "p_index": 9,
+   "text": "Climbing",
+   "style": ""
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "PSBGaWVsZCBHdWlkZQoKQSBzaG9ydCAqZmllbGQqIGd1aWRlIGZvciBfbmV3XyBoaWtlcnMuCgo9PSBQYWNraW5nCgpbTk9URV0KQnJpbmcgd2F0ZXIgYW5kIGEgbWFwLgoKKiBGaXJzdCBpdGVtIHdpdGggYGNvZGVgIGluc2lkZS4KKiBTZWNvbmQgaXRlbS4KCltzb3VyY2UscHl0aG9uXQotLS0tCnByaW50KCJub3QgdHJhbnNsYXRlZCIpCi0tLS0KCnw9PT0KfCBOYW1lIHwgVXNlCgp8IFJvcGUgfCBDbGltYmluZwp8PT09Cg=="
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü Field Guide",
+    "1": "Ü A short ⟦g1⟧Ü field⟦/g1⟧Ü  guide for ⟦g2⟧Ü new⟦/g2⟧Ü  hikers.",
+    "2": "Ü Packing",
+    "3": "Ü Bring water and a map.",
+    "4": "Ü First item with ⟦x1⟧Ü  inside.",
+    "5": "Ü Second item.",
+    "6": "Ü Name",
+    "7": "Ü Use",
+    "8": "Ü Rope",
+    "9": "Ü Climbing"
+   },
+   "out_b64": "PSDDnCBGaWVsZCBHdWlkZQoKw5wgQSBzaG9ydCAqKsOcIGZpZWxkKirDnCAgZ3VpZGUgZm9yIF9fw5wgbmV3X1/DnCAgaGlrZXJzLgoKPT0gw5wgUGFja2luZwoKW05PVEVdCsOcIEJyaW5nIHdhdGVyIGFuZCBhIG1hcC4KCiogw5wgRmlyc3QgaXRlbSB3aXRoIGBgY29kZWBgw5wgIGluc2lkZS4KKiDDnCBTZWNvbmQgaXRlbS4KCltzb3VyY2UscHl0aG9uXQotLS0tCnByaW50KCJub3QgdHJhbnNsYXRlZCIpCi0tLS0KCnw9PT0KfCDDnCBOYW1lIHwgw5wgVXNlCgp8IMOcIFJvcGUgfCDDnCBDbGltYmluZwp8PT09Cg=="
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Field Guide & <\"'>",
+    "2": "Packing & <\"'>",
+    "4": "First item with  & <\"'>⟦x1⟧ inside. & <\"'>",
+    "6": "Name & <\"'>",
+    "8": "Rope & <\"'>"
+   },
+   "out_b64": "PSBGaWVsZCBHdWlkZSAmIDwiJz4KOmxhbmc6IGRlLURFCgpBIHNob3J0ICpmaWVsZCogZ3VpZGUgZm9yIF9uZXdfIGhpa2Vycy4KCj09IFBhY2tpbmcgJiA8Iic+CgpbTk9URV0KQnJpbmcgd2F0ZXIgYW5kIGEgbWFwLgoKKiBGaXJzdCBpdGVtIHdpdGggICYgPCInPmBjb2RlYCBpbnNpZGUuICYgPCInPgoqIFNlY29uZCBpdGVtLgoKW3NvdXJjZSxweXRob25dCi0tLS0KcHJpbnQoIm5vdCB0cmFuc2xhdGVkIikKLS0tLQoKfD09PQp8IE5hbWUgJiA8Iic+IHwgVXNlCgp8IFJvcGUgJiA8Iic+IHwgQ2xpbWJpbmcKfD09PQo="
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "out_b64": "PSBGaWVsZCBHdWlkZQo6bGFuZzogZGUtREUKCkEgc2hvcnQgKmZpZWxkKiBndWlkZSBmb3IgX25ld18gaGlrZXJzLgoKPT0gUGFja2luZwoKW05PVEVdCkJyaW5nIHdhdGVyIGFuZCBhIG1hcC4KCiogRmlyc3QgaXRlbSB3aXRoIGBjb2RlYCBpbnNpZGUuCiogU2Vjb25kIGl0ZW0uCgpbc291cmNlLHB5dGhvbl0KLS0tLQpwcmludCgibm90IHRyYW5zbGF0ZWQiKQotLS0tCgp8PT09CnwgTmFtZSB8IFVzZQoKfCBSb3BlIHwgQ2xpbWJpbmcKfD09PQo="
+  }
+ ]
+}

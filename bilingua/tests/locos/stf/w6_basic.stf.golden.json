@@ -1,0 +1,53 @@
+{
+ "format": "stf",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "New Event",
+   "style": "stf:translated"
+  },
+  {
+   "p_index": 1,
+   "text": "Open the trail map",
+   "style": "stf:untranslated"
+  },
+  {
+   "p_index": 2,
+   "text": "Bring water",
+   "style": "stf:untranslated"
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "IyBCaWxpbmd1YWwgZmlsZSwgaGFuZC13cml0dGVuIGZvciB0aGUgVzYgZ29sZGVucy4KCkxhbmd1YWdlIGNvZGU6IGRlClR5cGU6IEJpbGluZ3VhbAoKLS0tLS0tLS0tLS0tLS0tLS0tVFJBTlNMQVRFRC0tLS0tLS0tLS0tLS0tLS0tLS0KCkJ1dHRvbk9yTGluay5FdmVudC5OZXcJTmV3IEV2ZW50CU5ldWVzIEVyZWlnbmlzCS0KCi0tLS0tLS0tLS0tLS0tLS0tLVVOVFJBTlNMQVRFRC0tLS0tLS0tLS0tLS0tLS0tCgpCdXR0b25PckxpbmsuRXZlbnQuT3BlbglPcGVuIHRoZSB0cmFpbCBtYXAKQ3VzdG9tTGFiZWwuV2F0ZXIJQnJpbmcgd2F0ZXIK"
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü New Event",
+    "1": "Ü Open the trail map",
+    "2": "Ü Bring water"
+   },
+   "out_b64": "IyBCaWxpbmd1YWwgZmlsZSwgaGFuZC13cml0dGVuIGZvciB0aGUgVzYgZ29sZGVucy4KCkxhbmd1YWdlIGNvZGU6IGRlClR5cGU6IEJpbGluZ3VhbAoKLS0tLS0tLS0tLS0tLS0tLS0tVFJBTlNMQVRFRC0tLS0tLS0tLS0tLS0tLS0tLS0KCkJ1dHRvbk9yTGluay5FdmVudC5OZXcJTmV3IEV2ZW50CcOcIE5ldyBFdmVudAktCgotLS0tLS0tLS0tLS0tLS0tLS1VTlRSQU5TTEFURUQtLS0tLS0tLS0tLS0tLS0tLQoKQnV0dG9uT3JMaW5rLkV2ZW50Lk9wZW4Jw5wgT3BlbiB0aGUgdHJhaWwgbWFwCkN1c3RvbUxhYmVsLldhdGVyCcOcIEJyaW5nIHdhdGVyCg=="
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "New Event & <\"'>",
+    "2": "Bring water & <\"'>"
+   },
+   "out_b64": "IyBCaWxpbmd1YWwgZmlsZSwgaGFuZC13cml0dGVuIGZvciB0aGUgVzYgZ29sZGVucy4KCkxhbmd1YWdlIGNvZGU6IGRlX0RFClR5cGU6IEJpbGluZ3VhbAoKLS0tLS0tLS0tLS0tLS0tLS0tVFJBTlNMQVRFRC0tLS0tLS0tLS0tLS0tLS0tLS0KCkJ1dHRvbk9yTGluay5FdmVudC5OZXcJTmV3IEV2ZW50CU5ldyBFdmVudCAmIDwiJz4JLQoKLS0tLS0tLS0tLS0tLS0tLS0tVU5UUkFOU0xBVEVELS0tLS0tLS0tLS0tLS0tLS0KCkJ1dHRvbk9yTGluay5FdmVudC5PcGVuCU9wZW4gdGhlIHRyYWlsIG1hcApDdXN0b21MYWJlbC5XYXRlcglCcmluZyB3YXRlciAmIDwiJz4K"
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "out_b64": "IyBCaWxpbmd1YWwgZmlsZSwgaGFuZC13cml0dGVuIGZvciB0aGUgVzYgZ29sZGVucy4KCkxhbmd1YWdlIGNvZGU6IGRlX0RFClR5cGU6IEJpbGluZ3VhbAoKLS0tLS0tLS0tLS0tLS0tLS0tVFJBTlNMQVRFRC0tLS0tLS0tLS0tLS0tLS0tLS0KCkJ1dHRvbk9yTGluay5FdmVudC5OZXcJTmV3IEV2ZW50CU5ldWVzIEVyZWlnbmlzCS0KCi0tLS0tLS0tLS0tLS0tLS0tLVVOVFJBTlNMQVRFRC0tLS0tLS0tLS0tLS0tLS0tCgpCdXR0b25PckxpbmsuRXZlbnQuT3BlbglPcGVuIHRoZSB0cmFpbCBtYXAKQ3VzdG9tTGFiZWwuV2F0ZXIJQnJpbmcgd2F0ZXIK"
+  }
+ ]
+}

@@ -1,0 +1,16 @@
+[
+ {
+  "name": "w6-unknown-token",
+  "locale": null,
+  "map": {
+   "1": "Ein ⟦g1⟧fettes⟦/g1⟧ Wort ⟦x7⟧."
+  }
+ },
+ {
+  "name": "w6-close-of-point",
+  "locale": null,
+  "map": {
+   "3": "Karte⟦g1⟧Papier⟦/g1⟧ ⟦/x5⟧ ⟦x05⟧."
+  }
+ }
+]

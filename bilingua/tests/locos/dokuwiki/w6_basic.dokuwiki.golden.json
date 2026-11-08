@@ -1,0 +1,85 @@
+{
+ "format": "dokuwiki",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Field guide",
+   "style": ""
+  },
+  {
+   "p_index": 1,
+   "text": "A short ⟦g1⟧field⟦/g1⟧ guide for ⟦g2⟧new⟦/g2⟧ hikers, see ⟦g3⟧the hiking page⟦/g3⟧.",
+   "style": ""
+  },
+  {
+   "p_index": 2,
+   "text": "Bring water.",
+   "style": ""
+  },
+  {
+   "p_index": 3,
+   "text": "Bring a map.",
+   "style": ""
+  },
+  {
+   "p_index": 4,
+   "text": "Name",
+   "style": ""
+  },
+  {
+   "p_index": 5,
+   "text": "Use",
+   "style": ""
+  },
+  {
+   "p_index": 6,
+   "text": "Rope",
+   "style": ""
+  },
+  {
+   "p_index": 7,
+   "text": "Climbing",
+   "style": ""
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "PT09PT09IEZpZWxkIGd1aWRlID09PT09PQpBIHNob3J0ICoqZmllbGQqKiBndWlkZSBmb3IgLy9uZXcvLyBoaWtlcnMsIHNlZSBbW2hpa2luZ3x0aGUgaGlraW5nIHBhZ2VdXS4KCiAgKiBCcmluZyB3YXRlci4KICAqIEJyaW5nIGEgbWFwLgoKXiBOYW1lIF4gVXNlIF4KfCBSb3BlIHwgQ2xpbWJpbmcgfAo="
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü Field guide",
+    "1": "Ü A short ⟦g1⟧Ü field⟦/g1⟧Ü  guide for ⟦g2⟧Ü new⟦/g2⟧Ü  hikers, see ⟦g3⟧Ü the hiking page⟦/g3⟧Ü .",
+    "2": "Ü Bring water.",
+    "3": "Ü Bring a map.",
+    "4": "Ü Name",
+    "5": "Ü Use",
+    "6": "Ü Rope",
+    "7": "Ü Climbing"
+   },
+   "out_b64": "PT09PT09IMOcIEZpZWxkIGd1aWRlID09PT09PQrDnCBBIHNob3J0ICoqw5wgZmllbGQqKsOcICBndWlkZSBmb3IgLy/DnCBuZXcvL8OcICBoaWtlcnMsIHNlZSBbW2hpa2luZ3zDnCB0aGUgaGlraW5nIHBhZ2VdXcOcIC4KCiAgKiDDnCBCcmluZyB3YXRlci4KICAqIMOcIEJyaW5nIGEgbWFwLgoKXiDDnCBOYW1lIF4gw5wgVXNlIF4KfCDDnCBSb3BlIHwgw5wgQ2xpbWJpbmcgfAo="
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Field guide & <\"'>",
+    "2": "Bring water. & <\"'>",
+    "4": "Name & <\"'>",
+    "6": "Rope & <\"'>"
+   },
+   "out_b64": "PT09PT09IEZpZWxkIGd1aWRlICYgPCInPiA9PT09PT0KQSBzaG9ydCAqKmZpZWxkKiogZ3VpZGUgZm9yIC8vbmV3Ly8gaGlrZXJzLCBzZWUgW1toaWtpbmd8dGhlIGhpa2luZyBwYWdlXV0uCgogICogQnJpbmcgd2F0ZXIuICYgPCInPgogICogQnJpbmcgYSBtYXAuCgpeIE5hbWUgJiA8Iic+IF4gVXNlIF4KfCBSb3BlICYgPCInPiB8IENsaW1iaW5nIHwK"
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "out_b64": "PT09PT09IEZpZWxkIGd1aWRlID09PT09PQpBIHNob3J0ICoqZmllbGQqKiBndWlkZSBmb3IgLy9uZXcvLyBoaWtlcnMsIHNlZSBbW2hpa2luZ3x0aGUgaGlraW5nIHBhZ2VdXS4KCiAgKiBCcmluZyB3YXRlci4KICAqIEJyaW5nIGEgbWFwLgoKXiBOYW1lIF4gVXNlIF4KfCBSb3BlIHwgQ2xpbWJpbmcgfAo="
+  }
+ ]
+}

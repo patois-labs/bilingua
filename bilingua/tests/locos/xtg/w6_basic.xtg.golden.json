@@ -1,0 +1,61 @@
+{
+ "format": "xtg",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Field guide",
+   "style": "Heading 1"
+  },
+  {
+   "p_index": 1,
+   "text": "Bring ⟦g1⟧water⟦/g1⟧ with you and a ⟦g2⟧map⟦/g2⟧.",
+   "style": "Text body"
+  },
+  {
+   "p_index": 2,
+   "text": "The trail closes after dark.",
+   "style": "Text body"
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "PHYxMS4xMD48ZTk+CkBIZWFkaW5nIDE6RmllbGQgZ3VpZGUKQFRleHQgYm9keTpCcmluZyA8QEVtcGhhc2lzPndhdGVyPEAkcD4gd2l0aCB5b3UgYW5kIGEgPEI+bWFwPEI+LgpAVGV4dCBib2R5OlRoZSB0cmFpbCBjbG9zZXMgYWZ0ZXIgZGFyay4K"
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü Field guide",
+    "1": "Ü Bring ⟦g1⟧Ü water⟦/g1⟧Ü  with you and a ⟦g2⟧Ü map⟦/g2⟧Ü .",
+    "2": "Ü The trail closes after dark."
+   },
+   "out_b64": "PHYxMS4xMD48ZTk+CkBIZWFkaW5nIDE6w5wgRmllbGQgZ3VpZGUKQFRleHQgYm9keTrDnCBCcmluZyA8QEVtcGhhc2lzPsOcIHdhdGVyPEAkcD7DnCAgd2l0aCB5b3UgYW5kIGEgPEI+w5wgbWFwPEI+w5wgLgpAVGV4dCBib2R5OsOcIFRoZSB0cmFpbCBjbG9zZXMgYWZ0ZXIgZGFyay4K"
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Field guide & <\"'>",
+    "2": "The trail closes after dark. & <\"'>"
+   },
+   "out_b64": "PHYxMS4xMD48ZTk+CkBIZWFkaW5nIDE6RmllbGQgZ3VpZGUgJiA8XDw+Iic+CkBUZXh0IGJvZHk6QnJpbmcgPEBFbXBoYXNpcz53YXRlcjxAJHA+IHdpdGggeW91IGFuZCBhIDxCPm1hcDxCPi4KQFRleHQgYm9keTpUaGUgdHJhaWwgY2xvc2VzIGFmdGVyIGRhcmsuICYgPFw8PiInPgo="
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "out_b64": "PHYxMS4xMD48ZTk+CkBIZWFkaW5nIDE6RmllbGQgZ3VpZGUKQFRleHQgYm9keTpCcmluZyA8QEVtcGhhc2lzPndhdGVyPEAkcD4gd2l0aCB5b3UgYW5kIGEgPEI+bWFwPEI+LgpAVGV4dCBib2R5OlRoZSB0cmFpbCBjbG9zZXMgYWZ0ZXIgZGFyay4K"
+  },
+  {
+   "name": "w6-repeated-pair",
+   "locale": null,
+   "map": {
+    "1": "Nimm ⟦g1⟧Wasser⟦/g1⟧ und ⟦g1⟧mehr⟦/g1⟧ und ⟦g2⟧Karte⟦/g2⟧."
+   },
+   "out_b64": "PHYxMS4xMD48ZTk+CkBIZWFkaW5nIDE6RmllbGQgZ3VpZGUKQFRleHQgYm9keTpOaW1tIDxARW1waGFzaXM+V2Fzc2VyPEAkcD4gdW5kIG1laHIgdW5kIDxCPkthcnRlPEI+LgpAVGV4dCBib2R5OlRoZSB0cmFpbCBjbG9zZXMgYWZ0ZXIgZGFyay4K"
+  }
+ ]
+}

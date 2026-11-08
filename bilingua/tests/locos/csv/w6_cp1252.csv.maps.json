@@ -1,0 +1,17 @@
+[
+ {
+  "name": "w6-fits",
+  "locale": null,
+  "map": {
+   "0": "Café Wasser",
+   "1": "Karte ü"
+  }
+ },
+ {
+  "name": "w6-overflow",
+  "locale": null,
+  "map": {
+   "0": "水"
+  }
+ }
+]
