@@ -684,9 +684,16 @@ fn decode_text_inner(data: &[u8], o: &DecodeOptions) -> Result<Decoded, Error> {
                 let bad = std::str::from_utf8(data).err().map_or(0, |e| e.valid_up_to());
                 return Err(bad_declared(&name, data, bad));
             }
-            if declared_ok(e) {
+            // a declared Windows-1252 / ISO-8859-1 file is read in it whatever the source language (B-SIDE W6 ts-1:
+            // a Japanese project read it as Shift_JIS); bytes it cannot read fall through to the default path
+            let latin = e == encoding_rs::WINDOWS_1252;
+            if declared_ok(e) || latin {
                 match strict(e, data) {
-                    Ok(s) => return done(rewrite_declared(&s), &e.name().to_ascii_lowercase(), label.as_deref(), Vec::new(), &o.limits),
+                    Ok(s) => {
+                        // the same tag the default path gives a Latin-1 file (`iso-8859-1` when no C1 byte is used)
+                        let b = if latin { declared_base(e, label.as_deref(), data) } else { e.name().to_ascii_lowercase() };
+                        return done(rewrite_declared(&s), &b, label.as_deref(), Vec::new(), &o.limits);
+                    }
                     Err(pos) => {
                         // Windows-1255 holds all of ISO-8859-8 at the same bytes, plus the vowel points pages use;
                         // the declared label stays, so a merge writes the same bytes back
@@ -694,7 +701,7 @@ fn decode_text_inner(data: &[u8], o: &DecodeOptions) -> Result<Decoded, Error> {
                         if let Some(s) = hebrew.then(|| strict(encoding_rs::WINDOWS_1255, data).ok()).flatten() {
                             return done(rewrite_declared(&s), "windows-1255", label.as_deref(), Vec::new(), &o.limits);
                         }
-                        if !declared_if_strict(e) {
+                        if !declared_if_strict(e) && !latin {
                             return Err(bad_declared(&name, data, pos));
                         }
                     }

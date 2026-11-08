@@ -400,8 +400,10 @@ fn merge(fmt: &str, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Erro
     if out.starts_with('\u{feff}') {
         out.insert(0, '\u{feff}');
     }
-    // (`output_encoding: Utf8` alone writes UTF-8 literally; the LocOS profile keeps LocOS's behaviour)
-    if !written && (opts.output_encoding == bilingua_model::OutputEncoding::Keep || opts.is_profile(bilingua_model::profile::LOCOS)) {
+    // (`output_encoding: Utf8` alone writes UTF-8 literally; the LocOS profile keeps LocOS's behaviour, whose guard
+    // hands back the upload only for a plain build: a localized export is written, as UTF-8)
+    let locos_plain = opts.is_profile(bilingua_model::profile::LOCOS) && doc.target_lang.as_deref().is_none_or(|t| t.trim().is_empty());
+    if !written && (opts.output_encoding == bilingua_model::OutputEncoding::Keep || locos_plain) {
         return enc::encode_text(&out, encoding);
     }
     enc::encode_text_with(&out, encoding, opts)
