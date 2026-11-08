@@ -7,6 +7,15 @@ use bilingua::profile::tokens;
 use bilingua::*;
 use std::time::Instant;
 
+/// Prints a line and keeps it in `<target tmp>/locos_phase_speed.txt` (read on the build machine).
+fn report(line: String) {
+    println!("{line}");
+    let path = std::path::Path::new(env!("CARGO_TARGET_TMPDIR")).join("locos_phase_speed.txt");
+    let old = std::fs::read_to_string(&path).unwrap_or_default();
+    let _ = std::fs::write(path, format!("{old}{line}
+"));
+}
+
 fn phases(name: &str, data: &[u8], text_of: impl Fn(usize) -> String) -> [f64; 4] {
     let t0 = Instant::now();
     let opts = profile::locos().extract_options().with_granularity(Granularity::Paragraph);
@@ -32,7 +41,7 @@ fn stf_804_build_is_linear_and_fast() {
     let big = format!("Language code: en_US\nType: Source\n\n# KEY\tLABEL\n{rows}");
     let p = phases("big.stf", big.as_bytes(), |i| format!("Etikett {i}"));
     let total: f64 = p.iter().sum();
-    println!("stf 40000 rows: extract {:.0} ms, locos_units {:.0} ms, set {:.0} ms, merge {:.0} ms, total {total:.0} ms", p[0], p[1], p[2], p[3]);
+    report(format!("stf 40000 rows: extract {:.0} ms, locos_units {:.0} ms, set {:.0} ms, merge {:.0} ms, total {total:.0} ms", p[0], p[1], p[2], p[3]));
     if !cfg!(debug_assertions) {
         assert!(total < 500.0, "stf build {total:.0} ms");
     }
@@ -51,6 +60,6 @@ fn small_files_per_call_cost() {
                 best[k] = best[k].min(p[k]);
             }
         }
-        println!("{name}: extract {:.2} ms, locos_units {:.2} ms, set {:.2} ms, merge {:.2} ms", best[0], best[1], best[2], best[3]);
+        report(format!("{name}: extract {:.2} ms, locos_units {:.2} ms, set {:.2} ms, merge {:.2} ms", best[0], best[1], best[2], best[3]));
     }
 }
