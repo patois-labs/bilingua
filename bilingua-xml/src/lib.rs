@@ -206,7 +206,10 @@ impl XmlFilter {
         let mut pl = plan::Planner::new(&t, &props, &limits);
         pl.container(t.root, 0)?;
         let planned = pl.finish();
-        let lang = dialect.as_ref().map(|d| d.lang.clone()).or_else(|| Some(LangStamp { update: vec!["xml:lang".into()], ..Default::default() })).and_then(|s| skel::lang_plan(&t, &s));
+        let lang = dialect.as_ref().map(|d| d.lang.clone()).or_else(|| Some(LangStamp { update: vec!["xml:lang".into()], ..Default::default() })).and_then(|s| skel::lang_plan(&t, &s))
+            // a root with no language attribute still lets nested elements that declare the source language be restamped
+            // (LocOS: the attribute is xml:lang, never added to the root)
+            .or_else(|| Some(("xml:lang".to_string(), false)));
         let empty = HashSet::new();
         let alt = dialect.as_ref().map_or(&empty, |d| &d.alt_attrs);
         let doc = skel::build_document(&t, &planned, &props.notes, alt, opts, dec.encoding.clone(), lang, self.id);
