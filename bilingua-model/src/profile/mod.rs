@@ -107,8 +107,13 @@ pub fn check(name: Option<&str>) -> Result<(), Error> {
 /// legacy charset stays, with a character reference for what it cannot hold) and resjson (`resjson_filter`: the
 /// UTF-16 BOM and code units kept) too, and the CAT XML files whose LocOS writer splices the translation into the
 /// file's own text and encodes it back in the file's codec (`ttx_filter.build_ttx`, `wordfast.build_txml`,
-/// `cat_xliff.build_units` for TXLF): a UTF-16 TTX, TXML or TXLF stays UTF-16 with its BOM.
-const LOCOS_KEEPS_ENCODING: &[&str] = &["ini", "strings", "dxf", "txt", "properties", "xaml", "resjson", "ttx", "txml", "txlf"];
+/// `cat_xliff.build_units` for TXLF): a UTF-16 TTX, TXML or TXLF stays UTF-16 with its BOM. Wave 6 (B-SIDE rc-1,
+/// pl-2, csv-1, csv-2, xtg-1): rc (`rc_filter._encode`: UTF-16 kept, an ANSI or declared page kept when the text
+/// fits, else UTF-8 with its `#pragma code_page` set to 65001), plist (`apple_filter`: a UTF-16 plist stays UTF-16),
+/// csv and tsv (`csv_filter`: the code page when every character fits, else UTF-8 with a BOM; UTF-16 kept) and
+/// XPress Tags (`quark_tags_filter`: UTF-16 and the legacy pages kept, else UTF-8 with `<e9>`).
+const LOCOS_KEEPS_ENCODING: &[&str] =
+    &["ini", "strings", "dxf", "txt", "properties", "xaml", "resjson", "ttx", "txml", "txlf", "rc", "plist", "csv", "tsv", "xtg"];
 
 impl Profile {
     /// The oldest version of this profile the release can still produce.
@@ -133,7 +138,7 @@ impl Profile {
 
     /// The merge options this profile uses for a document of `format` (a filter id). Localization OS: UTF-8 out,
     /// except for the formats it writes in their own encoding (ini, strings, dxf, txt, properties, xaml, resjson, ttx,
-    /// txml and txlf: `Keep`), and the target language
+    /// txml, txlf, rc, plist, csv, tsv and xtg: `Keep`), and the target language
     /// stamped and plurals filled even when nothing is translated (lead decision 11-04).
     pub fn merge_options(&self, format: &str) -> MergeOptions {
         let enc = if LOCOS_KEEPS_ENCODING.contains(&format) { OutputEncoding::Keep } else { OutputEncoding::Utf8 };
@@ -211,7 +216,9 @@ const LOCOS_NO_STYLE: &[&str] =
 fn locos_text_codes(format: &str) -> Option<fn(&CodeData) -> bool> {
     match format {
         // yaml: LocOS `yaml_filter` offers the plain value (no inline map): Rails `%{name}`, `{name}`, HTML, `%d`
-        "po" | "strings" | "properties" | "dtd" | "wxl" | "xaml" | "resx" | "json" | "json5" | "resjson" | "yaml" => Some(|_| true),
+        // mo (B-SIDE W6 mo-1): LocOS reads an MO through its PO filter, whose placeholders are tokens only for entries
+        // flagged c-format / python-format, and an MO has no flags
+        "po" | "mo" | "strings" | "properties" | "dtd" | "wxl" | "xaml" | "resx" | "json" | "json5" | "resjson" | "yaml" => Some(|_| true),
         "arb" | "ftl" => Some(|c| c.label.as_deref() == Some("placeholder")),
         _ => None,
     }
@@ -363,7 +370,13 @@ pub fn locos_units(doc: &Document) -> Vec<LocosUnit> {
 /// or unbalanced: their writers apply LocOS's rule (`cat_xliff._render`): a code written more often than the source
 /// has it loses the extra tags (its text stays), a close that closes nothing is dropped, a pair left open is closed
 /// at the end ([`tokens::repair_locos_text_for`] lists each repair). A tag the source lacks is still refused.
+/// MicroDVD `.sub` and XPress Tags take the same repairs, applied to the target before it is set.
 pub fn locos_set_target(doc: &mut Document, seg_id: &str, target: Vec<Inline>) -> Result<(), Error> {
+    if LOCOS_WRITES_REPAIRED.contains(&doc.format.as_str()) {
+        let Some((ui, si)) = doc.locate(seg_id) else { return Err(Error::UnknownSegment(seg_id.to_string())) };
+        let repaired = tokens::repair_tags(&doc.units[ui].segments[si].source, target);
+        return set_like_locos(doc, seg_id, repaired);
+    }
     if !tokens::locos_repairs_tags(&doc.format) {
         return set_like_locos(doc, seg_id, target);
     }
@@ -377,6 +390,13 @@ pub fn locos_set_target(doc: &mut Document, seg_id: &str, target: Vec<Inline>) -
     }
     Ok(())
 }
+
+/// Formats whose LocOS writer writes a translation that repeats a style pair, the repeat without its tags (its
+/// text stays), where `set_target` refuses it as "tag appears more often" (B-SIDE W6 st-2, xtg-2): MicroDVD
+/// `subtitle_text_filter` and XPress Tags `quark_tags_filter`. The target is repaired by the CAT writers' rule
+/// ([`tokens::repair_tags`]: at most as often as the source, a stray close dropped, an open pair closed at the end)
+/// and set as repaired.
+const LOCOS_WRITES_REPAIRED: &[&str] = &["sub", "xtg"];
 
 /// The body of [`locos_set_target`] once the tags are repaired.
 fn set_like_locos(doc: &mut Document, seg_id: &str, target: Vec<Inline>) -> Result<(), Error> {
