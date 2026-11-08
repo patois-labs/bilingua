@@ -117,7 +117,11 @@ fn extract_impl(kind: Kind, bytes: &[u8], opts: &ExtractOptions, copts: &CsvOpti
     let delim = spec.delimiter.or((kind == Kind::Tsv).then_some(b'\t')).unwrap_or_else(|| sniff::sniff_delimiter(&text, b','));
     let source_locale = opts.source_lang.clone().unwrap_or_default();
     let mut targets = copts.target_locales.clone();
-    if let Some(t) = opts.target_lang.as_ref().filter(|t| !t.is_empty()) {
+    // LocOS plans the columns from the languages its parse is given (the adapter passes `csv.target_locales` and
+    // `csv.columns`); the target of one export does not move them. Under the `locos` profile without either, the
+    // document's target language is not a planning input (B-SIDE W6 csv-3: tools and the diff harness)
+    let locos_bare = opts.is_profile(profile::LOCOS) && copts.target_locales.is_empty() && copts.columns.is_none();
+    if let Some(t) = opts.target_lang.as_ref().filter(|t| !t.is_empty() && !locos_bare) {
         if !targets.contains(t) {
             targets.push(t.clone());
         }
@@ -138,7 +142,7 @@ fn extract_impl(kind: Kind, bytes: &[u8], opts: &ExtractOptions, copts: &CsvOpti
         }
     }
     let plan: Plan = plan::resolve(&spec, &first, first.len(), &source_locale, &targets)?;
-    let tcol = if plan.inplace { None } else { plan::target_col(&plan, opts.target_lang.as_deref()) };
+    let tcol = if plan.inplace { None } else { plan::target_col(&plan, opts.target_lang.as_deref().filter(|_| !locos_bare)) };
     let note_cols: Vec<usize> = plan.notes.iter().map(|(_, i)| *i).collect();
 
     let mut units: Vec<Unit> = Vec::new();

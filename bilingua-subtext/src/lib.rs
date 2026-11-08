@@ -255,7 +255,7 @@ fn extract(fmt: &'static str, bytes: &[u8], opts: &ExtractOptions) -> Result<Doc
         ));
     }
     let limits = opts.limits();
-    let mut dec = enc::decode_text(bytes, &enc::DecodeOptions::new(opts))?;
+    let mut dec = enc::decode_text(bytes, &enc::DecodeOptions::new(opts).mark_before_legacy())?;
     let text_owned = std::mem::take(&mut dec.text);
     let text = text_owned.as_str();
     let dialect = if fmt == "sbv" { Dialect::Sbv } else { sniff_text(text)? };
@@ -332,21 +332,22 @@ fn render_block(target: &[Inline], joiner: &str, sv: bool) -> Result<String, Str
     };
     let probe = if sv { replace_br(&out) } else { out.clone() };
     if py_strip(&probe.replace(joiner, "")).is_empty() {
-        return Err("the translation is empty".into());
+        return Err("the translation is empty, so the cue would drop out of the file".into());
     }
     for line in split_newlines(&out) {
         if time_pair(line).is_some() {
-            return Err("the translation has a line that reads as a timecode".into());
+            return Err("a line of the translation reads as a timecode".into());
         }
         if sv && mdvd_cue(line).is_some() {
-            return Err("the translation has a line that reads as a MicroDVD cue".into());
+            return Err("a line of the translation reads as a MicroDVD cue".into());
         }
     }
     Ok(out)
 }
 
-/// Writes one unit; true when the translation (not the original text) was written.
-fn write_unit(u: &Unit, out: &mut String) -> Result<bool, Error> {
+/// Writes one unit (cue number `cue`, 1-based); true when the translation (not the original text) was written. A
+/// translation that cannot be written is refused with LocOS's sentence, which names the cue (B-SIDE W6 st-4).
+fn write_unit(u: &Unit, cue: usize, out: &mut String) -> Result<bool, Error> {
     let raw = get(u, RAW).unwrap_or("");
     if !u.translate || u.segments.iter().all(|s| !s.has_target()) {
         out.push_str(raw);
@@ -371,7 +372,10 @@ fn write_unit(u: &Unit, out: &mut String) -> Result<bool, Error> {
             out.push_str(&s);
             Ok(true)
         }
-        Err(m) => Err(Error::Unwritable { unit: Some(u.context.key.clone().unwrap_or_else(|| u.id.clone())), reason: m.to_string() }),
+        Err(m) => Err(Error::Unwritable {
+            unit: Some(u.context.key.clone().unwrap_or_else(|| u.id.clone())),
+            reason: format!("Cue {cue} was not exported: {m}. Edit that translation and export again."),
+        }),
     }
 }
 
@@ -387,7 +391,7 @@ fn merge(fmt: &str, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Erro
             SkelPart::Raw(s) => out.push_str(s),
             SkelPart::Unit(i) => {
                 let u = doc.units.get(*i).ok_or_else(|| Error::Write(format!("skeleton points at missing unit {i}")))?;
-                written |= write_unit(u, &mut out)?;
+                written |= write_unit(u, *i + 1, &mut out)?;
             }
         }
     }
@@ -396,8 +400,10 @@ fn merge(fmt: &str, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Erro
     if out.starts_with('\u{feff}') {
         out.insert(0, '\u{feff}');
     }
-    // (`output_encoding: Utf8` alone writes UTF-8 literally; the LocOS profile keeps LocOS's behaviour)
-    if !written && (opts.output_encoding == bilingua_model::OutputEncoding::Keep || opts.is_profile(bilingua_model::profile::LOCOS)) {
+    // (`output_encoding: Utf8` alone writes UTF-8 literally; the LocOS profile keeps LocOS's behaviour, whose guard
+    // hands back the upload only for a plain build: a localized export is written, as UTF-8)
+    let locos_plain = opts.is_profile(bilingua_model::profile::LOCOS) && doc.target_lang.as_deref().is_none_or(|t| t.trim().is_empty());
+    if !written && (opts.output_encoding == bilingua_model::OutputEncoding::Keep || locos_plain) {
         return enc::encode_text(&out, encoding);
     }
     enc::encode_text_with(&out, encoding, opts)

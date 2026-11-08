@@ -274,14 +274,14 @@ pub fn render(target: &[Inline], codes: &BTreeMap<String, CodeData>, heads: &Has
             }
         }
         if r.size > r.cap {
-            return Err("the translation would write its style codes again on too many lines".into());
+            return Err("the translation breaks lines inside so many open style codes that the cue would grow past its size bound".into());
         }
     }
     let joined = r.out.concat();
     let joined = py_strip(&joined);
     let res = collapse_newlines(joined, "|");
     if count_codes(&res) != r.emitted {
-        return Err("the translation holds text that reads as a MicroDVD control code ({y:i}, {c:$..})".into());
+        return Err("the translation holds text that reads as a MicroDVD control code ({y:i}, {c:$..}) once its line breaks are written as |".into());
     }
     let mut bare = String::with_capacity(res.len());
     let mut pos = 0;
@@ -291,10 +291,10 @@ pub fn render(target: &[Inline], codes: &BTreeMap<String, CodeData>, heads: &Has
     }
     bare.push_str(&res[pos..]);
     if py_strip(&strip_placeholders(&bare.replace('|', ""))).is_empty() {
-        return Err("the translation is empty (nothing but control codes and line breaks)".into());
+        return Err("the translation is empty (nothing but control codes and line breaks), so the cue would drop out of the file".into());
     }
     if fps && fps_text(&res) {
-        return Err("the translation reads as a frame-rate declaration".into());
+        return Err("the translation reads as a frame rate in a {0}{1} or {1}{1} cue, which the file would take as a declaration".into());
     }
     Ok(res)
 }

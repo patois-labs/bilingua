@@ -1,0 +1,46 @@
+{
+ "format": "ts",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Bring water",
+   "style": ""
+  },
+  {
+   "p_index": 1,
+   "text": "Open %1 files",
+   "style": ""
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4KPCFET0NUWVBFIFRTPgo8VFMgdmVyc2lvbj0iMi4xIiBsYW5ndWFnZT0iZGVfREUiPgo8Y29udGV4dD4KICAgIDxuYW1lPk1haW5XaW5kb3c8L25hbWU+CiAgICA8bWVzc2FnZT4KICAgICAgICA8bG9jYXRpb24gZmlsZW5hbWU9Im1haW4uY3BwIiBsaW5lPSIxMCIvPgogICAgICAgIDxzb3VyY2U+QnJpbmcgd2F0ZXI8L3NvdXJjZT4KICAgICAgICA8dHJhbnNsYXRpb24gdHlwZT0idW5maW5pc2hlZCI+PC90cmFuc2xhdGlvbj4KICAgIDwvbWVzc2FnZT4KICAgIDxtZXNzYWdlPgogICAgICAgIDxzb3VyY2U+T3BlbiAlMSBmaWxlczwvc291cmNlPgogICAgICAgIDx0cmFuc2xhdGlvbiB0eXBlPSJ1bmZpbmlzaGVkIj48L3RyYW5zbGF0aW9uPgogICAgPC9tZXNzYWdlPgo8L2NvbnRleHQ+CjwvVFM+Cg=="
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü Bring water",
+    "1": "Ü Open %1 files"
+   },
+   "out_b64": "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4KPCFET0NUWVBFIFRTPgo8VFMgdmVyc2lvbj0iMi4xIiBsYW5ndWFnZT0iZGVfREUiPgo8Y29udGV4dD4KICAgIDxuYW1lPk1haW5XaW5kb3c8L25hbWU+CiAgICA8bWVzc2FnZT4KICAgICAgICA8bG9jYXRpb24gZmlsZW5hbWU9Im1haW4uY3BwIiBsaW5lPSIxMCIvPgogICAgICAgIDxzb3VyY2U+QnJpbmcgd2F0ZXI8L3NvdXJjZT4KICAgICAgICA8dHJhbnNsYXRpb24+w5wgQnJpbmcgd2F0ZXI8L3RyYW5zbGF0aW9uPgogICAgPC9tZXNzYWdlPgogICAgPG1lc3NhZ2U+CiAgICAgICAgPHNvdXJjZT5PcGVuICUxIGZpbGVzPC9zb3VyY2U+CiAgICAgICAgPHRyYW5zbGF0aW9uPsOcIE9wZW4gJTEgZmlsZXM8L3RyYW5zbGF0aW9uPgogICAgPC9tZXNzYWdlPgo8L2NvbnRleHQ+CjwvVFM+Cg=="
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Bring water & <\"'>"
+   },
+   "out_b64": "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4KPCFET0NUWVBFIFRTPgo8VFMgdmVyc2lvbj0iMi4xIiBsYW5ndWFnZT0iZGVfREUiPgo8Y29udGV4dD4KICAgIDxuYW1lPk1haW5XaW5kb3c8L25hbWU+CiAgICA8bWVzc2FnZT4KICAgICAgICA8bG9jYXRpb24gZmlsZW5hbWU9Im1haW4uY3BwIiBsaW5lPSIxMCIvPgogICAgICAgIDxzb3VyY2U+QnJpbmcgd2F0ZXI8L3NvdXJjZT4KICAgICAgICA8dHJhbnNsYXRpb24+QnJpbmcgd2F0ZXIgJmFtcDsgJmx0OyInJmd0OzwvdHJhbnNsYXRpb24+CiAgICA8L21lc3NhZ2U+CiAgICA8bWVzc2FnZT4KICAgICAgICA8c291cmNlPk9wZW4gJTEgZmlsZXM8L3NvdXJjZT4KICAgICAgICA8dHJhbnNsYXRpb24gdHlwZT0idW5maW5pc2hlZCI+PC90cmFuc2xhdGlvbj4KICAgIDwvbWVzc2FnZT4KPC9jb250ZXh0Pgo8L1RTPgo="
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "out_b64": "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4KPCFET0NUWVBFIFRTPgo8VFMgdmVyc2lvbj0iMi4xIiBsYW5ndWFnZT0iZGVfREUiPgo8Y29udGV4dD4KICAgIDxuYW1lPk1haW5XaW5kb3c8L25hbWU+CiAgICA8bWVzc2FnZT4KICAgICAgICA8bG9jYXRpb24gZmlsZW5hbWU9Im1haW4uY3BwIiBsaW5lPSIxMCIvPgogICAgICAgIDxzb3VyY2U+QnJpbmcgd2F0ZXI8L3NvdXJjZT4KICAgICAgICA8dHJhbnNsYXRpb24gdHlwZT0idW5maW5pc2hlZCI+PC90cmFuc2xhdGlvbj4KICAgIDwvbWVzc2FnZT4KICAgIDxtZXNzYWdlPgogICAgICAgIDxzb3VyY2U+T3BlbiAlMSBmaWxlczwvc291cmNlPgogICAgICAgIDx0cmFuc2xhdGlvbiB0eXBlPSJ1bmZpbmlzaGVkIj48L3RyYW5zbGF0aW9uPgogICAgPC9tZXNzYWdlPgo8L2NvbnRleHQ+CjwvVFM+Cg=="
+  }
+ ]
+}

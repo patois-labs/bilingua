@@ -257,7 +257,7 @@ impl Filter for Dxf {
                     let unit = doc.units.get(*i).ok_or_else(|| Error::Write(format!("skeleton points at missing unit {i}")))?;
                     let occ = seen[*i];
                     seen[*i] += 1;
-                    write_unit(unit, occ, &mut changed[*i], codec, &mut out)?;
+                    write_unit(unit, occ, &mut changed[*i], codec, opts.is_profile(profile::LOCOS), &mut out)?;
                 }
             }
         }
@@ -265,7 +265,7 @@ impl Filter for Dxf {
     }
 }
 
-fn write_unit(unit: &Unit, occ: usize, changed: &mut bool, codec: Codec, out: &mut Vec<u8>) -> Result<(), Error> {
+fn write_unit(unit: &Unit, occ: usize, changed: &mut bool, codec: Codec, locos: bool, out: &mut Vec<u8>) -> Result<(), Error> {
     let original = unit.hidden(&raw_key(occ)).ok_or_else(|| Error::Write(format!("unit {} has no dxf record", unit.id)))?;
     let label = unit.hidden(KIND).unwrap_or("text");
     let kind = kind_of(label);
@@ -278,7 +278,7 @@ fn write_unit(unit: &Unit, occ: usize, changed: &mut bool, codec: Codec, out: &m
     if occ > 0 {
         return Ok(()); // the rest of an MTEXT's chunks: replaced by the block written at the first span
     }
-    let text = lex::render(&unit.output(), &unit.codes, kind);
+    let text = lex::render(&unit.output(), &unit.codes, kind, locos);
     let value = lex::fit_codec(&text, codec);
     let enc = |s: &str| -> Result<Vec<u8>, Error> {
         // DOS 864: `%` goes back to byte 0x25 (the code page itself only writes U+066A there), see `decode_value`

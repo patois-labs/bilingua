@@ -176,7 +176,7 @@ fn reopened_pairs_cannot_multiply_a_cue() {
     t.push(Inline::text(format!("w{}", "\nw".repeat(2_000))));
     t.extend(closes.into_iter().rev());
     doc.units[0].segments[0].target = t;
-    assert!(matches!(filter("sub").merge(&doc), Err(Error::Unwritable { reason: m, .. }) if m.contains("too many lines")));
+    assert!(matches!(filter("sub").merge(&doc), Err(Error::Unwritable { reason: m, .. }) if m.contains("grow past its size bound") && m.starts_with("Cue ")));
     // a few pairs over a few lines are written as LocOS writes them
     let out = build("sub", b"{1}{2}{y:i}a {c:$FF}b c|d\n", &[(0, "\u{27e6}g1\u{27e7}A\nB \u{27e6}g2\u{27e7}C\nD\u{27e6}/g2\u{27e7}\u{27e6}/g1\u{27e7}|E")]);
     assert_eq!(String::from_utf8(out).unwrap(), "{1}{2}{y:i}A|{y:i}B {c:$FF}C|{y:i}{c:$FF}D|E\n");
@@ -292,7 +292,7 @@ fn a_translation_cannot_make_a_control_code() {
 #[test]
 fn a_translation_cannot_make_a_frame_rate_line() {
     // the cue {0}{1} would read as a frame-rate declaration and drop out of the file's cues
-    assert!(matches!(translate("sub", MDVD, 0, "25"), Err(Error::Unwritable { reason: m, .. }) if m.contains("frame-rate")));
+    assert!(matches!(translate("sub", MDVD, 0, "25"), Err(Error::Unwritable { reason: m, .. }) if m.contains("frame rate") && m.starts_with("Cue 1 was not exported: ")));
     assert!(matches!(translate("sub", MDVD, 0, "23.976"), Err(Error::Write(_) | Error::Unwritable { .. })));
     assert!(translate("sub", MDVD, 0, "25 fps").is_ok());
     // another cue is not affected

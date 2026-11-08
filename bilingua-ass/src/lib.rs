@@ -165,7 +165,7 @@ struct Found {
 fn extract(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
     let limits = opts.limits();
     guard::check_input(bytes, &limits)?;
-    let mut dec = enc::decode_text(bytes, &enc::DecodeOptions::new(opts))?;
+    let mut dec = enc::decode_text(bytes, &enc::DecodeOptions::new(opts).mark_before_legacy())?;
     let text = std::mem::take(&mut dec.text);
     let include_locked = opts.include_locked || opts.format_flag("ass.include_locked").unwrap_or(false);
 
@@ -352,7 +352,15 @@ fn merge(doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
             out = stamp_language(&out, target);
         }
     }
-    enc::encode_text_with(&out, encoding, opts)
+    let bytes = enc::encode_text_with(&out, encoding, opts)?;
+    // UTF-8 out (LocOS `ass_filter.build`): a file that started with a UTF-16 byte order mark keeps a mark, the
+    // UTF-8 one (B-SIDE W6 ass-3)
+    if opts.output_encoding == OutputEncoding::Utf8 && enc::base(encoding).starts_with("utf-16") && !bytes.starts_with(b"\xef\xbb\xbf") {
+        let mut v = b"\xef\xbb\xbf".to_vec();
+        v.extend_from_slice(&bytes);
+        return Ok(v);
+    }
+    Ok(bytes)
 }
 
 fn newlines_to(s: &str, with: &str) -> String {

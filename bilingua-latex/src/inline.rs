@@ -237,6 +237,22 @@ fn placeholder_re() -> &'static Regex {
     RE.get_or_init(|| Regex::new(r"\u{27E6}/?[a-z]?\d+\u{27E7}").expect("placeholder pattern"))
 }
 
+/// `text` without the token look-alikes whose number names a code of `u` (LocOS `token_lit.code_tokens`, #814.1):
+/// a look-alike naming no code stays, escaped as the text around it.
+fn drop_code_tokens(text: &str, u: &Unit) -> String {
+    placeholder_re()
+        .replace_all(text, |c: &regex::Captures| {
+            // the digits as written (LocOS `token_number`: `x07` names no code `7`)
+            let num: String = c[0].chars().filter(char::is_ascii_digit).collect();
+            if u.codes.contains_key(&num) {
+                String::new()
+            } else {
+                c[0].to_string()
+            }
+        })
+        .into_owned()
+}
+
 /// LocOS `_translatable`: some letter outside the tokens.
 pub fn translatable(pieces: &[Piece]) -> bool {
     pieces.iter().any(|p| match p {
@@ -415,8 +431,9 @@ pub fn render(u: &Unit, target: &[Inline]) -> String {
             Inline::Text(x) => {
                 let mut s = String::with_capacity(x.len());
                 let folded = fold_newlines(x);
-                // a token the translation invented (or a closing mark of a standalone code) is dropped, as LocOS does
-                let folded = if folded.contains('\u{27E6}') { placeholder_re().replace_all(&folded, "").into_owned() } else { folded };
+                // a token that names a code of the unit but was left as text (a closing mark of a standalone code,
+                // a wrong letter) is dropped, as LocOS does; a token naming no code is text and is kept (#814.1)
+                let folded = if folded.contains('\u{27E6}') { drop_code_tokens(&folded, u) } else { folded };
                 escape_text(&folded, &mut s);
                 if matches!(kind, "label" | "short") {
                     s = s.replace(']', "{]}");

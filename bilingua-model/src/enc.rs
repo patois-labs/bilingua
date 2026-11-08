@@ -44,16 +44,21 @@ pub struct DecodeOptions<'a> {
     /// A UTF-8 byte order mark followed by bytes that are not UTF-8 is read as UTF-8 with replacement characters
     /// (U+FFFD), as Localization OS does for plain text and subtitles. Off: such a file is refused.
     pub lossy_after_utf8_bom: bool,
+    /// A UTF-8 byte order mark followed by bytes that are not UTF-8 is read as a mark, and the bytes after it as an
+    /// undeclared legacy file (Localization OS BOM read version 2, #799.4 / #800.4: its subtitle readers). The
+    /// envelope tag records the mark (`;bom8`), so a merge writes it back: before the code page's bytes, or before
+    /// UTF-8 when the text is written as UTF-8. Off: the mark's three bytes are read as code-page text.
+    pub mark_before_legacy: bool,
 }
 
 impl<'a> DecodeOptions<'a> {
     /// The options of one extraction: its source language and its limits.
     pub fn new(opts: &'a ExtractOptions) -> DecodeOptions<'a> {
-        DecodeOptions { declared: false, source_lang: opts.source_lang.as_deref(), limits: opts.limits(), lossy_after_utf8_bom: false }
+        DecodeOptions { declared: false, source_lang: opts.source_lang.as_deref(), limits: opts.limits(), lossy_after_utf8_bom: false, mark_before_legacy: false }
     }
     /// No source language, not declared, these limits.
     pub fn with_limits(limits: Limits) -> DecodeOptions<'static> {
-        DecodeOptions { declared: false, source_lang: None, limits, lossy_after_utf8_bom: false }
+        DecodeOptions { declared: false, source_lang: None, limits, lossy_after_utf8_bom: false, mark_before_legacy: false }
     }
     /// The source language that picks the code page of an undeclared legacy file.
     pub fn with_source_lang(mut self, lang: Option<&'a str>) -> Self {
@@ -63,6 +68,11 @@ impl<'a> DecodeOptions<'a> {
     /// See [`DecodeOptions::lossy_after_utf8_bom`].
     pub fn lossy_after_utf8_bom(mut self) -> Self {
         self.lossy_after_utf8_bom = true;
+        self
+    }
+    /// See [`DecodeOptions::mark_before_legacy`].
+    pub fn mark_before_legacy(mut self) -> Self {
+        self.mark_before_legacy = true;
         self
     }
     /// The same, for a format that declares its charset in the file.
@@ -638,6 +648,14 @@ fn decode_text_inner(data: &[u8], o: &DecodeOptions) -> Result<Decoded, Error> {
             bad + 3
             )));
         }
+        // BOM read version 2 (LocOS subtitle readers): the mark is a mark, the rest an undeclared legacy file
+        if o.mark_before_legacy && !o.declared {
+            let mut d = decode_text_inner(body, &DecodeOptions { mark_before_legacy: false, ..*o })?;
+            if !matches!(base(&d.encoding), "utf-8" | "utf-8-bom" | "utf-16le" | "utf-16be") {
+                d.encoding.push_str(";bom8");
+                return Ok(d);
+            }
+        }
         // an undeclared format reads it as LocOS's `read_text_upload` does: the code page fallback below
     }
     if data.starts_with(&[0xFF, 0xFE]) || data.starts_with(&[0xFE, 0xFF]) {
@@ -666,9 +684,16 @@ fn decode_text_inner(data: &[u8], o: &DecodeOptions) -> Result<Decoded, Error> {
                 let bad = std::str::from_utf8(data).err().map_or(0, |e| e.valid_up_to());
                 return Err(bad_declared(&name, data, bad));
             }
-            if declared_ok(e) {
+            // a declared Windows-1252 / ISO-8859-1 file is read in it whatever the source language (B-SIDE W6 ts-1:
+            // a Japanese project read it as Shift_JIS); bytes it cannot read fall through to the default path
+            let latin = e == encoding_rs::WINDOWS_1252;
+            if declared_ok(e) || latin {
                 match strict(e, data) {
-                    Ok(s) => return done(rewrite_declared(&s), &e.name().to_ascii_lowercase(), label.as_deref(), Vec::new(), &o.limits),
+                    Ok(s) => {
+                        // the same tag the default path gives a Latin-1 file (`iso-8859-1` when no C1 byte is used)
+                        let b = if latin { declared_base(e, label.as_deref(), data) } else { e.name().to_ascii_lowercase() };
+                        return done(rewrite_declared(&s), &b, label.as_deref(), Vec::new(), &o.limits);
+                    }
                     Err(pos) => {
                         // Windows-1255 holds all of ISO-8859-8 at the same bytes, plus the vowel points pages use;
                         // the declared label stays, so a merge writes the same bytes back
@@ -676,7 +701,7 @@ fn decode_text_inner(data: &[u8], o: &DecodeOptions) -> Result<Decoded, Error> {
                         if let Some(s) = hebrew.then(|| strict(encoding_rs::WINDOWS_1255, data).ok()).flatten() {
                             return done(rewrite_declared(&s), "windows-1255", label.as_deref(), Vec::new(), &o.limits);
                         }
-                        if !declared_if_strict(e) {
+                        if !declared_if_strict(e) && !latin {
                             return Err(bad_declared(&name, data, pos));
                         }
                     }
@@ -864,6 +889,8 @@ struct Envelope<'a> {
     euro_a2e3: bool,
     /// leading U+FEFF characters of the decoded text that are content (`feff=n`)
     feff: usize,
+    /// a UTF-8 byte order mark stood before the legacy bytes (`bom8`, [`DecodeOptions::mark_before_legacy`])
+    bom8: bool,
 }
 
 fn leading_marks(text: &str) -> usize {
@@ -885,10 +912,11 @@ pub fn strip_own_mark<'t>(text: &'t str, encoding: &str) -> &'t str {
 fn parse_tag(t: &str) -> Envelope<'_> {
     let mut parts = t.split(';');
     let base = parts.next().unwrap_or("utf-8");
-    let (mut nl, mut label, mut euro_a2e3, mut feff) = ("", None, false, 0);
+    let (mut nl, mut label, mut euro_a2e3, mut feff, mut bom8) = ("", None, false, 0, false);
     for p in parts {
         match p {
             "euro=a2e3" => euro_a2e3 = true,
+            "bom8" => bom8 = true,
             "nl=crlf" => nl = "\r\n",
             "nl=cr" => nl = "\r",
             _ => {
@@ -900,7 +928,7 @@ fn parse_tag(t: &str) -> Envelope<'_> {
             }
         }
     }
-    Envelope { base, nl, label, euro_a2e3, feff }
+    Envelope { base, nl, label, euro_a2e3, feff, bom8 }
 }
 
 fn with_newlines(text: &str, nl: &str) -> String {
@@ -966,7 +994,7 @@ fn utf8_text(text: &str, encoding: &str, base_is_label: bool) -> Vec<u8> {
             .into_owned();
     }
     let mut v = Vec::with_capacity(out.len() + 3);
-    if env.base == "utf-8-bom" {
+    if env.base == "utf-8-bom" || env.bom8 {
         v.extend_from_slice(BOM8);
     }
     v.extend_from_slice(out.as_bytes());
@@ -998,6 +1026,15 @@ pub fn legacy_output_or_utf8(out: Vec<u8>, text: &str, encoding: &str) -> Result
 }
 
 fn encode_text_as_is(text: &str, encoding: &str) -> Result<Vec<u8>, Error> {
+    let mut out = encode_text_unmarked(text, encoding)?;
+    // a mark read before the legacy bytes goes back in front of whatever was written (UTF-8 or the code page)
+    if parse_tag(encoding).bom8 {
+        out.splice(0..0, BOM8.iter().copied());
+    }
+    Ok(out)
+}
+
+fn encode_text_unmarked(text: &str, encoding: &str) -> Result<Vec<u8>, Error> {
     let env = parse_tag(encoding);
     let text = strip_own_mark(text, encoding);
     let normalized;
@@ -1121,7 +1158,7 @@ mod tests {
     use super::*;
 
     fn dec(bytes: &[u8], lang: Option<&str>, declared: bool) -> Result<Decoded, Error> {
-        let o = DecodeOptions { declared, source_lang: lang, limits: Limits::default(), lossy_after_utf8_bom: false };
+        let o = DecodeOptions { declared, source_lang: lang, limits: Limits::default(), lossy_after_utf8_bom: false, mark_before_legacy: false };
         decode_text(bytes, &o)
     }
 
@@ -1129,6 +1166,28 @@ mod tests {
         let (b, _, bad) = enc.encode(s);
         assert!(!bad);
         b.into_owned()
+    }
+
+    /// LocOS BOM read version 2 (#799.4, #800.4; B-SIDE W6 st-1, ass-1): with `mark_before_legacy` a UTF-8 BOM
+    /// before Windows-1252 bytes is a mark, the rest is read in the code page; the mark comes back on merge.
+    #[test]
+    fn mark_before_legacy_bytes() {
+        let data = b"\xef\xbb\xbfCaf\xe9\nSecond\n";
+        let o = DecodeOptions::with_limits(Limits::default()).mark_before_legacy();
+        let d = decode_text(data, &o).unwrap();
+        assert_eq!(d.text, "Caf\u{e9}\nSecond\n");
+        assert_eq!(d.encoding, "windows-1252;bom8");
+        assert_eq!(encode_text(&d.text, &d.encoding).unwrap(), data.to_vec());
+        // UTF-8 out (the LocOS profile): the mark, then UTF-8
+        let opts = MergeOptions::new().with_output_encoding(OutputEncoding::Utf8);
+        assert_eq!(encode_text_with(&d.text, &d.encoding, &opts).unwrap(), "\u{feff}Caf\u{e9}\nSecond\n".as_bytes());
+        assert_eq!(utf8_output(&d.text, &d.encoding, &opts).unwrap(), "\u{feff}Caf\u{e9}\nSecond\n".as_bytes());
+        // without the option the mark's bytes are code-page text, as before
+        let d = decode_text(data, &DecodeOptions::with_limits(Limits::default())).unwrap();
+        assert!(d.text.starts_with("\u{ef}\u{bb}\u{bf}Caf"), "{:?}", d.text);
+        // a valid UTF-8 file after the mark is unchanged
+        let d = decode_text("\u{feff}Caf\u{e9}".as_bytes(), &o).unwrap();
+        assert_eq!((d.text.as_str(), d.encoding.as_str()), ("Caf\u{e9}", "utf-8-bom"));
     }
 
     #[test]
@@ -1442,7 +1501,7 @@ mod tests {
 
     #[test]
     fn line_budget_applies_to_decoded_text() {
-        let mut o = DecodeOptions { declared: false, source_lang: None, limits: Limits::default(), lossy_after_utf8_bom: false };
+        let mut o = DecodeOptions { declared: false, source_lang: None, limits: Limits::default(), lossy_after_utf8_bom: false, mark_before_legacy: false };
         o.limits.max_lines = 3;
         assert!(decode_text(b"a\nb\n", &o).is_ok());
         let e = decode_text(b"\n\n\n\n\n", &o).unwrap_err();

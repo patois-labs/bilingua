@@ -1,0 +1,46 @@
+{
+ "format": "rc",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Bring water with you",
+   "style": "rc:string"
+  },
+  {
+   "p_index": 1,
+   "text": "Café open",
+   "style": "rc:string"
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "//5TAFQAUgBJAE4ARwBUAEEAQgBMAEUADQAKAEIARQBHAEkATgANAAoAIAAgACAAIABJAEQAUwBfAEgARQBMAEwATwAgACIAQgByAGkAbgBnACAAdwBhAHQAZQByACAAdwBpAHQAaAAgAHkAbwB1ACIADQAKACAAIAAgACAASQBEAFMAXwBDAEEARgBFACAAIgBDAGEAZgDpACAAbwBwAGUAbgAiAA0ACgBFAE4ARAANAAoA"
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü Bring water with you",
+    "1": "Ü Café open"
+   },
+   "out_b64": "//5TAFQAUgBJAE4ARwBUAEEAQgBMAEUADQAKAEIARQBHAEkATgANAAoAIAAgACAAIABJAEQAUwBfAEgARQBMAEwATwAgACIA3AAgAEIAcgBpAG4AZwAgAHcAYQB0AGUAcgAgAHcAaQB0AGgAIAB5AG8AdQAiAA0ACgAgACAAIAAgAEkARABTAF8AQwBBAEYARQAgACIA3AAgAEMAYQBmAOkAIABvAHAAZQBuACIADQAKAEUATgBEAA0ACgA="
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Bring water with you & <\"'>"
+   },
+   "out_b64": "//5TAFQAUgBJAE4ARwBUAEEAQgBMAEUADQAKAEIARQBHAEkATgANAAoAIAAgACAAIABJAEQAUwBfAEgARQBMAEwATwAgACIAQgByAGkAbgBnACAAdwBhAHQAZQByACAAdwBpAHQAaAAgAHkAbwB1ACAAJgAgADwAIgAiACcAPgAiAA0ACgAgACAAIAAgAEkARABTAF8AQwBBAEYARQAgACIAQwBhAGYA6QAgAG8AcABlAG4AIgANAAoARQBOAEQADQAKAA=="
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "out_b64": "//5TAFQAUgBJAE4ARwBUAEEAQgBMAEUADQAKAEIARQBHAEkATgANAAoAIAAgACAAIABJAEQAUwBfAEgARQBMAEwATwAgACIAQgByAGkAbgBnACAAdwBhAHQAZQByACAAdwBpAHQAaAAgAHkAbwB1ACIADQAKACAAIAAgACAASQBEAFMAXwBDAEEARgBFACAAIgBDAGEAZgDpACAAbwBwAGUAbgAiAA0ACgBFAE4ARAANAAoA"
+  }
+ ]
+}

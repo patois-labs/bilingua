@@ -61,8 +61,9 @@ rewritten.
   `latin9`, `cp1252`, `ansinew`, and the other legacy names) is rewritten to `utf8`, in the preamble only (LocOS also
 rewrites the same line inside a `verbatim` example in the body). The model's "always write UTF-8"
   option, when it exists, will need the same rewrite (see WIRING.md).
-* `LATEX_TEXT_COMMANDS` (an environment variable in LocOS) is `Latex::with_inline_commands` here: the crate reads no
-  environment.
+* `LATEX_TEXT_COMMANDS` (an environment variable in LocOS) is `Latex::with_inline_commands` here, or the format
+  option `tex.text_commands` (same spelling, for one call; the adapter passes the install's value): the crate reads
+  no environment.
 * Unicode letters: where LocOS asks "is this a letter" it uses Python `isalpha`; this crate uses `\p{L}`, the same
   set, and Python's `isspace`, which also counts U+001C to U+001F. The known Rust `is_alphanumeric` difference for
   combining marks does not arise.

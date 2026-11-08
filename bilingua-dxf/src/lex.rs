@@ -355,11 +355,18 @@ fn escape(s: &str, kind: Kind, out: &mut String) {
 
 /// The text value for a translation: escaped text and the original code spellings. A paired brace survives only
 /// with its partner, so braces stay balanced; a code the unit does not know is dropped.
-pub fn render(target: &[Inline], codes: &BTreeMap<String, CodeData>, kind: Kind) -> String {
+///
+/// `locos` (the LocOS profile): a token look-alike left in the translation's text that names a code of the unit is
+/// read as LocOS `dxf_filter._render` reads it (#814.1, B-SIDE W6 dxf-1): with the letter `x` or `g` it is that code
+/// (a point, or a brace written only with its partner), with any other letter (`p`, which this format never writes)
+/// it is dropped; the text on each side of it is escaped on its own, as LocOS does. A look-alike naming no code stays
+/// text everywhere.
+pub fn render(target: &[Inline], codes: &BTreeMap<String, CodeData>, kind: Kind, locos: bool) -> String {
+    let items = pieces(target, codes, locos);
     let mut opens: HashSet<&str> = HashSet::new();
     let mut closes: HashSet<&str> = HashSet::new();
-    for i in target {
-        if let Inline::Tag { id, kind: k, .. } = i {
+    for i in &items {
+        if let Piece::Tag(id, k) = i {
             match k {
                 TagKind::Open => {
                     opens.insert(id);
@@ -378,19 +385,19 @@ pub fn render(target: &[Inline], codes: &BTreeMap<String, CodeData>, kind: Kind)
     // `%%%d` (the literal `%` code and a stray `d`).
     let mut lone_pct = false;
     let mut piece = String::new();
-    for i in target {
+    for i in &items {
         piece.clear();
         let mut code = None;
         match i {
-            Inline::Text(t) => escape(t, kind, &mut piece),
-            Inline::Tag { id, kind: k, .. } => {
-                let Some(c) = codes.get(id) else { continue };
+            Piece::Text(t) => escape(t, kind, &mut piece),
+            Piece::Tag(id, k) => {
+                let Some(c) = codes.get(*id) else { continue };
                 if let Some(raw) = &c.standalone {
                     piece.push_str(raw);
                     code = Some(raw.as_str());
-                } else if *k == TagKind::Open && closes.contains(id.as_str()) {
+                } else if *k == TagKind::Open && closes.contains(id) {
                     piece.push_str(c.open.as_deref().unwrap_or("{"));
-                } else if *k == TagKind::Close && opens.contains(id.as_str()) {
+                } else if *k == TagKind::Close && opens.contains(id) {
                     piece.push_str(c.close.as_deref().unwrap_or("}"));
                 }
             }
@@ -407,6 +414,76 @@ pub fn render(target: &[Inline], codes: &BTreeMap<String, CodeData>, kind: Kind)
         lone_pct = code.is_none() && piece.ends_with('%') && !piece.ends_with("%%");
         out.push_str(&piece);
         seal = code.and_then(|raw| open_end(raw, kind));
+    }
+    out
+}
+
+/// One piece of a translation for [`render`]: text escaped on its own, or a code by id.
+enum Piece<'a> {
+    Text(&'a str),
+    Tag(&'a str, TagKind),
+}
+
+/// The translation as pieces. Under the LocOS profile a text run is split at each token look-alike that names a
+/// code (`⟦x1⟧`, `⟦/g2⟧`, LocOS `_PLACEHOLDER_RE` and `code_tokens`): `x` / `g` give that code (a closing mark of a
+/// point code too, as LocOS), other letters nothing.
+fn pieces<'a>(target: &'a [Inline], codes: &'a BTreeMap<String, CodeData>, locos: bool) -> Vec<Piece<'a>> {
+    let mut out = Vec::with_capacity(target.len());
+    for i in target {
+        match i {
+            Inline::Tag { id, kind, .. } => out.push(Piece::Tag(id, *kind)),
+            Inline::Text(t) if !locos || !t.contains('\u{27E6}') => out.push(Piece::Text(t)),
+            Inline::Text(t) => {
+                let mut at = 0;
+                for (s, e, closing, letter, num) in look_alikes(t) {
+                    let Some((id, c)) = codes.get_key_value(num) else { continue };
+                    out.push(Piece::Text(&t[at..s]));
+                    at = e;
+                    if matches!(letter, Some('x') | Some('g')) {
+                        let k = if c.standalone.is_some() {
+                            TagKind::Standalone
+                        } else if closing {
+                            TagKind::Close
+                        } else {
+                            TagKind::Open
+                        };
+                        out.push(Piece::Tag(id, k));
+                    }
+                }
+                out.push(Piece::Text(&t[at..]));
+            }
+        }
+    }
+    out
+}
+
+/// The `⟦/?[a-z]?\d+⟧` look-alikes of `t`: (start, end, closing, letter, digits).
+fn look_alikes(t: &str) -> Vec<(usize, usize, bool, Option<char>, &str)> {
+    let mut out = Vec::new();
+    let mut from = 0;
+    while let Some(rel) = t[from..].find('\u{27E6}') {
+        let s = from + rel;
+        let mut i = s + '\u{27E6}'.len_utf8();
+        let b = t.as_bytes();
+        let closing = b.get(i) == Some(&b'/');
+        if closing {
+            i += 1;
+        }
+        let letter = b.get(i).filter(|c| c.is_ascii_lowercase()).map(|&c| c as char);
+        if letter.is_some() {
+            i += 1;
+        }
+        let d0 = i;
+        while b.get(i).is_some_and(u8::is_ascii_digit) {
+            i += 1;
+        }
+        if i > d0 && t[i..].starts_with('\u{27E7}') {
+            let e = i + '\u{27E7}'.len_utf8();
+            out.push((s, e, closing, letter, &t[d0..i]));
+            from = e;
+        } else {
+            from = s + '\u{27E6}'.len_utf8();
+        }
     }
     out
 }

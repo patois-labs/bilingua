@@ -431,6 +431,35 @@ keeps the encoding:
   so the adapter's parse memo can keep one handle for the build; it cannot be pickled (store the original bytes, as
   the adapter does, not the handle).
 
+## Wave 6 B-side: markup, subtitles, legacy and resource formats (W6, 11-07)
+
+Measured with goldens LocOS (iss-int) wrote: `bilingua/tests/locos/<format>/w6_*` (hand-written, 20 formats) and,
+not committed, the 1,073 round-1 and round-2 wild files of wave 6 (`BILI_LOCOS_ROOT`).
+
+- Style (ass-2, tex-2, pl-1, mo-2): LocOS gives ASS, LaTeX, plist, stringsdict and MO units an empty style; the
+  profile now does too (`context.style` cleared). Every other wave-6 format already gave LocOS's value (`dxf:*`,
+  `rc:*`, `stf:*`, rST `meta:*`, XPress Tags paragraph style names, empty elsewhere).
+- tex-1: a token naming no code is kept as text (it was deleted). tex-3: `tex.text_commands`.
+- dxf-1: `⟦p1⟧` for a point code is no code (LocOS reads `x` and `g`); the writer drops it and escapes the text on
+  each side on its own, so `a%⟦p1⟧%b⟦x1⟧` gives LocOS's `a%%%%b%%d`.
+- rc-1, pl-2, csv-1, csv-2, xtg-1, ass-3: encodings on write as LocOS (see the CHANGELOG). rc-2: a pair token for a
+  point code is dropped.
+- st-1, ass-1: BOM read version 2. st-2, xtg-2: repeated style pairs repaired, not refused. st-4: the refusal
+  names the cue; its code stays `unwritable` (a code of its own, `caption`, would change what the adapter routes
+  on: left for the lead).
+- mo-1: placeholders are text. ts-1: a declared Latin-1 file is read whatever the source language.
+- csv-3: without `csv.target_locales` / `csv.columns` the export's target language does not plan the columns.
+- rst-1: LocOS does not widen a table either; it refuses a cell that cannot fit (TableFitError). Bilingua's
+  refusal is now `unwritable` with LocOS's sentence. rst-2: Bilingua already warns `rst_skipped_table`.
+- Kept differences, LocOS's to change: tex-4 (LocOS starts the body at a `\begin{document}` inside an example
+  environment and loses the chapter's prose; Bilingua skips it, see "LaTeX, `\begin{document}` in an example");
+  rst-3 (LocOS reads a literal block after `::` in a list item as text, and ends an inline literal that holds a
+  role at its first double backtick, leaving the last backtick as unit text); rst-4 (LocOS writes a changed grid table inside an indented
+  directive without its indent, which takes the table out of the directive; Bilingua keeps the indent); wiki-1
+  (the remaining unit differences are the known `wiki-file-links` rule: LocOS offers image options and empty
+  captions); adoc-1 (a `footnote:[url]` in a description-list term: LocOS keeps the macro as text, Bilingua makes it
+  a pair); binary plist object layout.
+
 ## Differences from LocOS: TXLF state and WiX comment runs (11-07)
 
 - TXLF under the profile: an identity build (each unit set to its own text) left `state="needs-translation"` on a

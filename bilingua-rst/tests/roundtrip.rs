@@ -68,7 +68,7 @@ fn pseudo_translation_reads_back_with_the_same_units_and_tags() {
         pseudo(&mut doc, "Zq ");
         let out = match Rst.merge(&doc) {
             Ok(o) => o,
-            Err(Error::Write(m)) => {
+            Err(Error::Unwritable { reason: m, .. }) => {
                 assert!(m.contains("does not fit"), "{name}: {m}");
                 continue;
             }
@@ -111,7 +111,7 @@ fn generated_corpus_round_trips() {
                 units_all += before.len();
                 n += 1;
             }
-            Err(Error::Write(m)) if m.contains("does not fit") => fits += 1,
+            Err(Error::Unwritable { reason: m, .. }) if m.contains("does not fit") => fits += 1,
             Err(e) => panic!("{}: {e}", c["name"]),
         }
     }

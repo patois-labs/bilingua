@@ -1,0 +1,17 @@
+[
+ {
+  "name": "w6-overflow",
+  "locale": null,
+  "map": {
+   "0": "水を持参",
+   "1": "Café offen"
+  }
+ },
+ {
+  "name": "w6-fits",
+  "locale": null,
+  "map": {
+   "0": "Wasser mitnehmen ä"
+  }
+ }
+]

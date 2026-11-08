@@ -356,14 +356,20 @@ pub fn from_locos_text(text: &str, map: &LocosMap) -> Vec<Inline> {
 
 /// Like [`from_locos_text`], and lists every token that could not be resolved.
 pub fn parse_locos_text(text: &str, map: &LocosMap) -> (Vec<Inline>, Vec<TokenProblem>) {
-    parse_tokens(text, map, false)
+    parse_tokens(text, map, false, true)
 }
 
 /// Formats whose LocOS filter drops a token of the wrong kind that names one of the unit's codes (a pair token
 /// `\u{27E6}g1\u{27E7}`, `\u{27E6}/g1\u{27E7}` for a point code), where other formats keep it as text: LocOS
-/// `toml_filter._detokenize` and `js_module_filter._render` (#814.1, g12). A token whose number names no code stays
+/// `toml_filter._detokenize`, `js_module_filter._render` and `rc_filter._render_literal` (#814.1, g12; rc: B-SIDE W6
+/// rc-2, a pair token for a point code). A token whose number names no code stays
 /// text in every format.
-const LOCOS_DROPS_MISMATCH: &[&str] = &["toml", "js"];
+const LOCOS_DROPS_MISMATCH: &[&str] = &["toml", "js", "rc"];
+
+/// Formats whose LocOS filter reads only `x` as a point letter: a `p` token naming a point code is not that code
+/// (LocOS `dxf_filter._render` takes `x` and `g` only, B-SIDE W6 dxf-1). It is a [`TokenProblem::KindMismatch`]
+/// left in the text, where the format's writer applies LocOS's rule (DXF drops it).
+const LOCOS_NO_FREE_LETTER: &[&str] = &["dxf"];
 
 /// [`parse_locos_text`] with the token rules of `format`'s LocOS filter: for TOML and JavaScript modules a token of
 /// the wrong kind for a code of the unit is dropped (LocOS writes nothing for it) instead of kept as text; it is
@@ -444,7 +450,7 @@ pub fn repair_locos_text_for(format: &str, text: &str, map: &LocosMap) -> (Vec<I
     if locos_repairs_tags(format) {
         return parse_tokens_repairing(text, map);
     }
-    let (inl, problems) = parse_tokens(text, map, LOCOS_DROPS_MISMATCH.contains(&format));
+    let (inl, problems) = parse_tokens(text, map, LOCOS_DROPS_MISMATCH.contains(&format), !LOCOS_NO_FREE_LETTER.contains(&format));
     (inl, problems, Vec::new())
 }
 
@@ -545,8 +551,9 @@ fn parse_tokens_repairing(text: &str, map: &LocosMap) -> (Vec<Inline>, Vec<Token
 /// The CAT writers' rule ([`repair_locos_text_for`]) on an inline list, for a target given as tags rather than
 /// LocOS text: each source code is written at most as often as the source has it (a repeated pair loses its tags,
 /// its text stays), a close that does not close the pair on top is dropped, a pair left open is closed at the end.
-/// A tag the source lacks is kept, so the model's check still refuses it.
-pub(crate) fn repair_tags(source: &[Inline], target: Vec<Inline>) -> Vec<Inline> {
+/// A tag the source lacks is kept, so the model's check still refuses it. With `points` false a standalone code
+/// is never dropped for being repeated (the formats whose writer writes a repeated placeholder each time).
+pub(crate) fn repair_tags(source: &[Inline], target: Vec<Inline>, points: bool) -> Vec<Inline> {
     use std::collections::HashMap;
     let partner = pairs(source);
     let mut pair_allowed: HashMap<&str, usize> = HashMap::new();
@@ -596,6 +603,7 @@ pub(crate) fn repair_tags(source: &[Inline], target: Vec<Inline>) -> Vec<Inline>
                 None if known.contains(id.as_str()) => {}
                 // not a code of the source: kept, the model's check names it
                 None => out.push(i),
+                Some(_) if !points => out.push(i),
                 Some(max) => {
                     let n = point_used.entry((id.clone(), *kind)).or_default();
                     if *n < *max {
@@ -615,7 +623,7 @@ pub(crate) fn repair_tags(source: &[Inline], target: Vec<Inline>) -> Vec<Inline>
     merge_text(out)
 }
 
-fn parse_tokens(text: &str, map: &LocosMap, drop_mismatch: bool) -> (Vec<Inline>, Vec<TokenProblem>) {
+fn parse_tokens(text: &str, map: &LocosMap, drop_mismatch: bool, free_letter: bool) -> (Vec<Inline>, Vec<TokenProblem>) {
     let mut out: Vec<Inline> = Vec::new();
     let mut problems = Vec::new();
     let mut lit = String::new();
@@ -626,7 +634,14 @@ fn parse_tokens(text: &str, map: &LocosMap, drop_mismatch: bool) -> (Vec<Inline>
         if ch == OPEN {
             if let Some((tok_len, closing, letter, num)) = scan_token(rest) {
                 let token = &rest[..tok_len];
-                match resolve(map, closing, letter, &num) {
+                let found = if free_letter || letter != Some(FREE_LETTER) {
+                    resolve(map, closing, letter, &num)
+                } else if map.contains_key(num.as_str()) {
+                    Resolved::Mismatch
+                } else {
+                    Resolved::Unknown
+                };
+                match found {
                     Resolved::Tag(t) => {
                         if !lit.is_empty() {
                             out.push(Inline::Text(std::mem::take(&mut lit)));
@@ -1212,7 +1227,8 @@ mod tests {
         let src = vec![Inline::text("Reading time "), Inline::tag("1", TagKind::Standalone, "{{ .Count }}"), Inline::text(" min")];
         let (_, map) = to_locos_text(&src);
         let t = "Lesezeit \u{27E6}x9\u{27E7} \u{27E6}g1\u{27E7}Min\u{27E6}/g1\u{27E7} \u{27E6}x1\u{27E7}";
-        for f in ["toml", "js"] {
+        // rc (B-SIDE W6 rc-2): LocOS `rc_filter._render_literal` drops a pair token for a point code the same way
+        for f in ["toml", "js", "rc"] {
             let (inl, problems) = parse_locos_text_for(f, t, &map);
             assert_eq!(
                 inl,
@@ -1225,6 +1241,23 @@ mod tests {
         let (kept, _) = parse_locos_text_for("json", t, &map);
         assert_eq!(kept, parse_locos_text(t, &map).0);
         assert!(matches!(&kept[0], Inline::Text(x) if x.contains("\u{27E6}g1\u{27E7}Min")));
+    }
+
+    /// B-SIDE W6 dxf-1: DXF reads only `x` as a point letter; `p` naming a point code is a kind mismatch left in the
+    /// text (the DXF writer drops it as LocOS does), where every other format reads `p` as the point.
+    #[test]
+    fn dxf_does_not_read_p_as_a_point() {
+        let src = vec![Inline::text("a"), Inline::tag("1", TagKind::Standalone, "%%d")];
+        let (_, map) = to_locos_text(&src);
+        let t = "a%\u{27E6}p1\u{27E7}%b\u{27E6}x1\u{27E7}";
+        let (inl, problems) = parse_locos_text_for("dxf", t, &map);
+        assert_eq!(inl, vec![Inline::text("a%\u{27E6}p1\u{27E7}%b"), Inline::tag("1", TagKind::Standalone, "%%d")]);
+        assert_eq!(problems, vec![TokenProblem::KindMismatch { token: "\u{27E6}p1\u{27E7}".into() }]);
+        // a `p` token naming no code is unknown, as everywhere
+        let (_, problems) = parse_locos_text_for("dxf", "\u{27E6}p7\u{27E7}", &map);
+        assert_eq!(problems, vec![TokenProblem::Unknown { token: "\u{27E6}p7\u{27E7}".into() }]);
+        let (inl, problems) = parse_locos_text_for("txt", t, &map);
+        assert!(problems.is_empty() && inl.iter().filter(|i| matches!(i, Inline::Tag { .. })).count() == 2);
     }
 
     /// B-SIDE 8: the CAT writers' rule (LocOS `cat_xliff._render`): a repeated pair loses its tags and keeps its
@@ -1263,7 +1296,7 @@ mod tests {
             for f in ["sdlxliff", "xliff", "mqxliff", "mxliff", "txlf", "txml", "ttx", "xlz", "mqxlz", "sdlppx"] {
                 let (inl, _, repairs) = repair_locos_text_for(f, t, &map);
                 // every token stays a tag (the writer applies the rule); the rule on the inlines gives LocOS's result
-                assert_eq!(repair_tags(&src, inl.clone()), want, "{f}: {t}");
+                assert_eq!(repair_tags(&src, inl.clone(), true), want, "{f}: {t}");
                 let got: Vec<&str> = repairs
                     .iter()
                     .map(|r| match r {
@@ -1275,7 +1308,7 @@ mod tests {
                     .collect();
                 assert_eq!(got, kinds, "{f}: {t}");
                 // the inline repair leaves a repaired target as it is
-                assert_eq!(repair_tags(&src, want.clone()), want, "{f}: {t}");
+                assert_eq!(repair_tags(&src, want.clone(), true), want, "{f}: {t}");
                 assert_eq!(parse_locos_text_for(f, t, &map).0, inl, "{f}: {t}");
             }
             let (plain, _, none) = repair_locos_text_for("json", t, &map);
@@ -1292,11 +1325,11 @@ mod tests {
         let close = Inline::tag("1", TagKind::Close, "</b>");
         let src = vec![open.clone(), Inline::text("a"), close.clone()];
         let t = vec![open.clone(), Inline::text("x"), close.clone(), open.clone(), Inline::text("y"), close.clone(), close.clone(), open.clone()];
-        assert_eq!(repair_tags(&src, t), vec![open.clone(), Inline::text("x"), close.clone(), Inline::text("y")]);
-        assert_eq!(repair_tags(&src, vec![open.clone(), Inline::text("z")]), vec![open.clone(), Inline::text("z"), close.clone()]);
+        assert_eq!(repair_tags(&src, t, true), vec![open.clone(), Inline::text("x"), close.clone(), Inline::text("y")]);
+        assert_eq!(repair_tags(&src, vec![open.clone(), Inline::text("z")], true), vec![open.clone(), Inline::text("z"), close.clone()]);
         let twice = vec![open.clone(), Inline::text("a"), close.clone(), open.clone(), Inline::text("b"), close.clone()];
-        assert_eq!(repair_tags(&twice, twice.clone()), twice);
+        assert_eq!(repair_tags(&twice, twice.clone(), true), twice);
         let invented = vec![Inline::tag("9", TagKind::Standalone, "<hr/>")];
-        assert_eq!(repair_tags(&src, invented.clone()), invented);
+        assert_eq!(repair_tags(&src, invented.clone(), true), invented);
     }
 }

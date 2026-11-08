@@ -163,8 +163,13 @@ fn units_carry_their_timing_and_stable_ids() {
 fn nothing_translated_keeps_every_byte_even_with_the_adapter_options() {
     let (_, _, cp, lines) = LANGS[6];
     for data in [enc(cp, &sbv(&lines, "\r\n")), sbv(&lines, "\r\n").into_bytes()] {
-        let o = opts().with_source_lang("ar").with_target_lang("en");
+        let o = opts().with_source_lang("ar");
         let doc = Sbv.extract(&data, &o).unwrap();
         assert_eq!(Sbv.merge_with(&doc, &bilingua_model::profile::locos().merge_options("xml")).unwrap(), data);
+        // a localized export is written even when nothing is translated (LocOS's guard hands back the upload only for
+        // a plain build): the same text, as UTF-8 (B-SIDE W6 st-1 goldens)
+        let doc = Sbv.extract(&data, &o.clone().with_target_lang("en")).unwrap();
+        let out = Sbv.merge_with(&doc, &bilingua_model::profile::locos().merge_options("xml")).unwrap();
+        assert_eq!(out, sbv(&lines, "\r\n").into_bytes());
     }
 }

@@ -1,0 +1,46 @@
+{
+ "format": "csv",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Bring water",
+   "style": ""
+  },
+  {
+   "p_index": 1,
+   "text": "Open the map, then go",
+   "style": ""
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "a2V5LGVuLGRlCndhdGVyLEJyaW5nIHdhdGVyLAptYXAsIk9wZW4gdGhlIG1hcCwgdGhlbiBnbyIsCg=="
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü Bring water",
+    "1": "Ü Open the map, then go"
+   },
+   "out_b64": "a2V5LGVuLGRlCndhdGVyLMOcIEJyaW5nIHdhdGVyLAptYXAsIsOcIE9wZW4gdGhlIG1hcCwgdGhlbiBnbyIsCg=="
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Bring water & <\"'>"
+   },
+   "out_b64": "a2V5LGVuLGRlCndhdGVyLCJCcmluZyB3YXRlciAmIDwiIic+IiwKbWFwLCJPcGVuIHRoZSBtYXAsIHRoZW4gZ28iLAo="
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "out_b64": "a2V5LGVuLGRlCndhdGVyLEJyaW5nIHdhdGVyLAptYXAsIk9wZW4gdGhlIG1hcCwgdGhlbiBnbyIsCg=="
+  }
+ ]
+}

@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Field Guide
+GenericName=Hiking guide
+Comment=Plan a walk with water and maps
+Exec=fieldguide %U
+Icon=fieldguide
+Keywords=hike;trail;map;

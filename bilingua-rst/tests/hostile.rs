@@ -25,7 +25,7 @@ fn check(data: &[u8]) {
                     let _ = extract(&out).unwrap_or_else(|e| panic!("merged output unreadable: {e}"));
                     let _ = n;
                 }
-                Err(Error::Write(m)) => assert!(m.contains("does not fit"), "{m}"),
+                Err(Error::Unwritable { reason: m, .. }) => assert!(m.contains("does not fit"), "{m}"),
                 Err(e) => panic!("unexpected merge error: {e}"),
             }
         }

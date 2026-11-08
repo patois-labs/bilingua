@@ -17,6 +17,15 @@ use bilingua_model::*;
 use regex::Regex;
 use std::sync::OnceLock;
 
+/// The `ExtractOptions::format_options` key that adds inline text commands for one call (LocOS
+/// `LATEX_TEXT_COMMANDS`, B-SIDE W6 tex-3): comma-separated names (`mynote,keyword`), the same rules as
+/// [`Latex::with_inline_commands`]; it adds to the filter's own list.
+pub const TEXT_COMMANDS_KEY: &str = "tex.text_commands";
+
+/// The `format_options` keys of the LaTeX filter.
+pub const FORMAT_OPTIONS: &[FormatOptionKey] =
+    &[FormatOptionKey::text(TEXT_COMMANDS_KEY, "Extra inline text commands, comma-separated (LocOS LATEX_TEXT_COMMANDS).")];
+
 /// The hidden code of a unit: `standalone` = the source text as written.
 const RAW: &str = "raw";
 
@@ -70,6 +79,10 @@ impl Filter for Latex {
         &["tex", "latex", "ltx"]
     }
 
+    fn format_option_keys(&self) -> &'static [FormatOptionKey] {
+        FORMAT_OPTIONS
+    }
+
     /// Strict: a `\documentclass`, `\usepackage`, `\RequirePackage` or `\begin{document}` at a line start in the first
     /// 8 KB. A chapter file without any of them is found by its extension only.
     fn sniff(&self, bytes: &[u8]) -> bool {
@@ -85,6 +98,15 @@ impl Filter for Latex {
         if text.len() >= u32::MAX as usize {
             return Err(limit_err("This file is too large to read; split it into smaller files.".into()));
         }
+        // the filter's own inline commands plus `tex.text_commands` for this call
+        let mut extra = self.extra_inline.clone();
+        if let Some(spec) = opts.format_option(TEXT_COMMANDS_KEY) {
+            for n in Latex::with_inline_commands(spec.split(',')).extra_inline {
+                if !extra.contains(&n) {
+                    extra.push(n);
+                }
+            }
+        }
         let tx = scan::Txt::new(&text);
         let mut sc = scan::Scan::new(&tx, limits);
         sc.run()?;
@@ -95,7 +117,7 @@ impl Filter for Latex {
         let (mut n_tr, mut n_lock) = (0usize, 0usize);
         for s in &sc.slots {
             let raw = &text[s.a..s.b];
-            let (pieces, map) = inline::tokenize_slot(raw, &self.extra_inline);
+            let (pieces, map) = inline::tokenize_slot(raw, &extra);
             let tr = inline::translatable(&pieces);
             if !(tr || opts.include_locked && !pieces.is_empty()) {
                 continue;
