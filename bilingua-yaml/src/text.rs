@@ -171,7 +171,7 @@ mod tests {
             assert_eq!(e, enc);
             assert_eq!(encode(&t, e).unwrap(), bytes);
         }
-        assert!(decode(b"\xFF\xD8\xFF\x00\x81binary\x00").is_err());
-        assert!(decode(b"a: \x81").is_err());
+        assert!(decode(b"\xFF\xD8\xFF\x00\x81binary\x00", None).is_err());
+        assert!(decode(b"a: \x81", None).is_err());
     }
 }
