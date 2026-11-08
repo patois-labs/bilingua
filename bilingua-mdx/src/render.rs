@@ -162,9 +162,91 @@ pub(crate) fn build_document(w: &Walk, l: &Loaded, opts: &ExtractOptions) -> Res
     if pos < text.len() {
         parts.push(SkelPart::Raw(text[pos..].to_string()));
     }
-    let warnings = a11y_warnings(w);
+    // LocOS profile: the image inventory goes on the units (LocOS `skeleton["a11y_images"]`, for its missing-alt
+    // prompts), not into the warnings
+    let warnings = if opts.is_profile(profile::LOCOS) {
+        image_inventory(w, fm_len, &mut units);
+        Vec::new()
+    } else {
+        a11y_warnings(w)
+    };
     let doc = Document::new(crate::ID, units, Skeleton::text(parts, l.encoding.clone(), bilingua_model::parser_info!())).with_options(opts);
     Ok((doc, warnings))
+}
+
+/// LocOS `mdx_filter.parse`'s image inventory: every Markdown image of a line unit and every `<img>` / `<Image>` tag,
+/// anchored at a line unit (`a11y.anchor_for`: the line holding it, else the nearest before, else the first), with a
+/// finding for an empty Markdown alt and a JSX image whose `alt` is missing or blank; written on the anchor units as
+/// the profile's `A11Y_IMAGES`, `A11Y_MISSING_ALT` and `A11Y_EMPTY_ALT` extras. Line unit `k` is unit `fm_len + k`.
+fn image_inventory(w: &Walk, fm_len: usize, units: &mut [Unit]) {
+    let text = w.text;
+    let spans: Vec<(usize, usize)> = w.units.iter().map(|lu| (lu.start, lu.end)).collect();
+    let anchor_for = |pos: usize| -> Option<usize> {
+        let mut before = None;
+        for (k, (s, e)) in spans.iter().enumerate() {
+            if *s <= pos && pos <= *e {
+                return Some(k);
+            }
+            if *e < pos {
+                before = Some(k);
+            }
+        }
+        before.or(if spans.is_empty() { None } else { Some(0) })
+    };
+    // (anchor, finding kind, where)
+    let mut seen: Vec<(Option<usize>, Option<&'static str>, String)> = Vec::new();
+    for lu in &w.units {
+        for (at, alt, target) in mdline::images(&text[lu.start..lu.end]) {
+            let anchor = anchor_for(lu.start + at);
+            if trim(&alt).is_empty() {
+                let name = trim(&target).split(' ').next().unwrap_or("").rsplit('/').next().unwrap_or("").to_string();
+                seen.push((anchor, Some("empty"), name));
+            } else {
+                seen.push((anchor, None, String::new()));
+            }
+        }
+    }
+    for tag in &w.tags {
+        let (closing, _sc, name) = tag_raw(&text[tag.start..tag.end]);
+        let lname = name.to_lowercase();
+        if closing || (lname != "img" && lname != "image") {
+            continue;
+        }
+        let anchor = anchor_for(tag.start);
+        let alt = tag.attrs.iter().find(|a| a.0 == "alt");
+        let kind = if !tag.names.iter().any(|n| n == "alt") {
+            Some("missing")
+        } else if alt.is_some_and(|a| trim(&text[a.1..a.2]).is_empty()) {
+            Some("empty")
+        } else {
+            None
+        };
+        let src = tag.attrs.iter().find(|a| a.0 == "src");
+        let place = src.map_or(lname.clone(), |s| trim(&text[s.1..s.2]).rsplit('/').next().unwrap_or("").to_string());
+        seen.push((anchor, kind, place));
+    }
+    let mut by_unit: std::collections::BTreeMap<usize, (usize, Vec<(&'static str, String)>)> = Default::default();
+    for (anchor, kind, place) in seen {
+        let Some(k) = anchor else { continue };
+        let e = by_unit.entry(fm_len + k).or_default();
+        e.0 += 1;
+        if let Some(kind) = kind {
+            e.1.push((kind, place.chars().take(120).collect()));
+        }
+    }
+    for (i, (n, found)) in by_unit {
+        let Some(u) = units.get_mut(i) else { continue };
+        u.context.extra.insert(profile::A11Y_IMAGES.into(), n.to_string());
+        if found.is_empty() {
+            continue;
+        }
+        let list: Vec<serde_json::Value> = found.iter().map(|(k, w)| serde_json::json!({"kind": k, "where": w})).collect();
+        u.context.extra.insert(profile::A11Y_MISSING_ALT.into(), serde_json::Value::Array(list).to_string());
+        let empty: Vec<&str> = found.iter().filter(|(k, _)| *k == "empty").map(|(_, w)| w.as_str()).collect();
+        if !empty.is_empty() {
+            u.context.extra.insert(profile::A11Y_EMPTY_ALT.into(), empty.join("\n"));
+        }
+    }
 }
 
 /// Empty Markdown alt text and `<img>` without alt (the LocOS `a11y_images` report), as warnings.

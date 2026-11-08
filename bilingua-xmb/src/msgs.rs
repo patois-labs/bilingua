@@ -340,6 +340,11 @@ pub fn extract(bytes: &[u8], opts: &ExtractOptions, limits: &Limits) -> Result<D
             u.context.notes.push(m.note.clone());
         }
         u.context.extra.insert("index".into(), mi.to_string());
+        if opts.is_profile(profile::LOCOS) {
+            // LocOS `_parse`: p_index is the message's position among every message of the bundle (a duplicate id
+            // or a placeholder-only message is skipped but counted), so a skipped message never renumbers the rest
+            u.context.extra.insert(profile::P_INDEX.into(), mi.to_string());
+        }
         if let Some(d) = &m.desc {
             u.context.extra.insert("description".into(), d.clone());
         }

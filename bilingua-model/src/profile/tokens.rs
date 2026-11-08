@@ -375,13 +375,30 @@ pub fn parse_locos_text_for(format: &str, text: &str, map: &LocosMap) -> (Vec<In
 
 /// Formats whose LocOS writer repairs the tags of a translation instead of refusing it (every CAT XML writer:
 /// `cat_xliff._render` for sdlxliff, mqxliff, mxliff, txlf, txml, ttx and the xlz, mqxlz and Trados package
-/// members, `xliff_filter._rebuild_target` for plain XLIFF). See [`repair_locos_text_for`].
-const LOCOS_REPAIRS_TAGS: &[&str] = &["xliff", "sdlxliff", "mqxliff", "mxliff", "txlf", "txml", "ttx", "xlz", "mqxlz", "sdlppx"];
+/// members, `xliff_filter._rebuild_target` for plain XLIFF). W5: the XML writers do the same (`xml_its` render for
+/// generic XML, DITA and DocBook, `xml_resource_common.render_inner` for Android strings and Java XML properties,
+/// `ttml_filter._render`, `angular_xmb_filter._render` for XMB and XTB): a duplicated token is dropped, a stray close
+/// is dropped, a pair left open is closed. MDX (`mdx_filter._rematerialize`) writes every token as it comes, a
+/// repeated one again. See [`repair_locos_text_for`].
+const LOCOS_REPAIRS_TAGS: &[&str] =
+    &["xliff", "sdlxliff", "mqxliff", "mxliff", "txlf", "txml", "ttx", "xlz", "mqxlz", "sdlppx", "xml", "dita", "docbook", "android", "javaxml", "ttml", "xmb", "xtb", "mdx"];
+
+/// The formats of [`LOCOS_REPAIRS_TAGS`] whose Bilingua writer gets the target with every tag as typed: the CAT
+/// writers port LocOS's render rule and apply it after stripping the target's edges; MDX writes each tag as LocOS
+/// does. The other formats get the repaired target.
+const LOCOS_TYPED_TAGS: &[&str] = &["xliff", "sdlxliff", "mqxliff", "mxliff", "txlf", "txml", "ttx", "xlz", "mqxlz", "sdlppx", "mdx"];
 
 /// True when the LocOS writer of `format` repairs a translation's tags ([`repair_locos_text_for`]) rather than
-/// refusing them: the XLIFF family, TXML, TTX and the XLIFF packages.
+/// refusing them: the XLIFF family, TXML, TTX, the XLIFF packages, and since W5 the XML formats (generic XML, DITA,
+/// DocBook, Android strings, Java XML properties, TTML, XMB, XTB) and MDX.
 pub fn locos_repairs_tags(format: &str) -> bool {
     LOCOS_REPAIRS_TAGS.contains(&format)
+}
+
+/// For a format [`locos_repairs_tags`] lists: true when the target is stored with its tags as typed (the writer
+/// applies LocOS's rule itself), false when it is stored repaired ([`repair_tags`]).
+pub(crate) fn locos_keeps_typed_tags(format: &str) -> bool {
+    LOCOS_TYPED_TAGS.contains(&format)
 }
 
 /// One repair [`repair_locos_text_for`] made to a translation's tokens. The text around a token always stays; only

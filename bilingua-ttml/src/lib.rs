@@ -75,6 +75,10 @@ impl Ttml {
             counted = cap.content_start;
             u.context.kind = Some("subtitle".into());
             u.context.style = cap.attrs.style.clone();
+            if opts.is_profile(profile::LOCOS) {
+                // LocOS `_units`: p_index is the caption's position among every caption <p>, a blank one counted
+                u.context.extra.insert(profile::P_INDEX.into(), idx.to_string());
+            }
             u.context.key = cap.attrs.xml_id.clone();
             u.context.location = Some(format!("line {line}"));
             for (k, v) in [("begin", &cap.attrs.begin), ("end", &cap.attrs.end), ("dur", &cap.attrs.dur), ("region", &cap.attrs.region)] {

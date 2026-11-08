@@ -354,6 +354,11 @@ pub(crate) fn extract(bytes: &[u8], opts: &ExtractOptions, cfg: Cfg) -> Result<D
         u.set_hidden(VALUE, "attr");
         units.push(u);
     }
+    if opts.is_profile(profile::LOCOS) {
+        // LocOS `skeleton["a11y_images"]` (html_filter._missing_alt_findings), for its missing-alt prompts
+        let (anchors, found) = html::missing_alt_findings(&toks, &body);
+        html::put_image_inventory(&mut units, &anchors, &found);
+    }
     let source_lang = opts.source_lang.clone().or_else(|| page_lang(&toks));
     let doc = Document::new("html", units, Skeleton::text(vec![SkelPart::Raw(text.to_string())], dec.encoding.clone(), parser_info!()))
         .with_options(opts)

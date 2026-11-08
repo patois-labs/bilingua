@@ -71,9 +71,16 @@ impl Kind {
 /// records it in the skeleton, so the merge of that document honours it.
 pub const UTF8_FALLBACK: &str = "htmlhelp.utf8_fallback";
 
+/// The format option (`ExtractOptions::format_options`) for the ANSI code page of the help project's `Language=`
+/// (decision 21, LocOS's `hhp_code_page` parse keyword), as a Windows code page number (`"1251"`): used for a file
+/// that declares no charset, as [`HhcFilter::extract_with`] does. See [`hhp_code_page`].
+pub const CODE_PAGE: &str = "htmlhelp.code_page";
+
 /// The `format_options` keys of the HTML Help filters.
-pub const FORMAT_OPTIONS: &[FormatOptionKey] =
-    &[FormatOptionKey::bool(UTF8_FALLBACK, "Write text the file's code page cannot hold as UTF-8 (LocOS HTMLHELP_UTF8_FALLBACK).")];
+pub const FORMAT_OPTIONS: &[FormatOptionKey] = &[
+    FormatOptionKey::bool(UTF8_FALLBACK, "Write text the file's code page cannot hold as UTF-8 (LocOS HTMLHELP_UTF8_FALLBACK)."),
+    FormatOptionKey::int(CODE_PAGE, "The Windows code page of the help project's Language= (LocOS hhp_code_page), for a file that declares no charset."),
+];
 const FALLBACK_MARK: &str = "utf8_fallback";
 
 /// The ANSI code page of an HTML Help project's language: `Language=0x419 Russian` in `[OPTIONS]` gives 1251. `None`
@@ -120,7 +127,13 @@ fn extract_impl(kind: Kind, bytes: &[u8], opts: &ExtractOptions, hint: Option<u1
     let limits = opts.limits();
     // The project's Language= code page decides first; else the code page of the project's source language (a
     // Japanese project's undeclared file is Shift_JIS, not Windows-1252). Localization OS has no second rule.
-    let hint = hint.or_else(|| opts.source_lang.as_deref().and_then(target_code_page));
+    // The caller's code page (the `htmlhelp.code_page` option) when no explicit hint is given; a project file is
+    // read in the code page of its own Language= (LocOS #797, decode version 2).
+    let hint = hint
+        .or_else(|| opts.format_option(CODE_PAGE).and_then(|v| v.trim().parse::<u16>().ok()))
+        .or_else(|| if kind == Kind::Hhp { hhp_code_page(bytes) } else { None });
+    // Bilingua's own rule, not LocOS's: the source language's code page; the LocOS profile has only the project's
+    let hint = if opts.is_profile(bilingua_model::profile::LOCOS) { hint } else { hint.or_else(|| opts.source_lang.as_deref().and_then(target_code_page)) };
     let (text, tag) = load(bytes, &limits, hint)?;
     let fallback = opts.format_flag(UTF8_FALLBACK) == Some(true);
     // A code page whose decode is not one to one (Shift_JIS NEC and IBM duplicates) cannot give the same bytes back

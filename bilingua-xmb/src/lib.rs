@@ -77,7 +77,9 @@ macro_rules! bundle_filter {
             /// (an XMB then comes back as the XTB for its target language); `output_encoding` as everywhere.
             fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
                 bilingua_model::check_own_options(self, &opts.format_options)?;
-                merge(doc, opts.stamp_lang(doc, false).is_some(), opts)
+                // LocOS profile: its XMB writer always produces the XTB, an untouched build included (`_xtb_from_xmb`)
+                let xtb_always = doc.format == "xmb" && opts.is_profile(bilingua_model::profile::LOCOS);
+                merge(doc, opts.stamp_lang(doc, false).is_some() || xtb_always, opts)
             }
         }
     };
