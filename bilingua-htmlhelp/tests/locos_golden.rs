@@ -65,8 +65,9 @@ fn check(bad: &mut Vec<String>, name: &str, what: &str, want: &str, got: Result<
 }
 
 /// Files that declare `shift_jis` or `gb2312`: LocOS reads that label with its strict codec, Bilingua as Windows 932 (issue 796), so the
-/// localized exports of NEC rows and the like differ on purpose. LocOS gets the same fix next; then this list goes away.
-const FIXED_ON_PURPOSE: &[&str] = &["random-121", "random-136", "random-156", "random-166", "random-227", "random-235", "random-252", "random-265", "random-284", "random-326", "random-329", "random-369", "random-377", "random-385", "random-423", "random-454", "random-459", "random-489", "random-509", "random-52", "random-67", "random-68", "random-89", "toc_zh.hhc", "index_zh.hhk"];
+/// localized exports of NEC rows and the like differed on purpose. LocOS has the same fix since its decode version 2
+/// (the golden was regenerated from LocOS iss-int on 11-07, W5): the list is empty; add a file here only with a reason.
+const FIXED_ON_PURPOSE: &[&str] = &[];
 
 #[test]
 fn matches_locos_on_random_files() {
