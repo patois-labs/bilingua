@@ -151,7 +151,9 @@ fn write_table(doc: &Document, i: usize, head: &Unit, widen: bool) -> Result<Str
             t.render(&cells, line)
         }
     };
-    let mut lines = rendered.map_err(Error::Write)?;
+    // a translation that does not fit its cell is the translator's to change (`unwritable`, LocOS TableFitError, B-SIDE
+    // W6 rst-1); anything else is a broken table record
+    let mut lines = rendered.map_err(|m| if m.contains("does not fit its cell") { Error::Unwritable { unit: Some(head.id.clone()), reason: m } } else { Error::Write(m) })?;
     if !pad.is_empty() {
         for l in lines.iter_mut().skip(1).filter(|l| !l.trim().is_empty()) {
             l.insert_str(0, pad);

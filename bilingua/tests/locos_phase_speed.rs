@@ -12,8 +12,7 @@ fn report(line: String) {
     println!("{line}");
     let path = std::path::Path::new(env!("CARGO_TARGET_TMPDIR")).join("locos_phase_speed.txt");
     let old = std::fs::read_to_string(&path).unwrap_or_default();
-    let _ = std::fs::write(path, format!("{old}{line}
-"));
+    let _ = std::fs::write(path, format!("{old}{line}\n"));
 }
 
 fn phases(name: &str, data: &[u8], text_of: impl Fn(usize) -> String) -> [f64; 4] {

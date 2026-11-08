@@ -87,7 +87,7 @@ fn matches_locos_on_generated_files() {
             let r = build_raw(&data, &tr);
             match (d.as_str(), r) {
                 (Some(dig), Ok(out)) => assert_eq!(fnv(&out), dig, "{name}: build {label}"),
-                (None, Err(Error::Write(m))) => {
+                (None, Err(Error::Unwritable { reason: m, .. })) => {
                     assert_eq!(m, d["msg"].as_str().unwrap(), "{name}: refusal {label}");
                     fits += 1;
                 }

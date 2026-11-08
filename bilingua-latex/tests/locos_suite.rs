@@ -163,6 +163,17 @@ fn config_extra_inline_command() {
     // names that are not plain letters are ignored
     let f = Latex::with_inline_commands(["key word", "", "a1"]);
     assert!(f.extra_inline.is_empty());
+    // B-SIDE W6 tex-3: the same list as a format option for one call (the adapter passes LATEX_TEXT_COMMANDS)
+    let o = opts().with_format_option(bilingua_latex::TEXT_COMMANDS_KEY, " keyword , bad name,");
+    let d = Latex::default().extract(data.as_bytes(), &o).unwrap();
+    assert_eq!(d.units.iter().map(token_text).collect::<Vec<_>>(), vec!["A \u{27E6}g1\u{27E7}term\u{27E6}/g1\u{27E7} here."]);
+    // and it round-trips: a translation keeps the command
+    let mut d = d;
+    d.units[0].segments[0].target = target_of(&d.units[0], "Ein \u{27E6}g1\u{27E7}Begriff\u{27E6}/g1\u{27E7} hier.");
+    assert!(text_of(&Latex::default().merge(&d).unwrap()).contains("Ein \\keyword{Begriff} hier."));
+    // an unknown tex option is refused
+    let bad = opts().with_format_option("tex.nope", "1");
+    assert!(matches!(Latex::default().extract(data.as_bytes(), &bad), Err(Error::FormatOption { .. })));
 }
 
 fn latin() -> Vec<u8> {

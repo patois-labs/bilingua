@@ -100,6 +100,19 @@ fn a_character_the_code_page_cannot_hold_becomes_a_character_reference() {
     assert!(out.starts_with(b"<?xml version=\"1.0\" encoding=\"ISO-8859-1\"?>"));
 }
 
+/// B-SIDE W6 ts-1: a declared ISO-8859-1 file read for a project whose source language is Japanese: the declaration
+/// decides, the source language does not (LocOS reads it), and an untouched merge gives the bytes back.
+#[test]
+fn a_declared_legacy_file_is_read_whatever_the_source_language() {
+    let bytes = data("lang_de_latin1.ts");
+    for lang in ["ja", "ja-JP", "zh-CN", "ru", "de"] {
+        let o = opts(None).with_source_lang(lang);
+        let d = QtTs.extract(&bytes, &o).unwrap_or_else(|e| panic!("{lang}: {e}"));
+        assert!(d.units.iter().any(|u| u.segments.iter().any(|s| s.target.iter().any(|i| matches!(i, Inline::Text(t) if t.contains('\u{f6}'))))), "{lang}");
+        assert_eq!(merged(&d), bytes, "{lang}: untouched merge");
+    }
+}
+
 #[test]
 fn us_ascii_files_stay_ascii() {
     let src = s(&lf("locos_app_de.ts")).replace("encoding=\"utf-8\"", "encoding=\"us-ascii\"");

@@ -160,7 +160,7 @@ fn fit(data: &[u8], tr: &[(usize, &str)]) -> Result<String, String> {
     let v: Vec<(usize, String)> = tr.iter().map(|(i, t)| (*i, t.to_string())).collect();
     match try_build(data, &v) {
         Ok(b) => Ok(String::from_utf8(b).unwrap()),
-        Err(Error::Write(m)) => Err(m),
+        Err(Error::Unwritable { reason: m, .. }) => Err(m),
         Err(e) => panic!("unexpected error kind: {e}"),
     }
 }
