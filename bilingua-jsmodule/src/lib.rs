@@ -117,7 +117,7 @@ fn is_xml(data: &[u8]) -> bool {
 
 struct Loaded {
     text: String,
-    encoding: &'static str,
+    encoding: String,
     warnings: Vec<bilingua_model::Warning>,
 }
 
@@ -135,7 +135,13 @@ fn load(bytes: &[u8], limits: &Limits, source_lang: Option<&str>) -> Result<Load
             msg: "This file is XML (a Qt Linguist .ts file?), not a JavaScript/TypeScript locale module.".into(),
         });
     }
-    let (text, encoding, warnings) = enc::decode(bytes, source_lang)?;
+    let (text, name, warnings) = enc::decode(bytes, source_lang)?;
+    // a code page whose bytes do not come back from the text (double-mapped sequences) keeps the file's own bytes
+    let encoding = if matches!(name, enc::UTF8 | enc::UTF8_BOM | enc::UTF16LE | enc::UTF16BE | enc::CP1252) {
+        name.to_string()
+    } else {
+        bilingua_model::enc::keep_original(name, bytes, enc::encode(&text, name).ok().as_deref())
+    };
     let lim = limits.max_units;
     let (mut lines, mut quotes, mut values) = (0usize, 0usize, 0usize);
     for &b in text.as_bytes() {
@@ -403,11 +409,14 @@ impl Filter for JsModule {
             return Ok(b);
         }
         if !changed {
-            return enc::encode(&out, encoding);
+            if let Some(orig) = bilingua_model::enc::original_if_same(encoding, &out) {
+                return Ok(orig);
+            }
+            return enc::encode(&out, bilingua_model::enc::split_original(encoding).0);
         }
         enc::encode(
             &out,
-            if encoding == enc::UTF8_BOM {
+            if bilingua_model::enc::split_original(encoding).0 == enc::UTF8_BOM {
                 enc::UTF8_BOM
             } else {
                 enc::UTF8

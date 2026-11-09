@@ -34,3 +34,14 @@ fn translated_text_is_written_as_utf8() {
     let out = Yaml.merge(&doc).unwrap();
     assert!(String::from_utf8(out).unwrap().contains("\u{4f60}\u{597d}"));
 }
+
+/// Shift_JIS has two spellings for one character (NEC row 13 byte pair 87 9B and the JIS X 0208 pair 81 E6 both read as
+/// U+2235). A Japanese file that uses the NEC spelling comes back byte for byte when nothing changed.
+#[test]
+fn double_mapped_shift_jis_untouched_merge_keeps_the_original_bytes() {
+    const SJIS: &[u8] = b"title: \x82\xb1\x82\xf1\x82\xc9\x82\xbf\x82\xcd\x87\x9b\n";
+    let opts = ExtractOptions::new().with_source_lang("ja");
+    let doc = Yaml.extract(SJIS, &opts).unwrap();
+    assert!(src(&doc).ends_with('\u{2235}'));
+    assert_eq!(Yaml.merge(&doc).unwrap(), SJIS);
+}
