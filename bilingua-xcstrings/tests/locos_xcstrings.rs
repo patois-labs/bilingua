@@ -247,3 +247,27 @@ fn empty_entry_objects_are_kept_byte_for_byte() {
     let d = Xcstrings.extract(src.as_bytes(), &profile::locos().extract_options().with_target_lang("de")).unwrap();
     assert_eq!(Xcstrings.merge_with(&d, &profile::locos().merge_options("xcstrings")).unwrap(), src.as_bytes());
 }
+
+/// F2 (xcs-1): under the locos profile a changed catalog is written the way LocOS `_dump` writes it: every object
+/// expanded over lines, LF line ends even for a CRLF source, an empty object as `{}`. The input keeps a compact
+/// inline object and CRLF. The expected text is what the LocOS filter gives for the same input. Native mode keeps
+/// the source layout and its CRLF.
+#[test]
+fn locos_profile_rewrites_a_compact_crlf_catalog_in_the_xcode_layout() {
+    let src = "{\r\n  \"sourceLanguage\" : \"en\",\r\n  \"strings\" : {\r\n    \"Hi\" : {\r\n      \"localizations\" : {\r\n        \"en\" : { \"stringUnit\" : { \"state\" : \"translated\", \"value\" : \"Hi\" } }\r\n      }\r\n    },\r\n    \"Empty\" : { }\r\n  },\r\n  \"version\" : \"1.0\"\r\n}\r\n";
+    let want = "{\n  \"sourceLanguage\" : \"en\",\n  \"strings\" : {\n    \"Hi\" : {\n      \"localizations\" : {\n        \"de\" : {\n          \"stringUnit\" : {\n            \"state\" : \"translated\",\n            \"value\" : \"Hallo\"\n          }\n        },\n        \"en\" : {\n          \"stringUnit\" : {\n            \"state\" : \"translated\",\n            \"value\" : \"Hi\"\n          }\n        }\n      }\n    },\n    \"Empty\" : {}\n  },\n  \"version\" : \"1.0\"\n}\n";
+    let mut d = ex(src.as_bytes(), Some("de"));
+    set_all(&mut d, &[(0, "Hallo")]);
+    let got = Xcstrings.merge_with(&d, &MergeOptions::new().with_profile("locos")).unwrap();
+    assert_eq!(String::from_utf8(got.clone()).unwrap(), want);
+    // the units read back are the same
+    let back = ex(&got, Some("de"));
+    assert_eq!(texts(&back), texts(&ex(src.as_bytes(), Some("de"))));
+    // an unchanged catalog is returned as it came, CRLF and all
+    let same = ex(src.as_bytes(), Some("de"));
+    assert_eq!(Xcstrings.merge_with(&same, &MergeOptions::new().with_profile("locos")).unwrap(), src.as_bytes());
+    // native mode: the source layout and CRLF are kept, only the new locale is added
+    let native = String::from_utf8(Xcstrings.merge(&d).unwrap()).unwrap();
+    assert!(native.contains("\r\n") && !native.replace("\r\n", "").contains('\n'));
+    assert!(native.contains("\"en\" : { \"stringUnit\" : { \"state\" : \"translated\", \"value\" : \"Hi\" } }"));
+}

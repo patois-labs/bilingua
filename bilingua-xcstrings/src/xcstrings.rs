@@ -354,9 +354,7 @@ impl Filter for Xcstrings {
         let entries = cat.walk(&unlimited)?;
         let mut out = apply(&cat, &entries, doc)?;
         if opts.is_profile(bilingua_model::profile::LOCOS) && out != cat.text {
-            // LocOS `_dump` writes a changed catalog with `json.dumps`, which spells an empty object `{}` where
-            // Xcode writes `{\n\n    }`; everything else of an Xcode file is already in that style
-            out = compact_empty(&out);
+            out = locos_dump(&out, &cat.text, &limits)?;
         }
         let mut bytes = Vec::with_capacity(out.len() + 3);
         if bom {
@@ -367,39 +365,23 @@ impl Filter for Xcstrings {
     }
 }
 
-/// Every object or array whose inside is only white space (outside strings) written as `{}` / `[]`, as Python's
-/// `json.dumps` writes an empty container.
-fn compact_empty(text: &str) -> String {
-    let b = text.as_bytes();
-    let mut out = String::with_capacity(text.len());
-    let (mut i, mut from) = (0usize, 0usize);
-    while i < b.len() {
-        match b[i] {
-            b'"' => {
-                i += 1;
-                while i < b.len() && b[i] != b'"' {
-                    i += if b[i] == b'\\' { 2 } else { 1 };
-                }
-                i += 1;
-            }
-            open @ (b'{' | b'[') => {
-                let close = if open == b'{' { b'}' } else { b']' };
-                let mut j = i + 1;
-                while j < b.len() && matches!(b[j], b' ' | b'\t' | b'\r' | b'\n') {
-                    j += 1;
-                }
-                if j > i + 1 && b.get(j) == Some(&close) {
-                    out.push_str(&text[from..=i]);
-                    from = j;
-                    i = j;
-                }
-                i += 1;
-            }
-            _ => i += 1,
-        }
+/// A changed catalog the way LocOS `_dump` writes it: the whole document through `json.dumps` in the style of the
+/// source (separators, indent unit and escapes read from the source text). Every object and array is expanded over
+/// lines whatever the source did, an empty one is `{}` / `[]`, and the line ends are LF (`json.dumps` writes LF even
+/// for a CRLF source). The file ends with a newline when the source did.
+fn locos_dump(edited: &str, source: &str, limits: &Limits) -> Result<String, Error> {
+    let root = json::parse(edited, limits.max_xml_depth).map_err(|_| Error::Write("xcstrings: the edited catalog is not JSON".into()))?;
+    let mut st = Style::detect(source);
+    st.eol = "
+";
+    let mut out = String::with_capacity(edited.len());
+    st.emit(&J::from_node(edited, &root), 0, &mut out);
+    if source.ends_with('
+') {
+        out.push('
+');
     }
-    out.push_str(&text[from.min(text.len())..]);
-    out
+    Ok(out)
 }
 
 // ---------------------------------------------------------------------------------------------------------
