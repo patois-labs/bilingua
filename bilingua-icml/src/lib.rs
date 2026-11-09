@@ -386,8 +386,7 @@ fn fit_ws(tp: &mut Vec<TP>, lead: &str, trail: &str) {
 /// whole document instead of splicing the stories.
 fn story_spans_match(dom: &Dom, stories: &[(Id, Id)]) -> bool {
     let b = dom.text.as_bytes();
-    let is_sp = |c: u8| matches!(c, b' ' | b'	' | b'
-' | b'' | 0x0b | 0x0c);
+    let is_sp = |c: u8| matches!(c, b' ' | 9 | 10 | 13 | 0x0b | 0x0c);
     let mut opens = Vec::new();
     let mut closes = Vec::new();
     let mut i = 0;
@@ -430,8 +429,7 @@ fn whole_document_lxml(dom: &Dom) -> (String, bool) {
     let mut out = String::with_capacity(text.len() + 256);
     if let Some(e) = decl_end {
         out.push_str(&text[..e]);
-        out.push('
-');
+        out.push(char::from(10));
     }
     let (rs, re) = dom.n(dom.root).src.map_or((text.len(), text.len()), |(s, e)| (s as usize, e as usize));
     let misc = |part: &str, out: &mut String| {
