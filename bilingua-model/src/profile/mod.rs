@@ -410,10 +410,11 @@ pub fn locos_set_target(doc: &mut Document, seg_id: &str, target: Vec<Inline>) -
 
 /// Formats whose LocOS writer writes a translation that repeats a style pair, the repeat without its tags (its
 /// text stays), where `set_target` refuses it as "tag appears more often" (B-SIDE W6 st-2, xtg-2): MicroDVD
-/// `subtitle_text_filter` and XPress Tags `quark_tags_filter`. The target is repaired by the CAT writers' rule
+/// `subtitle_text_filter`, XPress Tags `quark_tags_filter`, and InDesign IDML and InCopy ICML (`idml_filter`: a repeated
+/// token is dropped, its text stays). The target is repaired by the CAT writers' rule
 /// ([`tokens::repair_tags`]: at most as often as the source, a stray close dropped, an open pair closed at the end)
 /// and set as repaired.
-const LOCOS_WRITES_REPAIRED: &[&str] = &["sub", "xtg"];
+const LOCOS_WRITES_REPAIRED: &[&str] = &["sub", "xtg", "idml", "icml"];
 
 /// The body of [`locos_set_target`] once the tags are repaired.
 fn set_like_locos(doc: &mut Document, seg_id: &str, target: Vec<Inline>) -> Result<(), Error> {
