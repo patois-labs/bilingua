@@ -240,8 +240,10 @@ fn shield_marks(out: &mut [String], texts: &[usize], marks: &[char]) {
             // next to a code's own mark of the same character: the rule for that case already ran
             let at_code = (i == 0 && prev == Some(c)) || (i + 1 == chars.len() && next == Some(c));
             let run = (i > 0 && prev == Some(c)) || (i + 1 < chars.len() && next == Some(c));
-            let opens = prev.is_none_or(|p| !is_wordish(p)) && next.is_some_and(|n| !is_space(n));
-            let closes = prev.is_some_and(|p| !is_space(p)) && next.is_none_or(|n| !is_wordish(n));
+            // `^` and `~` pair inside a word too (`H~2~O`); the others only at a word edge
+            let loose = matches!(c, '^' | '~');
+            let opens = (loose || prev.is_none_or(|p| !is_wordish(p))) && next.is_some_and(|n| !is_space(n));
+            let closes = prev.is_some_and(|p| !is_space(p)) && (loose || next.is_none_or(|n| !is_wordish(n)));
             if !at_code && (run || opens || closes) {
                 piece.push_str(&format!("&#{};", c as u32));
             } else {
