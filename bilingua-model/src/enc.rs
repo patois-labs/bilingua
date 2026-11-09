@@ -1452,6 +1452,24 @@ mod tests {
     }
 
     #[test]
+    fn iso_8859_8_label_over_windows_1255_bytes_becomes_utf8_for_signs_it_lacks() {
+        let mut b = b"<meta charset=\"iso-8859-8\"><p>".to_vec();
+        b.extend_from_slice(&[0xF9, 0xC8, 0xEC, 0xE5, 0xED]);
+        b.extend_from_slice(b"</p>");
+        let d = dec(&b, None, true).unwrap();
+        assert!(d.encoding.starts_with("windows-1255"), "{}", d.encoding);
+        // a curly quote, a dash, an ellipsis, the euro sign, the new shekel sign: not in ISO-8859-8
+        for sign in ["\u{201c}", "\u{2013}", "\u{2026}", "\u{20ac}", "\u{20aa}"] {
+            let out = encode_text(&format!("{}{sign}", d.text), &d.encoding).unwrap();
+            let out = String::from_utf8(out).unwrap_or_else(|_| panic!("{sign:?} was written as code page bytes"));
+            assert!(out.contains("charset=\"UTF-8\"") && out.contains(sign), "{out}");
+        }
+        // a letter and a vowel point both exist in the page's code page: the label stays
+        let out = encode_text(&format!("{}\u{5d0}\u{5b0}", d.text), &d.encoding).unwrap();
+        assert!(std::str::from_utf8(&out).is_err() && out.starts_with(b"<meta charset=\"iso-8859-8\">"));
+    }
+
+    #[test]
     fn declared_iso_8859_1_is_written_as_iso_8859_1_or_utf8() {
         let po = b"msgid \"\"\nmsgstr \"\"\n\"Content-Type: text/plain; charset=ISO-8859-1\\n\"\n\nmsgid \"a\"\nmsgstr \"caf\xe9\"\n".to_vec();
         let d = dec(&po, Some("en"), true).unwrap();
