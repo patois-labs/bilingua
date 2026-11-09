@@ -1028,3 +1028,8 @@ translation with the source.
 
 - xcstrings under the `locos` profile: a CRLF catalog that is changed now comes back with LF line ends and every object
   expanded, as LocOS writes it. Native mode still keeps CRLF and the source layout.
+
+- Under the `locos` profile, a PowerPoint deck is refused when its walked paragraphs (empty ones too) pass
+  `Limits::max_units`, even if the units are fewer. Before, only units were counted. Native mode is unchanged.
+- Under the `locos` profile, rewritten OpenDocument parts carry lxml's single-quoted XML declaration and lxml's
+  serialisation (see CHANGELOG). The text and units are the same; only the bytes of rewritten parts differ.

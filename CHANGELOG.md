@@ -68,6 +68,16 @@ is listed here).
 
 ### Changed
 
+- LocOS profile, OpenDocument (odt, ods, odp, odg): a part that a merge rewrites (`content.xml`, `styles.xml`,
+  `meta.xml`) is now written the way LocOS's lxml writes it: UTF-8, the declaration
+  `<?xml version='1.0' encoding='UTF-8'?>` and a new line, `&apos;` in attributes as a plain `'` (`&quot;` stays),
+  `<x/>` for an empty element, namespace declarations first, no white space after the root. A part with a CDATA
+  section or a comment outside the root gets the declaration only. Parts a merge does not rewrite, and the native
+  mode, are unchanged. W-D D3 (odf-x).
+- LocOS profile, PowerPoint: the segment cap counts every walked paragraph, empty ones included, as LocOS does
+  (`check_segment_cap(len(self.paras))`). A deck whose unit count is under the cap but whose paragraph count is over
+  it is now refused (`LimitKind::Units`), as LocOS refuses it. Native mode still counts units. W-D D4 (sec-2).
+
 - bilingua-xcstrings, `locos` profile: a changed catalog is written the way LocOS writes it: every object and array
   expanded over lines (a source's compact inline objects are expanded), `{}` for an empty object, LF line ends even
   for a CRLF source, and a final newline when the source had one. Separator, indent and escapes still follow the
