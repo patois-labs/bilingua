@@ -204,11 +204,14 @@ fn shield_marks(out: &mut [String], texts: &[usize], marks: &[char]) {
     }
     for &k in texts {
         let chars: Vec<char> = out[k].chars().collect();
-        if !chars.iter().any(|c| marks.contains(c)) {
-            continue;
-        }
         let before_piece = k.checked_sub(1).and_then(|j| out[j].chars().next_back());
         let after_piece = out.get(k + 1).and_then(|p| p.chars().next());
+        // a mark character right against a code's mark of another character would end that mark's run (`*p*#`)
+        let beside = |c: char, other: Option<char>| LONE_MARKS.contains(&c) && other.is_some_and(|o| o != c && LONE_MARKS.contains(&o));
+        let edges = chars.first().is_some_and(|&c| beside(c, before_piece)) || chars.last().is_some_and(|&c| beside(c, after_piece));
+        if !edges && !chars.iter().any(|c| marks.contains(c)) {
+            continue;
+        }
         let mut piece = String::with_capacity(out[k].len() + 8);
         let mut i = 0;
         while i < chars.len() {
@@ -220,6 +223,12 @@ fn shield_marks(out: &mut [String], texts: &[usize], marks: &[char]) {
                     i += len + 1;
                     continue;
                 }
+            }
+            let edge = (i == 0 && beside(c, before_piece)) || (i + 1 == chars.len() && beside(c, after_piece));
+            if edge {
+                piece.push_str(&format!("&#{};", c as u32));
+                i += 1;
+                continue;
             }
             if !marks.contains(&c) {
                 piece.push(c);
