@@ -196,9 +196,9 @@ fn code_mark_chars(code: &bilingua_model::CodeData, into: &mut Vec<char>) {
 
 /// A lone mark character in translated text that could open or close formatting with a mark of a code further
 /// along (or before it) is written as a character reference, which prints the same: the line is then formatted as
-/// the translator typed it and the codes stay the codes. Marks that cannot be a delimiter (`5 * 3`, `a*b`) are left.
+/// the translator typed it and the codes stay the codes (`every`: each such mark, whatever its neighbours). Marks that cannot be a delimiter (`5 * 3`, `a*b`) are left.
 /// A mark right next to a code's own mark was handled when its text was written.
-fn shield_marks(out: &mut [String], texts: &[usize], marks: &[char]) {
+fn shield_marks(out: &mut [String], texts: &[usize], marks: &[char], every: bool) {
     if marks.is_empty() {
         return;
     }
@@ -244,7 +244,7 @@ fn shield_marks(out: &mut [String], texts: &[usize], marks: &[char]) {
             let loose = matches!(c, '^' | '~');
             let opens = (loose || prev.is_none_or(|p| !is_wordish(p))) && next.is_some_and(|n| !is_space(n));
             let closes = prev.is_some_and(|p| !is_space(p)) && (loose || next.is_none_or(|n| !is_wordish(n)));
-            if !at_code && (run || opens || closes) {
+            if !at_code && (every || run || opens || closes) {
                 piece.push_str(&format!("&#{};", c as u32));
             } else {
                 piece.push(c);
@@ -400,10 +400,10 @@ pub fn render(unit: &Unit, target: &[Inline], sep: Option<char>, nested: bool, a
             code_marks.push(m);
         }
     }
-    shield_marks(&mut out, &texts, &code_marks);
+    shield_marks(&mut out, &texts, &code_marks, false);
     // a character reference written above opens a `#` mark of its own (`&#42;`), which a lone `#` further on would close
     if !code_marks.contains(&'#') && texts.iter().any(|&k| out[k].contains("&#")) {
-        shield_marks(&mut out, &texts, &['#']);
+        shield_marks(&mut out, &texts, &['#'], true);
     }
     unconstrain(&mut out, &marks);
     explicit_links(&mut out, &links, attrs);
