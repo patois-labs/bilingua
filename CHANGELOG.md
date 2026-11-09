@@ -9,6 +9,10 @@ is listed here).
 
 ### Added
 
+- Python: `DocumentHandle.unit_notes()` gives the `context.notes` of every unit that has any, in document order, as
+  `{"unit", "segments", "notes"}`, without building the whole dict. An adapter that only wants the notes no longer
+  calls `to_dict()`.
+
 - Model: `enc::decode_source_legacy(data, source_lang)`, the last step of `decode_text` for a format with its own
   BOM and UTF-8 handling: the code page of the project's source language, with the same warnings. It returns `None`
   for a language with no code page of its own.
@@ -63,6 +67,11 @@ is listed here).
   `tools/build-wheel-m5.sh` builds and tests a manylinux_2_28 wheel on a Linux host.
 
 ### Changed
+
+- bilingua-xcstrings, `locos` profile: a changed catalog is written the way LocOS writes it: every object and array
+  expanded over lines (a source's compact inline objects are expanded), `{}` for an empty object, LF line ends even
+  for a CRLF source, and a final newline when the source had one. Separator, indent and escapes still follow the
+  source. Native mode is unchanged (it keeps the source layout and its line ends).
 
 - INI, YAML and JavaScript modules: a file that is not UTF-8 and has no byte order mark is read in the Windows code
   page of the project's source language (a Russian project reads Windows-1251), as text, PO, subtitles, CSV and HTML

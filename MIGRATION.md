@@ -1025,3 +1025,6 @@ translation with the source.
   If you relied on Windows-1252, set no source language or re-save the file as UTF-8.
 - HTML Help, native mode: a merge that used to fail with "cannot be written in the ... code page" for a sitemap
   value now writes a numeric character reference. Use the `locos` profile to keep the refusal.
+
+- xcstrings under the `locos` profile: a CRLF catalog that is changed now comes back with LF line ends and every object
+  expanded, as LocOS writes it. Native mode still keeps CRLF and the source layout.

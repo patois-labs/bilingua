@@ -268,3 +268,30 @@ def test_handles_are_freed():
         round_trip()
     grown = _rss_kb() - before
     assert grown < 64 * 1024, f"RSS grew {grown} kB over 300 rounds"
+
+
+def _notes_via_dict(doc):
+    """The notes an adapter reads from the dict: unit notes keyed by the first segment's id."""
+    out = []
+    for unit in doc["units"]:
+        notes = (unit.get("context") or {}).get("notes") or []
+        if notes:
+            out.append({"unit": unit["id"], "segments": [s["id"] for s in unit["segments"]], "notes": list(notes)})
+    return out
+
+
+@pytest.mark.parametrize(
+    "name,data,expect_notes",
+    [
+        ("a.xmb", b"<messagebundle><msg id='1' desc='button' meaning='verb'>Save</msg><msg id='2'>Plain</msg></messagebundle>", True),
+        ("a.tsv", b"key\tsource\tcomment\nk1\tHello\tbutton\nk2\tBye\t\n", False),
+        ("a.txt", b"One.\n\nTwo.\n", False),
+    ],
+)
+@pytest.mark.parametrize("profile", [None, "locos"])
+def test_unit_notes_match_the_dict_path(name, data, expect_notes, profile):
+    h = bilingua.extract_handle(name, data, profile=profile)
+    want = _notes_via_dict(h.to_dict())
+    assert h.unit_notes() == want
+    if expect_notes:
+        assert want and want[0]["notes"]

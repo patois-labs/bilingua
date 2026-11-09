@@ -247,3 +247,54 @@ fn empty_entry_objects_are_kept_byte_for_byte() {
     let d = Xcstrings.extract(src.as_bytes(), &profile::locos().extract_options().with_target_lang("de")).unwrap();
     assert_eq!(Xcstrings.merge_with(&d, &profile::locos().merge_options("xcstrings")).unwrap(), src.as_bytes());
 }
+
+/// F2 (xcs-1): under the locos profile a changed catalog is written the way LocOS `_dump` writes it: every object
+/// expanded over lines, LF line ends even for a CRLF source, an empty object as `{}`. The input keeps a compact
+/// inline object and CRLF. The expected text is what the LocOS filter gives for the same input. Native mode keeps
+/// the source layout and its CRLF.
+#[test]
+fn locos_profile_rewrites_a_compact_crlf_catalog_in_the_xcode_layout() {
+    let src = "{\r\n  \"sourceLanguage\" : \"en\",\r\n  \"strings\" : {\r\n    \"Hi\" : {\r\n      \"localizations\" : {\r\n        \"en\" : { \"stringUnit\" : { \"state\" : \"translated\", \"value\" : \"Hi\" } }\r\n      }\r\n    },\r\n    \"Empty\" : { }\r\n  },\r\n  \"version\" : \"1.0\"\r\n}\r\n";
+    let want = "{\n  \"sourceLanguage\" : \"en\",\n  \"strings\" : {\n    \"Hi\" : {\n      \"localizations\" : {\n        \"de\" : {\n          \"stringUnit\" : {\n            \"state\" : \"translated\",\n            \"value\" : \"Hallo\"\n          }\n        },\n        \"en\" : {\n          \"stringUnit\" : {\n            \"state\" : \"translated\",\n            \"value\" : \"Hi\"\n          }\n        }\n      }\n    },\n    \"Empty\" : {}\n  },\n  \"version\" : \"1.0\"\n}\n";
+    let mut d = ex(src.as_bytes(), Some("de"));
+    set_all(&mut d, &[(0, "Hallo")]);
+    let got = Xcstrings.merge_with(&d, &MergeOptions::new().with_profile("locos")).unwrap();
+    assert_eq!(String::from_utf8(got.clone()).unwrap(), want);
+    // the units read back are the same
+    let back = ex(&got, Some("de"));
+    assert_eq!(texts(&back), texts(&ex(src.as_bytes(), Some("de"))));
+    // an unchanged catalog is returned as it came, CRLF and all
+    let same = ex(src.as_bytes(), Some("de"));
+    assert_eq!(Xcstrings.merge_with(&same, &MergeOptions::new().with_profile("locos")).unwrap(), src.as_bytes());
+    // native mode: the source layout and CRLF are kept, only the new locale is added
+    let native = String::from_utf8(Xcstrings.merge(&d).unwrap()).unwrap();
+    assert!(native.contains("\r\n") && !native.replace("\r\n", "").contains('\n'));
+    assert!(native.contains("\"en\" : { \"stringUnit\" : { \"state\" : \"translated\", \"value\" : \"Hi\" } }"));
+}
+
+/// F2 gate: more of the `_dump` style under the locos profile, each expected text printed by the LocOS filter for
+/// the same input and translation. A: tab indent, `" : "`, `\/` in the source (every `/` written `\/`), non-ASCII
+/// in the source (written as it is), no final newline. B: four spaces, `": "`, an ASCII-only source with a `\u`
+/// escape (so every non-ASCII character is escaped, lower case hex, astral ones as a surrogate pair), a number,
+/// an inline object with an empty one inside.
+#[test]
+fn locos_profile_dump_follows_the_source_style() {
+    let cases = [
+        (
+            "{\n\t\"sourceLanguage\" : \"en\",\n\t\"strings\" : {\n\t\t\"Caf\u{e9} \\/ bar\" : {\n\t\t\t\"comment\" : \"a\\/b\"\n\t\t}\n\t},\n\t\"version\" : \"1.0\"\n}",
+            "Gr\u{fc}\u{df}e / da",
+            "{\n\t\"sourceLanguage\" : \"en\",\n\t\"strings\" : {\n\t\t\"Caf\u{e9} \\/ bar\" : {\n\t\t\t\"comment\" : \"a\\/b\",\n\t\t\t\"localizations\" : {\n\t\t\t\t\"de\" : {\n\t\t\t\t\t\"stringUnit\" : {\n\t\t\t\t\t\t\"state\" : \"translated\",\n\t\t\t\t\t\t\"value\" : \"Gr\u{fc}\u{df}e \\/ da\"\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\t},\n\t\"version\" : \"1.0\"\n}",
+        ),
+        (
+            "{\n    \"sourceLanguage\": \"en\",\n    \"strings\": {\n        \"Hi \\u00C9\": {\n            \"localizations\": {\n                \"en\": {\"stringUnit\": {\"state\": \"translated\", \"value\": \"Hi\"}, \"substitutions\": {}}\n            },\n            \"x\": 3\n        }\n    },\n    \"version\": \"1.0\"\n}\n",
+            "Gr\u{fc}\u{df}e \u{1f600}",
+            "{\n    \"sourceLanguage\": \"en\",\n    \"strings\": {\n        \"Hi \\u00c9\": {\n            \"localizations\": {\n                \"de\": {\n                    \"stringUnit\": {\n                        \"state\": \"translated\",\n                        \"value\": \"Gr\\u00fc\\u00dfe \\ud83d\\ude00\"\n                    }\n                },\n                \"en\": {\n                    \"stringUnit\": {\n                        \"state\": \"translated\",\n                        \"value\": \"Hi\"\n                    },\n                    \"substitutions\": {}\n                }\n            },\n            \"x\": 3\n        }\n    },\n    \"version\": \"1.0\"\n}\n",
+        ),
+    ];
+    for (src, tr, want) in cases {
+        let mut d = ex(src.as_bytes(), Some("de"));
+        set_all(&mut d, &[(0, tr)]);
+        let got = Xcstrings.merge_with(&d, &MergeOptions::new().with_profile("locos")).unwrap();
+        assert_eq!(String::from_utf8(got).unwrap(), want);
+    }
+}
