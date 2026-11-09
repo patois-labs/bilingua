@@ -125,7 +125,7 @@ fn native_mode_writes_a_numeric_reference_for_a_sitemap_value_outside_the_code_p
     assert_eq!(plain_text(&d.units[0].source()), "\u{110}ublin");
     // a pseudo-style round trip: every value translated to itself plus a mark
     let out = merge_with(&HhcFilter, &hhc, &[(0, "\u{110}ublin!")], None, MergeOptions::default()).unwrap();
-    let text = String::from_utf8(out.clone()).unwrap();
+    let text = String::from_utf8_lossy(&out).into_owned();
     assert!(text.contains("value=\"&#272;ublin!\""), "{text}");
     // it reads back as the same character
     assert_eq!(texts(&HhcFilter, &out)[0], "\u{110}ublin!");

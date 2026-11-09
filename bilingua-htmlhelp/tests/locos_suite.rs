@@ -172,7 +172,8 @@ fn encodings_and_bom() {
     assert!(out.contains("charset=windows-1252") && out.contains("<param name=\"See Also\" value=\"printing\">"), "{out}");
     // hh-4: the same build with nothing translated keeps the Cyrillic See Also, which Windows-1252 cannot hold; LocOS
     // refuses it too (HtmlHelpEncodingError), so a caller that wants a reference build must translate the keyword
-    assert!(build_loc(&HhkFilter, &rb, &[], "en-US").is_err());
+    let always = MergeOptions::default().with_profile(profile::LOCOS).with_stamp_target_always(true);
+    assert!(merge_with(&HhkFilter, &rb, &[], Some("en-US"), always).is_err());
     // UTF-8 with BOM and non-ASCII UTF-8 stay UTF-8; UTF-16 LE/BE keep their BOM
     let u16le: Vec<u8> = [0xFF, 0xFE].into_iter().chain(HHC.encode_utf16().flat_map(|u| u.to_le_bytes())).collect();
     let u16be: Vec<u8> = [0xFE, 0xFF].into_iter().chain(HHC.encode_utf16().flat_map(|u| u.to_be_bytes())).collect();
