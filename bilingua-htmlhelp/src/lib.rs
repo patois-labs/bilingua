@@ -390,6 +390,26 @@ fn merge_impl(kind: Kind, doc: &Document, mo: &MergeOptions) -> Result<Vec<u8>, 
     }
     let (out_tag, cp, label) = out_encoding(tag, target, localized);
     let ansi = enc::is_ansi(tag);
+    // Native mode (issue 12): a character the code page cannot hold, in a sitemap value, is written as a numeric
+    // character reference, which HTML Help reads in a `param` value. The LocOS profile keeps LocOS's refusal
+    // (`HtmlHelpEncodingError`), and so does a project file or any other place.
+    if kind != Kind::Hhp && ansi && !fallback && mo.output_encoding == OutputEncoding::Keep && !mo.is_profile(bilingua_model::profile::LOCOS) {
+        if let Some(codec) = enc::Codec::from_tag(&out_tag) {
+            for edit in &mut edits {
+                edit.2 = numeric_references(&edit.2, codec);
+            }
+            // a value that was not translated is written as it was, unless the target code page cannot hold it
+            for sp in spans.iter().chain(&extra_see) {
+                if !edits.iter().any(|e| (e.0, e.1) == (sp.start, sp.end)) {
+                    let raw = &orig[sp.start..sp.end];
+                    let fixed = numeric_references(raw, codec);
+                    if fixed != raw {
+                        edits.push((sp.start, sp.end, fixed));
+                    }
+                }
+            }
+        }
+    }
     let mut all = edits.clone();
     if localized && ansi {
         all.extend(extra_fonts.iter().filter_map(|f| font_edit(f, cp)));
@@ -470,6 +490,23 @@ fn merge_impl(kind: Kind, doc: &Document, mo: &MergeOptions) -> Result<Vec<u8>, 
             })
         }
     }
+}
+
+/// `text` with every character `codec` cannot write as a numeric character reference (`&#272;`).
+fn numeric_references(text: &str, codec: enc::Codec) -> String {
+    if text.is_ascii() {
+        return text.to_string();
+    }
+    let mut out = String::with_capacity(text.len() + 8);
+    let mut buf = [0u8; 4];
+    for c in text.chars() {
+        if c.is_ascii() || enc::encode_ansi(c.encode_utf8(&mut buf), codec).is_ok() {
+            out.push(c);
+        } else {
+            out.push_str(&format!("&#{};", c as u32));
+        }
+    }
+    out
 }
 
 fn head_text(bytes: &[u8]) -> String {

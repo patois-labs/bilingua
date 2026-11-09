@@ -1018,3 +1018,10 @@ translation with the source.
 - `locos` profile, xslt: no `xsl:text` around edge text next to a stripped whitespace node. A re-read of such a build
   can join the text with the whitespace, as LocOS's does.
 - Binary plist bytes change (shared scalars); the units and the values are the same.
+
+# Wave A entries for bilingua/MIGRATION.md
+
+- INI, YAML, JS: a legacy upload with a source language such as `ru` or `ja` is read in that language's code page.
+  If you relied on Windows-1252, set no source language or re-save the file as UTF-8.
+- HTML Help, native mode: a merge that used to fail with "cannot be written in the ... code page" for a sitemap
+  value now writes a numeric character reference. Use the `locos` profile to keep the refusal.

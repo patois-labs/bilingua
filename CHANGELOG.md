@@ -9,6 +9,12 @@ is listed here).
 
 ### Added
 
+- Model: `enc::decode_source_legacy(data, source_lang)`, the last step of `decode_text` for a format with its own
+  BOM and UTF-8 handling: the code page of the project's source language, with the same warnings. It returns `None`
+  for a language with no code page of its own.
+- Model: `enc::encode_text_unchanged(text, encoding)`, `encode_text` for a file nothing was changed in: a page
+  labelled ISO-8859-8 that was read as Windows-1255 gets its own bytes back (no switch to UTF-8).
+
 - LaTeX: the format option `tex.text_commands` (comma-separated inline text commands for one call, LocOS
   `LATEX_TEXT_COMMANDS`; adds to `Latex::with_inline_commands`). Model: `enc::DecodeOptions::mark_before_legacy`
   (LocOS BOM read version 2: a UTF-8 BOM before code-page bytes is a mark; the envelope tag gets `;bom8` and the
@@ -57,6 +63,28 @@ is listed here).
   `tools/build-wheel-m5.sh` builds and tests a manylinux_2_28 wheel on a Linux host.
 
 ### Changed
+
+- INI, YAML and JavaScript modules: a file that is not UTF-8 and has no byte order mark is read in the Windows code
+  page of the project's source language (a Russian project reads Windows-1251), as text, PO, subtitles, CSV and HTML
+  already did and as LocOS does (decision 22). Before, it was read as Windows-1252 whatever the language. The
+  warnings (letters that look wrong in that code page) are on the document. Without a source language, or for a
+  Western one, nothing changes. An untouched merge writes the same bytes; a changed YAML or JavaScript file is
+  written as UTF-8, and an INI file stays in its code page when every character fits.
+- HTML: a page labelled ISO-8859-8 that was read as Windows-1255 (it holds vowel points) is written as UTF-8 when a
+  character is one that Windows-1255 has at a byte which means another sign under that label (curly quotes, dashes,
+  the ellipsis, the euro sign, the new shekel sign). Before, Windows-1255 bytes were written under the
+  ISO-8859-8 label, which a browser shows wrong (LocOS issue 810 gate). Such a page still opens, and an
+  untouched merge gives its bytes back, as in LocOS.
+- LocOS profile, HTML and other formats that declare a charset: a declaration past the first 4096 characters of a
+  page that carries a charset label now takes the page's label when the page is written, or UTF-8 when the page is
+  written as UTF-8, as LocOS does. Without the profile such a declaration is content and comes back as it was.
+- LocOS profile, WiX (`.wxl`): a translation's carriage return is not written as `&#13;` any more; the line breaks
+  of a translation take the file's own style, as in LocOS. Without the profile a carriage return that came from
+  `&#13;` still comes back as `&#13;`.
+- HTML Help (native mode, issue #12): a character that the file's code page cannot hold, in a sitemap `param`
+  value of a `.hhc` or `.hhk`, is written as a numeric character reference (`&#272;` for U+0110) instead of refusing
+  the merge. The LocOS profile keeps the refusal (`HtmlHelpEncodingError`), and so do project files, `Local` paths
+  and every other place. `htmlhelp.utf8_fallback` works as before.
 
 - xml: generic XML whose root has no `xml:lang` still restamps a nested element that declares the source language and
   holds a changed unit, on a target-language merge (TEI `<exemplum xml:lang="en">` becomes `xml:lang="de-DE"`, as LocOS

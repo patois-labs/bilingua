@@ -56,7 +56,8 @@ pub fn build(f: &dyn Filter, data: &[u8], map: &[(usize, &str)]) -> Vec<u8> {
 }
 
 pub fn build_loc(f: &dyn Filter, data: &[u8], map: &[(usize, &str)], target: &str) -> Result<Vec<u8>, Error> {
-    merge_with(f, data, map, Some(target), MergeOptions::default())
+    // the LocOS profile keeps LocOS's refusal of a character the code page cannot hold
+    merge_with(f, data, map, Some(target), MergeOptions::default().with_profile(profile::LOCOS))
 }
 
 pub fn build_loc_utf8(f: &dyn Filter, data: &[u8], map: &[(usize, &str)], target: &str) -> Vec<u8> {

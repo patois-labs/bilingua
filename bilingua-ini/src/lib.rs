@@ -64,19 +64,21 @@ fn limit_err(kind: LimitKind, msg: String) -> Error {
     LimitError::new(kind, msg).into()
 }
 
-fn read(bytes: &[u8], limits: &Limits) -> Result<(String, &'static str, Vec<scan::Entry>), Error> {
-    let (text, encoding) = enc::decode(bytes)?;
+type Read = (String, &'static str, Vec<scan::Entry>, Vec<bilingua_model::Warning>);
+
+fn read(bytes: &[u8], limits: &Limits, source_lang: Option<&str>) -> Result<Read, Error> {
+    let (text, encoding, warnings) = enc::decode(bytes, source_lang)?;
     let lines = text.bytes().filter(|&b| b == b'\n' || b == b'\r').count();
     if lines > limits.max_lines {
         return Err(limit_err(LimitKind::Lines, format!("this file has more than {} lines; split it into smaller files", limits.max_lines)));
     }
     let entries = scan::scan(&text);
-    Ok((text, encoding, entries))
+    Ok((text, encoding, entries, warnings))
 }
 
 /// Every entry of the file in order, translatable or not.
 pub fn records(bytes: &[u8]) -> Result<Vec<Record>, Error> {
-    let (_, _, entries) = read(bytes, &Limits::default())?;
+    let (_, _, entries, _) = read(bytes, &Limits::default(), None)?;
     let dups = duplicates(&entries);
     let mut k = 0;
     let mut out = Vec::with_capacity(entries.len());
@@ -105,7 +107,7 @@ fn owned(s: &str) -> Option<String> {
 impl IniFilter {
     /// `extract` with explicit size limits.
     pub fn extract_with(&self, bytes: &[u8], opts: &ExtractOptions, limits: &Limits) -> Result<Document, Error> {
-        let (text, encoding, entries) = read(bytes, limits)?;
+        let (text, encoding, entries, warnings) = read(bytes, limits, opts.source_lang.as_deref())?;
         let mut parts: Vec<SkelPart> = Vec::new();
         let mut units: Vec<Unit> = Vec::new();
         let mut pos = 0usize;
@@ -145,7 +147,9 @@ impl IniFilter {
         if pos < text.len() {
             parts.push(SkelPart::Raw(text[pos..].to_string()));
         }
-        Ok(Document::new(ID, units, Skeleton::text(parts, encoding, bilingua_model::parser_info!())).with_options(opts))
+        let mut doc = Document::new(ID, units, Skeleton::text(parts, encoding, bilingua_model::parser_info!())).with_options(opts);
+        doc.warnings.extend(warnings);
+        Ok(doc)
     }
 }
 

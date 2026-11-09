@@ -727,6 +727,21 @@ fn decode_text_inner(data: &[u8], o: &DecodeOptions) -> Result<Decoded, Error> {
     done(text, &enc.name().to_ascii_lowercase(), None, warnings, &o.limits)
 }
 
+/// What [`decode_source_legacy`] returns: the text, the code page it was read in and the warnings.
+pub type SourceLegacy = Result<(String, &'static Encoding, Vec<Warning>), Error>;
+
+/// For a reader with its own BOM and UTF-8 handling (ini, yaml, js modules): the last step of [`decode_text`] for
+/// bytes that are not UTF-8 and carry no byte order mark. Returns `None` when `source_lang` has no code page of its
+/// own (the caller keeps its Windows-1252 path); else the text, the code page it was read in and the warnings
+/// (the letters look wrong in it, or it did not read and Windows-1252 was used). The caller has already refused
+/// binary files.
+pub fn decode_source_legacy(data: &[u8], source_lang: Option<&str>) -> Option<SourceLegacy> {
+    let locale = source_lang.unwrap_or("");
+    let hint = source_encoding(locale)?;
+    let mut warnings = Vec::new();
+    Some(decode_legacy(data, Some(hint), locale, &mut warnings).map(|(t, e)| (t, e, warnings)))
+}
+
 fn where_(hint: Option<&'static Encoding>, locale: &str) -> String {
     if hint.is_some() && !locale.is_empty() {
         format!(", the code page of the project's source language {locale},")
@@ -954,6 +969,17 @@ fn with_newlines(text: &str, nl: &str) -> String {
 /// original is kept, and an XML, HTML or PO charset declaration that still names another charset is rewritten to
 /// UTF-8, so the file says what it is.
 pub fn encode_text_with(text: &str, encoding: &str, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
+    // LocOS rewrites every declaration of a converted file to UTF-8 when it reads it (not only those near the top)
+    // and gives each the file's own label back when it writes it. Under the LocOS profile a file that carries a
+    // label does the same: a declaration further down becomes the file's label (or UTF-8, when the file is written
+    // as UTF-8). Without the profile it is content and comes back as it was.
+    let every;
+    let text = if opts.is_profile(crate::profile::LOCOS) && parse_tag(encoding).label.is_some() {
+        every = decl_re().replace_all(text, |c: &regex::Captures| format!("{}UTF-8", &c[1])).into_owned();
+        every.as_str()
+    } else {
+        text
+    };
     if opts.output_encoding != OutputEncoding::Utf8 {
         return encode_text(text, encoding);
     }
@@ -1008,7 +1034,17 @@ fn utf8_text(text: &str, encoding: &str, base_is_label: bool) -> Vec<u8> {
 /// a file below its control-byte allowance) is written as UTF-8 instead, which LocOS also writes and which always
 /// reads back ([`legacy_output_or_utf8`]).
 pub fn encode_text(text: &str, encoding: &str) -> Result<Vec<u8>, Error> {
-    let out = encode_text_as_is(text, encoding)?;
+    let out = encode_text_as_is(text, encoding, true)?;
+    legacy_output_or_utf8(out, text, encoding)
+}
+
+/// [`encode_text`] for a file nothing was changed in: the bytes it was read from. The one difference: a page
+/// labelled ISO-8859-8 that was read as Windows-1255 keeps its own bytes even when it holds a sign that
+/// [`encode_text`] would switch to UTF-8 for (LocOS gives such a page back as it was when nothing in it changed,
+/// and writes UTF-8 only for a changed page). A reader that refuses a file which does not write back unchanged
+/// checks with this function.
+pub fn encode_text_unchanged(text: &str, encoding: &str) -> Result<Vec<u8>, Error> {
+    let out = encode_text_as_is(text, encoding, false)?;
     legacy_output_or_utf8(out, text, encoding)
 }
 
@@ -1020,13 +1056,13 @@ pub fn legacy_output_or_utf8(out: Vec<u8>, text: &str, encoding: &str) -> Result
     let b = base(encoding);
     let legacy = !matches!(b, "utf-8" | "utf-8-bom" | "utf-16le" | "utf-16be");
     if legacy && std::str::from_utf8(&out).is_err() && looks_binary(&out) {
-        return encode_text_as_is(text, &format!("utf-8{}", &encoding[b.len()..]));
+        return encode_text_as_is(text, &format!("utf-8{}", &encoding[b.len()..]), true);
     }
     Ok(out)
 }
 
-fn encode_text_as_is(text: &str, encoding: &str) -> Result<Vec<u8>, Error> {
-    let mut out = encode_text_unmarked(text, encoding)?;
+fn encode_text_as_is(text: &str, encoding: &str, changed: bool) -> Result<Vec<u8>, Error> {
+    let mut out = encode_text_unmarked(text, encoding, changed)?;
     // a mark read before the legacy bytes goes back in front of whatever was written (UTF-8 or the code page)
     if parse_tag(encoding).bom8 {
         out.splice(0..0, BOM8.iter().copied());
@@ -1034,7 +1070,8 @@ fn encode_text_as_is(text: &str, encoding: &str) -> Result<Vec<u8>, Error> {
     Ok(out)
 }
 
-fn encode_text_unmarked(text: &str, encoding: &str) -> Result<Vec<u8>, Error> {
+/// `changed`: false for a file nothing was changed in (see [`encode_text_unchanged`]).
+fn encode_text_unmarked(text: &str, encoding: &str, changed: bool) -> Result<Vec<u8>, Error> {
     let env = parse_tag(encoding);
     let text = strip_own_mark(text, encoding);
     let normalized;
@@ -1108,6 +1145,19 @@ fn encode_text_unmarked(text: &str, encoding: &str) -> Result<Vec<u8>, Error> {
     if !agree {
         return Ok(utf8(false));
     }
+    // A page labelled ISO-8859-8 that was read as Windows-1255 (it holds vowel points) keeps its label only while
+    // no character is one that Windows-1255 writes at a byte meaning another sign under that label (curly quotes,
+    // dashes, the ellipsis, the euro and shekel signs): a browser would show a C1 control or the currency sign.
+    // Such a page is written as UTF-8 (LocOS #810 gate, G7).
+    if changed && enc == encoding_rs::WINDOWS_1255 {
+        let says_8859_8 = decl_re().captures_iter(split_head(&restored).0).any(|c| {
+            let name = c.get(2).map_or("", |m| m.as_str());
+            matches!(label_encoding(name), Some(e) if e == encoding_rs::ISO_8859_8 || e == encoding_rs::ISO_8859_8_I)
+        });
+        if says_8859_8 && restored.chars().any(|c| cp1255_only_signs().contains(&c)) {
+            return Ok(utf8(false));
+        }
+    }
     // GB18030 writes everything GBK does, with the same bytes, and the four-byte forms GBK's encoder lacks
     // (B6); only the euro sign differs: GBK and Windows code page 936 readers expect the single byte 0x80
     if enc == encoding_rs::GBK && !env.euro_a2e3 {
@@ -1119,6 +1169,22 @@ fn encode_text_unmarked(text: &str, encoding: &str) -> Result<Vec<u8>, Error> {
         return Ok(utf8(false));
     }
     Ok(bytes.into_owned())
+}
+
+/// The characters Windows-1255 writes at a byte that ISO-8859-8 reads as another character (both define the byte):
+/// the C1 range signs Windows-1255 uses for curly quotes, dashes, the ellipsis, the euro and the new shekel sign.
+fn cp1255_only_signs() -> &'static [char] {
+    static S: OnceLock<Vec<char>> = OnceLock::new();
+    S.get_or_init(|| {
+        (0x80u8..=0xFF)
+            .filter_map(|b| {
+                let one = [b];
+                let a = encoding_rs::WINDOWS_1255.decode_without_bom_handling_and_without_replacement(&one)?;
+                let c = encoding_rs::ISO_8859_8.decode_without_bom_handling_and_without_replacement(&one)?;
+                (a != c).then(|| a.chars().next()).flatten()
+            })
+            .collect()
+    })
 }
 
 /// Encodes `text` for a GBK / GB2312 / code page 936 file: GB18030's bytes (it holds everything GBK does, plus
@@ -1408,6 +1474,49 @@ mod tests {
         let out = encode_text(&d.text.replace("\u{5e9}\u{5dc}\u{5d5}\u{5dd}", "\u{65e5}\u{672c}"), &d.encoding).unwrap();
         let out = String::from_utf8(out).unwrap();
         assert!(out.contains("charset=\"UTF-8\"") && out.contains("\u{65e5}\u{672c}"), "{out}");
+    }
+
+    #[test]
+    fn iso_8859_8_label_over_windows_1255_bytes_becomes_utf8_for_signs_it_lacks() {
+        let mut b = b"<meta charset=\"iso-8859-8\"><p>".to_vec();
+        b.extend_from_slice(&[0xF9, 0xC8, 0xEC, 0xE5, 0xED]);
+        b.extend_from_slice(b"</p>");
+        let d = dec(&b, None, true).unwrap();
+        assert!(d.encoding.starts_with("windows-1255"), "{}", d.encoding);
+        // a curly quote, a dash, an ellipsis, the euro sign, the new shekel sign: not in ISO-8859-8
+        for sign in ["\u{201c}", "\u{2013}", "\u{2026}", "\u{20ac}", "\u{20aa}"] {
+            let out = encode_text(&format!("{}{sign}", d.text), &d.encoding).unwrap();
+            let out = String::from_utf8(out).unwrap_or_else(|_| panic!("{sign:?} was written as code page bytes"));
+            assert!(out.contains("charset=\"UTF-8\"") && out.contains(sign), "{out}");
+        }
+        // a letter and a vowel point both exist in the page's code page: the label stays
+        let out = encode_text(&format!("{}\u{5d0}\u{5b0}", d.text), &d.encoding).unwrap();
+        assert!(std::str::from_utf8(&out).is_err() && out.starts_with(b"<meta charset=\"iso-8859-8\">"));
+        // a page that already holds such a sign: encode_text switches it, an unchanged page gets its own bytes back
+        let mut b = b"<meta charset=\"iso-8859-8\"><p>".to_vec();
+        b.extend_from_slice(&[0xF9, 0xC8, 0xEC, 0xE5, 0xED, b' ', 0x93, 0xE0, 0x94]);
+        let d = dec(&b, None, true).unwrap();
+        assert!(d.encoding.starts_with("windows-1255"), "{}", d.encoding);
+        assert!(String::from_utf8(encode_text(&d.text, &d.encoding).unwrap()).unwrap().contains("\u{201c}"));
+        assert_eq!(encode_text_unchanged(&d.text, &d.encoding).unwrap(), b);
+    }
+
+    #[test]
+    fn locos_profile_gives_every_declaration_the_files_label_or_utf8() {
+        // a Windows-1256 page whose first declaration says so and whose second one (past the head) says 1252
+        let page = format!("<meta charset=\"windows-1256\"><p>{}</p><meta charset=\"windows-1252\">", "x".repeat(5000));
+        let b = legacy(encoding_rs::WINDOWS_1256, &page);
+        let d = dec(&b, None, true).unwrap();
+        assert_eq!(d.encoding, "windows-1256;label=windows-1256");
+        let locos = MergeOptions::new().with_profile(crate::profile::LOCOS);
+        // native: the late declaration is content and stays; LocOS: it takes the file's label
+        assert_eq!(encode_text_with(&d.text, &d.encoding, &MergeOptions::new()).unwrap(), b);
+        let out = String::from_utf8(encode_text_with(&d.text, &d.encoding, &locos).unwrap()).unwrap();
+        assert!(out.ends_with("<meta charset=\"windows-1256\">") && !out.contains("1252"), "{}", &out[out.len() - 60..]);
+        // a translation the code page cannot hold: UTF-8, and no declaration keeps the old label (LocOS)
+        let text = d.text.replacen("xx", "\u{65e5}\u{672c}", 1);
+        let out = String::from_utf8(encode_text_with(&text, &d.encoding, &locos).unwrap()).unwrap();
+        assert!(!out.contains("1256") && !out.contains("1252") && out.matches("charset=\"UTF-8\"").count() == 2, "{}", &out[out.len() - 60..]);
     }
 
     #[test]

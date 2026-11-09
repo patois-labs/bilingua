@@ -395,7 +395,7 @@ impl Filter for Wxl {
                 }
                 SkelPart::Unit(i) => {
                     let unit = doc.units.get(*i).ok_or_else(|| Error::Write(format!("no unit {i}")))?;
-                    out.push_str(&render(unit, nl));
+                    out.push_str(&render(unit, nl, !opts.is_profile(profile::LOCOS)));
                     first = false;
                 }
             }
@@ -442,7 +442,9 @@ fn hidden<'a>(u: &'a Unit, key: &str) -> &'a str {
 }
 
 /// What goes between the quotes (or between the tags) for a unit.
-fn render(unit: &Unit, nl: &str) -> String {
+/// `keep_cr`: a carriage return from a character reference in the source stays one (native mode). LocOS gives the
+/// translation's line breaks the file's style and drops it, so the locos profile passes false.
+fn render(unit: &Unit, nl: &str, keep_cr: bool) -> String {
     let out = flatten(&unit.output());
     let form = hidden(unit, FORM_KEY);
     if out == flatten(&unit.source()) {
@@ -451,7 +453,7 @@ fn render(unit: &Unit, nl: &str) -> String {
         }
     }
     let full = format!("{}{}{}", hidden(unit, LEAD_KEY), out, hidden(unit, TRAIL_KEY));
-    encode_value(form, &full, form == "c", nl, flatten(&unit.source()).contains('\r'))
+    encode_value(form, &full, form == "c", nl, keep_cr && flatten(&unit.source()).contains('\r'))
 }
 
 /// The culture to write for a target locale: LocOS `html_lang(...).lower()`, or `None` when the tag is unusable.

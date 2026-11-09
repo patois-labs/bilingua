@@ -180,7 +180,7 @@ impl Yaml {
         if bytes.len() > limits.max_bytes {
             return Err(LimitError::new(LimitKind::InputBytes, "This YAML file is larger than the size limit.").into());
         }
-        let (text, enc) = text::decode(bytes)?;
+        let (text, enc, enc_warnings) = text::decode(bytes, opts.source_lang.as_deref())?;
         count_budget(&text, limits)?;
         if let Some(p) = text::first_forbidden(&text) {
             return Err(parse_err(&text, &scan::ScanError { msg: "control characters are not allowed".into(), pos: p, limit: false }));
@@ -237,7 +237,9 @@ impl Yaml {
                 u.context.extra.insert("rails_locale".into(), r.key.clone());
             }
         }
-        Ok(Document::new("yaml", units, Skeleton::text(parts, enc.label(), bilingua_model::parser_info!())).with_options(opts))
+        let mut doc = Document::new("yaml", units, Skeleton::text(parts, enc.label(), bilingua_model::parser_info!())).with_options(opts);
+        doc.warnings.extend(enc_warnings);
+        Ok(doc)
     }
 }
 

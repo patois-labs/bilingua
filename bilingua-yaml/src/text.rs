@@ -10,6 +10,8 @@ pub enum Enc {
     Utf16Le,
     Utf16Be,
     Cp1252,
+    /// The code page of the project's source language (Windows-1251 for Russian, ...).
+    Legacy(&'static bilingua_model::encoding_rs::Encoding),
 }
 
 impl Enc {
@@ -20,6 +22,7 @@ impl Enc {
             Enc::Utf16Le => "utf-16le",
             Enc::Utf16Be => "utf-16be",
             Enc::Cp1252 => "cp1252",
+            Enc::Legacy(e) => e.name(),
         }
     }
     pub fn from_label(s: &str) -> Option<Enc> {
@@ -29,7 +32,7 @@ impl Enc {
             "utf-16le" => Enc::Utf16Le,
             "utf-16be" => Enc::Utf16Be,
             "cp1252" => Enc::Cp1252,
-            _ => return None,
+            other => Enc::Legacy(bilingua_model::encoding_rs::Encoding::for_label(other.as_bytes())?),
         })
     }
 }
@@ -52,13 +55,15 @@ fn err(msg: impl Into<String>) -> Error {
     Error::Encoding(msg.into())
 }
 
-pub fn decode(bytes: &[u8]) -> Result<(String, Enc), Error> {
+/// Bytes to text, the encoding the writer must use, and what the reader noticed. A file that is neither UTF-8 nor
+/// UTF-16 is read in the code page of `source_lang` (LocOS decision 22), Windows-1252 when the language has none.
+pub fn decode(bytes: &[u8], source_lang: Option<&str>) -> Result<(String, Enc, Vec<bilingua_model::Warning>), Error> {
     if let Some(rest) = bytes.strip_prefix(&[0xEF, 0xBB, 0xBF]) {
         if let Ok(s) = std::str::from_utf8(rest) {
-            return Ok((s.to_string(), Enc::Utf8Bom));
+            return Ok((s.to_string(), Enc::Utf8Bom, Vec::new()));
         }
     } else if let Ok(s) = std::str::from_utf8(bytes) {
-        return Ok((s.to_string(), Enc::Utf8));
+        return Ok((s.to_string(), Enc::Utf8, Vec::new()));
     }
     let le = bytes.starts_with(&[0xFF, 0xFE]);
     if le || bytes.starts_with(&[0xFE, 0xFF]) {
@@ -66,12 +71,17 @@ pub fn decode(bytes: &[u8]) -> Result<(String, Enc), Error> {
         if body.len().is_multiple_of(2) {
             let units = body.chunks_exact(2).map(|c| if le { u16::from_le_bytes([c[0], c[1]]) } else { u16::from_be_bytes([c[0], c[1]]) });
             if let Ok(s) = char::decode_utf16(units).collect::<Result<String, _>>() {
-                return Ok((s, if le { Enc::Utf16Le } else { Enc::Utf16Be }));
+                return Ok((s, if le { Enc::Utf16Le } else { Enc::Utf16Be }, Vec::new()));
             }
         }
     }
     if looks_binary(bytes) {
         return Err(err("file is not valid UTF-8 and looks like a binary file, not text; re-save the file as UTF-8."));
+    }
+    if let Some(r) = bilingua_model::enc::decode_source_legacy(bytes, source_lang) {
+        let (text, e, warnings) = r?;
+        let enc = if e == bilingua_model::encoding_rs::WINDOWS_1252 { Enc::Cp1252 } else { Enc::Legacy(e) };
+        return Ok((text, enc, warnings));
     }
     let mut s = String::with_capacity(bytes.len());
     for (i, &b) in bytes.iter().enumerate() {
@@ -83,7 +93,7 @@ pub fn decode(bytes: &[u8]) -> Result<(String, Enc), Error> {
             _ => s.push(b as char),
         }
     }
-    Ok((s, Enc::Cp1252))
+    Ok((s, Enc::Cp1252, Vec::new()))
 }
 
 /// Writes `text` in `enc`. Returns None when the text does not fit (Windows-1252 only).
@@ -102,6 +112,13 @@ pub fn encode(text: &str, enc: Enc) -> Option<Vec<u8>> {
                 v.extend_from_slice(&if le { u.to_le_bytes() } else { u.to_be_bytes() });
             }
             v
+        }
+        Enc::Legacy(e) => {
+            let (bytes, _, bad) = e.encode(text);
+            if bad {
+                return None;
+            }
+            bytes.into_owned()
         }
         Enc::Cp1252 => {
             let mut v = Vec::with_capacity(text.len());
@@ -150,11 +167,11 @@ mod tests {
             (encode("a: \u{fc}", Enc::Utf16Be).unwrap(), Enc::Utf16Be),
             (b"a: caf\xE9 \x80".to_vec(), Enc::Cp1252),
         ] {
-            let (t, e) = decode(&bytes).unwrap();
+            let (t, e, _) = decode(&bytes, None).unwrap();
             assert_eq!(e, enc);
             assert_eq!(encode(&t, e).unwrap(), bytes);
         }
-        assert!(decode(b"\xFF\xD8\xFF\x00\x81binary\x00").is_err());
-        assert!(decode(b"a: \x81").is_err());
+        assert!(decode(b"\xFF\xD8\xFF\x00\x81binary\x00", None).is_err());
+        assert!(decode(b"a: \x81", None).is_err());
     }
 }
