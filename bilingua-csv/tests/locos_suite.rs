@@ -330,3 +330,23 @@ fn column_mapping_messages_are_plain() {
     let b = Call::csv().cols("source=2,target.de=3").langs("en-US", &["de-DE"], Some("de-DE")).extract(data).unwrap();
     assert_eq!(a.units[0].codes, b.units[0].codes);
 }
+
+/// W-D D5 (csv-3): the read side of a CSV with no mapping. The plan follows the source language it is given, as the
+/// LocOS filter's `source_locale` does: with `en` the `en` column is the source (one unit a row); with no source
+/// language no column is named, so every text cell is a unit where it stands. The 1,365 against 105 of the diff
+/// harness was this: it handed the Python filter no `source_locale` and the wheel the hint's `en`.
+#[test]
+fn no_mapping_plans_by_the_source_language_it_is_given() {
+    let data = b"id,en,es,zh\nMENU_START,PLAY,Jugar,w\xc3\xa1n\nMENU_QUIT,QUIT,Abandonar,t\xc3\xadu\n";
+    let with_en = Call::csv().langs("en", &[], None);
+    assert_eq!(with_en.units(data), ["PLAY", "QUIT"]);
+    let none = Call::csv().langs("", &[], None);
+    let all = none.units(data);
+    // the `id` column is a key (a note), not text
+    assert_eq!(all, ["PLAY", "Jugar", "w\u{e1}n", "QUIT", "Abandonar", "t\u{ed}u"]);
+    // under the locos profile too, and the export's target language does not move the plan
+    let o = ExtractOptions::new().with_profile("locos").with_source_lang("en").with_target_lang("de");
+    assert_eq!(with_en.extract_with(data, &o).unwrap().units.len(), 2);
+    let o = ExtractOptions::new().with_profile("locos").with_target_lang("de");
+    assert_eq!(none.extract_with(data, &o).unwrap().units.len(), 6);
+}
