@@ -72,6 +72,27 @@ is listed here).
 
 ### Changed
 
+- bilingua-odf, `locos` profile: a paragraph that is given a target is rebuilt the way LocOS rebuilds it, also when the
+  target equals the source. A localized build with nothing translated differently therefore still writes content.xml
+  again (lxml declaration), writes a run of spaces after text as a space and `text:s`, and drops the white space between
+  a paragraph start and an inline element. The one case LocOS returns the upload is kept: no target locale and every
+  text unchanged. Native mode keeps an unchanged paragraph as it was.
+- bilingua-odf, `locos` profile: styles.xml and content.xml are written again whenever the language is set in them
+  (a default style, or a style that declares a language, or a right-to-left sheet), also when the file already had the
+  target language, as LocOS does.
+- bilingua-odf, `locos` profile: a new attribute or element in a namespace the document does not bind gets the prefix
+  lxml gives it (`ns0`), not a well-known one (`fo`).
+- bilingua-icml, `locos` profile: a rebuilt story keeps only the namespace declarations that LocOS's cleaned copy
+  keeps (those some name in the story uses; a declaration of an ancestor that the story uses is added to the story start
+  tag). When LocOS cannot cut every story out of the file (a story uses a prefix its `Document` declares, a `<Story`
+  tag is counted twice, a story is self-closed) the whole document is written with lxml, as LocOS does: the file's
+  declaration and a line end, comments and instructions around the root with nothing between them, every start tag
+  regenerated, no white space after the root. Native mode still splices the story.
+- bilingua-xcstrings, `locos` profile: a changed catalog prints numbers the way Python's `json.dumps` does (`1.50` as
+  `1.5`, `1e5` as `100000.0`, `-0` as `0`, `1e-05`, `1e+22`, `Infinity`), and the style (indent, separators) is read
+  from the lines Python's `splitlines` sees (U+2028, U+2029, U+0085 and the other line boundaries end a line too).
+  Native mode keeps numbers as written and its own line reading.
+
 - `bilingua-xml`: under the `locos` profile the source language of the nested `xml:lang` restamp is the root's own
   language, else the first one the file declares anywhere, never the project's source language (LocOS). Native mode
   keeps using the document's source language.
@@ -209,6 +230,10 @@ is listed here).
   drawings) now match and their lists are gone.
 
 ### Fixed
+
+- bilingua-xcstrings: the merge re-read of the stored catalog used the default nesting limit, so a catalog extracted
+  with a higher limit could be refused at merge. It now reads up to 1024 levels (a depth the recursive reader takes
+  on a 1 MB stack); a deeper stored catalog is still refused with an error.
 
 - `bilingua-plist`: a UTF-16 plist or stringsdict that was changed is no longer written as 8-bit bytes under an
   `encoding="UTF-16"` declaration. Under the `locos` profile it keeps UTF-16 and its byte order mark, as LocOS does,

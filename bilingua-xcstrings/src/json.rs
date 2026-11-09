@@ -405,13 +405,28 @@ pub struct Style {
     pub escape_slash: bool,
     /// The line ending the file uses (LF or CRLF).
     pub eol: &'static str,
+    /// Write a number or literal the way Python's `json.dumps` prints the value it read (`1.50` as `1.5`, `1e5` as
+    /// `100000.0`, `-0` as `0`), not as it was written.
+    pub py_numbers: bool,
 }
 
 impl Style {
     pub fn detect(text: &str) -> Style {
+        Style::detect_with(text, false)
+    }
+
+    /// The style as Localization OS reads it: lines are Python's `splitlines` lines, and numbers are written as
+    /// Python prints them.
+    pub fn detect_locos(text: &str) -> Style {
+        let mut st = Style::detect_with(text, true);
+        st.py_numbers = true;
+        st
+    }
+
+    fn detect_with(text: &str, python_lines: bool) -> Style {
         let ensure_ascii = text.is_ascii() && text.contains("\\u");
         let trimmed = text.trim_matches(bilingua_model::py_isspace_char);
-        let second = split_lines(trimmed).get(1).copied();
+        let second = if python_lines { py_splitlines(trimmed).get(1).copied() } else { split_lines(trimmed).get(1).copied() };
         let (indent, item_sep, key_sep) = match second {
             Some(second) => {
                 let key_sep = if text.contains("\" : ") { " : " } else { ": " };
@@ -433,7 +448,7 @@ impl Style {
         };
         let crlf = text.find('\n').is_some_and(|i| i > 0 && text.as_bytes()[i - 1] == b'\r');
         let eol = if crlf { "\r\n" } else { "\n" };
-        Style { indent, item_sep: item_sep.into(), key_sep: key_sep.into(), ensure_ascii, escape_slash: text.contains("\\/"), eol }
+        Style { indent, item_sep: item_sep.into(), key_sep: key_sep.into(), ensure_ascii, escape_slash: text.contains("\\/"), eol, py_numbers: false }
     }
 
     fn nl(&self, depth: usize, out: &mut String) {
@@ -477,6 +492,7 @@ impl Style {
     pub fn emit(&self, v: &J, depth: usize, out: &mut String) {
         match v {
             J::Str(s) => out.push_str(&self.string(s)),
+            J::Raw(r) if self.py_numbers => out.push_str(&py_number(r)),
             J::Raw(r) => out.push_str(r),
             J::Obj(m) if m.is_empty() => out.push_str("{}"),
             J::Arr(a) if a.is_empty() => out.push_str("[]"),
@@ -545,4 +561,77 @@ fn split_lines(s: &str) -> Vec<&str> {
         out.push(&s[start..]);
     }
     out
+}
+
+/// Python's `str.splitlines`: a line ends at `\n`, `\r`, `\r\n`, and at VT, FF, FS, GS, RS, NEL, LS and PS.
+fn py_splitlines(s: &str) -> Vec<&str> {
+    let mut out = Vec::new();
+    let mut start = 0;
+    let mut it = s.char_indices().peekable();
+    while let Some((i, c)) = it.next() {
+        if matches!(c, '\n' | '\r' | '\u{b}' | '\u{c}' | '\u{1c}' | '\u{1d}' | '\u{1e}' | '\u{85}' | '\u{2028}' | '\u{2029}') {
+            out.push(&s[start..i]);
+            let mut end = i + c.len_utf8();
+            if c == '\r' && it.peek().is_some_and(|(_, n)| *n == '\n') {
+                it.next();
+                end += 1;
+            }
+            start = end;
+        }
+    }
+    if start < s.len() {
+        out.push(&s[start..]);
+    }
+    out
+}
+
+/// A number or literal as Python's `json.dumps` prints what `json.loads` read: an integer keeps its digits (`-0` is
+/// `0`), a number with a fraction or an exponent is a float printed with `repr`, and `NaN` and the infinities keep
+/// their JSON-extension names.
+fn py_number(raw: &str) -> String {
+    if matches!(raw, "NaN" | "Infinity" | "-Infinity" | "true" | "false" | "null") {
+        return raw.to_string();
+    }
+    if !raw.contains(['.', 'e', 'E']) {
+        return if raw == "-0" { "0".to_string() } else { raw.to_string() };
+    }
+    match raw.parse::<f64>() {
+        Ok(f) => py_float_repr(f),
+        Err(_) => raw.to_string(),
+    }
+}
+
+/// Python's `float.__repr__`: the shortest digits that read back, in fixed notation when the decimal point falls
+/// within 16 places to the right or 4 to the left of the first digit, else as `d.ddde+XX`.
+fn py_float_repr(f: f64) -> String {
+    if f.is_nan() {
+        return "NaN".to_string();
+    }
+    if f.is_infinite() {
+        return if f > 0.0 { "Infinity" } else { "-Infinity" }.to_string();
+    }
+    let sign = if f.is_sign_negative() { "-" } else { "" };
+    if f == 0.0 {
+        return format!("{sign}0.0");
+    }
+    let sci = format!("{:e}", f.abs());
+    let (mant, exp) = sci.split_once('e').unwrap_or((&sci, "0"));
+    let exp: i32 = exp.parse().unwrap_or(0);
+    let digits: String = mant.chars().filter(|c| *c != '.').collect();
+    let n = digits.len() as i32;
+    let decpt = exp + 1;
+    let body = if decpt > 16 || decpt <= -4 {
+        let (first, rest) = digits.split_at(1);
+        let m = if rest.is_empty() { first.to_string() } else { format!("{first}.{rest}") };
+        let e = decpt - 1;
+        format!("{m}e{}{:02}", if e < 0 { '-' } else { '+' }, e.abs())
+    } else if decpt <= 0 {
+        format!("0.{}{digits}", "0".repeat((-decpt) as usize))
+    } else if decpt >= n {
+        format!("{digits}{}.0", "0".repeat((decpt - n) as usize))
+    } else {
+        let (a, b) = digits.split_at(decpt as usize);
+        format!("{a}.{b}")
+    };
+    format!("{sign}{body}")
 }

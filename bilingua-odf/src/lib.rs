@@ -315,6 +315,14 @@ fn merge_doc(doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
     let body: Vec<(usize, u32)> = parts.iter().enumerate().flat_map(|(pi, p)| p.paras.iter().map(move |n| (pi, *n))).collect();
     let notes: Vec<(usize, u32)> = parts.iter().enumerate().flat_map(|(pi, p)| walk::annotation_paragraphs(&p.tree).into_iter().map(move |n| (pi, n))).collect();
     let mut edits: Vec<Edits> = parts.iter().map(|p| Edits::new(&p.tree)).collect();
+    for e in &mut edits {
+        e.lxml_prefixes = locos;
+    }
+    // Localization OS rebuilds every paragraph it is given text for, also when that text is the paragraph's own
+    // (spaces become `text:s` the way its writer makes them, white space between inline elements goes, and the part
+    // is written again). Its build skips all of that only when no target locale is set and every text is unchanged
+    // (the identity build returns the upload).
+    let rebuild_same = locos && (stamp.is_some() || work.iter().any(|u| !same_content(&u.output(), &u.source())));
     for u in work {
         let (list, num) = if let Some(n) = u.id.strip_prefix('p').and_then(|n| n.parse::<usize>().ok()) {
             (&body, n)
@@ -327,7 +335,7 @@ fn merge_doc(doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
             return Err(Error::Write(format!("unit {} is not in this file", u.id)));
         };
         let out = u.output();
-        if same_content(&out, &u.source()) {
+        if !rebuild_same && same_content(&out, &u.source()) {
             continue;
         }
         let t = &parts[pi].tree;
@@ -353,6 +361,7 @@ fn merge_doc(doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
             let (text, enc_tag, _) = decode_part(&e.data, &l)?;
             let tree = Tree::parse(text, &l)?;
             let mut ed = Edits::new(&tree);
+            ed.lxml_prefixes = locos;
             if stamp::stamp_meta(&tree, &mut ed, tag) {
                 let text = ed.emit(&tree);
                 replaced.insert("meta.xml".into(), if locos { lxml_part(&text) } else { enc::encode_text_with(&text, &enc_tag, opts)? });

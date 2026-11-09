@@ -347,7 +347,9 @@ impl Filter for Xcstrings {
                 SkelPart::Unit(_) => return Err(Error::Write("xcstrings skeleton holds a unit slot".into())),
             }
         }
-        let limits = Limits::default();
+        // The file was accepted when it was extracted, at whatever nesting depth the caller allowed then (the document
+        // does not say which), so the stored text is read with a cap well above the default.
+        let limits = Limits::default().with_max_xml_depth(MERGE_MAX_DEPTH);
         let cat = Catalog::from_text(text, bom, &limits, false)?;
         // The file was accepted when it was extracted: no unit cap here.
         let unlimited = limits.with_max_units(usize::MAX);
@@ -365,13 +367,19 @@ impl Filter for Xcstrings {
     }
 }
 
+/// The nesting depth the merge allows in the stored catalog: four times the default of the extraction, close to what
+/// LocOS reads at all (Python's `json.loads` stops between 1,500 and 3,000 levels). The reader is recursive, so the
+/// cap also bounds the stack: 1024 levels fit a 1 MB thread in a release build (4096 did not). A deeper document,
+/// also a hand-made one, gets an error.
+const MERGE_MAX_DEPTH: usize = 1024;
+
 /// A changed catalog the way LocOS `_dump` writes it: the whole document through `json.dumps` in the style of the
 /// source (separators, indent unit and escapes read from the source text). Every object and array is expanded over
 /// lines whatever the source did, an empty one is `{}` / `[]`, and the line ends are LF (`json.dumps` writes LF even
 /// for a CRLF source). The file ends with a newline when the source did.
 fn locos_dump(edited: &str, source: &str, limits: &Limits) -> Result<String, Error> {
     let root = json::parse(edited, limits.max_xml_depth).map_err(|_| Error::Write("xcstrings: the edited catalog is not JSON".into()))?;
-    let mut st = Style::detect(source);
+    let mut st = Style::detect_locos(source);
     st.eol = "\n";
     let mut out = String::with_capacity(edited.len());
     st.emit(&J::from_node(edited, &root), 0, &mut out);

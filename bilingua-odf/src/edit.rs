@@ -12,6 +12,10 @@ pub enum Piece {
 }
 
 pub struct Edits {
+    /// Name a namespace the document does not bind `nsN`, as lxml does, instead of a well-known prefix.
+    pub lxml_prefixes: bool,
+    /// The part is written again even if no byte changed (see [`Edits::mark_rewritten`]).
+    forced: bool,
     content: HashMap<u32, Vec<Piece>>,
     start: HashMap<u32, String>,
     dirty: Vec<bool>,
@@ -19,11 +23,19 @@ pub struct Edits {
 
 impl Edits {
     pub fn new(t: &Tree) -> Edits {
-        Edits { content: HashMap::new(), start: HashMap::new(), dirty: vec![false; t.nodes.len()] }
+        Edits { lxml_prefixes: false, forced: false, content: HashMap::new(), start: HashMap::new(), dirty: vec![false; t.nodes.len()] }
     }
 
     pub fn is_edited(&self) -> bool {
-        !self.content.is_empty() || !self.start.is_empty()
+        self.forced || !self.content.is_empty() || !self.start.is_empty()
+    }
+
+    /// Localization OS writes a part again whenever it set a value in it, also to the value it had. Under the lxml
+    /// naming (the locos profile) that is kept: the part counts as edited. Native mode leaves the bytes alone.
+    pub fn mark_rewritten(&mut self) {
+        if self.lxml_prefixes {
+            self.forced = true;
+        }
     }
 
     fn mark(&mut self, t: &Tree, mut n: u32) {

@@ -428,3 +428,74 @@ fn locos_profile_writes_the_story_like_lxml_and_line_ends_as_forced_breaks() {
     assert!(native.contains("<Story Self=\"u1\"\n      AppliedTOCStyle"), "{native}");
     assert!(native.contains("Zeile eins\nZeile zwei"), "{native}");
 }
+
+fn locos_merge(data: &[u8], target: &str) -> String {
+    let lo = profile::locos().extract_options().with_granularity(Granularity::Paragraph);
+    let mut d = Icml.extract(data, &lo).unwrap();
+    d.units[0].segments[0].target = vec![Inline::text(target)];
+    String::from_utf8(Icml.merge_with(&d, &profile::locos().merge_options("icml")).unwrap()).unwrap()
+}
+
+/// W-H H4: LocOS copies a rebuilt story and cleans the copy of unused namespace declarations, so a declaration on the
+/// story or below it that no element or attribute name uses is gone, and a used one stays. Native mode keeps them.
+#[test]
+fn locos_profile_drops_unused_namespace_declarations_on_a_rebuilt_story() {
+    let body = psr(&csr(r#"<Content xmlns:y="urn:y">Hello</Content><z:Foo/>"#));
+    let data = String::from_utf8(icml(&body, "", "")).unwrap().replace("<Story Self=\"u1\"", "<Story xmlns:x=\"urn:x\" xmlns:z=\"urn:z\" Self=\"u1\"").into_bytes();
+    let out = locos_merge(&data, "Hallo");
+    assert!(out.contains("<Story xmlns:z=\"urn:z\" Self=\"u1\" AppliedTOCStyle"), "{out}");
+    assert!(out.contains("<Content>Hallo</Content><z:Foo/>") && !out.contains("urn:x") && !out.contains("urn:y"), "{out}");
+    let mut d = Icml.extract(&data, &opts()).unwrap();
+    d.units[0].segments[0].target = vec![Inline::text("Hallo")];
+    let native = String::from_utf8(Icml.merge(&d).unwrap()).unwrap();
+    assert!(native.contains("xmlns:x=\"urn:x\""), "{native}");
+}
+
+/// W-H H4: LocOS splices a rebuilt story back only when each story can be cut out of the file on its own. A story
+/// that uses a prefix its `Document` declares cannot, so LocOS writes the whole document with lxml: the file's XML
+/// declaration and a line end, then instructions and comments before and after the root with nothing between them,
+/// every start tag regenerated, no white space after the root. Native mode splices.
+#[test]
+fn locos_profile_writes_the_whole_document_when_a_story_uses_a_declared_prefix() {
+    let head = HEAD.replace("<Document DOMVersion", "<!-- c1 --><?foo   bar baz  ?>
+<Document xmlns:ea=\"urn:ea\" DOMVersion");
+    let body = psr(&csr(r#"<Content ea:note="a &amp; b">Hello</Content>"#));
+    let data = format!("{head}{}</Document>
+<!-- end -->
+<?tail x?>
+", story("u1", &body)).into_bytes();
+    let out = locos_merge(&data, "Hallo");
+    let want = [
+        "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>
+",
+        "<?aid style=\"50\" type=\"snippet\" readerVersion=\"6.0\" featureSet=\"513\" product=\"20.0(73)\" ?><?aid SnippetType=\"InCopyInterchange\"?>",
+        "<!-- c1 --><?foo bar baz  ?><Document xmlns:ea=\"urn:ea\" DOMVersion=\"20.0\" Self=\"d\">
+",
+        "	<Color Self=\"Color/Black\" Model=\"Process\" Space=\"CMYK\" ColorValue=\"0 0 0 100\" Name=\"Black\"/>
+",
+        "	<RootCharacterStyleGroup Self=\"rcsg\"><CharacterStyle Self=\"CharacterStyle/Bold\" Name=\"Bold\" FontStyle=\"Bold\"/></RootCharacterStyleGroup>
+",
+        "	<Story Self=\"u1\" AppliedTOCStyle=\"n\" TrackChanges=\"false\" StoryTitle=\"$ID/\" AppliedNamedGrid=\"n\">
+",
+        "		<StoryPreference OpticalMarginAlignment=\"false\" FrameType=\"TextFrameType\"/>
+",
+        "		<InCopyExportOption IncludeGraphicProxies=\"true\" IncludeAllResources=\"false\"/>
+",
+        "		<ParagraphStyleRange AppliedParagraphStyle=\"ParagraphStyle/$ID/NormalParagraphStyle\">
+",
+        "			<CharacterStyleRange AppliedCharacterStyle=\"CharacterStyle/$ID/[No character style]\"><Content ea:note=\"a &amp; b\">Hallo</Content></CharacterStyleRange>
+",
+        "		</ParagraphStyleRange>
+	</Story>
+</Document><!-- end --><?tail x?>",
+    ]
+    .concat();
+    assert_eq!(out, want);
+    let mut d = Icml.extract(&data, &opts()).unwrap();
+    d.units[0].segments[0].target = vec![Inline::text("Hallo")];
+    let native = String::from_utf8(Icml.merge(&d).unwrap()).unwrap();
+    assert!(native.starts_with(&head) && native.ends_with("</Document>
+<!-- end -->
+<?tail x?>
+") && native.contains(">Hallo</Content>"), "{native}");
+}
