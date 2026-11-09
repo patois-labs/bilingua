@@ -35,13 +35,13 @@ fn translated_text_is_written_as_utf8() {
     assert!(String::from_utf8(out).unwrap().contains("\u{4f60}\u{597d}"));
 }
 
-/// Shift_JIS has two spellings for one character (NEC row 13 byte pair 87 9B and the JIS X 0208 pair 81 E6 both read as
-/// U+2235). A Japanese file that uses the NEC spelling comes back byte for byte when nothing changed.
+/// Shift_JIS has two spellings for one character (NEC row 13 byte pair 87 9B and the JIS X 0208 pair 81 BF both read as
+/// U+2229). A Japanese file that uses the NEC spelling comes back byte for byte when nothing changed.
 #[test]
 fn double_mapped_shift_jis_untouched_merge_keeps_the_original_bytes() {
     const SJIS: &[u8] = b"export default { title: '\x82\xb1\x82\xf1\x82\xc9\x82\xbf\x82\xcd\x87\x9b' };\n";
     let opts = ExtractOptions::new().with_source_lang("ja");
     let doc = JsModule.extract(SJIS, &opts).unwrap();
-    assert_eq!(src(&doc), "\u{3053}\u{3093}\u{306b}\u{3061}\u{306f}\u{2235}");
+    assert_eq!(src(&doc), "\u{3053}\u{3093}\u{306b}\u{3061}\u{306f}\u{2229}");
     assert_eq!(JsModule.merge(&doc).unwrap(), SJIS);
 }
