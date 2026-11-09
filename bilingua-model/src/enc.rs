@@ -1052,7 +1052,17 @@ fn utf8_text(text: &str, encoding: &str, base_is_label: bool) -> Vec<u8> {
 /// a file below its control-byte allowance) is written as UTF-8 instead, which LocOS also writes and which always
 /// reads back ([`legacy_output_or_utf8`]).
 pub fn encode_text(text: &str, encoding: &str) -> Result<Vec<u8>, Error> {
-    let out = encode_text_as_is(text, encoding)?;
+    let out = encode_text_as_is(text, encoding, true)?;
+    legacy_output_or_utf8(out, text, encoding)
+}
+
+/// [`encode_text`] for a file nothing was changed in: the bytes it was read from. The one difference: a page
+/// labelled ISO-8859-8 that was read as Windows-1255 keeps its own bytes even when it holds a sign that
+/// [`encode_text`] would switch to UTF-8 for (LocOS gives such a page back as it was when nothing in it changed,
+/// and writes UTF-8 only for a changed page). A reader that refuses a file which does not write back unchanged
+/// checks with this function.
+pub fn encode_text_unchanged(text: &str, encoding: &str) -> Result<Vec<u8>, Error> {
+    let out = encode_text_as_is(text, encoding, false)?;
     legacy_output_or_utf8(out, text, encoding)
 }
 
@@ -1064,13 +1074,13 @@ pub fn legacy_output_or_utf8(out: Vec<u8>, text: &str, encoding: &str) -> Result
     let b = base(encoding);
     let legacy = !matches!(b, "utf-8" | "utf-8-bom" | "utf-16le" | "utf-16be");
     if legacy && std::str::from_utf8(&out).is_err() && looks_binary(&out) {
-        return encode_text_as_is(text, &format!("utf-8{}", &encoding[b.len()..]));
+        return encode_text_as_is(text, &format!("utf-8{}", &encoding[b.len()..]), true);
     }
     Ok(out)
 }
 
-fn encode_text_as_is(text: &str, encoding: &str) -> Result<Vec<u8>, Error> {
-    let mut out = encode_text_unmarked(text, encoding)?;
+fn encode_text_as_is(text: &str, encoding: &str, changed: bool) -> Result<Vec<u8>, Error> {
+    let mut out = encode_text_unmarked(text, encoding, changed)?;
     // a mark read before the legacy bytes goes back in front of whatever was written (UTF-8 or the code page)
     if parse_tag(encoding).bom8 {
         out.splice(0..0, BOM8.iter().copied());
@@ -1078,7 +1088,8 @@ fn encode_text_as_is(text: &str, encoding: &str) -> Result<Vec<u8>, Error> {
     Ok(out)
 }
 
-fn encode_text_unmarked(text: &str, encoding: &str) -> Result<Vec<u8>, Error> {
+/// `changed`: false for a file nothing was changed in (see [`encode_text_unchanged`]).
+fn encode_text_unmarked(text: &str, encoding: &str, changed: bool) -> Result<Vec<u8>, Error> {
     let env = parse_tag(encoding);
     let text = strip_own_mark(text, encoding);
     let normalized;
@@ -1156,7 +1167,7 @@ fn encode_text_unmarked(text: &str, encoding: &str) -> Result<Vec<u8>, Error> {
     // no character is one that Windows-1255 writes at a byte meaning another sign under that label (curly quotes,
     // dashes, the ellipsis, the euro and shekel signs): a browser would show a C1 control or the currency sign.
     // Such a page is written as UTF-8 (LocOS #810 gate, G7).
-    if enc == encoding_rs::WINDOWS_1255 {
+    if changed && enc == encoding_rs::WINDOWS_1255 {
         let says_8859_8 = decl_re().captures_iter(split_head(&restored).0).any(|c| {
             let name = c.get(2).map_or("", |m| m.as_str());
             matches!(label_encoding(name), Some(e) if e == encoding_rs::ISO_8859_8 || e == encoding_rs::ISO_8859_8_I)
@@ -1499,6 +1510,13 @@ mod tests {
         // a letter and a vowel point both exist in the page's code page: the label stays
         let out = encode_text(&format!("{}\u{5d0}\u{5b0}", d.text), &d.encoding).unwrap();
         assert!(std::str::from_utf8(&out).is_err() && out.starts_with(b"<meta charset=\"iso-8859-8\">"));
+        // a page that already holds such a sign: encode_text switches it, an unchanged page gets its own bytes back
+        let mut b = b"<meta charset=\"iso-8859-8\"><p>".to_vec();
+        b.extend_from_slice(&[0xF9, 0xC8, 0xEC, 0xE5, 0xED, b' ', 0x93, 0xE0, 0x94]);
+        let d = dec(&b, None, true).unwrap();
+        assert!(d.encoding.starts_with("windows-1255"), "{}", d.encoding);
+        assert!(String::from_utf8(encode_text(&d.text, &d.encoding).unwrap()).unwrap().contains("\u{201c}"));
+        assert_eq!(encode_text_unchanged(&d.text, &d.encoding).unwrap(), b);
     }
 
     #[test]

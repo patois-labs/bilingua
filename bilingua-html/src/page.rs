@@ -262,7 +262,7 @@ fn body_unit(id: String, u: &html::BodyUnit) -> Unit {
 fn load(bytes: &[u8], opts: &ExtractOptions, limits: &Limits) -> Result<enc::Decoded, Error> {
     guard::check_input(bytes, limits)?;
     let dec = enc::decode_text(bytes, &enc::DecodeOptions::with_limits(*limits).with_source_lang(opts.source_lang.as_deref()).declared())?;
-    if !matches!(enc::base(&dec.encoding), "utf-8" | "utf-8-bom" | "utf-16le" | "utf-16be") && enc::encode_text(&dec.text, &dec.encoding)? != bytes {
+    if !matches!(enc::base(&dec.encoding), "utf-8" | "utf-8-bom" | "utf-16le" | "utf-16be") && enc::encode_text_unchanged(&dec.text, &dec.encoding)? != bytes {
         return Err(Error::Encoding(
             "This file uses byte sequences of its legacy encoding that cannot be written back unchanged. Re-save the file as UTF-8.".into(),
         ));
@@ -499,6 +499,10 @@ pub(crate) fn merge(doc: &Document, opts: &MergeOptions, cfg: Cfg) -> Result<Vec
     let translated = targets.iter().any(Option::is_some);
     let tag = opts.stamp_lang(doc, translated).and_then(html::html_lang);
     if !translated && tag.is_none() {
+        // nothing changed: the page as it was read (load checked that it writes back so), as LocOS gives it back
+        if opts.output_encoding != OutputEncoding::Utf8 {
+            return enc::encode_text_unchanged(&text, encoding);
+        }
         return enc::encode_text_with(&text, encoding, opts);
     }
     let mut toks = html::tokenize_with(&text, cfg.template, &mut None).map_err(|_| Error::Write("token budget".into()))?;
