@@ -1,0 +1,77 @@
+//! Structure fuzz: a lone mark character in a translation, away from a code, must not pair with a code's mark
+//! further on (or before it), so the written line is formatted as the translator typed it.
+mod common;
+use common::*;
+
+const DOC: &str = "A paragraph with *strong* words.\n";
+
+fn write(t: &str) -> String {
+    let src = units(DOC.as_bytes())[0].clone();
+    let out = build_str(DOC.as_bytes(), &[(0, t)]);
+    assert_eq!(units(out.as_bytes()).len(), 1, "{src:?} -> {out}");
+    out
+}
+
+#[test]
+fn a_mark_before_a_code_does_not_pair_with_it() {
+    // `*}` + `**p**` read as `*}*` and `*p**`
+    let out = write("*}\u{27E6}g1\u{27E7}p\u{27E6}/g1\u{27E7} w");
+    assert_eq!(out, "&#42;}**p** w\n");
+    let read = units(out.as_bytes())[0].clone();
+    assert!(read.starts_with("&#42;}\u{27E6}g1\u{27E7}p"), "{read}");
+}
+
+#[test]
+fn marks_inside_a_pair_do_not_close_it() {
+    let out = write("w \u{27E6}g1\u{27E7}p** |\u{27E6}/g1\u{27E7} w");
+    assert_eq!(out, "w *p&#42;&#42; |* w\n");
+}
+
+#[test]
+fn a_mark_after_a_code_does_not_pair_with_it() {
+    // `*y` has no closing mark after it: the line reads back the same as typed, so it is written as typed
+    let out = write("w \u{27E6}g1\u{27E7}p\u{27E6}/g1\u{27E7} x *y");
+    assert_eq!(out, "w *p* x *y\n");
+    // `*` + `*y*` with the code between: the pair would wrap the code
+    let out = write("w *x \u{27E6}g1\u{27E7}p\u{27E6}/g1\u{27E7} y* w");
+    assert!(!out.contains("*x *p* y*"), "{out}");
+    assert_eq!(units(out.as_bytes())[0].matches('\u{27E6}').count(), 2, "{out}");
+}
+
+#[test]
+fn marks_that_cannot_be_a_delimiter_stay() {
+    assert_eq!(write("5 * 3 \u{27E6}g1\u{27E7}p\u{27E6}/g1\u{27E7} w"), "5 * 3 *p* w\n");
+    assert_eq!(write("a*b \u{27E6}g1\u{27E7}p\u{27E6}/g1\u{27E7} w"), "a*b *p* w\n");
+    // `_` is no mark of any code of the unit: typed markup stays markup
+    assert_eq!(write("a _b_ \u{27E6}g1\u{27E7}p\u{27E6}/g1\u{27E7} w"), "a _b_ *p* w\n");
+}
+
+/// Every unit set to `Zq<text>qZ`, merged and read again, gives the same unit text: marks the source already had as
+/// plain text are written as typed, not as references.
+fn pseudo_round_trip(doc: &str) {
+    let texts = units(doc.as_bytes());
+    let want: Vec<String> = texts.iter().map(|t| format!("Zq{t}qZ")).collect();
+    let mapping: Vec<(usize, &str)> = want.iter().enumerate().map(|(i, t)| (i, t.as_str())).collect();
+    let out = build_str(doc.as_bytes(), &mapping);
+    assert!(!out.contains("&#"), "{out}");
+    assert_eq!(units(out.as_bytes()), want, "{out}");
+}
+
+#[test]
+fn plain_underscores_beside_an_italic_code_stay_plain() {
+    pseudo_round_trip("A _word_ here: if u_ is set, then _u must be kept.\n");
+}
+
+#[test]
+fn plain_backticks_beside_a_monospace_code_stay_plain() {
+    pseudo_round_trip("Use `x` between and `</GridPanel>`in the generated file.\n");
+}
+
+#[test]
+fn an_escaped_mark_keeps_its_closing_mark() {
+    // `\*not*` glued to a monospace code: the line reads back the same as typed, so neither the `*` nor the code's
+    // backticks change (a reference would leave the escape without its pair)
+    let doc = "Say \u{5c}*not* `code` here.\n";
+    let out = build_str(doc.as_bytes(), &[(0, "Say\u{27E6}x1\u{27E7}not*\u{27E6}x2\u{27E7}\u{3002}")]);
+    assert_eq!(out, "Say\u{5c}*not*`code`\u{3002}\n");
+}

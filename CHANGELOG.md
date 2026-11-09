@@ -68,6 +68,9 @@ is listed here).
 
 ### Changed
 
+- New structure fuzz check S4 (AsciiDoc): the codes set in a translation are the codes read back, and the alphabet now
+  has lone marks.
+
 - LocOS profile, OpenDocument (odt, ods, odp, odg): a part that a merge rewrites (`content.xml`, `styles.xml`,
   `meta.xml`) is now written the way LocOS's lxml writes it: UTF-8, the declaration
   `<?xml version='1.0' encoding='UTF-8'?>` and a new line, `&apos;` in attributes as a plain `'` (`&quot;` stays),
@@ -189,6 +192,13 @@ is listed here).
   drawings) now match and their lists are gone.
 
 ### Fixed
+
+- adoc: a lone mark character (`*`, `_`, backtick, `#`, `^`, `~`, `+`) in a translation no longer pairs with a code's mark,
+  next to it or further along, or with a mark on the other side of a code (which would wrap and swallow the code). Where it
+  could open or close formatting it is written as a character reference, which prints the same. The line is first written
+  as typed, and the references are kept only when that line would not read back as the same codes and text, so a mark the
+  source already had as plain text (`u_`, a backtick glued to a word) stays a plain character. Under the LocOS profile the
+  bytes then differ from LocOS only for marks that would pair.
 
 - LocOS profile, server pages (aspx, erb, shtml, jsp, phtml), EPUB and mail HTML parts: an inline element whose end
   tag is not in the same unit (it follows a code statement or a block child) is a pair token `⟦g1⟧` with no closing
