@@ -198,7 +198,8 @@ is listed here).
   could open or close formatting it is written as a character reference, which prints the same. The line is first written
   as typed, and the references are kept only when that line would not read back as the same codes and text, so a mark the
   source already had as plain text (`u_`, a backtick glued to a word) stays a plain character. Under the LocOS profile the
-  bytes then differ from LocOS only for marks that would pair.
+  bytes then differ from LocOS only for marks that would pair, for example a text `*` that the joined lines of a
+  paragraph would pair with a `**` code of the next line (LocOS's own build loses that code).
 
 - LocOS profile, server pages (aspx, erb, shtml, jsp, phtml), EPUB and mail HTML parts: an inline element whose end
   tag is not in the same unit (it follows a code statement or a block child) is a pair token `⟦g1⟧` with no closing
