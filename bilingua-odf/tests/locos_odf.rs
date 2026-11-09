@@ -596,8 +596,8 @@ fn locos_profile_rebuilds_unchanged_paragraphs_like_localos() {
 }
 
 /// W-H H1: a new attribute in a namespace the document does not bind gets the prefix lxml gives it (`ns0`), also when
-/// the document uses the usual prefix for another namespace (an old `fo` URI). Native mode keeps the usual prefix
-/// where it is free, and never redefines one the document binds to something else.
+/// the document uses the usual prefix for another namespace (an old `fo` URI). Native mode keeps the usual prefix:
+/// declared on the element, it sets the language once (the output was well-formed before W-H and stays as it was).
 #[test]
 fn a_new_namespace_gets_the_prefix_lxml_gives_it() {
     let old = "http://www.w3.org/1999/XSL/Format";
@@ -616,9 +616,10 @@ fn a_new_namespace_gets_the_prefix_lxml_gives_it() {
     let s = member_str(&out, "styles.xml");
     let want = format!(r##"<style:text-properties xmlns:ns0="{FO}" fo:color="#000000" fo:language="en" fo:country="US" ns0:language="de" ns0:country="DE"/>"##);
     assert!(s.contains(&want), "{s}");
-    // native: the usual prefix is taken by the old URI, so the new one is not called `fo` either
+    // native: `fo` is declared again on the element, so its language is stated once, in the current namespace
     let s = member_str(&f.merge(&d).unwrap(), "styles.xml");
-    assert!(s.contains(&format!(r#"xmlns:ns0="{FO}""#)) && s.contains(r#"ns0:language="de""#) && s.contains(r#"fo:language="en""#), "{s}");
+    let want = format!(r##"<style:text-properties fo:color="#000000" fo:language="de" fo:country="DE" xmlns:fo="{FO}"/>"##);
+    assert!(s.contains(&want) && !s.contains("ns0"), "{s}");
     // where the usual prefix is free, native keeps it and the profile says `ns0`
     let bare = h_ns(FO).replace(&format!(r#" xmlns:fo="{FO}""#), "");
     let styles = h_doc(

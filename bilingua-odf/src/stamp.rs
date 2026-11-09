@@ -56,9 +56,8 @@ pub fn make_el(t: &Tree, ctx: u32, ns: u16, local: &str, attrs: &[(u16, &str, St
         match t.find_prefix(ctx, ns) {
             Some(p) => p,
             None => {
-                // the usual prefix, unless the document binds it to another namespace here (then the new name would
-                // change what its attributes mean) or the output is to read like lxml's
-                let p = if lxml || t.prefix_bound(ctx, default_prefix(ns)) {
+                // the usual prefix, or the one lxml makes up when the output is to read like lxml's (LocOS)
+                let p = if lxml {
                     lxml_prefix(t, ctx, |q| decls.iter().any(|(d, _)| d == q))
                 } else {
                     default_prefix(ns).to_string()
@@ -102,7 +101,10 @@ fn attr_q(t: &Tree, ed: &mut Edits, node: u32, ns: u16, local: &str) -> String {
     match t.find_prefix(node, ns) {
         Some(p) => format!("{p}:{local}"),
         None => {
-            let p = if ed.lxml_prefixes || t.prefix_bound(node, default_prefix(ns)) {
+            // Native mode declares the usual prefix on the element, also when an ancestor binds it to an older
+            // namespace (an early OpenOffice `fo`): the element's other attributes with that prefix then read in the
+            // current namespace, and the language is stated once. LocOS (lxml) adds `ns0` beside the old attributes.
+            let p = if ed.lxml_prefixes {
                 lxml_prefix(t, node, |q| scan_attrs(&tag).iter().any(|a| tag[a.name_start..a.name_end] == format!("xmlns:{q}")))
             } else {
                 default_prefix(ns).to_string()
