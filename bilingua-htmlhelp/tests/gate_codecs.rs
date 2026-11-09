@@ -98,7 +98,8 @@ fn output_encoding_utf8_writes_utf8_and_says_so() {
 fn utf8_fallback_is_a_format_option() {
     let hhc = cp1252(HHC);
     let greek = "\u{3b5}\u{3bb}";
-    assert!(merge_full(&HhcFilter, &hhc, &[(0, "\u{416}")], Some("el-GR"), false, MergeOptions::default()).is_err());
+    let locos = MergeOptions::default().with_profile(profile::LOCOS);
+    assert!(merge_full(&HhcFilter, &hhc, &[(0, "\u{416}")], Some("el-GR"), false, locos).is_err());
     let out = merge_full(&HhcFilter, &hhc, &[(0, "\u{416}"), (1, greek)], Some("el-GR"), true, MergeOptions::default()).unwrap();
     assert!(String::from_utf8(out).unwrap().contains("\u{416}"));
     assert_eq!(UTF8_FALLBACK, "htmlhelp.utf8_fallback");
@@ -114,4 +115,24 @@ fn euc_kr_make_up_bytes_keep_their_bytes_under_windows_949() {
     assert_eq!(first(&d), [0x3164, 0x3138, 0x3157, 0x3141, 0x20, 0x58]);
     assert_eq!(build(&HhcFilter, &d, &[]), d);
     assert_eq!(build(&HhcFilter, &d, &[(1, "Two")]), d);
+}
+
+#[test]
+fn native_mode_writes_a_numeric_reference_for_a_sitemap_value_outside_the_code_page() {
+    // issue 12: U+0110 (from `&Dstrok;`) has no Windows-1252 byte; the LocOS profile refuses, native mode writes `&#272;`
+    let hhc = cp1252(&HHC.replace("Getting started", "&Dstrok;ublin"));
+    let d = extract(&HhcFilter, &hhc).unwrap();
+    assert_eq!(plain_text(&d.units[0].source()), "\u{110}ublin");
+    // a pseudo-style round trip: every value translated to itself plus a mark
+    let out = merge_with(&HhcFilter, &hhc, &[(0, "\u{110}ublin!")], None, MergeOptions::default()).unwrap();
+    let text = String::from_utf8(out.clone()).unwrap();
+    assert!(text.contains("value=\"&#272;ublin!\""), "{text}");
+    // it reads back as the same character
+    assert_eq!(texts(&HhcFilter, &out)[0], "\u{110}ublin!");
+    // a Cyrillic translation in a Greek page is a reference too, and ASCII stays as it is
+    let out = merge_with(&HhcFilter, &cp1252(&HHC.replace('\u{e9}', "e")), &[(0, "\u{416}x")], Some("el-GR"), MergeOptions::default()).unwrap();
+    assert!(String::from_utf8_lossy(&out).contains("value=\"&#1046;x\""));
+    // the LocOS profile keeps the refusal
+    let locos = MergeOptions::default().with_profile(profile::LOCOS);
+    assert!(merge_with(&HhcFilter, &hhc, &[(0, "\u{110}ublin!")], None, locos).is_err());
 }

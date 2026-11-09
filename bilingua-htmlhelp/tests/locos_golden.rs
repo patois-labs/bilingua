@@ -44,7 +44,7 @@ fn filter(fmt: &str) -> Box<dyn Filter> {
 
 fn run(f: &dyn Filter, data: &[u8], map: &[(usize, String)], target: Option<&str>) -> Result<Vec<u8>, Error> {
     let m: Vec<(usize, &str)> = map.iter().map(|(i, s)| (*i, s.as_str())).collect();
-    merge_with(f, data, &m, target, MergeOptions::default())
+    merge_with(f, data, &m, target, MergeOptions::default().with_profile(bilingua_model::profile::LOCOS))
 }
 
 fn check(bad: &mut Vec<String>, name: &str, what: &str, want: &str, got: Result<Vec<u8>, Error>) {
