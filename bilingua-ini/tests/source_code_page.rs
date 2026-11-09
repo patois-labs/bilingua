@@ -42,6 +42,6 @@ fn double_mapped_shift_jis_untouched_merge_keeps_the_original_bytes() {
     const SJIS: &[u8] = b"[main]\r\ntitle=\x82\xb1\x82\xf1\x82\xc9\x82\xbf\x82\xcd\x87\x9b\r\n";
     let opts = ExtractOptions::new().with_source_lang("ja");
     let doc = IniFilter.extract(SJIS, &opts).unwrap();
-    assert!(src(&doc).ends_with('\u{2235}'));
+    assert_eq!(src(&doc), "\u{3053}\u{3093}\u{306b}\u{3061}\u{306f}\u{2235}");
     assert_eq!(IniFilter.merge(&doc).unwrap(), SJIS);
 }
