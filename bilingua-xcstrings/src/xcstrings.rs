@@ -372,14 +372,11 @@ impl Filter for Xcstrings {
 fn locos_dump(edited: &str, source: &str, limits: &Limits) -> Result<String, Error> {
     let root = json::parse(edited, limits.max_xml_depth).map_err(|_| Error::Write("xcstrings: the edited catalog is not JSON".into()))?;
     let mut st = Style::detect(source);
-    st.eol = "
-";
+    st.eol = "\n";
     let mut out = String::with_capacity(edited.len());
     st.emit(&J::from_node(edited, &root), 0, &mut out);
-    if source.ends_with('
-') {
-        out.push('
-');
+    if source.ends_with('\n') {
+        out.push('\n');
     }
     Ok(out)
 }
