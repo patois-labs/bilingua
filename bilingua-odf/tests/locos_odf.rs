@@ -605,7 +605,7 @@ fn a_new_namespace_gets_the_prefix_lxml_gives_it() {
     let styles = h_doc(
         "styles",
         &ns,
-        r#"<office:styles><style:default-style style:family="paragraph"><style:text-properties fo:color="#000000" fo:language="en" fo:country="US"/></style:default-style></office:styles>"#,
+        r##"<office:styles><style:default-style style:family="paragraph"><style:text-properties fo:color="#000000" fo:language="en" fo:country="US"/></style:default-style></office:styles>"##,
     );
     let content = h_doc("content", &ns, "<office:body><office:text><text:p>Hi</text:p></office:text></office:body>");
     let data = Pkg::new(content).styles(styles).build();
