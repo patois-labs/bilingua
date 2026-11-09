@@ -456,7 +456,15 @@ fn check(c: &Case, f: &dyn Filter, doc: &Document, want: &[u8], plan: &[(bool, V
             return Err(format!("S3 unit {i}: set {set_t:?} read {got:?}\n{}", shown()));
         }
         if c.norm == Norm::Adoc && !same_structure(c.norm, &d2.units[i], &d.units[i].segments[0].target, &d2.units[i].source()) {
-            return Err(format!("S4 unit {i}: the codes set are not the codes read: set {set_t:?} read {got:?}\n{}", shown()));
+            let items: Vec<String> = d2.units[i]
+                .source()
+                .iter()
+                .map(|x| match x {
+                    Inline::Text(t) => format!("T{t:?}"),
+                    Inline::Tag { kind, .. } => format!("{kind:?}{:?}", markup(&d2.units[i], x)),
+                })
+                .collect();
+            return Err(format!("S4 unit {i}: the codes set are not the codes read: set {set_t:?} read {got:?} items {items:?}\n{}", shown()));
         }
     }
     // a text skeleton: the bytes between the units are compared as they are
