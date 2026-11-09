@@ -325,3 +325,16 @@ fn mock_translation_round_trip_and_signed_refusal() {
     let e = refused(b"Subject: s\r\nContent-Type: application/pkcs7-mime\r\n\r\nMIA\r\n", "S/MIME");
     assert!(matches!(e, Error::Unsupported(_)));
 }
+
+#[test]
+fn locos_profile_writes_a_blank_target_in_an_html_part() {
+    // LocOS writes a white-space only translation as it is (`<h1>  </h1>`); the model's set_target drops one
+    let mail: &[u8] = b"From: a@example.com\r\nSubject: Hi\r\nMIME-Version: 1.0\r\nContent-Type: text/html; charset=utf-8\r\n\r\n<html><body><h1>Hello Anna,</h1><p>Your order shipped.</p></body></html>\r\n";
+    let mut d = Email.extract(mail, &opts(None).with_profile(profile::LOCOS)).unwrap();
+    let i = d.units.iter().position(|u| loc(u) == "Hello Anna,").expect("heading unit");
+    let seg = d.units[i].segments[0].id.clone();
+    profile::locos_set_target(&mut d, &seg, vec![Inline::text("  ")]).unwrap();
+    let out = Email.merge_with(&d, &MergeOptions::new().with_profile(profile::LOCOS)).unwrap();
+    assert!(contains(&out, b"<h1>  </h1>"), "{}", String::from_utf8_lossy(&out));
+    assert!(!contains(&out, b"Hello Anna"));
+}
