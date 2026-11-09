@@ -404,3 +404,21 @@ fn a_broken_comments_part_only_matters_when_comments_are_wanted() {
     assert!(crate::Pptx.extract(&broken, &opts(None)).is_ok());
     assert!(crate::Pptx.extract(&broken, &comment_opts()).is_err());
 }
+
+/// W-D D4 (sec-2): the segment cap counts every walked paragraph, empty ones too, as LocOS's walk does. A deck with
+/// 2 units and 5 paragraphs is read under a cap of 5 and refused under a cap of 4; native mode counts units only.
+#[test]
+fn segment_cap_counts_empty_paragraphs() {
+    let empty = "<a:p/>";
+    let data = deck(&sp(&format!("<a:p><a:r><a:t>One</a:t></a:r></a:p>{empty}{empty}<a:p><a:r><a:t>Two</a:t></a:r></a:p>{empty}")));
+    let capped = |n: usize| profile::locos().extract_options().with_limits(bilingua_model::Limits::new().with_max_units(n));
+    let doc = crate::Pptx.extract(&data, &capped(5)).unwrap();
+    assert_eq!(doc.units.len(), 2);
+    match crate::Pptx.extract(&data, &capped(4)) {
+        Err(Error::Limit(l)) => assert_eq!(l.kind, bilingua_model::LimitKind::Units),
+        other => panic!("{:?}", other.map(|d| d.units.len())),
+    }
+    // native: 2 units, so a cap of 2 passes
+    let native = ExtractOptions::new().with_limits(bilingua_model::Limits::new().with_max_units(2));
+    assert_eq!(crate::Pptx.extract(&data, &native).unwrap().units.len(), 2);
+}

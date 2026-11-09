@@ -266,6 +266,30 @@ fn same_content(a: &[Inline], b: &[Inline]) -> bool {
         })
 }
 
+/// A part Localization OS rewrites, as its `_serialize` writes it (`etree.tostring(root, xml_declaration=True,
+/// encoding="UTF-8")`): UTF-8 with a single-quoted declaration and a new line, then the tree as lxml serialises it
+/// (namespace declarations first, double-quoted attributes with `&apos;` as a plain `'` and `"` as `&quot;`, `<x/>`
+/// for an empty element, no white space after the root). A part with a CDATA section, or a comment or instruction outside the root,
+/// gets the declaration only, so nothing is lost (LocOS keeps a CDATA section too, `strip_cdata=False`, and drops what
+/// lies outside the root; there the bytes differ, the content does not).
+fn lxml_part(text: &str) -> Vec<u8> {
+    const DECL: &str = "<?xml version='1.0' encoding='UTF-8'?>
+";
+    let body = match text.trim_start().strip_prefix("<?xml") {
+        Some(rest) => rest.find("?>").map_or(text, |i| &rest[i + 2..]),
+        None => text,
+    };
+    if !body.contains("<![CDATA[") {
+        if let Ok(dom) = bilingua_xmltree::parse(body) {
+            let outside_blank = dom.nodes[dom.root].span.is_some_and(|s| body[..s.start].trim().is_empty() && body[s.end..].trim().is_empty());
+            if outside_blank {
+                return format!("{DECL}{}", dom.serialize()).into_bytes();
+            }
+        }
+    }
+    format!("{DECL}{}", body.trim_start()).into_bytes()
+}
+
 fn merge_doc(doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
     check_parser(doc, &parser_info!())?;
     let Skeleton::Zip { entries: skel, .. } = &doc.skeleton else {
@@ -275,6 +299,7 @@ fn merge_doc(doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
         return Err(Error::Write("the OpenDocument skeleton has lost its archive".into()));
     };
     let work: Vec<&Unit> = doc.units.iter().filter(|u| u.translate && translated(u)).collect();
+    let locos = opts.is_profile(bilingua_model::profile::LOCOS);
     let stamp = opts.stamp_lang(doc, !work.is_empty()).and_then(lang::html_lang);
     if work.is_empty() && stamp.is_none() {
         return Ok(archive.clone());
@@ -319,7 +344,8 @@ fn merge_doc(doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
     for (i, p) in parts.iter().enumerate() {
         if edits[i].is_edited() {
             let text = edits[i].emit(&p.tree);
-            replaced.insert(p.name.to_string(), enc::encode_text_with(&text, &p.enc, opts)?);
+            let bytes = if locos { lxml_part(&text) } else { enc::encode_text_with(&text, &p.enc, opts)? };
+            replaced.insert(p.name.to_string(), bytes);
         }
     }
     if let Some(tag) = &stamp {
@@ -328,7 +354,8 @@ fn merge_doc(doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
             let tree = Tree::parse(text, &l)?;
             let mut ed = Edits::new(&tree);
             if stamp::stamp_meta(&tree, &mut ed, tag) {
-                replaced.insert("meta.xml".into(), enc::encode_text_with(&ed.emit(&tree), &enc_tag, opts)?);
+                let text = ed.emit(&tree);
+                replaced.insert("meta.xml".into(), if locos { lxml_part(&text) } else { enc::encode_text_with(&text, &enc_tag, opts)? });
             }
         }
     }

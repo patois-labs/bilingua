@@ -158,6 +158,21 @@ fn translated_build() {
 }
 
 #[test]
+fn an_apostrophe_in_a_target_reads_back_as_typed() {
+    // LocOS writes a body-text apostrophe as `&#x27;` and its own reader keeps that entity as literal text, so a
+    // translated project re-reads there as `l&#x27;a` (a LocOS bug, W-D D2). Bilingua writes the plain character and
+    // the project re-reads with the text the translator typed, in the same build as a translated attribute.
+    let src = project();
+    let mut d = extract(&src);
+    let i = index_of(&d, "Hidden body text.");
+    set(&mut d, i, "Texte l'ancien");
+    let out = merge(&d);
+    let again = loc_texts(&extract(&out));
+    assert!(again.iter().any(|t| t == "Texte l'ancien"), "{again:?}");
+    assert!(!again.iter().any(|t| t.contains("&#x27;")), "{again:?}");
+}
+
+#[test]
 fn xhtml_safe_targets() {
     // A reference-looking text, an unknown entity or a control character still gives well-formed XHTML. The target
     // is markup text, as in LocOS (`_xml_named_refs`): `&nbsp;` is a no-break space, written `&#160;`.
