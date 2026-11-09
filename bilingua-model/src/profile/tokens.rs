@@ -85,7 +85,11 @@ pub fn locos_pair_letter(format: &str) -> char {
 /// close the pair token of the nearest open of its id even when pairs cross, and an open with no close a pair
 /// token too (LocOS `html_filter._iter_units`). Their LocOS text is not always well formed for
 /// `placeholders_well_formed`; it is what LocOS stores.
-const LOCOS_PAIRS_BY_ID: &[&str] = &["html"];
+///
+/// The formats that read their text with the same `_iter_units` do the same: the server pages (a `<span>` whose
+/// end tag sits after a code statement, an `<a>` closed after a block child), the mail HTML parts and the EPUB
+/// content documents.
+const LOCOS_PAIRS_BY_ID: &[&str] = &["html", "aspx", "erb", "shtml", "jsp", "phtml", "epub", "eml"];
 
 /// Formats whose LocOS filter does not number its tokens in reading order, so the tag ids carry LocOS's numbers
 /// ([`to_locos_text_numbered`], the one id-numbering path): DOCX numbers the runs `r1..rN` first and the object
@@ -1102,6 +1106,24 @@ mod tests {
         // the other formats keep the well-formed conversion, with their pair letter
         assert_eq!(to_locos_text_for("md", &s), to_locos_text_as(&s, 'g'));
         assert_eq!(to_locos_text_for("docx", &s), to_locos_text_as(&s, 'r'));
+    }
+
+    #[test]
+    fn html_family_formats_keep_an_open_with_no_close_a_pair_token() {
+        // `<a><span>&nbsp;</span>` then a block child: the `<a>` closes in a later unit
+        let s = vec![
+            Inline::tag("1", TagKind::Open, "<a>"),
+            Inline::tag("2", TagKind::Open, "<span>"),
+            Inline::text("&nbsp;"),
+            Inline::tag("2", TagKind::Close, "</span>"),
+        ];
+        for f in ["html", "aspx", "erb", "shtml", "jsp", "phtml", "epub", "eml"] {
+            let (t, map) = to_locos_text_for(f, &s);
+            assert_eq!(t, "\u{27E6}g1\u{27E7}\u{27E6}g2\u{27E7}&nbsp;\u{27E6}/g2\u{27E7}", "{f}");
+            assert_eq!(from_locos_text(&t, &map), s, "{f}");
+        }
+        // a format outside the family keeps the well-formed conversion
+        assert!(to_locos_text_for("md", &s).0.starts_with("\u{27E6}x1\u{27E7}"));
     }
 
     #[test]
