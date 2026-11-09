@@ -47,7 +47,7 @@ open("messages.es.po", "wb").write(bilingua.merge(doc))
   dict: `locos_units()`, `locos_set_targets(targets) -> (DocumentHandle, problems)` (a new handle; the old one is
   unchanged), `merge(**same keywords as merge)`, `to_dict()` (exactly `extract`'s dict) and
   `DocumentHandle.from_dict(document)`; the read-only `format`, `parser`, `warnings` and `source_encoding`, `len()` (the
-  number of units) and `unit_extras(names=None)` (each unit's `context.extra` with its unit and segment ids). A handle
+  number of units) and `unit_extras(names=None)` (each unit's `context.extra` with its unit and segment ids), `unit_notes()` (each unit's `context.notes` with its unit and segment ids). A handle
   is immutable, so threads may share it; it is freed with its last reference and cannot be pickled.
 - Type stubs: `bilingua.pyi` ships in the wheel (with `py.typed`), so editors and type checkers see the API.
 - `version() -> str`.

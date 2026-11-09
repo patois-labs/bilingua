@@ -149,6 +149,25 @@ impl DocumentHandle {
         Ok(out.into_any().unbind())
     }
 
+    /// The `context.notes` of every unit that has any, in file order: a list of `{"unit": unit id, "segments":
+    /// [segment ids], "notes": [str]}`. A unit with no notes is left out. This is what an adapter reads from
+    /// `to_dict()["units"][i]["context"]["notes"]` (with the first segment's id as the key), without the whole
+    /// Document.
+    fn unit_notes(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
+        let out = PyList::empty(py);
+        for u in &self.doc.units {
+            if u.context.notes.is_empty() {
+                continue;
+            }
+            let d = PyDict::new(py);
+            d.set_item("notes", &u.context.notes)?;
+            d.set_item("segments", u.segments.iter().map(|s| s.id.as_str()).collect::<Vec<_>>())?;
+            d.set_item("unit", &u.id)?;
+            out.append(d)?;
+        }
+        Ok(out.into_any().unbind())
+    }
+
     fn __repr__(&self) -> String {
         format!("<bilingua.DocumentHandle format={:?} units={}>", self.doc.format, self.doc.units.len())
     }

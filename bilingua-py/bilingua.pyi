@@ -270,6 +270,13 @@ class DocumentHandle:
         """The number of units, translatable or not."""
     def unit_extras(self, names: list[str] | None = None) -> list[UnitExtras]:
         """`context.extra` of each unit that has one (only `names`, when given), in file order."""
+    def unit_notes(self) -> list[UnitNotes]:
+        """`context.notes` of each unit that has any, in file order."""
+
+class UnitNotes(TypedDict):
+    unit: str
+    segments: list[str]
+    notes: list[str]
 
 class UnitExtras(TypedDict):
     unit: str
