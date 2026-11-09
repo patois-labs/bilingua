@@ -379,7 +379,9 @@ fn date_micros(x: f64) -> Option<i128> {
     us += ip as i128;
     let mut r = leftover.round();
     if (r - leftover).abs() == 0.5 {
-        r = 2.0 * (leftover / 2.0).round() - (us & 1) as f64;
+        // CPython: `2.0 * round((leftover + is_odd) * 0.5) - is_odd`, even with respect to the sum so far
+        let odd = (us & 1) as f64;
+        r = 2.0 * ((leftover + odd) * 0.5).round() - odd;
     }
     Some(us + r as i128)
 }
@@ -714,6 +716,15 @@ mod tests {
     fn dates_are_shared_by_microsecond_as_plistlib_does() {
         let input = "62706c6973743030a4010203043341b5752a008000003341b5752a008000053341b5752a008000113341b5752a00800000080d161f280000000000000101000000000000000500000000000000000000000000000031";
         let want = "62706c6973743030a4010102013341b5752a008000003341b5752a00800011080d16000000000000010100000000000000030000000000000000000000000000001f";
+        assert_eq!(rewrite(input), want);
+    }
+
+    /// A leftover of exactly half a microsecond rounds to the even neighbour of the sum, as CPython's `timedelta` does:
+    /// `[1.5e-6, 2e-6, 3.5e-6, 4e-6]` reads as 2, 2, 4 and 4 microseconds. Expected bytes from plistlib as above.
+    #[test]
+    fn a_date_half_a_microsecond_off_rounds_as_timedelta_does() {
+        let input = "62706c6973743030a401020304333eb92a737110e454333ec0c6f7a0b5ed8d333ecd5c31593e5fb7333ed0c6f7a0b5ed8d080d161f280000000000000101000000000000000500000000000000000000000000000031";
+        let want = "62706c6973743030a401010202333ec0c6f7a0b5ed8d333ed0c6f7a0b5ed8d080d16000000000000010100000000000000030000000000000000000000000000001f";
         assert_eq!(rewrite(input), want);
     }
 }
