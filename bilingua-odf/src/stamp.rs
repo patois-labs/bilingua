@@ -103,7 +103,7 @@ fn attr_q(t: &Tree, ed: &mut Edits, node: u32, ns: u16, local: &str) -> String {
         Some(p) => format!("{p}:{local}"),
         None => {
             let p = if ed.lxml_prefixes || t.prefix_bound(node, default_prefix(ns)) {
-                lxml_prefix(t, node, |q| scan_attrs(&tag).iter().any(|a| &tag[a.name_start..a.name_end] == format!("xmlns:{q}")))
+                lxml_prefix(t, node, |q| scan_attrs(&tag).iter().any(|a| tag[a.name_start..a.name_end] == format!("xmlns:{q}")))
             } else {
                 default_prefix(ns).to_string()
             };
