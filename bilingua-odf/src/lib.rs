@@ -268,9 +268,10 @@ fn same_content(a: &[Inline], b: &[Inline]) -> bool {
 
 /// A part Localization OS rewrites, as its `_serialize` writes it (`etree.tostring(root, xml_declaration=True,
 /// encoding="UTF-8")`): UTF-8 with a single-quoted declaration and a new line, then the tree as lxml serialises it
-/// (namespace declarations first, `&apos;` and `&quot;` in attributes as plain characters, `<x/>` for an empty
-/// element, no white space after the root). A part with a CDATA section, or a comment or instruction outside the root,
-/// gets the declaration only, so nothing is lost.
+/// (namespace declarations first, double-quoted attributes with `&apos;` as a plain `'` and `"` as `&quot;`, `<x/>`
+/// for an empty element, no white space after the root). A part with a CDATA section, or a comment or instruction outside the root,
+/// gets the declaration only, so nothing is lost (LocOS keeps a CDATA section too, `strip_cdata=False`, and drops what
+/// lies outside the root; there the bytes differ, the content does not).
 fn lxml_part(text: &str) -> Vec<u8> {
     const DECL: &str = "<?xml version='1.0' encoding='UTF-8'?>
 ";
