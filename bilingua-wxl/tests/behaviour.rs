@@ -392,3 +392,19 @@ fn carriage_return_from_a_character_reference_survives_a_translation() {
     assert!(out.contains("ZqLine one&#13;\nLine twoqZ"), "{out}");
     assert_eq!(texts(&ex(out.as_bytes())), ["ZqLine one\r\nLine twoqZ"]);
 }
+
+#[test]
+fn locos_profile_gives_a_translation_the_files_line_break_and_no_character_reference_for_cr() {
+    let data = b"<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<WixLocalization Culture=\"en-us\" xmlns=\"http://schemas.microsoft.com/wix/2006/localization\">\n  <String Id=\"A\">Line one&#13;&#10;Line two</String>\n</WixLocalization>\n";
+    let mut d = ex(data);
+    let t = vec![Inline::text("Zq")]
+        .into_iter()
+        .chain(d.units[0].source())
+        .chain(vec![Inline::text("qZ")])
+        .collect::<Vec<_>>();
+    d.units[0].segments[0].target = t;
+    let opts = MergeOptions::new().with_profile(profile::LOCOS);
+    let out = s(&Wxl.merge_with(&d, &opts).unwrap());
+    assert!(out.contains("ZqLine one\nLine twoqZ") && !out.contains("&#13;"), "{out}");
+    assert_eq!(texts(&ex(out.as_bytes())), ["ZqLine one\nLine twoqZ"]);
+}
