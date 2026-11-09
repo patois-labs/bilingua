@@ -271,11 +271,32 @@ pub(crate) fn decode_link_title(raw: &str) -> String {
     let mut it = raw.chars().peekable();
     while let Some(c) = it.next() {
         if c == '\\' && it.peek().is_some_and(|n| n.is_ascii_punctuation()) {
+            // the escaped character is kept as it is, so `\\` is one backslash and `\\\"` is `\"`
+            if let Some(n) = it.next() {
+                out.push(n);
+            }
             continue;
         }
         out.push(c);
     }
     out
+}
+
+#[cfg(test)]
+mod title_tests {
+    use super::*;
+
+    #[test]
+    fn a_title_decodes_each_escape_once() {
+        assert_eq!(decode_link_title(r#"Back\\slash and \\\" quote"#), r#"Back\slash and \" quote"#);
+        assert_eq!(decode_link_title(r"a \\ b"), r"a \ b");
+        assert_eq!(decode_link_title(r"a \s b"), r"a \s b");
+        for t in [r#"Back\slash and \" quote"#, r"ends with a backslash \", r#"say "hi" \\"#] {
+            for d in ['"', '\'', '('] {
+                assert_eq!(decode_link_title(&encode_link_title(t, d)), t, "{t:?} {d}");
+            }
+        }
+    }
 }
 
 /// The inside of a link title between `delim`: one line, backslash and the delimiter(s) escaped.
