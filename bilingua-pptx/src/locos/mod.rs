@@ -25,7 +25,8 @@
 //!   of every `p188:txBody`, comments and replies. They are numbered `COMMENT_BASE + j` (`j` counts every slot, the
 //!   skipped ones too) and styled `"slide N comment"`; a merge writes a comment whenever its unit has a target.
 //!
-//! Not ported: LocOS's segment and markup budgets (the facade's limits apply instead), XML parts in an encoding
+//! The segment cap counts walked paragraphs, empty ones included, as LocOS does (`Walk::paras`). Not ported: LocOS's
+//! markup budget (the facade's limits apply instead), XML parts in an encoding
 //! other than UTF-8 or UTF-16.
 //!
 //! The XML tree is the internal crate `bilingua-xmltree` the XLIFF and DOCX ports share (`dom` here).
@@ -949,6 +950,9 @@ fn serialize_part(d: &Dom, original: &[u8]) -> Vec<u8> {
 pub fn extract(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
     let mut pkg = Pkg::open(bytes, &opts.limits())?;
     let walk = Walk::new(&mut pkg)?;
+    // LocOS counts every walked paragraph against the segment cap, empty ones too (`check_segment_cap(len(self.paras))`),
+    // so a deck with few units and many paragraphs is refused there and here
+    bilingua_model::guard::check_unit_count(walk.paras.len(), &opts.limits())?;
     let mut units = Vec::new();
     for (i, (part, p, style)) in walk.paras.iter().enumerate() {
         let d = pkg.dom(part);
