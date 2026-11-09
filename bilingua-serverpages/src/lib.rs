@@ -776,10 +776,15 @@ fn merge_with(d: Dialect, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>
             text.push_str(s);
         }
     }
-    let targets: Vec<Option<Vec<Inline>>> = doc.units.iter().map(|u| target_of(u, opts.is_profile(bilingua_model::profile::LOCOS))).collect();
+    let mut targets: Vec<Option<Vec<Inline>>> = doc.units.iter().map(|u| target_of(u, false)).collect();
     let translated = targets.iter().any(Option::is_some);
     // the language is stamped when a unit is translated, or always with `stamp_target_always` (LocOS)
     let tag = if translated || opts.stamp_target_always { doc.target_lang.as_deref().and_then(html::html_lang) } else { None };
+    // LocOS `build` gives the page back when every text it is given is the unit's own (its byte guard), but
+    // `build_localized` (a target language) and any build with a changed text rewrite every unit they have text for
+    if opts.is_profile(bilingua_model::profile::LOCOS) && (translated || tag.is_some()) {
+        targets = doc.units.iter().map(|u| target_of(u, true)).collect();
+    }
     if !translated && tag.is_none() {
         return enc::encode_text_with(&text, encoding, opts);
     }
@@ -871,7 +876,14 @@ fn merge_with(d: Dialect, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>
             return Err(Error::Write(u.message()));
         }
     }
-    enc::encode_declared_with(&m.unmask(&out, &text), encoding, opts)
+    let page = m.unmask(&out, &text);
+    if opts.is_profile(bilingua_model::profile::LOCOS) {
+        // LocOS server pages end in `encode_text_lossless`, never `encode_like`: a page that was read in a code page
+        // is written as UTF-8 once anything is written, with its declarations saying so (it rewrote them when it read)
+        let utf8 = opts.clone().with_output_encoding(OutputEncoding::Utf8);
+        return enc::encode_declared_with(&page, encoding, &utf8);
+    }
+    enc::encode_declared_with(&page, encoding, opts)
 }
 
 // --- the filters --------------------------------------------------------------------------------------------

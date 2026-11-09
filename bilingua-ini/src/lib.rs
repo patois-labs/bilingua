@@ -64,10 +64,16 @@ fn limit_err(kind: LimitKind, msg: String) -> Error {
     LimitError::new(kind, msg).into()
 }
 
-type Read = (String, &'static str, Vec<scan::Entry>, Vec<bilingua_model::Warning>);
+type Read = (String, String, Vec<scan::Entry>, Vec<bilingua_model::Warning>);
 
 fn read(bytes: &[u8], limits: &Limits, source_lang: Option<&str>) -> Result<Read, Error> {
-    let (text, encoding, warnings) = enc::decode(bytes, source_lang)?;
+    let (text, name, warnings) = enc::decode(bytes, source_lang)?;
+    // a code page whose bytes do not come back from the text (double-mapped sequences) keeps the file's own bytes
+    let encoding = if matches!(name, enc::UTF8 | enc::UTF8_BOM | enc::UTF16LE | enc::UTF16BE | enc::CP1252) {
+        name.to_string()
+    } else {
+        bilingua_model::enc::keep_original(name, bytes, enc::encode(&text, name).ok().as_deref())
+    };
     let lines = text.bytes().filter(|&b| b == b'\n' || b == b'\r').count();
     if lines > limits.max_lines {
         return Err(limit_err(LimitKind::Lines, format!("this file has more than {} lines; split it into smaller files", limits.max_lines)));
@@ -210,7 +216,11 @@ impl Filter for IniFilter {
         }
         match bilingua_model::enc::utf8_output(&out, encoding, opts) {
             Some(b) => Ok(b),
-            None => enc::encode(&out, encoding),
+            None => match bilingua_model::enc::original_if_same(encoding, &out) {
+                // nothing changed in a file whose code page would write other bytes for some characters
+                Some(orig) => Ok(orig),
+                None => enc::encode(&out, bilingua_model::enc::split_original(encoding).0),
+            },
         }
     }
 }

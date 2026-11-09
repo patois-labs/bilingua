@@ -936,7 +936,7 @@ pub(crate) fn merge(doc: &Document, text: &str, cfg_blob: &str, target: Option<&
             continue;
         }
         let nd = &t.els[el as usize];
-        let mut m = crate::skel::Merger::new(doc, None);
+        let mut m = crate::skel::Merger::new(doc, None, false);
         m.render_translated(k)?;
         let body = m.out;
         let Some(code) = &code else {

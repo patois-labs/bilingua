@@ -311,7 +311,7 @@ impl Filter for XmlFilter {
             }
             None => {
                 let stamp = opts.stamp_lang(doc, doc.units.iter().any(skel::translated)).is_some();
-                skel::merge_parts(doc, parts, if stamp { tag } else { None })?
+                skel::merge_parts(doc, parts, if stamp { tag } else { None }, opts.is_profile(bilingua_model::profile::LOCOS))?
             }
         };
         enc::encode_text_with(&out, encoding, opts)

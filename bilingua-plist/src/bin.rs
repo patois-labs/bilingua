@@ -20,6 +20,17 @@ struct Reader<'a> {
     /// Bytes of strings and data still allowed to be copied out of the file (a shared string counts every use).
     text_budget: usize,
     tree: Tree,
+    /// Containers and UIDs already read, by object number: (tree node, nodes it stands for, height, text budget it
+    /// spent). plistlib hands back the same Python object for an object number it read before, so a container or UID
+    /// the file references twice is one value that appears twice; the tree shares the node the same way. A string is
+    /// not shared: a translation lands on one place of the tree, and a repeated string is another string.
+    shared: HashMap<usize, (usize, usize, usize, usize)>,
+    /// Object numbers being read now (a reference back to one of them is a cycle).
+    busy: std::collections::HashSet<usize>,
+    /// Nodes the tree would hold if every reference were expanded (the node limit counts these).
+    expanded: usize,
+    /// The deepest level reached so far.
+    deepest: usize,
 }
 
 fn be(bytes: &[u8]) -> u64 {
@@ -104,9 +115,24 @@ impl<'a> Reader<'a> {
         if depth > MAX_DEPTH {
             return Err(too_deep());
         }
-        if self.tree.nodes.len() >= self.max_nodes {
+        self.deepest = self.deepest.max(depth);
+        if let Some(&(idx, size, height, cost)) = self.shared.get(&i) {
+            // read before: the same value again, counted as if it were expanded (a reference bomb stays refused)
+            if depth + height > MAX_DEPTH {
+                return Err(too_deep());
+            }
+            if self.expanded.saturating_add(size) > self.max_nodes {
+                return Err(too_many(self.max_units));
+            }
+            self.expanded += size;
+            self.deepest = self.deepest.max(depth + height);
+            self.spend(cost)?;
+            return Ok(idx);
+        }
+        if self.expanded >= self.max_nodes {
             return Err(too_many(self.max_units));
         }
+        self.expanded += 1;
         let off = self.offset_of(i)?;
         let (hi, n, data) = self.header(off)?;
         if !matches!(hi, 0xA | 0xD) {
@@ -115,8 +141,25 @@ impl<'a> Reader<'a> {
             let node = self.leaf(i, off, hi, n, data)?;
             let idx = self.tree.nodes.len();
             self.tree.nodes.push(node);
+            if hi == 0x8 {
+                self.shared.insert(i, (idx, 1, 0, 0));
+            }
             return Ok(idx);
         }
+        if !self.busy.insert(i) {
+            return Err(too_deep());
+        }
+        let (nodes0, spent0) = (self.expanded, self.text_budget);
+        let outer = std::mem::replace(&mut self.deepest, depth);
+        let idx = self.container(hi, n, data, depth)?;
+        let (size, height) = (self.expanded - nodes0 + 1, self.deepest - depth);
+        self.deepest = self.deepest.max(outer);
+        self.busy.remove(&i);
+        self.shared.insert(i, (idx, size, height, spent0 - self.text_budget));
+        Ok(idx)
+    }
+
+    fn container(&mut self, hi: u8, n: usize, data: usize, depth: usize) -> Result<usize, Error> {
         let mut node = Node::new(Kind::Other);
         match hi {
             0xA => {
@@ -264,6 +307,10 @@ pub(crate) fn read(raw: &[u8], fmt: &'static str, lim: &Limits) -> Result<Tree, 
         max_units: lim.max_units,
         text_budget: raw.len().saturating_mul(8).saturating_add(1 << 20),
         tree: Tree { nodes: Vec::new(), root: 0 },
+        shared: HashMap::new(),
+        busy: std::collections::HashSet::new(),
+        expanded: 0,
+        deepest: 0,
     };
     let root = r.object(top as usize, 0)?;
     r.tree.root = root;
@@ -291,7 +338,12 @@ struct Shared {
     strs: HashMap<String, usize>,
     ints: HashMap<i128, usize>,
     reals: HashMap<u64, usize>,
-    dates: HashMap<u64, usize>,
+    dates: HashMap<i128, usize>,
+    /// Date bits for a date plistlib cannot hold (not finite, or beyond the years datetime has).
+    odd_dates: HashMap<u64, usize>,
+    /// Containers and UIDs by tree node: plistlib keeps those by identity, and a binary file that references one object
+    /// twice reads as one Python object.
+    nodes: HashMap<usize, usize>,
     data: HashMap<Vec<u8>, usize>,
     bools: [Option<usize>; 2],
     null: Option<usize>,
@@ -306,6 +358,37 @@ fn real_key(v: f64) -> Option<u64> {
     } else {
         Some(v.to_bits())
     }
+}
+
+/// The microseconds since 2001-01-01 that plistlib's `datetime(2001, 1, 1) + timedelta(seconds=x)` gives: the whole
+/// seconds exactly, the fraction as float microseconds, truncated, and the leftover rounded to the nearest (half to
+/// even, as CPython's `timedelta` does). `None` for a value datetime cannot hold.
+fn date_micros(x: f64) -> Option<i128> {
+    if !x.is_finite() || x.abs() > 3.0e11 {
+        return None;
+    }
+    let whole = x.trunc();
+    let frac = x - whole;
+    let mut us = (whole as i128) * 1_000_000;
+    if frac == 0.0 {
+        return Some(us);
+    }
+    let scaled = 1_000_000f64 * frac;
+    let ip = scaled.trunc();
+    let leftover = scaled - ip;
+    us += ip as i128;
+    let mut r = leftover.round();
+    if (r - leftover).abs() == 0.5 {
+        // CPython: `2.0 * round((leftover + is_odd) * 0.5) - is_odd`, even with respect to the sum so far
+        let odd = (us & 1) as f64;
+        r = 2.0 * ((leftover + odd) * 0.5).round() - odd;
+    }
+    Some(us + r as i128)
+}
+
+/// `timedelta.total_seconds()` of that many microseconds: the integer quotient, correctly rounded.
+fn micros_to_seconds(us: i128) -> f64 {
+    us as f64 / 1_000_000f64
 }
 
 /// Adds `o` to `objs` unless an equal shared scalar is there; returns its object number.
@@ -334,12 +417,16 @@ fn intern(objs: &mut Vec<Obj>, sh: &mut Shared, o: Obj) -> usize {
                 objs.len() - 1
             }
         },
-        Obj::Date(v) => match real_key(*v) {
-            Some(k) => slot(&mut sh.dates, k, objs, o),
-            None => {
-                objs.push(o);
-                objs.len() - 1
-            }
+        Obj::Date(v) => match date_micros(*v) {
+            // plistlib reads a date as a datetime (microseconds) and compares and writes it that way
+            Some(us) => slot(&mut sh.dates, us, objs, Obj::Date(micros_to_seconds(us))),
+            None => match real_key(*v) {
+                Some(k) => slot(&mut sh.odd_dates, k, objs, o),
+                None => {
+                    objs.push(o);
+                    objs.len() - 1
+                }
+            },
         },
         Obj::Data(d) => {
             let k = d.clone();
@@ -383,17 +470,33 @@ fn flatten(tree: &Tree, i: usize, objs: &mut Vec<Obj>, sh: &mut Shared) -> usize
                 Scalar::Uid(u) => Obj::Uid(*u),
                 Scalar::Null | Scalar::None => Obj::Null,
             };
+            if let Obj::Uid(_) = o {
+                if let Some(&at) = sh.nodes.get(&i) {
+                    return at;
+                }
+                let at = intern(objs, sh, o);
+                sh.nodes.insert(i, at);
+                return at;
+            }
             intern(objs, sh, o)
         }
         Kind::Array => {
+            if let Some(&o) = sh.nodes.get(&i) {
+                return o;
+            }
             let me = objs.len();
+            sh.nodes.insert(i, me);
             objs.push(Obj::Null);
             let kids: Vec<usize> = n.kids.iter().map(|k| flatten(tree, k.node, objs, sh)).collect();
             objs[me] = Obj::Array(kids);
             me
         }
         Kind::Dict => {
+            if let Some(&o) = sh.nodes.get(&i) {
+                return o;
+            }
             let me = objs.len();
+            sh.nodes.insert(i, me);
             objs.push(Obj::Null);
             let keys: Vec<usize> = n.kids.iter().map(|k| intern(objs, sh, Obj::Str(k.key.clone().unwrap_or_default()))).collect();
             let vals: Vec<usize> = n.kids.iter().map(|k| flatten(tree, k.node, objs, sh)).collect();
@@ -581,5 +684,47 @@ mod tests {
         let want = "62706c6973743030d801020304050607080303090a0d0d0b0b555469746c65544e616d655453617665546c697374516e516d517451755178ab03090b0c0b0d0d0e0e0f0f09081001234004000000000000410108191f24292e303234363844454648510000000000000101000000000000001000000000000000000000000000000053";
         let got: String = write(&t).iter().map(|b| format!("{b:02x}")).collect();
         assert_eq!(got, want);
+    }
+
+    fn unhex(h: &str) -> Vec<u8> {
+        (0..h.len()).step_by(2).map(|i| u8::from_str_radix(&h[i..i + 2], 16).unwrap()).collect()
+    }
+
+    fn hex(b: &[u8]) -> String {
+        b.iter().map(|x| format!("{x:02x}")).collect()
+    }
+
+    fn rewrite(h: &str) -> String {
+        let tree = read(&unhex(h), "plist", &Limits::default()).unwrap();
+        hex(&write(&tree))
+    }
+
+    /// An object the file references twice is one value that appears twice (plistlib hands back the same Python
+    /// object for a number it read before, and writes a container or UID once): `{"a": D, "b": D, "c": U, "d": U}`
+    /// with `D = {"k": "v"}` and `U` a UID. The expected bytes are `plistlib.dumps(plistlib.loads(raw), fmt=FMT_BINARY,
+    /// sort_keys=False)`.
+    #[test]
+    fn a_container_or_uid_the_file_references_twice_is_written_once() {
+        let input = "62706c6973743030d401020304050506065161516251635164d107088003516b51760811131517191c1e200000000000000101000000000000000900000000000000000000000000000022";
+        let want = "62706c6973743030d401020304050508085161516251635164d10607516b517680030811131517191c1e200000000000000101000000000000000900000000000000000000000000000022";
+        assert_eq!(rewrite(input), want);
+    }
+
+    /// plistlib reads a date as a datetime, so dates a microsecond apart are distinct and dates closer than half a
+    /// microsecond are one value: `[360000000.5, 360000000.5 + 3e-7, 360000000.500001, 360000000.5]`.
+    #[test]
+    fn dates_are_shared_by_microsecond_as_plistlib_does() {
+        let input = "62706c6973743030a4010203043341b5752a008000003341b5752a008000053341b5752a008000113341b5752a00800000080d161f280000000000000101000000000000000500000000000000000000000000000031";
+        let want = "62706c6973743030a4010102013341b5752a008000003341b5752a00800011080d16000000000000010100000000000000030000000000000000000000000000001f";
+        assert_eq!(rewrite(input), want);
+    }
+
+    /// A leftover of exactly half a microsecond rounds to the even neighbour of the sum, as CPython's `timedelta` does:
+    /// `[1.5e-6, 2e-6, 3.5e-6, 4e-6]` reads as 2, 2, 4 and 4 microseconds. Expected bytes from plistlib as above.
+    #[test]
+    fn a_date_half_a_microsecond_off_rounds_as_timedelta_does() {
+        let input = "62706c6973743030a401020304333eb92a737110e454333ec0c6f7a0b5ed8d333ecd5c31593e5fb7333ed0c6f7a0b5ed8d080d161f280000000000000101000000000000000500000000000000000000000000000031";
+        let want = "62706c6973743030a401010202333ec0c6f7a0b5ed8d333ed0c6f7a0b5ed8d080d16000000000000010100000000000000030000000000000000000000000000001f";
+        assert_eq!(rewrite(input), want);
     }
 }

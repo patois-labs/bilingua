@@ -643,3 +643,25 @@ fn a_semicolon_less_legacy_reference_of_the_source_is_kept_as_written() {
     d.set_target(&id, vec![Inline::text("Bonjour &nbsp toi")]).unwrap();
     assert!(merged(&d).contains("Bonjour &amp;nbsp toi"));
 }
+
+/// LocOS rewrites every unit it is given text for, also when the text is the source's own: a bare `>` in the source
+/// comes back as `&gt;` (escaping text is part of writing it) as soon as the build writes anything. A build whose texts
+/// are all the units' own gives the page back. Without the profile an unchanged target keeps the source as it was.
+#[test]
+fn locos_profile_escapes_text_of_a_unit_whose_target_equals_its_source() {
+    let src = "<html><body><p>More >> here</p><p>Other</p></body></html>";
+    let mut d = extract(src);
+    let ids: Vec<(String, Vec<Inline>)> = d.segments().filter(|(u, _)| u.translate).map(|(_, s)| (s.id.clone(), s.source.clone())).collect();
+    for (id, t) in &ids {
+        d.set_target(id, t.clone()).unwrap();
+    }
+    let locos = MergeOptions::new().with_profile(profile::LOCOS);
+    assert_eq!(merged(&d), src);
+    assert_eq!(String::from_utf8(Html.merge_with(&d, &locos).unwrap()).unwrap(), src);
+    // the second unit changes: the first, equal one is written too
+    let (id, t) = (ids[1].0.clone(), mark(&ids[1].1));
+    d.set_target(&id, t).unwrap();
+    assert_eq!(merged(&d), "<html><body><p>More >> here</p><p>Other~</p></body></html>");
+    let out = String::from_utf8(Html.merge_with(&d, &locos).unwrap()).unwrap();
+    assert_eq!(out, "<html><body><p>More &gt;&gt; here</p><p>Other~</p></body></html>");
+}

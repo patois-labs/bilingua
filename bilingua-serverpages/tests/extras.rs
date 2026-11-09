@@ -149,7 +149,12 @@ fn locos_profile_writes_a_translated_unit_that_equals_its_source_escaped() {
         let id = doc.units[0].segments[0].id.clone();
         let same = doc.units[0].source();
         doc.set_target(&id, same).unwrap();
+        // LocOS `build` with every text the unit's own gives the page back (its byte guard)
         let out = f.merge_with(&doc, &MergeOptions::new().with_profile(profile::LOCOS)).unwrap();
+        assert_eq!(out, src.as_bytes(), "{fmt}: identity build");
+        // `build_localized` (a target language) rewrites it
+        let localized = doc.clone().with_target_lang("de");
+        let out = f.merge_with(&localized, &MergeOptions::new().with_profile(profile::LOCOS).with_stamp_target_always(true)).unwrap();
         let out = String::from_utf8(out).unwrap();
         assert!(out.contains("&#x27;quoted&#x27;"), "{fmt}: {out}");
         // native mode leaves the bytes alone

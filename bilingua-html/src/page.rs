@@ -390,6 +390,15 @@ fn target_of(u: &Unit) -> Option<Vec<Inline>> {
     (out != u.source()).then_some(out)
 }
 
+/// [`target_of`] for the LocOS profile: LocOS rewrites every unit it is given text for, also one whose text is the
+/// source's own (a bare `>` of the source comes back as `&gt;`), so a target that equals the source is written too.
+fn target_written(u: &Unit) -> Option<Vec<Inline>> {
+    if !u.translate || u.segments.iter().all(|s| !s.has_target()) {
+        return None;
+    }
+    Some(u.output())
+}
+
 /// LocOS `template_pattern.findall(core)`: the whole match, or group 1 of a pattern with groups.
 fn protected_of(template: Option<&Regex>, core: &str) -> Vec<String> {
     let Some(re) = template else { return Vec::new() };
@@ -495,9 +504,15 @@ pub(crate) fn merge(doc: &Document, opts: &MergeOptions, cfg: Cfg) -> Result<Vec
     if let Some(d) = server_dialect(doc, &text)? {
         return d.filter().merge_with(doc, opts);
     }
-    let targets: Vec<Option<Vec<Inline>>> = doc.units.iter().map(target_of).collect();
+    let mut targets: Vec<Option<Vec<Inline>>> = doc.units.iter().map(target_of).collect();
     let translated = targets.iter().any(Option::is_some);
     let tag = opts.stamp_lang(doc, translated).and_then(html::html_lang);
+    // LocOS `build` gives the page back when every text it is given is the unit's own, but `build_localized` (a target
+    // language) and any build with a changed text rewrite every unit they have text for, equal ones too
+    if opts.is_profile(profile::LOCOS) && (translated || tag.is_some()) {
+        targets = doc.units.iter().map(target_written).collect();
+    }
+    let translated = translated || targets.iter().any(Option::is_some);
     if !translated && tag.is_none() {
         // nothing changed: the page as it was read (load checked that it writes back so), as LocOS gives it back
         if opts.output_encoding != OutputEncoding::Utf8 {

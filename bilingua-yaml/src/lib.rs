@@ -237,7 +237,12 @@ impl Yaml {
                 u.context.extra.insert("rails_locale".into(), r.key.clone());
             }
         }
-        let mut doc = Document::new("yaml", units, Skeleton::text(parts, enc.label(), bilingua_model::parser_info!())).with_options(opts);
+        // a code page whose bytes do not come back from the text (double-mapped sequences) keeps the file's own bytes
+        let tag = match enc {
+            text::Enc::Legacy(_) => bilingua_model::enc::keep_original(enc.label(), bytes, text::encode(&text, enc).as_deref()),
+            _ => enc.label().to_string(),
+        };
+        let mut doc = Document::new("yaml", units, Skeleton::text(parts, tag, bilingua_model::parser_info!())).with_options(opts);
         doc.warnings.extend(enc_warnings);
         Ok(doc)
     }
@@ -345,7 +350,8 @@ impl Filter for Yaml {
         let Skeleton::Text { parts, encoding, .. } = &doc.skeleton else {
             return Err(Error::Write("yaml needs a text skeleton".into()));
         };
-        let enc = Enc::from_label(encoding).ok_or_else(|| Error::Write(format!("unknown encoding {encoding}")))?;
+        let label = bilingua_model::enc::split_original(encoding).0;
+        let enc = Enc::from_label(label).ok_or_else(|| Error::Write(format!("unknown encoding {label}")))?;
         let mut changed = false;
         let out: String = // The root key and plural forms follow the target language only once something is translated (an untouched
         // document comes back byte for byte, like PO).
@@ -398,7 +404,7 @@ impl Filter for Yaml {
         let bytes = match enc {
             Enc::Utf8 | Enc::Utf8Bom => text::encode(&out, enc),
             _ if opts.output_encoding == bilingua_model::OutputEncoding::Utf8 => text::encode(&out, Enc::Utf8),
-            _ if !changed => text::encode(&out, enc),
+            _ if !changed => bilingua_model::enc::original_if_same(encoding, &out).or_else(|| text::encode(&out, enc)),
             _ => text::encode(&out, Enc::Utf8),
         };
         bytes.ok_or_else(|| Error::Unwritable { unit: None, reason: "the text does not fit the file's encoding".into() })

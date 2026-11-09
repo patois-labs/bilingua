@@ -9,6 +9,10 @@ is listed here).
 
 ### Added
 
+- `bilingua-model`: `enc::keep_original`, `enc::split_original` and `enc::original_if_same`. A reader of a legacy code
+  page whose bytes do not come back from the decoded text (Shift_JIS and Big5 read two byte sequences as one
+  character) keeps the file's own bytes in the skeleton encoding tag, and an unchanged merge gives them back.
+
 - Python: `DocumentHandle.unit_notes()` gives the `context.notes` of every unit that has any, in document order, as
   `{"unit", "segments", "notes"}`, without building the whole dict. An adapter that only wants the notes no longer
   calls `to_dict()`.
@@ -67,6 +71,19 @@ is listed here).
   `tools/build-wheel-m5.sh` builds and tests a manylinux_2_28 wheel on a Linux host.
 
 ### Changed
+
+- `bilingua-xml`: under the `locos` profile the source language of the nested `xml:lang` restamp is the root's own
+  language, else the first one the file declares anywhere, never the project's source language (LocOS). Native mode
+  keeps using the document's source language.
+- `bilingua-html`: under the `locos` profile, once a build writes anything (a changed unit or a target language), a unit
+  whose target equals its source is written too, so a bare `>` in its text comes back as `&gt;` as in LocOS. A build
+  whose texts are all the units' own still returns the page as it was.
+- `bilingua-serverpages`: under the `locos` profile a server page (erb, aspx, jsp, php, phtml, shtml) that was read in
+  a code page is written as UTF-8 once a unit is written, with its charset declarations saying UTF-8, whether or not
+  it declared the code page. Native mode keeps the code page.
+- `bilingua-plist`: a binary plist object that the file references twice (a container or a UID) is one value that
+  appears twice, as in plistlib: it is written once. Dates are shared and written by microsecond, as plistlib holds
+  them. An NSKeyedArchiver file now gets the same object order and size as plistlib.
 
 - New structure fuzz check S4 (AsciiDoc): the codes set in a translation are the codes read back, and the alphabet now
   has lone marks.
@@ -192,6 +209,17 @@ is listed here).
   drawings) now match and their lists are gone.
 
 ### Fixed
+
+- `bilingua-plist`: a UTF-16 plist or stringsdict that was changed is no longer written as 8-bit bytes under an
+  `encoding="UTF-16"` declaration. Under the `locos` profile it keeps UTF-16 and its byte order mark, as LocOS does,
+  also with UTF-8 output selected; natively, UTF-8 output is UTF-8 and the declaration says UTF-8.
+- `bilingua-ini`, `bilingua-yaml`, `bilingua-jsmodule`: an untouched merge of a Shift_JIS or Big5 file that uses the
+  second spelling of a double-mapped character (for example the NEC row 13 pair 87 9B) returns the original bytes.
+  It wrote the other spelling before.
+- LocOS profile, server pages: a build where every target equals its source and no target language is stamped
+  gives the page back unchanged, as LocOS's byte guard does (it was rewritten, and with the UTF-8 rule above moved
+  to UTF-8). A target language or one changed text still rewrites every unit.
+- plist (binary): a date exactly half a microsecond off rounds as CPython's `timedelta` does (1.5e-6 s is 2 µs).
 
 - adoc: a lone mark character (`*`, `_`, backtick, `#`, `^`, `~`, `+`) in a translation no longer pairs with a code's mark,
   next to it or further along, or with a mark on the other side of a code (which would wrap and swallow the code). Where it

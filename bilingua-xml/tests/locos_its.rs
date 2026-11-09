@@ -374,3 +374,62 @@ fn generic_nested_source_language_restamped_without_root_language() {
     // nothing translated: untouched
     assert_eq!(f.merge(&ex_to(&f, d, "de-DE")).unwrap(), d);
 }
+
+/// No language on the root, and the project says `en`: LocOS takes the first language the file declares as the source
+/// (`ta` here), not the project's. Under the profile the `ta` passage is restamped and the `en` one stays; without the
+/// profile the project's language decides.
+#[test]
+fn locos_nested_source_is_the_first_declared_language() {
+    let f = generic();
+    let d = br#"<r><h><title xml:lang="ta">Kalam</title></h><d xml:lang="en"><p>Hello</p></d></r>"#;
+    let build = |locos: bool| {
+        let o = ExtractOptions::new().with_source_lang("en").with_target_lang("de-DE");
+        let mut doc = f.extract(d, &o).expect("extract");
+        for i in 0..doc.units.len() {
+            set(&mut doc, i, "Neu");
+        }
+        let m = MergeOptions::new().with_profile(if locos { Some("locos".to_string()) } else { None });
+        s(&f.merge_with(&doc, &m).expect("merge"))
+    };
+    assert_eq!(
+        build(true),
+        r#"<r><h><title xml:lang="de-DE">Neu</title></h><d xml:lang="en"><p>Neu</p></d></r>"#
+    );
+    assert_eq!(
+        build(false),
+        r#"<r><h><title xml:lang="ta">Neu</title></h><d xml:lang="de-DE"><p>Neu</p></d></r>"#
+    );
+}
+
+/// A skeleton written before the root marker carried the first declared language (no third field) merges under the
+/// profile as it did then: the project's language decides.
+#[test]
+fn locos_skeleton_without_the_first_language_merges_as_before() {
+    let f = generic();
+    let d = br#"<r><h><title xml:lang="ta">Kalam</title></h><d xml:lang="en"><p>Hello</p></d></r>"#;
+    let o = ExtractOptions::new().with_source_lang("en").with_target_lang("de-DE");
+    let mut doc = f.extract(d, &o).expect("extract");
+    for i in 0..doc.units.len() {
+        set(&mut doc, i, "Neu");
+    }
+    let Skeleton::Text { parts, .. } = &mut doc.skeleton else { panic!("text skeleton") };
+    let mut stripped = 0;
+    for p in parts.iter_mut() {
+        if let SkelPart::Raw(r) = p {
+            if let Some(at) = r.find("\0L") {
+                let end = at + 2 + r[at + 2..].find('\0').expect("marker end");
+                let arg: Vec<&str> = r[at + 2..end].split('|').collect();
+                if arg.len() == 3 {
+                    *r = format!("{}\0L{}|{}{}", &r[..at], arg[0], arg[1], &r[end..]);
+                    stripped += 1;
+                }
+            }
+        }
+    }
+    assert_eq!(stripped, 1, "the new skeleton carries the first language");
+    let m = MergeOptions::new().with_profile(Some("locos".to_string()));
+    assert_eq!(
+        s(&f.merge_with(&doc, &m).expect("merge")),
+        r#"<r><h><title xml:lang="ta">Neu</title></h><d xml:lang="de-DE"><p>Neu</p></d></r>"#
+    );
+}

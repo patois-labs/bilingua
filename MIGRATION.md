@@ -1033,3 +1033,10 @@ translation with the source.
   `Limits::max_units`, even if the units are fewer. Before, only units were counted. Native mode is unchanged.
 - Under the `locos` profile, rewritten OpenDocument parts carry lxml's single-quoted XML declaration and lxml's
   serialisation (see CHANGELOG). The text and units are the same; only the bytes of rewritten parts differ.
+
+## Finalize 11-08: Wave G (encodings)
+
+- ini, yaml, js: a file whose code page does not write back byte for byte (Shift_JIS or Big5 bytes with two
+  mappings) keeps its original bytes in the skeleton's encoding tag (`;orig=<base64>`), and an unchanged merge
+  returns them. Such a stored Document holds the file about 2.3 times. A skeleton with `;orig=` does not merge with
+  0.9.0 (a write error, never wrong bytes); store Documents made by this release only with this release or later.

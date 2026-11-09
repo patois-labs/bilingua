@@ -924,6 +924,39 @@ pub fn strip_own_mark<'t>(text: &'t str, encoding: &str) -> &'t str {
     }
 }
 
+/// Marks a skeleton encoding tag with the file's own bytes, for a reader of a legacy code page (Shift_JIS, Big5 ...)
+/// whose bytes do not come back the same from the decoded text: the code page maps two byte sequences to one
+/// character (NEC row 13, IBM extensions) and writes only one of them. `written_back` is what the reader's writer
+/// gives for the decoded text; when it is not `bytes`, the original bytes ride along in the tag (`;orig=<base64>`) so
+/// [`original_if_same`] can give an untouched file back exactly. The tag is otherwise unchanged.
+pub fn keep_original(name: &str, bytes: &[u8], written_back: Option<&[u8]>) -> String {
+    if written_back == Some(bytes) {
+        name.to_string()
+    } else {
+        format!("{name};orig={}", crate::b64::encode(bytes))
+    }
+}
+
+/// A tag made by [`keep_original`]: the encoding name without the marker, and the original bytes when it had one.
+pub fn split_original(tag: &str) -> (&str, Option<Vec<u8>>) {
+    match tag.split_once(";orig=") {
+        Some((name, rest)) => {
+            let b64 = rest.split(';').next().unwrap_or("");
+            (name, crate::b64::decode(b64).ok())
+        }
+        None => (tag, None),
+    }
+}
+
+/// The original bytes of a file read with [`keep_original`] when `text` is exactly the text those bytes decode to
+/// (nothing changed), else `None`.
+pub fn original_if_same(tag: &str, text: &str) -> Option<Vec<u8>> {
+    let (name, orig) = split_original(tag);
+    let orig = orig?;
+    let enc = Encoding::for_label(name.as_bytes())?;
+    (enc.decode_without_bom_handling(&orig).0 == text).then_some(orig)
+}
+
 fn parse_tag(t: &str) -> Envelope<'_> {
     let mut parts = t.split(';');
     let base = parts.next().unwrap_or("utf-8");
