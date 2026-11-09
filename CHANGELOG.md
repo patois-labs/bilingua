@@ -190,6 +190,20 @@ is listed here).
 
 ### Fixed
 
+- LocOS profile, server pages (aspx, erb, shtml, jsp, phtml), EPUB and mail HTML parts: an inline element whose end
+  tag is not in the same unit (it follows a code statement or a block child) is a pair token `⟦g1⟧` with no closing
+  token, as LocOS writes it, not a point code `⟦x1⟧`. Model: `to_locos_text_for` treats these formats like `html`.
+- LocOS profile, server pages: a unit that has a translation equal to its source is still rewritten, so an
+  apostrophe in it is written `&#x27;` (and a bare `<` or `&` escaped) as LocOS does. Native mode leaves such a unit's
+  bytes alone.
+- LocOS profile, email: a white-space only (or empty) translation of a unit in an HTML part is written as it is
+  (`<h1>  </h1>`), as LocOS does, instead of leaving the source text.
+- MDX: a link reference title decodes each backslash escape once, so a title holding a backslash before a quote reads
+  back as typed (LocOS `md_blocks_735` `test_titles`). Markdown already did.
+- LocOS profile, HTML and server pages: a page read in a legacy code page whose only charset declaration sits past the
+  first 4096 characters is written as UTF-8 with that declaration rewritten to UTF-8 (LocOS `encode_like` gate).
+  New `enc::encode_declared_with`. Native mode keeps the code page and the declaration.
+
 - idml, icml: under the `locos` profile `locos_set_target` repairs a target that repeats a pair token (the repeat loses
   its tags, its text stays), as LocOS writes it, instead of refusing it as `duplicated_tag`.
 

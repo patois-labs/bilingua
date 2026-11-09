@@ -138,3 +138,22 @@ fn a_semicolon_less_legacy_reference_of_the_source_is_kept_as_written() {
     let out = build_str("phtml", src, &[(0, &format!("&nbsp&nbsp Bonjour {X1} &nbsp & co"))]);
     assert!(out.contains("<p>&nbsp&nbsp Bonjour <?= $x ?> &nbsp &amp; co</p>"), "{out}");
 }
+
+#[test]
+fn locos_profile_writes_a_translated_unit_that_equals_its_source_escaped() {
+    // LocOS rewrites every unit it is given a text for, so the apostrophe becomes a character reference
+    let src = "<p><strong>[[x]]</strong> 'quoted' text</p>";
+    for fmt in FORMATS {
+        let f = filter(fmt);
+        let mut doc = f.extract(src.as_bytes(), &ExtractOptions::default().with_profile(profile::LOCOS)).unwrap();
+        let id = doc.units[0].segments[0].id.clone();
+        let same = doc.units[0].source();
+        doc.set_target(&id, same).unwrap();
+        let out = f.merge_with(&doc, &MergeOptions::new().with_profile(profile::LOCOS)).unwrap();
+        let out = String::from_utf8(out).unwrap();
+        assert!(out.contains("&#x27;quoted&#x27;"), "{fmt}: {out}");
+        // native mode leaves the bytes alone
+        let out = f.merge(&doc).unwrap();
+        assert_eq!(out, src.as_bytes(), "{fmt}");
+    }
+}

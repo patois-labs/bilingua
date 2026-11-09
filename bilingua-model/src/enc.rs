@@ -986,6 +986,24 @@ pub fn encode_text_with(text: &str, encoding: &str, opts: &MergeOptions) -> Resu
     Ok(utf8_text(text, encoding, false))
 }
 
+/// [`encode_text_with`] for an HTML page (a format whose LocOS filter reads with `declared=True`). LocOS rewrites
+/// every charset declaration of a converted page to UTF-8 when it reads it and, when the page has no label of its own
+/// to give back (its only declaration sits past the first 4096 characters, so it never named the page's charset),
+/// writes the page as UTF-8: the gate in `encode_like` finds a declaration that does not name the code page. Under the
+/// LocOS profile a legacy page with no label and such a late declaration does the same. Native mode keeps the
+/// declaration as content and the code page, as before.
+pub fn encode_declared_with(text: &str, encoding: &str, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
+    if opts.is_profile(crate::profile::LOCOS) {
+        let env = parse_tag(encoding);
+        let legacy = !(env.base.starts_with("utf-8") || env.base.starts_with("utf-16"));
+        if legacy && env.label.is_none() && decl_re().is_match(text) {
+            let every = decl_re().replace_all(text, |c: &regex::Captures| format!("{}UTF-8", &c[1])).into_owned();
+            return Ok(utf8_text(&every, encoding, false));
+        }
+    }
+    encode_text_with(text, encoding, opts)
+}
+
 /// For a format crate with its own codec and its own encoding names: the bytes to write when `opts` asks for UTF-8
 /// out ([`OutputEncoding::Utf8`]), or `None` when the crate writes its own encoding (`Keep`). The text is written as
 /// UTF-8 (a UTF-8 BOM is kept when `encoding` is `utf-8-bom`; a UTF-16 BOM is not), and an XML, HTML or PO charset
@@ -1517,6 +1535,27 @@ mod tests {
         let text = d.text.replacen("xx", "\u{65e5}\u{672c}", 1);
         let out = String::from_utf8(encode_text_with(&text, &d.encoding, &locos).unwrap()).unwrap();
         assert!(!out.contains("1256") && !out.contains("1252") && out.matches("charset=\"UTF-8\"").count() == 2, "{}", &out[out.len() - 60..]);
+    }
+
+    #[test]
+    fn locos_profile_writes_a_legacy_page_with_only_a_late_declaration_as_utf8() {
+        // the only declaration is past the first 4096 characters: the page is read as Windows-1252 with no label
+        let page = format!("<html><head><script>/*{}*/</script><meta charset=\"windows-1252\"></head><body><p>Caf\u{e9}</p></body></html>", "x".repeat(5000));
+        let b = legacy(encoding_rs::WINDOWS_1252, &page);
+        let d = dec(&b, None, true).unwrap();
+        assert_eq!(d.encoding, "windows-1252");
+        let locos = MergeOptions::new().with_profile(crate::profile::LOCOS);
+        // native: the code page and the declaration as they were
+        assert_eq!(encode_declared_with(&d.text, &d.encoding, &MergeOptions::new()).unwrap(), b);
+        // LocOS: UTF-8 under a UTF-8 label, whether the text fits the code page or not
+        for text in [d.text.clone(), d.text.replace("Caf\u{e9}", "\u{436}")] {
+            let out = String::from_utf8(encode_declared_with(&text, &d.encoding, &locos).unwrap()).unwrap();
+            assert!(out.contains("<meta charset=\"UTF-8\">") && !out.contains("1252"), "{}", &out[out.len() - 80..]);
+        }
+        // a page with no declaration at all keeps its code page
+        let plain = legacy(encoding_rs::WINDOWS_1252, "<p>Caf\u{e9}</p>");
+        let d = dec(&plain, None, true).unwrap();
+        assert_eq!(encode_declared_with(&d.text, &d.encoding, &locos).unwrap(), plain);
     }
 
     #[test]

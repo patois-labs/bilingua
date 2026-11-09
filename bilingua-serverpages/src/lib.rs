@@ -655,13 +655,15 @@ fn extract_with(d: Dialect, bytes: &[u8], opts: &ExtractOptions, limits: &Limits
 
 // --- merge --------------------------------------------------------------------------------------------------
 
-/// A target the page writes: the unit's output when it is translated and different from the source.
-fn target_of(u: &Unit) -> Option<Vec<Inline>> {
+/// A target the page writes: the unit's output when it is translated and different from the source. Under the
+/// `locos` profile a translated unit is written even when it equals its source: LocOS rewrites every unit it is
+/// given a text for, so `'` becomes `&#x27;` and a bare `<` or `&` is escaped.
+fn target_of(u: &Unit, rewrite_equal: bool) -> Option<Vec<Inline>> {
     if u.segments.iter().all(|s| !s.has_target()) {
         return None;
     }
     let out = u.output();
-    (out != u.source()).then_some(out)
+    (rewrite_equal || out != u.source()).then_some(out)
 }
 
 fn escape_el(s: &str, out: &mut String) {
@@ -774,7 +776,7 @@ fn merge_with(d: Dialect, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>
             text.push_str(s);
         }
     }
-    let targets: Vec<Option<Vec<Inline>>> = doc.units.iter().map(target_of).collect();
+    let targets: Vec<Option<Vec<Inline>>> = doc.units.iter().map(|u| target_of(u, opts.is_profile(bilingua_model::profile::LOCOS))).collect();
     let translated = targets.iter().any(Option::is_some);
     // the language is stamped when a unit is translated, or always with `stamp_target_always` (LocOS)
     let tag = if translated || opts.stamp_target_always { doc.target_lang.as_deref().and_then(html::html_lang) } else { None };
@@ -869,7 +871,7 @@ fn merge_with(d: Dialect, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>
             return Err(Error::Write(u.message()));
         }
     }
-    enc::encode_text_with(&m.unmask(&out, &text), encoding, opts)
+    enc::encode_declared_with(&m.unmask(&out, &text), encoding, opts)
 }
 
 // --- the filters --------------------------------------------------------------------------------------------

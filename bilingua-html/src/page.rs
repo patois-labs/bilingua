@@ -550,7 +550,7 @@ pub(crate) fn merge(doc: &Document, opts: &MergeOptions, cfg: Cfg) -> Result<Vec
             return Err(Error::Write(u.message()));
         }
     }
-    enc::encode_text_with(&out, encoding, opts)
+    enc::encode_declared_with(&out, encoding, opts)
 }
 
 /// The page tokens for the preview (no budget: the page was accepted at extract).

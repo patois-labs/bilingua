@@ -526,7 +526,8 @@ impl Filter for Email {
                     for (seg, out) in sets {
                         // the outer document was checked by the caller; under the LocOS profile it may repeat a standalone tag
                         if opts.is_profile(bilingua_model::profile::LOCOS) {
-                            sub.set_target_repeating(&seg, out)?;
+                            // as the outer document was set: white space only and an empty text are kept, not dropped
+                            bilingua_model::profile::locos_set_target(&mut sub, &seg, out)?;
                         } else {
                             sub.set_target(&seg, out)?;
                         }
