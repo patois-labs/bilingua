@@ -282,23 +282,6 @@ pub(crate) fn decode_link_title(raw: &str) -> String {
     out
 }
 
-#[cfg(test)]
-mod title_tests {
-    use super::*;
-
-    #[test]
-    fn a_title_decodes_each_escape_once() {
-        assert_eq!(decode_link_title(r#"Back\\slash and \\\" quote"#), r#"Back\slash and \" quote"#);
-        assert_eq!(decode_link_title(r"a \\ b"), r"a \ b");
-        assert_eq!(decode_link_title(r"a \s b"), r"a \s b");
-        for t in [r#"Back\slash and \" quote"#, r"ends with a backslash \", r#"say "hi" \\"#] {
-            for d in ['"', '\'', '('] {
-                assert_eq!(decode_link_title(&encode_link_title(t, d)), t, "{t:?} {d}");
-            }
-        }
-    }
-}
-
 /// The inside of a link title between `delim`: one line, backslash and the delimiter(s) escaped.
 pub(crate) fn encode_link_title(new: &str, delim: char) -> String {
     let new = line_breaks_to_space(new);
@@ -385,6 +368,23 @@ fn only_comments(s: &str, mut pos: usize) -> bool {
         match s[pos + 2..].find("-->") {
             Some(c) => pos = pos + 2 + c + 3,
             None => return false,
+        }
+    }
+}
+
+#[cfg(test)]
+mod title_tests {
+    use super::*;
+
+    #[test]
+    fn a_title_decodes_each_escape_once() {
+        assert_eq!(decode_link_title(r#"Back\\slash and \\\" quote"#), r#"Back\slash and \" quote"#);
+        assert_eq!(decode_link_title(r"a \\ b"), r"a \ b");
+        assert_eq!(decode_link_title(r"a \s b"), r"a \s b");
+        for t in [r#"Back\slash and \" quote"#, r"ends with a backslash \", r#"say "hi" \\"#] {
+            for d in ['"', '\'', '('] {
+                assert_eq!(decode_link_title(&encode_link_title(t, d)), t, "{t:?} {d}");
+            }
         }
     }
 }
