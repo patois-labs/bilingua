@@ -353,11 +353,11 @@ fn utf16_plist_stays_utf16_when_output_is_utf8() {
         src.extend_from_slice(&u.to_le_bytes());
     }
     let f = Stringsdict;
-    for profile in [None, Some("locos")] {
-        let o = ExtractOptions::new().with_target_lang("de").with_profile(profile);
+    for profile in [None, Some("locos".to_string())] {
+        let o = ExtractOptions::new().with_target_lang("de").with_profile(profile.clone());
         let mut d = f.extract(&src, &o).unwrap();
         set_nth(&mut d, 0, "Eine Datei");
-        let mo = MergeOptions::new().with_output_encoding(OutputEncoding::Utf8).with_profile(profile);
+        let mo = MergeOptions::new().with_output_encoding(OutputEncoding::Utf8).with_profile(profile.clone());
         let out = f.merge_with(&d, &mo).unwrap();
         assert!(out.starts_with(&[0xFF, 0xFE]), "UTF-16 LE mark kept");
         assert_eq!(out.len() % 2, 0);
