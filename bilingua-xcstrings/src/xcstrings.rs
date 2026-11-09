@@ -348,7 +348,7 @@ impl Filter for Xcstrings {
             }
         }
         // The file was accepted when it was extracted, at whatever nesting depth the caller allowed then (the document
-        // does not say which), so the stored text is read with the most any extraction may have allowed.
+        // does not say which), so the stored text is read with a cap well above the default.
         let limits = Limits::default().with_max_xml_depth(MERGE_MAX_DEPTH);
         let cat = Catalog::from_text(text, bom, &limits, false)?;
         // The file was accepted when it was extracted: no unit cap here.
@@ -367,9 +367,11 @@ impl Filter for Xcstrings {
     }
 }
 
-/// The nesting depth the merge allows in the stored catalog: far above the default of the extraction, as the other
-/// formats' merges do, and still a safe depth for the recursive reader.
-const MERGE_MAX_DEPTH: usize = 4096;
+/// The nesting depth the merge allows in the stored catalog: four times the default of the extraction, close to what
+/// LocOS reads at all (Python's `json.loads` stops between 1,500 and 3,000 levels). The reader is recursive, so the
+/// cap also bounds the stack: 1024 levels fit a 1 MB thread in a release build (4096 did not). A deeper document,
+/// also a hand-made one, gets an error.
+const MERGE_MAX_DEPTH: usize = 1024;
 
 /// A changed catalog the way LocOS `_dump` writes it: the whole document through `json.dumps` in the style of the
 /// source (separators, indent unit and escapes read from the source text). Every object and array is expanded over

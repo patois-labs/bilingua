@@ -350,3 +350,44 @@ fn merge_reads_a_catalog_extracted_at_a_higher_depth_limit() {
         assert!(String::from_utf8(out).unwrap().contains("\"value\" : \"Hallo\""));
     }
 }
+
+fn deep_catalog(levels: usize) -> String {
+    let deep = format!("{}1{}", "[".repeat(levels), "]".repeat(levels));
+    format!("{{
+  \"sourceLanguage\" : \"en\",
+  \"strings\" : {{
+    \"Hi\" : {{
+      \"x\" : {deep}
+    }}
+  }},
+  \"version\" : \"1.0\"
+}}
+")
+}
+
+fn on_stack<T: Send + 'static>(bytes: usize, f: impl FnOnce() -> T + Send + 'static) -> T {
+    std::thread::Builder::new().stack_size(bytes).spawn(f).unwrap().join().expect("no stack overflow")
+}
+
+/// Gate H5: the merge reads the stored catalog with a recursive reader up to its depth cap, so a catalog at the cap
+/// must merge without a stack overflow, on a 1 MB thread in a release build (a debug build uses about three times
+/// the stack per level, so it gets 4 MB here), and a deeper one, which a caller can extract at a higher limit or
+/// write by hand, is refused with an error. Both modes.
+#[test]
+fn merge_of_a_catalog_at_the_merge_depth_limit_does_not_overflow_the_stack() {
+    let stack = if cfg!(debug_assertions) { 4 << 20 } else { 1 << 20 };
+    let both = || [MergeOptions::new(), MergeOptions::new().with_profile("locos")];
+    let src = deep_catalog(1020);
+    let o = opts(Some("de")).with_limits(Limits::new().with_max_xml_depth(1024));
+    let mut d = on_stack(64 << 20, move || Xcstrings.extract(src.as_bytes(), &o).unwrap());
+    set_all(&mut d, &[(0, "Hallo")]);
+    for out in on_stack(stack, move || both().map(|m| Xcstrings.merge_with(&d, &m).map(|b| String::from_utf8(b).unwrap()))) {
+        let out = out.unwrap();
+        assert!(out.contains("\"value\" : \"Hallo\"") && out.matches('[').count() == 1020, "{}", &out[..200]);
+    }
+    let src = deep_catalog(5000);
+    let o = opts(Some("de")).with_limits(Limits::new().with_max_xml_depth(8192));
+    let mut d = on_stack(64 << 20, move || Xcstrings.extract(src.as_bytes(), &o).unwrap());
+    set_all(&mut d, &[(0, "Hallo")]);
+    assert_eq!(on_stack(stack, move || both().map(|m| Xcstrings.merge_with(&d, &m).is_err())), [true, true]);
+}
