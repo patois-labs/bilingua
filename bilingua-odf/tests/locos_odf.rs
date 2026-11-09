@@ -525,3 +525,113 @@ fn locos_profile_writes_a_rewritten_part_like_lxml() {
     let out = member_str(&f.merge_with(&d, &MergeOptions::new().with_profile("locos")).unwrap(), "content.xml");
     assert!(out.starts_with("<?xml version='1.0' encoding='UTF-8'?>\n<office:document-content") && out.contains("<![CDATA[x]]>") && out.contains("Salut"), "{out}");
 }
+
+const FO: &str = "urn:oasis:names:tc:opendocument:xmlns:xsl-fo-compatible:1.0";
+
+fn h_ns(fo: &str) -> String {
+    format!(
+        r#" xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0" xmlns:text="urn:oasis:names:tc:opendocument:xmlns:text:1.0" xmlns:style="urn:oasis:names:tc:opendocument:xmlns:style:1.0" xmlns:fo="{fo}" xmlns:dc="http://purl.org/dc/elements/1.1/""#
+    )
+}
+
+fn h_doc(root: &str, ns: &str, inner: &str) -> String {
+    format!("<?xml version=\"1.0\" encoding=\"UTF-8\"?>
+<office:document-{root}{ns}>{inner}</office:document-{root}>")
+}
+
+/// W-H H1, H2, H3: Localization OS rebuilds every paragraph it is given text for, also a paragraph whose text did not
+/// change. A localized build with nothing translated differently therefore still writes content.xml again (lxml
+/// declaration), writes a run of spaces after text as a space and `text:s`, and drops white space between inline
+/// elements. The build for no target locale with every text unchanged returns the upload.
+#[test]
+fn locos_profile_rebuilds_unchanged_paragraphs_like_localos() {
+    let ns = h_ns(FO);
+    let body = concat!(
+        "<office:body><office:text><text:p>Hello<text:s text:c=\"2\"/><text:bookmark text:name=\"b\"/>done</text:p>",
+        "<text:p text:style-name=\"P48\">
+		<text:span text:style-name=\"T49\">Hello</text:span> <text:span text:style-name=\"T50\">world</text:span></text:p>",
+        "</office:text></office:body>"
+    );
+    let styles = h_doc("styles", &ns, "<office:styles/>");
+    let data = Pkg::new(h_doc("content", &ns, body)).styles(styles.clone()).build();
+    let f = Odt::default();
+    let own = |d: &mut Document| {
+        for u in d.units.clone() {
+            set(d, p_index(&u), &ltext(&u));
+        }
+    };
+    let locos = MergeOptions::new().with_profile("locos");
+
+    // a localized build: content.xml and meta.xml are written again, styles.xml (nothing to stamp) is not
+    let mut d = f.extract(&data, &opts(Some("de-DE"))).unwrap();
+    own(&mut d);
+    let out = f.merge_with(&d, &locos).unwrap();
+    let c = member_str(&out, "content.xml");
+    assert!(c.starts_with("<?xml version='1.0' encoding='UTF-8'?>
+<office:document-content"), "{c}");
+    assert!(c.contains("<text:p>Hello <text:s/><text:bookmark text:name=\"b\"/>done</text:p>"), "{c}");
+    assert!(
+        c.contains("<text:p text:style-name=\"P48\"><text:span text:style-name=\"T49\">Hello</text:span> <text:span text:style-name=\"T50\">world</text:span></text:p>"),
+        "{c}"
+    );
+    assert_eq!(member_str(&out, "styles.xml"), styles);
+    assert!(member_str(&out, "meta.xml").starts_with("<?xml version='1.0' encoding='UTF-8'?>
+"));
+
+    // no target locale, every text unchanged: the upload comes back as it was
+    let mut d = f.extract(&data, &opts(None)).unwrap();
+    own(&mut d);
+    assert_eq!(f.merge_with(&d, &locos).unwrap(), data);
+    // no target locale, one text changed: every paragraph that was given text is rebuilt
+    set(&mut d, 1, "Hello world!");
+    let c = member_str(&f.merge_with(&d, &locos).unwrap(), "content.xml");
+    assert!(c.contains("<text:p>Hello <text:s/><text:bookmark text:name=\"b\"/>done</text:p>") && c.contains("world!"), "{c}");
+
+    // native: an unchanged paragraph keeps its markup
+    let mut d = f.extract(&data, &opts(Some("de-DE"))).unwrap();
+    own(&mut d);
+    let c = member_str(&f.merge(&d).unwrap(), "content.xml");
+    assert!(c.starts_with("<?xml version=\"1.0\"") && c.contains("<text:s text:c=\"2\"/>") && c.contains("P48\">
+		<text:span"), "{c}");
+}
+
+/// W-H H1: a new attribute in a namespace the document does not bind gets the prefix lxml gives it (`ns0`), also when
+/// the document uses the usual prefix for another namespace (an old `fo` URI). Native mode keeps the usual prefix
+/// where it is free, and never redefines one the document binds to something else.
+#[test]
+fn a_new_namespace_gets_the_prefix_lxml_gives_it() {
+    let old = "http://www.w3.org/1999/XSL/Format";
+    let ns = h_ns(old);
+    let styles = h_doc(
+        "styles",
+        &ns,
+        r#"<office:styles><style:default-style style:family="paragraph"><style:text-properties fo:color="#000000" fo:language="en" fo:country="US"/></style:default-style></office:styles>"#,
+    );
+    let content = h_doc("content", &ns, "<office:body><office:text><text:p>Hi</text:p></office:text></office:body>");
+    let data = Pkg::new(content).styles(styles).build();
+    let f = Odt::default();
+    let mut d = f.extract(&data, &opts(Some("de-DE"))).unwrap();
+    set(&mut d, 0, "Salut");
+    let out = f.merge_with(&d, &MergeOptions::new().with_profile("locos")).unwrap();
+    let s = member_str(&out, "styles.xml");
+    let want = format!(r##"<style:text-properties xmlns:ns0="{FO}" fo:color="#000000" fo:language="en" fo:country="US" ns0:language="de" ns0:country="DE"/>"##);
+    assert!(s.contains(&want), "{s}");
+    // native: the usual prefix is taken by the old URI, so the new one is not called `fo` either
+    let s = member_str(&f.merge(&d).unwrap(), "styles.xml");
+    assert!(s.contains(&format!(r#"xmlns:ns0="{FO}""#)) && s.contains(r#"ns0:language="de""#) && s.contains(r#"fo:language="en""#), "{s}");
+    // where the usual prefix is free, native keeps it and the profile says `ns0`
+    let bare = h_ns(FO).replace(&format!(r#" xmlns:fo="{FO}""#), "");
+    let styles = h_doc(
+        "styles",
+        &bare,
+        r#"<office:styles><style:default-style style:family="paragraph"><style:text-properties style:font-name="x"/></style:default-style></office:styles>"#,
+    );
+    let content = h_doc("content", &bare, "<office:body><office:text><text:p>Hi</text:p></office:text></office:body>");
+    let data = Pkg::new(content).styles(styles).build();
+    let mut d = f.extract(&data, &opts(Some("de-DE"))).unwrap();
+    set(&mut d, 0, "Salut");
+    let s = member_str(&f.merge_with(&d, &MergeOptions::new().with_profile("locos")).unwrap(), "styles.xml");
+    assert!(s.contains(&format!(r#"<style:text-properties xmlns:ns0="{FO}" style:font-name="x" ns0:language="de" ns0:country="DE"/>"#)), "{s}");
+    let s = member_str(&f.merge(&d).unwrap(), "styles.xml");
+    assert!(s.contains(&format!(r#"<style:text-properties style:font-name="x" xmlns:fo="{FO}" fo:language="de" fo:country="DE"/>"#)), "{s}");
+}

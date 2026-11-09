@@ -665,6 +665,11 @@ impl Tree {
         None
     }
 
+    /// Whether `prefix` is bound to any namespace in the scope of `node`.
+    pub fn prefix_bound(&self, node: u32, prefix: &str) -> bool {
+        self.lookup(node, prefix).is_some()
+    }
+
     /// A prefix bound to namespace `ns` in the scope of `node`.
     pub fn find_prefix(&self, node: u32, ns: u16) -> Option<String> {
         let mut n = node;

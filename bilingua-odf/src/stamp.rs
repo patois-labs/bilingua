@@ -39,15 +39,30 @@ fn default_prefix(ns: u16) -> &'static str {
     }
 }
 
+/// The first `nsN` (N from 0) that is not bound at `node` and not in `taken`: the prefix lxml gives a namespace the
+/// document has no prefix for.
+fn lxml_prefix(t: &Tree, node: u32, taken: impl Fn(&str) -> bool) -> String {
+    (0..).map(|k| format!("ns{k}")).find(|p| !t.prefix_bound(node, p) && !taken(p)).expect("endless range")
+}
+
 /// A new element as markup, with prefixes taken from the scope of `ctx` and a local `xmlns` declaration for any
 /// namespace the document does not bind there.
-pub fn make_el(t: &Tree, ctx: u32, ns: u16, local: &str, attrs: &[(u16, &str, String)], inner: &str) -> String {
+pub fn make_el(t: &Tree, ctx: u32, ns: u16, local: &str, attrs: &[(u16, &str, String)], inner: &str, lxml: bool) -> String {
     let mut decls: Vec<(String, u16)> = Vec::new();
     let mut pf = |ns: u16| -> String {
+        if let Some((p, _)) = decls.iter().find(|(_, id)| *id == ns) {
+            return p.clone();
+        }
         match t.find_prefix(ctx, ns) {
             Some(p) => p,
             None => {
-                let p = default_prefix(ns).to_string();
+                // the usual prefix, unless the document binds it to another namespace here (then the new name would
+                // change what its attributes mean) or the output is to read like lxml's
+                let p = if lxml || t.prefix_bound(ctx, default_prefix(ns)) {
+                    lxml_prefix(t, ctx, |q| decls.iter().any(|(d, _)| d == q))
+                } else {
+                    default_prefix(ns).to_string()
+                };
                 if !decls.iter().any(|(q, _)| *q == p) {
                     decls.push((p.clone(), ns));
                 }
@@ -73,11 +88,26 @@ fn attr_q(t: &Tree, ed: &mut Edits, node: u32, ns: u16, local: &str) -> String {
     if let Some(q) = t.attr_qname(node, ns, local) {
         return q.to_string();
     }
+    // a declaration this edit already put on the start tag comes first (nearest scope)
+    let tag = ed.start_of(t, node).to_string();
+    let uri = t.ns_uri(ns);
+    for a in scan_attrs(&tag) {
+        let q = &tag[a.name_start..a.name_end];
+        if let Some(p) = q.strip_prefix("xmlns:") {
+            if unescape(&tag[a.val_start..a.val_end]) == uri {
+                return format!("{p}:{local}");
+            }
+        }
+    }
     match t.find_prefix(node, ns) {
         Some(p) => format!("{p}:{local}"),
         None => {
-            let p = default_prefix(ns);
-            ed.set_attr(t, node, &format!("xmlns:{p}"), Some(t.ns_uri(ns)));
+            let p = if ed.lxml_prefixes || t.prefix_bound(node, default_prefix(ns)) {
+                lxml_prefix(t, node, |q| scan_attrs(&tag).iter().any(|a| &tag[a.name_start..a.name_end] == format!("xmlns:{q}")))
+            } else {
+                default_prefix(ns).to_string()
+            };
+            ed.set_attr(t, node, &format!("xmlns:{p}"), Some(uri));
             format!("{p}:{local}")
         }
     }
@@ -129,7 +159,7 @@ pub fn stamp_part(t: &Tree, ed: &mut Edits, styles_part: bool, content_part: boo
                 None => {
                     let attrs: Vec<(u16, &str, String)> =
                         l.names.iter().enumerate().filter_map(|(k, (ns, local))| l.values[k].clone().map(|v| (*ns, *local, v))).collect();
-                    ed.append_child(t, i, make_el(t, i, NS_STYLE, "text-properties", &attrs, ""));
+                    ed.append_child(t, i, make_el(t, i, NS_STYLE, "text-properties", &attrs, "", ed.lxml_prefixes));
                 }
             }
             // Text in drawing frames (every ODP / ODG text, ODT text boxes) takes its direction from the graphic
@@ -139,7 +169,7 @@ pub fn stamp_part(t: &Tree, ed: &mut Edits, styles_part: bool, content_part: boo
                     Some(pp) => set_attr(t, ed, pp, NS_STYLE, "writing-mode", Some("rl-tb")),
                     None => {
                         let at = child_el(t, i, NS_STYLE, "graphic-properties").map_or(0, |g| node_index(t, i, g) + 1);
-                        let raw = make_el(t, i, NS_STYLE, "paragraph-properties", &[(NS_STYLE, "writing-mode", "rl-tb".to_string())], "");
+                        let raw = make_el(t, i, NS_STYLE, "paragraph-properties", &[(NS_STYLE, "writing-mode", "rl-tb".to_string())], "", ed.lxml_prefixes);
                         ed.insert_child(t, i, at, raw);
                     }
                 }
@@ -182,6 +212,7 @@ fn flip_sheets(t: &Tree, ed: &mut Edits) {
     if tables.is_empty() {
         return;
     }
+    let lx = ed.lxml_prefixes;
     let autos = child_el(t, root, NS_OFFICE, "automatic-styles");
     let mut by_name: Vec<(String, u32)> = Vec::new();
     let mut taken: Vec<String> = Vec::new();
@@ -207,7 +238,7 @@ fn flip_sheets(t: &Tree, ed: &mut Edits) {
                     match child_el(t, st, NS_STYLE, "table-properties") {
                         Some(tp) => set_attr(t, ed, tp, NS_STYLE, "writing-mode", Some("rl-tb")),
                         None => {
-                            let raw = make_el(t, st, NS_STYLE, "table-properties", &[(NS_STYLE, "writing-mode", "rl-tb".to_string())], "");
+                            let raw = make_el(t, st, NS_STYLE, "table-properties", &[(NS_STYLE, "writing-mode", "rl-tb".to_string())], "", ed.lxml_prefixes);
                             ed.insert_child(t, st, 0, raw);
                         }
                     }
@@ -227,8 +258,8 @@ fn flip_sheets(t: &Tree, ed: &mut Edits) {
                         if let Some(p) = &name {
                             attrs.push((NS_STYLE, "parent-style-name", p.clone()));
                         }
-                        let tp = make_el(t, autos.unwrap_or(root), NS_STYLE, "table-properties", &[(NS_STYLE, "writing-mode", "rl-tb".to_string())], "");
-                        new_styles.push_str(&make_el(t, autos.unwrap_or(root), NS_STYLE, "style", &attrs, &tp));
+                        let tp = make_el(t, autos.unwrap_or(root), NS_STYLE, "table-properties", &[(NS_STYLE, "writing-mode", "rl-tb".to_string())], "", lx);
+                        new_styles.push_str(&make_el(t, autos.unwrap_or(root), NS_STYLE, "style", &attrs, &tp, lx));
                         made.push((name.clone(), nn.clone()));
                         nn
                     }
@@ -244,7 +275,7 @@ fn flip_sheets(t: &Tree, ed: &mut Edits) {
         Some(a) => ed.append_child(t, a, new_styles),
         None => {
             let at = node_index(t, root, body);
-            let raw = make_el(t, root, NS_OFFICE, "automatic-styles", &[], &new_styles);
+            let raw = make_el(t, root, NS_OFFICE, "automatic-styles", &[], &new_styles, lx);
             ed.insert_child(t, root, at, raw);
         }
     }
@@ -257,7 +288,7 @@ pub fn stamp_meta(t: &Tree, ed: &mut Edits, tag: &str) -> bool {
     escape_text(tag, &mut text);
     match child_el(t, meta, NS_DC, "language") {
         Some(l) => ed.set_content(t, l, vec![crate::edit::Piece::Raw(text)]),
-        None => ed.append_child(t, meta, make_el(t, meta, NS_DC, "language", &[], &text)),
+        None => ed.append_child(t, meta, make_el(t, meta, NS_DC, "language", &[], &text, ed.lxml_prefixes)),
     }
     true
 }

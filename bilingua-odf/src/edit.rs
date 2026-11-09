@@ -12,6 +12,8 @@ pub enum Piece {
 }
 
 pub struct Edits {
+    /// Name a namespace the document does not bind `nsN`, as lxml does, instead of a well-known prefix.
+    pub lxml_prefixes: bool,
     content: HashMap<u32, Vec<Piece>>,
     start: HashMap<u32, String>,
     dirty: Vec<bool>,
@@ -19,7 +21,7 @@ pub struct Edits {
 
 impl Edits {
     pub fn new(t: &Tree) -> Edits {
-        Edits { content: HashMap::new(), start: HashMap::new(), dirty: vec![false; t.nodes.len()] }
+        Edits { lxml_prefixes: false, content: HashMap::new(), start: HashMap::new(), dirty: vec![false; t.nodes.len()] }
     }
 
     pub fn is_edited(&self) -> bool {
