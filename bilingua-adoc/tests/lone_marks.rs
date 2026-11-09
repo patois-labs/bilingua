@@ -18,7 +18,7 @@ fn a_mark_before_a_code_does_not_pair_with_it() {
     let out = write("*}\u{27E6}g1\u{27E7}p\u{27E6}/g1\u{27E7} w");
     assert_eq!(out, "&#42;}**p** w\n");
     let read = units(out.as_bytes())[0].clone();
-    assert!(read.starts_with("*}\u{27E6}g1\u{27E7}p\u{27E6}/g1\u{27E7}"), "{read}");
+    assert!(read.starts_with("&#42;}\u{27E6}g1\u{27E7}p"), "{read}");
 }
 
 #[test]

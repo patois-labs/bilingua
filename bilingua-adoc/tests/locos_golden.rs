@@ -106,8 +106,9 @@ const CELL_GUARD: &[&str] = &[
 const GLUED_MACRO: &[&str] = &["random-558"];
 /// MARK_REF (structure fuzz): in the `zh` builds (blanks taken out) a translated mark character lands next to a
 /// code's mark of the same character; Bilingua writes it as a character reference and the writer then also doubles
-/// the code's mark (a `;` is before it), where LocOS writes the run joined (`*b**x`).
-const MARK_REF: &[&str] = &["random-206", "random-281"];
+/// the code's mark (a `;` is before it), where LocOS writes the run joined (`*b**x`). The same holds for a lone mark
+/// in a translation that is written as a reference so that it cannot pair with a code's mark further along.
+const MARK_REF: &[&str] = &["random-124", "random-159", "random-202", "random-206", "random-215", "random-281"];
 
 /// A build without the #788 differences: every `{empty}` that starts a line and every backslash right before `|`
 /// are dropped (the same rule as `norm` in `tools/gen_cell_guard.py`).
