@@ -3,6 +3,7 @@
 //! written back from their source bytes; only nodes the rebuild created or changed are regenerated.
 
 use std::borrow::Cow;
+use std::collections::HashSet;
 
 pub type Id = u32;
 pub const NIL: Id = u32::MAX;
@@ -59,6 +60,14 @@ impl Node {
 
 pub fn xml_ws(c: char) -> bool {
     matches!(c, ' ' | '\t' | '\n' | '\r')
+}
+
+/// The namespace declarations a story keeps in the lxml form, see [`Dom::story_ns`].
+pub struct StoryNs {
+    top: Id,
+    keep: HashSet<(Id, usize)>,
+    added: Vec<(String, String)>,
+    pub outside: bool,
 }
 
 pub struct Dom {
@@ -286,24 +295,130 @@ impl Dom {
 
     /// Writes `id` the way lxml does: every element's start tag is regenerated (one space between attributes, double
     /// quotes) and an element with no children is written empty (`<a/>`, also for a source `<a></a>`). Text is
-    /// escaped afresh; comments and processing instructions keep their source bytes.
-    pub fn ser_lxml(&self, id: Id, out: &mut String) {
+    /// escaped afresh; comments keep their source bytes and a processing instruction is `<?target data?>`.
+    /// `ns` says which namespace declarations to write (see [`Dom::story_ns`]); `None` writes every one, as
+    /// `tostring` of a whole document does.
+    pub fn ser_lxml(&self, id: Id, out: &mut String, ns: Option<&StoryNs>) {
         let n = self.n(id);
-        if n.kind != Kind::Elem {
-            self.ser(id, out, true);
-            return;
+        match n.kind {
+            Kind::Pi => {
+                self.pi_lxml(id, out);
+                return;
+            }
+            Kind::Elem => {}
+            _ => {
+                self.ser(id, out, true);
+                return;
+            }
         }
+        let decls = self.decls_for(id, ns);
         if n.children.is_empty() {
-            self.gen_start(n, out, true);
+            self.gen_start(n, &decls, out, true);
             return;
         }
-        self.gen_start(n, out, false);
+        self.gen_start(n, &decls, out, false);
         for c in &n.children {
-            self.ser_lxml(*c, out);
+            self.ser_lxml(*c, out, ns);
         }
         out.push_str("</");
         out.push_str(&n.name);
         out.push('>');
+    }
+
+    fn decls_for(&self, id: Id, ns: Option<&StoryNs>) -> Vec<(String, String)> {
+        let n = self.n(id);
+        match ns {
+            None => n.nsdecls.clone(),
+            Some(k) => {
+                let mut v: Vec<(String, String)> = n.nsdecls.iter().enumerate().filter(|(i, _)| k.keep.contains(&(id, *i))).map(|(_, d)| d.clone()).collect();
+                if id == k.top {
+                    v.extend(k.added.iter().cloned());
+                }
+                v
+            }
+        }
+    }
+
+    /// A processing instruction as libxml2 writes it: `<?target data?>`, the white space after the target dropped.
+    pub fn pi_lxml(&self, id: Id, out: &mut String) {
+        let n = self.n(id);
+        let Some((s, e)) = n.src else { return };
+        let body = &self.text[s as usize + 2..e as usize - 2];
+        let data = body[n.name.len().min(body.len())..].trim_start_matches(xml_ws);
+        out.push_str("<?");
+        out.push_str(&n.name);
+        if !data.is_empty() {
+            out.push(' ');
+            out.push_str(data);
+        }
+        out.push_str("?>");
+    }
+
+    /// The namespace declarations lxml leaves on a copy of `top` made with `deepcopy` and cleaned with
+    /// `cleanup_namespaces`: the declarations in the subtree that some element or attribute name uses, in place, and
+    /// on the copy's root those of the ancestors that the subtree uses, after the root's own, in the order they are
+    /// first needed (an element's name before its attributes, in document order). `outside` is true when the
+    /// subtree uses any prefix declared above it, so that it does not parse on its own.
+    pub fn story_ns(&self, top: Id) -> StoryNs {
+        let mut r = StoryNs { top, keep: HashSet::new(), added: Vec::new(), outside: false };
+        let mut stack = vec![top];
+        while let Some(e) = stack.pop() {
+            let n = self.n(e);
+            if n.kind != Kind::Elem {
+                continue;
+            }
+            let mut uses: Vec<&str> = Vec::new();
+            uses.push(n.name.split_once(':').map_or("", |(p, _)| p));
+            for (k, _) in &n.attrs {
+                if let Some((p, _)) = k.split_once(':') {
+                    if p != "xml" && p != "xmlns" {
+                        uses.push(p);
+                    }
+                }
+            }
+            for p in uses {
+                match self.resolve_prefix(e, top, p) {
+                    Some((x, i, true)) => {
+                        r.keep.insert((x, i));
+                    }
+                    Some((x, i, false)) => {
+                        let (pf, uri) = &self.n(x).nsdecls[i];
+                        if !uri.is_empty() {
+                            r.outside = true;
+                            let own = self.n(top).nsdecls.iter().any(|(q, _)| q == pf);
+                            if !own && !r.added.iter().any(|(q, _)| q == pf) {
+                                r.added.push((pf.clone(), uri.clone()));
+                            }
+                        }
+                    }
+                    None => {}
+                }
+            }
+            for c in n.children.iter().rev() {
+                stack.push(*c);
+            }
+        }
+        r
+    }
+
+    /// The nearest declaration of `prefix` seen from `from`: its node, its place in that node's list, and whether the
+    /// node is `top` or below it.
+    fn resolve_prefix(&self, from: Id, top: Id, prefix: &str) -> Option<(Id, usize, bool)> {
+        let mut x = from;
+        let mut inside = true;
+        loop {
+            if let Some(i) = self.n(x).nsdecls.iter().rposition(|(p, _)| p == prefix) {
+                return Some((x, i, inside));
+            }
+            if x == top {
+                inside = false;
+            }
+            let up = self.n(x).parent;
+            if up == NIL {
+                return None;
+            }
+            x = up;
+        }
     }
 
     fn ser_elem(&self, id: Id, out: &mut String, force: bool) {
@@ -318,13 +433,13 @@ impl Dom {
             if let (true, true, Some((s, e))) = (sliceable, n.self_closed, n.src) {
                 out.push_str(&self.text[s as usize..e as usize]);
             } else {
-                self.gen_start(n, out, true);
+                self.gen_start(n, &n.nsdecls, out, true);
             }
             return;
         }
         match n.src {
             Some((s, _)) if sliceable && !n.self_closed => out.push_str(&self.text[s as usize..n.start_end as usize]),
-            _ => self.gen_start(n, out, false),
+            _ => self.gen_start(n, &n.nsdecls, out, false),
         }
         for c in &n.children {
             self.ser(*c, out, force);
@@ -334,10 +449,10 @@ impl Dom {
         out.push('>');
     }
 
-    fn gen_start(&self, n: &Node, out: &mut String, empty: bool) {
+    fn gen_start(&self, n: &Node, decls: &[(String, String)], out: &mut String, empty: bool) {
         out.push('<');
         out.push_str(&n.name);
-        for (p, u) in &n.nsdecls {
+        for (p, u) in decls {
             out.push(' ');
             if p.is_empty() {
                 out.push_str("xmlns");

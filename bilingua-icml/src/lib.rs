@@ -11,7 +11,7 @@ mod walk;
 
 use bilingua_model::guard::{LimitError, LimitKind};
 use bilingua_model::*;
-use dom::{Dom, Id, Kind, NIL};
+use dom::{xml_ws, Dom, Id, Kind, NIL};
 use rebuild::TP;
 use std::collections::{BTreeSet, HashMap};
 use walk::*;
@@ -381,6 +381,90 @@ fn fit_ws(tp: &mut Vec<TP>, lead: &str, trail: &str) {
     }
 }
 
+/// LocOS `_spans`: the nth `<Story` and the nth `</Story>` found in the bytes are the start and end of the nth story,
+/// and each such piece parses on its own (no prefix declared above it is used). When this is false LocOS rewrites the
+/// whole document instead of splicing the stories.
+fn story_spans_match(dom: &Dom, stories: &[(Id, Id)]) -> bool {
+    let b = dom.text.as_bytes();
+    let is_sp = |c: u8| matches!(c, b' ' | b'	' | b'
+' | b'' | 0x0b | 0x0c);
+    let mut opens = Vec::new();
+    let mut closes = Vec::new();
+    let mut i = 0;
+    while let Some(k) = dom.text[i..].find("<Story").map(|k| k + i) {
+        if b.get(k + 6).is_some_and(|c| is_sp(*c) || *c == b'>' || *c == b'/') {
+            opens.push(k);
+        }
+        i = k + 1;
+    }
+    let mut i = 0;
+    while let Some(k) = dom.text[i..].find("</Story").map(|k| k + i) {
+        let mut j = k + 7;
+        while b.get(j).is_some_and(|c| is_sp(*c)) {
+            j += 1;
+        }
+        if b.get(j) == Some(&b'>') {
+            closes.push(j + 1);
+        }
+        i = k + 1;
+    }
+    if opens.len() != stories.len() || closes.len() != stories.len() {
+        return false;
+    }
+    let mut prev = 0usize;
+    for ((story, _), (o, c)) in stories.iter().zip(opens.iter().zip(&closes)) {
+        if *o < prev || *o >= *c || dom.n(*story).src != Some((*o as u32, *c as u32)) || dom.story_ns(*story).outside {
+            return false;
+        }
+        prev = *c;
+    }
+    true
+}
+
+/// `etree.tostring(tree)` of the whole document, put behind the file's own XML declaration and a line end (LocOS keeps
+/// the declaration as written and nothing else of the prolog but comments and instructions; no white space between
+/// them). The flag says whether the file's byte order mark is kept: LocOS keeps it only together with a declaration.
+fn whole_document_lxml(dom: &Dom) -> (String, bool) {
+    let text = &dom.text;
+    let decl_end = if text.starts_with("<?xml") { text.find('>').filter(|e| *e >= 6 && text.as_bytes()[*e - 1] == b'?').map(|e| e + 1) } else { None };
+    let mut out = String::with_capacity(text.len() + 256);
+    if let Some(e) = decl_end {
+        out.push_str(&text[..e]);
+        out.push('
+');
+    }
+    let (rs, re) = dom.n(dom.root).src.map_or((text.len(), text.len()), |(s, e)| (s as usize, e as usize));
+    let misc = |part: &str, out: &mut String| {
+        let mut i = 0;
+        while i < part.len() {
+            if part[i..].starts_with("<!--") {
+                let e = part[i..].find("-->").map_or(part.len(), |k| i + k + 3);
+                out.push_str(&part[i..e]);
+                i = e;
+            } else if part[i..].starts_with("<?") {
+                let e = part[i..].find("?>").map_or(part.len(), |k| i + k + 2);
+                let body = &part[i + 2..e.saturating_sub(2).max(i + 2)];
+                let name_end = body.find(xml_ws).unwrap_or(body.len());
+                out.push_str("<?");
+                out.push_str(&body[..name_end]);
+                let data = body[name_end..].trim_start_matches(xml_ws);
+                if !data.is_empty() {
+                    out.push(' ');
+                    out.push_str(data);
+                }
+                out.push_str("?>");
+                i = e;
+            } else {
+                i += part[i..].chars().next().map_or(1, char::len_utf8);
+            }
+        }
+    };
+    misc(&text[decl_end.unwrap_or(0)..rs], &mut out);
+    dom.ser_lxml(dom.root, &mut out, None);
+    misc(&text[re..], &mut out);
+    (out, decl_end.is_some())
+}
+
 /// LocOS `base._newline_style`: `\r\n` when every line end of `text` is CRLF, `\r` when there are only bare CRs,
 /// else `None` (LF, or mixed: the piece is left as it is).
 fn newline_style(text: &str) -> Option<&'static str> {
@@ -488,6 +572,9 @@ impl Filter for Icml {
         let mut changes: Vec<(usize, usize, String)> = Vec::new();
         let mut idx = 0usize;
         let stories = prep.stories.clone();
+        let locos = opts.is_profile(bilingua_model::profile::LOCOS);
+        // LocOS writes a rebuilt story alone only when every story can be cut out of the file by its tags
+        let spans_ok = !locos || story_spans_match(&prep.dom, &stories);
         for (story, d) in stories {
             let hidden = prep.hidden.get(&d).cloned().unwrap_or_default();
             let dom = &mut prep.dom;
@@ -525,9 +612,11 @@ impl Filter for Icml {
                 if touched {
                     if let Some((s, e)) = dom.n(story).src {
                         let mut out = String::new();
-                        if opts.is_profile(bilingua_model::profile::LOCOS) {
-                            // LocOS re-serialises the story with lxml: start tags and empty elements are regenerated
-                            dom.ser_lxml(story, &mut out);
+                        if locos {
+                            // LocOS re-serialises the story with lxml: start tags and empty elements are regenerated,
+                            // and the declarations of a copy that was cleaned of unused ones are all it keeps
+                            let ns = dom.story_ns(story);
+                            dom.ser_lxml(story, &mut out, Some(&ns));
                         } else {
                             dom.ser(story, &mut out, false);
                         }
@@ -542,6 +631,20 @@ impl Filter for Icml {
         }
         if changes.is_empty() {
             return Ok(finish(&prep.dom.text));
+        }
+        if !spans_ok {
+            // LocOS could not match the stories to their tags, so it writes the whole document with lxml: the
+            // declaration of the file (not its BOM, unless there is one), then the tree
+            let (mut whole, keep_bom) = whole_document_lxml(&prep.dom);
+            if let Some(nl) = newline_style(&prep.dom.text) {
+                whole = with_newlines(&whole, nl);
+            }
+            let mut v = Vec::with_capacity(whole.len() + 3);
+            if bom && keep_bom {
+                v.extend_from_slice(&[0xEF, 0xBB, 0xBF]);
+            }
+            v.extend_from_slice(whole.as_bytes());
+            return Ok(v);
         }
         changes.sort_by_key(|c| c.0);
         let src = &prep.dom.text;
