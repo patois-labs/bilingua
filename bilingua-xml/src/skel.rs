@@ -626,12 +626,14 @@ impl<'d> Merger<'d> {
                                 // (no source language anywhere: the first language the file declares is its source);
                                 // the edit waits for the end marker, which knows whether anything inside was changed
                                 let old = lang_value(&self.out[at..], &attr);
-                                if !self.locos && self.doc.source_lang.is_none() && self.root_lang.is_none() {
+                                // a skeleton written before the `L` marker carried the first value merges as it did then
+                                let locos = self.locos && self.first_lang.is_some();
+                                if !locos && self.doc.source_lang.is_none() && self.root_lang.is_none() {
                                     self.root_lang = old.clone();
                                 }
-                                let src = if self.locos {
+                                let src = if locos {
                                     // LocOS: the root's own language, else the first one declared anywhere in the file
-                                    self.root_lang.clone().or_else(|| self.first_lang.clone()).or_else(|| old.clone())
+                                    self.root_lang.clone().or_else(|| self.first_lang.clone())
                                 } else {
                                     self.doc.source_lang.clone().or_else(|| self.root_lang.clone())
                                 };
