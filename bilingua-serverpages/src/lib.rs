@@ -871,7 +871,14 @@ fn merge_with(d: Dialect, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>
             return Err(Error::Write(u.message()));
         }
     }
-    enc::encode_declared_with(&m.unmask(&out, &text), encoding, opts)
+    let page = m.unmask(&out, &text);
+    if opts.is_profile(bilingua_model::profile::LOCOS) {
+        // LocOS server pages end in `encode_text_lossless`, never `encode_like`: a page that was read in a code page
+        // is written as UTF-8 once anything is written, with its declarations saying so (it rewrote them when it read)
+        let utf8 = opts.clone().with_output_encoding(OutputEncoding::Utf8);
+        return enc::encode_declared_with(&page, encoding, &utf8);
+    }
+    enc::encode_declared_with(&page, encoding, opts)
 }
 
 // --- the filters --------------------------------------------------------------------------------------------
