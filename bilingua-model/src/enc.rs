@@ -1120,6 +1120,19 @@ fn encode_text_unmarked(text: &str, encoding: &str) -> Result<Vec<u8>, Error> {
     if !agree {
         return Ok(utf8(false));
     }
+    // A page labelled ISO-8859-8 that was read as Windows-1255 (it holds vowel points) keeps its label only while
+    // no character is one that Windows-1255 writes at a byte meaning another sign under that label (curly quotes,
+    // dashes, the ellipsis, the euro and shekel signs): a browser would show a C1 control or the currency sign.
+    // Such a page is written as UTF-8 (LocOS #810 gate, G7).
+    if enc == encoding_rs::WINDOWS_1255 {
+        let says_8859_8 = decl_re().captures_iter(split_head(&restored).0).any(|c| {
+            let name = c.get(2).map_or("", |m| m.as_str());
+            matches!(label_encoding(name), Some(e) if e == encoding_rs::ISO_8859_8 || e == encoding_rs::ISO_8859_8_I)
+        });
+        if says_8859_8 && restored.chars().any(|c| cp1255_only_signs().contains(&c)) {
+            return Ok(utf8(false));
+        }
+    }
     // GB18030 writes everything GBK does, with the same bytes, and the four-byte forms GBK's encoder lacks
     // (B6); only the euro sign differs: GBK and Windows code page 936 readers expect the single byte 0x80
     if enc == encoding_rs::GBK && !env.euro_a2e3 {
@@ -1131,6 +1144,22 @@ fn encode_text_unmarked(text: &str, encoding: &str) -> Result<Vec<u8>, Error> {
         return Ok(utf8(false));
     }
     Ok(bytes.into_owned())
+}
+
+/// The characters Windows-1255 writes at a byte that ISO-8859-8 reads as another character (both define the byte):
+/// the C1 range signs Windows-1255 uses for curly quotes, dashes, the ellipsis, the euro and the new shekel sign.
+fn cp1255_only_signs() -> &'static [char] {
+    static S: OnceLock<Vec<char>> = OnceLock::new();
+    S.get_or_init(|| {
+        (0x80u8..=0xFF)
+            .filter_map(|b| {
+                let one = [b];
+                let a = encoding_rs::WINDOWS_1255.decode_without_bom_handling_and_without_replacement(&one)?;
+                let c = encoding_rs::ISO_8859_8.decode_without_bom_handling_and_without_replacement(&one)?;
+                (a != c).then(|| a.chars().next()).flatten()
+            })
+            .collect()
+    })
 }
 
 /// Encodes `text` for a GBK / GB2312 / code page 936 file: GB18030's bytes (it holds everything GBK does, plus
