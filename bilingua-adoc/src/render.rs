@@ -175,6 +175,75 @@ fn unconstrain(out: &mut [String], marks: &[(usize, usize, char)]) {
     }
 }
 
+/// The inline mark characters (`*`, `_`, backtick, `#`, `^`, `~`, `+`).
+const LONE_MARKS: &[char] = &['*', '_', '`', '#', '^', '~', '+'];
+
+/// The mark characters the codes of a translation open or close with.
+fn code_mark_chars(code: &bilingua_model::CodeData, into: &mut Vec<char>) {
+    let mut add = |c: Option<char>| {
+        if let Some(c) = c.filter(|c| LONE_MARKS.contains(c)) {
+            if !into.contains(&c) {
+                into.push(c);
+            }
+        }
+    };
+    add(code.open.as_deref().and_then(|m| m.chars().next_back()));
+    add(code.close.as_deref().and_then(|m| m.chars().next()));
+    if let Some(raw) = code.standalone.as_deref().filter(|r| constrained_point(r)) {
+        add(raw.chars().next());
+    }
+}
+
+/// A lone mark character in translated text that could open or close formatting with a mark of a code further
+/// along (or before it) is written as a character reference, which prints the same: the line is then formatted as
+/// the translator typed it and the codes stay the codes. Marks that cannot be a delimiter (`5 * 3`, `a*b`) are left.
+/// A mark right next to a code's own mark was handled when its text was written.
+fn shield_marks(out: &mut [String], texts: &[usize], marks: &[char]) {
+    if marks.is_empty() {
+        return;
+    }
+    for &k in texts {
+        let chars: Vec<char> = out[k].chars().collect();
+        if !chars.iter().any(|c| marks.contains(c)) {
+            continue;
+        }
+        let before_piece = k.checked_sub(1).and_then(|j| out[j].chars().next_back());
+        let after_piece = out.get(k + 1).and_then(|p| p.chars().next());
+        let mut piece = String::with_capacity(out[k].len() + 8);
+        let mut i = 0;
+        while i < chars.len() {
+            let c = chars[i];
+            // a character reference (written by an earlier rule, or typed) is kept whole
+            if c == '&' && chars.get(i + 1) == Some(&'#') {
+                if let Some(len) = chars[i..].iter().take(12).position(|&x| x == ';') {
+                    piece.extend(&chars[i..=i + len]);
+                    i += len + 1;
+                    continue;
+                }
+            }
+            if !marks.contains(&c) {
+                piece.push(c);
+                i += 1;
+                continue;
+            }
+            let prev = if i > 0 { Some(chars[i - 1]) } else { before_piece };
+            let next = if i + 1 < chars.len() { Some(chars[i + 1]) } else { after_piece };
+            // next to a code's own mark of the same character: the rule for that case already ran
+            let at_code = (i == 0 && prev == Some(c)) || (i + 1 == chars.len() && next == Some(c));
+            let run = (i > 0 && prev == Some(c)) || (i + 1 < chars.len() && next == Some(c));
+            let opens = prev.is_none_or(|p| !is_wordish(p)) && next.is_some_and(|n| !is_space(n));
+            let closes = prev.is_some_and(|p| !is_space(p)) && next.is_none_or(|n| !is_wordish(n));
+            if !at_code && (run || opens || closes) {
+                piece.push_str(&format!("&#{};", c as u32));
+            } else {
+                piece.push(c);
+            }
+            i += 1;
+        }
+        out[k] = piece;
+    }
+}
+
 fn explicit_links(out: &mut [String], links: &[usize], attrs: &mut Attrs) {
     if links.is_empty() {
         return;
@@ -228,6 +297,8 @@ pub fn render(unit: &Unit, target: &[Inline], sep: Option<char>, nested: bool, a
     let mut opens: HashMap<&str, usize> = HashMap::new();
     let mut marks: Vec<(usize, usize, char)> = Vec::new();
     let mut links: Vec<usize> = Vec::new();
+    let mut texts: Vec<usize> = Vec::new();
+    let mut code_marks: Vec<char> = Vec::new();
     let mut prev_text = false;
     let markup = |i: Option<&Inline>| -> Option<&str> {
         let Some(Inline::Tag { id, kind, .. }) = i else { return None };
@@ -273,6 +344,7 @@ pub fn render(unit: &Unit, target: &[Inline], sep: Option<char>, nested: bool, a
                         }
                     }
                 }
+                texts.push(out.len());
                 out.push(piece);
                 prev_text = true;
             }
@@ -282,6 +354,7 @@ pub fn render(unit: &Unit, target: &[Inline], sep: Option<char>, nested: bool, a
                 }
                 prev_text = false;
                 let Some(code) = unit.codes.get(id) else { continue };
+                code_mark_chars(code, &mut code_marks);
                 let closing = *kind == TagKind::Close;
                 if let (Some(open), Some(close)) = (&code.open, &code.close) {
                     if let Some(mark) = constrained_pair_mark(open, close) {
@@ -310,6 +383,7 @@ pub fn render(unit: &Unit, target: &[Inline], sep: Option<char>, nested: bool, a
     if !prev_text {
         out.push(String::new());
     }
+    shield_marks(&mut out, &texts, &code_marks);
     unconstrain(&mut out, &marks);
     explicit_links(&mut out, &links, attrs);
     out.concat()
