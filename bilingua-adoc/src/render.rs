@@ -310,6 +310,8 @@ pub fn render(unit: &Unit, target: &[Inline], sep: Option<char>, nested: bool, a
     let mut links: Vec<usize> = Vec::new();
     let mut texts: Vec<usize> = Vec::new();
     let mut code_marks: Vec<char> = Vec::new();
+    // the items the translation sets, the way the written line should read back (see `read_back`)
+    let mut want: Vec<Read> = Vec::new();
     let mut prev_text = false;
     let markup = |i: Option<&Inline>| -> Option<&str> {
         let Some(Inline::Tag { id, kind, .. }) = i else { return None };
@@ -356,6 +358,7 @@ pub fn render(unit: &Unit, target: &[Inline], sep: Option<char>, nested: bool, a
                     }
                 }
                 texts.push(out.len());
+                want.push(Read::Text(unref(&piece)));
                 out.push(piece);
                 prev_text = true;
             }
@@ -367,7 +370,9 @@ pub fn render(unit: &Unit, target: &[Inline], sep: Option<char>, nested: bool, a
                 let Some(code) = unit.codes.get(id) else { continue };
                 code_mark_chars(code, &mut code_marks);
                 let closing = *kind == TagKind::Close;
+                let item = Read::Code(*kind, code.label.clone(), code.standalone.as_deref().map(|r| fold_edges(&unref(r))));
                 if let (Some(open), Some(close)) = (&code.open, &code.close) {
+                    want.push(item);
                     if let Some(mark) = constrained_pair_mark(open, close) {
                         if !closing {
                             opens.insert(id.as_str(), out.len());
@@ -380,6 +385,7 @@ pub fn render(unit: &Unit, target: &[Inline], sep: Option<char>, nested: bool, a
                     }
                     out.push(if closing { close.clone() } else { open.clone() });
                 } else if let (Some(raw), false) = (&code.standalone, closing) {
+                    want.push(item);
                     if constrained_point(raw) {
                         marks.push((out.len(), out.len(), raw.chars().next().unwrap_or('`')));
                     }
@@ -412,17 +418,40 @@ pub fn render(unit: &Unit, target: &[Inline], sep: Option<char>, nested: bool, a
     unconstrain(&mut out, &marks);
     explicit_links(&mut out, &links, attrs);
     let shielded = out.concat();
-    // the references are needed only where the marks would pair: when the line without them reads back as the same
-    // codes and text, it is written as typed (a mark the source line already had as text stays a plain character)
+    // the references are needed only where the marks would pair. The line is written as typed when it reads back as
+    // the codes and text the translation sets (an untouched or pseudo translation of a source line always does: its
+    // marks, a code's own or plain text, stay as they were), or when the references would not change how it reads.
     if let Some(mut plain_out) = unshielded {
         unconstrain(&mut plain_out, &marks);
         explicit_links(&mut plain_out, &links, attrs);
         let as_typed = plain_out.concat();
-        if as_typed != shielded && same_reading(&as_typed, &shielded) {
-            return as_typed;
+        if as_typed != shielded {
+            let typed = read_back(&as_typed);
+            if typed == tidy(want) || typed == read_back(&shielded) {
+                return as_typed;
+            }
         }
     }
     shielded
+}
+
+/// Items as `unit_of` gives them: neighbouring texts joined, the ends trimmed, empty texts dropped.
+fn tidy(v: Vec<Read>) -> Vec<Read> {
+    let mut out: Vec<Read> = Vec::with_capacity(v.len());
+    for i in v {
+        match (out.last_mut(), i) {
+            (Some(Read::Text(a)), Read::Text(b)) => a.push_str(&b),
+            (_, x) => out.push(x),
+        }
+    }
+    if let Some(Read::Text(t)) = out.first_mut() {
+        *t = t.trim_start_matches(is_space).to_string();
+    }
+    if let Some(Read::Text(t)) = out.last_mut() {
+        *t = t.trim_end_matches(is_space).to_string();
+    }
+    out.retain(|i| !matches!(i, Read::Text(t) if t.is_empty()));
+    out
 }
 
 /// The marks `shield_marks` writes as references, back as the characters they print.
@@ -443,7 +472,7 @@ enum Read {
 
 fn read_back(line: &str) -> Vec<Read> {
     let (items, codes) = crate::inline::unit_of(line);
-    bilingua_model::merge_text(
+    let read = bilingua_model::merge_text(
         items
             .into_iter()
             .map(|i| match i {
@@ -463,7 +492,8 @@ fn read_back(line: &str) -> Vec<Read> {
             Read::Code(kind, label, raw)
         }
     })
-    .collect()
+    .collect::<Vec<Read>>();
+    tidy(read)
 }
 
 /// `` ``x`` `` as `` `x` ``: a run of one mark character at either end folded to one.
@@ -476,11 +506,4 @@ fn fold_edges(r: &str) -> String {
         return r.to_string();
     }
     c[a..c.len() - b].iter().collect()
-}
-
-/// `a` (the line written without shielded marks) reads back as the same codes and text as `b` (the shielded line).
-/// A code is compared by kind and label, not by its markup: a reference ends in `;`, after which a code's mark is
-/// written in its unconstrained form (`**b**` for `*b*`), which is the same code.
-fn same_reading(a: &str, b: &str) -> bool {
-    read_back(a) == read_back(b)
 }
