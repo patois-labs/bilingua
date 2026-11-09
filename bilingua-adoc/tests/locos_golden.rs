@@ -108,7 +108,7 @@ const GLUED_MACRO: &[&str] = &["random-558"];
 /// code's mark of the same character; Bilingua writes it as a character reference and the writer then also doubles
 /// the code's mark (a `;` is before it), where LocOS writes the run joined (`*b**x`). The same holds for a lone mark
 /// in a translation that is written as a reference so that it cannot pair with a code's mark further along.
-const MARK_REF: &[&str] = &["random-124", "random-159", "random-202", "random-206", "random-215", "random-281"];
+const MARK_REF: &[&str] = &["random-206", "random-215", "random-281"];
 
 /// A build without the #788 differences: every `{empty}` that starts a line and every backslash right before `|`
 /// are dropped (the same rule as `norm` in `tools/gen_cell_guard.py`).
@@ -210,7 +210,7 @@ fn matches_locos_on_random_files() {
                 bad.push(format!("{name}: in MARK_REF but the zh build now matches LocOS: take it off the list"));
             }
             if got != d.as_str().unwrap() {
-                if CELL_GUARD.contains(&name) && !(MARK_REF.contains(&name) && label == "zh") && beyond_cell_guard(&norms, name, label, &b) {
+                if CELL_GUARD.contains(&name) && beyond_cell_guard(&norms, name, label, &b) {
                     bad.push(format!("{name}: build {label} differs beyond the cell guard"));
                 } else if setext && label != "echo" {
                     differs = true;
@@ -229,7 +229,7 @@ fn matches_locos_on_random_files() {
                 let m = mapping(label, &want);
                 let got = undo_dlist(&run(&data, &m, Some(lc)));
                 if fnv(&got) != d.as_str().unwrap() {
-                    if CELL_GUARD.contains(&name) && !(MARK_REF.contains(&name) && label == "zh") && beyond_cell_guard(&norms, name, lc, &got) {
+                    if CELL_GUARD.contains(&name) && beyond_cell_guard(&norms, name, lc, &got) {
                         bad.push(format!("{name}: localized {lc} differs beyond the cell guard"));
                     } else if setext && label != "echo" {
                         differs = true;
