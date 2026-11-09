@@ -966,6 +966,17 @@ fn with_newlines(text: &str, nl: &str) -> String {
 /// original is kept, and an XML, HTML or PO charset declaration that still names another charset is rewritten to
 /// UTF-8, so the file says what it is.
 pub fn encode_text_with(text: &str, encoding: &str, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
+    // LocOS rewrites every declaration of a converted file to UTF-8 when it reads it (not only those near the top)
+    // and gives each the file's own label back when it writes it. Under the LocOS profile a file that carries a
+    // label does the same: a declaration further down becomes the file's label (or UTF-8, when the file is written
+    // as UTF-8). Without the profile it is content and comes back as it was.
+    let every;
+    let text = if opts.is_profile(crate::profile::LOCOS) && parse_tag(encoding).label.is_some() {
+        every = decl_re().replace_all(text, |c: &regex::Captures| format!("{}UTF-8", &c[1])).into_owned();
+        every.as_str()
+    } else {
+        text
+    };
     if opts.output_encoding != OutputEncoding::Utf8 {
         return encode_text(text, encoding);
     }
@@ -1467,6 +1478,24 @@ mod tests {
         // a letter and a vowel point both exist in the page's code page: the label stays
         let out = encode_text(&format!("{}\u{5d0}\u{5b0}", d.text), &d.encoding).unwrap();
         assert!(std::str::from_utf8(&out).is_err() && out.starts_with(b"<meta charset=\"iso-8859-8\">"));
+    }
+
+    #[test]
+    fn locos_profile_gives_every_declaration_the_files_label_or_utf8() {
+        // a Windows-1256 page whose first declaration says so and whose second one (past the head) says 1252
+        let page = format!("<meta charset=\"windows-1256\"><p>{}</p><meta charset=\"windows-1252\">", "x".repeat(5000));
+        let b = legacy(encoding_rs::WINDOWS_1256, &page);
+        let d = dec(&b, None, true).unwrap();
+        assert_eq!(d.encoding, "windows-1256;label=windows-1256");
+        let locos = MergeOptions::new().with_profile(crate::profile::LOCOS);
+        // native: the late declaration is content and stays; LocOS: it takes the file's label
+        assert_eq!(encode_text_with(&d.text, &d.encoding, &MergeOptions::new()).unwrap(), b);
+        let out = String::from_utf8(encode_text_with(&d.text, &d.encoding, &locos).unwrap()).unwrap();
+        assert!(out.ends_with("<meta charset=\"windows-1256\">") && !out.contains("1252"), "{}", &out[out.len() - 60..]);
+        // a translation the code page cannot hold: UTF-8, and no declaration keeps the old label (LocOS)
+        let text = d.text.replacen("xx", "\u{65e5}\u{672c}", 1);
+        let out = String::from_utf8(encode_text_with(&text, &d.encoding, &locos).unwrap()).unwrap();
+        assert!(!out.contains("1256") && !out.contains("1252") && out.matches("charset=\"UTF-8\"").count() == 2, "{}", &out[out.len() - 60..]);
     }
 
     #[test]
