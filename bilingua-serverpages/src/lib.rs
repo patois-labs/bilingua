@@ -871,7 +871,7 @@ fn merge_with(d: Dialect, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>
             return Err(Error::Write(u.message()));
         }
     }
-    enc::encode_text_with(&m.unmask(&out, &text), encoding, opts)
+    enc::encode_declared_with(&m.unmask(&out, &text), encoding, opts)
 }
 
 // --- the filters --------------------------------------------------------------------------------------------
