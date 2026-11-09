@@ -146,6 +146,7 @@ pub fn stamp_part(t: &Tree, ed: &mut Edits, styles_part: bool, content_part: boo
             let cur = t.attr(i, ns0, local0);
             if !matches!(cur.as_deref(), None | Some("zxx") | Some("none")) {
                 set_lang(t, ed, i, l);
+                ed.mark_rewritten();
             }
         }
     }
@@ -162,6 +163,7 @@ pub fn stamp_part(t: &Tree, ed: &mut Edits, styles_part: bool, content_part: boo
                     ed.append_child(t, i, make_el(t, i, NS_STYLE, "text-properties", &attrs, "", ed.lxml_prefixes));
                 }
             }
+            ed.mark_rewritten();
             // Text in drawing frames (every ODP / ODG text, ODT text boxes) takes its direction from the graphic
             // default style, so both defaults turn right to left.
             if l.rtl {
@@ -212,6 +214,7 @@ fn flip_sheets(t: &Tree, ed: &mut Edits) {
     if tables.is_empty() {
         return;
     }
+    ed.mark_rewritten();
     let lx = ed.lxml_prefixes;
     let autos = child_el(t, root, NS_OFFICE, "automatic-styles");
     let mut by_name: Vec<(String, u32)> = Vec::new();

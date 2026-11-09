@@ -635,3 +635,24 @@ fn a_new_namespace_gets_the_prefix_lxml_gives_it() {
     let s = member_str(&f.merge(&d).unwrap(), "styles.xml");
     assert!(s.contains(&format!(r#"<style:text-properties style:font-name="x" xmlns:fo="{FO}" fo:language="de" fo:country="DE"/>"#)), "{s}");
 }
+
+/// W-H H1: LocOS writes styles.xml again whenever it sets the language in it, also when the target language is the one
+/// the file already has (the default style is set, so the part counts as touched). Native mode leaves such a part alone.
+#[test]
+fn locos_profile_writes_styles_again_when_the_language_is_already_the_target() {
+    let ns = h_ns(FO);
+    let styles = h_doc(
+        "styles",
+        &ns,
+        r#"<office:styles><style:default-style style:family="paragraph"><style:text-properties fo:language="de" fo:country="DE"/></style:default-style></office:styles>"#,
+    );
+    let content = h_doc("content", &ns, "<office:body><office:text><text:p>Hi</text:p></office:text></office:body>");
+    let data = Pkg::new(content).styles(styles.clone()).build();
+    let f = Odt::default();
+    let mut d = f.extract(&data, &opts(Some("de-DE"))).unwrap();
+    set(&mut d, 0, "Salut");
+    let out = f.merge_with(&d, &MergeOptions::new().with_profile("locos")).unwrap();
+    let s = member_str(&out, "styles.xml");
+    assert!(s.starts_with("<?xml version='1.0' encoding='UTF-8'?>\n<office:document-styles") && s.contains(r#"fo:language="de" fo:country="DE""#), "{s}");
+    assert_eq!(member_str(&f.merge(&d).unwrap(), "styles.xml"), styles);
+}
