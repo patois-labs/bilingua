@@ -323,9 +323,10 @@ fn p_index_of(u: &Unit) -> Option<usize> {
 /// A target as translated pieces; XML-illegal characters dropped, line ends turned into spaces (a newline is
 /// never a paragraph break here). `keep_nl`: the paragraph's source text has literal line feeds in its `Content`
 /// (a code block written by pandoc, for instance), so a line feed in the target stays one instead of being
-/// flattened to a space.
-fn to_tp(v: &[Inline], keep_nl: bool) -> Vec<TP> {
-    fn clean(t: &str, keep_nl: bool) -> String {
+/// flattened to a space. `locos`: every line end becomes InDesign's forced line break (U+2028), as LocOS writes it.
+fn to_tp(v: &[Inline], keep_nl: bool, locos: bool) -> Vec<TP> {
+    fn clean(t: &str, keep_nl: bool, locos: bool) -> String {
+        let eol = if locos { '\u{2028}' } else if keep_nl { '\n' } else { ' ' };
         let mut s = String::with_capacity(t.len());
         let mut it = t.chars().peekable();
         while let Some(c) = it.next() {
@@ -337,9 +338,9 @@ fn to_tp(v: &[Inline], keep_nl: bool) -> Vec<TP> {
                 if it.peek() == Some(&'\n') {
                     it.next();
                 }
-                s.push(if keep_nl { '\n' } else { ' ' });
+                s.push(eol);
             } else if c == '\n' {
-                s.push(if keep_nl { '\n' } else { ' ' });
+                s.push(eol);
             } else {
                 s.push(c);
             }
@@ -349,7 +350,7 @@ fn to_tp(v: &[Inline], keep_nl: bool) -> Vec<TP> {
     let mut out = Vec::new();
     for i in v {
         match i {
-            Inline::Text(t) => out.push(TP::Text(clean(t, keep_nl))),
+            Inline::Text(t) => out.push(TP::Text(clean(t, keep_nl, locos))),
             Inline::Tag { id, kind: TagKind::Open, .. } => out.push(TP::Open(id.clone())),
             Inline::Tag { id, kind: TagKind::Close, .. } => out.push(TP::Close(id.clone())),
             Inline::Tag { id, kind: TagKind::Standalone, .. } => out.push(TP::Point(id.clone())),
@@ -470,7 +471,7 @@ impl Filter for Icml {
             }
             let Some(p) = p_index_of(u) else { continue };
             let keep_nl = u.source().iter().any(|i| matches!(i, Inline::Text(t) if t.contains('\n')));
-            wanted.insert(p, to_tp(&u.output(), keep_nl));
+            wanted.insert(p, to_tp(&u.output(), keep_nl, opts.is_profile(bilingua_model::profile::LOCOS)));
         }
         if wanted.is_empty() {
             return Ok(finish(&text));
@@ -524,7 +525,12 @@ impl Filter for Icml {
                 if touched {
                     if let Some((s, e)) = dom.n(story).src {
                         let mut out = String::new();
-                        dom.ser(story, &mut out, false);
+                        if opts.is_profile(bilingua_model::profile::LOCOS) {
+                            // LocOS re-serialises the story with lxml: start tags and empty elements are regenerated
+                            dom.ser_lxml(story, &mut out);
+                        } else {
+                            dom.ser(story, &mut out, false);
+                        }
                         changes.push((s as usize, e as usize, out));
                     }
                 }

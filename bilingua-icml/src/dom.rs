@@ -284,6 +284,28 @@ impl Dom {
         }
     }
 
+    /// Writes `id` the way lxml does: every element's start tag is regenerated (one space between attributes, double
+    /// quotes) and an element with no children is written empty (`<a/>`, also for a source `<a></a>`). Text is
+    /// escaped afresh; comments and processing instructions keep their source bytes.
+    pub fn ser_lxml(&self, id: Id, out: &mut String) {
+        let n = self.n(id);
+        if n.kind != Kind::Elem {
+            self.ser(id, out, true);
+            return;
+        }
+        if n.children.is_empty() {
+            self.gen_start(n, out, true);
+            return;
+        }
+        self.gen_start(n, out, false);
+        for c in &n.children {
+            self.ser_lxml(*c, out);
+        }
+        out.push_str("</");
+        out.push_str(&n.name);
+        out.push('>');
+    }
+
     fn ser_elem(&self, id: Id, out: &mut String, force: bool) {
         let n = self.n(id);
         if let (false, false, Some((s, e))) = (n.dirty, force, n.src) {
