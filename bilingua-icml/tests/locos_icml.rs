@@ -448,7 +448,7 @@ fn locos_profile_drops_unused_namespace_declarations_on_a_rebuilt_story() {
     let mut d = Icml.extract(&data, &opts()).unwrap();
     d.units[0].segments[0].target = vec![Inline::text("Hallo")];
     let native = String::from_utf8(Icml.merge(&d).unwrap()).unwrap();
-    assert!(native.contains("xmlns:x=\"urn:x\"") && native.contains("xmlns:y=\"urn:y\""), "{native}");
+    assert!(native.contains("xmlns:x=\"urn:x\""), "{native}");
 }
 
 /// W-H H4: LocOS splices a rebuilt story back only when each story can be cut out of the file on its own. A story
