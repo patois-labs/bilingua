@@ -226,6 +226,55 @@ fn plain_of(u: &Unit) -> String {
     plain_text(&u.source())
 }
 
+/// One item of a unit for the structure check: a character, or a code of a kind.
+#[derive(Clone, Copy, PartialEq)]
+enum Tok {
+    Ch(char),
+    Code(TagKind),
+}
+
+fn chars_of(n: Norm, t: &str) -> Vec<Tok> {
+    norm_text(n, t).chars().filter(|c| !c.is_whitespace()).map(Tok::Ch).collect()
+}
+
+/// S4 (AsciiDoc): the codes of the translation are still codes after the file is read again, and the text around
+/// them is the text that was set. A mark the reader pairs into a code of its own (a lone `*` in a translation with
+/// a code's `**` further on) is a code that was not set, so the line formats differently than the translator typed.
+/// A read code may stand for its own markup as text only when the translation had that text, so typed markup such
+/// as `_a_` (text on one side, a pair on the other) passes.
+fn same_structure(n: Norm, u: &Unit, set_t: &[Inline], read: &[Inline]) -> bool {
+    let mut want: Vec<Tok> = Vec::new();
+    for i in set_t {
+        match i {
+            Inline::Text(t) => want.extend(chars_of(n, t)),
+            Inline::Tag { kind, .. } => want.push(Tok::Code(*kind)),
+        }
+    }
+    // reach[j]: the items read so far can stand for the first j wanted tokens
+    let mut reach = vec![false; want.len() + 1];
+    reach[0] = true;
+    for i in read {
+        let alts: Vec<Vec<Tok>> = match i {
+            Inline::Text(t) => vec![chars_of(n, t)],
+            Inline::Tag { kind, .. } => {
+                let m = markup(u, i).unwrap_or_default();
+                let m = if m.len() == 2 && m.as_bytes()[0] == m.as_bytes()[1] { &m[..1] } else { m };
+                vec![vec![Tok::Code(*kind)], chars_of(n, m)]
+            }
+        };
+        let mut next = vec![false; want.len() + 1];
+        for j in (0..reach.len()).filter(|&j| reach[j]) {
+            for a in &alts {
+                if want.len() - j >= a.len() && want[j..j + a.len()] == a[..] {
+                    next[j + a.len()] = true;
+                }
+            }
+        }
+        reach = next;
+    }
+    reach[want.len()]
+}
+
 /// A Markdown table row unit (MDX: one unit per row, cells split by `|`).
 fn is_row(u: &Unit) -> bool {
     let t = plain_of(u);
@@ -406,6 +455,9 @@ fn check(c: &Case, f: &dyn Filter, doc: &Document, want: &[u8], plan: &[(bool, V
         if set_t != got {
             return Err(format!("S3 unit {i}: set {set_t:?} read {got:?}\n{}", shown()));
         }
+        if c.norm == Norm::Adoc && !same_structure(c.norm, &d2.units[i], &d.units[i].segments[0].target, &d2.units[i].source()) {
+            return Err(format!("S4 unit {i}: the codes set are not the codes read: set {set_t:?} read {got:?}\n{}", shown()));
+        }
     }
     // a text skeleton: the bytes between the units are compared as they are
     if let (true, Some(a), Some(b)) = (c.raw_s2, raw_parts(doc), raw_parts(&d2)) {
@@ -541,9 +593,9 @@ Term one:: Its description.
 NOTE: Admonition text.
 ";
 
-// no lone inline marks (`*`, `_`, backtick, `+`, `#`): a translated mark next to a code's mark of the same character
-// is written as a character reference, but one further away can still pair with it (`*}` + `**p**`): open item
-const ADOC_ATOMS: &[&str] = &["|", "!", "{", "}", ":", "::", ":::", ";;", "/", "//", "\n", "* ", "[", "]", "=", "== ", ". ", "- "];
+// lone inline marks (`*`, `_`, backtick, `#`, `^`, `~`) are in the alphabet: one in a translation must not pair with a
+// code's mark, next to it or further away (`*}` + `**p**`; check S4)
+const ADOC_ATOMS: &[&str] = &["|", "!", "{", "}", ":", "::", ":::", ";;", "/", "//", "\n", "* ", "[", "]", "=", "== ", ". ", "- ", "*", "_", "`", "#", "^", "~"];
 
 #[test]
 fn adoc() {
