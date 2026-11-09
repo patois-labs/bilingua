@@ -283,40 +283,124 @@ enum Obj {
     Dict(Vec<usize>, Vec<usize>),
 }
 
-fn flatten(tree: &Tree, i: usize, objs: &mut Vec<Obj>) -> usize {
-    let n = &tree.nodes[i];
-    let me = objs.len();
-    match n.kind {
-        Kind::Str => objs.push(Obj::Str(n.text.clone())),
-        Kind::Other => objs.push(match &n.scalar {
-            Scalar::Bool(b) => Obj::Bool(*b),
-            Scalar::Int(v) => Obj::Int(*v),
-            Scalar::Real(v) => Obj::Real(*v),
-            Scalar::Date(v) => Obj::Date(*v),
-            Scalar::Data(d) => Obj::Data(d.clone()),
-            Scalar::Uid(u) => Obj::Uid(*u),
-            Scalar::Null | Scalar::None => Obj::Null,
-        }),
-        Kind::Array => {
-            objs.push(Obj::Null);
-            let kids: Vec<usize> = n.kids.iter().map(|k| flatten(tree, k.node, objs)).collect();
-            objs[me] = Obj::Array(kids);
+/// Objects already in the table, so an equal scalar is written once (plistlib `_BinaryPlistWriter._flatten`: a string,
+/// integer, real, date, data, boolean or null that equals an earlier one reuses its object; a container never does,
+/// and neither does a UID).
+#[derive(Default)]
+struct Shared {
+    strs: HashMap<String, usize>,
+    ints: HashMap<i128, usize>,
+    reals: HashMap<u64, usize>,
+    dates: HashMap<u64, usize>,
+    data: HashMap<Vec<u8>, usize>,
+    bools: [Option<usize>; 2],
+    null: Option<usize>,
+}
+
+/// The bits an f64 is compared by: -0.0 equals 0.0 (as Python's `==`); a NaN never equals anything.
+fn real_key(v: f64) -> Option<u64> {
+    if v.is_nan() {
+        None
+    } else if v == 0.0 {
+        Some(0)
+    } else {
+        Some(v.to_bits())
+    }
+}
+
+/// Adds `o` to `objs` unless an equal shared scalar is there; returns its object number.
+fn intern(objs: &mut Vec<Obj>, sh: &mut Shared, o: Obj) -> usize {
+    fn slot<K: std::hash::Hash + Eq>(map: &mut HashMap<K, usize>, key: K, objs: &mut Vec<Obj>, o: Obj) -> usize {
+        if let Some(&i) = map.get(&key) {
+            return i;
         }
-        Kind::Dict => {
-            objs.push(Obj::Null);
-            let keys: Vec<usize> = n
-                .kids
-                .iter()
-                .map(|k| {
-                    objs.push(Obj::Str(k.key.clone().unwrap_or_default()));
-                    objs.len() - 1
-                })
-                .collect();
-            let vals: Vec<usize> = n.kids.iter().map(|k| flatten(tree, k.node, objs)).collect();
-            objs[me] = Obj::Dict(keys, vals);
+        objs.push(o);
+        map.insert(key, objs.len() - 1);
+        objs.len() - 1
+    }
+    match &o {
+        Obj::Str(s) => {
+            let k = s.clone();
+            slot(&mut sh.strs, k, objs, o)
+        }
+        Obj::Int(v) => {
+            let k = *v;
+            slot(&mut sh.ints, k, objs, o)
+        }
+        Obj::Real(v) => match real_key(*v) {
+            Some(k) => slot(&mut sh.reals, k, objs, o),
+            None => {
+                objs.push(o);
+                objs.len() - 1
+            }
+        },
+        Obj::Date(v) => match real_key(*v) {
+            Some(k) => slot(&mut sh.dates, k, objs, o),
+            None => {
+                objs.push(o);
+                objs.len() - 1
+            }
+        },
+        Obj::Data(d) => {
+            let k = d.clone();
+            slot(&mut sh.data, k, objs, o)
+        }
+        Obj::Bool(b) => {
+            let at = usize::from(*b);
+            if let Some(i) = sh.bools[at] {
+                return i;
+            }
+            objs.push(o);
+            sh.bools[at] = Some(objs.len() - 1);
+            objs.len() - 1
+        }
+        Obj::Null => {
+            if let Some(i) = sh.null {
+                return i;
+            }
+            objs.push(o);
+            sh.null = Some(objs.len() - 1);
+            objs.len() - 1
+        }
+        _ => {
+            objs.push(o);
+            objs.len() - 1
         }
     }
-    me
+}
+
+fn flatten(tree: &Tree, i: usize, objs: &mut Vec<Obj>, sh: &mut Shared) -> usize {
+    let n = &tree.nodes[i];
+    match n.kind {
+        Kind::Str => intern(objs, sh, Obj::Str(n.text.clone())),
+        Kind::Other => {
+            let o = match &n.scalar {
+                Scalar::Bool(b) => Obj::Bool(*b),
+                Scalar::Int(v) => Obj::Int(*v),
+                Scalar::Real(v) => Obj::Real(*v),
+                Scalar::Date(v) => Obj::Date(*v),
+                Scalar::Data(d) => Obj::Data(d.clone()),
+                Scalar::Uid(u) => Obj::Uid(*u),
+                Scalar::Null | Scalar::None => Obj::Null,
+            };
+            intern(objs, sh, o)
+        }
+        Kind::Array => {
+            let me = objs.len();
+            objs.push(Obj::Null);
+            let kids: Vec<usize> = n.kids.iter().map(|k| flatten(tree, k.node, objs, sh)).collect();
+            objs[me] = Obj::Array(kids);
+            me
+        }
+        Kind::Dict => {
+            let me = objs.len();
+            objs.push(Obj::Null);
+            let keys: Vec<usize> = n.kids.iter().map(|k| intern(objs, sh, Obj::Str(k.key.clone().unwrap_or_default()))).collect();
+            let vals: Vec<usize> = n.kids.iter().map(|k| flatten(tree, k.node, objs, sh)).collect();
+            objs[me] = Obj::Dict(keys, vals);
+            me
+        }
+    }
 }
 
 fn put_uint(out: &mut Vec<u8>, v: u64, size: usize) {
@@ -366,7 +450,8 @@ fn put_head(out: &mut Vec<u8>, hi: u8, n: usize) {
 /// Writes the whole tree as a `bplist00` file.
 pub(crate) fn write(tree: &Tree) -> Vec<u8> {
     let mut objs = Vec::new();
-    flatten(tree, tree.root, &mut objs);
+    let mut shared = Shared::default();
+    let top = flatten(tree, tree.root, &mut objs, &mut shared);
     let ref_size = size_for(objs.len() as u64);
     let mut out = b"bplist00".to_vec();
     let mut offsets = Vec::with_capacity(objs.len());
@@ -428,7 +513,73 @@ pub(crate) fn write(tree: &Tree) -> Vec<u8> {
     out.push(offset_size as u8);
     out.push(ref_size as u8);
     out.extend_from_slice(&(objs.len() as u64).to_be_bytes());
-    out.extend_from_slice(&0u64.to_be_bytes());
+    out.extend_from_slice(&(top as u64).to_be_bytes());
     out.extend_from_slice(&table.to_be_bytes());
     out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn leaf(t: &mut Tree, kind: Kind, text: &str, scalar: Scalar) -> usize {
+        let mut n = Node::new(kind);
+        n.text = text.to_string();
+        n.scalar = scalar;
+        t.nodes.push(n);
+        t.nodes.len() - 1
+    }
+
+    fn kid(key: Option<&str>, node: usize) -> Kid {
+        Kid { key: key.map(str::to_string), kstart: NO_SPAN, kend: NO_SPAN, node }
+    }
+
+    /// plistlib's output for the same value (`plistlib.dumps(v, fmt=FMT_BINARY, sort_keys=False)`): equal strings,
+    /// integers, reals, data and booleans are written once, keys and values share objects, references are one byte.
+    #[test]
+    fn equal_scalars_are_written_once_as_plistlib_does() {
+        let mut t = Tree::default();
+        let s = |t: &mut Tree, x: &str| leaf(t, Kind::Str, x, Scalar::None);
+        let list_items = {
+            let a = s(&mut t, "Save");
+            let b = s(&mut t, "x");
+            let c = leaf(&mut t, Kind::Other, "", Scalar::Bool(true));
+            let d = leaf(&mut t, Kind::Other, "", Scalar::Bool(false));
+            let e = leaf(&mut t, Kind::Other, "", Scalar::Bool(true));
+            let f = leaf(&mut t, Kind::Other, "", Scalar::Int(1));
+            let g = leaf(&mut t, Kind::Other, "", Scalar::Int(1));
+            let h = leaf(&mut t, Kind::Other, "", Scalar::Real(2.5));
+            let i = leaf(&mut t, Kind::Other, "", Scalar::Real(2.5));
+            let j = leaf(&mut t, Kind::Other, "", Scalar::Data(vec![1]));
+            let k = leaf(&mut t, Kind::Other, "", Scalar::Data(vec![1]));
+            [a, b, c, d, e, f, g, h, i, j, k]
+        };
+        let mut list = Node::new(Kind::Array);
+        list.kids = list_items.iter().map(|n| kid(None, *n)).collect();
+        t.nodes.push(list);
+        let list = t.nodes.len() - 1;
+        let v_title = s(&mut t, "Save");
+        let v_name = s(&mut t, "Save");
+        let v_save = s(&mut t, "x");
+        let n1 = leaf(&mut t, Kind::Other, "", Scalar::Int(1));
+        let n2 = leaf(&mut t, Kind::Other, "", Scalar::Int(1));
+        let t1 = leaf(&mut t, Kind::Other, "", Scalar::Bool(true));
+        let t2 = leaf(&mut t, Kind::Other, "", Scalar::Bool(true));
+        let mut root = Node::new(Kind::Dict);
+        root.kids = vec![
+            kid(Some("Title"), v_title),
+            kid(Some("Name"), v_name),
+            kid(Some("Save"), v_save),
+            kid(Some("list"), list),
+            kid(Some("n"), n1),
+            kid(Some("m"), n2),
+            kid(Some("t"), t1),
+            kid(Some("u"), t2),
+        ];
+        t.nodes.push(root);
+        t.root = t.nodes.len() - 1;
+        let want = "62706c6973743030d801020304050607080303090a0d0d0b0b555469746c65544e616d655453617665546c697374516e516d517451755178ab03090b0c0b0d0d0e0e0f0f09081001234004000000000000410108191f24292e303234363844454648510000000000000101000000000000001000000000000000000000000000000053";
+        let got: String = write(&t).iter().map(|b| format!("{b:02x}")).collect();
+        assert_eq!(got, want);
+    }
 }

@@ -374,6 +374,8 @@ impl Filter for Xslt {
             return Err(Error::Write("xslt needs a text skeleton".into()));
         };
         let refs = char_refs(parts, encoding);
+        // LocOS writes edge text plain; native mode wraps it in xsl:text so the stripped whitespace stays stripped
+        let wrap_edge = !opts.is_profile(bilingua_model::profile::LOCOS);
         let any_translated = doc.units.iter().any(|u| u.translate && u.segments.iter().any(|s| s.has_target()));
         let lang = opts.stamp_lang(doc, any_translated).and_then(html_lang);
         let mut out = String::new();
@@ -385,7 +387,7 @@ impl Filter for Xslt {
                 },
                 SkelPart::Unit(i) => {
                     let u = doc.units.get(*i).ok_or_else(|| Error::Write(format!("skeleton points at missing unit {i}")))?;
-                    out.push_str(&write_unit(doc, u, refs));
+                    out.push_str(&write_unit(doc, u, refs, wrap_edge));
                 }
             }
         }
@@ -502,7 +504,7 @@ fn meta_of(u: &Unit) -> (bool, u8, bool, bool) {
 
 /// `raw` with the attribute units that sit inside it written in. Only attribute units are written in, and an
 /// attribute unit never writes nests of its own, so a tampered nest list cannot recurse.
-fn apply_nests(doc: &Document, raw: &str, nests: &str, refs: CharRefs) -> String {
+fn apply_nests(doc: &Document, raw: &str, nests: &str, refs: CharRefs, wrap_edge: bool) -> String {
     let mut list = parse_nests(nests);
     if list.is_empty() {
         return raw.to_string();
@@ -516,18 +518,18 @@ fn apply_nests(doc: &Document, raw: &str, nests: &str, refs: CharRefs) -> String
         }
         let Some(u) = doc.units.get(idx).filter(|u| meta_of(u).0) else { continue };
         out.push_str(&raw[last..s]);
-        out.push_str(&write_unit(doc, u, refs));
+        out.push_str(&write_unit(doc, u, refs, wrap_edge));
         last = e;
     }
     out.push_str(&raw[last..]);
     out
 }
 
-fn write_unit(doc: &Document, u: &Unit, refs: CharRefs) -> String {
+fn write_unit(doc: &Document, u: &Unit, refs: CharRefs, wrap_edge: bool) -> String {
     let raw = code(u, RAW).unwrap_or_default();
     let (attr, ..) = meta_of(u);
     let nests = code(u, NEST).unwrap_or_default();
-    let plain = |raw: &str| if attr { raw.to_string() } else { apply_nests(doc, raw, &nests, refs) };
+    let plain = |raw: &str| if attr { raw.to_string() } else { apply_nests(doc, raw, &nests, refs, wrap_edge) };
     if !u.translate || u.segments.iter().all(|s| !s.has_target()) {
         return plain(&raw);
     }
@@ -535,13 +537,13 @@ fn write_unit(doc: &Document, u: &Unit, refs: CharRefs) -> String {
     if new == u.source() {
         return plain(&raw);
     }
-    rebuild(doc, u, &new, refs)
+    rebuild(doc, u, &new, refs, wrap_edge)
 }
 
 /// Writes a translated unit: literal text escaped for its place, tokens put back as the source wrote them.
 /// A damaged token stream is repaired: an unknown or repeated token is dropped, an unclosed pair is closed, a
 /// dropped point is appended; nothing protected is lost.
-fn rebuild(doc: &Document, u: &Unit, target: &[Inline], refs: CharRefs) -> String {
+fn rebuild(doc: &Document, u: &Unit, target: &[Inline], refs: CharRefs, wrap_edge: bool) -> String {
     let (attr, quote, crlf, top_tvt) = meta_of(u);
     let keep_cr = u.source().iter().any(|i| matches!(i, Inline::Text(t) if t.contains('\r')));
     let mut out = String::new();
@@ -559,7 +561,7 @@ fn rebuild(doc: &Document, u: &Unit, target: &[Inline], refs: CharRefs) -> Strin
             return Some(raw);
         }
         let nests = code(u, &format!("{TNEST}{id}")).unwrap_or_default();
-        Some(apply_nests(doc, &raw, &nests, refs))
+        Some(apply_nests(doc, &raw, &nests, refs, wrap_edge))
     };
     let kind_of = |id: &str| -> Option<bool> {
         // true for a paired token
@@ -569,7 +571,7 @@ fn rebuild(doc: &Document, u: &Unit, target: &[Inline], refs: CharRefs) -> Strin
     // Text written right against a whitespace-only node the stylesheet strips would join it, so the whitespace
     // would be kept in the output and the units would merge on the next read: such edge text goes in `xsl:text`.
     let edge = code(u, EDGE).unwrap_or_default();
-    let (wrap_first, wrap_last, wrap_prefix) = if attr || edge.len() < 2 { (false, false, "") } else { (edge.starts_with('1'), edge[1..].starts_with('1'), &edge[2..]) };
+    let (wrap_first, wrap_last, wrap_prefix) = if attr || !wrap_edge || edge.len() < 2 { (false, false, "") } else { (edge.starts_with('1'), edge[1..].starts_with('1'), &edge[2..]) };
     let last = target.len().saturating_sub(1);
     for (n, i) in target.iter().enumerate() {
         match i {

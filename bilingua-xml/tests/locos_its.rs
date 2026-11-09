@@ -362,3 +362,15 @@ fn generic_localized_lang_only_when_present() {
     // a locale is written in BCP 47 form
     assert_eq!(merge_with(&f, d2, Some("pt_br"), &[(0, "Ola")]), br#"<r xml:lang="pt-BR"><p>Ola</p></r>"#);
 }
+
+/// Generic XML with no language on the root: a nested element that declares the source language and holds a changed
+/// unit is restamped, the root is left without one (LocOS), a foreign passage stays.
+#[test]
+fn generic_nested_source_language_restamped_without_root_language() {
+    let f = generic();
+    let d = br#"<r><ex xml:lang="en"><p>Hello</p></ex><ex xml:lang="fr"><p>Salut</p></ex><ex xml:lang="en"><p>Bye</p></ex></r>"#;
+    let out = merge_with(&f, d, Some("de-DE"), &[(0, "Hallo"), (1, "Tschuess"), (2, "Tschuess")]);
+    assert_eq!(s(&out), r#"<r><ex xml:lang="de-DE"><p>Hallo</p></ex><ex xml:lang="fr"><p>Tschuess</p></ex><ex xml:lang="de-DE"><p>Tschuess</p></ex></r>"#);
+    // nothing translated: untouched
+    assert_eq!(f.merge(&ex_to(&f, d, "de-DE")).unwrap(), d);
+}

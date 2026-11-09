@@ -1010,3 +1010,11 @@ translation with the source.
   Okapi reads it). XSLT keeps a named entity reference as a protected token when the DOCTYPE has an external subset
   (the subset is still never read). XSLT and WXL write the carriage returns of a translation as `&#13;` when the source
   text had one (it can only have come from a character reference); LocOS turns them into LF.
+
+## Finalize 11-08: Wave C (XML family)
+
+- `locos` profile, icml: a rebuilt Story is re-serialised like lxml, and a line end in a translation is U+2028. A
+  caller that compared native bytes of a profile build sees different bytes (the units are as before).
+- `locos` profile, xslt: no `xsl:text` around edge text next to a stripped whitespace node. A re-read of such a build
+  can join the text with the whitespace, as LocOS's does.
+- Binary plist bytes change (shared scalars); the units and the values are the same.

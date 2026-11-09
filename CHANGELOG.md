@@ -58,6 +58,19 @@ is listed here).
 
 ### Changed
 
+- xml: generic XML whose root has no `xml:lang` still restamps a nested element that declares the source language and
+  holds a changed unit, on a target-language merge (TEI `<exemplum xml:lang="en">` becomes `xml:lang="de-DE"`, as LocOS
+  writes it). The root is not given a language. A foreign passage and an element with no changed unit are left alone.
+- xslt: under the `locos` profile, text written right against a whitespace-only node the stylesheet strips is written
+  plain, as LocOS does, instead of inside `xsl:text`. Native mode keeps the `xsl:text` wrap (it keeps the stripped
+  whitespace stripped and the units apart on re-read).
+- icml: under the `locos` profile a rebuilt Story is written the way lxml writes it (attributes on one line, empty
+  elements as `<a/>`), and every line end in a translation becomes InDesign's forced line break (U+2028), which reads
+  back as a point, as LocOS does. Native mode keeps the source bytes of the Story and the line feeds of a code block.
+- plist: a rewritten binary plist writes equal strings (keys included), integers, reals, dates, data, booleans and
+  nulls once, as plistlib does, and uses the smallest reference size. The file no longer doubles in size; it reads
+  back the same.
+
 - LocOS profile (W5): `locos.p_index` for Android strings, Java XML properties, XMB, XTB and TTML is LocOS's number
   (skipped entries counted); an untouched XMB merges to the XTB; e-mail and TTML units have no style; html, xslt and
   the HTML Help files keep their encoding (legacy code page, UTF-16, ANSI code page with a refusal for what does not
@@ -129,6 +142,9 @@ is listed here).
   drawings) now match and their lists are gone.
 
 ### Fixed
+
+- idml, icml: under the `locos` profile `locos_set_target` repairs a target that repeats a pair token (the repeat loses
+  its tags, its text stays), as LocOS writes it, instead of refusing it as `duplicated_tag`.
 
 - LaTeX (native and profile): a token look-alike that names no code of the unit (`⟦x7⟧`) was deleted from the
   export; it is text and is kept (#814.1, W6 tex-1). One that names a code but was left as text (a closing mark of

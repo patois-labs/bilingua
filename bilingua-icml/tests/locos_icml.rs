@@ -406,3 +406,25 @@ fn story_level_table_is_skipped_under_the_locos_profile() {
     let s = String::from_utf8(out).unwrap();
     assert!(s.contains("Danach.") && s.contains("<Content>Head</Content>") && s.contains("<Content>Before.</Content>"), "{s}");
 }
+
+/// icml-1: under the LocOS profile a rebuilt story is written as lxml writes it (attributes on one line, `<Br/>`),
+/// and a line end in a translation is InDesign's forced line break (U+2028), which reads back as a point.
+#[test]
+fn locos_profile_writes_the_story_like_lxml_and_line_ends_as_forced_breaks() {
+    let body = format!("{}\n<Br />\n{}", psr(&csr("<Content>Line one\nline two</Content>")), psr(&csr("<Content>Other</Content>")));
+    let mut data = String::from_utf8(icml(&body, "", "")).unwrap();
+    data = data.replace("<Story Self=\"u1\" AppliedTOCStyle=\"n\"", "<Story Self=\"u1\"\n      AppliedTOCStyle=\"n\"");
+    let data = data.into_bytes();
+    let lo = profile::locos().extract_options().with_granularity(Granularity::Paragraph);
+    let mut d = Icml.extract(&data, &lo).unwrap();
+    d.units[0].segments[0].target = vec![Inline::text("Zeile eins\nZeile zwei")];
+    let out = String::from_utf8(Icml.merge_with(&d, &profile::locos().merge_options("icml")).unwrap()).unwrap();
+    assert!(out.contains("<Story Self=\"u1\" AppliedTOCStyle=\"n\" TrackChanges"), "{out}");
+    assert!(out.contains("<Content>Zeile eins\u{2028}Zeile zwei</Content>"), "{out}");
+    assert!(!out.contains("<Br />"), "{out}");
+    // native mode keeps the source bytes of the start tag and a line feed that the source had
+    d.units[0].segments[0].target = vec![Inline::text("Zeile eins\nZeile zwei")];
+    let native = String::from_utf8(Icml.merge(&d).unwrap()).unwrap();
+    assert!(native.contains("<Story Self=\"u1\"\n      AppliedTOCStyle"), "{native}");
+    assert!(native.contains("Zeile eins\nZeile zwei"), "{native}");
+}

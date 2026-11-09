@@ -504,3 +504,29 @@ fn rebuilt_range_keeps_properties_tail_and_profile_drops_the_epilog() {
         assert_eq!(s.ends_with("</idPkg:Story>\n"), !profile_on, "{s:?}");
     }
 }
+
+/// idml-1: under the LocOS profile a target that repeats a pair token is taken (the repeat loses its tags, its text
+/// stays), as LocOS writes it, instead of being refused as `duplicated_tag`.
+#[test]
+fn locos_profile_takes_a_repeated_pair_token() {
+    let body = psr(&[
+        csr("<Content>A </Content><HyperlinkTextSource Self=\"h9\"><Content>link</Content></HyperlinkTextSource><Content> and</Content><PageReference Self=\"p9\"/><Content> more</Content>"),
+        csr_b("<Content> bold</Content>", BOLD),
+    ]
+    .concat());
+    let data = package(body);
+    let lo = profile::locos().extract_options();
+    let mut doc = Idml.extract(&data, &lo).unwrap();
+    let units = profile::locos_units(&doc);
+    let (seg, map) = (units[0].segment_id.clone(), units[0].map.clone());
+    let bad = "\u{27e6}x99\u{27e7} junk \u{27e6}/g7\u{27e7} \u{27e6}g1\u{27e7}a\u{27e6}/g1\u{27e7}\u{27e6}g1\u{27e7}b\u{27e6}/g1\u{27e7}";
+    let (inl, _, _) = profile::tokens::repair_locos_text_for("idml", bad, &map);
+    profile::locos_set_target(&mut doc, &seg, inl).expect("a repeated pair is repaired, not refused");
+    let out = Idml.merge_with(&doc, &profile::locos().merge_options("idml")).unwrap();
+    let t = story_tree(&out, "a");
+    assert_eq!(named_attr(&t, "HyperlinkTextSource", "Self", "h9").len(), 1);
+    assert_eq!(named_attr(&t, "PageReference", "Self", "p9").len(), 1);
+    let vis = visible_text(&t);
+    assert!(vis.contains("\u{27e6}x99\u{27e7} junk \u{27e6}/g7\u{27e7}"), "{vis}");
+    assert!(!vis.contains("\u{27e6}g1\u{27e7}") && !vis.contains("\u{27e6}/g1\u{27e7}"), "{vis}");
+}

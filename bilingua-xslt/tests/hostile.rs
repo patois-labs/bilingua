@@ -416,3 +416,25 @@ fn edge_text_next_to_stripped_whitespace_keeps_units_apart() {
     assert!(out.contains("</i>!]"), "{out}");
     assert_eq!(Xslt.extract(out.as_bytes(), &o).unwrap().units.len(), d.units.len());
 }
+
+/// Under the LocOS profile edge text is written plain, as LocOS does (no `xsl:text`), and the units still read back
+/// the same.
+#[test]
+fn locos_profile_writes_edge_text_plain() {
+    let src = b"<t:stylesheet version=\"2.0\" xmlns:t=\"http://www.w3.org/1999/XSL/Transform\"><t:template match=\"/\">
+  <b>Bold</b> <i>Italic</i>!
+  <p>Para</p>
+</t:template></t:stylesheet>";
+    let o = opts().with_target_lang("de-DE").with_profile("locos");
+    let d = Xslt.extract(src, &o).unwrap();
+    let mut e = d.clone();
+    for u in &mut e.units {
+        let mut t = vec![Inline::text("[")];
+        t.extend(u.source());
+        t.push(Inline::text("]"));
+        u.segments[0].target = t;
+    }
+    let out = String::from_utf8(Xslt.merge_with(&e, &MergeOptions::default().with_profile("locos")).unwrap()).unwrap();
+    assert!(!out.contains("t:text"), "{out}");
+    assert!(out.contains("</b> [<i>Italic</i>!]"), "{out}");
+}
