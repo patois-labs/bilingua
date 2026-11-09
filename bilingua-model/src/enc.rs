@@ -727,12 +727,15 @@ fn decode_text_inner(data: &[u8], o: &DecodeOptions) -> Result<Decoded, Error> {
     done(text, &enc.name().to_ascii_lowercase(), None, warnings, &o.limits)
 }
 
+/// What [`decode_source_legacy`] returns: the text, the code page it was read in and the warnings.
+pub type SourceLegacy = Result<(String, &'static Encoding, Vec<Warning>), Error>;
+
 /// For a reader with its own BOM and UTF-8 handling (ini, yaml, js modules): the last step of [`decode_text`] for
 /// bytes that are not UTF-8 and carry no byte order mark. Returns `None` when `source_lang` has no code page of its
 /// own (the caller keeps its Windows-1252 path); else the text, the code page it was read in and the warnings
 /// (the letters look wrong in it, or it did not read and Windows-1252 was used). The caller has already refused
 /// binary files.
-pub fn decode_source_legacy(data: &[u8], source_lang: Option<&str>) -> Option<Result<(String, &'static Encoding, Vec<Warning>), Error>> {
+pub fn decode_source_legacy(data: &[u8], source_lang: Option<&str>) -> Option<SourceLegacy> {
     let locale = source_lang.unwrap_or("");
     let hint = source_encoding(locale)?;
     let mut warnings = Vec::new();
