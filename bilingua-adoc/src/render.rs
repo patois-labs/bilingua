@@ -384,6 +384,10 @@ pub fn render(unit: &Unit, target: &[Inline], sep: Option<char>, nested: bool, a
         out.push(String::new());
     }
     shield_marks(&mut out, &texts, &code_marks);
+    // a character reference written above opens a `#` mark of its own (`&#42;`), which a lone `#` further on would close
+    if !code_marks.contains(&'#') && texts.iter().any(|&k| out[k].contains("&#")) {
+        shield_marks(&mut out, &texts, &['#']);
+    }
     unconstrain(&mut out, &marks);
     explicit_links(&mut out, &links, attrs);
     out.concat()
