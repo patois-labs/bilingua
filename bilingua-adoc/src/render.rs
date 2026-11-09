@@ -383,6 +383,12 @@ pub fn render(unit: &Unit, target: &[Inline], sep: Option<char>, nested: bool, a
     if !prev_text {
         out.push(String::new());
     }
+    // a mark in two pieces of text has a code between them, which the pair would wrap (`` `*p` ``) and swallow
+    for &m in LONE_MARKS {
+        if !code_marks.contains(&m) && texts.iter().filter(|&&k| out[k].contains(m)).count() > 1 {
+            code_marks.push(m);
+        }
+    }
     shield_marks(&mut out, &texts, &code_marks);
     // a character reference written above opens a `#` mark of its own (`&#42;`), which a lone `#` further on would close
     if !code_marks.contains(&'#') && texts.iter().any(|&k| out[k].contains("&#")) {
