@@ -7,6 +7,10 @@ is listed here).
 
 ## [Unreleased]
 
+## [0.9.1] - 2026-11-09
+
+0.9.0 was tagged on 11-06 but never published to crates.io or PyPI; 0.9.1 is the first published release.
+
 ### Added
 
 - `bilingua-model`: `enc::keep_original`, `enc::split_original` and `enc::original_if_same`. A reader of a legacy code
@@ -494,4 +498,5 @@ table, with extensions, is in the README.
 
 - Rust 1.88 or later. Python 3.11 or later for the wheel.
 
+[0.9.1]: https://github.com/patois-labs/bilingua/releases/tag/v0.9.1
 [0.9.0]: https://github.com/patois-labs/bilingua/releases/tag/v0.9.0
