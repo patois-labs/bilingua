@@ -284,14 +284,8 @@ def _notes_via_dict(doc):
     "name,data,expect_notes",
     [
         ("a.xmb", b"<messagebundle><msg id='1' desc='button' meaning='verb'>Save</msg><msg id='2'>Plain</msg></messagebundle>", True),
-        ("a.tsv", b"key	source	comment
-k1	Hello	button
-k2	Bye	
-", False),
-        ("a.txt", b"One.
-
-Two.
-", False),
+        ("a.tsv", b"key\tsource\tcomment\nk1\tHello\tbutton\nk2\tBye\t\n", False),
+        ("a.txt", b"One.\n\nTwo.\n", False),
     ],
 )
 @pytest.mark.parametrize("profile", [None, "locos"])
