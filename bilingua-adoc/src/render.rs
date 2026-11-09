@@ -400,12 +400,53 @@ pub fn render(unit: &Unit, target: &[Inline], sep: Option<char>, nested: bool, a
             code_marks.push(m);
         }
     }
+    let mut unshielded = (!code_marks.is_empty()).then(|| out.clone());
     shield_marks(&mut out, &texts, &code_marks, false);
     // a character reference written above opens a `#` mark of its own (`&#42;`), which a lone `#` further on would close
     if texts.iter().any(|&k| out[k].contains("&#")) {
+        if unshielded.is_none() {
+            unshielded = Some(out.clone());
+        }
         shield_marks(&mut out, &texts, &['#'], true);
     }
     unconstrain(&mut out, &marks);
     explicit_links(&mut out, &links, attrs);
-    out.concat()
+    let shielded = out.concat();
+    // the references are needed only where the marks would pair: when the line without them reads back as the same
+    // codes and text, it is written as typed (a mark the source line already had as text stays a plain character)
+    if let Some(mut plain_out) = unshielded {
+        unconstrain(&mut plain_out, &marks);
+        explicit_links(&mut plain_out, &links, attrs);
+        let as_typed = plain_out.concat();
+        if as_typed != shielded && same_reading(&as_typed, &shielded) {
+            return as_typed;
+        }
+    }
+    shielded
+}
+
+/// The marks `shield_marks` writes as references, back as the characters they print.
+fn unref(s: &str) -> String {
+    let mut s = s.to_string();
+    for &c in LONE_MARKS {
+        s = s.replace(&format!("&#{};", c as u32), &c.to_string());
+    }
+    s
+}
+
+/// `a` (the line written without shielded marks) reads back as the same codes and text as `b` (the shielded line).
+fn same_reading(a: &str, b: &str) -> bool {
+    let (ia, ca) = crate::inline::unit_of(a);
+    let (ib, cb) = crate::inline::unit_of(b);
+    let dec = |v: Vec<Inline>| -> Vec<Inline> {
+        bilingua_model::merge_text(
+            v.into_iter()
+                .map(|i| match i {
+                    Inline::Text(t) => Inline::Text(unref(&t)),
+                    x => x,
+                })
+                .collect(),
+        )
+    };
+    ca == cb && dec(ia) == dec(ib)
 }

@@ -40,3 +40,25 @@ fn marks_that_cannot_be_a_delimiter_stay() {
     // `_` is no mark of any code of the unit: typed markup stays markup
     assert_eq!(write("a _b_ \u{27E6}g1\u{27E7}p\u{27E6}/g1\u{27E7} w"), "a _b_ *p* w\n");
 }
+
+/// Every unit set to `Zq<text>qZ`, merged and read again, gives the same unit text: marks the source already had as
+/// plain text are written as typed, not as references.
+fn pseudo_round_trip(doc: &str) {
+    let texts = units(doc.as_bytes());
+    let want: Vec<String> = texts.iter().map(|t| format!("Zq{t}qZ")).collect();
+    let mapping: Vec<(usize, &str)> = want.iter().enumerate().map(|(i, t)| (i, t.as_str())).collect();
+    let out = build_str(doc.as_bytes(), &mapping);
+    assert_eq!(units(out.as_bytes()), want, "{out}");
+}
+
+#[test]
+fn plain_underscores_beside_an_italic_code_stay_plain() {
+    pseudo_round_trip("A _word_ here: if u_ is set, then _u must be kept.
+");
+}
+
+#[test]
+fn plain_backticks_beside_a_monospace_code_stay_plain() {
+    pseudo_round_trip("Use `x` between and `</GridPanel>`in the generated file.
+");
+}
