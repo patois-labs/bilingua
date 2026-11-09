@@ -1,6 +1,6 @@
-//! AsciiDoc under the LocOS profile: the lone-mark shield (wave E) never touches a line that reads back as set. An
-//! untouched or localized build keeps the file's bytes, and a pseudo translation (letters rotated) keeps every mark,
-//! a code's own and the plain ones, as the source had them: no character reference is written.
+//! AsciiDoc under the LocOS profile and the lone-mark shield (wave E). An untouched or localized build keeps the
+//! file's bytes. A pseudo translation (letters rotated) reads back with the codes and text it set; a line that reads
+//! back as set gets no character reference, and a code's own mark is never written as one.
 use bilingua::profile::tokens;
 use bilingua::*;
 
@@ -67,14 +67,33 @@ fn untouched_and_localized_builds_keep_the_bytes() {
     }
 }
 
+/// Mark references back as the characters they print.
+fn unref(s: &str) -> String {
+    let mut s = s.to_string();
+    for c in ['*', '_', '`', '#', '^', '~', '+'] {
+        s = s.replace(&format!("&#{};", c as u32), &c.to_string());
+    }
+    s
+}
+
 #[test]
-fn a_pseudo_translation_keeps_every_mark() {
-    for d in DOCS {
+fn a_pseudo_translation_keeps_every_code() {
+    for (k, d) in DOCS.iter().enumerate() {
         let want: Vec<String> = texts(d.as_bytes()).iter().map(|t| rot(t)).collect();
         for lang in [None, Some("de-DE")] {
             let out = build(d.as_bytes(), lang, &|t| Some(rot(t)));
-            assert!(!out.contains("&#"), "{out}");
-            assert_eq!(texts(out.as_bytes()), want, "{out}");
+            // the codes read back are the codes set, and the text is the text set
+            let got: Vec<String> = texts(out.as_bytes()).iter().map(|t| unref(t)).collect();
+            assert_eq!(got, want, "{out}");
+            if k == 2 {
+                // a line that reads back as set as it is gets no reference
+                assert!(!out.contains("&#"), "{out}");
+            } else {
+                // the writer joins the paragraph's lines, which would let the text `*` before `The` pair with the
+                // `**` code of the next line (LocOS's own build does that, and its `**` code is lost); only that
+                // text mark and the plain `_` beside it are written as references, never a code's own mark
+                assert!(out.contains("&#42;Gur") && out.contains("**`units_meta`**"), "{out}");
+            }
         }
     }
 }
