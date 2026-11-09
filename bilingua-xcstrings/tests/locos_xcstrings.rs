@@ -298,3 +298,55 @@ fn locos_profile_dump_follows_the_source_style() {
         assert_eq!(String::from_utf8(got).unwrap(), want);
     }
 }
+
+fn locos_build(src: &str, tr: &str) -> String {
+    let mut d = ex(src.as_bytes(), Some("de"));
+    set_all(&mut d, &[(0, tr)]);
+    String::from_utf8(Xcstrings.merge_with(&d, &MergeOptions::new().with_profile("locos")).unwrap()).unwrap()
+}
+
+/// H5: under the locos profile a changed catalog prints a number the way Python's `json.dumps` prints what
+/// `json.loads` read (`1.50` is `1.5`, `1e5` is `100000.0`, `-0` is `0`, the float exponent form is `1e-05`, `1e+22`),
+/// and keeps an integer's digits. Native mode keeps the number as written. The expected text is the LocOS filter's.
+#[test]
+fn locos_profile_prints_numbers_like_python() {
+    let nums = "[1.50, 1e5, -0, 0.00001, 1E+22, 100000000000000000000, 0.1, -0.0, 12345678.9, 1e16, 1e15, 123456789012345678.0, 5e-324, 1.7976931348623157e308, 2.5E-3, 1e400, -1e400, NaN, Infinity, -Infinity, 0.0001, 1.0, 100.0, 3, true, null]";
+    let src = format!("{{\n  \"sourceLanguage\" : \"en\",\n  \"strings\" : {{\n    \"Hi\" : {{\n      \"extractionState\" : \"manual\",\n      \"x\" : {nums}\n    }}\n  }},\n  \"version\" : \"1.0\"\n}}\n");
+    let want = "{\n  \"sourceLanguage\" : \"en\",\n  \"strings\" : {\n    \"Hi\" : {\n      \"extractionState\" : \"manual\",\n      \"x\" : [\n        1.5,\n        100000.0,\n        0,\n        1e-05,\n        1e+22,\n        100000000000000000000,\n        0.1,\n        -0.0,\n        12345678.9,\n        1e+16,\n        1000000000000000.0,\n        1.2345678901234568e+17,\n        5e-324,\n        1.7976931348623157e+308,\n        0.0025,\n        Infinity,\n        -Infinity,\n        NaN,\n        Infinity,\n        -Infinity,\n        0.0001,\n        1.0,\n        100.0,\n        3,\n        true,\n        null\n      ],\n      \"localizations\" : {\n        \"de\" : {\n          \"stringUnit\" : {\n            \"state\" : \"translated\",\n            \"value\" : \"Hallo\"\n          }\n        }\n      }\n    }\n  },\n  \"version\" : \"1.0\"\n}\n";
+    assert_eq!(locos_build(&src, "Hallo"), want);
+    // native: the numbers stay as they were written
+    let mut d = ex(src.as_bytes(), Some("de"));
+    set_all(&mut d, &[(0, "Hallo")]);
+    let native = String::from_utf8(Xcstrings.merge(&d).unwrap()).unwrap();
+    assert!(native.contains(nums), "{native}");
+}
+
+/// H5: Python's `splitlines` also ends a line at U+2028 (and U+2029, U+0085, ...), so a one-line catalog with such a
+/// character in a string reads as a catalog with a second line, and LocOS takes its indent from the text after it.
+/// Native mode keeps its own reading of a line (LF, CR, CRLF), so the catalog stays on one line.
+#[test]
+fn locos_profile_splits_lines_where_python_does() {
+    let src = "{\"sourceLanguage\": \"en\", \"strings\": {\"Hi\u{2028}   there\": {\"x\": 1.50}}, \"version\": \"1.0\"}";
+    let want = "{\n   \"sourceLanguage\": \"en\",\n   \"strings\": {\n      \"Hi\u{2028}   there\": {\n         \"x\": 1.5,\n         \"localizations\": {\n            \"de\": {\n               \"stringUnit\": {\n                  \"state\": \"translated\",\n                  \"value\": \"Hallo\"\n               }\n            }\n         }\n      }\n   },\n   \"version\": \"1.0\"\n}";
+    assert_eq!(locos_build(src, "Hallo"), want);
+    let mut d = ex(src.as_bytes(), Some("de"));
+    set_all(&mut d, &[(0, "Hallo")]);
+    let native = String::from_utf8(Xcstrings.merge(&d).unwrap()).unwrap();
+    assert!(!native.contains('\n') && native.contains("\"x\": 1.50"), "{native}");
+}
+
+/// H5: a catalog extracted with a nesting limit above the default is read again by the merge, whatever the limit
+/// the extraction used (the document does not carry it).
+#[test]
+fn merge_reads_a_catalog_extracted_at_a_higher_depth_limit() {
+    let deep = format!("{}1{}", "[".repeat(300), "]".repeat(300));
+    let src = format!("{{\n  \"sourceLanguage\" : \"en\",\n  \"strings\" : {{\n    \"Hi\" : {{\n      \"x\" : {deep}\n    }}\n  }},\n  \"version\" : \"1.0\"\n}}\n");
+    assert!(Xcstrings.extract(src.as_bytes(), &opts(Some("de"))).is_err(), "the default limit refuses it");
+    let o = opts(Some("de")).with_limits(Limits::new().with_max_xml_depth(512));
+    let mut d = Xcstrings.extract(src.as_bytes(), &o).unwrap();
+    set_all(&mut d, &[(0, "Hallo")]);
+    for m in [MergeOptions::new(), MergeOptions::new().with_profile("locos")] {
+        let out = Xcstrings.merge_with(&d, &m).unwrap();
+        assert!(String::from_utf8(out).unwrap().contains("\"value\" : \"Hallo\""));
+    }
+}
