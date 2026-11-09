@@ -491,3 +491,37 @@ fn hostile() {
 }
 
 use bilingua_zip::{write_zip, EntryMeta};
+
+/// W-D D3 (odf-x): under the locos profile a part that is rewritten is written as LocOS's lxml writes it, so the
+/// package matches byte for byte. Native mode keeps the file's own declaration and quoting.
+#[test]
+fn locos_profile_writes_a_rewritten_part_like_lxml() {
+    let ns = r#" xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0" xmlns:text="urn:oasis:names:tc:opendocument:xmlns:text:1.0" xmlns:style="urn:oasis:names:tc:opendocument:xmlns:style:1.0" xmlns:fo="urn:oasis:names:tc:opendocument:xmlns:xsl-fo-compatible:1.0" xmlns:dc="http://purl.org/dc/elements/1.1/""#;
+    let content = format!(
+        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<office:document-content office:version=\"1.3\"{ns}><office:body><office:text><text:p text:style-name=\"P&apos;1\" fo:note=\"a &quot;b&quot; &gt; c\">Hallo &amp; ciao &gt; &#xE9;</text:p><text:p></text:p><text:p text:style-name=\"T\"/></office:text></office:body></office:document-content>\n"
+    );
+    let data = Pkg::new(content).build();
+    let f = Odt::default();
+    let mut d = f.extract(&data, &opts(Some("de-DE"))).unwrap();
+    set(&mut d, 0, "Salut & ciao > \u{e9}");
+    // LocOS: etree.tostring(root, xml_declaration=True, encoding="UTF-8")
+    let want = format!(
+        "<?xml version='1.0' encoding='UTF-8'?>\n<office:document-content{ns} office:version=\"1.3\"><office:body><office:text><text:p text:style-name=\"P'1\" fo:note=\"a &quot;b&quot; &gt; c\">Salut &amp; ciao &gt; \u{e9}</text:p><text:p/><text:p text:style-name=\"T\"/></office:text></office:body></office:document-content>"
+    );
+    let out = f.merge_with(&d, &MergeOptions::new().with_profile("locos")).unwrap();
+    assert_eq!(member_str(&out, "content.xml"), want);
+    let meta = member_str(&out, "meta.xml");
+    assert!(meta.starts_with("<?xml version='1.0' encoding='UTF-8'?>\n<office:document-meta"), "{meta}");
+    assert!(meta.contains("<dc:language>de-DE</dc:language>") && meta.ends_with("</office:document-meta>"), "{meta}");
+    // native: the file's own declaration, quoting and white space stay
+    let native = member_str(&f.merge(&d).unwrap(), "content.xml");
+    assert!(native.starts_with("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<office:document-content"), "{native}");
+    assert!(native.contains("P&apos;1") && native.contains("<text:p></text:p>") && native.ends_with(">\n"), "{native}");
+    // a part with a CDATA section gets the declaration only
+    let cdata = format!("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<office:document-content{ns}><office:body><office:text><text:p>Hi</text:p><![CDATA[x]]></office:text></office:body></office:document-content>");
+    let data = Pkg::new(cdata).build();
+    let mut d = f.extract(&data, &opts(None)).unwrap();
+    set(&mut d, 0, "Salut");
+    let out = member_str(&f.merge_with(&d, &MergeOptions::new().with_profile("locos")).unwrap(), "content.xml");
+    assert!(out.starts_with("<?xml version='1.0' encoding='UTF-8'?>\n<office:document-content") && out.contains("<![CDATA[x]]>") && out.contains("Salut"), "{out}");
+}

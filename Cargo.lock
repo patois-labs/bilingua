@@ -422,6 +422,7 @@ name = "bilingua-odf"
 version = "0.9.0"
 dependencies = [
  "bilingua-model",
+ "bilingua-xmltree",
  "bilingua-zip",
  "proptest",
  "serde_json",
