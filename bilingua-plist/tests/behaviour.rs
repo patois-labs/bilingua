@@ -346,3 +346,40 @@ fn binary_value_kinds_come_back() {
     let V::Dict(orig) = src else { panic!() };
     assert_eq!(items, orig[1..].to_vec());
 }
+
+/// pl-3: a rewritten binary plist shares equal strings, keys included (as plistlib does), so many bookmarks with the
+/// same keys do not grow the file; it reads back the same.
+#[test]
+fn rewritten_binary_plist_shares_equal_strings() {
+    use common::bp::{dict, s as bs, V};
+    let one = |n: usize| dict(vec![("WebBookmarkType", bs("WebBookmarkTypeLeaf")), ("URLString", bs(&format!("https://example.com/{}", n % 3))), ("Title", bs("Same title"))]);
+    let src = dict(vec![("CFBundleName", bs("Name")), ("Children", V::Arr((0..60).map(one).collect()))]);
+    let data = common::bp::write(&src);
+    let mut d = ex(F::Plist, &data);
+    set_nth(&mut d, 0, "Neu");
+    let out = merged(F::Plist, &d);
+    // the test writer repeats every string; the shared file is far smaller
+    assert!(out.len() * 2 < data.len(), "{} against {}", out.len(), data.len());
+    let V::Dict(mut items) = common::bp::read(&out) else { panic!() };
+    assert_eq!(items.remove(0).1, bs("Neu"));
+    let V::Dict(orig) = src else { panic!() };
+    assert_eq!(items, orig[1..].to_vec());
+}
+
+/// pl-3 / FOLLOWUPS: the CamelCase rule decides whether a string of the file being read is text; a merge writes a
+/// translation whatever its shape, and the unit's state comes from the source text it was extracted with.
+#[test]
+fn a_camel_case_translation_is_written_whatever_its_shape() {
+    let src = plist("<dict><key>Greeting</key><string>Welcome back</string></dict>");
+    let mut d = ex(F::Plist, &src);
+    assert_eq!(texts(&d), ["Welcome back"]);
+    set_nth(&mut d, 0, "WillkommenZurueckMeinFreund");
+    let out = merged(F::Plist, &d);
+    assert!(s(&out).contains("<string>WillkommenZurueckMeinFreund</string>"), "{}", s(&out));
+    // a binary file is rewritten the same way
+    let bin = common::bp::write(&common::bp::dict(vec![("Greeting", common::bp::s("Welcome back"))]));
+    let mut b = ex(F::Plist, &bin);
+    set_nth(&mut b, 0, "WillkommenZurueckMeinFreund");
+    let out = merged(F::Plist, &b);
+    assert_eq!(common::bp::read(&out), common::bp::dict(vec![("Greeting", common::bp::s("WillkommenZurueckMeinFreund"))]));
+}
