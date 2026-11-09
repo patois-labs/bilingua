@@ -5,8 +5,8 @@
 //!
 //! * `\0U<n>\0`  the content of unit `n` (a nested unit inside a protected element), rendered where it stands;
 //! * `\0A<n>\0`  the value of translatable attribute unit `n`, inside a start tag;
-//! * `\0L<attr>|<0 or 1>\0 ... \0l\0`  around the root start tag: the language attribute to update (or add, `1`) on a
-//!   target-language merge;
+//! * `\0L<attr>|<0 or 1>[|<first value>]\0 ... \0l\0`  around the root start tag: the language attribute to update (or
+//!   add, `1`) on a target-language merge, and the first value the file gives that attribute;
 //! * `\0N<attr>\0 ... \0l\0 ... \0n\0`  around the start tag, and after the end tag, of a nested (not inline) element
 //!   that holds units and declares a language itself: on a target-language merge the attribute is changed only if
 //!   it still names the source language and at least one unit between the markers is written with a target that
@@ -51,6 +51,9 @@ pub(crate) struct Emit<'a, 'b> {
     pub lang: Option<(String, bool)>,
     /// Nested elements whose own language attribute is restamped (see the `N` marker).
     pub restamp: std::collections::HashSet<u32>,
+    /// The first value of the language attribute in the file, in document order (the stand-in for the source language
+    /// under the LocOS profile when the root declares none).
+    pub first_lang: Option<String>,
 }
 
 impl Emit<'_, '_> {
@@ -61,7 +64,10 @@ impl Emit<'_, '_> {
         let stamp = if is_root { self.lang.as_ref() } else { None };
         let nested = !is_root && self.restamp.contains(&el);
         if let Some((a, add)) = stamp {
-            out.push_str(&format!("\0L{a}|{}\0", u8::from(*add)));
+            match &self.first_lang {
+                Some(f) => out.push_str(&format!("\0L{a}|{}|{f}\0", u8::from(*add))),
+                None => out.push_str(&format!("\0L{a}|{}\0", u8::from(*add))),
+            }
         } else if nested {
             if let Some((a, _)) = &self.lang {
                 out.push_str(&format!("\0N{a}\0"));
@@ -213,7 +219,10 @@ pub(crate) fn build_document(t: &Tree, p: &Planned, notes: &[String], alt: &std:
         // an inline element's tags are unit codes, which carry no end marker: never restamped
         restamp.retain(|&el| p.role[el as usize] != ROLE_INLINE && t.attrs_of(el).iter().any(|x| t.attr_qname(x) == a.as_str()));
     }
-    let em = Emit { t, p, attr_unit, lang, restamp };
+    let first_lang = lang.as_ref().and_then(|(a, _)| {
+        (0..t.els.len() as u32).find_map(|el| t.attrs_of(el).iter().find(|x| t.attr_qname(x) == a.as_str()).map(|x| t.attr_raw(x).to_string()))
+    });
+    let em = Emit { t, p, attr_unit, lang, restamp, first_lang };
     // skeleton parts
     let mut whole = String::with_capacity(t.text.len() + 64);
     for it in &t.prolog {
@@ -447,6 +456,10 @@ pub(crate) struct Merger<'d> {
     lang_start: Option<(usize, String, bool, bool)>,
     /// The language the root declared in the source (the stand-in for the source language when the document has none).
     root_lang: Option<String>,
+    /// The first value of the language attribute anywhere in the file (from the `L` marker).
+    first_lang: Option<String>,
+    /// LocOS profile: the source language is the root's, else the first one the file declares, never the project's.
+    locos: bool,
     /// Units already written: a well-formed skeleton names each unit once, so a second use (a hand-edited or
     /// hostile document, possibly a cycle or an exponential fan-out) is refused.
     seen: Vec<bool>,
@@ -480,13 +493,15 @@ enum Work<'d> {
 }
 
 impl<'d> Merger<'d> {
-    pub(crate) fn new(doc: &'d Document, lang_tag: Option<String>) -> Merger<'d> {
+    pub(crate) fn new(doc: &'d Document, lang_tag: Option<String>, locos: bool) -> Merger<'d> {
         Merger {
             doc,
             out: String::new(),
             lang_tag,
             lang_start: None,
             root_lang: None,
+            first_lang: None,
+            locos,
             seen: vec![false; doc.units.len()],
             frames: Vec::new(),
             stag_changed: false,
@@ -591,7 +606,9 @@ impl<'d> Merger<'d> {
                     self.render_attr(i)?;
                 }
                 "L" => {
-                    if let (Some(_), Some((a, add))) = (&self.lang_tag, arg.split_once('|')) {
+                    if let (Some(_), Some((a, rest))) = (&self.lang_tag, arg.split_once('|')) {
+                        let (add, first) = rest.split_once('|').map_or((rest, None), |(x, f)| (x, Some(f.to_string())));
+                        self.first_lang = first;
                         self.lang_start = Some((self.out.len(), a.to_string(), add == "1", false));
                     }
                 }
@@ -609,10 +626,15 @@ impl<'d> Merger<'d> {
                                 // (no source language anywhere: the first language the file declares is its source);
                                 // the edit waits for the end marker, which knows whether anything inside was changed
                                 let old = lang_value(&self.out[at..], &attr);
-                                if self.doc.source_lang.is_none() && self.root_lang.is_none() {
+                                if !self.locos && self.doc.source_lang.is_none() && self.root_lang.is_none() {
                                     self.root_lang = old.clone();
                                 }
-                                let src = self.doc.source_lang.clone().or_else(|| self.root_lang.clone());
+                                let src = if self.locos {
+                                    // LocOS: the root's own language, else the first one declared anywhere in the file
+                                    self.root_lang.clone().or_else(|| self.first_lang.clone()).or_else(|| old.clone())
+                                } else {
+                                    self.doc.source_lang.clone().or_else(|| self.root_lang.clone())
+                                };
                                 let source = matches!((old, src), (Some(o), Some(s)) if same_lang(&o, &s));
                                 let changed = std::mem::take(&mut self.stag_changed);
                                 self.frames.push(Frame { s: at, e: self.out.len(), attr, source, changed });
@@ -833,8 +855,8 @@ fn set_lang_scan_q(stag: &str, attr: &str) -> Option<(usize, usize, char)> {
     hit
 }
 
-pub(crate) fn merge_parts<'d>(doc: &'d Document, parts: &'d [SkelPart], lang_tag: Option<String>) -> Result<String, Error> {
-    let mut m = Merger::new(doc, lang_tag);
+pub(crate) fn merge_parts<'d>(doc: &'d Document, parts: &'d [SkelPart], lang_tag: Option<String>, locos: bool) -> Result<String, Error> {
+    let mut m = Merger::new(doc, lang_tag, locos);
     for p in parts {
         match p {
             SkelPart::Raw(s) => m.resolve(s)?,

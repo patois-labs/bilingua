@@ -374,3 +374,29 @@ fn generic_nested_source_language_restamped_without_root_language() {
     // nothing translated: untouched
     assert_eq!(f.merge(&ex_to(&f, d, "de-DE")).unwrap(), d);
 }
+
+/// No language on the root, and the project says `en`: LocOS takes the first language the file declares as the source
+/// (`ta` here), not the project's. Under the profile the `ta` passage is restamped and the `en` one stays; without the
+/// profile the project's language decides.
+#[test]
+fn locos_nested_source_is_the_first_declared_language() {
+    let f = generic();
+    let d = br#"<r><h><title xml:lang="ta">Kalam</title></h><d xml:lang="en"><p>Hello</p></d></r>"#;
+    let build = |locos: bool| {
+        let o = ExtractOptions::new().with_source_lang("en").with_target_lang("de-DE");
+        let mut doc = f.extract(d, &o).expect("extract");
+        for i in 0..doc.units.len() {
+            set(&mut doc, i, "Neu");
+        }
+        let m = MergeOptions::new().with_profile(if locos { Some("locos".to_string()) } else { None });
+        s(&f.merge_with(&doc, &m).expect("merge"))
+    };
+    assert_eq!(
+        build(true),
+        r#"<r><h><title xml:lang="de-DE">Neu</title></h><d xml:lang="en"><p>Neu</p></d></r>"#
+    );
+    assert_eq!(
+        build(false),
+        r#"<r><h><title xml:lang="ta">Neu</title></h><d xml:lang="de-DE"><p>Neu</p></d></r>"#
+    );
+}
