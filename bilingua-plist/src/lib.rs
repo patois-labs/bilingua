@@ -395,6 +395,11 @@ fn merge_impl(fmt: Fmt, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, 
     if let Some(lang) = wants_fill(fmt, doc, opts) {
         out = fill_xml(&out, lang)?;
     }
+    // A UTF-16 plist stays UTF-16 with its byte order mark whatever the output encoding is (LocOS writes the source's
+    // codec back). Writing it as 8-bit bytes would leave a file that declares UTF-16 over bytes that are not.
+    if encoding.starts_with("utf-16") {
+        return enc::encode_text(&out, encoding);
+    }
     enc::encode_text_with(&out, encoding, opts)
 }
 

@@ -339,3 +339,31 @@ fn test_web_surface_stringsdict() {
     assert!(other.contains("%lld") && !text(&out).contains('\u{27e6}'), "{other}");
     assert!(text(&out).contains("<key>NSStringLocalizedFormatKey</key>\n\t\t<string>%#@files@</string>"));
 }
+
+#[test]
+fn utf16_plist_stays_utf16_when_output_is_utf8() {
+    // a UTF-16 LE stringsdict with a mark: a changed build keeps UTF-16 and the mark, also with UTF-8 output
+    let body = "<?xml version=\"1.0\" encoding=\"UTF-16\"?>\n<plist version=\"1.0\"><dict><key>k</key><dict>\
+<key>NSStringLocalizedFormatKey</key><string>%#@n@</string><key>n</key><dict>\
+<key>NSStringFormatSpecTypeKey</key><string>NSStringPluralRuleType</string>\
+<key>NSStringFormatValueTypeKey</key><string>d</string><key>one</key><string>%d file</string>\
+<key>other</key><string>%d files</string></dict></dict></dict></plist>\n";
+    let mut src = vec![0xFF, 0xFE];
+    for u in body.encode_utf16() {
+        src.extend_from_slice(&u.to_le_bytes());
+    }
+    let f = Stringsdict;
+    for profile in [None, Some("locos")] {
+        let o = ExtractOptions::new().with_target_lang("de").with_profile(profile);
+        let mut d = f.extract(&src, &o).unwrap();
+        set_nth(&mut d, 0, "Eine Datei");
+        let mo = MergeOptions::new().with_output_encoding(OutputEncoding::Utf8).with_profile(profile);
+        let out = f.merge_with(&d, &mo).unwrap();
+        assert!(out.starts_with(&[0xFF, 0xFE]), "UTF-16 LE mark kept");
+        assert_eq!(out.len() % 2, 0);
+        let back: Vec<u16> = out[2..].chunks(2).map(|c| u16::from_le_bytes([c[0], c[1]])).collect();
+        let t = String::from_utf16(&back).unwrap();
+        assert!(t.starts_with("<?xml version=\"1.0\" encoding=\"UTF-16\"?>"));
+        assert!(t.contains("Eine Datei"));
+    }
+}
