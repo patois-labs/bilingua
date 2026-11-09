@@ -112,8 +112,7 @@ fn matches_locos_on_generated_files() {
             match (d.as_str(), try_build(fmt, &data, &tr)) {
                 (Some(dig), Ok(out)) => {
                     if fnv(&out) != dig {
-                        diffs.push(format!("{name}: build {label}
-  rust  {:?}", String::from_utf8_lossy(&out)));
+                        diffs.push(format!("{name}: build {label}\n  rust  {:?}", String::from_utf8_lossy(&out)));
                     }
                 }
                 // the one kept difference: a MicroDVD control code typed (or made by joining pieces) that LocOS still
