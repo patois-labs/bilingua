@@ -206,6 +206,9 @@ fn matches_locos_on_random_files() {
         for (label, d) in c["builds"].as_object().unwrap() {
             let b = undo_dlist(&run(&data, &mapping(label, &want), None));
             let got = fnv(&b);
+            if got == d.as_str().unwrap() && MARK_REF.contains(&name) && label == "zh" {
+                bad.push(format!("{name}: in MARK_REF but the zh build now matches LocOS: take it off the list"));
+            }
             if got != d.as_str().unwrap() {
                 if CELL_GUARD.contains(&name) && !(MARK_REF.contains(&name) && label == "zh") && beyond_cell_guard(&norms, name, label, &b) {
                     bad.push(format!("{name}: build {label} differs beyond the cell guard"));

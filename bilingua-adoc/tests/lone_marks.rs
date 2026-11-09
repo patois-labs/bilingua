@@ -62,3 +62,12 @@ fn plain_backticks_beside_a_monospace_code_stay_plain() {
     pseudo_round_trip("Use `x` between and `</GridPanel>`in the generated file.
 ");
 }
+
+#[test]
+fn an_escaped_mark_keeps_its_closing_mark() {
+    // `\*not*` glued to a monospace code: the line reads back the same as typed, so neither the `*` nor the code's
+    // backticks change (a reference would leave the escape without its pair)
+    let doc = "Say \*not* `code` here.\n";
+    let out = build_str(doc.as_bytes(), &[(0, "Say\u{27E6}x1\u{27E7}not*\u{27E6}x2\u{27E7}here.")]);
+    assert_eq!(out, "Say\*not*`code`here.\n");
+}

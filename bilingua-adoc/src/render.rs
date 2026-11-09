@@ -434,19 +434,53 @@ fn unref(s: &str) -> String {
     s
 }
 
+/// One item of a line read back: its text (references of marks back as the characters), or a code by kind and label.
+#[derive(PartialEq)]
+enum Read {
+    Text(String),
+    Code(TagKind, Option<String>, Option<String>),
+}
+
+fn read_back(line: &str) -> Vec<Read> {
+    let (items, codes) = crate::inline::unit_of(line);
+    bilingua_model::merge_text(
+        items
+            .into_iter()
+            .map(|i| match i {
+                Inline::Text(t) => Inline::Text(unref(&t)),
+                x => x,
+            })
+            .collect(),
+    )
+    .into_iter()
+    .map(|i| match i {
+        Inline::Text(t) => Read::Text(t),
+        Inline::Tag { id, kind, .. } => {
+            let c = codes.get(&id);
+            let label = c.and_then(|c| c.label.clone());
+            // a standalone code keeps what it holds (`` `x` ``, `+p+`): its markup with the doubled edge marks folded
+            let raw = c.and_then(|c| c.standalone.as_deref()).map(|r| fold_edges(&unref(r)));
+            Read::Code(kind, label, raw)
+        }
+    })
+    .collect()
+}
+
+/// `` ``x`` `` as `` `x` ``: a run of one mark character at either end folded to one.
+fn fold_edges(r: &str) -> String {
+    let c: Vec<char> = r.chars().collect();
+    let (Some(&f), Some(&l)) = (c.first(), c.last()) else { return String::new() };
+    let a = if LONE_MARKS.contains(&f) { c.iter().take_while(|&&x| x == f).count() - 1 } else { 0 };
+    let b = if LONE_MARKS.contains(&l) { c.iter().rev().take_while(|&&x| x == l).count() - 1 } else { 0 };
+    if a + b >= c.len() {
+        return r.to_string();
+    }
+    c[a..c.len() - b].iter().collect()
+}
+
 /// `a` (the line written without shielded marks) reads back as the same codes and text as `b` (the shielded line).
+/// A code is compared by kind and label, not by its markup: a reference ends in `;`, after which a code's mark is
+/// written in its unconstrained form (`**b**` for `*b*`), which is the same code.
 fn same_reading(a: &str, b: &str) -> bool {
-    let (ia, ca) = crate::inline::unit_of(a);
-    let (ib, cb) = crate::inline::unit_of(b);
-    let dec = |v: Vec<Inline>| -> Vec<Inline> {
-        bilingua_model::merge_text(
-            v.into_iter()
-                .map(|i| match i {
-                    Inline::Text(t) => Inline::Text(unref(&t)),
-                    x => x,
-                })
-                .collect(),
-        )
-    };
-    ca == cb && dec(ia) == dec(ib)
+    read_back(a) == read_back(b)
 }
