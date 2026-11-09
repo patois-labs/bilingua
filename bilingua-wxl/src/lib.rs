@@ -453,7 +453,7 @@ fn render(unit: &Unit, nl: &str, keep_cr: bool) -> String {
         }
     }
     let full = format!("{}{}{}", hidden(unit, LEAD_KEY), out, hidden(unit, TRAIL_KEY));
-    encode_value(form, &full, form == "c", nl, flatten(&unit.source()).contains('\r'))
+    encode_value(form, &full, form == "c", nl, keep_cr && flatten(&unit.source()).contains('\r'))
 }
 
 /// The culture to write for a target locale: LocOS `html_lang(...).lower()`, or `None` when the tag is unusable.
