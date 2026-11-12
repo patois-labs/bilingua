@@ -53,4 +53,4 @@ From the command line: `bilingua extract page.docx --target es-ES -o page.xlf`, 
 - A published crate on crates.io.
 
 ## Where it is developed
-Bilingua is developed inside the CAT OS repository (`bilingua/`), which uses it, and mirrored here with its history.
+Bilingua is developed inside the ChatterCAT repository (`bilingua/`), which uses it, and mirrored here with its history.
