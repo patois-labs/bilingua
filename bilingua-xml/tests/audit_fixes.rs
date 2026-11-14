@@ -139,9 +139,10 @@ fn chained_descendant_steps_walk_the_tree_once() {
     let control = extract(&deep(&(rule("/*//*", "no") + &rule("//a[position() mod 2 = 0]", "yes")), depth, leaves), Limits::new()).expect("control");
     assert_eq!(chained.units.len(), leaves / 2);
     assert_eq!(unit_texts(&chained), unit_texts(&control));
-    // a positional predicate still sees each context node's own axis: the first descendant of the innermost <n>
-    // is the first leaf, which the outer <n> elements do not select as their first descendant
-    let first = extract(&deep(&(rule("//*", "no") + &rule("//n/descendant::*[1]", "yes")), 3, 4), Limits::new()).expect("positional");
-    assert_eq!(unit_texts(&first), vec!["t0".to_string()]);
+    // a positional predicate still sees each context node's own axis: from every <n>, the first descendant is its
+    // first child, which a single context node (the outer <n>) does not give for the inner ones
+    let sel = |s: &str| unit_texts(&extract(&deep(&(rule("//*", "yes") + &rule(s, "no")), 3, 4), Limits::new()).expect(s));
+    assert_eq!(sel("//n/descendant::*[1]"), sel("//n/*[1]"));
+    assert_ne!(sel("//n/descendant::*[1]"), sel("/r/n/descendant::*[1]"));
     assert!(start.elapsed() < Duration::from_secs(20), "took {:?}", start.elapsed());
 }

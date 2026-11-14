@@ -780,9 +780,10 @@ impl<'a, 'b> Ev<'a, 'b> {
                     // set, since it is normalised again after the step.
                     let mut floor = 4096usize;
                     // A descendant step from an element that lies inside another context element only finds nodes
-                    // the outer one finds too, so it is skipped when no predicate looks at a position: `//*//*` on a
-                    // deep document then walks the tree once instead of once per level.
-                    let covered = (cur.len() > 1 && matches!(st.axis, Axis::Descendant | Axis::DescendantOrSelf) && !st.preds.iter().any(uses_position))
+                    // the outer one finds too, so it is skipped when every predicate is certainly true or false for a
+                    // node (`[1]` is a position test): `//*//*` on a deep document then walks the tree once instead
+                    // of once per level.
+                    let covered = (cur.len() > 1 && matches!(st.axis, Axis::Descendant | Axis::DescendantOrSelf) && st.preds.iter().all(boolean_pred))
                         .then(|| self.covered(&cur));
                     for (k, n) in cur.iter().enumerate() {
                         if covered.as_ref().is_some_and(|c| c[k]) {
