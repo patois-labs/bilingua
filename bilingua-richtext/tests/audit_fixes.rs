@@ -4,6 +4,9 @@ use bilingua_model::*;
 use bilingua_richtext::*;
 use std::time::{Duration, Instant};
 
+/// Builds a file of `n` paragraphs for one filter.
+type Maker = Box<dyn Fn(usize) -> Vec<u8>>;
+
 fn opts() -> ExtractOptions {
     ExtractOptions::new().with_source_lang("en").with_target_lang("de-DE")
 }
@@ -68,7 +71,7 @@ fn every_filter_stops_at_the_unit_limit() {
         let b = "{\"object\":\"block\",\"type\":\"paragraph\",\"paragraph\":{\"rich_text\":[{\"type\":\"text\",\"text\":{\"content\":\"a\"}}]}}";
         format!("[{}]", vec![b; n].join(",")).into_bytes()
     };
-    let cases: Vec<(&dyn Filter, Box<dyn Fn(usize) -> Vec<u8>>)> =
+    let cases: Vec<(&dyn Filter, Maker)> =
         vec![(&Adf, Box::new(adf)), (&Contentful, Box::new(contentful)), (&Sanity, Box::new(sanity)), (&Notion, Box::new(notion))];
     for (f, make) in &cases {
         let doc = f.extract(&make(50), &with_limits(l)).unwrap_or_else(|e| panic!("{}: {e:?}", f.id()));
