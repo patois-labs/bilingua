@@ -378,8 +378,9 @@ impl Filter for Mo {
         bilingua_model::check_own_options(self, &opts.format_options)?;
         bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
         let original = original_bytes(doc)?;
-        // The file was checked when it was extracted; read it again under limits only the file size bounds.
-        let limits = Limits::new().with_max_units(usize::MAX).with_max_unit_chars(usize::MAX / 16);
+        // The stored catalog is read again under the caller's merge limits, not limits lifted on the word of the
+        // Document (BILI-105); a file extracted under raised limits is merged with the same ones.
+        let limits = opts.limits();
         let cat = read::read(original, &limits)?;
         let codec = cat.codec;
         let mut entries = cat.entries;

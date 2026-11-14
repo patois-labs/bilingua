@@ -335,17 +335,19 @@ fn locos_profile_splits_lines_where_python_does() {
     assert!(!native.contains('\n') && native.contains("\"x\": 1.50"), "{native}");
 }
 
-/// H5: a catalog extracted with a nesting limit above the default is read again by the merge, whatever the limit
-/// the extraction used (the document does not carry it).
+/// H5: a catalog extracted with a nesting limit above the default is read again by a merge given the same limits
+/// (the document does not carry them: they are the caller's policy, BILI-105); the default merge limits refuse it.
 #[test]
 fn merge_reads_a_catalog_extracted_at_a_higher_depth_limit() {
     let deep = format!("{}1{}", "[".repeat(300), "]".repeat(300));
     let src = format!("{{\n  \"sourceLanguage\" : \"en\",\n  \"strings\" : {{\n    \"Hi\" : {{\n      \"x\" : {deep}\n    }}\n  }},\n  \"version\" : \"1.0\"\n}}\n");
     assert!(Xcstrings.extract(src.as_bytes(), &opts(Some("de"))).is_err(), "the default limit refuses it");
-    let o = opts(Some("de")).with_limits(Limits::new().with_max_xml_depth(512));
+    let raised = Limits::new().with_max_xml_depth(512);
+    let o = opts(Some("de")).with_limits(raised);
     let mut d = Xcstrings.extract(src.as_bytes(), &o).unwrap();
     set_all(&mut d, &[(0, "Hallo")]);
-    for m in [MergeOptions::new(), MergeOptions::new().with_profile("locos")] {
+    assert!(Xcstrings.merge_with(&d, &MergeOptions::new()).is_err(), "the default merge limits refuse it");
+    for m in [MergeOptions::new().with_limits(raised), MergeOptions::new().with_profile("locos").with_limits(raised)] {
         let out = Xcstrings.merge_with(&d, &m).unwrap();
         assert!(String::from_utf8(out).unwrap().contains("\"value\" : \"Hallo\""));
     }
@@ -376,7 +378,9 @@ fn on_stack<T: Send + 'static>(bytes: usize, f: impl FnOnce() -> T + Send + 'sta
 #[test]
 fn merge_of_a_catalog_at_the_merge_depth_limit_does_not_overflow_the_stack() {
     let stack = if cfg!(debug_assertions) { 4 << 20 } else { 1 << 20 };
-    let both = || [MergeOptions::new(), MergeOptions::new().with_profile("locos")];
+    // the merge is given a depth limit far above its own cap: the cap still holds
+    let deep = Limits::new().with_max_xml_depth(8192);
+    let both = move || [MergeOptions::new().with_limits(deep), MergeOptions::new().with_profile("locos").with_limits(deep)];
     let src = deep_catalog(1020);
     let o = opts(Some("de")).with_limits(Limits::new().with_max_xml_depth(1024));
     let mut d = on_stack(64 << 20, move || Xcstrings.extract(src.as_bytes(), &o).unwrap());

@@ -46,10 +46,11 @@ dict may list only the fields it changes).
 | `zip_ratio_floor_bytes` | 1 MB | `ZIP_RATIO_MIN_BYTES` |
 | `max_paragraphs` | 50 000 | `DOCX_MAX_PARAGRAPHS` |
 | `xlsx_max_cells` / `_rows` / `_cell_chars` / `_total_text_chars` | 500 000 / 100 000 / 32 767 / 8 MB | `XLSX_MAX_*` |
+| `max_output_bytes` (merge only) | 1 GB | none |
 
 A refusal is `Error::Limit(LimitError { kind: LimitKind, msg })`: `kind` is a stable value to branch on
 (`input_bytes`, `lines`, `units`, `unit_chars`, `xml_depth`, `xml_elements`, `xml_entities`, `paragraphs`,
-`spreadsheet`, `zip_entries`, `zip_bytes`, `zip_ratio`, `zip_malformed`), `msg` is short and safe to show the person
+`spreadsheet`, `zip_entries`, `zip_bytes`, `zip_ratio`, `zip_malformed`, `output_bytes`), `msg` is short and safe to show the person
 who uploaded the file. Unreadable text is `Error::Encoding(msg)`.
 
 **What a new format crate calls** (all in `guard`):

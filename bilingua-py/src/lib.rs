@@ -238,15 +238,7 @@ fn extract_doc(
 ) -> PyResult<Extracted> {
     let g = parse_granularity(granularity).map_err(|f| to_py_err(py, f))?;
     let prof = resolve_profile(profile.as_deref(), profile_version).map_err(|f| to_py_err(py, f))?;
-    // A dict of limit names (see `Limits`); anything left out keeps Localization OS's default.
-    let limits: Option<engine::Limits> = match limits {
-        None => None,
-        Some(l) if l.is_none() => None,
-        Some(l) => {
-            let v = from_py(l, 0).map_err(|f| to_py_err(py, f))?;
-            Some(serde_json::from_value(v).map_err(|e| to_py_err(py, Fail::new("invalid_argument", format!("limits: {e}"))))?)
-        }
-    };
+    let limits = parse_limits(py, limits)?;
     // Options only one format knows, e.g. {"ftl.translate_terms": True, "csv.columns": "source=1"}; values are
     // str, bool or int (sent to the engine as text: true/false, decimal).
     let format_options: std::collections::BTreeMap<String, String> = match format_options {
@@ -447,9 +439,12 @@ fn doc_in(obj: &Bound<'_, PyAny>) -> Result<(DocIn, Option<Value>), Fail> {
 ///
 /// Merge options are keyword-only, like extract's: `output_encoding` ("keep", the default, or "utf-8", which
 /// writes UTF-8 and makes charset declarations say so) and `stamp_target_always` (bool: stamp the target language
-/// and fill plurals even when nothing is translated, as Localization OS does).
+/// and fill plurals even when nothing is translated, as Localization OS does). `limits` bounds the merge (the
+/// stored Document's size and what it may make the merge write); a file extracted under raised limits is merged
+/// with the same ones.
 #[pyfunction]
-#[pyo3(signature = (document, *, output_encoding=None, stamp_target_always=None, profile=None, format_options=None, profile_version=None))]
+#[pyo3(signature = (document, *, output_encoding=None, stamp_target_always=None, profile=None, format_options=None, profile_version=None, limits=None))]
+#[allow(clippy::too_many_arguments)] // one keyword argument per option
 fn merge<'py>(
     py: Python<'py>,
     document: &Bound<'py, PyAny>,
@@ -458,15 +453,28 @@ fn merge<'py>(
     profile: Option<String>,
     format_options: Option<&Bound<'py, PyAny>>,
     profile_version: Option<u32>,
+    limits: Option<&Bound<'py, PyAny>>,
 ) -> PyResult<Bound<'py, PyBytes>> {
     // the parser record extract adds is information for the caller, not part of the model's document
     let (doc, stamped) = doc_in(document).map_err(|f| to_py_err(py, f))?;
-    let opts = merge_options(py, &doc.format(), stamped.as_ref(), output_encoding, stamp_target_always, profile, format_options, profile_version)?;
+    let opts = merge_options(py, &doc.format(), stamped.as_ref(), output_encoding, stamp_target_always, profile, format_options, profile_version, limits)?;
     let bytes = guarded(py, move || {
         let doc = doc.into_document()?;
         Ok(engine::merge_with(&doc, &opts)?)
     })?;
     Ok(PyBytes::new(py, &bytes))
+}
+
+/// A dict of limit names (see `Limits`); anything left out keeps Localization OS's default.
+fn parse_limits(py: Python<'_>, limits: Option<&Bound<'_, PyAny>>) -> PyResult<Option<engine::Limits>> {
+    match limits {
+        None => Ok(None),
+        Some(l) if l.is_none() => Ok(None),
+        Some(l) => {
+            let v = from_py(l, 0).map_err(|f| to_py_err(py, f))?;
+            Ok(Some(serde_json::from_value(v).map_err(|e| to_py_err(py, Fail::new("invalid_argument", format!("limits: {e}"))))?))
+        }
+    }
 }
 
 /// `merge`'s keywords as MergeOptions, for a document of `format` whose parser record is `stamped`.
@@ -480,6 +488,7 @@ fn merge_options(
     profile: Option<String>,
     format_options: Option<&Bound<'_, PyAny>>,
     profile_version: Option<u32>,
+    limits: Option<&Bound<'_, PyAny>>,
 ) -> PyResult<engine::MergeOptions> {
     // a profile gives the defaults (LocOS: UTF-8 out except ini, strings, dxf, txt, properties, xaml and resjson, stamp always);
     // keywords override them. Without a version in the call, the version the document was extracted under is used.
@@ -505,6 +514,9 @@ fn merge_options(
     }
     if let Some(b) = stamp_target_always {
         opts = opts.with_stamp_target_always(b);
+    }
+    if let Some(l) = parse_limits(py, limits)? {
+        opts = opts.with_limits(l);
     }
     Ok(opts)
 }

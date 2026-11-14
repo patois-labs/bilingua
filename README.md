@@ -240,6 +240,17 @@ Bilingua is built to open files from people you do not know.
   every text format. Zip-based formats (Office, OpenDocument, IDML, EPUB, packages) keep every untouched entry's
   compressed bytes, compression method and time stamp as they were; only the parts holding translated text are
   written again.
+- **A stored Document is host data.** Between extract and merge a Document (the JSON, the Python dict, the CLI's
+  `.skl.json` sidecar) holds the file's whole skeleton, and merge writes what it says. Keep a stored Document where
+  uploaders, translators and other tenants cannot write it: send a translator the XLIFF, never the sidecar, and
+  merge the returned XLIFF against your own copy. Merge still bounds what a changed Document can make it do, under
+  the caller's merge limits (`MergeOptions::limits`, `limits=` in Python, the defaults otherwise): no more units,
+  zip entries or unit slots in the skeleton than an extraction under those limits makes, no output over
+  `max_output_bytes` (1 GB), no zip entry name that the zip reader would refuse, and no stored target with a tag its
+  source does not have (or, outside the `locos` profile, a paired tag more often than the source). A format that
+  re-reads stored bytes at merge (email, MO, xcstrings, EPUB, Flare) reads them under the same limits, so a file
+  extracted under raised limits is merged with the same ones. A holder of the Document can still change any text,
+  as a translator can.
 - **Round trips are tested.** Every format round-trips a full pseudo-translation (merge, reopen, compare). Format
   crates have hostile-input tests (truncated files, zip and XML bombs, deep nesting, bad encodings).
 

@@ -175,6 +175,7 @@ def merge(
     profile: str | None = None,
     format_options: Mapping[str, FormatOptionValue] | None = None,
     profile_version: int | None = None,
+    limits: Mapping[str, int] | None = None,
 ) -> bytes:
     """Writes a Document back to file bytes. Every option is keyword-only. `output_encoding="utf-8"` writes UTF-8
     whatever the file's own encoding ("keep" is the default); `stamp_target_always` stamps the target language and
@@ -257,6 +258,7 @@ class DocumentHandle:
         profile: str | None = None,
         format_options: Mapping[str, FormatOptionValue] | None = None,
         profile_version: int | None = None,
+        limits: Mapping[str, int] | None = None,
     ) -> bytes: ...
     @property
     def format(self) -> str: ...

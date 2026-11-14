@@ -39,3 +39,9 @@ prolonged sound mark and middle dot are not counted. Hangul is counted by space-
 
 Only XLIFF 2.1 (no 1.2). No TM or glossary options. `merge` needs the sidecar file next to the XLIFF.
 The sidecar is the whole document model as JSON; its shape may change until Bilingua 1.0.
+
+The sidecar is your data, not the translator's: it holds the file's skeleton, and `merge` writes what it says. Send
+the translator only the `.xlf`, keep the sidecar where only you can write it, and merge the returned XLIFF against
+your copy (`--skeleton path`). Merge refuses a sidecar that was changed into something no extraction makes (more
+unit slots than the unit limit allows, output over 1 GB, an unsafe zip entry name, a target with a tag its source
+does not have); see the safety model in the workspace README.

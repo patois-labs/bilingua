@@ -486,6 +486,8 @@ pub fn write_zip_parts(entries: &[(EntryMeta, Body<'_>)]) -> Result<Vec<u8>, Err
         |name: &str, e: &dyn std::fmt::Display| Error::Write(format!("cannot write {name:?}: {e}"));
     let mut w = zip::ZipWriter::new(Cursor::new(Vec::new()));
     for (m, body) in entries {
+        // the names come from a stored Document: one that never passed the reader's check is not written (BILI-105)
+        safe_name(&m.name)?;
         let dt = m
             .modified
             .and_then(|t| {
@@ -563,6 +565,16 @@ mod tests {
         // members are handed back as files, refuses them in `bilingua::batch::safe_member_path`)
         for ok in ["OEBPS/aux.xhtml", "word/con.xml", "CON", "nul.txt", "com1.xml"] {
             assert!(safe_name(ok).is_ok(), "{ok:?} must pass");
+        }
+    }
+
+    /// BILI-105: the writer checks every name it is given, since a stored Document can carry any.
+    #[test]
+    fn writer_refuses_an_unsafe_name() {
+        let meta = |name: &str| EntryMeta { name: name.into(), stored: false, dir: false, modified: None };
+        assert!(write_zip_parts(&[(meta("word/document.xml"), Body::Plain(b"x"))]).is_ok());
+        for bad in ["../x.xml", "/abs.xml", "a/b:stream", "a\0b"] {
+            assert!(write_zip_parts(&[(meta(bad), Body::Plain(b"x"))]).is_err(), "{bad:?} must be refused");
         }
     }
 }

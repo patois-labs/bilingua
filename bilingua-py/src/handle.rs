@@ -74,7 +74,8 @@ impl DocumentHandle {
 
     /// `merge(handle.to_dict(), ...)`, without the dict: the same keywords, the same defaults (the profile version
     /// the Document was extracted under, from its parser record).
-    #[pyo3(signature = (*, output_encoding=None, stamp_target_always=None, profile=None, format_options=None, profile_version=None))]
+    #[pyo3(signature = (*, output_encoding=None, stamp_target_always=None, profile=None, format_options=None, profile_version=None, limits=None))]
+    #[allow(clippy::too_many_arguments)] // one keyword argument per option
     fn merge<'py>(
         &self,
         py: Python<'py>,
@@ -83,8 +84,9 @@ impl DocumentHandle {
         profile: Option<String>,
         format_options: Option<&Bound<'py, PyAny>>,
         profile_version: Option<u32>,
+        limits: Option<&Bound<'py, PyAny>>,
     ) -> PyResult<Bound<'py, PyBytes>> {
-        let opts = merge_options(py, &self.doc.format, self.parser.as_ref(), output_encoding, stamp_target_always, profile, format_options, profile_version)?;
+        let opts = merge_options(py, &self.doc.format, self.parser.as_ref(), output_encoding, stamp_target_always, profile, format_options, profile_version, limits)?;
         let doc = Arc::clone(&self.doc);
         let bytes = guarded(py, move || Ok(engine::merge_with(&doc, &opts)?))?;
         Ok(PyBytes::new(py, &bytes))

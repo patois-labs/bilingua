@@ -36,6 +36,12 @@ open("messages.es.po", "wb").write(bilingua.merge(doc))
   to nothing on purpose: written empty). Merge options are keyword-only: `output_encoding` (`"keep"` or `"utf-8"`,
   which writes UTF-8 and makes charset declarations say so) and `stamp_target_always` (stamp the target language and
   fill plurals even when nothing is translated, as Localization OS does).
+- `merge(..., limits=None)`: the limits the merge runs under, as for `extract` (the defaults when left out). A file
+  extracted under raised limits is merged with the same ones. The Document dict is your data: merge writes what its
+  skeleton says, so keep a stored one where uploaders, translators and other tenants cannot write it. Merge still
+  refuses a Document no extraction under these limits makes (too many units or unit slots, output over
+  `max_output_bytes`, 1 GB by default, an unsafe zip entry name) and a target with a tag its source does not have
+  (`invented_tag`) or, outside the `locos` profile, a paired tag more often than the source (`duplicated_tag`).
 - `extract(..., format_options=None)`: a dict of `"<format>.<name>"` options to str, bool or int values, e.g.
   `{"ftl.translate_terms": True, "csv.columns": "source=1, target.de=2"}`. A key no format declares, or a value of the
   wrong kind, raises `invalid_argument`.

@@ -1235,6 +1235,22 @@ impl Document {
     }
 }
 
+/// The merge-time tag check ([`guard::check_targets`]): `check_tags` with standalone repeats allowed, or with
+/// `counts` off only the rule that every tag comes from the source.
+pub(crate) fn check_target_tags(source: &[Inline], target: &[Inline], counts: bool) -> Result<(), Error> {
+    if counts {
+        return check_tags(source, target, true);
+    }
+    for i in target {
+        if let Inline::Tag { id, kind, .. } = i {
+            if !source.iter().any(|s| matches!(s, Inline::Tag { id: sid, kind: sk, .. } if sid == id && sk == kind)) {
+                return Err(Error::InventedTag(id.clone()));
+            }
+        }
+    }
+    Ok(())
+}
+
 fn check_tags(source: &[Inline], target: &[Inline], repeat_standalone: bool) -> Result<(), Error> {
     let mut allowed: BTreeMap<(&str, TagKind), usize> = BTreeMap::new();
     for i in source {
