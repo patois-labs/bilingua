@@ -1515,6 +1515,11 @@ pub struct MergeOptions {
     /// Merge-time format options, as for [`ExtractOptions::format_options`] (checked against the same keys).
     #[serde(skip_serializing_if = "BTreeMap::is_empty")]
     pub format_options: BTreeMap<String, String>,
+    /// Safety limits for a merge that reads a stored package again (EPUB, MadCap Flare); `None` uses
+    /// [`Limits::default`]. They are the caller's policy: a merge never takes limits from the document, so a file
+    /// extracted under raised limits is merged under the same ones only when the caller passes them here again.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub limits: Option<Limits>,
 }
 
 impl MergeOptions {
@@ -1540,6 +1545,15 @@ impl MergeOptions {
     /// True when this profile is on.
     pub fn is_profile(&self, name: &str) -> bool {
         self.profile.as_deref() == Some(name)
+    }
+    /// Sets the safety limits for this merge, or `None` for [`Limits::default`].
+    pub fn with_limits(mut self, limits: impl Into<Option<Limits>>) -> MergeOptions {
+        self.limits = limits.into();
+        self
+    }
+    /// The limits in force: the caller's, or the defaults.
+    pub fn limits(&self) -> Limits {
+        self.limits.unwrap_or_default()
     }
     /// Sets one format option (`"<format>.<name>"`).
     pub fn with_format_option(mut self, key: impl Into<String>, value: impl ToString) -> MergeOptions {

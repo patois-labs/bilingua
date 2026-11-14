@@ -47,7 +47,7 @@ use xml::Edits;
 const ARCHIVE: &str = "epub";
 /// The skeleton entry that holds the options the file was read with. The unit ids depend on `include_locked`
 /// (locked text is numbered too), so merge must use the same value. The limits are written for the record only:
-/// merge reads the archive again under `Limits::default()`.
+/// merge reads the archive again under the caller's `MergeOptions::limits`.
 const OPTIONS: &str = "epub-options";
 
 #[derive(serde::Serialize)]
@@ -193,8 +193,9 @@ fn merge_epub(doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
         .transpose()
         .map_err(|e| Error::Write(format!("the epub skeleton's options are unreadable: {e}")))?
         .unwrap_or(StoredOpts { include_locked: false });
-    // the stored archive is read again under the default limits, whatever the document says it was read with
-    let limits = Limits::default();
+    // the stored archive is read again under the caller's merge limits (`MergeOptions::limits`, the defaults
+    // unless raised), whatever the document says it was read with
+    let limits = opts.limits();
     let entries = read_package(original, &limits)?;
     let pkg = Package::open(&entries, &limits)?;
     let by_id: HashMap<&str, &Unit> = doc.units.iter().map(|u| (u.id.as_str(), u)).collect();

@@ -53,7 +53,7 @@ use topic::{translated, Topic};
 const ARCHIVE: &str = "flprjzip";
 /// The skeleton entry that holds the options the file was read with: unit ids depend on `include_locked`, so merge
 /// uses the same value. The limits are written for the record only: merge reads the archive again under
-/// `Limits::default()`.
+/// the caller's `MergeOptions::limits`.
 const OPTIONS: &str = "flprjzip-options";
 
 #[derive(serde::Serialize)]
@@ -230,8 +230,9 @@ fn merge_flare(doc: &Document, mopts: &MergeOptions) -> Result<Vec<u8>, Error> {
         .transpose()
         .map_err(|e| Error::Write(format!("the flprjzip skeleton's options are unreadable: {e}")))?
         .unwrap_or(StoredOpts { include_locked: false });
-    // the stored archive is read again under the default limits, whatever the document says it was read with
-    let limits = Limits::default();
+    // the stored archive is read again under the caller's merge limits (`MergeOptions::limits`, the defaults
+    // unless raised), whatever the document says it was read with
+    let limits = mopts.limits();
     let pkg = Package::open(original, &limits)?;
     let by_id: HashMap<&str, &Unit> = doc.units.iter().map(|u| (u.id.as_str(), u)).collect();
     let lang_ref = lang.as_ref().map(|(t, r)| (t.as_str(), *r));
