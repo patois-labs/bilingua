@@ -88,3 +88,18 @@ fn edited_spans_are_looked_up_in_a_set() {
     assert_eq!(out_utf8.matches("value=\"Beta\"").count(), m + 1);
     assert!(keep < control * 3 + Duration::from_secs(2), "keep {keep:?}, UTF-8 control {control:?}");
 }
+
+/// Resource limit: SVG lets `<style>` nest, and each level's body holds the text of every level inside it, so the
+/// export check's browser view held the file about n/2 times over (n levels). The bodies now stop at twice the file
+/// plus 1 MiB, and a file over that is refused at export; a few levels still merge.
+#[test]
+fn nested_svg_style_bodies_are_refused_not_copied() {
+    let n = 20_000;
+    let data = format!("{HEAD}<svg>{}x{}</svg>", "<style>".repeat(n), "</style>".repeat(n));
+    let t = Instant::now();
+    let r = merge_with(&HhcFilter, data.as_bytes(), &[(0, "Beta")], None, MergeOptions::default());
+    assert!(matches!(&r, Err(Error::Unwritable { reason, .. }) if reason.contains("nested inside each other")), "{:?}", r.map(|b| b.len()));
+    assert!(t.elapsed() < Duration::from_secs(20), "took {:?}", t.elapsed());
+    let (_, out) = translated(&format!("{HEAD}<svg><style><style>a{{}}</style></style></svg>"), MergeOptions::default());
+    assert!(out.contains("value=\"Beta\""));
+}

@@ -53,6 +53,32 @@ pub struct View {
     pub spans: HashSet<(usize, usize, u8)>,
     pub bodies: Vec<(String, usize, String)>,
     pub uncertain: bool,
+    /// Bytes held in `bodies`.
+    pub body_bytes: usize,
+    /// True when `bodies` stopped at [`body_budget`]: script / style elements nested inside each other (SVG and
+    /// MathML allow it) hold the same text once per level. [`check_build`] then refuses the page.
+    pub bodies_cut: bool,
+}
+
+/// Most bytes the script / style bodies of one view may hold: twice the page plus 1 MiB. Bodies that do not nest
+/// hold at most the page once.
+pub fn body_budget(text: &str) -> usize {
+    text.len().saturating_mul(2).saturating_add(1 << 20)
+}
+
+impl View {
+    /// Records a body unless the view's body budget for a page is spent.
+    fn add_body(&mut self, name: String, at: usize, body: &str, budget: usize) {
+        if self.bodies_cut {
+            return;
+        }
+        if self.body_bytes.saturating_add(body.len()) > budget {
+            self.bodies_cut = true;
+            return;
+        }
+        self.body_bytes += body.len();
+        self.bodies.push((name, at, body.to_string()));
+    }
 }
 
 fn ws_run(b: &[u8], mut i: usize) -> usize {
@@ -249,8 +275,8 @@ pub fn browser_view(text: &str, scripting: bool, legacy_select: bool) -> View {
         while stack.len() > idx {
             let Some(e) = stack.pop() else { break };
             if let Some(body) = e.body {
-                let s = if at >= body { text[body..at].to_string() } else { String::new() };
-                view.bodies.push((e.name, body, s));
+                let s = if at >= body { &text[body..at] } else { "" };
+                view.add_body(e.name, body, s, body_budget(text));
             }
         }
     }
@@ -420,7 +446,7 @@ pub fn browser_view(text: &str, scripting: bool, legacy_select: bool) -> View {
             if raw || name == "script" {
                 let close = if name == "script" { html::raw_end(b, i, "script") } else { raw_close(text, i, &name) };
                 if name == "script" || name == "style" {
-                    view.bodies.push((name.clone(), i, text[i..close].to_string()));
+                    view.add_body(name.clone(), i, &text[i..close], body_budget(text));
                 }
                 i = close;
                 if close < n {
@@ -746,6 +772,9 @@ pub fn check_build(before: &str, after: &str, sources: &[View], xml: bool) -> Re
     }
     for ((scripting, legacy_select), vb) in MODES.iter().zip(sources) {
         let va = browser_view(after, *scripting, *legacy_select);
+        if vb.bodies_cut || va.bodies_cut {
+            return Err(Unsafe { what: "script or style elements nested inside each other".into(), line: 1, xml: false });
+        }
         let known: HashSet<String> = vb.starts.iter().map(signature).collect();
         for st in &va.starts {
             if !known.contains(&signature(st)) {

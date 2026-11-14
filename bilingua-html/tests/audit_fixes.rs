@@ -1,6 +1,6 @@
 //! Regression tests for the 0.9.1 security audit.
 use bilingua_html::{sanitize_html, Html};
-use bilingua_htmlcore::browser::browser_views;
+use bilingua_htmlcore::browser::{body_budget, browser_views};
 use bilingua_model::*;
 use std::time::{Duration, Instant};
 
@@ -286,4 +286,51 @@ fn browser_view_end_tags_close_as_before() {
             assert_eq!(v.bodies.iter().filter(|(n, _, _)| n == "script").count(), 1, "{page}");
         }
     }
+}
+
+// --- resource limits: script / style bodies in the export check -------------------------------------------------
+
+/// Extracts `page`, translates its first unit and merges.
+fn translated_merge(page: &str) -> Result<Vec<u8>, Error> {
+    let mut doc = extract(page);
+    let id = doc.units[0].segments[0].id.clone();
+    doc.set_target(&id, vec![Inline::text("Hallo")]).expect("set_target");
+    Html.merge(&doc)
+}
+
+/// Resource limit: SVG lets `<style>` nest, and each level's body holds the text of every level inside it, so the
+/// export check's browser view held the page about n/2 times over (n levels). The bodies of one view now stop at
+/// twice the page plus 1 MiB, and a page over that is refused at export instead.
+#[test]
+fn nested_svg_style_bodies_stay_within_the_budget() {
+    let n = 20_000;
+    let page = format!("<p>Hello</p><svg>{}x{}</svg>", "<style>".repeat(n), "</style>".repeat(n));
+    let t = Instant::now();
+    let views = browser_views(&page);
+    for v in &views {
+        assert!(v.bodies_cut, "the bodies were not cut");
+        assert!(v.body_bytes <= body_budget(&page), "{} body bytes", v.body_bytes);
+    }
+    let r = translated_merge(&page);
+    assert!(matches!(&r, Err(Error::Write(m)) if m.contains("nested inside each other")), "{:?}", r.map(|b| b.len()));
+    let t = t.elapsed();
+    assert!(t < Duration::from_secs(20), "took {t:?}");
+    // a few levels are an ordinary file and still merge
+    let page = "<p>Hello</p><svg><style><style>a{}</style></style></svg>";
+    let out = String::from_utf8(translated_merge(page).expect("merge")).unwrap();
+    assert!(out.contains("Hallo") && out.contains("<svg><style><style>a{}</style></style></svg>"), "{out}");
+}
+
+/// Resource limit: the XML reading of the export check gave each text to every script / style element seen so far,
+/// closed or not, so a well-formed page with many style elements took time in their number squared. Only the open
+/// ones receive it now.
+#[test]
+fn many_style_elements_in_a_well_formed_page_are_linear() {
+    let n = 200_000;
+    let page = format!("<html xmlns=\"http://www.w3.org/1999/xhtml\"><body><p>Hello</p>{}</body></html>", "<style>a</style>".repeat(n));
+    let t = Instant::now();
+    let out = String::from_utf8(translated_merge(&page).expect("merge")).unwrap();
+    assert!(out.contains("<p>Hallo</p>"));
+    let t = t.elapsed();
+    assert!(t < Duration::from_secs(20), "took {t:?}");
 }

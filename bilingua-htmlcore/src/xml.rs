@@ -20,6 +20,9 @@ const MAX_DEPTH: usize = 256;
 pub struct XmlView {
     pub sigs: Vec<(String, usize)>,
     pub bodies: HashSet<(String, String)>,
+    /// True when the script / style bodies stopped at twice the document plus 1 MiB: elements nested inside each
+    /// other hold the same text once per level. [`check_xml`] then refuses the page.
+    pub bodies_cut: bool,
 }
 
 fn is_xml_char(c: char) -> bool {
@@ -171,10 +174,29 @@ pub fn xml_view(text: &str) -> Option<XmlView> {
         c.expand_empty_elements = false;
         c.allow_dangling_amp = true; // references are checked by `expand`
     }
-    let mut view = XmlView { sigs: Vec::new(), bodies: HashSet::new() };
+    let mut view = XmlView { sigs: Vec::new(), bodies: HashSet::new(), bodies_cut: false };
     let mut stack: Vec<Open> = Vec::new();
     let mut scopes: Vec<(String, String)> = Vec::new();
     let mut captures: Vec<(String, String, bool)> = Vec::new(); // (name, text, open)
+    // The captures still open, innermost last: a text goes to these only, not past every closed one. Their bytes
+    // together stay within `budget`.
+    let mut open_caps: Vec<usize> = Vec::new();
+    let budget = text.len().saturating_mul(2).saturating_add(1 << 20);
+    let mut captured = 0usize;
+    let mut add_text = |captures: &mut Vec<(String, String, bool)>, open_caps: &[usize], view: &mut XmlView, t: &str| {
+        if open_caps.is_empty() || view.bodies_cut {
+            return;
+        }
+        let more = t.len().saturating_mul(open_caps.len());
+        if captured.saturating_add(more) > budget {
+            view.bodies_cut = true;
+            return;
+        }
+        captured += more;
+        for &ci in open_caps {
+            captures[ci].1.push_str(t);
+        }
+    };
     let mut ents: HashMap<String, String> = HashMap::new();
     let mut lenient = false;
     let mut seen_root = false;
@@ -200,18 +222,14 @@ pub fn xml_view(text: &str) -> Option<XmlView> {
                     return None;
                 }
                 let t = expand(raw, &ents, lenient)?;
-                for c in captures.iter_mut().filter(|c| c.2) {
-                    c.1.push_str(&t);
-                }
+                add_text(&mut captures, &open_caps, &mut view, &t);
             }
             Event::CData(_) => {
                 if stack.is_empty() {
                     return None;
                 }
                 let inner = raw.get(9..raw.len().saturating_sub(3)).unwrap_or("");
-                for c in captures.iter_mut().filter(|c| c.2) {
-                    c.1.push_str(inner);
-                }
+                add_text(&mut captures, &open_caps, &mut view, inner);
             }
             Event::Start(_) | Event::Empty(_) => {
                 let empty = matches!(ev, Event::Empty(_));
@@ -285,6 +303,7 @@ pub fn xml_view(text: &str) -> Option<XmlView> {
                 } else {
                     let capture = is_body.then(|| {
                         captures.push((local.clone(), String::new(), true));
+                        open_caps.push(captures.len() - 1);
                         captures.len() - 1
                     });
                     stack.push(Open { local, scope_mark: mark, capture });
@@ -295,6 +314,7 @@ pub fn xml_view(text: &str) -> Option<XmlView> {
                 scopes.truncate(open.scope_mark);
                 if let Some(ci) = open.capture {
                     captures[ci].2 = false;
+                    open_caps.pop();
                     let body = std::mem::take(&mut captures[ci].1);
                     view.bodies.insert((open.local, body));
                 }
@@ -357,6 +377,9 @@ pub fn check_xml(before: &str, after: &str) -> Result<(), Unsafe> {
     check_markup_entities(before, after)?;
     let Some(xb) = xml_view(before) else { return Ok(()) };
     let Some(xa) = xml_view(after) else { return Ok(()) };
+    if xb.bodies_cut || xa.bodies_cut {
+        return Err(Unsafe { what: "script or style elements nested inside each other".into(), line: 1, xml: true });
+    }
     let known: HashSet<&str> = xb.sigs.iter().map(|(s, _)| s.as_str()).collect();
     for (sig, line) in &xa.sigs {
         if !known.contains(sig.as_str()) {

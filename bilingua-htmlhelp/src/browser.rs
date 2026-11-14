@@ -66,6 +66,28 @@ struct View {
     spans: HashSet<ValueSpan>,
     bodies: Vec<(String, String)>,
     uncertain: bool,
+    /// Bytes held in `bodies`.
+    body_bytes: usize,
+    /// `bodies` stopped at the budget: script / style elements nested inside each other (SVG and MathML allow it)
+    /// hold the same text once per level. `check_build` then refuses the file.
+    bodies_cut: bool,
+}
+
+impl View {
+    /// Records a body unless the bodies of the view already hold twice the file plus 1 MiB (bodies that do not
+    /// nest hold at most the file once).
+    fn add_body(&mut self, name: String, body: &str, page_len: usize) {
+        if self.bodies_cut {
+            return;
+        }
+        let budget = page_len.saturating_mul(2).saturating_add(1 << 20);
+        if self.body_bytes.saturating_add(body.len()) > budget {
+            self.bodies_cut = true;
+            return;
+        }
+        self.body_bytes += body.len();
+        self.bodies.push((name, body.to_string()));
+    }
 }
 
 struct Frame {
@@ -350,8 +372,8 @@ impl Parser<'_> {
                 }
             }
             if let Some(body) = f.body {
-                let body_text = self.text.get(body..at.max(body)).unwrap_or("").to_string();
-                self.view.bodies.push((f.name, body_text));
+                let text = self.text;
+                self.view.add_body(f.name, text.get(body..at.max(body)).unwrap_or(""), text.len());
             }
         }
     }
@@ -528,7 +550,7 @@ fn browser_view(text: &str, scripting: bool, legacy_select: bool) -> View {
             if raw || name == "script" {
                 let close = if name == "script" { raw_end(text, i, "script") } else { raw_close(text, i, &name) };
                 if name == "script" || name == "style" {
-                    ps.view.bodies.push((name.clone(), text[i..close].to_string()));
+                    ps.view.add_body(name.clone(), &text[i..close], n);
                 }
                 i = close;
                 if close < n {
@@ -652,6 +674,9 @@ pub fn check_build(before: &str, after: &str) -> Result<(), String> {
     for &(s, l) in modes {
         let vb = browser_view(before, s, l);
         let va = browser_view(after, s, l);
+        if vb.bodies_cut || va.bodies_cut {
+            return Err(refusal(after, 0, "script or style elements nested inside each other"));
+        }
         let known: HashSet<Signature> = vb.starts.iter().map(signature).collect();
         if let Some(st) = va.starts.iter().find(|st| !known.contains(&signature(st))) {
             return Err(refusal(after, st.start, &format!("the <{}> tag", st.name)));
