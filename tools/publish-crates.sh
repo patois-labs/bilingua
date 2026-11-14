@@ -9,6 +9,10 @@
 #
 # Options: --log FILE (default ~/bili/publish-<version>.log), --from CRATE (start at that crate; the skip check
 # makes this rarely needed).
+# A crate already up at this version is skipped only when crates.io lists one of our accounts as its owner: the
+# owner logins come from BILINGUA_CRATES_OWNERS (space-separated crates.io logins) or, when that is unset, from the
+# account of CARGO_REGISTRY_TOKEN. A crate up at this version under another owner (a squatted name), or one whose
+# owners crates.io could not tell, stops the run, so a release never counts someone else's crate as ours.
 # Every step goes to the log with a time stamp. Rate limits (HTTP 429) are waited out: the script sleeps until the
 # time crates.io names, or 10 minutes when it names none, and tries the same crate again. Any other failure is
 # retried 3 times (1, 2 then 4 minutes apart), then the script stops with exit code 1 and names the crate.
@@ -24,7 +28,7 @@ while [ $# -gt 0 ]; do
     --list) mode=list ;;
     --from) from="$2"; shift ;;
     --log) log="$2"; shift ;;
-    -h|--help) sed -n '2,17p' "$0"; exit 0 ;;
+    -h|--help) sed -n '2,19p' "$0"; exit 0 ;;
     *) echo "unknown argument: $1" >&2; exit 2 ;;
   esac
   shift
@@ -42,13 +46,42 @@ published() {
   curl -s -o /dev/null -w '%{http_code}' -A "$UA" "https://crates.io/api/v1/crates/$1/$version"
 }
 
+# The crates.io logins that own <crate>, one per line; exit 1 when crates.io could not be asked.
+owners_of() {
+  local body
+  body="$(curl -s -f -A "$UA" "https://crates.io/api/v1/crates/$1/owners")" || return 1
+  printf '%s' "$body" | python3 -c 'import json,sys; print("\n".join(u["login"] for u in json.load(sys.stdin).get("users", []) if u.get("login")))'
+}
+
+# 0 when one of <expected logins> owns <crate>; 1 when only others own it; 2 when the owners are unknown.
+owned_by_us() {
+  local got want
+  got="$(owners_of "$1")" || return 2
+  [ -n "$got" ] || return 2
+  for want in $2; do
+    if printf '%s\n' "$got" | grep -qxF "$want"; then return 0; fi
+  done
+  return 1
+}
+
+# The login of the account CARGO_REGISTRY_TOKEN belongs to. The token goes to curl on stdin, never on the command line.
+token_login() {
+  printf 'header = "Authorization: %s"\n' "$CARGO_REGISTRY_TOKEN" \
+    | curl -s -f -A "$UA" -K - "https://crates.io/api/v1/me" \
+    | python3 -c 'import json,sys; print(json.load(sys.stdin)["user"]["login"])'
+}
+
 bash tools/set-version.sh --check >/dev/null || { say "set-version.sh --check failed: fix the versions first"; exit 1; }
 order="$(cargo metadata --no-deps --format-version 1 | python3 tools/publish-order.py)" || { say "could not work out the order"; exit 1; }
 count="$(echo "$order" | wc -l)"
 
 if [ "$mode" = list ]; then
   i=0
-  for c in $order; do i=$((i+1)); printf '%3d %-24s %s\n' "$i" "$c" "$( [ "$(published "$c")" = 200 ] && echo "up at $version" || echo "-")"; done
+  for c in $order; do
+    i=$((i+1))
+    if [ "$(published "$c")" = 200 ]; then st="up at $version, owners: $(owners_of "$c" | tr '\n' ' ')"; else st="-"; fi
+    printf '%3d %-24s %s\n' "$i" "$c" "$st"
+  done
   exit 0
 fi
 
@@ -64,14 +97,24 @@ if [ "$mode" = dry ]; then
 fi
 
 [ -n "${CARGO_REGISTRY_TOKEN:-}" ] || { say "CARGO_REGISTRY_TOKEN is not set"; exit 1; }
-say "publish: $count crates at $version, log $log"
+ours="${BILINGUA_CRATES_OWNERS:-}"
+if [ -z "$ours" ]; then
+  ours="$(token_login)" || ours=""
+  [ -n "$ours" ] || { say "could not ask crates.io whose token this is; set BILINGUA_CRATES_OWNERS to our crates.io login(s)"; exit 1; }
+fi
+say "publish: $count crates at $version, log $log, owners counted as ours: $ours"
 started=0; [ -z "$from" ] && started=1
 i=0
 for c in $order; do
   i=$((i+1))
   [ "$started" = 0 ] && { [ "$c" = "$from" ] && started=1 || { say "[$i/$count] $c: before --from, skipped"; continue; }; }
   code="$(published "$c")"
-  if [ "$code" = 200 ]; then say "[$i/$count] $c $version: already on crates.io, skipped"; continue; fi
+  if [ "$code" = 200 ]; then
+    owned_by_us "$c" "$ours"; own=$?
+    if [ $own = 0 ]; then say "[$i/$count] $c $version: already on crates.io under our account, skipped"; continue; fi
+    if [ $own = 1 ]; then say "[$i/$count] $c $version: on crates.io but NOT owned by $ours (owners: $(owners_of "$c" | tr '\n' ' ')); stopping"; exit 1; fi
+    say "[$i/$count] $c $version: on crates.io but its owners could not be read; stopping (run again to retry)"; exit 1
+  fi
   tries=0
   while :; do
     say "[$i/$count] $c $version: publishing"
