@@ -133,7 +133,7 @@ fn extract(d: Dialect, load_targets: bool, bytes: &[u8], opts: &ExtractOptions, 
         .into());
     }
     let tree = xml::parse(name, text)?;
-    let ctx = Ctx { text, tree: &tree, limits, want_protected: load_targets || opts.include_locked };
+    let ctx = Ctx { text, tree: &tree, limits, want_protected: load_targets || opts.include_locked, keep_locked: opts.include_locked };
     let Walked { items, source_lang, target_lang } = match d {
         Dialect::Txml => txml::walk(&ctx)?,
         Dialect::Txlf => txlf::walk(&ctx)?,

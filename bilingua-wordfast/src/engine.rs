@@ -53,4 +53,7 @@ pub struct Ctx<'a> {
     pub limits: &'a Limits,
     /// Tokenise segments that are not for translation (they are listed).
     pub want_protected: bool,
+    /// Locked and non-translatable segments become units (`include_locked`); without it the walk can drop them
+    /// at once, so its item list holds only what becomes a unit and the unit cap bounds it.
+    pub keep_locked: bool,
 }

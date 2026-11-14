@@ -75,10 +75,13 @@ fn serialize(block: &Value, children: &[Value], b: &mut Builder) -> bool {
     true
 }
 
-pub(crate) fn plan(root: &Value, _leaf: bool) -> Vec<Plan> {
-    let mut out = Vec::new();
-    let Some(blocks) = root.as_arr() else { return out };
+pub(crate) fn plan(root: &Value, _leaf: bool, max: usize) -> Vec<Plan> {
+    let mut out = Plans::new(max);
+    let Some(blocks) = root.as_arr() else { return out.into_vec() };
     for (i, b) in blocks.iter().enumerate() {
+        if out.full() {
+            break;
+        }
         if !b.has_str("_type", "block") {
             continue;
         }
@@ -93,10 +96,10 @@ pub(crate) fn plan(root: &Value, _leaf: bool) -> Vec<Plan> {
             if let Some(k) = b.get("_key").and_then(Value::as_str) {
                 extra.push(("_key".to_string(), k.to_string()));
             }
-            out.push(bl.finish(vec![Step::I(i)], &kind, extra));
+            out.push(bl.finish(Path::root().child(Step::I(i)), &kind, extra));
         }
     }
-    out
+    out.into_vec()
 }
 
 fn seed_of(block: &Value) -> String {
@@ -177,7 +180,7 @@ pub(crate) fn apply(root: &mut Value, plans: &[Plan], outs: &[Option<Vec<Inline>
             return Err(unwritable(i, "the translation is empty"));
         }
         let evs = events(o, &p.tokens).ok_or_else(|| unwritable(i, "the translation does not keep every placeholder of the source exactly once"))?;
-        let node = node_mut(root, &p.path).ok_or_else(|| Error::Write("the original text no longer matches the document".into()))?;
+        let node = node_mut(root, &p.path.steps()).ok_or_else(|| Error::Write("the original text no longer matches the document".into()))?;
         let rebuilt = rebuild(&evs, &p.tokens, node).filter(|r| !r.is_empty()).ok_or_else(|| unwritable(i, "a marked span may hold text only, and its placeholders must be in pairs"))?;
         node.set("children", Value::Arr(rebuilt));
     }

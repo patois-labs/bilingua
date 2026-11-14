@@ -273,16 +273,16 @@ fn translate_no_text_is_not_offered_and_the_ids_stay_consistent() {
 }
 
 #[test]
-fn custom_limits_travel_with_the_skeleton() {
-    // a file read under raised limits can be merged again under the same ones
+fn custom_limits_do_not_travel_with_the_skeleton() {
+    // 0.9.1 security audit: merge reads the stored archive under the default limits, never under limits the
+    // document carries, so a file read under raised limits is refused at merge once something is translated
     let big = vec![b'a'; 3 * 1024 * 1024];
     let src = epub_with(&[("OEBPS/img/pad.bin", &big)]);
     let o = ExtractOptions::new().with_limits(Limits::new().with_max_zip_ratio(1_000_000));
     let mut d = Epub.extract(&src, &o).unwrap();
+    assert_eq!(Epub.merge(&d).unwrap(), src, "nothing translated: the original bytes, unopened");
     set(&mut d, 0, "Titre");
-    let (m, _) = members(&merge(&d));
-    assert!(member_text(&m, "OEBPS/content.opf").contains(">Titre<"));
-    assert_eq!(m["OEBPS/img/pad.bin"], big);
+    assert!(matches!(Epub.merge(&d), Err(Error::Limit(e)) if e.kind == LimitKind::ZipRatio));
 }
 
 #[test]

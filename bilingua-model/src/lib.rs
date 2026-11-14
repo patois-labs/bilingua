@@ -1564,10 +1564,19 @@ impl MergeOptions {
         self.stamp_lang(doc, Self::any_translated(doc)).is_some()
     }
 
-    /// The one stamp rule every format uses: the document's `target_lang` (as written, never blank) when
-    /// `translated` (the format's own "something was written" test) or `stamp_target_always`, else `None`.
+    /// Can this text be a language code in any spelling a format writes (`de-DE`, `zh_Hant`, `sr@latin`,
+    /// `de_DE.UTF-8`)? ASCII letters, digits, `-`, `_`, `@` and `.`, at most 64 bytes. The target language is free
+    /// text (a host setting, or the `trgLang` of a returned XLIFF), and several formats write it into a header
+    /// line or a key; anything else, a line break above all, is never stamped.
+    pub fn plausible_lang(code: &str) -> bool {
+        !code.is_empty() && code.len() <= 64 && code.bytes().all(|b| b.is_ascii_alphanumeric() || matches!(b, b'-' | b'_' | b'@' | b'.'))
+    }
+
+    /// The one stamp rule every format uses: the document's `target_lang` (trimmed, and only when it can be a
+    /// language code, see [`MergeOptions::plausible_lang`]) when `translated` (the format's own "something was
+    /// written" test) or `stamp_target_always`, else `None`.
     pub fn stamp_lang<'a>(&self, doc: &'a Document, translated: bool) -> Option<&'a str> {
-        doc.target_lang.as_deref().filter(|t| !t.trim().is_empty()).filter(|_| translated || self.stamp_target_always)
+        doc.target_lang.as_deref().map(str::trim).filter(|t| Self::plausible_lang(t)).filter(|_| translated || self.stamp_target_always)
     }
 }
 

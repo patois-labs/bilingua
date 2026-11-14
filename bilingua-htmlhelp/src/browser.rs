@@ -20,7 +20,7 @@
 //! 2025 `<select>` rules. Offsets are byte offsets; every delimiter is ASCII, so they line up with the walker's.
 
 use crate::text::{has_alnum, py_trim, unescape};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 const RCDATA: &[&str] = &["title", "textarea"];
 const RAWTEXT: &[&str] = &["style", "xmp", "iframe", "noembed", "noframes"];
@@ -295,6 +295,17 @@ struct Parser<'a> {
     view: View,
     stack: Vec<Frame>,
     select_open: bool,
+    // An index of the open frames, so that an end tag finds its element without walking the stack. A sitemap leaves
+    // every <LI> open, so the stack is as deep as the file is long and a walk per end tag is quadratic work. Each
+    // list holds stack positions in rising order; `push` and `pop_to` are the only places that change them.
+    /// Open HTML frames by element name.
+    html_named: HashMap<String, Vec<usize>>,
+    /// Open SVG / MathML frames by element name.
+    foreign_named: HashMap<String, Vec<usize>>,
+    /// Every open HTML frame.
+    html_at: Vec<usize>,
+    /// Every open frame that is an integration point.
+    ip_at: Vec<usize>,
 }
 
 impl Parser<'_> {
@@ -302,9 +313,42 @@ impl Parser<'_> {
         self.stack.last().is_some_and(|f| f.ns != "html")
     }
 
+    fn push(&mut self, f: Frame) {
+        let idx = self.stack.len();
+        let html = f.ns == "html";
+        if html {
+            self.html_at.push(idx);
+        }
+        if f.ip != Ip::None {
+            self.ip_at.push(idx);
+        }
+        let named = if html { &mut self.html_named } else { &mut self.foreign_named };
+        match named.get_mut(&f.name) {
+            Some(v) => v.push(idx),
+            None => {
+                named.insert(f.name.clone(), vec![idx]);
+            }
+        }
+        self.stack.push(f);
+    }
+
     fn pop_to(&mut self, idx: usize, at: usize) {
         while self.stack.len() > idx {
-            let f = self.stack.pop().expect("non-empty stack");
+            let Some(f) = self.stack.pop() else { break };
+            let k = self.stack.len();
+            let html = f.ns == "html";
+            if html && self.html_at.last() == Some(&k) {
+                self.html_at.pop();
+            }
+            if self.ip_at.last() == Some(&k) {
+                self.ip_at.pop();
+            }
+            let named = if html { &mut self.html_named } else { &mut self.foreign_named };
+            if let Some(v) = named.get_mut(&f.name) {
+                if v.last() == Some(&k) {
+                    v.pop();
+                }
+            }
             if let Some(body) = f.body {
                 let body_text = self.text.get(body..at.max(body)).unwrap_or("").to_string();
                 self.view.bodies.push((f.name, body_text));
@@ -335,15 +379,13 @@ impl Parser<'_> {
         if name == "select" {
             self.select_open = false;
         }
-        for k in (0..self.stack.len()).rev() {
-            if self.stack[k].ns == "html" && self.stack[k].name == name {
-                self.pop_to(k, at);
-                return;
-            }
-            if self.stack[k].ip != Ip::None {
-                return;
-            }
+        // The topmost open HTML element of this name closes, unless an integration point lies above it (an HTML frame
+        // is never an integration point itself, so the two positions differ).
+        let Some(&k) = self.html_named.get(name).and_then(|v| v.last()) else { return };
+        if self.ip_at.last().is_some_and(|&p| p > k) {
+            return;
         }
+        self.pop_to(k, at);
     }
 }
 
@@ -354,7 +396,16 @@ fn breakout(name: &str, attrs: &Attrs) -> bool {
 fn browser_view(text: &str, scripting: bool, legacy_select: bool) -> View {
     let b = text.as_bytes();
     let n = b.len();
-    let mut ps = Parser { text, view: View::default(), stack: Vec::new(), select_open: false };
+    let mut ps = Parser {
+        text,
+        view: View::default(),
+        stack: Vec::new(),
+        select_open: false,
+        html_named: HashMap::new(),
+        foreign_named: HashMap::new(),
+        html_at: Vec::new(),
+        ip_at: Vec::new(),
+    };
     let mut i = 0usize;
     while i < n {
         let Some(k) = text[i..].find('<') else { break };
@@ -395,20 +446,14 @@ fn browser_view(text: &str, scripting: bool, legacy_select: bool) -> View {
                     ps.pop_foreign(i);
                     ps.html_end(&name, i);
                 } else {
-                    let mut k = ps.stack.len() as isize - 1;
-                    loop {
-                        if ps.stack[k as usize].name == name {
-                            ps.pop_to(k as usize, i);
-                            break;
-                        }
-                        k -= 1;
-                        if k < 0 {
-                            break;
-                        }
-                        if ps.stack[k as usize].ns == "html" {
-                            ps.html_end(&name, i);
-                            break;
-                        }
+                    // The topmost foreign element of this name closes when no HTML element lies above it; otherwise
+                    // the end tag is handled as HTML does from the topmost HTML element down.
+                    let html = ps.html_at.last().copied();
+                    let named = ps.foreign_named.get(&name).and_then(|v| v.last()).copied();
+                    match (named, html) {
+                        (Some(k), h) if h.is_none_or(|h| k > h) => ps.pop_to(k, i),
+                        (_, Some(_)) => ps.html_end(&name, i),
+                        _ => {}
                     }
                 }
             } else {
@@ -444,18 +489,15 @@ fn browser_view(text: &str, scripting: bool, legacy_select: bool) -> View {
                 ps.view.starts.push(StartTag { name: name.clone(), ns, start, attrs: attrs.clone() });
                 if !sc {
                     let body = (name == "script" || name == "style").then_some(end);
-                    ps.stack.push(Frame { name: name.clone(), ns, ip, body });
+                    ps.push(Frame { name: name.clone(), ns, ip, body });
                 }
                 break;
             }
             if legacy_select && ps.select_open && !has(SELECT_KEEP, &name) {
                 if has(SELECT_CLOSE, &name) {
                     ps.select_open = false;
-                    for k in (0..ps.stack.len()).rev() {
-                        if ps.stack[k].name == "select" && ps.stack[k].ns == "html" {
-                            ps.pop_to(k, start);
-                            break;
-                        }
+                    if let Some(&k) = ps.html_named.get("select").and_then(|v| v.last()) {
+                        ps.pop_to(k, start);
                     }
                     if name == "select" {
                         break;
@@ -468,7 +510,7 @@ fn browser_view(text: &str, scripting: bool, legacy_select: bool) -> View {
                 let ns: &'static str = if name == "svg" { "svg" } else { "math" };
                 ps.view.starts.push(StartTag { name: name.clone(), ns, start, attrs: attrs.clone() });
                 if !sc {
-                    ps.stack.push(Frame { name: name.clone(), ns, ip: Ip::None, body: None });
+                    ps.push(Frame { name: name.clone(), ns, ip: Ip::None, body: None });
                 }
                 break;
             }
@@ -498,7 +540,7 @@ fn browser_view(text: &str, scripting: bool, legacy_select: bool) -> View {
             } else if name == "plaintext" {
                 i = n;
             } else if !has(VOID, &name) {
-                ps.stack.push(Frame { name: name.clone(), ns: "html", ip: Ip::None, body: None });
+                ps.push(Frame { name: name.clone(), ns: "html", ip: Ip::None, body: None });
             }
             break;
         }

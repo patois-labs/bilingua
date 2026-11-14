@@ -196,7 +196,9 @@ pub struct Msg<'a> {
     pub value: &'a str,
     pub syntax: Syntax,
     pub pointer: String,
-    pub notes: Vec<String>,
+    /// Shared by the strings of one message (a go-i18n message has one per plural form), so the list of
+    /// messages holds a description once however many strings stand under it.
+    pub notes: std::rc::Rc<Vec<String>>,
 }
 
 fn esc(k: &str) -> String {
@@ -274,9 +276,9 @@ pub fn messages<'a>(root: &'a Node, d: Dialect) -> Vec<Msg<'a>> {
     out
 }
 
-fn push<'a>(out: &mut Vec<Msg<'a>>, n: &'a Node, syntax: Syntax, pointer: String, notes: Vec<String>) {
+fn push<'a>(out: &mut Vec<Msg<'a>>, n: &'a Node, syntax: Syntax, pointer: String, notes: impl Into<std::rc::Rc<Vec<String>>>) {
     if let Node::Str { val: Some(v), start, end } = n {
-        out.push(Msg { start: *start, end: *end, value: v, syntax, pointer, notes });
+        out.push(Msg { start: *start, end: *end, value: v, syntax, pointer, notes: notes.into() });
     }
 }
 
@@ -314,7 +316,7 @@ fn walk_go<'a>(o: &'a Obj, path: &mut Vec<String>, out: &mut Vec<Msg<'a>>) {
 }
 
 fn go_strings<'a>(v: &'a Obj, base: String, out: &mut Vec<Msg<'a>>) {
-    let notes = notes_of(v, &["description"]);
+    let notes = std::rc::Rc::new(notes_of(v, &["description"]));
     for p in &v.pairs {
         let lk = p.key.to_lowercase();
         let here = format!("{base}/{}", esc(&p.key));

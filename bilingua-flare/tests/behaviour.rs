@@ -235,16 +235,16 @@ fn the_cached_variable_and_other_point_codes_cannot_be_moved_out_of_the_source()
 }
 
 #[test]
-fn custom_limits_travel_with_the_skeleton() {
-    // a file read under raised limits can be merged again under the same ones
+fn custom_limits_do_not_travel_with_the_skeleton() {
+    // 0.9.1 security audit: merge reads the stored archive under the default limits, never under limits the
+    // document carries, so a file read under raised limits is refused at merge once something is translated
     let big = vec![b'a'; 3 * 1024 * 1024];
     let src = project_with(&[("Content/Resources/pad.bin", &big)], &[]);
     let o = ExtractOptions::new().with_limits(Limits::new().with_max_zip_ratio(1_000_000));
     let mut d = Flare.extract(&src, &o).unwrap();
+    assert_eq!(Flare.merge(&d).unwrap(), src, "nothing translated: the original bytes, unopened");
     set(&mut d, 0, "Guide");
-    let (m, _) = members(&merge(&d));
-    assert!(text_of(&m, "Content/Topic.htm").contains("<title>Guide</title>"));
-    assert_eq!(get(&m, "Content/Resources/pad.bin"), big.as_slice());
+    assert!(matches!(Flare.merge(&d), Err(Error::Limit(e)) if e.kind == LimitKind::ZipRatio));
 }
 
 #[test]

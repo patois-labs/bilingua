@@ -79,7 +79,9 @@ pub(super) struct View {
 }
 
 /// One cell's value (`WorkSheetParser.parse_cell`), `shared` holding the sheet's shared-formula masters so far.
-fn parse_cell(d: &Dom, c: usize, key: (i64, i64), ctx: &Ctx, shared: &mut HashMap<Option<String>, (String, (i64, i64))>, name: &str) -> Result<(String, bool), Error> {
+/// With a `budget` (an extraction), the text of a shared or inline string is charged against the spreadsheet limits,
+/// a shared string before it is copied.
+fn parse_cell(d: &Dom, c: usize, key: (i64, i64), ctx: &Ctx, shared: &mut HashMap<Option<String>, (String, (i64, i64))>, name: &str, budget: &mut Option<crate::budget::SheetBudget>) -> Result<(String, bool), Error> {
     let style = ctx.formats.style_of(d.get(c, "s"), name)?;
     let has_r = d.get(c, "r").is_some_and(|r| !r.is_empty());
     let t = d.get(c, "t").unwrap_or("n");
@@ -108,7 +110,13 @@ fn parse_cell(d: &Dom, c: usize, key: (i64, i64), ctx: &Ctx, shared: &mut HashMa
     }
     if t == "inlineStr" {
         return Ok(match d.find(c, M, "is") {
-            Some(is) => (rich_content(d, is), true),
+            Some(is) => {
+                let text = rich_content(d, is);
+                if let Some(b) = budget.as_mut() {
+                    b.text(text.chars().count(), 1)?;
+                }
+                (text, true)
+            }
             None => (String::new(), false),
         });
     }
@@ -125,7 +133,11 @@ fn parse_cell(d: &Dom, c: usize, key: (i64, i64), ctx: &Ctx, shared: &mut HashMa
             if at < 0 || at as usize >= ctx.sst.len() {
                 return Err(invalid(name));
             }
-            (ctx.sst[at as usize].clone(), true)
+            let s = &ctx.sst[at as usize];
+            if let Some(b) = budget.as_mut() {
+                b.text(s.chars().count(), 1)?;
+            }
+            (s.clone(), true)
         }
         "b" => {
             let (_, digits) = py_int_parts(&v).ok_or_else(|| invalid(name))?;
@@ -151,6 +163,7 @@ impl View {
     /// Reads every cell of the sheet in document order, as openpyxl does (an error where openpyxl fails to load).
     pub(super) fn build(pkg: &mut Package, path: &str, ctx: &Ctx) -> Result<View, Error> {
         pkg.ensure_index(path)?;
+        let budget = &mut pkg.budget;
         let d = &pkg.roots[path];
         let mut vals: HashMap<(i64, i64), (String, bool)> = HashMap::new();
         let mut shared = HashMap::new();
@@ -173,7 +186,7 @@ impl View {
                         (row_n, col_n)
                     }
                 };
-                let v = parse_cell(d, c, key, ctx, &mut shared, path)?;
+                let v = parse_cell(d, c, key, ctx, &mut shared, path, budget)?;
                 vals.insert(key, v);
             }
         }
@@ -232,6 +245,7 @@ pub(super) fn extract(bytes: &[u8], opts: &ExtractOptions, xo: &crate::XlsxOptio
     guard::check_input(bytes, &l)?;
     let entries = read(bytes, &l)?;
     let mut pkg = Package::open(&entries)?;
+    pkg.budget = Some(crate::budget::SheetBudget::new(l));
     let spec = plan::parse_spec(xo.columns.as_deref())?;
     if spec.delimiter.is_some() {
         return Err(Error::Unsupported("delimiter= applies to CSV/TSV files only.".into()));

@@ -118,13 +118,16 @@ impl QtTs {
         let mut units: Vec<Unit> = Vec::new();
         let mut spans: Vec<(usize, usize, usize)> = Vec::new();
         let mut slot = 0usize;
+        // every kept message carries its own copy of the context name: the copies are charged before they are
+        // made, so one long name over many messages cannot multiply the file in memory
+        let mut budget = guard::ContextBudget::new();
         for ctx in sc.children(0).filter(|c| sc.local(text, *c) == "context") {
             let cname = first_child(&sc, text, ctx, "name").map(|n| leading_text(&content(&sc, text, n))).unwrap_or_default();
             for msg in sc.children(ctx).filter(|c| sc.local(text, *c) == "message") {
                 let Some(src) = first_child(&sc, text, msg, "source") else { continue };
                 let this = slot;
                 slot += 1;
-                let Some(found) = self.message(&sc, text, msg, src, this, &cname, opts)? else { continue };
+                let Some(found) = self.message(&sc, text, msg, src, this, &cname, opts, &mut budget, limits)? else { continue };
                 guard::check_unit_count(units.len() + 1, limits)?;
                 let chars: usize = found.unit.source().iter().map(|i| match i {
                     Inline::Text(t) => t.chars().count(),
@@ -158,7 +161,7 @@ impl QtTs {
     }
 
     #[allow(clippy::too_many_arguments)]
-    fn message(&self, sc: &Scan, text: &str, msg: usize, src: usize, slot: usize, cname: &str, opts: &ExtractOptions) -> Result<Option<Found>, Error> {
+    fn message(&self, sc: &Scan, text: &str, msg: usize, src: usize, slot: usize, cname: &str, opts: &ExtractOptions, budget: &mut guard::ContextBudget, limits: &Limits) -> Result<Option<Found>, Error> {
         let tr = first_child(sc, text, msg, "translation");
         let ttype = tr.and_then(|t| sc.attr(text, t, "type")).unwrap_or_default();
         let skip = tr.is_none() || ttype == "vanished" || ttype == "obsolete";
@@ -229,6 +232,7 @@ impl QtTs {
                 }
             }
         }
+        budget.charge(cname.len(), limits)?;
         unit.context.extra.insert("context".into(), cname.to_string());
         unit.context.extra.insert("p_index".into(), slot.to_string());
         if numerus {

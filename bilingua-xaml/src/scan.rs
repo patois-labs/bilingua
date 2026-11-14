@@ -9,7 +9,7 @@ use crate::Limits;
 use bilingua_model::{Error, LimitError, LimitKind};
 use quick_xml::events::Event;
 use quick_xml::Reader;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 const XAML_NS: [&str; 2] = ["http://schemas.microsoft.com/winfx/2006/xaml", "http://schemas.microsoft.com/winfx/2009/xaml"];
 pub const VIEW_ATTRIBUTES: [&str; 5] = ["Content", "Text", "ToolTip", "Header", "Title"];
@@ -259,11 +259,46 @@ fn lex_tag<'a>(text: &'a str, s: usize, e: usize) -> Result<(&'a str, Vec<RawAtt
     Ok((qname, attrs))
 }
 
-fn lookup<'a>(ns: &'a [(String, String)], prefix: &str) -> Option<&'a str> {
-    if prefix == "xml" {
-        return Some(XML_NS);
+/// Most namespace declarations in scope at once (no real file comes near it).
+const MAX_NS_IN_SCOPE: usize = 4096;
+
+/// The namespace bindings in scope, in declaration order, with an index per prefix so a lookup is constant time
+/// however many declarations are in scope (a linear search per name was quadratic on a namespace-heavy file).
+#[derive(Default)]
+struct NsScope {
+    bind: Vec<(String, String)>,
+    /// prefix to the indexes in `bind` that declare it, innermost last (`""` is the default namespace)
+    by_prefix: HashMap<String, Vec<usize>>,
+}
+
+impl NsScope {
+    fn len(&self) -> usize {
+        self.bind.len()
     }
-    ns.iter().rev().find(|(p, _)| p == prefix).map(|(_, u)| u.as_str())
+
+    fn push(&mut self, prefix: String, uri: String) {
+        self.by_prefix.entry(prefix.clone()).or_default().push(self.bind.len());
+        self.bind.push((prefix, uri));
+    }
+
+    fn truncate(&mut self, n: usize) {
+        while self.bind.len() > n {
+            let Some((p, _)) = self.bind.pop() else { break };
+            if let Some(v) = self.by_prefix.get_mut(&p) {
+                v.pop();
+                if v.is_empty() {
+                    self.by_prefix.remove(&p);
+                }
+            }
+        }
+    }
+
+    fn lookup(&self, prefix: &str) -> Option<&str> {
+        if prefix == "xml" {
+            return Some(XML_NS);
+        }
+        self.by_prefix.get(prefix).and_then(|v| v.last()).map(|i| self.bind[*i].1.as_str())
+    }
 }
 
 fn is_string_ns(uri: &str) -> bool {
@@ -296,7 +331,7 @@ pub fn walk(text: &str, with_attrs: bool, l: &Limits) -> Result<Vec<Item>, Error
         c.check_comments = true;
         c.check_end_names = true;
     }
-    let mut ns: Vec<(String, String)> = Vec::new();
+    let mut ns = NsScope::default();
     let mut stack: Vec<Frame> = Vec::new();
     let mut resources: Vec<Item> = Vec::new();
     let mut attrs_out: Vec<Item> = Vec::new();
@@ -368,23 +403,28 @@ pub fn walk(text: &str, with_attrs: bool, l: &Limits) -> Result<Vec<Item>, Error
                 let ns_len = ns.len();
                 for a in &raw_attrs {
                     if a.name == "xmlns" {
-                        ns.push((String::new(), unescape(a.vraw)));
+                        ns.push(String::new(), unescape(a.vraw));
                     } else if let Some(p) = a.name.strip_prefix("xmlns:") {
-                        ns.push((p.to_string(), unescape(a.vraw)));
+                        ns.push(p.to_string(), unescape(a.vraw));
+                    } else {
+                        continue;
+                    }
+                    if ns.len() > MAX_NS_IN_SCOPE {
+                        return Err(limit_err(LimitKind::XmlElements, "This XAML file declares far too many namespaces at once.".into()));
                     }
                 }
                 let (prefix, local) = match qname.split_once(':') {
                     Some((p, l)) => (p, l),
                     None => ("", qname),
                 };
-                let uri = match lookup(&ns, prefix) {
+                let uri = match ns.lookup(prefix) {
                     Some(u) => Some(u.to_string()).filter(|u| !u.is_empty()),
                     None if prefix.is_empty() => None,
                     None => return Err(perr(format!("not well-formed XML: namespace prefix {prefix} is not defined"))),
                 };
                 for a in &raw_attrs {
                     if let Some((p, _)) = a.name.split_once(':') {
-                        if p != "xmlns" && lookup(&ns, p).is_none() {
+                        if p != "xmlns" && ns.lookup(p).is_none() {
                             return Err(perr(format!("not well-formed XML: namespace prefix {p} is not defined")));
                         }
                     }
@@ -393,7 +433,7 @@ pub fn walk(text: &str, with_attrs: bool, l: &Limits) -> Result<Vec<Item>, Error
                     .iter()
                     .find(|a| {
                         let (p, loc) = a.name.split_once(':').unwrap_or(("", a.name));
-                        matches!(loc, "Key" | "Name" | "Uid") && (p.is_empty() && loc == "Name" || lookup(&ns, p).is_some_and(|u| XAML_NS.contains(&u)))
+                        matches!(loc, "Key" | "Name" | "Uid") && (p.is_empty() && loc == "Name" || ns.lookup(p).is_some_and(|u| XAML_NS.contains(&u)))
                     })
                     .map(|a| unescape(a.vraw));
                 let is_string = local == "String" && uri.as_deref().is_some_and(is_string_ns);

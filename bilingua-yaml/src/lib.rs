@@ -64,6 +64,8 @@ fn parse_err(text: &str, e: &scan::ScanError) -> Error {
         // LocOS InputLimitError ("This YAML file is nested too deeply.", the segment cap): code `limit`
         let kind = if e.msg.contains("nested") {
             LimitKind::Depth
+        } else if e.msg == walk::CONTEXT_MSG {
+            LimitKind::Context
         } else if e.msg.contains("longer") {
             LimitKind::UnitChars
         } else {
@@ -193,6 +195,11 @@ impl Yaml {
         let mut parts: Vec<SkelPart> = Vec::new();
         let mut units: Vec<Unit> = Vec::with_capacity(w.units.len());
         let mut pos = 0usize;
+        // The comment block above a key line is read once and reused for every value of that line (a flow
+        // mapping on one line has many), and each stored copy counts against the context budget.
+        let context_limits = limits.context_limits();
+        let mut context = w.context;
+        let mut noted: Option<(usize, String)> = None;
         for (i, wu) in w.units.iter().enumerate() {
             let (lead, core, trail) = split_ws(&wu.value);
             let (inl, codes) = inline::tag_placeholders(core);
@@ -214,9 +221,12 @@ impl Yaml {
             u.context.style = Some(style_name(wu.style).into());
             u.context.location = Some(format!("line {}", starts.partition_point(|&p| p <= wu.start)));
             if let Some(kl) = wu.key_line {
-                let c = comment_above(&text, &starts, kl);
-                if !c.is_empty() {
-                    u.context.notes.push(c);
+                if noted.as_ref().map(|n| n.0) != Some(kl) {
+                    noted = Some((kl, comment_above(&text, &starts, kl)));
+                }
+                if let Some((_, c)) = noted.as_ref().filter(|n| !n.1.is_empty()) {
+                    context.charge(c.len(), &context_limits)?;
+                    u.context.notes.push(c.clone());
                 }
             }
             if let Some(p) = &wu.plural {

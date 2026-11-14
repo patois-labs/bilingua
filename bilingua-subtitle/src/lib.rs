@@ -445,12 +445,55 @@ fn merge(k: Kind, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result
                 let translated = u.translate && u.segments.iter().any(|s| s.has_target());
                 match raw {
                     Some(r) if !translated => out.push_str(r),
-                    _ => out.push_str(&render(k, u, eol)),
+                    _ => out.push_str(&keep_one_cue(k, u, render(k, u, eol), eol)?),
                 }
             }
         }
     }
     bilingua_model::enc::encode_text_with(&out, encoding, opts)
+}
+
+/// A time as a timing line writes it: digits with at least one colon, and a `,` or `.` before the fraction.
+fn looks_like_time(s: &str) -> bool {
+    s.as_bytes().first().is_some_and(|c| c.is_ascii_digit()) && s.contains(':') && s.bytes().all(|c| c.is_ascii_digit() || matches!(c, b':' | b'.' | b','))
+}
+
+/// True when a line reads as a timing line: a time on each side of the arrow (settings may follow the second).
+fn is_timing_line(line: &str) -> bool {
+    let Some((a, b)) = line.split_once("-->") else { return false };
+    looks_like_time(a.trim()) && b.split_whitespace().next().is_some_and(looks_like_time)
+}
+
+/// A written cue stays one cue. A blank line ends a cue for every reader, so the blank lines of a translation are
+/// dropped (a lone CR is a line break to players, and counts as one here). A WebVTT reader also ends the cue at a
+/// line holding `-->`, so the arrow is written `--&gt;`, which reads back as the same text. SRT has no escape: a
+/// line that reads as a timing line is refused, unless the cue's own source text already had that line (a file
+/// whose cues run together comes back as it was). The check is on the whole rendered cue, because a blank line
+/// can form between a text run and a line-break tag. A cue this leaves alone is returned as it was rendered.
+fn keep_one_cue(k: Kind, u: &Unit, rendered: String, eol: &str) -> Result<String, Error> {
+    let lone_cr = rendered.replace("\r\n", "").contains('\r');
+    if !lone_cr && !rendered.contains("-->") && rendered.split('\n').all(|l| !l.trim().is_empty()) {
+        return Ok(rendered);
+    }
+    let text = rendered.replace("\r\n", "\n").replace('\r', "\n");
+    let mut kept: Vec<String> = Vec::new();
+    for l in text.split('\n').filter(|l| !l.trim().is_empty()) {
+        match k {
+            Kind::Vtt => kept.push(l.replace("-->", "--&gt;")),
+            Kind::Srt => {
+                let in_source = || u.hidden(RAW).is_some_and(|raw| raw.split(['\n', '\r']).any(|s| s.trim() == l.trim()));
+                if is_timing_line(l) && !in_source() {
+                    return Err(Error::Unwritable { unit: Some(u.id.clone()), reason: "a line of the translation reads as a subtitle timing line (two times around -->)".into() });
+                }
+                kept.push(l.to_string());
+            }
+        }
+    }
+    if kept.is_empty() {
+        // only white space: nothing in it can start a cue
+        return Ok(rendered);
+    }
+    Ok(kept.join(eol))
 }
 
 fn render(k: Kind, u: &Unit, eol: &str) -> String {

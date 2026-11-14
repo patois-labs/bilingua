@@ -339,7 +339,11 @@ impl Filter for DesktopFilter {
         };
         let tr: Vec<Option<String>> = doc.units.iter().map(translated_text).collect();
         let any = tr.iter().any(Option::is_some);
-        let loc = opts.stamp_lang(doc, any).map(posix_locale).filter(|l| !l.is_empty());
+        // a locale is a key suffix `Key[ll_CC@modifier]`: letters, digits, `_`, `@`, `.` and `-` only
+        let loc = opts
+            .stamp_lang(doc, any)
+            .map(posix_locale)
+            .filter(|l| !l.is_empty() && l.bytes().all(|b| b.is_ascii_alphanumeric() || matches!(b, b'_' | b'@' | b'.' | b'-')));
         let get = |i: usize| doc.units.get(i).ok_or_else(|| Error::Write(format!("no unit {i}")));
         let raw_of = |u: &Unit| u.codes.get(HIDDEN).and_then(|c| c.standalone.clone()).unwrap_or_default();
         let in_list = |u: &Unit| u.codes.get(HIDDEN).and_then(|c| c.label.as_deref()) == Some("list");

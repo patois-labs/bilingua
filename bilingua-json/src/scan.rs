@@ -1,7 +1,8 @@
 //! A strict JSON scanner that finds every string value with its byte range and JSON pointer, without building
 //! a tree and without touching a byte of the input.
 
-use bilingua_model::Error;
+use bilingua_model::guard::ContextBudget;
+use bilingua_model::{Error, Limits};
 
 /// A string value: the byte range of the whole token (quotes included) and its JSON pointer.
 #[derive(Debug, Clone)]
@@ -22,13 +23,17 @@ const MAX_DEPTH: usize = 200;
 /// scanner recurses, so the cap stays where a 2 MB thread stack (a debug build) is safe: 400 (900 overflowed it).
 const PYTHON_MAX_DEPTH: usize = 400;
 
+/// [`scan_with`] as strict JSON under the default limits (the sniffer, which has no options to read).
 pub fn scan(text: &str) -> Result<Vec<StrVal>, Error> {
-    scan_with(text, false)
+    scan_with(text, false, &Limits::default())
 }
 
-/// [`scan`]; with `python` also the `NaN`, `Infinity` and `-Infinity` that Python's `json.loads` reads (LocOS).
-pub fn scan_with(text: &str, python: bool) -> Result<Vec<StrVal>, Error> {
-    let mut s = Scan { text, b: text.as_bytes(), i: 0, depth: 0, vals: Vec::new(), ord: Vec::new(), python };
+/// Every string value of `text`; with `python` also the `NaN`, `Infinity` and `-Infinity` that Python's
+/// `json.loads` reads (LocOS). The pointers of all values together stay inside `limits.max_context_bytes`: each
+/// value keeps its own copy of the whole key path, so one long key over many values would otherwise grow with
+/// the square of the file.
+pub fn scan_with(text: &str, python: bool, limits: &Limits) -> Result<Vec<StrVal>, Error> {
+    let mut s = Scan { text, b: text.as_bytes(), i: 0, depth: 0, vals: Vec::new(), ord: Vec::new(), python, limits, context: ContextBudget::new() };
     s.ws();
     let mut path = Vec::new();
     s.value(&mut path)?;
@@ -47,6 +52,8 @@ struct Scan<'a> {
     vals: Vec<StrVal>,
     ord: Vec<usize>,
     python: bool,
+    limits: &'a Limits,
+    context: ContextBudget,
 }
 
 impl Scan<'_> {
@@ -74,6 +81,8 @@ impl Scan<'_> {
             Some(b'[') => self.array(path),
             Some(b'"') => {
                 let (start, end) = self.string()?;
+                // charged before the pointer is built: a refused file never takes the memory
+                self.context.charge(path.iter().map(|p| p.len() + 1).sum(), self.limits)?;
                 self.vals.push(StrVal { start, end, pointer: pointer(path), ord: self.ord.clone(), dead: false });
                 Ok(())
             }

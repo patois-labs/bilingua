@@ -43,7 +43,13 @@ fn scan_err(e: ScanError) -> Error {
         ScanError::Syntax(m) => parse_err(format!("this TOML file could not be read ({m})")),
         // LocOS: InputLimitError ("This TOML file is nested too deeply.")
         ScanError::Limit(m) => {
-            let kind = if m.contains("nested") { LimitKind::Depth } else { LimitKind::Units };
+            let kind = if m.contains("nested") {
+                LimitKind::Depth
+            } else if m == scan::KEY_BYTES_MSG {
+                LimitKind::Context
+            } else {
+                LimitKind::Units
+            };
             LimitError::new(kind, m).into()
         }
     }
@@ -234,14 +240,16 @@ impl Filter for TomlFilter {
 
     fn sniff(&self, bytes: &[u8]) -> bool {
         let Ok((text, _)) = decode(bytes, &Limits::default()) else { return false };
-        scan::scan(text).is_ok_and(|s| s.has_content)
+        scan::scan(text, Limits::default().max_context_bytes).is_ok_and(|s| s.has_content)
     }
 
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
         bilingua_model::check_own_options(self, &opts.format_options)?;
         let limits = opts.limits();
         let (text, bom) = decode(bytes, &limits)?;
-        let scan = scan::scan(text).map_err(scan_err)?;
+        let scan = scan::scan(text, limits.max_context_bytes).map_err(scan_err)?;
+        // what the units copy: their key path, and the description of a message table once per string of it
+        let mut context = guard::ContextBudget::new();
         let nl = match text.find('\n') {
             Some(i) if i > 0 && text.as_bytes()[i - 1] == b'\r' => 'r',
             _ => 'n',
@@ -294,9 +302,11 @@ impl Filter for TomlFilter {
             u.codes.insert(META.into(), CodeData::new().with_standalone(format!("{}{}{}", kind_char(s.kind), lead, nl)));
             u.context.kind = Some("string".into());
             u.context.style = Some(cls.style);
+            context.charge(s.key.len(), &limits)?;
             u.context.key = Some(s.key.clone());
             if cls.message {
                 if let Some(d) = s.parent.and_then(|p| scan.tables[p].string("description")) {
+                    context.charge(scan.strings[d].value.len(), &limits)?;
                     u.context.notes.push(scan.strings[d].value.to_string());
                 }
             }
@@ -383,7 +393,8 @@ fn render_unit(u: &Unit) -> (String, bool) {
 /// unit wrote. Never ship a broken file.
 fn verify(out: &str, placed: &[(usize, usize)], doc: &Document) -> Result<(), Error> {
     let bad = |m: &str| Error::Write(format!("the translated TOML file could not be rebuilt safely ({m})"));
-    let sc = scan::scan(out).map_err(|e| bad(&match e {
+    // the document already holds these keys; the cap belongs to extraction
+    let sc = scan::scan(out, u64::MAX).map_err(|e| bad(&match e {
         ScanError::Syntax(m) | ScanError::Limit(m) => m,
     }))?;
     for (at, ui) in placed {

@@ -415,6 +415,9 @@ fn parse_start<'a>(text: &'a str, lt: usize, ents: &HashSet<&str>) -> Result<Sta
         return Err(bad());
     }
     let mut attrs: Vec<(&str, usize, usize, u8)> = Vec::new();
+    // the names seen so far, filled only once a tag has more than a handful of attributes: comparing each new
+    // name with every earlier one was quadratic on a tag with tens of thousands of attributes
+    let mut seen: HashSet<&str> = HashSet::new();
     loop {
         let before = i;
         while i < n && is_ws(b[i]) {
@@ -465,7 +468,15 @@ fn parse_start<'a>(text: &'a str, lt: usize, ents: &HashSet<&str>) -> Result<Sta
             scan_refs(v, vs, ents, |_, _| {})?;
         }
         i = ve + 1;
-        if attrs.iter().any(|a| a.0 == aname) {
+        let repeated = if attrs.len() < 8 {
+            attrs.iter().any(|a| a.0 == aname)
+        } else {
+            if seen.is_empty() {
+                seen.extend(attrs.iter().map(|a| a.0));
+            }
+            !seen.insert(aname)
+        };
+        if repeated {
             return Err(wf("duplicate attribute"));
         }
         attrs.push((aname, vs, ve, q));

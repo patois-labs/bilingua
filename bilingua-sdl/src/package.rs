@@ -22,13 +22,20 @@ use crate::zipio::ZipLimits;
 use crate::zipio::{read_zip, safe_name, write_zip};
 use quick_xml::events::Event;
 use quick_xml::Reader;
+use bilingua_model::{LimitError, LimitKind, Limits};
 use serde::Serialize;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 /// A bilingual file inside a package, as the package needs it: open from bytes, count, tell whether it was
 /// edited, write back. `bilingua_xliff::Doc` is one; an editor can wrap it in its own type.
 pub trait PackageDoc: Sized {
     fn open(bytes: Vec<u8>) -> Result<Self, Error>;
+    /// [`PackageDoc::open`] under the caller's limits, for a type that can refuse an oversized file while it reads
+    /// it. The default opens without them.
+    fn open_limited(bytes: Vec<u8>, limits: &Limits) -> Result<Self, Error> {
+        let _ = limits;
+        Self::open(bytes)
+    }
     fn segment_count(&self) -> usize;
     fn is_dirty(&self) -> bool;
     fn to_bytes(&self) -> Vec<u8>;
@@ -39,6 +46,9 @@ pub trait PackageDoc: Sized {
 impl PackageDoc for bilingua_xliff::Doc {
     fn open(bytes: Vec<u8>) -> Result<Self, Error> {
         bilingua_xliff::Doc::from_bytes(bytes)
+    }
+    fn open_limited(bytes: Vec<u8>, limits: &Limits) -> Result<Self, Error> {
+        bilingua_xliff::Doc::from_bytes_limited(bytes, false, limits)
     }
     fn segment_count(&self) -> usize {
         self.len()
@@ -173,18 +183,45 @@ struct ProjectInfo {
     package_type: String,
     source: String,
     targets: Vec<String>,
-    /// (language, normalised physical path) for every file version listed in the project.
-    files: Vec<(String, String)>,
-    reports: Vec<String>,
+    /// Normalised physical path -> language, for every file version listed in the project (the first listing of a
+    /// path counts). A map and a set, because every zip entry is looked up in them.
+    files: HashMap<String, String>,
+    reports: HashSet<String>,
+}
+
+/// The XML guard over one package member, before any parser reads it. A refusal keeps its kind for the `Filter`s.
+fn guard_xml(name: &str, data: &[u8], limits: &Limits) -> Result<(), Error> {
+    match bilingua_model::guard::check_xml(data, limits) {
+        Ok(()) => Ok(()),
+        Err(bilingua_model::Error::Limit(l)) => Err(Error::Limit(l)),
+        Err(e) => Err(Error::Package(format!("{name}: {e}"))),
+    }
+}
+
+/// Opens one bilingual member: with `guard`, the XML guard runs first and the file is read under the limits.
+fn open_member<D: PackageDoc>(e: &Entry, guard: Option<&Limits>) -> Result<D, Error> {
+    let Some(l) = guard else {
+        return D::open(e.data.clone()).map_err(|err| Error::Package(format!("{}: {err}", e.name)));
+    };
+    guard_xml(&e.name, &e.data, l)?;
+    D::open_limited(e.data.clone(), l).map_err(|err| match err {
+        Error::Limit(l) => Error::Limit(l),
+        err => Error::Package(format!("{}: {err}", e.name)),
+    })
 }
 
 fn attr(e: &quick_xml::events::BytesStart<'_>, name: &str) -> Option<String> {
     e.attributes().flatten().find(|a| a.key.as_ref() == name.as_bytes()).and_then(|a| a.unescape_value().ok().map(|v| v.into_owned()))
 }
 
-fn parse_project(xml: &[u8]) -> Result<ProjectInfo, Error> {
+/// Reads the project file. `limits.max_entries` also caps the target languages: every one of them has a folder
+/// of files in the package, so a project that names more languages than the package may hold entries is refused
+/// instead of read to the end.
+fn parse_project(xml: &[u8], limits: &ZipLimits) -> Result<ProjectInfo, Error> {
     let mut rd = Reader::from_reader(xml);
     let mut info = ProjectInfo::default();
+    // the target codes seen, beside the ordered list: one lookup per language direction, not a walk of the list
+    let mut seen_targets: HashSet<String> = HashSet::new();
     let mut lang_file: Option<String> = None;
     let mut in_source_lang = false;
     let mut saw_root = false;
@@ -202,7 +239,16 @@ fn parse_project(xml: &[u8]) -> Result<ProjectInfo, Error> {
                     b"SourceLanguageCode" => in_source_lang = true,
                     b"LanguageDirection" => {
                         if let Some(t) = attr(&e, "TargetLanguageCode") {
-                            if !info.targets.contains(&t) {
+                            if !seen_targets.contains(&t) {
+                                if info.targets.len() >= limits.max_entries {
+                                    let n = limits.max_entries;
+                                    return Err(if limits.typed_errors {
+                                        Error::Limit(LimitError::new(LimitKind::XmlElements, format!("This package's project file names more than {n} target languages.")))
+                                    } else {
+                                        Error::Package(format!("the .sdlproj names more than {n} target languages"))
+                                    });
+                                }
+                                seen_targets.insert(t.clone());
                                 info.targets.push(t);
                             }
                         }
@@ -213,12 +259,12 @@ fn parse_project(xml: &[u8]) -> Result<ProjectInfo, Error> {
                     b"LanguageFile" => lang_file = attr(&e, "LanguageCode"),
                     b"FileVersion" => {
                         if let (Some(l), Some(p)) = (lang_file.clone(), attr(&e, "PhysicalPath")) {
-                            info.files.push((l, p.replace('\\', "/")));
+                            info.files.entry(p.replace('\\', "/")).or_insert(l);
                         }
                     }
                     b"Report" => {
                         if let Some(p) = attr(&e, "PhysicalPath") {
-                            info.reports.push(p.replace('\\', "/"));
+                            info.reports.insert(p.replace('\\', "/"));
                         }
                     }
                     _ => {}
@@ -260,10 +306,13 @@ impl<D: PackageDoc> SdlPackage<D> {
     /// `max_zip_ratio`, `zip_ratio_floor_bytes`). `Limits::default()` is Localization OS's numbers; CAT OS desktop
     /// may pass larger ones. A refusal is a plain `Error::Package` message.
     pub fn from_bytes_with_limits(bytes: &[u8], limits: &bilingua_model::Limits) -> Result<Self, Error> {
-        Self::open(bytes, &ZipLimits::of(limits, false))
+        Self::open(bytes, &ZipLimits::of(limits, false), None)
     }
 
-    pub(crate) fn open(bytes: &[u8], limits: &ZipLimits) -> Result<Self, Error> {
+    /// `guard`: the limits of a `Filter` call. With them the XML guard (no entity declarations, bounded depth and
+    /// element count) runs over the project file and over every bilingual file before a parser reads it, and a
+    /// bilingual file over `max_units` is refused while it is scanned.
+    pub(crate) fn open(bytes: &[u8], limits: &ZipLimits, guard: Option<&Limits>) -> Result<Self, Error> {
         let entries = read_zip(bytes, limits)?;
         let projects: Vec<usize> = entries
             .iter()
@@ -278,11 +327,14 @@ impl<D: PackageDoc> SdlPackage<D> {
         };
         let data = &entries[project].data;
         let data = data.strip_prefix(&[0xEF, 0xBB, 0xBF][..]).unwrap_or(data);
-        let info = parse_project(data)?;
+        if let Some(l) = guard {
+            guard_xml(&entries[project].name, data, l)?;
+        }
+        let info = parse_project(data, limits)?;
         let mut docs = HashMap::new();
         for (i, e) in entries.iter().enumerate() {
             if role_of(&info, e) == FileRole::Target && e.name.to_ascii_lowercase().ends_with(".sdlxliff") {
-                let doc = D::open(e.data.clone()).map_err(|err| Error::Package(format!("{}: {err}", e.name)))?;
+                let doc = open_member::<D>(e, guard)?;
                 docs.insert(i, doc);
             }
         }
@@ -421,7 +473,7 @@ impl<D: PackageDoc> SdlPackage<D> {
 }
 
 fn language_of(info: &ProjectInfo, e: &Entry) -> Option<String> {
-    info.files.iter().find(|(_, p)| *p == e.name).map(|(l, _)| l.clone())
+    info.files.get(&e.name).cloned()
 }
 
 fn is_report(info: &ProjectInfo, e: &Entry) -> bool {
@@ -587,15 +639,17 @@ impl<D: PackageDoc> MqPackage<D> {
     /// `max_zip_ratio`, `zip_ratio_floor_bytes`). `Limits::default()` is Localization OS's numbers; CAT OS desktop
     /// may pass larger ones. A refusal is a plain `Error::Package` message.
     pub fn from_bytes_with_limits(bytes: &[u8], limits: &bilingua_model::Limits) -> Result<Self, Error> {
-        Self::open(bytes, &ZipLimits::of(limits, false))
+        Self::open(bytes, &ZipLimits::of(limits, false), None)
     }
 
-    pub(crate) fn open(bytes: &[u8], limits: &ZipLimits) -> Result<Self, Error> {
+    /// `guard`: as for [`SdlPackage`], the limits of a `Filter` call, applied to every bilingual file before it
+    /// is parsed.
+    pub(crate) fn open(bytes: &[u8], limits: &ZipLimits, guard: Option<&Limits>) -> Result<Self, Error> {
         let entries = read_zip(bytes, limits)?;
         let mut docs = HashMap::new();
         for (i, e) in entries.iter().enumerate() {
             if e.name.to_ascii_lowercase().ends_with(".mqxliff") {
-                let doc = D::open(e.data.clone()).map_err(|err| Error::Package(format!("{}: {err}", e.name)))?;
+                let doc = open_member::<D>(e, guard)?;
                 docs.insert(i, doc);
             }
         }

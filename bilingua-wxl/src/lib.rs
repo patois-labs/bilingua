@@ -121,11 +121,21 @@ fn is_no(v: &Option<String>) -> bool {
     matches!(v.as_deref().map(|s| s.trim_matches(is_space).to_lowercase()).as_deref(), Some("no" | "false"))
 }
 
+/// The most bytes a formatted reference holds between its brackets.
+const MAX_REFERENCE: usize = 128;
+
 /// The end of a Windows Installer formatted reference that starts at `s[0] == '['`, if it is one.
 fn reference_len(s: &str) -> Option<usize> {
-    let close = s.find(']')?;
+    // A reference holds at most 128 bytes between its brackets and no `[`, so the `]` is looked for only that far
+    // and only up to the next `[`: a value of many `[` with no `]` must not be read to its end once per `[`.
+    // (Bytes, so no character is cut.)
+    let b = s.as_bytes();
+    let close = 1 + b.iter().take(MAX_REFERENCE + 2).skip(1).position(|&c| c == b']' || c == b'[')?;
+    if b[close] != b']' {
+        return None;
+    }
     let inner = &s[1..close];
-    if inner.is_empty() || inner.len() > 128 || inner.contains('[') {
+    if inner.is_empty() || inner.len() > MAX_REFERENCE || inner.contains('[') {
         return None;
     }
     let ok = if inner == "~" {
@@ -343,6 +353,13 @@ impl Filter for Wxl {
                 parts.push(SkelPart::Raw(text[pos..start].to_string()));
             }
             pos = end;
+            // A value far over the unit length limit is refused before it is split into text and references. The
+            // finished unit counts a reference as one character and a reference is at most MAX_REFERENCE + 2 bytes,
+            // so a value of more bytes than that many per allowed character is over the limit however it splits;
+            // the final check in `guard::finish` refuses the rest as before.
+            if core.len() > limits.max_unit_chars.saturating_mul(MAX_REFERENCE + 2) {
+                guard::check_unit_chars(usize::MAX, &limits)?;
+            }
             let mut unit = Unit::new(format!("u{}", idx + 1), vec![]);
             let source = inlines_of(core, &mut unit);
             unit.segments[0].source = source;

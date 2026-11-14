@@ -94,7 +94,7 @@ struct CurSeg {
     tgt: Option<TSlot>,
 }
 
-pub fn parse(buf: &[u8]) -> Result<ParsedDoc, Error> {
+pub fn parse(buf: &[u8], limits: Option<&bilingua_model::Limits>) -> Result<ParsedDoc, Error> {
     let mut rd = Reader::from_reader(buf);
     let mut stack: Vec<K> = Vec::new();
     let mut recs: Vec<SegRec> = Vec::new();
@@ -208,6 +208,7 @@ pub fn parse(buf: &[u8]) -> Result<ParsedDoc, Error> {
                         if let Some(c) = cur.take() {
                             if let Some(rec) = build_seg(buf, c, &unit_id, unit_locked, unit_ids.len())? {
                                 recs.push(rec);
+                                crate::doc::check_segments(recs.len(), limits)?;
                             }
                         }
                     }

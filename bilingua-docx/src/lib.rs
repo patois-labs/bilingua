@@ -198,6 +198,56 @@ fn split_template(t: &str, idx: &HashMap<&str, usize>) -> Result<Vec<SkelPart>, 
     Ok(parts)
 }
 
+fn too_many_paragraphs(l: &Limits) -> Error {
+    bilingua_model::LimitError::new(
+        bilingua_model::LimitKind::Paragraphs,
+        format!("This file has more than {} paragraphs. Split it into smaller files.", l.max_paragraphs),
+    )
+    .into()
+}
+
+/// True for an entry the XML guard covers by its name alone (`bilingua_zip::check_xml_parts_except`).
+pub(crate) fn xml_guarded_by_name(name: &str) -> bool {
+    let n = name.to_ascii_lowercase();
+    !UNPARSED_PARTS.iter().any(|p| name.starts_with(p)) && [".xml", ".rels", ".vml", ".xlf", ".xliff", ".sdlxliff"].iter().any(|x| n.ends_with(x))
+}
+
+/// True for an entry whose paragraphs `guard_named_parts` counts by its name alone.
+fn paragraphs_counted_by_name(name: &str) -> bool {
+    name.starts_with("word/") && name.ends_with(".xml")
+}
+
+/// The guards that go by entry name, run before anything is parsed: the XML guard over every XML-named entry
+/// outside `customXml/`, and the paragraph count over `word/*.xml`. Returns the paragraphs counted so far.
+pub(crate) fn guard_named_parts(entries: &[zipio::RawEntry], l: &Limits) -> Result<usize, Error> {
+    bilingua_zip::check_xml_parts_except(entries, l, UNPARSED_PARTS)?;
+    // empty paragraphs count too (LocOS DOCX_MAX_PARAGRAPHS), before any tree is built
+    let mut paragraphs = 0usize;
+    for e in entries.iter().filter(|e| paragraphs_counted_by_name(&e.name)) {
+        paragraphs += bilingua_model::guard::count_elements(&e.data, "p");
+        if paragraphs > l.max_paragraphs {
+            return Err(too_many_paragraphs(l));
+        }
+    }
+    Ok(paragraphs)
+}
+
+/// The same guards for one part that is about to be parsed, whatever its name. A package chooses its parts by
+/// content type and relationship, so the main document may be called `word/document.bin` or sit under
+/// `customXml/`, where the name-keyed guards do not look; a part they did cover is not scanned twice.
+pub(crate) fn guard_parsed_part(name: &str, data: &[u8], l: &Limits, paragraphs: &mut usize) -> Result<(), Error> {
+    if !xml_guarded_by_name(name) {
+        bilingua_model::guard::check_xml(data, l)?;
+    }
+    if !paragraphs_counted_by_name(name) {
+        *paragraphs += bilingua_model::guard::count_elements(data, "p");
+        if *paragraphs > l.max_paragraphs {
+            return Err(too_many_paragraphs(l));
+        }
+    }
+    Ok(())
+}
+
 fn extract_doc(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
     let l = opts.limits();
     bilingua_model::guard::check_input(bytes, &l)?;
@@ -206,22 +256,8 @@ fn extract_doc(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
 
 fn extract_doc_inner(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
     let entries = zipio::read_zip(bytes, &ZipLimits::from(&opts.limits()))?;
-    bilingua_zip::check_xml_parts_except(&entries, &opts.limits(), crate::UNPARSED_PARTS)?;
-    {
-        // empty paragraphs count too (LocOS DOCX_MAX_PARAGRAPHS), before any tree is built
-        let l = opts.limits();
-        let mut paragraphs = 0usize;
-        for e in entries.iter().filter(|e| e.name.starts_with("word/") && e.name.ends_with(".xml")) {
-            paragraphs += bilingua_model::guard::count_elements(&e.data, "p");
-            if paragraphs > l.max_paragraphs {
-                return Err(bilingua_model::LimitError::new(
-                    bilingua_model::LimitKind::Paragraphs,
-                    format!("This file has more than {} paragraphs. Split it into smaller files.", l.max_paragraphs),
-                )
-                .into());
-            }
-        }
-    }
+    let l = opts.limits();
+    let mut paragraphs = guard_named_parts(&entries, &l)?;
     let ct = entries
         .iter()
         .find(|e| e.name == "[Content_Types].xml")
@@ -235,11 +271,21 @@ fn extract_doc_inner(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Er
         .map(|(d, _)| format!("{d}/"))
         .unwrap_or_default();
 
+    // The guards above go by entry name; the parts read below are chosen by content type and by the main part's
+    // folder. Whatever is about to be parsed and was not covered by name is guarded here, before any tree is built.
+    let styles_name = format!("{dir}styles.xml");
+    let comments_name = format!("{dir}comments.xml");
+    for e in entries.iter() {
+        if e.name == styles_name || e.name == comments_name || classify(&e.name, &main, &dir).is_some() {
+            guard_parsed_part(&e.name, &e.data, &l, &mut paragraphs)?;
+        }
+    }
+
     // Styles and comments first: paragraphs need them for their context.
     let mut styles = Styles::default();
     if let Some(e) = entries
         .iter()
-        .find(|e| e.name == format!("{dir}styles.xml"))
+        .find(|e| e.name == styles_name)
     {
         if let Some(nodes) = std::str::from_utf8(&e.data)
             .ok()
@@ -252,7 +298,7 @@ fn extract_doc_inner(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Er
     let mut comments = HashMap::new();
     if let Some(e) = entries
         .iter()
-        .find(|e| e.name == format!("{dir}comments.xml"))
+        .find(|e| e.name == comments_name)
     {
         if let Ok(t) = std::str::from_utf8(&e.data) {
             comments = read_comments(t);
@@ -272,7 +318,7 @@ fn extract_doc_inner(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Er
         }
     }
 
-    let mut ex = Extractor::new(styles, comments);
+    let mut ex = Extractor::new(styles, comments).with_limits(l);
     let mut templates: HashMap<usize, String> = HashMap::new();
     let mut wp = "w:".to_string();
     let mut bilingual: Option<storyline::Found> = None;
@@ -320,6 +366,8 @@ fn extract_doc_inner(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Er
         };
         ex.begin_part(kind, &e.name, prefix, ns);
         templates.insert(i, ex.run_part(&nodes));
+        // a comment copied into more units than the context budget allows: refused as soon as the part is walked
+        ex.check_refused()?;
     }
     let mut units = ex.finish();
     // A Storyline "Export to Word" table: only the Translation cells are translated (LocOS docx_bilingual)

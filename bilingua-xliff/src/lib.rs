@@ -45,15 +45,24 @@ pub fn segment_ids(doc: &Doc) -> (Vec<String>, Vec<String>) {
     let mut unit_ids: Vec<Option<String>> = vec![None; doc.unit_count()];
     let mut seg_count = vec![0usize; doc.unit_count()];
     let mut seen: HashSet<String> = HashSet::new();
+    // The last suffix given out per repeated id, for units and for segments. Ids are only ever added, so every
+    // suffix up to it is still taken: going on from there gives the ids a search from 2 gives, in linear time.
+    let mut last_unit: HashMap<String, usize> = HashMap::new();
+    let mut last_seg: HashMap<String, usize> = HashMap::new();
     for i in 0..doc.len() {
         let v = doc.seg(i);
         seg_count[v.unit_ix] += 1;
         if unit_ids[v.unit_ix].is_none() {
             let mut uid = v.unit_id.to_string();
-            let mut n = 1;
-            while !seen.insert(uid.clone()) {
-                n += 1;
-                uid = format!("{}~{n}", v.unit_id);
+            if !seen.insert(uid.clone()) {
+                let n = last_unit.entry(uid.clone()).or_insert(1);
+                loop {
+                    *n += 1;
+                    uid = format!("{}~{n}", v.unit_id);
+                    if seen.insert(uid.clone()) {
+                        break;
+                    }
+                }
             }
             unit_ids[v.unit_ix] = Some(uid);
         }
@@ -75,10 +84,15 @@ pub fn segment_ids(doc: &Doc) -> (Vec<String>, Vec<String>) {
         }
         let base = unit_ids[v.unit_ix].clone().unwrap_or_default();
         let mut id = base.clone();
-        let mut n = 1;
-        while !taken.insert(id.clone()) {
-            n += 1;
-            id = format!("{base}~{n}");
+        if !taken.insert(id.clone()) {
+            let n = last_seg.entry(base.clone()).or_insert(1);
+            loop {
+                *n += 1;
+                id = format!("{base}~{n}");
+                if taken.insert(id.clone()) {
+                    break;
+                }
+            }
         }
         seg_ids.push(id);
     }
@@ -143,6 +157,10 @@ pub struct MxMeta {
 }
 
 fn parse_err(id: &str, e: Error) -> bilingua_model::Error {
+    if let Error::Limit(l) = e {
+        // a refusal for size keeps its kind
+        return bilingua_model::Error::Limit(l);
+    }
     bilingua_model::Error::Parse { format: id.to_string(), msg: e.to_string() }
 }
 
@@ -365,13 +383,13 @@ impl Filter for XliffFilter {
         }
         let body = bytes.strip_prefix(&[0xEF, 0xBB, 0xBF][..]).unwrap_or(bytes);
         if std::str::from_utf8(body).is_ok() {
-            let doc = Doc::from_bytes_hint(bytes.to_vec(), self.id == "mxliff").map_err(|e| parse_err(self.id, e))?;
+            let doc = Doc::from_bytes_limited(bytes.to_vec(), self.id == "mxliff", &limits).map_err(|e| parse_err(self.id, e))?;
             return to_document(&doc, self.id, opts);
         }
         // UTF-16 or a legacy code page: read it as text, hand the parser UTF-8
         let dec = bilingua_model::enc::decode_text(bytes, &bilingua_model::enc::DecodeOptions::new(opts).declared())?;
         bilingua_model::guard::check_xml(dec.text.as_bytes(), &limits)?;
-        let doc = Doc::from_bytes_hint(dec.text.into_bytes(), self.id == "mxliff").map_err(|e| parse_err(self.id, e))?;
+        let doc = Doc::from_bytes_limited(dec.text.into_bytes(), self.id == "mxliff", &limits).map_err(|e| parse_err(self.id, e))?;
         to_document_in(&doc, self.id, opts, Some(dec.encoding), dec.warnings)
     }
     fn merge_with(&self, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, bilingua_model::Error> {

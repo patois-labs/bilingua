@@ -201,6 +201,10 @@ pub fn start_tag(text: &str, pos: usize) -> Result<StartTag, Error> {
     let name = text[ns..i].to_string();
     let name_end = i;
     let mut attrs: Vec<Attr> = Vec::new();
+    // the names seen so far, filled only once a tag has more than a handful of attributes: comparing each new
+    // name with every earlier one was quadratic on a tag with tens of thousands of attributes
+    let mut seen: std::collections::HashSet<&str> = std::collections::HashSet::new();
+    let mut names: Vec<&str> = Vec::new();
     loop {
         let before = i;
         while i < b.len() && is_ws(b[i]) {
@@ -260,9 +264,18 @@ pub fn start_tag(text: &str, pos: usize) -> Result<StartTag, Error> {
             return Err(perr("not well-formed XML: < in an attribute value"));
         }
         check_refs(raw)?;
-        if attrs.iter().any(|a| a.name == aname) {
+        let repeated = if names.len() < 8 {
+            names.contains(&&text[an..an + aname.len()])
+        } else {
+            if seen.is_empty() {
+                seen.extend(names.iter().copied());
+            }
+            !seen.insert(&text[an..an + aname.len()])
+        };
+        if repeated {
             return Err(perr(format!("not well-formed XML: attribute {aname} repeated")));
         }
+        names.push(&text[an..an + aname.len()]);
         attrs.push(Attr { name: aname, value: attr_value(raw), vstart: vs, vend, quote: q });
         i = vend + 1;
     }

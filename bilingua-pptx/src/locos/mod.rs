@@ -337,6 +337,11 @@ impl Pkg {
         }
         let bad = || perr(format!("This PowerPoint file has invalid XML in {name}. Save it again in PowerPoint."));
         let text = decode(raw).ok_or_else(bad)?;
+        // `decode` drops one byte order mark. A second one is not XML, and the parser would skip it without
+        // counting it, so every element's span would sit three bytes before its place in `text`.
+        if text.starts_with('\u{feff}') {
+            return Err(bad());
+        }
         let d = dom::parse(&text).map_err(|_| bad())?;
         self.doms.insert(name.to_string(), d);
         self.texts.insert(name.to_string(), text);
@@ -657,7 +662,8 @@ fn tok_inlines(d: &Dom, text: &str, p: usize) -> (Vec<Inline>, BTreeMap<String, 
         }
         return (out, codes);
     }
-    let raw = |id: usize| d.nodes[id].span.map(|s| (&text[s.start..s.start_end], &text[s.end_start..s.end], &text[s.start..s.end]));
+    // `get`, not an index: a span that does not fit the text gives empty tag data, never a panic
+    let raw = |id: usize| d.nodes[id].span.and_then(|s| Some((text.get(s.start..s.start_end)?, text.get(s.end_start..s.end)?, text.get(s.start..s.end)?)));
     let (mut rn, mut xn) = (0usize, runs);
     for (run, el) in it {
         let (open, close, whole) = raw(el).unwrap_or(("", "", ""));

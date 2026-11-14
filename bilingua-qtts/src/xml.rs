@@ -7,6 +7,7 @@
 
 use crate::Limits;
 use bilingua_model::{Error, LimitError, LimitKind};
+use std::collections::{HashMap, HashSet};
 
 
 pub fn perr(msg: impl Into<String>) -> Error {
@@ -248,7 +249,21 @@ pub fn scan(text: &str, fragment: bool, limits: &Limits) -> Result<Scan, Error> 
     let b = text.as_bytes();
     let mut sc = Scan::default();
     let mut stack: Vec<Frame> = Vec::new();
-    let mut ns: Vec<String> = Vec::new(); // declared prefixes, innermost last
+    let mut ns: Vec<&str> = Vec::new(); // declared prefixes, innermost last
+    // how many declarations of each prefix are in scope, kept in step with `ns`, so "is this prefix declared"
+    // is one lookup however many declarations are open (a search of `ns` per name was quadratic)
+    let mut ns_count: HashMap<&str, usize> = HashMap::new();
+    let ns_pop = |ns: &mut Vec<&str>, ns_count: &mut HashMap<&str, usize>, len: usize| {
+        while ns.len() > len {
+            let Some(p) = ns.pop() else { break };
+            if let Some(n) = ns_count.get_mut(p) {
+                *n -= 1;
+                if *n == 0 {
+                    ns_count.remove(p);
+                }
+            }
+        }
+    };
     let mut pos = 0usize;
     let mut root_done = false;
     let mut doctype_seen = false;
@@ -353,7 +368,7 @@ pub fn scan(text: &str, fragment: bool, limits: &Limits) -> Result<Scan, Error> 
             el.etag_start = pos;
             el.end = close + 1;
             sc.els[top.el].sub_end = sc.els.len() - 1;
-            ns.truncate(top.ns_len);
+            ns_pop(&mut ns, &mut ns_count, top.ns_len);
             pos = close + 1;
             if stack.is_empty() {
                 root_done = true;
@@ -374,6 +389,9 @@ pub fn scan(text: &str, fragment: bool, limits: &Limits) -> Result<Scan, Error> 
             let attr_lo = sc.attrs.len();
             let mut j = ne;
             let ns_len = ns.len();
+            // the names of this tag, filled only once it has more than a handful of attributes: comparing each
+            // new name with every earlier one was quadratic on a tag with tens of thousands of attributes
+            let mut seen: HashSet<&str> = HashSet::new();
             let (stag_end, empty);
             loop {
                 let after_ws = skip_ws(j);
@@ -410,19 +428,27 @@ pub fn scan(text: &str, fragment: bool, limits: &Limits) -> Result<Scan, Error> 
                 };
                 let vend = b[k + 1..].iter().position(|c| *c == q).map(|p| p + k + 1).ok_or_else(|| not_wf("an attribute value that never ends"))?;
                 check_chars(&text[k + 1..vend], true)?;
-                if sc.attrs[attr_lo..].iter().any(|a| &text[a.name.0..a.name.1] == aname) {
+                let twice = if sc.attrs.len() - attr_lo < 8 {
+                    sc.attrs[attr_lo..].iter().any(|a| &text[a.name.0..a.name.1] == aname)
+                } else {
+                    if seen.is_empty() {
+                        seen.extend(sc.attrs[attr_lo..].iter().map(|a| &text[a.name.0..a.name.1]));
+                    }
+                    !seen.insert(aname)
+                };
+                if twice {
                     return Err(not_wf(format!("attribute {aname} appears twice")));
                 }
-                if aname == "xmlns" {
-                    ns.push(String::new());
-                } else if let Some(p) = aname.strip_prefix("xmlns:") {
-                    ns.push(p.to_string());
+                let declares = if aname == "xmlns" { Some("") } else { aname.strip_prefix("xmlns:") };
+                if let Some(p) = declares {
+                    ns.push(p);
+                    *ns_count.entry(p).or_insert(0) += 1;
                 }
                 sc.attrs.push(Attr { name: (after_ws, ae), val: (k + 1, vend), quote: q, whole: (j, vend + 1) });
                 j = vend + 1;
             }
             if !fragment {
-                let declared = |p: &str| p == "xml" || p == "xmlns" || ns.iter().any(|d| d == p);
+                let declared = |p: &str| p == "xml" || p == "xmlns" || ns_count.contains_key(p);
                 if let Some((p, _)) = qname.split_once(':') {
                     if !declared(p) {
                         return Err(not_wf(format!("namespace prefix {p} is not defined")));
@@ -453,7 +479,7 @@ pub fn scan(text: &str, fragment: bool, limits: &Limits) -> Result<Scan, Error> 
             });
             pos = stag_end;
             if empty {
-                ns.truncate(ns_len);
+                ns_pop(&mut ns, &mut ns_count, ns_len);
                 if stack.is_empty() {
                     root_done = true;
                 }

@@ -93,6 +93,9 @@ pub fn parse_header(line: &str) -> Option<(String, usize, usize)> {
     None
 }
 
+/// The most characters a section name has: one letter and up to 60 more, as in `parse_section`'s pattern.
+const MAX_SECTION_NAME: usize = 61;
+
 /// `^-{3,}[ \t]*([A-Za-z][A-Za-z ]{0,60}?)[ \t]*-{3,}[ \t]*$`: the section name, lowercased with runs of spaces
 /// collapsed.
 pub fn parse_section(line: &str) -> Option<String> {
@@ -110,7 +113,7 @@ pub fn parse_section(line: &str) -> Option<String> {
     while e > s && b[e - 1] == b' ' {
         e -= 1;
     }
-    if e - s > 61 {
+    if e - s > MAX_SECTION_NAME {
         return None;
     }
     let after = skip_blanks(line, s + run);
@@ -157,13 +160,16 @@ pub struct Walker<'t> {
     /// Lines that are not comments, section lines, headers or data rows and hold no tab.
     pub stray: usize,
     pub type_: String,
+    /// The section of a row before any section line: the lowercased Type header, or "source". Worked out once,
+    /// when the header is read, and shared by every such row.
+    default_section: Rc<str>,
     /// First span of each header, by lowercased name.
     pub headers: Vec<(String, Header)>,
 }
 
 impl<'t> Walker<'t> {
     pub fn new(text: &'t str, pos: usize) -> Walker<'t> {
-        Walker { text, pos, section: Rc::from(""), columns: None, seen_data: false, stray: 0, type_: String::new(), headers: Vec::new() }
+        Walker { text, pos, section: Rc::from(""), columns: None, seen_data: false, stray: 0, type_: String::new(), default_section: Rc::from("source"), headers: Vec::new() }
     }
 
     pub fn header(&self, name: &str) -> Option<&Header> {
@@ -209,7 +215,11 @@ impl<'t> Walker<'t> {
                 // Checked before the tab test: `Language code:<TAB>de` is a header, not a data row.
                 let value = line[vs..ve].to_string();
                 if name == "type" {
-                    self.type_ = py_strip(&value).to_string();
+                    // The Type value names the section of every row that has no section line, and each unit
+                    // carries its section name. It is kept to the length a section line's name may have, so a
+                    // long header cannot be copied once per row. (The header line itself stays in the file.)
+                    self.type_ = py_strip(&value).chars().take(MAX_SECTION_NAME).collect();
+                    self.default_section = Rc::from(if self.type_.is_empty() { "source".to_string() } else { self.type_.to_lowercase() });
                 }
                 if !self.headers.iter().any(|(n, _)| *n == name) {
                     self.headers.push((name, Header { start: start + vs, end: start + ve, value }));
@@ -234,7 +244,7 @@ impl<'t> Walker<'t> {
             return Some(None);
         }
         let section: Rc<str> = if self.section.is_empty() {
-            Rc::from(if self.type_.is_empty() { "source".to_string() } else { self.type_.to_lowercase() })
+            self.default_section.clone()
         } else {
             self.section.clone()
         };

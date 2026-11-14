@@ -22,11 +22,19 @@ pub struct Limits {
     pub max_unit_chars: usize,
     /// Largest file, in bytes.
     pub max_bytes: usize,
+    /// Most bytes of key path and comment text on all strings together (`bilingua_model::Limits::max_context_bytes`).
+    pub max_context_bytes: u64,
 }
 
 impl Default for Limits {
     fn default() -> Limits {
-        Limits { max_depth: 256, max_units: 500_000, max_unit_chars: 100_000, max_bytes: 256 * 1024 * 1024 }
+        Limits {
+            max_depth: 256,
+            max_units: 500_000,
+            max_unit_chars: 100_000,
+            max_bytes: 256 * 1024 * 1024,
+            max_context_bytes: bilingua_model::Limits::default().max_context_bytes,
+        }
     }
 }
 
@@ -77,6 +85,7 @@ impl Limits {
             max_units: self.max_units.min(l.max_units),
             max_unit_chars: self.max_unit_chars.min(l.max_unit_chars),
             max_bytes: self.max_bytes.min(usize::try_from(l.max_input_bytes).unwrap_or(usize::MAX)),
+            max_context_bytes: self.max_context_bytes.min(l.max_context_bytes),
         }
     }
 }
@@ -503,6 +512,9 @@ pub fn scan<'a>(text: &'a str, lim: &Limits) -> Result<Vec<StrVal>, Error> {
     let mut seg: Seg<'a> = Seg::None;
     let mut expect = Expect::Value;
     let mut translatable = 0usize;
+    // every string keeps its own copy of the whole key path: one long key over many values counts once per value
+    let context_limits = bilingua_model::Limits::default().with_max_context_bytes(lim.max_context_bytes);
+    let mut context = bilingua_model::guard::ContextBudget::new();
     let mut pos = skip(text, 0, Some(&mut pending))?;
     loop {
         let c = b.get(pos).copied();
@@ -540,7 +552,9 @@ pub fn scan<'a>(text: &'a str, lim: &Limits) -> Result<Vec<StrVal>, Error> {
                             Some(top) => join_path(&top.base, &seg),
                             None => String::new(),
                         };
-                        out.push(StrVal { start: pos, end, value, key, comment: comment_text(text, &comment), translatable: ok });
+                        let comment_text = comment_text(text, &comment);
+                        context.charge(key.len() + comment_text.len(), &context_limits)?;
+                        out.push(StrVal { start: pos, end, value, key, comment: comment_text, translatable: ok });
                         pos = end;
                         expect = Expect::After;
                     }

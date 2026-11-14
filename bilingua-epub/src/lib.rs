@@ -46,13 +46,23 @@ use xml::Edits;
 /// The skeleton entry that holds the whole original file.
 const ARCHIVE: &str = "epub";
 /// The skeleton entry that holds the options the file was read with. The unit ids depend on `include_locked`
-/// (locked text is numbered too) and the limits decide what may be read again, so merge must use the same ones.
+/// (locked text is numbered too), so merge must use the same value. The limits are written for the record only:
+/// merge reads the archive again under `Limits::default()`.
 const OPTIONS: &str = "epub-options";
 
-#[derive(serde::Serialize, serde::Deserialize)]
+#[derive(serde::Serialize)]
 struct Opts {
     include_locked: bool,
     limits: Limits,
+}
+
+/// What merge reads back from the options entry: only how the units were numbered. The limits written beside it
+/// are never used: the stored document is not a trusted place to take the resource policy from (a document that
+/// raised them would have its own archive read again without the zip and XML guards).
+#[derive(serde::Deserialize)]
+struct StoredOpts {
+    #[serde(default)]
+    include_locked: bool,
 }
 
 /// The EPUB filter.
@@ -177,13 +187,14 @@ fn merge_epub(doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
     let read_with = skel
         .iter()
         .find_map(|e| match (&e.data, e.name == OPTIONS) {
-            (ZipData::Raw(b), true) => Some(serde_json::from_slice::<Opts>(b)),
+            (ZipData::Raw(b), true) => Some(serde_json::from_slice::<StoredOpts>(b)),
             _ => None,
         })
         .transpose()
         .map_err(|e| Error::Write(format!("the epub skeleton's options are unreadable: {e}")))?
-        .unwrap_or(Opts { include_locked: false, limits: Limits::default() });
-    let limits = read_with.limits;
+        .unwrap_or(StoredOpts { include_locked: false });
+    // the stored archive is read again under the default limits, whatever the document says it was read with
+    let limits = Limits::default();
     let entries = read_package(original, &limits)?;
     let pkg = Package::open(&entries, &limits)?;
     let by_id: HashMap<&str, &Unit> = doc.units.iter().map(|u| (u.id.as_str(), u)).collect();

@@ -111,7 +111,7 @@ impl Filter for JsonFilter {
         bilingua_model::guard::check_budget(quotes, 40, "This JSON file has far more strings", &limits)?;
         let values = text.bytes().filter(|b| matches!(b, b',' | b'[' | b'{')).count();
         bilingua_model::guard::check_budget(values, 20, "This JSON file has far more values", &limits)?;
-        let vals = scan::scan_with(text, locos)?;
+        let vals = scan::scan_with(text, locos, &limits)?;
         let want = want_dialect(opts, locos)?;
         if !matches!(want, Want::Plain) {
             let found = tree::scan(text).ok().and_then(|root| dialect::detect(&root).map(|d| (root, d)));
@@ -251,6 +251,9 @@ fn extract_dialect(text: &str, encoding: &str, root: &tree::Node, d: Dialect, op
     let mut parts: Vec<SkelPart> = Vec::new();
     let mut units: Vec<Unit> = Vec::new();
     let mut pos = 0usize;
+    // every unit of a message (an ICU message has one per branch) keeps its own copy of the pointer and the notes
+    let limits = opts.limits();
+    let mut context = bilingua_model::guard::ContextBudget::new();
     for m in dialect::messages(root, d) {
         let plan = plan::plan_message(m.value, m.syntax);
         if plan.units.is_empty() {
@@ -268,8 +271,9 @@ fn extract_dialect(text: &str, encoding: &str, root: &tree::Node, d: Dialect, op
                 unit.codes.insert(RAW_KEY.into(), CodeData::new().with_standalone(text[m.start..m.end].to_string()));
             }
             unit.context.kind = Some("message".into());
+            context.charge(m.pointer.len() + m.notes.iter().map(|n| n.len()).sum::<usize>(), &limits)?;
             unit.context.key = Some(m.pointer.clone());
-            unit.context.notes = m.notes.clone();
+            unit.context.notes = m.notes.to_vec();
             if !up.path.is_empty() {
                 unit.context.extra.insert("icu".into(), up.path);
             }

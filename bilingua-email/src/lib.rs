@@ -443,7 +443,23 @@ impl Filter for Email {
         guard::check_input(bytes, &limits)?;
         let parsed = parse_message(bytes, !opts.is_profile(bilingua_model::profile::LOCOS))?;
         let mut units: Vec<Unit> = Vec::new();
+        // One markup allowance for the whole message: the HTML filter allows a page ten `<` per allowed segment, and
+        // the HTML parts of a message share that allowance instead of getting a fresh one each (a message may hold
+        // hundreds of parts). A part that is too large on its own is left to the HTML filter, which says so itself.
+        let markup_cap = limits.max_units.saturating_mul(10);
+        let mut markup = 0usize;
         for slot in &parsed.slots {
+            if slot.kind == Kind::Html {
+                let n = slot.text.bytes().filter(|&c| c == b'<').count();
+                markup = markup.saturating_add(n);
+                if n <= markup_cap && markup > markup_cap {
+                    return Err(LimitError::new(
+                        LimitKind::Units,
+                        format!("The HTML parts of this email have far more tags than {} segments allow. It was not processed.", limits.max_units),
+                    )
+                    .into());
+                }
+            }
             let (local, _) = slot_units(slot, opts.source_lang.as_deref(), limits)?;
             for u in local {
                 units.push(u);

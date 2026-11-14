@@ -44,7 +44,7 @@ fn marks_label(marks: &Value) -> String {
     label_of(parts, "text")
 }
 
-fn walk_leaf(node: &Value, path: &mut Vec<Step>, in_code: bool, out: &mut Vec<Plan>) {
+fn walk_leaf(node: &Value, path: &Path, in_code: bool, out: &mut Plans) {
     if !node.is_obj() || opaque(node) {
         return;
     }
@@ -60,16 +60,17 @@ fn walk_leaf(node: &Value, path: &mut Vec<Step>, in_code: bool, out: &mut Vec<Pl
     }
     let code = in_code || ty(node) == Some("codeBlock");
     if let Some(c) = content_of(node) {
+        let content = path.child(k("content"));
         for (i, child) in c.iter().enumerate() {
-            path.push(k("content"));
-            path.push(Step::I(i));
-            walk_leaf(child, path, code, out);
-            path.truncate(path.len() - 2);
+            if out.full() {
+                return;
+            }
+            walk_leaf(child, &content.child(Step::I(i)), code, out);
         }
     }
 }
 
-fn walk_inline(node: &Value, path: &mut Vec<Step>, in_code: bool, out: &mut Vec<Plan>) {
+fn walk_inline(node: &Value, path: &Path, in_code: bool, out: &mut Plans) {
     if !node.is_obj() || opaque(node) {
         return;
     }
@@ -99,30 +100,34 @@ fn walk_inline(node: &Value, path: &mut Vec<Step>, in_code: bool, out: &mut Vec<
         }
         return;
     }
+    let below = path.child(k("content"));
     for (i, child) in content.iter().enumerate() {
-        path.push(k("content"));
-        path.push(Step::I(i));
-        walk_inline(child, path, code, out);
-        path.truncate(path.len() - 2);
+        if out.full() {
+            return;
+        }
+        walk_inline(child, &below.child(Step::I(i)), code, out);
     }
 }
 
-pub(crate) fn plan(root: &Value, leaf: bool) -> Vec<Plan> {
-    let mut out = Vec::new();
+pub(crate) fn plan(root: &Value, leaf: bool, max: usize) -> Vec<Plan> {
+    let mut out = Plans::new(max);
     if !root.is_obj() {
-        return out;
+        return out.into_vec();
     }
     if leaf {
         if let Some(c) = content_of(root) {
+            let content = Path::root().child(k("content"));
             for (i, child) in c.iter().enumerate() {
-                let mut path = vec![k("content"), Step::I(i)];
-                walk_leaf(child, &mut path, false, &mut out);
+                if out.full() {
+                    break;
+                }
+                walk_leaf(child, &content.child(Step::I(i)), false, &mut out);
             }
         }
     } else {
-        walk_inline(root, &mut Vec::new(), false, &mut out);
+        walk_inline(root, &Path::root(), false, &mut out);
     }
-    out
+    out.into_vec()
 }
 
 fn emit(out: &mut Vec<Value>, text: &str, marks: Option<&Value>) {
@@ -168,7 +173,7 @@ fn rebuild(evs: &[Ev], p: &Plan) -> Option<Vec<Value>> {
 pub(crate) fn apply(root: &mut Value, plans: &[Plan], outs: &[Option<Vec<Inline>>]) -> Result<(), Error> {
     for (i, (p, o)) in plans.iter().zip(outs).enumerate() {
         let Some(o) = o else { continue };
-        let node = node_mut(root, &p.path).ok_or_else(|| Error::Write("the original text no longer matches the document".into()))?;
+        let node = node_mut(root, &p.path.steps()).ok_or_else(|| Error::Write("the original text no longer matches the document".into()))?;
         // the leaf walk's plans only: an inline container may itself be typed `text` (a malformed leaf with content)
         if p.leaf {
             if !is_leaf(node) {

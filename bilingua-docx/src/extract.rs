@@ -153,6 +153,12 @@ pub struct Extractor {
     dml_runs: HashMap<String, Vec<(String, Option<String>)>>,
     dml_n: usize,
     cur_ord: usize,
+    limits: bilingua_model::Limits,
+    /// What the comment copies on the units have cost so far (`Limits::max_context_bytes`).
+    context: bilingua_model::guard::ContextBudget,
+    /// Set when a comment copy went over the context budget; no copy is made after that, and the caller turns it
+    /// into the refusal (`check_refused`).
+    refused: Option<Error>,
 }
 
 fn is_wrapper_local(l: &str) -> Option<(&'static str, &'static str)> {
@@ -188,6 +194,23 @@ impl Extractor {
             dml_runs: HashMap::new(),
             dml_n: 0,
             cur_ord: 0,
+            limits: bilingua_model::Limits::default(),
+            context: bilingua_model::guard::ContextBudget::new(),
+            refused: None,
+        }
+    }
+
+    /// The limits of this extraction (the default ones otherwise).
+    pub fn with_limits(mut self, limits: bilingua_model::Limits) -> Extractor {
+        self.limits = limits;
+        self
+    }
+
+    /// The refusal recorded while walking a part, if any: call after each `run_part`.
+    pub fn check_refused(&mut self) -> Result<(), Error> {
+        match self.refused.take() {
+            Some(e) => Err(e),
+            None => Ok(()),
         }
     }
 
@@ -1353,7 +1376,14 @@ impl Extractor {
         unit.context.location = Some(format!("{} paragraph {}", self.part_name, p.ord));
         for cid in &st.comment_ids {
             if let Some(t) = self.comments.get(cid) {
-                unit.context.notes.push(t.clone());
+                // one comment may be referenced by every paragraph: each copy is charged before it is made
+                if self.refused.is_some() {
+                    break;
+                }
+                match self.context.charge(t.len(), &self.limits) {
+                    Ok(()) => unit.context.notes.push(t.clone()),
+                    Err(e) => self.refused = Some(e),
+                }
             }
         }
         if st.tracked {

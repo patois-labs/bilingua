@@ -33,6 +33,8 @@ pub struct Walk {
     pub units: Vec<WUnit>,
     pub plural_maps: Vec<PluralMap>,
     pub rails_root: Option<RootKey>,
+    /// What the key paths of the units have taken from the context budget; the caller goes on charging the notes.
+    pub context: bilingua_model::guard::ContextBudget,
 }
 
 #[derive(Clone)]
@@ -80,11 +82,13 @@ pub struct Limits {
     pub max_unit_chars: usize,
     pub max_depth: usize,
     pub max_bytes: usize,
+    /// The bytes of key path and comment text all units together may carry (`bilingua_model::Limits::max_context_bytes`).
+    pub max_context_bytes: u64,
 }
 
 impl Default for Limits {
     fn default() -> Self {
-        Limits { max_units: 50_000, max_unit_chars: 100_000, max_depth: 200, max_bytes: 64 << 20 }
+        Limits { max_units: 50_000, max_unit_chars: 100_000, max_depth: 200, max_bytes: 64 << 20, max_context_bytes: bilingua_model::Limits::default().max_context_bytes }
     }
 }
 
@@ -98,13 +102,22 @@ impl Limits {
             max_unit_chars: l.max_unit_chars,
             max_depth: d.max_depth,
             max_bytes: d.max_bytes.min(usize::try_from(l.max_input_bytes).unwrap_or(usize::MAX)),
+            max_context_bytes: l.max_context_bytes,
         }
     }
 
     pub fn unlimited() -> Limits {
-        Limits { max_units: usize::MAX / 64, max_unit_chars: usize::MAX / 64, max_depth: 200, max_bytes: usize::MAX / 64 }
+        Limits { max_units: usize::MAX / 64, max_unit_chars: usize::MAX / 64, max_depth: 200, max_bytes: usize::MAX / 64, max_context_bytes: u64::MAX }
+    }
+
+    /// The model limits the shared context budget reads (only `max_context_bytes` matters to it).
+    pub(crate) fn context_limits(&self) -> bilingua_model::Limits {
+        bilingua_model::Limits::default().with_max_context_bytes(self.max_context_bytes)
     }
 }
+
+/// The sentence of a refusal for the context budget (`parse_err` reads it to choose `LimitKind::Context`).
+pub const CONTEXT_MSG: &str = "its keys and comments together take more room than the limit allows";
 
 fn dotted(prefix: &str, seg: &str) -> String {
     if prefix.is_empty() {
@@ -123,6 +136,8 @@ pub fn walk(events: &[Ev], text: &str, limits: &Limits) -> Result<Walk, ScanErro
     let mut docs = 0usize;
     let mut root_keys: Vec<(RootKey, Option<&'static str>)> = Vec::new();
     let mut root_is_map = false;
+    let context_limits = limits.context_limits();
+    let mut context = bilingua_model::guard::ContextBudget::new();
 
     // (prefix for the node starting now, in_key, is_key, flow)
     fn begin(stack: &[Frame]) -> (String, bool, bool, bool) {
@@ -183,6 +198,11 @@ pub fn walk(events: &[Ev], text: &str, limits: &Limits) -> Result<Walk, ScanErro
                     }
                     if sc.value.chars().count() > limits.max_unit_chars {
                         return Err(ScanError { msg: format!("a value is longer than {} characters", limits.max_unit_chars), pos: sc.start, limit: true });
+                    }
+                    // every unit keeps its own copy of the key path: one long key over many values is refused here,
+                    // before the copies are stored
+                    if context.charge(path.len(), &context_limits).is_err() {
+                        return Err(ScanError { msg: CONTEXT_MSG.into(), pos: sc.start, limit: true });
                     }
                     let key_line = stack.last().filter(|t| t.map).and_then(|t| t.key_line);
                     unit = Some(units.len());
@@ -246,5 +266,5 @@ pub fn walk(events: &[Ev], text: &str, limits: &Limits) -> Result<Walk, ScanErro
     if docs == 1 && root_is_map && root_keys.len() == 1 && root_keys[0].1 == Some("map") && crate::locale::looks_locale(&root_keys[0].0.key) {
         rails_root = Some(root_keys.pop().unwrap().0);
     }
-    Ok(Walk { units, plural_maps, rails_root })
+    Ok(Walk { units, plural_maps, rails_root, context })
 }

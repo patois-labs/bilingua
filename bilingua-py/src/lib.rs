@@ -184,7 +184,11 @@ fn formats(py: Python<'_>) -> PyResult<Py<PyAny>> {
 #[pyfunction]
 fn detect(py: Python<'_>, name: &str, data: &[u8]) -> PyResult<Option<String>> {
     let (name, data) = (name.to_string(), data.to_vec());
-    guarded(py, move || Ok(engine::detect(&name, &data).map(|f| f.id().to_string())))
+    guarded(py, move || {
+        // the sniffers of a file with no extension read the whole input: the size gate comes first, as in extract
+        engine::guard::check_input(&data, &engine::Limits::default())?;
+        Ok(engine::detect(&name, &data).map(|f| f.id().to_string()))
+    })
 }
 
 fn parse_granularity(s: &str) -> Result<Granularity, Fail> {

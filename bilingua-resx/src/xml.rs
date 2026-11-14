@@ -117,6 +117,11 @@ pub fn scan(text: &str) -> Result<Scan, Error> {
     if text.bytes().any(|b| b < 0x20 && !matches!(b, 9 | 10 | 13)) || text.contains('\u{FFFE}') || text.contains('\u{FFFF}') {
         return Err(parse_err("the file contains a character XML does not allow"));
     }
+    if text.starts_with('\u{feff}') {
+        // the decoder already took the file's one BOM; a second one is not XML (and quick-xml would skip it and
+        // report offsets that no longer match this text)
+        return Err(parse_err("not well-formed XML: a second byte-order mark at the start"));
+    }
     let mut rd = Reader::from_str(text);
     let mut depth = 0usize;
     let mut root_seen = false;

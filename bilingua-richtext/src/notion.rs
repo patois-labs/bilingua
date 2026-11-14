@@ -56,12 +56,14 @@ fn is_run(el: &Value) -> bool {
     el.has_str("type", "text") && el.get("text").is_some_and(|t| t.get("content").and_then(Value::as_str).is_some())
 }
 
-fn push_runs(base: &[Step], sub: &[Step], kind: &str, a: &[Value], block_id: Option<&str>, out: &mut Vec<Plan>) {
+fn push_runs(base: &Path, sub: &[Step], kind: &str, a: &[Value], block_id: Option<&str>, out: &mut Plans) {
+    let array = sub.iter().fold(base.clone(), |p, s| p.child(s.clone()));
     for (j, el) in a.iter().enumerate() {
+        if out.full() {
+            return;
+        }
         if is_run(el) {
-            let mut path = base.to_vec();
-            path.extend(sub.iter().cloned());
-            path.push(Step::I(j));
+            let path = array.child(Step::I(j));
             let mut b = Builder::default();
             b.text(el.get("text").and_then(|t| t.get("content")).and_then(Value::as_str).unwrap_or(""));
             let mut extra = Vec::new();
@@ -73,22 +75,22 @@ fn push_runs(base: &[Step], sub: &[Step], kind: &str, a: &[Value], block_id: Opt
     }
 }
 
-fn walk(blocks: &Value, base: &mut Vec<Step>, in_code: bool, out: &mut Vec<Plan>) {
+fn walk(blocks: &Value, base: &Path, in_code: bool, out: &mut Plans) {
     let Some(arr) = blocks.as_arr() else { return };
     for (bi, block) in arr.iter().enumerate() {
-        base.push(Step::I(bi));
-        walk_block(block, base, in_code, out);
-        base.pop();
+        if out.full() {
+            return;
+        }
+        walk_block(block, &base.child(Step::I(bi)), in_code, out);
     }
 }
 
 /// One block; `base` is the path to it.
-fn walk_block(block: &Value, base: &mut Vec<Step>, in_code: bool, out: &mut Vec<Plan>) {
+fn walk_block(block: &Value, base: &Path, in_code: bool, out: &mut Plans) {
     let Some(ntype) = block.get("type").and_then(Value::as_str) else { return };
     let Some(container) = block.get(ntype).filter(|c| c.is_obj()) else { return };
     let this_code = in_code || ntype == "code";
-    let n0 = base.len();
-    base.push(k(ntype));
+    let base = &base.child(k(ntype));
     let mut arrays: Vec<(Vec<Step>, &str, &Vec<Value>)> = Vec::new();
     if let Some(cells) = container.get("cells").and_then(Value::as_arr) {
         for (ci, cell) in cells.iter().enumerate() {
@@ -109,31 +111,28 @@ fn walk_block(block: &Value, base: &mut Vec<Step>, in_code: bool, out: &mut Vec<
         push_runs(base, &sub, kind, a, block.get("id").and_then(Value::as_str), out);
     }
     if let Some(children) = container.get("children") {
-        base.push(k("children"));
-        walk(children, base, this_code, out);
-        base.pop();
+        walk(children, &base.child(k("children")), this_code, out);
     }
-    base.truncate(n0);
 }
 
 /// The title runs of a page object (`properties.<name>` of type `title`), before its blocks.
-fn page_titles(root: &Value, out: &mut Vec<Plan>) {
+fn page_titles(root: &Value, out: &mut Plans) {
     let Some(props) = root.get("properties").filter(|p| p.is_obj()) else { return };
     let Value::Obj(entries) = props else { return };
     for (name, prop) in entries {
         if prop.has_str("type", "title") {
             if let Some(a) = prop.get("title").and_then(Value::as_arr) {
-                push_runs(&[k("properties"), k(name)], &[k("title")], "title", a, None, out);
+                push_runs(&Path::root().child(k("properties")).child(k(name)), &[k("title")], "title", a, None, out);
             }
         }
     }
 }
 
-pub(crate) fn plan(root: &Value, _leaf: bool) -> Vec<Plan> {
-    let mut out = Vec::new();
+pub(crate) fn plan(root: &Value, _leaf: bool, max: usize) -> Vec<Plan> {
+    let mut out = Plans::new(max);
     match shape(root) {
-        Some(Shape::Single) => walk_block(root, &mut Vec::new(), false, &mut out),
-        Some(Shape::List(mut base)) => {
+        Some(Shape::Single) => walk_block(root, &Path::root(), false, &mut out),
+        Some(Shape::List(base)) => {
             if !base.is_empty() {
                 page_titles(root, &mut out);
             }
@@ -143,12 +142,13 @@ pub(crate) fn plan(root: &Value, _leaf: bool) -> Vec<Plan> {
                 Some(Step::I(_)) => None,
             };
             if let Some(l) = list {
-                walk(l, &mut base, false, &mut out);
+                let base = base.iter().fold(Path::root(), |p, s| p.child(s.clone()));
+                walk(l, &base, false, &mut out);
             }
         }
         None => {}
     }
-    out
+    out.into_vec()
 }
 
 pub(crate) fn apply(root: &mut Value, plans: &[Plan], outs: &[Option<Vec<Inline>>]) -> Result<(), Error> {
@@ -156,7 +156,8 @@ pub(crate) fn apply(root: &mut Value, plans: &[Plan], outs: &[Option<Vec<Inline>
     for (p, o) in plans.iter().zip(outs).rev() {
         let Some(o) = o else { continue };
         let text = plain_text(o);
-        let Some((Step::I(at), parent)) = p.path.split_last().map(|(l, r)| (l.clone(), r)) else { continue };
+        let steps = p.path.steps();
+        let Some((Step::I(at), parent)) = steps.split_last().map(|(l, r)| (l.clone(), r)) else { continue };
         let arr = node_mut(root, parent).and_then(Value::as_arr_mut).ok_or_else(|| Error::Write("the original text no longer matches the document".into()))?;
         let run = arr.get(at).cloned().ok_or_else(|| Error::Write("the original text no longer matches the document".into()))?;
         let chars: Vec<char> = text.chars().collect();

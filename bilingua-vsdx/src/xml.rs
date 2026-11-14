@@ -474,16 +474,26 @@ fn parse_inner(s: &str, max_depth: usize, fragment: bool) -> Result<Parsed, Stri
                 return Err("more than one root element".into());
             }
             // attributes: well formed, no duplicates, valid values
+            // The names seen so far: a short list for the few attributes a tag usually has, a set once there are
+            // many, so a tag with tens of thousands of attributes is not a scan of the list per attribute.
             let mut seen: Vec<&str> = Vec::new();
+            let mut seen_many: std::collections::HashSet<&str> = std::collections::HashSet::new();
             scan_attrs(raw, |a| {
                 let an = &raw[a.ns..a.ne];
                 if !valid_name(an) {
                     return Err(format!("{an:?} is not a valid attribute name"));
                 }
-                if seen.contains(&an) {
+                if seen_many.is_empty() {
+                    if seen.contains(&an) {
+                        return Err(format!("attribute {an:?} appears twice"));
+                    }
+                    seen.push(an);
+                    if seen.len() > 16 {
+                        seen_many.extend(seen.drain(..));
+                    }
+                } else if !seen_many.insert(an) {
                     return Err(format!("attribute {an:?} appears twice"));
                 }
-                seen.push(an);
                 check_chars(&raw[a.vs..a.ve], true)
             })?;
             let tail = raw[name_end..raw.len() - if self_close { 2 } else { 1 }].trim_end();

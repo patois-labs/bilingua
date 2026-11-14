@@ -399,8 +399,10 @@ fn merge_impl(kind: Kind, doc: &Document, mo: &MergeOptions) -> Result<Vec<u8>, 
                 edit.2 = numeric_references(&edit.2, codec);
             }
             // a value that was not translated is written as it was, unless the target code page cannot hold it
+            // (the spans already edited are looked up in a set: a file can hold one See Also span per tag)
+            let edited: std::collections::HashSet<(usize, usize)> = edits.iter().map(|e| (e.0, e.1)).collect();
             for sp in spans.iter().chain(&extra_see) {
-                if !edits.iter().any(|e| (e.0, e.1) == (sp.start, sp.end)) {
+                if !edited.contains(&(sp.start, sp.end)) {
                     let raw = &orig[sp.start..sp.end];
                     let fixed = numeric_references(raw, codec);
                     if fixed != raw {

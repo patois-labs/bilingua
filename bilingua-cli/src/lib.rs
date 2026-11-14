@@ -176,11 +176,32 @@ fn cmd_merge(a: &Args, out: &mut dyn Write) -> Result<(), String> {
     Ok(())
 }
 
+/// Text from the document as one printable run of a row. A file can hold escape sequences that drive a terminal
+/// (clear the screen, set the title), line breaks and tabs that would forge rows of this output, and bidirectional
+/// controls that reorder what the operator sees. Every such character is written as a visible escape: the C0 and
+/// C1 controls and DEL, the line and paragraph separators, and the bidirectional marks, embeddings, overrides and
+/// isolates.
+fn visible(s: &str) -> String {
+    let mut o = String::with_capacity(s.len());
+    for c in s.chars() {
+        match c {
+            '\n' => o.push_str("\\n"),
+            '\r' => o.push_str("\\r"),
+            '\t' => o.push_str("\\t"),
+            c if c.is_control() || matches!(c, '\u{61c}' | '\u{200e}' | '\u{200f}' | '\u{2028}'..='\u{202e}' | '\u{2066}'..='\u{2069}') => {
+                o.push_str(&format!("\\u{{{:x}}}", c as u32));
+            }
+            c => o.push(c),
+        }
+    }
+    o
+}
+
 fn show(inl: &[Inline]) -> String {
     inl.iter()
         .map(|i| match i {
-            Inline::Text(t) => t.replace('\n', "\\n").replace('\r', "\\r").replace('\t', "\\t"),
-            Inline::Tag { display, .. } => format!("{{{display}}}"),
+            Inline::Text(t) => visible(t),
+            Inline::Tag { display, .. } => format!("{{{}}}", visible(display)),
         })
         .collect()
 }
@@ -192,7 +213,7 @@ fn cmd_segment(a: &Args, out: &mut dyn Write) -> Result<(), String> {
         return Ok(());
     }
     for (_, s) in doc.segments() {
-        let _ = writeln!(out, "{}\t{}", s.id, show(&s.source));
+        let _ = writeln!(out, "{}\t{}", visible(&s.id), show(&s.source));
     }
     Ok(())
 }
@@ -206,7 +227,7 @@ fn cmd_wordcount(a: &Args, out: &mut dyn Write) -> Result<(), String> {
             total += n;
         }
         let what = u.context.key.clone().or_else(|| u.context.kind.clone()).unwrap_or_default();
-        let _ = writeln!(out, "{}\t{}\t{}{}", u.id, n, what, if u.translate { "" } else { "\t(locked)" });
+        let _ = writeln!(out, "{}\t{}\t{}{}", visible(&u.id), n, visible(&what), if u.translate { "" } else { "\t(locked)" });
     }
     let _ = writeln!(out, "total\t{total}\t{} units, {} segments", doc.units.len(), doc.segment_count());
     Ok(())

@@ -51,14 +51,24 @@ use topic::{translated, Topic};
 
 /// The skeleton entry that holds the whole original file.
 const ARCHIVE: &str = "flprjzip";
-/// The skeleton entry that holds the options the file was read with: unit ids depend on `include_locked` and the
-/// limits decide what may be read again, so merge uses the same ones.
+/// The skeleton entry that holds the options the file was read with: unit ids depend on `include_locked`, so merge
+/// uses the same value. The limits are written for the record only: merge reads the archive again under
+/// `Limits::default()`.
 const OPTIONS: &str = "flprjzip-options";
 
-#[derive(serde::Serialize, serde::Deserialize)]
+#[derive(serde::Serialize)]
 struct Opts {
     include_locked: bool,
     limits: Limits,
+}
+
+/// What merge reads back from the options entry: only how the units were numbered. The limits written beside it
+/// are never used: the stored document is not a trusted place to take the resource policy from (a document that
+/// raised them would have its own archive read again without the zip and XML guards).
+#[derive(serde::Deserialize)]
+struct StoredOpts {
+    #[serde(default)]
+    include_locked: bool,
 }
 
 /// The Flare project filter.
@@ -214,14 +224,14 @@ fn merge_flare(doc: &Document, mopts: &MergeOptions) -> Result<Vec<u8>, Error> {
     let read_with = skel
         .iter()
         .find_map(|e| match (&e.data, e.name == OPTIONS) {
-            (ZipData::Raw(b), true) => Some(serde_json::from_slice::<Opts>(b)),
+            (ZipData::Raw(b), true) => Some(serde_json::from_slice::<StoredOpts>(b)),
             _ => None,
         })
         .transpose()
         .map_err(|e| Error::Write(format!("the flprjzip skeleton's options are unreadable: {e}")))?
-        .unwrap_or(Opts { include_locked: false, limits: Limits::default() });
-    // a stored limit set from an older build may lack new fields: serde fills them from `Limits::default()`
-    let limits = read_with.limits;
+        .unwrap_or(StoredOpts { include_locked: false });
+    // the stored archive is read again under the default limits, whatever the document says it was read with
+    let limits = Limits::default();
     let pkg = Package::open(original, &limits)?;
     let by_id: HashMap<&str, &Unit> = doc.units.iter().map(|u| (u.id.as_str(), u)).collect();
     let lang_ref = lang.as_ref().map(|(t, r)| (t.as_str(), *r));

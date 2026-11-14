@@ -243,6 +243,10 @@ struct Extractor {
     lang: Option<String>,
     /// Plain text of data paragraphs by (slide, text) for SmartArt drawing mirrors.
     smart: HashMap<(u32, String), String>,
+    limits: Limits,
+    /// Set when a paragraph is already longer than a unit may be; the walk makes no more units and the extraction
+    /// returns it.
+    refused: Option<Error>,
 }
 
 fn shape_info(e: &El, parent: &Shape) -> Shape {
@@ -390,6 +394,12 @@ impl Extractor {
             let mut all = orig_nodes;
             all.extend(tail);
             p.children = all;
+            return;
+        }
+        // A paragraph over `max_unit_chars` (one per character and per code) is refused here, before `build` works
+        // on its atoms; the finished document would be refused for the same unit.
+        if let Err(e) = check_size(&atoms, &self.limits) {
+            self.refused = Some(e);
             return;
         }
         let id = format!("{}-p{n}", pi.stem);
@@ -641,6 +651,8 @@ fn extract_doc_inner(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Er
         titles: HashMap::new(),
         lang: None,
         smart: HashMap::new(),
+        limits: opts.limits(),
+        refused: None,
     };
     let mut trees: HashMap<usize, Vec<Node>> = HashMap::new();
     for pi in parts.iter_mut() {
@@ -680,6 +692,9 @@ fn extract_doc_inner(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Er
             ex.drawing_paragraphs(pi, &ns, &mut nodes);
         } else {
             ex.walk(pi, &ns, &mut nodes, &Shape::default(), None);
+        }
+        if let Some(e) = ex.refused.take() {
+            return Err(e);
         }
         trees.insert(pi.idx, nodes);
     }

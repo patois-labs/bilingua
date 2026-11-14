@@ -332,7 +332,7 @@ pub fn walk(pkg: &mut Pkg) -> Result<Walk, Error> {
         add(&mut w, d, main, &tops);
     }
     for (kind, part) in extra_parts(pkg) {
-        if !pkg.open(part) {
+        if !pkg.try_open(part)? {
             continue;
         }
         w.roots.push(part);

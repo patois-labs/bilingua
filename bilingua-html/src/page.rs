@@ -145,6 +145,10 @@ pub(crate) fn places(toks: &[Tok], wanted: &HashSet<usize>) -> HashMap<usize, Pl
         counts: HashMap<String, usize>,
     }
     let mut stack: Vec<Frame> = Vec::new();
+    // how many frames of each name are on the stack: an end tag that matches nothing is answered without a walk
+    // over the stack, and one that matches removes every frame it walks over, so the whole walk stays linear even
+    // when end-tag-optional elements pile up (`<li><dd><li><dd>...` followed by thousands of `</div>`)
+    let mut open: HashMap<String, usize> = HashMap::new();
     let mut root: HashMap<String, usize> = HashMap::new();
     let mut out = HashMap::new();
     // the innermost 32 levels: a path is a hint for the translator, and a page of 20 000 unclosed `<li><dd>`
@@ -171,8 +175,14 @@ pub(crate) fn places(toks: &[Tok], wanted: &HashSet<usize>) -> HashMap<usize, Pl
             continue;
         }
         if closing {
-            if let Some(p) = stack.iter().rposition(|f| f.name == name) {
-                stack.truncate(p);
+            if open.get(&name).is_some_and(|n| *n > 0) {
+                if let Some(p) = stack.iter().rposition(|f| f.name == name) {
+                    for f in stack.drain(p..) {
+                        if let Some(n) = open.get_mut(&f.name) {
+                            *n -= 1;
+                        }
+                    }
+                }
             }
             continue;
         }
@@ -188,7 +198,11 @@ pub(crate) fn places(toks: &[Tok], wanted: &HashSet<usize>) -> HashMap<usize, Pl
             _ => &[],
         };
         while stack.last().is_some_and(|f| siblings.contains(&f.name.as_str())) {
-            stack.pop();
+            if let Some(f) = stack.pop() {
+                if let Some(n) = open.get_mut(&f.name) {
+                    *n -= 1;
+                }
+            }
         }
         if sc || VOID.contains(&name.as_str()) {
             continue;
@@ -200,6 +214,7 @@ pub(crate) fn places(toks: &[Tok], wanted: &HashSet<usize>) -> HashMap<usize, Pl
         let c = counts.entry(name.clone()).or_insert(0);
         *c += 1;
         let nth = *c;
+        *open.entry(name.clone()).or_insert(0) += 1;
         stack.push(Frame { name, nth, ti, counts: HashMap::new() });
     }
     out

@@ -454,7 +454,9 @@ fn render_msgstr(u: &Unit, entry_changed: bool, eol: &str) -> String {
 }
 
 fn update_header(raw: &str, lang: Option<&str>, doc: &Document) -> String {
-    let Some(lang) = lang else { return raw.to_string() };
+    // the header line is a quoted PO string: only a plausible language code is written into it (a quote or a
+    // line break in the code would close the string and start new entries)
+    let Some(lang) = lang.map(str::trim).filter(|l| bilingua_model::MergeOptions::plausible_lang(l)) else { return raw.to_string() };
     if !raw.contains("msgid \"\"") {
         return raw.to_string();
     }

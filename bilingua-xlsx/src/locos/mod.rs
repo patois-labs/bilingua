@@ -34,6 +34,7 @@ pub use table::{report_options, table_mode};
 
 use bilingua_model::{guard, parser_info, profile, CodeData, Document, Error, ExtractOptions, Granularity, Inline, MergeOptions, Skeleton, TagKind, Unit, UnitContext};
 use dom::Dom;
+use std::borrow::Cow;
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 
 const M: &str = "http://schemas.openxmlformats.org/spreadsheetml/2006/main";
@@ -201,6 +202,9 @@ struct Package {
     formula_removed: bool,
     /// Per sheet, for `unshare`: the cells by element and the shared formulas by group.
     formula_index: HashMap<String, FormulaIndex>,
+    /// The spreadsheet limits, charged by the walks of an extraction (cells and rows as a sheet is indexed, cell
+    /// text before it is copied). `None` for a merge, which reads a workbook an extraction already accepted.
+    budget: Option<crate::budget::SheetBudget>,
 }
 
 type FormulaIndex = (HashMap<usize, (i64, i64)>, HashMap<String, Vec<usize>>);
@@ -247,6 +251,7 @@ impl Package {
             removed: BTreeSet::new(),
             formula_removed: false,
             formula_index: HashMap::new(),
+            budget: None,
         };
         let wb = pkg.main_part()?;
         pkg.workbook = wb.clone();
@@ -340,15 +345,26 @@ impl Package {
             return Err(invalid(path));
         }
         let d = &self.roots[path];
+        let budget = &mut self.budget;
         let mut cells = BTreeMap::new();
         let mut row_n = 0i64;
+        let mut row_count = 0i64;
         for row in d.iter_tag(d.root, M, "row") {
             row_n = match d.get(row, "r") {
                 Some(r) => row_number(r, path)?,
                 None => row_n + 1,
             };
+            // the row limit counts row elements here, not the row number: LocOS reads a sparse sheet with one cell
+            // in Excel's last row, and it is the count of rows that costs, not how far down one sits
+            row_count += 1;
+            if let Some(b) = budget.as_mut() {
+                b.row(row_count)?;
+            }
             let mut col_n = 0i64;
             for c in d.element_children(row) {
+                if let Some(b) = budget.as_mut() {
+                    b.cell()?;
+                }
                 let key = match d.get(c, "r").filter(|r| !r.is_empty()) {
                     Some(r) => {
                         let k = coord(r, path)?;
@@ -384,7 +400,14 @@ impl Package {
             return Ok(Vec::new());
         }
         let d = &self.roots[&path];
-        Ok(d.iter_tag(d.root, M, "si").into_iter().map(|si| rich_content(d, si).replace("x005F_", "")).collect())
+        let table: Vec<String> = d.iter_tag(d.root, M, "si").into_iter().map(|si| rich_content(d, si).replace("x005F_", "")).collect();
+        // every shared string counts once for the table, used or not, as in the native walk
+        if let Some(b) = self.budget.as_mut() {
+            for s in &table {
+                b.text(s.chars().count(), 1)?;
+            }
+        }
+        Ok(table)
     }
 
     /// Every unit cell: (sheet index, row, column, value), in openpyxl's order (`_iter_cells`): a string value with
@@ -396,15 +419,20 @@ impl Package {
             self.ensure_index(path)?;
             let d = &self.roots[path];
             let covered = self.covered.get(path);
+            let budget = &mut self.budget;
             for (&(row, col), &c) in &self.cells[path] {
                 if covered.is_some_and(|s| s.contains(&(row, col))) {
                     continue;
                 }
-                if let Some(v) = cell_value(d, c, &sst, path)? {
+                if let Some(v) = cell_value(d, c, &sst, path, budget)? {
                     // LocOS `_iter_cells`: a string that starts with `=` is a formula look-alike, never a unit,
                     // even a shared or inline string (`= Mandatory fields`)
                     if !v.starts_with('=') && bilingua_model::py_has_alnum(&v) {
-                        out.push((n, row, col, v));
+                        // the unit cap stops the collecting, before the text of one more cell is copied
+                        if let Some(b) = budget.as_ref() {
+                            guard::check_unit_count(out.len() + 1, b.limits())?;
+                        }
+                        out.push((n, row, col, v.into_owned()));
                     }
                 }
             }
@@ -789,14 +817,21 @@ fn py_float_ok(s: &str) -> bool {
 }
 
 /// The value openpyxl reads for a cell when it is a string that is not a formula (`parse_cell`); an error for a
-/// value openpyxl cannot read (it refuses the workbook).
-fn cell_value(d: &Dom, c: usize, sst: &[String], name: &str) -> Result<Option<String>, Error> {
+/// value openpyxl cannot read (it refuses the workbook). A shared string is lent, not copied, and with a `budget`
+/// its characters are charged first (every cell that uses it counts), so many cells pointing at one long string
+/// are refused before any copy is made.
+fn cell_value<'a>(d: &Dom, c: usize, sst: &'a [String], name: &str, budget: &mut Option<crate::budget::SheetBudget>) -> Result<Option<Cow<'a, str>>, Error> {
     let t = d.get(c, "t").unwrap_or("n");
     if d.find(c, M, "f").is_some() {
         return Ok(None); // a formula: "=..." or an array / data table formula, never a unit
     }
     if t == "inlineStr" {
-        return Ok(d.find(c, M, "is").map(|is| rich_content(d, is)));
+        let Some(is) = d.find(c, M, "is") else { return Ok(None) };
+        let text = rich_content(d, is);
+        if let Some(b) = budget.as_mut() {
+            b.text(text.chars().count(), 1)?;
+        }
+        return Ok(Some(Cow::Owned(text)));
     }
     let Some(v) = d.findtext(c, M, "v").filter(|v| !v.is_empty()) else { return Ok(None) };
     match t {
@@ -814,7 +849,11 @@ fn cell_value(d: &Dom, c: usize, sst: &[String], name: &str) -> Result<Option<St
             if at < 0 || at as usize >= sst.len() {
                 return Err(invalid(name));
             }
-            Ok(Some(sst[at as usize].clone()))
+            let s = &sst[at as usize];
+            if let Some(b) = budget.as_mut() {
+                b.text(s.chars().count(), 1)?;
+            }
+            Ok(Some(Cow::Borrowed(s.as_str())))
         }
         "b" => {
             py_int_parts(&v).ok_or_else(|| invalid(name))?;
@@ -822,7 +861,7 @@ fn cell_value(d: &Dom, c: usize, sst: &[String], name: &str) -> Result<Option<St
         }
         "d" => Ok(None),
         // "str", an error value ("#N/A") and any type openpyxl does not know: the text as it is
-        _ => Ok(Some(v)),
+        _ => Ok(Some(Cow::Owned(v))),
     }
 }
 
@@ -1126,6 +1165,7 @@ pub fn extract(bytes: &[u8], opts: &ExtractOptions, xo: &crate::XlsxOptions) -> 
     guard::check_input(bytes, &l)?;
     let entries = read(bytes, &l)?;
     let mut pkg = Package::open(&entries)?;
+    pkg.budget = Some(crate::budget::SheetBudget::new(l));
     let cells = pkg.unit_cells()?;
     guard::check_unit_count(cells.len(), &l)?;
     let mut units = Vec::with_capacity(cells.len());

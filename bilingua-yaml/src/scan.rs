@@ -57,11 +57,11 @@ struct P<'a> {
     ev: Vec<Ev>,
     depth: usize,
     max_depth: usize,
-    handles: Vec<String>,
+    handles: std::collections::HashSet<String>,
 }
 
 pub fn scan(text: &str, max_depth: usize) -> R<Vec<Ev>> {
-    let mut p = P { s: text, b: text.as_bytes(), pos: 0, ev: Vec::new(), depth: 0, max_depth, handles: Vec::new() };
+    let mut p = P { s: text, b: text.as_bytes(), pos: 0, ev: Vec::new(), depth: 0, max_depth, handles: std::collections::HashSet::new() };
     p.stream()?;
     Ok(p.ev)
 }
@@ -179,7 +179,11 @@ impl<'a> P<'a> {
                 let line = &self.s[s0..self.pos];
                 if let Some(rest) = line.strip_prefix("%TAG") {
                     if let Some(h) = rest.split_whitespace().next() {
-                        self.handles.push(h.to_string());
+                        // PyYAML and libyaml (so Localization OS) refuse a handle declared twice in one document;
+                        // with it the set holds each handle once and a tag's lookup is one probe
+                        if !self.handles.insert(h.to_string()) {
+                            return self.err("found duplicate %TAG directive");
+                        }
                     }
                 }
                 self.skip_to_token()?;
@@ -264,7 +268,7 @@ impl<'a> P<'a> {
                     if t.len() > 2 && !t.starts_with("!<") && !t.starts_with("!!") {
                         if let Some(i) = t[1..].find('!') {
                             let handle = &t[..i + 2];
-                            if !self.handles.iter().any(|h| h == handle) {
+                            if !self.handles.contains(handle) {
                                 return self.err("found undefined tag handle");
                             }
                         }

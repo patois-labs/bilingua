@@ -6,7 +6,7 @@
 use bilingua_model::{Error, LimitError, LimitKind};
 use quick_xml::events::Event;
 use quick_xml::Reader;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 const XML_NS: &str = "http://www.w3.org/XML/1998/namespace";
 
@@ -229,11 +229,46 @@ fn lex_tag<'a>(fmt: &str, text: &'a str, s: usize, e: usize) -> Result<(&'a str,
     Ok((qname, attrs))
 }
 
-fn lookup<'a>(ns: &'a [(String, String)], prefix: &str) -> Option<&'a str> {
-    if prefix == "xml" {
-        return Some(XML_NS);
+/// Most namespace declarations in scope at once (no real file comes near it).
+const MAX_NS_IN_SCOPE: usize = 4096;
+
+/// The namespace bindings in scope, in declaration order, with an index per prefix so a lookup is constant time
+/// however many declarations are in scope (a linear search per name was quadratic on a namespace-heavy file).
+#[derive(Default)]
+struct NsScope {
+    bind: Vec<(String, String)>,
+    /// prefix to the indexes in `bind` that declare it, innermost last (`""` is the default namespace)
+    by_prefix: HashMap<String, Vec<usize>>,
+}
+
+impl NsScope {
+    fn len(&self) -> usize {
+        self.bind.len()
     }
-    ns.iter().rev().find(|(p, _)| p == prefix).map(|(_, u)| u.as_str())
+
+    fn push(&mut self, prefix: String, uri: String) {
+        self.by_prefix.entry(prefix.clone()).or_default().push(self.bind.len());
+        self.bind.push((prefix, uri));
+    }
+
+    fn truncate(&mut self, n: usize) {
+        while self.bind.len() > n {
+            let Some((p, _)) = self.bind.pop() else { break };
+            if let Some(v) = self.by_prefix.get_mut(&p) {
+                v.pop();
+                if v.is_empty() {
+                    self.by_prefix.remove(&p);
+                }
+            }
+        }
+    }
+
+    fn lookup(&self, prefix: &str) -> Option<&str> {
+        if prefix == "xml" {
+            return Some(XML_NS);
+        }
+        self.by_prefix.get(prefix).and_then(|v| v.last()).map(|i| self.bind[*i].1.as_str())
+    }
 }
 
 /// The text of an attribute value as an XML parser hands it over: literal tab, newline and carriage return become
@@ -268,7 +303,7 @@ pub fn parse(fmt: &str, text: &str) -> Result<Tree, Error> {
         c.check_end_names = true;
     }
     let mut tree = Tree { els: Vec::new() };
-    let mut ns: Vec<(String, String)> = Vec::new();
+    let mut ns = NsScope::default();
     // open elements: (element index, ns length before it, gs4tr in scope before it)
     let mut stack: Vec<(usize, usize, bool)> = Vec::new();
     let mut gs4tr_scope = false;
@@ -338,11 +373,14 @@ pub fn parse(fmt: &str, text: &str) -> Result<Tree, Error> {
                         if uri.contains("gs4tr") {
                             gs4tr_scope = true;
                         }
-                        ns.push((a.name.strip_prefix("xmlns:").unwrap_or("").to_string(), uri));
+                        ns.push(a.name.strip_prefix("xmlns:").unwrap_or("").to_string(), uri);
+                        if ns.len() > MAX_NS_IN_SCOPE {
+                            return Err(LimitError::new(LimitKind::XmlElements, "This file declares far too many namespaces at once. It was not processed.").into());
+                        }
                     }
                 }
                 let prefix = qname.split_once(':').map_or("", |(p, _)| p);
-                if !prefix.is_empty() && lookup(&ns, prefix).is_none() {
+                if !prefix.is_empty() && ns.lookup(prefix).is_none() {
                     return Err(perr(fmt, format!("not well-formed XML: namespace prefix {prefix} is not defined")));
                 }
                 let mut attrs = Vec::with_capacity(raw_attrs.len());
@@ -354,7 +392,7 @@ pub fn parse(fmt: &str, text: &str) -> Result<Tree, Error> {
                     let uri = if p.is_empty() {
                         String::new()
                     } else {
-                        match lookup(&ns, p) {
+                        match ns.lookup(p) {
                             Some(u) => u.to_string(),
                             None => return Err(perr(fmt, format!("not well-formed XML: namespace prefix {p} is not defined"))),
                         }

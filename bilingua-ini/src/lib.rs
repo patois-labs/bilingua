@@ -37,11 +37,13 @@ pub struct Limits {
     pub max_value_chars: usize,
     /// Line breaks in one file.
     pub max_lines: usize,
+    /// Bytes of key, comment and section text on all units together (`bilingua_model::Limits::max_context_bytes`).
+    pub max_context_bytes: u64,
 }
 
 impl Default for Limits {
     fn default() -> Limits {
-        Limits { max_units: 50_000, max_value_chars: 100_000, max_lines: 1_000_000 }
+        Limits { max_units: 50_000, max_value_chars: 100_000, max_lines: 1_000_000, max_context_bytes: bilingua_model::Limits::default().max_context_bytes }
     }
 }
 
@@ -118,6 +120,10 @@ impl IniFilter {
         let mut units: Vec<Unit> = Vec::new();
         let mut pos = 0usize;
         let dups = duplicates(&entries);
+        // The scan shares one section name among its entries; every unit gets its own copy, so a long name over
+        // many keys is charged per unit, before the copy is made.
+        let context_limits = bilingua_model::Limits::default().with_max_context_bytes(limits.max_context_bytes);
+        let mut context = guard::ContextBudget::new();
         for (e, duplicate) in entries.into_iter().zip(dups) {
             let translatable = is_translatable(&e.value);
             if !translatable && (!opts.include_locked || e.value.trim().is_empty()) {
@@ -138,6 +144,7 @@ impl IniFilter {
             let hidden = CodeData::new().with_open(owned(lead)).with_close(owned(trail)).with_standalone(text[e.start..e.end].to_string()).with_label(owned(e.quote.code()));
             unit.codes.insert(HIDDEN.into(), hidden);
             unit.translate = translatable;
+            context.charge(e.key.len() + e.comments.iter().map(|c| c.len()).sum::<usize>() + e.section.len(), &context_limits)?;
             unit.context.kind = Some("key".into());
             unit.context.key = Some(e.key);
             unit.context.notes = e.comments;
@@ -195,7 +202,8 @@ impl Filter for IniFilter {
 
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
         bilingua_model::check_own_options(self, &opts.format_options)?;
-        self.extract_with(bytes, opts, &Limits::default())
+        // the context budget is the call's; the other caps stay the crate's own
+        self.extract_with(bytes, opts, &Limits { max_context_bytes: opts.limits().max_context_bytes, ..Limits::default() })
     }
 
     fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {

@@ -88,14 +88,14 @@ struct Opened {
     docs: Vec<String>,
 }
 
-fn open_entries(family: Family, bytes: &[u8], limits: &ZipLimits) -> Result<Opened, Error> {
+fn open_entries(family: Family, bytes: &[u8], limits: &ZipLimits, guard: &bilingua_model::Limits) -> Result<Opened, Error> {
     Ok(match family {
         Family::Sdl => {
-            let p = SdlPackage::<Doc>::open(bytes, limits)?;
+            let p = SdlPackage::<Doc>::open(bytes, limits, Some(guard))?;
             Opened { entries: p.entries().to_vec(), docs: p.document_paths() }
         }
         Family::Mq => {
-            let p = MqPackage::<Doc>::open(bytes, limits)?;
+            let p = MqPackage::<Doc>::open(bytes, limits, Some(guard))?;
             Opened { entries: p.entries().to_vec(), docs: p.document_paths() }
         }
     })
@@ -129,13 +129,18 @@ impl Filter for PackageFilter {
         // the B6 limits of this call (Localization OS's numbers unless the caller sets others)
         let limits = opts.limits();
         bilingua_model::guard::check_input(bytes, &limits)?;
-        let opened = open_entries(self.family, bytes, &ZipLimits::of(&limits, true)).map_err(|e| perr(self.id, e))?;
+        let opened = open_entries(self.family, bytes, &ZipLimits::of(&limits, true), &limits).map_err(|e| perr(self.id, e))?;
         let mut units = Vec::new();
         let mut source_lang = None;
         let mut target_lang = None;
+        // the first entry of each name, found by a lookup rather than a walk of the entries per file
+        let mut by_name: std::collections::HashMap<&str, usize> = std::collections::HashMap::new();
+        for (i, e) in opened.entries.iter().enumerate() {
+            by_name.entry(e.name.as_str()).or_insert(i);
+        }
         for path in &opened.docs {
-            let data = &opened.entries.iter().find(|e| &e.name == path).expect("listed above").data;
-            let doc = Doc::from_bytes(data.clone()).map_err(|e| perr(self.id, e))?;
+            let data = &opened.entries[*by_name.get(path.as_str()).expect("listed above")].data;
+            let doc = Doc::from_bytes_limited(data.clone(), false, &limits).map_err(|e| perr(self.id, e))?;
             let one = bilingua_xliff::to_document(&doc, self.id, opts)?;
             source_lang = source_lang.or(one.source_lang.clone());
             target_lang = target_lang.or(one.target_lang.clone());
@@ -183,9 +188,12 @@ impl Filter for PackageFilter {
             })
             .collect();
         let zipped = zipio::write_zip(&raw, (1980, 1, 1, 0, 0, 0)).map_err(werr)?;
+        // The skeleton is whatever the holder of the document passes in, so its XML is guarded again (the default
+        // XML limits, as the other merges use). The unit count is not: extraction already decided it.
+        let guard = bilingua_model::Limits::default().with_max_units(usize::MAX);
         match self.family {
             Family::Sdl => {
-                let mut p = SdlPackage::<Doc>::open(&zipped, &ZipLimits::unlimited()).map_err(werr)?;
+                let mut p = SdlPackage::<Doc>::open(&zipped, &ZipLimits::unlimited(), Some(&guard)).map_err(werr)?;
                 let paths = p.document_paths();
                 for path in paths {
                     if let Some(doc) = p.doc_mut(&path) {
@@ -195,7 +203,7 @@ impl Filter for PackageFilter {
                 p.to_bytes().map_err(werr)
             }
             Family::Mq => {
-                let mut p = MqPackage::<Doc>::open(&zipped, &ZipLimits::unlimited()).map_err(werr)?;
+                let mut p = MqPackage::<Doc>::open(&zipped, &ZipLimits::unlimited(), Some(&guard)).map_err(werr)?;
                 let paths = p.document_paths();
                 for path in paths {
                     if let Some(doc) = p.doc_mut(&path) {

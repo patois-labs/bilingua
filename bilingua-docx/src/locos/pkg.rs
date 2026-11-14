@@ -82,6 +82,8 @@ pub struct Part {
     /// A part kept as bytes whose tree LocOS wrote back (a footnotes or endnotes part a translation landed in).
     pub dirty: bool,
     pub rels: Vec<Rel>,
+    /// The XML guard and the paragraph count have seen this part (by its name at load, or when it was parsed).
+    guarded: bool,
 }
 
 pub struct Pkg {
@@ -92,6 +94,10 @@ pub struct Pkg {
     original: Vec<RawEntry>,
     normalized: Vec<Vec<u8>>,
     strict: bool,
+    /// The limits the package was loaded under, for the parts parsed later (`open`).
+    limits: Limits,
+    /// Paragraphs counted so far over the guarded parts, against `max_paragraphs`.
+    paragraphs: usize,
 }
 
 fn perr(msg: impl Into<String>) -> Error {
@@ -324,6 +330,10 @@ impl Pkg {
     fn srels(&self, partname: &str) -> Result<Vec<SRel>, Error> {
         let member = rels_member(partname);
         let Some(data) = self.entry(&member) else { return Ok(Vec::new()) };
+        // the relationships of a `customXml/` part are parsed here, though the name-keyed guard skips that folder
+        if !crate::xml_guarded_by_name(&member) {
+            bilingua_model::guard::check_xml(data, &self.limits)?;
+        }
         let d = parse_xml(data, &member)?;
         let mut out = Vec::new();
         for r in d.element_children(d.root).filter(|&r| d.is(r, PKG_RELS_NS, "Relationship")) {
@@ -336,22 +346,10 @@ impl Pkg {
     /// Opens a package the way python-docx does.
     pub fn load(bytes: &[u8], limits: &Limits) -> Result<Pkg, Error> {
         let entries: Vec<RawEntry> = zipio::read_zip(bytes, &ZipLimits::from(limits))?.into_iter().filter(|e| !e.meta.dir).collect();
-        bilingua_zip::check_xml_parts_except(&entries, limits, crate::UNPARSED_PARTS)?;
-        // empty paragraphs count too (LocOS DOCX_MAX_PARAGRAPHS), before any tree is built
-        let mut paragraphs = 0usize;
-        for e in entries.iter().filter(|e| e.name.starts_with("word/") && e.name.ends_with(".xml")) {
-            paragraphs += bilingua_model::guard::count_elements(&e.data, "p");
-            if paragraphs > limits.max_paragraphs {
-                return Err(bilingua_model::LimitError::new(
-                    bilingua_model::LimitKind::Paragraphs,
-                    format!("This file has more than {} paragraphs. Split it into smaller files.", limits.max_paragraphs),
-                )
-                .into());
-            }
-        }
+        let paragraphs = crate::guard_named_parts(&entries, limits)?;
         let strict = entries.iter().any(|e| e.name == "_rels/.rels" && contains(&e.data, format!("{STRICT_RELS}/officeDocument").as_bytes()));
         let normalized = entries.iter().map(|e| if strict && xml_member(&e.name) { part_to_transitional(&e.data) } else { Ok(e.data.clone()) }).collect::<Result<Vec<_>, _>>()?;
-        let mut pkg = Pkg { parts: Vec::new(), rels: Vec::new(), main: 0, original: entries, normalized, strict };
+        let mut pkg = Pkg { parts: Vec::new(), rels: Vec::new(), main: 0, original: entries, normalized, strict, limits: *limits, paragraphs };
 
         // content types
         let ct = pkg.entry("[Content_Types].xml").ok_or_else(|| perr("not a Word document: no [Content_Types].xml"))?;
@@ -396,8 +394,13 @@ impl Pkg {
             index.insert(partname.clone(), pkg.parts.len());
             // python-docx's PartFactory: an image relationship gives an image part, else the content type decides
             let xml = s.reltype != rt("image") && (ct == WML_MAIN || WML_ALIASES.contains(&ct.as_str()) || XML_PARTS.contains(&ct.as_str()));
+            // a part is parsed for its content type, not its name: one the name-keyed guards passed over (a main
+            // part called `word/document.bin`, or under `customXml/`) is guarded here, before its tree is built
+            if xml {
+                crate::guard_parsed_part(&member, &data, limits, &mut pkg.paragraphs)?;
+            }
             let dom = if xml { Some(parse_xml(&data, &member)?) } else { None };
-            pkg.parts.push(Part { name: member, ct, xml, data, dom, dirty: false, rels: Vec::new() });
+            pkg.parts.push(Part { name: member, ct, xml, data, dom, dirty: false, rels: Vec::new(), guarded: xml });
             part_srels.push(srels_here.clone());
             stack.push((base_uri(&partname), srels_here, 0));
         }
@@ -428,17 +431,33 @@ impl Pkg {
     /// The tree of a part the walk reads (`_part_root`): an XML part's, or a bytes-kept part parsed now; false when
     /// it is not XML (left exactly as it was).
     pub fn open(&mut self, part: usize) -> bool {
-        let p = &mut self.parts[part];
-        if p.dom.is_some() {
-            return true;
+        // a part over a limit is not parsed, so it is left exactly as it was, like one that is not XML
+        self.try_open(part).unwrap_or(false)
+    }
+
+    /// [`Pkg::open`] for the extraction walk: a part over the XML or paragraph limits is the limit error, checked
+    /// before its tree is built (these parts are chosen by relationship, so the name-keyed guards of `load` may
+    /// not have seen them).
+    pub fn try_open(&mut self, part: usize) -> Result<bool, Error> {
+        if self.parts[part].dom.is_some() {
+            return Ok(true);
         }
-        match tree::decode(&p.data).and_then(|t| bilingua_xmltree::parse_noblanks(&t).ok()) {
+        if !self.parts[part].guarded {
+            let limits = self.limits;
+            let mut paragraphs = self.paragraphs;
+            let checked = crate::guard_parsed_part(&self.parts[part].name, &self.parts[part].data, &limits, &mut paragraphs);
+            self.paragraphs = paragraphs;
+            checked?;
+            self.parts[part].guarded = true;
+        }
+        let p = &mut self.parts[part];
+        Ok(match tree::decode(&p.data).and_then(|t| bilingua_xmltree::parse_noblanks(&t).ok()) {
             Some(d) => {
                 p.dom = Some(d);
                 true
             }
             None => false,
-        }
+        })
     }
 
     /// The first internal relationship of a part (`None`: the package) with this type.

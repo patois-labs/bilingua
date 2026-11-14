@@ -257,10 +257,11 @@ pub fn extract(name: &str, bytes: &[u8], opts: &ExtractOptions) -> Result<Docume
     // a misspelt option or profile would otherwise be ignored without a word
     profile::check(opts.profile.as_deref())?;
     check_format_options(opts, &format_option_keys())?;
-    let f = detect_with(name, bytes, opts.profile.as_deref()).ok_or_else(|| Error::Unsupported(format!("no parser for {name}")))?;
-    // the safety net for every format, also one that forgets to call the guards: input size first, the unit,
-    // segment and unit-length caps at the end
+    // the safety net for every format, also one that forgets to call the guards: input size first (before
+    // detection, whose sniffers read the whole input of a file with no extension), the unit, segment, unit-length
+    // and context caps at the end
     bilingua_model::guard::check_input(bytes, &opts.limits())?;
+    let f = detect_with(name, bytes, opts.profile.as_deref()).ok_or_else(|| Error::Unsupported(format!("no parser for {name}")))?;
     let mut doc = f.extract(bytes, opts)?;
     doc.name = Some(name.to_string());
     doc.source_encoding = doc.detected_source_encoding();

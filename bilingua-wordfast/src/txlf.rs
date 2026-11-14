@@ -4,7 +4,7 @@
 use crate::engine::{Ctx, Item, Region, Status, Walked};
 use crate::inline::{build_source, build_target, CodePiece, Piece};
 use crate::xml::{perr, py_strip, with_attr, Node, Tree};
-use bilingua_model::{Error, LimitError, LimitKind, Note, Origin, OriginKind, SegState, TagKind};
+use bilingua_model::{guard, Error, LimitError, LimitKind, Note, Origin, OriginKind, SegState, TagKind};
 use std::collections::HashMap;
 
 pub const FORMAT: &str = "txlf";
@@ -313,6 +313,24 @@ fn target_region(c: &Ctx, tu: usize, t: usize) -> Region {
     Region { start: e.start_end, end: e.end_start, pre: String::new(), post: String::new() }
 }
 
+/// Most copies of notes one trans-unit hands to its segments (notes times segments carrying them). Past it the
+/// later segments go without: a crafted trans-unit with thousands of notes and segments would copy them a
+/// quadratic number of times.
+const MAX_NOTE_COPIES: usize = 10_000;
+
+/// What the walk reads once per trans-unit, however many `<source>` children it has.
+struct TuSeen {
+    target: Option<usize>,
+    seg_source: Option<usize>,
+    notes: Vec<Note>,
+    /// Bytes of text in `notes`.
+    note_bytes: usize,
+    /// Notes handed to items of this trans-unit so far.
+    copied: usize,
+    /// An item of this trans-unit carries the notes already.
+    given: bool,
+}
+
 pub fn walk(c: &Ctx) -> Result<Walked, Error> {
     let tree = c.tree;
     let root = &tree.els[0];
@@ -322,6 +340,8 @@ pub fn walk(c: &Ctx) -> Result<Walked, Error> {
     let mut items: Vec<Item> = Vec::new();
     let mut budget: i64 = 10 * c.limits.max_units as i64;
     let (mut idx, mut seg_n) = (0usize, 0usize);
+    let mut seen: HashMap<usize, TuSeen> = HashMap::new();
+    let mut note_budget = guard::ContextBudget::new();
     for si in 0..tree.els.len() {
         let src = &tree.els[si];
         if src.local != "source" {
@@ -333,9 +353,32 @@ pub fn walk(c: &Ctx) -> Result<Walked, Error> {
         }
         let key = idx;
         idx += 1;
-        let target = tree.kid(tu, "target");
+        // the trans-unit's target, seg-source and notes, read once for all its source children and segments (a
+        // crafted trans-unit can have thousands of each: reading them per source was quadratic)
+        let tu_seen = seen.entry(tu).or_insert_with(|| {
+            let mut notes = Vec::new();
+            let mut note_bytes = 0usize;
+            for &nk in &tree.els[tu].kids {
+                let ne = &tree.els[nk];
+                if ne.local == "note" {
+                    let text = py_strip(&tree.text_of(c.text, nk)).to_string();
+                    if !text.is_empty() {
+                        note_bytes += text.len() + ne.attr("from").map_or(0, str::len);
+                        notes.push(Note::new(text).with_author(ne.attr("from").map(str::to_string)));
+                    }
+                }
+            }
+            TuSeen {
+                target: tree.kid(tu, "target"),
+                seg_source: tree.kid(tu, "seg-source").filter(|_| tree.els[tu].local == "trans-unit"),
+                notes,
+                note_bytes,
+                copied: 0,
+                given: false,
+            }
+        });
+        let (target, seg_source) = (tu_seen.target, tu_seen.seg_source);
         let skip = unit_skip(c, tu, target);
-        let seg_source = tree.kid(tu, "seg-source").filter(|_| tree.els[tu].local == "trans-unit");
         let mrks = seg_mrks(tree, seg_source);
         let tgt_mrks: HashMap<&str, usize> = seg_mrks(tree, target).into_iter().map(|m| (tree.els[m].attr("mid").unwrap_or(""), m)).collect();
         // (slot key, element holding the source text, element holding the seg target)
@@ -387,21 +430,9 @@ pub fn walk(c: &Ctx) -> Result<Walked, Error> {
             }
             template.push_str(&c.text[pos..ss.end_start]);
         }
-        // the trans-unit's notes, read once for all its segments (a seg-source unit can have many)
-        let mut notes = Vec::new();
-        for &nk in &tree.els[tu].kids {
-            let ne = &tree.els[nk];
-            if ne.local == "note" {
-                let text = py_strip(&tree.text_of(c.text, nk)).to_string();
-                if !text.is_empty() {
-                    notes.push(Note::new(text).with_author(ne.attr("from").map(str::to_string)));
-                }
-            }
-        }
         // every segment gets the notes, unless that would copy them a quadratic number of times (a crafted file
         // with thousands of notes and segments): then the first listed segment carries them
-        let notes_everywhere = notes.len().saturating_mul(slots.len()) <= 10_000;
-        let mut notes = Some(notes);
+        let notes_everywhere = tu_seen.notes.len().saturating_mul(slots.len()) <= MAX_NOTE_COPIES;
         for (n, &(k, el, tel)) in slots.iter().enumerate() {
             let status = std::mem::replace(&mut status_of[n], Status::Open);
             let open = matches!(status, Status::Open);
@@ -425,6 +456,11 @@ pub fn walk(c: &Ctx) -> Result<Walked, Error> {
             } else {
                 status
             };
+            if matches!(status, Status::Locked(_)) && !c.keep_locked {
+                continue; // never a unit: not kept, so the list below holds units only
+            }
+            // the unit cap, while the list is built and not after it
+            guard::check_unit_count(items.len() + 1, c.limits)?;
             let (tgt, state, origin) = match tel.filter(|_| has_content(c, tel)) {
                 Some(t) => {
                     let tg = build_target(pieces(c, t, false), &s);
@@ -485,7 +521,22 @@ pub fn walk(c: &Ctx) -> Result<Walked, Error> {
                 extra,
                 ctx_key: tree.els[tu].attr("id").map(str::to_string),
                 style: Some("trans-unit".into()),
-                notes: if notes_everywhere { notes.clone().unwrap_or_default() } else { notes.take().unwrap_or_default() },
+                notes: {
+                    // the same bound over all the source children of the trans-unit together: the first item
+                    // always carries the notes, a later one while the copies stay within the bound
+                    let n = tu_seen.notes.len();
+                    if !tu_seen.given {
+                        tu_seen.given = true;
+                        tu_seen.copied = n;
+                        tu_seen.notes.clone()
+                    } else if notes_everywhere && tu_seen.copied + n <= MAX_NOTE_COPIES {
+                        note_budget.charge(tu_seen.note_bytes, c.limits)?;
+                        tu_seen.copied += n;
+                        tu_seen.notes.clone()
+                    } else {
+                        Vec::new()
+                    }
+                },
             });
         }
     }

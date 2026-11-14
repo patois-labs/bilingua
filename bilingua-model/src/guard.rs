@@ -28,6 +28,8 @@ pub enum LimitKind {
     Units,
     /// A unit is too long.
     UnitChars,
+    /// Too much key, note and other context text on the units (`Limits::max_context_bytes`).
+    Context,
     /// XML nested too deeply.
     XmlDepth,
     /// Nesting deeper than allowed in a format that is not XML (HTML, JSON, YAML, ...). Uses
@@ -121,6 +123,10 @@ pub struct Limits {
     /// Most characters of cell text in an XLSX, repeated shared strings counted every time
     /// (`XLSX_MAX_TOTAL_TEXT_CHARS`).
     pub xlsx_max_total_text_chars: usize,
+    /// Most bytes of context the units of one document may carry together: keys, notes, headings, locations and
+    /// the other strings of `UnitContext`. A string the file holds once and a parser copies into many units counts
+    /// once per copy, so one long key or comment over many units cannot multiply the input.
+    pub max_context_bytes: u64,
 }
 
 impl Default for Limits {
@@ -142,6 +148,7 @@ impl Default for Limits {
             xlsx_max_rows: 100_000,
             xlsx_max_cell_chars: 32_767,
             xlsx_max_total_text_chars: 8 * 1024 * 1024,
+            max_context_bytes: 128 * 1024 * 1024,
         }
     }
 }
@@ -231,6 +238,11 @@ impl Limits {
         self.xlsx_max_total_text_chars = v;
         self
     }
+    /// Sets `max_context_bytes`.
+    pub fn with_max_context_bytes(mut self, v: u64) -> Limits {
+        self.max_context_bytes = v;
+        self
+    }
 }
 
 fn mb(n: u64) -> String {
@@ -314,11 +326,66 @@ pub fn check_unit_chars(chars: usize, l: &Limits) -> Result<(), Error> {
     Ok(())
 }
 
-/// The check for a finished extraction: unit and segment counts, and the length of every unit.
+/// Refuses a running total of context bytes over `max_context_bytes`.
+pub fn check_context_bytes(total: u64, l: &Limits) -> Result<(), Error> {
+    if total > l.max_context_bytes {
+        return Err(LimitError::new(
+            LimitKind::Context,
+            format!(
+                "This file carries more key, comment and note text than the limit of {} allows. Split it into smaller files.",
+                mb(l.max_context_bytes)
+            ),
+        )
+        .into());
+    }
+    Ok(())
+}
+
+/// The bytes of context one unit carries: every string of its `UnitContext`.
+pub fn unit_context_bytes(c: &crate::UnitContext) -> u64 {
+    let opt = |s: &Option<String>| s.as_ref().map_or(0, |v| v.len() as u64);
+    opt(&c.kind)
+        + opt(&c.style)
+        + opt(&c.key)
+        + opt(&c.heading)
+        + opt(&c.location)
+        + c.notes.iter().map(|n| n.len() as u64).sum::<u64>()
+        + c.extra.iter().map(|(k, v)| (k.len() + v.len()) as u64).sum::<u64>()
+}
+
+/// The running context budget for a parser that copies a shared string (a key path, a section name, a comment)
+/// into many units: charge every copy before it is made, so a hostile file is refused before the memory is
+/// taken. `check_document` applies the same cap to the finished document as the safety net.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct ContextBudget {
+    used: u64,
+}
+
+impl ContextBudget {
+    /// A budget with nothing charged.
+    pub fn new() -> ContextBudget {
+        ContextBudget::default()
+    }
+    /// Charges `bytes` more of context and refuses once the total passes `max_context_bytes`.
+    pub fn charge(&mut self, bytes: usize, l: &Limits) -> Result<(), Error> {
+        self.used = self.used.saturating_add(bytes as u64);
+        check_context_bytes(self.used, l)
+    }
+    /// The bytes charged so far.
+    pub fn used(&self) -> u64 {
+        self.used
+    }
+}
+
+/// The check for a finished extraction: unit and segment counts, the length of every unit, and the context
+/// bytes of all units together.
 pub fn check_document(doc: &Document, l: &Limits) -> Result<(), Error> {
     check_unit_count(doc.units.len(), l)?;
     check_unit_count(doc.segment_count(), l)?;
+    let mut context: u64 = 0;
     for u in &doc.units {
+        context = context.saturating_add(unit_context_bytes(&u.context));
+        check_context_bytes(context, l)?;
         let chars: usize = u
             .segments
             .iter()

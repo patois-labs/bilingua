@@ -653,12 +653,15 @@ pub fn iter_units<'t>(tokens: &'t [Tok<'_>], cap: Option<usize>) -> Result<Vec<B
         parts: Vec<Piece<'t>>,
         indices: Vec<usize>,
         map: Vec<Entry>,
-        stack: Vec<(u32, String)>,
+        /// The ids of the open inline elements of the unit, per element name, innermost last. An end tag closes
+        /// the innermost open element of its name, so it looks at one list and never walks the others: a unit of
+        /// thousands of open `<rt>` followed by thousands of end tags stays linear.
+        stack: HashMap<String, Vec<u32>>,
         run_id: u32,
     }
     impl<'t> St<'t> {
         fn new() -> Self {
-            St { parts: Vec::new(), indices: Vec::new(), map: Vec::new(), stack: Vec::new(), run_id: 0 }
+            St { parts: Vec::new(), indices: Vec::new(), map: Vec::new(), stack: HashMap::new(), run_id: 0 }
         }
         fn counter(&self) -> u32 {
             self.map.len() as u32
@@ -746,7 +749,9 @@ pub fn iter_units<'t>(tokens: &'t [Tok<'_>], cap: Option<usize>) -> Result<Vec<B
         st.parts.clear();
         st.indices.clear();
         st.map.clear();
-        st.stack.clear();
+        if !st.stack.is_empty() {
+            st.stack.clear();
+        }
         Ok(())
     }
 
@@ -787,8 +792,7 @@ pub fn iter_units<'t>(tokens: &'t [Tok<'_>], cap: Option<usize>) -> Result<Vec<B
                     st.parts.push(Piece::Point(st.counter()));
                     st.indices.push(ti);
                 } else if closing {
-                    if let Some(si) = st.stack.iter().rposition(|(_, n)| *n == name) {
-                        let (oid, _) = st.stack.remove(si);
+                    if let Some(oid) = st.stack.get_mut(&name).and_then(Vec::pop) {
                         st.map[oid as usize - 1].close = Some(tok.s.to_string());
                         st.parts.push(Piece::Close(oid));
                         st.indices.push(ti);
@@ -801,7 +805,7 @@ pub fn iter_units<'t>(tokens: &'t [Tok<'_>], cap: Option<usize>) -> Result<Vec<B
                 } else {
                     st.map.push(Entry { open: Some(tok.s.to_string()), name: name.clone(), ..Default::default() });
                     let id = st.counter();
-                    st.stack.push((id, name));
+                    st.stack.entry(name).or_default().push(id);
                     st.parts.push(Piece::Open(id));
                     st.indices.push(ti);
                 }

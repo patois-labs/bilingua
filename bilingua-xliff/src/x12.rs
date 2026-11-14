@@ -398,18 +398,18 @@ fn find(hay: &[u8], needle: &[u8]) -> Option<usize> {
     hay.windows(needle.len()).position(|w| w == needle)
 }
 
-pub fn parse(buf: &[u8], format: Format) -> Result<ParsedDoc, Error> {
-    let (doc, segmented) = parse_inner(buf, format, false)?;
+pub fn parse(buf: &[u8], format: Format, limits: Option<&bilingua_model::Limits>) -> Result<ParsedDoc, Error> {
+    let (doc, segmented) = parse_inner(buf, format, false, limits)?;
     if format == Format::Sdlxliff && !segmented {
         // A Trados file saved before segmentation: no `mrk mtype="seg"` anywhere. Every trans-unit
         // becomes one segment, so the translator is not shown an empty file.
-        return Ok(parse_inner(buf, format, true)?.0);
+        return Ok(parse_inner(buf, format, true, limits)?.0);
     }
     Ok(doc)
 }
 
 /// Returns the parsed document and whether any trans-unit carried a segmentation `mrk`.
-fn parse_inner(buf: &[u8], format: Format, unsegmented: bool) -> Result<(ParsedDoc, bool), Error> {
+fn parse_inner(buf: &[u8], format: Format, unsegmented: bool, limits: Option<&bilingua_model::Limits>) -> Result<(ParsedDoc, bool), Error> {
     let mut any_mrk = false;
     let tag_defs = if format == Format::Sdlxliff { Some(parse_tag_defs(buf)) } else { None };
     let iws_names = iws_prefixes(buf);
@@ -610,6 +610,7 @@ fn parse_inner(buf: &[u8], format: Format, unsegmented: bool) -> Result<(ParsedD
                         if let Some(a) = acc.take() {
                             any_mrk |= !a.src_mrks.is_empty();
                             finish_unit(buf, format, a, start, unsegmented, &mut recs, &mut units)?;
+                            crate::doc::check_segments(recs.len(), limits)?;
                         }
                     }
                     K::Group => {

@@ -4,6 +4,7 @@
 use crate::json::{self, Value};
 use bilingua_model::*;
 use std::collections::BTreeMap;
+use std::rc::Rc;
 
 /// One step of a path from the root of the JSON tree.
 #[derive(Debug, Clone)]
@@ -14,6 +15,71 @@ pub(crate) enum Step {
 
 pub(crate) fn k(s: &str) -> Step {
     Step::K(s.to_string())
+}
+
+/// A path from the root of the JSON tree, kept as its last step and a shared link to the path before it. The
+/// units of one container, and of the containers below it, share their common start, so the paths of all plans
+/// together take memory in line with the tree: a full copy per plan was units times depth (hundreds of MB for a
+/// small, deeply nested file).
+#[derive(Debug, Clone, Default)]
+pub(crate) struct Path(Option<Rc<Link>>);
+
+#[derive(Debug)]
+struct Link {
+    step: Step,
+    up: Path,
+}
+
+impl Path {
+    /// The empty path: the root value.
+    pub fn root() -> Path {
+        Path(None)
+    }
+
+    /// This path and one more step.
+    pub fn child(&self, step: Step) -> Path {
+        Path(Some(Rc::new(Link { step, up: self.clone() })))
+    }
+
+    /// The steps from the root, in order.
+    pub fn steps(&self) -> Vec<Step> {
+        let mut v = Vec::new();
+        let mut cur = &self.0;
+        while let Some(l) = cur {
+            v.push(l.step.clone());
+            cur = &l.up.0;
+        }
+        v.reverse();
+        v
+    }
+}
+
+/// The plans of a walk, with the most the caller will take: a walker stops as soon as `full` says the tree has
+/// more units than that, so a refused file is not planned to its end first.
+pub(crate) struct Plans {
+    v: Vec<Plan>,
+    max: usize,
+}
+
+impl Plans {
+    pub fn new(max: usize) -> Plans {
+        Plans { v: Vec::new(), max }
+    }
+
+    /// More plans than the caller takes: the walk can stop (the count alone tells the caller to refuse).
+    pub fn full(&self) -> bool {
+        self.v.len() > self.max
+    }
+
+    pub fn push(&mut self, p: Plan) {
+        if !self.full() {
+            self.v.push(p);
+        }
+    }
+
+    pub fn into_vec(self) -> Vec<Plan> {
+        self.v
+    }
 }
 
 /// What a tag stands for in the source tree (copied back on merge, never rebuilt from text).
@@ -36,7 +102,7 @@ impl Token {
 /// One translatable unit of a tree.
 #[derive(Debug, Clone)]
 pub(crate) struct Plan {
-    pub path: Vec<Step>,
+    pub path: Path,
     /// A text leaf of the ADF leaf walk (`adf.units=leaf`): its translation is written to the leaf's `text`.
     pub leaf: bool,
     pub kind: String,
@@ -49,7 +115,7 @@ pub(crate) struct Plan {
 impl Plan {
     pub fn pointer(&self) -> String {
         let mut s = String::new();
-        for st in &self.path {
+        for st in &self.path.steps() {
             s.push('/');
             match st {
                 Step::K(k) => s.push_str(&k.replace('~', "~0").replace('/', "~1")),
@@ -108,7 +174,7 @@ impl Builder {
         self.n
     }
 
-    pub fn finish(self, path: Vec<Step>, kind: &str, extra: Vec<(String, String)>) -> Plan {
+    pub fn finish(self, path: Path, kind: &str, extra: Vec<(String, String)>) -> Plan {
         Plan { path, leaf: false, kind: kind.to_string(), extra, src: self.inl, codes: self.codes, tokens: self.tokens }
     }
 }
@@ -196,7 +262,23 @@ pub(crate) fn label_of(parts: Vec<String>, fallback: &str) -> String {
     }
 }
 
-pub(crate) type PlanFn = fn(&Value, bool) -> Vec<Plan>;
+/// A filter's walk: the tree, the ADF leaf mode, and the most plans the caller takes (the walk stops one past it).
+pub(crate) type PlanFn = fn(&Value, bool, usize) -> Vec<Plan>;
+
+/// Quotes and values (`,`, `[`, `{`) a file may hold for each unit the limits allow. Rich text JSON is wordy (a
+/// Notion block with one run has about 100 quotes and 40 values), so these are wider than the plain JSON
+/// filter's 40 and 20.
+const QUOTES_PER_UNIT: usize = 200;
+const VALUES_PER_UNIT: usize = 100;
+
+/// The budget before a text is parsed: the value tree and its span tree are built whole, so far more strings or
+/// values than the unit limit can use are refused first (as `bilingua-json` does).
+fn check_json_budget(text: &str, what: &str, limits: &Limits) -> Result<(), Error> {
+    let quotes = text.bytes().filter(|b| *b == b'"').count();
+    guard::check_budget(quotes, QUOTES_PER_UNIT, &format!("This {what} file has far more strings"), limits)?;
+    let values = text.bytes().filter(|b| matches!(b, b',' | b'[' | b'{')).count();
+    guard::check_budget(values, VALUES_PER_UNIT, &format!("This {what} file has far more values"), limits)
+}
 pub(crate) type ApplyFn = fn(&mut Value, &[Plan], &[Option<Vec<Inline>>]) -> Result<(), Error>;
 
 fn reparse(id: &str, e: Error) -> Error {
@@ -207,23 +289,30 @@ fn reparse(id: &str, e: Error) -> Error {
 }
 
 pub(crate) fn extract_doc(id: &'static str, what: &str, bytes: &[u8], opts: &ExtractOptions, mode: &str, shape: fn(&Value) -> bool, plan: PlanFn) -> Result<Document, Error> {
-    guard::check_input(bytes, &opts.limits())?;
+    let limits = opts.limits();
+    guard::check_input(bytes, &limits)?;
     let mut dec = enc::decode_text(bytes, &enc::DecodeOptions::new(opts))?;
     let text = std::mem::take(&mut dec.text);
+    check_json_budget(&text, id, &limits)?;
     let parsed = json::parse(&text).map_err(|e| reparse(id, e))?;
     if !shape(&parsed.value) {
         return Err(Error::Parse { format: id.into(), msg: format!("this JSON is not {what}") });
     }
     let leaf = mode == "leaf";
-    let plans = plan(&parsed.value, leaf);
-    guard::check_unit_count(plans.len(), &opts.limits())?;
+    // the walk stops one plan past the limit: the count is then refused here, before the rest is planned
+    let plans = plan(&parsed.value, leaf, limits.max_units);
+    guard::check_unit_count(plans.len(), &limits)?;
     let locos = opts.is_profile(profile::LOCOS);
     let mut units = Vec::with_capacity(plans.len());
+    // every unit keeps its path as a pointer string, as long as the unit is deep: charged before it is kept
+    let mut context = guard::ContextBudget::new();
     for (n, p) in plans.into_iter().enumerate() {
         let mut u = Unit::new(format!("u{}", n + 1), p.src.clone());
         u.codes = p.codes.clone();
         u.context.kind = Some(p.kind.clone());
-        u.context.key = Some(p.pointer());
+        let pointer = p.pointer();
+        context.charge(pointer.len(), &limits)?;
+        u.context.key = Some(pointer);
         for (a, b) in &p.extra {
             u.context.extra.insert(a.clone(), b.clone());
         }
@@ -233,7 +322,7 @@ pub(crate) fn extract_doc(id: &'static str, what: &str, bytes: &[u8], opts: &Ext
         units.push(u);
     }
     let skeleton = Skeleton::text(vec![SkelPart::Raw(mode.to_string()), SkelPart::Raw(text)], dec.encoding.clone(), parser_info!());
-    guard::finish(Document::new(id, units, skeleton).with_options(opts), std::mem::take(&mut dec.warnings), &opts.limits())
+    guard::finish(Document::new(id, units, skeleton).with_options(opts), std::mem::take(&mut dec.warnings), &limits)
 }
 
 pub(crate) fn merge_doc(id: &'static str, doc: &Document, opts: &MergeOptions, plan: PlanFn, apply: ApplyFn) -> Result<Vec<u8>, Error> {
@@ -248,9 +337,18 @@ pub(crate) fn merge_doc(id: &'static str, doc: &Document, opts: &MergeOptions, p
     if !touched {
         return enc::encode_text_with(text, encoding, opts);
     }
+    // the same bounds as extract, for a Document whose stored text did not come from this filter: the budget of
+    // the default limits (wider when the document itself has more units), and a walk that stops one plan past
+    // the document's unit count
+    let limits = Limits::default();
+    let limits = limits.with_max_units(limits.max_units.max(doc.units.len()));
+    check_json_budget(text, id, &limits)?;
     let parsed = json::parse(text).map_err(|e| reparse(id, e))?;
     let mut root = parsed.value.clone();
-    let plans = plan(&root, mode == "leaf");
+    let plans = plan(&root, mode == "leaf", doc.units.len());
+    if plans.len() > doc.units.len() {
+        return Err(Error::Write(format!("{id}: the document has {} units but the original text has more", doc.units.len())));
+    }
     if plans.len() != doc.units.len() {
         return Err(Error::Write(format!("{id}: the document has {} units but the original text has {}", doc.units.len(), plans.len())));
     }

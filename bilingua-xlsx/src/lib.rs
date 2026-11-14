@@ -10,6 +10,7 @@
 /// Skeleton schema number: bump only when this crate's skeleton layout changes (see `bilingua_model::check_parser`).
 pub const SKELETON_SCHEMA: u32 = 2;
 
+mod budget;
 mod extract;
 mod locos;
 mod refs;

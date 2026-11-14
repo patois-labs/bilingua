@@ -285,15 +285,20 @@ fn check_tag(d: Dialect, tok: &str, orig: &str, m: &Masked, masked_pos: usize) -
             None => i += 1,
         }
     }
+    // The value spans are in ascending order and never overlap (they are built left to right above), so the span
+    // that could hold a code is found by binary search, and whether the tag reads cleanly is decided once: the answer
+    // is the same for every code of the tag. A tag of n values and n codes must cost n steps, not n * n * n.
+    let mut clean: Option<bool> = None;
     let mut from = 0;
     while let Some(p) = tok[from..].find(S_OPEN) {
         let s = from + p;
         let e = tok[s..].find(S_CLOSE).map_or(tok.len(), |q| s + q + S_CLOSE.len_utf8());
-        if !allowed.iter().any(|&(a, b)| a <= s && e <= b) {
+        let k = allowed.partition_point(|&(_, b)| b < e);
+        if !allowed.get(k).is_some_and(|&(a, b)| a <= s && e <= b) {
             // Code BETWEEN attributes (after the tag name, between two attributes, before `>` or `/>`, or around a bare
             // attribute) is an opaque code of the tag. It must not build a tag or attribute name, and the rest of the
             // tag must read cleanly.
-            if !(bare_code_ok(tok, s, e, &allowed, m) && tag_is_clean(tok, &allowed)) {
+            if !(bare_code_ok(tok, s, e, &allowed, m) && *clean.get_or_insert_with(|| tag_is_clean(tok, &allowed))) {
                 let prefix = m.unmask(&m.text[..masked_pos + s], orig);
                 return Err(refused(d, &prefix, prefix.len(), "code is used as a tag or attribute name", HINT));
             }
@@ -321,7 +326,7 @@ fn bare_code_ok(tok: &str, s: usize, e: usize, allowed: &[(usize, usize)], m: &M
     let run = before.len() - before.trim_end_matches(is_name_char).len();
     let head = &before[..before.len() - run];
     let before_ok = if run == 0 {
-        before.chars().next_back().is_some_and(|c| is_space(c) || c == S_CLOSE) || allowed.iter().any(|&(_, b)| b == s)
+        before.chars().next_back().is_some_and(|c| is_space(c) || c == S_CLOSE) || allowed.binary_search_by_key(&s, |&(_, b)| b).is_ok()
     } else if head.ends_with(S_CLOSE) {
         true
     } else {
@@ -345,14 +350,20 @@ fn bare_code_ok(tok: &str, s: usize, e: usize, allowed: &[(usize, usize)], m: &M
 /// A tag that holds code between its attributes must read cleanly: outside the attribute values and the codes there
 /// is no quote and no `<` (a tag nested inside a quoted value, such as `href="a<x:url value="${v}"/>b"`, would make the
 /// HTML tokenizer read junk, so such a page stays refused).
+///
+/// `allowed` is ascending and disjoint, so one index moves through it with the cursor.
 fn tag_is_clean(tok: &str, allowed: &[(usize, usize)]) -> bool {
+    let mut next = 0; // the first value span that ends after the cursor
     let mut i = 1;
     for (j, c) in tok.char_indices().skip(1) {
         if j < i {
             continue;
         }
         i = j + c.len_utf8();
-        if let Some(&(_, b)) = allowed.iter().find(|&&(a, b)| a <= j && j < b) {
+        while allowed.get(next).is_some_and(|&(_, b)| b <= j) {
+            next += 1;
+        }
+        if let Some(&(_, b)) = allowed.get(next).filter(|&&(a, _)| a <= j) {
             i = b;
         } else if c == S_OPEN {
             i = tok[j..].find(S_CLOSE).map_or(tok.len(), |q| j + q + S_CLOSE.len_utf8());

@@ -10,8 +10,8 @@ use crate::error::Error;
 use crate::inline::{parse_inlines, plain, split_brace_codes, Flavor, Parsed, RawTag, TagDefs};
 use crate::patch::{apply, Patch};
 use crate::{x12, x2, Format, MxMeta};
-use bilingua_model::{merge_text, Inline, Note, Origin, SegState};
-use std::collections::HashMap;
+use bilingua_model::{merge_text, Inline, Limits, Note, Origin, SegState, TagKind};
+use std::collections::{HashMap, HashSet};
 use std::ops::Range;
 use std::sync::OnceLock;
 
@@ -73,12 +73,28 @@ pub(crate) struct ParsedDoc {
 
 /// Combine tag markup learned from the source and the target (source wins).
 fn merge_raws(mut src: Vec<RawTag>, tgt: Vec<RawTag>) -> Vec<RawTag> {
+    if tgt.is_empty() {
+        return src;
+    }
+    // looked up in a set: a segment with thousands of tags on each side is not compared pair by pair
+    let mut have: HashSet<(String, TagKind)> = src.iter().map(|s| (s.id.clone(), s.kind)).collect();
     for t in tgt {
-        if !src.iter().any(|s| s.id == t.id && s.kind == t.kind) {
+        if have.insert((t.id.clone(), t.kind)) {
             src.push(t);
         }
     }
     src
+}
+
+/// The running check of the scanners: with limits given, a file is refused as soon as it has more segments than
+/// `max_units` (the count the finished document is refused for), not after all of it was read.
+pub(crate) fn check_segments(count: usize, limits: Option<&Limits>) -> Result<(), Error> {
+    if let Some(l) = limits {
+        if let Err(bilingua_model::Error::Limit(e)) = bilingua_model::guard::check_unit_count(count, l) {
+            return Err(Error::Limit(e));
+        }
+    }
+    Ok(())
 }
 
 /// What the file says about one segment, borrowed from the open file.
@@ -180,24 +196,38 @@ impl Doc {
     /// Open a file held in memory. `mxliff_ext` is true when the file name ends in `.mxliff`: such a file is read
     /// as MXLIFF even when its header has no Phrase namespace.
     pub fn from_bytes_hint(bytes: Vec<u8>, mxliff_ext: bool) -> Result<Doc, Error> {
+        Doc::open(bytes, mxliff_ext, None)
+    }
+
+    /// [`Doc::from_bytes_hint`] under the caller's limits: a file with more segments than `limits.max_units` is
+    /// refused with [`Error::Limit`] while it is scanned.
+    pub fn from_bytes_limited(bytes: Vec<u8>, mxliff_ext: bool, limits: &Limits) -> Result<Doc, Error> {
+        Doc::open(bytes, mxliff_ext, Some(limits))
+    }
+
+    fn open(bytes: Vec<u8>, mxliff_ext: bool, limits: Option<&Limits>) -> Result<Doc, Error> {
         let bom = if bytes.starts_with(&[0xEF, 0xBB, 0xBF]) { 3 } else { 0 };
         let mut format = detect(&bytes[bom..])?;
         if mxliff_ext && format == Format::Xliff12 {
             format = Format::Mxliff;
         }
         let parsed = match format {
-            Format::Xliff2 => x2::parse(&bytes[bom..])?,
-            f => x12::parse(&bytes[bom..], f)?,
+            Format::Xliff2 => x2::parse(&bytes[bom..], limits)?,
+            f => x12::parse(&bytes[bom..], f, limits)?,
         };
         let mut recs = parsed.recs;
         let mut index = HashMap::with_capacity(recs.len());
+        // The last suffix given out per repeated id. Ids are only ever added, so every suffix up to it is still
+        // taken and the search for the next free one goes on from there: the same ids as a search from 2, without
+        // walking all earlier repeats again for each one.
+        let mut last: HashMap<String, usize> = HashMap::new();
         for (i, r) in recs.iter_mut().enumerate() {
             // Ids must be unique so a segment can be addressed by id.
             if index.contains_key(&r.seg.id) {
                 let base = r.seg.id.clone();
-                let mut n = 1;
+                let n = last.entry(base.clone()).or_insert(1);
                 while index.contains_key(&r.seg.id) {
-                    n += 1;
+                    *n += 1;
                     r.seg.id = format!("{base}~{n}");
                 }
             }

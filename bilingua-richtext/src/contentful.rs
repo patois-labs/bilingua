@@ -84,7 +84,7 @@ fn serialize(children: &[Value], b: &mut Builder) -> bool {
     true
 }
 
-fn walk(node: &Value, path: &mut Vec<Step>, out: &mut Vec<Plan>) {
+fn walk(node: &Value, path: &Path, out: &mut Plans) {
     if !node.is_obj() {
         return;
     }
@@ -106,20 +106,21 @@ fn walk(node: &Value, path: &mut Vec<Step>, out: &mut Vec<Plan>) {
         }
         return;
     }
+    let below = path.child(k("content"));
     for (i, child) in content.iter().enumerate() {
-        path.push(k("content"));
-        path.push(Step::I(i));
-        walk(child, path, out);
-        path.truncate(path.len() - 2);
+        if out.full() {
+            return;
+        }
+        walk(child, &below.child(Step::I(i)), out);
     }
 }
 
-pub(crate) fn plan(root: &Value, _leaf: bool) -> Vec<Plan> {
-    let mut out = Vec::new();
+pub(crate) fn plan(root: &Value, _leaf: bool, max: usize) -> Vec<Plan> {
+    let mut out = Plans::new(max);
     if is_document(root) {
-        walk(root, &mut Vec::new(), &mut out);
+        walk(root, &Path::root(), &mut out);
     }
-    out
+    out.into_vec()
 }
 
 fn text_node(value: &str, shell: Option<&Value>) -> Value {
@@ -224,7 +225,7 @@ pub(crate) fn apply(root: &mut Value, plans: &[Plan], outs: &[Option<Vec<Inline>
         }
         let evs = events(o, &p.tokens).ok_or_else(|| unwritable(i, "the translation does not keep every placeholder of the source exactly once"))?;
         let rebuilt = rebuild(&evs, &p.tokens).filter(|r| !r.is_empty()).ok_or_else(|| unwritable(i, "the translation's placeholders are crossed, nested or unopened"))?;
-        let node = node_mut(root, &p.path).ok_or_else(|| Error::Write("the original text no longer matches the document".into()))?;
+        let node = node_mut(root, &p.path.steps()).ok_or_else(|| Error::Write("the original text no longer matches the document".into()))?;
         node.set("content", Value::Arr(rebuilt));
     }
     let mut after = BTreeMap::new();

@@ -434,8 +434,11 @@ pub(crate) struct Layout {
     pub lang_attr: String,
     pub attr_key: Option<(String, String)>,
     pub sources: Vec<u32>,
-    /// source element -> members (element, language) of its group
-    pub groups: HashMap<u32, Vec<(u32, String)>>,
+    /// source element -> index of its group in `group_list`. An index, not a copy of the group: a group with many
+    /// source-language members would otherwise be stored once per member.
+    pub groups: HashMap<u32, usize>,
+    /// members (element, language) of each group, each group held once
+    pub group_list: Vec<Vec<(u32, String)>>,
     pub languages: Vec<String>,
 }
 
@@ -543,10 +546,10 @@ fn layout_element(t: &Tree, strict: bool) -> RawLayout {
     RawLayout { mode: MlMode::Element, lang_attr: String::new(), attr_key: None, groups }
 }
 
-fn finish(lay: RawLayout, source: &str, threshold: usize) -> Option<Layout> {
+fn finish(t: &Tree, lay: RawLayout, source: &str, threshold: usize, limits: &Limits) -> Result<Option<Layout>, Error> {
     let multi = lay.groups.iter().filter(|g| g.iter().map(|(_, l)| norm(l)).collect::<HashSet<_>>().len() >= 2).count();
     if multi < threshold {
-        return None;
+        return Ok(None);
     }
     let mut source = source.to_string();
     if source.is_empty() {
@@ -554,51 +557,58 @@ fn finish(lay: RawLayout, source: &str, threshold: usize) -> Option<Layout> {
         let mut first: HashMap<String, usize> = HashMap::new();
         let mut seen = 0usize;
         for g in &lay.groups {
-            let mut done: Vec<String> = Vec::new();
+            let mut done: HashSet<String> = HashSet::new();
             for (_, l) in g {
                 let n = norm(l);
-                if done.contains(&n) {
+                if !done.insert(n.clone()) {
                     continue;
                 }
-                done.push(n.clone());
                 *counts.entry(n.clone()).or_insert(0) += 1;
                 first.entry(n).or_insert(seen);
                 seen += 1;
             }
         }
-        source = counts.keys().min_by_key(|c| (std::cmp::Reverse(counts[*c]), first[*c]))?.clone();
+        let Some(best) = counts.keys().min_by_key(|c| (std::cmp::Reverse(counts[*c]), first[*c])) else { return Ok(None) };
+        source = best.clone();
     }
     let src = norm(&source);
     let mut sources: Vec<u32> = Vec::new();
-    let mut groups: HashMap<u32, Vec<(u32, String)>> = HashMap::new();
-    let mut languages: Vec<(String, String)> = Vec::new();
+    let mut groups: HashMap<u32, usize> = HashMap::new();
+    // the first spelling of each language, in file order; the set answers "seen before?" without a scan
+    let mut languages: Vec<String> = Vec::new();
+    let mut seen_lang: HashSet<String> = HashSet::new();
     let mut written: Option<String> = None;
-    for g in &lay.groups {
-        for (_, l) in g {
-            if !languages.iter().any(|(n, _)| *n == norm(l)) {
-                languages.push((norm(l), l.clone()));
-            }
-        }
+    // source nodes that hold something: each can become a unit, so more of them than the unit limit is a layout
+    // the planner would refuse anyway, and it is refused here before the rest of the layout is built
+    let mut with_content = 0usize;
+    for (gi, g) in lay.groups.iter().enumerate() {
         for (e, l) in g {
-            if norm(l) == src {
+            let n = norm(l);
+            if n == src {
+                let el = &t.els[*e as usize];
+                if !el.empty && !el.items.is_empty() {
+                    with_content += 1;
+                    if with_content > limits.max_units {
+                        return Err(Error::Limit(LimitError::new(
+                            LimitKind::Units,
+                            format!("Multilingual XML: more than {} source-language nodes; split the file.", limits.max_units),
+                        )));
+                    }
+                }
                 sources.push(*e);
-                groups.insert(*e, g.clone());
+                groups.insert(*e, gi);
                 if written.is_none() {
                     written = Some(l.clone());
                 }
             }
+            if !seen_lang.contains(&n) {
+                seen_lang.insert(n);
+                languages.push(l.clone());
+            }
         }
     }
-    let written = written?;
-    Some(Layout {
-        mode: lay.mode,
-        source: written,
-        lang_attr: lay.lang_attr,
-        attr_key: lay.attr_key,
-        sources,
-        groups,
-        languages: languages.into_iter().map(|(_, l)| l).collect(),
-    })
+    let Some(written) = written else { return Ok(None) };
+    Ok(Some(Layout { mode: lay.mode, source: written, lang_attr: lay.lang_attr, attr_key: lay.attr_key, sources, groups, group_list: lay.groups, languages }))
 }
 
 fn layout_xpath(t: &Tree, cfg: &MlConfig, budget: &mut Budget) -> Result<Layout, Error> {
@@ -622,13 +632,14 @@ fn layout_xpath(t: &Tree, cfg: &MlConfig, budget: &mut Budget) -> Result<Layout,
         source: cfg.source.clone(),
         lang_attr: cfg.lang_attr.clone(),
         attr_key: key,
-        groups: sources.iter().map(|e| (*e, vec![(*e, cfg.source.clone())])).collect(),
+        groups: sources.iter().enumerate().map(|(i, e)| (*e, i)).collect(),
+        group_list: sources.iter().map(|e| vec![(*e, cfg.source.clone())]).collect(),
         sources,
         languages: vec![cfg.source.clone()],
     })
 }
 
-fn detect(t: &Tree, cfg: &MlConfig, budget: &mut Budget) -> Result<Option<Layout>, Error> {
+fn detect(t: &Tree, cfg: &MlConfig, budget: &mut Budget, limits: &Limits) -> Result<Option<Layout>, Error> {
     if !cfg.enabled {
         return Ok(None);
     }
@@ -641,7 +652,7 @@ fn detect(t: &Tree, cfg: &MlConfig, budget: &mut Budget) -> Result<Option<Layout
         let raws: Vec<&str> = if cfg.lang_attr.is_empty() { vec!["xml:lang", "lang"] } else { vec![cfg.lang_attr.as_str()] };
         for raw in raws {
             if let Some(l) = layout_attr(t, raw) {
-                if let Some(done) = finish(l, &cfg.source, threshold) {
+                if let Some(done) = finish(t, l, &cfg.source, threshold, limits)? {
                     return Ok(Some(done));
                 }
             }
@@ -649,7 +660,7 @@ fn detect(t: &Tree, cfg: &MlConfig, budget: &mut Budget) -> Result<Option<Layout
     }
     if matches!(cfg.mode, None | Some(MlMode::Element)) {
         let l = layout_element(t, !cfg.explicit);
-        if let Some(done) = finish(l, &cfg.source, threshold) {
+        if let Some(done) = finish(t, l, &cfg.source, threshold, limits)? {
             return Ok(Some(done));
         }
     }
@@ -696,7 +707,7 @@ pub(crate) fn plan(t: &Tree, config: Option<&MlConfig>, limits: &Limits, check_b
         return Ok(None);
     }
     let mut budget = Budget::new(t, 400u64 * (t.els.len() as u64 + 1000));
-    let Some(layout) = detect(t, &cfg, &mut budget)? else {
+    let Some(layout) = detect(t, &cfg, &mut budget, limits)? else {
         if cfg.explicit {
             return Err(bad("Multilingual XML: no source-language nodes found with the configured rule."));
         }
@@ -780,9 +791,11 @@ fn target_code(lay: &Layout, target: &str) -> String {
     styled(target, &lay.source)
 }
 
+/// The target nodes the configured `target_xpath` finds for the source element `el` (the xpath layout only; the
+/// other layouts look their group up in `GroupTargets`).
 fn find_target(t: &Tree, lay: &Layout, cfg: &MlConfig, el: u32, code: &str, budget: &mut Budget) -> Result<Vec<u32>, Error> {
     let want = norm(code);
-    if lay.mode == MlMode::Xpath {
+    {
         let ns = t.nsmap(t.root);
         let primary = want.split('-').next().unwrap_or("").to_string();
         let mut tries = vec![code.to_string()];
@@ -805,9 +818,52 @@ fn find_target(t: &Tree, lay: &Layout, cfg: &MlConfig, el: u32, code: &str, budg
                 return Ok(found);
             }
         }
-        return Ok(Vec::new());
+        Ok(Vec::new())
     }
-    Ok(lay.groups.get(&el).map(|g| g.iter().filter(|(m, l)| *m != el && norm(l) == want).map(|(m, _)| *m).collect()).unwrap_or_default())
+}
+
+/// The members of each group that carry the wanted language, in file order, with a cursor per group. A member is
+/// skipped for good once it is a source node or was given to an earlier unit, and neither ever changes back, so
+/// every unit of a group continues where the last one stopped instead of walking the whole group again.
+struct GroupTargets {
+    by_group: HashMap<usize, (Vec<u32>, usize)>,
+    /// end offset of the last member of each group, worked out once per group
+    end: HashMap<usize, usize>,
+}
+
+impl GroupTargets {
+    fn new(lay: &Layout, code: Option<&str>) -> GroupTargets {
+        let mut by_group: HashMap<usize, (Vec<u32>, usize)> = HashMap::new();
+        if let (Some(code), false) = (code, lay.mode == MlMode::Xpath) {
+            let want = norm(code);
+            for (gi, g) in lay.group_list.iter().enumerate() {
+                let hits: Vec<u32> = g.iter().filter(|(_, l)| norm(l) == want).map(|(m, _)| *m).collect();
+                if !hits.is_empty() {
+                    by_group.insert(gi, (hits, 0));
+                }
+            }
+        }
+        GroupTargets { by_group, end: HashMap::new() }
+    }
+
+    /// The first member of `el`'s group in the wanted language that is neither a source node nor already used.
+    fn next(&mut self, lay: &Layout, el: u32, used: &HashSet<u32>, sources: &HashSet<u32>) -> Option<u32> {
+        let (hits, at) = self.by_group.get_mut(lay.groups.get(&el)?)?;
+        while let Some(&h) = hits.get(*at) {
+            if !used.contains(&h) && !sources.contains(&h) {
+                return Some(h);
+            }
+            *at += 1;
+        }
+        None
+    }
+
+    /// Where a new target node goes: after the last member of the group (after the source itself without one).
+    fn end_of(&mut self, t: &Tree, lay: &Layout, el: u32) -> usize {
+        let own = t.els[el as usize].e1;
+        let Some(&gi) = lay.groups.get(&el) else { return own };
+        *self.end.entry(gi).or_insert_with(|| lay.group_list[gi].iter().map(|(m, _)| t.els[*m as usize].e1).max().unwrap_or(own))
+    }
 }
 
 fn indent_before(t: &Tree, el: u32) -> String {
@@ -930,6 +986,7 @@ pub(crate) fn merge(doc: &Document, text: &str, cfg_blob: &str, target: Option<&
     let mut used: HashSet<u32> = HashSet::new();
     let sources: HashSet<u32> = lay.sources.iter().copied().collect();
     let mut budget = Budget::new(&t, 400u64 * (t.els.len() as u64 + 1000));
+    let mut targets = GroupTargets::new(lay, code.as_deref());
     for (k, &el) in mp.unit_src.iter().enumerate() {
         let u = &doc.units[k];
         if !crate::skel::translated(u) {
@@ -946,8 +1003,12 @@ pub(crate) fn merge(doc: &Document, text: &str, cfg_blob: &str, target: Option<&
             edits.push((nd.s1, nd.e0, k, body));
             continue;
         };
-        let hits: Vec<u32> = find_target(&t, lay, &mp.cfg, el, code, &mut budget)?.into_iter().filter(|h| !used.contains(h) && !sources.contains(h)).collect();
-        if let Some(&tel) = hits.first() {
+        let hit: Option<u32> = if lay.mode == MlMode::Xpath {
+            find_target(&t, lay, &mp.cfg, el, code, &mut budget)?.into_iter().find(|h| !used.contains(h) && !sources.contains(h))
+        } else {
+            targets.next(lay, el, &used, &sources)
+        };
+        if let Some(tel) = hit {
             used.insert(tel);
             let tn = &t.els[tel as usize];
             if tn.empty {
@@ -962,8 +1023,7 @@ pub(crate) fn merge(doc: &Document, text: &str, cfg_blob: &str, target: Option<&
         if !mp.cfg.create {
             continue;
         }
-        let members: Vec<u32> = lay.groups.get(&el).map(|g| g.iter().map(|(m, _)| *m).collect()).unwrap_or_else(|| vec![el]);
-        let after = members.iter().map(|m| t.els[*m as usize].e1).max().unwrap_or(nd.e1);
+        let after = targets.end_of(&t, lay, el);
         let sep = indent_before(&t, el);
         edits.push((after, after, k, format!("{sep}{}", new_node(&t, lay, el, code, &body)?)));
     }

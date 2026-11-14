@@ -129,9 +129,17 @@ struct P<'a> {
     path: Vec<Seg>,
     nvals: usize,
     has_content: bool,
+    key_bytes: u64,
+    max_key_bytes: u64,
 }
 
-pub fn scan(text: &str) -> R<Scan<'_>> {
+/// The refusal for key paths over the cap (`scan_err` reads it to choose `LimitKind::Context`).
+pub const KEY_BYTES_MSG: &str = "the key paths of the TOML file take more room than the limit allows";
+
+/// Scans `text`. Every string keeps its own copy of its whole key path, so the paths of all strings together
+/// are capped at `max_key_bytes` (one long table name over many values would otherwise grow with the square of
+/// the file).
+pub fn scan(text: &str, max_key_bytes: u64) -> R<Scan<'_>> {
     let mut p = P {
         t: text,
         b: text.as_bytes(),
@@ -141,6 +149,8 @@ pub fn scan(text: &str) -> R<Scan<'_>> {
         path: Vec::new(),
         nvals: 0,
         has_content: false,
+        key_bytes: 0,
+        max_key_bytes,
     };
     p.run()?;
     Ok(Scan { strings: p.strings, tables: p.tables, has_content: p.has_content })
@@ -521,6 +531,10 @@ impl<'a> P<'a> {
                     return Err(ScanError::Limit("the TOML file has too many strings".into()));
                 }
                 let key = self.key_text();
+                self.key_bytes = self.key_bytes.saturating_add(key.len() as u64);
+                if self.key_bytes > self.max_key_bytes {
+                    return Err(ScanError::Limit(KEY_BYTES_MSG.into()));
+                }
                 self.strings.push(Str { start: tok.start, end: tok.end, kind: tok.kind, lead: tok.lead, value: tok.value, key, parent });
                 Ok(Val::Str(self.strings.len() - 1))
             }

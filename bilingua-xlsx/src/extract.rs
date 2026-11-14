@@ -290,36 +290,38 @@ struct Extractor<'a> {
     u_hf: Vec<Unit>,
     u_comments: Vec<Unit>,
     limits: Limits,
-    /// Cells seen so far, for the cell limit.
-    cells: usize,
-    /// Characters of cell text seen so far (inline strings; shared strings are added once, then by use count).
-    text_chars: usize,
+    /// Cells and characters of cell text seen so far (inline strings; shared strings are added once, then by use
+    /// count), against the spreadsheet limits. The LocOS-profile walk charges the same budget.
+    budget: crate::budget::SheetBudget,
+    /// What the comment notes on the units have cost so far (`Limits::max_context_bytes`).
+    context: bilingua_model::guard::ContextBudget,
     /// The first limit a sheet went over; the walk stops and the extraction returns it.
     refused: Option<Error>,
 }
 
-fn sheet_limit(msg: String) -> Error {
-    bilingua_model::LimitError::new(bilingua_model::LimitKind::Spreadsheet, msg).into()
-}
-
 impl Extractor<'_> {
-    fn refuse(&mut self, msg: String) {
+    fn refuse(&mut self, e: Error) {
         if self.refused.is_none() {
-            self.refused = Some(sheet_limit(msg));
+            self.refused = Some(e);
         }
     }
 
     /// Charges `chars` of cell text against the per-cell and total limits.
     fn charge_text(&mut self, chars: usize, total_times: usize) {
-        if chars > self.limits.xlsx_max_cell_chars {
-            self.refuse(format!("This file has a cell with more than {} characters. Split it into smaller files.", self.limits.xlsx_max_cell_chars));
+        if let Err(e) = self.budget.text(chars, total_times) {
+            self.refuse(e);
         }
-        self.text_chars = self.text_chars.saturating_add(chars.saturating_mul(total_times));
-        if self.text_chars > self.limits.xlsx_max_total_text_chars {
-            self.refuse(format!(
-                "This file has more than {} characters of cell text (repeated shared strings included). Split it into smaller files.",
-                self.limits.xlsx_max_total_text_chars
-            ));
+    }
+
+    /// False, with the refusal recorded, when these atoms already make a unit longer than `max_unit_chars`: checked
+    /// before `build` works on them.
+    fn fits(&mut self, atoms: &[Atom]) -> bool {
+        match check_size(atoms, &self.limits) {
+            Ok(()) => true,
+            Err(e) => {
+                self.refuse(e);
+                false
+            }
         }
     }
 }
@@ -353,8 +355,10 @@ impl Extractor<'_> {
         location(&sh.name, cell)
     }
 
-    fn comments_for(&self, sh: &SheetInfo, cell: &str) -> Vec<String> {
-        self.notes.get(&(sh.idx, cell.to_ascii_uppercase())).cloned().unwrap_or_default()
+    /// The comment notes of a cell, handed out once: a comment belongs to one cell of its sheet, so a second cell
+    /// that repeats the reference gets none (a file can repeat `r="A1"` on every cell of a row).
+    fn comments_for(&mut self, sh: &SheetInfo, cell: &str) -> Vec<String> {
+        self.notes.remove(&(sh.idx, cell.to_ascii_uppercase())).unwrap_or_default()
     }
 
     fn sheet_ctx(&self, ns: &Ns, root: &El) -> SheetCtx {
@@ -412,17 +416,16 @@ impl Extractor<'_> {
                     // `r` is optional in the file format: a row without it follows the previous row, a cell
                     // without it follows the previous cell.
                     row_no = row.attr("r").and_then(|v| v.trim().parse::<u32>().ok()).unwrap_or(row_no + 1);
-                    if row_no > self.limits.xlsx_max_rows {
-                        self.refuse(format!("This file has a row past row {}. Split it into smaller files.", self.limits.xlsx_max_rows));
+                    if let Err(e) = self.budget.row(i64::from(row_no)) {
+                        self.refuse(e);
                         return;
                     }
                     let mut col_no = 0u32;
                     for cell in row.children.iter_mut() {
                         if let Node::El(c) = cell {
                             if ns.is(&c.name, "c") {
-                                self.cells += 1;
-                                if self.cells > self.limits.xlsx_max_cells {
-                                    self.refuse(format!("This file has more than {} cells. Split it into smaller files.", self.limits.xlsx_max_cells));
+                                if let Err(e) = self.budget.cell() {
+                                    self.refuse(e);
                                     return;
                                 }
                                 col_no = match c.attr("r").and_then(|r| parse_ref(&r)) {
@@ -509,6 +512,14 @@ impl Extractor<'_> {
                     if !has_text(&atoms) || (self.xo.skip_hidden && hidden.is_some()) {
                         return;
                     }
+                    if !self.fits(&atoms) {
+                        return;
+                    }
+                    // the notes move onto this unit; their bytes count against the context budget
+                    if let Err(e) = self.context.charge(notes.iter().map(String::len).sum(), &self.limits) {
+                        self.refuse(e);
+                        return;
+                    }
                     let id = format!("is{}-{}", sh.idx, r);
                     let built = build(atoms, props_of);
                     let mut cx = UnitContext::new().with_kind("cell".to_string()).with_location(loc).with_max_len(max_len).with_notes(notes);
@@ -534,6 +545,9 @@ impl Extractor<'_> {
             let atoms = hf_atoms(&h.text());
             if !has_text(&atoms) || (self.xo.skip_hidden && sh.hidden) {
                 continue;
+            }
+            if !self.fits(&atoms) {
+                return;
             }
             let id = format!("sh{}-{}", sh.idx, name);
             let kind = if name.ends_with("Header") { "header" } else { "footer" };
@@ -655,6 +669,9 @@ impl Extractor<'_> {
                     if self.xo.translate_comments && body.chars().any(|c| c.is_alphabetic()) {
                         let id = format!("threaded{}-{}-{}", sh.idx, cell, k);
                         let atoms = vec![Atom::Text { fmt: String::new(), key: String::new(), text: body.clone() }];
+                        if !self.fits(&atoms) {
+                            return;
+                        }
                         let cx = UnitContext::new().with_kind("comment".to_string()).with_location(self.sheet_cell(sh, &cell));
                         self.u_comments.push(make_unit(id.clone(), build(atoms, props_of), raw_children(te), "plain", &pfx, cx));
                         te.children = vec![marker(&id)];
@@ -693,6 +710,9 @@ impl Extractor<'_> {
                     self.add_note(sh, &cell, author.as_deref(), body.trim());
                     let (atoms, _) = si_atoms(&ns, &te.children);
                     if self.xo.translate_comments && has_text(&atoms) {
+                        if !self.fits(&atoms) {
+                            return;
+                        }
                         let id = format!("comment{}-{}", sh.idx, cell);
                         let cx = UnitContext::new().with_kind("comment".to_string()).with_location(self.sheet_cell(sh, &cell));
                         self.u_comments.push(make_unit(id.clone(), build(atoms, props_of), raw_children(te), "si", &ns.pfx, cx));
@@ -760,6 +780,7 @@ fn extract_doc_inner(bytes: &[u8], opts: &ExtractOptions, xo: &XlsxOptions) -> R
     // Sheets in workbook order.
     let mut sheets: Vec<SheetInfo> = vec![];
     let mut all_names: Vec<(usize, String, bool)> = vec![];
+    let mut sheet_targets: HashSet<String> = HashSet::new();
     {
         let root = wb_nodes
             .iter()
@@ -778,6 +799,12 @@ fn extract_doc_inner(bytes: &[u8], opts: &ExtractOptions, xo: &XlsxOptions) -> R
                 if !rel.typ.ends_with("/worksheet") {
                     continue;
                 }
+                // Each worksheet part is read once: a `sheet` element that names a part an earlier one already
+                // named is skipped, or a workbook could have one large sheet, its relationships and its comments
+                // parsed again for every repeat. Its place in the numbering (`idx`, the sheet-name units) stays.
+                if !sheet_targets.insert(rel.target.clone()) {
+                    continue;
+                }
                 sheets.push(SheetInfo { idx, name, file: rel.target.clone(), hidden });
             }
         }
@@ -793,8 +820,8 @@ fn extract_doc_inner(bytes: &[u8], opts: &ExtractOptions, xo: &XlsxOptions) -> R
         u_hf: vec![],
         u_comments: vec![],
         limits: opts.limits(),
-        cells: 0,
-        text_chars: 0,
+        budget: crate::budget::SheetBudget::new(opts.limits()),
+        context: bilingua_model::guard::ContextBudget::new(),
         refused: None,
     };
 
@@ -851,6 +878,9 @@ fn extract_doc_inner(bytes: &[u8], opts: &ExtractOptions, xo: &XlsxOptions) -> R
             } else if rel.typ.ends_with("/comments") || rel.typ.ends_with("/threadedComment") {
                 let Some(mut nodes) = parse_part(e) else { continue };
                 ex.comments(&sh, &mut nodes, rel.typ.ends_with("/threadedComment"), &persons);
+                if let Some(e) = ex.refused.take() {
+                    return Err(e);
+                }
                 trees.insert(i, nodes);
             }
         }
@@ -910,6 +940,9 @@ fn extract_doc_inner(bytes: &[u8], opts: &ExtractOptions, xo: &XlsxOptions) -> R
                 if !has_text(&atoms) {
                     continue;
                 }
+                check_size(&atoms, &ex.limits)?;
+                // each shared-string unit takes a copy of the notes of its cells: charged before the copy
+                ex.context.charge(u.notes.iter().map(String::len).sum(), &ex.limits)?;
                 let id = format!("ss{idx}");
                 let mut built = build(atoms, props_of);
                 if phonetic {

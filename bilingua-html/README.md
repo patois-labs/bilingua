@@ -80,4 +80,8 @@ comma separated. `render_segment()` returns the inner HTML of a span, or the esc
 
 The preview removes `<script>` elements, `on*` attributes, `srcdoc`, `javascript:` URLs, `<base>` and meta
 refresh, and adds `<style>[data-bl-seg]{outline:none}...</style>` (with a `.bl-active` highlight hook).
-`sanitize_html` is exported for other callers. A page read through server-page routing has no preview.
+`sanitize_html` is exported for other callers. So that a browser cannot read the result differently from the
+sanitizer, comments, processing instructions and CDATA markers are left out, a `<` that starts no tag is written
+`&lt;` (in text and in attribute values), end tags are written bare and a tag cut off by the end of the input is
+dropped; tags, attributes, the doctype and style sheets are otherwise copied as typed. Show the preview in a
+sandboxed `<iframe>` with a restrictive Content-Security-Policy all the same. A page read through server-page routing has no preview.

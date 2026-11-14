@@ -774,12 +774,21 @@ impl<'a, 'b> Ev<'a, 'b> {
                 }
                 for st in steps {
                     let mut next: Vec<Node> = Vec::new();
+                    // Many context nodes can reach the same nodes (every element of a deep document has the same
+                    // ancestors), so the set is deduplicated each time it has doubled: it then never holds much
+                    // more than twice the distinct nodes, and the sorting stays amortised. The result is the same
+                    // set, since it is normalised again after the step.
+                    let mut floor = 4096usize;
                     for n in &cur {
                         let mut cand = self.axis(&st.axis, *n, &st.test, budget)?;
                         for p in &st.preds {
                             cand = self.filter(cand, p, budget)?;
                         }
                         next.extend(cand);
+                        if cur.len() > 1 && next.len() > floor {
+                            next = self.normalize(std::mem::take(&mut next));
+                            floor = next.len().saturating_mul(2).max(4096);
+                        }
                     }
                     cur = if cur.len() > 1 || matches!(st.axis, Axis::Parent | Axis::Ancestor | Axis::AncestorOrSelf) { self.normalize(next) } else { next };
                 }
@@ -925,13 +934,18 @@ impl<'a, 'b> Ev<'a, 'b> {
                 self.descendants(n, &mut raw, budget)?;
             }
             Axis::SelfAx => raw.push(n),
-            Axis::Parent => raw.extend(self.parent(n)),
+            Axis::Parent => {
+                // the upward axes visit nodes like any other and pay for them
+                tick(budget, 1)?;
+                raw.extend(self.parent(n));
+            }
             Axis::Ancestor | Axis::AncestorOrSelf => {
                 if matches!(axis, Axis::AncestorOrSelf) {
                     raw.push(n);
                 }
                 let mut c = n;
                 while let Some(p) = self.parent(c) {
+                    tick(budget, 1)?;
                     raw.push(p);
                     c = p;
                 }

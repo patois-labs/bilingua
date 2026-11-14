@@ -454,8 +454,16 @@ fn merge(doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
     }
     // a target the file already held does not count as translated: an untouched merge stays byte for byte
     if doc.target_lang.is_some() && (opts.stamp_target_always || doc.units.iter().any(has_new_target)) {
-        let code = doc.target_lang.as_deref().map(salesforce_language_code).unwrap_or_default();
-        if !code.is_empty() {
+        // a Salesforce language code is `ll` or `ll_CC`; a target language that is not a plausible code (a line
+        // break in it would add records) is not written
+        let code = doc
+            .target_lang
+            .as_deref()
+            .map(str::trim)
+            .filter(|t| bilingua_model::MergeOptions::plausible_lang(t))
+            .map(salesforce_language_code)
+            .unwrap_or_default();
+        if !code.is_empty() && code.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'_') {
             if let Some(h) = scan::find_header(&out, lead(&out, encoding), "language code") {
                 if h.value != code {
                     out.replace_range(h.start..h.end, &code);
