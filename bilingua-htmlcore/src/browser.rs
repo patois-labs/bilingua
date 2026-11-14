@@ -9,7 +9,7 @@
 
 use crate::html::{self, K};
 use crate::pyx::*;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 fn is_ws(c: u8) -> bool {
     matches!(c, b'\t' | b'\n' | 0x0c | b'\r' | b' ')
@@ -180,18 +180,74 @@ struct Entry {
     body: Option<usize>,
 }
 
+/// The open elements, with an index so that an end tag finds its element without walking the stack. A page can
+/// leave thousands of elements open (every `<li>` of a long list), and a walk per unmatched end tag is then
+/// quadratic work (0.9.1 security audit, the htmlhelp walker had the same scan). Reads go through `Deref` to the
+/// slice; `push` and `pop` are the only writes, and they keep the index in step.
+#[derive(Default)]
+struct Stack {
+    v: Vec<Entry>,
+    /// Positions of the open HTML elements by name, rising.
+    html_named: HashMap<String, Vec<usize>>,
+    /// Positions of the open integration points, rising.
+    ip_at: Vec<usize>,
+}
+
+impl Stack {
+    fn push(&mut self, e: Entry) {
+        let k = self.v.len();
+        if e.ns == "html" {
+            self.html_named.entry(e.name.clone()).or_default().push(k);
+        }
+        if e.ip != IP_NONE {
+            self.ip_at.push(k);
+        }
+        self.v.push(e);
+    }
+    fn pop(&mut self) -> Option<Entry> {
+        let e = self.v.pop()?;
+        let k = self.v.len();
+        if e.ns == "html" {
+            if let Some(v) = self.html_named.get_mut(&e.name) {
+                if v.last() == Some(&k) {
+                    v.pop();
+                }
+            }
+        }
+        if self.ip_at.last() == Some(&k) {
+            self.ip_at.pop();
+        }
+        Some(e)
+    }
+    /// The topmost open HTML element called `name`.
+    fn top_html(&self, name: &str) -> Option<usize> {
+        self.html_named.get(name).and_then(|v| v.last().copied())
+    }
+    /// The topmost open integration point.
+    fn top_ip(&self) -> Option<usize> {
+        self.ip_at.last().copied()
+    }
+}
+
+impl std::ops::Deref for Stack {
+    type Target = [Entry];
+    fn deref(&self) -> &[Entry] {
+        &self.v
+    }
+}
+
 /// Parse `text` as an HTML5 browser does, as far as tokenizer states go.
 pub fn browser_view(text: &str, scripting: bool, legacy_select: bool) -> View {
     let b = text.as_bytes();
     let n = b.len();
     let mut view = View::default();
-    let mut stack: Vec<Entry> = Vec::new();
+    let mut stack = Stack::default();
     let mut select_open = false;
     let mut i = 0;
 
-    fn pop_to(stack: &mut Vec<Entry>, view: &mut View, text: &str, idx: usize, at: usize) {
+    fn pop_to(stack: &mut Stack, view: &mut View, text: &str, idx: usize, at: usize) {
         while stack.len() > idx {
-            let e = stack.pop().expect("non-empty");
+            let Some(e) = stack.pop() else { break };
             if let Some(body) = e.body {
                 let s = if at >= body { text[body..at].to_string() } else { String::new() };
                 view.bodies.push((e.name, body, s));
@@ -201,21 +257,19 @@ pub fn browser_view(text: &str, scripting: bool, legacy_select: bool) -> View {
     fn foreign_top(stack: &[Entry]) -> bool {
         stack.last().is_some_and(|e| e.ns != "html")
     }
-    fn html_end(stack: &mut Vec<Entry>, view: &mut View, text: &str, select_open: &mut bool, name: &str, at: usize) {
+    fn html_end(stack: &mut Stack, view: &mut View, text: &str, select_open: &mut bool, name: &str, at: usize) {
         if name == "select" {
             *select_open = false;
         }
-        for k in (0..stack.len()).rev() {
-            if stack[k].ns == "html" && stack[k].name == name {
+        // walking down from the top, the first HTML element of that name is closed, unless an integration point
+        // comes first (a match on the same frame wins, as the name is checked first)
+        if let Some(k) = stack.top_html(name) {
+            if stack.top_ip().is_none_or(|p| p <= k) {
                 pop_to(stack, view, text, k, at);
-                return;
-            }
-            if stack[k].ip != IP_NONE {
-                return;
             }
         }
     }
-    fn pop_foreign(stack: &mut Vec<Entry>, view: &mut View, text: &str, at: usize) {
+    fn pop_foreign(stack: &mut Stack, view: &mut View, text: &str, at: usize) {
         let mut k = stack.len();
         while k > 0 && stack[k - 1].ns != "html" && !matches!(stack[k - 1].ip, IP_HTML | IP_MATH_TEXT) {
             k -= 1;
@@ -334,11 +388,8 @@ pub fn browser_view(text: &str, scripting: bool, legacy_select: bool) -> View {
             if legacy_select && select_open && !SELECT_KEEP.contains(&name.as_str()) {
                 if SELECT_CLOSE.contains(&name.as_str()) {
                     select_open = false;
-                    for k in (0..stack.len()).rev() {
-                        if stack[k].name == "select" && stack[k].ns == "html" {
-                            pop_to(&mut stack, &mut view, text, k, start);
-                            break;
-                        }
+                    if let Some(k) = stack.top_html("select") {
+                        pop_to(&mut stack, &mut view, text, k, start);
                     }
                     if name == "select" {
                         break;

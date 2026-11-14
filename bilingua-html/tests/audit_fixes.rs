@@ -259,3 +259,31 @@ fn ordinary_input_that_is_rewritten() {
     // a tag that runs into the end of the input is dropped, as a browser drops it
     assert_eq!(sanitize_html("<p>a</p><a href=\"x", false), "<p>a</p>");
 }
+
+// --- browser view stack scan (follow-up to the 0.9.1 audit) ----------------------------------------------------
+
+/// The browser view a merge builds: thousands of open `<li>`, then as many end tags that match none of them. Each
+/// end tag used to walk the whole open-element stack; now it is one index lookup.
+#[test]
+fn browser_view_end_tags_do_not_walk_the_open_elements() {
+    let n = 60_000;
+    let page = format!("<ul>{}{}</ul>", "<li>x".repeat(n), "</span>".repeat(n));
+    let t = Instant::now();
+    let views = browser_views(&page);
+    assert!(!views.is_empty());
+    assert_eq!(views[0].starts.iter().filter(|s| s.name == "li").count(), n);
+    let t = t.elapsed();
+    assert!(t < Duration::from_secs(20), "took {t:?}");
+}
+
+/// An end tag still closes the innermost open element of its name and the ones above it, and stops at an SVG
+/// integration point: a script opened after the close is read as a script either way.
+#[test]
+fn browser_view_end_tags_close_as_before() {
+    for page in ["<div><b><i>a</b><script>x()</script></div>", "<svg><foreignObject><p>a</div><script>y()</script></foreignObject></svg>"] {
+        let views = browser_views(page);
+        for v in views {
+            assert_eq!(v.bodies.iter().filter(|(n, _, _)| n == "script").count(), 1, "{page}");
+        }
+    }
+}
