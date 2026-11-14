@@ -27,6 +27,13 @@ is listed here).
   instead of lifted ones, so a file extracted under raised limits is merged with the same limits passed again.
   Ordinary files merge exactly as before.
 - Python: `merge` and `DocumentHandle.merge` take `limits=`, as `extract` does.
+- Resource limits: the HTML and HTML Help export check bounds the script and style bodies it holds for one page
+  (twice the page plus 1 MiB) and refuses a page over that; script or style elements nested inside each other in
+  SVG are the only way to reach it. New public fields `View::body_bytes`, `View::bodies_cut` and
+  `XmlView::bodies_cut`, and `browser::body_budget` (`bilingua-htmlcore`). The XML reading of that check is linear
+  in the page (style elements, namespace declarations, pages without line breaks). An ITS rule's descendant steps
+  skip context elements that lie inside another one, so chained `//*//*` selectors walk the tree once. PPTX and
+  XLSX rich text no longer copy a run's formatting into every empty run next to it. Output is unchanged.
 - Docs: the safety model says a stored Document (and the CLI sidecar) is host data, kept where uploaders,
   translators and other tenants cannot write it.
 
