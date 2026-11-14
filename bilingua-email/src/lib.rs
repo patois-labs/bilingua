@@ -147,11 +147,6 @@ fn parse_message(data: &[u8], mbox_from: bool) -> Result<Parsed, Error> {
     Ok(Parsed { parts, slots, eol })
 }
 
-/// Limits that never refuse: the file was already accepted when it was extracted.
-fn unlimited() -> Limits {
-    Limits::new().with_max_input_bytes(u64::MAX).with_max_units(usize::MAX).with_max_unit_chars(usize::MAX).with_max_lines(usize::MAX).with_max_xml_depth(usize::MAX).with_max_xml_elements(usize::MAX)
-}
-
 /// The HTML of a part read by `bilingua-html` as UTF-8 (a byte-order mark makes it skip the charset declaration,
 /// which describes the transfer bytes, not this text).
 fn html_doc(text: &str, source_lang: Option<&str>, limits: Limits) -> Result<Document, Error> {
@@ -482,7 +477,9 @@ impl Filter for Email {
         bilingua_model::check_parser_min(doc, &bilingua_model::parser_info!(), if doc.units.is_empty() { 1 } else { SKELETON_SCHEMA })?;
         let data = original_of(doc)?;
         let parsed = parse_message(data, !opts.is_profile(bilingua_model::profile::LOCOS))?;
-        let limits = unlimited();
+        // the stored message is read again under the caller's merge limits (a file extracted under raised limits is
+        // merged with the same ones), not under limits lifted on the word of the Document (BILI-105)
+        let limits = opts.limits();
         let by_id: HashMap<&str, &Unit> = doc.units.iter().map(|u| (u.id.as_str(), u)).collect();
         let any_translated = doc.units.iter().any(|u| changed(u).is_some());
         let tag = opts.stamp_lang(doc, any_translated).and_then(lang::canonical_tag);

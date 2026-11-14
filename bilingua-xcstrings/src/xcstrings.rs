@@ -347,13 +347,13 @@ impl Filter for Xcstrings {
                 SkelPart::Unit(_) => return Err(Error::Write("xcstrings skeleton holds a unit slot".into())),
             }
         }
-        // The file was accepted when it was extracted, at whatever nesting depth the caller allowed then (the document
-        // does not say which), so the stored text is read with a cap well above the default.
-        let limits = Limits::default().with_max_xml_depth(MERGE_MAX_DEPTH);
+        // The stored text is read again under the caller's merge limits (BILI-105): a catalog extracted under a
+        // raised depth or unit limit is merged with the same ones. The recursive reader never goes past
+        // MERGE_MAX_DEPTH, whatever the caller allows, so a 1 MB stack holds.
+        let limits = opts.limits();
+        let limits = limits.with_max_xml_depth(limits.max_xml_depth.min(MERGE_MAX_DEPTH));
         let cat = Catalog::from_text(text, bom, &limits, false)?;
-        // The file was accepted when it was extracted: no unit cap here.
-        let unlimited = limits.with_max_units(usize::MAX);
-        let entries = cat.walk(&unlimited)?;
+        let entries = cat.walk(&limits)?;
         let mut out = apply(&cat, &entries, doc)?;
         if opts.is_profile(bilingua_model::profile::LOCOS) && out != cat.text {
             out = locos_dump(&out, &cat.text, &limits)?;

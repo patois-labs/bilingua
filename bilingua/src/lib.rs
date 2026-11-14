@@ -305,9 +305,10 @@ fn filter_for(doc: &Document) -> Result<Box<dyn Filter>, Error> {
         .ok_or_else(|| Error::Unsupported(format!("no writer for format {}", doc.format)))
 }
 
-/// Writes the document back in its original format.
+/// Writes the document back in its original format: [`merge_with`] with the default options, so the same
+/// merge bounds apply.
 pub fn merge(doc: &Document) -> Result<Vec<u8>, Error> {
-    filter_for(doc)?.merge(doc)
+    merge_with(doc, &MergeOptions::default())
 }
 
 /// [`merge`] with [`MergeOptions`]: `output_encoding` (keep the file's encoding, or write UTF-8 and make the
@@ -315,10 +316,26 @@ pub fn merge(doc: &Document) -> Result<Vec<u8>, Error> {
 /// translated, as Localization OS does). `merge(doc)` is `merge_with(doc, &MergeOptions::default())`.
 ///
 /// For a profile, start from its options: `merge_with(&doc, &profile::locos().merge_options(&doc.format))`.
+///
+/// The Document is the caller's data (keep a stored one where only the host can write it), and the merge still
+/// bounds what it can be made to do, under `opts.limits` (the defaults when unset): the unit, skeleton and output
+/// checks of [`bilingua_model::guard::check_merge`], the tag check of [`bilingua_model::guard::check_targets`] on
+/// every stored target (a bilingual file's own targets come from the file and are not checked), and
+/// `Limits::max_output_bytes` on the bytes written.
 pub fn merge_with(doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
     profile::check(opts.profile.as_deref())?;
     check_option_map(&opts.format_options, &format_option_keys())?;
-    filter_for(doc)?.merge_with(doc, opts)
+    let filter = filter_for(doc)?;
+    let limits = opts.limits();
+    bilingua_model::guard::check_merge(doc, &limits)?;
+    if !own_segmentation(&doc.format) {
+        // the locos profile keeps a repeated tag as it was typed for some formats; the rule that every tag comes
+        // from the source holds for both
+        bilingua_model::guard::check_targets(doc, !opts.is_profile(profile::LOCOS))?;
+    }
+    let out = filter.merge_with(doc, opts)?;
+    bilingua_model::guard::check_output(out.len(), &limits)?;
+    Ok(out)
 }
 
 /// Translated HTML preview with `data-bl-seg` spans, for formats that have one.

@@ -220,6 +220,8 @@ pub(crate) fn read_zip(bytes: &[u8], limits: &ZipLimits) -> Result<Vec<Entry>, E
 pub fn write_zip(entries: &[Entry], default_time: (u16, u8, u8, u8, u8, u8)) -> Result<Vec<u8>, Error> {
     let mut w = zip::ZipWriter::new(Cursor::new(Vec::new()));
     for e in entries {
+        // a name that never passed the reader's check is not written (BILI-105)
+        safe_name(&e.name)?;
         let t = e.modified.unwrap_or(default_time);
         let dt = zip::DateTime::from_date_and_time(t.0, t.1, t.2, t.3, t.4, t.5)
             .unwrap_or_else(|_| zip::DateTime::default());

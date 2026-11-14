@@ -51,6 +51,9 @@ pub enum LimitKind {
     ZipRatio,
     /// A zip whose declared sizes or names are unsafe or do not match its data.
     ZipMalformed,
+    /// A merge would write more than `Limits::max_output_bytes`, or a stored document's skeleton is larger or
+    /// refers to its units more often than any extraction makes it.
+    OutputBytes,
 }
 
 /// A file refused for being over a limit or unsafe.
@@ -127,6 +130,9 @@ pub struct Limits {
     /// the other strings of `UnitContext`. A string the file holds once and a parser copies into many units counts
     /// once per copy, so one long key or comment over many units cannot multiply the input.
     pub max_context_bytes: u64,
+    /// Most bytes one merge may write (1 GB). Only a merge reads it: an ordinary file never comes near it, so it
+    /// bounds what a stored Document that was changed by hand can make a merge produce.
+    pub max_output_bytes: u64,
 }
 
 impl Default for Limits {
@@ -149,6 +155,7 @@ impl Default for Limits {
             xlsx_max_cell_chars: 32_767,
             xlsx_max_total_text_chars: 8 * 1024 * 1024,
             max_context_bytes: 128 * 1024 * 1024,
+            max_output_bytes: 1024 * 1024 * 1024,
         }
     }
 }
@@ -241,6 +248,11 @@ impl Limits {
     /// Sets `max_context_bytes`.
     pub fn with_max_context_bytes(mut self, v: u64) -> Limits {
         self.max_context_bytes = v;
+        self
+    }
+    /// Sets `max_output_bytes`.
+    pub fn with_max_output_bytes(mut self, v: u64) -> Limits {
+        self.max_output_bytes = v;
         self
     }
 }
@@ -396,6 +408,146 @@ pub fn check_document(doc: &Document, l: &Limits) -> Result<(), Error> {
             })
             .sum();
         check_unit_chars(chars, l)?;
+    }
+    Ok(())
+}
+
+/// How often a skeleton may refer to units, per allowed unit (`max_units`). Extraction writes each unit into the
+/// skeleton once or a few times; a stored Document that refers to one unit many more times would make a merge
+/// write that unit over and over.
+pub const MERGE_REFS_PER_UNIT: usize = 4;
+
+/// The checks a merge runs on a stored Document before writing it (BILI-105). A Document is the caller's data, but
+/// it is plain JSON between extract and merge, so these bound what one that was edited by hand can make a merge
+/// do, under the caller's merge limits (`MergeOptions::limits`): no more units or segments than `max_units`; no
+/// more zip entries than `max_zip_entries`; at most [`MERGE_REFS_PER_UNIT`] x `max_units` unit slots and
+/// `max_lines` + that many skeleton parts; and an estimate of the output (the skeleton's own bytes, each unit slot
+/// counted at its unit's size, and the units once more for formats that rebuild from them) within
+/// `max_output_bytes`. An ordinary extraction is far inside every one of these.
+pub fn check_merge(doc: &Document, l: &Limits) -> Result<(), Error> {
+    check_unit_count(doc.units.len(), l)?;
+    check_unit_count(doc.segment_count(), l)?;
+    let max_refs = MERGE_REFS_PER_UNIT.saturating_mul(l.max_units);
+    let max_parts = l.max_lines.saturating_add(max_refs);
+    let sizes: Vec<u64> = doc.units.iter().map(unit_output_bytes).collect();
+    let mut walk = SkeletonWalk { parts: 0, refs: 0, estimate: sizes.iter().fold(0u64, |a, b| a.saturating_add(*b)) };
+    check_output_estimate(walk.estimate, l)?;
+    match &doc.skeleton {
+        crate::Skeleton::Text { parts, .. } => walk.parts(parts, &sizes, max_parts, max_refs, l)?,
+        crate::Skeleton::Zip { entries, .. } => {
+            if entries.len() > l.max_zip_entries {
+                return Err(LimitError::new(
+                    LimitKind::ZipEntries,
+                    format!("This document lists more than {} zip entries. It was not written.", l.max_zip_entries),
+                )
+                .into());
+            }
+            for e in entries {
+                match &e.data {
+                    crate::ZipData::Raw(b) => {
+                        walk.estimate = walk.estimate.saturating_add(b.len() as u64);
+                        check_output_estimate(walk.estimate, l)?;
+                    }
+                    crate::ZipData::Parts(parts) => walk.parts(parts, &sizes, max_parts, max_refs, l)?,
+                }
+            }
+        }
+        crate::Skeleton::Binary { data, .. } => {
+            walk.estimate = walk.estimate.saturating_add(data.len() as u64);
+            check_output_estimate(walk.estimate, l)?;
+        }
+    }
+    Ok(())
+}
+
+/// The running totals of [`check_merge`] over every part list of a skeleton.
+struct SkeletonWalk {
+    parts: usize,
+    refs: usize,
+    estimate: u64,
+}
+
+impl SkeletonWalk {
+    fn parts(&mut self, parts: &[crate::SkelPart], sizes: &[u64], max_parts: usize, max_refs: usize, l: &Limits) -> Result<(), Error> {
+        self.parts = self.parts.saturating_add(parts.len());
+        if self.parts > max_parts {
+            return Err(over_skeleton(l));
+        }
+        for p in parts {
+            match p {
+                crate::SkelPart::Raw(s) => self.estimate = self.estimate.saturating_add(s.len() as u64),
+                crate::SkelPart::Unit(i) => {
+                    self.refs += 1;
+                    if self.refs > max_refs {
+                        return Err(over_skeleton(l));
+                    }
+                    self.estimate = self.estimate.saturating_add(sizes.get(*i).copied().unwrap_or(0));
+                }
+            }
+        }
+        check_output_estimate(self.estimate, l)
+    }
+}
+
+/// Refuses merge output over `max_output_bytes` (the facade calls it on what the writer returned).
+pub fn check_output(len: usize, l: &Limits) -> Result<(), Error> {
+    check_output_estimate(len as u64, l)
+}
+
+fn check_output_estimate(n: u64, l: &Limits) -> Result<(), Error> {
+    if n > l.max_output_bytes {
+        return Err(LimitError::new(
+            LimitKind::OutputBytes,
+            format!("This document would write more than {}, the output limit. It was not written.", mb(l.max_output_bytes)),
+        )
+        .into());
+    }
+    Ok(())
+}
+
+fn over_skeleton(l: &Limits) -> Error {
+    LimitError::new(
+        LimitKind::OutputBytes,
+        format!(
+            "This document's skeleton is larger, or refers to its units more often, than a file of {} segments. It was not written.",
+            l.max_units
+        ),
+    )
+    .into()
+}
+
+/// What writing one unit costs at least: per segment the larger of its source and target, each code counted at
+/// its stored markup.
+fn unit_output_bytes(u: &crate::Unit) -> u64 {
+    let inlines = |v: &[crate::Inline]| -> u64 {
+        v.iter()
+            .map(|i| match i {
+                crate::Inline::Text(t) => t.len() as u64,
+                crate::Inline::Tag { id, kind, display, .. } => {
+                    let code = u.codes.get(id).and_then(|c| match kind {
+                        crate::TagKind::Open => c.open.as_ref(),
+                        crate::TagKind::Close => c.close.as_ref(),
+                        crate::TagKind::Standalone => c.standalone.as_ref(),
+                    });
+                    code.map_or(display.len(), String::len) as u64
+                }
+            })
+            .fold(0u64, u64::saturating_add)
+    };
+    u.segments.iter().map(|s| inlines(&s.source).max(inlines(&s.target))).fold(0u64, u64::saturating_add)
+}
+
+/// Checks every stored target's tags as a merge reads them (BILI-105): a tag must be one of its segment's source
+/// tags (same id and kind). With `counts`, a paired tag may also appear no more often than in the source, the
+/// rule of [`Document::set_target_repeating`](crate::Document::set_target_repeating); without it repeats pass,
+/// for the `locos` profile, whose targets may keep a repeated tag as it was typed.
+pub fn check_targets(doc: &Document, counts: bool) -> Result<(), Error> {
+    for u in &doc.units {
+        for s in &u.segments {
+            if !s.target.is_empty() {
+                crate::check_target_tags(&s.source, &s.target, counts)?;
+            }
+        }
     }
     Ok(())
 }
