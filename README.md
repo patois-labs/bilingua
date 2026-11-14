@@ -246,8 +246,9 @@ Bilingua is built to open files from people you do not know.
   merge the returned XLIFF against your own copy. Merge still bounds what a changed Document can make it do, under
   the caller's merge limits (`MergeOptions::limits`, `limits=` in Python, the defaults otherwise): no more units,
   zip entries or unit slots in the skeleton than an extraction under those limits makes, no output over
-  `max_output_bytes` (1 GB), no zip entry name that the zip reader would refuse, and no stored target with a tag its
-  source does not have (or, outside the `locos` profile, a paired tag more often than the source). A format that
+  `max_output_bytes` (1 GB), no zip entry name that the zip reader would refuse, and (outside the `locos` profile,
+  whose targets keep tags as Localization OS writes them) no stored target with a tag its source does not have or a
+  paired tag more often than the source. A format that
   re-reads stored bytes at merge (email, MO, xcstrings, EPUB, Flare) reads them under the same limits, so a file
   extracted under raised limits is merged with the same ones. A holder of the Document can still change any text,
   as a translator can.
