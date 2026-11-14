@@ -49,12 +49,15 @@ pub fn check_size(atoms: &[Atom], l: &Limits) -> Result<(), Error> {
     guard::check_unit_chars(chars, l)
 }
 
-pub fn build(mut atoms: Vec<Atom>, props: Props) -> Built {
+pub fn build(atoms: Vec<Atom>, props: Props) -> Built {
     // Whitespace-only runs take the formatting of their neighbour, so they do not open a tag of their own.
     // One pass: the nearest text run before is carried along (`prev`), and the look ahead for the next run with
     // text happens only while there is no run before, which is true for at most one run. A paragraph of many
     // thousands of empty runs is then linear work, not a scan per run.
+    // A run records which run's formatting it uses (`src`) instead of a copy of it: one long run property followed
+    // by many empty runs then costs its own size once, not once per empty run.
     let n = atoms.len();
+    let mut src: Vec<usize> = (0..n).collect();
     let mut prev: Option<usize> = None;
     for i in 0..n {
         let ws = match &atoms[i] {
@@ -62,67 +65,81 @@ pub fn build(mut atoms: Vec<Atom>, props: Props) -> Built {
             Atom::Code { .. } => continue,
         };
         if ws {
-            let from = prev.or_else(|| (i + 1..n).find(|&j| matches!(&atoms[j], Atom::Text { text, .. } if !text.trim().is_empty())));
-            let taken = from.and_then(|j| match &atoms[j] {
-                Atom::Text { fmt, key, .. } => Some((fmt.clone(), key.clone())),
-                Atom::Code { .. } => None,
-            });
-            if let Some((f, k)) = taken {
-                if let Atom::Text { fmt, key, .. } = &mut atoms[i] {
-                    *fmt = f;
-                    *key = k;
-                }
+            let from = prev.map(|p| src[p]).or_else(|| (i + 1..n).find(|&j| matches!(&atoms[j], Atom::Text { text, .. } if !text.trim().is_empty())));
+            if let Some(j) = from {
+                src[i] = j;
             }
         }
         prev = Some(i);
     }
+    // The formatting and key of run `s` (a run whose `src` is itself).
+    let fmt_of = |s: usize| match &atoms[s] {
+        Atom::Text { fmt, .. } => fmt.as_str(),
+        Atom::Code { .. } => "",
+    };
+    let key_of = |s: usize| match &atoms[s] {
+        Atom::Text { key, .. } => key.as_str(),
+        Atom::Code { .. } => "",
+    };
+    let same_key = |a: usize, b: usize| a == b || key_of(a) == key_of(b);
     // Merge neighbouring runs with the same formatting.
-    let mut merged: Vec<Atom> = Vec::new();
-    for a in atoms {
+    let mut merged: Vec<M> = Vec::new();
+    for (i, a) in atoms.iter().enumerate() {
         match (merged.last_mut(), a) {
-            (
-                Some(Atom::Text { key: k0, text: t0, .. }),
-                Atom::Text { key, text, .. },
-            ) if *k0 == key => t0.push_str(&text),
-            (_, a) => merged.push(a),
+            (Some(M::Text { src: s0, text: t0 }), Atom::Text { text, .. }) if same_key(*s0, src[i]) => t0.push_str(text),
+            (_, Atom::Text { text, .. }) => merged.push(M::Text { src: src[i], text: text.clone() }),
+            (_, Atom::Code { .. }) => merged.push(M::Code(i)),
         }
     }
     // Base = formatting with the most text.
     // The tally is kept in first-seen order (a tie goes to the formatting seen first) and found through a map, so
-    // many different formattings do not cost a search each.
-    let mut weight: Vec<(String, String, usize)> = Vec::new();
+    // many different formattings do not cost a search each. A run whose formatting was already looked up is found
+    // by its index, so the key is not hashed again.
+    let mut weight: Vec<(usize, usize)> = Vec::new();
     let mut weight_at: HashMap<&str, usize> = HashMap::new();
+    let mut weight_of_src: HashMap<usize, usize> = HashMap::new();
     for a in &merged {
-        if let Atom::Text { fmt, key, text } = a {
-            match weight_at.get(key.as_str()) {
-                Some(&w) => weight[w].2 += text.chars().count(),
+        if let M::Text { src: s, text } = a {
+            let w = match weight_of_src.get(s) {
+                Some(&w) => w,
                 None => {
-                    weight_at.insert(key.as_str(), weight.len());
-                    weight.push((key.clone(), fmt.clone(), text.chars().count()));
+                    let w = match weight_at.get(key_of(*s)) {
+                        Some(&w) => w,
+                        None => {
+                            weight_at.insert(key_of(*s), weight.len());
+                            weight.push((*s, 0));
+                            weight.len() - 1
+                        }
+                    };
+                    weight_of_src.insert(*s, w);
+                    w
                 }
-            }
+            };
+            weight[w].1 += text.chars().count();
         }
     }
-    let mut base: (String, String) = (String::new(), String::new());
+    let mut base: Option<usize> = None;
     let mut best = 0;
-    for (k, f, w) in &weight {
+    for (s, w) in &weight {
         if *w > best {
             best = *w;
-            base = (k.clone(), f.clone());
+            base = Some(*s);
         }
     }
-    let base_props = props(&base.1);
+    let base_fmt = base.map_or("", fmt_of);
+    let is_base = |s: usize| base.is_some_and(|b| same_key(b, s)) || (base.is_none() && key_of(s).is_empty());
+    let base_props = props(base_fmt);
 
     let mut inlines = Vec::new();
     let mut codes: BTreeMap<String, CodeData> = BTreeMap::new();
     codes.insert(
         C_BASE.into(),
-        CodeData::new().with_standalone(base.1.clone()),
+        CodeData::new().with_standalone(base_fmt.to_string()),
     );
     let mut counter = 0usize;
-    let mut open: Option<(String, String)> = None; // (key, tag id)
+    let mut open: Option<(usize, String)> = None; // (run whose key is open, tag id)
     let mut close_display = String::new();
-    let close_open = |inl: &mut Vec<Inline>, open: &mut Option<(String, String)>, cd: &str| {
+    let close_open = |inl: &mut Vec<Inline>, open: &mut Option<(usize, String)>, cd: &str| {
         if let Some((_, id)) = open.take() {
             inl.push(Inline::tag(id, TagKind::Close, cd));
         }
@@ -133,20 +150,21 @@ pub fn build(mut atoms: Vec<Atom>, props: Props) -> Built {
     let mut seen: Option<usize> = None;
     for i in (0..n_merged).rev() {
         next_text[i] = seen;
-        if matches!(&merged[i], Atom::Text { .. }) {
-            seen = Some(i);
+        if let M::Text { src: s, .. } = &merged[i] {
+            seen = Some(*s);
         }
     }
-    for (ai, a) in merged.iter().cloned().enumerate().take(n_merged) {
+    for (ai, a) in merged.into_iter().enumerate() {
         match a {
-            Atom::Text { fmt, key, text } => {
-                if key == base.0 {
+            M::Text { src: s, text } => {
+                if is_base(s) {
                     close_open(&mut inlines, &mut open, &close_display);
-                } else if open.as_ref().map(|(k, _)| k != &key).unwrap_or(true) {
+                } else if open.as_ref().map(|(k, _)| !same_key(*k, s)).unwrap_or(true) {
                     close_open(&mut inlines, &mut open, &close_display);
                     counter += 1;
                     let id = counter.to_string();
-                    let added: Vec<&str> = props(&fmt).difference(&base_props).copied().collect();
+                    let fmt = fmt_of(s);
+                    let added: Vec<&str> = props(fmt).difference(&base_props).copied().collect();
                     let (name, label) = if added.len() == 1 {
                         (added[0].to_string(), label_of(added[0]).to_string())
                     } else if added.len() > 1 {
@@ -156,35 +174,38 @@ pub fn build(mut atoms: Vec<Atom>, props: Props) -> Built {
                     };
                     codes.insert(
                         id.clone(),
-                        CodeData::new().with_open(fmt).with_label(label),
+                        CodeData::new().with_open(fmt.to_string()).with_label(label),
                     );
                     inlines.push(Inline::tag(id.clone(), TagKind::Open, format!("<{name}>")));
                     close_display = format!("</{name}>");
-                    open = Some((key, id));
+                    open = Some((s, id));
                 }
                 inlines.push(Inline::Text(text));
             }
-            Atom::Code { xml, display, label } => {
+            M::Code(i) => {
+                let Atom::Code { xml, display, label } = &atoms[i] else { continue };
                 // The tag pair stays open across the code only when the next text has the same formatting.
-                let next_key = next_text[ai].and_then(|j| match &merged[j] {
-                    Atom::Text { key, .. } => Some(key),
-                    Atom::Code { .. } => None,
-                });
-                if open.as_ref().map(|(k, _)| Some(k) != next_key).unwrap_or(false) {
+                if open.as_ref().map(|(k, _)| next_text[ai].is_none_or(|nx| !same_key(*k, nx))).unwrap_or(false) {
                     close_open(&mut inlines, &mut open, &close_display);
                 }
                 counter += 1;
                 let id = counter.to_string();
                 codes.insert(
                     id.clone(),
-                    CodeData::new().with_standalone(xml).with_label(label),
+                    CodeData::new().with_standalone(xml.clone()).with_label(label.clone()),
                 );
-                inlines.push(Inline::tag(id, TagKind::Standalone, display));
+                inlines.push(Inline::tag(id, TagKind::Standalone, display.clone()));
             }
         }
     }
     close_open(&mut inlines, &mut open, &close_display);
     Built { inlines: merge_text(inlines), codes }
+}
+
+/// A run of a paragraph after merging: text in the formatting of atom `src`, or the code at that atom index.
+enum M {
+    Text { src: usize, text: String },
+    Code(usize),
 }
 
 /// Writes `out` using the unit's codes. `write_text(fmt, text, s)` writes one piece of text in a formatting;
