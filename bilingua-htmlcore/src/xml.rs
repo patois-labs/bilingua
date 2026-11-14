@@ -325,10 +325,10 @@ pub fn xml_view(text: &str) -> Option<XmlView> {
                     .map(|(k, a, v)| if free_attr(&local, a, &lowered) { format!("{k}\u{0}\u{0}free") } else { format!("{k}\u{0}{v}") })
                     .collect();
                 parts.sort();
-                while let Some(off) = text[line_pos..start].find('\n') {
-                    line += 1;
-                    line_pos += off + 1;
-                }
+                // only the line breaks since the last element are counted: a page without any used to be scanned
+                // from its start for every element
+                line += text.as_bytes()[line_pos..start].iter().filter(|&&c| c == b'\n').count();
+                line_pos = start;
                 view.sigs.push((format!("{tag}\u{2}{}", parts.join("\u{3}")), line));
                 let is_body = local == "script" || local == "style";
                 if empty {
