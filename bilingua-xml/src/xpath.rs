@@ -779,7 +779,15 @@ impl<'a, 'b> Ev<'a, 'b> {
                     // more than twice the distinct nodes, and the sorting stays amortised. The result is the same
                     // set, since it is normalised again after the step.
                     let mut floor = 4096usize;
-                    for n in &cur {
+                    // A descendant step from an element that lies inside another context element only finds nodes
+                    // the outer one finds too, so it is skipped when no predicate looks at a position: `//*//*` on a
+                    // deep document then walks the tree once instead of once per level.
+                    let covered = (cur.len() > 1 && matches!(st.axis, Axis::Descendant | Axis::DescendantOrSelf) && !st.preds.iter().any(uses_position))
+                        .then(|| self.covered(&cur));
+                    for (k, n) in cur.iter().enumerate() {
+                        if covered.as_ref().is_some_and(|c| c[k]) {
+                            continue;
+                        }
                         let mut cand = self.axis(&st.axis, *n, &st.test, budget)?;
                         for p in &st.preds {
                             cand = self.filter(cand, p, budget)?;
@@ -795,6 +803,34 @@ impl<'a, 'b> Ev<'a, 'b> {
                 Ok(Val::Nodes(cur))
             }
         }
+    }
+
+    /// For each node of `ctx`, whether it is an element inside the document node or inside another element of
+    /// `ctx` (one copy of a repeated element stays uncovered). Other kinds of node are never covered.
+    fn covered(&self, ctx: &[Node]) -> Vec<bool> {
+        let mut out = vec![false; ctx.len()];
+        let mut els: Vec<(usize, usize, usize)> = Vec::new();
+        let doc = ctx.contains(&Node::Doc);
+        for (k, n) in ctx.iter().enumerate() {
+            if let Node::El(e) = n {
+                if doc {
+                    out[k] = true;
+                } else {
+                    let el = &self.t.els[*e as usize];
+                    els.push((el.s0, el.e1, k));
+                }
+            }
+        }
+        els.sort_unstable();
+        let mut open: Option<(usize, usize)> = None;
+        for (s0, e1, k) in els {
+            match open {
+                // the same element again, or one that starts inside the open one
+                Some((os, oe)) if s0 == os || s0 < oe => out[k] = true,
+                _ => open = Some((s0, e1)),
+            }
+        }
+        out
     }
 
     fn normalize(&self, mut v: Vec<Node>) -> Vec<Node> {

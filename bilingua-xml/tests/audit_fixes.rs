@@ -127,3 +127,21 @@ fn the_ancestor_axes_are_charged() {
     assert!(matches!(&r, Err(e) if e.to_string().contains("too expensive")), "{:?}", r.map(|d| d.units.len()));
     assert!(start.elapsed() < Duration::from_secs(20), "took {:?}", start.elapsed());
 }
+
+/// Resource limit: a descendant step from every element of a deep document walked the tree once per level, so
+/// `//*//*//*` over 250 levels ran out of the rule's step budget. Elements inside another context element are now
+/// skipped on that step (no predicate looks at a position), so the walk is linear and selects the same nodes.
+#[test]
+fn chained_descendant_steps_walk_the_tree_once() {
+    let (depth, leaves) = (250, 20_000);
+    let start = Instant::now();
+    let chained = extract(&deep(&(rule("//*//*//*", "no") + &rule("//a[position() mod 2 = 0]", "yes")), depth, leaves), Limits::new()).expect("chained descendants");
+    let control = extract(&deep(&(rule("/*//*", "no") + &rule("//a[position() mod 2 = 0]", "yes")), depth, leaves), Limits::new()).expect("control");
+    assert_eq!(chained.units.len(), leaves / 2);
+    assert_eq!(unit_texts(&chained), unit_texts(&control));
+    // a positional predicate still sees each context node's own axis: the first descendant of the innermost <n>
+    // is the first leaf, which the outer <n> elements do not select as their first descendant
+    let first = extract(&deep(&(rule("//*", "no") + &rule("//n/descendant::*[1]", "yes")), 3, 4), Limits::new()).expect("positional");
+    assert_eq!(unit_texts(&first), vec!["t0".to_string()]);
+    assert!(start.elapsed() < Duration::from_secs(20), "took {:?}", start.elapsed());
+}
