@@ -40,8 +40,8 @@ open("messages.es.po", "wb").write(bilingua.merge(doc))
   extracted under raised limits is merged with the same ones. The Document dict is your data: merge writes what its
   skeleton says, so keep a stored one where uploaders, translators and other tenants cannot write it. Merge still
   refuses a Document no extraction under these limits makes (too many units or unit slots, output over
-  `max_output_bytes`, 1 GB by default, an unsafe zip entry name) and a target with a tag its source does not have
-  (`invented_tag`) or, outside the `locos` profile, a paired tag more often than the source (`duplicated_tag`).
+  `max_output_bytes`, 1 GB by default, an unsafe zip entry name) and, outside the `locos` profile, a target with a
+  tag its source does not have (`invented_tag`) or a paired tag more often than the source (`duplicated_tag`).
 - `extract(..., format_options=None)`: a dict of `"<format>.<name>"` options to str, bool or int values, e.g.
   `{"ftl.translate_terms": True, "csv.columns": "source=1, target.de=2"}`. A key no format declares, or a value of the
   wrong kind, raises `invalid_argument`.

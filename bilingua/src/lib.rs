@@ -320,7 +320,8 @@ pub fn merge(doc: &Document) -> Result<Vec<u8>, Error> {
 /// The Document is the caller's data (keep a stored one where only the host can write it), and the merge still
 /// bounds what it can be made to do, under `opts.limits` (the defaults when unset): the unit, skeleton and output
 /// checks of [`bilingua_model::guard::check_merge`], the tag check of [`bilingua_model::guard::check_targets`] on
-/// every stored target (a bilingual file's own targets come from the file and are not checked), and
+/// every stored target (not for a bilingual file, whose own targets come from the file, nor under the `locos`
+/// profile, whose targets keep tags as Localization OS writes them), and
 /// `Limits::max_output_bytes` on the bytes written.
 pub fn merge_with(doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
     profile::check(opts.profile.as_deref())?;
@@ -328,10 +329,10 @@ pub fn merge_with(doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error>
     let filter = filter_for(doc)?;
     let limits = opts.limits();
     bilingua_model::guard::check_merge(doc, &limits)?;
-    if !own_segmentation(&doc.format) {
-        // the locos profile keeps a repeated tag as it was typed for some formats; the rule that every tag comes
-        // from the source holds for both
-        bilingua_model::guard::check_targets(doc, !opts.is_profile(profile::LOCOS))?;
+    // Not under the locos profile: it turns some source codes back into text at extract (Track D) while a target
+    // read from the file keeps them as tags, and keeps a repeated tag as typed, as Localization OS writes them.
+    if !own_segmentation(&doc.format) && !opts.is_profile(profile::LOCOS) {
+        bilingua_model::guard::check_targets(doc, true)?;
     }
     let out = filter.merge_with(doc, opts)?;
     bilingua_model::guard::check_output(out.len(), &limits)?;

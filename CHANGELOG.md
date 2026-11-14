@@ -13,8 +13,9 @@ is listed here).
   (and so the CLI and Python) check the Document under the caller's merge limits (`MergeOptions::limits`, the
   defaults when unset) before writing: units and segments within `max_units`, zip entries within `max_zip_entries`,
   at most 4 x `max_units` unit slots in the skeleton, an output estimate and the written bytes within the new
-  `Limits::max_output_bytes` (1 GB, `LimitKind::OutputBytes`). Every stored target of a monolingual format must use
-  only its source's tags (outside the `locos` profile, a paired tag no more often than the source). The zip writers
+  `Limits::max_output_bytes` (1 GB, `LimitKind::OutputBytes`). Outside the `locos` profile, every stored target of a
+  monolingual format must use only its source's tags (or codes of its unit), a paired tag no more often than the
+  source. The zip writers
   check every entry name with `safe_name`. Email, MO and xcstrings re-read their stored bytes under the merge limits
   instead of lifted ones, so a file extracted under raised limits is merged with the same limits passed again.
   Ordinary files merge exactly as before.

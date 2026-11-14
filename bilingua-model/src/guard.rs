@@ -539,8 +539,7 @@ fn unit_output_bytes(u: &crate::Unit) -> u64 {
 
 /// Checks every stored target's tags as a merge reads them (BILI-105): a tag must be one of its segment's source
 /// tags (same id and kind) or have its markup in the unit's `codes`. With `counts`, a paired tag may also appear no more often than in the source, the
-/// rule of [`Document::set_target_repeating`](crate::Document::set_target_repeating); without it repeats pass,
-/// for the `locos` profile, whose targets may keep a repeated tag as it was typed.
+/// rule of [`Document::set_target_repeating`](crate::Document::set_target_repeating); without it repeats pass.
 pub fn check_targets(doc: &Document, counts: bool) -> Result<(), Error> {
     for u in &doc.units {
         for s in &u.segments {
