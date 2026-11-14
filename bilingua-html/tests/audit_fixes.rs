@@ -322,8 +322,9 @@ fn nested_svg_style_bodies_stay_within_the_budget() {
 }
 
 /// Resource limit: the XML reading of the export check gave each text to every script / style element seen so far,
-/// closed or not, so a well-formed page with many style elements took time in their number squared. Only the open
-/// ones receive it now.
+/// closed or not, and searched from the page's start for each element's line on a page without line breaks, so a
+/// well-formed page with many style elements took time in their number squared (137 s for this page in a debug
+/// build). Only the open elements receive a text now, and line breaks are counted once.
 #[test]
 fn many_style_elements_in_a_well_formed_page_are_linear() {
     let n = 200_000;
