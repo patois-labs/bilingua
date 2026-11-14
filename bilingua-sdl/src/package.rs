@@ -26,6 +26,14 @@ use bilingua_model::{LimitError, LimitKind, Limits};
 use serde::Serialize;
 use std::collections::{HashMap, HashSet};
 
+/// The attribute value with its character and entity references resolved and nothing else changed. quick-xml 0.40
+/// made `Attribute::unescape_value` also normalize whitespace (tab and line breaks to spaces) and deprecated it;
+/// this keeps the value exactly as before.
+fn attr_unescaped<'v>(a: &'v quick_xml::events::attributes::Attribute<'_>) -> quick_xml::Result<std::borrow::Cow<'v, str>> {
+    let raw = std::str::from_utf8(&a.value).map_err(quick_xml::encoding::EncodingError::Utf8)?;
+    Ok(quick_xml::escape::unescape(raw)?)
+}
+
 /// A bilingual file inside a package, as the package needs it: open from bytes, count, tell whether it was
 /// edited, write back. `bilingua_xliff::Doc` is one; an editor can wrap it in its own type.
 pub trait PackageDoc: Sized {
@@ -211,7 +219,7 @@ fn open_member<D: PackageDoc>(e: &Entry, guard: Option<&Limits>) -> Result<D, Er
 }
 
 fn attr(e: &quick_xml::events::BytesStart<'_>, name: &str) -> Option<String> {
-    e.attributes().flatten().find(|a| a.key.as_ref() == name.as_bytes()).and_then(|a| a.unescape_value().ok().map(|v| v.into_owned()))
+    e.attributes().flatten().find(|a| a.key.as_ref() == name.as_bytes()).and_then(|a| attr_unescaped(&a).ok().map(|v| v.into_owned()))
 }
 
 /// Reads the project file. `limits.max_entries` also caps the target languages: every one of them has a folder

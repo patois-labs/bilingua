@@ -7,6 +7,14 @@ use crate::scan::{next_tag, Tag};
 use crate::text::{split_ws, unescape, xml_escape, xml_target_text};
 use bilingua_model::{guard, py_has_alpha, Error, Inline, Limits, TagKind};
 
+/// The attribute value with its character and entity references resolved and nothing else changed. quick-xml 0.40
+/// made `Attribute::unescape_value` also normalize whitespace (tab and line breaks to spaces) and deprecated it;
+/// this keeps the value exactly as before.
+fn attr_unescaped<'v>(a: &'v quick_xml::events::attributes::Attribute<'_>) -> quick_xml::Result<std::borrow::Cow<'v, str>> {
+    let raw = std::str::from_utf8(&a.value).map_err(quick_xml::encoding::EncodingError::Utf8)?;
+    Ok(quick_xml::escape::unescape(raw)?)
+}
+
 pub const STYLE_VARIABLE: &str = "flare:variable";
 pub const STYLE_TOC: &str = "flare:toc-title";
 pub const STYLE_TERM: &str = "flare:glossary-term";
@@ -56,7 +64,7 @@ pub fn check(text: &str, name: &str, l: &Limits) -> Result<(), Error> {
     let (mut depth, mut roots) = (0usize, 0usize);
     let attrs_ok = |e: &quick_xml::events::BytesStart| -> bool {
         e.attributes().all(|a| match a {
-            Ok(a) => a.unescape_value().is_ok(),
+            Ok(a) => attr_unescaped(&a).is_ok(),
             Err(_) => false,
         })
     };

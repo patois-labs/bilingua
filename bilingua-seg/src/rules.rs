@@ -12,6 +12,14 @@ use regex::Regex;
 use std::collections::HashMap;
 use std::sync::OnceLock;
 
+/// The attribute value with its character and entity references resolved and nothing else changed. quick-xml 0.40
+/// made `Attribute::unescape_value` also normalize whitespace (tab and line breaks to spaces) and deprecated it;
+/// this keeps the value exactly as before.
+fn attr_unescaped<'v>(a: &'v quick_xml::events::attributes::Attribute<'_>) -> quick_xml::Result<std::borrow::Cow<'v, str>> {
+    let raw = std::str::from_utf8(&a.value).map_err(quick_xml::encoding::EncodingError::Utf8)?;
+    Ok(quick_xml::escape::unescape(raw)?)
+}
+
 #[derive(Debug)]
 #[non_exhaustive]
 pub enum SrxError {
@@ -88,7 +96,7 @@ impl Rules {
                     let name = std::str::from_utf8(local.as_ref()).unwrap_or("").to_string();
                     let attr = |key: &str| -> Option<String> {
                         e.attributes().flatten().find(|a| a.key.as_ref() == key.as_bytes()).and_then(|a| {
-                            a.unescape_value().ok().map(|v| v.into_owned())
+                            attr_unescaped(&a).ok().map(|v| v.into_owned())
                         })
                     };
                     match name.as_str() {

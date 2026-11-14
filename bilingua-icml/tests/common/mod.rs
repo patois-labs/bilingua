@@ -5,6 +5,14 @@
 use bilingua_icml::Icml;
 use bilingua_model::*;
 
+/// The attribute value with its character and entity references resolved and nothing else changed. quick-xml 0.40
+/// made `Attribute::unescape_value` also normalize whitespace (tab and line breaks to spaces) and deprecated it;
+/// this keeps the value exactly as before.
+fn attr_unescaped<'v>(a: &'v quick_xml::events::attributes::Attribute<'_>) -> quick_xml::Result<std::borrow::Cow<'v, str>> {
+    let raw = std::str::from_utf8(&a.value).map_err(quick_xml::encoding::EncodingError::Utf8)?;
+    Ok(quick_xml::escape::unescape(raw)?)
+}
+
 pub const BOLD: &str = "CharacterStyle/Bold";
 pub const NORMAL: &str = "CharacterStyle/$ID/[No character style]";
 
@@ -221,7 +229,7 @@ pub fn attrs_of(data: &[u8], local: &str) -> Vec<Vec<(String, String)>> {
             Event::Start(e) | Event::Empty(e) if e.local_name().as_ref() == local.as_bytes() => {
                 let mut v = Vec::new();
                 for a in e.attributes().flatten() {
-                    v.push((String::from_utf8_lossy(a.key.as_ref()).into_owned(), a.unescape_value().expect("value").into_owned()));
+                    v.push((String::from_utf8_lossy(a.key.as_ref()).into_owned(), attr_unescaped(&a).expect("value").into_owned()));
                 }
                 out.push(v);
             }
@@ -255,7 +263,7 @@ pub fn story_ranges(data: &[u8]) -> Vec<(String, String)> {
                         cur = (String::new(), String::new());
                         for a in e.attributes().flatten() {
                             if a.key.as_ref() == b"AppliedCharacterStyle" {
-                                cur.0 = a.unescape_value().expect("v").into_owned();
+                                cur.0 = attr_unescaped(&a).expect("v").into_owned();
                             }
                         }
                     }

@@ -11,6 +11,14 @@ use crate::zipio::{read_zip, write_zip, Entry, ZipLimits};
 use bilingua_model::{profile, Document, Error, ExtractOptions, Granularity, MergeOptions, Skeleton};
 use quick_xml::events::Event;
 
+/// The attribute value with its character and entity references resolved and nothing else changed. quick-xml 0.40
+/// made `Attribute::unescape_value` also normalize whitespace (tab and line breaks to spaces) and deprecated it;
+/// this keeps the value exactly as before.
+fn attr_unescaped<'v>(a: &'v quick_xml::events::attributes::Attribute<'_>) -> quick_xml::Result<std::borrow::Cow<'v, str>> {
+    let raw = std::str::from_utf8(&a.value).map_err(quick_xml::encoding::EncodingError::Utf8)?;
+    Ok(quick_xml::escape::unescape(raw)?)
+}
+
 fn perr(msg: impl Into<String>) -> Error {
     Error::Parse { format: "sdlppx".into(), msg: msg.into() }
 }
@@ -40,7 +48,7 @@ fn languages(xml: &[u8]) -> Result<(String, Vec<(String, String)>), Error> {
                 }
                 if local == "LanguageDirection" {
                     let get = |k: &str| {
-                        e.attributes().flatten().find(|a| a.key.local_name().as_ref() == k.as_bytes()).and_then(|a| a.unescape_value().ok()).map(|v| v.trim().to_string()).unwrap_or_default()
+                        e.attributes().flatten().find(|a| a.key.local_name().as_ref() == k.as_bytes()).and_then(|a| attr_unescaped(&a).ok().map(|v| v.trim().to_string())).unwrap_or_default()
                     };
                     let (s, t) = (get("SourceLanguageCode"), get("TargetLanguageCode"));
                     if !s.is_empty() && !t.is_empty() {

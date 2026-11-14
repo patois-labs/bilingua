@@ -17,6 +17,14 @@ use serde_json::Value;
 use std::collections::{BTreeSet, HashMap};
 use std::path::{Path, PathBuf};
 
+/// The attribute value with its character and entity references resolved and nothing else changed. quick-xml 0.40
+/// made `Attribute::unescape_value` also normalize whitespace (tab and line breaks to spaces) and deprecated it;
+/// this keeps the value exactly as before.
+fn attr_unescaped<'v>(a: &'v quick_xml::events::attributes::Attribute<'_>) -> quick_xml::Result<std::borrow::Cow<'v, str>> {
+    let raw = std::str::from_utf8(&a.value).map_err(quick_xml::encoding::EncodingError::Utf8)?;
+    Ok(quick_xml::escape::unescape(raw)?)
+}
+
 fn opts(locale: Option<&str>) -> ExtractOptions {
     profile::locos().extract_options().with_granularity(Granularity::Paragraph).with_target_lang(locale.map(|l| l.replace('_', "-")))
 }
@@ -129,7 +137,7 @@ fn canonical_xml(data: &[u8]) -> Option<String> {
                 for a in e.attributes() {
                     let a = a.ok()?;
                     let k = String::from_utf8(a.key.as_ref().to_vec()).ok()?;
-                    let v = a.unescape_value().ok()?.to_string();
+                    let v = attr_unescaped(&a).ok()?.to_string();
                     attrs.push((k, v));
                 }
                 attrs.sort();

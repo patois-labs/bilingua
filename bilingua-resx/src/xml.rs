@@ -5,6 +5,14 @@ use bilingua_model::Error;
 use quick_xml::events::{BytesStart, Event};
 use quick_xml::Reader;
 
+/// The attribute value with its character and entity references resolved and nothing else changed. quick-xml 0.40
+/// made `Attribute::unescape_value` also normalize whitespace (tab and line breaks to spaces) and deprecated it;
+/// this keeps the value exactly as before.
+fn attr_unescaped<'v>(a: &'v quick_xml::events::attributes::Attribute<'_>) -> quick_xml::Result<std::borrow::Cow<'v, str>> {
+    let raw = std::str::from_utf8(&a.value).map_err(quick_xml::encoding::EncodingError::Utf8)?;
+    Ok(quick_xml::escape::unescape(raw)?)
+}
+
 fn parse_err(msg: impl Into<String>) -> Error {
     Error::Parse { format: "resx".into(), msg: msg.into() }
 }
@@ -81,7 +89,7 @@ fn attrs(e: &BytesStart, want: bool) -> Result<(Option<String>, bool), Error> {
     let mut typed = false;
     for a in e.attributes() {
         let a = a.map_err(|x| parse_err(format!("bad attribute: {x}")))?;
-        let v = a.unescape_value().map_err(|x| parse_err(format!("bad attribute value: {x}")))?;
+        let v = attr_unescaped(&a).map_err(|x| parse_err(format!("bad attribute value: {x}")))?;
         if want {
             match a.key.as_ref() {
                 b"name" => name = Some(v.into_owned()),
