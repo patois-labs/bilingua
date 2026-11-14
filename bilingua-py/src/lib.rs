@@ -121,7 +121,7 @@ fn from_py(obj: &Bound<'_, PyAny>, depth: usize) -> Result<Value, Fail> {
         return Ok(Value::Null);
     }
     // bool before int: bool is a subclass of int in Python.
-    if let Ok(b) = obj.downcast::<PyBool>() {
+    if let Ok(b) = obj.cast::<PyBool>() {
         return Ok(Value::Bool(b.is_true()));
     }
     if obj.is_instance_of::<PyInt>() {
@@ -134,16 +134,16 @@ fn from_py(obj: &Bound<'_, PyAny>, depth: usize) -> Result<Value, Fail> {
         return Err(bad("integer out of range".into()));
     }
     if obj.is_instance_of::<PyFloat>() {
-        let f: f64 = obj.extract().map_err(|e| bad(e.to_string()))?;
+        let f = obj.extract::<f64>().map_err(|e| bad(e.to_string()))?;
         return Number::from_f64(f).map(Value::Number).ok_or_else(|| bad("NaN or infinity in document".into()));
     }
-    if let Ok(s) = obj.downcast::<PyString>() {
+    if let Ok(s) = obj.cast::<PyString>() {
         return Ok(Value::String(s.to_str().map_err(|e| bad(e.to_string()))?.to_string()));
     }
-    if let Ok(d) = obj.downcast::<PyDict>() {
+    if let Ok(d) = obj.cast::<PyDict>() {
         let mut m = Map::new();
         for (k, v) in d.iter() {
-            let key = k.downcast::<PyString>().map_err(|_| bad("dict keys must be strings".into()))?;
+            let key = k.cast::<PyString>().map_err(|_| bad("dict keys must be strings".into()))?;
             let key = key.to_str().map_err(|e| bad(e.to_string()))?.to_string();
             m.insert(key, from_py(&v, depth + 1)?);
         }
@@ -156,7 +156,7 @@ fn from_py(obj: &Bound<'_, PyAny>, depth: usize) -> Result<Value, Fail> {
         }
         return Ok(Value::Array(out));
     }
-    if let Ok(b) = obj.downcast::<PyBytes>() {
+    if let Ok(b) = obj.cast::<PyBytes>() {
         // Raw zip entries may be passed as bytes; the model reads them as a base64 string.
         return Ok(Value::String(engine::b64::encode(b.as_bytes())));
     }
@@ -336,7 +336,7 @@ impl pythonize::PythonizeMappingType for SortedDict {
 
     fn push_item<'py>(builder: &mut Self::Builder<'py>, key: Bound<'py, PyAny>, value: Bound<'py, PyAny>) -> PyResult<()> {
         // a key that is not a str fails the fast path; doc_to_py then takes the Value path
-        builder.1.push((key.downcast_into::<PyString>()?, value));
+        builder.1.push((key.cast_into::<PyString>()?, value));
         Ok(())
     }
 
@@ -417,7 +417,7 @@ impl DocIn {
 /// (`pyde`); anything it does not take goes the old way, `from_py` (whose conversion errors are raised here, as
 /// before) and a `Value` read later by `DocIn::into_document`.
 fn doc_in(obj: &Bound<'_, PyAny>) -> Result<(DocIn, Option<Value>), Fail> {
-    if let Ok(d) = obj.downcast::<PyDict>() {
+    if let Ok(d) = obj.cast::<PyDict>() {
         let stamped = match d.get_item(PARSER_KEY) {
             // the record sits one level down, as it did inside the whole document's from_py
             Ok(Some(p)) => from_py(&p, 1).ok().map(Some),

@@ -7,6 +7,13 @@ is listed here).
 
 ## [Unreleased]
 
+### Security
+
+- Dependencies: quick-xml 0.41 (RUSTSEC-2026-0194, -0195) and pulldown-cmark 0.13.6 (RUSTSEC-2026-0433); attribute
+  values come out as before.
+- Python: PyO3 0.29 and pythonize 0.29 (RUSTSEC-2026-0176, -0177). The Python API is unchanged. The
+  `generate-import-lib` feature is kept but does nothing now: PyO3 links Windows wheels without an import library.
+
 ### Changed
 
 - Merge bounds what a stored Document can make it do (BILI-105). The `bilingua` facade's `merge` and `merge_with`

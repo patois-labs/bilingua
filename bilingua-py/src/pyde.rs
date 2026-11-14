@@ -74,7 +74,7 @@ impl<'py> De<'py> {
         // Document) is none of the types checked before it below, so it takes its branch at once; anything else
         // (a subclass, a number, bytes) goes through the checks in `from_py`'s order
         if obj.is_exact_instance_of::<PyString>() {
-            let s = obj.downcast::<PyString>().map_err(|e| DeError(e.to_string()))?;
+            let s = obj.cast::<PyString>().map_err(|e| DeError(e.to_string()))?;
             return Ok(Kind::Str(Cow::Borrowed(s.to_str().map_err(|e| DeError(e.to_string()))?)));
         }
         if obj.is_exact_instance_of::<PyDict>() {
@@ -83,7 +83,7 @@ impl<'py> De<'py> {
         if obj.is_exact_instance_of::<PyList>() {
             return Ok(Kind::Seq);
         }
-        if let Ok(b) = obj.downcast::<PyBool>() {
+        if let Ok(b) = obj.cast::<PyBool>() {
             return Ok(Kind::Bool(b.is_true()));
         }
         if obj.is_instance_of::<PyInt>() {
@@ -96,10 +96,10 @@ impl<'py> De<'py> {
             return fail("integer out of range");
         }
         if obj.is_instance_of::<PyFloat>() {
-            let f: f64 = obj.extract().map_err(|e| DeError(e.to_string()))?;
+            let f = obj.extract::<f64>().map_err(|e| DeError(e.to_string()))?;
             return if f.is_finite() { Ok(Kind::F64(f)) } else { fail("NaN or infinity in document") };
         }
-        if let Ok(s) = obj.downcast::<PyString>() {
+        if let Ok(s) = obj.cast::<PyString>() {
             return Ok(Kind::Str(Cow::Borrowed(s.to_str().map_err(|e| DeError(e.to_string()))?)));
         }
         if obj.is_instance_of::<PyDict>() {
@@ -108,7 +108,7 @@ impl<'py> De<'py> {
         if obj.is_instance_of::<PyList>() || obj.is_instance_of::<PyTuple>() {
             return Ok(Kind::Seq);
         }
-        if let Ok(b) = obj.downcast::<PyBytes>() {
+        if let Ok(b) = obj.cast::<PyBytes>() {
             return Ok(Kind::Str(Cow::Owned(engine::b64::encode(b.as_bytes()))));
         }
         fail("unsupported type")
@@ -121,10 +121,10 @@ impl<'py> De<'py> {
     /// The items of a list or tuple, iterated the way `from_py` iterates them (a plain list or tuple directly:
     /// its iterator is the built-in one; a subclass through `iter()`, which may be overridden).
     fn items(&self) -> Result<Vec<De<'py>>, DeError> {
-        if let Ok(l) = self.obj.downcast_exact::<PyList>() {
+        if let Ok(l) = self.obj.cast_exact::<PyList>() {
             return Ok(l.iter().map(|x| self.child(x)).collect());
         }
-        if let Ok(t) = self.obj.downcast_exact::<PyTuple>() {
+        if let Ok(t) = self.obj.cast_exact::<PyTuple>() {
             return Ok(t.iter().map(|x| self.child(x)).collect());
         }
         let mut out = Vec::new();
@@ -136,10 +136,10 @@ impl<'py> De<'py> {
 
     /// The entries of a dict; keys must be str (valid UTF-8), as in `from_py`.
     fn entries(&self) -> Result<Vec<(Bound<'py, PyString>, De<'py>)>, DeError> {
-        let d = self.obj.downcast::<PyDict>().map_err(|e| DeError(e.to_string()))?;
+        let d = self.obj.cast::<PyDict>().map_err(|e| DeError(e.to_string()))?;
         let mut out = Vec::with_capacity(d.len());
         for (k, v) in d.iter() {
-            let key = k.downcast_into::<PyString>().map_err(|_| DeError("dict keys must be strings".into()))?;
+            let key = k.cast_into::<PyString>().map_err(|_| DeError("dict keys must be strings".into()))?;
             key.to_str().map_err(|e| DeError(e.to_string()))?;
             out.push((key, self.child(v)));
         }

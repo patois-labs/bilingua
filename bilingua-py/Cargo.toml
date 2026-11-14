@@ -20,14 +20,14 @@ crate-type = ["cdylib", "rlib"]
 engine = { package = "bilingua", path = "../bilingua" }
 serde = { workspace = true }
 serde_json = { workspace = true }
-pyo3 = { version = "0.26", features = ["abi3-py311"] }
+pyo3 = { version = "0.29", features = ["abi3-py311"] }
 # Document to Python objects without a serde_json::Value copy in between (T8, BILI-18). MIT licence. Its
 # version pairs with pyo3's; the exact release is pinned in Cargo.lock.
-pythonize = "0.26"
+pythonize = "0.29"
 
 [features]
 # maturin turns this on for wheels; plain cargo test and cargo clippy leave it off so they link.
 extension-module = ["pyo3/extension-module"]
-# A Windows abi3 wheel built off Windows (maturin with cargo-xwin) needs python3.lib; PyO3 writes it with this.
-# Off by default; pass `--features generate-import-lib` for that build only.
+# Kept so older build commands still work: since PyO3 0.29 it does nothing, because PyO3 links Windows targets
+# with raw-dylib and a Windows abi3 wheel built off Windows no longer needs python3.lib.
 generate-import-lib = ["pyo3/generate-import-lib"]
