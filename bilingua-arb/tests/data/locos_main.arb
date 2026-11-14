@@ -1,0 +1,16 @@
+{
+  "@@locale": "en",
+  "@@last_modified": "2026-10-10T09:00:00",
+  "title": "Hello {name}",
+  "@title": {
+    "description": "Greeting on the home page",
+    "placeholders": {"name": {"type": "String", "example": "Bob"}}
+  },
+  "items": "{count, plural, =0{No items} one{# item} other{# items}}",
+  "@items": {"description": "Shown under the cart"},
+  "mixed": "You have {count, plural, one{# new message} other{# new messages}} from {who}",
+  "sel": "{gender, select, male{He liked it} female{She liked it} other{They liked it}}",
+  "rank": "{n, selectordinal, one{#st place} other{#th place}}",
+  "quoted": "Use '{braces}' and it''s fine",
+  "id": "4711"
+}

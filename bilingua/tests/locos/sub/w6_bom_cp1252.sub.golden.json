@@ -1,0 +1,46 @@
+{
+ "format": "sub",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Café au lait",
+   "style": ""
+  },
+  {
+   "p_index": 1,
+   "text": "Second cue",
+   "style": ""
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "77u/ezEwfXs1MH1DYWbpIGF1IGxhaXQKezYwfXs5MH1TZWNvbmQgY3VlCg=="
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü Café au lait",
+    "1": "Ü Second cue"
+   },
+   "out_b64": "77u/ezEwfXs1MH3DnCBDYWbDqSBhdSBsYWl0Cns2MH17OTB9w5wgU2Vjb25kIGN1ZQo="
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Café au lait & <\"'>"
+   },
+   "out_b64": "77u/ezEwfXs1MH1DYWbDqSBhdSBsYWl0ICYgPCInPgp7NjB9ezkwfVNlY29uZCBjdWUK"
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "out_b64": "77u/ezEwfXs1MH1DYWbDqSBhdSBsYWl0Cns2MH17OTB9U2Vjb25kIGN1ZQo="
+  }
+ ]
+}

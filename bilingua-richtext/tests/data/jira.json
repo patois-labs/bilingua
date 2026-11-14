@@ -1,0 +1,101 @@
+{
+  "type": "doc",
+  "version": 1,
+  "content": [
+    {
+      "type": "paragraph",
+      "content": [
+        {
+          "type": "text",
+          "text": "Click "
+        },
+        {
+          "type": "text",
+          "text": "here",
+          "marks": [
+            {
+              "type": "link",
+              "attrs": {
+                "href": "https://acme.co/reset"
+              }
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "text": " to reset, "
+        },
+        {
+          "type": "text",
+          "text": "now",
+          "marks": [
+            {
+              "type": "strong"
+            }
+          ]
+        },
+        {
+          "type": "mention",
+          "attrs": {
+            "id": "u1",
+            "text": "@Sam"
+          }
+        },
+        {
+          "type": "text",
+          "text": " thanks"
+        }
+      ]
+    },
+    {
+      "type": "codeBlock",
+      "attrs": {
+        "language": "python"
+      },
+      "content": [
+        {
+          "type": "text",
+          "text": "print('hello world')"
+        }
+      ]
+    },
+    {
+      "type": "bulletList",
+      "content": [
+        {
+          "type": "listItem",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "First item"
+                }
+              ]
+            },
+            {
+              "type": "orderedList",
+              "content": [
+                {
+                  "type": "listItem",
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "type": "text",
+                          "text": "Nested one"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

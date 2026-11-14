@@ -1,0 +1,26 @@
+# Use the Bilingual file to review translations and add translations.
+# - The TRANSLATED section of the file contains text that has been translated.
+# - The UNTRANSLATED section of the file contains text that hasn't been translated.
+Language code: ko
+Type: Bilingual
+Translation type: Metadata
+
+------------------TRANSLATED-------------------
+
+# KEY	LABEL	TRANSLATION	OUT OF DATE
+
+# CustomField
+CustomField.Account.Region.FieldLabel	로그인	로그인	-
+CustomField.Account.Region.HelpText	저장을 눌러주세요\n매일 아침 신선한 빵	저장을 눌러주세요	*
+
+------------------UNTRANSLATED-----------------
+
+# KEY	LABEL
+
+# CustomLabel
+CustomLabel.Welcome	로그인, {0}! 장바구니 품목 {!$User.FirstName}.
+CustomLabel.Count	{0,number} 장바구니 품목
+PicklistValue.Lumen.Bakery.Fresh	매일 아침 신선한 빵
+CustomLabel.Blank	
+CustomLabel.Escapes	\n
+CustomLabel.Tabbed	로그인\t매일 아침 신선한 빵\\done

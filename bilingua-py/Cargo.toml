@@ -1,0 +1,33 @@
+[package]
+name = "bilingua-py"
+description = "Python wheel for Bilingua (PyO3, abi3, Python 3.11 and up)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+rust-version.workspace = true
+homepage.workspace = true
+readme = "README.md"
+keywords.workspace = true
+categories.workspace = true
+
+[lib]
+name = "bilingua_py"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+engine = { package = "bilingua", path = "../bilingua" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+pyo3 = { version = "0.26", features = ["abi3-py311"] }
+# Document to Python objects without a serde_json::Value copy in between (T8, BILI-18). MIT licence. Its
+# version pairs with pyo3's; the exact release is pinned in Cargo.lock.
+pythonize = "0.26"
+
+[features]
+# maturin turns this on for wheels; plain cargo test and cargo clippy leave it off so they link.
+extension-module = ["pyo3/extension-module"]
+# A Windows abi3 wheel built off Windows (maturin with cargo-xwin) needs python3.lib; PyO3 writes it with this.
+# Off by default; pass `--features generate-import-lib` for that build only.
+generate-import-lib = ["pyo3/generate-import-lib"]

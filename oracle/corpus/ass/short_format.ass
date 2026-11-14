@@ -1,0 +1,4 @@
+[Events]
+Format: Start, End, Text
+Dialogue: 0:00:01.00,0:00:02.00,Short, form, text
+Dialogue: 0:00:02.00,0:00:03.00,{\i1}Second{\i0}

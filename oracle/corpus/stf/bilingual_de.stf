@@ -1,0 +1,26 @@
+# Use the Bilingual file to review translations and add translations.
+# - The TRANSLATED section of the file contains text that has been translated.
+# - The UNTRANSLATED section of the file contains text that hasn't been translated.
+Language code: de
+Type: Bilingual
+Translation type: Metadata
+
+------------------TRANSLATED-------------------
+
+# KEY	LABEL	TRANSLATION	OUT OF DATE
+
+# CustomField
+CustomField.Account.Region.FieldLabel	Anmelden	Anmelden	-
+CustomField.Account.Region.HelpText	Klicken Sie auf "Speichern"\nJeden Morgen frisches Brot	Klicken Sie auf "Speichern"	*
+
+------------------UNTRANSLATED-----------------
+
+# KEY	LABEL
+
+# CustomLabel
+CustomLabel.Welcome	Anmelden, {0}! Artikel in Ihrem Warenkorb {!$User.FirstName}.
+CustomLabel.Count	{0,number} Artikel in Ihrem Warenkorb
+PicklistValue.Lumen.Bakery.Fresh	Jeden Morgen frisches Brot
+CustomLabel.Blank	
+CustomLabel.Escapes	\n
+CustomLabel.Tabbed	Anmelden\tJeden Morgen frisches Brot\\done

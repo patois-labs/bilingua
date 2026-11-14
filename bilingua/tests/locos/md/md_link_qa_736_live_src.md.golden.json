@@ -1,0 +1,40 @@
+{
+ "format": "md",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Read the [setup steps](#install-tools) first.",
+   "style": ""
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "UmVhZCB0aGUgW3NldHVwIHN0ZXBzXSgjaW5zdGFsbC10b29scykgZmlyc3Qu"
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü Read the [setup steps](#install-tools) first."
+   },
+   "out_b64": "w5wgUmVhZCB0aGUgW3NldHVwIHN0ZXBzXSgjaW5zdGFsbC10b29scykgZmlyc3Qu"
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Read the [setup steps](#install-tools) first. & <\"'>"
+   },
+   "out_b64": "UmVhZCB0aGUgW3NldHVwIHN0ZXBzXSgjaW5zdGFsbC10b29scykgZmlyc3QuICYgPCInPg=="
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "out_b64": "UmVhZCB0aGUgW3NldHVwIHN0ZXBzXSgjaW5zdGFsbC10b29scykgZmlyc3Qu"
+  }
+ ]
+}

@@ -1,0 +1,1 @@
+<script>var s = "<?= $x ?>"; document.write("<p>no</p>");</script><p>After script <?= $y ?></p><style>.a:after{content:"${x}"}</style><script>/* </script> */</script><p>Tail</p>

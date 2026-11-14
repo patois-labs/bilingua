@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2" xmlns:gs4tr="http://www.gs4tr.org/schema/xliff-ext">
+  <file original="guide.docx" source-language="pt-BR" target-language="xx-XX" datatype="x-docx">
+    <body>
+      <trans-unit id="1"><source>Abra o menu <bpt id="1">&lt;b&gt;</bpt>Configurações<ept id="1">&lt;/b&gt;</ept> para continuar.</source><target state="needs-translation"/></trans-unit>
+      <trans-unit id="2"><source>Salve e feche o arquivo. <ph id="2">{0}</ph> Olá, mundo!</source><target state="needs-review-translation" gs4tr:score="75">Salve e feche o arquivo. (fuzzy)</target></trans-unit>
+      <trans-unit id="3"><source>para continuar. <g id="3"><x id="4" ctype="image"/>Configurações</g></source></trans-unit>
+      <trans-unit id="4" gs4tr:locked="true"><source>Olá, mundo!</source><target state="translated" gs4tr:score="100">Olá, mundo! (locked)</target></trans-unit>
+      <trans-unit id="5"><source>Salve e feche o arquivo.</source><target state="translated">Salve e feche o arquivo. (done)</target></trans-unit>
+      <trans-unit id="6" translate="no"><source>Configurações</source></trans-unit>
+    </body>
+  </file>
+</xliff>

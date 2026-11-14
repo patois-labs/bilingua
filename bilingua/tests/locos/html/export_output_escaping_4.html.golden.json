@@ -1,0 +1,40 @@
+{
+ "format": "html",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "<div title='unclosed >text",
+   "style": ""
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "PGRpdiB0aXRsZT0ndW5jbG9zZWQgPnRleHQ="
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü <div title='unclosed >text"
+   },
+   "out_b64": "w5wgJmx0O2RpdiB0aXRsZT0ndW5jbG9zZWQgJmd0O3RleHQ="
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "<div title='unclosed >text & <\"'>"
+   },
+   "out_b64": "Jmx0O2RpdiB0aXRsZT0ndW5jbG9zZWQgJmd0O3RleHQgJmFtcDsgJmx0OyInJmd0Ow=="
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "out_b64": "PGRpdiB0aXRsZT0ndW5jbG9zZWQgPnRleHQ="
+  }
+ ]
+}

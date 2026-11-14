@@ -7,9 +7,15 @@
 //! let (out, report) = bilingua_docx::merge_with_report(&doc)?;
 //! ```
 
+/// Skeleton schema number: bump only when this crate's skeleton layout changes (see `bilingua_model::check_parser`).
+pub const SKELETON_SCHEMA: u32 = 2;
+
 mod extract;
+#[doc(hidden)]
+pub mod locos;
 mod preview;
 mod render;
+mod storyline;
 mod xml;
 mod zipio;
 
@@ -33,9 +39,25 @@ struct Meta {
     /// Name of the main document part.
     main: String,
     entries: Vec<EntryMeta>,
+    /// Entries whose skeleton bytes are the original deflated bytes (merge copies them without recompressing).
+    #[serde(default, skip_serializing_if = "std::collections::BTreeMap::is_empty")]
+    packed: std::collections::BTreeMap<String, zipio::Packed>,
 }
 
 pub struct Docx;
+
+/// A member's XML refused by `xml::parse`: the nesting cap is a limit (`LimitKind::Depth`), like every other
+/// crate's; anything else is a parse error.
+pub(crate) fn xml_member_err(member: &str, m: &str) -> Error {
+    if m.starts_with("elements nested deeper than") {
+        return bilingua_model::LimitError::new(bilingua_model::LimitKind::Depth, format!("{member}: {m}")).into();
+    }
+    perr(format!("{member}: {m}"))
+}
+
+/// Parts never parsed into units: `customXml/` (data a Word add-in keeps). The XML guard skips them, so a deep or
+/// broken one never refuses the document (W4 docx-2, as LocOS `zip_guard.refuse_doctype` skips them).
+pub(crate) const UNPARSED_PARTS: &[&str] = &["customXml/"];
 
 fn perr(msg: impl Into<String>) -> Error {
     Error::Parse {
@@ -176,8 +198,66 @@ fn split_template(t: &str, idx: &HashMap<&str, usize>) -> Result<Vec<SkelPart>, 
     Ok(parts)
 }
 
+fn too_many_paragraphs(l: &Limits) -> Error {
+    bilingua_model::LimitError::new(
+        bilingua_model::LimitKind::Paragraphs,
+        format!("This file has more than {} paragraphs. Split it into smaller files.", l.max_paragraphs),
+    )
+    .into()
+}
+
+/// True for an entry the XML guard covers by its name alone (`bilingua_zip::check_xml_parts_except`).
+pub(crate) fn xml_guarded_by_name(name: &str) -> bool {
+    let n = name.to_ascii_lowercase();
+    !UNPARSED_PARTS.iter().any(|p| name.starts_with(p)) && [".xml", ".rels", ".vml", ".xlf", ".xliff", ".sdlxliff"].iter().any(|x| n.ends_with(x))
+}
+
+/// True for an entry whose paragraphs `guard_named_parts` counts by its name alone.
+fn paragraphs_counted_by_name(name: &str) -> bool {
+    name.starts_with("word/") && name.ends_with(".xml")
+}
+
+/// The guards that go by entry name, run before anything is parsed: the XML guard over every XML-named entry
+/// outside `customXml/`, and the paragraph count over `word/*.xml`. Returns the paragraphs counted so far.
+pub(crate) fn guard_named_parts(entries: &[zipio::RawEntry], l: &Limits) -> Result<usize, Error> {
+    bilingua_zip::check_xml_parts_except(entries, l, UNPARSED_PARTS)?;
+    // empty paragraphs count too (LocOS DOCX_MAX_PARAGRAPHS), before any tree is built
+    let mut paragraphs = 0usize;
+    for e in entries.iter().filter(|e| paragraphs_counted_by_name(&e.name)) {
+        paragraphs += bilingua_model::guard::count_elements(&e.data, "p");
+        if paragraphs > l.max_paragraphs {
+            return Err(too_many_paragraphs(l));
+        }
+    }
+    Ok(paragraphs)
+}
+
+/// The same guards for one part that is about to be parsed, whatever its name. A package chooses its parts by
+/// content type and relationship, so the main document may be called `word/document.bin` or sit under
+/// `customXml/`, where the name-keyed guards do not look; a part they did cover is not scanned twice.
+pub(crate) fn guard_parsed_part(name: &str, data: &[u8], l: &Limits, paragraphs: &mut usize) -> Result<(), Error> {
+    if !xml_guarded_by_name(name) {
+        bilingua_model::guard::check_xml(data, l)?;
+    }
+    if !paragraphs_counted_by_name(name) {
+        *paragraphs += bilingua_model::guard::count_elements(data, "p");
+        if *paragraphs > l.max_paragraphs {
+            return Err(too_many_paragraphs(l));
+        }
+    }
+    Ok(())
+}
+
 fn extract_doc(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
-    let entries = zipio::read_zip(bytes, &ZipLimits::default())?;
+    let l = opts.limits();
+    bilingua_model::guard::check_input(bytes, &l)?;
+    bilingua_model::guard::finish(extract_doc_inner(bytes, opts)?, vec![], &l)
+}
+
+fn extract_doc_inner(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
+    let entries = zipio::read_zip(bytes, &ZipLimits::from(&opts.limits()))?;
+    let l = opts.limits();
+    let mut paragraphs = guard_named_parts(&entries, &l)?;
     let ct = entries
         .iter()
         .find(|e| e.name == "[Content_Types].xml")
@@ -191,11 +271,21 @@ fn extract_doc(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
         .map(|(d, _)| format!("{d}/"))
         .unwrap_or_default();
 
+    // The guards above go by entry name; the parts read below are chosen by content type and by the main part's
+    // folder. Whatever is about to be parsed and was not covered by name is guarded here, before any tree is built.
+    let styles_name = format!("{dir}styles.xml");
+    let comments_name = format!("{dir}comments.xml");
+    for e in entries.iter() {
+        if e.name == styles_name || e.name == comments_name || classify(&e.name, &main, &dir).is_some() {
+            guard_parsed_part(&e.name, &e.data, &l, &mut paragraphs)?;
+        }
+    }
+
     // Styles and comments first: paragraphs need them for their context.
     let mut styles = Styles::default();
     if let Some(e) = entries
         .iter()
-        .find(|e| e.name == format!("{dir}styles.xml"))
+        .find(|e| e.name == styles_name)
     {
         if let Some(nodes) = std::str::from_utf8(&e.data)
             .ok()
@@ -208,7 +298,7 @@ fn extract_doc(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
     let mut comments = HashMap::new();
     if let Some(e) = entries
         .iter()
-        .find(|e| e.name == format!("{dir}comments.xml"))
+        .find(|e| e.name == comments_name)
     {
         if let Ok(t) = std::str::from_utf8(&e.data) {
             comments = read_comments(t);
@@ -228,9 +318,10 @@ fn extract_doc(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
         }
     }
 
-    let mut ex = Extractor::new(styles, comments);
+    let mut ex = Extractor::new(styles, comments).with_limits(l);
     let mut templates: HashMap<usize, String> = HashMap::new();
     let mut wp = "w:".to_string();
+    let mut bilingual: Option<storyline::Found> = None;
     for (i, kind) in order {
         let e = &entries[i];
         let is_main = kind == PartKind::Main;
@@ -249,7 +340,7 @@ fn extract_doc(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
         }
         let mut nodes = match xml::parse(text) {
             Ok(n) => n,
-            Err(m) if is_main => return Err(perr(format!("{}: {m}", e.name))),
+            Err(m) if is_main => return Err(xml_member_err(&e.name, &m)),
             Err(_) => continue,
         };
         let ns = xml::Ns::detect(&nodes);
@@ -258,6 +349,9 @@ fn extract_doc(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
         }
         let mut counter = 0;
         xml::number(&mut nodes, &format!("{}p", ns.w), &mut counter);
+        if is_main {
+            bilingual = storyline::translation_paragraphs(&nodes, &ns);
+        }
         let prefix = if is_main {
             String::new()
         } else {
@@ -272,8 +366,20 @@ fn extract_doc(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
         };
         ex.begin_part(kind, &e.name, prefix, ns);
         templates.insert(i, ex.run_part(&nodes));
+        // a comment copied into more units than the context budget allows: refused as soon as the part is walked
+        ex.check_refused()?;
     }
-    let units = ex.finish();
+    let mut units = ex.finish();
+    // A Storyline "Export to Word" table: only the Translation cells are translated (LocOS docx_bilingual)
+    let mut warnings = Vec::new();
+    if let Some(f) = &bilingual {
+        let keep: std::collections::HashSet<String> = f.keep.iter().map(|o| format!("p{o}")).collect();
+        for u in units.iter_mut().filter(|u| !keep.contains(&u.id)) {
+            u.translate = false;
+            u.lock_reason = Some("bilingual table: only the Translation column is translated".into());
+        }
+        warnings.push(bilingua_model::Warning::new("docx_bilingual_table", main.clone(), storyline::notice(f)));
+    }
     let idx: HashMap<&str, usize> = units
         .iter()
         .enumerate()
@@ -281,42 +387,30 @@ fn extract_doc(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
         .collect();
 
     let mut zentries = Vec::with_capacity(entries.len() + 1);
+    let mut packed = std::collections::BTreeMap::new();
     for (i, e) in entries.iter().enumerate() {
         let data = match templates.get(&i) {
             Some(t) if t.contains(M_UNIT) => ZipData::Parts(split_template(t, &idx)?),
-            _ => ZipData::Raw(e.data.clone()),
+            _ => ZipData::Raw(e.keep(&mut packed)),
         };
-        zentries.push(ZipEntry {
-            name: e.name.clone(),
-            data,
-        });
+        zentries.push(ZipEntry::new(e.name.clone(), data));
     }
     let meta = Meta {
         wp,
         main: main.clone(),
         entries: entries.iter().map(|e| e.meta.clone()).collect(),
+        packed,
     };
     let meta_json = serde_json::to_vec(&meta).map_err(|e| perr(e.to_string()))?;
-    zentries.push(ZipEntry {
-        name: META_NAME.into(),
-        data: ZipData::Raw(meta_json),
-    });
+    zentries.push(ZipEntry::raw(META_NAME, meta_json));
 
-    Ok(Document {
-        format: "docx".into(),
-        name: None,
-        source_lang: opts.source_lang.clone().or(lang_default),
-        target_lang: opts.target_lang.clone(),
-        granularity: Granularity::Paragraph,
-        units,
-        skeleton: Skeleton::Zip { entries: zentries },
-    })
+    Ok(Document::new("docx", units, Skeleton::zip(zentries, bilingua_model::parser_info!())).with_source_lang(opts.source_lang.clone().or(lang_default)).with_target_lang(opts.target_lang.clone()).with_granularity(Granularity::Paragraph).with_warnings(warnings))
 }
 
 type Split<'a> = (Option<Meta>, Vec<&'a ZipEntry>);
 
 fn split_meta(doc: &Document) -> Result<Split<'_>, Error> {
-    let Skeleton::Zip { entries } = &doc.skeleton else {
+    let Skeleton::Zip { entries, .. } = &doc.skeleton else {
         return Err(Error::Write("docx needs a zip skeleton".into()));
     };
     let mut meta = None;
@@ -324,7 +418,11 @@ fn split_meta(doc: &Document) -> Result<Split<'_>, Error> {
     for e in entries {
         if e.name == META_NAME {
             if let ZipData::Raw(b) = &e.data {
-                meta = serde_json::from_slice::<Meta>(b).ok();
+                // An unreadable record must not be skipped: without its list of packed entries, their deflated
+                // bytes would be written as if they were plain, and the file would be broken.
+                meta = Some(serde_json::from_slice::<Meta>(b).map_err(|e| {
+                    Error::Write(format!("the docx skeleton's zip record is unreadable: {e}"))
+                })?);
             }
         } else {
             real.push(e);
@@ -335,16 +433,17 @@ fn split_meta(doc: &Document) -> Result<Split<'_>, Error> {
 
 /// Writes the document and reports what the caller should know (tracked changes accepted, and so on).
 pub fn merge_with_report(doc: &Document) -> Result<(Vec<u8>, MergeReport), Error> {
+    bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
     let (meta, real) = split_meta(doc)?;
     let wp = meta
         .as_ref()
         .map(|m| m.wp.clone())
         .unwrap_or_else(|| "w:".into());
     let mut r = render::Renderer::new(doc, wp);
-    let mut out: Vec<(EntryMeta, Vec<u8>)> = Vec::with_capacity(real.len());
+    let mut out: Vec<(EntryMeta, zipio::Body)> = Vec::with_capacity(real.len());
     for e in real {
         let data = match &e.data {
-            ZipData::Raw(b) => b.clone(),
+            ZipData::Raw(b) => zipio::raw_body(meta.as_ref().map(|m| &m.packed), &e.name, b),
             ZipData::Parts(parts) => {
                 let mut s = String::new();
                 for p in parts {
@@ -353,7 +452,7 @@ pub fn merge_with_report(doc: &Document) -> Result<(Vec<u8>, MergeReport), Error
                         SkelPart::Unit(i) => s.push_str(&r.unit(*i)?),
                     }
                 }
-                s.into_bytes()
+                zipio::Body::Owned(s.into_bytes())
             }
         };
         let em = meta
@@ -367,7 +466,7 @@ pub fn merge_with_report(doc: &Document) -> Result<(Vec<u8>, MergeReport), Error
             });
         out.push((em, data));
     }
-    let bytes = zipio::write_zip(&out)?;
+    let bytes = zipio::write_zip_parts(&out)?;
     Ok((
         bytes,
         MergeReport {
@@ -375,6 +474,12 @@ pub fn merge_with_report(doc: &Document) -> Result<(Vec<u8>, MergeReport), Error
         },
     ))
 }
+
+/// The `format_options` keys of the DOCX filter.
+pub const FORMAT_OPTIONS: &[bilingua_model::FormatOptionKey] = &[
+    bilingua_model::FormatOptionKey::bool("docx.translate_comments", "Translate Word comments (the default); false keeps them as locked context."),
+    bilingua_model::FormatOptionKey::text("docx.walk", "Accepted and ignored: LocOS's numbering walk stamp; Bilingua has one walk, the current one."),
+];
 
 impl Filter for Docx {
     fn id(&self) -> &'static str {
@@ -387,10 +492,37 @@ impl Filter for Docx {
         let has = |needle: &[u8]| bytes.windows(needle.len()).any(|w| w == needle);
         bytes.starts_with(b"PK\x03\x04") && has(b"[Content_Types].xml") && has(b"word/")
     }
-    fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
-        extract_doc(bytes, opts)
+    fn format_option_keys(&self) -> &'static [bilingua_model::FormatOptionKey] {
+        FORMAT_OPTIONS
     }
-    fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
+    fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
+        if opts.is_profile(bilingua_model::profile::LOCOS) {
+            // Track D: LocOS's units and numbering (comments left out with the option off, as LocOS does)
+            let l = opts.limits();
+            bilingua_model::guard::check_input(bytes, &l)?;
+            return bilingua_model::guard::finish(locos::extract(bytes, opts)?, vec![], &l);
+        }
+        let mut doc = extract_doc(bytes, opts)?;
+        // Word comments are part of the document walk (as in LocOS): with the option off they stay in the
+        // document as locked context, so unit ids and the skeleton do not change
+        if opts.format_flag("docx.translate_comments") == Some(false) {
+            for u in doc.units.iter_mut().filter(|u| u.context.kind.as_deref() == Some("comment")) {
+                u.translate = false;
+                u.lock_reason = Some("comments are not translated (docx.translate_comments)".into());
+            }
+        }
+        Ok(doc)
+    }
+    fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
+        if let Skeleton::Binary { .. } = &doc.skeleton {
+            // a document extracted under the Localization OS profile
+            bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
+            return locos::merge(doc, opts);
+        }
+        // The parts are UTF-8 XML, and the language is set on the runs this merge rewrites (translated text), so neither
+        // option changes anything: an untranslated run is never rewritten.
         merge_with_report(doc).map(|(b, _)| b)
     }
     fn preview(&self, doc: &Document) -> Option<String> {
@@ -407,3 +539,24 @@ impl Filter for Docx {
 mod tests;
 #[cfg(test)]
 mod tests_features;
+
+/// B-SIDE 16: a member nested past the cap is a limit (`LimitKind::Depth`), not a parse error; other XML damage
+/// stays a parse error.
+#[cfg(test)]
+mod depth_is_a_limit {
+    #[test]
+    fn nesting_cap_is_coded_limit() {
+        let deep = "<a>".repeat(xml::MAX_DEPTH + 5) + &"</a>".repeat(xml::MAX_DEPTH + 5);
+        let m = crate::xml::parse(&deep).unwrap_err();
+        match crate::xml_member_err("word/document.xml", &m) {
+            bilingua_model::Error::Limit(e) => {
+                assert_eq!(e.kind, bilingua_model::LimitKind::Depth);
+                assert!(e.msg.starts_with("word/document.xml: elements nested deeper than"), "{}", e.msg);
+            }
+            other => panic!("{other:?}"),
+        }
+        let bad = crate::xml::parse("<a><b></a>").unwrap_err();
+        assert!(matches!(crate::xml_member_err("m.xml", &bad), bilingua_model::Error::Parse { .. }));
+    }
+    use crate::xml;
+}

@@ -1,0 +1,11 @@
+{
+  "home": {
+    "title": {
+      "string": "Welcome",
+      "context": "page header",
+      "developer_comment": "Keep it short",
+      "character_limit": 20
+    },
+    "files": {"string": "{n, plural, one{# file} other{# files}}"}
+  }
+}

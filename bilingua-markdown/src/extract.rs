@@ -94,7 +94,7 @@ impl Block {
     fn standalone(&mut self, display: &str, code: String, label: &str) {
         self.flush_text();
         let id = self.new_id();
-        self.codes.insert(id.clone(), CodeData { standalone: Some(code), label: Some(label.into()), ..Default::default() });
+        self.codes.insert(id.clone(), CodeData::new().with_standalone(code).with_label(label.to_string()));
         self.inl.push(Inline::tag(id, TagKind::Standalone, display));
     }
 }
@@ -125,7 +125,7 @@ struct Ex<'a> {
     newlines: Vec<usize>,
 }
 
-pub fn extract(full: &str, include_locked: bool) -> Extracted {
+pub fn extract(full: &str, include_locked: bool, fm_keys: Option<&[String]>) -> Extracted {
     let _ = include_locked;
     let mut newlines = vec![];
     for (i, b) in full.bytes().enumerate() {
@@ -133,7 +133,7 @@ pub fn extract(full: &str, include_locked: bool) -> Extracted {
             newlines.push(i);
         }
     }
-    let fm = frontmatter::parse(full);
+    let fm = frontmatter::parse_with(full, fm_keys);
     let off = fm.as_ref().map(|f| f.end).unwrap_or(0);
     let mut ex = Ex { full, off, body: &full[off..], units: vec![], parts: vec![], raw_cursor: 0, last_heading: None, newlines };
     if let Some(fm) = fm {
@@ -143,8 +143,8 @@ pub fn extract(full: &str, include_locked: bool) -> Extracted {
             u.context.kind = Some(v.key.clone());
             u.context.key = Some(v.key.clone());
             u.context.location = Some(format!("line {}", ex.line(v.range.start)));
-            u.codes.insert(RAW_KEY.into(), CodeData { standalone: Some(token), ..Default::default() });
-            u.codes.insert(FM_KEY.into(), CodeData { label: Some(v.style.name().into()), ..Default::default() });
+            u.codes.insert(RAW_KEY.into(), CodeData::new().with_standalone(token));
+            u.codes.insert(FM_KEY.into(), CodeData::new().with_label(v.style.name().to_string()));
             ex.add_unit_in_skeleton(u, v.range.start, v.range.end);
         }
     }
@@ -417,7 +417,7 @@ fn open_container(b: &mut Block, src: &str, evs: &[(Event, Range<usize>)], i: us
     }
     b.flush_text();
     let id = b.new_id();
-    b.codes.insert(id.clone(), CodeData { open: Some(open.to_string()), label: Some(label.into()), ..Default::default() });
+    b.codes.insert(id.clone(), CodeData::new().with_open(open.to_string()).with_label(label.to_string()));
     b.inl.push(Inline::tag(id.clone(), TagKind::Open, display));
     b.stack.push(Frame { id });
     b.cursor = first;

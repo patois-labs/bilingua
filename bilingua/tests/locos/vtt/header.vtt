@@ -1,0 +1,16 @@
+WEBVTT - Title
+Language: en-US
+Kind: captions
+
+NOTE a comment
+spanning lines
+
+STYLE
+::cue { color: red }
+
+intro
+00:00:01.000 --> 00:00:02.000 align:start
+<i>Hello</i> &amp; <b>welcome</b> to <c.x>A & B</c>
+
+00:00:03.000 --> 00:00:04.000
+<ruby>Kan<rt>kan</ruby> ji

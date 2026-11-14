@@ -1,0 +1,63 @@
+{
+ "parse": {
+  "columns": "header=auto",
+  "source_locale": "en-US",
+  "target_locales": [
+   "de-DE"
+  ]
+ },
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Zwei",
+   "style": "",
+   "note": "Comment: =A2&B2 | Key: =A2&B2"
+  },
+  {
+   "p_index": 1,
+   "text": "Save file",
+   "style": "",
+   "note": "Comment: =A2&B2 | Key: =UPPER(A2)"
+  },
+  {
+   "p_index": 2,
+   "text": "x",
+   "style": "",
+   "note": ""
+  },
+  {
+   "p_index": 3,
+   "text": "Hello",
+   "style": "",
+   "note": "Comment: 2024-02-29 | Key: True"
+  },
+  {
+   "p_index": 4,
+   "text": "日本語",
+   "style": "",
+   "note": "Comment: 2024-01-05 10:30:00"
+  },
+  {
+   "p_index": 5,
+   "text": "Total:",
+   "style": "",
+   "note": ""
+  }
+ ],
+ "error": false,
+ "builds": [
+  {
+   "name": "b",
+   "locale": "de-DE",
+   "map": {
+    "0": "T Zwei",
+    "1": "T Save file",
+    "2": "T x",
+    "3": "Hello",
+    "4": "T 日本語",
+    "5": "T Total:"
+   },
+   "file": "fuzz_029.b.xlsx"
+  }
+ ]
+}

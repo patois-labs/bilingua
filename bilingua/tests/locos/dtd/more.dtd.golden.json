@@ -1,0 +1,53 @@
+{
+ "format": "dtd",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "One",
+   "style": "dtd:a"
+  },
+  {
+   "p_index": 1,
+   "text": "Two & three",
+   "style": "dtd:b"
+  },
+  {
+   "p_index": 2,
+   "text": "&brandName; Settings",
+   "style": "dtd:c"
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "PCEtLSBjIC0tPg0KPCFFTlRJVFkgYSAiT25lIj4NCjwhRU5USVRZIGIgJ1R3byAmYW1wOyB0aHJlZSc+DQo8IUVOVElUWSBjICImYnJhbmROYW1lOyBTZXR0aW5ncyI+DQo="
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü One",
+    "1": "Ü Two & three",
+    "2": "Ü &brandName; Settings"
+   },
+   "out_b64": "PCEtLSBjIC0tPg0KPCFFTlRJVFkgYSAiw5wgT25lIj4NCjwhRU5USVRZIGIgJ8OcIFR3byAmYW1wOyB0aHJlZSc+DQo8IUVOVElUWSBjICLDnCAmYnJhbmROYW1lOyBTZXR0aW5ncyI+DQo="
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "One & <\"'>",
+    "2": "&brandName; Settings & <\"'>"
+   },
+   "out_b64": "PCEtLSBjIC0tPg0KPCFFTlRJVFkgYSAiT25lICZhbXA7IDwmcXVvdDsnPiI+DQo8IUVOVElUWSBiICdUd28gJmFtcDsgdGhyZWUnPg0KPCFFTlRJVFkgYyAiJmJyYW5kTmFtZTsgU2V0dGluZ3MgJmFtcDsgPCZxdW90Oyc+Ij4NCg=="
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "out_b64": "PCEtLSBjIC0tPg0KPCFFTlRJVFkgYSAiT25lIj4NCjwhRU5USVRZIGIgJ1R3byAmYW1wOyB0aHJlZSc+DQo8IUVOVElUWSBjICImYnJhbmROYW1lOyBTZXR0aW5ncyI+DQo="
+  }
+ ]
+}

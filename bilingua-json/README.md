@@ -23,6 +23,7 @@ They stay in the skeleton (or become locked units with `ExtractOptions::include_
 - ISO dates and times, UUIDs, long hex hashes, `#rrggbb` colours;
 - key-like words with no spaces: `user.profile.title`, `app_title`, `MAX_RETRY`, `userName`, `en-US`, `pt_BR`,
   and kebab-case with two or more hyphens or a digit (`page-title-main`).
+- a whole-value vue-i18n linked message such as `@:common.save` or `@.lower:(common.save)` (a reference, not text).
 
 Plain words such as `Home`, `e-mail` or `well-known` are extracted. A lower-case camelCase product name such as
 `iPhone` is treated as a key and skipped; add it to a project glossary if that is wrong.

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="windows-1252"?>
+<PackageProject xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" Guid="7d1c2a40-5b6e-4f70-8a91-0b2c3d4e5f60" PackageGuid="c0ffee00-1234-4abc-9def-001122334455" PackageName="Menu de la boulangerie Lumen" PackageType="ProjectPackage" Comment="Carte de printemps pour les vitrines, très détaillée" Version="4.0.0.0" Name="Menu de la boulangerie Lumen">
+  <LanguageDirections>
+    <LanguageDirection Guid="11111111-2222-4333-8444-555555555555" TargetLanguageCode="es-ES" SourceLanguageCode="fr-FR" />
+  </LanguageDirections>
+</PackageProject>

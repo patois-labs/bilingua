@@ -1,0 +1,22 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<HTML><HEAD><meta http-equiv="Content-Type" content="text/html; charset=windows-1256">
+<!-- Sitemap 1.0 -->
+</HEAD><BODY>
+<UL>
+	<LI> <OBJECT type="text/sitemap">
+		<param name="Name" value="طلب الخبز عبر الإنترنت">
+		<param name="Name" value="البدء">
+		<param name="Local" value="html/ar/start.htm">
+		<param name="Name" value="التوصيل والاستلام">
+		<param name="Local" value="html/ar/delivery.htm">
+		</OBJECT>
+	<LI> <OBJECT type="text/sitemap">
+		<param name="Keyword" value="الأسئلة الشائعة">
+		<param name="Local" value="html/ar/faq.htm">
+		</OBJECT>
+	<LI> <OBJECT type="text/sitemap">
+		<param name="Name" value="دليل المخبز">
+		<param name="See Also" value="طلب الخبز عبر الإنترنت">
+		</OBJECT>
+</UL>
+</BODY></HTML>

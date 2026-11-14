@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<!-- a comment before the root value -->
+<dict>
+	<key>welcome</key>
+	<string>Welcome back, %@!</string>
+	<key>padded</key>
+	<string>   Padded text   </string>
+	<key>multi</key>
+	<string>First line
+Second line</string>
+	<key>escaped</key>
+	<string>Tom &amp; Jerry&#39;s &lt;best&gt; &#x1F600; caf&#xE9;</string>
+	<key>cdata</key>
+	<string><![CDATA[<b>bold</b> & more]]></string>
+	<key>percent</key>
+	<string>100%% sure of %d items and %1$@</string>
+	<key>empty</key>
+	<string></string>
+	<key>selfclosed</key>
+	<string/>
+	<key>only_spec</key>
+	<string>%@</string>
+	<key>id</key>
+	<string>com.example.thing</string>
+	<key>url</key>
+	<string>https://example.com/help</string>
+	<key>build</key>
+	<string>$(PRODUCT_NAME)</string>
+	<key>version</key>
+	<string>2.0.1</string>
+	<key>snake</key>
+	<string>home_screen</string>
+	<key>camel</key>
+	<string>isEnabled</string>
+	<key>colour</key>
+	<string>#FFAA00</string>
+	<key>count</key>
+	<integer>42</integer>
+	<key>ratio</key>
+	<real>1.25</real>
+	<key>flag</key>
+	<true/>
+	<key>off</key>
+	<false/>
+	<key>when</key>
+	<date>2026-10-10T09:30:00Z</date>
+	<key>blob</key>
+	<data>
+	AAECAw==
+	</data>
+	<key>list</key>
+	<array>
+		<string>First item</string>
+		<dict>
+			<key>label</key>
+			<string>Nested label</string>
+		</dict>
+		<array>
+			<string>Deep item</string>
+		</array>
+	</array>
+</dict>
+</plist>

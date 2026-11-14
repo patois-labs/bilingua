@@ -1,0 +1,31 @@
+// Larchmoor Reader: strings for the start page.
+// Hand-written; every name and sentence is made up.
+{
+  /* Home page */
+  "home_title": "Larchmoor Reader",
+  "_home_title.comment": "Product name. Do not translate the brand.",
+  "_home_title.source": "Home.resx",
+  "home_welcome": "  Welcome back, {0}!  ",
+  "_home_welcome.comment": "{0} is the reader's first name.",
+  "_home_welcome.maxLength": 60,
+  "home_count": "You have {0} unread {1}.",
+  "home_percent": "%d%% of the book is read",
+  "home_code": "{0}",
+  "home_dash": "---",
+  "home_empty": "",
+  "home_blank": "   ",
+  "home_unicode": "Caf\u00e9 \u2013 d\u00e9j\u00e0 vu \/ \ud83d\ude00",
+  "home_line": "First line\nSecond line\ttabbed",
+
+  "settings": {
+    "title": "Settings", // trailing comment
+    "_title.comment": "Page title.",
+    "theme": { "dark": "Dark", "light": "Light", "auto": "Follow system" },
+    "flags": { "beta": true, "retries": 3, "ratio": -1.5e+3, "off": null },
+    "_title.maxLength": 24,
+  },
+
+  "tips": ["Swipe to turn the page", "Tap twice to zoom", 7, ["Nested tip"]],
+  "dup": "First",
+  "dup": "Second"
+}

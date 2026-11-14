@@ -1,0 +1,16 @@
+<!-- This Source Code Form is subject to the terms of the Mozilla Public
+   - License, v. 2.0. If a copy of the MPL was not distributed with this
+   - file, You can obtain one at http://mozilla.org/MPL/2.0/. -->
+
+<!ENTITY % brandDTD SYSTEM "chrome://branding/locale/brand.dtd">
+%brandDTD;
+
+<!-- LOCALIZATION NOTE (window.title): &brandShortName; is the product name (pt). -->
+<!ENTITY window.title "&brandShortName; - Padaria Lumen">
+<!ENTITY login.label "Entrar">
+<!ENTITY login.accesskey "E">
+<!ENTITY save.label 'Salvar e fechar'>
+<!ENTITY click.text "Clique em &quot;Salvar&quot;">
+<!ENTITY tagline.text "<html:b>Pão fresco toda manhã</html:b> &#169; 100&#037;">
+<!ENTITY ref.only "&brandShortName;">
+<!ENTITY escaped.markup "&lt;i>Pão fresco toda manhã&lt;/i> &lt;now&gt;">

@@ -1,0 +1,202 @@
+{
+	"sourceLanguage": "en-US",
+	"strings": {
+		"empty.entry": {
+			"localizations": {
+				"ja": {
+					"stringUnit": {
+						"state": "translated",
+						"value": "\u7ffb\u8a33 empty.entry"
+					}
+				}
+			}
+		},
+		"  padded  ": {
+			"comment": "key with spaces; also used as the source text",
+			"localizations": {
+				"ja": {
+					"stringUnit": {
+						"state": "translated",
+						"value": "  \u7ffb\u8a33 padded  "
+					}
+				}
+			}
+		},
+		"Zeta key": {
+			"localizations": {
+				"fr": {
+					"stringUnit": {
+						"state": "needs_review",
+						"value": "Cle zeta"
+					}
+				},
+				"en-US": {
+					"stringUnit": {
+						"state": "new",
+						"value": "  Zeta value %1$@ of %2$@  "
+					}
+				},
+				"ja": {
+					"stringUnit": {
+						"state": "translated",
+						"value": "  \u7ffb\u8a33 Zeta value %1$@ of %2$@  "
+					}
+				}
+			}
+		},
+		"files": {
+			"extractionState": "manual",
+			"localizations": {
+				"en-US": {
+					"stringUnit": {
+						"state": "translated",
+						"value": "%#@count@ in 100%% of folders"
+					},
+					"substitutions": {
+						"count": {
+							"argNum": 1,
+							"formatSpecifier": "d",
+							"variations": {
+								"plural": {
+									"zero": {
+										"stringUnit": {
+											"state": "translated",
+											"value": "No files"
+										}
+									},
+									"one": {
+										"stringUnit": {
+											"state": "translated",
+											"value": "%arg file"
+										}
+									},
+									"other": {
+										"stringUnit": {
+											"state": "translated",
+											"value": "%arg files"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"ja": {
+					"stringUnit": {
+						"state": "translated",
+						"value": "\u7ffb\u8a33 %#@count@ in 100%% of folders"
+					},
+					"substitutions": {
+						"count": {
+							"argNum": 1,
+							"formatSpecifier": "d",
+							"variations": {
+								"plural": {
+									"other": {
+										"stringUnit": {
+											"state": "translated",
+											"value": "\u7ffb\u8a33 %arg files"
+										}
+									},
+									"zero": {
+										"stringUnit": {
+											"state": "translated",
+											"value": "\u7ffb\u8a33 No files"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"zh-Hans": {
+					"stringUnit": {
+						"state": "translated",
+						"value": "zh existing"
+					}
+				}
+			}
+		},
+		"device.plural": {
+			"comment": "Device first, then plural inside",
+			"localizations": {
+				"en-US": {
+					"variations": {
+						"device": {
+							"iphone": {
+								"variations": {
+									"plural": {
+										"one": {
+											"stringUnit": {
+												"state": "translated",
+												"value": "One tap"
+											}
+										},
+										"other": {
+											"stringUnit": {
+												"state": "translated",
+												"value": "%lld taps"
+											}
+										}
+									}
+								}
+							},
+							"other": {
+								"stringUnit": {
+									"state": "translated",
+									"value": "Any other device \u00e9"
+								}
+							}
+						}
+					}
+				},
+				"ja": {
+					"variations": {
+						"device": {
+							"iphone": {
+								"variations": {
+									"plural": {
+										"other": {
+											"stringUnit": {
+												"state": "translated",
+												"value": "\u7ffb\u8a33 %lld taps"
+											}
+										}
+									}
+								}
+							},
+							"other": {
+								"stringUnit": {
+									"state": "translated",
+									"value": "\u7ffb\u8a33 Any other device \u00e9"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"12345": {
+			"shouldTranslate": false
+		},
+		"---": {},
+		"%@": {},
+		"Slash/key": {
+			"localizations": {
+				"en-US": {
+					"stringUnit": {
+						"state": "translated",
+						"value": "A/B \u201cquoted\u201d \u2013 done"
+					}
+				},
+				"ja": {
+					"stringUnit": {
+						"state": "translated",
+						"value": "\u7ffb\u8a33 A/B \u201cquoted\u201d \u2013 done"
+					}
+				}
+			}
+		}
+	},
+	"version": "1.1"
+}

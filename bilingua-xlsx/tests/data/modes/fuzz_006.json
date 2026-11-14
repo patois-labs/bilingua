@@ -1,0 +1,29 @@
+{
+ "parse": {
+  "columns": "source=en,target.de=de,context=Notes",
+  "source_locale": "en-US",
+  "target_locales": [
+   "de",
+   "fr"
+  ]
+ },
+ "units": [
+  {
+   "p_index": 0,
+   "text": "a&b",
+   "style": "",
+   "note": ""
+  }
+ ],
+ "error": false,
+ "builds": [
+  {
+   "name": "b",
+   "locale": "de",
+   "map": {
+    "0": "T a&b"
+   },
+   "file": "fuzz_006.b.xlsx"
+  }
+ ]
+}

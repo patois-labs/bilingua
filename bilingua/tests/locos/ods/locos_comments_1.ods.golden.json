@@ -1,0 +1,98 @@
+{
+ "format": "ods",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Revenue",
+   "style": ""
+  },
+  {
+   "p_index": 1000000,
+   "text": "Rounded figure.",
+   "style": "comment"
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "zip": [
+    {
+     "name": "mimetype",
+     "same": true
+    },
+    {
+     "name": "content.xml",
+     "same": true
+    },
+    {
+     "name": "META-INF/manifest.xml",
+     "same": true
+    }
+   ]
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü Revenue",
+    "1000000": "Ü Rounded figure."
+   },
+   "zip": [
+    {
+     "name": "mimetype",
+     "same": true
+    },
+    {
+     "name": "content.xml",
+     "sha1": "e80cf694c018f2429c7e85b2e3a20c6a55bdf432"
+    },
+    {
+     "name": "META-INF/manifest.xml",
+     "same": true
+    }
+   ]
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Revenue & <\"'>"
+   },
+   "zip": [
+    {
+     "name": "mimetype",
+     "same": true
+    },
+    {
+     "name": "content.xml",
+     "sha1": "c2e2c432882003797209d995fedebba11b05f7a3"
+    },
+    {
+     "name": "META-INF/manifest.xml",
+     "same": true
+    }
+   ]
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "zip": [
+    {
+     "name": "mimetype",
+     "same": true
+    },
+    {
+     "name": "content.xml",
+     "same": true
+    },
+    {
+     "name": "META-INF/manifest.xml",
+     "same": true
+    }
+   ]
+  }
+ ]
+}

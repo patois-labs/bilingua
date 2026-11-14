@@ -1,0 +1,92 @@
+{
+ "format": "md",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "See [one][a], [two][b], [three][c], [four][d], [five][e] and [six][f].",
+   "style": ""
+  },
+  {
+   "p_index": 1,
+   "text": "Double quoted title",
+   "style": ""
+  },
+  {
+   "p_index": 2,
+   "text": "Single quoted title",
+   "style": ""
+  },
+  {
+   "p_index": 3,
+   "text": "Parenthesised title",
+   "style": ""
+  },
+  {
+   "p_index": 4,
+   "text": "Angle destination title",
+   "style": ""
+  },
+  {
+   "p_index": 5,
+   "text": "Title on the next line",
+   "style": ""
+  },
+  {
+   "p_index": 6,
+   "text": "A paragraph line",
+   "style": ""
+  },
+  {
+   "p_index": 7,
+   "text": "[g]: https://example.com/g \"glued to the paragraph\"",
+   "style": ""
+  },
+  {
+   "p_index": 8,
+   "text": "[Note]: Read this before you install anything.",
+   "style": ""
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "U2VlIFtvbmVdW2FdLCBbdHdvXVtiXSwgW3RocmVlXVtjXSwgW2ZvdXJdW2RdLCBbZml2ZV1bZV0gYW5kIFtzaXhdW2ZdLgoKW2FdOiBodHRwczovL2V4YW1wbGUuY29tL2EgIkRvdWJsZSBxdW90ZWQgdGl0bGUiCltiXTogaHR0cHM6Ly9leGFtcGxlLmNvbS9iICdTaW5nbGUgcXVvdGVkIHRpdGxlJwpbY106IGh0dHBzOi8vZXhhbXBsZS5jb20vYyAoUGFyZW50aGVzaXNlZCB0aXRsZSkKW2RdOiA8aHR0cHM6Ly9leGFtcGxlLmNvbS9kIGQ+ICJBbmdsZSBkZXN0aW5hdGlvbiB0aXRsZSIKW2VdOiBodHRwczovL2V4YW1wbGUuY29tL2UKICAgIlRpdGxlIG9uIHRoZSBuZXh0IGxpbmUiCltmXTogaHR0cHM6Ly9leGFtcGxlLmNvbS9mCgpBIHBhcmFncmFwaCBsaW5lCltnXTogaHR0cHM6Ly9leGFtcGxlLmNvbS9nICJnbHVlZCB0byB0aGUgcGFyYWdyYXBoIgoKW05vdGVdOiBSZWFkIHRoaXMgYmVmb3JlIHlvdSBpbnN0YWxsIGFueXRoaW5nLgo="
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü See [one][a], [two][b], [three][c], [four][d], [five][e] and [six][f].",
+    "1": "Ü Double quoted title",
+    "2": "Ü Single quoted title",
+    "3": "Ü Parenthesised title",
+    "4": "Ü Angle destination title",
+    "5": "Ü Title on the next line",
+    "6": "Ü A paragraph line",
+    "7": "Ü [g]: https://example.com/g \"glued to the paragraph\"",
+    "8": "Ü [Note]: Read this before you install anything."
+   },
+   "out_b64": "w5wgU2VlIFtvbmVdW2FdLCBbdHdvXVtiXSwgW3RocmVlXVtjXSwgW2ZvdXJdW2RdLCBbZml2ZV1bZV0gYW5kIFtzaXhdW2ZdLgoKW2FdOiBodHRwczovL2V4YW1wbGUuY29tL2EgIsOcIERvdWJsZSBxdW90ZWQgdGl0bGUiCltiXTogaHR0cHM6Ly9leGFtcGxlLmNvbS9iICfDnCBTaW5nbGUgcXVvdGVkIHRpdGxlJwpbY106IGh0dHBzOi8vZXhhbXBsZS5jb20vYyAow5wgUGFyZW50aGVzaXNlZCB0aXRsZSkKW2RdOiA8aHR0cHM6Ly9leGFtcGxlLmNvbS9kIGQ+ICLDnCBBbmdsZSBkZXN0aW5hdGlvbiB0aXRsZSIKW2VdOiBodHRwczovL2V4YW1wbGUuY29tL2UKICAgIsOcIFRpdGxlIG9uIHRoZSBuZXh0IGxpbmUiCltmXTogaHR0cHM6Ly9leGFtcGxlLmNvbS9mCgrDnCBBIHBhcmFncmFwaCBsaW5lCsOcIFtnXTogaHR0cHM6Ly9leGFtcGxlLmNvbS9nICJnbHVlZCB0byB0aGUgcGFyYWdyYXBoIgoKw5wgW05vdGVdOiBSZWFkIHRoaXMgYmVmb3JlIHlvdSBpbnN0YWxsIGFueXRoaW5nLgo="
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "See [one][a], [two][b], [three][c], [four][d], [five][e] and [six][f]. & <\"'>",
+    "2": "Single quoted title & <\"'>",
+    "4": "Angle destination title & <\"'>",
+    "6": "A paragraph line & <\"'>",
+    "8": "[Note]: Read this before you install anything. & <\"'>"
+   },
+   "out_b64": "U2VlIFtvbmVdW2FdLCBbdHdvXVtiXSwgW3RocmVlXVtjXSwgW2ZvdXJdW2RdLCBbZml2ZV1bZV0gYW5kIFtzaXhdW2ZdLiAmIDwiJz4KClthXTogaHR0cHM6Ly9leGFtcGxlLmNvbS9hICJEb3VibGUgcXVvdGVkIHRpdGxlIgpbYl06IGh0dHBzOi8vZXhhbXBsZS5jb20vYiAnU2luZ2xlIHF1b3RlZCB0aXRsZSAmIDwiXCc+JwpbY106IGh0dHBzOi8vZXhhbXBsZS5jb20vYyAoUGFyZW50aGVzaXNlZCB0aXRsZSkKW2RdOiA8aHR0cHM6Ly9leGFtcGxlLmNvbS9kIGQ+ICJBbmdsZSBkZXN0aW5hdGlvbiB0aXRsZSAmIDxcIic+IgpbZV06IGh0dHBzOi8vZXhhbXBsZS5jb20vZQogICAiVGl0bGUgb24gdGhlIG5leHQgbGluZSIKW2ZdOiBodHRwczovL2V4YW1wbGUuY29tL2YKCkEgcGFyYWdyYXBoIGxpbmUgJiA8Iic+CltnXTogaHR0cHM6Ly9leGFtcGxlLmNvbS9nICJnbHVlZCB0byB0aGUgcGFyYWdyYXBoIgoKW05vdGVdOiBSZWFkIHRoaXMgYmVmb3JlIHlvdSBpbnN0YWxsIGFueXRoaW5nLiAmIDwiJz4K"
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "out_b64": "U2VlIFtvbmVdW2FdLCBbdHdvXVtiXSwgW3RocmVlXVtjXSwgW2ZvdXJdW2RdLCBbZml2ZV1bZV0gYW5kIFtzaXhdW2ZdLgoKW2FdOiBodHRwczovL2V4YW1wbGUuY29tL2EgIkRvdWJsZSBxdW90ZWQgdGl0bGUiCltiXTogaHR0cHM6Ly9leGFtcGxlLmNvbS9iICdTaW5nbGUgcXVvdGVkIHRpdGxlJwpbY106IGh0dHBzOi8vZXhhbXBsZS5jb20vYyAoUGFyZW50aGVzaXNlZCB0aXRsZSkKW2RdOiA8aHR0cHM6Ly9leGFtcGxlLmNvbS9kIGQ+ICJBbmdsZSBkZXN0aW5hdGlvbiB0aXRsZSIKW2VdOiBodHRwczovL2V4YW1wbGUuY29tL2UKICAgIlRpdGxlIG9uIHRoZSBuZXh0IGxpbmUiCltmXTogaHR0cHM6Ly9leGFtcGxlLmNvbS9mCgpBIHBhcmFncmFwaCBsaW5lCltnXTogaHR0cHM6Ly9leGFtcGxlLmNvbS9nICJnbHVlZCB0byB0aGUgcGFyYWdyYXBoIgoKW05vdGVdOiBSZWFkIHRoaXMgYmVmb3JlIHlvdSBpbnN0YWxsIGFueXRoaW5nLgo="
+  }
+ ]
+}

@@ -1,0 +1,1 @@
+<svg><style><img alt="In svg style"></style></svg><p>Hi there</p><a title="Link title">go</a>

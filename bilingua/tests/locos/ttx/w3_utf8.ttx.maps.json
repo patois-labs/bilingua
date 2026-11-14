@@ -1,0 +1,96 @@
+[
+ {
+  "name": "repair-nested",
+  "locale": null,
+  "map": {
+   "0": "Q ⟦g1⟧A ⟦g1⟧B⟦/g1⟧ C⟦/g1⟧ Pick a ⟦g1⟧blue⟦/g1⟧ pen.",
+   "3": "Q ⟦g1⟧A ⟦g1⟧B⟦/g1⟧ C⟦/g1⟧ Last ⟦g1⟧green⟦/g1⟧ cup."
+  }
+ },
+ {
+  "name": "repair-point",
+  "locale": null,
+  "map": {
+   "0": "Q Pick a ⟦x1⟧ blue pen.",
+   "3": "Q Last ⟦x1⟧ green cup."
+  }
+ },
+ {
+  "name": "repair-repeat",
+  "locale": null,
+  "map": {
+   "0": "Q Pick a ⟦g1⟧blue⟦/g1⟧ pen. ⟦g1⟧W⟦/g1⟧ E",
+   "3": "Q Last ⟦g1⟧green⟦/g1⟧ cup. ⟦g1⟧W⟦/g1⟧ E"
+  }
+ },
+ {
+  "name": "repair-stray",
+  "locale": null,
+  "map": {
+   "0": "⟦/g1⟧Q Pick a ⟦g1⟧blue⟦/g1⟧ pen. ⟦/g1⟧",
+   "3": "⟦/g1⟧Q Last ⟦g1⟧green⟦/g1⟧ cup. ⟦/g1⟧"
+  }
+ },
+ {
+  "name": "repair-unclosed",
+  "locale": null,
+  "map": {
+   "0": "Q Pick a ⟦g1⟧blue pen.",
+   "3": "Q Last ⟦g1⟧green cup."
+  }
+ },
+ {
+  "name": "repair-xrepeat",
+  "locale": null,
+  "map": {
+   "2": "Q Line one⟦x1⟧line two. ⟦x1⟧"
+  }
+ },
+ {
+  "name": "repair-nested-de-DE",
+  "locale": "de-DE",
+  "map": {
+   "0": "Q ⟦g1⟧A ⟦g1⟧B⟦/g1⟧ C⟦/g1⟧ Pick a ⟦g1⟧blue⟦/g1⟧ pen.",
+   "3": "Q ⟦g1⟧A ⟦g1⟧B⟦/g1⟧ C⟦/g1⟧ Last ⟦g1⟧green⟦/g1⟧ cup."
+  }
+ },
+ {
+  "name": "repair-point-de-DE",
+  "locale": "de-DE",
+  "map": {
+   "0": "Q Pick a ⟦x1⟧ blue pen.",
+   "3": "Q Last ⟦x1⟧ green cup."
+  }
+ },
+ {
+  "name": "repair-repeat-de-DE",
+  "locale": "de-DE",
+  "map": {
+   "0": "Q Pick a ⟦g1⟧blue⟦/g1⟧ pen. ⟦g1⟧W⟦/g1⟧ E",
+   "3": "Q Last ⟦g1⟧green⟦/g1⟧ cup. ⟦g1⟧W⟦/g1⟧ E"
+  }
+ },
+ {
+  "name": "repair-stray-de-DE",
+  "locale": "de-DE",
+  "map": {
+   "0": "⟦/g1⟧Q Pick a ⟦g1⟧blue⟦/g1⟧ pen. ⟦/g1⟧",
+   "3": "⟦/g1⟧Q Last ⟦g1⟧green⟦/g1⟧ cup. ⟦/g1⟧"
+  }
+ },
+ {
+  "name": "repair-unclosed-de-DE",
+  "locale": "de-DE",
+  "map": {
+   "0": "Q Pick a ⟦g1⟧blue pen.",
+   "3": "Q Last ⟦g1⟧green cup."
+  }
+ },
+ {
+  "name": "repair-xrepeat-de-DE",
+  "locale": "de-DE",
+  "map": {
+   "2": "Q Line one⟦x1⟧line two. ⟦x1⟧"
+  }
+ }
+]

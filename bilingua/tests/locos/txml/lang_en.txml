@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<txml locale="en_US" version="1.0" segtype="sentence" datatype="html" targetlocale="xx_XX" createdby="bilingua test corpus">
+<skeleton>&lt;html&gt;&lt;body&gt;&lt;p&gt;</skeleton>
+<translatable blockId="1" datatype="html">
+<segment segmentId="1">
+<source>Open the <ut type="start" x="1">&lt;b&gt;</ut>Settings<ut type="end" x="1">&lt;/b&gt;</ut> menu to continue.</source>
+<ws> </ws>
+</segment>
+<segment segmentId="2" gtmt="true">
+<source>Save and close the file. <ut x="2">&lt;br/&gt;</ut>Hello world! &amp; &#169;</source>
+<target>Save and close the file. (machine)</target>
+</segment>
+</translatable>
+<skeleton>&lt;/p&gt;&lt;p&gt;</skeleton>
+<translatable blockId="2" locked="true"><segment segmentId="1"><source>Hello world!</source></segment></translatable>
+<translatable blockId="3">
+<segment segmentId="1" modified="true"><source>Save and close the file.</source><target score="100">Save and close the file. (done)</target></segment>
+<segment segmentId="2"><source><![CDATA[Open the <raw> Hello world!]]></source><target score="85">Open the (fuzzy)</target></segment>
+<segment segmentId="3"><source>menu to continue. <!-- inline comment -->Settings</source><comments><comment creationid="pm" type="text">Hello world!</comment></comments></segment>
+</translatable>
+<localizable blockId="4"><segment segmentId="1"><source>Settings</source></segment></localizable>
+</txml>

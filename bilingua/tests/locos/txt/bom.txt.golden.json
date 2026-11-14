@@ -1,0 +1,46 @@
+{
+ "format": "txt",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "The café menu.",
+   "style": ""
+  },
+  {
+   "p_index": 1,
+   "text": "Good night.",
+   "style": ""
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "77u/VGhlIGNhZsOpIG1lbnUuCkdvb2QgbmlnaHQuCg=="
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü The café menu.",
+    "1": "Ü Good night."
+   },
+   "out_b64": "77u/w5wgVGhlIGNhZsOpIG1lbnUuCsOcIEdvb2QgbmlnaHQuCg=="
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "The café menu. & <\"'>"
+   },
+   "out_b64": "77u/VGhlIGNhZsOpIG1lbnUuICYgPCInPgpHb29kIG5pZ2h0Lgo="
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "out_b64": "77u/VGhlIGNhZsOpIG1lbnUuCkdvb2QgbmlnaHQuCg=="
+  }
+ ]
+}

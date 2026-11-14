@@ -1,0 +1,56 @@
+{
+ "parse": {
+  "columns": "source=1,target=6,context=3,header=yes",
+  "source_locale": "en-US",
+  "target_locales": [
+   "de-DE"
+  ]
+ },
+ "units": [
+  {
+   "p_index": 0,
+   "text": "日本語",
+   "style": "",
+   "note": "Comment: -1.25"
+  },
+  {
+   "p_index": 1,
+   "text": "日本語",
+   "style": "",
+   "note": "Comment: 1e+20"
+  },
+  {
+   "p_index": 2,
+   "text": " Padded ",
+   "style": "",
+   "note": "Comment: Hello"
+  },
+  {
+   "p_index": 3,
+   "text": "Cancel",
+   "style": "",
+   "note": ""
+  },
+  {
+   "p_index": 4,
+   "text": "x",
+   "style": "",
+   "note": "Comment: =A10  +  1"
+  }
+ ],
+ "error": false,
+ "builds": [
+  {
+   "name": "b",
+   "locale": "de-DE",
+   "map": {
+    "0": "日本語",
+    "1": "T 日本語",
+    "2": "T  Padded ",
+    "3": "T Cancel",
+    "4": "T x"
+   },
+   "file": "fuzz_041.b.xlsx"
+  }
+ ]
+}

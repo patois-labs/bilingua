@@ -1,0 +1,22 @@
+[
+ {
+  "name": "repair-xrepeat",
+  "locale": null,
+  "map": {
+   "1": "Q Hello, ⟦p1⟧! You have ⟦p2⟧ new messages. ⟦p1⟧",
+   "2": "Q The ⟦x1⟧sky⟦x2⟧ is blue ⟦x1⟧",
+   "3": "Q Updated ⟦p1⟧ ⟦p1⟧",
+   "4": "Q {VAR_PLURAL, plural, =0 {just now} =1 {one minute ago} other {⟦p1⟧ minutes ago}} ⟦p1⟧"
+  }
+ },
+ {
+  "name": "repair-xrepeat-de-DE",
+  "locale": "de-DE",
+  "map": {
+   "1": "Q Hello, ⟦p1⟧! You have ⟦p2⟧ new messages. ⟦p1⟧",
+   "2": "Q The ⟦x1⟧sky⟦x2⟧ is blue ⟦x1⟧",
+   "3": "Q Updated ⟦p1⟧ ⟦p1⟧",
+   "4": "Q {VAR_PLURAL, plural, =0 {just now} =1 {one minute ago} other {⟦p1⟧ minutes ago}} ⟦p1⟧"
+  }
+ }
+]

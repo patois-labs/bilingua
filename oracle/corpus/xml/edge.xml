@@ -1,0 +1,15 @@
+<?xml version='1.0'?>
+<!DOCTYPE note SYSTEM "note.dtd">
+<note xmlns:x="urn:lumen" x:id="n1">
+  <to>Anna &amp; Ben</to>
+  <body>Fish &#38; chips &#x263A; for &company; at &lt;noon&gt;</body>
+  <mixed>one <!-- gone --> two <?pi data?> three</mixed>
+  <empty/>
+  <nbsp>a&#160;b</nbsp>
+  <cdata><![CDATA[1 < 2]]></cdata>
+  <deep><a><b><c>deep text</c></b></a></deep>
+  <x:ns>namespaced text</x:ns>
+  <attrs title="Don't &quot;panic&quot;" other='single &amp; quoted'>content</attrs>
+  <blank>   </blank>
+  <tail>text<tail2>inner</tail2>after</tail>
+</note>

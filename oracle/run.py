@@ -26,9 +26,22 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
 # The Localization OS checkout (the oracle). Default: a `local-tms` folder next to the repository.
-LOCOS = Path(os.environ.get("LOCOS_DIR", Path(__file__).resolve().parents[3] / "local-tms"))
+def _find_locos() -> Path:
+    """LOCOS_DIR, else the first `local-tms` folder found next to this repository or any folder above it (a git
+    worktree lives several levels down, so a fixed number of parents is not enough)."""
+    if os.environ.get("LOCOS_DIR"):
+        return Path(os.environ["LOCOS_DIR"])
+    for up in Path(__file__).resolve().parents:
+        if (up / "local-tms" / "app" / "filters").is_dir():
+            return up / "local-tms"
+    return Path(__file__).resolve().parents[3] / "local-tms"
+
+
+LOCOS = _find_locos()
+os.environ["LOCOS_DIR"] = str(LOCOS)  # locos_dump.py reads the same variable
 LOCOS_PY = LOCOS / ".venv" / "Scripts" / "python.exe"
-BL = ROOT / "target" / "debug" / ("bl-dump.exe" if os.name == "nt" else "bl-dump")
+_TARGET = Path(os.environ["CARGO_TARGET_DIR"]) if os.environ.get("CARGO_TARGET_DIR") else ROOT / "target"
+BL = _TARGET / "debug" / ("bl-dump.exe" if os.name == "nt" else "bl-dump")
 if not BL.exists():
     BL = HERE.parent / "target" / "debug" / "bl-dump.exe"
 
@@ -36,8 +49,41 @@ FORMATS = {
     "docx": "DOCX", "docm": "DOCX", "dotx": "DOCX", "xlsx": "XLSX", "xlsm": "XLSX", "pptx": "PPTX",
     "html": "HTML", "htm": "HTML", "md": "Markdown", "markdown": "Markdown", "json": "JSON", "po": "PO",
     "pot": "PO", "srt": "SRT", "vtt": "VTT", "txt": "TXT",
+    "arb": "ARB", "dtd": "DTD", "ftl": "Fluent", "ini": "INI", "properties": "Properties", "strings": "Apple .strings",
+    "toml": "TOML", "yaml": "YAML", "yml": "YAML", "resx": "RESX", "resw": "RESX", "resjson": "RESJSON",
+    "json5": "JSON5", "jsonc": "JSON5", "wxl": "WXL", "xaml": "XAML", "xcstrings": "xcstrings", "xcloc": "xcloc",
+    "js": "JS module", "mjs": "JS module", "cjs": "JS module", "ts": "TS (Qt or JS module)", "mts": "JS module", "cts": "JS module",
+    "php": "PHP array", "xmb": "XMB", "xtb": "XTB",
+    "xlf": "XLIFF", "xliff": "XLIFF", "sdlxliff": "XLIFF", "mqxliff": "XLIFF", "mxliff": "XLIFF",
+    # Waves 3 to 11 (wired in wave 12 from each crate's WIRING.md).
+    "dotm": "DOCX", "xltx": "XLSX", "xltm": "XLSX", "pptm": "PPTX", "potx": "PPTX", "potm": "PPTX", "ppsx": "PPTX",
+    "ppsm": "PPTX", "xhtml": "HTML", "mdown": "Markdown", "mkd": "Markdown", "text": "TXT", "sdlxlf": "XLIFF",
+    "xml": "XML", "dita": "DITA", "ditamap": "DITA", "bookmap": "DITA", "dbk": "DocBook", "docbook": "DocBook",
+    "plist": "plist", "stringsdict": "stringsdict", "mo": "MO", "gmo": "MO", "rc": "RC", "desktop": "desktop",
+    "catkeys": "catkeys", "csv": "CSV", "tsv": "TSV", "tab": "TSV",
+    "odt": "ODF", "ott": "ODF", "ods": "ODF", "ots": "ODF", "odp": "ODF", "otp": "ODF", "odg": "ODF", "otg": "ODF",
+    "idml": "IDML", "icml": "ICML", "wcml": "ICML", "mif": "MIF", "epub": "EPUB", "vsdx": "Visio", "vsdm": "Visio",
+    "xtg": "XPress Tags", "tag": "XPress Tags", "adoc": "AsciiDoc", "asciidoc": "AsciiDoc", "asc": "AsciiDoc",
+    "rst": "reStructuredText", "rest": "reStructuredText", "mdx": "MDX", "tex": "LaTeX", "latex": "LaTeX", "ltx": "LaTeX",
+    "wiki": "MediaWiki", "mediawiki": "MediaWiki", "wikitext": "MediaWiki", "dokuwiki": "DokuWiki",
+    "txml": "Wordfast TXML", "txlf": "Wordfast TXLF", "ttx": "TTX", "xlz": "XLIFF package", "wsxz": "XLIFF package",
+    "dxf": "DXF", "eml": "Email", "flprjzip": "Flare", "hhc": "HTML Help", "hhk": "HTML Help", "hhp": "HTML Help",
+    "aspx": "Server pages", "ascx": "Server pages", "jsp": "Server pages", "jspf": "Server pages",
+    "phtml": "Server pages", "shtml": "Server pages", "shtm": "Server pages", "stm": "Server pages", "erb": "Server pages",
+    "xsl": "XSLT", "xslt": "XSLT", "pdf": "PDF", "svg": "SVG", "png": "Image", "ttml": "TTML", "dfxp": "TTML",
+    "ass": "ASS", "ssa": "ASS", "scc": "SCC", "stl": "EBU STL", "stf": "STF", "sbv": "SBV", "sub": "SUB",
+    "sdlproj": "sdlproj", "mqxlz": "memoQ package", "sdlppx": "Trados package", "sdlrpx": "Trados package",
+    # Wave 12 B: rich text JSON (LocOS walks these in its connectors, not as file filters).
+    "contentful": "Contentful", "portabletext": "Portable Text", "adf": "Jira ADF", "notion": "Notion",
 }
-ORDER = ["DOCX", "XLSX", "PPTX", "HTML", "Markdown", "JSON", "PO", "SRT", "VTT", "TXT"]
+ORDER = ["DOCX", "XLSX", "PPTX", "HTML", "Markdown", "JSON", "PO", "SRT", "VTT", "TXT",
+         "ARB", "DTD", "Fluent", "INI", "Properties", "Apple .strings", "TOML", "YAML", "RESX", "RESJSON", "JSON5", "WXL",
+         "XAML", "xcstrings", "xcloc", "JS module", "TS (Qt or JS module)", "PHP array", "XMB", "XTB", "XLIFF",
+         "XML", "DITA", "DocBook", "plist", "stringsdict", "MO", "RC", "desktop", "catkeys", "CSV", "TSV",
+         "ODF", "IDML", "ICML", "MIF", "EPUB", "Visio", "XPress Tags", "AsciiDoc", "reStructuredText", "MDX", "LaTeX",
+         "MediaWiki", "DokuWiki", "Wordfast TXML", "Wordfast TXLF", "TTX", "XLIFF package", "DXF", "Email", "Flare",
+         "HTML Help", "Server pages", "XSLT", "PDF", "SVG", "Image", "TTML", "ASS", "SCC", "EBU STL", "STF", "SBV", "SUB",
+         "sdlproj", "memoQ package", "Trados package"]
 CODE = "\u00a4"
 LINE_BASED = {"txt": True, "md": True, "markdown": True}
 LOCOS_TOKEN = re.compile("\u27e6/?[a-z]?\\d+\u27e7")
@@ -91,9 +137,12 @@ def run_bl(path: Path, merged: Path) -> dict:
 
 
 def run_locos(paths) -> dict:
-    out = Path(tempfile.mkdtemp(prefix="oracle-")) / "locos.json"
-    subprocess.run([str(LOCOS_PY), str(HERE / "locos_dump.py"), str(out), *map(str, paths)], check=True,
-                   capture_output=True, timeout=1200)
+    tmp = Path(tempfile.mkdtemp(prefix="oracle-"))
+    out = tmp / "locos.json"
+    # The file list goes in a list file: a thousand paths are longer than a Windows command line.
+    (tmp / "files.txt").write_text("\n".join(map(str, paths)), encoding="utf-8")
+    subprocess.run([str(LOCOS_PY), str(HERE / "locos_dump.py"), str(out), "@" + str(tmp / "files.txt")], check=True,
+                   capture_output=True, timeout=3600)
     return json.loads(out.read_text(encoding="utf-8"))
 
 
@@ -163,6 +212,12 @@ def has_letters(s: str) -> bool:
     return any(c.isalpha() for c in s)
 
 
+def pseudo_ok(status: str) -> bool:
+    """bl-dump's pseudo round trip passed: "ok", "ok (n units keep the source ...)", or "n/a..." (a translated
+    merge refused by design, PDF)."""
+    return status == "ok" or status.startswith("ok (") or status.startswith("n/a")
+
+
 def compare(path: Path, bl: dict, lo: dict) -> dict:
     r = {"file": path.name, "bl_error": bl.get("error"), "lo_error": lo.get("error"), "issues": [], "notes": []}
     r["unchanged"] = bl.get("unchanged", "n/a")
@@ -185,6 +240,7 @@ def compare(path: Path, bl: dict, lo: dict) -> dict:
         b = words_of(" ".join(x[0] for x in lu), md)
         r["pairs"] = "words"
         sm = difflib.SequenceMatcher(None, a, b, autojunk=False)
+        r["match_n"], r["match_d"] = sum(m.size for m in sm.get_matching_blocks()), max(len(a), len(b))
         for op, i1, i2, j1, j2 in sm.get_opcodes():
             if op == "equal":
                 continue
@@ -200,6 +256,17 @@ def compare(path: Path, bl: dict, lo: dict) -> dict:
                 missing.remove(m)
                 extra.remove(e)
                 pairs.append((e, m))
+                break
+    # The greedy pairing above can pair a unit with a similar one although its exact twin is left over (it then
+    # shows as one wrong pair plus one missing unit). Swap such pairs back.
+    for i, (x, y) in enumerate(pairs):
+        if strip_codes(x[0]) == strip_codes(y[0]) or loose_bl(x[0]) == loose_lo(y[0]):
+            continue
+        for m in list(missing):
+            if strip_codes(x[0]) == strip_codes(m[0]) or loose_bl(x[0]) == loose_lo(m[0]):
+                missing.remove(m)
+                missing.append(y)
+                pairs[i] = (x, m)
                 break
     # LocOS lists one unit per cell; Bilingua lists a shared string once. A repeat of a matched text is not missing.
     seen = {strip_codes(y[0]) for _, y in pairs}
@@ -219,6 +286,9 @@ def compare(path: Path, bl: dict, lo: dict) -> dict:
             r["notes"].append(("markup shown differently", f"B: {short(x[0], 50)} / L: {short(y[0], 50)}", f"{x[1]} / #{y[1]}"))
         else:
             r["issues"].append(("different text", f"B: {short(x[0], 50)} / L: {short(y[0], 50)}", f"{x[1]} / #{y[1]}"))
+    # Text match: paired units whose words agree, over every unit either side has (repeats already dropped).
+    diff = sum(1 for k, _, _ in r["issues"] if k == "different text")
+    r["match_n"], r["match_d"] = len(pairs) - diff, len(pairs) + len(missing) + len(extra)
     return r
 
 
@@ -296,7 +366,7 @@ def report(results, locos_ok) -> str:
                 L.append(f"| {r['file']} | {r['bl_n']} | {r['lo_n']} | {r['pairs']} | {len(r['issues'])} | {len(r['notes'])} | {r['codes'][0]}/{r['codes'][1]} | {short(r['unchanged'], 60)} | {short(r['pseudo'], 60)} | {short(r.get('reread', '-'), 60)} |")
             tot["files"] += 1
             tot["issues"] += len(r["issues"])
-            tot["rt_bad"] += (r["unchanged"] not in ("identical", "identical-parts")) + (r["pseudo"] != "ok") + (r.get("reread", "ok") != "ok")
+            tot["rt_bad"] += (r["unchanged"] not in ("identical", "identical-parts")) + (not pseudo_ok(r["pseudo"])) + (r.get("reread", "ok") != "ok")
         L.append("")
         for r in rs:
             if r["issues"] or r.get("pseudo_first"):
@@ -326,7 +396,8 @@ def main():
     external = "--external" in args
     if "--out" in args:
         out = Path(args[args.index("--out") + 1])
-    extra = [a for a in args if not a.startswith("--") and Path(a).is_file() and a != str(out)]
+    skip = {args[args.index("--out") + 1]} if "--out" in args else set()
+    extra = [a for a in args if not a.startswith("--") and Path(a).is_file() and a not in skip]
     if "--build" in args:
         subprocess.run(["cargo", "build", "-p", "bilingua-oracle"], cwd=ROOT, check=True)
     files = collect(extra, external)
@@ -364,4 +435,10 @@ def main():
     print(f"wrote {out}: {len(results)} files")
 
 
-main()
+if __name__ == "__main__":
+    if "--scoreboard" in sys.argv[1:]:
+        import scoreboard
+
+        scoreboard.main()
+    else:
+        main()

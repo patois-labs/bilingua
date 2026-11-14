@@ -1,0 +1,85 @@
+{
+ "format": "md",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Paragraph one.",
+   "style": ""
+  },
+  {
+   "p_index": 1,
+   "text": "lazy continuation, not code",
+   "style": ""
+  },
+  {
+   "p_index": 2,
+   "text": "List item.",
+   "style": ""
+  },
+  {
+   "p_index": 3,
+   "text": "List continuation paragraph.",
+   "style": ""
+  },
+  {
+   "p_index": 4,
+   "text": "Ordered step.",
+   "style": ""
+  },
+  {
+   "p_index": 5,
+   "text": "More for the step.",
+   "style": ""
+  },
+  {
+   "p_index": 6,
+   "text": "Back at the top level.",
+   "style": ""
+  },
+  {
+   "p_index": 7,
+   "text": "Done.",
+   "style": ""
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "ICAgIGluZGVudGVkIGNvZGUgYXQgdGhlIHN0YXJ0CgpQYXJhZ3JhcGggb25lLgogICAgbGF6eSBjb250aW51YXRpb24sIG5vdCBjb2RlCgogICAgcmVhbCBpbmRlbnRlZCBjb2RlCgoJY29kZSBhZnRlciBhIHRhYgoKLSBMaXN0IGl0ZW0uCgogICAgTGlzdCBjb250aW51YXRpb24gcGFyYWdyYXBoLgoKICAgICAgICBsaXN0IGl0ZW0gY29kZSBibG9jawoKMS4gT3JkZXJlZCBzdGVwLgoKICAgIE1vcmUgZm9yIHRoZSBzdGVwLgoKQmFjayBhdCB0aGUgdG9wIGxldmVsLgoKICAgIHRvcCBsZXZlbCBjb2RlIGFnYWluCiAgICBgYGAKICAgIG5vdCBhIGZlbmNlCgpEb25lLgo="
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü Paragraph one.",
+    "1": "Ü lazy continuation, not code",
+    "2": "Ü List item.",
+    "3": "Ü List continuation paragraph.",
+    "4": "Ü Ordered step.",
+    "5": "Ü More for the step.",
+    "6": "Ü Back at the top level.",
+    "7": "Ü Done."
+   },
+   "out_b64": "ICAgIGluZGVudGVkIGNvZGUgYXQgdGhlIHN0YXJ0CgrDnCBQYXJhZ3JhcGggb25lLgogICAgw5wgbGF6eSBjb250aW51YXRpb24sIG5vdCBjb2RlCgogICAgcmVhbCBpbmRlbnRlZCBjb2RlCgoJY29kZSBhZnRlciBhIHRhYgoKLSDDnCBMaXN0IGl0ZW0uCgogICAgw5wgTGlzdCBjb250aW51YXRpb24gcGFyYWdyYXBoLgoKICAgICAgICBsaXN0IGl0ZW0gY29kZSBibG9jawoKMS4gw5wgT3JkZXJlZCBzdGVwLgoKICAgIMOcIE1vcmUgZm9yIHRoZSBzdGVwLgoKw5wgQmFjayBhdCB0aGUgdG9wIGxldmVsLgoKICAgIHRvcCBsZXZlbCBjb2RlIGFnYWluCiAgICBgYGAKICAgIG5vdCBhIGZlbmNlCgrDnCBEb25lLgo="
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Paragraph one. & <\"'>",
+    "2": "List item. & <\"'>",
+    "4": "Ordered step. & <\"'>",
+    "6": "Back at the top level. & <\"'>"
+   },
+   "out_b64": "ICAgIGluZGVudGVkIGNvZGUgYXQgdGhlIHN0YXJ0CgpQYXJhZ3JhcGggb25lLiAmIDwiJz4KICAgIGxhenkgY29udGludWF0aW9uLCBub3QgY29kZQoKICAgIHJlYWwgaW5kZW50ZWQgY29kZQoKCWNvZGUgYWZ0ZXIgYSB0YWIKCi0gTGlzdCBpdGVtLiAmIDwiJz4KCiAgICBMaXN0IGNvbnRpbnVhdGlvbiBwYXJhZ3JhcGguCgogICAgICAgIGxpc3QgaXRlbSBjb2RlIGJsb2NrCgoxLiBPcmRlcmVkIHN0ZXAuICYgPCInPgoKICAgIE1vcmUgZm9yIHRoZSBzdGVwLgoKQmFjayBhdCB0aGUgdG9wIGxldmVsLiAmIDwiJz4KCiAgICB0b3AgbGV2ZWwgY29kZSBhZ2FpbgogICAgYGBgCiAgICBub3QgYSBmZW5jZQoKRG9uZS4K"
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "out_b64": "ICAgIGluZGVudGVkIGNvZGUgYXQgdGhlIHN0YXJ0CgpQYXJhZ3JhcGggb25lLgogICAgbGF6eSBjb250aW51YXRpb24sIG5vdCBjb2RlCgogICAgcmVhbCBpbmRlbnRlZCBjb2RlCgoJY29kZSBhZnRlciBhIHRhYgoKLSBMaXN0IGl0ZW0uCgogICAgTGlzdCBjb250aW51YXRpb24gcGFyYWdyYXBoLgoKICAgICAgICBsaXN0IGl0ZW0gY29kZSBibG9jawoKMS4gT3JkZXJlZCBzdGVwLgoKICAgIE1vcmUgZm9yIHRoZSBzdGVwLgoKQmFjayBhdCB0aGUgdG9wIGxldmVsLgoKICAgIHRvcCBsZXZlbCBjb2RlIGFnYWluCiAgICBgYGAKICAgIG5vdCBhIGZlbmNlCgpEb25lLgo="
+  }
+ ]
+}

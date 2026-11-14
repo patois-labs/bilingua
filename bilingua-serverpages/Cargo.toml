@@ -1,0 +1,21 @@
+[package]
+name = "bilingua-serverpages"
+description = "Bilingua: server pages (ASP.NET aspx/ascx, JSP, PHP templates, SSI shtml, ERB)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+homepage.workspace = true
+include.workspace = true
+readme = "README.md"
+keywords = ["localization", "translation", "l10n", "serverpages", "parser"]
+categories.workspace = true
+
+[dependencies]
+bilingua-model = { workspace = true }
+bilingua-htmlcore = { workspace = true }
+
+[dev-dependencies]
+proptest = { workspace = true }
+serde_json = { workspace = true }

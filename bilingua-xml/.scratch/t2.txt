@@ -1,0 +1,51 @@
+
+running 11 tests
+test xpath_pi ... ok
+test element_layout ... ok
+test encodings ... ok
+test hostile ... ok
+test token_damage ... FAILED
+test attr_layout ... ok
+test detection_negatives ... ok
+test config ... ok
+test identity ... ok
+test in_place_build ... ok
+test scale_linear_build ... ok
+
+failures:
+
+---- token_damage stdout ----
+
+thread 'token_damage' (9424) panicked at bilingua-xml\tests\locos_multilingual.rs:162:9:
+assertion `left == right` failed: <?xml version="1.0" encoding="UTF-8"?>
+<!-- Product strings, one entry per message, every language as a sibling -->
+<catalog xml:lang="en" version='2'>
+  <entry id="welcome">
+    <text xml:lang="en" id="t1">Welcome to <b>Northwind</b>, {0}!</text>
+    <text xml:lang="de" id="t2">Willkommen bei <b>Northwind</b>, {0}!</text>
+    <text xml:lang="fr">Bienvenue <b>chez</b></text>
+  </entry>
+  <entry id="save">
+    <text xml:lang="en">Save &amp; close</text>
+    <text xml:lang="de">Speichern &amp; schliessen</text>
+    <text xml:lang="fr"/>
+  </entry>
+  <entry id="count">
+    <text xml:lang="en">You have %1$s new messages</text>
+  </entry>
+  <entry id="skip">
+    <text xml:lang="en">   </text>
+    <text xml:lang="de">   </text>
+  </entry>
+</catalog>
+
+  left: 2
+ right: 3
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    token_damage
+
+test result: FAILED. 10 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 42.09s
+

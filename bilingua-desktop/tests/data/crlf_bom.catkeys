@@ -1,0 +1,6 @@
+﻿1	english	x-vnd.Example-App	123456789
+Open	MainWindow		Open
+Save %s?	MainWindow	file name	Save %s?
+(	CalcView		(
+Line one\nLine "two"	About		Line one\nLine "two"
+Quit	MainWindow		Beenden

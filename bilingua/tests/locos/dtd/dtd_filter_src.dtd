@@ -1,0 +1,16 @@
+<!-- This Source Code Form is subject to the terms of the Mozilla Public
+   - License, v. 2.0. -->
+
+<!ENTITY % brandDTD SYSTEM "chrome://branding/locale/brand.dtd">
+%brandDTD;
+
+<!-- LOCALIZATION NOTE (window.title): &brandShortName; is the product name. -->
+<!ENTITY window.title "&brandShortName; Settings">
+<!ENTITY save.label 'Save &amp; close'>
+<!ENTITY save.accesskey "S">
+<!ENTITY quote.text "Say &quot;hi&quot; to &#169; 100&#037;">
+<!ENTITY markup.text "Click <html:b>here</html:b> &lt;now&gt;">
+<!ENTITY only.ref "&brandShortName;">
+<!ENTITY   spaced.label
+     "Spaced out"  >
+<!ENTITY ext.file SYSTEM "http://example.invalid/evil.dtd">

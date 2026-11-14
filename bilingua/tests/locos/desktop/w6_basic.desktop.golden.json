@@ -1,0 +1,72 @@
+{
+ "format": "desktop",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Field Guide",
+   "style": ""
+  },
+  {
+   "p_index": 1,
+   "text": "Hiking guide",
+   "style": ""
+  },
+  {
+   "p_index": 2,
+   "text": "Plan a walk with water and maps",
+   "style": ""
+  },
+  {
+   "p_index": 3,
+   "text": "hike",
+   "style": ""
+  },
+  {
+   "p_index": 4,
+   "text": "trail",
+   "style": ""
+  },
+  {
+   "p_index": 5,
+   "text": "map",
+   "style": ""
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "W0Rlc2t0b3AgRW50cnldClR5cGU9QXBwbGljYXRpb24KTmFtZT1GaWVsZCBHdWlkZQpHZW5lcmljTmFtZT1IaWtpbmcgZ3VpZGUKQ29tbWVudD1QbGFuIGEgd2FsayB3aXRoIHdhdGVyIGFuZCBtYXBzCkV4ZWM9ZmllbGRndWlkZSAlVQpJY29uPWZpZWxkZ3VpZGUKS2V5d29yZHM9aGlrZTt0cmFpbDttYXA7Cg=="
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü Field Guide",
+    "1": "Ü Hiking guide",
+    "2": "Ü Plan a walk with water and maps",
+    "3": "Ü hike",
+    "4": "Ü trail",
+    "5": "Ü map"
+   },
+   "out_b64": "W0Rlc2t0b3AgRW50cnldClR5cGU9QXBwbGljYXRpb24KTmFtZT3DnCBGaWVsZCBHdWlkZQpHZW5lcmljTmFtZT3DnCBIaWtpbmcgZ3VpZGUKQ29tbWVudD3DnCBQbGFuIGEgd2FsayB3aXRoIHdhdGVyIGFuZCBtYXBzCkV4ZWM9ZmllbGRndWlkZSAlVQpJY29uPWZpZWxkZ3VpZGUKS2V5d29yZHM9w5wgaGlrZTvDnCB0cmFpbDvDnCBtYXA7Cg=="
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Field Guide & <\"'>",
+    "2": "Plan a walk with water and maps & <\"'>",
+    "4": "trail & <\"'>"
+   },
+   "out_b64": "W0Rlc2t0b3AgRW50cnldClR5cGU9QXBwbGljYXRpb24KTmFtZT1GaWVsZCBHdWlkZQpOYW1lW2RlX0RFXT1GaWVsZCBHdWlkZSAmIDwiJz4KR2VuZXJpY05hbWU9SGlraW5nIGd1aWRlCkNvbW1lbnQ9UGxhbiBhIHdhbGsgd2l0aCB3YXRlciBhbmQgbWFwcwpDb21tZW50W2RlX0RFXT1QbGFuIGEgd2FsayB3aXRoIHdhdGVyIGFuZCBtYXBzICYgPCInPgpFeGVjPWZpZWxkZ3VpZGUgJVUKSWNvbj1maWVsZGd1aWRlCktleXdvcmRzPWhpa2U7dHJhaWw7bWFwOwpLZXl3b3Jkc1tkZV9ERV09aGlrZTt0cmFpbCAmIDwiJz47bWFwOwo="
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "out_b64": "W0Rlc2t0b3AgRW50cnldClR5cGU9QXBwbGljYXRpb24KTmFtZT1GaWVsZCBHdWlkZQpHZW5lcmljTmFtZT1IaWtpbmcgZ3VpZGUKQ29tbWVudD1QbGFuIGEgd2FsayB3aXRoIHdhdGVyIGFuZCBtYXBzCkV4ZWM9ZmllbGRndWlkZSAlVQpJY29uPWZpZWxkZ3VpZGUKS2V5d29yZHM9aGlrZTt0cmFpbDttYXA7Cg=="
+  }
+ ]
+}

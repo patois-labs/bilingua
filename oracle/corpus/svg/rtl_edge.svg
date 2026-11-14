@@ -1,0 +1,1 @@
+<svg xmlns="http://www.w3.org/2000/svg"><text id="z" x="1" y="1"/><text id="a" x="10" y="20">Hello</text><text id="m" x="50" y="40" transform="rotate(30 50 40)" text-anchor="middle"><tspan x="50">One</tspan><tspan x="50" dy="12" text-anchor="start">Two</tspan></text></svg>

@@ -1,0 +1,1 @@
+<?xml version="1.0"?><xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform"><!-- emit <!DOCTYPE html [ <!ENTITY a SYSTEM "f"> ]> first --><xsl:template match="/"><p>Hello</p></xsl:template></xsl:stylesheet>

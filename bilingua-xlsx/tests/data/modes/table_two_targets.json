@@ -1,0 +1,45 @@
+{
+ "parse": {
+  "columns": "source=en,target.de=de,target.fr=fr",
+  "source_locale": "en",
+  "target_locales": [
+   "de-DE",
+   "fr-FR"
+  ]
+ },
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Hello",
+   "style": "",
+   "note": ""
+  },
+  {
+   "p_index": 1,
+   "text": "Thanks",
+   "style": "",
+   "note": ""
+  }
+ ],
+ "error": false,
+ "builds": [
+  {
+   "name": "fr",
+   "locale": "fr-FR",
+   "map": {
+    "0": "FR Hello",
+    "1": "FR Thanks"
+   },
+   "file": "table_two_targets.fr.xlsx"
+  },
+  {
+   "name": "de",
+   "locale": "de-DE",
+   "map": {
+    "0": "DE Hello",
+    "1": "DE Thanks"
+   },
+   "file": "table_two_targets.de.xlsx"
+  }
+ ]
+}

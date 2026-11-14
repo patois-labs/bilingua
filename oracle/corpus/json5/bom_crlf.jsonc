@@ -1,0 +1,5 @@
+﻿// BOM and CRLF line endings
+{
+  "one": "First string",
+  "two": ["Second string", "Third string"],
+}

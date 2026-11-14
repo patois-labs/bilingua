@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Notlar
+Comment=Hızlı not alın
+Keywords=notlar;metin;
+Exec=notes %F
+Actions=new;
+
+[Desktop Action new]
+Name=Yeni not
+Exec=notes --new

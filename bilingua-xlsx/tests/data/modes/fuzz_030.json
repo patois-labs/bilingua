@@ -1,0 +1,36 @@
+{
+ "parse": {
+  "columns": "header=auto",
+  "source_locale": "en-US",
+  "target_locales": [
+   "de",
+   "fr"
+  ]
+ },
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Ünïcödé",
+   "style": "",
+   "note": "Comment: Hello"
+  },
+  {
+   "p_index": 1,
+   "text": "Open the door",
+   "style": "",
+   "note": ""
+  }
+ ],
+ "error": false,
+ "builds": [
+  {
+   "name": "b",
+   "locale": "fr",
+   "map": {
+    "0": "T Ünïcödé",
+    "1": "T Open the door"
+   },
+   "file": "fuzz_030.b.xlsx"
+  }
+ ]
+}

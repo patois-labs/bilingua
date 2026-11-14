@@ -1,0 +1,5 @@
+1	ja	x-vnd.Notes	4711
+開く	MainWindow		開く
+%s を保存しますか？	MainWindow	file name	%s を保存しますか？
+終了	MainWindow		終了
+メモ帳	About		メモ帳

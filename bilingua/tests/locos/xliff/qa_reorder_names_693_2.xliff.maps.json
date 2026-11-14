@@ -1,0 +1,16 @@
+[
+ {
+  "name": "repair-xrepeat",
+  "locale": null,
+  "map": {
+   "0": "Q Delete ⟦x1⟧ from ⟦p2⟧ now ⟦x3⟧bold⟦x4⟧ ⟦x1⟧"
+  }
+ },
+ {
+  "name": "repair-xrepeat-de-DE",
+  "locale": "de-DE",
+  "map": {
+   "0": "Q Delete ⟦x1⟧ from ⟦p2⟧ now ⟦x3⟧bold⟦x4⟧ ⟦x1⟧"
+  }
+ }
+]

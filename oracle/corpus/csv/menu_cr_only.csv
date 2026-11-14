@@ -1,0 +1,2 @@
+key,source,target,context,max lengthbtn.save,Save,,button on the order form,12btn.cancel,Cancel,,button,12msg.welcome,"Welcome back, baker!",,home screen,msg.order,"Your order ""Sourdough Deluxe"" is on its way.",,email,msg.hours,"Open Monday to Friday,
+7 AM to 6 PM.",,"footer, two lines",msg.items,%d items in your basket (%s),,placeholders,msg.tags,<b>Fresh</b> today,,markup,

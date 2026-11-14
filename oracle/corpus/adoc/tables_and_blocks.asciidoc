@@ -1,0 +1,37 @@
+= Blocks
+:author: X
+
+[NOTE]
+====
+An admonition block body is translated.
+====
+
+****
+A sidebar with *bold* text.
+****
+
+====
+An example block.
+
+A second paragraph.
+====
+
+[quote, Someone]
+____
+A quotation here.
+____
+
+....
+literal never translated
+....
+
+----
+listing never translated
+----
+
+|===
+|Name |Value
+a|An *AsciiDoc* cell
+|===
+.. Step one
+.. Step two

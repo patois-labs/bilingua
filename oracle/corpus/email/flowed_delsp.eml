@@ -1,0 +1,15 @@
+From: Ann <ann@example.com>
+Subject: Flowed text
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8; format=flowed; delsp=yes
+Content-Transfer-Encoding: 8bit
+
+This is one long logical line that a mail client wrapped with soft br 
+eaks so it fits in seventy two columns.
+
+> Quoted text that was 
+> flowed by the sender.
+
+Regards 
+-- 
+Ann

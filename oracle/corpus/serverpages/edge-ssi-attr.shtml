@@ -1,0 +1,1 @@
+<a href="<!--#echo var="URL" -->" title="Plain">Last updated <!--#echo var="LAST_MODIFIED" --> by the team.</a>

@@ -1,0 +1,11 @@
+Subject: open
+Content-Type: multipart/mixed; boundary=q
+
+--q
+Content-Type: text/plain
+
+body one
+--q
+Content-Type: text/plain
+
+body two

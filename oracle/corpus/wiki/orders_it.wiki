@@ -1,0 +1,21 @@
+{{Infobox bakery
+| name = Lumen
+}}
+== Panificio Lumen ==
+Il nostro '''pane a lievitazione naturale''' viene sfornato ogni mattina nel [[Bakery|vecchio panificio]]. See https://example.com/menu for more.<ref>Gli orari possono cambiare nei giorni festivi.</ref>
+
+* Ordina prima di mezzogiorno
+* Ritiro al banco ''caffè gratis''
+# Paga con carta o contanti
+
+{| class="wikitable"
+|+ Menu settimanale
+! Giorno !! Pane
+|-
+| Lunedì || Pane di segale
+|}
+
+[[File:Loaf.jpg|thumb|200px|Un pane fresco sul banco]]
+
+<!-- editor note: keep -->
+[[Category:Bakery]]

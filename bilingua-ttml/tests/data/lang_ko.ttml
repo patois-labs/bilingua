@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<tt xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling" xmlns:ttm="http://www.w3.org/ns/ttml#metadata" xml:lang="ko">
+  <head><metadata><ttm:title>Bakery ko</ttm:title></metadata><styling><style xml:id="s1" tts:color="white"/></styling></head>
+  <body><div>
+    <p begin="1s" end="3s" style="s1">빵집에 오신 것을 환영합니다</p>
+    <p begin="4s" end="6s" style="s1"><span tts:fontWeight="bold">{1}에 대한 주문이 {0}개 있습니다</span></p>
+    <p begin="7s" end="9s" style="s1">신선한 빵<br/>매일 아침</p>
+    <p begin="10s" end="12s" style="s1">계속하려면 %1$s을(를) 누르세요</p>
+    <p begin="13s" end="15s" style="s1">감사합니다 &amp; 안녕히 가세요</p>
+  </div></body>
+</tt>

@@ -1,0 +1,21 @@
+[package]
+name = "bilingua-scc"
+description = "Bilingua: Scenarist Closed Captions (SCC, CEA-608) filter"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+homepage.workspace = true
+include.workspace = true
+readme = "README.md"
+keywords = ["localization", "translation", "l10n", "scc", "parser"]
+categories.workspace = true
+
+[dependencies]
+bilingua-model = { workspace = true }
+unicode-normalization = { workspace = true }
+
+[dev-dependencies]
+proptest = { workspace = true }
+serde_json = { workspace = true }

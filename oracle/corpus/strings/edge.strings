@@ -1,0 +1,17 @@
+/* Class = "UILabel"; text = "Title"; ObjectID = "abc-12-xyz"; */
+"abc-12-xyz.text" = "Title";
+// unquoted forms
+plain_key = plainValue;
+"emoji" = "Party \UD83C\UDF89 time";
+"octal" = "Tab\011done";
+"padded" = "  keep my spaces  ";
+"empty" = "";
+"only_ph" = "%@";
+"only_num" = "---";
+"stringsdict" = "%#@files@";
+"percent" = "100%% sure, %d%% done, 50% off";
+"multi" = "line1\nline2\r\nline3\ttab";
+"quote" = "He said \"hi\" and C:\\dir";
+"dup" = "First";
+"dup" = "Second";
+/* trailing comment */

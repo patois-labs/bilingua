@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- en strings -->
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib">
+    <sys:String x:Key="Welcome">Welcome to the Lumen Bakery</sys:String>
+    <sys:String x:Key="Order">Order {0} loaves for {1}</sys:String>
+    <sys:String x:Key="Save">Save &amp; close</sys:String>
+    <sys:String x:Key="Total">Total: %d items</sys:String>
+    <sys:String x:Key="Bound">{Binding Path=Name}</sys:String>
+    <sys:String x:Key="Num">42</sys:String>
+    <SolidColorBrush x:Key="Accent" Color="#FF0078D7"/>
+</ResourceDictionary>

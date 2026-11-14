@@ -1,0 +1,53 @@
+{
+ "format": "txt",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "First",
+   "style": ""
+  },
+  {
+   "p_index": 1,
+   "text": "Second",
+   "style": ""
+  },
+  {
+   "p_index": 2,
+   "text": "Third",
+   "style": ""
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "Rmlyc3QKCgpTZWNvbmQgIAogICAKVGhpcmQ="
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü First",
+    "1": "Ü Second",
+    "2": "Ü Third"
+   },
+   "out_b64": "w5wgRmlyc3QKCgrDnCBTZWNvbmQKICAgCsOcIFRoaXJk"
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "First & <\"'>",
+    "2": "Third & <\"'>"
+   },
+   "out_b64": "Rmlyc3QgJiA8Iic+CgoKU2Vjb25kCiAgIApUaGlyZCAmIDwiJz4="
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "out_b64": "Rmlyc3QKCgpTZWNvbmQKICAgClRoaXJk"
+  }
+ ]
+}

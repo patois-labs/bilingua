@@ -1,0 +1,516 @@
+{
+ "help_en.flprjzip": [
+  [
+   "Printing guide",
+   ""
+  ],
+  [
+   "Print with ⟦x1⟧",
+   ""
+  ],
+  [
+   "Install ⟦x1⟧ before you print, don't skip it.",
+   ""
+  ],
+  [
+   "Read the ⟦g1⟧spooler⟦/g1⟧ notes and see ⟦g2⟧Other topic⟦/g2⟧.⟦x3⟧",
+   ""
+  ],
+  [
+   "Text for ⟦g1⟧online readers only⟦/g1⟧ and everyone.",
+   ""
+  ],
+  [
+   "Brand line: ⟦x1⟧ ends here.",
+   ""
+  ],
+  [
+   "More details",
+   ""
+  ],
+  [
+   "Hidden body text.",
+   ""
+  ],
+  [
+   "⟦x1⟧ Spacing&#160;kept.",
+   ""
+  ],
+  [
+   "Company logo",
+   "a11y:img-alt"
+  ],
+  [
+   "Printing",
+   "flare:index-keyword"
+  ],
+  [
+   "Printing",
+   "flare:index-keyword"
+  ],
+  [
+   "Color",
+   "flare:index-keyword"
+  ],
+  [
+   ":Colon start",
+   "flare:index-keyword"
+  ],
+  [
+   "Outer snippet text.",
+   ""
+  ],
+  [
+   "Inner snippet with ⟦g1⟧print words⟦/g1⟧.",
+   ""
+  ],
+  [
+   "Acme makes writing tools",
+   ""
+  ],
+  [
+   "Acme Writer",
+   "flare:variable"
+  ],
+  [
+   "Write & ship",
+   "flare:variable"
+  ],
+  [
+   "Getting started",
+   "flare:toc-title"
+  ],
+  [
+   "Guide to ⟦x1⟧ printing",
+   "flare:toc-title"
+  ],
+  [
+   "spooler",
+   "flare:glossary-term"
+  ],
+  [
+   "A queue that holds print jobs.",
+   "flare:glossary-definition"
+  ]
+ ],
+ "languages.flprjzip": [
+  [
+   "Acme Writer",
+   "flare:variable"
+  ],
+  [
+   "Write & ship",
+   "flare:variable"
+  ],
+  [
+   "Bake the bread",
+   ""
+  ],
+  [
+   "Bake the bread",
+   ""
+  ],
+  [
+   "Mix the flour, water and salt, then rest the dough. ⟦x1⟧",
+   ""
+  ],
+  [
+   "⟦g1⟧Mix the flour, water and salt, then rest the dough.⟦/g1⟧",
+   ""
+  ],
+  [
+   "Bake the bread",
+   "flare:index-keyword"
+  ],
+  [
+   "Bake the bread",
+   "flare:index-keyword"
+  ],
+  [
+   "Mix th",
+   "flare:index-keyword"
+  ],
+  [
+   "اخبز الخبز",
+   ""
+  ],
+  [
+   "اخبز الخبز",
+   ""
+  ],
+  [
+   "اخلط الدقيق والماء ثم اترك العجين. ⟦x1⟧",
+   ""
+  ],
+  [
+   "⟦g1⟧اخلط الدقيق والماء ثم اترك العجين.⟦/g1⟧",
+   ""
+  ],
+  [
+   "اخبز الخبز",
+   "flare:index-keyword"
+  ],
+  [
+   "اخبز الخبز",
+   "flare:index-keyword"
+  ],
+  [
+   "اخلط ا",
+   "flare:index-keyword"
+  ],
+  [
+   "パンを焼く",
+   ""
+  ],
+  [
+   "パンを焼く",
+   ""
+  ],
+  [
+   "小麦粉と水と塩を混ぜて生地を休ませます。 ⟦x1⟧",
+   ""
+  ],
+  [
+   "⟦g1⟧小麦粉と水と塩を混ぜて生地を休ませます。⟦/g1⟧",
+   ""
+  ],
+  [
+   "パンを焼く",
+   "flare:index-keyword"
+  ],
+  [
+   "パンを焼く",
+   "flare:index-keyword"
+  ],
+  [
+   "小麦粉と水と",
+   "flare:index-keyword"
+  ],
+  [
+   "烘烤面包",
+   ""
+  ],
+  [
+   "烘烤面包",
+   ""
+  ],
+  [
+   "将面粉、水和盐混合，然后醒面。 ⟦x1⟧",
+   ""
+  ],
+  [
+   "⟦g1⟧将面粉、水和盐混合，然后醒面。⟦/g1⟧",
+   ""
+  ],
+  [
+   "烘烤面包",
+   "flare:index-keyword"
+  ],
+  [
+   "烘烤面包",
+   "flare:index-keyword"
+  ],
+  [
+   "将面粉、水和",
+   "flare:index-keyword"
+  ],
+  [
+   "빵 굽기",
+   ""
+  ],
+  [
+   "빵 굽기",
+   ""
+  ],
+  [
+   "밀가루와 물과 소금을 섞고 반죽을 쉬게 하세요. ⟦x1⟧",
+   ""
+  ],
+  [
+   "⟦g1⟧밀가루와 물과 소금을 섞고 반죽을 쉬게 하세요.⟦/g1⟧",
+   ""
+  ],
+  [
+   "빵 굽기",
+   "flare:index-keyword"
+  ],
+  [
+   "빵 굽기",
+   "flare:index-keyword"
+  ],
+  [
+   "밀가루와 물",
+   "flare:index-keyword"
+  ],
+  [
+   "Испечь хлеб",
+   ""
+  ],
+  [
+   "Испечь хлеб",
+   ""
+  ],
+  [
+   "Смешайте муку, воду и соль. ⟦x1⟧",
+   ""
+  ],
+  [
+   "⟦g1⟧Смешайте муку, воду и соль.⟦/g1⟧",
+   ""
+  ],
+  [
+   "Испечь хлеб",
+   "flare:index-keyword"
+  ],
+  [
+   "Испечь хлеб",
+   "flare:index-keyword"
+  ],
+  [
+   "Смешай",
+   "flare:index-keyword"
+  ],
+  [
+   "Brot backen",
+   ""
+  ],
+  [
+   "Brot backen",
+   ""
+  ],
+  [
+   "Mehl, Wasser und Salz mischen und den Teig ruhen lassen. ⟦x1⟧",
+   ""
+  ],
+  [
+   "⟦g1⟧Mehl, Wasser und Salz mischen und den Teig ruhen lassen.⟦/g1⟧",
+   ""
+  ],
+  [
+   "Brot backen",
+   "flare:index-keyword"
+  ],
+  [
+   "Brot backen",
+   "flare:index-keyword"
+  ],
+  [
+   "Mehl,",
+   "flare:index-keyword"
+  ],
+  [
+   "Cuire le pain",
+   ""
+  ],
+  [
+   "Cuire le pain",
+   ""
+  ],
+  [
+   "Mélangez la farine, l'eau et le sel, puis laissez reposer la pâte. ⟦x1⟧",
+   ""
+  ],
+  [
+   "⟦g1⟧Mélangez la farine, l'eau et le sel, puis laissez reposer la pâte.⟦/g1⟧",
+   ""
+  ],
+  [
+   "Cuire le pain",
+   "flare:index-keyword"
+  ],
+  [
+   "Cuire le pain",
+   "flare:index-keyword"
+  ],
+  [
+   "Mélang",
+   "flare:index-keyword"
+  ],
+  [
+   "Hornear el pan",
+   ""
+  ],
+  [
+   "Hornear el pan",
+   ""
+  ],
+  [
+   "Mezcle la harina, el agua y la sal y deje reposar la masa. ⟦x1⟧",
+   ""
+  ],
+  [
+   "⟦g1⟧Mezcle la harina, el agua y la sal y deje reposar la masa.⟦/g1⟧",
+   ""
+  ],
+  [
+   "Hornear el pan",
+   "flare:index-keyword"
+  ],
+  [
+   "Hornear el pan",
+   "flare:index-keyword"
+  ],
+  [
+   "Mezcle",
+   "flare:index-keyword"
+  ],
+  [
+   "रोटी बनाएं",
+   ""
+  ],
+  [
+   "रोटी बनाएं",
+   ""
+  ],
+  [
+   "आटा, पानी और नमक मिलाएं। ⟦x1⟧",
+   ""
+  ],
+  [
+   "⟦g1⟧आटा, पानी और नमक मिलाएं।⟦/g1⟧",
+   ""
+  ],
+  [
+   "रोटी बनाएं",
+   "flare:index-keyword"
+  ],
+  [
+   "रोटी बनाएं",
+   "flare:index-keyword"
+  ],
+  [
+   "आटा, प",
+   "flare:index-keyword"
+  ],
+  [
+   "อบขนมปัง",
+   ""
+  ],
+  [
+   "อบขนมปัง",
+   ""
+  ],
+  [
+   "ผสมแป้ง น้ำ และเกลือ ⟦x1⟧",
+   ""
+  ],
+  [
+   "⟦g1⟧ผสมแป้ง น้ำ และเกลือ⟦/g1⟧",
+   ""
+  ],
+  [
+   "อบขนมปัง",
+   "flare:index-keyword"
+  ],
+  [
+   "อบขนมปัง",
+   "flare:index-keyword"
+  ],
+  [
+   "ผสมแป้",
+   "flare:index-keyword"
+  ]
+ ],
+ "rich.flprjzip": [
+  [
+   "Oven care",
+   ""
+  ],
+  [
+   "Daily care",
+   ""
+  ],
+  [
+   "Wipe the ⟦g1⟧door⟦/g1⟧ glass.",
+   ""
+  ],
+  [
+   "Empty the ⟦g1⟧crumb⟦/g1⟧ tray &amp; check it.",
+   ""
+  ],
+  [
+   "Part",
+   ""
+  ],
+  [
+   "Task",
+   ""
+  ],
+  [
+   "Fan",
+   ""
+  ],
+  [
+   "Dust it weekly.",
+   ""
+  ],
+  [
+   "See ⟦g1⟧⟦g2⟧the ⟦g3⟧print⟦/g3⟧ guide⟦/g2⟧⟦/g1⟧ for ⟦x4⟧ units.",
+   ""
+  ],
+  [
+   "Caf&eacute; r&#233;sum&#233; &lt;tag&gt; and ⟦g1⟧code_sample()⟦/g1⟧ stay.",
+   ""
+  ],
+  [
+   "Call ⟦g1⟧us⟦/g1⟧ ⟦x2⟧⟦x3⟧ now.",
+   ""
+  ],
+  [
+   "Tip",
+   ""
+  ],
+  [
+   "Never use water.",
+   ""
+  ],
+  [
+   "Phone the bakery",
+   "a11y:link-title"
+  ],
+  [
+   "Ovens",
+   "flare:index-keyword"
+  ],
+  [
+   "Cleaning",
+   "flare:index-keyword"
+  ],
+  [
+   "Safety",
+   "flare:index-keyword"
+  ],
+  [
+   "Open daily",
+   "flare:variable"
+  ],
+  [
+   "+1 555 0100 ext. A",
+   "flare:variable"
+  ],
+  [
+   "Oven care & safety",
+   "flare:toc-title"
+  ],
+  [
+   "Daily ⟦x1⟧ checks",
+   "flare:toc-title"
+  ],
+  [
+   "オーブン",
+   "flare:toc-title"
+  ],
+  [
+   "proofing",
+   "flare:glossary-term"
+  ],
+  [
+   "crumb",
+   "flare:glossary-term"
+  ],
+  [
+   "The soft inside of a loaf.",
+   "flare:glossary-definition"
+  ]
+ ]
+}

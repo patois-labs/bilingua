@@ -1,0 +1,189 @@
+[
+  {
+    "object": "block",
+    "id": "b1",
+    "type": "paragraph",
+    "has_children": false,
+    "paragraph": {
+      "rich_text": [
+        {
+          "type": "text",
+          "text": {
+            "content": "Hello ",
+            "link": null
+          },
+          "annotations": {
+            "bold": false,
+            "italic": false
+          },
+          "plain_text": "Hello ",
+          "href": null
+        },
+        {
+          "type": "text",
+          "text": {
+            "content": "world",
+            "link": null
+          },
+          "annotations": {
+            "bold": true,
+            "italic": false
+          },
+          "plain_text": "world",
+          "href": null
+        },
+        {
+          "type": "text",
+          "text": {
+            "content": " site",
+            "link": {
+              "url": "https://x.example"
+            }
+          },
+          "annotations": {
+            "bold": false,
+            "italic": false
+          },
+          "plain_text": " site",
+          "href": "https://x.example"
+        },
+        {
+          "type": "mention",
+          "mention": {
+            "type": "user",
+            "user": {
+              "id": "u"
+            }
+          },
+          "plain_text": "@Ann"
+        }
+      ]
+    }
+  },
+  {
+    "object": "block",
+    "id": "b2",
+    "type": "toggle",
+    "has_children": false,
+    "toggle": {
+      "rich_text": [
+        {
+          "type": "text",
+          "text": {
+            "content": "More",
+            "link": null
+          },
+          "annotations": {
+            "bold": false,
+            "italic": false
+          },
+          "plain_text": "More",
+          "href": null
+        }
+      ],
+      "children": [
+        {
+          "object": "block",
+          "id": "b2c",
+          "type": "paragraph",
+          "has_children": false,
+          "paragraph": {
+            "rich_text": [
+              {
+                "type": "text",
+                "text": {
+                  "content": "Nested step.",
+                  "link": null
+                },
+                "annotations": {
+                  "bold": false,
+                  "italic": false
+                },
+                "plain_text": "Nested step.",
+                "href": null
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "object": "block",
+    "id": "b3",
+    "type": "code",
+    "has_children": false,
+    "code": {
+      "rich_text": [
+        {
+          "type": "text",
+          "text": {
+            "content": "print('hi')",
+            "link": null
+          },
+          "annotations": {
+            "bold": false,
+            "italic": false
+          },
+          "plain_text": "print('hi')",
+          "href": null
+        }
+      ],
+      "caption": [
+        {
+          "type": "text",
+          "text": {
+            "content": "Sample code",
+            "link": null
+          },
+          "annotations": {
+            "bold": false,
+            "italic": false
+          },
+          "plain_text": "Sample code",
+          "href": null
+        }
+      ],
+      "language": "python"
+    }
+  },
+  {
+    "object": "block",
+    "id": "b4",
+    "type": "table_row",
+    "table_row": {
+      "cells": [
+        [
+          {
+            "type": "text",
+            "text": {
+              "content": "Plan",
+              "link": null
+            },
+            "annotations": {
+              "bold": false,
+              "italic": false
+            },
+            "plain_text": "Plan",
+            "href": null
+          }
+        ],
+        [
+          {
+            "type": "text",
+            "text": {
+              "content": "Price",
+              "link": null
+            },
+            "annotations": {
+              "bold": false,
+              "italic": false
+            },
+            "plain_text": "Price",
+            "href": null
+          }
+        ]
+      ]
+    }
+  }
+]

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2" xmlns:gs4tr="http://www.gs4tr.org/schema/xliff-ext">
+  <file original="a.html" source-language="en-US">
+    <body>
+      <trans-unit id="1"><source>One. Two <x id="1"/>three.</source><seg-source><mrk mtype="seg" mid="1">One.</mrk> <mrk mtype="seg" mid="2">Two <x id="1"/>three.</mrk></seg-source></trans-unit>
+      <trans-unit id="2"><source>Alpha. Beta.</source><seg-source><mrk mtype="seg" mid="1">Alpha.</mrk> <mrk mtype="seg" mid="2">Beta.</mrk></seg-source><target><mrk mtype="seg" mid="1"/> <mrk mtype="seg" mid="2"></mrk></target></trans-unit>
+      <trans-unit id="3"><source>Plain &amp; simple.</source></trans-unit>
+    </body>
+  </file>
+  <file original="b.html" source-language="en-US" target-language="fr-FR">
+    <body>
+      <trans-unit id="1"><source><g id="1"><g id="2">Nested</g> text</g></source><target/></trans-unit>
+    </body>
+  </file>
+</xliff>

@@ -1,0 +1,14 @@
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#, fuzzy, c-format
+#| msgid "Old"
+msgid "%d apple"
+msgid_plural "%d apples"
+msgstr[0] "old one"
+msgstr[1] "old many"
+
+msgid "\nLeading newline"
+msgstr ""

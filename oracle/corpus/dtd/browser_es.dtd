@@ -1,0 +1,16 @@
+<!-- This Source Code Form is subject to the terms of the Mozilla Public
+   - License, v. 2.0. If a copy of the MPL was not distributed with this
+   - file, You can obtain one at http://mozilla.org/MPL/2.0/. -->
+
+<!ENTITY % brandDTD SYSTEM "chrome://branding/locale/brand.dtd">
+%brandDTD;
+
+<!-- LOCALIZATION NOTE (window.title): &brandShortName; is the product name (es). -->
+<!ENTITY window.title "&brandShortName; - Panadería Lumen">
+<!ENTITY login.label "Iniciar sesión">
+<!ENTITY login.accesskey "I">
+<!ENTITY save.label 'Guardar y cerrar'>
+<!ENTITY click.text "Pulse &quot;Guardar&quot; para continuar">
+<!ENTITY tagline.text "<html:b>Pan fresco cada mañana</html:b> &#169; 100&#037;">
+<!ENTITY ref.only "&brandShortName;">
+<!ENTITY escaped.markup "&lt;i>Pan fresco cada mañana&lt;/i> &lt;now&gt;">

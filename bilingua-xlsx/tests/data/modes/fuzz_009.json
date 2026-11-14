@@ -1,0 +1,78 @@
+{
+ "parse": {
+  "columns": "source=en-US,target.de-DE=de-DE,context=Notes",
+  "source_locale": "en-US",
+  "target_locales": [
+   "de",
+   "fr"
+  ]
+ },
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Ünïcödé",
+   "style": "",
+   "note": "Notes: 1e+20"
+  },
+  {
+   "p_index": 1,
+   "text": "日本語",
+   "style": "",
+   "note": ""
+  },
+  {
+   "p_index": 2,
+   "text": "Open the door",
+   "style": "",
+   "note": "Notes: 0.25"
+  },
+  {
+   "p_index": 3,
+   "text": "x",
+   "style": "",
+   "note": "Notes: =1+2"
+  },
+  {
+   "p_index": 4,
+   "text": "a&b",
+   "style": "",
+   "note": ""
+  },
+  {
+   "p_index": 5,
+   "text": "x",
+   "style": "",
+   "note": ""
+  },
+  {
+   "p_index": 6,
+   "text": "Hello",
+   "style": "",
+   "note": ""
+  },
+  {
+   "p_index": 7,
+   "text": "Cancel",
+   "style": "",
+   "note": "Notes: Total:"
+  }
+ ],
+ "error": false,
+ "builds": [
+  {
+   "name": "b",
+   "locale": "de",
+   "map": {
+    "0": "T Ünïcödé",
+    "1": "T 日本語",
+    "2": "T Open the door",
+    "3": "T x",
+    "4": "a&b",
+    "5": "T x",
+    "6": "T Hello",
+    "7": "T Cancel"
+   },
+   "file": "fuzz_009.b.xlsx"
+  }
+ ]
+}

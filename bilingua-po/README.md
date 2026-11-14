@@ -6,7 +6,7 @@ gettext PO and POT filter for Bilingua.
 use bilingua_po::Po;
 use bilingua_model::*;
 
-let mut doc = Po.extract(&bytes, &ExtractOptions { target_lang: Some("es".into()), ..Default::default() })?;
+let mut doc = Po.extract(&bytes, &ExtractOptions::new().with_target_lang("es"))?;
 doc.set_target("e2", vec![Inline::text("Hola")])?;
 let out = Po.merge(&doc)?;
 ```
@@ -43,4 +43,4 @@ by a segment. The `#, fuzzy` line is a second skeleton reference to the first un
 
 - No `msgmerge`-style fuzzy matching, no `.mo` output, no wrapping of long lines.
 - Only the first `#,` line holding `fuzzy` is rewritten.
-- Non-UTF-8 PO files return `Error::Unsupported`.
+- Non-UTF-8 PO files return `Error::Encoding` (code `encoding`).

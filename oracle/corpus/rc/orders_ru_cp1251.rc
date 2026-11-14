@@ -1,0 +1,13 @@
+#pragma code_page(1251)
+STRINGTABLE
+BEGIN
+    IDS_GREETING    "Добро пожаловать, %s! Ваш заказ готов."
+    IDS_PICKUP      "Выберите время выдачи"
+END
+
+IDD_ABOUT DIALOG 0, 0, 160, 60
+CAPTION "О программе"
+BEGIN
+    DEFPUSHBUTTON   "О&К",IDOK,50,40,50,14
+    LTEXT           "Пекарня ""Люмен""",IDC_STATIC,7,7,140,10
+END

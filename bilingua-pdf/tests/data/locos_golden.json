@@ -1,0 +1,675 @@
+{
+ "raw_actualtext_type3.pdf": {
+  "ocr_pages": [],
+  "pages": [
+   "replacement text and the rest.\r\nabc"
+  ],
+  "units": [
+   "replacement text and the rest. abc"
+  ]
+ },
+ "raw_arabic_visual.pdf": {
+  "ocr_pages": [
+   0
+  ],
+  "pages": [
+   "مرحبا بالعالم\r\nHelo"
+  ],
+  "units": [
+   "<OCR page 1>"
+  ]
+ },
+ "raw_bad_offsets.pdf": {
+  "ocr_pages": [],
+  "pages": [
+   "Repaired cross reference table text."
+  ],
+  "units": [
+   "Repaired cross reference table text."
+  ]
+ },
+ "raw_cjk_legacy.pdf": {
+  "ocr_pages": [],
+  "pages": [
+   "日本語のテキスト ABC\r\n简体中文文本\r\n繁體中文文字\r\n한국어 텍스트\r\nユニコード"
+  ],
+  "units": [
+   "日本語のテキスト ABC 简体中文文本 繁體中文文字 한국어 텍스트 ユニコード"
+  ]
+ },
+ "raw_empty.pdf": {
+  "error": "PdfiumError",
+  "message": "Failed to load document (PDFium: Data format error)."
+ },
+ "raw_encodings.pdf": {
+  "ocr_pages": [],
+  "pages": [
+   "find flow Łódº asc ffect — “quoted” glyph\u0005\r\nMacRoman: été ä nañve ß\r\nStandard: “quoted” Æ æ fifi\r\nαβχ"
+  ],
+  "units": [
+   "find flow Łódº asc ffect — “quoted” glyph\u0005 MacRoman: été ä nañve ß Standard: “quoted” Æ æ fifi αβχ"
+  ]
+ },
+ "raw_encrypted_aes128.pdf": {
+  "ocr_pages": [],
+  "pages": [
+   "Owner password only, the text still opens."
+  ],
+  "units": [
+   "Owner password only, the text still opens."
+  ]
+ },
+ "raw_encrypted_aes256.pdf": {
+  "ocr_pages": [],
+  "pages": [
+   "Owner password only, the text still opens."
+  ],
+  "units": [
+   "Owner password only, the text still opens."
+  ]
+ },
+ "raw_encrypted_rc4128.pdf": {
+  "ocr_pages": [],
+  "pages": [
+   "Owner password only, the text still opens."
+  ],
+  "units": [
+   "Owner password only, the text still opens."
+  ]
+ },
+ "raw_encrypted_rc440.pdf": {
+  "ocr_pages": [],
+  "pages": [
+   "Owner password only, the text still opens."
+  ],
+  "units": [
+   "Owner password only, the text still opens."
+  ]
+ },
+ "raw_encrypted_userpw.pdf": {
+  "error": "PdfiumError",
+  "message": "Failed to load document (PDFium: Incorrect password error)."
+ },
+ "raw_encrypted_userpw_aes256.pdf": {
+  "error": "PdfiumError",
+  "message": "Failed to load document (PDFium: Incorrect password error)."
+ },
+ "raw_filters.pdf": {
+  "ocr_pages": [],
+  "pages": [
+   "Text through the ASCII85 filter.",
+   "Text through the ASCIIHex filter.",
+   "Text through the LZW filter.",
+   "Text through the RunLength filter.",
+   "Text through the chained filter."
+  ],
+  "units": [
+   "Text through the ASCII85 filter.",
+   "Text through the ASCIIHex filter.",
+   "Text through the LZW filter.",
+   "Text through the RunLength filter.",
+   "Text through the chained filter."
+  ]
+ },
+ "raw_forms.pdf": {
+  "ocr_pages": [],
+  "pages": [
+   "Page text before the form.\r\nOuter form text.\r\nInner nested form text.\r\nText after an inline image in a second stream."
+  ],
+  "units": [
+   "Page text before the form. Outer form text. Inner nested form text. Text after an inline image in a second stream."
+  ]
+ },
+ "raw_incremental.pdf": {
+  "ocr_pages": [],
+  "pages": [
+   "Second revision replaces the first."
+  ],
+  "units": [
+   "Second revision replaces the first."
+  ]
+ },
+ "raw_junk_prefix.pdf": {
+  "ocr_pages": [],
+  "pages": [
+   "Repaired cross reference table text."
+  ],
+  "units": [
+   "Repaired cross reference table text."
+  ]
+ },
+ "raw_kerning.pdf": {
+  "ocr_pages": [],
+  "pages": [
+   "The quick brown fox jumps over the lazy dog.\r\nTightkerningstays joined or splits.\r\nLine ending with a hyphen￾ated word continues here."
+  ],
+  "units": [
+   "The quick brown fox jumps over the lazy dog. Tightkerningstays joined or splits. Line ending with a hyphen￾ated word continues here."
+  ]
+ },
+ "raw_layout.pdf": {
+  "ocr_pages": [],
+  "pages": [
+   "Left gaptouching\r\nleft part drawn second right part\r\nsup 2\r\n after superscript\r\nfake bold\r\ninvisible OCR layer text\r\nrisen wide spaced word spaced text"
+  ],
+  "units": [
+   "Left gaptouching left part drawn second right part sup 2 after superscript fake bold invisible OCR layer text risen wide spaced word spaced text"
+  ]
+ },
+ "raw_no_xref.pdf": {
+  "ocr_pages": [],
+  "pages": [
+   "Repaired cross reference table text."
+  ],
+  "units": [
+   "Repaired cross reference table text."
+  ]
+ },
+ "raw_not_pdf.pdf": {
+  "error": "PdfiumError",
+  "message": "Failed to load document (PDFium: Data format error)."
+ },
+ "raw_objstm.pdf": {
+  "ocr_pages": [],
+  "pages": [
+   "Hello ffi 😀 日本 \r\nabc def\r\nH ello"
+  ],
+  "units": [
+   "Hello ffi 😀 日本 abc def H ello"
+  ]
+ },
+ "raw_page_tree.pdf": {
+  "ocr_pages": [
+   1,
+   2
+  ],
+  "pages": [
+   "Inherited resources and media box on page one.",
+   "",
+   "Page 3"
+  ],
+  "units": [
+   "Inherited resources and media box on page one.",
+   "<OCR page 1>",
+   "<OCR page 2>"
+  ]
+ },
+ "raw_prev_loop.pdf": {
+  "ocr_pages": [],
+  "pages": [
+   "Second revision replaces the first."
+  ],
+  "units": [
+   "Second revision replaces the first."
+  ]
+ },
+ "raw_rotated.pdf": {
+  "ocr_pages": [],
+  "pages": [
+   "Text on a page rotated ninety degrees.\r\nText drawn vertically with a matrix."
+  ],
+  "units": [
+   "Text on a page rotated ninety degrees. Text drawn vertically with a matrix."
+  ]
+ },
+ "raw_std14.pdf": {
+  "ocr_pages": [],
+  "pages": [
+   "Standard fonts: Tj, TJ, quote and double quote.\r\nKerned TJarray\r\nAfter T-star on the next line.\r\nQuote operator line.\r\nDouble quote with spacing.\r\nTimes Roman at ten points, café crème brûlée.\r\nCourier fixed pitch 1234567890"
+  ],
+  "units": [
+   "Standard fonts: Tj, TJ, quote and double quote. Kerned TJarray After T-star on the next line. Quote operator line. Double quote with spacing. Times Roman at ten points, café crème brûlée. Courier fixed pitch 1234567890"
+  ]
+ },
+ "raw_truncated_half.pdf": {
+  "error": "PdfiumError",
+  "message": "Failed to load document (PDFium: Data format error)."
+ },
+ "raw_truncated_tail.pdf": {
+  "ocr_pages": [],
+  "pages": [
+   "Repaired cross reference table text."
+  ],
+  "units": [
+   "Repaired cross reference table text."
+  ]
+ },
+ "raw_type0_tounicode.pdf": {
+  "ocr_pages": [],
+  "pages": [
+   "Hello ffi 😀 日本 \r\nabc def\r\nH ello"
+  ],
+  "units": [
+   "Hello ffi 😀 日本 abc def H ello"
+  ]
+ },
+ "raw_vertical_gap.pdf": {
+  "ocr_pages": [],
+  "pages": [
+   "A first line\r\na second line of the same paragraph\r\nAfter a large vertical gap"
+  ],
+  "units": [
+   "A first line a second line of the same paragraph After a large vertical gap"
+  ]
+ },
+ "typst_digital.pdf": {
+  "ocr_pages": [],
+  "pages": [
+   "Hello world. This is a digital PDF.\r\nSecond paragraph here."
+  ],
+  "units": [
+   "Hello world. This is a digital PDF. Second paragraph here."
+  ]
+ },
+ "typst_escape.pdf": {
+  "ocr_pages": [],
+  "pages": [
+   "Run the tool with --verbose --help to see all flags.\r\nValues in the range 10--20 are valid; see the docs...\r\nwell--known --- ... -? co-?operate --> <-- 1--2\r\ntypst meta: #call *bold* _emph_ `code` [group] $math$ @ref ~tilde // comment\r\npath/with/slashes and quotes 'x' \"y\" and a lone backslash \\ end\r\n<b>&</b> and #read(\"/x\") #include \"y\" #import \"z\" stay literal\r\n- leading dash not a bullet\r\n+ leading plus not an enum\r\n= leading equals not a heading\r\n - spaces then dash\r\n + tab then plus\r\n = spaced heading\r\n1. leading enum stays\r\n1.5 million (decimal)\r\nWORD1 WORD2 WORD3 must not fuse (tab -> space)\r\ncol1 col2 col3 tabbed values stay separated"
+  ],
+  "units": [
+   "Run the tool with --verbose --help to see all flags. Values in the range 10--20 are valid; see the docs... well--known --- ... -? co-?operate --> <-- 1--2 typst meta: #call *bold* _emph_ `code` [group] $math$ @ref ~tilde // comment path/with/slashes and quotes 'x' \"y\" and a lone backslash \\ end <b>&</b> and #read(\"/x\") #include \"y\" #import \"z\" stay literal - leading dash not a bullet + leading plus not an enum = leading equals not a heading - spaces then dash + tab then plus = spaced heading 1. leading enum stays 1.5 million (decimal) WORD1 WORD2 WORD3 must not fuse (tab -> space) col1 col2 col3 tabbed values stay separated"
+  ]
+ },
+ "typst_escape_00.pdf": {
+  "ocr_pages": [],
+  "pages": [
+   "Run the tool with --verbose --help to see all flags."
+  ],
+  "units": [
+   "Run the tool with --verbose --help to see all flags."
+  ]
+ },
+ "typst_escape_01.pdf": {
+  "ocr_pages": [],
+  "pages": [
+   "Values in the range 10--20 are valid; see the docs..."
+  ],
+  "units": [
+   "Values in the range 10--20 are valid; see the docs..."
+  ]
+ },
+ "typst_escape_02.pdf": {
+  "ocr_pages": [],
+  "pages": [
+   "well--known --- ... -? co-?operate --> <-- 1--2"
+  ],
+  "units": [
+   "well--known --- ... -? co-?operate --> <-- 1--2"
+  ]
+ },
+ "typst_escape_03.pdf": {
+  "ocr_pages": [],
+  "pages": [
+   "typst meta: #call *bold* _emph_ `code` [group] $math$ @ref ~tilde // comment"
+  ],
+  "units": [
+   "typst meta: #call *bold* _emph_ `code` [group] $math$ @ref ~tilde // comment"
+  ]
+ },
+ "typst_escape_04.pdf": {
+  "ocr_pages": [],
+  "pages": [
+   "path/with/slashes and quotes 'x' \"y\" and a lone backslash \\ end"
+  ],
+  "units": [
+   "path/with/slashes and quotes 'x' \"y\" and a lone backslash \\ end"
+  ]
+ },
+ "typst_escape_05.pdf": {
+  "ocr_pages": [],
+  "pages": [
+   "<b>&</b> and #read(\"/x\") #include \"y\" #import \"z\" stay literal"
+  ],
+  "units": [
+   "<b>&</b> and #read(\"/x\") #include \"y\" #import \"z\" stay literal"
+  ]
+ },
+ "typst_escape_06.pdf": {
+  "ocr_pages": [],
+  "pages": [
+   "- leading dash not a bullet"
+  ],
+  "units": [
+   "- leading dash not a bullet"
+  ]
+ },
+ "typst_escape_07.pdf": {
+  "ocr_pages": [],
+  "pages": [
+   "+ leading plus not an enum"
+  ],
+  "units": [
+   "+ leading plus not an enum"
+  ]
+ },
+ "typst_escape_08.pdf": {
+  "ocr_pages": [],
+  "pages": [
+   "= leading equals not a heading"
+  ],
+  "units": [
+   "= leading equals not a heading"
+  ]
+ },
+ "typst_escape_09.pdf": {
+  "ocr_pages": [
+   0
+  ],
+  "pages": [
+   " - spaces then dash"
+  ],
+  "units": [
+   "<OCR page 1>"
+  ]
+ },
+ "typst_escape_10.pdf": {
+  "ocr_pages": [
+   0
+  ],
+  "pages": [
+   " + tab then plus"
+  ],
+  "units": [
+   "<OCR page 1>"
+  ]
+ },
+ "typst_escape_11.pdf": {
+  "ocr_pages": [
+   0
+  ],
+  "pages": [
+   " = spaced heading"
+  ],
+  "units": [
+   "<OCR page 1>"
+  ]
+ },
+ "typst_escape_12.pdf": {
+  "ocr_pages": [],
+  "pages": [
+   "1. leading enum stays"
+  ],
+  "units": [
+   "1. leading enum stays"
+  ]
+ },
+ "typst_escape_13.pdf": {
+  "ocr_pages": [],
+  "pages": [
+   "1.5 million (decimal)"
+  ],
+  "units": [
+   "1.5 million (decimal)"
+  ]
+ },
+ "typst_escape_14.pdf": {
+  "ocr_pages": [],
+  "pages": [
+   "WORD1 WORD2 WORD3 must not fuse (tab -> space)"
+  ],
+  "units": [
+   "WORD1 WORD2 WORD3 must not fuse (tab -> space)"
+  ]
+ },
+ "typst_escape_15.pdf": {
+  "ocr_pages": [],
+  "pages": [
+   "col1 col2 col3 tabbed values stay separated"
+  ],
+  "units": [
+   "col1 col2 col3 tabbed values stay separated"
+  ]
+ },
+ "typst_hyphen_columns.pdf": {
+  "ocr_pages": [],
+  "pages": [
+   "Internationalization and localization require extraor￾dinarily comprehensive documentation, notwithstand￾ing unquestionably straightforward implementations. \r\nInternationalization and localization require extraor￾dinarily comprehensive documentation, notwithstand￾ing unquestionably straightforward implementations. \r\nInternationalization and localization require extraor￾dinarily comprehensive documentation, notwithstand￾ing unquestionably straightforward implementations. \r\nInternationalization and localization require extraor￾dinarily comprehensive documentation, notwithstand￾ing unquestionably straightforward implementations. \r\nInternationalization and localization require extraor￾dinarily comprehensive documentation, notwithstand￾ing unquestionably straightforward implementations. \r\nInternationalization and localization require extraor￾dinarily comprehensive documentation, notwithstand￾ing unquestionably straightforward implementations. \r\nInternationalization and localization require extraor￾dinarily comprehensive documentation, notwithstand￾ing unquestionably straightforward implementations. \r\nInternationalization and localization require extraor￾dinarily comprehensive documentation, notwithstand￾ing unquestionably straightforward implementations. \r\nInternationalization and localization require extraor￾dinarily comprehensive documentation, notwithstand￾ing unquestionably straightforward implementations. \r\nInternationalization and localization require extraor￾dinarily comprehensive documentation, notwithstand￾ing unquestionably straightforward implementations. \r\nInternationalization and localization require extraor￾dinarily comprehensive documentation, notwithstand￾ing unquestionably straightforward implementations. \r\nInternationalization and localization require extraordi￾narily comprehensive documentation, notwithstanding \r\nunquestionably straightforward implementations."
+  ],
+  "units": [
+   "Internationalization and localization require extraor￾dinarily comprehensive documentation, notwithstand￾ing unquestionably straightforward implementations. Internationalization and localization require extraor￾dinarily comprehensive documentation, notwithstand￾ing unquestionably straightforward implementations. Internationalization and localization require extraor￾dinarily comprehensive documentation, notwithstand￾ing unquestionably straightforward implementations. Internationalization and localization require extraor￾dinarily comprehensive documentation, notwithstand￾ing unquestionably straightforward implementations. Internationalization and localization require extraor￾dinarily comprehensive documentation, notwithstand￾ing unquestionably straightforward implementations. Internationalization and localization require extraor￾dinarily comprehensive documentation, notwithstand￾ing unquestionably straightforward implementations. Internationalization and localization require extraor￾dinarily comprehensive documentation, notwithstand￾ing unquestionably straightforward implementations. Internationalization and localization require extraor￾dinarily comprehensive documentation, notwithstand￾ing unquestionably straightforward implementations. Internationalization and localization require extraor￾dinarily comprehensive documentation, notwithstand￾ing unquestionably straightforward implementations. Internationalization and localization require extraor￾dinarily comprehensive documentation, notwithstand￾ing unquestionably straightforward implementations. Internationalization and localization require extraor￾dinarily comprehensive documentation, notwithstand￾ing unquestionably straightforward implementations. Internationalization and localization require extraordi￾narily comprehensive documentation, notwithstanding unquestionably straightforward implementations."
+  ]
+ },
+ "typst_lang_ar.pdf": {
+  "ocr_pages": [],
+  "pages": [
+   "الثعلب البني السر يع يقفز فوق الكلب الكسول.\r\nالثعلب البني السر يع يقفز فوق الكلب الكسول. الثعلب البني السر يع يقفز فوق الكلب الكسول."
+  ],
+  "units": [
+   "الثعلب البني السر يع يقفز فوق الكلب الكسول. الثعلب البني السر يع يقفز فوق الكلب الكسول. الثعلب البني السر يع يقفز فوق الكلب الكسول."
+  ]
+ },
+ "typst_lang_bn.pdf": {
+  "ocr_pages": [],
+  "pages": [
+   "দ্রুত বাদামী শিয়াল অলস কুকুরের উপর দিয়ে লাফ দেয়।\r\nদ্রুত বাদামী শিয়াল অলস কুকুরের উপর দিয়ে লাফ দেয়। দ্রুত বাদামী শিয়াল অলস কুকুরের উপর দিয়ে লাফ দেয়।"
+  ],
+  "units": [
+   "দ্রুত বাদামী শিয়াল অলস কুকুরের উপর দিয়ে লাফ দেয়। দ্রুত বাদামী শিয়াল অলস কুকুরের উপর দিয়ে লাফ দেয়। দ্রুত বাদামী শিয়াল অলস কুকুরের উপর দিয়ে লাফ দেয়।"
+  ]
+ },
+ "typst_lang_de.pdf": {
+  "ocr_pages": [],
+  "pages": [
+   "Der schnelle braune Fuchs springt über den faulen Hund. Größe: ß.\r\nDer schnelle braune Fuchs springt über den faulen Hund. Größe: ß. Der schnelle braune Fuchs springt über den \r\nfaulen Hund. Größe: ß."
+  ],
+  "units": [
+   "Der schnelle braune Fuchs springt über den faulen Hund. Größe: ß. Der schnelle braune Fuchs springt über den faulen Hund. Größe: ß. Der schnelle braune Fuchs springt über den faulen Hund. Größe: ß."
+  ]
+ },
+ "typst_lang_el.pdf": {
+  "ocr_pages": [],
+  "pages": [
+   "Η γρήγορη καφέ αλεπού πηδάει πάνω από το τεμπέλικο σκυλί.\r\nΗ γρήγορη καφέ αλεπού πηδάει πάνω από το τεμπέλικο σκυλί. Η γρήγορη καφέ αλεπού πηδάει πάνω από το \r\nτεμπέλικο σκυλί."
+  ],
+  "units": [
+   "Η γρήγορη καφέ αλεπού πηδάει πάνω από το τεμπέλικο σκυλί. Η γρήγορη καφέ αλεπού πηδάει πάνω από το τεμπέλικο σκυλί. Η γρήγορη καφέ αλεπού πηδάει πάνω από το τεμπέλικο σκυλί."
+  ]
+ },
+ "typst_lang_es.pdf": {
+  "ocr_pages": [],
+  "pages": [
+   "El veloz zorro marrón salta sobre el perro perezoso. ¿Señor? ¡Sí!\r\nEl veloz zorro marrón salta sobre el perro perezoso. ¿Señor? ¡Sí! El veloz zorro marrón salta sobre el perro \r\nperezoso. ¿Señor? ¡Sí!"
+  ],
+  "units": [
+   "El veloz zorro marrón salta sobre el perro perezoso. ¿Señor? ¡Sí! El veloz zorro marrón salta sobre el perro perezoso. ¿Señor? ¡Sí! El veloz zorro marrón salta sobre el perro perezoso. ¿Señor? ¡Sí!"
+  ]
+ },
+ "typst_lang_fr.pdf": {
+  "ocr_pages": [],
+  "pages": [
+   "Le vif renard brun saute par-dessus le chien paresseux, à l'été déjà.\r\nLe vif renard brun saute par-dessus le chien paresseux, à l'été déjà. Le vif renard brun saute par-dessus le chien \r\nparesseux, à l'été déjà."
+  ],
+  "units": [
+   "Le vif renard brun saute par-dessus le chien paresseux, à l'été déjà. Le vif renard brun saute par-dessus le chien paresseux, à l'été déjà. Le vif renard brun saute par-dessus le chien paresseux, à l'été déjà."
+  ]
+ },
+ "typst_lang_he.pdf": {
+  "ocr_pages": [],
+  "pages": [
+   "השועל החום המהיר קופץ מעל הכלב העצלן.\r\nהשועל החום המהיר קופץ מעל הכלב העצלן. השועל החום המהיר קופץ מעל הכלב העצלן."
+  ],
+  "units": [
+   "השועל החום המהיר קופץ מעל הכלב העצלן. השועל החום המהיר קופץ מעל הכלב העצלן. השועל החום המהיר קופץ מעל הכלב העצלן."
+  ]
+ },
+ "typst_lang_hi.pdf": {
+  "ocr_pages": [],
+  "pages": [
+   "तेज़ भूरी लोमड़ी आलसी कुत्तेकेऊपर कूद जाती है।\r\nतेज़ भूरी लोमड़ी आलसी कुत्तेकेऊपर कूद जाती है। तेज़ भूरी लोमड़ी आलसी कुत्तेकेऊपर कूद जाती है।"
+  ],
+  "units": [
+   "तेज़ भूरी लोमड़ी आलसी कुत्तेकेऊपर कूद जाती है। तेज़ भूरी लोमड़ी आलसी कुत्तेकेऊपर कूद जाती है। तेज़ भूरी लोमड़ी आलसी कुत्तेकेऊपर कूद जाती है।"
+  ]
+ },
+ "typst_lang_ja.pdf": {
+  "ocr_pages": [],
+  "pages": [
+   "素早い茶色の狐が怠け者の犬を飛び越えます。\r\n素早い茶色の狐が怠け者の犬を飛び越えます。 素早い茶色の狐が怠け者の犬を飛び越えます。"
+  ],
+  "units": [
+   "素早い茶色の狐が怠け者の犬を飛び越えます。 素早い茶色の狐が怠け者の犬を飛び越えます。 素早い茶色の狐が怠け者の犬を飛び越えます。"
+  ]
+ },
+ "typst_lang_ko.pdf": {
+  "ocr_pages": [],
+  "pages": [
+   "빠른 갈색 여우가 게으른 개를 뛰어넘습니다.\r\n빠른 갈색 여우가 게으른 개를 뛰어넘습니다. 빠른 갈색 여우가 게으른 개를 뛰어넘습니다."
+  ],
+  "units": [
+   "빠른 갈색 여우가 게으른 개를 뛰어넘습니다. 빠른 갈색 여우가 게으른 개를 뛰어넘습니다. 빠른 갈색 여우가 게으른 개를 뛰어넘습니다."
+  ]
+ },
+ "typst_lang_pl.pdf": {
+  "ocr_pages": [],
+  "pages": [
+   "Szybki brązowy lis przeskakuje nad leniwym psem. Zażółć gęślą jaźń.\r\nSzybki brązowy lis przeskakuje nad leniwym psem. Zażółć gęślą jaźń. Szybki brązowy lis przeskakuje nad \r\nleniwym psem. Zażółć gęślą jaźń."
+  ],
+  "units": [
+   "Szybki brązowy lis przeskakuje nad leniwym psem. Zażółć gęślą jaźń. Szybki brązowy lis przeskakuje nad leniwym psem. Zażółć gęślą jaźń. Szybki brązowy lis przeskakuje nad leniwym psem. Zażółć gęślą jaźń."
+  ]
+ },
+ "typst_lang_ru.pdf": {
+  "ocr_pages": [],
+  "pages": [
+   "Быстрая коричневая лиса перепрыгивает через ленивую собаку.\r\nБыстрая коричневая лиса перепрыгивает через ленивую собаку. Быстрая коричневая лиса перепрыгивает \r\nчерез ленивую собаку."
+  ],
+  "units": [
+   "Быстрая коричневая лиса перепрыгивает через ленивую собаку. Быстрая коричневая лиса перепрыгивает через ленивую собаку. Быстрая коричневая лиса перепрыгивает через ленивую собаку."
+  ]
+ },
+ "typst_lang_th.pdf": {
+  "ocr_pages": [],
+  "pages": [
+   "สุนัขจิ้งจอกสีน้ำสี ตาลว่องไวกระโดดข้ามสุนัขขี้เกียจ\r\nสุนัขจิ้งจอกสีน้ำสี ตาลว่องไวกระโดดข้ามสุนัขขี้เกียจ สุนัขจิ้งจอกสีน้ำสี ตาลว่องไวกระโดดข้ามสุนัขขี้เกียจ"
+  ],
+  "units": [
+   "สุนัขจิ้งจอกสีน้ำสี ตาลว่องไวกระโดดข้ามสุนัขขี้เกียจ สุนัขจิ้งจอกสีน้ำสี ตาลว่องไวกระโดดข้ามสุนัขขี้เกียจ สุนัขจิ้งจอกสีน้ำสี ตาลว่องไวกระโดดข้ามสุนัขขี้เกียจ"
+  ]
+ },
+ "typst_lang_zh-Hans.pdf": {
+  "ocr_pages": [],
+  "pages": [
+   "敏捷的棕色狐狸跳过了懒狗。\r\n敏捷的棕色狐狸跳过了懒狗。 敏捷的棕色狐狸跳过了懒狗。"
+  ],
+  "units": [
+   "敏捷的棕色狐狸跳过了懒狗。 敏捷的棕色狐狸跳过了懒狗。 敏捷的棕色狐狸跳过了懒狗。"
+  ]
+ },
+ "typst_long_token.pdf": {
+  "ocr_pages": [],
+  "pages": [
+   "hash \r\na1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6 \r\nend"
+  ],
+  "units": [
+   "hash a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6 end"
+  ]
+ },
+ "typst_mixed_scan.pdf": {
+  "ocr_pages": [
+   1
+  ],
+  "pages": [
+   "This is page one with a real text layer and plenty of characters.",
+   ""
+  ],
+  "units": [
+   "This is page one with a real text layer and plenty of characters.",
+   "<OCR page 1>"
+  ]
+ },
+ "typst_multiscript.pdf": {
+  "ocr_pages": [],
+  "pages": [
+   "Быстрая коричневая лиса перепрыгивает через ленивую собаку.\r\nΗ γρήγορη καφέ αλεπού πηδάει πάνω από το τεμπέλικο σκυλί.\r\n素早い茶色の狐が怠け者の犬を飛び越えます。\r\n敏捷的棕色狐狸跳过了懒狗。\r\n빠른 갈색 여우가 게으른 개를 뛰어넘습니다.\r\n.الثعلب البني السر يع يقفز فوق الكلب الكسول\r\n.השועל החום המהיר קופץ מעל הכלב העצלן\r\nतेज़ भूरी लोमड़ी आलसी कुत्तेकेऊपर कूद जाती है।\r\nদ্রুত বাদামী শিয়াল অলস কুকুরের উপর দিয়ে লাফ দেয়।\r\nสุนัขจิ้งจอกสีน้ำสี ตาลว่องไวกระโดดข้ามสุนัขขี้เกียจ\r\nLe vif renard brun saute par-dessus le chien paresseux, à l'été déjà.\r\nDer schnelle braune Fuchs springt über den faulen Hund. Größe: ß.\r\nSzybki brązowy lis przeskakuje nad leniwym psem. Zażółć gęślą jaźń.\r\nEl veloz zorro marrón salta sobre el perro perezoso. ¿Señor? ¡Sí!"
+  ],
+  "units": [
+   "Быстрая коричневая лиса перепрыгивает через ленивую собаку. Η γρήγορη καφέ αλεπού πηδάει πάνω από το τεμπέλικο σκυλί. 素早い茶色の狐が怠け者の犬を飛び越えます。 敏捷的棕色狐狸跳过了懒狗。 빠른 갈색 여우가 게으른 개를 뛰어넘습니다. .الثعلب البني السر يع يقفز فوق الكلب الكسول .השועל החום המהיר קופץ מעל הכלב העצלן तेज़ भूरी लोमड़ी आलसी कुत्तेकेऊपर कूद जाती है। দ্রুত বাদামী শিয়াল অলস কুকুরের উপর দিয়ে লাফ দেয়। สุนัขจิ้งจอกสีน้ำสี ตาลว่องไวกระโดดข้ามสุนัขขี้เกียจ Le vif renard brun saute par-dessus le chien paresseux, à l'été déjà. Der schnelle braune Fuchs springt über den faulen Hund. Größe: ß. Szybki brązowy lis przeskakuje nad leniwym psem. Zażółć gęślą jaźń. El veloz zorro marrón salta sobre el perro perezoso. ¿Señor? ¡Sí!"
+  ]
+ },
+ "typst_pagination.pdf": {
+  "ocr_pages": [],
+  "pages": [
+   "Paragraph 0: enough words on this line to consume vertical space.\r\nParagraph 1: enough words on this line to consume vertical space.\r\nParagraph 2: enough words on this line to consume vertical space.\r\nParagraph 3: enough words on this line to consume vertical space.\r\nParagraph 4: enough words on this line to consume vertical space.\r\nParagraph 5: enough words on this line to consume vertical space.\r\nParagraph 6: enough words on this line to consume vertical space.\r\nParagraph 7: enough words on this line to consume vertical space.\r\nParagraph 8: enough words on this line to consume vertical space.\r\nParagraph 9: enough words on this line to consume vertical space.\r\nParagraph 10: enough words on this line to consume vertical space.\r\nParagraph 11: enough words on this line to consume vertical space.\r\nParagraph 12: enough words on this line to consume vertical space.\r\nParagraph 13: enough words on this line to consume vertical space.\r\nParagraph 14: enough words on this line to consume vertical space.\r\nParagraph 15: enough words on this line to consume vertical space.\r\nParagraph 16: enough words on this line to consume vertical space.\r\nParagraph 17: enough words on this line to consume vertical space.\r\nParagraph 18: enough words on this line to consume vertical space.\r\nParagraph 19: enough words on this line to consume vertical space.\r\nParagraph 20: enough words on this line to consume vertical space.\r\nParagraph 21: enough words on this line to consume vertical space.\r\nParagraph 22: enough words on this line to consume vertical space.\r\nParagraph 23: enough words on this line to consume vertical space.\r\nParagraph 24: enough words on this line to consume vertical space.\r\nParagraph 25: enough words on this line to consume vertical space.\r\nParagraph 26: enough words on this line to consume vertical space.\r\nParagraph 27: enough words on this line to consume vertical space.\r\nParagraph 28: enough words on this line to consume vertical space.\r\nParagraph 29: enough words on this line to consume vertical space.\r\nParagraph 30: enough words on this line to consume vertical space.\r\nParagraph 31: enough words on this line to consume vertical space.\r\nParagraph 32: enough words on this line to consume vertical space.\r\nParagraph 33: enough words on this line to consume vertical space.\r\nParagraph 34: enough words on this line to consume vertical space.\r\nParagraph 35: enough words on this line to consume vertical space.\r\nParagraph 36: enough words on this line to consume vertical space.",
+   "Paragraph 37: enough words on this line to consume vertical space.\r\nParagraph 38: enough words on this line to consume vertical space.\r\nParagraph 39: enough words on this line to consume vertical space.\r\nParagraph 40: enough words on this line to consume vertical space.\r\nParagraph 41: enough words on this line to consume vertical space.\r\nParagraph 42: enough words on this line to consume vertical space.\r\nParagraph 43: enough words on this line to consume vertical space.\r\nParagraph 44: enough words on this line to consume vertical space.\r\nParagraph 45: enough words on this line to consume vertical space.\r\nParagraph 46: enough words on this line to consume vertical space.\r\nParagraph 47: enough words on this line to consume vertical space.\r\nParagraph 48: enough words on this line to consume vertical space.\r\nParagraph 49: enough words on this line to consume vertical space.\r\nParagraph 50: enough words on this line to consume vertical space.\r\nParagraph 51: enough words on this line to consume vertical space.\r\nParagraph 52: enough words on this line to consume vertical space.\r\nParagraph 53: enough words on this line to consume vertical space.\r\nParagraph 54: enough words on this line to consume vertical space.\r\nParagraph 55: enough words on this line to consume vertical space.\r\nParagraph 56: enough words on this line to consume vertical space.\r\nParagraph 57: enough words on this line to consume vertical space.\r\nParagraph 58: enough words on this line to consume vertical space.\r\nParagraph 59: enough words on this line to consume vertical space.\r\nParagraph 60: enough words on this line to consume vertical space.\r\nParagraph 61: enough words on this line to consume vertical space.\r\nParagraph 62: enough words on this line to consume vertical space.\r\nParagraph 63: enough words on this line to consume vertical space.\r\nParagraph 64: enough words on this line to consume vertical space.\r\nParagraph 65: enough words on this line to consume vertical space.\r\nParagraph 66: enough words on this line to consume vertical space.\r\nParagraph 67: enough words on this line to consume vertical space.\r\nParagraph 68: enough words on this line to consume vertical space.\r\nParagraph 69: enough words on this line to consume vertical space.\r\nParagraph 70: enough words on this line to consume vertical space.\r\nParagraph 71: enough words on this line to consume vertical space.\r\nParagraph 72: enough words on this line to consume vertical space.\r\nParagraph 73: enough words on this line to consume vertical space.",
+   "Paragraph 74: enough words on this line to consume vertical space.\r\nParagraph 75: enough words on this line to consume vertical space.\r\nParagraph 76: enough words on this line to consume vertical space.\r\nParagraph 77: enough words on this line to consume vertical space.\r\nParagraph 78: enough words on this line to consume vertical space.\r\nParagraph 79: enough words on this line to consume vertical space.\r\nParagraph 80: enough words on this line to consume vertical space.\r\nParagraph 81: enough words on this line to consume vertical space.\r\nParagraph 82: enough words on this line to consume vertical space.\r\nParagraph 83: enough words on this line to consume vertical space.\r\nParagraph 84: enough words on this line to consume vertical space.\r\nParagraph 85: enough words on this line to consume vertical space.\r\nParagraph 86: enough words on this line to consume vertical space.\r\nParagraph 87: enough words on this line to consume vertical space.\r\nParagraph 88: enough words on this line to consume vertical space.\r\nParagraph 89: enough words on this line to consume vertical space.\r\nParagraph 90: enough words on this line to consume vertical space.\r\nParagraph 91: enough words on this line to consume vertical space.\r\nParagraph 92: enough words on this line to consume vertical space.\r\nParagraph 93: enough words on this line to consume vertical space.\r\nParagraph 94: enough words on this line to consume vertical space.\r\nParagraph 95: enough words on this line to consume vertical space.\r\nParagraph 96: enough words on this line to consume vertical space.\r\nParagraph 97: enough words on this line to consume vertical space.\r\nParagraph 98: enough words on this line to consume vertical space.\r\nParagraph 99: enough words on this line to consume vertical space.\r\nParagraph 100: enough words on this line to consume vertical space.\r\nParagraph 101: enough words on this line to consume vertical space.\r\nParagraph 102: enough words on this line to consume vertical space.\r\nParagraph 103: enough words on this line to consume vertical space.\r\nParagraph 104: enough words on this line to consume vertical space.\r\nParagraph 105: enough words on this line to consume vertical space.\r\nParagraph 106: enough words on this line to consume vertical space.\r\nParagraph 107: enough words on this line to consume vertical space.\r\nParagraph 108: enough words on this line to consume vertical space.\r\nParagraph 109: enough words on this line to consume vertical space.\r\nParagraph 110: enough words on this line to consume vertical space.",
+   "Paragraph 111: enough words on this line to consume vertical space.\r\nParagraph 112: enough words on this line to consume vertical space.\r\nParagraph 113: enough words on this line to consume vertical space.\r\nParagraph 114: enough words on this line to consume vertical space.\r\nParagraph 115: enough words on this line to consume vertical space.\r\nParagraph 116: enough words on this line to consume vertical space.\r\nParagraph 117: enough words on this line to consume vertical space.\r\nParagraph 118: enough words on this line to consume vertical space.\r\nParagraph 119: enough words on this line to consume vertical space."
+  ],
+  "units": [
+   "Paragraph 0: enough words on this line to consume vertical space. Paragraph 1: enough words on this line to consume vertical space. Paragraph 2: enough words on this line to consume vertical space. Paragraph 3: enough words on this line to consume vertical space. Paragraph 4: enough words on this line to consume vertical space. Paragraph 5: enough words on this line to consume vertical space. Paragraph 6: enough words on this line to consume vertical space. Paragraph 7: enough words on this line to consume vertical space. Paragraph 8: enough words on this line to consume vertical space. Paragraph 9: enough words on this line to consume vertical space. Paragraph 10: enough words on this line to consume vertical space. Paragraph 11: enough words on this line to consume vertical space. Paragraph 12: enough words on this line to consume vertical space. Paragraph 13: enough words on this line to consume vertical space. Paragraph 14: enough words on this line to consume vertical space. Paragraph 15: enough words on this line to consume vertical space. Paragraph 16: enough words on this line to consume vertical space. Paragraph 17: enough words on this line to consume vertical space. Paragraph 18: enough words on this line to consume vertical space. Paragraph 19: enough words on this line to consume vertical space. Paragraph 20: enough words on this line to consume vertical space. Paragraph 21: enough words on this line to consume vertical space. Paragraph 22: enough words on this line to consume vertical space. Paragraph 23: enough words on this line to consume vertical space. Paragraph 24: enough words on this line to consume vertical space. Paragraph 25: enough words on this line to consume vertical space. Paragraph 26: enough words on this line to consume vertical space. Paragraph 27: enough words on this line to consume vertical space. Paragraph 28: enough words on this line to consume vertical space. Paragraph 29: enough words on this line to consume vertical space. Paragraph 30: enough words on this line to consume vertical space. Paragraph 31: enough words on this line to consume vertical space. Paragraph 32: enough words on this line to consume vertical space. Paragraph 33: enough words on this line to consume vertical space. Paragraph 34: enough words on this line to consume vertical space. Paragraph 35: enough words on this line to consume vertical space. Paragraph 36: enough words on this line to consume vertical space.",
+   "Paragraph 37: enough words on this line to consume vertical space. Paragraph 38: enough words on this line to consume vertical space. Paragraph 39: enough words on this line to consume vertical space. Paragraph 40: enough words on this line to consume vertical space. Paragraph 41: enough words on this line to consume vertical space. Paragraph 42: enough words on this line to consume vertical space. Paragraph 43: enough words on this line to consume vertical space. Paragraph 44: enough words on this line to consume vertical space. Paragraph 45: enough words on this line to consume vertical space. Paragraph 46: enough words on this line to consume vertical space. Paragraph 47: enough words on this line to consume vertical space. Paragraph 48: enough words on this line to consume vertical space. Paragraph 49: enough words on this line to consume vertical space. Paragraph 50: enough words on this line to consume vertical space. Paragraph 51: enough words on this line to consume vertical space. Paragraph 52: enough words on this line to consume vertical space. Paragraph 53: enough words on this line to consume vertical space. Paragraph 54: enough words on this line to consume vertical space. Paragraph 55: enough words on this line to consume vertical space. Paragraph 56: enough words on this line to consume vertical space. Paragraph 57: enough words on this line to consume vertical space. Paragraph 58: enough words on this line to consume vertical space. Paragraph 59: enough words on this line to consume vertical space. Paragraph 60: enough words on this line to consume vertical space. Paragraph 61: enough words on this line to consume vertical space. Paragraph 62: enough words on this line to consume vertical space. Paragraph 63: enough words on this line to consume vertical space. Paragraph 64: enough words on this line to consume vertical space. Paragraph 65: enough words on this line to consume vertical space. Paragraph 66: enough words on this line to consume vertical space. Paragraph 67: enough words on this line to consume vertical space. Paragraph 68: enough words on this line to consume vertical space. Paragraph 69: enough words on this line to consume vertical space. Paragraph 70: enough words on this line to consume vertical space. Paragraph 71: enough words on this line to consume vertical space. Paragraph 72: enough words on this line to consume vertical space. Paragraph 73: enough words on this line to consume vertical space.",
+   "Paragraph 74: enough words on this line to consume vertical space. Paragraph 75: enough words on this line to consume vertical space. Paragraph 76: enough words on this line to consume vertical space. Paragraph 77: enough words on this line to consume vertical space. Paragraph 78: enough words on this line to consume vertical space. Paragraph 79: enough words on this line to consume vertical space. Paragraph 80: enough words on this line to consume vertical space. Paragraph 81: enough words on this line to consume vertical space. Paragraph 82: enough words on this line to consume vertical space. Paragraph 83: enough words on this line to consume vertical space. Paragraph 84: enough words on this line to consume vertical space. Paragraph 85: enough words on this line to consume vertical space. Paragraph 86: enough words on this line to consume vertical space. Paragraph 87: enough words on this line to consume vertical space. Paragraph 88: enough words on this line to consume vertical space. Paragraph 89: enough words on this line to consume vertical space. Paragraph 90: enough words on this line to consume vertical space. Paragraph 91: enough words on this line to consume vertical space. Paragraph 92: enough words on this line to consume vertical space. Paragraph 93: enough words on this line to consume vertical space. Paragraph 94: enough words on this line to consume vertical space. Paragraph 95: enough words on this line to consume vertical space. Paragraph 96: enough words on this line to consume vertical space. Paragraph 97: enough words on this line to consume vertical space. Paragraph 98: enough words on this line to consume vertical space. Paragraph 99: enough words on this line to consume vertical space. Paragraph 100: enough words on this line to consume vertical space. Paragraph 101: enough words on this line to consume vertical space. Paragraph 102: enough words on this line to consume vertical space. Paragraph 103: enough words on this line to consume vertical space. Paragraph 104: enough words on this line to consume vertical space. Paragraph 105: enough words on this line to consume vertical space. Paragraph 106: enough words on this line to consume vertical space. Paragraph 107: enough words on this line to consume vertical space. Paragraph 108: enough words on this line to consume vertical space. Paragraph 109: enough words on this line to consume vertical space. Paragraph 110: enough words on this line to consume vertical space.",
+   "Paragraph 111: enough words on this line to consume vertical space. Paragraph 112: enough words on this line to consume vertical space. Paragraph 113: enough words on this line to consume vertical space. Paragraph 114: enough words on this line to consume vertical space. Paragraph 115: enough words on this line to consume vertical space. Paragraph 116: enough words on this line to consume vertical space. Paragraph 117: enough words on this line to consume vertical space. Paragraph 118: enough words on this line to consume vertical space. Paragraph 119: enough words on this line to consume vertical space."
+  ]
+ },
+ "typst_reparse.pdf": {
+  "ocr_pages": [],
+  "pages": [
+   "The quick brown fox jumps over the lazy dog.\r\nA second paragraph with distinct wording for the check.\r\nTroisieme paragraphe avec des accents: eleve, francais."
+  ],
+  "units": [
+   "The quick brown fox jumps over the lazy dog. A second paragraph with distinct wording for the check. Troisieme paragraphe avec des accents: eleve, francais."
+  ]
+ },
+ "typst_rotate.pdf": {
+  "ocr_pages": [],
+  "pages": [
+   "Rotated words here\r\nCorner text\r\nPlain line of text at the top."
+  ],
+  "units": [
+   "Rotated words here Corner text Plain line of text at the top."
+  ]
+ },
+ "typst_rtl_mixed.pdf": {
+  "ocr_pages": [],
+  "pages": [
+   "الثعلب البني السر يع يقفز فوق الكلب الكسول. 2024 )نص(\r\ninside English عربي text."
+  ],
+  "units": [
+   "الثعلب البني السر يع يقفز فوق الكلب الكسول. 2024 )نص( inside English عربي text."
+  ]
+ },
+ "typst_scanned.pdf": {
+  "ocr_pages": [
+   0
+  ],
+  "pages": [
+   ""
+  ],
+  "units": [
+   "<OCR page 1>"
+  ]
+ },
+ "typst_short_page.pdf": {
+  "ocr_pages": [
+   1
+  ],
+  "pages": [
+   "Paragraph 0 of a document whose pages each carry a few lines of plain prose.\r\nParagraph 1 of a document whose pages each carry a few lines of plain prose.\r\nParagraph 2 of a document whose pages each carry a few lines of plain prose.\r\nParagraph 3 of a document whose pages each carry a few lines of plain prose.\r\nParagraph 4 of a document whose pages each carry a few lines of plain prose.\r\nParagraph 5 of a document whose pages each carry a few lines of plain prose.",
+   "Short.",
+   "Third page text that is long enough to count as a text layer."
+  ],
+  "units": [
+   "Paragraph 0 of a document whose pages each carry a few lines of plain prose. Paragraph 1 of a document whose pages each carry a few lines of plain prose. Paragraph 2 of a document whose pages each carry a few lines of plain prose. Paragraph 3 of a document whose pages each carry a few lines of plain prose. Paragraph 4 of a document whose pages each carry a few lines of plain prose. Paragraph 5 of a document whose pages each carry a few lines of plain prose.",
+   "<OCR page 1>",
+   "Third page text that is long enough to count as a text layer."
+  ]
+ },
+ "typst_styles.pdf": {
+  "ocr_pages": [],
+  "pages": [
+   "A Heading\r\nSome bold and italic words, code, and a link.\r\n• first item\r\n• second item with more words\r\n1. one\r\n2. two\r\nName Qty Price\r\nApple 3 1.20\r\nPear 10 0.50\r\nFootnote here1 and H2O and x2.\r\n1The note text."
+  ],
+  "units": [
+   "A Heading Some bold and italic words, code, and a link. • first item • second item with more words 1. one 2. two Name Qty Price Apple 3 1.20 Pear 10 0.50 Footnote here1 and H2O and x2. 1The note text."
+  ]
+ },
+ "typst_translated.pdf": {
+  "ocr_pages": [],
+  "pages": [
+   "Texte traduit.\r\nTexte traduit."
+  ],
+  "units": [
+   "Texte traduit. Texte traduit."
+  ]
+ }
+}

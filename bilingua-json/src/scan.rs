@@ -1,7 +1,8 @@
 //! A strict JSON scanner that finds every string value with its byte range and JSON pointer, without building
 //! a tree and without touching a byte of the input.
 
-use bilingua_model::Error;
+use bilingua_model::guard::ContextBudget;
+use bilingua_model::{Error, Limits};
 
 /// A string value: the byte range of the whole token (quotes included) and its JSON pointer.
 #[derive(Debug, Clone)]
@@ -9,12 +10,30 @@ pub struct StrVal {
     pub start: usize,
     pub end: usize,
     pub pointer: String,
+    /// Python's walk order of the value: per level, the position of its key among the object's distinct keys
+    /// (first occurrence) or its array index. What `json.loads` iterates (the LocOS profile).
+    pub ord: Vec<usize>,
+    /// Under a key that the same object repeats later: `json.loads` keeps the last value only.
+    pub dead: bool,
 }
 
 const MAX_DEPTH: usize = 200;
+/// The LocOS profile reads deeper than the native 200 levels: LocOS reads as deep as `json.loads` does (Python's
+/// recursion limit, about 990 levels), and a 300-level array is text to it (`verify_json_dialects_filter`). The
+/// scanner recurses, so the cap stays where a 2 MB thread stack (a debug build) is safe: 400 (900 overflowed it).
+const PYTHON_MAX_DEPTH: usize = 400;
 
+/// [`scan_with`] as strict JSON under the default limits (the sniffer, which has no options to read).
 pub fn scan(text: &str) -> Result<Vec<StrVal>, Error> {
-    let mut s = Scan { text, b: text.as_bytes(), i: 0, depth: 0, vals: Vec::new() };
+    scan_with(text, false, &Limits::default())
+}
+
+/// Every string value of `text`; with `python` also the `NaN`, `Infinity` and `-Infinity` that Python's
+/// `json.loads` reads (LocOS). The pointers of all values together stay inside `limits.max_context_bytes`: each
+/// value keeps its own copy of the whole key path, so one long key over many values would otherwise grow with
+/// the square of the file.
+pub fn scan_with(text: &str, python: bool, limits: &Limits) -> Result<Vec<StrVal>, Error> {
+    let mut s = Scan { text, b: text.as_bytes(), i: 0, depth: 0, vals: Vec::new(), ord: Vec::new(), python, limits, context: ContextBudget::new() };
     s.ws();
     let mut path = Vec::new();
     s.value(&mut path)?;
@@ -31,6 +50,10 @@ struct Scan<'a> {
     i: usize,
     depth: usize,
     vals: Vec<StrVal>,
+    ord: Vec<usize>,
+    python: bool,
+    limits: &'a Limits,
+    context: ContextBudget,
 }
 
 impl Scan<'_> {
@@ -58,12 +81,17 @@ impl Scan<'_> {
             Some(b'[') => self.array(path),
             Some(b'"') => {
                 let (start, end) = self.string()?;
-                self.vals.push(StrVal { start, end, pointer: pointer(path) });
+                // charged before the pointer is built: a refused file never takes the memory
+                self.context.charge(path.iter().map(|p| p.len() + 1).sum(), self.limits)?;
+                self.vals.push(StrVal { start, end, pointer: pointer(path), ord: self.ord.clone(), dead: false });
                 Ok(())
             }
             Some(b't') => self.literal("true"),
             Some(b'f') => self.literal("false"),
             Some(b'n') => self.literal("null"),
+            Some(b'N') if self.python => self.literal("NaN"),
+            Some(b'I') if self.python => self.literal("Infinity"),
+            Some(b'-') if self.python && self.b[self.i..].starts_with(b"-Infinity") => self.literal("-Infinity"),
             Some(b'-' | b'0'..=b'9') => self.number(),
             Some(_) => Err(self.err("unexpected character")),
         }
@@ -147,8 +175,11 @@ impl Scan<'_> {
 
     fn enter(&mut self) -> Result<(), Error> {
         self.depth += 1;
-        if self.depth > MAX_DEPTH {
-            return Err(self.err("nesting is too deep"));
+        let cap = if self.python { PYTHON_MAX_DEPTH } else { MAX_DEPTH };
+        if self.depth > cap {
+            // the nesting cap is a limit like every other crate's (`LimitKind::Depth`), not a parse error
+            let Error::Parse { msg, .. } = self.err("nesting is too deep") else { unreachable!("err gives Parse") };
+            return Err(bilingua_model::LimitError::new(bilingua_model::LimitKind::Depth, msg).into());
         }
         Ok(())
     }
@@ -162,6 +193,9 @@ impl Scan<'_> {
             self.depth -= 1;
             return Ok(());
         }
+        // key -> (its position among the distinct keys, the range of `vals` its latest value produced)
+        let mut keys: Vec<(usize, usize, usize)> = Vec::new();
+        let mut seen: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
         loop {
             self.ws();
             if self.peek() != Some(b'"') {
@@ -177,8 +211,28 @@ impl Scan<'_> {
             self.i += 1;
             self.ws();
             path.push(key.replace('~', "~0").replace('/', "~1"));
+            let at = seen.get(&key).copied();
+            let o = at.map(|k| keys[k].0).unwrap_or(keys.len());
+            self.ord.push(o);
+            let first = self.vals.len();
             self.value(path)?;
+            self.ord.pop();
             path.pop();
+            let last = self.vals.len();
+            match at {
+                Some(k) => {
+                    let (_, a, b) = keys[k];
+                    for v in &mut self.vals[a..b] {
+                        v.dead = true;
+                    }
+                    keys[k].1 = first;
+                    keys[k].2 = last;
+                }
+                None => {
+                    seen.insert(key, keys.len());
+                    keys.push((o, first, last));
+                }
+            }
             self.ws();
             match self.peek() {
                 Some(b',') => self.i += 1,
@@ -205,7 +259,9 @@ impl Scan<'_> {
         loop {
             self.ws();
             path.push(n.to_string());
+            self.ord.push(n);
             self.value(path)?;
+            self.ord.pop();
             path.pop();
             n += 1;
             self.ws();
@@ -295,4 +351,34 @@ pub fn quote(text: &str) -> String {
     }
     out.push('"');
     out
+}
+
+/// Like [`unescape`], with U+FFFD for a lone surrogate escape (object keys).
+pub fn unescape_lossy(inner: &str) -> String {
+    match unescape(inner) {
+        Some(s) => s,
+        None => {
+            // replace each \uD800-\uDFFF escape by U+FFFD, then decode the rest
+            let mut out = String::new();
+            let b = inner.as_bytes();
+            let mut i = 0;
+            let mut run = 0;
+            while i < b.len() {
+                if b[i] == b'\\' && b.get(i + 1) == Some(&b'u') && i + 6 <= b.len() {
+                    if let Ok(v) = u32::from_str_radix(&inner[i + 2..i + 6], 16) {
+                        if (0xD800..0xE000).contains(&v) {
+                            out.push_str(&unescape(&inner[run..i]).unwrap_or_default());
+                            out.push('\u{FFFD}');
+                            i += 6;
+                            run = i;
+                            continue;
+                        }
+                    }
+                }
+                i += if b[i] == b'\\' { 2 } else { 1 };
+            }
+            out.push_str(&unescape(&inner[run..]).unwrap_or_default());
+            out
+        }
+    }
 }

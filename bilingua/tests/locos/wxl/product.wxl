@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<WixLocalization Culture="en-us" xmlns="http://schemas.microsoft.com/wix/2006/localization">
+  <String Id="WelcomeDlgTitle">Welcome to the [ProductName] Setup Wizard</String>
+  <String Id="Save" Overridable="yes">Save &amp; close</String>
+  <String Id="Pct">[1] of [2] done, {0}</String>
+  <String Id="Blank"></String>
+  <!-- comment -->
+  <String Id="Multi">Line one
+Line two</String>
+</WixLocalization>

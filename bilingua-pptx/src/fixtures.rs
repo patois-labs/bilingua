@@ -156,7 +156,7 @@ pub fn dgm_drawing() -> String {
     )
 }
 
-fn rels(items: &[(&str, &str, &str)]) -> String {
+pub fn rels(items: &[(&str, &str, &str)]) -> String {
     let body: String = items
         .iter()
         .map(|(id, t, target)| {

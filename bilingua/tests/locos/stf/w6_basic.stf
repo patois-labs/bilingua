@@ -1,0 +1,13 @@
+# Bilingual file, hand-written for the W6 goldens.
+
+Language code: de
+Type: Bilingual
+
+------------------TRANSLATED-------------------
+
+ButtonOrLink.Event.New	New Event	Neues Ereignis	-
+
+------------------UNTRANSLATED-----------------
+
+ButtonOrLink.Event.Open	Open the trail map
+CustomLabel.Water	Bring water

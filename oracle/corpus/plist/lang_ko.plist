@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>CFBundleDisplayName</key>
+	<string>트레일 노트</string>
+	<key>CFBundleIdentifier</key>
+	<string>com.example.trailnotes</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.4</string>
+	<key>NSCameraUsageDescription</key>
+	<string>트레일 노트는 카메라를 사용해 노트에 사진을 첨부합니다.</string>
+	<key>NSHumanReadableCopyright</key>
+	<string>저작권 2026 예제 주식회사. 모든 권리 보유.</string>
+	<key>NSLocationTemporaryUsageDescriptionDictionary</key>
+	<dict>
+		<key>TrailMap</key>
+		<string>정확한 위치는 트레일 지도에 내 위치를 표시합니다.</string>
+	</dict>
+	<key>LSRequiresIPhoneOS</key>
+	<true/>
+</dict>
+</plist>

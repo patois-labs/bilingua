@@ -1,0 +1,22 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<HTML><HEAD><meta http-equiv="Content-Type" content="text/html; charset=ks_c_5601-1987">
+<!-- Sitemap 1.0 -->
+</HEAD><BODY>
+<UL>
+	<LI> <OBJECT type="text/sitemap">
+		<param name="Name" value="온라인으로 빵 주문">
+		<param name="Name" value="시작하기">
+		<param name="Local" value="html/ko/start.htm">
+		<param name="Name" value="배송 및 픽업">
+		<param name="Local" value="html/ko/delivery.htm">
+		</OBJECT>
+	<LI> <OBJECT type="text/sitemap">
+		<param name="Keyword" value="자주 묻는 질문">
+		<param name="Local" value="html/ko/faq.htm">
+		</OBJECT>
+	<LI> <OBJECT type="text/sitemap">
+		<param name="Name" value="베이커리 안내서">
+		<param name="See Also" value="온라인으로 빵 주문">
+		</OBJECT>
+</UL>
+</BODY></HTML>

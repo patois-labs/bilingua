@@ -85,7 +85,7 @@ fn ex(src: &str) -> Document {
 }
 
 fn ex_to(src: &str, lang: &str) -> Document {
-    Po.extract(src.as_bytes(), &ExtractOptions { target_lang: Some(lang.into()), ..Default::default() }).unwrap()
+    Po.extract(src.as_bytes(), &ExtractOptions::new().with_target_lang(lang)).unwrap()
 }
 
 fn merged(d: &Document) -> String {
@@ -306,8 +306,8 @@ fn errors() {
     assert!(Po.extract(b"\"stray\"\n", &Default::default()).is_err());
     assert!(Po.extract(b"foo \"a\"\n", &Default::default()).is_err());
     assert!(Po.extract(b"msgid \"a\"\nmsgid_plural \"b\"\nmsgstr \"c\"\n", &Default::default()).is_err());
-    assert!(Po.extract(b"msgid \"\"\nmsgstr \"\"\n\"Content-Type: text/plain; charset=ISO-8859-2\\n\"\n", &Default::default()).is_err());
-    assert!(Po.extract(&[0xff, 0xfe], &Default::default()).is_err());
+    assert!(Po.extract(b"msgid \"\"\nmsgstr \"\"\n\"Content-Type: text/plain; charset=x-no-such-charset\\n\"\n", &Default::default()).is_err());
+    assert!(Po.extract(&[0x00, 0xFF], &Default::default()).is_err());
     assert!(Po.sniff(b"msgid \"a\"\nmsgstr \"b\"\n"));
     assert!(!Po.sniff(b"hello"));
     assert_eq!(Po.extensions(), ["po", "pot"]);
@@ -365,4 +365,76 @@ fn placeholders_in_targets_map_to_source_tags() {
     // A placeholder in the target that the source lacks stays plain text.
     let d = ex("msgid \"Hi\"\nmsgstr \"Hola %s\"\n");
     assert_eq!(plain_text(&d.units[0].segments[0].target), "Hola %s");
+}
+
+#[test]
+fn cldr_only_targets_get_their_language_and_plural_rule_under_the_profile() {
+    let src = "msgid \"\"\nmsgstr \"\"\n\"Language: \\n\"\n\"Content-Type: text/plain; charset=UTF-8\\n\"\n\"Plural-Forms: nplurals=2; plural=(n != 1);\\n\"\n\nmsgid \"One file\"\nmsgid_plural \"%d files\"\nmsgstr[0] \"\"\nmsgstr[1] \"\"\n";
+    let want = [
+        ("tl", "nplurals=2; plural=(n == 1 || n == 2 || n == 3 || (n % 10 != 4 && n % 10 != 6 && n % 10 != 9) ? 0 : 1);"),
+        ("tgl", "nplurals=2; plural=(n == 1 || n == 2 || n == 3 || (n % 10 != 4 && n % 10 != 6 && n % 10 != 9) ? 0 : 1);"),
+        ("fil", "nplurals=2; plural=(n == 1 || n == 2 || n == 3 || (n % 10 != 4 && n % 10 != 6 && n % 10 != 9) ? 0 : 1);"),
+        ("id", "nplurals=1; plural=0;"),
+        ("in", "nplurals=1; plural=0;"),
+        ("ta", "nplurals=2; plural=(n != 1);"),
+        ("zu", "nplurals=2; plural=(n > 1);"),
+        ("mk", "nplurals=2; plural=(n%10==1 && n%100!=11 ? 0 : 1);"),
+    ];
+    let o = ExtractOptions::new().with_profile(Some(profile::LOCOS));
+    for (lang, rule) in want {
+        let mut doc = Po.extract(src.as_bytes(), &o).unwrap().with_target_lang(lang);
+        let id = doc.units[0].segments[0].id.clone();
+        doc.set_target(&id, vec![Inline::text("Eins")]).unwrap();
+        let out = String::from_utf8(Po.merge_with(&doc, &MergeOptions::new().with_profile(Some(profile::LOCOS))).unwrap()).unwrap();
+        assert!(out.contains(&format!("\"Language: {lang}\\n\"")), "{lang}: {out}");
+        let got = out.lines().find(|l| l.contains("Plural-Forms:")).unwrap();
+        if lang == "mk" {
+            // the exact spelling is the generated table's; only the slot numbers matter
+            assert!(got.contains("nplurals=2"), "{lang}: {got}");
+        } else {
+            assert!(got.contains(rule), "{lang}: {got}");
+        }
+    }
+}
+
+#[test]
+fn escape_flood_is_a_limit_like_locos() {
+    // LocOS: more than 40 x max_units backslashes is refused before the entries are read
+    let l = Limits::new().with_max_units(10);
+    let flood = format!("msgid \"{}\"\nmsgstr \"\"\n", "\\n".repeat(401));
+    let ok = format!("msgid \"a{}\"\nmsgstr \"\"\n", "\\n".repeat(400));
+    for profile in [None, Some(profile::LOCOS)] {
+        let o = ExtractOptions::new().with_limits(l).with_profile(profile);
+        match Po.extract(flood.as_bytes(), &o) {
+            Err(Error::Limit(e)) => {
+                assert_eq!(e.kind, LimitKind::Units);
+                assert!(e.msg.contains("escape sequences than a file of 10 segments. Split"), "{}", e.msg);
+            }
+            other => panic!("{profile:?}: {other:?}"),
+        }
+        assert_eq!(Po.extract(ok.as_bytes(), &o).unwrap().units.len(), 1, "{profile:?}");
+    }
+}
+
+#[test]
+fn a_python_charset_name_is_read_and_kept_like_locos() {
+    // charset=CP932 is Python's name for Windows-31J (no WHATWG label): LocOS reads the catalog in it whatever the
+    // project language, and writes it back in it under the same label
+    let mut src = b"msgid \"\"\nmsgstr \"\"\n\"Content-Type: text/plain; charset=CP932\\n\"\n\nmsgid \"Hello\"\nmsgstr \"".to_vec();
+    src.extend_from_slice(&[0x93, 0xfa, 0x96, 0x7b]); // nihon
+    src.extend_from_slice(b"\"\n\nmsgid \"World\"\nmsgstr \"\"\n");
+    let mo = MergeOptions::new().with_profile(Some(profile::LOCOS));
+    for lang in ["en", "ja"] {
+        let o = ExtractOptions::new().with_profile(Some(profile::LOCOS)).with_source_lang(lang);
+        let mut doc = Po.extract(&src, &o).unwrap_or_else(|e| panic!("{lang}: {e}"));
+        assert_eq!(doc.detected_source_encoding().as_deref(), Some("shift_jis"), "{lang}");
+        assert_eq!(Po.merge_with(&doc, &mo).unwrap(), src, "{lang}: untouched");
+        let id = doc.units[1].segments[0].id.clone();
+        doc.set_target(&id, vec![Inline::text("\u{4e16}\u{754c}")]).unwrap();
+        let out = Po.merge_with(&doc, &mo).unwrap();
+        assert!(out.windows(13).any(|w| w == b"charset=CP932"), "{lang}: {}", String::from_utf8_lossy(&out));
+        assert!(std::str::from_utf8(&out).is_err(), "{lang}: written in the code page, not UTF-8");
+        let (back, _, _) = bilingua_model::encoding_rs::SHIFT_JIS.decode(&out);
+        assert!(back.contains("msgstr \"\u{4e16}\u{754c}\""), "{lang}: {back}");
+    }
 }

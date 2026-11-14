@@ -1,0 +1,209 @@
+{
+ "format": "docx",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "First paragraph⟦x1⟧",
+   "style": "Normal"
+  },
+  {
+   "p_index": 2,
+   "text": "Second paragraph⟦x1⟧",
+   "style": "Normal"
+  },
+  {
+   "p_index": 3,
+   "text": "Company logo",
+   "style": "a11y:img-alt"
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "zip": [
+    {
+     "name": "[Content_Types].xml",
+     "same": true
+    },
+    {
+     "name": "_rels/.rels",
+     "same": true
+    },
+    {
+     "name": "word/document.xml",
+     "same": true
+    },
+    {
+     "name": "word/_rels/document.xml.rels",
+     "same": true
+    },
+    {
+     "name": "word/styles.xml",
+     "same": true
+    }
+   ]
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü First paragraph⟦x1⟧",
+    "2": "Ü Second paragraph⟦x1⟧",
+    "3": "Ü Company logo"
+   },
+   "zip": [
+    {
+     "name": "[Content_Types].xml",
+     "sha1": "7a30371b8ae51b0705a77ac1ad60cb720185b6ff"
+    },
+    {
+     "name": "_rels/.rels",
+     "sha1": "167354cb44c739547c37b1d70c1f8781a593bfb1"
+    },
+    {
+     "name": "word/document.xml",
+     "sha1": "c5e5ccd078f84b2bb4f03ee3a56b3087b731ade4"
+    },
+    {
+     "name": "word/_rels/document.xml.rels",
+     "sha1": "8b323b4caff007d33268e0ab0c6bf0d4205051e9"
+    },
+    {
+     "name": "word/styles.xml",
+     "sha1": "b511fa4b66e8917cdd0cfd7f5740f89f0e103643"
+    }
+   ]
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "First paragraph & <\"'>⟦x1⟧",
+    "3": "Company logo & <\"'>"
+   },
+   "zip": [
+    {
+     "name": "[Content_Types].xml",
+     "sha1": "7a30371b8ae51b0705a77ac1ad60cb720185b6ff"
+    },
+    {
+     "name": "_rels/.rels",
+     "sha1": "167354cb44c739547c37b1d70c1f8781a593bfb1"
+    },
+    {
+     "name": "word/document.xml",
+     "sha1": "a7de8569c96b68d10e9f67db20cfc9e1cb328b6b"
+    },
+    {
+     "name": "word/_rels/document.xml.rels",
+     "sha1": "8b323b4caff007d33268e0ab0c6bf0d4205051e9"
+    },
+    {
+     "name": "word/styles.xml",
+     "sha1": "2ad904aaaa3c1377e248f008923272ed9e7901e8"
+    }
+   ]
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "zip": [
+    {
+     "name": "[Content_Types].xml",
+     "sha1": "7a30371b8ae51b0705a77ac1ad60cb720185b6ff"
+    },
+    {
+     "name": "_rels/.rels",
+     "sha1": "167354cb44c739547c37b1d70c1f8781a593bfb1"
+    },
+    {
+     "name": "word/document.xml",
+     "sha1": "e54d9caabaf83f810a1c3fc3495cba4b2f0d1b46"
+    },
+    {
+     "name": "word/_rels/document.xml.rels",
+     "sha1": "8b323b4caff007d33268e0ab0c6bf0d4205051e9"
+    },
+    {
+     "name": "word/styles.xml",
+     "sha1": "2ad904aaaa3c1377e248f008923272ed9e7901e8"
+    }
+   ]
+  },
+  {
+   "name": "escape-ar-SA",
+   "locale": "ar-SA",
+   "map": {
+    "0": "First paragraph & <\"'>⟦x1⟧",
+    "3": "Company logo & <\"'>"
+   },
+   "zip": [
+    {
+     "name": "[Content_Types].xml",
+     "sha1": "7a30371b8ae51b0705a77ac1ad60cb720185b6ff"
+    },
+    {
+     "name": "_rels/.rels",
+     "sha1": "167354cb44c739547c37b1d70c1f8781a593bfb1"
+    },
+    {
+     "name": "word/document.xml",
+     "sha1": "6352c58074d667e7259226761ef7866226d22586"
+    },
+    {
+     "name": "word/_rels/document.xml.rels",
+     "sha1": "8b323b4caff007d33268e0ab0c6bf0d4205051e9"
+    },
+    {
+     "name": "word/styles.xml",
+     "sha1": "0db83a85d7c299e875ed34786557d862b8d68609"
+    }
+   ]
+  },
+  {
+   "name": "none-ar-SA",
+   "locale": "ar-SA",
+   "map": {},
+   "zip": [
+    {
+     "name": "[Content_Types].xml",
+     "sha1": "7a30371b8ae51b0705a77ac1ad60cb720185b6ff"
+    },
+    {
+     "name": "_rels/.rels",
+     "sha1": "167354cb44c739547c37b1d70c1f8781a593bfb1"
+    },
+    {
+     "name": "word/document.xml",
+     "sha1": "99b6b93d6e876327e7dca00c796ec3459d4b5da4"
+    },
+    {
+     "name": "word/_rels/document.xml.rels",
+     "sha1": "8b323b4caff007d33268e0ab0c6bf0d4205051e9"
+    },
+    {
+     "name": "word/styles.xml",
+     "sha1": "0db83a85d7c299e875ed34786557d862b8d68609"
+    }
+   ]
+  }
+ ],
+ "a11y_images": {
+  "images": 4,
+  "missing_alt": [
+   {
+    "kind": "missing",
+    "unit": 0,
+    "where": "Picture 1"
+   },
+   {
+    "kind": "empty",
+    "unit": 0,
+    "where": "Spacer"
+   }
+  ]
+ }
+}

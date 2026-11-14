@@ -1,0 +1,5288 @@
+{
+"corpus/flow.odg": {
+"de-DE": {
+"content": [],
+"styles": [
+"country-asian=JP",
+"country-complex=SA",
+"country=DE",
+"country=none",
+"language-asian=ja",
+"language-complex=ar",
+"language=de",
+"language=zxx",
+"writing-mode=lr-tb"
+],
+"meta": "de-DE"
+},
+"es-ES": {
+"content": [],
+"styles": [
+"country-asian=JP",
+"country-complex=SA",
+"country=ES",
+"country=none",
+"language-asian=ja",
+"language-complex=ar",
+"language=es",
+"language=zxx",
+"writing-mode=lr-tb"
+],
+"meta": "es-ES"
+},
+"fr-FR": {
+"content": [],
+"styles": [
+"country-asian=JP",
+"country-complex=SA",
+"country=FR",
+"country=none",
+"language-asian=ja",
+"language-complex=ar",
+"language=fr",
+"language=zxx",
+"writing-mode=lr-tb"
+],
+"meta": "fr-FR"
+},
+"it-IT": {
+"content": [],
+"styles": [
+"country-asian=JP",
+"country-complex=SA",
+"country=IT",
+"country=none",
+"language-asian=ja",
+"language-complex=ar",
+"language=it",
+"language=zxx",
+"writing-mode=lr-tb"
+],
+"meta": "it-IT"
+},
+"nl-NL": {
+"content": [],
+"styles": [
+"country-asian=JP",
+"country-complex=SA",
+"country=NL",
+"country=none",
+"language-asian=ja",
+"language-complex=ar",
+"language=nl",
+"language=zxx",
+"writing-mode=lr-tb"
+],
+"meta": "nl-NL"
+},
+"pt-BR": {
+"content": [],
+"styles": [
+"country-asian=JP",
+"country-complex=SA",
+"country=BR",
+"country=none",
+"language-asian=ja",
+"language-complex=ar",
+"language=pt",
+"language=zxx",
+"writing-mode=lr-tb"
+],
+"meta": "pt-BR"
+},
+"ja-JP": {
+"content": [],
+"styles": [
+"country-asian=JP",
+"country-complex=SA",
+"country=US",
+"country=none",
+"language-asian=ja",
+"language-complex=ar",
+"language=en",
+"language=zxx",
+"writing-mode=lr-tb"
+],
+"meta": "ja-JP"
+},
+"zh-CN": {
+"content": [],
+"styles": [
+"country-asian=CN",
+"country-complex=SA",
+"country=US",
+"country=none",
+"language-asian=zh",
+"language-complex=ar",
+"language=en",
+"language=zxx",
+"writing-mode=lr-tb"
+],
+"meta": "zh-CN"
+},
+"ko-KR": {
+"content": [],
+"styles": [
+"country-asian=KR",
+"country-complex=SA",
+"country=US",
+"country=none",
+"language-asian=ko",
+"language-complex=ar",
+"language=en",
+"language=zxx",
+"writing-mode=lr-tb"
+],
+"meta": "ko-KR"
+},
+"ar-SA": {
+"content": [],
+"styles": [
+"country-asian=JP",
+"country-complex=SA",
+"country=US",
+"country=none",
+"language-asian=ja",
+"language-complex=ar",
+"language=en",
+"language=zxx",
+"writing-mode=rl-tb"
+],
+"meta": "ar-SA"
+},
+"th-TH": {
+"content": [],
+"styles": [
+"country-asian=JP",
+"country-complex=TH",
+"country=US",
+"country=none",
+"language-asian=ja",
+"language-complex=th",
+"language=en",
+"language=zxx",
+"writing-mode=lr-tb"
+],
+"meta": "th-TH"
+},
+"he-IL": {
+"content": [],
+"styles": [
+"country-asian=JP",
+"country-complex=IL",
+"country=US",
+"country=none",
+"language-asian=ja",
+"language-complex=he",
+"language=en",
+"language=zxx",
+"writing-mode=rl-tb"
+],
+"meta": "he-IL"
+}
+},
+"corpus/guide.odt": {
+"de-DE": {
+"content": [],
+"styles": [
+"country-asian=JP",
+"country-complex=SA",
+"country=DE",
+"country=none",
+"language-asian=ja",
+"language-complex=ar",
+"language=de",
+"language=zxx",
+"writing-mode=lr-tb"
+],
+"meta": "de-DE"
+},
+"es-ES": {
+"content": [],
+"styles": [
+"country-asian=JP",
+"country-complex=SA",
+"country=ES",
+"country=none",
+"language-asian=ja",
+"language-complex=ar",
+"language=es",
+"language=zxx",
+"writing-mode=lr-tb"
+],
+"meta": "es-ES"
+},
+"fr-FR": {
+"content": [],
+"styles": [
+"country-asian=JP",
+"country-complex=SA",
+"country=FR",
+"country=none",
+"language-asian=ja",
+"language-complex=ar",
+"language=fr",
+"language=zxx",
+"writing-mode=lr-tb"
+],
+"meta": "fr-FR"
+},
+"it-IT": {
+"content": [],
+"styles": [
+"country-asian=JP",
+"country-complex=SA",
+"country=IT",
+"country=none",
+"language-asian=ja",
+"language-complex=ar",
+"language=it",
+"language=zxx",
+"writing-mode=lr-tb"
+],
+"meta": "it-IT"
+},
+"nl-NL": {
+"content": [],
+"styles": [
+"country-asian=JP",
+"country-complex=SA",
+"country=NL",
+"country=none",
+"language-asian=ja",
+"language-complex=ar",
+"language=nl",
+"language=zxx",
+"writing-mode=lr-tb"
+],
+"meta": "nl-NL"
+},
+"pt-BR": {
+"content": [],
+"styles": [
+"country-asian=JP",
+"country-complex=SA",
+"country=BR",
+"country=none",
+"language-asian=ja",
+"language-complex=ar",
+"language=pt",
+"language=zxx",
+"writing-mode=lr-tb"
+],
+"meta": "pt-BR"
+},
+"ja-JP": {
+"content": [],
+"styles": [
+"country-asian=JP",
+"country-complex=SA",
+"country=US",
+"country=none",
+"language-asian=ja",
+"language-complex=ar",
+"language=en",
+"language=zxx",
+"writing-mode=lr-tb"
+],
+"meta": "ja-JP"
+},
+"zh-CN": {
+"content": [],
+"styles": [
+"country-asian=CN",
+"country-complex=SA",
+"country=US",
+"country=none",
+"language-asian=zh",
+"language-complex=ar",
+"language=en",
+"language=zxx",
+"writing-mode=lr-tb"
+],
+"meta": "zh-CN"
+},
+"ko-KR": {
+"content": [],
+"styles": [
+"country-asian=KR",
+"country-complex=SA",
+"country=US",
+"country=none",
+"language-asian=ko",
+"language-complex=ar",
+"language=en",
+"language=zxx",
+"writing-mode=lr-tb"
+],
+"meta": "ko-KR"
+},
+"ar-SA": {
+"content": [],
+"styles": [
+"country-asian=JP",
+"country-complex=SA",
+"country=US",
+"country=none",
+"language-asian=ja",
+"language-complex=ar",
+"language=en",
+"language=zxx",
+"writing-mode=rl-tb"
+],
+"meta": "ar-SA"
+},
+"th-TH": {
+"content": [],
+"styles": [
+"country-asian=JP",
+"country-complex=TH",
+"country=US",
+"country=none",
+"language-asian=ja",
+"language-complex=th",
+"language=en",
+"language=zxx",
+"writing-mode=lr-tb"
+],
+"meta": "th-TH"
+},
+"he-IL": {
+"content": [],
+"styles": [
+"country-asian=JP",
+"country-complex=IL",
+"country=US",
+"country=none",
+"language-asian=ja",
+"language-complex=he",
+"language=en",
+"language=zxx",
+"writing-mode=rl-tb"
+],
+"meta": "he-IL"
+}
+},
+"corpus/sales.ods": {
+"de-DE": {
+"content": [],
+"styles": [
+"country-asian=JP",
+"country-complex=SA",
+"country=DE",
+"country=none",
+"language-asian=ja",
+"language-complex=ar",
+"language=de",
+"language=zxx",
+"writing-mode=lr-tb"
+],
+"meta": "de-DE"
+},
+"es-ES": {
+"content": [],
+"styles": [
+"country-asian=JP",
+"country-complex=SA",
+"country=ES",
+"country=none",
+"language-asian=ja",
+"language-complex=ar",
+"language=es",
+"language=zxx",
+"writing-mode=lr-tb"
+],
+"meta": "es-ES"
+},
+"fr-FR": {
+"content": [],
+"styles": [
+"country-asian=JP",
+"country-complex=SA",
+"country=FR",
+"country=none",
+"language-asian=ja",
+"language-complex=ar",
+"language=fr",
+"language=zxx",
+"writing-mode=lr-tb"
+],
+"meta": "fr-FR"
+},
+"it-IT": {
+"content": [],
+"styles": [
+"country-asian=JP",
+"country-complex=SA",
+"country=IT",
+"country=none",
+"language-asian=ja",
+"language-complex=ar",
+"language=it",
+"language=zxx",
+"writing-mode=lr-tb"
+],
+"meta": "it-IT"
+},
+"nl-NL": {
+"content": [],
+"styles": [
+"country-asian=JP",
+"country-complex=SA",
+"country=NL",
+"country=none",
+"language-asian=ja",
+"language-complex=ar",
+"language=nl",
+"language=zxx",
+"writing-mode=lr-tb"
+],
+"meta": "nl-NL"
+},
+"pt-BR": {
+"content": [],
+"styles": [
+"country-asian=JP",
+"country-complex=SA",
+"country=BR",
+"country=none",
+"language-asian=ja",
+"language-complex=ar",
+"language=pt",
+"language=zxx",
+"writing-mode=lr-tb"
+],
+"meta": "pt-BR"
+},
+"ja-JP": {
+"content": [],
+"styles": [
+"country-asian=JP",
+"country-complex=SA",
+"country=US",
+"country=none",
+"language-asian=ja",
+"language-complex=ar",
+"language=en",
+"language=zxx",
+"writing-mode=lr-tb"
+],
+"meta": "ja-JP"
+},
+"zh-CN": {
+"content": [],
+"styles": [
+"country-asian=CN",
+"country-complex=SA",
+"country=US",
+"country=none",
+"language-asian=zh",
+"language-complex=ar",
+"language=en",
+"language=zxx",
+"writing-mode=lr-tb"
+],
+"meta": "zh-CN"
+},
+"ko-KR": {
+"content": [],
+"styles": [
+"country-asian=KR",
+"country-complex=SA",
+"country=US",
+"country=none",
+"language-asian=ko",
+"language-complex=ar",
+"language=en",
+"language=zxx",
+"writing-mode=lr-tb"
+],
+"meta": "ko-KR"
+},
+"ar-SA": {
+"content": [
+"writing-mode=rl-tb"
+],
+"styles": [
+"country-asian=JP",
+"country-complex=SA",
+"country=US",
+"country=none",
+"language-asian=ja",
+"language-complex=ar",
+"language=en",
+"language=zxx",
+"writing-mode=rl-tb"
+],
+"meta": "ar-SA"
+},
+"th-TH": {
+"content": [],
+"styles": [
+"country-asian=JP",
+"country-complex=TH",
+"country=US",
+"country=none",
+"language-asian=ja",
+"language-complex=th",
+"language=en",
+"language=zxx",
+"writing-mode=lr-tb"
+],
+"meta": "th-TH"
+},
+"he-IL": {
+"content": [
+"writing-mode=rl-tb"
+],
+"styles": [
+"country-asian=JP",
+"country-complex=IL",
+"country=US",
+"country=none",
+"language-asian=ja",
+"language-complex=he",
+"language=en",
+"language=zxx",
+"writing-mode=rl-tb"
+],
+"meta": "he-IL"
+}
+},
+"corpus/slides.odp": {
+"de-DE": {
+"content": [
+"writing-mode=lr-tb"
+],
+"styles": [
+"country-asian=JP",
+"country-complex=SA",
+"country=DE",
+"country=none",
+"language-asian=ja",
+"language-complex=ar",
+"language=de",
+"language=zxx",
+"writing-mode=lr-tb"
+],
+"meta": "de-DE"
+},
+"es-ES": {
+"content": [
+"writing-mode=lr-tb"
+],
+"styles": [
+"country-asian=JP",
+"country-complex=SA",
+"country=ES",
+"country=none",
+"language-asian=ja",
+"language-complex=ar",
+"language=es",
+"language=zxx",
+"writing-mode=lr-tb"
+],
+"meta": "es-ES"
+},
+"fr-FR": {
+"content": [
+"writing-mode=lr-tb"
+],
+"styles": [
+"country-asian=JP",
+"country-complex=SA",
+"country=FR",
+"country=none",
+"language-asian=ja",
+"language-complex=ar",
+"language=fr",
+"language=zxx",
+"writing-mode=lr-tb"
+],
+"meta": "fr-FR"
+},
+"it-IT": {
+"content": [
+"writing-mode=lr-tb"
+],
+"styles": [
+"country-asian=JP",
+"country-complex=SA",
+"country=IT",
+"country=none",
+"language-asian=ja",
+"language-complex=ar",
+"language=it",
+"language=zxx",
+"writing-mode=lr-tb"
+],
+"meta": "it-IT"
+},
+"nl-NL": {
+"content": [
+"writing-mode=lr-tb"
+],
+"styles": [
+"country-asian=JP",
+"country-complex=SA",
+"country=NL",
+"country=none",
+"language-asian=ja",
+"language-complex=ar",
+"language=nl",
+"language=zxx",
+"writing-mode=lr-tb"
+],
+"meta": "nl-NL"
+},
+"pt-BR": {
+"content": [
+"writing-mode=lr-tb"
+],
+"styles": [
+"country-asian=JP",
+"country-complex=SA",
+"country=BR",
+"country=none",
+"language-asian=ja",
+"language-complex=ar",
+"language=pt",
+"language=zxx",
+"writing-mode=lr-tb"
+],
+"meta": "pt-BR"
+},
+"ja-JP": {
+"content": [
+"writing-mode=lr-tb"
+],
+"styles": [
+"country-asian=JP",
+"country-complex=SA",
+"country=US",
+"country=none",
+"language-asian=ja",
+"language-complex=ar",
+"language=en",
+"language=zxx",
+"writing-mode=lr-tb"
+],
+"meta": "ja-JP"
+},
+"zh-CN": {
+"content": [
+"writing-mode=lr-tb"
+],
+"styles": [
+"country-asian=CN",
+"country-complex=SA",
+"country=US",
+"country=none",
+"language-asian=zh",
+"language-complex=ar",
+"language=en",
+"language=zxx",
+"writing-mode=lr-tb"
+],
+"meta": "zh-CN"
+},
+"ko-KR": {
+"content": [
+"writing-mode=lr-tb"
+],
+"styles": [
+"country-asian=KR",
+"country-complex=SA",
+"country=US",
+"country=none",
+"language-asian=ko",
+"language-complex=ar",
+"language=en",
+"language=zxx",
+"writing-mode=lr-tb"
+],
+"meta": "ko-KR"
+},
+"ar-SA": {
+"content": [
+"writing-mode=rl-tb"
+],
+"styles": [
+"country-asian=JP",
+"country-complex=SA",
+"country=US",
+"country=none",
+"language-asian=ja",
+"language-complex=ar",
+"language=en",
+"language=zxx",
+"writing-mode=rl-tb"
+],
+"meta": "ar-SA"
+},
+"th-TH": {
+"content": [
+"writing-mode=lr-tb"
+],
+"styles": [
+"country-asian=JP",
+"country-complex=TH",
+"country=US",
+"country=none",
+"language-asian=ja",
+"language-complex=th",
+"language=en",
+"language=zxx",
+"writing-mode=lr-tb"
+],
+"meta": "th-TH"
+},
+"he-IL": {
+"content": [
+"writing-mode=rl-tb"
+],
+"styles": [
+"country-asian=JP",
+"country-complex=IL",
+"country=US",
+"country=none",
+"language-asian=ja",
+"language-complex=he",
+"language=en",
+"language=zxx",
+"writing-mode=rl-tb"
+],
+"meta": "he-IL"
+}
+},
+"okapi/TestDocument01.odt": {
+"de-DE": {
+"content": [
+"country-asian=none",
+"country-asian=none",
+"country-asian=none",
+"country-complex=none",
+"country-complex=none",
+"country-complex=none",
+"country=DE",
+"country=DE",
+"country=DE",
+"country=DE",
+"country=DE",
+"country=US",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-complex=zxx",
+"language-complex=zxx",
+"language-complex=zxx",
+"language=de",
+"language=de",
+"language=de",
+"language=de",
+"language=de",
+"language=en",
+"writing-mode=lr-tb"
+],
+"styles": [
+"country-asian=none",
+"country-asian=none",
+"country-complex=none",
+"country-complex=none",
+"country=DE",
+"country=DE",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-complex=zxx",
+"language-complex=zxx",
+"language=de",
+"language=de",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "de-DE"
+},
+"es-ES": {
+"content": [
+"country-asian=none",
+"country-asian=none",
+"country-asian=none",
+"country-complex=none",
+"country-complex=none",
+"country-complex=none",
+"country=ES",
+"country=ES",
+"country=ES",
+"country=ES",
+"country=ES",
+"country=US",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-complex=zxx",
+"language-complex=zxx",
+"language-complex=zxx",
+"language=en",
+"language=es",
+"language=es",
+"language=es",
+"language=es",
+"language=es",
+"writing-mode=lr-tb"
+],
+"styles": [
+"country-asian=none",
+"country-asian=none",
+"country-complex=none",
+"country-complex=none",
+"country=ES",
+"country=ES",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-complex=zxx",
+"language-complex=zxx",
+"language=es",
+"language=es",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "es-ES"
+},
+"fr-FR": {
+"content": [
+"country-asian=none",
+"country-asian=none",
+"country-asian=none",
+"country-complex=none",
+"country-complex=none",
+"country-complex=none",
+"country=FR",
+"country=FR",
+"country=FR",
+"country=FR",
+"country=FR",
+"country=US",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-complex=zxx",
+"language-complex=zxx",
+"language-complex=zxx",
+"language=en",
+"language=fr",
+"language=fr",
+"language=fr",
+"language=fr",
+"language=fr",
+"writing-mode=lr-tb"
+],
+"styles": [
+"country-asian=none",
+"country-asian=none",
+"country-complex=none",
+"country-complex=none",
+"country=FR",
+"country=FR",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-complex=zxx",
+"language-complex=zxx",
+"language=fr",
+"language=fr",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "fr-FR"
+},
+"it-IT": {
+"content": [
+"country-asian=none",
+"country-asian=none",
+"country-asian=none",
+"country-complex=none",
+"country-complex=none",
+"country-complex=none",
+"country=IT",
+"country=IT",
+"country=IT",
+"country=IT",
+"country=IT",
+"country=US",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-complex=zxx",
+"language-complex=zxx",
+"language-complex=zxx",
+"language=en",
+"language=it",
+"language=it",
+"language=it",
+"language=it",
+"language=it",
+"writing-mode=lr-tb"
+],
+"styles": [
+"country-asian=none",
+"country-asian=none",
+"country-complex=none",
+"country-complex=none",
+"country=IT",
+"country=IT",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-complex=zxx",
+"language-complex=zxx",
+"language=it",
+"language=it",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "it-IT"
+},
+"nl-NL": {
+"content": [
+"country-asian=none",
+"country-asian=none",
+"country-asian=none",
+"country-complex=none",
+"country-complex=none",
+"country-complex=none",
+"country=NL",
+"country=NL",
+"country=NL",
+"country=NL",
+"country=NL",
+"country=US",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-complex=zxx",
+"language-complex=zxx",
+"language-complex=zxx",
+"language=en",
+"language=nl",
+"language=nl",
+"language=nl",
+"language=nl",
+"language=nl",
+"writing-mode=lr-tb"
+],
+"styles": [
+"country-asian=none",
+"country-asian=none",
+"country-complex=none",
+"country-complex=none",
+"country=NL",
+"country=NL",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-complex=zxx",
+"language-complex=zxx",
+"language=nl",
+"language=nl",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "nl-NL"
+},
+"pt-BR": {
+"content": [
+"country-asian=none",
+"country-asian=none",
+"country-asian=none",
+"country-complex=none",
+"country-complex=none",
+"country-complex=none",
+"country=BR",
+"country=BR",
+"country=BR",
+"country=BR",
+"country=BR",
+"country=US",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-complex=zxx",
+"language-complex=zxx",
+"language-complex=zxx",
+"language=en",
+"language=pt",
+"language=pt",
+"language=pt",
+"language=pt",
+"language=pt",
+"writing-mode=lr-tb"
+],
+"styles": [
+"country-asian=none",
+"country-asian=none",
+"country-complex=none",
+"country-complex=none",
+"country=BR",
+"country=BR",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-complex=zxx",
+"language-complex=zxx",
+"language=pt",
+"language=pt",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "pt-BR"
+},
+"ja-JP": {
+"content": [
+"country-asian=none",
+"country-asian=none",
+"country-asian=none",
+"country-complex=none",
+"country-complex=none",
+"country-complex=none",
+"country=US",
+"country=US",
+"country=US",
+"country=US",
+"country=none",
+"country=none",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-complex=zxx",
+"language-complex=zxx",
+"language-complex=zxx",
+"language=en",
+"language=en",
+"language=en",
+"language=en",
+"language=rm",
+"language=rm",
+"writing-mode=lr-tb"
+],
+"styles": [
+"country-asian=JP",
+"country-asian=JP",
+"country-complex=none",
+"country-complex=none",
+"country=US",
+"country=US",
+"language-asian=ja",
+"language-asian=ja",
+"language-complex=zxx",
+"language-complex=zxx",
+"language=en",
+"language=en",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "ja-JP"
+},
+"zh-CN": {
+"content": [
+"country-asian=none",
+"country-asian=none",
+"country-asian=none",
+"country-complex=none",
+"country-complex=none",
+"country-complex=none",
+"country=US",
+"country=US",
+"country=US",
+"country=US",
+"country=none",
+"country=none",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-complex=zxx",
+"language-complex=zxx",
+"language-complex=zxx",
+"language=en",
+"language=en",
+"language=en",
+"language=en",
+"language=rm",
+"language=rm",
+"writing-mode=lr-tb"
+],
+"styles": [
+"country-asian=CN",
+"country-asian=CN",
+"country-complex=none",
+"country-complex=none",
+"country=US",
+"country=US",
+"language-asian=zh",
+"language-asian=zh",
+"language-complex=zxx",
+"language-complex=zxx",
+"language=en",
+"language=en",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "zh-CN"
+},
+"ko-KR": {
+"content": [
+"country-asian=none",
+"country-asian=none",
+"country-asian=none",
+"country-complex=none",
+"country-complex=none",
+"country-complex=none",
+"country=US",
+"country=US",
+"country=US",
+"country=US",
+"country=none",
+"country=none",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-complex=zxx",
+"language-complex=zxx",
+"language-complex=zxx",
+"language=en",
+"language=en",
+"language=en",
+"language=en",
+"language=rm",
+"language=rm",
+"writing-mode=lr-tb"
+],
+"styles": [
+"country-asian=KR",
+"country-asian=KR",
+"country-complex=none",
+"country-complex=none",
+"country=US",
+"country=US",
+"language-asian=ko",
+"language-asian=ko",
+"language-complex=zxx",
+"language-complex=zxx",
+"language=en",
+"language=en",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "ko-KR"
+},
+"ar-SA": {
+"content": [
+"country-asian=none",
+"country-asian=none",
+"country-asian=none",
+"country-complex=none",
+"country-complex=none",
+"country-complex=none",
+"country=US",
+"country=US",
+"country=US",
+"country=US",
+"country=none",
+"country=none",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-complex=zxx",
+"language-complex=zxx",
+"language-complex=zxx",
+"language=en",
+"language=en",
+"language=en",
+"language=en",
+"language=rm",
+"language=rm",
+"writing-mode=rl-tb"
+],
+"styles": [
+"country-asian=none",
+"country-asian=none",
+"country-complex=SA",
+"country-complex=SA",
+"country=US",
+"country=US",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-complex=ar",
+"language-complex=ar",
+"language=en",
+"language=en",
+"writing-mode=lr-tb",
+"writing-mode=rl-tb",
+"writing-mode=rl-tb"
+],
+"meta": "ar-SA"
+},
+"th-TH": {
+"content": [
+"country-asian=none",
+"country-asian=none",
+"country-asian=none",
+"country-complex=none",
+"country-complex=none",
+"country-complex=none",
+"country=US",
+"country=US",
+"country=US",
+"country=US",
+"country=none",
+"country=none",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-complex=zxx",
+"language-complex=zxx",
+"language-complex=zxx",
+"language=en",
+"language=en",
+"language=en",
+"language=en",
+"language=rm",
+"language=rm",
+"writing-mode=lr-tb"
+],
+"styles": [
+"country-asian=none",
+"country-asian=none",
+"country-complex=TH",
+"country-complex=TH",
+"country=US",
+"country=US",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-complex=th",
+"language-complex=th",
+"language=en",
+"language=en",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "th-TH"
+},
+"he-IL": {
+"content": [
+"country-asian=none",
+"country-asian=none",
+"country-asian=none",
+"country-complex=none",
+"country-complex=none",
+"country-complex=none",
+"country=US",
+"country=US",
+"country=US",
+"country=US",
+"country=none",
+"country=none",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-complex=zxx",
+"language-complex=zxx",
+"language-complex=zxx",
+"language=en",
+"language=en",
+"language=en",
+"language=en",
+"language=rm",
+"language=rm",
+"writing-mode=rl-tb"
+],
+"styles": [
+"country-asian=none",
+"country-asian=none",
+"country-complex=IL",
+"country-complex=IL",
+"country=US",
+"country=US",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-complex=he",
+"language-complex=he",
+"language=en",
+"language=en",
+"writing-mode=lr-tb",
+"writing-mode=rl-tb",
+"writing-mode=rl-tb"
+],
+"meta": "he-IL"
+}
+},
+"okapi/TestDocument02.odt": {
+"de-DE": {
+"content": [],
+"styles": [
+"country-asian=none",
+"country-asian=none",
+"country-complex=none",
+"country-complex=none",
+"country=DE",
+"country=DE",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-complex=zxx",
+"language-complex=zxx",
+"language=de",
+"language=de",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "de-DE"
+},
+"es-ES": {
+"content": [],
+"styles": [
+"country-asian=none",
+"country-asian=none",
+"country-complex=none",
+"country-complex=none",
+"country=ES",
+"country=ES",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-complex=zxx",
+"language-complex=zxx",
+"language=es",
+"language=es",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "es-ES"
+},
+"fr-FR": {
+"content": [],
+"styles": [
+"country-asian=none",
+"country-asian=none",
+"country-complex=none",
+"country-complex=none",
+"country=FR",
+"country=FR",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-complex=zxx",
+"language-complex=zxx",
+"language=fr",
+"language=fr",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "fr-FR"
+},
+"it-IT": {
+"content": [],
+"styles": [
+"country-asian=none",
+"country-asian=none",
+"country-complex=none",
+"country-complex=none",
+"country=IT",
+"country=IT",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-complex=zxx",
+"language-complex=zxx",
+"language=it",
+"language=it",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "it-IT"
+},
+"nl-NL": {
+"content": [],
+"styles": [
+"country-asian=none",
+"country-asian=none",
+"country-complex=none",
+"country-complex=none",
+"country=NL",
+"country=NL",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-complex=zxx",
+"language-complex=zxx",
+"language=nl",
+"language=nl",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "nl-NL"
+},
+"pt-BR": {
+"content": [],
+"styles": [
+"country-asian=none",
+"country-asian=none",
+"country-complex=none",
+"country-complex=none",
+"country=BR",
+"country=BR",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-complex=zxx",
+"language-complex=zxx",
+"language=pt",
+"language=pt",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "pt-BR"
+},
+"ja-JP": {
+"content": [],
+"styles": [
+"country-asian=JP",
+"country-asian=JP",
+"country-complex=none",
+"country-complex=none",
+"country=US",
+"country=US",
+"language-asian=ja",
+"language-asian=ja",
+"language-complex=zxx",
+"language-complex=zxx",
+"language=en",
+"language=en",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "ja-JP"
+},
+"zh-CN": {
+"content": [],
+"styles": [
+"country-asian=CN",
+"country-asian=CN",
+"country-complex=none",
+"country-complex=none",
+"country=US",
+"country=US",
+"language-asian=zh",
+"language-asian=zh",
+"language-complex=zxx",
+"language-complex=zxx",
+"language=en",
+"language=en",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "zh-CN"
+},
+"ko-KR": {
+"content": [],
+"styles": [
+"country-asian=KR",
+"country-asian=KR",
+"country-complex=none",
+"country-complex=none",
+"country=US",
+"country=US",
+"language-asian=ko",
+"language-asian=ko",
+"language-complex=zxx",
+"language-complex=zxx",
+"language=en",
+"language=en",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "ko-KR"
+},
+"ar-SA": {
+"content": [],
+"styles": [
+"country-asian=none",
+"country-asian=none",
+"country-complex=SA",
+"country-complex=SA",
+"country=US",
+"country=US",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-complex=ar",
+"language-complex=ar",
+"language=en",
+"language=en",
+"writing-mode=lr-tb",
+"writing-mode=rl-tb",
+"writing-mode=rl-tb"
+],
+"meta": "ar-SA"
+},
+"th-TH": {
+"content": [],
+"styles": [
+"country-asian=none",
+"country-asian=none",
+"country-complex=TH",
+"country-complex=TH",
+"country=US",
+"country=US",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-complex=th",
+"language-complex=th",
+"language=en",
+"language=en",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "th-TH"
+},
+"he-IL": {
+"content": [],
+"styles": [
+"country-asian=none",
+"country-asian=none",
+"country-complex=IL",
+"country-complex=IL",
+"country=US",
+"country=US",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-complex=he",
+"language-complex=he",
+"language=en",
+"language=en",
+"writing-mode=lr-tb",
+"writing-mode=rl-tb",
+"writing-mode=rl-tb"
+],
+"meta": "he-IL"
+}
+},
+"okapi/TestDocument03.odt": {
+"de-DE": {
+"content": [
+"country=DE",
+"language=de"
+],
+"styles": [
+"country-asian=none",
+"country-asian=none",
+"country-complex=none",
+"country-complex=none",
+"country=DE",
+"country=DE",
+"country=DE",
+"country=DE",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-complex=zxx",
+"language-complex=zxx",
+"language=de",
+"language=de",
+"language=de",
+"language=de",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "de-DE"
+},
+"es-ES": {
+"content": [
+"country=ES",
+"language=es"
+],
+"styles": [
+"country-asian=none",
+"country-asian=none",
+"country-complex=none",
+"country-complex=none",
+"country=ES",
+"country=ES",
+"country=ES",
+"country=ES",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-complex=zxx",
+"language-complex=zxx",
+"language=es",
+"language=es",
+"language=es",
+"language=es",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "es-ES"
+},
+"fr-FR": {
+"content": [
+"country=FR",
+"language=fr"
+],
+"styles": [
+"country-asian=none",
+"country-asian=none",
+"country-complex=none",
+"country-complex=none",
+"country=FR",
+"country=FR",
+"country=FR",
+"country=FR",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-complex=zxx",
+"language-complex=zxx",
+"language=fr",
+"language=fr",
+"language=fr",
+"language=fr",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "fr-FR"
+},
+"it-IT": {
+"content": [
+"country=IT",
+"language=it"
+],
+"styles": [
+"country-asian=none",
+"country-asian=none",
+"country-complex=none",
+"country-complex=none",
+"country=IT",
+"country=IT",
+"country=IT",
+"country=IT",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-complex=zxx",
+"language-complex=zxx",
+"language=it",
+"language=it",
+"language=it",
+"language=it",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "it-IT"
+},
+"nl-NL": {
+"content": [
+"country=NL",
+"language=nl"
+],
+"styles": [
+"country-asian=none",
+"country-asian=none",
+"country-complex=none",
+"country-complex=none",
+"country=NL",
+"country=NL",
+"country=NL",
+"country=NL",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-complex=zxx",
+"language-complex=zxx",
+"language=nl",
+"language=nl",
+"language=nl",
+"language=nl",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "nl-NL"
+},
+"pt-BR": {
+"content": [
+"country=BR",
+"language=pt"
+],
+"styles": [
+"country-asian=none",
+"country-asian=none",
+"country-complex=none",
+"country-complex=none",
+"country=BR",
+"country=BR",
+"country=BR",
+"country=BR",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-complex=zxx",
+"language-complex=zxx",
+"language=pt",
+"language=pt",
+"language=pt",
+"language=pt",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "pt-BR"
+},
+"ja-JP": {
+"content": [
+"country=FR",
+"language=fr"
+],
+"styles": [
+"country-asian=JP",
+"country-asian=JP",
+"country-complex=none",
+"country-complex=none",
+"country=US",
+"country=US",
+"country=US",
+"country=US",
+"language-asian=ja",
+"language-asian=ja",
+"language-complex=zxx",
+"language-complex=zxx",
+"language=en",
+"language=en",
+"language=en",
+"language=en",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "ja-JP"
+},
+"zh-CN": {
+"content": [
+"country=FR",
+"language=fr"
+],
+"styles": [
+"country-asian=CN",
+"country-asian=CN",
+"country-complex=none",
+"country-complex=none",
+"country=US",
+"country=US",
+"country=US",
+"country=US",
+"language-asian=zh",
+"language-asian=zh",
+"language-complex=zxx",
+"language-complex=zxx",
+"language=en",
+"language=en",
+"language=en",
+"language=en",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "zh-CN"
+},
+"ko-KR": {
+"content": [
+"country=FR",
+"language=fr"
+],
+"styles": [
+"country-asian=KR",
+"country-asian=KR",
+"country-complex=none",
+"country-complex=none",
+"country=US",
+"country=US",
+"country=US",
+"country=US",
+"language-asian=ko",
+"language-asian=ko",
+"language-complex=zxx",
+"language-complex=zxx",
+"language=en",
+"language=en",
+"language=en",
+"language=en",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "ko-KR"
+},
+"ar-SA": {
+"content": [
+"country=FR",
+"language=fr"
+],
+"styles": [
+"country-asian=none",
+"country-asian=none",
+"country-complex=SA",
+"country-complex=SA",
+"country=US",
+"country=US",
+"country=US",
+"country=US",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-complex=ar",
+"language-complex=ar",
+"language=en",
+"language=en",
+"language=en",
+"language=en",
+"writing-mode=lr-tb",
+"writing-mode=rl-tb",
+"writing-mode=rl-tb"
+],
+"meta": "ar-SA"
+},
+"th-TH": {
+"content": [
+"country=FR",
+"language=fr"
+],
+"styles": [
+"country-asian=none",
+"country-asian=none",
+"country-complex=TH",
+"country-complex=TH",
+"country=US",
+"country=US",
+"country=US",
+"country=US",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-complex=th",
+"language-complex=th",
+"language=en",
+"language=en",
+"language=en",
+"language=en",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "th-TH"
+},
+"he-IL": {
+"content": [
+"country=FR",
+"language=fr"
+],
+"styles": [
+"country-asian=none",
+"country-asian=none",
+"country-complex=IL",
+"country-complex=IL",
+"country=US",
+"country=US",
+"country=US",
+"country=US",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-complex=he",
+"language-complex=he",
+"language=en",
+"language=en",
+"language=en",
+"language=en",
+"writing-mode=lr-tb",
+"writing-mode=rl-tb",
+"writing-mode=rl-tb"
+],
+"meta": "he-IL"
+}
+},
+"okapi/TestDocument04.odt": {
+"de-DE": {
+"content": [
+"country-asian=none",
+"country-complex=none",
+"country=DE",
+"language-asian=zxx",
+"language-complex=zxx",
+"language=de",
+"writing-mode=lr-tb"
+],
+"styles": [
+"country-asian=none",
+"country-asian=none",
+"country-asian=none",
+"country-complex=none",
+"country-complex=none",
+"country-complex=none",
+"country=DE",
+"country=DE",
+"country=none",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-complex=zxx",
+"language-complex=zxx",
+"language-complex=zxx",
+"language=de",
+"language=de",
+"language=zxx",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "de-DE"
+},
+"es-ES": {
+"content": [
+"country-asian=none",
+"country-complex=none",
+"country=ES",
+"language-asian=zxx",
+"language-complex=zxx",
+"language=es",
+"writing-mode=lr-tb"
+],
+"styles": [
+"country-asian=none",
+"country-asian=none",
+"country-asian=none",
+"country-complex=none",
+"country-complex=none",
+"country-complex=none",
+"country=ES",
+"country=ES",
+"country=none",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-complex=zxx",
+"language-complex=zxx",
+"language-complex=zxx",
+"language=es",
+"language=es",
+"language=zxx",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "es-ES"
+},
+"fr-FR": {
+"content": [
+"country-asian=none",
+"country-complex=none",
+"country=FR",
+"language-asian=zxx",
+"language-complex=zxx",
+"language=fr",
+"writing-mode=lr-tb"
+],
+"styles": [
+"country-asian=none",
+"country-asian=none",
+"country-asian=none",
+"country-complex=none",
+"country-complex=none",
+"country-complex=none",
+"country=FR",
+"country=FR",
+"country=none",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-complex=zxx",
+"language-complex=zxx",
+"language-complex=zxx",
+"language=fr",
+"language=fr",
+"language=zxx",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "fr-FR"
+},
+"it-IT": {
+"content": [
+"country-asian=none",
+"country-complex=none",
+"country=IT",
+"language-asian=zxx",
+"language-complex=zxx",
+"language=it",
+"writing-mode=lr-tb"
+],
+"styles": [
+"country-asian=none",
+"country-asian=none",
+"country-asian=none",
+"country-complex=none",
+"country-complex=none",
+"country-complex=none",
+"country=IT",
+"country=IT",
+"country=none",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-complex=zxx",
+"language-complex=zxx",
+"language-complex=zxx",
+"language=it",
+"language=it",
+"language=zxx",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "it-IT"
+},
+"nl-NL": {
+"content": [
+"country-asian=none",
+"country-complex=none",
+"country=NL",
+"language-asian=zxx",
+"language-complex=zxx",
+"language=nl",
+"writing-mode=lr-tb"
+],
+"styles": [
+"country-asian=none",
+"country-asian=none",
+"country-asian=none",
+"country-complex=none",
+"country-complex=none",
+"country-complex=none",
+"country=NL",
+"country=NL",
+"country=none",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-complex=zxx",
+"language-complex=zxx",
+"language-complex=zxx",
+"language=nl",
+"language=nl",
+"language=zxx",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "nl-NL"
+},
+"pt-BR": {
+"content": [
+"country-asian=none",
+"country-complex=none",
+"country=BR",
+"language-asian=zxx",
+"language-complex=zxx",
+"language=pt",
+"writing-mode=lr-tb"
+],
+"styles": [
+"country-asian=none",
+"country-asian=none",
+"country-asian=none",
+"country-complex=none",
+"country-complex=none",
+"country-complex=none",
+"country=BR",
+"country=BR",
+"country=none",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-complex=zxx",
+"language-complex=zxx",
+"language-complex=zxx",
+"language=pt",
+"language=pt",
+"language=zxx",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "pt-BR"
+},
+"ja-JP": {
+"content": [
+"country-asian=none",
+"country-complex=none",
+"country=US",
+"language-asian=zxx",
+"language-complex=zxx",
+"language=en",
+"writing-mode=lr-tb"
+],
+"styles": [
+"country-asian=JP",
+"country-asian=JP",
+"country-asian=none",
+"country-complex=none",
+"country-complex=none",
+"country-complex=none",
+"country=US",
+"country=US",
+"country=none",
+"language-asian=ja",
+"language-asian=ja",
+"language-asian=zxx",
+"language-complex=zxx",
+"language-complex=zxx",
+"language-complex=zxx",
+"language=en",
+"language=en",
+"language=zxx",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "ja-JP"
+},
+"zh-CN": {
+"content": [
+"country-asian=none",
+"country-complex=none",
+"country=US",
+"language-asian=zxx",
+"language-complex=zxx",
+"language=en",
+"writing-mode=lr-tb"
+],
+"styles": [
+"country-asian=CN",
+"country-asian=CN",
+"country-asian=none",
+"country-complex=none",
+"country-complex=none",
+"country-complex=none",
+"country=US",
+"country=US",
+"country=none",
+"language-asian=zh",
+"language-asian=zh",
+"language-asian=zxx",
+"language-complex=zxx",
+"language-complex=zxx",
+"language-complex=zxx",
+"language=en",
+"language=en",
+"language=zxx",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "zh-CN"
+},
+"ko-KR": {
+"content": [
+"country-asian=none",
+"country-complex=none",
+"country=US",
+"language-asian=zxx",
+"language-complex=zxx",
+"language=en",
+"writing-mode=lr-tb"
+],
+"styles": [
+"country-asian=KR",
+"country-asian=KR",
+"country-asian=none",
+"country-complex=none",
+"country-complex=none",
+"country-complex=none",
+"country=US",
+"country=US",
+"country=none",
+"language-asian=ko",
+"language-asian=ko",
+"language-asian=zxx",
+"language-complex=zxx",
+"language-complex=zxx",
+"language-complex=zxx",
+"language=en",
+"language=en",
+"language=zxx",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "ko-KR"
+},
+"ar-SA": {
+"content": [
+"country-asian=none",
+"country-complex=none",
+"country=US",
+"language-asian=zxx",
+"language-complex=zxx",
+"language=en",
+"writing-mode=rl-tb"
+],
+"styles": [
+"country-asian=none",
+"country-asian=none",
+"country-asian=none",
+"country-complex=SA",
+"country-complex=SA",
+"country-complex=none",
+"country=US",
+"country=US",
+"country=none",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-complex=ar",
+"language-complex=ar",
+"language-complex=zxx",
+"language=en",
+"language=en",
+"language=zxx",
+"writing-mode=lr-tb",
+"writing-mode=rl-tb",
+"writing-mode=rl-tb"
+],
+"meta": "ar-SA"
+},
+"th-TH": {
+"content": [
+"country-asian=none",
+"country-complex=none",
+"country=US",
+"language-asian=zxx",
+"language-complex=zxx",
+"language=en",
+"writing-mode=lr-tb"
+],
+"styles": [
+"country-asian=none",
+"country-asian=none",
+"country-asian=none",
+"country-complex=TH",
+"country-complex=TH",
+"country-complex=none",
+"country=US",
+"country=US",
+"country=none",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-complex=th",
+"language-complex=th",
+"language-complex=zxx",
+"language=en",
+"language=en",
+"language=zxx",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "th-TH"
+},
+"he-IL": {
+"content": [
+"country-asian=none",
+"country-complex=none",
+"country=US",
+"language-asian=zxx",
+"language-complex=zxx",
+"language=en",
+"writing-mode=rl-tb"
+],
+"styles": [
+"country-asian=none",
+"country-asian=none",
+"country-asian=none",
+"country-complex=IL",
+"country-complex=IL",
+"country-complex=none",
+"country=US",
+"country=US",
+"country=none",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-complex=he",
+"language-complex=he",
+"language-complex=zxx",
+"language=en",
+"language=en",
+"language=zxx",
+"writing-mode=lr-tb",
+"writing-mode=rl-tb",
+"writing-mode=rl-tb"
+],
+"meta": "he-IL"
+}
+},
+"okapi/TestDocument05.odt": {
+"de-DE": {
+"content": [],
+"styles": [
+"country-asian=US",
+"country-asian=US",
+"country-asian=none",
+"country-complex=US",
+"country-complex=US",
+"country-complex=none",
+"country=DE",
+"country=DE",
+"country=none",
+"language-asian=en",
+"language-asian=en",
+"language-asian=zxx",
+"language-complex=en",
+"language-complex=en",
+"language-complex=zxx",
+"language=de",
+"language=de",
+"language=zxx",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "de-DE"
+},
+"es-ES": {
+"content": [],
+"styles": [
+"country-asian=US",
+"country-asian=US",
+"country-asian=none",
+"country-complex=US",
+"country-complex=US",
+"country-complex=none",
+"country=ES",
+"country=ES",
+"country=none",
+"language-asian=en",
+"language-asian=en",
+"language-asian=zxx",
+"language-complex=en",
+"language-complex=en",
+"language-complex=zxx",
+"language=es",
+"language=es",
+"language=zxx",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "es-ES"
+},
+"fr-FR": {
+"content": [],
+"styles": [
+"country-asian=US",
+"country-asian=US",
+"country-asian=none",
+"country-complex=US",
+"country-complex=US",
+"country-complex=none",
+"country=FR",
+"country=FR",
+"country=none",
+"language-asian=en",
+"language-asian=en",
+"language-asian=zxx",
+"language-complex=en",
+"language-complex=en",
+"language-complex=zxx",
+"language=fr",
+"language=fr",
+"language=zxx",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "fr-FR"
+},
+"it-IT": {
+"content": [],
+"styles": [
+"country-asian=US",
+"country-asian=US",
+"country-asian=none",
+"country-complex=US",
+"country-complex=US",
+"country-complex=none",
+"country=IT",
+"country=IT",
+"country=none",
+"language-asian=en",
+"language-asian=en",
+"language-asian=zxx",
+"language-complex=en",
+"language-complex=en",
+"language-complex=zxx",
+"language=it",
+"language=it",
+"language=zxx",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "it-IT"
+},
+"nl-NL": {
+"content": [],
+"styles": [
+"country-asian=US",
+"country-asian=US",
+"country-asian=none",
+"country-complex=US",
+"country-complex=US",
+"country-complex=none",
+"country=NL",
+"country=NL",
+"country=none",
+"language-asian=en",
+"language-asian=en",
+"language-asian=zxx",
+"language-complex=en",
+"language-complex=en",
+"language-complex=zxx",
+"language=nl",
+"language=nl",
+"language=zxx",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "nl-NL"
+},
+"pt-BR": {
+"content": [],
+"styles": [
+"country-asian=US",
+"country-asian=US",
+"country-asian=none",
+"country-complex=US",
+"country-complex=US",
+"country-complex=none",
+"country=BR",
+"country=BR",
+"country=none",
+"language-asian=en",
+"language-asian=en",
+"language-asian=zxx",
+"language-complex=en",
+"language-complex=en",
+"language-complex=zxx",
+"language=pt",
+"language=pt",
+"language=zxx",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "pt-BR"
+},
+"ja-JP": {
+"content": [],
+"styles": [
+"country-asian=JP",
+"country-asian=JP",
+"country-asian=none",
+"country-complex=US",
+"country-complex=US",
+"country-complex=none",
+"country=US",
+"country=US",
+"country=none",
+"language-asian=ja",
+"language-asian=ja",
+"language-asian=zxx",
+"language-complex=en",
+"language-complex=en",
+"language-complex=zxx",
+"language=en",
+"language=en",
+"language=zxx",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "ja-JP"
+},
+"zh-CN": {
+"content": [],
+"styles": [
+"country-asian=CN",
+"country-asian=CN",
+"country-asian=none",
+"country-complex=US",
+"country-complex=US",
+"country-complex=none",
+"country=US",
+"country=US",
+"country=none",
+"language-asian=zh",
+"language-asian=zh",
+"language-asian=zxx",
+"language-complex=en",
+"language-complex=en",
+"language-complex=zxx",
+"language=en",
+"language=en",
+"language=zxx",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "zh-CN"
+},
+"ko-KR": {
+"content": [],
+"styles": [
+"country-asian=KR",
+"country-asian=KR",
+"country-asian=none",
+"country-complex=US",
+"country-complex=US",
+"country-complex=none",
+"country=US",
+"country=US",
+"country=none",
+"language-asian=ko",
+"language-asian=ko",
+"language-asian=zxx",
+"language-complex=en",
+"language-complex=en",
+"language-complex=zxx",
+"language=en",
+"language=en",
+"language=zxx",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "ko-KR"
+},
+"ar-SA": {
+"content": [],
+"styles": [
+"country-asian=US",
+"country-asian=US",
+"country-asian=none",
+"country-complex=SA",
+"country-complex=SA",
+"country-complex=none",
+"country=US",
+"country=US",
+"country=none",
+"language-asian=en",
+"language-asian=en",
+"language-asian=zxx",
+"language-complex=ar",
+"language-complex=ar",
+"language-complex=zxx",
+"language=en",
+"language=en",
+"language=zxx",
+"writing-mode=lr-tb",
+"writing-mode=rl-tb",
+"writing-mode=rl-tb"
+],
+"meta": "ar-SA"
+},
+"th-TH": {
+"content": [],
+"styles": [
+"country-asian=US",
+"country-asian=US",
+"country-asian=none",
+"country-complex=TH",
+"country-complex=TH",
+"country-complex=none",
+"country=US",
+"country=US",
+"country=none",
+"language-asian=en",
+"language-asian=en",
+"language-asian=zxx",
+"language-complex=th",
+"language-complex=th",
+"language-complex=zxx",
+"language=en",
+"language=en",
+"language=zxx",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "th-TH"
+},
+"he-IL": {
+"content": [],
+"styles": [
+"country-asian=US",
+"country-asian=US",
+"country-asian=none",
+"country-complex=IL",
+"country-complex=IL",
+"country-complex=none",
+"country=US",
+"country=US",
+"country=none",
+"language-asian=en",
+"language-asian=en",
+"language-asian=zxx",
+"language-complex=he",
+"language-complex=he",
+"language-complex=zxx",
+"language=en",
+"language=en",
+"language=zxx",
+"writing-mode=lr-tb",
+"writing-mode=rl-tb",
+"writing-mode=rl-tb"
+],
+"meta": "he-IL"
+}
+},
+"okapi/TestDocument06.odt": {
+"de-DE": {
+"content": [],
+"styles": [
+"country-asian=none",
+"country-asian=none",
+"country-complex=none",
+"country-complex=none",
+"country=DE",
+"country=DE",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-complex=zxx",
+"language-complex=zxx",
+"language=de",
+"language=de",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "de-DE"
+},
+"es-ES": {
+"content": [],
+"styles": [
+"country-asian=none",
+"country-asian=none",
+"country-complex=none",
+"country-complex=none",
+"country=ES",
+"country=ES",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-complex=zxx",
+"language-complex=zxx",
+"language=es",
+"language=es",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "es-ES"
+},
+"fr-FR": {
+"content": [],
+"styles": [
+"country-asian=none",
+"country-asian=none",
+"country-complex=none",
+"country-complex=none",
+"country=FR",
+"country=FR",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-complex=zxx",
+"language-complex=zxx",
+"language=fr",
+"language=fr",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "fr-FR"
+},
+"it-IT": {
+"content": [],
+"styles": [
+"country-asian=none",
+"country-asian=none",
+"country-complex=none",
+"country-complex=none",
+"country=IT",
+"country=IT",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-complex=zxx",
+"language-complex=zxx",
+"language=it",
+"language=it",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "it-IT"
+},
+"nl-NL": {
+"content": [],
+"styles": [
+"country-asian=none",
+"country-asian=none",
+"country-complex=none",
+"country-complex=none",
+"country=NL",
+"country=NL",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-complex=zxx",
+"language-complex=zxx",
+"language=nl",
+"language=nl",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "nl-NL"
+},
+"pt-BR": {
+"content": [],
+"styles": [
+"country-asian=none",
+"country-asian=none",
+"country-complex=none",
+"country-complex=none",
+"country=BR",
+"country=BR",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-complex=zxx",
+"language-complex=zxx",
+"language=pt",
+"language=pt",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "pt-BR"
+},
+"ja-JP": {
+"content": [],
+"styles": [
+"country-asian=JP",
+"country-asian=JP",
+"country-complex=none",
+"country-complex=none",
+"country=US",
+"country=US",
+"language-asian=ja",
+"language-asian=ja",
+"language-complex=zxx",
+"language-complex=zxx",
+"language=en",
+"language=en",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "ja-JP"
+},
+"zh-CN": {
+"content": [],
+"styles": [
+"country-asian=CN",
+"country-asian=CN",
+"country-complex=none",
+"country-complex=none",
+"country=US",
+"country=US",
+"language-asian=zh",
+"language-asian=zh",
+"language-complex=zxx",
+"language-complex=zxx",
+"language=en",
+"language=en",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "zh-CN"
+},
+"ko-KR": {
+"content": [],
+"styles": [
+"country-asian=KR",
+"country-asian=KR",
+"country-complex=none",
+"country-complex=none",
+"country=US",
+"country=US",
+"language-asian=ko",
+"language-asian=ko",
+"language-complex=zxx",
+"language-complex=zxx",
+"language=en",
+"language=en",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "ko-KR"
+},
+"ar-SA": {
+"content": [],
+"styles": [
+"country-asian=none",
+"country-asian=none",
+"country-complex=SA",
+"country-complex=SA",
+"country=US",
+"country=US",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-complex=ar",
+"language-complex=ar",
+"language=en",
+"language=en",
+"writing-mode=lr-tb",
+"writing-mode=rl-tb",
+"writing-mode=rl-tb"
+],
+"meta": "ar-SA"
+},
+"th-TH": {
+"content": [],
+"styles": [
+"country-asian=none",
+"country-asian=none",
+"country-complex=TH",
+"country-complex=TH",
+"country=US",
+"country=US",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-complex=th",
+"language-complex=th",
+"language=en",
+"language=en",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "th-TH"
+},
+"he-IL": {
+"content": [],
+"styles": [
+"country-asian=none",
+"country-asian=none",
+"country-complex=IL",
+"country-complex=IL",
+"country=US",
+"country=US",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-complex=he",
+"language-complex=he",
+"language=en",
+"language=en",
+"writing-mode=lr-tb",
+"writing-mode=rl-tb",
+"writing-mode=rl-tb"
+],
+"meta": "he-IL"
+}
+},
+"okapi/TestDocumentWithFormulaResults.ods": {
+"de-DE": {
+"content": [
+"country-asian=CN",
+"country-asian=CN",
+"country-complex=IN",
+"country-complex=IN",
+"country=DE",
+"country=DE",
+"language-asian=zh",
+"language-asian=zh",
+"language-complex=hi",
+"language-complex=hi",
+"language=de",
+"language=de",
+"writing-mode=lr-tb",
+"writing-mode=page",
+"writing-mode=page"
+],
+"styles": [
+"country-asian=JP",
+"country-asian=none",
+"country-complex=IR",
+"country-complex=none",
+"country=DE",
+"country=none",
+"language-asian=ja",
+"language-asian=zxx",
+"language-complex=fa",
+"language-complex=zxx",
+"language=de",
+"language=zxx",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page",
+"writing-mode=page",
+"writing-mode=page",
+"writing-mode=page"
+],
+"meta": "de-DE"
+},
+"es-ES": {
+"content": [
+"country-asian=CN",
+"country-asian=CN",
+"country-complex=IN",
+"country-complex=IN",
+"country=ES",
+"country=ES",
+"language-asian=zh",
+"language-asian=zh",
+"language-complex=hi",
+"language-complex=hi",
+"language=es",
+"language=es",
+"writing-mode=lr-tb",
+"writing-mode=page",
+"writing-mode=page"
+],
+"styles": [
+"country-asian=JP",
+"country-asian=none",
+"country-complex=IR",
+"country-complex=none",
+"country=ES",
+"country=none",
+"language-asian=ja",
+"language-asian=zxx",
+"language-complex=fa",
+"language-complex=zxx",
+"language=es",
+"language=zxx",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page",
+"writing-mode=page",
+"writing-mode=page",
+"writing-mode=page"
+],
+"meta": "es-ES"
+},
+"fr-FR": {
+"content": [
+"country-asian=CN",
+"country-asian=CN",
+"country-complex=IN",
+"country-complex=IN",
+"country=FR",
+"country=FR",
+"language-asian=zh",
+"language-asian=zh",
+"language-complex=hi",
+"language-complex=hi",
+"language=fr",
+"language=fr",
+"writing-mode=lr-tb",
+"writing-mode=page",
+"writing-mode=page"
+],
+"styles": [
+"country-asian=JP",
+"country-asian=none",
+"country-complex=IR",
+"country-complex=none",
+"country=FR",
+"country=none",
+"language-asian=ja",
+"language-asian=zxx",
+"language-complex=fa",
+"language-complex=zxx",
+"language=fr",
+"language=zxx",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page",
+"writing-mode=page",
+"writing-mode=page",
+"writing-mode=page"
+],
+"meta": "fr-FR"
+},
+"it-IT": {
+"content": [
+"country-asian=CN",
+"country-asian=CN",
+"country-complex=IN",
+"country-complex=IN",
+"country=IT",
+"country=IT",
+"language-asian=zh",
+"language-asian=zh",
+"language-complex=hi",
+"language-complex=hi",
+"language=it",
+"language=it",
+"writing-mode=lr-tb",
+"writing-mode=page",
+"writing-mode=page"
+],
+"styles": [
+"country-asian=JP",
+"country-asian=none",
+"country-complex=IR",
+"country-complex=none",
+"country=IT",
+"country=none",
+"language-asian=ja",
+"language-asian=zxx",
+"language-complex=fa",
+"language-complex=zxx",
+"language=it",
+"language=zxx",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page",
+"writing-mode=page",
+"writing-mode=page",
+"writing-mode=page"
+],
+"meta": "it-IT"
+},
+"nl-NL": {
+"content": [
+"country-asian=CN",
+"country-asian=CN",
+"country-complex=IN",
+"country-complex=IN",
+"country=NL",
+"country=NL",
+"language-asian=zh",
+"language-asian=zh",
+"language-complex=hi",
+"language-complex=hi",
+"language=nl",
+"language=nl",
+"writing-mode=lr-tb",
+"writing-mode=page",
+"writing-mode=page"
+],
+"styles": [
+"country-asian=JP",
+"country-asian=none",
+"country-complex=IR",
+"country-complex=none",
+"country=NL",
+"country=none",
+"language-asian=ja",
+"language-asian=zxx",
+"language-complex=fa",
+"language-complex=zxx",
+"language=nl",
+"language=zxx",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page",
+"writing-mode=page",
+"writing-mode=page",
+"writing-mode=page"
+],
+"meta": "nl-NL"
+},
+"pt-BR": {
+"content": [
+"country-asian=CN",
+"country-asian=CN",
+"country-complex=IN",
+"country-complex=IN",
+"country=BR",
+"country=BR",
+"language-asian=zh",
+"language-asian=zh",
+"language-complex=hi",
+"language-complex=hi",
+"language=pt",
+"language=pt",
+"writing-mode=lr-tb",
+"writing-mode=page",
+"writing-mode=page"
+],
+"styles": [
+"country-asian=JP",
+"country-asian=none",
+"country-complex=IR",
+"country-complex=none",
+"country=BR",
+"country=none",
+"language-asian=ja",
+"language-asian=zxx",
+"language-complex=fa",
+"language-complex=zxx",
+"language=pt",
+"language=zxx",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page",
+"writing-mode=page",
+"writing-mode=page",
+"writing-mode=page"
+],
+"meta": "pt-BR"
+},
+"ja-JP": {
+"content": [
+"country-asian=JP",
+"country-asian=JP",
+"country-complex=IN",
+"country-complex=IN",
+"country=SE",
+"country=SE",
+"language-asian=ja",
+"language-asian=ja",
+"language-complex=hi",
+"language-complex=hi",
+"language=sv",
+"language=sv",
+"writing-mode=lr-tb",
+"writing-mode=page",
+"writing-mode=page"
+],
+"styles": [
+"country-asian=JP",
+"country-asian=none",
+"country-complex=IR",
+"country-complex=none",
+"country=DE",
+"country=none",
+"language-asian=ja",
+"language-asian=zxx",
+"language-complex=fa",
+"language-complex=zxx",
+"language=de",
+"language=zxx",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page",
+"writing-mode=page",
+"writing-mode=page",
+"writing-mode=page"
+],
+"meta": "ja-JP"
+},
+"zh-CN": {
+"content": [
+"country-asian=CN",
+"country-asian=CN",
+"country-complex=IN",
+"country-complex=IN",
+"country=SE",
+"country=SE",
+"language-asian=zh",
+"language-asian=zh",
+"language-complex=hi",
+"language-complex=hi",
+"language=sv",
+"language=sv",
+"writing-mode=lr-tb",
+"writing-mode=page",
+"writing-mode=page"
+],
+"styles": [
+"country-asian=CN",
+"country-asian=none",
+"country-complex=IR",
+"country-complex=none",
+"country=DE",
+"country=none",
+"language-asian=zh",
+"language-asian=zxx",
+"language-complex=fa",
+"language-complex=zxx",
+"language=de",
+"language=zxx",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page",
+"writing-mode=page",
+"writing-mode=page",
+"writing-mode=page"
+],
+"meta": "zh-CN"
+},
+"ko-KR": {
+"content": [
+"country-asian=KR",
+"country-asian=KR",
+"country-complex=IN",
+"country-complex=IN",
+"country=SE",
+"country=SE",
+"language-asian=ko",
+"language-asian=ko",
+"language-complex=hi",
+"language-complex=hi",
+"language=sv",
+"language=sv",
+"writing-mode=lr-tb",
+"writing-mode=page",
+"writing-mode=page"
+],
+"styles": [
+"country-asian=KR",
+"country-asian=none",
+"country-complex=IR",
+"country-complex=none",
+"country=DE",
+"country=none",
+"language-asian=ko",
+"language-asian=zxx",
+"language-complex=fa",
+"language-complex=zxx",
+"language=de",
+"language=zxx",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page",
+"writing-mode=page",
+"writing-mode=page",
+"writing-mode=page"
+],
+"meta": "ko-KR"
+},
+"ar-SA": {
+"content": [
+"country-asian=CN",
+"country-asian=CN",
+"country-complex=SA",
+"country-complex=SA",
+"country=SE",
+"country=SE",
+"language-asian=zh",
+"language-asian=zh",
+"language-complex=ar",
+"language-complex=ar",
+"language=sv",
+"language=sv",
+"writing-mode=page",
+"writing-mode=page",
+"writing-mode=rl-tb"
+],
+"styles": [
+"country-asian=JP",
+"country-asian=none",
+"country-complex=SA",
+"country-complex=none",
+"country=DE",
+"country=none",
+"language-asian=ja",
+"language-asian=zxx",
+"language-complex=ar",
+"language-complex=zxx",
+"language=de",
+"language=zxx",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page",
+"writing-mode=page",
+"writing-mode=page",
+"writing-mode=page"
+],
+"meta": "ar-SA"
+},
+"th-TH": {
+"content": [
+"country-asian=CN",
+"country-asian=CN",
+"country-complex=TH",
+"country-complex=TH",
+"country=SE",
+"country=SE",
+"language-asian=zh",
+"language-asian=zh",
+"language-complex=th",
+"language-complex=th",
+"language=sv",
+"language=sv",
+"writing-mode=lr-tb",
+"writing-mode=page",
+"writing-mode=page"
+],
+"styles": [
+"country-asian=JP",
+"country-asian=none",
+"country-complex=TH",
+"country-complex=none",
+"country=DE",
+"country=none",
+"language-asian=ja",
+"language-asian=zxx",
+"language-complex=th",
+"language-complex=zxx",
+"language=de",
+"language=zxx",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page",
+"writing-mode=page",
+"writing-mode=page",
+"writing-mode=page"
+],
+"meta": "th-TH"
+},
+"he-IL": {
+"content": [
+"country-asian=CN",
+"country-asian=CN",
+"country-complex=IL",
+"country-complex=IL",
+"country=SE",
+"country=SE",
+"language-asian=zh",
+"language-asian=zh",
+"language-complex=he",
+"language-complex=he",
+"language=sv",
+"language=sv",
+"writing-mode=page",
+"writing-mode=page",
+"writing-mode=rl-tb"
+],
+"styles": [
+"country-asian=JP",
+"country-asian=none",
+"country-complex=IL",
+"country-complex=none",
+"country=DE",
+"country=none",
+"language-asian=ja",
+"language-asian=zxx",
+"language-complex=he",
+"language-complex=zxx",
+"language=de",
+"language=zxx",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page",
+"writing-mode=page",
+"writing-mode=page",
+"writing-mode=page"
+],
+"meta": "he-IL"
+}
+},
+"okapi/TestDocumentWithMetadata.odt": {
+"de-DE": {
+"content": [],
+"styles": [
+"country-asian=CN",
+"country-asian=CN",
+"country-complex=IN",
+"country-complex=IN",
+"country=DE",
+"country=DE",
+"language-asian=zh",
+"language-asian=zh",
+"language-complex=hi",
+"language-complex=hi",
+"language=de",
+"language=de",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "de-DE"
+},
+"es-ES": {
+"content": [],
+"styles": [
+"country-asian=CN",
+"country-asian=CN",
+"country-complex=IN",
+"country-complex=IN",
+"country=ES",
+"country=ES",
+"language-asian=zh",
+"language-asian=zh",
+"language-complex=hi",
+"language-complex=hi",
+"language=es",
+"language=es",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "es-ES"
+},
+"fr-FR": {
+"content": [],
+"styles": [
+"country-asian=CN",
+"country-asian=CN",
+"country-complex=IN",
+"country-complex=IN",
+"country=FR",
+"country=FR",
+"language-asian=zh",
+"language-asian=zh",
+"language-complex=hi",
+"language-complex=hi",
+"language=fr",
+"language=fr",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "fr-FR"
+},
+"it-IT": {
+"content": [],
+"styles": [
+"country-asian=CN",
+"country-asian=CN",
+"country-complex=IN",
+"country-complex=IN",
+"country=IT",
+"country=IT",
+"language-asian=zh",
+"language-asian=zh",
+"language-complex=hi",
+"language-complex=hi",
+"language=it",
+"language=it",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "it-IT"
+},
+"nl-NL": {
+"content": [],
+"styles": [
+"country-asian=CN",
+"country-asian=CN",
+"country-complex=IN",
+"country-complex=IN",
+"country=NL",
+"country=NL",
+"language-asian=zh",
+"language-asian=zh",
+"language-complex=hi",
+"language-complex=hi",
+"language=nl",
+"language=nl",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "nl-NL"
+},
+"pt-BR": {
+"content": [],
+"styles": [
+"country-asian=CN",
+"country-asian=CN",
+"country-complex=IN",
+"country-complex=IN",
+"country=BR",
+"country=BR",
+"language-asian=zh",
+"language-asian=zh",
+"language-complex=hi",
+"language-complex=hi",
+"language=pt",
+"language=pt",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "pt-BR"
+},
+"ja-JP": {
+"content": [],
+"styles": [
+"country-asian=JP",
+"country-asian=JP",
+"country-complex=IN",
+"country-complex=IN",
+"country=US",
+"country=US",
+"language-asian=ja",
+"language-asian=ja",
+"language-complex=hi",
+"language-complex=hi",
+"language=en",
+"language=en",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "ja-JP"
+},
+"zh-CN": {
+"content": [],
+"styles": [
+"country-asian=CN",
+"country-asian=CN",
+"country-complex=IN",
+"country-complex=IN",
+"country=US",
+"country=US",
+"language-asian=zh",
+"language-asian=zh",
+"language-complex=hi",
+"language-complex=hi",
+"language=en",
+"language=en",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "zh-CN"
+},
+"ko-KR": {
+"content": [],
+"styles": [
+"country-asian=KR",
+"country-asian=KR",
+"country-complex=IN",
+"country-complex=IN",
+"country=US",
+"country=US",
+"language-asian=ko",
+"language-asian=ko",
+"language-complex=hi",
+"language-complex=hi",
+"language=en",
+"language=en",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "ko-KR"
+},
+"ar-SA": {
+"content": [],
+"styles": [
+"country-asian=CN",
+"country-asian=CN",
+"country-complex=SA",
+"country-complex=SA",
+"country=US",
+"country=US",
+"language-asian=zh",
+"language-asian=zh",
+"language-complex=ar",
+"language-complex=ar",
+"language=en",
+"language=en",
+"writing-mode=lr-tb",
+"writing-mode=rl-tb",
+"writing-mode=rl-tb"
+],
+"meta": "ar-SA"
+},
+"th-TH": {
+"content": [],
+"styles": [
+"country-asian=CN",
+"country-asian=CN",
+"country-complex=TH",
+"country-complex=TH",
+"country=US",
+"country=US",
+"language-asian=zh",
+"language-asian=zh",
+"language-complex=th",
+"language-complex=th",
+"language=en",
+"language=en",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "th-TH"
+},
+"he-IL": {
+"content": [],
+"styles": [
+"country-asian=CN",
+"country-asian=CN",
+"country-complex=IL",
+"country-complex=IL",
+"country=US",
+"country=US",
+"language-asian=zh",
+"language-asian=zh",
+"language-complex=he",
+"language-complex=he",
+"language=en",
+"language=en",
+"writing-mode=lr-tb",
+"writing-mode=rl-tb",
+"writing-mode=rl-tb"
+],
+"meta": "he-IL"
+}
+},
+"okapi/TestDocumentWithNumberTag.odp": {
+"de-DE": {
+"content": [],
+"styles": [
+"country-asian=CN",
+"country-complex=IN",
+"country=DE",
+"language-asian=zh",
+"language-complex=hi",
+"language=de",
+"writing-mode=lr-tb"
+],
+"meta": "de-DE"
+},
+"es-ES": {
+"content": [],
+"styles": [
+"country-asian=CN",
+"country-complex=IN",
+"country=ES",
+"language-asian=zh",
+"language-complex=hi",
+"language=es",
+"writing-mode=lr-tb"
+],
+"meta": "es-ES"
+},
+"fr-FR": {
+"content": [],
+"styles": [
+"country-asian=CN",
+"country-complex=IN",
+"country=FR",
+"language-asian=zh",
+"language-complex=hi",
+"language=fr",
+"writing-mode=lr-tb"
+],
+"meta": "fr-FR"
+},
+"it-IT": {
+"content": [],
+"styles": [
+"country-asian=CN",
+"country-complex=IN",
+"country=IT",
+"language-asian=zh",
+"language-complex=hi",
+"language=it",
+"writing-mode=lr-tb"
+],
+"meta": "it-IT"
+},
+"nl-NL": {
+"content": [],
+"styles": [
+"country-asian=CN",
+"country-complex=IN",
+"country=NL",
+"language-asian=zh",
+"language-complex=hi",
+"language=nl",
+"writing-mode=lr-tb"
+],
+"meta": "nl-NL"
+},
+"pt-BR": {
+"content": [],
+"styles": [
+"country-asian=CN",
+"country-complex=IN",
+"country=BR",
+"language-asian=zh",
+"language-complex=hi",
+"language=pt",
+"writing-mode=lr-tb"
+],
+"meta": "pt-BR"
+},
+"ja-JP": {
+"content": [],
+"styles": [
+"country-asian=JP",
+"country-complex=IN",
+"country=US",
+"language-asian=ja",
+"language-complex=hi",
+"language=en",
+"writing-mode=lr-tb"
+],
+"meta": "ja-JP"
+},
+"zh-CN": {
+"content": [],
+"styles": [
+"country-asian=CN",
+"country-complex=IN",
+"country=US",
+"language-asian=zh",
+"language-complex=hi",
+"language=en",
+"writing-mode=lr-tb"
+],
+"meta": "zh-CN"
+},
+"ko-KR": {
+"content": [],
+"styles": [
+"country-asian=KR",
+"country-complex=IN",
+"country=US",
+"language-asian=ko",
+"language-complex=hi",
+"language=en",
+"writing-mode=lr-tb"
+],
+"meta": "ko-KR"
+},
+"ar-SA": {
+"content": [],
+"styles": [
+"country-asian=CN",
+"country-complex=SA",
+"country=US",
+"language-asian=zh",
+"language-complex=ar",
+"language=en",
+"writing-mode=rl-tb"
+],
+"meta": "ar-SA"
+},
+"th-TH": {
+"content": [],
+"styles": [
+"country-asian=CN",
+"country-complex=TH",
+"country=US",
+"language-asian=zh",
+"language-complex=th",
+"language=en",
+"writing-mode=lr-tb"
+],
+"meta": "th-TH"
+},
+"he-IL": {
+"content": [],
+"styles": [
+"country-asian=CN",
+"country-complex=IL",
+"country=US",
+"language-asian=zh",
+"language-complex=he",
+"language=en",
+"writing-mode=rl-tb"
+],
+"meta": "he-IL"
+}
+},
+"okapi/TestDocumentWithTableWrappingAboutTable.odt": {
+"de-DE": {
+"content": [
+"writing-mode=lr-tb"
+],
+"styles": [
+"country-asian=US",
+"country-asian=US",
+"country-complex=SA",
+"country-complex=SA",
+"country=DE",
+"country=DE",
+"language-asian=en",
+"language-asian=en",
+"language-complex=ar",
+"language-complex=ar",
+"language=de",
+"language=de",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "de-DE"
+},
+"es-ES": {
+"content": [
+"writing-mode=lr-tb"
+],
+"styles": [
+"country-asian=US",
+"country-asian=US",
+"country-complex=SA",
+"country-complex=SA",
+"country=ES",
+"country=ES",
+"language-asian=en",
+"language-asian=en",
+"language-complex=ar",
+"language-complex=ar",
+"language=es",
+"language=es",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "es-ES"
+},
+"fr-FR": {
+"content": [
+"writing-mode=lr-tb"
+],
+"styles": [
+"country-asian=US",
+"country-asian=US",
+"country-complex=SA",
+"country-complex=SA",
+"country=FR",
+"country=FR",
+"language-asian=en",
+"language-asian=en",
+"language-complex=ar",
+"language-complex=ar",
+"language=fr",
+"language=fr",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "fr-FR"
+},
+"it-IT": {
+"content": [
+"writing-mode=lr-tb"
+],
+"styles": [
+"country-asian=US",
+"country-asian=US",
+"country-complex=SA",
+"country-complex=SA",
+"country=IT",
+"country=IT",
+"language-asian=en",
+"language-asian=en",
+"language-complex=ar",
+"language-complex=ar",
+"language=it",
+"language=it",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "it-IT"
+},
+"nl-NL": {
+"content": [
+"writing-mode=lr-tb"
+],
+"styles": [
+"country-asian=US",
+"country-asian=US",
+"country-complex=SA",
+"country-complex=SA",
+"country=NL",
+"country=NL",
+"language-asian=en",
+"language-asian=en",
+"language-complex=ar",
+"language-complex=ar",
+"language=nl",
+"language=nl",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "nl-NL"
+},
+"pt-BR": {
+"content": [
+"writing-mode=lr-tb"
+],
+"styles": [
+"country-asian=US",
+"country-asian=US",
+"country-complex=SA",
+"country-complex=SA",
+"country=BR",
+"country=BR",
+"language-asian=en",
+"language-asian=en",
+"language-complex=ar",
+"language-complex=ar",
+"language=pt",
+"language=pt",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "pt-BR"
+},
+"ja-JP": {
+"content": [
+"writing-mode=lr-tb"
+],
+"styles": [
+"country-asian=JP",
+"country-asian=JP",
+"country-complex=SA",
+"country-complex=SA",
+"country=US",
+"country=US",
+"language-asian=ja",
+"language-asian=ja",
+"language-complex=ar",
+"language-complex=ar",
+"language=en",
+"language=en",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "ja-JP"
+},
+"zh-CN": {
+"content": [
+"writing-mode=lr-tb"
+],
+"styles": [
+"country-asian=CN",
+"country-asian=CN",
+"country-complex=SA",
+"country-complex=SA",
+"country=US",
+"country=US",
+"language-asian=zh",
+"language-asian=zh",
+"language-complex=ar",
+"language-complex=ar",
+"language=en",
+"language=en",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "zh-CN"
+},
+"ko-KR": {
+"content": [
+"writing-mode=lr-tb"
+],
+"styles": [
+"country-asian=KR",
+"country-asian=KR",
+"country-complex=SA",
+"country-complex=SA",
+"country=US",
+"country=US",
+"language-asian=ko",
+"language-asian=ko",
+"language-complex=ar",
+"language-complex=ar",
+"language=en",
+"language=en",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "ko-KR"
+},
+"ar-SA": {
+"content": [
+"writing-mode=lr-tb"
+],
+"styles": [
+"country-asian=US",
+"country-asian=US",
+"country-complex=SA",
+"country-complex=SA",
+"country=US",
+"country=US",
+"language-asian=en",
+"language-asian=en",
+"language-complex=ar",
+"language-complex=ar",
+"language=en",
+"language=en",
+"writing-mode=lr-tb",
+"writing-mode=rl-tb",
+"writing-mode=rl-tb",
+"writing-mode=rl-tb"
+],
+"meta": "ar-SA"
+},
+"th-TH": {
+"content": [
+"writing-mode=lr-tb"
+],
+"styles": [
+"country-asian=US",
+"country-asian=US",
+"country-complex=TH",
+"country-complex=TH",
+"country=US",
+"country=US",
+"language-asian=en",
+"language-asian=en",
+"language-complex=th",
+"language-complex=th",
+"language=en",
+"language=en",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "th-TH"
+},
+"he-IL": {
+"content": [
+"writing-mode=lr-tb"
+],
+"styles": [
+"country-asian=US",
+"country-asian=US",
+"country-complex=IL",
+"country-complex=IL",
+"country=US",
+"country=US",
+"language-asian=en",
+"language-asian=en",
+"language-complex=he",
+"language-complex=he",
+"language=en",
+"language=en",
+"writing-mode=lr-tb",
+"writing-mode=rl-tb",
+"writing-mode=rl-tb",
+"writing-mode=rl-tb"
+],
+"meta": "he-IL"
+}
+},
+"okapi/TestDocument_WithITS.odt": {
+"de-DE": {
+"content": [],
+"styles": [
+"country-asian=none",
+"country-asian=none",
+"country-complex=none",
+"country-complex=none",
+"country=DE",
+"country=DE",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-complex=zxx",
+"language-complex=zxx",
+"language=de",
+"language=de",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "de-DE"
+},
+"es-ES": {
+"content": [],
+"styles": [
+"country-asian=none",
+"country-asian=none",
+"country-complex=none",
+"country-complex=none",
+"country=ES",
+"country=ES",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-complex=zxx",
+"language-complex=zxx",
+"language=es",
+"language=es",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "es-ES"
+},
+"fr-FR": {
+"content": [],
+"styles": [
+"country-asian=none",
+"country-asian=none",
+"country-complex=none",
+"country-complex=none",
+"country=FR",
+"country=FR",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-complex=zxx",
+"language-complex=zxx",
+"language=fr",
+"language=fr",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "fr-FR"
+},
+"it-IT": {
+"content": [],
+"styles": [
+"country-asian=none",
+"country-asian=none",
+"country-complex=none",
+"country-complex=none",
+"country=IT",
+"country=IT",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-complex=zxx",
+"language-complex=zxx",
+"language=it",
+"language=it",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "it-IT"
+},
+"nl-NL": {
+"content": [],
+"styles": [
+"country-asian=none",
+"country-asian=none",
+"country-complex=none",
+"country-complex=none",
+"country=NL",
+"country=NL",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-complex=zxx",
+"language-complex=zxx",
+"language=nl",
+"language=nl",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "nl-NL"
+},
+"pt-BR": {
+"content": [],
+"styles": [
+"country-asian=none",
+"country-asian=none",
+"country-complex=none",
+"country-complex=none",
+"country=BR",
+"country=BR",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-complex=zxx",
+"language-complex=zxx",
+"language=pt",
+"language=pt",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "pt-BR"
+},
+"ja-JP": {
+"content": [],
+"styles": [
+"country-asian=JP",
+"country-asian=JP",
+"country-complex=none",
+"country-complex=none",
+"country=US",
+"country=US",
+"language-asian=ja",
+"language-asian=ja",
+"language-complex=zxx",
+"language-complex=zxx",
+"language=en",
+"language=en",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "ja-JP"
+},
+"zh-CN": {
+"content": [],
+"styles": [
+"country-asian=CN",
+"country-asian=CN",
+"country-complex=none",
+"country-complex=none",
+"country=US",
+"country=US",
+"language-asian=zh",
+"language-asian=zh",
+"language-complex=zxx",
+"language-complex=zxx",
+"language=en",
+"language=en",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "zh-CN"
+},
+"ko-KR": {
+"content": [],
+"styles": [
+"country-asian=KR",
+"country-asian=KR",
+"country-complex=none",
+"country-complex=none",
+"country=US",
+"country=US",
+"language-asian=ko",
+"language-asian=ko",
+"language-complex=zxx",
+"language-complex=zxx",
+"language=en",
+"language=en",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "ko-KR"
+},
+"ar-SA": {
+"content": [],
+"styles": [
+"country-asian=none",
+"country-asian=none",
+"country-complex=SA",
+"country-complex=SA",
+"country=US",
+"country=US",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-complex=ar",
+"language-complex=ar",
+"language=en",
+"language=en",
+"writing-mode=lr-tb",
+"writing-mode=rl-tb",
+"writing-mode=rl-tb"
+],
+"meta": "ar-SA"
+},
+"th-TH": {
+"content": [],
+"styles": [
+"country-asian=none",
+"country-asian=none",
+"country-complex=TH",
+"country-complex=TH",
+"country=US",
+"country=US",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-complex=th",
+"language-complex=th",
+"language=en",
+"language=en",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "th-TH"
+},
+"he-IL": {
+"content": [],
+"styles": [
+"country-asian=none",
+"country-asian=none",
+"country-complex=IL",
+"country-complex=IL",
+"country=US",
+"country=US",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-complex=he",
+"language-complex=he",
+"language=en",
+"language=en",
+"writing-mode=lr-tb",
+"writing-mode=rl-tb",
+"writing-mode=rl-tb"
+],
+"meta": "he-IL"
+}
+},
+"okapi/TestDrawing01.odg": {
+"de-DE": {
+"content": [],
+"styles": [
+"country-asian=none",
+"country-complex=none",
+"country=DE",
+"language-asian=zxx",
+"language-complex=zxx",
+"language=de",
+"writing-mode=lr-tb"
+],
+"meta": "de-DE"
+},
+"es-ES": {
+"content": [],
+"styles": [
+"country-asian=none",
+"country-complex=none",
+"country=ES",
+"language-asian=zxx",
+"language-complex=zxx",
+"language=es",
+"writing-mode=lr-tb"
+],
+"meta": "es-ES"
+},
+"fr-FR": {
+"content": [],
+"styles": [
+"country-asian=none",
+"country-complex=none",
+"country=FR",
+"language-asian=zxx",
+"language-complex=zxx",
+"language=fr",
+"writing-mode=lr-tb"
+],
+"meta": "fr-FR"
+},
+"it-IT": {
+"content": [],
+"styles": [
+"country-asian=none",
+"country-complex=none",
+"country=IT",
+"language-asian=zxx",
+"language-complex=zxx",
+"language=it",
+"writing-mode=lr-tb"
+],
+"meta": "it-IT"
+},
+"nl-NL": {
+"content": [],
+"styles": [
+"country-asian=none",
+"country-complex=none",
+"country=NL",
+"language-asian=zxx",
+"language-complex=zxx",
+"language=nl",
+"writing-mode=lr-tb"
+],
+"meta": "nl-NL"
+},
+"pt-BR": {
+"content": [],
+"styles": [
+"country-asian=none",
+"country-complex=none",
+"country=BR",
+"language-asian=zxx",
+"language-complex=zxx",
+"language=pt",
+"writing-mode=lr-tb"
+],
+"meta": "pt-BR"
+},
+"ja-JP": {
+"content": [],
+"styles": [
+"country-asian=JP",
+"country-complex=none",
+"country=US",
+"language-asian=ja",
+"language-complex=zxx",
+"language=en",
+"writing-mode=lr-tb"
+],
+"meta": "ja-JP"
+},
+"zh-CN": {
+"content": [],
+"styles": [
+"country-asian=CN",
+"country-complex=none",
+"country=US",
+"language-asian=zh",
+"language-complex=zxx",
+"language=en",
+"writing-mode=lr-tb"
+],
+"meta": "zh-CN"
+},
+"ko-KR": {
+"content": [],
+"styles": [
+"country-asian=KR",
+"country-complex=none",
+"country=US",
+"language-asian=ko",
+"language-complex=zxx",
+"language=en",
+"writing-mode=lr-tb"
+],
+"meta": "ko-KR"
+},
+"ar-SA": {
+"content": [],
+"styles": [
+"country-asian=none",
+"country-complex=SA",
+"country=US",
+"language-asian=zxx",
+"language-complex=ar",
+"language=en",
+"writing-mode=rl-tb"
+],
+"meta": "ar-SA"
+},
+"th-TH": {
+"content": [],
+"styles": [
+"country-asian=none",
+"country-complex=TH",
+"country=US",
+"language-asian=zxx",
+"language-complex=th",
+"language=en",
+"writing-mode=lr-tb"
+],
+"meta": "th-TH"
+},
+"he-IL": {
+"content": [],
+"styles": [
+"country-asian=none",
+"country-complex=IL",
+"country=US",
+"language-asian=zxx",
+"language-complex=he",
+"language=en",
+"writing-mode=rl-tb"
+],
+"meta": "he-IL"
+}
+},
+"okapi/TestPresentation01.odp": {
+"de-DE": {
+"content": [],
+"styles": [
+"country-asian=none",
+"country-complex=none",
+"country=DE",
+"language-asian=zxx",
+"language-complex=zxx",
+"language=de",
+"writing-mode=lr-tb"
+],
+"meta": "de-DE"
+},
+"es-ES": {
+"content": [],
+"styles": [
+"country-asian=none",
+"country-complex=none",
+"country=ES",
+"language-asian=zxx",
+"language-complex=zxx",
+"language=es",
+"writing-mode=lr-tb"
+],
+"meta": "es-ES"
+},
+"fr-FR": {
+"content": [],
+"styles": [
+"country-asian=none",
+"country-complex=none",
+"country=FR",
+"language-asian=zxx",
+"language-complex=zxx",
+"language=fr",
+"writing-mode=lr-tb"
+],
+"meta": "fr-FR"
+},
+"it-IT": {
+"content": [],
+"styles": [
+"country-asian=none",
+"country-complex=none",
+"country=IT",
+"language-asian=zxx",
+"language-complex=zxx",
+"language=it",
+"writing-mode=lr-tb"
+],
+"meta": "it-IT"
+},
+"nl-NL": {
+"content": [],
+"styles": [
+"country-asian=none",
+"country-complex=none",
+"country=NL",
+"language-asian=zxx",
+"language-complex=zxx",
+"language=nl",
+"writing-mode=lr-tb"
+],
+"meta": "nl-NL"
+},
+"pt-BR": {
+"content": [],
+"styles": [
+"country-asian=none",
+"country-complex=none",
+"country=BR",
+"language-asian=zxx",
+"language-complex=zxx",
+"language=pt",
+"writing-mode=lr-tb"
+],
+"meta": "pt-BR"
+},
+"ja-JP": {
+"content": [],
+"styles": [
+"country-asian=JP",
+"country-complex=none",
+"country=US",
+"language-asian=ja",
+"language-complex=zxx",
+"language=en",
+"writing-mode=lr-tb"
+],
+"meta": "ja-JP"
+},
+"zh-CN": {
+"content": [],
+"styles": [
+"country-asian=CN",
+"country-complex=none",
+"country=US",
+"language-asian=zh",
+"language-complex=zxx",
+"language=en",
+"writing-mode=lr-tb"
+],
+"meta": "zh-CN"
+},
+"ko-KR": {
+"content": [],
+"styles": [
+"country-asian=KR",
+"country-complex=none",
+"country=US",
+"language-asian=ko",
+"language-complex=zxx",
+"language=en",
+"writing-mode=lr-tb"
+],
+"meta": "ko-KR"
+},
+"ar-SA": {
+"content": [],
+"styles": [
+"country-asian=none",
+"country-complex=SA",
+"country=US",
+"language-asian=zxx",
+"language-complex=ar",
+"language=en",
+"writing-mode=rl-tb"
+],
+"meta": "ar-SA"
+},
+"th-TH": {
+"content": [],
+"styles": [
+"country-asian=none",
+"country-complex=TH",
+"country=US",
+"language-asian=zxx",
+"language-complex=th",
+"language=en",
+"writing-mode=lr-tb"
+],
+"meta": "th-TH"
+},
+"he-IL": {
+"content": [],
+"styles": [
+"country-asian=none",
+"country-complex=IL",
+"country=US",
+"language-asian=zxx",
+"language-complex=he",
+"language=en",
+"writing-mode=rl-tb"
+],
+"meta": "he-IL"
+}
+},
+"okapi/TestSpreadsheet01.ods": {
+"de-DE": {
+"content": [
+"country-asian=none",
+"country-asian=none",
+"country-complex=none",
+"country-complex=none",
+"country=DE",
+"country=DE",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-complex=zxx",
+"language-complex=zxx",
+"language=de",
+"language=de",
+"writing-mode=lr-tb",
+"writing-mode=page",
+"writing-mode=page"
+],
+"styles": [
+"country-asian=none",
+"country-complex=none",
+"country=DE",
+"language-asian=zxx",
+"language-complex=zxx",
+"language=de",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb"
+],
+"meta": "de-DE"
+},
+"es-ES": {
+"content": [
+"country-asian=none",
+"country-asian=none",
+"country-complex=none",
+"country-complex=none",
+"country=ES",
+"country=ES",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-complex=zxx",
+"language-complex=zxx",
+"language=es",
+"language=es",
+"writing-mode=lr-tb",
+"writing-mode=page",
+"writing-mode=page"
+],
+"styles": [
+"country-asian=none",
+"country-complex=none",
+"country=ES",
+"language-asian=zxx",
+"language-complex=zxx",
+"language=es",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb"
+],
+"meta": "es-ES"
+},
+"fr-FR": {
+"content": [
+"country-asian=none",
+"country-asian=none",
+"country-complex=none",
+"country-complex=none",
+"country=FR",
+"country=FR",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-complex=zxx",
+"language-complex=zxx",
+"language=fr",
+"language=fr",
+"writing-mode=lr-tb",
+"writing-mode=page",
+"writing-mode=page"
+],
+"styles": [
+"country-asian=none",
+"country-complex=none",
+"country=FR",
+"language-asian=zxx",
+"language-complex=zxx",
+"language=fr",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb"
+],
+"meta": "fr-FR"
+},
+"it-IT": {
+"content": [
+"country-asian=none",
+"country-asian=none",
+"country-complex=none",
+"country-complex=none",
+"country=IT",
+"country=IT",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-complex=zxx",
+"language-complex=zxx",
+"language=it",
+"language=it",
+"writing-mode=lr-tb",
+"writing-mode=page",
+"writing-mode=page"
+],
+"styles": [
+"country-asian=none",
+"country-complex=none",
+"country=IT",
+"language-asian=zxx",
+"language-complex=zxx",
+"language=it",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb"
+],
+"meta": "it-IT"
+},
+"nl-NL": {
+"content": [
+"country-asian=none",
+"country-asian=none",
+"country-complex=none",
+"country-complex=none",
+"country=NL",
+"country=NL",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-complex=zxx",
+"language-complex=zxx",
+"language=nl",
+"language=nl",
+"writing-mode=lr-tb",
+"writing-mode=page",
+"writing-mode=page"
+],
+"styles": [
+"country-asian=none",
+"country-complex=none",
+"country=NL",
+"language-asian=zxx",
+"language-complex=zxx",
+"language=nl",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb"
+],
+"meta": "nl-NL"
+},
+"pt-BR": {
+"content": [
+"country-asian=none",
+"country-asian=none",
+"country-complex=none",
+"country-complex=none",
+"country=BR",
+"country=BR",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-complex=zxx",
+"language-complex=zxx",
+"language=pt",
+"language=pt",
+"writing-mode=lr-tb",
+"writing-mode=page",
+"writing-mode=page"
+],
+"styles": [
+"country-asian=none",
+"country-complex=none",
+"country=BR",
+"language-asian=zxx",
+"language-complex=zxx",
+"language=pt",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb"
+],
+"meta": "pt-BR"
+},
+"ja-JP": {
+"content": [
+"country-asian=none",
+"country-asian=none",
+"country-complex=none",
+"country-complex=none",
+"country=US",
+"country=US",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-complex=zxx",
+"language-complex=zxx",
+"language=en",
+"language=en",
+"writing-mode=lr-tb",
+"writing-mode=page",
+"writing-mode=page"
+],
+"styles": [
+"country-asian=none",
+"country-complex=none",
+"country=US",
+"language-asian=zxx",
+"language-complex=zxx",
+"language=en",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb"
+],
+"meta": "ja-JP"
+},
+"zh-CN": {
+"content": [
+"country-asian=none",
+"country-asian=none",
+"country-complex=none",
+"country-complex=none",
+"country=US",
+"country=US",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-complex=zxx",
+"language-complex=zxx",
+"language=en",
+"language=en",
+"writing-mode=lr-tb",
+"writing-mode=page",
+"writing-mode=page"
+],
+"styles": [
+"country-asian=none",
+"country-complex=none",
+"country=US",
+"language-asian=zxx",
+"language-complex=zxx",
+"language=en",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb"
+],
+"meta": "zh-CN"
+},
+"ko-KR": {
+"content": [
+"country-asian=none",
+"country-asian=none",
+"country-complex=none",
+"country-complex=none",
+"country=US",
+"country=US",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-complex=zxx",
+"language-complex=zxx",
+"language=en",
+"language=en",
+"writing-mode=lr-tb",
+"writing-mode=page",
+"writing-mode=page"
+],
+"styles": [
+"country-asian=none",
+"country-complex=none",
+"country=US",
+"language-asian=zxx",
+"language-complex=zxx",
+"language=en",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb"
+],
+"meta": "ko-KR"
+},
+"ar-SA": {
+"content": [
+"country-asian=none",
+"country-asian=none",
+"country-complex=none",
+"country-complex=none",
+"country=US",
+"country=US",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-complex=zxx",
+"language-complex=zxx",
+"language=en",
+"language=en",
+"writing-mode=page",
+"writing-mode=page",
+"writing-mode=rl-tb"
+],
+"styles": [
+"country-asian=none",
+"country-complex=none",
+"country=US",
+"language-asian=zxx",
+"language-complex=zxx",
+"language=en",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb"
+],
+"meta": "ar-SA"
+},
+"th-TH": {
+"content": [
+"country-asian=none",
+"country-asian=none",
+"country-complex=none",
+"country-complex=none",
+"country=US",
+"country=US",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-complex=zxx",
+"language-complex=zxx",
+"language=en",
+"language=en",
+"writing-mode=lr-tb",
+"writing-mode=page",
+"writing-mode=page"
+],
+"styles": [
+"country-asian=none",
+"country-complex=none",
+"country=US",
+"language-asian=zxx",
+"language-complex=zxx",
+"language=en",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb"
+],
+"meta": "th-TH"
+},
+"he-IL": {
+"content": [
+"country-asian=none",
+"country-asian=none",
+"country-complex=none",
+"country-complex=none",
+"country=US",
+"country=US",
+"language-asian=zxx",
+"language-asian=zxx",
+"language-complex=zxx",
+"language-complex=zxx",
+"language=en",
+"language=en",
+"writing-mode=page",
+"writing-mode=page",
+"writing-mode=rl-tb"
+],
+"styles": [
+"country-asian=none",
+"country-complex=none",
+"country=US",
+"language-asian=zxx",
+"language-complex=zxx",
+"language=en",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb"
+],
+"meta": "he-IL"
+}
+},
+"okapi/bookmark-reference.odt": {
+"de-DE": {
+"content": [],
+"styles": [
+"country-asian=CN",
+"country-asian=CN",
+"country-complex=IN",
+"country-complex=IN",
+"country=DE",
+"country=DE",
+"language-asian=zh",
+"language-asian=zh",
+"language-complex=hi",
+"language-complex=hi",
+"language=de",
+"language=de",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "de-DE"
+},
+"es-ES": {
+"content": [],
+"styles": [
+"country-asian=CN",
+"country-asian=CN",
+"country-complex=IN",
+"country-complex=IN",
+"country=ES",
+"country=ES",
+"language-asian=zh",
+"language-asian=zh",
+"language-complex=hi",
+"language-complex=hi",
+"language=es",
+"language=es",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "es-ES"
+},
+"fr-FR": {
+"content": [],
+"styles": [
+"country-asian=CN",
+"country-asian=CN",
+"country-complex=IN",
+"country-complex=IN",
+"country=FR",
+"country=FR",
+"language-asian=zh",
+"language-asian=zh",
+"language-complex=hi",
+"language-complex=hi",
+"language=fr",
+"language=fr",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "fr-FR"
+},
+"it-IT": {
+"content": [],
+"styles": [
+"country-asian=CN",
+"country-asian=CN",
+"country-complex=IN",
+"country-complex=IN",
+"country=IT",
+"country=IT",
+"language-asian=zh",
+"language-asian=zh",
+"language-complex=hi",
+"language-complex=hi",
+"language=it",
+"language=it",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "it-IT"
+},
+"nl-NL": {
+"content": [],
+"styles": [
+"country-asian=CN",
+"country-asian=CN",
+"country-complex=IN",
+"country-complex=IN",
+"country=NL",
+"country=NL",
+"language-asian=zh",
+"language-asian=zh",
+"language-complex=hi",
+"language-complex=hi",
+"language=nl",
+"language=nl",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "nl-NL"
+},
+"pt-BR": {
+"content": [],
+"styles": [
+"country-asian=CN",
+"country-asian=CN",
+"country-complex=IN",
+"country-complex=IN",
+"country=BR",
+"country=BR",
+"language-asian=zh",
+"language-asian=zh",
+"language-complex=hi",
+"language-complex=hi",
+"language=pt",
+"language=pt",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "pt-BR"
+},
+"ja-JP": {
+"content": [],
+"styles": [
+"country-asian=JP",
+"country-asian=JP",
+"country-complex=IN",
+"country-complex=IN",
+"country=GB",
+"country=GB",
+"language-asian=ja",
+"language-asian=ja",
+"language-complex=hi",
+"language-complex=hi",
+"language=en",
+"language=en",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "ja-JP"
+},
+"zh-CN": {
+"content": [],
+"styles": [
+"country-asian=CN",
+"country-asian=CN",
+"country-complex=IN",
+"country-complex=IN",
+"country=GB",
+"country=GB",
+"language-asian=zh",
+"language-asian=zh",
+"language-complex=hi",
+"language-complex=hi",
+"language=en",
+"language=en",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "zh-CN"
+},
+"ko-KR": {
+"content": [],
+"styles": [
+"country-asian=KR",
+"country-asian=KR",
+"country-complex=IN",
+"country-complex=IN",
+"country=GB",
+"country=GB",
+"language-asian=ko",
+"language-asian=ko",
+"language-complex=hi",
+"language-complex=hi",
+"language=en",
+"language=en",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "ko-KR"
+},
+"ar-SA": {
+"content": [],
+"styles": [
+"country-asian=CN",
+"country-asian=CN",
+"country-complex=SA",
+"country-complex=SA",
+"country=GB",
+"country=GB",
+"language-asian=zh",
+"language-asian=zh",
+"language-complex=ar",
+"language-complex=ar",
+"language=en",
+"language=en",
+"writing-mode=lr-tb",
+"writing-mode=rl-tb",
+"writing-mode=rl-tb"
+],
+"meta": "ar-SA"
+},
+"th-TH": {
+"content": [],
+"styles": [
+"country-asian=CN",
+"country-asian=CN",
+"country-complex=TH",
+"country-complex=TH",
+"country=GB",
+"country=GB",
+"language-asian=zh",
+"language-asian=zh",
+"language-complex=th",
+"language-complex=th",
+"language=en",
+"language=en",
+"writing-mode=lr-tb",
+"writing-mode=lr-tb",
+"writing-mode=page"
+],
+"meta": "th-TH"
+},
+"he-IL": {
+"content": [],
+"styles": [
+"country-asian=CN",
+"country-asian=CN",
+"country-complex=IL",
+"country-complex=IL",
+"country=GB",
+"country=GB",
+"language-asian=zh",
+"language-asian=zh",
+"language-complex=he",
+"language-complex=he",
+"language=en",
+"language=en",
+"writing-mode=lr-tb",
+"writing-mode=rl-tb",
+"writing-mode=rl-tb"
+],
+"meta": "he-IL"
+}
+}
+}

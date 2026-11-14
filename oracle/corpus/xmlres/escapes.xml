@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+    <string name="amp">Fish &amp; chips &lt;b&gt; &#233;t&#xE9;</string>
+    <string name="pad">   padded value   </string>
+    <string name="quoted_pad">"  quoted, with spaces  "</string>
+    <string name="q_cdata"><![CDATA["Don't stop"]]></string>
+    <string name="at">\@start and \?q</string>
+    <string name="tail_bs">ends with a backslash \\</string>
+    <string name="unicode">\u00e9 stays as typed \t tab</string>
+    <string name="ref2">@android:string/ok</string>
+    <string name="digits">12345</string>
+    <string name="multi">first line
+        second line</string>
+</resources>

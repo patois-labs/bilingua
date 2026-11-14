@@ -8,7 +8,7 @@ use bilingua_pptx::Pptx;
 use bilingua_model::*;
 
 let f = Pptx;
-let mut doc = f.extract(&bytes, &ExtractOptions { target_lang: Some("es-ES".into()), ..Default::default() })?;
+let mut doc = f.extract(&bytes, &ExtractOptions::new().with_target_lang("es-ES"))?;
 doc.set_target("slide1-p1", vec![Inline::text("Hola.")])?;
 let (out, report) = bilingua_pptx::merge_with_report(&doc)?;   // or f.merge(&doc) for just the bytes
 let html = f.preview(&doc);                                    // approximate HTML, one span per segment

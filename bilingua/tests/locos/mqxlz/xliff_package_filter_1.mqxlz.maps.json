@@ -1,0 +1,18 @@
+[
+ {
+  "name": "repair-xrepeat",
+  "locale": null,
+  "map": {
+   "0": "Q Press ⟦x1⟧Start⟦x2⟧ to begin. ⟦x1⟧",
+   "4": "Q Use {0} files & ⟦p1⟧more. ⟦p1⟧"
+  }
+ },
+ {
+  "name": "repair-xrepeat-de-DE",
+  "locale": "de-DE",
+  "map": {
+   "0": "Q Press ⟦x1⟧Start⟦x2⟧ to begin. ⟦x1⟧",
+   "4": "Q Use {0} files & ⟦p1⟧more. ⟦p1⟧"
+  }
+ }
+]

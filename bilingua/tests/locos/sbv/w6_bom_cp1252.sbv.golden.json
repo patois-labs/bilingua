@@ -1,0 +1,46 @@
+{
+ "format": "sbv",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Café au lait",
+   "style": ""
+  },
+  {
+   "p_index": 1,
+   "text": "Second cue",
+   "style": ""
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "77u/MDowMDowMS4wMDAsMDowMDowMi4wMDAKQ2Fm6SBhdSBsYWl0CgowOjAwOjAzLjAwMCwwOjAwOjA0LjAwMApTZWNvbmQgY3VlCg=="
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü Café au lait",
+    "1": "Ü Second cue"
+   },
+   "out_b64": "77u/MDowMDowMS4wMDAsMDowMDowMi4wMDAKw5wgQ2Fmw6kgYXUgbGFpdAoKMDowMDowMy4wMDAsMDowMDowNC4wMDAKw5wgU2Vjb25kIGN1ZQo="
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Café au lait & <\"'>"
+   },
+   "out_b64": "77u/MDowMDowMS4wMDAsMDowMDowMi4wMDAKQ2Fmw6kgYXUgbGFpdCAmIDwiJz4KCjA6MDA6MDMuMDAwLDA6MDA6MDQuMDAwClNlY29uZCBjdWUK"
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "out_b64": "77u/MDowMDowMS4wMDAsMDowMDowMi4wMDAKQ2Fmw6kgYXUgbGFpdAoKMDowMDowMy4wMDAsMDowMDowNC4wMDAKU2Vjb25kIGN1ZQo="
+  }
+ ]
+}

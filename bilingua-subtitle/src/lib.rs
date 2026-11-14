@@ -1,12 +1,17 @@
 //! Bilingua subtitle filters: SRT and WebVTT. See the README.
 
+/// Skeleton schema number: bump only when this crate's skeleton layout changes (see `bilingua_model::check_parser`).
+pub const SKELETON_SCHEMA: u32 = 1;
+
 use bilingua_model::*;
 use std::collections::BTreeMap;
+
+mod locos;
 
 /// Default characters per line stored in `context.extra["max_cpl"]`. A unit's QA can check against it.
 pub const DEFAULT_MAX_CPL: &str = "42";
 
-const RAW: &str = "~raw";
+const RAW: &str = "raw";
 const LINE_BREAK_DISPLAY: &str = "\u{21b5}";
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -33,10 +38,12 @@ impl Filter for Srt {
         !head.trim_start().starts_with("WEBVTT") && head.lines().take(6).any(|l| l.contains(" --> ") && l.contains(','))
     }
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         extract(Kind::Srt, bytes, opts)
     }
-    fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
-        merge(Kind::Srt, doc)
+    fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
+        merge(Kind::Srt, doc, opts)
     }
 }
 
@@ -52,10 +59,12 @@ impl Filter for Vtt {
         head.trim_start_matches('\u{feff}').starts_with("WEBVTT")
     }
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
         extract(Kind::Vtt, bytes, opts)
     }
-    fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
-        merge(Kind::Vtt, doc)
+    fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
+        merge(Kind::Vtt, doc, opts)
     }
 }
 
@@ -82,7 +91,8 @@ fn lines(s: &str) -> Vec<Line<'_>> {
     let mut pos = 0;
     for raw in s.split_inclusive('\n') {
         let t = raw.strip_suffix('\n').unwrap_or(raw);
-        let t = t.strip_suffix('\r').unwrap_or(t);
+        // every CR before the LF belongs to the terminator (a file saved twice has CR CR LF endings)
+        let t = t.trim_end_matches('\r');
         out.push(Line { start: pos, end: pos + t.len(), text: t });
         pos += raw.len();
     }
@@ -90,11 +100,12 @@ fn lines(s: &str) -> Vec<Line<'_>> {
 }
 
 fn extract(k: Kind, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
-    let (body, bom) = match bytes.strip_prefix(&[0xEF, 0xBB, 0xBF]) {
-        Some(r) => (r, true),
-        None => (bytes, false),
-    };
-    let text = std::str::from_utf8(body).map_err(|e| perr(k, format!("not valid UTF-8: {e}")))?;
+    let mut dec = bilingua_model::enc::decode_text(bytes, &bilingua_model::enc::DecodeOptions::new(opts).lossy_after_utf8_bom())?;
+    let text_owned = std::mem::take(&mut dec.text);
+    let text = text_owned.as_str();
+    if opts.is_profile(profile::LOCOS) {
+        return locos::extract(fmt_name(k), text, &dec.encoding, opts, std::mem::take(&mut dec.warnings));
+    }
     let ls = lines(text);
     if k == Kind::Vtt && !ls.first().is_some_and(|l| l.text.starts_with("WEBVTT")) {
         return Err(perr(k, "a WebVTT file must start with WEBVTT"));
@@ -149,7 +160,7 @@ fn extract(k: Kind, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Err
         let (inl, codes) = cue_inlines(k, raw);
         let mut u = Unit::new(format!("c{n}"), inl);
         u.codes = codes;
-        u.codes.insert(RAW.into(), CodeData { standalone: Some(raw.to_string()), ..Default::default() });
+        u.set_hidden(RAW, raw.to_string());
         u.context.kind = Some("subtitle".into());
         u.context.key = Some(ident.unwrap_or_else(|| n.to_string()));
         u.context.location = Some(format!("line {}", ti + 1));
@@ -179,15 +190,7 @@ fn extract(k: Kind, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Err
     if cursor < text.len() {
         parts.push(SkelPart::Raw(text[cursor..].to_string()));
     }
-    Ok(Document {
-        format: fmt_name(k).into(),
-        name: None,
-        source_lang: opts.source_lang.clone(),
-        target_lang: opts.target_lang.clone(),
-        granularity: opts.granularity,
-        units,
-        skeleton: Skeleton::Text { parts, encoding: if bom { "utf-8-bom".into() } else { "utf-8".into() } },
-    })
+    bilingua_model::guard::finish(Document::new(fmt_name(k), units, Skeleton::text(parts, dec.encoding.as_str(), bilingua_model::parser_info!())).with_options(opts), std::mem::take(&mut dec.warnings), &opts.limits())
 }
 
 // ---------- cue text ----------
@@ -271,7 +274,12 @@ fn scan(k: Kind, raw: &str) -> Vec<Tok<'_>> {
     while i < b.len() {
         let c = b[i];
         if c == b'\r' || c == b'\n' {
-            let end = if c == b'\r' && b.get(i + 1) == Some(&b'\n') { i + 2 } else { i + 1 };
+            // CR CR LF is one break, as `lines` reads it
+            let mut j = i;
+            while c == b'\r' && b.get(j + 1) == Some(&b'\r') {
+                j += 1;
+            }
+            let end = if c == b'\r' && b.get(j + 1) == Some(&b'\n') { j + 2 } else { i + 1 };
             flush(&mut text, &mut out);
             out.push(Tok::Break(&raw[i..end]));
             i = end;
@@ -300,7 +308,8 @@ fn scan(k: Kind, raw: &str) -> Vec<Tok<'_>> {
                     .to_ascii_lowercase();
                 let is_stamp = !closing && body.as_bytes().first().is_some_and(|c| c.is_ascii_digit()) && body.contains(':');
                 let ok = match k {
-                    Kind::Srt => srt_tag(&name) && !name.is_empty(),
+                    // YouTube-style SRT files keep word timings as <00:00:04.480> inside the cue text
+                    Kind::Srt => (srt_tag(&name) && !name.is_empty()) || (is_stamp && body.contains(['.', ',']) && body.bytes().all(|c| c.is_ascii_digit() || matches!(c, b':' | b'.' | b','))),
                     Kind::Vtt => is_stamp || (!name.is_empty() && body.as_bytes().first().is_some_and(|c| c.is_ascii_alphabetic())),
                 };
                 if ok && !inner.contains('\n') {
@@ -389,7 +398,7 @@ fn cue_inlines(k: Kind, raw: &str) -> (Vec<Inline>, BTreeMap<String, CodeData>) 
                 let id = next.to_string();
                 next += 1;
                 let close = pair[idx].and_then(|c| if let Tok::Close { raw, .. } = &toks[c] { Some(raw.to_string()) } else { None });
-                codes.insert(id.clone(), CodeData { open: Some(raw.to_string()), close, standalone: None, label: Some(label(name).into()) });
+                codes.insert(id.clone(), CodeData::new().with_open(raw.to_string()).with_close(close).with_label(label(name).to_string()));
                 inl.push(Inline::tag(id.clone(), TagKind::Open, display_open(raw, name)));
                 ids[idx] = Some(id);
             }
@@ -408,7 +417,7 @@ fn cue_inlines(k: Kind, raw: &str) -> (Vec<Inline>, BTreeMap<String, CodeData>) 
                     Tok::Break(b) => (b.to_string(), "line break", LINE_BREAK_DISPLAY.to_string()),
                     Tok::Text(_) => continue,
                 };
-                codes.insert(id.clone(), CodeData { open: None, close: None, standalone: Some(raw), label: Some(label(name).into()) });
+                codes.insert(id.clone(), CodeData::new().with_standalone(raw).with_label(label(name).to_string()));
                 inl.push(Inline::tag(id, TagKind::Standalone, display));
             }
         }
@@ -416,8 +425,13 @@ fn cue_inlines(k: Kind, raw: &str) -> (Vec<Inline>, BTreeMap<String, CodeData>) 
     (merge_text(inl), codes)
 }
 
-fn merge(k: Kind, doc: &Document) -> Result<Vec<u8>, Error> {
-    let Skeleton::Text { parts, encoding } = &doc.skeleton else {
+fn merge(k: Kind, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
+    bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
+    // a document extracted under the LocOS profile carries the decoded file and is written the LocOS way
+    if let Skeleton::Binary { data, .. } = &doc.skeleton {
+        return locos::merge(doc, data, opts);
+    }
+    let Skeleton::Text { parts, encoding, .. } = &doc.skeleton else {
         return Err(Error::Write(format!("{} needs a text skeleton", fmt_name(k))));
     };
     let eol = if parts.iter().any(|p| matches!(p, SkelPart::Raw(s) if s.contains("\r\n"))) { "\r\n" } else { "\n" };
@@ -427,21 +441,59 @@ fn merge(k: Kind, doc: &Document) -> Result<Vec<u8>, Error> {
             SkelPart::Raw(s) => out.push_str(s),
             SkelPart::Unit(i) => {
                 let u = doc.units.get(*i).ok_or_else(|| Error::Write(format!("skeleton points at missing unit {i}")))?;
-                let raw = u.codes.get(RAW).and_then(|c| c.standalone.as_deref());
-                let translated = u.translate && u.segments.iter().any(|s| !s.target.is_empty());
+                let raw = u.hidden(RAW);
+                let translated = u.translate && u.segments.iter().any(|s| s.has_target());
                 match raw {
                     Some(r) if !translated => out.push_str(r),
-                    _ => out.push_str(&render(k, u, eol)),
+                    _ => out.push_str(&keep_one_cue(k, u, render(k, u, eol), eol)?),
                 }
             }
         }
     }
-    let mut bytes = Vec::new();
-    if encoding == "utf-8-bom" {
-        bytes.extend_from_slice(&[0xEF, 0xBB, 0xBF]);
+    bilingua_model::enc::encode_text_with(&out, encoding, opts)
+}
+
+/// A time as a timing line writes it: digits with at least one colon, and a `,` or `.` before the fraction.
+fn looks_like_time(s: &str) -> bool {
+    s.as_bytes().first().is_some_and(|c| c.is_ascii_digit()) && s.contains(':') && s.bytes().all(|c| c.is_ascii_digit() || matches!(c, b':' | b'.' | b','))
+}
+
+/// True when a line reads as a timing line: a time on each side of the arrow (settings may follow the second).
+fn is_timing_line(line: &str) -> bool {
+    let Some((a, b)) = line.split_once("-->") else { return false };
+    looks_like_time(a.trim()) && b.split_whitespace().next().is_some_and(looks_like_time)
+}
+
+/// A written cue stays one cue. A blank line ends a cue for every reader, so the blank lines of a translation are
+/// dropped (a lone CR is a line break to players, and counts as one here). A WebVTT reader also ends the cue at a
+/// line holding `-->`, so the arrow is written `--&gt;`, which reads back as the same text. SRT has no escape: a
+/// line that reads as a timing line is refused, unless the cue's own source text already had that line (a file
+/// whose cues run together comes back as it was). The check is on the whole rendered cue, because a blank line
+/// can form between a text run and a line-break tag. A cue this leaves alone is returned as it was rendered.
+fn keep_one_cue(k: Kind, u: &Unit, rendered: String, eol: &str) -> Result<String, Error> {
+    let lone_cr = rendered.replace("\r\n", "").contains('\r');
+    if !lone_cr && !rendered.contains("-->") && rendered.split('\n').all(|l| !l.trim().is_empty()) {
+        return Ok(rendered);
     }
-    bytes.extend_from_slice(out.as_bytes());
-    Ok(bytes)
+    let text = rendered.replace("\r\n", "\n").replace('\r', "\n");
+    let mut kept: Vec<String> = Vec::new();
+    for l in text.split('\n').filter(|l| !l.trim().is_empty()) {
+        match k {
+            Kind::Vtt => kept.push(l.replace("-->", "--&gt;")),
+            Kind::Srt => {
+                let in_source = || u.hidden(RAW).is_some_and(|raw| raw.split(['\n', '\r']).any(|s| s.trim() == l.trim()));
+                if is_timing_line(l) && !in_source() {
+                    return Err(Error::Unwritable { unit: Some(u.id.clone()), reason: "a line of the translation reads as a subtitle timing line (two times around -->)".into() });
+                }
+                kept.push(l.to_string());
+            }
+        }
+    }
+    if kept.is_empty() {
+        // only white space: nothing in it can start a cue
+        return Ok(rendered);
+    }
+    Ok(kept.join(eol))
 }
 
 fn render(k: Kind, u: &Unit, eol: &str) -> String {

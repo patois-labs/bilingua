@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=メモ帳
+Comment=すばやくメモを取る
+Keywords=メモ;テキスト;
+Exec=notes %F
+Actions=new;
+
+[Desktop Action new]
+Name=新しいメモ
+Exec=notes --new

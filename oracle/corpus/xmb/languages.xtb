@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE translationbundle>
+<translationbundle lang="en">
+  <translation id="greet.en">Welcome back, <ph name="USER"/>! You have <ph name="START_BOLD"/>3 new messages<ph name="CLOSE_BOLD"/>.</translation>
+  <translation id="greet.fr">Bon retour, <ph name="USER"/> ! Vous avez <ph name="START_BOLD"/>3 nouveaux messages<ph name="CLOSE_BOLD"/>.</translation>
+  <translation id="greet.de">Willkommen zurück, <ph name="USER"/>! Grüße aus München &amp; Zürich.</translation>
+  <translation id="greet.es">¿Cómo estás, <ph name="USER"/>? ¡Mañana habrá niños!</translation>
+  <translation id="greet.ru">Добро пожаловать, <ph name="USER"/>! У вас 3 новых сообщения.</translation>
+  <translation id="greet.ar">مرحباً بعودتك، <ph name="USER"/>! لديك 3 رسائل جديدة.</translation>
+  <translation id="greet.ja">お帰りなさい、<ph name="USER"/>さん！新しいメッセージが3件あります。</translation>
+  <translation id="greet.zh">欢迎回来，<ph name="USER"/>！您有 3 条新消息。</translation>
+  <translation id="greet.ko">다시 오신 것을 환영합니다, <ph name="USER"/>님! 새 메시지가 3개 있습니다.</translation>
+  <translation id="greet.tr">Tekrar hoş geldiniz, <ph name="USER"/>! Üç yeni iletiniz var.</translation>
+  <translation id="greet.hi">वापस स्वागत है, <ph name="USER"/>! आपके 3 नए संदेश हैं।</translation>
+</translationbundle>

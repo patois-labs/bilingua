@@ -1,0 +1,6 @@
+msg = "Hello"
+# CRLF file
+[a]
+b = """
+line1
+line2"""

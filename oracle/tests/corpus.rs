@@ -2,8 +2,8 @@
 //! and a pseudo-translated merge opens again with the same units. The comparison with the Localization OS
 //! filters needs that project and is run by hand (`python run.py`); this part needs nothing.
 
-use bilingua::{Granularity, Inline};
-use std::collections::BTreeMap;
+use bilingua::{Error, Granularity, Inline};
+use std::collections::{BTreeMap, BTreeSet};
 use std::io::Read;
 use std::path::{Path, PathBuf};
 
@@ -31,6 +31,36 @@ fn parts(bytes: &[u8]) -> Option<BTreeMap<String, Vec<u8>>> {
     Some(m)
 }
 
+/// The plural form a unit stands for: (key, label), or `None` for a unit that is not a plural form. Formats keep it
+/// in `context.extra["plural"]` (PO index, YAML and Rails category), as `[label]` after the key (Fluent variants) or
+/// as the last `/` step of a stringsdict key path (`files_count/count/many`).
+fn plural_label(u: &bilingua::Unit) -> Option<(Option<String>, String)> {
+    if let Some(p) = u.context.extra.get("plural") {
+        return Some((u.context.key.clone(), p.clone()));
+    }
+    let key = u.context.key.as_deref()?;
+    if let Some((base, last)) = key.rsplit_once('/') {
+        if matches!(last, "zero" | "one" | "two" | "few" | "many" | "other") {
+            return Some((Some(base.to_string()), last.to_string()));
+        }
+    }
+    let (base, rest) = key.rsplit_once('[')?;
+    let label = rest.strip_suffix(']')?;
+    Some((Some(base.to_string()), label.to_string()))
+}
+
+/// Formats whose files hold no translatable text by design, so a corpus file of theirs gives zero units and is
+/// still checked for an exact untouched merge. Keep this list narrow: only a format whose LocOS spec extracts
+/// nothing from it belongs here. `sdlproj`: a Trados project file is a manifest; LocOS reads only its languages,
+/// GUID, type and name (`app/filters/sdl_package.py`) and never extracts text from it.
+const NO_TEXT_FORMATS: &[&str] = &["sdlproj"];
+
+/// Formats whose translated merge is `Error::Unsupported` by design, so a corpus file of theirs is checked for an
+/// exact untouched merge and for that refusal instead of a pseudo-translated round trip. Keep this list narrow.
+/// `pdf`: Localization OS re-typesets a translated PDF with typst; that step stays in LocOS for 1.0 (Brent's
+/// decision, see `bilingua-pdf/DESIGN-MERGE.md`), so Bilingua's PDF filter extracts and merges untouched only.
+const MERGE_UNSUPPORTED_FORMATS: &[&str] = &["pdf"];
+
 fn pseudo(v: &[Inline]) -> Vec<Inline> {
     let mut out = vec![Inline::text("[")];
     out.extend(v.iter().cloned());
@@ -44,7 +74,7 @@ fn every_corpus_file_round_trips() {
     let mut all = vec![];
     files(&root, &mut all);
     assert!(all.len() >= 25, "corpus is missing: {} files", all.len());
-    let opts = bilingua::ExtractOptions { target_lang: Some("es-ES".into()), granularity: Granularity::Paragraph, ..Default::default() };
+    let opts = bilingua::ExtractOptions::new().with_target_lang("es-ES").with_granularity(Granularity::Paragraph);
     let mut failures = vec![];
     for p in &all {
         let name = p.file_name().unwrap().to_string_lossy().to_string();
@@ -56,7 +86,7 @@ fn every_corpus_file_round_trips() {
                 continue;
             }
         };
-        if doc.units.is_empty() {
+        if doc.units.is_empty() && !NO_TEXT_FORMATS.contains(&doc.format.as_str()) {
             failures.push(format!("{name}: no units"));
         }
         match bilingua::merge(&doc) {
@@ -75,10 +105,27 @@ fn every_corpus_file_round_trips() {
                 failures.push(format!("{name}: set_target {id}: {e}"));
             }
         }
+        if MERGE_UNSUPPORTED_FORMATS.contains(&doc.format.as_str()) {
+            let translated = t.units.iter().any(|u| u.is_translated());
+            match bilingua::merge(&t) {
+                Err(Error::Unsupported(_)) if translated => {}
+                Ok(_) if !translated => {}
+                Ok(_) => failures.push(format!("{name}: a translated merge should be refused as unsupported")),
+                Err(e) => failures.push(format!("{name}: merge failed: {e}")),
+            }
+            continue;
+        }
         match bilingua::merge(&t).and_then(|b| bilingua::extract(&name, &b, &opts)) {
             Ok(again) => {
-                let a = doc.units.iter().filter(|u| u.translate).count();
-                let b = again.units.iter().filter(|u| u.translate).count();
+                // A merge with a target language may fill plural forms the target needs and the source lacks
+                // (es-ES has "many", an English file does not). Those new units are not a mismatch: count only
+                // the units whose plural label the source has. It may also drop the forms the target never uses
+                // (Android `<plurals>`, as LocOS: es-ES has no "two"): those are not counted on the source side.
+                let labels: BTreeSet<(Option<String>, String)> = doc.units.iter().filter_map(plural_label).collect();
+                let kept: BTreeSet<(Option<String>, String)> = again.units.iter().filter_map(plural_label).collect();
+                let dropped = |u: &&bilingua::Unit| doc.format == "android" && plural_label(u).is_some_and(|l| !kept.contains(&l));
+                let a = doc.units.iter().filter(|u| u.translate).filter(|u| !dropped(u)).count();
+                let b = again.units.iter().filter(|u| u.translate && plural_label(u).is_none_or(|l| labels.contains(&l))).count();
                 if a != b {
                     failures.push(format!("{name}: reopened with {b} units, had {a}"));
                 }

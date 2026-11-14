@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="gb2312"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <data name="Welcome.en" xml:space="preserve">
+    <value>Welcome to Lumen Bakery. Your fresh bread is ready, {0} loaves waiting.</value>
+    <comment>Greeting, en</comment>
+  </data>
+  <data name="Welcome.zh" xml:space="preserve">
+    <value>欢迎来到流明面包店。您的新鲜面包已准备好，{0}个面包正在等候。</value>
+    <comment>Greeting, zh</comment>
+  </data>
+</root>

@@ -1,0 +1,1 @@
+<p>Entities &amp; &lt;b&gt; &copy; &nbsp; &#8364; &foo; &amp text</p><img alt="&amp;&#39;&quot;&nbsp;&notit;&#x41;&#65" title="&lt;i&gt; ok"><a title="A &amp; B">x</a>

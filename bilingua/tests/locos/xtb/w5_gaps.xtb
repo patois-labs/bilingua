@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE translationbundle>
+<translationbundle lang="fr">
+  <translation id="2001">Bonjour</translation>
+  <translation id="2002"><ph name="INTERPOLATION"/></translation>
+  <translation id="2003">Salut <ph name="INTERPOLATION"/> !</translation>
+  <translation id="2004"/>
+  <translation id="2005">  Enregistrer  </translation>
+  <translation id="2003">Doublon</translation>
+  <translation id="2006">Fin <ph name="START_LINK"/>ici<ph name="CLOSE_LINK"/></translation>
+</translationbundle>

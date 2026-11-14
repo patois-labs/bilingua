@@ -1,0 +1,4 @@
+<!-- c -->
+<!ENTITY a "One">
+<!ENTITY b 'Two &amp; three'>
+<!ENTITY c "&brandName; Settings">

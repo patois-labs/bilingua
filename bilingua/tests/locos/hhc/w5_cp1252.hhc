@@ -1,0 +1,19 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<HTML>
+<HEAD>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+</HEAD><BODY>
+<OBJECT type="text/site properties">
+	<param name="Font" value="Arial,8,0">
+</OBJECT>
+<UL>
+	<LI> <OBJECT type="text/sitemap">
+		<param name="Name" value="Café menu">
+		<param name="Local" value="cafe.htm">
+		</OBJECT>
+	<LI> <OBJECT type="text/sitemap">
+		<param name="Name" value="Tea &amp; cake">
+		<param name="Local" value="tea.htm">
+		</OBJECT>
+</UL>
+</BODY></HTML>

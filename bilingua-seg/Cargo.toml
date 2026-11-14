@@ -5,6 +5,12 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
+rust-version.workspace = true
+homepage.workspace = true
+include = ["/src/**", "/rules/**", "/README.md", "/LICENSE", "/NOTICE"]
+readme = "README.md"
+keywords = ["segmentation", "srx", "sentence", "localization", "translation"]
+categories = ["internationalization", "localization", "text-processing"]
 
 [dependencies]
 bilingua-model = { workspace = true }

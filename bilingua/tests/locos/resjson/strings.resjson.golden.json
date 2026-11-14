@@ -1,0 +1,53 @@
+{
+ "format": "resjson",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Hello, {0}!",
+   "style": ""
+  },
+  {
+   "p_index": 1,
+   "text": "Save & close",
+   "style": ""
+  },
+  {
+   "p_index": 2,
+   "text": "%1 of %2",
+   "style": ""
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "ewogICJHcmVldGluZyI6ICJIZWxsbywgezB9ISIsCiAgIl9HcmVldGluZy5jb21tZW50IjogIlNob3duIGF0IHN0YXJ0IiwKICAiU2F2ZSI6ICJTYXZlICYgY2xvc2UiLAogICJQY3QiOiAiJTEgb2YgJTIiCn0K"
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü Hello, {0}!",
+    "1": "Ü Save & close",
+    "2": "Ü %1 of %2"
+   },
+   "out_b64": "ewogICJHcmVldGluZyI6ICLDnCBIZWxsbywgezB9ISIsCiAgIl9HcmVldGluZy5jb21tZW50IjogIlNob3duIGF0IHN0YXJ0IiwKICAiU2F2ZSI6ICLDnCBTYXZlICYgY2xvc2UiLAogICJQY3QiOiAiw5wgJTEgb2YgJTIiCn0K"
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Hello, {0}! & <\"'>",
+    "2": "%1 of %2 & <\"'>"
+   },
+   "out_b64": "ewogICJHcmVldGluZyI6ICJIZWxsbywgezB9ISAmIDxcIic+IiwKICAiX0dyZWV0aW5nLmNvbW1lbnQiOiAiU2hvd24gYXQgc3RhcnQiLAogICJTYXZlIjogIlNhdmUgJiBjbG9zZSIsCiAgIlBjdCI6ICIlMSBvZiAlMiAmIDxcIic+Igp9Cg=="
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "out_b64": "ewogICJHcmVldGluZyI6ICJIZWxsbywgezB9ISIsCiAgIl9HcmVldGluZy5jb21tZW50IjogIlNob3duIGF0IHN0YXJ0IiwKICAiU2F2ZSI6ICJTYXZlICYgY2xvc2UiLAogICJQY3QiOiAiJTEgb2YgJTIiCn0K"
+  }
+ ]
+}

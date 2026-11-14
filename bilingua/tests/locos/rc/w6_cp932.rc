@@ -1,0 +1,6 @@
+#pragma code_page(932)
+STRINGTABLE
+BEGIN
+    IDS_HELLO "Bring water with you"
+    IDS_CAFE "Šì’ƒ“X open"
+END

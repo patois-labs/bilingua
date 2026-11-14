@@ -1,0 +1,5 @@
+1	ko	x-vnd.Notes	4711
+열기	MainWindow		열기
+%s 저장할까요?	MainWindow	file name	%s 저장할까요?
+종료	MainWindow		종료
+메모	About		메모

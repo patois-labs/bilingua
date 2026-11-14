@@ -1,0 +1,1 @@
+<p>Hi <%= a %></p><P>UPPER <B>case</B></P><Div>Mixed<BR>Case</Div><IMG ALT="Upper alt" SRC=x><A TITLE="Upper title" HREF=y>link</A>

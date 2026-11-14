@@ -1,0 +1,53 @@
+{
+ "format": "txt",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Zeile eins",
+   "style": ""
+  },
+  {
+   "p_index": 1,
+   "text": "World",
+   "style": ""
+  },
+  {
+   "p_index": 2,
+   "text": "last",
+   "style": ""
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "WmVpbGUgZWlucw0KDQogIFdvcmxkDQpsYXN0IA0K"
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü Zeile eins",
+    "1": "Ü World",
+    "2": "Ü last"
+   },
+   "out_b64": "w5wgWmVpbGUgZWlucw0KDQogIMOcIFdvcmxkDQrDnCBsYXN0DQo="
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Zeile eins & <\"'>",
+    "2": "last & <\"'>"
+   },
+   "out_b64": "WmVpbGUgZWlucyAmIDwiJz4NCg0KICBXb3JsZA0KbGFzdCAmIDwiJz4NCg=="
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "out_b64": "WmVpbGUgZWlucw0KDQogIFdvcmxkDQpsYXN0DQo="
+  }
+ ]
+}

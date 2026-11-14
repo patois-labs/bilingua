@@ -6,6 +6,9 @@
 //! original line ending (`\n` or `\r\n`), so mixed endings survive and translators cannot damage them.
 //! A UTF-8 byte order mark is kept.
 
+/// Skeleton schema number: bump only when this crate's skeleton layout changes (see `bilingua_model::check_parser`).
+pub const SKELETON_SCHEMA: u32 = 1;
+
 use bilingua_model::*;
 use std::collections::BTreeMap;
 
@@ -13,6 +16,8 @@ pub struct TextFilter;
 
 const ID: &str = "txt";
 const BOM: &[u8] = &[0xEF, 0xBB, 0xBF];
+/// Most lines in one piece of a paragraph the unit size limit would refuse.
+const CUT_LINES: usize = 500;
 
 impl Filter for TextFilter {
     fn id(&self) -> &'static str {
@@ -29,17 +34,16 @@ impl Filter for TextFilter {
     }
 
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
-        if bytes.starts_with(&[0xFF, 0xFE]) || bytes.starts_with(&[0xFE, 0xFF]) {
-            return Err(Error::Unsupported("UTF-16 text files; save the file as UTF-8".into()));
+        bilingua_model::check_own_options(self, &opts.format_options)?;
+        let mut dec = bilingua_model::enc::decode_text(bytes, &bilingua_model::enc::DecodeOptions::new(opts).lossy_after_utf8_bom())?;
+        let text_owned = std::mem::take(&mut dec.text);
+        let text = text_owned.as_str();
+        let encoding = dec.encoding.as_str();
+        if opts.is_profile(profile::LOCOS) {
+            let (parts, units) = locos_parts(text);
+            let doc = Document::new(ID, units, Skeleton::text(parts, encoding, bilingua_model::parser_info!())).with_options(opts);
+            return bilingua_model::guard::finish(doc, std::mem::take(&mut dec.warnings), &opts.limits());
         }
-        let (body, encoding) = match bytes.strip_prefix(BOM) {
-            Some(rest) => (rest, "utf-8-bom"),
-            None => (bytes, "utf-8"),
-        };
-        let text = std::str::from_utf8(body).map_err(|e| Error::Parse {
-            format: ID.into(),
-            msg: format!("the file is not valid UTF-8 (at byte {})", e.valid_up_to()),
-        })?;
 
         let mut parts: Vec<SkelPart> = Vec::new();
         let mut units: Vec<Unit> = Vec::new();
@@ -61,49 +65,95 @@ impl Filter for TextFilter {
             group.clear();
         };
 
+        // a paragraph the unit size limit would refuse (a list with no blank lines) is cut at line breaks into
+        // pieces of at most CUT_LINES lines and half the limit, so the file is read as several units rather than
+        // refused; a paragraph within the limit stays one unit, as before. The line count is what decides on most
+        // files, so a translated file (longer lines) reopens with the same pieces.
+        let max = opts.limits().max_unit_chars;
+        let cap = (max / 2).max(1);
+        let emit = |group: &mut Vec<&str>, raw: &mut String, parts: &mut Vec<SkelPart>, units: &mut Vec<Unit>| {
+            if group.is_empty() || unit_chars(group) <= max {
+                flush(group, raw, parts, units);
+                return;
+            }
+            let all = std::mem::take(group);
+            let mut chunk_chars = 0usize;
+            for line in all {
+                let n = split_eol(line).0.chars().count() + 1;
+                if !group.is_empty() && (chunk_chars + n > cap || group.len() >= CUT_LINES) {
+                    flush(group, raw, parts, units);
+                    chunk_chars = 0;
+                }
+                group.push(line);
+                chunk_chars += n;
+            }
+            flush(group, raw, parts, units);
+        };
         for line in text.split_inclusive('\n') {
             if line.trim().is_empty() {
-                flush(&mut group, &mut raw, &mut parts, &mut units);
+                emit(&mut group, &mut raw, &mut parts, &mut units);
                 raw.push_str(line);
             } else {
                 group.push(line);
             }
         }
-        flush(&mut group, &mut raw, &mut parts, &mut units);
+        emit(&mut group, &mut raw, &mut parts, &mut units);
         if !raw.is_empty() {
             parts.push(SkelPart::Raw(raw));
         }
 
-        Ok(Document {
-            format: ID.into(),
-            name: None,
-            source_lang: opts.source_lang.clone(),
-            target_lang: opts.target_lang.clone(),
-            granularity: opts.granularity,
-            units,
-            skeleton: Skeleton::Text { parts, encoding: encoding.into() },
-        })
+        bilingua_model::guard::finish(Document::new(ID, units, Skeleton::text(parts, encoding, bilingua_model::parser_info!())).with_options(opts), std::mem::take(&mut dec.warnings), &opts.limits())
     }
 
-    fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
-        let Skeleton::Text { parts, encoding } = &doc.skeleton else {
+    fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
+        bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
+        let Skeleton::Text { parts, encoding, .. } = &doc.skeleton else {
             return Err(Error::Write("txt needs a text skeleton".into()));
         };
-        let mut out: Vec<u8> = Vec::new();
-        if encoding == "utf-8-bom" {
-            out.extend_from_slice(BOM);
-        }
+        let mut out = String::new();
         for p in parts {
             match p {
-                SkelPart::Raw(s) => out.extend_from_slice(s.as_bytes()),
+                SkelPart::Raw(s) => out.push_str(s),
                 SkelPart::Unit(i) => {
                     let unit = doc.units.get(*i).ok_or_else(|| Error::Write(format!("no unit {i}")))?;
-                    out.extend_from_slice(render(unit).as_bytes());
+                    out.push_str(&render(unit));
                 }
             }
         }
-        Ok(out)
+        bilingua_model::enc::encode_text_with(&out, encoding, opts)
     }
+}
+
+/// The LocOS profile's text units: one per line that is not blank (Python `splitlines` breaks, `strip`ped), as
+/// LocOS's `TextFilter` makes them. The line's indentation and terminator are skeleton; its trailing spaces are
+/// dropped, as LocOS's build drops them.
+fn locos_parts(text: &str) -> (Vec<SkelPart>, Vec<Unit>) {
+    use bilingua_model::pytext::{py_split_line_end, py_splitlines_keepends};
+    let mut parts: Vec<SkelPart> = Vec::new();
+    let mut units: Vec<Unit> = Vec::new();
+    let mut raw = String::new();
+    for line in py_splitlines_keepends(text) {
+        let (body, end) = py_split_line_end(line);
+        let content = py_strip(body);
+        if content.is_empty() {
+            raw.push_str(line);
+            continue;
+        }
+        raw.push_str(&body[..body.len() - py_lstrip(body).len()]);
+        if !raw.is_empty() {
+            parts.push(SkelPart::Raw(std::mem::take(&mut raw)));
+        }
+        parts.push(SkelPart::Unit(units.len()));
+        let mut unit = Unit::new(format!("p{}", units.len() + 1), vec![Inline::text(content)]);
+        unit.context.kind = Some("paragraph".into());
+        units.push(unit);
+        raw.push_str(end);
+    }
+    if !raw.is_empty() {
+        parts.push(SkelPart::Raw(raw));
+    }
+    (parts, units)
 }
 
 /// Splits `line` into content and its line ending.
@@ -115,6 +165,26 @@ fn split_eol(line: &str) -> (&str, &str) {
     } else {
         (line, "")
     }
+}
+
+/// The characters `check_document` counts for the unit `build_unit` makes of these lines: the text (first line
+/// without its indentation, last line without its trailing spaces) plus one per line break tag.
+fn unit_chars(lines: &[&str]) -> usize {
+    let last = lines.len().saturating_sub(1);
+    lines
+        .iter()
+        .enumerate()
+        .map(|(i, line)| {
+            let mut c = split_eol(line).0;
+            if i == 0 {
+                c = c.trim_start();
+            }
+            if i == last {
+                c = c.trim_end();
+            }
+            c.chars().count() + usize::from(i < last)
+        })
+        .sum()
 }
 
 /// Builds the unit for a paragraph. Returns (skeleton before, unit, skeleton after).
@@ -145,7 +215,7 @@ fn build_unit(lines: &[&str], n: usize) -> (String, Unit, String) {
             let id = (codes.len() + 1).to_string();
             codes.insert(
                 id.clone(),
-                CodeData { standalone: Some(eol.to_string()), label: Some("line break".into()), ..Default::default() },
+                CodeData::new().with_standalone(eol.to_string()).with_label("line break".to_string()),
             );
             inl.push(Inline::tag(id, TagKind::Standalone, "\u{21b5}"));
         }
@@ -199,6 +269,56 @@ mod tests {
     }
 
     #[test]
+    fn a_huge_paragraph_without_blank_lines_is_cut_at_line_breaks() {
+        let line = format!("{}\n", "word ".repeat(100));
+        let src = line.repeat(1000); // 500 000 characters, no blank line
+        let d = extract(src.as_bytes());
+        assert!(d.units.len() >= 10, "{}", d.units.len());
+        assert_eq!(TextFilter.merge(&d).unwrap(), src.as_bytes());
+    }
+
+    #[test]
+    fn a_paragraph_within_the_limit_is_not_cut() {
+        // 70 000 characters: over half the limit but within it, so still one unit (ids as in 0.9.0)
+        let src = format!("Intro.\n\n{}\nEnd.\n", "word word\n".repeat(7_000));
+        let d = extract(src.as_bytes());
+        assert_eq!(d.units.len(), 3);
+        assert_eq!(d.units[2].id, "p3");
+        assert_eq!(TextFilter.merge(&d).unwrap(), src.as_bytes());
+    }
+
+    #[test]
+    fn a_cut_never_splits_a_crlf_or_a_character() {
+        // CRLF lines of multi-byte text, no blank line, over the limit
+        let src = "Gr\u{fc}\u{df}e aus K\u{f6}ln, \u{6771}\u{4eac}\u{3068}\u{5927}\u{962a}\u{3002}\r\n".repeat(8_000);
+        let d = extract(src.as_bytes());
+        assert!(d.units.len() >= 2, "{}", d.units.len());
+        for u in &d.units {
+            let t = plain_text(&u.source());
+            assert!(t.starts_with("Gr\u{fc}\u{df}e") && t.ends_with("\u{962a}\u{3002}"), "{t:?}");
+            assert!(!t.contains('\r'));
+        }
+        assert_eq!(TextFilter.merge(&d).unwrap(), src.as_bytes());
+        let ids: Vec<String> = d.units.iter().map(|u| u.id.clone()).collect();
+        let want: Vec<String> = (1..=d.units.len()).map(|i| format!("p{i}")).collect();
+        assert_eq!(ids, want);
+        assert_eq!(extract(src.as_bytes()).units.len(), d.units.len());
+        // a longer translation of every piece reopens with the same pieces
+        let para = ExtractOptions::default().with_granularity(Granularity::Paragraph);
+        let d = TextFilter.extract(src.as_bytes(), &para).unwrap();
+        let mut t = d.clone();
+        for u in &d.units {
+            let mut v = vec![Inline::text("Zq")];
+            v.extend(u.segments[0].source.iter().cloned());
+            v.push(Inline::text("qZ"));
+            t.set_target(&u.segments[0].id, v).unwrap();
+        }
+        let back = TextFilter.extract(&TextFilter.merge(&t).unwrap(), &para).unwrap();
+        assert_eq!(back.units.len(), d.units.len());
+        assert!(back.units.iter().all(|u| plain_text(&u.source()).starts_with("ZqGr")));
+    }
+
+    #[test]
     fn round_trip_in_every_primary_language() {
         for (lang, s) in samples() {
             let d = extract(s.as_bytes());
@@ -236,7 +356,7 @@ mod tests {
         let mut b = vec![0xEF, 0xBB, 0xBF];
         b.extend_from_slice("Hola.\n".as_bytes());
         let d = extract(&b);
-        assert_eq!(d.skeleton, Skeleton::Text { parts: d_parts(&d), encoding: "utf-8-bom".into() });
+        assert_eq!(d.skeleton, Skeleton::text(d_parts(&d), "utf-8-bom", parser_info!()));
         assert_eq!(TextFilter.merge(&d).unwrap(), b);
         // without a BOM none is added
         let d = extract(b"Hola.\n");
@@ -254,10 +374,11 @@ mod tests {
     fn translation_replaces_the_unit_and_keeps_line_breaks() {
         let mut d = extract("Hello\nworld\n\nBye.\n".as_bytes());
         let src = d.units[0].source();
-        let Inline::Tag { id, kind, display } = src[1].clone() else { panic!() };
+        let tag = src[1].clone();
+        assert!(matches!(tag, Inline::Tag { .. }));
         d.set_target(
             "p1",
-            vec![Inline::text("Hola"), Inline::Tag { id, kind, display }, Inline::text("mundo")],
+            vec![Inline::text("Hola"), tag, Inline::text("mundo")],
         )
         .unwrap();
         d.set_target("p2", vec![Inline::text("Adi\u{f3}s.")]).unwrap();
@@ -282,9 +403,12 @@ mod tests {
 
     #[test]
     fn bad_input_is_an_error() {
-        assert!(matches!(TextFilter.extract(&[0x48, 0xFF, 0xFE, 0x41], &Default::default()), Err(Error::Parse { .. })));
-        assert!(matches!(TextFilter.extract(&[0xFF, 0xFE, 0x41, 0x00], &Default::default()), Err(Error::Unsupported(_))));
-        assert!(matches!(TextFilter.extract(&[0xFE, 0xFF, 0x00, 0x41], &Default::default()), Err(Error::Unsupported(_))));
+        assert!(matches!(TextFilter.extract(&[0x48, 0, 0xFE, 0x41], &Default::default()), Err(Error::Encoding(_))));
+        // UTF-16 with a byte-order mark is text, and goes back out as UTF-16
+        let d = TextFilter.extract(&[0xFF, 0xFE, 0x41, 0x00], &Default::default()).unwrap();
+        assert_eq!(TextFilter.merge(&d).unwrap(), [0xFF, 0xFE, 0x41, 0x00]);
+        let d = TextFilter.extract(&[0xFE, 0xFF, 0x00, 0x41], &Default::default()).unwrap();
+        assert_eq!(TextFilter.merge(&d).unwrap(), [0xFE, 0xFF, 0x00, 0x41]);
     }
 
     #[test]
@@ -297,7 +421,7 @@ mod tests {
     #[test]
     fn wrong_skeleton_cannot_be_written() {
         let mut d = extract(b"a");
-        d.skeleton = Skeleton::Zip { entries: vec![] };
+        d.skeleton = Skeleton::Zip { entries: vec![], parser: None };
         assert!(matches!(TextFilter.merge(&d), Err(Error::Write(_))));
     }
 }

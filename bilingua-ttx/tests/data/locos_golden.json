@@ -1,0 +1,213 @@
+{
+ "lang_ar.ttx": {
+  "units": [
+   [
+    0,
+    "مرحبًا بعودتك، يرجى تسجيل الدخول."
+   ],
+   [
+    1,
+    "انقر على ⟦g1⟧حفظ⟦/g1⟧ للاحتفاظ بملاحظاتك."
+   ],
+   [
+    2,
+    "إجمالي الطلب:⟦x1⟧⟦g2⟧شكرًا على طلبك.⟦/g2⟧"
+   ]
+  ]
+ },
+ "lang_de.ttx": {
+  "units": [
+   [
+    0,
+    "Willkommen zurück, bitte anmelden."
+   ],
+   [
+    1,
+    "Klicken Sie auf ⟦g1⟧Speichern⟦/g1⟧ um Ihre Notizen zu behalten."
+   ],
+   [
+    2,
+    "Gesamtsumme:⟦x1⟧⟦g2⟧Danke für Ihre Bestellung.⟦/g2⟧"
+   ]
+  ]
+ },
+ "lang_en.ttx": {
+  "units": [
+   [
+    0,
+    "Welcome back, please sign in."
+   ],
+   [
+    1,
+    "Click ⟦g1⟧Save⟦/g1⟧ to keep your notes."
+   ],
+   [
+    2,
+    "Order total:⟦x1⟧⟦g2⟧Thanks for your order.⟦/g2⟧"
+   ]
+  ]
+ },
+ "lang_es.ttx": {
+  "units": [
+   [
+    0,
+    "Bienvenido de nuevo, inicie sesión."
+   ],
+   [
+    1,
+    "Haga clic en ⟦g1⟧Guardar⟦/g1⟧ para conservar sus notas."
+   ],
+   [
+    2,
+    "Total del pedido:⟦x1⟧⟦g2⟧Gracias por su pedido.⟦/g2⟧"
+   ]
+  ]
+ },
+ "lang_fr.ttx": {
+  "units": [
+   [
+    0,
+    "Bon retour, veuillez vous connecter."
+   ],
+   [
+    1,
+    "Cliquez sur ⟦g1⟧Enregistrer⟦/g1⟧ pour garder vos notes."
+   ],
+   [
+    2,
+    "Total de la commande:⟦x1⟧⟦g2⟧Merci pour votre commande.⟦/g2⟧"
+   ]
+  ]
+ },
+ "lang_ja.ttx": {
+  "units": [
+   [
+    0,
+    "お帰りなさい。ログインしてください。"
+   ],
+   [
+    1,
+    "クリックして ⟦g1⟧保存⟦/g1⟧ メモを保持します。"
+   ],
+   [
+    2,
+    "注文合計:⟦x1⟧⟦g2⟧ご注文ありがとうございます。⟦/g2⟧"
+   ]
+  ]
+ },
+ "lang_ko.ttx": {
+  "units": [
+   [
+    0,
+    "다시 오신 것을 환영합니다. 로그인하세요."
+   ],
+   [
+    1,
+    "클릭하여 ⟦g1⟧저장⟦/g1⟧ 메모를 유지하세요."
+   ],
+   [
+    2,
+    "주문 합계:⟦x1⟧⟦g2⟧주문해 주셔서 감사합니다.⟦/g2⟧"
+   ]
+  ]
+ },
+ "lang_pt.ttx": {
+  "units": [
+   [
+    0,
+    "Bem-vindo de volta, entre na sua conta."
+   ],
+   [
+    1,
+    "Clique em ⟦g1⟧Salvar⟦/g1⟧ para manter suas notas."
+   ],
+   [
+    2,
+    "Total do pedido:⟦x1⟧⟦g2⟧Obrigado pelo seu pedido.⟦/g2⟧"
+   ]
+  ]
+ },
+ "lang_ru.ttx": {
+  "units": [
+   [
+    0,
+    "С возвращением, войдите в систему."
+   ],
+   [
+    1,
+    "Нажмите ⟦g1⟧Сохранить⟦/g1⟧ чтобы сохранить заметки."
+   ],
+   [
+    2,
+    "Итого по заказу:⟦x1⟧⟦g2⟧Спасибо за заказ.⟦/g2⟧"
+   ]
+  ]
+ },
+ "lang_tr.ttx": {
+  "units": [
+   [
+    0,
+    "Tekrar hoş geldiniz, lütfen oturum açın."
+   ],
+   [
+    1,
+    "Tıklayın ⟦g1⟧Kaydet⟦/g1⟧ notlarınızı saklamak için."
+   ],
+   [
+    2,
+    "Sipariş toplamı:⟦x1⟧⟦g2⟧Siparişiniz için teşekkürler.⟦/g2⟧"
+   ]
+  ]
+ },
+ "lang_zh.ttx": {
+  "units": [
+   [
+    0,
+    "欢迎回来，请登录。"
+   ],
+   [
+    1,
+    "点击 ⟦g1⟧保存⟦/g1⟧ 以保留您的笔记。"
+   ],
+   [
+    2,
+    "订单总额:⟦x1⟧⟦g2⟧感谢您的订购。⟦/g2⟧"
+   ]
+  ]
+ },
+ "locos_suite_sample.ttx": {
+  "units": [
+   [
+    0,
+    "Click ⟦g1⟧Save⟦/g1⟧ to keep R&D notes."
+   ],
+   [
+    1,
+    "Line one⟦x1⟧⟦g2⟧line two⟦/g2⟧ here."
+   ],
+   [
+    3,
+    "Empty target here."
+   ],
+   [
+    4,
+    "⟦x1⟧ 42"
+   ]
+  ]
+ },
+ "locos_suite_unsegmented.ttx": {
+  "error": "UnsegmentedTtxError"
+ },
+ "okapi_issue_164.ttx": {
+  "error": "UnsegmentedTtxError"
+ },
+ "okapi_test01.ttx": {
+  "error": "EmptyDocumentError"
+ },
+ "okapi_test02_allseg.ttx": {
+  "error": "EmptyDocumentError"
+ },
+ "okapi_test02_noseg.ttx": {
+  "error": "UnsegmentedTtxError"
+ }
+}

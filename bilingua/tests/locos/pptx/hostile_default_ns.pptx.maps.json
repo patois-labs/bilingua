@@ -1,0 +1,26 @@
+[
+ {
+  "name": "hostile",
+  "locale": null,
+  "map": {
+   "0": "⟦r2⟧zwei⟦/r2⟧\n⟦r1⟧eins⟦/r1⟧",
+   "1": "Eins"
+  }
+ },
+ {
+  "name": "hostile-ar-SA",
+  "locale": "ar-SA",
+  "map": {
+   "0": "⟦r2⟧zwei⟦/r2⟧\n⟦r1⟧eins⟦/r1⟧",
+   "1": "Eins"
+  }
+ },
+ {
+  "name": "hostile-de-DE",
+  "locale": "de-DE",
+  "map": {
+   "0": "⟦r2⟧zwei⟦/r2⟧\n⟦r1⟧eins⟦/r1⟧",
+   "1": "Eins"
+  }
+ }
+]

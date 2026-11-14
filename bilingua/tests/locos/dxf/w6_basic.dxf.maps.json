@@ -1,0 +1,30 @@
+[
+ {
+  "name": "w6-p-letter",
+  "locale": null,
+  "map": {
+   "0": "a%⟦p1⟧%b⟦x1⟧"
+  }
+ },
+ {
+  "name": "w6-unknown",
+  "locale": null,
+  "map": {
+   "0": "a%⟦x9⟧%b⟦x1⟧"
+  }
+ },
+ {
+  "name": "w6-g-for-point",
+  "locale": null,
+  "map": {
+   "0": "Tank ⟦g1⟧ voll"
+  }
+ },
+ {
+  "name": "w6-wrong-letters",
+  "locale": null,
+  "map": {
+   "1": "Weg ⟦g1⟧⟦p2⟧zu⟦/g1⟧ nach⟦x3⟧Dunkel ⟦/x3⟧"
+  }
+ }
+]

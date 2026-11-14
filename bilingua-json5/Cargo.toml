@@ -1,0 +1,22 @@
+[package]
+name = "bilingua-json5"
+description = "Bilingua: JSON5 and JSONC filter (comments, trailing commas, unquoted keys, single quotes; edits strings in place)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+homepage.workspace = true
+include.workspace = true
+readme = "README.md"
+keywords = ["localization", "translation", "l10n", "json5", "parser"]
+categories.workspace = true
+
+[dependencies]
+bilingua-model = { workspace = true }
+regex = { workspace = true }
+encoding_rs = "0.8"
+
+[dev-dependencies]
+proptest = { workspace = true }
+serde_json = { workspace = true }

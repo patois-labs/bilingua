@@ -1,0 +1,57 @@
+{
+ "parse": {
+  "columns": "source=1,target=6,context=3,header=yes",
+  "source_locale": "en",
+  "target_locales": [
+   "de",
+   "fr"
+  ]
+ },
+ "units": [
+  {
+   "p_index": 0,
+   "text": "#N/A",
+   "style": "",
+   "note": "de: 2024-02-29"
+  },
+  {
+   "p_index": 1,
+   "text": "#N/A",
+   "style": "",
+   "note": "de: =A2&B2"
+  },
+  {
+   "p_index": 2,
+   "text": "Hello",
+   "style": "",
+   "note": "de: Cancel"
+  },
+  {
+   "p_index": 3,
+   "text": "#N/A",
+   "style": "",
+   "note": "de: 123456789012345678"
+  },
+  {
+   "p_index": 4,
+   "text": "#N/A",
+   "style": "",
+   "note": "de-DE: =A2&B2"
+  }
+ ],
+ "error": false,
+ "builds": [
+  {
+   "name": "b",
+   "locale": "de",
+   "map": {
+    "0": "T #N/A",
+    "1": "#N/A",
+    "2": "T Hello",
+    "3": "T #N/A",
+    "4": "T #N/A"
+   },
+   "file": "fuzz_003.b.xlsx"
+  }
+ ]
+}

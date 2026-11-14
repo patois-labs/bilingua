@@ -1,0 +1,1591 @@
+{
+ "corpus/flow.odg": {
+  "units": [
+   [
+    0,
+    "Start here",
+    ""
+   ],
+   [
+    1,
+    "Decision ⟦g1⟧point⟦/g1⟧",
+    ""
+   ],
+   [
+    2,
+    "Finish",
+    ""
+   ]
+  ],
+  "comments": []
+ },
+ "corpus/guide.odt": {
+  "units": [
+   [
+    0,
+    "Lantern festival guide",
+    "heading"
+   ],
+   [
+    1,
+    "Press ⟦g1⟧Start⟦/g1⟧ to open the gate at ⟦g2⟧the east pier⟦/g2⟧.⟦x3⟧⟦x4⟧",
+    ""
+   ],
+   [
+    2,
+    "The east pier closes at nine.",
+    ""
+   ],
+   [
+    3,
+    "Two   gaps,⟦x1⟧a tab and⟦x2⟧a new line.",
+    ""
+   ],
+   [
+    4,
+    "Before⟦x1⟧ after ⟦x2⟧the change⟦x3⟧.",
+    ""
+   ],
+   [
+    5,
+    "Visitors by day",
+    "heading"
+   ],
+   [
+    6,
+    "Day",
+    ""
+   ],
+   [
+    7,
+    "Visitors",
+    ""
+   ],
+   [
+    8,
+    "Saturday",
+    ""
+   ],
+   [
+    9,
+    "Bring a lantern",
+    ""
+   ],
+   [
+    10,
+    "Wear ⟦g1⟧warm⟦/g1⟧ clothes",
+    ""
+   ],
+   [
+    11,
+    "Caption⟦x1⟧",
+    ""
+   ],
+   [
+    12,
+    "Text inside a frame",
+    ""
+   ],
+   [
+    15,
+    "⟦g1⟧code_sample()⟦/g1⟧ is not translated as code",
+    ""
+   ],
+   [
+    16,
+    "Welcome to the harbor lantern show",
+    ""
+   ],
+   [
+    17,
+    "Bienvenidos al espectáculo del faro",
+    ""
+   ],
+   [
+    18,
+    "Bienvenue au spectacle de la lanterne",
+    ""
+   ],
+   [
+    19,
+    "Benvenuti allo spettacolo del faro",
+    ""
+   ],
+   [
+    20,
+    "Willkommen zur Laternenshow am Hafen",
+    ""
+   ],
+   [
+    21,
+    "Welkom bij de lantaarnshow in de haven",
+    ""
+   ],
+   [
+    22,
+    "Bem-vindos ao espetáculo da lanterna",
+    ""
+   ],
+   [
+    23,
+    "港のランタンショーへようこそ",
+    ""
+   ],
+   [
+    24,
+    "欢迎观看港口灯笼表演",
+    ""
+   ],
+   [
+    25,
+    "항구 등불 쇼에 오신 것을 환영합니다",
+    ""
+   ],
+   [
+    26,
+    "مرحبا بكم في عرض فانوس الميناء",
+    ""
+   ],
+   [
+    27,
+    "Lantern guide header",
+    ""
+   ],
+   [
+    28,
+    "Page ⟦x1⟧ of the guide",
+    ""
+   ]
+  ],
+  "comments": [
+   [
+    1000000,
+    "Check this wording"
+   ]
+  ]
+ },
+ "corpus/sales.ods": {
+  "units": [
+   [
+    0,
+    "Product",
+    ""
+   ],
+   [
+    1,
+    "Total ⟦g1⟧due⟦/g1⟧",
+    ""
+   ],
+   [
+    2,
+    "Repeated label",
+    ""
+   ],
+   [
+    3,
+    "Paper lanterns",
+    ""
+   ],
+   [
+    4,
+    "With a note",
+    ""
+   ],
+   [
+    5,
+    "Welcome to the harbor lantern show",
+    ""
+   ],
+   [
+    6,
+    "Bienvenidos al espectáculo del faro",
+    ""
+   ],
+   [
+    7,
+    "Bienvenue au spectacle de la lanterne",
+    ""
+   ],
+   [
+    8,
+    "Benvenuti allo spettacolo del faro",
+    ""
+   ],
+   [
+    9,
+    "Willkommen zur Laternenshow am Hafen",
+    ""
+   ],
+   [
+    10,
+    "Welkom bij de lantaarnshow in de haven",
+    ""
+   ],
+   [
+    11,
+    "Bem-vindos ao espetáculo da lanterna",
+    ""
+   ],
+   [
+    12,
+    "港のランタンショーへようこそ",
+    ""
+   ],
+   [
+    13,
+    "欢迎观看港口灯笼表演",
+    ""
+   ],
+   [
+    14,
+    "항구 등불 쇼에 오신 것을 환영합니다",
+    ""
+   ],
+   [
+    15,
+    "مرحبا بكم في عرض فانوس الميناء",
+    ""
+   ]
+  ],
+  "comments": [
+   [
+    1000000,
+    "Cell comment text"
+   ]
+  ]
+ },
+ "corpus/slides.odp": {
+  "units": [
+   [
+    0,
+    "Welcome to the harbor lantern show",
+    ""
+   ],
+   [
+    1,
+    "Revenue ⟦g1⟧up⟦/g1⟧ 20%",
+    ""
+   ],
+   [
+    2,
+    "Speak slowly on this slide",
+    ""
+   ],
+   [
+    3,
+    "Bienvenidos al espectáculo del faro",
+    ""
+   ],
+   [
+    4,
+    "Revenue ⟦g1⟧up⟦/g1⟧ 20%",
+    ""
+   ],
+   [
+    5,
+    "Speak slowly on this slide",
+    ""
+   ],
+   [
+    6,
+    "Bienvenue au spectacle de la lanterne",
+    ""
+   ],
+   [
+    7,
+    "Revenue ⟦g1⟧up⟦/g1⟧ 20%",
+    ""
+   ],
+   [
+    8,
+    "Speak slowly on this slide",
+    ""
+   ],
+   [
+    9,
+    "Benvenuti allo spettacolo del faro",
+    ""
+   ],
+   [
+    10,
+    "Revenue ⟦g1⟧up⟦/g1⟧ 20%",
+    ""
+   ],
+   [
+    11,
+    "Speak slowly on this slide",
+    ""
+   ],
+   [
+    12,
+    "مرحبا بكم في عرض فانوس الميناء",
+    ""
+   ]
+  ],
+  "comments": []
+ },
+ "okapi/TestDocument01.odt": {
+  "units": [
+   [
+    0,
+    "Heading 1",
+    "heading"
+   ],
+   [
+    1,
+    "Text in English. ⟦g1⟧Texte en rheato-romances.⟦/g1⟧",
+    ""
+   ],
+   [
+    2,
+    "Heading 2",
+    "heading"
+   ],
+   [
+    3,
+    "Paragraph with ⟦g1⟧bold⟦/g1⟧, ⟦g2⟧italics⟦/g2⟧, ⟦g3⟧and ⟦/g3⟧⟦g4⟧both⟦/g4⟧.",
+    ""
+   ],
+   [
+    4,
+    "Extended chars: ©=copyright, è=egrave, Ω=Omega.",
+    ""
+   ],
+   [
+    5,
+    "Spaces: [   ]=3, [⟦x1⟧⟦x2⟧⟦x3⟧]=3tabs,⟦x4⟧Line after.",
+    ""
+   ],
+   [
+    6,
+    "Paragraph with footnote here⟦x1⟧ and here⟦x2⟧.",
+    ""
+   ],
+   [
+    7,
+    "Text of the ⟦g1⟧automatic⟦/g1⟧ footnote.",
+    ""
+   ],
+   [
+    8,
+    "Second paragraph of the footnote.",
+    ""
+   ],
+   [
+    9,
+    "Text of the footnote ⟦g1⟧N⟦/g1⟧.",
+    ""
+   ],
+   [
+    10,
+    "<=lt, >=gt, \"=quot, &=amp, '=apos, {=opencb, }=closecb, \\=bslash.",
+    ""
+   ],
+   [
+    12,
+    "Cell r1-c1",
+    ""
+   ],
+   [
+    13,
+    "Cell r1-c2",
+    ""
+   ],
+   [
+    14,
+    "Cell r2-c1",
+    ""
+   ],
+   [
+    15,
+    "Cell r2-c2",
+    ""
+   ],
+   [
+    16,
+    "Table ⟦x1⟧: Caption text",
+    ""
+   ],
+   [
+    18,
+    "Fields: date=⟦x1⟧, time=⟦x2⟧, pgnum=⟦x3⟧, pgcount=⟦x4⟧, subject=⟦x5⟧, title=⟦x6⟧, author=⟦x7⟧.",
+    ""
+   ],
+   [
+    19,
+    "Paragraph with nbsp= , nbhyphen=‑, optional-hyphen=­.",
+    ""
+   ],
+   [
+    20,
+    "Pargaraph with a note [⟦x1⟧].",
+    ""
+   ],
+   [
+    21,
+    "List item 1⟦x1⟧",
+    ""
+   ],
+   [
+    22,
+    "List item 2",
+    ""
+   ],
+   [
+    23,
+    "sub-item 1",
+    ""
+   ],
+   [
+    24,
+    "sub-item 2",
+    ""
+   ],
+   [
+    25,
+    "One more paragraph.",
+    ""
+   ],
+   [
+    26,
+    "Pargarpah with a ⟦x1⟧note on a range.",
+    ""
+   ],
+   [
+    28,
+    "Paragraph with ⟦g1⟧text of the link⟦/g1⟧.",
+    ""
+   ],
+   [
+    29,
+    "Text with font change: ⟦g1⟧Example⟦/g1⟧, ⟦g2⟧example⟦/g2⟧, ⟦g3⟧example⟦/g3⟧.",
+    ""
+   ],
+   [
+    30,
+    "Paragraph with an index ⟦x1⟧marker⟦x2⟧.",
+    ""
+   ],
+   [
+    31,
+    "Image: ",
+    ""
+   ],
+   [
+    33,
+    "⟦x1⟧Illustration ⟦x2⟧: Caption of the image",
+    ""
+   ],
+   [
+    35,
+    "Paragraph with reference: [⟦x1⟧] and [⟦x2⟧], [⟦x3⟧], [⟦x4⟧], [⟦x5⟧], [⟦x6⟧], [⟦x7⟧]",
+    ""
+   ],
+   [
+    37,
+    "Below is the index and the table of content:",
+    ""
+   ],
+   [
+    38,
+    "Title of the Table of Contents",
+    ""
+   ],
+   [
+    39,
+    "Heading 1⟦x1⟧1",
+    ""
+   ],
+   [
+    40,
+    "Heading 2⟦x1⟧1",
+    ""
+   ],
+   [
+    42,
+    "Title of the Alphabetical Index",
+    ""
+   ],
+   [
+    43,
+    "Key1 text⟦x1⟧",
+    ""
+   ],
+   [
+    44,
+    "Key2 text⟦x1⟧",
+    ""
+   ],
+   [
+    45,
+    "marker⟦x1⟧1",
+    ""
+   ],
+   [
+    47,
+    "Text of the header",
+    ""
+   ],
+   [
+    48,
+    "Text of the footer",
+    ""
+   ]
+  ],
+  "comments": [
+   [
+    1000000,
+    "Text of the note"
+   ],
+   [
+    1000002,
+    "⟦g1⟧And here goes a second note. A long comment with formatting like ⟦/g1⟧⟦g2⟧bold⟦/g2⟧⟦g3⟧, and ⟦/g3⟧⟦g4⟧more⟦/g4⟧⟦g5⟧.⟦/g5⟧"
+   ],
+   [
+    1000003,
+    "⟦g1⟧Like several paragraphs.⟦/g1⟧"
+   ],
+   [
+    1000004,
+    "⟦g1⟧Text of the note on the range.⟦/g1⟧"
+   ]
+  ]
+ },
+ "okapi/TestDocument02.odt": {
+  "units": [
+   [
+    0,
+    "Heading 1",
+    "heading"
+   ],
+   [
+    1,
+    "Heading 2",
+    "heading"
+   ],
+   [
+    2,
+    "Heading 3",
+    "heading"
+   ],
+   [
+    3,
+    "Text body",
+    ""
+   ],
+   [
+    4,
+    "Paragraph with an inserted script: ⟦x1⟧ and text after.",
+    ""
+   ],
+   [
+    5,
+    "Non-breaking space= , non-breaking hyphen=‑, optional hyphen=­.",
+    ""
+   ],
+   [
+    6,
+    "Before page break",
+    ""
+   ],
+   [
+    7,
+    "After page break",
+    ""
+   ],
+   [
+    8,
+    "Before line break⟦x1⟧After line break.",
+    ""
+   ],
+   [
+    9,
+    "Before column break",
+    ""
+   ],
+   [
+    10,
+    "After column break.",
+    ""
+   ],
+   [
+    12,
+    "Section that is password-protected.",
+    ""
+   ],
+   [
+    14,
+    "Section that is just protected.",
+    ""
+   ],
+   [
+    16,
+    "Section with normal text.",
+    ""
+   ]
+  ],
+  "comments": []
+ },
+ "okapi/TestDocument03.odt": {
+  "units": [
+   [
+    0,
+    "OmegaT developer's guide",
+    ""
+   ],
+   [
+    1,
+    "Content",
+    ""
+   ],
+   [
+    2,
+    "OmegaT architecture⟦x1⟧3",
+    ""
+   ],
+   [
+    3,
+    "Threads usage⟦x1⟧3",
+    ""
+   ],
+   [
+    4,
+    "Components⟦x1⟧3",
+    ""
+   ],
+   [
+    5,
+    "IMainWindow⟦x1⟧3",
+    ""
+   ],
+   [
+    6,
+    "IEditor⟦x1⟧3",
+    ""
+   ],
+   [
+    7,
+    "IProject⟦x1⟧3",
+    ""
+   ],
+   [
+    8,
+    "IMatcher⟦x1⟧4",
+    ""
+   ],
+   [
+    9,
+    "ITagValidation⟦x1⟧4",
+    ""
+   ],
+   [
+    10,
+    "ITokenizer⟦x1⟧4",
+    ""
+   ],
+   [
+    11,
+    "ISpellChecker⟦x1⟧4",
+    ""
+   ],
+   [
+    12,
+    "Events⟦x1⟧4",
+    ""
+   ],
+   [
+    13,
+    "Filters⟦x1⟧4",
+    ""
+   ],
+   [
+    14,
+    "Details on patterns⟦x1⟧5",
+    ""
+   ],
+   [
+    15,
+    "Project details⟦x1⟧5",
+    ""
+   ],
+   [
+    18,
+    "OmegaT - Computer Assisted Translation (CAT) tool ",
+    ""
+   ],
+   [
+    19,
+    "with fuzzy matching, translation memory, keyword search, ",
+    ""
+   ],
+   [
+    20,
+    "glossaries, and translation leveraging into updated projects.",
+    ""
+   ],
+   [
+    22,
+    "Copyright (C) 2005-2008 Maxym Mykhalchuk and Alex Buloichik",
+    ""
+   ],
+   [
+    23,
+    "               Home page: http://www.omegat.org/",
+    ""
+   ],
+   [
+    24,
+    "               Support center: http://groups.yahoo.com/group/OmegaT/",
+    ""
+   ],
+   [
+    25,
+    "This program is free software; you can redistribute it and/or modify",
+    ""
+   ],
+   [
+    26,
+    "it under the terms of the GNU General Public License as published by",
+    ""
+   ],
+   [
+    27,
+    "the Free Software Foundation; either version 2 of the License, or",
+    ""
+   ],
+   [
+    28,
+    "(at your option) any later version.",
+    ""
+   ],
+   [
+    30,
+    " This program is distributed in the hope that it will be useful,",
+    ""
+   ],
+   [
+    31,
+    "but WITHOUT ANY WARRANTY; without even the implied warranty of",
+    ""
+   ],
+   [
+    32,
+    "MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the",
+    ""
+   ],
+   [
+    33,
+    "GNU General Public License for more details.",
+    ""
+   ],
+   [
+    35,
+    "You should have received a copy of the GNU General Public License",
+    ""
+   ],
+   [
+    36,
+    "along with this program; if not, write to the Free Software",
+    ""
+   ],
+   [
+    37,
+    "Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA",
+    ""
+   ],
+   [
+    39,
+    "In the specific context of this document (“OmegaT's developer's guide”), “source code” is to be understood as the text of this document itself (independently of the document format used), as well as the images, either in the binary version contained inside this document, or as the .⟦g1⟧vpp files used to create these images.⟦/g1⟧",
+    ""
+   ],
+   [
+    40,
+    "OmegaT architecture",
+    "heading"
+   ],
+   [
+    41,
+    "Components in OmegaT:",
+    ""
+   ],
+   [
+    42,
+    "⟦x1⟧Each component must implement a specific interface, and only this interface should be used to call this component from other components. ",
+    ""
+   ],
+   [
+    43,
+    "Threads usage",
+    "heading"
+   ],
+   [
+    44,
+    "OmegaT uses standard thread behavior, i.e., short term (i.e., most of them) operations should be executed in the UI thread (event dispatcher thread). Only long-term tasks should create a new thread using SwingWorker. All these (long-term) tasks lock the OmegaT UI to prevent the user to change anything in application.",
+    ""
+   ],
+   [
+    45,
+    "There is only one “real” thread — it's SaveThread, which saves the project every 10 minutes.",
+    ""
+   ],
+   [
+    46,
+    "Components",
+    "heading"
+   ],
+   [
+    47,
+    "All components accessible from Core class static methods.",
+    ""
+   ],
+   [
+    48,
+    "IMainWindow",
+    "heading"
+   ],
+   [
+    49,
+    "This component controls the main application frame and can make some basic operations, like locking/unlocking the UI and displaying messages and errors.",
+    ""
+   ],
+   [
+    50,
+    "IEditor",
+    "heading"
+   ],
+   [
+    51,
+    "This is the editor of translations. The application must have only one editor, but theoretically the user can switch between different editor implementations without project reloading.",
+    ""
+   ],
+   [
+    52,
+    "IProject",
+    "heading"
+   ],
+   [
+    53,
+    "Interface for the currently loaded project. There are two implementation classes: RealProject ⟦x1⟧and NotLoadedProject. The RealProject instance is created when a project is loaded, i.e., if the user clicks on “Open Project”, then the first instance will be created, when the user clicks on “Close Project” and “Open Project” again, the second instance will be created. All project data are stored in this class.",
+    ""
+   ],
+   [
+    54,
+    "IMatcher",
+    "heading"
+   ],
+   [
+    55,
+    "Panel that find matches in other translations and TM files.",
+    ""
+   ],
+   [
+    56,
+    "ITagValidation",
+    "heading"
+   ],
+   [
+    57,
+    "Tag validator, that checks tags in all translations and show invalid tags.",
+    ""
+   ],
+   [
+    58,
+    "ITokenizer",
+    "heading"
+   ],
+   [
+    59,
+    "It can split segments on tokens for spell checking and to find matches.",
+    ""
+   ],
+   [
+    60,
+    "ISpellChecker",
+    "heading"
+   ],
+   [
+    61,
+    "Spell checker for translation.",
+    ""
+   ],
+   [
+    62,
+    "Events",
+    "heading"
+   ],
+   [
+    63,
+    "Each component can listen to application events. To register listeners, component should call CoreEvents.register... methods. Events can be:",
+    ""
+   ],
+   [
+    64,
+    "IProjectEventListener",
+    ""
+   ],
+   [
+    65,
+    "onProjectChanged(PROJECT_CHANGE_TYPE), where PROJECT_CHANGE_TYPE is enum {CLOSE, COMPILE, CREATE, LOAD, SAVE}",
+    ""
+   ],
+   [
+    66,
+    "Project changed, i.e., when the user closes a project, or compile, create, load, or save it.",
+    ""
+   ],
+   [
+    67,
+    "IEntryEventListener",
+    ""
+   ],
+   [
+    68,
+    "onNewFile(String activeFileName)",
+    ""
+   ],
+   [
+    69,
+    "User changes the current file in the editor.",
+    ""
+   ],
+   [
+    70,
+    "onEntryActivated(StringEntry newEntry)",
+    ""
+   ],
+   [
+    71,
+    "User change current entry in editor.",
+    ""
+   ],
+   [
+    72,
+    "IFontChangedEventListener",
+    ""
+   ],
+   [
+    73,
+    "onFontChanged(Font newFont)",
+    ""
+   ],
+   [
+    74,
+    "User change application font.",
+    ""
+   ],
+   [
+    75,
+    "Event listeners are executed only in the UI (Swing event dispatcher) thread by the “invokeLater” method.",
+    ""
+   ],
+   [
+    76,
+    "Event listening is the preferred way to handle project open/close and entry change for components, since the list of components can be large, and the application cannot know anything about user-defined components.",
+    ""
+   ],
+   [
+    77,
+    "Filters",
+    "heading"
+   ],
+   [
+    78,
+    "OmegaT has many classes to parse (and build) translation files. It supports many formats, such as *.po, *.properties, *.html, etc. A class to parse one format is named a “Filter”. There is a FilterMaster, which organizes all filters and can detect which filter should be executed for a specific file format.",
+    ""
+   ],
+   [
+    79,
+    "Filter is a class that can:",
+    ""
+   ],
+   [
+    80,
+    "⟦x1⟧Read the document in a given format",
+    ""
+   ],
+   [
+    81,
+    "Extract the translatable content out of it",
+    ""
+   ],
+   [
+    82,
+    "Write the document in the same format, replacing translatable content with its translation ",
+    ""
+   ],
+   [
+    83,
+    "Note that filters must be two-fold: read & write, reading and writing the same format. Responsibility for such behavior is of course up to the file filter programmer.",
+    ""
+   ],
+   [
+    84,
+    "There's a correspondence between a file filter and a file format it handles: only one instance of the file filter is instantiated for a single file format.",
+    ""
+   ],
+   [
+    85,
+    "Two possible options for handling similar file formats:",
+    ""
+   ],
+   [
+    86,
+    "The same file filter instance handles all the similar formats. For example, the Open Office file filter handles all the file formats of Open Office suite.",
+    ""
+   ],
+   [
+    87,
+    "A single file filter class may be instantiated with different parameters. For example, the text file filter is instantiated with different encoding to handle text files coming with different character sets. ",
+    ""
+   ],
+   [
+    88,
+    "While there are many file filters, there's a need to distinguish what source files are handled by what filter. Currently (OmegaT version 2.0), we distinguish files by extension, and by content, but a more sophisticated mechanism should be invented, and more control over the process should be given both to the filter itself and to the user.",
+    ""
+   ],
+   [
+    89,
+    "Details on patterns",
+    "heading"
+   ],
+   [
+    90,
+    "Input filename pattern resembles DOS filename pattern:",
+    ""
+   ],
+   [
+    91,
+    "*.txt means all files with \"txt\" extension",
+    ""
+   ],
+   [
+    92,
+    "read* means all the files that start with \"read\", for example \"readme\" ",
+    ""
+   ],
+   [
+    93,
+    "Output filename pattern is more complex.",
+    ""
+   ],
+   [
+    94,
+    "It may consist of normal characters and some substituted variables. They have the format ${variableName} and are case insensitive.",
+    ""
+   ],
+   [
+    95,
+    "The following variables exist:",
+    ""
+   ],
+   [
+    96,
+    "${filename} - full filename of the input file, both name and extension (default)",
+    ""
+   ],
+   [
+    97,
+    "${nameOnly} - only the name of the input file without extension part",
+    ""
+   ],
+   [
+    98,
+    "${extension} - the extension of the input file",
+    ""
+   ],
+   [
+    99,
+    "${sourceLanguage} - the source language of the project",
+    ""
+   ],
+   [
+    100,
+    "${targetLanguage} - the target language of the project",
+    ""
+   ],
+   [
+    101,
+    "Most file filters will use default “${filename}”, that leads to the name of translated file being the same as the name of source file. But, for example, the Java Resource Bundles file filter will have the pattern equal to “${nameonly}_${targetlanguage}.${extension}”.",
+    ""
+   ],
+   [
+    102,
+    "Project details",
+    "heading"
+   ],
+   [
+    103,
+    "Sequence diagram for loading a project:",
+    ""
+   ],
+   [
+    107,
+    "Application states by project:",
+    ""
+   ]
+  ],
+  "comments": []
+ },
+ "okapi/TestDocument04.odt": {
+  "units": [
+   [
+    0,
+    "⟦x1⟧Document Title⟦x2⟧",
+    "heading"
+   ],
+   [
+    1,
+    "Paragraph one with a⟦x1⟧ ⟦x2⟧big footnote: >⟦x3⟧<",
+    ""
+   ],
+   [
+    2,
+    " Text of the big footnote.",
+    ""
+   ],
+   [
+    3,
+    "⟦g1⟧Paragraph⟦/g1⟧ 2 of footnote with annotation >⟦x2⟧< text after.",
+    ""
+   ],
+   [
+    4,
+    "See: ⟦x1⟧ etc.",
+    ""
+   ],
+   [
+    6,
+    "Link: ⟦g1⟧Text for this link⟦/g1⟧",
+    ""
+   ],
+   [
+    7,
+    "Text with revisions: ⟦x1⟧⟦x2⟧inserted⟦x3⟧.⟦x4⟧",
+    ""
+   ],
+   [
+    8,
+    "New paragraph with new footnote here >⟦x1⟧<⟦x2⟧",
+    ""
+   ],
+   [
+    9,
+    "⟦x1⟧New footnote text.⟦x2⟧",
+    ""
+   ]
+  ],
+  "comments": [
+   [
+    1000000,
+    "⟦g1⟧Text of the note in the footnote.⟦/g1⟧"
+   ]
+  ]
+ },
+ "okapi/TestDocument05.odt": {
+  "units": [
+   [
+    0,
+    "Text of Heading 1",
+    "heading"
+   ],
+   [
+    1,
+    "Pre-formetted text paragraph1",
+    ""
+   ],
+   [
+    2,
+    "Line 1⟦x1⟧Line 2 [     ]=5spaces⟦x2⟧Line 3",
+    ""
+   ],
+   [
+    4,
+    "Cell1",
+    ""
+   ],
+   [
+    5,
+    "Cell2",
+    ""
+   ],
+   [
+    6,
+    "Cell3",
+    ""
+   ],
+   [
+    7,
+    "Cell4",
+    ""
+   ],
+   [
+    10,
+    "⟦x1⟧Illustration ⟦x2⟧: Text of the caption",
+    ""
+   ],
+   [
+    11,
+    "Text with footnote here>⟦x1⟧<",
+    ""
+   ],
+   [
+    12,
+    "Text of the footnote.",
+    ""
+   ],
+   [
+    14,
+    "TESTgraph in special style.",
+    ""
+   ],
+   [
+    15,
+    "⟦g1⟧Text with the character⟦/g1⟧",
+    ""
+   ]
+  ],
+  "comments": []
+ },
+ "okapi/TestDocument06.odt": {
+  "units": [
+   [
+    0,
+    "Header Text",
+    ""
+   ],
+   [
+    1,
+    "Item 1",
+    ""
+   ],
+   [
+    2,
+    "Item 2",
+    ""
+   ],
+   [
+    3,
+    "Item 3",
+    ""
+   ]
+  ],
+  "comments": []
+ },
+ "okapi/TestDocumentWithFormulaResults.ods": {
+  "units": [
+   [
+    0,
+    "Max 1000 signs (Do not translate)",
+    ""
+   ],
+   [
+    2,
+    "Description (Do not translate)",
+    ""
+   ],
+   [
+    4,
+    "This is the first sentence (short one).",
+    ""
+   ],
+   [
+    5,
+    "We need a lot of lovely characters. A b c d e f g h i j k l m n o p q r s t u v w x y z.",
+    ""
+   ],
+   [
+    6,
+    "One. Two. Three. Four.",
+    ""
+   ],
+   [
+    7,
+    "One. Two. Three. Four.",
+    ""
+   ],
+   [
+    8,
+    "This line contains ten whitespaces at the end          ",
+    ""
+   ],
+   [
+    10,
+    "Page ⟦x1⟧",
+    ""
+   ],
+   [
+    13,
+    "Page ⟦x1⟧ / ⟦x2⟧",
+    ""
+   ]
+  ],
+  "comments": []
+ },
+ "okapi/TestDocumentWithMetadata.odt": {
+  "units": [
+   [
+    0,
+    "Text on the first page.",
+    ""
+   ],
+   [
+    2,
+    "Text on the second page.",
+    ""
+   ],
+   [
+    3,
+    "Author: Test",
+    ""
+   ],
+   [
+    4,
+    "Page ⟦x1⟧ of ⟦x2⟧",
+    ""
+   ]
+  ],
+  "comments": []
+ },
+ "okapi/TestDocumentWithNumberTag.odp": {
+  "units": [
+   [
+    0,
+    "There will be a lot of them",
+    ""
+   ]
+  ],
+  "comments": []
+ },
+ "okapi/TestDocumentWithTableWrappingAboutTable.odt": {
+  "units": [
+   [
+    0,
+    "⟦x1⟧Computer science or computing science (sometimes abbreviated CS) is the study of the theoretical foundations of information and computation, and of practical techniques for their implementation and application in computer systems. It is frequently described as the systematic study of algorithmic processes that create, describe, and transform information. Computer science has many sub-fields; some, such as computer graphics, emphasize the computation of specific results, while others, such as computational complexity theory, study the properties of computational problems. Still others focus on the challenges in implementing computations. For example, programming language theory studies approaches to describe computations, while computer programming applies specific programming languages to solve specific computational problems, and human-computer interaction focuses on the challenges in making computers and computations useful, usable, and universally accessible to people.",
+    ""
+   ],
+   [
+    1,
+    "Computer science or computing science is the study of the theoretical foundations.",
+    ""
+   ],
+   [
+    2,
+    "It is frequently described as the systematic study of algorithmic processes.",
+    ""
+   ],
+   [
+    3,
+    "Still others focus on the challenges.",
+    ""
+   ],
+   [
+    4,
+    "For example, programming language theory studies approaches to describe computations.",
+    ""
+   ],
+   [
+    5,
+    "The general public sometimes confuses computer science with careers that deal with computers (such as information technology), or think that it relates to their own experience of computers, which typically involves activities such as gaming, web-browsing, and word-processing. However, the focus of computer science is more on understanding the properties of the programs used to implement software such as games and web-browsers, and using that understanding to create new programs or improve existing ones.",
+    ""
+   ]
+  ],
+  "comments": []
+ },
+ "okapi/TestDocument_WithITS.odt": {
+  "units": [
+   [
+    0,
+    "Paragraph one.",
+    ""
+   ],
+   [
+    1,
+    "To translate ⟦g1⟧NOT to translate ⟦g2⟧but translate this⟦/g2⟧⟦/g1⟧.",
+    ""
+   ],
+   [
+    2,
+    "Text with ⟦g1⟧a note⟦/g1⟧. More text ⟦g2⟧with a note ⟦g3⟧and another note⟦/g3⟧⟦/g2⟧.",
+    ""
+   ],
+   [
+    3,
+    "Maecenas scelerisque, elit sit amet mattis dapibus, lacus erat euismod nunc, eu tincidunt orci dui non leo. Ut dapibus varius tellus, vitae scelerisque nunc elementum sit amet.",
+    ""
+   ],
+   [
+    4,
+    "Text with ⟦g1⟧a very long term ⟦g2⟧made of several words⟦/g2⟧⟦/g1⟧ and more text.",
+    ""
+   ],
+   [
+    5,
+    "Locale filter: ⟦g1⟧for FR⟦/g1⟧ and ⟦g2⟧Not for FR⟦/g2⟧.",
+    ""
+   ],
+   [
+    6,
+    "Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia Curae; Fusce porttitor augue at dolor egestas rhoncus. Nullam malesuada blandit nulla a pulvinar. Integer congue porta gravida. Morbi nisi odio, vestibulum at varius vel, posuere vitae elit. Sed leo nulla, venenatis a consectetur eu, elementum quis nisl. Vivamus faucibus euismod lorem nec egestas. Integer sagittis sodales orci in commodo. Nullam vel urna a risus facilisis laoreet a quis purus. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. ",
+    ""
+   ],
+   [
+    8,
+    "Text of the header",
+    ""
+   ],
+   [
+    9,
+    "Text of the footer",
+    ""
+   ]
+  ],
+  "comments": []
+ },
+ "okapi/TestDrawing01.odg": {
+  "units": [
+   [
+    0,
+    "This is a text object.",
+    ""
+   ],
+   [
+    1,
+    "With two paragraphs, and some ⟦g1⟧bold⟦/g1⟧.",
+    ""
+   ]
+  ],
+  "comments": []
+ },
+ "okapi/TestPresentation01.odp": {
+  "units": [
+   [
+    0,
+    "Text of title slide 1",
+    ""
+   ],
+   [
+    1,
+    "Item 1",
+    ""
+   ],
+   [
+    2,
+    "Item 2",
+    ""
+   ],
+   [
+    3,
+    "Item 3 ⟦g1⟧and⟦/g1⟧ some ⟦g2⟧bold⟦/g2⟧.",
+    ""
+   ],
+   [
+    4,
+    "Notes ⟦g1⟧going with⟦/g1⟧ the presentation.",
+    ""
+   ],
+   [
+    6,
+    "Title of slide 2",
+    ""
+   ],
+   [
+    7,
+    "Item with some text that wraps along severa lines, well, at least two of them.",
+    ""
+   ],
+   [
+    8,
+    "⟦g1⟧Ã⟦/g1⟧⟦g2⟧=Atitle.⟦/g2⟧",
+    ""
+   ]
+  ],
+  "comments": []
+ },
+ "okapi/TestSpreadsheet01.ods": {
+  "units": [
+   [
+    0,
+    "Text in cell A1",
+    ""
+   ],
+   [
+    1,
+    "Text in cell B1",
+    ""
+   ],
+   [
+    2,
+    "cell A5",
+    ""
+   ],
+   [
+    3,
+    "This is a longer text. It has several sentences.",
+    ""
+   ],
+   [
+    4,
+    "And it goes on several lines.",
+    ""
+   ],
+   [
+    5,
+    "In fact 3 of them.",
+    ""
+   ],
+   [
+    6,
+    "cell A8",
+    ""
+   ],
+   [
+    7,
+    "Text of the cell-A1 in sheet 2",
+    ""
+   ],
+   [
+    9,
+    "Page ⟦x1⟧",
+    ""
+   ],
+   [
+    12,
+    "Page ⟦x1⟧ / ⟦x2⟧",
+    ""
+   ]
+  ],
+  "comments": [
+   [
+    1000000,
+    "Note for cell with “15”"
+   ],
+   [
+    1000001,
+    "⟦g1⟧Note for the cell A5.⟦/g1⟧"
+   ],
+   [
+    1000002,
+    "⟦g1⟧Second paragraph of that note.⟦/g1⟧"
+   ],
+   [
+    1000003,
+    "Note for empty cell A7"
+   ]
+  ]
+ },
+ "okapi/bookmark-reference.odt": {
+  "units": [
+   [
+    2,
+    "⟦x1⟧1 Heading & title⟦x2⟧",
+    "heading"
+   ],
+   [
+    3,
+    "Text",
+    ""
+   ]
+  ],
+  "comments": []
+ }
+}

@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=ملاحظات
+Comment=دوّن ملاحظات سريعة
+Keywords=ملاحظات;نص;
+Exec=notes %F
+Actions=new;
+
+[Desktop Action new]
+Name=ملاحظة جديدة
+Exec=notes --new

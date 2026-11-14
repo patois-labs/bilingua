@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head><meta charset="utf-8"><title>欢迎回来 <?= $name ?></title><meta name="description" content="您的订单"></head>
+<body>
+<?php // note: not text ?>
+<h1>欢迎回来, <?= $name ?>!</h1>
+<?php if ($user): ?>
+<p>请登录以继续。很快，而且免费。 <b>您的订单</b> <?= $name ?> <a href="<?= $url ?>" title="打开收件箱">打开收件箱</a>.</p>
+<?php endif; ?>
+<img src="logo.png" alt="公司标志">
+<ul><li>您的订单</li><li><?= $name ?> &amp; 欢迎回来</li></ul>
+<script>var user = "<?= $name ?>"; if (a < b) { go(); }</script>
+</body>
+</html>

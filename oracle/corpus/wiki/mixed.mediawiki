@@ -1,0 +1,12 @@
+{| class="wikitable"
+! Name !! Value
+|-
+| style="x" | Alpha || [[Beta|the beta]]
+|}
+
+; Term : The definition
+: Reply
+
+ #REDIRECT-like text
+#REDIRECT [[Other]]
+__NOTOC__ Signed ~~~~

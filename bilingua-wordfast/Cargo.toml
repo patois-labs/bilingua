@@ -1,0 +1,21 @@
+[package]
+name = "bilingua-wordfast"
+description = "Bilingua: Wordfast Pro TXML and TXLF (bilingual) parser and byte-faithful writer"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+homepage.workspace = true
+include.workspace = true
+readme = "README.md"
+keywords = ["localization", "translation", "l10n", "wordfast", "parser"]
+categories.workspace = true
+
+[dependencies]
+bilingua-model = { workspace = true }
+quick-xml = { workspace = true }
+
+[dev-dependencies]
+proptest = { version = "1", default-features = false, features = ["std"] }
+serde_json = { workspace = true }

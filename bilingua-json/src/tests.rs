@@ -192,7 +192,7 @@ fn values_that_are_not_prose_are_skipped() {
 
 #[test]
 fn skipped_values_can_be_extracted_as_locked_units() {
-    let opts = ExtractOptions { include_locked: true, ..Default::default() };
+    let opts = ExtractOptions::new().with_include_locked(true);
     let src = r#"{"url": "https://example.test/x", "t": "Hello", "empty": ""}"#;
     let d = JsonFilter.extract(src.as_bytes(), &opts).unwrap();
     assert_eq!(d.units.len(), 2);
@@ -239,16 +239,26 @@ fn invalid_json_is_an_error_with_a_position() {
             other => panic!("{b:?} should be a parse error, got {other:?}"),
         }
     }
-    assert!(matches!(JsonFilter.extract(&[b'[', b'"', 0xFF, b'"', b']'], &Default::default()), Err(Error::Parse { .. })));
-    assert!(matches!(JsonFilter.extract(&[0xFF, 0xFE, b'[', 0], &Default::default()), Err(Error::Unsupported(_))));
+    assert!(matches!(JsonFilter.extract(&[b'[', b'"', 0xFF, 0, b'"', b']'], &Default::default()), Err(Error::Encoding(_))));
+    // an odd-length UTF-16 body is not UTF-16; read as Windows-1252 it is not JSON
+    assert!(matches!(JsonFilter.extract(&[0xFF, 0xFE, b'[', 0, b'x'], &Default::default()), Err(Error::Encoding(_))));
 }
 
 #[test]
 fn deep_nesting_is_refused_not_crashed() {
     let deep = format!("{}{}", "[".repeat(500), "]".repeat(500));
-    assert!(matches!(JsonFilter.extract(deep.as_bytes(), &Default::default()), Err(Error::Parse { .. })));
+    // the nesting cap is a limit, as in every other crate (B-SIDE 16)
+    assert!(matches!(JsonFilter.extract(deep.as_bytes(), &Default::default()), Err(Error::Limit(e)) if e.kind == bilingua_model::LimitKind::Depth));
     let ok = format!("{}\"fine text\"{}", "[".repeat(100), "]".repeat(100));
     assert_eq!(extract(&ok).units.len(), 1);
+    // the LocOS profile reads 300 levels (text to json.loads), refusing past 400
+    let o = ExtractOptions::new().with_profile(Some(profile::LOCOS));
+    let deep = format!("{}\"deep text\"{}", "[".repeat(300), "]".repeat(300));
+    assert_eq!(JsonFilter.extract(deep.as_bytes(), &o).unwrap().units.len(), 1);
+    let edge = format!("{}\"edge text\"{}", "[".repeat(400), "]".repeat(400));
+    assert_eq!(JsonFilter.extract(edge.as_bytes(), &o).unwrap().units.len(), 1);
+    let deeper = format!("{}{}", "[".repeat(401), "]".repeat(401));
+    assert!(matches!(JsonFilter.extract(deeper.as_bytes(), &o), Err(Error::Limit(e)) if e.kind == bilingua_model::LimitKind::Depth));
 }
 
 #[test]
@@ -278,9 +288,39 @@ fn output_stays_valid_json_for_awkward_translations() {
 fn works_with_segmentation_separators() {
     let mut d = extract(r#"{"a": "One. Two."}"#);
     d.units[0].segments = vec![
-        Segment { id: "u1#1".into(), source: vec![Inline::text("One.")], target: vec![Inline::text("Uno.")], state: SegState::Draft },
-        Segment { id: "u1#2".into(), source: vec![Inline::text("Two.")], target: vec![], state: SegState::New },
+        Segment::new("u1#1", vec![Inline::text("One.")]).with_target(vec![Inline::text("Uno.")]).with_state(SegState::Draft),
+        Segment::new("u1#2", vec![Inline::text("Two.")]),
     ];
     d.units[0].separators = vec![" ".into()];
     assert_eq!(merged(&d), r#"{"a": "Uno. Two."}"#);
+}
+
+#[test]
+fn a_vue_i18n_linked_message_is_not_text() {
+    // "Zq@:a.bqZ" would look like an e-mail address, so the reference must be skipped before it is wrapped
+    let d = extract(r#"{"a": "Save", "b": "@:common.save", "c": "@.lower:(common.save)", "d": "Press @:common.save now"}"#);
+    assert_eq!(texts(&d), ["Save", "Press @:common.save now"]);
+}
+
+#[test]
+fn value_and_string_floods_are_refused_as_limits_like_locos() {
+    // LocOS check_json_budget: more than 20 x max_units commas and brackets, or 40 x max_units quotes, is a
+    // limit refusal before any value is read (a file of `{},` holds no text but millions of values)
+    let l = Limits::new().with_max_units(10);
+    for profile in [None, Some(profile::LOCOS)] {
+        let o = ExtractOptions::new().with_limits(l).with_profile(profile);
+        let flood = format!("[{}{{}}]", "{},".repeat(200));
+        match JsonFilter.extract(flood.as_bytes(), &o) {
+            Err(Error::Limit(e)) => {
+                assert_eq!(e.kind, LimitKind::Units);
+                assert!(e.msg.contains("far more values than a file of 10 segments. Split"), "{}", e.msg);
+            }
+            other => panic!("{profile:?}: {other:?}"),
+        }
+        let strings = format!("[{}\"x\"]", "\"\",".repeat(200));
+        assert!(matches!(JsonFilter.extract(strings.as_bytes(), &o), Err(Error::Limit(e)) if e.msg.contains("far more strings")));
+        // under the budget: read as before
+        let ok = format!("[{}\"Hello\"]", "{},".repeat(50));
+        assert_eq!(JsonFilter.extract(ok.as_bytes(), &o).unwrap().units.len(), 1);
+    }
 }

@@ -1,0 +1,20 @@
+[
+ {
+  "name": "repair-xrepeat",
+  "locale": null,
+  "map": {
+   "0": "Q A ⟦x1⟧unpaired start⟦x2⟧ end⟦x3⟧ ⟦x1⟧",
+   "1": "Q ⟦x1⟧ ⟦x1⟧",
+   "4": "Q ⟦x1⟧ text ⟦x1⟧"
+  }
+ },
+ {
+  "name": "repair-xrepeat-de-DE",
+  "locale": "de-DE",
+  "map": {
+   "0": "Q A ⟦x1⟧unpaired start⟦x2⟧ end⟦x3⟧ ⟦x1⟧",
+   "1": "Q ⟦x1⟧ ⟦x1⟧",
+   "4": "Q ⟦x1⟧ text ⟦x1⟧"
+  }
+ }
+]

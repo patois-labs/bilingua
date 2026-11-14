@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE messagebundle [
+<!ELEMENT messagebundle (msg)*>
+<!ATTLIST messagebundle class CDATA #IMPLIED>
+<!ELEMENT msg (#PCDATA|ph|source)*>
+<!ATTLIST msg id CDATA #IMPLIED>
+<!ATTLIST msg desc CDATA #IMPLIED>
+<!ATTLIST msg meaning CDATA #IMPLIED>
+<!ELEMENT ph (#PCDATA|ex)*>
+<!ATTLIST ph name CDATA #REQUIRED>
+<!ELEMENT ex (#PCDATA)>
+<!ELEMENT source (#PCDATA)>
+]>
+<messagebundle>
+  <msg id="1001" desc="Title"><source>app.html:1</source>Welcome home</msg>
+  <msg id="1002"><source>app.html:2</source>Hi <ph name="INTERPOLATION"><ex>{{ name }}</ex></ph>!</msg>
+  <msg id="1003"><ph name="INTERPOLATION"/></msg>
+  <msg id="1001"><source>app.html:9</source>Welcome home</msg>
+  <msg id="1004">Press <ph name="START_BOLD_TEXT"><ex>&lt;b&gt;</ex></ph>save<ph name="CLOSE_BOLD_TEXT"><ex>&lt;/b&gt;</ex></ph> now</msg>
+  <msg id="1005" meaning="verb">Open</msg>
+</messagebundle>

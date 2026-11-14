@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="300" height="120">
+  <defs><linearGradient id="g"><stop offset="0" stop-color="#347"/></linearGradient></defs>
+  <rect x="2" y="2" width="296" height="116" fill="url(#g)"/>
+  <style>.t { font-family: sans-serif; }</style>
+  <text class="t" x="16" y="40">Summer Sale &amp; more</text>
+  <text class="t" x="16" y="80"><tspan>Shop now</tspan></text>
+  <!-- decorative comment stays byte-identical -->
+</svg>

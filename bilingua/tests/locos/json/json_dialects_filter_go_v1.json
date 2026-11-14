@@ -1,0 +1,4 @@
+[
+  {"id": "d_days", "translation": {"one": "{{.Count}} day", "other": "{{.Count}} days"}},
+  {"id": "hello", "translation": "Hello"}
+]

@@ -1,0 +1,54 @@
+{
+ "format": "rc",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Bring water with you",
+   "style": "rc:string"
+  },
+  {
+   "p_index": 1,
+   "text": "喜茶店 open",
+   "style": "rc:string"
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "I3ByYWdtYSBjb2RlX3BhZ2UoOTMyKQ0KU1RSSU5HVEFCTEUNCkJFR0lODQogICAgSURTX0hFTExPICJCcmluZyB3YXRlciB3aXRoIHlvdSINCiAgICBJRFNfQ0FGRSAiiuySg5NYIG9wZW4iDQpFTkQNCg=="
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü Bring water with you",
+    "1": "Ü 喜茶店 open"
+   },
+   "out_b64": "I3ByYWdtYSBjb2RlX3BhZ2UoNjUwMDEpDQpTVFJJTkdUQUJMRQ0KQkVHSU4NCiAgICBJRFNfSEVMTE8gIsOcIEJyaW5nIHdhdGVyIHdpdGggeW91Ig0KICAgIElEU19DQUZFICLDnCDllpzojLblupcgb3BlbiINCkVORA0K"
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Bring water with you & <\"'>"
+   },
+   "out_b64": "I3ByYWdtYSBjb2RlX3BhZ2UoOTMyKQ0KU1RSSU5HVEFCTEUNCkJFR0lODQogICAgSURTX0hFTExPICJCcmluZyB3YXRlciB3aXRoIHlvdSAmIDwiIic+Ig0KICAgIElEU19DQUZFICKK7JKDk1ggb3BlbiINCkVORA0K"
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "out_b64": "I3ByYWdtYSBjb2RlX3BhZ2UoOTMyKQ0KU1RSSU5HVEFCTEUNCkJFR0lODQogICAgSURTX0hFTExPICJCcmluZyB3YXRlciB3aXRoIHlvdSINCiAgICBJRFNfQ0FGRSAiiuySg5NYIG9wZW4iDQpFTkQNCg=="
+  },
+  {
+   "name": "w6-kana",
+   "locale": null,
+   "map": {
+    "1": "喜茶店、営業中"
+   },
+   "out_b64": "I3ByYWdtYSBjb2RlX3BhZ2UoOTMyKQ0KU1RSSU5HVEFCTEUNCkJFR0lODQogICAgSURTX0hFTExPICJCcmluZyB3YXRlciB3aXRoIHlvdSINCiAgICBJRFNfQ0FGRSAiiuySg5NYgUGJY4vGkoYiDQpFTkQNCg=="
+  }
+ ]
+}

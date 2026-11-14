@@ -1,0 +1,13 @@
+STRINGTABLE
+BEGIN
+    IDS_GREETING    "مرحباً بعودتك، %s! لديك %d طلبات."
+    IDS_NEWORDER    L"طلب جديد 26"
+END
+
+IDR_MENU MENU
+BEGIN
+    POPUP "&ملف"
+    BEGIN
+        MENUITEM "خروج", ID_APP_EXIT
+    END
+END

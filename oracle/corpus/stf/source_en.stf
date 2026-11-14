@@ -1,0 +1,10 @@
+# Use the Source file to translate labels for the first time.
+Language code: en_US
+Type: Source
+Translation type: Metadata
+
+# KEY	LABEL
+
+ButtonOrLink.Account.Call	Log in
+LayoutSection.Account.Account Layout.Address	Items in your basket
+CustomLabel.Tagline	Fresh bread every morning {0}

@@ -1,0 +1,11 @@
+== Field guide ==
+A short '''field''' guide for ''new'' hikers, see [[Hiking|the hiking page]].
+
+* Bring water.
+* Bring a [https://example.org map].
+
+{| class="wikitable"
+! Name !! Use
+|-
+| Rope || Climbing
+|}

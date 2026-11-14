@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<tt xmlns="http://www.w3.org/ns/ttml" xmlns:tts="http://www.w3.org/ns/ttml#styling" xmlns:ttm="http://www.w3.org/ns/ttml#metadata" xml:lang="fr">
+  <head><metadata><ttm:title>Bakery fr</ttm:title></metadata><styling><style xml:id="s1" tts:color="white"/></styling></head>
+  <body><div>
+    <p begin="1s" end="3s" style="s1">Bienvenue à la boulangerie</p>
+    <p begin="4s" end="6s" style="s1"><span tts:fontWeight="bold">Vous avez {0} commandes pour {1}</span></p>
+    <p begin="7s" end="9s" style="s1">Du pain frais<br/>tous les matins</p>
+    <p begin="10s" end="12s" style="s1">Appuyez sur %1$s pour continuer</p>
+    <p begin="13s" end="15s" style="s1">Merci &amp; au revoir</p>
+  </div></body>
+</tt>

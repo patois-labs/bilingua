@@ -1,0 +1,1 @@
+<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform" xmlns:c="urn:example:catalog"><xsl:template match="/"><c:item><c:style>Classic leather</c:style></c:item><svg xmlns="http://www.w3.org/2000/svg"><style>.a{fill:red}</style></svg></xsl:template></xsl:stylesheet>

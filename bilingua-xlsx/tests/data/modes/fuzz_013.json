@@ -1,0 +1,28 @@
+{
+ "parse": {
+  "columns": "source=1,target=2,context=3,key=4",
+  "source_locale": "en",
+  "target_locales": [
+   "de"
+  ]
+ },
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Cancel",
+   "style": "",
+   "note": ""
+  }
+ ],
+ "error": false,
+ "builds": [
+  {
+   "name": "b",
+   "locale": "de",
+   "map": {
+    "0": "T Cancel"
+   },
+   "file": "fuzz_013.b.xlsx"
+  }
+ ]
+}

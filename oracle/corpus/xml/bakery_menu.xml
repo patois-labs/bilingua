@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Lumen Bakery menu (made up) -->
+<?render-hint compact?>
+<menu xmlns:its="http://www.w3.org/2005/11/its" its:version="2.0" xml:lang="en">
+  <its:rules version="2.0">
+    <its:translateRule selector="//price" translate="no"/>
+    <its:translateRule selector="//item/@label" translate="yes"/>
+    <its:translateRule selector="//item/@sku" translate="no"/>
+    <its:withinTextRule selector="//b | //i | //br" withinText="yes"/>
+    <its:locNoteRule selector="//desc">
+      <its:locNote>Keep under 90 characters.</its:locNote>
+    </its:locNoteRule>
+    <its:locNoteRule selector="//name" locNotePointer="../hint"/>
+    <its:preserveSpaceRule selector="//recipe" space="preserve"/>
+  </its:rules>
+  <item sku="B-100" label="Sourdough loaf">
+    <name>Sourdough</name>
+    <hint>Product name, do not shorten.</hint>
+    <desc>A <b>crusty</b> loaf, baked <i>fresh</i> every day.<br/>Order before noon.</desc>
+    <price currency="EUR">4.50</price>
+  </item>
+  <item sku="B-200" label="Croissant">
+    <name>Croissant</name>
+    <hint>Plural is fine.</hint>
+    <desc>Butter &amp; flour, nothing else. Serves 1 &lt; 2 people.</desc>
+    <price currency="EUR">2.10</price>
+    <recipe>Mix 500 g flour
+    with 300 ml water.
+      Rest overnight.</recipe>
+  </item>
+  <item sku="B-300" label="Seed bar">
+    <name>Seed bar</name>
+    <hint>Snack.</hint>
+    <desc><![CDATA[Oats, <seeds> & honey.]]></desc>
+    <price currency="EUR">1.90</price>
+    <!-- seasonal -->
+    <seasonal its:translate="no">Autumn only</seasonal>
+  </item>
+</menu>

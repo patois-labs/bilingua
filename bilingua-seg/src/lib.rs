@@ -4,12 +4,9 @@
 //! use bilingua_model::*;
 //! use bilingua_seg::{segment, Rules};
 //!
-//! let mut doc = Document {
-//!     format: "txt".into(), name: None, source_lang: None, target_lang: None,
-//!     granularity: Granularity::Sentence,
-//!     units: vec![Unit::new("p1", vec![Inline::text("Hello there. How are you?")])],
-//!     skeleton: Skeleton::Text { parts: vec![SkelPart::Unit(0)], encoding: "utf-8".into() },
-//! };
+//! let units = vec![Unit::new("p1", vec![Inline::text("Hello there. How are you?")])];
+//! let skeleton = Skeleton::Text { parts: vec![SkelPart::Unit(0)], encoding: "utf-8".into(), parser: None };
+//! let mut doc = Document::new("txt", units, skeleton);
 //! segment(&mut doc, "en", Granularity::Sentence, Rules::bundled());
 //! assert_eq!(doc.units[0].segments.len(), 2);
 //! assert_eq!(doc.units[0].segments[1].id, "p1#2");
@@ -111,15 +108,6 @@ fn settle_cut(a: &[Atom], prev_char: usize) -> usize {
     p
 }
 
-fn rank(s: SegState) -> u8 {
-    match s {
-        SegState::New => 0,
-        SegState::Draft => 1,
-        SegState::Translated => 2,
-        SegState::Confirmed => 3,
-    }
-}
-
 fn renumber(unit: &mut Unit) {
     if unit.segments.len() == 1 {
         unit.segments[0].id = unit.id.clone();
@@ -135,30 +123,17 @@ fn collapse(unit: &mut Unit) {
     if unit.segments.len() <= 1 {
         return;
     }
-    let all_translated = unit.segments.iter().all(|s| !s.target.is_empty());
+    let all_translated = unit.segments.iter().all(|s| s.has_target());
     let source = unit.source();
     let target = if all_translated { unit.output() } else { vec![] };
-    let state = unit.segments.iter().map(|s| rank_state(s.state)).min().map(state_of).unwrap_or(SegState::New);
-    unit.segments = vec![Segment {
-        id: unit.id.clone(),
-        source,
-        target,
-        state: if all_translated { state } else { SegState::New },
-    }];
+    let state = unit.segments.iter().map(|s| s.state.rank()).min().map(SegState::from_rank).unwrap_or(SegState::New);
+    // The origin survives only when every part has the same one.
+    let origin = match unit.segments.first().map(|s| &s.origin) {
+        Some(first) if all_translated && unit.segments.iter().all(|s| &s.origin == first) => first.clone(),
+        _ => None,
+    };
+    unit.segments = vec![Segment::new(unit.id.clone(), source).with_target(target).with_state(if all_translated { state } else { SegState::New }).with_origin(origin)];
     unit.separators.clear();
-}
-
-fn rank_state(s: SegState) -> u8 {
-    rank(s)
-}
-
-fn state_of(r: u8) -> SegState {
-    match r {
-        0 => SegState::New,
-        1 => SegState::Draft,
-        2 => SegState::Translated,
-        _ => SegState::Confirmed,
-    }
 }
 
 /// Splits a unit's single segment at the given atom cuts. Each cut is an index into the atoms: the new segment
@@ -196,7 +171,7 @@ fn split_at_cuts(unit: &mut Unit, a: &[Atom], cuts: &[usize]) {
     segs.push(a[start..].to_vec());
     unit.segments = segs
         .into_iter()
-        .map(|s| Segment { id: String::new(), source: inlines(&s), target: vec![], state: SegState::New })
+        .map(|s| Segment::new(String::new(), inlines(&s)))
         .collect();
     unit.separators = seps;
     renumber(unit);
@@ -256,18 +231,21 @@ fn locate<'a>(doc: &'a mut Document, seg_id: &str) -> Result<(&'a mut Unit, usiz
 /// renumbered. Returns the id of the merged segment.
 pub fn join(doc: &mut Document, seg_a: &str, seg_b: &str) -> Result<String, Error> {
     let (unit, i) = locate(doc, seg_a)?;
-    if !unit.translate {
+    if !unit.translate || unit.lock_reason.is_some() || unit.segments[i].state == SegState::Locked {
         return Err(Error::Locked(seg_a.to_string()));
     }
     if unit.segments.get(i + 1).map(|s| s.id.as_str()) != Some(seg_b) {
         return Err(Error::Unsupported(format!("{seg_a} and {seg_b} are not neighbours in one unit")));
     }
+    if unit.segments[i + 1].state == SegState::Locked {
+        return Err(Error::Locked(seg_b.to_string()));
+    }
     let sep = unit.separators.get(i).cloned().unwrap_or_default();
     let b = unit.segments.remove(i + 1);
     unit.separators.remove(i);
     let a = &mut unit.segments[i];
-    let both = !a.target.is_empty() && !b.target.is_empty();
-    let state = if both { state_of(rank(a.state).min(rank(b.state))) } else { SegState::New };
+    let both = a.has_target() && b.has_target();
+    let state = if both { SegState::from_rank(a.state.rank().min(b.state.rank())) } else { SegState::New };
     let join_with_sep = |x: &[Inline], y: &[Inline]| -> Vec<Inline> {
         let mut v = x.to_vec();
         if !sep.is_empty() {
@@ -279,6 +257,9 @@ pub fn join(doc: &mut Document, seg_a: &str, seg_b: &str) -> Result<String, Erro
     a.source = join_with_sep(&a.source, &b.source);
     a.target = if both { join_with_sep(&a.target, &b.target) } else { vec![] };
     a.state = state;
+    if !both || a.origin != b.origin {
+        a.origin = None;
+    }
     renumber(unit);
     Ok(unit.segments[i].id.clone())
 }
@@ -288,7 +269,7 @@ pub fn join(doc: &mut Document, seg_a: &str, seg_b: &str) -> Result<String, Erro
 /// Both new segments start untranslated. Returns the two new segment ids.
 pub fn split(doc: &mut Document, seg_id: &str, at_char: usize) -> Result<(String, String), Error> {
     let (unit, i) = locate(doc, seg_id)?;
-    if !unit.translate {
+    if !unit.translate || unit.lock_reason.is_some() || unit.segments[i].state == SegState::Locked {
         return Err(Error::Locked(seg_id.to_string()));
     }
     let a = atoms(&unit.segments[i].source);
@@ -326,8 +307,8 @@ pub fn split(doc: &mut Document, seg_id: &str, at_char: usize) -> Result<(String
     if inside_pair(&pr, left) || inside_pair(&pr, right) {
         return Err(Error::Unsupported("cannot split inside a tag pair".into()));
     }
-    let first = Segment { id: String::new(), source: inlines(&a[..left]), target: vec![], state: SegState::New };
-    let second = Segment { id: String::new(), source: inlines(&a[right..]), target: vec![], state: SegState::New };
+    let first = Segment::new(String::new(), inlines(&a[..left]));
+    let second = Segment::new(String::new(), inlines(&a[right..]));
     unit.segments.splice(i..=i, [first, second]);
     unit.separators.insert(i, text_of(&a[left..right]));
     renumber(unit);
@@ -340,15 +321,7 @@ mod tests {
 
     fn doc_of(units: Vec<Vec<Inline>>) -> Document {
         let n = units.len();
-        Document {
-            format: "test".into(),
-            name: None,
-            source_lang: None,
-            target_lang: None,
-            granularity: Granularity::Sentence,
-            units: units.into_iter().enumerate().map(|(i, s)| Unit::new(format!("u{}", i + 1), s)).collect(),
-            skeleton: Skeleton::Text { parts: (0..n).map(SkelPart::Unit).collect(), encoding: "utf-8".into() },
-        }
+        Document::new("test", units.into_iter().enumerate().map(|(i, s)| Unit::new(format!("u{}", i + 1), s)).collect(), Skeleton::Text { parts: (0..n).map(SkelPart::Unit).collect(), encoding: "utf-8".into(), parser: None })
     }
 
     fn segs(lang: &str, text: &str) -> Vec<String> {
@@ -563,6 +536,28 @@ mod tests {
         assert!(matches!(join(&mut d, "nope", "u1#2"), Err(Error::UnknownSegment(_))));
         assert!(matches!(split(&mut d, "u2", 0), Err(Error::Unsupported(_))));
         assert!(matches!(split(&mut d, "u2", 99), Err(Error::Unsupported(_))));
+    }
+
+    #[test]
+    fn join_and_split_refuse_locked_segments_and_units() {
+        let mut d = doc_of(vec![vec![Inline::text("One. Two. Three.")]]);
+        segment(&mut d, "en", Granularity::Sentence, Rules::bundled());
+        d.units[0].segments[1].state = SegState::Locked;
+        // Locked second, locked first, and a locked middle segment all refuse; nothing changes.
+        assert!(matches!(join(&mut d, "u1#1", "u1#2"), Err(Error::Locked(id)) if id == "u1#2"));
+        assert!(matches!(join(&mut d, "u1#2", "u1#3"), Err(Error::Locked(id)) if id == "u1#2"));
+        assert!(matches!(split(&mut d, "u1#2", 2), Err(Error::Locked(_))));
+        assert_eq!(d.units[0].segments.len(), 3);
+        assert_eq!(d.units[0].segments[1].state, SegState::Locked);
+        // A unit with a lock reason refuses both operations too.
+        d.units[0].segments[1].state = SegState::New;
+        d.units[0].lock_reason = Some("context match".into());
+        assert!(matches!(join(&mut d, "u1#1", "u1#2"), Err(Error::Locked(_))));
+        assert!(matches!(split(&mut d, "u1#1", 2), Err(Error::Locked(_))));
+        assert_eq!(d.units[0].segments.len(), 3);
+        // Unlocked again, it works.
+        d.units[0].lock_reason = None;
+        assert!(join(&mut d, "u1#1", "u1#2").is_ok());
     }
 
     #[test]

@@ -1,0 +1,53 @@
+{
+ "format": "properties",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "#1 file - Downloads;#1 files - Downloads",
+   "style": ""
+  },
+  {
+   "p_index": 1,
+   "text": "The file %S already exists.",
+   "style": ""
+  },
+  {
+   "p_index": 2,
+   "text": "%1$S of %2$S",
+   "style": ""
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "IyBUaGlzIFNvdXJjZSBDb2RlIEZvcm0gaXMgc3ViamVjdCB0byB0aGUgdGVybXMgb2YgdGhlIE1vemlsbGEgUHVibGljCiMgTGljZW5zZSwgdi4gMi4wLgoKIyBMT0NBTElaQVRJT04gTk9URSAoZG93bmxvYWRzVGl0bGVGaWxlcyk6IFNlbWljb2xvbi1zZXBhcmF0ZWQgbGlzdCBvZiBwbHVyYWwgZm9ybXMuCiMgIzEgbnVtYmVyIG9mIGZpbGVzOyAjMiBvdmVyYWxsIGRvd25sb2FkIHBlcmNlbnQKZG93bmxvYWRzVGl0bGVGaWxlcz0jMSBmaWxlIC0gRG93bmxvYWRzOyMxIGZpbGVzIC0gRG93bmxvYWRzCmZpbGVFeGlzdHM9VGhlIGZpbGUgJVMgYWxyZWFkeSBleGlzdHMuCmNvcHlPZj0lMSRTIG9mICUyJFMK"
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü #1 file - Downloads;#1 files - Downloads",
+    "1": "Ü The file %S already exists.",
+    "2": "Ü %1$S of %2$S"
+   },
+   "out_b64": "IyBUaGlzIFNvdXJjZSBDb2RlIEZvcm0gaXMgc3ViamVjdCB0byB0aGUgdGVybXMgb2YgdGhlIE1vemlsbGEgUHVibGljCiMgTGljZW5zZSwgdi4gMi4wLgoKIyBMT0NBTElaQVRJT04gTk9URSAoZG93bmxvYWRzVGl0bGVGaWxlcyk6IFNlbWljb2xvbi1zZXBhcmF0ZWQgbGlzdCBvZiBwbHVyYWwgZm9ybXMuCiMgIzEgbnVtYmVyIG9mIGZpbGVzOyAjMiBvdmVyYWxsIGRvd25sb2FkIHBlcmNlbnQKZG93bmxvYWRzVGl0bGVGaWxlcz3DnCAjMSBmaWxlIC0gRG93bmxvYWRzOyMxIGZpbGVzIC0gRG93bmxvYWRzCmZpbGVFeGlzdHM9w5wgVGhlIGZpbGUgJVMgYWxyZWFkeSBleGlzdHMuCmNvcHlPZj3DnCAlMSRTIG9mICUyJFMK"
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "#1 file - Downloads;#1 files - Downloads & <\"'>",
+    "2": "%1$S of %2$S & <\"'>"
+   },
+   "out_b64": "IyBUaGlzIFNvdXJjZSBDb2RlIEZvcm0gaXMgc3ViamVjdCB0byB0aGUgdGVybXMgb2YgdGhlIE1vemlsbGEgUHVibGljCiMgTGljZW5zZSwgdi4gMi4wLgoKIyBMT0NBTElaQVRJT04gTk9URSAoZG93bmxvYWRzVGl0bGVGaWxlcyk6IFNlbWljb2xvbi1zZXBhcmF0ZWQgbGlzdCBvZiBwbHVyYWwgZm9ybXMuCiMgIzEgbnVtYmVyIG9mIGZpbGVzOyAjMiBvdmVyYWxsIGRvd25sb2FkIHBlcmNlbnQKZG93bmxvYWRzVGl0bGVGaWxlcz0jMSBmaWxlIC0gRG93bmxvYWRzOyMxIGZpbGVzIC0gRG93bmxvYWRzICYgPCInPgpmaWxlRXhpc3RzPVRoZSBmaWxlICVTIGFscmVhZHkgZXhpc3RzLgpjb3B5T2Y9JTEkUyBvZiAlMiRTICYgPCInPgo="
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "out_b64": "IyBUaGlzIFNvdXJjZSBDb2RlIEZvcm0gaXMgc3ViamVjdCB0byB0aGUgdGVybXMgb2YgdGhlIE1vemlsbGEgUHVibGljCiMgTGljZW5zZSwgdi4gMi4wLgoKIyBMT0NBTElaQVRJT04gTk9URSAoZG93bmxvYWRzVGl0bGVGaWxlcyk6IFNlbWljb2xvbi1zZXBhcmF0ZWQgbGlzdCBvZiBwbHVyYWwgZm9ybXMuCiMgIzEgbnVtYmVyIG9mIGZpbGVzOyAjMiBvdmVyYWxsIGRvd25sb2FkIHBlcmNlbnQKZG93bmxvYWRzVGl0bGVGaWxlcz0jMSBmaWxlIC0gRG93bmxvYWRzOyMxIGZpbGVzIC0gRG93bmxvYWRzCmZpbGVFeGlzdHM9VGhlIGZpbGUgJVMgYWxyZWFkeSBleGlzdHMuCmNvcHlPZj0lMSRTIG9mICUyJFMK"
+  }
+ ]
+}

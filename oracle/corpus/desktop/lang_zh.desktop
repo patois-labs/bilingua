@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=笔记
+Comment=快速记笔记
+Keywords=笔记;文本;
+Exec=notes %F
+Actions=new;
+
+[Desktop Action new]
+Name=新笔记
+Exec=notes --new

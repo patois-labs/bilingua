@@ -1,0 +1,163 @@
+{
+ "format": "md",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Release notes: \"v2\"",
+   "style": ""
+  },
+  {
+   "p_index": 1,
+   "text": "It's a plain one",
+   "style": ""
+  },
+  {
+   "p_index": 2,
+   "text": "Single 'quoted' text",
+   "style": ""
+  },
+  {
+   "p_index": 3,
+   "text": "Heading one #",
+   "style": ""
+  },
+  {
+   "p_index": 4,
+   "text": "First step",
+   "style": ""
+  },
+  {
+   "p_index": 5,
+   "text": "Second step",
+   "style": ""
+  },
+  {
+   "p_index": 6,
+   "text": "continued text under the item",
+   "style": ""
+  },
+  {
+   "p_index": 7,
+   "text": "indented code? no, list content",
+   "style": ""
+  },
+  {
+   "p_index": 8,
+   "text": "item",
+   "style": ""
+  },
+  {
+   "p_index": 9,
+   "text": "nested item",
+   "style": ""
+  },
+  {
+   "p_index": 10,
+   "text": "Paragraph line one",
+   "style": ""
+  },
+  {
+   "p_index": 11,
+   "text": "still the paragraph (lazy)",
+   "style": ""
+  },
+  {
+   "p_index": 12,
+   "text": "Text after comment.",
+   "style": ""
+  },
+  {
+   "p_index": 13,
+   "text": "Ref title",
+   "style": ""
+  },
+  {
+   "p_index": 14,
+   "text": "Other title",
+   "style": ""
+  },
+  {
+   "p_index": 15,
+   "text": "The footnote text.",
+   "style": ""
+  },
+  {
+   "p_index": 16,
+   "text": "Table | here",
+   "style": ""
+  },
+  {
+   "p_index": 17,
+   "text": "Yes \\| No | cell",
+   "style": ""
+  },
+  {
+   "p_index": 18,
+   "text": "Last line with trailing spaces",
+   "style": ""
+  },
+  {
+   "p_index": 19,
+   "text": "1984\\. was a year.",
+   "style": ""
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "LS0tCnRpdGxlOiAiUmVsZWFzZSBub3RlczogXCJ2MlwiIgpkZXNjcmlwdGlvbjogSXQncyBhIHBsYWluIG9uZQpkYXRlOiAyMDI0LTAxLTAyCnN1bW1hcnk6IHllcwpleGNlcnB0OiAnU2luZ2xlICcncXVvdGVkJycgdGV4dCcKdGFnczogW2EsIGJdCi0tLQoKIyBIZWFkaW5nIG9uZSAjCgoxLiBGaXJzdCBzdGVwCjIpIFNlY29uZCBzdGVwCiAgIGNvbnRpbnVlZCB0ZXh0IHVuZGVyIHRoZSBpdGVtCgogICAgaW5kZW50ZWQgY29kZT8gbm8sIGxpc3QgY29udGVudAoKLSBpdGVtCiAgLSBuZXN0ZWQgaXRlbQoKUGFyYWdyYXBoIGxpbmUgb25lCiAgICBzdGlsbCB0aGUgcGFyYWdyYXBoIChsYXp5KQoKICAgIHJlYWwgaW5kZW50ZWQgY29kZQoKPCEtLSBhIGNvbW1lbnQgLS0+CjwhLS0KbXVsdGkgbGluZSBjb21tZW50Ci0tPgpUZXh0IGFmdGVyIGNvbW1lbnQuCgpbcmVmXTogaHR0cHM6Ly9leGFtcGxlLmNvbSAnUmVmIHRpdGxlJwpbb3RoZXJdOgogIGh0dHBzOi8vZXhhbXBsZS5jb20vb3RoZXIKICAiT3RoZXIgdGl0bGUiCgpbXm5vdGVdOiBUaGUgZm9vdG5vdGUgdGV4dC4KCn5+fnB5dGhvbgpwcmludCgibm8iKQp+fn4KCmBgYGAKbmVzdGVkIGBgYCBmZW5jZQpgYGBgCgpUYWJsZSB8IGhlcmUKLS0tIHwgLS0tClllcyBcfCBObyB8IGNlbGwKCkxhc3QgbGluZSB3aXRoIHRyYWlsaW5nIHNwYWNlcwoxOTg0XC4gd2FzIGEgeWVhci4K"
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü Release notes: \"v2\"",
+    "1": "Ü It's a plain one",
+    "2": "Ü Single 'quoted' text",
+    "3": "Ü Heading one #",
+    "4": "Ü First step",
+    "5": "Ü Second step",
+    "6": "Ü continued text under the item",
+    "7": "Ü indented code? no, list content",
+    "8": "Ü item",
+    "9": "Ü nested item",
+    "10": "Ü Paragraph line one",
+    "11": "Ü still the paragraph (lazy)",
+    "12": "Ü Text after comment.",
+    "13": "Ü Ref title",
+    "14": "Ü Other title",
+    "15": "Ü The footnote text.",
+    "16": "Ü Table | here",
+    "17": "Ü Yes \\| No | cell",
+    "18": "Ü Last line with trailing spaces",
+    "19": "Ü 1984\\. was a year."
+   },
+   "out_b64": "LS0tCnRpdGxlOiAiw5wgUmVsZWFzZSBub3RlczogXCJ2MlwiIgpkZXNjcmlwdGlvbjogw5wgSXQncyBhIHBsYWluIG9uZQpkYXRlOiAyMDI0LTAxLTAyCnN1bW1hcnk6IHllcwpleGNlcnB0OiAnw5wgU2luZ2xlICcncXVvdGVkJycgdGV4dCcKdGFnczogW2EsIGJdCi0tLQoKIyDDnCBIZWFkaW5nIG9uZSAjCgoxLiDDnCBGaXJzdCBzdGVwCjIpIMOcIFNlY29uZCBzdGVwCiAgIMOcIGNvbnRpbnVlZCB0ZXh0IHVuZGVyIHRoZSBpdGVtCgogICAgw5wgaW5kZW50ZWQgY29kZT8gbm8sIGxpc3QgY29udGVudAoKLSDDnCBpdGVtCiAgLSDDnCBuZXN0ZWQgaXRlbQoKw5wgUGFyYWdyYXBoIGxpbmUgb25lCiAgICDDnCBzdGlsbCB0aGUgcGFyYWdyYXBoIChsYXp5KQoKICAgIHJlYWwgaW5kZW50ZWQgY29kZQoKPCEtLSBhIGNvbW1lbnQgLS0+CjwhLS0KbXVsdGkgbGluZSBjb21tZW50Ci0tPgrDnCBUZXh0IGFmdGVyIGNvbW1lbnQuCgpbcmVmXTogaHR0cHM6Ly9leGFtcGxlLmNvbSAnw5wgUmVmIHRpdGxlJwpbb3RoZXJdOgogIGh0dHBzOi8vZXhhbXBsZS5jb20vb3RoZXIKICAiw5wgT3RoZXIgdGl0bGUiCgpbXm5vdGVdOiDDnCBUaGUgZm9vdG5vdGUgdGV4dC4KCn5+fnB5dGhvbgpwcmludCgibm8iKQp+fn4KCmBgYGAKbmVzdGVkIGBgYCBmZW5jZQpgYGBgCgrDnCBUYWJsZSB8IGhlcmUKLS0tIHwgLS0tCsOcIFllcyBcfCBObyB8IGNlbGwKCsOcIExhc3QgbGluZSB3aXRoIHRyYWlsaW5nIHNwYWNlcwrDnCAxOTg0XC4gd2FzIGEgeWVhci4K"
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Release notes: \"v2\" & <\"'>",
+    "2": "Single 'quoted' text & <\"'>",
+    "4": "First step & <\"'>",
+    "6": "continued text under the item & <\"'>",
+    "8": "item & <\"'>",
+    "10": "Paragraph line one & <\"'>",
+    "12": "Text after comment. & <\"'>",
+    "14": "Other title & <\"'>",
+    "16": "Table | here & <\"'>",
+    "18": "Last line with trailing spaces & <\"'>"
+   },
+   "out_b64": "LS0tCnRpdGxlOiAiUmVsZWFzZSBub3RlczogXCJ2MlwiICYgPFwiJz4iCmRlc2NyaXB0aW9uOiBJdCdzIGEgcGxhaW4gb25lCmRhdGU6IDIwMjQtMDEtMDIKc3VtbWFyeTogeWVzCmV4Y2VycHQ6ICdTaW5nbGUgJydxdW90ZWQnJyB0ZXh0ICYgPCInJz4nCnRhZ3M6IFthLCBiXQotLS0KCiMgSGVhZGluZyBvbmUgIwoKMS4gRmlyc3Qgc3RlcCAmIDwiJz4KMikgU2Vjb25kIHN0ZXAKICAgY29udGludWVkIHRleHQgdW5kZXIgdGhlIGl0ZW0gJiA8Iic+CgogICAgaW5kZW50ZWQgY29kZT8gbm8sIGxpc3QgY29udGVudAoKLSBpdGVtICYgPCInPgogIC0gbmVzdGVkIGl0ZW0KClBhcmFncmFwaCBsaW5lIG9uZSAmIDwiJz4KICAgIHN0aWxsIHRoZSBwYXJhZ3JhcGggKGxhenkpCgogICAgcmVhbCBpbmRlbnRlZCBjb2RlCgo8IS0tIGEgY29tbWVudCAtLT4KPCEtLQptdWx0aSBsaW5lIGNvbW1lbnQKLS0+ClRleHQgYWZ0ZXIgY29tbWVudC4gJiA8Iic+CgpbcmVmXTogaHR0cHM6Ly9leGFtcGxlLmNvbSAnUmVmIHRpdGxlJwpbb3RoZXJdOgogIGh0dHBzOi8vZXhhbXBsZS5jb20vb3RoZXIKICAiT3RoZXIgdGl0bGUgJiA8XCInPiIKCltebm90ZV06IFRoZSBmb290bm90ZSB0ZXh0LgoKfn5+cHl0aG9uCnByaW50KCJubyIpCn5+fgoKYGBgYApuZXN0ZWQgYGBgIGZlbmNlCmBgYGAKClRhYmxlIHwgaGVyZSAmIDwiJz4KLS0tIHwgLS0tClllcyBcfCBObyB8IGNlbGwKCkxhc3QgbGluZSB3aXRoIHRyYWlsaW5nIHNwYWNlcyAmIDwiJz4KMTk4NFwuIHdhcyBhIHllYXIuCg=="
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "out_b64": "LS0tCnRpdGxlOiAiUmVsZWFzZSBub3RlczogXCJ2MlwiIgpkZXNjcmlwdGlvbjogSXQncyBhIHBsYWluIG9uZQpkYXRlOiAyMDI0LTAxLTAyCnN1bW1hcnk6IHllcwpleGNlcnB0OiAnU2luZ2xlICcncXVvdGVkJycgdGV4dCcKdGFnczogW2EsIGJdCi0tLQoKIyBIZWFkaW5nIG9uZSAjCgoxLiBGaXJzdCBzdGVwCjIpIFNlY29uZCBzdGVwCiAgIGNvbnRpbnVlZCB0ZXh0IHVuZGVyIHRoZSBpdGVtCgogICAgaW5kZW50ZWQgY29kZT8gbm8sIGxpc3QgY29udGVudAoKLSBpdGVtCiAgLSBuZXN0ZWQgaXRlbQoKUGFyYWdyYXBoIGxpbmUgb25lCiAgICBzdGlsbCB0aGUgcGFyYWdyYXBoIChsYXp5KQoKICAgIHJlYWwgaW5kZW50ZWQgY29kZQoKPCEtLSBhIGNvbW1lbnQgLS0+CjwhLS0KbXVsdGkgbGluZSBjb21tZW50Ci0tPgpUZXh0IGFmdGVyIGNvbW1lbnQuCgpbcmVmXTogaHR0cHM6Ly9leGFtcGxlLmNvbSAnUmVmIHRpdGxlJwpbb3RoZXJdOgogIGh0dHBzOi8vZXhhbXBsZS5jb20vb3RoZXIKICAiT3RoZXIgdGl0bGUiCgpbXm5vdGVdOiBUaGUgZm9vdG5vdGUgdGV4dC4KCn5+fnB5dGhvbgpwcmludCgibm8iKQp+fn4KCmBgYGAKbmVzdGVkIGBgYCBmZW5jZQpgYGBgCgpUYWJsZSB8IGhlcmUKLS0tIHwgLS0tClllcyBcfCBObyB8IGNlbGwKCkxhc3QgbGluZSB3aXRoIHRyYWlsaW5nIHNwYWNlcwoxOTg0XC4gd2FzIGEgeWVhci4K"
+  }
+ ]
+}

@@ -1,0 +1,7 @@
+{
+  a: 'caf\u00e9 \"q\"',
+  b: "Tab\there \x41 \v",
+  c: '\ud83c\udf5e bread',
+  d: "line one\nline two",
+  e: 'slash \/ ok',
+}

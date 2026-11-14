@@ -249,8 +249,8 @@ fn preview_wraps_every_segment_and_blocks_scripts() {
     let u = &mut d.units[1];
     let src = u.source();
     u.segments = vec![
-        Segment { id: "u2#1".into(), source: vec![src[0].clone()].into_iter().map(|_| Inline::text("First sentence.")).collect(), target: vec![], state: SegState::New },
-        Segment { id: "u2#2".into(), source: src[1..].to_vec(), target: vec![], state: SegState::New },
+        Segment::new("u2#1", vec![src[0].clone()].into_iter().map(|_| Inline::text("First sentence.")).collect()),
+        Segment::new("u2#2", src[1..].to_vec()),
     ];
     u.separators = vec![" ".into()];
     d.set_target("u1", vec![Inline::text("T\u{ed}tulo")]).unwrap();
@@ -288,13 +288,13 @@ fn render_segment_gives_inner_html() {
 
 #[test]
 fn bad_input() {
-    assert!(matches!(MarkdownFilter.extract(&[0x23, 0x20, 0xFF], &Default::default()), Err(Error::Parse { .. })));
-    assert!(matches!(MarkdownFilter.extract(&[0xFF, 0xFE, 0x23, 0], &Default::default()), Err(Error::Unsupported(_))));
+    assert!(matches!(MarkdownFilter.extract(&[0x23, 0x20, 0xFF, 0], &Default::default()), Err(Error::Encoding(_))));
+    assert!(MarkdownFilter.extract(&[0xFF, 0xFE, 0x23, 0], &Default::default()).is_ok());
     let d = extract("");
     assert_eq!(d.units.len(), 0);
     assert_eq!(merged(&d), "");
     let mut d = extract("x y\n");
-    d.skeleton = Skeleton::Zip { entries: vec![] };
+    d.skeleton = Skeleton::Zip { entries: vec![], parser: None };
     assert!(matches!(MarkdownFilter.merge(&d), Err(Error::Write(_))));
 }
 
@@ -343,8 +343,8 @@ fn awkward_documents_always_round_trip() {
 fn works_with_segmentation_separators() {
     let mut d = extract("One. Two.\n");
     d.units[0].segments = vec![
-        Segment { id: "u1#1".into(), source: vec![Inline::text("One.")], target: vec![Inline::text("Uno.")], state: SegState::Draft },
-        Segment { id: "u1#2".into(), source: vec![Inline::text("Two.")], target: vec![], state: SegState::New },
+        Segment::new("u1#1", vec![Inline::text("One.")]).with_target(vec![Inline::text("Uno.")]).with_state(SegState::Draft),
+        Segment::new("u1#2", vec![Inline::text("Two.")]),
     ];
     d.units[0].separators = vec![" ".into()];
     assert_eq!(merged(&d), "Uno. Two.\n");
@@ -374,4 +374,181 @@ fn fuzz_fragments_always_round_trip() {
             assert!(!h.to_lowercase().contains("<script"));
         }
     }
+}
+
+/// One unit translated to plain text, merged, and read again: the kinds stay.
+fn one(src: &str, id: &str, t: &str) -> String {
+    let mut d = extract(src);
+    d.set_target(id, vec![Inline::text(t)]).unwrap();
+    let out = merged(&d);
+    assert_eq!(kinds(&extract(&out)), kinds(&d), "the units keep their kinds: {out}");
+    out
+}
+
+#[test]
+fn a_translation_opens_no_fence_or_block() {
+    // LocOS trackers #790 (a fence swallows the rest of the file) and #704 (a marker turns the block into another)
+    let src = "Para one.\n\nPara two.\n";
+    for (t, want) in [
+        ("```js x", r"\```js x"),
+        ("~~~ x", r"\~~~ x"),
+        ("# x", r"\# x"),
+        ("- x", r"\- x"),
+        ("1984. x", r"1984\. x"),
+        ("> x", r"\> x"),
+        ("a\n---", "a\n\\---"),
+        ("a\n=", "a\n\\="),
+        ("a\n# b", "a\n\\# b"),
+    ] {
+        assert_eq!(one(src, "u1", t), format!("{want}\n\nPara two.\n"), "{t}");
+    }
+    // a code span with three backticks is no fence, and plain text is untouched
+    assert_eq!(one(src, "u1", "```a``` x"), "```a``` x\n\nPara two.\n");
+    assert_eq!(one(src, "u1", "x - y # z"), "x - y # z\n\nPara two.\n");
+    // four columns of indent would be an indented code block
+    assert_eq!(one(src, "u1", "    x"), "x\n\nPara two.\n");
+}
+
+#[test]
+fn a_list_item_or_quote_translation_opens_no_block() {
+    assert_eq!(one("- item one\n", "u1", "# x"), "- \\# x\n");
+    assert_eq!(one("> quoted\n", "u1", "```x"), "> \\```x\n");
+    // heading text is inline
+    assert_eq!(one("# Title\n", "u1", "# x"), "# # x\n");
+    // a closing sequence would be dropped by the reader
+    assert_eq!(one("# Title\n", "u1", "w #"), "# w \\#\n");
+    assert_eq!(one("# Title\n", "u1", "w#"), "# w#\n");
+}
+
+#[test]
+fn a_bracket_in_link_text_keeps_the_link() {
+    let mut d = extract("See [the guide](https://x.test/g) now.\n");
+    let tgt: Vec<Inline> = d.units[0]
+        .source()
+        .into_iter()
+        .map(|i| match i {
+            Inline::Text(t) if t == "the guide" => Inline::text("p[ ]q"),
+            other => other,
+        })
+        .collect();
+    d.set_target("u1", tgt).unwrap();
+    let out = merged(&d);
+    assert_eq!(out, "See [p\\[ \\]q](https://x.test/g) now.\n");
+    assert_eq!(extract(&out).units.len(), d.units.len());
+}
+
+#[test]
+fn a_cell_translation_does_not_split_the_cell() {
+    let src = "| Name | Note |\n|---|---|\n| Lamp | Warm |\n";
+    let mut d = extract(src);
+    d.set_target("u3", vec![Inline::text(r"a | b \| c")]).unwrap();
+    let out = merged(&d);
+    assert_eq!(out, "| Name | Note |\n|---|---|\n| a \\| b \\| c | Warm |\n");
+    assert_eq!(extract(&out).units.len(), d.units.len());
+}
+
+#[test]
+fn a_plain_front_matter_value_that_goes_on_is_left_alone() {
+    let src = "---\ntitle: A plain title that\n  goes on over two lines\ndescription: A one line summary\n---\nBody text here.\n";
+    let d = extract(src);
+    assert_eq!(texts(&d), vec!["A one line summary", "Body text here."]);
+    assert_eq!(merged(&d), src);
+    // a blank line before the continuation still folds into the value; a comment line ends it
+    let d = extract("---\ntitle: First part\n\n  second part\n---\nBody text here.\n");
+    assert_eq!(texts(&d), vec!["Body text here."]);
+    let d = extract("---\ntitle: Whole value\n# a comment\nauthor: x\n---\nBody text here.\n");
+    assert_eq!(texts(&d), vec!["Whole value", "Body text here."]);
+}
+
+#[test]
+fn a_one_line_value_before_a_nested_key_or_an_indented_comment_stays_offered() {
+    // the indented lines belong to the next key, or are a comment: the value above them is still one line
+    let src = "---\ntitle: Kept title\nauthor:\n  name: x\ndescription: Kept summary\n  # an indented comment\nnotes: a plain value that\n  goes on\n---\nBody text here.\n";
+    let d = extract(src);
+    assert_eq!(texts(&d), vec!["Kept title", "Kept summary", "Body text here."]);
+    assert_eq!(merged(&d), src);
+}
+
+fn with_keys(keys: &str, locos: bool) -> ExtractOptions {
+    let mut o = ExtractOptions::default();
+    o.format_options.insert("markdown.fm_keys".into(), keys.into());
+    if locos {
+        o = o.with_profile(Some(profile::LOCOS));
+    }
+    o
+}
+
+const FM_DOC: &str = "---\nTitle: T one\ndescription: D one\nkeywords: k one, k two\nsummary: S one\n---\nBody text here.\n";
+
+#[test]
+fn front_matter_allowlist_option_under_the_locos_profile() {
+    // LocOS LOC_TMS_FRONT_MATTER_KEYS="Title, keywords": those keys only, case-insensitive, in file order
+    let o = with_keys("Title, keywords", true);
+    let mut d = MarkdownFilter.extract(FM_DOC.as_bytes(), &o).unwrap();
+    assert_eq!(texts(&d), vec!["T one", "k one, k two", "Body text here."]);
+    let mo = MergeOptions::new().with_profile(Some(profile::LOCOS));
+    assert_eq!(MarkdownFilter.merge_with(&d, &mo).unwrap(), FM_DOC.as_bytes());
+    // the merge walks with the keys the document was extracted with (they travel in the skeleton)
+    let (k, b) = (d.units[1].segments[0].id.clone(), d.units[2].segments[0].id.clone());
+    d.set_target(&k, vec![Inline::text("K eins")]).unwrap();
+    d.set_target(&b, vec![Inline::text("Text hier.")]).unwrap();
+    let out = String::from_utf8(MarkdownFilter.merge_with(&d, &mo).unwrap()).unwrap();
+    assert_eq!(out, "---\nTitle: T one\ndescription: D one\nkeywords: K eins\nsummary: S one\n---\nText hier.\n");
+    // the default list without the option; an empty list translates no front matter at all
+    let d = MarkdownFilter.extract(FM_DOC.as_bytes(), &ExtractOptions::default().with_profile(Some(profile::LOCOS))).unwrap();
+    assert_eq!(texts(&d), vec!["T one", "D one", "S one", "Body text here."]);
+    let d = MarkdownFilter.extract(FM_DOC.as_bytes(), &with_keys("", true)).unwrap();
+    assert_eq!(texts(&d), vec!["Body text here."]);
+    assert_eq!(MarkdownFilter.merge_with(&d, &mo).unwrap(), FM_DOC.as_bytes());
+}
+
+#[test]
+fn front_matter_allowlist_option_in_native_mode() {
+    let d = MarkdownFilter.extract(FM_DOC.as_bytes(), &with_keys("keywords,SUMMARY", false)).unwrap();
+    assert_eq!(texts(&d), vec!["k one, k two", "S one", "Body text here."]);
+    assert_eq!(merged(&d), FM_DOC);
+    // unset: title and description (the file's `Title` is not `title`)
+    assert_eq!(texts(&extract(FM_DOC)), vec!["D one", "Body text here."]);
+}
+
+#[test]
+fn image_inventory_under_the_locos_profile() {
+    // LocOS a11y_images: every image outside fences, on the unit of its line; empty alt text names the file
+    let src = "---\ntitle: Pics\n---\n![](img/one.png \"t\")\n\n```\n![](in/fence.png)\n```\n\nSee ![A cat](cat.png) and ![ ](x/two.gif).\n\n![ok](three.png)\n";
+    let d = MarkdownFilter.extract(src.as_bytes(), &ExtractOptions::default().with_profile(Some(profile::LOCOS))).unwrap();
+    let extra = |i: usize, k: &str| d.units[i].context.extra.get(k).cloned();
+    assert_eq!(texts(&d), vec!["Pics", "![](img/one.png \"t\")", "See ![A cat](cat.png) and ![ ](x/two.gif).", "![ok](three.png)"]);
+    assert_eq!(extra(0, profile::A11Y_IMAGES), None);
+    assert_eq!(extra(1, profile::A11Y_IMAGES).as_deref(), Some("1"));
+    assert_eq!(extra(1, profile::A11Y_EMPTY_ALT).as_deref(), Some("one.png"));
+    assert_eq!(extra(2, profile::A11Y_IMAGES).as_deref(), Some("2"));
+    assert_eq!(extra(2, profile::A11Y_EMPTY_ALT).as_deref(), Some("two.gif"));
+    assert_eq!(extra(3, profile::A11Y_IMAGES).as_deref(), Some("1"));
+    assert_eq!(extra(3, profile::A11Y_EMPTY_ALT), None);
+}
+
+#[test]
+fn emphasis_that_would_not_flank_in_the_translation_is_repaired() {
+    // a bold run that ends in punctuation and is followed by a letter does not close in CommonMark: the edge
+    // punctuation moves outside the marks (LocOS #695), which every renderer reads the same
+    let mut d = extract("Intro text\n\n**Note (1)**\n");
+    let src = d.units[1].source();
+    d.set_target("u2", vec![src[0].clone(), Inline::text("\u{ff08}1\u{ff09}"), src[2].clone(), Inline::text("abc")]).unwrap();
+    assert_eq!(merged(&d), "Intro text\n\n\u{ff08}**1**\u{ff09}abc\n");
+    // no rearrangement works (a blank inside the punctuation): the pair is written as HTML
+    d.set_target("u2", vec![src[0].clone(), Inline::text("( x)"), src[2].clone(), Inline::text("abc")]).unwrap();
+    assert_eq!(merged(&d), "Intro text\n\n<strong>( x)</strong>abc\n");
+    // marks inside a code span are not emphasis: the pair around `( x)` closes before the backtick and stays
+    d.set_target("u2", vec![src[0].clone(), Inline::text("( x)"), src[2].clone(), Inline::text("`a**`")]).unwrap();
+    assert_eq!(merged(&d), "Intro text\n\n**( x)**`a**`\n");
+    // a translation that keeps good flanking keeps its stars
+    d.set_target("u2", vec![src[0].clone(), Inline::text("Nota"), src[2].clone(), Inline::text(" abc")]).unwrap();
+    assert_eq!(merged(&d), "Intro text\n\n**Nota** abc\n");
+    let d2 = extract(&merged(&d));
+    assert_eq!(d2.units.len(), 2);
+    // `_` glued to letters on both sides becomes `*`
+    let mut d = extract("Intro text\n\nsee _this_ one\n");
+    let src = d.units[1].source();
+    d.set_target("u2", vec![Inline::text("\u{898b}"), src[1].clone(), Inline::text("\u{3053}\u{308c}"), src[3].clone(), Inline::text("\u{3092}")]).unwrap();
+    assert_eq!(merged(&d), "Intro text\n\n\u{898b}*\u{3053}\u{308c}*\u{3092}\n");
 }

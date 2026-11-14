@@ -1,5 +1,9 @@
 //! Bilingua PO filter (gettext PO and POT). See the README.
 
+/// Skeleton schema number: bump only when this crate's skeleton layout changes (see `bilingua_model::check_parser`).
+pub const SKELETON_SCHEMA: u32 = 1;
+
+mod locos;
 mod parse;
 mod ph;
 
@@ -11,14 +15,14 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 pub struct Po;
 
 /// Reserved code ids (start with `~`, never a numeric tag id).
-const RAW: &str = "~raw"; // original msgstr field (plural: whole block on the first form)
-const FRAW: &str = "~fraw"; // original text of this form's own field
-const FLAGS: &str = "~fl"; // original `#,` line that holds "fuzzy"
-const ENTRY: &str = "~e"; // entry id, shared by all forms
-const MID: &str = "~mid"; // "1" when the msgid used the multi-line layout
-const OV: &str = "~ov"; // original msgstr value of this form (unescaped)
-const FMULTI: &str = "~fmulti"; // "1" when the original field used the multi-line layout
-const PN: &str = "~pn"; // number of plural forms of the entry
+const RAW: &str = "raw"; // original msgstr field (plural: whole block on the first form)
+const FRAW: &str = "fraw"; // original text of this form's own field
+const FLAGS: &str = "fl"; // original `#,` line that holds "fuzzy"
+const ENTRY: &str = "e"; // entry id, shared by all forms
+const MID: &str = "mid"; // "1" when the msgid used the multi-line layout
+const OV: &str = "ov"; // original msgstr value of this form (unescaped)
+const FMULTI: &str = "fmulti"; // "1" when the original field used the multi-line layout
+const PN: &str = "pn"; // number of plural forms of the entry
 
 /// Plural-Forms for the languages Bilingua knows. (nplurals, expression)
 fn plural_rule(lang: &str) -> Option<(usize, &'static str)> {
@@ -50,13 +54,23 @@ fn source_inlines(text: &str) -> Source {
             ph::Piece::Text(t) => inl.push(Inline::text(t)),
             ph::Piece::Ph(p) => {
                 let id = (tags.len() + 1).to_string();
-                codes.insert(id.clone(), CodeData { standalone: Some(p.to_string()), label: Some("placeholder".into()), ..Default::default() });
-                inl.push(Inline::tag(id.clone(), TagKind::Standalone, p));
+                codes.insert(id.clone(), CodeData::new().with_standalone(p.to_string()).with_label("placeholder".to_string()));
+                inl.push(placeholder_tag(&id, p));
                 tags.push((id, p.to_string()));
             }
         }
     }
     (merge_text(inl), codes, tags)
+}
+
+/// A placeholder code. One that names its argument (`%1$s`, `%(name)s`, `{name}`, `{0}`) may move in the target;
+/// `%s` and `{}` may not, their order is the argument order.
+fn placeholder_tag(id: &str, p: &str) -> Inline {
+    if bilingua_model::profile::tokens::is_named_placeholder(p) {
+        Inline::free_tag(id, p)
+    } else {
+        Inline::tag(id, TagKind::Standalone, p)
+    }
 }
 
 fn target_inlines(text: &str, tags: &[(String, String)]) -> Vec<Inline> {
@@ -71,7 +85,7 @@ fn target_inlines(text: &str, tags: &[(String, String)]) -> Vec<Inline> {
             ph::Piece::Ph(p) => match tags.iter().find(|(id, t)| t == p && !used.contains(id)) {
                 Some((id, _)) => {
                     used.insert(id.clone());
-                    out.push(Inline::tag(id.clone(), TagKind::Standalone, p));
+                    out.push(placeholder_tag(id, p));
                 }
                 None => out.push(Inline::text(p)),
             },
@@ -96,16 +110,12 @@ fn out_text(u: &Unit, v: &[Inline]) -> String {
 }
 
 fn code(u: &Unit, key: &str) -> Option<String> {
-    u.codes.get(key).and_then(|c| c.standalone.clone())
-}
-
-fn hidden(text: String) -> CodeData {
-    CodeData { standalone: Some(text), ..Default::default() }
+    u.hidden(key).map(str::to_string)
 }
 
 /// The text this unit writes as its msgstr ("" when no segment has a target).
 fn unit_text(u: &Unit) -> String {
-    if u.segments.iter().any(|s| !s.target.is_empty()) {
+    if u.segments.iter().any(|s| s.has_target()) {
         out_text(u, &u.output())
     } else {
         String::new()
@@ -118,12 +128,23 @@ fn changed(u: &Unit) -> bool {
 }
 
 fn done(u: &Unit) -> bool {
-    u.segments.iter().all(|s| !s.target.is_empty() && matches!(s.state, SegState::Translated | SegState::Confirmed))
+    u.segments.iter().all(|s| s.has_target() && matches!(s.state, SegState::Translated | SegState::Confirmed))
+}
+
+/// LocOS's PO budget (#571 gate): every escape is one replacement, so a file with more than 40 x `max_units`
+/// backslashes is refused as a limit before the entries are read.
+fn check_escape_budget(text: &str, opts: &ExtractOptions) -> Result<(), Error> {
+    let n = text.bytes().filter(|b| *b == b'\\').count();
+    bilingua_model::guard::check_budget(n, 40, "This PO file has far more escape sequences", &opts.limits())
 }
 
 impl Filter for Po {
     fn id(&self) -> &'static str {
         "po"
+    }
+
+    fn bilingual(&self) -> bool {
+        true
     }
 
     fn extensions(&self) -> &'static [&'static str] {
@@ -137,11 +158,16 @@ impl Filter for Po {
     }
 
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
-        let (body, bom) = match bytes.strip_prefix(&[0xEF, 0xBB, 0xBF]) {
-            Some(r) => (r, true),
-            None => (bytes, false),
-        };
-        let text = std::str::from_utf8(body).map_err(|e| Error::Parse { format: "po".into(), msg: format!("not valid UTF-8: {e}") })?;
+        bilingua_model::check_own_options(self, &opts.format_options)?;
+        if opts.is_profile(profile::LOCOS) {
+            let (text, tag, warnings) = locos::decode(bytes, opts)?;
+            check_escape_budget(&text, opts)?;
+            return locos::extract(&text, &tag, opts, warnings);
+        }
+        let mut dec = bilingua_model::enc::decode_text(bytes, &bilingua_model::enc::DecodeOptions::new(opts).declared())?;
+        let text_owned = std::mem::take(&mut dec.text);
+        let text = text_owned.as_str();
+        check_escape_budget(text, opts)?;
         let parsed = parse(text)?;
 
         // Header: the first entry with an empty msgid.
@@ -159,7 +185,7 @@ impl Filter for Po {
             .and_then(|l| l.to_ascii_lowercase().split("charset=").nth(1).map(|c| c.trim().to_string()))
             .is_none_or(|c| c.is_empty() || c == "utf-8" || c == "utf8" || c == "ascii" || c == "us-ascii" || c == "charset");
         if !charset_ok {
-            return Err(Error::Unsupported("PO files that are not UTF-8".into()));
+            return Err(Error::Encoding("PO files that are not UTF-8 are not supported here; re-save the file as UTF-8.".into()));
         }
         let header_lang = header_text
             .lines()
@@ -216,19 +242,17 @@ impl Filter for Po {
         if cursor < text.len() {
             parts.push(SkelPart::Raw(text[cursor..].to_string()));
         }
-        Ok(Document {
-            format: "po".into(),
-            name: None,
-            source_lang: opts.source_lang.clone(),
-            target_lang,
-            granularity: opts.granularity,
-            units,
-            skeleton: Skeleton::Text { parts, encoding: if bom { "utf-8-bom".into() } else { "utf-8".into() } },
-        })
+        bilingua_model::guard::finish(Document::new("po", units, Skeleton::text(parts, dec.encoding.as_str(), bilingua_model::parser_info!())).with_source_lang(opts.source_lang.clone()).with_target_lang(target_lang).with_granularity(opts.granularity), std::mem::take(&mut dec.warnings), &opts.limits())
     }
 
-    fn merge(&self, doc: &Document) -> Result<Vec<u8>, Error> {
-        let Skeleton::Text { parts, encoding } = &doc.skeleton else {
+    fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
+        bilingua_model::check_own_options(self, &opts.format_options)?;
+        bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
+        // a document extracted under the LocOS profile carries the decoded file and is written the LocOS way
+        if let Skeleton::Binary { data, .. } = &doc.skeleton {
+            return locos::merge(doc, data, opts);
+        }
+        let Skeleton::Text { parts, encoding, .. } = &doc.skeleton else {
             return Err(Error::Write("po needs a text skeleton".into()));
         };
         let eol = if parts.iter().any(|p| matches!(p, SkelPart::Raw(s) if s.contains("\r\n"))) { "\r\n" } else { "\n" };
@@ -242,7 +266,7 @@ impl Filter for Po {
                 *d &= done(u);
             }
         }
-        let any = doc.units.iter().any(changed);
+        let any = doc.units.iter().any(changed) || opts.stamp_lang(doc, false).is_some();
         let mut seen: HashSet<usize> = HashSet::new();
         let mut out = String::new();
         for (pi, p) in parts.iter().enumerate() {
@@ -258,7 +282,7 @@ impl Filter for Po {
                     let u = doc.units.get(*i).ok_or_else(|| Error::Write(format!("skeleton points at missing unit {i}")))?;
                     let first = seen.insert(*i);
                     let entry = code(u, ENTRY).unwrap_or_default();
-                    if first && u.codes.contains_key(FLAGS) {
+                    if first && u.has_hidden(FLAGS) {
                         out.push_str(&render_flags(u, entry_done.get(&entry).copied().unwrap_or(false)));
                     } else {
                         out.push_str(&render_msgstr(u, entry_changed.get(&entry).copied().unwrap_or(false), eol));
@@ -266,12 +290,7 @@ impl Filter for Po {
                 }
             }
         }
-        let mut bytes = Vec::new();
-        if encoding == "utf-8-bom" {
-            bytes.extend_from_slice(&[0xEF, 0xBB, 0xBF]);
-        }
-        bytes.extend_from_slice(out.as_bytes());
-        Ok(bytes)
+        bilingua_model::enc::encode_text_with(&out, encoding, opts)
     }
 }
 
@@ -337,7 +356,7 @@ fn entry_units(
         }
         if plural {
             u.context.extra.insert("plural".into(), k.to_string());
-            u.codes.insert(PN.into(), hidden(n.to_string()));
+            u.set_hidden(PN, n.to_string());
         }
         if fuzzy {
             u.context.extra.insert("fuzzy".into(), "true".into());
@@ -345,24 +364,24 @@ fn entry_units(
         if !other_flags.is_empty() {
             u.context.extra.insert("flags".into(), other_flags.join(", "));
         }
-        u.codes.insert(ENTRY.into(), hidden(entry_id.clone()));
-        u.codes.insert(OV.into(), hidden(tgt_text.to_string()));
+        u.set_hidden(ENTRY, entry_id.clone());
+        u.set_hidden(OV, tgt_text.to_string());
         if id.multiline() {
-            u.codes.insert(MID.into(), hidden("1".into()));
+            u.set_hidden(MID, "1");
         }
         if let Some(f) = field {
-            u.codes.insert(FRAW.into(), hidden(text[f.start..f.end].to_string()));
+            u.set_hidden(FRAW, text[f.start..f.end].to_string());
             if f.multiline() {
-                u.codes.insert(FMULTI.into(), hidden("1".into()));
+                u.set_hidden(FMULTI, "1");
             }
         }
         idxs.push(units.len());
         units.push(u);
     }
     let block = (first_str.start, last_str.end);
-    units[idxs[0]].codes.insert(RAW.into(), hidden(text[block.0..block.1].to_string()));
+    units[idxs[0]].set_hidden(RAW, text[block.0..block.1].to_string());
     if let Some((fs, fe)) = e.flag_line {
-        units[idxs[0]].codes.insert(FLAGS.into(), hidden(text[fs..fe].to_string()));
+        units[idxs[0]].set_hidden(FLAGS, text[fs..fe].to_string());
         edits.push((fs, fe, vec![idxs[0]]));
     }
     edits.push((block.0, block.1, idxs));
@@ -435,7 +454,9 @@ fn render_msgstr(u: &Unit, entry_changed: bool, eol: &str) -> String {
 }
 
 fn update_header(raw: &str, lang: Option<&str>, doc: &Document) -> String {
-    let Some(lang) = lang else { return raw.to_string() };
+    // the header line is a quoted PO string: only a plausible language code is written into it (a quote or a
+    // line break in the code would close the string and start new entries)
+    let Some(lang) = lang.map(str::trim).filter(|l| bilingua_model::MergeOptions::plausible_lang(l)) else { return raw.to_string() };
     if !raw.contains("msgid \"\"") {
         return raw.to_string();
     }

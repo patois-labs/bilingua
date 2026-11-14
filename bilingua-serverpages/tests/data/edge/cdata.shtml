@@ -1,0 +1,1 @@
+<p>Hello</p><![CDATA[ <img alt="cdata alt"> ]]><p>World</p><svg><![CDATA[<p>x</p>]]></svg>

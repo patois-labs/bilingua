@@ -1,0 +1,90 @@
+[
+ {
+  "name": "repair-nested",
+  "locale": null,
+  "map": {
+   "2": "Q ⟦g1⟧A ⟦g1⟧B⟦/g1⟧ C⟦/g1⟧ menu to continue. ⟦g1⟧⟦p2⟧Settings⟦/g1⟧"
+  }
+ },
+ {
+  "name": "repair-point",
+  "locale": null,
+  "map": {
+   "2": "Q menu to continue. ⟦x1⟧ ⟦p2⟧Settings"
+  }
+ },
+ {
+  "name": "repair-repeat",
+  "locale": null,
+  "map": {
+   "2": "Q menu to continue. ⟦g1⟧⟦p2⟧Settings⟦/g1⟧ ⟦g1⟧W⟦/g1⟧ E"
+  }
+ },
+ {
+  "name": "repair-stray",
+  "locale": null,
+  "map": {
+   "2": "⟦/g1⟧Q menu to continue. ⟦g1⟧⟦p2⟧Settings⟦/g1⟧ ⟦/g1⟧"
+  }
+ },
+ {
+  "name": "repair-unclosed",
+  "locale": null,
+  "map": {
+   "2": "Q menu to continue. ⟦g1⟧⟦p2⟧Settings"
+  }
+ },
+ {
+  "name": "repair-xrepeat",
+  "locale": null,
+  "map": {
+   "0": "Q Open the ⟦x1⟧Settings⟦x2⟧ menu to continue. ⟦x1⟧",
+   "1": "Q Save and close the file. ⟦p1⟧ Hello world! ⟦p1⟧",
+   "2": "Q menu to continue. ⟦g1⟧⟦p2⟧Settings⟦/g1⟧ ⟦p2⟧"
+  }
+ },
+ {
+  "name": "repair-nested-de-DE",
+  "locale": "de-DE",
+  "map": {
+   "2": "Q ⟦g1⟧A ⟦g1⟧B⟦/g1⟧ C⟦/g1⟧ menu to continue. ⟦g1⟧⟦p2⟧Settings⟦/g1⟧"
+  }
+ },
+ {
+  "name": "repair-point-de-DE",
+  "locale": "de-DE",
+  "map": {
+   "2": "Q menu to continue. ⟦x1⟧ ⟦p2⟧Settings"
+  }
+ },
+ {
+  "name": "repair-repeat-de-DE",
+  "locale": "de-DE",
+  "map": {
+   "2": "Q menu to continue. ⟦g1⟧⟦p2⟧Settings⟦/g1⟧ ⟦g1⟧W⟦/g1⟧ E"
+  }
+ },
+ {
+  "name": "repair-stray-de-DE",
+  "locale": "de-DE",
+  "map": {
+   "2": "⟦/g1⟧Q menu to continue. ⟦g1⟧⟦p2⟧Settings⟦/g1⟧ ⟦/g1⟧"
+  }
+ },
+ {
+  "name": "repair-unclosed-de-DE",
+  "locale": "de-DE",
+  "map": {
+   "2": "Q menu to continue. ⟦g1⟧⟦p2⟧Settings"
+  }
+ },
+ {
+  "name": "repair-xrepeat-de-DE",
+  "locale": "de-DE",
+  "map": {
+   "0": "Q Open the ⟦x1⟧Settings⟦x2⟧ menu to continue. ⟦x1⟧",
+   "1": "Q Save and close the file. ⟦p1⟧ Hello world! ⟦p1⟧",
+   "2": "Q menu to continue. ⟦g1⟧⟦p2⟧Settings⟦/g1⟧ ⟦p2⟧"
+  }
+ }
+]

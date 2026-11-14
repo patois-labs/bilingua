@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="windows-1256"?>
+<WixLocalization Culture="ar-xx" xmlns="http://schemas.microsoft.com/wix/2006/localization">
+  <String Id="Welcome">مرحبا بكم في لارتشمور</String>
+  <String Id="Quit" Value="مرحبا بكم في لارتشمور!" />
+</WixLocalization>

@@ -1,0 +1,10 @@
+{
+  "cart.count": {
+    "defaultMessage": "{itemCount, plural, one{# item} other{# items}} in your cart",
+    "description": "Cart badge"
+  },
+  "app.welcome": {
+    "defaultMessage": "Welcome back, {name}!",
+    "description": {"context": "home", "note": "keep it short"}
+  }
+}

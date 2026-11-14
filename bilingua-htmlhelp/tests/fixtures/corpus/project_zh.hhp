@@ -1,0 +1,18 @@
+[OPTIONS]
+Compatibility=1.1 or later
+Compiled file=manual.chm
+Contents file=toc.hhc
+Default topic=html/zh/start.htm
+Display compile progress=No
+Index file=index.hhk
+Language=0x804 Chinese (Simplified, China)
+Title=面包店手册
+
+[WINDOWS]
+main="面包店帮助","toc.hhc","index.hhk","html/zh/start.htm","html/zh/start.htm",,,,,0x23520,,0x387e,,,,,,,,0
+
+[FILES]
+html/zh/start.htm
+; Title=not an option here
+
+[INFOTYPES]

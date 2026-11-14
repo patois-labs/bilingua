@@ -1,0 +1,28 @@
+{
+ "parse": {
+  "columns": "source=1,target=6,context=3,header=yes",
+  "source_locale": "en-US",
+  "target_locales": [
+   "de-DE"
+  ]
+ },
+ "units": [
+  {
+   "p_index": 0,
+   "text": " Padded ",
+   "style": "",
+   "note": "Notes: 2.5"
+  }
+ ],
+ "error": false,
+ "builds": [
+  {
+   "name": "b",
+   "locale": "de-DE",
+   "map": {
+    "0": "T  Padded "
+   },
+   "file": "fuzz_014.b.xlsx"
+  }
+ ]
+}

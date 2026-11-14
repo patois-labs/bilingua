@@ -1,0 +1,554 @@
+{
+ "format": "xlsx",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "DE Quarterly report",
+   "style": ""
+  },
+  {
+   "p_index": 1,
+   "text": "DE Bold title",
+   "style": ""
+  },
+  {
+   "p_index": 2,
+   "text": "DE Mixed run text",
+   "style": ""
+  },
+  {
+   "p_index": 3,
+   "text": "DE Inline note",
+   "style": ""
+  },
+  {
+   "p_index": 4,
+   "text": "DE Plain str cell",
+   "style": ""
+  },
+  {
+   "p_index": 5,
+   "text": "DE Quarterly report",
+   "style": ""
+  },
+  {
+   "p_index": 6,
+   "text": "DE Implicit row cell",
+   "style": ""
+  },
+  {
+   "p_index": 7,
+   "text": "DE Second sheet text",
+   "style": ""
+  },
+  {
+   "p_index": 8,
+   "text": "DE Box line one",
+   "style": "text box"
+  },
+  {
+   "p_index": 9,
+   "text": "DE Box line two",
+   "style": "text box"
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "zip": [
+    {
+     "name": "[Content_Types].xml",
+     "same": true
+    },
+    {
+     "name": "_rels/.rels",
+     "same": true
+    },
+    {
+     "name": "xl/workbook.xml",
+     "same": true
+    },
+    {
+     "name": "xl/_rels/workbook.xml.rels",
+     "same": true
+    },
+    {
+     "name": "xl/worksheets/sheet1.xml",
+     "same": true
+    },
+    {
+     "name": "xl/worksheets/_rels/sheet1.xml.rels",
+     "same": true
+    },
+    {
+     "name": "xl/worksheets/sheet2.xml",
+     "same": true
+    },
+    {
+     "name": "xl/sharedStrings.xml",
+     "same": true
+    },
+    {
+     "name": "xl/styles.xml",
+     "same": true
+    },
+    {
+     "name": "xl/calcChain.xml",
+     "same": true
+    },
+    {
+     "name": "xl/comments1.xml",
+     "same": true
+    },
+    {
+     "name": "xl/drawings/vmlDrawing1.vml",
+     "same": true
+    },
+    {
+     "name": "xl/drawings/drawing1.xml",
+     "same": true
+    },
+    {
+     "name": "xl/drawings/_rels/drawing1.xml.rels",
+     "same": true
+    },
+    {
+     "name": "xl/media/image1.emf",
+     "same": true
+    },
+    {
+     "name": "xl/charts/chart1.xml",
+     "same": true
+    },
+    {
+     "name": "xl/printerSettings/printerSettings1.bin",
+     "same": true
+    },
+    {
+     "name": "docProps/core.xml",
+     "same": true
+    }
+   ]
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü DE Quarterly report",
+    "1": "Ü DE Bold title",
+    "2": "Ü DE Mixed run text",
+    "3": "Ü DE Inline note",
+    "4": "Ü DE Plain str cell",
+    "5": "Ü DE Quarterly report",
+    "6": "Ü DE Implicit row cell",
+    "7": "Ü DE Second sheet text",
+    "8": "Ü DE Box line one",
+    "9": "Ü DE Box line two"
+   },
+   "zip": [
+    {
+     "name": "[Content_Types].xml",
+     "same": true
+    },
+    {
+     "name": "_rels/.rels",
+     "same": true
+    },
+    {
+     "name": "xl/workbook.xml",
+     "same": true
+    },
+    {
+     "name": "xl/_rels/workbook.xml.rels",
+     "same": true
+    },
+    {
+     "name": "xl/worksheets/sheet1.xml",
+     "sha1": "84deb6678287ec9b2f07db7144ac711a82b197b3"
+    },
+    {
+     "name": "xl/worksheets/_rels/sheet1.xml.rels",
+     "same": true
+    },
+    {
+     "name": "xl/worksheets/sheet2.xml",
+     "sha1": "ddf9534b868cced906c4bd2fb19e291f7b64698b"
+    },
+    {
+     "name": "xl/sharedStrings.xml",
+     "sha1": "f6040c37e0392fce48b3276f79eceb0cb80d8078"
+    },
+    {
+     "name": "xl/styles.xml",
+     "same": true
+    },
+    {
+     "name": "xl/calcChain.xml",
+     "same": true
+    },
+    {
+     "name": "xl/comments1.xml",
+     "same": true
+    },
+    {
+     "name": "xl/drawings/vmlDrawing1.vml",
+     "same": true
+    },
+    {
+     "name": "xl/drawings/drawing1.xml",
+     "sha1": "59328590c6c4705c0d4cf04ff234f211454e246a"
+    },
+    {
+     "name": "xl/drawings/_rels/drawing1.xml.rels",
+     "same": true
+    },
+    {
+     "name": "xl/media/image1.emf",
+     "same": true
+    },
+    {
+     "name": "xl/charts/chart1.xml",
+     "same": true
+    },
+    {
+     "name": "xl/printerSettings/printerSettings1.bin",
+     "same": true
+    },
+    {
+     "name": "docProps/core.xml",
+     "same": true
+    }
+   ]
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "DE Quarterly report & <\"'>",
+    "2": "DE Mixed run text & <\"'>",
+    "4": "DE Plain str cell & <\"'>",
+    "6": "DE Implicit row cell & <\"'>",
+    "8": "DE Box line one & <\"'>"
+   },
+   "zip": [
+    {
+     "name": "[Content_Types].xml",
+     "same": true
+    },
+    {
+     "name": "_rels/.rels",
+     "same": true
+    },
+    {
+     "name": "xl/workbook.xml",
+     "same": true
+    },
+    {
+     "name": "xl/_rels/workbook.xml.rels",
+     "same": true
+    },
+    {
+     "name": "xl/worksheets/sheet1.xml",
+     "sha1": "243e6c2e471a743b8ae413f0831daabfc9051bd9"
+    },
+    {
+     "name": "xl/worksheets/_rels/sheet1.xml.rels",
+     "same": true
+    },
+    {
+     "name": "xl/worksheets/sheet2.xml",
+     "same": true
+    },
+    {
+     "name": "xl/sharedStrings.xml",
+     "sha1": "63fa79d7be3c4cf9490e3d9d4e20c9583eeb2eca"
+    },
+    {
+     "name": "xl/styles.xml",
+     "same": true
+    },
+    {
+     "name": "xl/calcChain.xml",
+     "same": true
+    },
+    {
+     "name": "xl/comments1.xml",
+     "same": true
+    },
+    {
+     "name": "xl/drawings/vmlDrawing1.vml",
+     "same": true
+    },
+    {
+     "name": "xl/drawings/drawing1.xml",
+     "sha1": "c0d9672ef5e07beaae084373183e956e180a5b3c"
+    },
+    {
+     "name": "xl/drawings/_rels/drawing1.xml.rels",
+     "same": true
+    },
+    {
+     "name": "xl/media/image1.emf",
+     "same": true
+    },
+    {
+     "name": "xl/charts/chart1.xml",
+     "same": true
+    },
+    {
+     "name": "xl/printerSettings/printerSettings1.bin",
+     "same": true
+    },
+    {
+     "name": "docProps/core.xml",
+     "sha1": "0946500c127e13af655022401a3c935cd13fe2f4"
+    }
+   ]
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "zip": [
+    {
+     "name": "[Content_Types].xml",
+     "same": true
+    },
+    {
+     "name": "_rels/.rels",
+     "same": true
+    },
+    {
+     "name": "xl/workbook.xml",
+     "same": true
+    },
+    {
+     "name": "xl/_rels/workbook.xml.rels",
+     "same": true
+    },
+    {
+     "name": "xl/worksheets/sheet1.xml",
+     "same": true
+    },
+    {
+     "name": "xl/worksheets/_rels/sheet1.xml.rels",
+     "same": true
+    },
+    {
+     "name": "xl/worksheets/sheet2.xml",
+     "same": true
+    },
+    {
+     "name": "xl/sharedStrings.xml",
+     "same": true
+    },
+    {
+     "name": "xl/styles.xml",
+     "same": true
+    },
+    {
+     "name": "xl/calcChain.xml",
+     "same": true
+    },
+    {
+     "name": "xl/comments1.xml",
+     "same": true
+    },
+    {
+     "name": "xl/drawings/vmlDrawing1.vml",
+     "same": true
+    },
+    {
+     "name": "xl/drawings/drawing1.xml",
+     "same": true
+    },
+    {
+     "name": "xl/drawings/_rels/drawing1.xml.rels",
+     "same": true
+    },
+    {
+     "name": "xl/media/image1.emf",
+     "same": true
+    },
+    {
+     "name": "xl/charts/chart1.xml",
+     "same": true
+    },
+    {
+     "name": "xl/printerSettings/printerSettings1.bin",
+     "same": true
+    },
+    {
+     "name": "docProps/core.xml",
+     "sha1": "0946500c127e13af655022401a3c935cd13fe2f4"
+    }
+   ]
+  },
+  {
+   "name": "escape-ar-SA",
+   "locale": "ar-SA",
+   "map": {
+    "0": "DE Quarterly report & <\"'>",
+    "2": "DE Mixed run text & <\"'>",
+    "4": "DE Plain str cell & <\"'>",
+    "6": "DE Implicit row cell & <\"'>",
+    "8": "DE Box line one & <\"'>"
+   },
+   "zip": [
+    {
+     "name": "[Content_Types].xml",
+     "same": true
+    },
+    {
+     "name": "_rels/.rels",
+     "same": true
+    },
+    {
+     "name": "xl/workbook.xml",
+     "same": true
+    },
+    {
+     "name": "xl/_rels/workbook.xml.rels",
+     "same": true
+    },
+    {
+     "name": "xl/worksheets/sheet1.xml",
+     "sha1": "ffdd78cf73d99e8784daa1865237656b1c5c37e5"
+    },
+    {
+     "name": "xl/worksheets/_rels/sheet1.xml.rels",
+     "same": true
+    },
+    {
+     "name": "xl/worksheets/sheet2.xml",
+     "sha1": "dbe6d4a24ca42cdae7d50e94e9e29110d3b6223f"
+    },
+    {
+     "name": "xl/sharedStrings.xml",
+     "sha1": "63fa79d7be3c4cf9490e3d9d4e20c9583eeb2eca"
+    },
+    {
+     "name": "xl/styles.xml",
+     "same": true
+    },
+    {
+     "name": "xl/calcChain.xml",
+     "same": true
+    },
+    {
+     "name": "xl/comments1.xml",
+     "same": true
+    },
+    {
+     "name": "xl/drawings/vmlDrawing1.vml",
+     "same": true
+    },
+    {
+     "name": "xl/drawings/drawing1.xml",
+     "sha1": "92dda0d63c07f70445fd04aa627831d4c4d54505"
+    },
+    {
+     "name": "xl/drawings/_rels/drawing1.xml.rels",
+     "same": true
+    },
+    {
+     "name": "xl/media/image1.emf",
+     "same": true
+    },
+    {
+     "name": "xl/charts/chart1.xml",
+     "same": true
+    },
+    {
+     "name": "xl/printerSettings/printerSettings1.bin",
+     "same": true
+    },
+    {
+     "name": "docProps/core.xml",
+     "sha1": "85236976b8af926fd9a6f91ac93a77642280da55"
+    }
+   ]
+  },
+  {
+   "name": "none-ar-SA",
+   "locale": "ar-SA",
+   "map": {},
+   "zip": [
+    {
+     "name": "[Content_Types].xml",
+     "same": true
+    },
+    {
+     "name": "_rels/.rels",
+     "same": true
+    },
+    {
+     "name": "xl/workbook.xml",
+     "same": true
+    },
+    {
+     "name": "xl/_rels/workbook.xml.rels",
+     "same": true
+    },
+    {
+     "name": "xl/worksheets/sheet1.xml",
+     "sha1": "6f80837f16fba1d001e5d070424f2b1d27917b22"
+    },
+    {
+     "name": "xl/worksheets/_rels/sheet1.xml.rels",
+     "same": true
+    },
+    {
+     "name": "xl/worksheets/sheet2.xml",
+     "sha1": "dbe6d4a24ca42cdae7d50e94e9e29110d3b6223f"
+    },
+    {
+     "name": "xl/sharedStrings.xml",
+     "same": true
+    },
+    {
+     "name": "xl/styles.xml",
+     "same": true
+    },
+    {
+     "name": "xl/calcChain.xml",
+     "same": true
+    },
+    {
+     "name": "xl/comments1.xml",
+     "same": true
+    },
+    {
+     "name": "xl/drawings/vmlDrawing1.vml",
+     "same": true
+    },
+    {
+     "name": "xl/drawings/drawing1.xml",
+     "same": true
+    },
+    {
+     "name": "xl/drawings/_rels/drawing1.xml.rels",
+     "same": true
+    },
+    {
+     "name": "xl/media/image1.emf",
+     "same": true
+    },
+    {
+     "name": "xl/charts/chart1.xml",
+     "same": true
+    },
+    {
+     "name": "xl/printerSettings/printerSettings1.bin",
+     "same": true
+    },
+    {
+     "name": "docProps/core.xml",
+     "sha1": "85236976b8af926fd9a6f91ac93a77642280da55"
+    }
+   ]
+  }
+ ]
+}

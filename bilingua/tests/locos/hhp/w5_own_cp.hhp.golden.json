@@ -1,0 +1,60 @@
+{
+ "format": "hhp",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Справка",
+   "style": ""
+  },
+  {
+   "p_index": 1,
+   "text": "Главная",
+   "style": ""
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "W09QVElPTlNdDQpDb21wYXRpYmlsaXR5PTEuMSBvciBsYXRlcg0KQ29udGVudHMgZmlsZT10b2MuaGhjDQpMYW5ndWFnZT0weDQxOSBSdXNzaWFuDQpUaXRsZT3R7/Dg4urgDQoNCltXSU5ET1dTXQ0KbWFpbj0iw+vg4u3g/yIsInRvYy5oaGMiLCwsLCwsLCwweDI1MjAsLDB4MzAwNiwsLCwsLCwsMA0KDQpbRklMRVNdDQppbmRleC5odG0NCg=="
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü Справка",
+    "1": "Ü Главная"
+   },
+   "error": "HtmlHelpEncodingError: The translated HTML Help file cannot be written in the source (Windows 1251) code page: the character 'Ü' (U+00DC) has no representation there, and HTML Help 1.x reads Contents, Index and project files in the help language's Windows ANSI code page. Fix the text (a translation or an untranslated value), or have the operator set HTMLHELP_UTF8_FALLBACK=1 to write UTF-8 instead (with a warning)."
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Справка & <\"'>"
+   },
+   "error": "HtmlHelpEncodingError: The translated HTML Help file cannot be written in the Windows-1252 code page: the character 'С' (U+0421) has no representation there, and HTML Help 1.x reads Contents, Index and project files in the help language's Windows ANSI code page. Fix the text (a translation or an untranslated value), or have the operator set HTMLHELP_UTF8_FALLBACK=1 to write UTF-8 instead (with a warning)."
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "error": "HtmlHelpEncodingError: The translated HTML Help file cannot be written in the Windows-1252 code page: the character 'С' (U+0421) has no representation there, and HTML Help 1.x reads Contents, Index and project files in the help language's Windows ANSI code page. Fix the text (a translation or an untranslated value), or have the operator set HTMLHELP_UTF8_FALLBACK=1 to write UTF-8 instead (with a warning)."
+  },
+  {
+   "name": "escape-ru-RU",
+   "locale": "ru-RU",
+   "map": {
+    "0": "Справка & <\"'>"
+   },
+   "out_b64": "W09QVElPTlNdDQpDb21wYXRpYmlsaXR5PTEuMSBvciBsYXRlcg0KQ29udGVudHMgZmlsZT10b2MuaGhjDQpMYW5ndWFnZT0weDQxOSBSdXNzaWFuIChSdXNzaWEpDQpUaXRsZT3R7/Dg4urgICYgPCInPg0KDQpbV0lORE9XU10NCm1haW49IsPr4OLt4P8iLCJ0b2MuaGhjIiwsLCwsLCwsMHgyNTIwLCwweDMwMDYsLCwsLCwsLDANCg0KW0ZJTEVTXQ0KaW5kZXguaHRtDQo="
+  },
+  {
+   "name": "none-ru-RU",
+   "locale": "ru-RU",
+   "map": {},
+   "out_b64": "W09QVElPTlNdDQpDb21wYXRpYmlsaXR5PTEuMSBvciBsYXRlcg0KQ29udGVudHMgZmlsZT10b2MuaGhjDQpMYW5ndWFnZT0weDQxOSBSdXNzaWFuIChSdXNzaWEpDQpUaXRsZT3R7/Dg4urgDQoNCltXSU5ET1dTXQ0KbWFpbj0iw+vg4u3g/yIsInRvYy5oaGMiLCwsLCwsLCwweDI1MjAsLDB4MzAwNiwsLCwsLCwsMA0KDQpbRklMRVNdDQppbmRleC5odG0NCg=="
+  }
+ ]
+}

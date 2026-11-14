@@ -1,0 +1,79 @@
+{
+ "format": "strings",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Welcome",
+   "style": ""
+  },
+  {
+   "p_index": 1,
+   "text": "Save \"all\" files",
+   "style": ""
+  },
+  {
+   "p_index": 2,
+   "text": "Line one\nLine two",
+   "style": ""
+  },
+  {
+   "p_index": 3,
+   "text": "Hello %@, you have %1$@ items",
+   "style": ""
+  },
+  {
+   "p_index": 4,
+   "text": "Café",
+   "style": ""
+  },
+  {
+   "p_index": 5,
+   "text": "plainValue",
+   "style": ""
+  },
+  {
+   "p_index": 6,
+   "text": "C:\\Temp",
+   "style": ""
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "LyogVGl0bGUgb2YgdGhlIG1haW4gd2luZG93ICovDQoiV2VsY29tZSIgPSAiV2VsY29tZSI7DQovLyBCdXR0b24gdGhhdCBzYXZlcw0KInNhdmUuYnV0dG9uIiA9ICJTYXZlIFwiYWxsXCIgZmlsZXMiOw0KIm11bHRpIiA9ICJMaW5lIG9uZVxuTGluZSB0d28iOw0KImdyZWV0aW5nIiA9ICJIZWxsbyAlQCwgeW91IGhhdmUgJTEkQCBpdGVtcyI7DQoicGN0IiA9ICIlQCI7DQoidW5pY29kZSIgPSAiQ2FmXFUwMGU5IjsNCnBsYWluS2V5ID0gcGxhaW5WYWx1ZTsNCiJiYWNrc2xhc2giID0gIkM6XFxUZW1wIjsNCg=="
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü Welcome",
+    "1": "Ü Save \"all\" files",
+    "2": "Ü Line one\nLine two",
+    "3": "Ü Hello %@, you have %1$@ items",
+    "4": "Ü Café",
+    "5": "Ü plainValue",
+    "6": "Ü C:\\Temp"
+   },
+   "out_b64": "LyogVGl0bGUgb2YgdGhlIG1haW4gd2luZG93ICovDQoiV2VsY29tZSIgPSAiw5wgV2VsY29tZSI7DQovLyBCdXR0b24gdGhhdCBzYXZlcw0KInNhdmUuYnV0dG9uIiA9ICLDnCBTYXZlIFwiYWxsXCIgZmlsZXMiOw0KIm11bHRpIiA9ICLDnCBMaW5lIG9uZVxuTGluZSB0d28iOw0KImdyZWV0aW5nIiA9ICLDnCBIZWxsbyAlQCwgeW91IGhhdmUgJTEkQCBpdGVtcyI7DQoicGN0IiA9ICIlQCI7DQoidW5pY29kZSIgPSAiw5wgQ2Fmw6kiOw0KcGxhaW5LZXkgPSAiw5wgcGxhaW5WYWx1ZSI7DQoiYmFja3NsYXNoIiA9ICLDnCBDOlxcVGVtcCI7DQo="
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Welcome & <\"'>",
+    "2": "Line one\nLine two & <\"'>",
+    "4": "Café & <\"'>",
+    "6": "C:\\Temp & <\"'>"
+   },
+   "out_b64": "LyogVGl0bGUgb2YgdGhlIG1haW4gd2luZG93ICovDQoiV2VsY29tZSIgPSAiV2VsY29tZSAmIDxcIic+IjsNCi8vIEJ1dHRvbiB0aGF0IHNhdmVzDQoic2F2ZS5idXR0b24iID0gIlNhdmUgXCJhbGxcIiBmaWxlcyI7DQoibXVsdGkiID0gIkxpbmUgb25lXG5MaW5lIHR3byAmIDxcIic+IjsNCiJncmVldGluZyIgPSAiSGVsbG8gJUAsIHlvdSBoYXZlICUxJEAgaXRlbXMiOw0KInBjdCIgPSAiJUAiOw0KInVuaWNvZGUiID0gIkNhZsOpICYgPFwiJz4iOw0KcGxhaW5LZXkgPSBwbGFpblZhbHVlOw0KImJhY2tzbGFzaCIgPSAiQzpcXFRlbXAgJiA8XCInPiI7DQo="
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "out_b64": "LyogVGl0bGUgb2YgdGhlIG1haW4gd2luZG93ICovDQoiV2VsY29tZSIgPSAiV2VsY29tZSI7DQovLyBCdXR0b24gdGhhdCBzYXZlcw0KInNhdmUuYnV0dG9uIiA9ICJTYXZlIFwiYWxsXCIgZmlsZXMiOw0KIm11bHRpIiA9ICJMaW5lIG9uZVxuTGluZSB0d28iOw0KImdyZWV0aW5nIiA9ICJIZWxsbyAlQCwgeW91IGhhdmUgJTEkQCBpdGVtcyI7DQoicGN0IiA9ICIlQCI7DQoidW5pY29kZSIgPSAiQ2FmXFUwMGU5IjsNCnBsYWluS2V5ID0gcGxhaW5WYWx1ZTsNCiJiYWNrc2xhc2giID0gIkM6XFxUZW1wIjsNCg=="
+  }
+ ]
+}

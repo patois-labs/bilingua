@@ -1,0 +1,28 @@
+[package]
+name = "bilingua-epub"
+description = "Bilingua: EPUB 2 and EPUB 3 publication filter (OPF metadata, XHTML chapters in spine order, navigation document, NCX)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+homepage.workspace = true
+include.workspace = true
+readme = "README.md"
+keywords = ["localization", "translation", "l10n", "epub", "parser"]
+categories.workspace = true
+
+[dependencies]
+bilingua-model = { workspace = true }
+bilingua-zip = { workspace = true }
+quick-xml = { workspace = true }
+bilingua-html = { workspace = true }
+regex = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+proptest = "1"
+zip = { workspace = true }
+quick-xml = { workspace = true }
+bilingua-seg = { workspace = true }

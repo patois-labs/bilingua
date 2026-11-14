@@ -1,0 +1,11 @@
+<v19.00><e9>
+@Normal=[S"",""]<*L*h"Standard"f"Helvetica"z12>
+@Heading=[S"","Body"]<*C><B>
+@Heading:<*C>Getting started
+@Body:Hello <B>bold<P> world<\n>second line
+Mail us <\@> 3 <\<> 4, <\\><\i>.
+<f"Arial"><z10>Leading text<f$><z$>
+@$:<XI,"Entry","">Leading text <I>italic<I$> again.
+
+<\#13><*R>
+<*t(36,0,"1 ")>Name<\t>Value <c"Red">Red<c$>

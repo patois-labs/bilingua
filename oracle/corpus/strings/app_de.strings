@@ -1,0 +1,15 @@
+﻿/* Shown on launch */
+"welcome" = "Willkommen";
+
+/* Menu item */
+"save_all" = "Alle Dateien sichern";
+
+/* Greeting with a name and a count */
+"greeting" = "Hallo %@, du hast %1$@ Elemente";
+
+/* Confirmation; %d is a count */
+"delete_files" = "%d Dateien löschen?";
+
+/* Title of the settings screen */
+"settings" = "Einstellungen";
+

@@ -5,6 +5,13 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 publish = false
+repository.workspace = true
+rust-version.workspace = true
+homepage.workspace = true
+include.workspace = true
+readme = "README.md"
+keywords.workspace = true
+categories.workspace = true
 
 [[bin]]
 name = "bl-dump"
@@ -12,5 +19,7 @@ path = "src/main.rs"
 
 [dependencies]
 bilingua = { workspace = true }
+bilingua-html = { workspace = true }
+bilingua-htmlcore = { workspace = true }
 serde_json = { workspace = true }
 zip = { workspace = true }

@@ -1,0 +1,22 @@
+[package]
+name = "bilingua-odf"
+description = "Bilingua: OpenDocument (odt ott ods ots odp otp odg otg) filters"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+homepage.workspace = true
+include.workspace = true
+readme = "README.md"
+keywords = ["localization", "translation", "l10n", "odf", "parser"]
+categories.workspace = true
+
+[dependencies]
+bilingua-model = { workspace = true }
+bilingua-zip = { workspace = true }
+bilingua-xmltree = { workspace = true }
+
+[dev-dependencies]
+proptest = "1"
+serde_json = { workspace = true }

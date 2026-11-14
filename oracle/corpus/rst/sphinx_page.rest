@@ -1,0 +1,26 @@
+:orphan:
+
+.. py:function:: bake(loaf, minutes=30)
+
+   Bake a loaf and return it when it is ready.
+
+   Waits for the oven to heat up first.
+
+.. seealso:: The oven guide.
+
+.. admonition:: A word of warning
+
+   Hot trays stay hot for a long time.
+
+Glossary
+--------
+
+.. only:: html
+
+   The HTML build adds a search box here.
+
+.. rubric:: Footnotes
+
+.. container:: notice
+
+   Prices change on the first of the month.

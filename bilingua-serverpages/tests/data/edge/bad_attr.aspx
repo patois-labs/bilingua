@@ -1,0 +1,1 @@
+<a href="x" <%= attrs %>>link</a>

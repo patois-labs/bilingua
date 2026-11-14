@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PackageProject xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" Guid="7d1c2a40-5b6e-4f70-8a91-0b2c3d4e5f60" PackageGuid="c0ffee00-1234-4abc-9def-001122334455" PackageName="Lumen 面包店菜单" PackageType="ProjectPackage" Comment="店面橱窗的春季菜单" Version="4.0.0.0" Name="Lumen 面包店菜单">
+  <LanguageDirections>
+    <LanguageDirection Guid="11111111-2222-4333-8444-555555555555" TargetLanguageCode="en-US" SourceLanguageCode="zh-CN" />
+  </LanguageDirections>
+</PackageProject>

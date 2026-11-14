@@ -1,0 +1,550 @@
+{
+ "format": "docx",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "External resources.",
+   "style": "Normal"
+  },
+  {
+   "p_index": 1,
+   "text": "Field ⟦x1⟧",
+   "style": "Normal"
+  },
+  {
+   "p_index": 2,
+   "text": "Field ⟦x1⟧",
+   "style": "Normal"
+  },
+  {
+   "p_index": 3,
+   "text": "Field ⟦x1⟧",
+   "style": "Normal"
+  },
+  {
+   "p_index": 4,
+   "text": "Field ⟦x1⟧",
+   "style": "Normal"
+  },
+  {
+   "p_index": 5,
+   "text": "Field ⟦x1⟧",
+   "style": "Normal"
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "zip": [
+    {
+     "name": "[Content_Types].xml",
+     "same": true
+    },
+    {
+     "name": "_rels/.rels",
+     "same": true
+    },
+    {
+     "name": "docProps/core.xml",
+     "same": true
+    },
+    {
+     "name": "docProps/app.xml",
+     "same": true
+    },
+    {
+     "name": "word/document.xml",
+     "same": true
+    },
+    {
+     "name": "word/_rels/document.xml.rels",
+     "same": true
+    },
+    {
+     "name": "word/styles.xml",
+     "same": true
+    },
+    {
+     "name": "word/stylesWithEffects.xml",
+     "same": true
+    },
+    {
+     "name": "word/settings.xml",
+     "same": true
+    },
+    {
+     "name": "word/_rels/settings.xml.rels",
+     "same": true
+    },
+    {
+     "name": "word/webSettings.xml",
+     "same": true
+    },
+    {
+     "name": "word/fontTable.xml",
+     "same": true
+    },
+    {
+     "name": "word/theme/theme1.xml",
+     "same": true
+    },
+    {
+     "name": "customXml/item1.xml",
+     "same": true
+    },
+    {
+     "name": "customXml/_rels/item1.xml.rels",
+     "same": true
+    },
+    {
+     "name": "customXml/itemProps1.xml",
+     "same": true
+    },
+    {
+     "name": "word/numbering.xml",
+     "same": true
+    },
+    {
+     "name": "word/header1.xml",
+     "same": true
+    },
+    {
+     "name": "docProps/thumbnail.jpeg",
+     "same": true
+    }
+   ]
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü External resources.",
+    "1": "Ü Field ⟦x1⟧",
+    "2": "Ü Field ⟦x1⟧",
+    "3": "Ü Field ⟦x1⟧",
+    "4": "Ü Field ⟦x1⟧",
+    "5": "Ü Field ⟦x1⟧"
+   },
+   "zip": [
+    {
+     "name": "[Content_Types].xml",
+     "same": true
+    },
+    {
+     "name": "_rels/.rels",
+     "same": true
+    },
+    {
+     "name": "docProps/core.xml",
+     "same": true
+    },
+    {
+     "name": "docProps/app.xml",
+     "same": true
+    },
+    {
+     "name": "word/document.xml",
+     "sha1": "1c440f361ef1445370950d96bc58a2b02918bb2f"
+    },
+    {
+     "name": "word/_rels/document.xml.rels",
+     "same": true
+    },
+    {
+     "name": "word/styles.xml",
+     "same": true
+    },
+    {
+     "name": "word/stylesWithEffects.xml",
+     "same": true
+    },
+    {
+     "name": "word/settings.xml",
+     "same": true
+    },
+    {
+     "name": "word/_rels/settings.xml.rels",
+     "same": true
+    },
+    {
+     "name": "word/webSettings.xml",
+     "same": true
+    },
+    {
+     "name": "word/fontTable.xml",
+     "same": true
+    },
+    {
+     "name": "word/theme/theme1.xml",
+     "same": true
+    },
+    {
+     "name": "customXml/item1.xml",
+     "same": true
+    },
+    {
+     "name": "customXml/_rels/item1.xml.rels",
+     "same": true
+    },
+    {
+     "name": "customXml/itemProps1.xml",
+     "same": true
+    },
+    {
+     "name": "word/numbering.xml",
+     "same": true
+    },
+    {
+     "name": "word/header1.xml",
+     "same": true
+    },
+    {
+     "name": "docProps/thumbnail.jpeg",
+     "same": true
+    }
+   ]
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "External resources. & <\"'>",
+    "2": "Field  & <\"'>⟦x1⟧",
+    "4": "Field  & <\"'>⟦x1⟧"
+   },
+   "zip": [
+    {
+     "name": "[Content_Types].xml",
+     "same": true
+    },
+    {
+     "name": "_rels/.rels",
+     "same": true
+    },
+    {
+     "name": "docProps/core.xml",
+     "sha1": "31685c2f6417268e6e610f3dff65a85cb1256931"
+    },
+    {
+     "name": "docProps/app.xml",
+     "same": true
+    },
+    {
+     "name": "word/document.xml",
+     "sha1": "495970bf8d1f918cc80a5add1f87f7a68a2bfe65"
+    },
+    {
+     "name": "word/_rels/document.xml.rels",
+     "same": true
+    },
+    {
+     "name": "word/styles.xml",
+     "sha1": "6e1412e2b3fb8e9b11806df6becc9393bfbbb459"
+    },
+    {
+     "name": "word/stylesWithEffects.xml",
+     "same": true
+    },
+    {
+     "name": "word/settings.xml",
+     "same": true
+    },
+    {
+     "name": "word/_rels/settings.xml.rels",
+     "same": true
+    },
+    {
+     "name": "word/webSettings.xml",
+     "same": true
+    },
+    {
+     "name": "word/fontTable.xml",
+     "same": true
+    },
+    {
+     "name": "word/theme/theme1.xml",
+     "same": true
+    },
+    {
+     "name": "customXml/item1.xml",
+     "same": true
+    },
+    {
+     "name": "customXml/_rels/item1.xml.rels",
+     "same": true
+    },
+    {
+     "name": "customXml/itemProps1.xml",
+     "same": true
+    },
+    {
+     "name": "word/numbering.xml",
+     "same": true
+    },
+    {
+     "name": "word/header1.xml",
+     "sha1": "794d08d4ad5f5f72ac99813d831871f9b9150fa7"
+    },
+    {
+     "name": "docProps/thumbnail.jpeg",
+     "same": true
+    }
+   ]
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "zip": [
+    {
+     "name": "[Content_Types].xml",
+     "same": true
+    },
+    {
+     "name": "_rels/.rels",
+     "same": true
+    },
+    {
+     "name": "docProps/core.xml",
+     "sha1": "31685c2f6417268e6e610f3dff65a85cb1256931"
+    },
+    {
+     "name": "docProps/app.xml",
+     "same": true
+    },
+    {
+     "name": "word/document.xml",
+     "sha1": "936b126346b6a52a6b3cf38cee28f47f96349682"
+    },
+    {
+     "name": "word/_rels/document.xml.rels",
+     "same": true
+    },
+    {
+     "name": "word/styles.xml",
+     "sha1": "6e1412e2b3fb8e9b11806df6becc9393bfbbb459"
+    },
+    {
+     "name": "word/stylesWithEffects.xml",
+     "same": true
+    },
+    {
+     "name": "word/settings.xml",
+     "same": true
+    },
+    {
+     "name": "word/_rels/settings.xml.rels",
+     "same": true
+    },
+    {
+     "name": "word/webSettings.xml",
+     "same": true
+    },
+    {
+     "name": "word/fontTable.xml",
+     "same": true
+    },
+    {
+     "name": "word/theme/theme1.xml",
+     "same": true
+    },
+    {
+     "name": "customXml/item1.xml",
+     "same": true
+    },
+    {
+     "name": "customXml/_rels/item1.xml.rels",
+     "same": true
+    },
+    {
+     "name": "customXml/itemProps1.xml",
+     "same": true
+    },
+    {
+     "name": "word/numbering.xml",
+     "same": true
+    },
+    {
+     "name": "word/header1.xml",
+     "sha1": "794d08d4ad5f5f72ac99813d831871f9b9150fa7"
+    },
+    {
+     "name": "docProps/thumbnail.jpeg",
+     "same": true
+    }
+   ]
+  },
+  {
+   "name": "escape-ar-SA",
+   "locale": "ar-SA",
+   "map": {
+    "0": "External resources. & <\"'>",
+    "2": "Field  & <\"'>⟦x1⟧",
+    "4": "Field  & <\"'>⟦x1⟧"
+   },
+   "zip": [
+    {
+     "name": "[Content_Types].xml",
+     "same": true
+    },
+    {
+     "name": "_rels/.rels",
+     "same": true
+    },
+    {
+     "name": "docProps/core.xml",
+     "sha1": "90644248ae04e4f34db4a6430a717c1a4c5cc77d"
+    },
+    {
+     "name": "docProps/app.xml",
+     "same": true
+    },
+    {
+     "name": "word/document.xml",
+     "sha1": "be9598cc0ab439b4c4618cc4c33cca9a76014c3d"
+    },
+    {
+     "name": "word/_rels/document.xml.rels",
+     "same": true
+    },
+    {
+     "name": "word/styles.xml",
+     "same": true
+    },
+    {
+     "name": "word/stylesWithEffects.xml",
+     "same": true
+    },
+    {
+     "name": "word/settings.xml",
+     "same": true
+    },
+    {
+     "name": "word/_rels/settings.xml.rels",
+     "same": true
+    },
+    {
+     "name": "word/webSettings.xml",
+     "same": true
+    },
+    {
+     "name": "word/fontTable.xml",
+     "same": true
+    },
+    {
+     "name": "word/theme/theme1.xml",
+     "same": true
+    },
+    {
+     "name": "customXml/item1.xml",
+     "same": true
+    },
+    {
+     "name": "customXml/_rels/item1.xml.rels",
+     "same": true
+    },
+    {
+     "name": "customXml/itemProps1.xml",
+     "same": true
+    },
+    {
+     "name": "word/numbering.xml",
+     "same": true
+    },
+    {
+     "name": "word/header1.xml",
+     "sha1": "e90ad15543a8dd59e18f3adcd48fe7215a1d3cb0"
+    },
+    {
+     "name": "docProps/thumbnail.jpeg",
+     "same": true
+    }
+   ]
+  },
+  {
+   "name": "none-ar-SA",
+   "locale": "ar-SA",
+   "map": {},
+   "zip": [
+    {
+     "name": "[Content_Types].xml",
+     "same": true
+    },
+    {
+     "name": "_rels/.rels",
+     "same": true
+    },
+    {
+     "name": "docProps/core.xml",
+     "sha1": "90644248ae04e4f34db4a6430a717c1a4c5cc77d"
+    },
+    {
+     "name": "docProps/app.xml",
+     "same": true
+    },
+    {
+     "name": "word/document.xml",
+     "sha1": "092cc6babe9eadaf32fc0c28beeb4217dfe7a1f1"
+    },
+    {
+     "name": "word/_rels/document.xml.rels",
+     "same": true
+    },
+    {
+     "name": "word/styles.xml",
+     "same": true
+    },
+    {
+     "name": "word/stylesWithEffects.xml",
+     "same": true
+    },
+    {
+     "name": "word/settings.xml",
+     "same": true
+    },
+    {
+     "name": "word/_rels/settings.xml.rels",
+     "same": true
+    },
+    {
+     "name": "word/webSettings.xml",
+     "same": true
+    },
+    {
+     "name": "word/fontTable.xml",
+     "same": true
+    },
+    {
+     "name": "word/theme/theme1.xml",
+     "same": true
+    },
+    {
+     "name": "customXml/item1.xml",
+     "same": true
+    },
+    {
+     "name": "customXml/_rels/item1.xml.rels",
+     "same": true
+    },
+    {
+     "name": "customXml/itemProps1.xml",
+     "same": true
+    },
+    {
+     "name": "word/numbering.xml",
+     "same": true
+    },
+    {
+     "name": "word/header1.xml",
+     "sha1": "e90ad15543a8dd59e18f3adcd48fe7215a1d3cb0"
+    },
+    {
+     "name": "docProps/thumbnail.jpeg",
+     "same": true
+    }
+   ]
+  }
+ ]
+}

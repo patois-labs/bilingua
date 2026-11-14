@@ -1,0 +1,14 @@
+====== Boulangerie Lumière ======
+Notre **pain au levain** est cuit chaque matin à la [[bakery:menu|vieille boulangerie]] ((Les horaires peuvent changer les jours fériés.)).
+
+  * Commandez avant midi
+  * Retrait au comptoir //café offert//
+
+^ Jour ^ Pain ^
+| Lundi | Pain de seigle |
+
+> Le pain frais embellit chaque jour.
+<code>
+echo "keep";
+</code>
+{{logo.png?100|Un pain frais sur le comptoir}}

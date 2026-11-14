@@ -22,6 +22,8 @@ Usage:
       Words per unit and in total. Han, Hiragana and Katakana count one word per character.
   bilingua pseudo <file> [--source en] [--target xx] [--mode ...] [-o out]
       Pseudo-translate: accented letters, about 30 percent longer, in brackets, tags kept.
+  bilingua options
+      List the format options (--option key=value on extract, segment, wordcount and pseudo).
 
 Formats: .txt, .json, .md (more come with the Bilingua format crates).
 ";
@@ -35,12 +37,14 @@ struct Args {
     output: Option<PathBuf>,
     skeleton: Option<PathBuf>,
     json: bool,
+    /// `--option key=value`, repeatable: `ExtractOptions::format_options`.
+    options: Vec<(String, String)>,
 }
 
 fn parse_args(args: &[String]) -> Result<Args, String> {
     let mut it = args.iter();
     let cmd = it.next().ok_or("no command given")?.clone();
-    let mut a = Args { cmd, positional: vec![], source: None, target: None, mode: Granularity::Sentence, output: None, skeleton: None, json: false };
+    let mut a = Args { cmd, positional: vec![], source: None, target: None, mode: Granularity::Sentence, output: None, skeleton: None, json: false, options: vec![] };
     while let Some(x) = it.next() {
         let mut value = |name: &str| it.next().cloned().ok_or(format!("{name} needs a value"));
         match x.as_str() {
@@ -57,6 +61,11 @@ fn parse_args(args: &[String]) -> Result<Args, String> {
             "-o" | "--output" => a.output = Some(PathBuf::from(value("-o")?)),
             "--skeleton" => a.skeleton = Some(PathBuf::from(value("--skeleton")?)),
             "--json" => a.json = true,
+            "--option" => {
+                let kv = value("--option")?;
+                let (k, v) = kv.split_once('=').ok_or(format!("--option needs key=value, not {kv}"))?;
+                a.options.push((k.trim().to_string(), v.trim().to_string()));
+            }
             s if s.starts_with('-') && s.len() > 1 => return Err(format!("unknown option {s}")),
             _ => a.positional.push(x.clone()),
         }
@@ -76,7 +85,10 @@ fn open(a: &Args, path: &str) -> Result<(Document, String), String> {
     let bytes = std::fs::read(path).map_err(|e| format!("cannot read {path}: {e}"))?;
     let name = Path::new(path).file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_else(|| path.to_string());
     let src = a.source.clone().unwrap_or_else(|| "en".to_string());
-    let opts = ExtractOptions { source_lang: Some(src.clone()), target_lang: a.target.clone(), granularity: a.mode, ..Default::default() };
+    let mut opts = ExtractOptions::new().with_source_lang(src.clone()).with_target_lang(a.target.clone()).with_granularity(a.mode);
+    for (k, v) in &a.options {
+        opts = opts.with_format_option(k.as_str(), v);
+    }
     let mut doc = extract(&name, &bytes, &opts).map_err(|e| format!("{path}: {e}"))?;
     doc.source_lang = Some(src);
     Ok((doc, name))
@@ -95,6 +107,17 @@ pub fn run(args: &[String], out: &mut dyn Write) -> Result<(), String> {
         "segment" => cmd_segment(&a, out),
         "wordcount" => cmd_wordcount(&a, out),
         "pseudo" => cmd_pseudo(&a, out),
+        "options" => {
+            for k in format_option_keys() {
+                let kind = match k.kind {
+                    OptionKind::Bool => "bool",
+                    OptionKind::Int => "int",
+                    _ => "text",
+                };
+                let _ = writeln!(out, "{}\t{kind}\t{}", k.key, k.help);
+            }
+            Ok(())
+        }
         other => Err(format!("unknown command '{other}'. Run 'bilingua help'.")),
     }
 }
@@ -132,8 +155,17 @@ fn cmd_merge(a: &Args, out: &mut dyn Write) -> Result<(), String> {
     if doc.target_lang.is_none() {
         doc.target_lang = read.target_lang.clone();
     }
+    // Locked units and locked segments keep what the file has: the XLIFF carries their targets for context only.
+    let frozen: std::collections::HashSet<String> = doc
+        .units
+        .iter()
+        .flat_map(|u| u.segments.iter().filter(move |s| !u.translate || s.state == SegState::Locked).map(|s| s.id.clone()))
+        .collect();
     let mut n = 0usize;
     for (id, target, state) in read.targets {
+        if frozen.contains(&id) {
+            continue;
+        }
         doc.set_target(&id, target).map_err(|e| format!("segment {id}: {e}"))?;
         doc.set_state(&id, state).map_err(|e| format!("segment {id}: {e}"))?;
         n += 1;
@@ -144,11 +176,32 @@ fn cmd_merge(a: &Args, out: &mut dyn Write) -> Result<(), String> {
     Ok(())
 }
 
+/// Text from the document as one printable run of a row. A file can hold escape sequences that drive a terminal
+/// (clear the screen, set the title), line breaks and tabs that would forge rows of this output, and bidirectional
+/// controls that reorder what the operator sees. Every such character is written as a visible escape: the C0 and
+/// C1 controls and DEL, the line and paragraph separators, and the bidirectional marks, embeddings, overrides and
+/// isolates.
+fn visible(s: &str) -> String {
+    let mut o = String::with_capacity(s.len());
+    for c in s.chars() {
+        match c {
+            '\n' => o.push_str("\\n"),
+            '\r' => o.push_str("\\r"),
+            '\t' => o.push_str("\\t"),
+            c if c.is_control() || matches!(c, '\u{61c}' | '\u{200e}' | '\u{200f}' | '\u{2028}'..='\u{202e}' | '\u{2066}'..='\u{2069}') => {
+                o.push_str(&format!("\\u{{{:x}}}", c as u32));
+            }
+            c => o.push(c),
+        }
+    }
+    o
+}
+
 fn show(inl: &[Inline]) -> String {
     inl.iter()
         .map(|i| match i {
-            Inline::Text(t) => t.replace('\n', "\\n").replace('\r', "\\r").replace('\t', "\\t"),
-            Inline::Tag { display, .. } => format!("{{{display}}}"),
+            Inline::Text(t) => visible(t),
+            Inline::Tag { display, .. } => format!("{{{}}}", visible(display)),
         })
         .collect()
 }
@@ -160,7 +213,7 @@ fn cmd_segment(a: &Args, out: &mut dyn Write) -> Result<(), String> {
         return Ok(());
     }
     for (_, s) in doc.segments() {
-        let _ = writeln!(out, "{}\t{}", s.id, show(&s.source));
+        let _ = writeln!(out, "{}\t{}", visible(&s.id), show(&s.source));
     }
     Ok(())
 }
@@ -174,7 +227,7 @@ fn cmd_wordcount(a: &Args, out: &mut dyn Write) -> Result<(), String> {
             total += n;
         }
         let what = u.context.key.clone().or_else(|| u.context.kind.clone()).unwrap_or_default();
-        let _ = writeln!(out, "{}\t{}\t{}{}", u.id, n, what, if u.translate { "" } else { "\t(locked)" });
+        let _ = writeln!(out, "{}\t{}\t{}{}", visible(&u.id), n, visible(&what), if u.translate { "" } else { "\t(locked)" });
     }
     let _ = writeln!(out, "total\t{total}\t{} units, {} segments", doc.units.len(), doc.segment_count());
     Ok(())
@@ -183,7 +236,12 @@ fn cmd_wordcount(a: &Args, out: &mut dyn Write) -> Result<(), String> {
 fn cmd_pseudo(a: &Args, out: &mut dyn Write) -> Result<(), String> {
     let path = one_file(a)?;
     let (mut doc, name) = open(a, path)?;
-    let ids: Vec<(String, Vec<Inline>)> = doc.units.iter().filter(|u| u.translate).flat_map(|u| u.segments.iter().map(|s| (s.id.clone(), s.source.clone()))).collect();
+    let ids: Vec<(String, Vec<Inline>)> = doc
+        .units
+        .iter()
+        .filter(|u| u.translate)
+        .flat_map(|u| u.segments.iter().filter(|s| s.state != SegState::Locked).map(|s| (s.id.clone(), s.source.clone())))
+        .collect();
     let mut n = 0usize;
     for (id, source) in ids {
         let chars = plain_text(&source).chars().count();

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2" xmlns:gs4tr="http://www.gs4tr.org/schema/xliff-ext">
+  <file original="notes.html" source-language="en-US" target-language="nl-NL" datatype="html">
+    <body>
+      <trans-unit id="1" gs4tr:editStatus="leveraged">
+        <source>Entry #1</source>
+        <target gs4tr:score="-1" state="needs-translation" state-qualifier="x-no-match">Entry #1</target>
+      </trans-unit>
+      <trans-unit id="2">
+        <source>Plan the <g id="1">next</g> step</source>
+        <target state="needs-translation">Plan the <g id="1">next</g> step</target>
+      </trans-unit>
+      <trans-unit id="3">
+        <source>Ship it</source>
+        <target state="new">Ship it</target>
+      </trans-unit>
+      <trans-unit id="4">
+        <source>Kept as it is</source>
+        <target state="needs-translation">Kept as it is</target>
+      </trans-unit>
+      <trans-unit id="5">
+        <source>Done already</source>
+        <target state="translated">Gedaan</target>
+      </trans-unit>
+    </body>
+  </file>
+</xliff>

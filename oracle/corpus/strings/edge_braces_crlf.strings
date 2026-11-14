@@ -1,0 +1,5 @@
+{
+  // wrapped
+  "a" = "Alpha %1$@ and %2$@";
+  "b" = "Beta";
+}

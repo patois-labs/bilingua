@@ -1,0 +1,18 @@
+From: Ann <ann@example.com>
+Subject: Logo
+MIME-Version: 1.0
+Content-Type: multipart/related; boundary=rel
+
+--rel
+Content-Type: text/html; charset=utf-8
+
+<html lang="en"><body><p>See our <img src="cid:logo@example.com" alt="Company logo"> logo.</p></body></html>
+--rel
+Content-Type: image/png
+Content-Transfer-Encoding: base64
+Content-ID: <logo@example.com>
+
+iVBORw0KGgoAAQIDBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHyAhIiMkJSYnKCkqKywtLi8w
+MTIzNDU2Nzg5Ojs8PT4/QEFCQ0RFRkdISUpLTE1OT1BRUlNUVVZXWFlaW1xdXl9gYWJjZGVmZ2hp
+amtsbW5vcHFyc3R1dnc=
+--rel--

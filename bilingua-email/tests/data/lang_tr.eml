@@ -1,0 +1,32 @@
+From: Ann <ann@example.com>
+To: Bob <bob@example.com>
+Subject: =?utf-8?b?U2lwYXJpxZ8gb25hecSx?=
+MIME-Version: 1.0
+Content-Type: multipart/alternative; boundary="alt-tr"
+
+Preamble text.
+--alt-tr
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: quoted-printable
+
+Merhaba Anna,
+
+Sipari=C5=9Finiz Pazartesi g=C3=BCn=C3=BC g=C3=B6nderilecek. L=C3=BCtfen ad=
+resinizi hafta sonuna kadar onaylay=C4=B1n.
+
+Sabr=C4=B1n=C4=B1z i=C3=A7in te=C5=9Fekk=C3=BCr ederiz.
+
+--=20
+Ann
+
+--alt-tr
+Content-Type: text/html; charset=utf-8
+Content-Transfer-Encoding: base64
+
+PGh0bWw+PGhlYWQ+PG1ldGEgY2hhcnNldD0idXRmLTgiPjwvaGVhZD48Ym9keT48aDE+TWVyaGFi
+YSBBbm5hLDwvaDE+PHA+U2lwYXJpxZ9pbml6IFBhemFydGVzaSBnw7xuw7wgZ8O2bmRlcmlsZWNl
+ay4gTMO8dGZlbiBhZHJlc2luaXppIGhhZnRhIHNvbnVuYSBrYWRhciBvbmF5bGF5xLFuLjwvcD48
+cD5TYWJyxLFuxLF6IGnDp2luIHRlxZ9la2vDvHIgZWRlcml6LiA8Yj5TaXBhcmnFnyBvbmF5xLE8
+L2I+PC9wPjwvYm9keT48L2h0bWw+Cg==
+
+--alt-tr--

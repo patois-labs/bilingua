@@ -108,7 +108,7 @@ fn vtt_round_trip_and_units() {
     // No identifier: the cue number is the key. Class span and timestamp.
     let second = &d.units[1];
     assert_eq!(second.context.key.as_deref(), Some("2"));
-    let labels: Vec<&str> = second.codes.values().filter_map(|c| c.label.as_deref()).filter(|l| *l != "~raw").collect();
+    let labels: Vec<&str> = second.codes.values().filter_map(|c| c.label.as_deref()).collect();
     assert!(labels.contains(&"class") && labels.contains(&"timestamp"), "{labels:?}");
     // Unclosed voice and bold become standalone tags.
     let third = &d.units[2];
@@ -247,4 +247,46 @@ fn every_prefix_of_a_file_is_safe() {
             }
         }
     }
+}
+
+#[test]
+fn cr_cr_lf_line_endings_keep_a_cue_in_one_piece() {
+    // a file saved twice has CR CR LF endings; a cue is still one cue, and a longer translation stays in it
+    let s = "1\r\r\n00:00:01,000 --> 00:00:03,000\r\r\nFirst line\r\r\nsecond line\r\r\n\r\r\n2\r\r\n00:00:04,000 --> 00:00:05,000\r\r\nOnly\r\r\n";
+    let mut d = srt(s);
+    assert_eq!(d.units.len(), 2);
+    assert_eq!(String::from_utf8(Srt.merge(&d).unwrap()).unwrap(), s);
+    let id = d.units[0].segments[0].id.clone();
+    let mut t = d.units[0].segments[0].source.clone();
+    t.insert(0, Inline::text("Zq"));
+    t.push(Inline::text("qZ"));
+    d.set_target(&id, t).unwrap();
+    let out = Srt.merge(&d).unwrap();
+    let back = srt(&String::from_utf8(out).unwrap());
+    assert_eq!(back.units.len(), 2);
+    assert!(plain_text(&back.units[0].segments[0].source).starts_with("ZqFirst line"));
+}
+
+#[test]
+fn srt_word_timing_marks_are_codes_not_text() {
+    // YouTube-style auto captions: <hh:mm:ss.mmm> before each word
+    let s = "1\n00:00:04,160 --> 00:00:08,070\nWe are <00:00:04.480>ourselves.\n\n2\n00:00:09,000 --> 00:00:10,000\nStays <1:2> text and <b>bold</b>\n";
+    let mut d = srt(s);
+    assert_eq!(String::from_utf8(Srt.merge(&d).unwrap()).unwrap(), s);
+    assert_eq!(text_of(&d, "c1"), "We are ourselves.");
+    let stamp = d.units[0].codes.values().find(|c| c.label.as_deref() == Some("timestamp")).expect("a timestamp code");
+    assert_eq!(stamp.standalone.as_deref(), Some("<00:00:04.480>"));
+    // something that only looks like a stamp stays text
+    assert_eq!(text_of(&d, "c2"), "Stays <1:2> text and bold");
+    let mut t = d.units[0].segments[0].source.clone();
+    for i in t.iter_mut() {
+        if let Inline::Text(x) = i {
+            if x == "We are " {
+                *x = "Wir sind ".into();
+            }
+        }
+    }
+    d.set_target("c1", t).unwrap();
+    let out = String::from_utf8(Srt.merge(&d).unwrap()).unwrap();
+    assert!(out.contains("Wir sind <00:00:04.480>ourselves."), "{out}");
 }

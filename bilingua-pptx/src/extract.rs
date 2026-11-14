@@ -243,6 +243,10 @@ struct Extractor {
     lang: Option<String>,
     /// Plain text of data paragraphs by (slide, text) for SmartArt drawing mirrors.
     smart: HashMap<(u32, String), String>,
+    limits: Limits,
+    /// Set when a paragraph is already longer than a unit may be; the walk makes no more units and the extraction
+    /// returns it.
+    refused: Option<Error>,
 }
 
 fn shape_info(e: &El, parent: &Shape) -> Shape {
@@ -392,6 +396,12 @@ impl Extractor {
             p.children = all;
             return;
         }
+        // A paragraph over `max_unit_chars` (one per character and per code) is refused here, before `build` works
+        // on its atoms; the finished document would be refused for the same unit.
+        if let Err(e) = check_size(&atoms, &self.limits) {
+            self.refused = Some(e);
+            return;
+        }
         let id = format!("{}-p{n}", pi.stem);
         let built = build(atoms, props_of);
 
@@ -404,7 +414,7 @@ impl Extractor {
             (_, None, None) => ("textbox", None),
         };
         let slide = pi.slide_no;
-        let mut cx = UnitContext { kind: Some(kind.into()), style, ..Default::default() };
+        let mut cx = UnitContext::new().with_kind(kind.to_string()).with_style(style);
         let shape_part = format!("shape \"{}\"", shape.name);
         let loc = match pi.kind {
             Kind::Slide => format!("slide {slide}, {shape_part}"),
@@ -452,9 +462,9 @@ impl Extractor {
         let orig = raw_of(&orig_nodes);
         let mut u = Unit::new(id.clone(), built.inlines);
         u.codes = built.codes;
-        u.codes.insert(C_ORIG.into(), CodeData { standalone: Some(orig), ..Default::default() });
-        u.codes.insert(C_LEAD.into(), CodeData { standalone: Some(lead), ..Default::default() });
-        u.codes.insert(C_PFX.into(), CodeData { standalone: Some(ns.a.pfx.clone()), ..Default::default() });
+        u.codes.insert(C_ORIG.into(), CodeData::new().with_standalone(orig));
+        u.codes.insert(C_LEAD.into(), CodeData::new().with_standalone(lead));
+        u.codes.insert(C_PFX.into(), CodeData::new().with_standalone(ns.a.pfx.clone()));
         u.context = cx;
         let plain = plain_text(&u.source());
         if matches!(pi.kind, Kind::Diagram) {
@@ -541,7 +551,14 @@ fn numbered<'a>(name: &'a str, dir: &str, prefix: &str) -> Option<(&'a str, u32)
 }
 
 pub fn extract_doc(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
-    let entries = zipio::read_zip(bytes, &ZipLimits::default())?;
+    let l = opts.limits();
+    bilingua_model::guard::check_input(bytes, &l)?;
+    bilingua_model::guard::finish(extract_doc_inner(bytes, opts)?, vec![], &l)
+}
+
+fn extract_doc_inner(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
+    let entries = zipio::read_zip(bytes, &ZipLimits::from(&opts.limits()))?;
+    bilingua_zip::check_xml_parts(&entries, &opts.limits())?;
     let ct = find_entry(&entries, "[Content_Types].xml")
         .ok_or_else(|| perr("not a PowerPoint file: no [Content_Types].xml"))?
         .1;
@@ -606,9 +623,13 @@ pub fn extract_doc(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Erro
             }
         };
     }
-    // Notes, SmartArt data and drawings belong to the slide that points at them.
+    // Notes, SmartArt data and drawings belong to the slide that points at them. A part that two
+    // slides point at goes to the first in presentation order (as the LocOS profile does), so the
+    // slides are walked in slide-number order, not in HashMap order.
     let mut owner: HashMap<String, u32> = HashMap::new();
-    for (name, n) in slide_no.clone() {
+    let mut in_order: Vec<(String, u32)> = slide_no.clone().into_iter().collect();
+    in_order.sort_by(|a, b| (a.1, &a.0).cmp(&(b.1, &b.0)));
+    for (name, n) in in_order {
         for rel in read_rels(&entries, &name) {
             if rel.typ.ends_with("/notesSlide") || rel.typ.ends_with("/diagramData") || rel.typ.ends_with("/diagramDrawing") {
                 owner.entry(rel.target).or_insert(n);
@@ -630,6 +651,8 @@ pub fn extract_doc(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Erro
         titles: HashMap::new(),
         lang: None,
         smart: HashMap::new(),
+        limits: opts.limits(),
+        refused: None,
     };
     let mut trees: HashMap<usize, Vec<Node>> = HashMap::new();
     for pi in parts.iter_mut() {
@@ -648,7 +671,7 @@ pub fn extract_doc(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Erro
         }
         let mut nodes = match parse(text) {
             Ok(n) => n,
-            Err(m) if pi.kind == Kind::Slide => return Err(perr(format!("{}: {m}", e.name))),
+            Err(m) if pi.kind == Kind::Slide => return Err(crate::xml_member_err(&e.name, &m)),
             Err(_) => continue,
         };
         let ns = Nss {
@@ -670,6 +693,9 @@ pub fn extract_doc(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Erro
         } else {
             ex.walk(pi, &ns, &mut nodes, &Shape::default(), None);
         }
+        if let Some(e) = ex.refused.take() {
+            return Err(e);
+        }
         trees.insert(pi.idx, nodes);
     }
 
@@ -678,6 +704,7 @@ pub fn extract_doc(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Erro
     let idx: HashMap<&str, usize> = units.iter().enumerate().map(|(i, u)| (u.id.as_str(), i)).collect();
 
     let mut zentries = Vec::with_capacity(entries.len() + 1);
+    let mut packed = std::collections::BTreeMap::new();
     for (i, e) in entries.iter().enumerate() {
         let data = match trees.get(&i) {
             Some(nodes) => {
@@ -685,24 +712,16 @@ pub fn extract_doc(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Erro
                 if has_marker_chars(&t) {
                     ZipData::Parts(split_template(&t, &idx)?)
                 } else {
-                    ZipData::Raw(e.data.clone())
+                    ZipData::Raw(e.keep(&mut packed))
                 }
             }
-            None => ZipData::Raw(e.data.clone()),
+            None => ZipData::Raw(e.keep(&mut packed)),
         };
-        zentries.push(ZipEntry { name: e.name.clone(), data });
+        zentries.push(ZipEntry::new(e.name.clone(), data));
     }
-    let meta = Meta { entries: entries.iter().map(|e| e.meta.clone()).collect() };
+    let meta = Meta { entries: entries.iter().map(|e| e.meta.clone()).collect(), packed };
     let meta_json = serde_json::to_vec(&meta).map_err(|e| perr(e.to_string()))?;
-    zentries.push(ZipEntry { name: META_NAME.into(), data: ZipData::Raw(meta_json) });
+    zentries.push(ZipEntry::raw(META_NAME, meta_json));
 
-    Ok(Document {
-        format: "pptx".into(),
-        name: None,
-        source_lang: opts.source_lang.clone().or(ex.lang),
-        target_lang: opts.target_lang.clone(),
-        granularity: Granularity::Paragraph,
-        units,
-        skeleton: Skeleton::Zip { entries: zentries },
-    })
+    Ok(Document::new("pptx", units, Skeleton::zip(zentries, bilingua_model::parser_info!())).with_source_lang(opts.source_lang.clone().or(ex.lang)).with_target_lang(opts.target_lang.clone()).with_granularity(Granularity::Paragraph))
 }

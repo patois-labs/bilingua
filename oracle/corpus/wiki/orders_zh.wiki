@@ -1,0 +1,21 @@
+{{Infobox bakery
+| name = Lumen
+}}
+== 露明面包房 ==
+我们的 '''酸面包''' 每天早上在 [[Bakery|老面包房]]. See https://example.com/menu for more.<ref>节假日营业时间可能调整。</ref>
+
+* 请在中午前下单
+* 到柜台取货 ''免费咖啡''
+# 支持刷卡或现金
+
+{| class="wikitable"
+|+ 每周菜单
+! 星期 !! 面包
+|-
+| 星期一 || 黑麦面包
+|}
+
+[[File:Loaf.jpg|thumb|200px|柜台上的新鲜面包]]
+
+<!-- editor note: keep -->
+[[Category:Bakery]]

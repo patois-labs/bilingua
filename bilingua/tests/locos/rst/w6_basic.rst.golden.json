@@ -1,0 +1,131 @@
+{
+ "format": "rst",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Field Guide",
+   "style": ""
+  },
+  {
+   "p_index": 1,
+   "text": "A short ⟦g1⟧field⟦/g1⟧ guide for ⟦g2⟧new⟦/g2⟧ hikers.",
+   "style": ""
+  },
+  {
+   "p_index": 2,
+   "text": "Packing",
+   "style": ""
+  },
+  {
+   "p_index": 3,
+   "text": "Bring water.",
+   "style": ""
+  },
+  {
+   "p_index": 4,
+   "text": "Bring a ⟦x1⟧ too.",
+   "style": ""
+  },
+  {
+   "p_index": 5,
+   "text": "Check the weather first.",
+   "style": ""
+  },
+  {
+   "p_index": 6,
+   "text": "Name",
+   "style": ""
+  },
+  {
+   "p_index": 7,
+   "text": "Use",
+   "style": ""
+  },
+  {
+   "p_index": 8,
+   "text": "Rope",
+   "style": ""
+  },
+  {
+   "p_index": 9,
+   "text": "Climbing",
+   "style": ""
+  },
+  {
+   "p_index": 10,
+   "text": "Item",
+   "style": ""
+  },
+  {
+   "p_index": 11,
+   "text": "Note",
+   "style": ""
+  },
+  {
+   "p_index": 12,
+   "text": "Tent",
+   "style": ""
+  },
+  {
+   "p_index": 13,
+   "text": "Dry",
+   "style": ""
+  },
+  {
+   "p_index": 14,
+   "text": "A guide for hikers",
+   "style": "meta:description"
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "RmllbGQgR3VpZGUKPT09PT09PT09PT0KCkEgc2hvcnQgKmZpZWxkKiBndWlkZSBmb3IgKipuZXcqKiBoaWtlcnMuCgouLiBtZXRhOjoKICAgOmRlc2NyaXB0aW9uOiBBIGd1aWRlIGZvciBoaWtlcnMKClBhY2tpbmcKLS0tLS0tLQoKLSBCcmluZyB3YXRlci4KLSBCcmluZyBhIGBgbWFwYGAgdG9vLgoKLi4gbm90ZTo6IENoZWNrIHRoZSB3ZWF0aGVyIGZpcnN0LgoKKy0tLS0tLS0tKy0tLS0tLS0tLS0rCnwgTmFtZSAgIHwgVXNlICAgICAgfAorPT09PT09PT0rPT09PT09PT09PSsKfCBSb3BlICAgfCBDbGltYmluZyB8CistLS0tLS0tLSstLS0tLS0tLS0tKwoKPT09PT0gID09PT09Ckl0ZW0gICBOb3RlCj09PT09ICA9PT09PQpUZW50ICAgRHJ5Cj09PT09ICA9PT09PQo="
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü Field Guide",
+    "1": "Ü A short ⟦g1⟧Ü field⟦/g1⟧Ü  guide for ⟦g2⟧Ü new⟦/g2⟧Ü  hikers.",
+    "2": "Ü Packing",
+    "3": "Ü Bring water.",
+    "4": "Ü Bring a ⟦x1⟧Ü  too.",
+    "5": "Ü Check the weather first.",
+    "6": "Ü Name",
+    "7": "Ü Use",
+    "8": "Ü Rope",
+    "9": "Ü Climbing",
+    "10": "Ü Item",
+    "11": "Ü Note",
+    "12": "Ü Tent",
+    "13": "Ü Dry",
+    "14": "Ü A guide for hikers"
+   },
+   "error": "TableFitError: reStructuredText table at line 24: the translation 'Ü Item' does not fit its cell: the first column of a simple table holds one line of 5 columns. Column widths are kept as in the source; shorten the translation or widen the column in the source file."
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Field Guide & <\"'>",
+    "2": "Packing & <\"'>",
+    "4": "Bring a  & <\"'>⟦x1⟧ too. & <\"'>",
+    "6": "Name & <\"'>",
+    "8": "Rope & <\"'>",
+    "10": "Item & <\"'>",
+    "12": "Tent & <\"'>",
+    "14": "A guide for hikers & <\"'>"
+   },
+   "error": "TableFitError: reStructuredText table at line 24: the translation 'Item & <\"'>' does not fit its cell: the first column of a simple table holds one line of 5 columns. Column widths are kept as in the source; shorten the translation or widen the column in the source file."
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "out_b64": "RmllbGQgR3VpZGUKPT09PT09PT09PT0KCkEgc2hvcnQgKmZpZWxkKiBndWlkZSBmb3IgKipuZXcqKiBoaWtlcnMuCgouLiBtZXRhOjoKICAgOmRlc2NyaXB0aW9uOiBBIGd1aWRlIGZvciBoaWtlcnMKClBhY2tpbmcKLS0tLS0tLQoKLSBCcmluZyB3YXRlci4KLSBCcmluZyBhIGBgbWFwYGAgdG9vLgoKLi4gbm90ZTo6IENoZWNrIHRoZSB3ZWF0aGVyIGZpcnN0LgoKKy0tLS0tLS0tKy0tLS0tLS0tLS0rCnwgTmFtZSAgIHwgVXNlICAgICAgfAorPT09PT09PT0rPT09PT09PT09PSsKfCBSb3BlICAgfCBDbGltYmluZyB8CistLS0tLS0tLSstLS0tLS0tLS0tKwoKPT09PT0gID09PT09Ckl0ZW0gICBOb3RlCj09PT09ICA9PT09PQpUZW50ICAgRHJ5Cj09PT09ICA9PT09PQo="
+  }
+ ]
+}

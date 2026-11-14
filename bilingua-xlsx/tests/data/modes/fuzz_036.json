@@ -1,0 +1,35 @@
+{
+ "parse": {
+  "columns": "header=auto",
+  "source_locale": "en",
+  "target_locales": [
+   "de-DE"
+  ]
+ },
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Save file",
+   "style": "",
+   "note": "Comment: Zwei"
+  },
+  {
+   "p_index": 1,
+   "text": "日本語",
+   "style": "",
+   "note": "Comment: =$A$1&B4 | Key: #N/A"
+  }
+ ],
+ "error": false,
+ "builds": [
+  {
+   "name": "b",
+   "locale": "de-DE",
+   "map": {
+    "0": "T Save file",
+    "1": "T 日本語"
+   },
+   "file": "fuzz_036.b.xlsx"
+  }
+ ]
+}

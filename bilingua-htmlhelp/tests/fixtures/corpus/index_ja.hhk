@@ -1,0 +1,22 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<HTML><HEAD><meta http-equiv="Content-Type" content="text/html; charset=shift_jis">
+<!-- Sitemap 1.0 -->
+</HEAD><BODY>
+<UL>
+	<LI> <OBJECT type="text/sitemap">
+		<param name="Name" value="パンをオンラインで注文">
+		<param name="Name" value="はじめに">
+		<param name="Local" value="html/ja/start.htm">
+		<param name="Name" value="配達と受け取り">
+		<param name="Local" value="html/ja/delivery.htm">
+		</OBJECT>
+	<LI> <OBJECT type="text/sitemap">
+		<param name="Keyword" value="よくある質問">
+		<param name="Local" value="html/ja/faq.htm">
+		</OBJECT>
+	<LI> <OBJECT type="text/sitemap">
+		<param name="Name" value="ベーカリーハンドブック">
+		<param name="See Also" value="パンをオンラインで注文">
+		</OBJECT>
+</UL>
+</BODY></HTML>

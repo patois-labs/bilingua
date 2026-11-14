@@ -1,0 +1,69 @@
+{
+ "format": "html",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Café",
+   "style": ""
+  },
+  {
+   "p_index": 1,
+   "text": "Café crème",
+   "style": ""
+  },
+  {
+   "p_index": 2,
+   "text": "Tea &amp; cake",
+   "style": ""
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "PGh0bWw+PGhlYWQ+PG1ldGEgY2hhcnNldD0id2luZG93cy0xMjUyIj48dGl0bGU+Q2Fm6TwvdGl0bGU+PC9oZWFkPgo8Ym9keT48cD5DYWbpIGNy6G1lPC9wPjxwPlRlYSAmYW1wOyBjYWtlPC9wPjwvYm9keT48L2h0bWw+Cg=="
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü Café",
+    "1": "Ü Café crème",
+    "2": "Ü Tea &amp; cake"
+   },
+   "out_b64": "PGh0bWw+PGhlYWQ+PG1ldGEgY2hhcnNldD0id2luZG93cy0xMjUyIj48dGl0bGU+3CBDYWbpPC90aXRsZT48L2hlYWQ+Cjxib2R5PjxwPtwgQ2Fm6SBjcuhtZTwvcD48cD7cIFRlYSAmYW1wOyBjYWtlPC9wPjwvYm9keT48L2h0bWw+Cg=="
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Café & <\"'>",
+    "2": "Tea &amp; cake & <\"'>"
+   },
+   "out_b64": "PGh0bWwgbGFuZz0iZGUtREUiPjxoZWFkPjxtZXRhIGNoYXJzZXQ9IndpbmRvd3MtMTI1MiI+PHRpdGxlPkNhZukgJmFtcDsgJmx0OyInJmd0OzwvdGl0bGU+PC9oZWFkPgo8Ym9keT48cD5DYWbpIGNy6G1lPC9wPjxwPlRlYSAmYW1wOyBjYWtlICZhbXA7ICZsdDsiJyZndDs8L3A+PC9ib2R5PjwvaHRtbD4K"
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "out_b64": "PGh0bWwgbGFuZz0iZGUtREUiPjxoZWFkPjxtZXRhIGNoYXJzZXQ9IndpbmRvd3MtMTI1MiI+PHRpdGxlPkNhZuk8L3RpdGxlPjwvaGVhZD4KPGJvZHk+PHA+Q2Fm6SBjcuhtZTwvcD48cD5UZWEgJmFtcDsgY2FrZTwvcD48L2JvZHk+PC9odG1sPgo="
+  },
+  {
+   "name": "fits",
+   "locale": null,
+   "map": {
+    "1": "Café au lait"
+   },
+   "out_b64": "PGh0bWw+PGhlYWQ+PG1ldGEgY2hhcnNldD0id2luZG93cy0xMjUyIj48dGl0bGU+Q2Fm6TwvdGl0bGU+PC9oZWFkPgo8Ym9keT48cD5DYWbpIGF1IGxhaXQ8L3A+PHA+VGVhICZhbXA7IGNha2U8L3A+PC9ib2R5PjwvaHRtbD4K"
+  },
+  {
+   "name": "nofit",
+   "locale": null,
+   "map": {
+    "1": "Кафе"
+   },
+   "out_b64": "PGh0bWw+PGhlYWQ+PG1ldGEgY2hhcnNldD0iVVRGLTgiPjx0aXRsZT5DYWbDqTwvdGl0bGU+PC9oZWFkPgo8Ym9keT48cD7QmtCw0YTQtTwvcD48cD5UZWEgJmFtcDsgY2FrZTwvcD48L2JvZHk+PC9odG1sPgo="
+  }
+ ]
+}

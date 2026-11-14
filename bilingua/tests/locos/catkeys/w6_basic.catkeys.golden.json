@@ -1,0 +1,46 @@
+{
+ "format": "catkeys",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Bring water",
+   "style": ""
+  },
+  {
+   "p_index": 1,
+   "text": "Open %name",
+   "style": ""
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "MQllbmdsaXNoCXgtdm5kLkZpZWxkR3VpZGUJMTIzNDU2Nzg5MApCcmluZyB3YXRlcglNYWluV2luZG93CQlCcmluZyB3YXRlcgpPcGVuICVuYW1lCU1haW5XaW5kb3cJbWVudSBpdGVtCU9wZW4gJW5hbWUK"
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü Bring water",
+    "1": "Ü Open %name"
+   },
+   "out_b64": "MQllbmdsaXNoCXgtdm5kLkZpZWxkR3VpZGUJMTIzNDU2Nzg5MApCcmluZyB3YXRlcglNYWluV2luZG93CQnDnCBCcmluZyB3YXRlcgpPcGVuICVuYW1lCU1haW5XaW5kb3cJbWVudSBpdGVtCcOcIE9wZW4gJW5hbWUK"
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Bring water & <\"'>"
+   },
+   "out_b64": "MQlnZXJtYW4gKGdlcm1hbnkpCXgtdm5kLkZpZWxkR3VpZGUJMTIzNDU2Nzg5MApCcmluZyB3YXRlcglNYWluV2luZG93CQlCcmluZyB3YXRlciAmIDxcIic+Ck9wZW4gJW5hbWUJTWFpbldpbmRvdwltZW51IGl0ZW0JT3BlbiAlbmFtZQo="
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "out_b64": "MQlnZXJtYW4gKGdlcm1hbnkpCXgtdm5kLkZpZWxkR3VpZGUJMTIzNDU2Nzg5MApCcmluZyB3YXRlcglNYWluV2luZG93CQlCcmluZyB3YXRlcgpPcGVuICVuYW1lCU1haW5XaW5kb3cJbWVudSBpdGVtCU9wZW4gJW5hbWUK"
+  }
+ ]
+}

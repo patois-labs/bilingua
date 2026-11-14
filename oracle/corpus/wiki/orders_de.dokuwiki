@@ -1,0 +1,14 @@
+====== Bäckerei Lumen ======
+Unser **Sauerteigbrot** wird jeden Morgen in der [[bakery:menu|alten Bäckerei]] ((Die Öffnungszeiten können an Feiertagen abweichen.)).
+
+  * Bestellen Sie vor Mittag
+  * Abholung an der Theke //Kaffee gratis//
+
+^ Tag ^ Brot ^
+| Montag | Roggenbrot |
+
+> Frisches Brot macht jeden Tag besser.
+<code>
+echo "keep";
+</code>
+{{logo.png?100|Ein frisches Brot auf der Theke}}

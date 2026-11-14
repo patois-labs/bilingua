@@ -5,19 +5,89 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
+rust-version.workspace = true
+homepage.workspace = true
+include.workspace = true
+readme = "README.md"
+keywords.workspace = true
+categories.workspace = true
 
 [dependencies]
 bilingua-model = { workspace = true }
+# ZIP batches (src/batch.rs) read the archive with the shared zip guard
+bilingua-zip = { workspace = true }
 bilingua-seg = { workspace = true }
 bilingua-text = { workspace = true }
 bilingua-json = { workspace = true }
+bilingua-toml = { workspace = true }
+bilingua-json5 = { workspace = true }
 bilingua-markdown = { workspace = true }
 bilingua-docx = { workspace = true }
 bilingua-html = { workspace = true }
 bilingua-po = { workspace = true }
+bilingua-properties = { workspace = true }
+bilingua-resx = { workspace = true }
+bilingua-xaml = { workspace = true }
+bilingua-ttml = { workspace = true }
+bilingua-xslt = { workspace = true }
+bilingua-xcstrings = { workspace = true }
 bilingua-subtitle = { workspace = true }
+bilingua-ass = { workspace = true }
 bilingua-xlsx = { workspace = true }
 bilingua-pptx = { workspace = true }
+bilingua-xliff = { workspace = true }
+bilingua-wordfast = { workspace = true }
+bilingua-sdl = { workspace = true }
+bilingua-xliffpkg = { workspace = true }
+bilingua-ini = { workspace = true }
+bilingua-stf = { workspace = true }
+bilingua-sdlproj = { workspace = true }
+bilingua-htmlhelp = { workspace = true }
+bilingua-image = { workspace = true }
+bilingua-pdf = { workspace = true }
+bilingua-scc = { workspace = true }
+bilingua-dxf = { workspace = true }
+bilingua-mo = { workspace = true }
+bilingua-stl = { workspace = true }
+bilingua-ftl = { workspace = true }
+bilingua-csv = { workspace = true }
+bilingua-strings = { workspace = true }
+bilingua-plist = { workspace = true }
+bilingua-resjson = { workspace = true }
+bilingua-wxl = { workspace = true }
+bilingua-desktop = { workspace = true }
+bilingua-jsmodule = { workspace = true }
+bilingua-mdx = { workspace = true }
+bilingua-xml = { workspace = true }
+bilingua-xmlres = { workspace = true }
+bilingua-richtext = { workspace = true }
+bilingua-dita = { workspace = true }
+bilingua-yaml = { workspace = true }
+bilingua-arb = { workspace = true }
+bilingua-dtd = { workspace = true }
+bilingua-xmb = { workspace = true }
+bilingua-vsdx = { workspace = true }
+bilingua-ttx = { workspace = true }
+bilingua-qtts = { workspace = true }
+bilingua-php = { workspace = true }
+bilingua-rc = { workspace = true }
+bilingua-epub = { workspace = true }
+bilingua-flare = { workspace = true }
+bilingua-idml = { workspace = true }
+bilingua-odf = { workspace = true }
+bilingua-icml = { workspace = true }
+bilingua-mif = { workspace = true }
+bilingua-xtg = { workspace = true }
+bilingua-adoc = { workspace = true }
+bilingua-latex = { workspace = true }
+bilingua-rst = { workspace = true }
+bilingua-email = { workspace = true }
+bilingua-serverpages = { workspace = true }
+bilingua-subtext = { workspace = true }
+bilingua-wiki = { workspace = true }
 
 [dev-dependencies]
+proptest = { workspace = true }
 zip = { workspace = true }
+serde_json = { workspace = true }
+quick-xml = { workspace = true }

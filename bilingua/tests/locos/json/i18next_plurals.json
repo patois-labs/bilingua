@@ -1,0 +1,15 @@
+{
+  "files": {
+    "deleted_one": "{{count}} file was deleted",
+    "deleted_other": "{{count}} files were deleted",
+    "show_other": "Show other",
+    "ratio": 1.50,
+    "big": 1E2,
+    "tiny": 0.00001,
+    "none": null,
+    "list": [1, 2.0, "x y", {"a_one": "One a", "a_other": "Many a"}]
+  },
+  "place_ordinal_one": "{{count}}st",
+  "place_ordinal_other": "{{count}}th",
+  "name": "Café menu"
+}

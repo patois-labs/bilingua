@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Welcome back <?= $name ?></title><meta name="description" content="Your orders"></head>
+<body>
+<?php // note: not text ?>
+<h1>Welcome back, <?= $name ?>!</h1>
+<?php if ($user): ?>
+<p>Sign in to continue. It's quick, and it's free. <b>Your orders</b> <?= $name ?> <a href="<?= $url ?>" title="Open the inbox">Open the inbox</a>.</p>
+<?php endif; ?>
+<img src="logo.png" alt="Company logo">
+<ul><li>Your orders</li><li><?= $name ?> &amp; Welcome back</li></ul>
+<script>var user = "<?= $name ?>"; if (a < b) { go(); }</script>
+</body>
+</html>

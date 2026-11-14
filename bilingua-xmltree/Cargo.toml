@@ -1,0 +1,16 @@
+[package]
+name = "bilingua-xmltree"
+description = "Bilingua internal: the small lxml-like XML tree the Localization OS ports (XLIFF family, DOCX, PPTX) share. Not a public API."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+homepage.workspace = true
+include.workspace = true
+readme = "README.md"
+keywords = ["localization", "translation", "l10n", "xml", "parser"]
+categories.workspace = true
+
+[dependencies]
+quick-xml = { workspace = true }

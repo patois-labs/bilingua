@@ -1,0 +1,12 @@
+{
+    // Editor settings (JSON with Comments, made-up)
+    "editor.title": "Lumen Workspace",
+    "window.welcome": "Welcome back, {{user}}",
+    /* block
+       comment */
+    "tabSize": 4,
+    "files.exclude": {
+        "**/.git": true,
+    },
+    "messages": ["Saved", "Not saved", ""],
+}

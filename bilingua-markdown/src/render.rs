@@ -29,7 +29,7 @@ pub fn inlines_md(doc: &Document, unit: &Unit, inl: &[Inline]) -> String {
 /// The current text of an alt or title unit, escaped for its place. Untouched text is written as it was.
 fn side_text(doc: &Document, kind: char, idx: usize) -> String {
     let Some(u) = doc.units.get(idx) else { return String::new() };
-    let touched = u.segments.iter().any(|s| !s.target.is_empty());
+    let touched = u.segments.iter().any(|s| s.has_target());
     let text = plain_text(&u.output());
     if !touched {
         return text;
@@ -50,7 +50,7 @@ fn side_text(doc: &Document, kind: char, idx: usize) -> String {
 /// The bytes a unit writes in the skeleton.
 pub fn render_unit(doc: &Document, unit: &Unit) -> String {
     if let Some(style) = unit.codes.get(FM_KEY) {
-        let touched = unit.segments.iter().any(|s| !s.target.is_empty());
+        let touched = unit.segments.iter().any(|s| s.has_target());
         if !touched {
             if let Some(raw) = unit.codes.get(RAW_KEY).and_then(|c| c.standalone.clone()) {
                 return raw;
@@ -60,6 +60,149 @@ pub fn render_unit(doc: &Document, unit: &Unit) -> String {
         return frontmatter::write(&text, Style::from_name(style.label.as_deref().unwrap_or("plain")));
     }
     inlines_md(doc, unit, &unit.output())
+}
+
+/// The block markers at the start of `line` (a block start): each a kind letter and the byte where a backslash
+/// makes it text. `f` code fence (three or more backticks with no backtick after them on the line, or three or more
+/// tildes), `h` ATX heading, `b` bullet, `n` list number (escaped before its `.` / `)`), `q` block quote, `r` rule
+/// or setext underline (only `=`, only `-`, three or more `*` or `_`). Quote marks are followed by the markers
+/// after them; up to three blanks of indent are allowed.
+fn block_markers(line: &str, first: bool) -> Vec<(char, usize)> {
+    let b = line.as_bytes();
+    let blank = |i: usize| matches!(b.get(i), None | Some(b' ') | Some(b'\t') | Some(b'\n') | Some(b'\r'));
+    let mut out = Vec::new();
+    let mut i = 0;
+    loop {
+        let st = i;
+        while i < b.len() && (b[i] == b' ' || b[i] == b'\t') {
+            i += 1;
+        }
+        if i - st > 3 {
+            return out;
+        }
+        if b.get(i) == Some(&b'>') {
+            out.push(('q', i));
+            i += 1;
+            continue;
+        }
+        break;
+    }
+    let rest = &b[i..];
+    let body: Vec<u8> = rest.iter().copied().filter(|c| !matches!(c, b' ' | b'\t' | b'\n' | b'\r')).collect();
+    let run = |c: u8| rest.iter().take_while(|&&x| x == c).count();
+    if let Some(&c) = body.first() {
+        let same = body.iter().all(|&x| x == c);
+        if same && ((matches!(c, b'=' | b'-') && !first) || (matches!(c, b'-' | b'*' | b'_') && body.len() >= 3)) {
+            out.push(('r', i));
+            return out;
+        }
+    }
+    let ticks = run(b'`');
+    if (ticks >= 3 && !rest[ticks..].contains(&b'`')) || run(b'~') >= 3 {
+        out.push(('f', i));
+    } else if (1..=6).contains(&run(b'#')) && blank(i + run(b'#')) {
+        out.push(('h', i));
+    } else if matches!(b.get(i), Some(b'-') | Some(b'+') | Some(b'*')) && blank(i + 1) {
+        out.push(('b', i));
+    } else {
+        let d = rest.iter().take_while(|c| c.is_ascii_digit()).count();
+        if (1..=9).contains(&d) && matches!(b.get(i + d), Some(b'.') | Some(b')')) && blank(i + d + 1) {
+            out.push(('n', i + d));
+        }
+    }
+    out
+}
+
+/// The lines of `text` that start a block, with whether each one does: every line after a line break, and the
+/// first line when only blanks and container marks (quote, bullet, list number) come before the unit on its line.
+fn block_lines<'a>(line_prefix: &str, text: &'a str) -> impl Iterator<Item = (&'a str, bool, bool)> {
+    let container = |c: char| matches!(c, ' ' | '\t' | '>' | '-' | '+' | '*' | '.' | ')') || c.is_ascii_digit();
+    let first = line_prefix.chars().all(container);
+    text.split_inclusive('\n').enumerate().map(move |(n, l)| (l, n > 0 || first, n == 0))
+}
+
+/// A translated unit must not start a block its source did not (LocOS trackers #704 and #790): a code fence would
+/// swallow the rest of the file, a `# `, `- `, `1. ` or `> ` would turn a paragraph or list item into a heading,
+/// list or quote. A marker of a kind the source has at none of its block starts gets a backslash, so it reads as
+/// text and prints the same. Heading text and table cells are inline, so they are left alone.
+pub fn guard_block_starts(line_prefix: &str, src: &str, text: &str) -> String {
+    let mut seen: Vec<char> = Vec::new();
+    for (line, at_start, first) in block_lines(line_prefix, src) {
+        if at_start {
+            seen.extend(block_markers(line, first).into_iter().map(|(k, _)| k));
+        }
+    }
+    let cols = |s: &str| s.chars().take_while(|c| matches!(c, ' ' | '\t')).fold(0, |w, c| if c == '\t' { w + 4 - w % 4 } else { w + 1 });
+    let mut out = String::with_capacity(text.len() + 4);
+    for (line, at_start, first) in block_lines(line_prefix, text) {
+        // four columns of indent at the unit's start would make it an indented code block: the blanks go
+        let line = if first && at_start && cols(line) >= 4 && cols(src) < 4 { line.trim_start_matches([' ', '\t']) } else { line };
+        let marks: Vec<usize> = if at_start { block_markers(line, first).into_iter().filter(|(k, _)| !seen.contains(k)).map(|(_, at)| at).collect() } else { Vec::new() };
+        let mut pos = 0;
+        for at in marks {
+            out.push_str(&line[pos..at]);
+            out.push('\\');
+            pos = at;
+        }
+        out.push_str(&line[pos..]);
+    }
+    out
+}
+
+/// A translated ATX heading must not end in a closing sequence (`# w #`): the reader drops it, so the translated
+/// `#` would be lost. Its first `#` gets a backslash (structure fuzz).
+pub fn guard_atx_close(text: &str) -> String {
+    let body = text.trim_end_matches([' ', '\t']);
+    let before = body.trim_end_matches('#');
+    if before.len() == body.len() || !(before.is_empty() || before.ends_with([' ', '\t'])) {
+        return text.to_string();
+    }
+    format!("{before}\\{}", &text[before.len()..])
+}
+
+/// A bracket in the translated text of a link would end its label early or open another one (`[p[](url)` is the
+/// text `[p` and an empty link): inside a link a `[` or `]` with no backslash before it gets one (structure fuzz).
+pub fn escape_link_text(unit: &Unit, inl: &[Inline]) -> Vec<Inline> {
+    let mut links: Vec<&str> = Vec::new();
+    inl.iter()
+        .map(|i| match i {
+            Inline::Tag { id, kind: TagKind::Open, .. } if unit.codes.get(id).and_then(|c| c.open.as_deref()).is_some_and(|o| o.starts_with('[')) => {
+                links.push(id);
+                i.clone()
+            }
+            Inline::Tag { id, kind: TagKind::Close, .. } if links.last() == Some(&id.as_str()) => {
+                links.pop();
+                i.clone()
+            }
+            Inline::Text(t) if !links.is_empty() => {
+                let mut out = String::with_capacity(t.len() + 2);
+                let mut escaped = false;
+                for c in t.chars() {
+                    if matches!(c, '[' | ']') && !escaped {
+                        out.push('\\');
+                    }
+                    out.push(c);
+                    escaped = c == '\\' && !escaped;
+                }
+                Inline::Text(out)
+            }
+            _ => i.clone(),
+        })
+        .collect()
+}
+
+/// A translated table cell must not split its cell: a `|` with no backslash before it gets one.
+pub fn guard_cell(text: &str) -> String {
+    let mut out = String::with_capacity(text.len() + 2);
+    let mut escaped = false;
+    for c in text.chars() {
+        if c == '|' && !escaped {
+            out.push('\\');
+        }
+        out.push(c);
+        escaped = c == '\\' && !escaped;
+    }
+    out
 }
 
 // Markers used only while building the preview. They are punctuation-like (Ps/Pe) so that Markdown emphasis
@@ -88,7 +231,7 @@ pub fn preview(doc: &Document) -> Option<String> {
                     if n > 0 {
                         md.push_str(&unit.separators.get(n - 1).cloned().unwrap_or_default());
                     }
-                    let inl = if seg.target.is_empty() { &seg.source } else { &seg.target };
+                    let inl = if !seg.has_target() { &seg.source } else { &seg.target };
                     md.push(SEG_OPEN);
                     md.push_str(&seg.id);
                     md.push(SEG_ID_END);
@@ -111,7 +254,7 @@ pub fn preview(doc: &Document) -> Option<String> {
 
 pub fn render_segment(doc: &Document, seg_id: &str) -> Option<String> {
     let (unit, seg) = doc.find(seg_id)?;
-    let inl = if seg.target.is_empty() { &seg.source } else { &seg.target };
+    let inl = if !seg.has_target() { &seg.source } else { &seg.target };
     let md = clean(&inlines_md(doc, unit, inl));
     let html = to_html(&md);
     let t = html.trim_end();

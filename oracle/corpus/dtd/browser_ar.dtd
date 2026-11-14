@@ -1,0 +1,16 @@
+<!-- This Source Code Form is subject to the terms of the Mozilla Public
+   - License, v. 2.0. If a copy of the MPL was not distributed with this
+   - file, You can obtain one at http://mozilla.org/MPL/2.0/. -->
+
+<!ENTITY % brandDTD SYSTEM "chrome://branding/locale/brand.dtd">
+%brandDTD;
+
+<!-- LOCALIZATION NOTE (window.title): &brandShortName; is the product name (ar). -->
+<!ENTITY window.title "&brandShortName; - مخبز لومن">
+<!ENTITY login.label "تسجيل الدخول">
+<!ENTITY login.accesskey "ت">
+<!ENTITY save.label 'حفظ وإغلاق'>
+<!ENTITY click.text "انقر على &quot;حفظ&quot; للمتابعة">
+<!ENTITY tagline.text "<html:b>خبز طازج كل صباح</html:b> &#169; 100&#037;">
+<!ENTITY ref.only "&brandShortName;">
+<!ENTITY escaped.markup "&lt;i>خبز طازج كل صباح&lt;/i> &lt;now&gt;">

@@ -1,0 +1,8 @@
+{
+ "parse": {
+  "comments": true
+ },
+ "format_options": {
+  "vsdx.translate_comments": true
+ }
+}

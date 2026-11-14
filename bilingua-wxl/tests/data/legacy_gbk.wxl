@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="gbk"?>
+<WixLocalization Culture="zh-xx" xmlns="http://schemas.microsoft.com/wix/2006/localization">
+  <String Id="Welcome">欢迎来到拉奇莫尔</String>
+  <String Id="Quit" Value="欢迎来到拉奇莫尔!" />
+</WixLocalization>

@@ -1,0 +1,14 @@
+﻿{
+    // Shown on the start page
+    "greeting"              : "Hello",
+    "_greeting.comment"     : "A welcome greeting.",
+
+    "farewell"              : "Goodbye",
+    "_farewell.comment"     : "A goodbye.",
+    "quote"                 : "Say \"cheese\" \u00e9",
+    "count"                 : "{0} new messages",
+    "id"                    : "{0}",
+    "_count.maxLength"      : 40,
+    /* grouped strings */
+    "menu"                  : { "open": "Open file", "flag": true }
+}

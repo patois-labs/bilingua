@@ -1,0 +1,40 @@
+{
+ "format": "xtg",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Café and ⟦g1⟧bold⟦/g1⟧ words.",
+   "style": "Text body"
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "PHYxMS4xMD48ZTA+DQpAVGV4dCBib2R5OkNhZo4gYW5kIDxCPmJvbGQ8Qj4gd29yZHMuDQo="
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü Café and ⟦g1⟧Ü bold⟦/g1⟧Ü  words."
+   },
+   "out_b64": "PHYxMS4xMD48ZTA+DQpAVGV4dCBib2R5OoYgQ2FmjiBhbmQgPEI+hiBib2xkPEI+hiAgd29yZHMuDQo="
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Café and  & <\"'>⟦g1⟧bold & <\"'>⟦/g1⟧ words. & <\"'>"
+   },
+   "out_b64": "PHYxMS4xMD48ZTA+DQpAVGV4dCBib2R5OkNhZo4gYW5kICAmIDxcPD4iJz48Qj5ib2xkICYgPFw8PiInPjxCPiB3b3Jkcy4gJiA8XDw+Iic+DQo="
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "out_b64": "PHYxMS4xMD48ZTA+DQpAVGV4dCBib2R5OkNhZo4gYW5kIDxCPmJvbGQ8Qj4gd29yZHMuDQo="
+  }
+ ]
+}

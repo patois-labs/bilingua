@@ -1,0 +1,64 @@
+{
+ "parse": {
+  "columns": "source=1,target=6,context=3,header=yes",
+  "source_locale": "en",
+  "target_locales": [
+   "de",
+   "fr"
+  ]
+ },
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Save file",
+   "style": "",
+   "note": "Comment: x"
+  },
+  {
+   "p_index": 1,
+   "text": "Open the door",
+   "style": "",
+   "note": ""
+  },
+  {
+   "p_index": 2,
+   "text": "Hello",
+   "style": "",
+   "note": ""
+  },
+  {
+   "p_index": 3,
+   "text": "a&b",
+   "style": "",
+   "note": "Comment: Padded"
+  },
+  {
+   "p_index": 4,
+   "text": "Hello",
+   "style": "",
+   "note": "Notes: 2024-01-05 08:00:00"
+  },
+  {
+   "p_index": 5,
+   "text": "Open the door",
+   "style": "",
+   "note": "Notes: 12:30:15.500000"
+  }
+ ],
+ "error": false,
+ "builds": [
+  {
+   "name": "b",
+   "locale": "fr",
+   "map": {
+    "0": "T Save file",
+    "1": "T Open the door",
+    "2": "T Hello",
+    "3": "T a&b",
+    "4": "Hello",
+    "5": "T Open the door"
+   },
+   "file": "fuzz_020.b.xlsx"
+  }
+ ]
+}

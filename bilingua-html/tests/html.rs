@@ -6,7 +6,7 @@ fn extract(src: &str) -> Document {
 }
 
 fn extract_to(src: &str, lang: &str) -> Document {
-    Html.extract(src.as_bytes(), &ExtractOptions { target_lang: Some(lang.into()), ..Default::default() }).unwrap()
+    Html.extract(src.as_bytes(), &ExtractOptions::new().with_target_lang(lang)).unwrap()
 }
 
 fn merged(d: &Document) -> String {
@@ -70,23 +70,23 @@ fn eleven_languages_round_trip_and_translate() {
         let src = page(p);
         let d = round_trip(&src);
         assert_eq!(d.source_lang.as_deref(), Some(p.0));
-        // title, meta content, h1, p, alt, button, link = 7 units
+        // LocOS order: the block units (title, h1, p, button, the link), then the accessibility attributes (alt),
+        // then the page metadata (description); the lone <img> between blocks is no unit
         assert_eq!(d.units.len(), 7, "{}: {:?}", p.0, texts(&d));
         let kinds: Vec<&str> = d.units.iter().map(|u| u.context.kind.as_deref().unwrap()).collect();
-        assert_eq!(kinds, ["title", "meta", "heading", "paragraph", "alt", "button", "link"], "{}", p.0);
-        // Text survives with entities decoded.
+        assert_eq!(kinds, ["title", "heading", "paragraph", "button", "paragraph", "alt", "meta"], "{}", p.0);
+        assert_eq!(d.units[5].context.style.as_deref(), Some("a11y:img-alt"));
+        assert_eq!(d.units[6].context.style.as_deref(), Some("meta:description"));
         assert!(texts(&d).iter().any(|t| t.contains(p.3)));
 
         let mut d = extract_to(&src, p.0);
         translate_all(&mut d);
         let out = merged(&d);
         let again = extract(&out);
-        let expected: Vec<String> = texts(&d).iter().map(|t| format!("{t}~")).collect();
-        // Inline tags are kept, so the mark is added after each text piece.
         assert_eq!(again.units.len(), 7);
         assert!(out.contains("kettle.png"));
-        for (u, t) in again.units.iter().zip(&expected) {
-            assert!(plain_text(&u.source()).contains('~'), "{}: {t}", p.0);
+        for u in &again.units {
+            assert!(plain_text(&u.source()).contains('~'), "{}: {:?}", p.0, u.source());
         }
     }
 }
@@ -111,12 +111,12 @@ fn rtl_dir_added_when_missing() {
     let src = "<html lang=\"en\"><body><p>Hello there</p></body></html>";
     let mut d = extract_to(src, "ar-EG");
     translate_all(&mut d);
-    assert!(merged(&d).starts_with("<html dir=\"rtl\" lang=\"ar-EG\">") || merged(&d).starts_with("<html lang=\"ar-EG\" dir=\"rtl\">"));
-    // No lang attribute: none added.
+    assert!(merged(&d).starts_with("<html dir=\"rtl\" lang=\"ar-EG\">"), "{}", merged(&d));
+    // No lang attribute: LocOS adds one (and no dir for a left-to-right target)
     let src2 = "<html><body><p>Hello there</p></body></html>";
     let mut d2 = extract_to(src2, "fr");
     translate_all(&mut d2);
-    assert!(merged(&d2).starts_with("<html><body>"));
+    assert!(merged(&d2).starts_with("<html lang=\"fr\"><body>"), "{}", merged(&d2));
 }
 
 #[test]
@@ -160,51 +160,51 @@ fn nested_inline_tags() {
 }
 
 #[test]
-fn entities_decode_and_encode() {
+fn character_references_stay_as_typed() {
+    // LocOS: unit text is the page's text, references as typed; a translation is written with a bare `&`, `<` and
+    // `>` escaped and every reference it holds kept
     let src = "<p>Fish &amp; chips &lt;2&gt; &copy; 2026 &#8212; caf&eacute; &nbsp;ok &unknown; &#x4e2d;</p>";
     let d = round_trip(src);
-    assert_eq!(texts(&d)[0], "Fish & chips <2> \u{a9} 2026 \u{2014} caf\u{e9} \u{a0}ok &unknown; \u{4e2d}");
+    assert_eq!(texts(&d)[0], "Fish &amp; chips &lt;2&gt; &copy; 2026 &#8212; caf&eacute; &nbsp;ok &unknown; &#x4e2d;");
     let mut d = d;
-    d.set_target("u1", vec![Inline::text("A & B < C > D")]).unwrap();
-    assert_eq!(merged(&d), "<p>A &amp; B &lt; C &gt; D</p>");
+    d.set_target("u1", vec![Inline::text("A & B < C > D &copy; \"q\" 'a'")]).unwrap();
+    assert_eq!(merged(&d), "<p>A &amp; B &lt; C &gt; D &copy; \"q\" 'a'</p>");
 }
 
 #[test]
 fn attributes_are_units() {
+    // LocOS offers the accessibility attributes (quoted alt, title, aria-label of img and area; title, aria-label
+    // of a) and the page metadata, nothing else
     let src = concat!(
         "<head><meta name=\"description\" content=\"Great kettles\"><meta name=\"keywords\" content=\"kettle, tea\">",
         "<meta property=\"og:title\" content=\"Kettle shop\"><meta property=\"og:description\" content=\"Buy now\">",
         "<meta name=\"viewport\" content=\"width=device-width\"><meta charset=\"utf-8\"></head>",
         "<form><input type=\"text\" placeholder=\"Your name\" aria-label=\"Name field\"><input type=\"submit\" value=\"Send it\">",
         "<input type=\"hidden\" value=\"secret-token\"><input type=\"checkbox\" value=\"on\"></form>",
-        "<div title='Tip text'><img src=a.png alt=Unquoted><img alt=\"\" src=b.png><img alt=\"  \" src=c.png></div>"
+        "<div title='Tip text'><img src=a.png alt=Unquoted><img alt=\"\" src=b.png><img alt=\"  \" src=c.png>",
+        "<a href=\"/\" title=\"Home page\"><img src=h.png alt=\"House\"></a></div>"
     );
     let d = round_trip(src);
-    let got: Vec<(String, String)> =
-        d.units.iter().map(|u| (u.context.kind.clone().unwrap(), plain_text(&u.source()))).collect();
-    assert_eq!(
-        got,
-        vec![
-            ("meta".to_string(), "Great kettles".to_string()),
-            ("meta".to_string(), "kettle, tea".to_string()),
-            ("meta".to_string(), "Kettle shop".to_string()),
-            ("meta".to_string(), "Buy now".to_string()),
-            ("label".to_string(), "Your name".to_string()),
-            ("label".to_string(), "Name field".to_string()),
-            ("button".to_string(), "Send it".to_string()),
-            ("title".to_string(), "Tip text".to_string()),
-            ("alt".to_string(), "Unquoted".to_string()),
-        ]
-    );
-    assert_eq!(d.units[4].context.style.as_deref(), Some("input"));
-    assert_eq!(d.units[4].context.key.as_deref(), Some("placeholder"));
+    let got: Vec<(String, String, String)> =
+        d.units.iter().map(|u| (u.context.kind.clone().unwrap(), u.context.style.clone().unwrap(), plain_text(&u.source()))).collect();
+    let want = [
+        ("title", "a11y:link-title", "Home page"),
+        ("alt", "a11y:img-alt", "House"),
+        ("meta", "meta:description", "Great kettles"),
+        ("meta", "meta:keywords", "kettle, tea"),
+        ("meta", "meta:og-title", "Kettle shop"),
+        ("meta", "meta:og-description", "Buy now"),
+    ];
+    assert_eq!(got, want.iter().map(|(a, b, c)| (a.to_string(), b.to_string(), c.to_string())).collect::<Vec<_>>());
+    assert_eq!(d.units[1].context.key.as_deref(), Some("alt"));
+    assert_eq!(d.units[1].context.extra.get("element").map(String::as_str), Some("img"));
     let mut d = d;
-    d.set_target("u9", vec![Inline::text("Sin comillas")]).unwrap();
-    d.set_target("u8", vec![Inline::text("Consejo")]).unwrap();
+    d.set_target("u2", vec![Inline::text("Casa \"azul\"")]).unwrap();
+    d.set_target("u4", vec![Inline::text("tetera, t\u{e9}")]).unwrap();
     let out = merged(&d);
-    assert!(out.contains("<img src=a.png alt=\"Sin comillas\">"), "{out}");
-    assert!(out.contains("<div title=\"Consejo\">"), "{out}");
-    assert!(out.contains("<input type=\"hidden\" value=\"secret-token\">"));
+    assert!(out.contains("alt=\"Casa &quot;azul&quot;\""), "{out}");
+    assert!(out.contains("<meta name=\"keywords\" content=\"tetera, t\u{e9}\">"), "{out}");
+    assert!(out.contains("<div title='Tip text'>") && out.contains("alt=Unquoted"), "{out}");
 }
 
 #[test]
@@ -226,7 +226,7 @@ fn script_style_comments_untouched() {
 }
 
 #[test]
-fn pre_code_and_notranslate_are_protected() {
+fn code_pre_and_notranslate_as_locos() {
     let src = concat!(
         "<p>Run <code>npm install --save</code> now, then <kbd>Ctrl</kbd>+<kbd>C</kbd>.</p>\n",
         "<pre>  line one\n  line two <b>bold</b>\n</pre>\n",
@@ -236,9 +236,12 @@ fn pre_code_and_notranslate_are_protected() {
         "<p>Free text</p>\n"
     );
     let d = round_trip(src);
-    assert_eq!(texts(&d), ["Run  now, then +.", "Brand:  kettles.", "Free text"]);
+    // code and kbd are paired codes with their text inside, pre text is a unit, a notranslate run is one point
+    assert_eq!(texts(&d), ["Run npm install --save now, then Ctrl+C.", "line one\n  line two bold", "Brand:  kettles.", "Free text"]);
     let first = &d.units[0].segments[0].source;
-    assert!(first.iter().any(|i| matches!(i, Inline::Tag { kind: TagKind::Standalone, display, .. } if display == "<code>")));
+    assert!(first.iter().any(|i| matches!(i, Inline::Tag { kind: TagKind::Open, display, .. } if display == "<code>")));
+    let brand = &d.units[2];
+    assert_eq!(brand.codes["1"].standalone.as_deref(), Some("<span class=\"notranslate\">Larchmoor&reg;</span>"));
     let mut d = d;
     let mut t = d.units[0].segments[0].source.clone();
     if let Inline::Text(x) = &mut t[0] {
@@ -248,13 +251,9 @@ fn pre_code_and_notranslate_are_protected() {
     let out = merged(&d);
     assert!(out.starts_with("<p>Ejecute <code>npm install --save</code>"), "{out}");
     assert!(out.contains("<pre>  line one\n  line two <b>bold</b>\n</pre>"));
-
-    // With locked units requested, locked text appears but cannot be edited.
-    let mut dl = Html.extract(src.as_bytes(), &ExtractOptions { include_locked: true, ..Default::default() }).unwrap();
-    let locked: Vec<String> = dl.units.iter().filter(|u| !u.translate).map(|u| u.segments[0].id.clone()).collect();
-    assert_eq!(locked.len(), 2);
-    assert!(dl.set_target(&locked[0], vec![Inline::text("x")]).is_err());
-    assert_eq!(merged(&dl), src);
+    // translate="no" text is never a unit, even with include_locked
+    let dl = Html.extract(src.as_bytes(), &ExtractOptions::new().with_include_locked(true)).unwrap();
+    assert_eq!(dl.units.len(), 4);
 }
 
 #[test]
@@ -262,10 +261,11 @@ fn malformed_markup() {
     let src = "<div><p>First paragraph\n<p>Second <b>bold\n</div></div><li>Item one<li>Item two</ul><td>cell</p><p>Last";
     let d = round_trip(src);
     assert_eq!(texts(&d), ["First paragraph", "Second bold", "Item one", "Item two", "cell", "Last"]);
-    // The unclosed <b> becomes a standalone tag, not a broken pair.
+    // The unclosed <b> is an open code with no close (LocOS `⟦g1⟧bold`)
     let tags: Vec<&Inline> = d.units[1].segments[0].source.iter().filter(|i| matches!(i, Inline::Tag { .. })).collect();
     assert_eq!(tags.len(), 1);
-    assert!(matches!(tags[0], Inline::Tag { kind: TagKind::Standalone, .. }));
+    assert!(matches!(tags[0], Inline::Tag { kind: TagKind::Open, .. }));
+    assert_eq!(d.units[1].codes["1"].close, None);
     let mut d = d;
     d.set_target("u6", vec![Inline::text("Ultimo")]).unwrap();
     assert!(merged(&d).ends_with("<p>Ultimo"));
@@ -304,20 +304,20 @@ fn tables_lists_and_kinds() {
         ("list-item", "Term"),
         ("list-item", "Definition"),
         ("paragraph", "Quote text"),
-        ("alt", "Chart"),
         ("caption", "Figure one"),
         ("option", "Red"),
         ("option", "Blue"),
-        ("label", "Name"),
-        ("link", "Only a link"),
+        ("paragraph", "Name"),
+        ("paragraph", "Only a link"),
         ("summary", "More"),
         ("paragraph", "Body"),
+        ("alt", "Chart"),
     ];
     let want: Vec<(String, String)> = want.iter().map(|(a, b)| (a.to_string(), b.to_string())).collect();
     assert_eq!(got, want);
     let td = d.units.iter().find(|u| plain_text(&u.source()) == "Small").unwrap();
-    assert_eq!(td.context.style.as_deref(), Some("td"));
-    assert!(td.context.location.as_deref().unwrap().ends_with("td:nth-of-type(1)"), "{:?}", td.context.location);
+    assert_eq!(td.context.style, None, "LocOS gives body units no style");
+    assert!(td.context.location.as_deref().unwrap().ends_with("tr:nth-of-type(2) > td:nth-of-type(1)"), "{:?}", td.context.location);
 }
 
 #[test]
@@ -339,13 +339,18 @@ fn bom_and_latin1() {
     let mut d = Html.extract(&latin, &Default::default()).unwrap();
     assert_eq!(texts(&d), ["Caf\u{e9} cr\u{e8}me"]);
     assert_eq!(Html.merge(&d).unwrap(), latin);
+    d.set_target("u1", vec![Inline::text("na\u{ef}ve")]).unwrap();
+    assert_eq!(Html.merge(&d).unwrap(), b"<html><head><meta charset=\"iso-8859-1\"></head><body><p>na\xefve</p></body></html>");
+    // LocOS `encode_like`: a translation the code page cannot hold is written as UTF-8, its declaration too
     d.set_target("u1", vec![Inline::text("\u{4e2d}\u{6587} na\u{ef}ve")]).unwrap();
-    let out = Html.merge(&d).unwrap();
-    assert!(String::from_utf8_lossy(&out).contains("&#20013;&#25991; na"));
-    assert!(out.contains(&0xEF));
+    let out = String::from_utf8(Html.merge(&d).unwrap()).unwrap();
+    assert!(out.contains("<meta charset=\"UTF-8\">") && out.contains("<p>\u{4e2d}\u{6587} na\u{ef}ve</p>"), "{out}");
 
-    assert!(Html.extract(b"<meta charset=\"shift_jis\"><p>x</p>", &Default::default()).is_err());
-    assert!(Html.extract(b"<p>\xff\xfe</p>", &Default::default()).is_err());
+    // an unknown charset name is no declaration: the page reads as UTF-8
+    assert!(Html.extract(b"<meta charset=\"x-no-such-charset\"><p>x</p>", &Default::default()).is_ok_and(|d| d.units.len() == 1));
+    // a binary file is refused; an undeclared non-UTF-8 file is read as Windows-1252 (or the source language's page)
+    assert!(Html.extract(b"<p>\x00\xff\x02\x03</p>", &Default::default()).is_err());
+    assert!(Html.extract(b"<p>\xff\xfe</p>", &Default::default()).is_ok());
 }
 
 #[test]
@@ -391,11 +396,11 @@ fn preview_has_a_span_for_every_segment() {
         let in_attr = format!("data-bl-attr-seg=\"{}\"", seg.id);
         assert!(pv.contains(&in_span) || pv.contains(&in_attr), "segment {} missing in {pv}", seg.id);
     }
-    assert!(pv.contains("<h1 class=\"hero\"><span data-bl-seg=\"u3\">Welcome to Larchmoor</span></h1>"), "{pv}");
-    assert!(pv.contains("<span data-bl-seg=\"u4\">Our <b>kettles</b> boil fast &amp; quietly.</span>"), "{pv}");
+    assert!(pv.contains("<h1 class=\"hero\"><span data-bl-seg=\"u2\">Welcome to Larchmoor</span></h1>"), "{pv}");
+    assert!(pv.contains("<span data-bl-seg=\"u3\">Our <b>kettles</b> boil fast &amp; quietly.</span>"), "{pv}");
     assert!(pv.contains("[data-bl-seg]{outline:none}"));
     // Attribute units cannot hold spans.
-    assert!(pv.contains("<img data-bl-attr-seg=\"u5\" data-bl-attr=\"alt\" src=\"kettle.png\" alt=\"A blue kettle\">"), "{pv}");
+    assert!(pv.contains("<img data-bl-attr-seg=\"u6\" data-bl-attr=\"alt\" src=\"kettle.png\" alt=\"A blue kettle\">"), "{pv}");
     // Title is plain text.
     assert!(pv.contains("<title data-bl-attr-seg=\"u1\" data-bl-attr=\"#text\">Larchmoor Tools</title>"), "{pv}");
 }
@@ -484,8 +489,30 @@ fn render_segment_is_safe_and_escaped() {
 }
 
 #[test]
+fn preview_declares_the_target_language_once_something_is_translated() {
+    let src = "<!DOCTYPE html>\n<html lang=\"en-US\">\n<head><title>Lamp</title></head>\n<body><h1>Harbor lamp</h1><p>It glows.</p></body>\n</html>\n";
+    let mut d = extract_to(src, "ar");
+    // nothing translated: the page is still the source page
+    let pv0 = Html.preview(&d).unwrap();
+    assert!(pv0.contains("<html lang=\"en-US\">"), "{pv0}");
+    d.set_target("u2", vec![Inline::text("مصباح الميناء")]).unwrap();
+    let pv = Html.preview(&d).unwrap();
+    let html_tag = |p: &str| p[p.find("<html").unwrap()..].split('>').next().unwrap().to_string();
+    let t = html_tag(&pv);
+    assert!(t.contains("lang=\"ar\"") && t.contains("dir=\"rtl\""), "{pv}");
+    assert!(pv.contains("مصباح الميناء"), "{pv}");
+    // the preview declares what the merge writes
+    let m = html_tag(&merged(&d));
+    assert!(m.contains("lang=\"ar\"") && m.contains("dir=\"rtl\""), "{m}");
+    // a left-to-right target only restamps the language
+    let mut e = extract_to(src, "de");
+    e.set_target("u2", vec![Inline::text("Hafenlampe")]).unwrap();
+    assert!(Html.preview(&e).unwrap().contains("<html lang=\"de\">"));
+}
+
+#[test]
 fn preview_marks_two_attributes_on_one_element() {
-    let d = extract("<div title=\"Tip one\" aria-label=\"Label two\"></div>");
+    let d = extract("<a href=\"#\" title=\"Tip one\" aria-label=\"Label two\"></a>");
     let pv = Html.preview(&d).unwrap();
     assert!(pv.contains("data-bl-attr-seg=\"u1 u2\" data-bl-attr=\"title aria-label\""), "{pv}");
 }
@@ -496,8 +523,8 @@ fn preview_with_segmented_units() {
     let mut d = extract("<p>One. Two.</p>");
     let u = &mut d.units[0];
     u.segments = vec![
-        Segment { id: "u1#1".into(), source: vec![Inline::text("One.")], target: vec![], state: SegState::New },
-        Segment { id: "u1#2".into(), source: vec![Inline::text("Two.")], target: vec![Inline::text("Dos.")], state: SegState::Draft },
+        Segment::new("u1#1", vec![Inline::text("One.")]),
+        Segment::new("u1#2", vec![Inline::text("Two.")]).with_target(vec![Inline::text("Dos.")]).with_state(SegState::Draft),
     ];
     u.separators = vec![" ".into()];
     let pv = Html.preview(&d).unwrap();
@@ -531,4 +558,110 @@ fn preview_of_every_language_page_has_all_segments() {
         }
         assert!(!pv.contains("<script"));
     }
+}
+
+// Deep nesting used to take minutes (a path string per level, per element). It is a typed Limit error now.
+#[test]
+fn deep_nesting_is_a_typed_limit_error_and_fast() {
+    use std::time::Instant;
+    for (open, close) in [("<div>", "</div>"), ("<b>", "</b>"), ("<span>", "</span>"), ("<ul><li>", "</li></ul>")] {
+        let depth = 20_000;
+        let src = format!("<html><body>{}text here{}</body></html>", open.repeat(depth), close.repeat(depth));
+        let t = Instant::now();
+        let r = Html.extract(src.as_bytes(), &ExtractOptions::default());
+        match r {
+            Err(Error::Limit(e)) => assert_eq!(e.kind, LimitKind::Depth, "{open}"),
+            other => panic!("{open}: expected a depth limit, got {:?}", other.map(|d| d.units.len())),
+        }
+        assert!(t.elapsed().as_secs_f64() < 1.0, "{open} took {:?}", t.elapsed());
+    }
+    // unclosed end-tag-optional elements are siblings, not depth
+    let src = format!("<html><body><ul>{}</ul></body></html>", "<li>item ".repeat(2000));
+    assert!(Html.extract(src.as_bytes(), &ExtractOptions::default()).is_ok());
+    let src = format!("<html><body>{}</body></html>", "<p>para ".repeat(2000));
+    assert!(Html.extract(src.as_bytes(), &ExtractOptions::default()).is_ok());
+    // a caller can raise or lower the cap
+    let src = format!("<div>{}x{}</div>", "<div>".repeat(40), "</div>".repeat(40));
+    let tight = ExtractOptions::new().with_limits(Limits::new().with_max_xml_depth(20));
+    assert!(matches!(Html.extract(src.as_bytes(), &tight), Err(Error::Limit(_))));
+    assert!(Html.extract(src.as_bytes(), &ExtractOptions::default()).is_ok());
+    // an unlimited depth (email passes usize::MAX for HTML parts) must not overflow
+    let open = ExtractOptions::new().with_limits(Limits::new().with_max_xml_depth(usize::MAX));
+    assert!(Html.extract(src.as_bytes(), &open).is_ok());
+}
+
+// The depth check must follow the walker: end tags that close nothing, and runs of end-tag-optional elements the
+// walker keeps nested (`<li><dd>` closes neither), must not hide real nesting.
+#[test]
+fn depth_cap_cannot_be_dodged() {
+    use std::time::Instant;
+    for unit in ["<div></p>", "<div></li></td>", "<section></b>"] {
+        let src = format!("<html><body>{}text</body></html>", unit.repeat(20_000));
+        let t = Instant::now();
+        match Html.extract(src.as_bytes(), &ExtractOptions::default()) {
+            Err(Error::Limit(e)) => assert_eq!(e.kind, LimitKind::Depth, "{unit}"),
+            other => panic!("{unit}: expected a depth limit, got {:?}", other.map(|d| d.units.len())),
+        }
+        assert!(t.elapsed().as_secs_f64() < 2.0, "{unit} took {:?}", t.elapsed());
+    }
+    // runs of end-tag-optional elements are not depth for the LocOS walker (it keeps no element stack), and they
+    // stay linear
+    for unit in ["<li><dd>x ", "<td><li>x "] {
+        let src = format!("<html><body>{}text</body></html>", unit.repeat(20_000));
+        let t = Instant::now();
+        let d = Html.extract(src.as_bytes(), &ExtractOptions::default()).unwrap();
+        assert_eq!(d.units.len(), 20_000, "{unit}");
+        assert!(t.elapsed().as_secs_f64() < 4.0, "{unit} took {:?}", t.elapsed());
+    }
+    // ordinary tables and lists are not deep
+    let row = "<tr><td>a<td>b</tr>";
+    let src = format!("<html><body><table>{}</table><ul>{}</ul></body></html>", row.repeat(3000), "<li>x</li>".repeat(3000));
+    assert!(Html.extract(src.as_bytes(), &ExtractOptions::default()).is_ok());
+}
+
+#[test]
+fn an_orphan_end_tag_survives_a_translated_build() {
+    let src = "<p>Hello</b> big <i>world</p>";
+    let mut d = round_trip(src);
+    translate_all(&mut d);
+    let out = merged(&d);
+    assert!(out.contains("</b>"), "orphan end tag lost: {out}");
+    assert!(out.contains("<i>"), "{out}");
+}
+
+#[test]
+fn a_semicolon_less_legacy_reference_of_the_source_is_kept_as_written() {
+    // HTML5 reads `&nbsp` (no `;`) in text as a no-break space; escaping its `&` would show the letters
+    let src = "<p>&nbsp&nbsp Hello &nbsp (more) &copy2024 AT&T</p>";
+    let mut d = round_trip(src);
+    translate_all(&mut d);
+    let out = merged(&d);
+    assert!(out.contains("&nbsp&nbsp Hello &nbsp (more) &copy2024 AT&amp;T~"), "{out}");
+    // a legacy name the source did not write without `;` is escaped as before
+    let mut d = extract("<p>Hello</p>");
+    let id = d.segments().next().unwrap().1.id.clone();
+    d.set_target(&id, vec![Inline::text("Bonjour &nbsp toi")]).unwrap();
+    assert!(merged(&d).contains("Bonjour &amp;nbsp toi"));
+}
+
+/// LocOS rewrites every unit it is given text for, also when the text is the source's own: a bare `>` in the source
+/// comes back as `&gt;` (escaping text is part of writing it) as soon as the build writes anything. A build whose texts
+/// are all the units' own gives the page back. Without the profile an unchanged target keeps the source as it was.
+#[test]
+fn locos_profile_escapes_text_of_a_unit_whose_target_equals_its_source() {
+    let src = "<html><body><p>More >> here</p><p>Other</p></body></html>";
+    let mut d = extract(src);
+    let ids: Vec<(String, Vec<Inline>)> = d.segments().filter(|(u, _)| u.translate).map(|(_, s)| (s.id.clone(), s.source.clone())).collect();
+    for (id, t) in &ids {
+        d.set_target(id, t.clone()).unwrap();
+    }
+    let locos = MergeOptions::new().with_profile(profile::LOCOS);
+    assert_eq!(merged(&d), src);
+    assert_eq!(String::from_utf8(Html.merge_with(&d, &locos).unwrap()).unwrap(), src);
+    // the second unit changes: the first, equal one is written too
+    let (id, t) = (ids[1].0.clone(), mark(&ids[1].1));
+    d.set_target(&id, t).unwrap();
+    assert_eq!(merged(&d), "<html><body><p>More >> here</p><p>Other~</p></body></html>");
+    let out = String::from_utf8(Html.merge_with(&d, &locos).unwrap()).unwrap();
+    assert_eq!(out, "<html><body><p>More &gt;&gt; here</p><p>Other~</p></body></html>");
 }

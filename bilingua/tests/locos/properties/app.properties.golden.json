@@ -1,0 +1,92 @@
+{
+ "format": "properties",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Welcome to Northwind",
+   "style": ""
+  },
+  {
+   "p_index": 1,
+   "text": "Sign in",
+   "style": ""
+  },
+  {
+   "p_index": 2,
+   "text": "Sign out",
+   "style": ""
+  },
+  {
+   "p_index": 3,
+   "text": "First part, second part",
+   "style": ""
+  },
+  {
+   "p_index": 4,
+   "text": "Café au lait",
+   "style": ""
+  },
+  {
+   "p_index": 5,
+   "text": "Hello {0}, you have {1} messages",
+   "style": ""
+  },
+  {
+   "p_index": 6,
+   "text": "Don't delete {0}",
+   "style": ""
+  },
+  {
+   "p_index": 7,
+   "text": "Spaced key",
+   "style": ""
+  },
+  {
+   "p_index": 8,
+   "text": "%s of %d",
+   "style": ""
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "IyBDb21tZW50CiEgQmFuZyBjb21tZW50CmFwcC50aXRsZSA9IFdlbGNvbWUgdG8gTm9ydGh3aW5kCmxvZ2luPVNpZ24gaW4KbG9nb3V0OlNpZ24gb3V0Cm11bHRpID0gRmlyc3QgcGFydCwgXAogICAgICAgIHNlY29uZCBwYXJ0CnVuaWNvZGU9Q2FmXHUwMGU5IGF1IGxhaXQKZ3JlZXRpbmc9SGVsbG8gezB9LCB5b3UgaGF2ZSB7MX0gbWVzc2FnZXMKcXVvdGU9RG9uJyd0IGRlbGV0ZSB7MH0Ka2V5XCB3aXRoXCBzcGFjZXMgPSBTcGFjZWQga2V5CmVtcHR5PQpwcmludGY9JXMgb2YgJWQK"
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü Welcome to Northwind",
+    "1": "Ü Sign in",
+    "2": "Ü Sign out",
+    "3": "Ü First part, second part",
+    "4": "Ü Café au lait",
+    "5": "Ü Hello {0}, you have {1} messages",
+    "6": "Ü Don't delete {0}",
+    "7": "Ü Spaced key",
+    "8": "Ü %s of %d"
+   },
+   "out_b64": "IyBDb21tZW50CiEgQmFuZyBjb21tZW50CmFwcC50aXRsZSA9IFx1MDBEQyBXZWxjb21lIHRvIE5vcnRod2luZApsb2dpbj1cdTAwREMgU2lnbiBpbgpsb2dvdXQ6XHUwMERDIFNpZ24gb3V0Cm11bHRpID0gXHUwMERDIEZpcnN0IHBhcnQsIHNlY29uZCBwYXJ0CnVuaWNvZGU9XHUwMERDIENhZlx1MDBFOSBhdSBsYWl0CmdyZWV0aW5nPVx1MDBEQyBIZWxsbyB7MH0sIHlvdSBoYXZlIHsxfSBtZXNzYWdlcwpxdW90ZT1cdTAwREMgRG9uJyd0IGRlbGV0ZSB7MH0Ka2V5XCB3aXRoXCBzcGFjZXMgPSBcdTAwREMgU3BhY2VkIGtleQplbXB0eT0KcHJpbnRmPVx1MDBEQyAlcyBvZiAlZAo="
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Welcome to Northwind & <\"'>",
+    "2": "Sign out & <\"'>",
+    "4": "Café au lait & <\"'>",
+    "6": "Don't delete {0} & <\"'>",
+    "8": "%s of %d & <\"'>"
+   },
+   "out_b64": "IyBDb21tZW50CiEgQmFuZyBjb21tZW50CmFwcC50aXRsZSA9IFdlbGNvbWUgdG8gTm9ydGh3aW5kICYgPCInPgpsb2dpbj1TaWduIGluCmxvZ291dDpTaWduIG91dCAmIDwiJz4KbXVsdGkgPSBGaXJzdCBwYXJ0LCBcCiAgICAgICAgc2Vjb25kIHBhcnQKdW5pY29kZT1DYWZcdTAwRTkgYXUgbGFpdCAmIDwiJz4KZ3JlZXRpbmc9SGVsbG8gezB9LCB5b3UgaGF2ZSB7MX0gbWVzc2FnZXMKcXVvdGU9RG9uJyd0IGRlbGV0ZSB7MH0gJiA8IicnPgprZXlcIHdpdGhcIHNwYWNlcyA9IFNwYWNlZCBrZXkKZW1wdHk9CnByaW50Zj0lcyBvZiAlZCAmIDwiJz4K"
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "out_b64": "IyBDb21tZW50CiEgQmFuZyBjb21tZW50CmFwcC50aXRsZSA9IFdlbGNvbWUgdG8gTm9ydGh3aW5kCmxvZ2luPVNpZ24gaW4KbG9nb3V0OlNpZ24gb3V0Cm11bHRpID0gRmlyc3QgcGFydCwgXAogICAgICAgIHNlY29uZCBwYXJ0CnVuaWNvZGU9Q2FmXHUwMGU5IGF1IGxhaXQKZ3JlZXRpbmc9SGVsbG8gezB9LCB5b3UgaGF2ZSB7MX0gbWVzc2FnZXMKcXVvdGU9RG9uJyd0IGRlbGV0ZSB7MH0Ka2V5XCB3aXRoXCBzcGFjZXMgPSBTcGFjZWQga2V5CmVtcHR5PQpwcmludGY9JXMgb2YgJWQK"
+  }
+ ]
+}

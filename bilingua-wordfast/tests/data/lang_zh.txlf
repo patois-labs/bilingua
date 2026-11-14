@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2" xmlns:gs4tr="http://www.gs4tr.org/schema/xliff-ext">
+  <file original="guide.docx" source-language="zh-CN" target-language="xx-XX" datatype="x-docx">
+    <body>
+      <trans-unit id="1"><source>要继续，请打开 <bpt id="1">&lt;b&gt;</bpt>设置<ept id="1">&lt;/b&gt;</ept> 菜单。</source><target state="needs-translation"/></trans-unit>
+      <trans-unit id="2"><source>保存并关闭文件。 <ph id="2">{0}</ph> 你好，世界！</source><target state="needs-review-translation" gs4tr:score="75">保存并关闭文件。 (fuzzy)</target></trans-unit>
+      <trans-unit id="3"><source>菜单。 <g id="3"><x id="4" ctype="image"/>设置</g></source></trans-unit>
+      <trans-unit id="4" gs4tr:locked="true"><source>你好，世界！</source><target state="translated" gs4tr:score="100">你好，世界！ (locked)</target></trans-unit>
+      <trans-unit id="5"><source>保存并关闭文件。</source><target state="translated">保存并关闭文件。 (done)</target></trans-unit>
+      <trans-unit id="6" translate="no"><source>设置</source></trans-unit>
+    </body>
+  </file>
+</xliff>

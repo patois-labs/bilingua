@@ -1,0 +1,5 @@
+1	fr	x-vnd.Notes	4711
+Ouvrir	MainWindow		Ouvrir
+Enregistrer %s ?	MainWindow	file name	Enregistrer %s ?
+Quitter	MainWindow		Quitter
+Notes	About		Notes

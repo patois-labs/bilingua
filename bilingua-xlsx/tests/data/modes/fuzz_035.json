@@ -1,0 +1,36 @@
+{
+ "parse": {
+  "columns": "source=1,target=2,context=3,key=4",
+  "source_locale": "en",
+  "target_locales": [
+   "de",
+   "fr"
+  ]
+ },
+ "units": [
+  {
+   "p_index": 0,
+   "text": "#N/A",
+   "style": "",
+   "note": "Comment: 1:30:00"
+  },
+  {
+   "p_index": 1,
+   "text": "#N/A",
+   "style": "",
+   "note": "Key: #N/A | Comment: 60"
+  }
+ ],
+ "error": false,
+ "builds": [
+  {
+   "name": "b",
+   "locale": "fr",
+   "map": {
+    "0": "T #N/A",
+    "1": "#N/A"
+   },
+   "file": "fuzz_035.b.xlsx"
+  }
+ ]
+}

@@ -1,0 +1,5 @@
+1	ru	x-vnd.Notes	4711
+Открыть	MainWindow		Открыть
+Сохранить %s?	MainWindow	file name	Сохранить %s?
+Выход	MainWindow		Выход
+Заметки	About		Заметки

@@ -8,7 +8,7 @@ use bilingua_docx::Docx;
 use bilingua_model::*;
 
 let f = Docx;
-let mut doc = f.extract(&bytes, &ExtractOptions { target_lang: Some("es-ES".into()), ..Default::default() })?;
+let mut doc = f.extract(&bytes, &ExtractOptions::new().with_target_lang("es-ES"))?;
 doc.set_target("p3", vec![Inline::text("Hola.")])?;
 let (out, report) = bilingua_docx::merge_with_report(&doc)?;   // or f.merge(&doc) for just the bytes
 let html = f.preview(&doc);                                    // approximate HTML, one span per segment
@@ -44,6 +44,7 @@ For the facade (`bilingua/src/lib.rs`, `filters()`): `Box::new(bilingua_docx::Do
 | Split runs | Neighbouring runs with the same formatting are merged. Spell-check marks, `w:lang`, `w:noProof` and rsid attributes do not count as formatting. They are dropped from a rebuilt paragraph |
 | Formatting | The most common formatting of a paragraph needs no tag. Other runs become paired tags: `<b>`, `<i>`, `<u>`, `<sup>`, `<sub>`, or `<fmt>` for anything else (label says what, e.g. "italic color"). The full `w:rPr` is kept in the tag's code |
 | Hyperlinks, smart tags, content controls (`w:sdt`) | Paired tags (`<a>`, `<x>`); the relationship id and all attributes are kept. Formatting inside a link is relative to the link's own most common formatting |
+| Ruby text (`w:ruby`, phonetic guides) | The base text is the unit text, inside a paired `<ruby>` tag. The guide (`w:rt`) and `w:rubyPr` stay in the tag's code as they were and are not offered for translation, so a translated base keeps the source guide. LocOS keeps the whole ruby as one standalone code and reads no base text |
 | Tabs, line and page breaks, symbols, images, equations, footnote references | Standalone tags |
 | Fields | Simple and complex fields are one locked standalone tag, shown like `{PAGE 3}`. The instruction is never translated. A field that spans paragraphs (a table of contents) locks all of those paragraphs |
 | Bookmarks, comment ranges, permission marks | Not shown as tags. Marks at the start of a paragraph stay at the start; all others move to the end of the paragraph when it is rebuilt |
@@ -57,7 +58,8 @@ For the facade (`bilingua/src/lib.rs`, `filters()`): `Box::new(bilingua_docx::Do
 
 | Not supported | What happens |
 |---|---|
-| SmartArt, charts, embedded objects, text inside DrawingML shapes that are not text boxes | Left untouched, not extracted |
+| SmartArt, charts, embedded objects | Left untouched, not extracted |
+| Text inside DrawingML shapes that are not text boxes (`a:p` in a lockedCanvas or group shape) | A paragraph of plain runs is a unit (id `d1`, `d2`, ...; native mode only, not the LocOS profile). Run formatting other than the most common one is a paired tag, as for Word runs. In `mc:AlternateContent` the VML `Fallback` paragraph with the same text is written from the same translation (with its own `w:rPr` per tag when its runs line up with the shape's runs). A paragraph with `a:br`, `a:fld` or anything else is left untouched |
 | Right-to-left setup for a target language | Translating into Arabic, Hebrew etc. does not add `w:bidi` or `w:rtl`. Fix the paragraph direction in Word, or start from a template that has it |
 | `w:ins`/`w:del` inside a changed paragraph | Accepted (see above); the reviewer sees plain text |
 | A field that starts inside a hyperlink or content control and ends outside it | Both parts stay valid XML but the order of the pieces in a rebuilt paragraph may differ from the original |

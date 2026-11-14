@@ -1,0 +1,91 @@
+{
+ "format": "html",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Gallery",
+   "style": ""
+  },
+  {
+   "p_index": 1,
+   "text": "First ⟦x1⟧ and ⟦x2⟧",
+   "style": ""
+  },
+  {
+   "p_index": 2,
+   "text": "Second ⟦x1⟧ ⟦x2⟧",
+   "style": ""
+  },
+  {
+   "p_index": 3,
+   "text": "End",
+   "style": ""
+  },
+  {
+   "p_index": 4,
+   "text": "A cat",
+   "style": "a11y:img-alt"
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "PGh0bWw+PGJvZHk+CjxoMT5HYWxsZXJ5PC9oMT4KPHA+Rmlyc3QgPGltZyBzcmM9ImltZy9hLnBuZyI+IGFuZCA8aW1nIHNyYz0iYi5wbmciIGFsdD0iIj48L3A+CjxwPlNlY29uZCA8aW1nIHNyYz0iL3gvYy5qcGciIGFsdD0iQSBjYXQiPiA8aW1nIHNyYz0iZC5naWYiIGFsdD0iICAiPjwvcD4KPGltZyBzcmM9ImUucG5nIj4KPHA+RW5kPC9wPgo8L2JvZHk+PC9odG1sPgo="
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü Gallery",
+    "1": "Ü First ⟦x1⟧Ü  and ⟦x2⟧",
+    "2": "Ü Second ⟦x1⟧ ⟦x2⟧",
+    "3": "Ü End",
+    "4": "Ü A cat"
+   },
+   "out_b64": "PGh0bWw+PGJvZHk+CjxoMT7DnCBHYWxsZXJ5PC9oMT4KPHA+w5wgRmlyc3QgPGltZyBzcmM9ImltZy9hLnBuZyI+w5wgIGFuZCA8aW1nIHNyYz0iYi5wbmciIGFsdD0iIj48L3A+CjxwPsOcIFNlY29uZCA8aW1nIHNyYz0iL3gvYy5qcGciIGFsdD0iw5wgQSBjYXQiPiA8aW1nIHNyYz0iZC5naWYiIGFsdD0iICAiPjwvcD4KPGltZyBzcmM9ImUucG5nIj4KPHA+w5wgRW5kPC9wPgo8L2JvZHk+PC9odG1sPgo="
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Gallery & <\"'>",
+    "2": "Second  & <\"'>⟦x1⟧ ⟦x2⟧",
+    "4": "A cat & <\"'>"
+   },
+   "out_b64": "PGh0bWwgbGFuZz0iZGUtREUiPjxib2R5Pgo8aDE+R2FsbGVyeSAmYW1wOyAmbHQ7IicmZ3Q7PC9oMT4KPHA+Rmlyc3QgPGltZyBzcmM9ImltZy9hLnBuZyI+IGFuZCA8aW1nIHNyYz0iYi5wbmciIGFsdD0iIj48L3A+CjxwPlNlY29uZCAgJmFtcDsgJmx0OyInJmd0OzxpbWcgc3JjPSIveC9jLmpwZyIgYWx0PSJBIGNhdCAmYW1wOyAmbHQ7JnF1b3Q7JiN4Mjc7Jmd0OyI+IDxpbWcgc3JjPSJkLmdpZiIgYWx0PSIgICI+PC9wPgo8aW1nIHNyYz0iZS5wbmciPgo8cD5FbmQ8L3A+CjwvYm9keT48L2h0bWw+Cg=="
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "out_b64": "PGh0bWwgbGFuZz0iZGUtREUiPjxib2R5Pgo8aDE+R2FsbGVyeTwvaDE+CjxwPkZpcnN0IDxpbWcgc3JjPSJpbWcvYS5wbmciPiBhbmQgPGltZyBzcmM9ImIucG5nIiBhbHQ9IiI+PC9wPgo8cD5TZWNvbmQgPGltZyBzcmM9Ii94L2MuanBnIiBhbHQ9IkEgY2F0Ij4gPGltZyBzcmM9ImQuZ2lmIiBhbHQ9IiAgIj48L3A+CjxpbWcgc3JjPSJlLnBuZyI+CjxwPkVuZDwvcD4KPC9ib2R5PjwvaHRtbD4K"
+  }
+ ],
+ "a11y_images": {
+  "images": 5,
+  "missing_alt": [
+   {
+    "kind": "missing",
+    "unit": 1,
+    "where": "a.png"
+   },
+   {
+    "kind": "empty",
+    "unit": 1,
+    "where": "b.png"
+   },
+   {
+    "kind": "empty",
+    "unit": 2,
+    "where": "d.gif"
+   },
+   {
+    "kind": "missing",
+    "unit": 2,
+    "where": "e.png"
+   }
+  ]
+ }
+}

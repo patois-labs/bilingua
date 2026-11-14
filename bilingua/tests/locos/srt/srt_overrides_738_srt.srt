@@ -1,0 +1,24 @@
+1
+00:00:01,000 --> 00:00:03,000
+{\an8}Welcome to the trail.
+
+2
+00:00:04,000 --> 00:00:06,000
+{\i1}Watch{\i0} your step on the rocks.
+
+3
+00:00:07,000 --> 00:00:09,000
+{\an8}{\c&H00FFFF&}See you at the top.
+
+4
+00:00:10,000 --> 00:00:12,000
+The {\b1}orange{\b0} markers {\i1}point up{\i0}.
+
+5
+00:00:13,000 --> 00:00:15,000
+Keep {left} and {\fs20}{\c&HFF&}stay{\r} close
+{\i1}on the ridge.{\i0}
+
+6
+00:00:16,000 --> 00:00:18,000
+<i>No override here,</i> {just braces}.

@@ -1,0 +1,40 @@
+{
+ "format": "html",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Hi {{ \"a&b\" }}friends{% endif %}",
+   "style": ""
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "PHA+SGkge3sgImEmYiIgfX1mcmllbmRzeyUgZW5kaWYgJX08L3A+"
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü Hi {{ \"a&b\" }}friends{% endif %}"
+   },
+   "out_b64": "PHA+w5wgSGkge3sgImEmYW1wO2IiIH19ZnJpZW5kc3slIGVuZGlmICV9PC9wPg=="
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Hi {{ \"a&b\" }}friends{% endif %} & <\"'>"
+   },
+   "out_b64": "PHA+SGkge3sgImEmYW1wO2IiIH19ZnJpZW5kc3slIGVuZGlmICV9ICZhbXA7ICZsdDsiJyZndDs8L3A+"
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "out_b64": "PHA+SGkge3sgImEmYiIgfX1mcmllbmRzeyUgZW5kaWYgJX08L3A+"
+  }
+ ]
+}

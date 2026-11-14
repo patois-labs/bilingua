@@ -1,0 +1,296 @@
+<MIFFile 9.0>
+# Options:
+#    Paragraph Text
+#    Paragraph Tags
+#    Paragraph Formats
+#    Font Information
+#    Markers
+#    Anchored Frames
+#    Tables
+#    Graphics and TextRect Layout
+#    Master Page Items
+#    Condition Catalog
+#    Table Catalogs
+#    Font Catalog
+#    Paragraph Catalog
+#    Document Template
+#    Document Dictionary
+#    Variables
+#    Element Definitions
+#    Elements
+#    Format Change Lists
+#
+<Units Uin>
+<CharUnits CUpt>
+<PgfCatalog
+ <Pgf
+  <PgfTag `Body'>
+  <PgfUseNextTag No>
+  <PgfNextTag `'>
+  <PgfAlignment Left>
+  <PgfFIndent  0.0">
+  <PgfLIndent  0.0">
+  <PgfRIndent  0.0">
+  <PgfFIndentRelative No>
+  <PgfFIndentOffset  0.0">
+  <PgfTopSeparator `'>
+  <PgfTopSepAtIndent No>
+  <PgfTopSepOffset  0.0">
+  <PgfBotSeparator `'>
+  <PgfBotSepAtIndent No>
+  <PgfBotSepOffset  0.0">
+  <PgfPlacement Anywhere>
+  <PgfPlacementStyle Normal>
+  <PgfRunInDefaultPunct `'>
+  <PgfSpBefore  0.0 pt>
+  <PgfSpAfter  0.0 pt>
+  <PgfWithPrev No>
+  <PgfWithNext No>
+  <PgfBlockSize 2>
+  <PgfFont
+   <FTag `'>
+   <FPlatformName `W.Times New Roman.R.400'>
+   <FFamily `Times New Roman'>
+   <FVar `Regular'>
+   <FWeight `Regular'>
+   <FAngle `Regular'>
+   <FEncoding `FrameRoman'>
+   <FSize  12.0 pt>
+   <FUnderlining FNoUnderlining>
+   <FOverline No>
+   <FStrike No>
+   <FChangeBar No>
+   <FOutline No>
+   <FShadow No>
+   <FPairKern Yes>
+   <FTsume No>
+   <FCase FAsTyped>
+   <FPosition FNormal>
+   <FDX  0.0%>
+   <FDY  0.0%>
+   <FDW  0.0%>
+   <FStretch  100.0%>
+   <FLanguage USEnglish>
+   <FLocked No>
+   <FSeparation 0>
+   <FColor `Black'>
+   <FBackgroundColor NoColor>
+  > # end of PgfFont
+  <PgfLineSpacing Proportional>
+  <PgfLeading  2.0 pt>
+  <PgfAutoNum No>
+  <PgfNumTabs 0>
+  <PgfHyphenate Yes>
+  <HyphenMaxLines 2>
+  <HyphenMinPrefix 3>
+  <HyphenMinSuffix 3>
+  <HyphenMinWord 5>
+  <PgfLetterSpace No>
+  <PgfMinWordSpace 90>
+  <PgfOptWordSpace 100>
+  <PgfMaxWordSpace 110>
+  <PgfMinJRomanLetterSpace 0>
+  <PgfOptJRomanLetterSpace 25>
+  <PgfMaxJRomanLetterSpace 50>
+  <PgfMinJLetterSpace 0>
+  <PgfOptJLetterSpace 0>
+  <PgfMaxJLetterSpace 10>
+  <PgfYakumonoType Floating>
+  <PgfPDFStructureLevel 6>
+  <PgfLanguage USEnglish>
+  <PgfCellAlignment Top>
+  <PgfCellMargins  0.0 pt 0.0 pt 0.0 pt 0.0 pt>
+  <PgfCellLMarginFixed No>
+  <PgfCellTMarginFixed No>
+  <PgfCellRMarginFixed No>
+  <PgfCellBMarginFixed No>
+  <PgfLocked No>
+  <PgfBoxColor NoColor>
+  <PgfAsianComposer No>
+  <PgfDir INHERITLTR>
+ > # end of Pgf
+ <Pgf
+  <PgfTag `Numbered1'>
+  <PgfUseNextTag No>
+  <PgfNextTag `'>
+  <PgfAlignment Left>
+  <PgfFIndent  0.0">
+  <PgfLIndent  0.25">
+  <PgfRIndent  0.0">
+  <PgfFIndentRelative No>
+  <PgfFIndentOffset  0.0">
+  <PgfTopSeparator `'>
+  <PgfTopSepAtIndent No>
+  <PgfTopSepOffset  0.0">
+  <PgfBotSeparator `'>
+  <PgfBotSepAtIndent No>
+  <PgfBotSepOffset  0.0">
+  <PgfPlacement Anywhere>
+  <PgfPlacementStyle Normal>
+  <PgfRunInDefaultPunct `'>
+  <PgfSpBefore  0.0 pt>
+  <PgfSpAfter  0.0 pt>
+  <PgfWithPrev No>
+  <PgfWithNext No>
+  <PgfBlockSize 2>
+  <PgfFont
+   <FTag `'>
+   <FPlatformName `W.Times New Roman.R.400'>
+   <FFamily `Times New Roman'>
+   <FVar `Regular'>
+   <FWeight `Regular'>
+   <FAngle `Regular'>
+   <FEncoding `FrameRoman'>
+   <FSize  12.0 pt>
+   <FUnderlining FNoUnderlining>
+   <FOverline No>
+   <FStrike No>
+   <FChangeBar No>
+   <FOutline No>
+   <FShadow No>
+   <FPairKern Yes>
+   <FTsume No>
+   <FCase FAsTyped>
+   <FPosition FNormal>
+   <FDX  0.0%>
+   <FDY  0.0%>
+   <FDW  0.0%>
+   <FStretch  100.0%>
+   <FLanguage USEnglish>
+   <FLocked No>
+   <FSeparation 0>
+   <FColor `Black'>
+   <FBackgroundColor NoColor>
+  > # end of PgfFont
+  <PgfLineSpacing Proportional>
+  <PgfLeading  2.0 pt>
+  <PgfAutoNum Yes>
+  <PgfNumFormat `<Default ¶ Font\>Numbered1 \n<n=1\>.\\t\n'>
+  <PgfNumberFont `'>
+  <PgfNumAtEnd No>
+  <PgfNumTabs 1>
+  <TabStop
+   <TSX  0.25">
+   <TSType Left>
+   <TSLeaderStr ` '>
+  > # end of TabStop
+  <PgfHyphenate Yes>
+  <HyphenMaxLines 2>
+  <HyphenMinPrefix 3>
+  <HyphenMinSuffix 3>
+  <HyphenMinWord 5>
+  <PgfLetterSpace No>
+  <PgfMinWordSpace 90>
+  <PgfOptWordSpace 100>
+  <PgfMaxWordSpace 110>
+  <PgfMinJRomanLetterSpace 0>
+  <PgfOptJRomanLetterSpace 25>
+  <PgfMaxJRomanLetterSpace 50>
+  <PgfMinJLetterSpace 0>
+  <PgfOptJLetterSpace 0>
+  <PgfMaxJLetterSpace 10>
+  <PgfYakumonoType Floating>
+  <PgfPDFStructureLevel 6>
+  <PgfLanguage USEnglish>
+  <PgfCellAlignment Top>
+  <PgfCellMargins  0.0 pt 0.0 pt 0.0 pt 0.0 pt>
+  <PgfCellLMarginFixed No>
+  <PgfCellTMarginFixed No>
+  <PgfCellRMarginFixed No>
+  <PgfCellBMarginFixed No>
+  <PgfLocked No>
+  <PgfBoxColor NoColor>
+  <PgfAsianComposer No>
+  <PgfDir INHERITLTR>
+ > # end of Pgf
+> # end of PgfCatalog
+<VariableFormats
+ <VariableFormat
+  <VariableName `Page Count'>
+  <VariableDef `<$lastpagenum\>'>
+ > # end of VariableFormat
+> # end of VariableFormats
+<MarkerTypeCatalog
+ <MTypeName `HTML Macro'>
+ <MTypeName `GlossaryTerm'>
+> # end of MarkerTypeCatalog
+<XRefFormats
+ <XRefFormat
+  <XRefName `Heading & Page'>
+  <XRefDef `“<$paratext\>” on page\x11 <$pagenum\>'>
+ > # end of XRefFormat
+ <XRefFormat
+  <XRefName `Page'>
+  <XRefDef `<Default ¶ Font\> page\x11 <$pagenum\>'>
+ > # end of XRefFormat
+> # end of XRefFormats
+<Page
+ <Unique 996720>
+ <PageType BodyPage>
+ <PageNum `1'>
+ <PageTag `'>
+ <PageSize  11.0" 8.5">
+ <PageOrientation Landscape>
+ <PageAngle  0.0>
+ <PageBackground `Default'>
+ <TextRect
+  <ID 19>
+  <Unique 998399>
+  <Pen 15>
+  <Fill 15>
+  <PenWidth  1.0 pt>
+  <Separation 0>
+  <ObColor `Black'>
+  <DashedPattern
+   <DashedStyle Solid>
+  > # end of DashedPattern
+  <RunaroundGap  6.0 pt>
+  <RunaroundType None>
+  <ShapeRect  1.0" 1.0" 9.0" 6.5">
+  <BRect  1.0" 1.0" 9.0" 6.5">
+  <TRNumColumns 1>
+  <TRColumnGap  0.25">
+  <TRColumnBalance No>
+  <TRSideheadWidth  1.1811">
+  <TRSideheadGap  0.19685">
+  <TRSideheadPlacement Left>
+  <TRNext 0>
+ > # end of TextRect
+> # end of Page
+<TextFlow
+ <TFTag `A'>
+ <TFAutoConnect Yes>
+ <FlowDir INHERITLTR>
+ <Notes 
+ > # end of Notes
+ <Para 
+  <Unique 998398>
+  <PgfTag `Numbered1'>
+  <Pgf 
+    <PgfNumFormat `Overrides Numbered1 \n<n=1\>.\\t\n'>
+  > # end of Pgf
+  <PgfNumString `Should be updated on load: Numbered1 1.\t'>
+  <ParaLine 
+   <TextRectID 19>
+   <Font 
+    <FTag `'>
+    <FAngle `Italic'>
+   > # end of Font
+   <Char HardReturn>
+  > # end of ParaLine
+  <ParaLine
+   <Font 
+    <FTag `'>
+    <FWeight `Bold'>
+   > # end of Font
+   <Char Tab>
+   <String `\tPa\tra\n 2.\t'>
+   <Char Tab>
+   <Font 
+    <FTag `'>
+    <FWeight `Bold'>
+   > # end of Font
+  > # end of ParaLine
+ > # end of Para
+> # end of TextFlow
+# End of MIFFile

@@ -1,0 +1,6 @@
+﻿greeting: Hello
+block: |
+  Line one
+  Line two
+
+quoted: "Done"

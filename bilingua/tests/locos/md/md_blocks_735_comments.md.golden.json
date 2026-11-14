@@ -1,0 +1,53 @@
+{
+ "format": "md",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Text before.",
+   "style": ""
+  },
+  {
+   "p_index": 1,
+   "text": "<!-- a comment --> then visible text",
+   "style": ""
+  },
+  {
+   "p_index": 2,
+   "text": "Inline <!-- note --> comment stays in the line.",
+   "style": ""
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "PCEtLSBvbmUgbGluZSBjb21tZW50IC0tPgoKVGV4dCBiZWZvcmUuCjwhLS0KICBBIG11bHRpLWxpbmUgY29tbWVudAogIHRoYXQgc2F5cyB0aGluZ3MuCi0tPgoKICA8IS0tIGEgLS0+IDwhLS0gYiAtLT4KCjwhLS0gYSBjb21tZW50IC0tPiB0aGVuIHZpc2libGUgdGV4dAoKSW5saW5lIDwhLS0gbm90ZSAtLT4gY29tbWVudCBzdGF5cyBpbiB0aGUgbGluZS4K"
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü Text before.",
+    "1": "Ü <!-- a comment --> then visible text",
+    "2": "Ü Inline <!-- note --> comment stays in the line."
+   },
+   "out_b64": "PCEtLSBvbmUgbGluZSBjb21tZW50IC0tPgoKw5wgVGV4dCBiZWZvcmUuCjwhLS0KICBBIG11bHRpLWxpbmUgY29tbWVudAogIHRoYXQgc2F5cyB0aGluZ3MuCi0tPgoKICA8IS0tIGEgLS0+IDwhLS0gYiAtLT4KCsOcIDwhLS0gYSBjb21tZW50IC0tPiB0aGVuIHZpc2libGUgdGV4dAoKw5wgSW5saW5lIDwhLS0gbm90ZSAtLT4gY29tbWVudCBzdGF5cyBpbiB0aGUgbGluZS4K"
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Text before. & <\"'>",
+    "2": "Inline <!-- note --> comment stays in the line. & <\"'>"
+   },
+   "out_b64": "PCEtLSBvbmUgbGluZSBjb21tZW50IC0tPgoKVGV4dCBiZWZvcmUuICYgPCInPgo8IS0tCiAgQSBtdWx0aS1saW5lIGNvbW1lbnQKICB0aGF0IHNheXMgdGhpbmdzLgotLT4KCiAgPCEtLSBhIC0tPiA8IS0tIGIgLS0+Cgo8IS0tIGEgY29tbWVudCAtLT4gdGhlbiB2aXNpYmxlIHRleHQKCklubGluZSA8IS0tIG5vdGUgLS0+IGNvbW1lbnQgc3RheXMgaW4gdGhlIGxpbmUuICYgPCInPgo="
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "out_b64": "PCEtLSBvbmUgbGluZSBjb21tZW50IC0tPgoKVGV4dCBiZWZvcmUuCjwhLS0KICBBIG11bHRpLWxpbmUgY29tbWVudAogIHRoYXQgc2F5cyB0aGluZ3MuCi0tPgoKICA8IS0tIGEgLS0+IDwhLS0gYiAtLT4KCjwhLS0gYSBjb21tZW50IC0tPiB0aGVuIHZpc2libGUgdGV4dAoKSW5saW5lIDwhLS0gbm90ZSAtLT4gY29tbWVudCBzdGF5cyBpbiB0aGUgbGluZS4K"
+  }
+ ]
+}

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<txml locale="en_US" version="1.0" segtype="sentence" datatype="html" targetlocale="de_DE" createdby="bilingua w3">
+<skeleton>&lt;p&gt;</skeleton>
+<translatable blockId="1" datatype="html">
+<segment segmentId="1"><source>Pick a <ut type="start" x="1">&lt;b&gt;</ut>blue<ut type="end" x="1">&lt;/b&gt;</ut> pen.</source></segment>
+<segment segmentId="2" modified="true"><source>Kept line.</source><target>Behalten.</target></segment>
+<segment segmentId="3"><source>Line one<ut x="2">&lt;br/&gt;</ut>line two.</source><target score="80">Zeile (fuzzy)</target></segment>
+<segment segmentId="4" gtmt="true"><source>Raw machine line.</source><target>Maschine.</target></segment>
+<segment segmentId="5"><source>Done line.</source><target score="100">Fertig.</target></segment>
+</translatable>
+<localizable blockId="2"><segment segmentId="1"><source>Menu</source></segment></localizable>
+<translatable blockId="3">
+<segment segmentId="1"><source>Last <ut type="start" x="3">&lt;i&gt;</ut>green<ut type="end" x="3">&lt;/i&gt;</ut> cup.</source></segment>
+</translatable>
+</txml>

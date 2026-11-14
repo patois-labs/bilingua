@@ -1,0 +1,1012 @@
+{
+"edge.ts": {
+"units": [
+[
+0,
+"Less < more > été あ"
+],
+[
+1,
+"Raw <b>markup</b> & more"
+],
+[
+2,
+"With ⟦x1⟧ comment and ⟦x2⟧ instruction"
+],
+[
+3,
+"padded text"
+],
+[
+6,
+"⟦x1⟧"
+],
+[
+10,
+"%n item(s)"
+],
+[
+11,
+"%n thing(s) in a row"
+],
+[
+12,
+"%n tight"
+],
+[
+13,
+"Multi\nline &text"
+],
+[
+14,
+"Same \"quoted\" 'text'"
+],
+[
+15,
+"Plain"
+]
+],
+"merges": {
+"": "<?xml version='1.0' encoding='utf-8'?>\n<!-- edge cases: Qt Linguist file -->\n<!DOCTYPE TS>\n<TS version='2.1' sourcelanguage='en_US'  language='de_DE' >\n<defaultcodec>utf-8</defaultcodec>\n<context encoding=\"utf-8\">\n    <name>Edge &amp; Co</name>\n    <comment>context comment</comment>\n    <message id=\"entities\">\n        <source>Less &lt; more &gt; &#233;t&#xe9; &#x3042;</source>\n        <translation variants=\"no\">T:Less &lt; more &gt; été あ</translation>\n    </message>\n    <message>\n        <source><![CDATA[Raw <b>markup</b> & more]]></source>\n        <translation>T:Raw &lt;b&gt;markup&lt;/b&gt; &amp; more</translation>\n    </message>\n    <message>\n        <source>With <!-- a note --> comment and <?pi data?> instruction</source>\n        <translation>T:With <!-- a note --> comment and <?pi data?> instruction</translation>\n    </message>\n    <message>\n        <source>   padded text   </source>\n        <translation>   T:padded text   </translation>\n    </message>\n    <message>\n        <source>  </source>\n        <translation type=\"unfinished\"></translation>\n    </message>\n    <message>\n        <source>---</source>\n        <translation type=\"unfinished\"></translation>\n    </message>\n    <message>\n        <source><byte value=\"x9\"/></source>\n        <translation>T:<byte value=\"x9\"/></translation>\n    </message>\n    <message>\n        <source>Gone</source>\n        <translation type=\"vanished\">Weg</translation>\n    </message>\n    <message>\n        <source>Old</source>\n        <translation type=\"obsolete\">Alt</translation>\n    </message>\n    <message>\n        <source>No translation element</source>\n    </message>\n    <message>\n        <translation>No source element</translation>\n    </message>\n    <message numerus=\"yes\">\n        <source>%n item(s)</source>\n        <translatorcomment>check plurals</translatorcomment>\n        <translation>\n            <numerusform>T:%n item(s)</numerusform>\n            <numerusform>T:%n item(s)</numerusform>\n        </translation>\n    </message>\n    <message numerus=\"YES\">\n        <source>%n thing(s) in a row</source>\n        <oldsource>%n thing</oldsource>\n        <translation><numerusform>T:%n thing(s) in a row</numerusform><numerusform>T:%n thing(s) in a row</numerusform></translation>\n    </message>\n    <message numerus=\"yes\">\n        <source>%n tight</source><translation><numerusform>T:%n tight</numerusform><numerusform>T:%n tight</numerusform></translation>\n    </message>\n    <message>\n        <location filename=\"../src/a.cpp\" line=\"7\"/>\n        <source>Multi\nline &amp;text</source>\n        <comment>  spaced comment  </comment>\n        <extracomment>extra</extracomment>\n        <translation>T:Multi\nline &amp;text</translation>\n    </message>\n    <message>\n        <source>Same &quot;quoted&quot; &apos;text&apos;</source>\n        <translation>T:Same \"quoted\" 'text'</translation>\n    </message>\n</context>\n<context>\n    <name>Second</name>\n    <message>\n        <source>Plain</source>\n        <translation>T:Plain</translation>\n    </message>\n</context>\n</TS>\n",
+"pl-PL": "<?xml version='1.0' encoding='utf-8'?>\n<!-- edge cases: Qt Linguist file -->\n<!DOCTYPE TS>\n<TS version='2.1' sourcelanguage='en_US'  language='pl_PL' >\n<defaultcodec>utf-8</defaultcodec>\n<context encoding=\"utf-8\">\n    <name>Edge &amp; Co</name>\n    <comment>context comment</comment>\n    <message id=\"entities\">\n        <source>Less &lt; more &gt; &#233;t&#xe9; &#x3042;</source>\n        <translation variants=\"no\">T:Less &lt; more &gt; été あ</translation>\n    </message>\n    <message>\n        <source><![CDATA[Raw <b>markup</b> & more]]></source>\n        <translation>T:Raw &lt;b&gt;markup&lt;/b&gt; &amp; more</translation>\n    </message>\n    <message>\n        <source>With <!-- a note --> comment and <?pi data?> instruction</source>\n        <translation>T:With <!-- a note --> comment and <?pi data?> instruction</translation>\n    </message>\n    <message>\n        <source>   padded text   </source>\n        <translation>   T:padded text   </translation>\n    </message>\n    <message>\n        <source>  </source>\n        <translation type=\"unfinished\"></translation>\n    </message>\n    <message>\n        <source>---</source>\n        <translation type=\"unfinished\"></translation>\n    </message>\n    <message>\n        <source><byte value=\"x9\"/></source>\n        <translation>T:<byte value=\"x9\"/></translation>\n    </message>\n    <message>\n        <source>Gone</source>\n        <translation type=\"vanished\">Weg</translation>\n    </message>\n    <message>\n        <source>Old</source>\n        <translation type=\"obsolete\">Alt</translation>\n    </message>\n    <message>\n        <source>No translation element</source>\n    </message>\n    <message>\n        <translation>No source element</translation>\n    </message>\n    <message numerus=\"yes\">\n        <source>%n item(s)</source>\n        <translatorcomment>check plurals</translatorcomment>\n        <translation>\n            <numerusform>T:%n item(s)</numerusform>\n            <numerusform>T:%n item(s)</numerusform>\n            <numerusform>T:%n item(s)</numerusform>\n        </translation>\n    </message>\n    <message numerus=\"YES\">\n        <source>%n thing(s) in a row</source>\n        <oldsource>%n thing</oldsource>\n        <translation><numerusform>T:%n thing(s) in a row</numerusform><numerusform>T:%n thing(s) in a row</numerusform><numerusform>T:%n thing(s) in a row</numerusform></translation>\n    </message>\n    <message numerus=\"yes\">\n        <source>%n tight</source><translation><numerusform>T:%n tight</numerusform><numerusform>T:%n tight</numerusform><numerusform>T:%n tight</numerusform></translation>\n    </message>\n    <message>\n        <location filename=\"../src/a.cpp\" line=\"7\"/>\n        <source>Multi\nline &amp;text</source>\n        <comment>  spaced comment  </comment>\n        <extracomment>extra</extracomment>\n        <translation>T:Multi\nline &amp;text</translation>\n    </message>\n    <message>\n        <source>Same &quot;quoted&quot; &apos;text&apos;</source>\n        <translation>T:Same \"quoted\" 'text'</translation>\n    </message>\n</context>\n<context>\n    <name>Second</name>\n    <message>\n        <source>Plain</source>\n        <translation>T:Plain</translation>\n    </message>\n</context>\n</TS>\n",
+"ar-SA": "<?xml version='1.0' encoding='utf-8'?>\n<!-- edge cases: Qt Linguist file -->\n<!DOCTYPE TS>\n<TS version='2.1' sourcelanguage='en_US'  language='ar_SA' >\n<defaultcodec>utf-8</defaultcodec>\n<context encoding=\"utf-8\">\n    <name>Edge &amp; Co</name>\n    <comment>context comment</comment>\n    <message id=\"entities\">\n        <source>Less &lt; more &gt; &#233;t&#xe9; &#x3042;</source>\n        <translation variants=\"no\">T:Less &lt; more &gt; été あ</translation>\n    </message>\n    <message>\n        <source><![CDATA[Raw <b>markup</b> & more]]></source>\n        <translation>T:Raw &lt;b&gt;markup&lt;/b&gt; &amp; more</translation>\n    </message>\n    <message>\n        <source>With <!-- a note --> comment and <?pi data?> instruction</source>\n        <translation>T:With <!-- a note --> comment and <?pi data?> instruction</translation>\n    </message>\n    <message>\n        <source>   padded text   </source>\n        <translation>   T:padded text   </translation>\n    </message>\n    <message>\n        <source>  </source>\n        <translation type=\"unfinished\"></translation>\n    </message>\n    <message>\n        <source>---</source>\n        <translation type=\"unfinished\"></translation>\n    </message>\n    <message>\n        <source><byte value=\"x9\"/></source>\n        <translation>T:<byte value=\"x9\"/></translation>\n    </message>\n    <message>\n        <source>Gone</source>\n        <translation type=\"vanished\">Weg</translation>\n    </message>\n    <message>\n        <source>Old</source>\n        <translation type=\"obsolete\">Alt</translation>\n    </message>\n    <message>\n        <source>No translation element</source>\n    </message>\n    <message>\n        <translation>No source element</translation>\n    </message>\n    <message numerus=\"yes\">\n        <source>%n item(s)</source>\n        <translatorcomment>check plurals</translatorcomment>\n        <translation>\n            <numerusform>T:%n item(s)</numerusform>\n            <numerusform>T:%n item(s)</numerusform>\n            <numerusform>T:%n item(s)</numerusform>\n            <numerusform>T:%n item(s)</numerusform>\n            <numerusform>T:%n item(s)</numerusform>\n            <numerusform>T:%n item(s)</numerusform>\n        </translation>\n    </message>\n    <message numerus=\"YES\">\n        <source>%n thing(s) in a row</source>\n        <oldsource>%n thing</oldsource>\n        <translation><numerusform>T:%n thing(s) in a row</numerusform><numerusform>T:%n thing(s) in a row</numerusform><numerusform>T:%n thing(s) in a row</numerusform><numerusform>T:%n thing(s) in a row</numerusform><numerusform>T:%n thing(s) in a row</numerusform><numerusform>T:%n thing(s) in a row</numerusform></translation>\n    </message>\n    <message numerus=\"yes\">\n        <source>%n tight</source><translation><numerusform>T:%n tight</numerusform><numerusform>T:%n tight</numerusform><numerusform>T:%n tight</numerusform><numerusform>T:%n tight</numerusform><numerusform>T:%n tight</numerusform><numerusform>T:%n tight</numerusform></translation>\n    </message>\n    <message>\n        <location filename=\"../src/a.cpp\" line=\"7\"/>\n        <source>Multi\nline &amp;text</source>\n        <comment>  spaced comment  </comment>\n        <extracomment>extra</extracomment>\n        <translation>T:Multi\nline &amp;text</translation>\n    </message>\n    <message>\n        <source>Same &quot;quoted&quot; &apos;text&apos;</source>\n        <translation>T:Same \"quoted\" 'text'</translation>\n    </message>\n</context>\n<context>\n    <name>Second</name>\n    <message>\n        <source>Plain</source>\n        <translation>T:Plain</translation>\n    </message>\n</context>\n</TS>\n",
+"ja": "<?xml version='1.0' encoding='utf-8'?>\n<!-- edge cases: Qt Linguist file -->\n<!DOCTYPE TS>\n<TS version='2.1' sourcelanguage='en_US'  language='ja' >\n<defaultcodec>utf-8</defaultcodec>\n<context encoding=\"utf-8\">\n    <name>Edge &amp; Co</name>\n    <comment>context comment</comment>\n    <message id=\"entities\">\n        <source>Less &lt; more &gt; &#233;t&#xe9; &#x3042;</source>\n        <translation variants=\"no\">T:Less &lt; more &gt; été あ</translation>\n    </message>\n    <message>\n        <source><![CDATA[Raw <b>markup</b> & more]]></source>\n        <translation>T:Raw &lt;b&gt;markup&lt;/b&gt; &amp; more</translation>\n    </message>\n    <message>\n        <source>With <!-- a note --> comment and <?pi data?> instruction</source>\n        <translation>T:With <!-- a note --> comment and <?pi data?> instruction</translation>\n    </message>\n    <message>\n        <source>   padded text   </source>\n        <translation>   T:padded text   </translation>\n    </message>\n    <message>\n        <source>  </source>\n        <translation type=\"unfinished\"></translation>\n    </message>\n    <message>\n        <source>---</source>\n        <translation type=\"unfinished\"></translation>\n    </message>\n    <message>\n        <source><byte value=\"x9\"/></source>\n        <translation>T:<byte value=\"x9\"/></translation>\n    </message>\n    <message>\n        <source>Gone</source>\n        <translation type=\"vanished\">Weg</translation>\n    </message>\n    <message>\n        <source>Old</source>\n        <translation type=\"obsolete\">Alt</translation>\n    </message>\n    <message>\n        <source>No translation element</source>\n    </message>\n    <message>\n        <translation>No source element</translation>\n    </message>\n    <message numerus=\"yes\">\n        <source>%n item(s)</source>\n        <translatorcomment>check plurals</translatorcomment>\n        <translation>\n            <numerusform>T:%n item(s)</numerusform>\n            <numerusform>T:%n item(s)</numerusform>\n        </translation>\n    </message>\n    <message numerus=\"YES\">\n        <source>%n thing(s) in a row</source>\n        <oldsource>%n thing</oldsource>\n        <translation><numerusform>T:%n thing(s) in a row</numerusform></translation>\n    </message>\n    <message numerus=\"yes\">\n        <source>%n tight</source><translation><numerusform>T:%n tight</numerusform><numerusform>T:%n tight</numerusform></translation>\n    </message>\n    <message>\n        <location filename=\"../src/a.cpp\" line=\"7\"/>\n        <source>Multi\nline &amp;text</source>\n        <comment>  spaced comment  </comment>\n        <extracomment>extra</extracomment>\n        <translation>T:Multi\nline &amp;text</translation>\n    </message>\n    <message>\n        <source>Same &quot;quoted&quot; &apos;text&apos;</source>\n        <translation>T:Same \"quoted\" 'text'</translation>\n    </message>\n</context>\n<context>\n    <name>Second</name>\n    <message>\n        <source>Plain</source>\n        <translation>T:Plain</translation>\n    </message>\n</context>\n</TS>\n",
+"de-DE": "<?xml version='1.0' encoding='utf-8'?>\n<!-- edge cases: Qt Linguist file -->\n<!DOCTYPE TS>\n<TS version='2.1' sourcelanguage='en_US'  language='de_DE' >\n<defaultcodec>utf-8</defaultcodec>\n<context encoding=\"utf-8\">\n    <name>Edge &amp; Co</name>\n    <comment>context comment</comment>\n    <message id=\"entities\">\n        <source>Less &lt; more &gt; &#233;t&#xe9; &#x3042;</source>\n        <translation variants=\"no\">T:Less &lt; more &gt; été あ</translation>\n    </message>\n    <message>\n        <source><![CDATA[Raw <b>markup</b> & more]]></source>\n        <translation>T:Raw &lt;b&gt;markup&lt;/b&gt; &amp; more</translation>\n    </message>\n    <message>\n        <source>With <!-- a note --> comment and <?pi data?> instruction</source>\n        <translation>T:With <!-- a note --> comment and <?pi data?> instruction</translation>\n    </message>\n    <message>\n        <source>   padded text   </source>\n        <translation>   T:padded text   </translation>\n    </message>\n    <message>\n        <source>  </source>\n        <translation type=\"unfinished\"></translation>\n    </message>\n    <message>\n        <source>---</source>\n        <translation type=\"unfinished\"></translation>\n    </message>\n    <message>\n        <source><byte value=\"x9\"/></source>\n        <translation>T:<byte value=\"x9\"/></translation>\n    </message>\n    <message>\n        <source>Gone</source>\n        <translation type=\"vanished\">Weg</translation>\n    </message>\n    <message>\n        <source>Old</source>\n        <translation type=\"obsolete\">Alt</translation>\n    </message>\n    <message>\n        <source>No translation element</source>\n    </message>\n    <message>\n        <translation>No source element</translation>\n    </message>\n    <message numerus=\"yes\">\n        <source>%n item(s)</source>\n        <translatorcomment>check plurals</translatorcomment>\n        <translation>\n            <numerusform>T:%n item(s)</numerusform>\n            <numerusform>T:%n item(s)</numerusform>\n        </translation>\n    </message>\n    <message numerus=\"YES\">\n        <source>%n thing(s) in a row</source>\n        <oldsource>%n thing</oldsource>\n        <translation><numerusform>T:%n thing(s) in a row</numerusform><numerusform>T:%n thing(s) in a row</numerusform></translation>\n    </message>\n    <message numerus=\"yes\">\n        <source>%n tight</source><translation><numerusform>T:%n tight</numerusform><numerusform>T:%n tight</numerusform></translation>\n    </message>\n    <message>\n        <location filename=\"../src/a.cpp\" line=\"7\"/>\n        <source>Multi\nline &amp;text</source>\n        <comment>  spaced comment  </comment>\n        <extracomment>extra</extracomment>\n        <translation>T:Multi\nline &amp;text</translation>\n    </message>\n    <message>\n        <source>Same &quot;quoted&quot; &apos;text&apos;</source>\n        <translation>T:Same \"quoted\" 'text'</translation>\n    </message>\n</context>\n<context>\n    <name>Second</name>\n    <message>\n        <source>Plain</source>\n        <translation>T:Plain</translation>\n    </message>\n</context>\n</TS>\n"
+}
+},
+"lang_ar.ts": {
+"units": [
+[
+0,
+"&Open file..."
+],
+[
+1,
+"Saved %1 of %2 pages"
+],
+[
+2,
+"%n file(s) deleted"
+],
+[
+3,
+"Settings"
+],
+[
+4,
+"Tab⟦x1⟧separated"
+]
+],
+"merges": {
+"": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!DOCTYPE TS>\n<TS version=\"2.1\" language=\"ar_SA\" sourcelanguage=\"en_US\">\n<context>\n    <name>MainWindow</name>\n    <message>\n        <location filename=\"../src/mainwindow.cpp\" line=\"42\"/>\n        <source>&amp;Open file...</source>\n        <comment>menu entry</comment>\n        <translation>T:&amp;Open file...</translation>\n    </message>\n    <message>\n        <source>Saved %1 of %2 pages</source>\n        <extracomment>%1 and %2 are page counts</extracomment>\n        <translation>T:Saved %1 of %2 pages</translation>\n    </message>\n    <message numerus=\"yes\">\n        <source>%n file(s) deleted</source>\n        <translation>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n        </translation>\n    </message>\n</context>\n<context>\n    <name>Preferences</name>\n    <message>\n        <source>Settings</source>\n        <translation>T:Settings</translation>\n    </message>\n    <message>\n        <source>Tab<byte value=\"x9\"/>separated</source>\n        <translation>T:Tab<byte value=\"x9\"/>separated</translation>\n    </message>\n</context>\n</TS>\n",
+"pl-PL": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!DOCTYPE TS>\n<TS version=\"2.1\" language=\"pl_PL\" sourcelanguage=\"en_US\">\n<context>\n    <name>MainWindow</name>\n    <message>\n        <location filename=\"../src/mainwindow.cpp\" line=\"42\"/>\n        <source>&amp;Open file...</source>\n        <comment>menu entry</comment>\n        <translation>T:&amp;Open file...</translation>\n    </message>\n    <message>\n        <source>Saved %1 of %2 pages</source>\n        <extracomment>%1 and %2 are page counts</extracomment>\n        <translation>T:Saved %1 of %2 pages</translation>\n    </message>\n    <message numerus=\"yes\">\n        <source>%n file(s) deleted</source>\n        <translation>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n        </translation>\n    </message>\n</context>\n<context>\n    <name>Preferences</name>\n    <message>\n        <source>Settings</source>\n        <translation>T:Settings</translation>\n    </message>\n    <message>\n        <source>Tab<byte value=\"x9\"/>separated</source>\n        <translation>T:Tab<byte value=\"x9\"/>separated</translation>\n    </message>\n</context>\n</TS>\n",
+"ar-SA": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!DOCTYPE TS>\n<TS version=\"2.1\" language=\"ar_SA\" sourcelanguage=\"en_US\">\n<context>\n    <name>MainWindow</name>\n    <message>\n        <location filename=\"../src/mainwindow.cpp\" line=\"42\"/>\n        <source>&amp;Open file...</source>\n        <comment>menu entry</comment>\n        <translation>T:&amp;Open file...</translation>\n    </message>\n    <message>\n        <source>Saved %1 of %2 pages</source>\n        <extracomment>%1 and %2 are page counts</extracomment>\n        <translation>T:Saved %1 of %2 pages</translation>\n    </message>\n    <message numerus=\"yes\">\n        <source>%n file(s) deleted</source>\n        <translation>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n        </translation>\n    </message>\n</context>\n<context>\n    <name>Preferences</name>\n    <message>\n        <source>Settings</source>\n        <translation>T:Settings</translation>\n    </message>\n    <message>\n        <source>Tab<byte value=\"x9\"/>separated</source>\n        <translation>T:Tab<byte value=\"x9\"/>separated</translation>\n    </message>\n</context>\n</TS>\n",
+"ja": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!DOCTYPE TS>\n<TS version=\"2.1\" language=\"ja\" sourcelanguage=\"en_US\">\n<context>\n    <name>MainWindow</name>\n    <message>\n        <location filename=\"../src/mainwindow.cpp\" line=\"42\"/>\n        <source>&amp;Open file...</source>\n        <comment>menu entry</comment>\n        <translation>T:&amp;Open file...</translation>\n    </message>\n    <message>\n        <source>Saved %1 of %2 pages</source>\n        <extracomment>%1 and %2 are page counts</extracomment>\n        <translation>T:Saved %1 of %2 pages</translation>\n    </message>\n    <message numerus=\"yes\">\n        <source>%n file(s) deleted</source>\n        <translation>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n        </translation>\n    </message>\n</context>\n<context>\n    <name>Preferences</name>\n    <message>\n        <source>Settings</source>\n        <translation>T:Settings</translation>\n    </message>\n    <message>\n        <source>Tab<byte value=\"x9\"/>separated</source>\n        <translation>T:Tab<byte value=\"x9\"/>separated</translation>\n    </message>\n</context>\n</TS>\n",
+"de-DE": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!DOCTYPE TS>\n<TS version=\"2.1\" language=\"de_DE\" sourcelanguage=\"en_US\">\n<context>\n    <name>MainWindow</name>\n    <message>\n        <location filename=\"../src/mainwindow.cpp\" line=\"42\"/>\n        <source>&amp;Open file...</source>\n        <comment>menu entry</comment>\n        <translation>T:&amp;Open file...</translation>\n    </message>\n    <message>\n        <source>Saved %1 of %2 pages</source>\n        <extracomment>%1 and %2 are page counts</extracomment>\n        <translation>T:Saved %1 of %2 pages</translation>\n    </message>\n    <message numerus=\"yes\">\n        <source>%n file(s) deleted</source>\n        <translation>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n        </translation>\n    </message>\n</context>\n<context>\n    <name>Preferences</name>\n    <message>\n        <source>Settings</source>\n        <translation>T:Settings</translation>\n    </message>\n    <message>\n        <source>Tab<byte value=\"x9\"/>separated</source>\n        <translation>T:Tab<byte value=\"x9\"/>separated</translation>\n    </message>\n</context>\n</TS>\n"
+}
+},
+"lang_ar_cp1256.ts": {
+"units": [
+[
+0,
+"&Open file..."
+],
+[
+1,
+"Saved %1 of %2 pages"
+],
+[
+2,
+"%n file(s) deleted"
+],
+[
+3,
+"Settings"
+],
+[
+4,
+"Tab⟦x1⟧separated"
+]
+]
+},
+"lang_ar_utf16le.ts": {
+"units": [
+[
+0,
+"&Open file..."
+],
+[
+1,
+"Saved %1 of %2 pages"
+],
+[
+2,
+"%n file(s) deleted"
+],
+[
+3,
+"Settings"
+],
+[
+4,
+"Tab⟦x1⟧separated"
+]
+]
+},
+"lang_de.ts": {
+"units": [
+[
+0,
+"&Open file..."
+],
+[
+1,
+"Saved %1 of %2 pages"
+],
+[
+2,
+"%n file(s) deleted"
+],
+[
+3,
+"Settings"
+],
+[
+4,
+"Tab⟦x1⟧separated"
+]
+],
+"merges": {
+"": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!DOCTYPE TS>\n<TS version=\"2.1\" language=\"de_DE\" sourcelanguage=\"en_US\">\n<context>\n    <name>MainWindow</name>\n    <message>\n        <location filename=\"../src/mainwindow.cpp\" line=\"42\"/>\n        <source>&amp;Open file...</source>\n        <comment>menu entry</comment>\n        <translation>T:&amp;Open file...</translation>\n    </message>\n    <message>\n        <source>Saved %1 of %2 pages</source>\n        <extracomment>%1 and %2 are page counts</extracomment>\n        <translation>T:Saved %1 of %2 pages</translation>\n    </message>\n    <message numerus=\"yes\">\n        <source>%n file(s) deleted</source>\n        <translation>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n        </translation>\n    </message>\n</context>\n<context>\n    <name>Preferences</name>\n    <message>\n        <source>Settings</source>\n        <translation>T:Settings</translation>\n    </message>\n    <message>\n        <source>Tab<byte value=\"x9\"/>separated</source>\n        <translation>T:Tab<byte value=\"x9\"/>separated</translation>\n    </message>\n</context>\n</TS>\n",
+"pl-PL": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!DOCTYPE TS>\n<TS version=\"2.1\" language=\"pl_PL\" sourcelanguage=\"en_US\">\n<context>\n    <name>MainWindow</name>\n    <message>\n        <location filename=\"../src/mainwindow.cpp\" line=\"42\"/>\n        <source>&amp;Open file...</source>\n        <comment>menu entry</comment>\n        <translation>T:&amp;Open file...</translation>\n    </message>\n    <message>\n        <source>Saved %1 of %2 pages</source>\n        <extracomment>%1 and %2 are page counts</extracomment>\n        <translation>T:Saved %1 of %2 pages</translation>\n    </message>\n    <message numerus=\"yes\">\n        <source>%n file(s) deleted</source>\n        <translation>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n        </translation>\n    </message>\n</context>\n<context>\n    <name>Preferences</name>\n    <message>\n        <source>Settings</source>\n        <translation>T:Settings</translation>\n    </message>\n    <message>\n        <source>Tab<byte value=\"x9\"/>separated</source>\n        <translation>T:Tab<byte value=\"x9\"/>separated</translation>\n    </message>\n</context>\n</TS>\n",
+"ar-SA": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!DOCTYPE TS>\n<TS version=\"2.1\" language=\"ar_SA\" sourcelanguage=\"en_US\">\n<context>\n    <name>MainWindow</name>\n    <message>\n        <location filename=\"../src/mainwindow.cpp\" line=\"42\"/>\n        <source>&amp;Open file...</source>\n        <comment>menu entry</comment>\n        <translation>T:&amp;Open file...</translation>\n    </message>\n    <message>\n        <source>Saved %1 of %2 pages</source>\n        <extracomment>%1 and %2 are page counts</extracomment>\n        <translation>T:Saved %1 of %2 pages</translation>\n    </message>\n    <message numerus=\"yes\">\n        <source>%n file(s) deleted</source>\n        <translation>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n        </translation>\n    </message>\n</context>\n<context>\n    <name>Preferences</name>\n    <message>\n        <source>Settings</source>\n        <translation>T:Settings</translation>\n    </message>\n    <message>\n        <source>Tab<byte value=\"x9\"/>separated</source>\n        <translation>T:Tab<byte value=\"x9\"/>separated</translation>\n    </message>\n</context>\n</TS>\n",
+"ja": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!DOCTYPE TS>\n<TS version=\"2.1\" language=\"ja\" sourcelanguage=\"en_US\">\n<context>\n    <name>MainWindow</name>\n    <message>\n        <location filename=\"../src/mainwindow.cpp\" line=\"42\"/>\n        <source>&amp;Open file...</source>\n        <comment>menu entry</comment>\n        <translation>T:&amp;Open file...</translation>\n    </message>\n    <message>\n        <source>Saved %1 of %2 pages</source>\n        <extracomment>%1 and %2 are page counts</extracomment>\n        <translation>T:Saved %1 of %2 pages</translation>\n    </message>\n    <message numerus=\"yes\">\n        <source>%n file(s) deleted</source>\n        <translation>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n        </translation>\n    </message>\n</context>\n<context>\n    <name>Preferences</name>\n    <message>\n        <source>Settings</source>\n        <translation>T:Settings</translation>\n    </message>\n    <message>\n        <source>Tab<byte value=\"x9\"/>separated</source>\n        <translation>T:Tab<byte value=\"x9\"/>separated</translation>\n    </message>\n</context>\n</TS>\n",
+"de-DE": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!DOCTYPE TS>\n<TS version=\"2.1\" language=\"de_DE\" sourcelanguage=\"en_US\">\n<context>\n    <name>MainWindow</name>\n    <message>\n        <location filename=\"../src/mainwindow.cpp\" line=\"42\"/>\n        <source>&amp;Open file...</source>\n        <comment>menu entry</comment>\n        <translation>T:&amp;Open file...</translation>\n    </message>\n    <message>\n        <source>Saved %1 of %2 pages</source>\n        <extracomment>%1 and %2 are page counts</extracomment>\n        <translation>T:Saved %1 of %2 pages</translation>\n    </message>\n    <message numerus=\"yes\">\n        <source>%n file(s) deleted</source>\n        <translation>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n        </translation>\n    </message>\n</context>\n<context>\n    <name>Preferences</name>\n    <message>\n        <source>Settings</source>\n        <translation>T:Settings</translation>\n    </message>\n    <message>\n        <source>Tab<byte value=\"x9\"/>separated</source>\n        <translation>T:Tab<byte value=\"x9\"/>separated</translation>\n    </message>\n</context>\n</TS>\n"
+}
+},
+"lang_de_latin1.ts": {
+"units": [
+[
+0,
+"&Open file..."
+],
+[
+1,
+"Saved %1 of %2 pages"
+],
+[
+2,
+"%n file(s) deleted"
+],
+[
+3,
+"Settings"
+],
+[
+4,
+"Tab⟦x1⟧separated"
+]
+]
+},
+"lang_en.ts": {
+"units": [
+[
+0,
+"&Open file..."
+],
+[
+1,
+"Saved %1 of %2 pages"
+],
+[
+2,
+"%n file(s) deleted"
+],
+[
+3,
+"Settings"
+],
+[
+4,
+"Tab⟦x1⟧separated"
+]
+],
+"merges": {
+"": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!DOCTYPE TS>\n<TS version=\"2.1\" language=\"en_US\" sourcelanguage=\"en_US\">\n<context>\n    <name>MainWindow</name>\n    <message>\n        <location filename=\"../src/mainwindow.cpp\" line=\"42\"/>\n        <source>&amp;Open file...</source>\n        <comment>menu entry</comment>\n        <translation>T:&amp;Open file...</translation>\n    </message>\n    <message>\n        <source>Saved %1 of %2 pages</source>\n        <extracomment>%1 and %2 are page counts</extracomment>\n        <translation>T:Saved %1 of %2 pages</translation>\n    </message>\n    <message numerus=\"yes\">\n        <source>%n file(s) deleted</source>\n        <translation>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n        </translation>\n    </message>\n</context>\n<context>\n    <name>Preferences</name>\n    <message>\n        <source>Settings</source>\n        <translation>T:Settings</translation>\n    </message>\n    <message>\n        <source>Tab<byte value=\"x9\"/>separated</source>\n        <translation>T:Tab<byte value=\"x9\"/>separated</translation>\n    </message>\n</context>\n</TS>\n",
+"pl-PL": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!DOCTYPE TS>\n<TS version=\"2.1\" language=\"pl_PL\" sourcelanguage=\"en_US\">\n<context>\n    <name>MainWindow</name>\n    <message>\n        <location filename=\"../src/mainwindow.cpp\" line=\"42\"/>\n        <source>&amp;Open file...</source>\n        <comment>menu entry</comment>\n        <translation>T:&amp;Open file...</translation>\n    </message>\n    <message>\n        <source>Saved %1 of %2 pages</source>\n        <extracomment>%1 and %2 are page counts</extracomment>\n        <translation>T:Saved %1 of %2 pages</translation>\n    </message>\n    <message numerus=\"yes\">\n        <source>%n file(s) deleted</source>\n        <translation>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n        </translation>\n    </message>\n</context>\n<context>\n    <name>Preferences</name>\n    <message>\n        <source>Settings</source>\n        <translation>T:Settings</translation>\n    </message>\n    <message>\n        <source>Tab<byte value=\"x9\"/>separated</source>\n        <translation>T:Tab<byte value=\"x9\"/>separated</translation>\n    </message>\n</context>\n</TS>\n",
+"ar-SA": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!DOCTYPE TS>\n<TS version=\"2.1\" language=\"ar_SA\" sourcelanguage=\"en_US\">\n<context>\n    <name>MainWindow</name>\n    <message>\n        <location filename=\"../src/mainwindow.cpp\" line=\"42\"/>\n        <source>&amp;Open file...</source>\n        <comment>menu entry</comment>\n        <translation>T:&amp;Open file...</translation>\n    </message>\n    <message>\n        <source>Saved %1 of %2 pages</source>\n        <extracomment>%1 and %2 are page counts</extracomment>\n        <translation>T:Saved %1 of %2 pages</translation>\n    </message>\n    <message numerus=\"yes\">\n        <source>%n file(s) deleted</source>\n        <translation>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n        </translation>\n    </message>\n</context>\n<context>\n    <name>Preferences</name>\n    <message>\n        <source>Settings</source>\n        <translation>T:Settings</translation>\n    </message>\n    <message>\n        <source>Tab<byte value=\"x9\"/>separated</source>\n        <translation>T:Tab<byte value=\"x9\"/>separated</translation>\n    </message>\n</context>\n</TS>\n",
+"ja": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!DOCTYPE TS>\n<TS version=\"2.1\" language=\"ja\" sourcelanguage=\"en_US\">\n<context>\n    <name>MainWindow</name>\n    <message>\n        <location filename=\"../src/mainwindow.cpp\" line=\"42\"/>\n        <source>&amp;Open file...</source>\n        <comment>menu entry</comment>\n        <translation>T:&amp;Open file...</translation>\n    </message>\n    <message>\n        <source>Saved %1 of %2 pages</source>\n        <extracomment>%1 and %2 are page counts</extracomment>\n        <translation>T:Saved %1 of %2 pages</translation>\n    </message>\n    <message numerus=\"yes\">\n        <source>%n file(s) deleted</source>\n        <translation>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n        </translation>\n    </message>\n</context>\n<context>\n    <name>Preferences</name>\n    <message>\n        <source>Settings</source>\n        <translation>T:Settings</translation>\n    </message>\n    <message>\n        <source>Tab<byte value=\"x9\"/>separated</source>\n        <translation>T:Tab<byte value=\"x9\"/>separated</translation>\n    </message>\n</context>\n</TS>\n",
+"de-DE": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!DOCTYPE TS>\n<TS version=\"2.1\" language=\"de_DE\" sourcelanguage=\"en_US\">\n<context>\n    <name>MainWindow</name>\n    <message>\n        <location filename=\"../src/mainwindow.cpp\" line=\"42\"/>\n        <source>&amp;Open file...</source>\n        <comment>menu entry</comment>\n        <translation>T:&amp;Open file...</translation>\n    </message>\n    <message>\n        <source>Saved %1 of %2 pages</source>\n        <extracomment>%1 and %2 are page counts</extracomment>\n        <translation>T:Saved %1 of %2 pages</translation>\n    </message>\n    <message numerus=\"yes\">\n        <source>%n file(s) deleted</source>\n        <translation>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n        </translation>\n    </message>\n</context>\n<context>\n    <name>Preferences</name>\n    <message>\n        <source>Settings</source>\n        <translation>T:Settings</translation>\n    </message>\n    <message>\n        <source>Tab<byte value=\"x9\"/>separated</source>\n        <translation>T:Tab<byte value=\"x9\"/>separated</translation>\n    </message>\n</context>\n</TS>\n"
+}
+},
+"lang_en_utf8bom_crlf.ts": {
+"units": [
+[
+0,
+"&Open file..."
+],
+[
+1,
+"Saved %1 of %2 pages"
+],
+[
+2,
+"%n file(s) deleted"
+],
+[
+3,
+"Settings"
+],
+[
+4,
+"Tab⟦x1⟧separated"
+]
+]
+},
+"lang_es.ts": {
+"units": [
+[
+0,
+"&Open file..."
+],
+[
+1,
+"Saved %1 of %2 pages"
+],
+[
+2,
+"%n file(s) deleted"
+],
+[
+3,
+"Settings"
+],
+[
+4,
+"Tab⟦x1⟧separated"
+]
+],
+"merges": {
+"": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!DOCTYPE TS>\n<TS version=\"2.1\" language=\"es_ES\" sourcelanguage=\"en_US\">\n<context>\n    <name>MainWindow</name>\n    <message>\n        <location filename=\"../src/mainwindow.cpp\" line=\"42\"/>\n        <source>&amp;Open file...</source>\n        <comment>menu entry</comment>\n        <translation>T:&amp;Open file...</translation>\n    </message>\n    <message>\n        <source>Saved %1 of %2 pages</source>\n        <extracomment>%1 and %2 are page counts</extracomment>\n        <translation>T:Saved %1 of %2 pages</translation>\n    </message>\n    <message numerus=\"yes\">\n        <source>%n file(s) deleted</source>\n        <translation>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n        </translation>\n    </message>\n</context>\n<context>\n    <name>Preferences</name>\n    <message>\n        <source>Settings</source>\n        <translation>T:Settings</translation>\n    </message>\n    <message>\n        <source>Tab<byte value=\"x9\"/>separated</source>\n        <translation>T:Tab<byte value=\"x9\"/>separated</translation>\n    </message>\n</context>\n</TS>\n",
+"pl-PL": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!DOCTYPE TS>\n<TS version=\"2.1\" language=\"pl_PL\" sourcelanguage=\"en_US\">\n<context>\n    <name>MainWindow</name>\n    <message>\n        <location filename=\"../src/mainwindow.cpp\" line=\"42\"/>\n        <source>&amp;Open file...</source>\n        <comment>menu entry</comment>\n        <translation>T:&amp;Open file...</translation>\n    </message>\n    <message>\n        <source>Saved %1 of %2 pages</source>\n        <extracomment>%1 and %2 are page counts</extracomment>\n        <translation>T:Saved %1 of %2 pages</translation>\n    </message>\n    <message numerus=\"yes\">\n        <source>%n file(s) deleted</source>\n        <translation>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n        </translation>\n    </message>\n</context>\n<context>\n    <name>Preferences</name>\n    <message>\n        <source>Settings</source>\n        <translation>T:Settings</translation>\n    </message>\n    <message>\n        <source>Tab<byte value=\"x9\"/>separated</source>\n        <translation>T:Tab<byte value=\"x9\"/>separated</translation>\n    </message>\n</context>\n</TS>\n",
+"ar-SA": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!DOCTYPE TS>\n<TS version=\"2.1\" language=\"ar_SA\" sourcelanguage=\"en_US\">\n<context>\n    <name>MainWindow</name>\n    <message>\n        <location filename=\"../src/mainwindow.cpp\" line=\"42\"/>\n        <source>&amp;Open file...</source>\n        <comment>menu entry</comment>\n        <translation>T:&amp;Open file...</translation>\n    </message>\n    <message>\n        <source>Saved %1 of %2 pages</source>\n        <extracomment>%1 and %2 are page counts</extracomment>\n        <translation>T:Saved %1 of %2 pages</translation>\n    </message>\n    <message numerus=\"yes\">\n        <source>%n file(s) deleted</source>\n        <translation>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n        </translation>\n    </message>\n</context>\n<context>\n    <name>Preferences</name>\n    <message>\n        <source>Settings</source>\n        <translation>T:Settings</translation>\n    </message>\n    <message>\n        <source>Tab<byte value=\"x9\"/>separated</source>\n        <translation>T:Tab<byte value=\"x9\"/>separated</translation>\n    </message>\n</context>\n</TS>\n",
+"ja": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!DOCTYPE TS>\n<TS version=\"2.1\" language=\"ja\" sourcelanguage=\"en_US\">\n<context>\n    <name>MainWindow</name>\n    <message>\n        <location filename=\"../src/mainwindow.cpp\" line=\"42\"/>\n        <source>&amp;Open file...</source>\n        <comment>menu entry</comment>\n        <translation>T:&amp;Open file...</translation>\n    </message>\n    <message>\n        <source>Saved %1 of %2 pages</source>\n        <extracomment>%1 and %2 are page counts</extracomment>\n        <translation>T:Saved %1 of %2 pages</translation>\n    </message>\n    <message numerus=\"yes\">\n        <source>%n file(s) deleted</source>\n        <translation>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n        </translation>\n    </message>\n</context>\n<context>\n    <name>Preferences</name>\n    <message>\n        <source>Settings</source>\n        <translation>T:Settings</translation>\n    </message>\n    <message>\n        <source>Tab<byte value=\"x9\"/>separated</source>\n        <translation>T:Tab<byte value=\"x9\"/>separated</translation>\n    </message>\n</context>\n</TS>\n",
+"de-DE": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!DOCTYPE TS>\n<TS version=\"2.1\" language=\"de_DE\" sourcelanguage=\"en_US\">\n<context>\n    <name>MainWindow</name>\n    <message>\n        <location filename=\"../src/mainwindow.cpp\" line=\"42\"/>\n        <source>&amp;Open file...</source>\n        <comment>menu entry</comment>\n        <translation>T:&amp;Open file...</translation>\n    </message>\n    <message>\n        <source>Saved %1 of %2 pages</source>\n        <extracomment>%1 and %2 are page counts</extracomment>\n        <translation>T:Saved %1 of %2 pages</translation>\n    </message>\n    <message numerus=\"yes\">\n        <source>%n file(s) deleted</source>\n        <translation>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n        </translation>\n    </message>\n</context>\n<context>\n    <name>Preferences</name>\n    <message>\n        <source>Settings</source>\n        <translation>T:Settings</translation>\n    </message>\n    <message>\n        <source>Tab<byte value=\"x9\"/>separated</source>\n        <translation>T:Tab<byte value=\"x9\"/>separated</translation>\n    </message>\n</context>\n</TS>\n"
+}
+},
+"lang_fr.ts": {
+"units": [
+[
+0,
+"&Open file..."
+],
+[
+1,
+"Saved %1 of %2 pages"
+],
+[
+2,
+"%n file(s) deleted"
+],
+[
+3,
+"Settings"
+],
+[
+4,
+"Tab⟦x1⟧separated"
+]
+],
+"merges": {
+"": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!DOCTYPE TS>\n<TS version=\"2.1\" language=\"fr_FR\" sourcelanguage=\"en_US\">\n<context>\n    <name>MainWindow</name>\n    <message>\n        <location filename=\"../src/mainwindow.cpp\" line=\"42\"/>\n        <source>&amp;Open file...</source>\n        <comment>menu entry</comment>\n        <translation>T:&amp;Open file...</translation>\n    </message>\n    <message>\n        <source>Saved %1 of %2 pages</source>\n        <extracomment>%1 and %2 are page counts</extracomment>\n        <translation>T:Saved %1 of %2 pages</translation>\n    </message>\n    <message numerus=\"yes\">\n        <source>%n file(s) deleted</source>\n        <translation>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n        </translation>\n    </message>\n</context>\n<context>\n    <name>Preferences</name>\n    <message>\n        <source>Settings</source>\n        <translation>T:Settings</translation>\n    </message>\n    <message>\n        <source>Tab<byte value=\"x9\"/>separated</source>\n        <translation>T:Tab<byte value=\"x9\"/>separated</translation>\n    </message>\n</context>\n</TS>\n",
+"pl-PL": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!DOCTYPE TS>\n<TS version=\"2.1\" language=\"pl_PL\" sourcelanguage=\"en_US\">\n<context>\n    <name>MainWindow</name>\n    <message>\n        <location filename=\"../src/mainwindow.cpp\" line=\"42\"/>\n        <source>&amp;Open file...</source>\n        <comment>menu entry</comment>\n        <translation>T:&amp;Open file...</translation>\n    </message>\n    <message>\n        <source>Saved %1 of %2 pages</source>\n        <extracomment>%1 and %2 are page counts</extracomment>\n        <translation>T:Saved %1 of %2 pages</translation>\n    </message>\n    <message numerus=\"yes\">\n        <source>%n file(s) deleted</source>\n        <translation>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n        </translation>\n    </message>\n</context>\n<context>\n    <name>Preferences</name>\n    <message>\n        <source>Settings</source>\n        <translation>T:Settings</translation>\n    </message>\n    <message>\n        <source>Tab<byte value=\"x9\"/>separated</source>\n        <translation>T:Tab<byte value=\"x9\"/>separated</translation>\n    </message>\n</context>\n</TS>\n",
+"ar-SA": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!DOCTYPE TS>\n<TS version=\"2.1\" language=\"ar_SA\" sourcelanguage=\"en_US\">\n<context>\n    <name>MainWindow</name>\n    <message>\n        <location filename=\"../src/mainwindow.cpp\" line=\"42\"/>\n        <source>&amp;Open file...</source>\n        <comment>menu entry</comment>\n        <translation>T:&amp;Open file...</translation>\n    </message>\n    <message>\n        <source>Saved %1 of %2 pages</source>\n        <extracomment>%1 and %2 are page counts</extracomment>\n        <translation>T:Saved %1 of %2 pages</translation>\n    </message>\n    <message numerus=\"yes\">\n        <source>%n file(s) deleted</source>\n        <translation>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n        </translation>\n    </message>\n</context>\n<context>\n    <name>Preferences</name>\n    <message>\n        <source>Settings</source>\n        <translation>T:Settings</translation>\n    </message>\n    <message>\n        <source>Tab<byte value=\"x9\"/>separated</source>\n        <translation>T:Tab<byte value=\"x9\"/>separated</translation>\n    </message>\n</context>\n</TS>\n",
+"ja": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!DOCTYPE TS>\n<TS version=\"2.1\" language=\"ja\" sourcelanguage=\"en_US\">\n<context>\n    <name>MainWindow</name>\n    <message>\n        <location filename=\"../src/mainwindow.cpp\" line=\"42\"/>\n        <source>&amp;Open file...</source>\n        <comment>menu entry</comment>\n        <translation>T:&amp;Open file...</translation>\n    </message>\n    <message>\n        <source>Saved %1 of %2 pages</source>\n        <extracomment>%1 and %2 are page counts</extracomment>\n        <translation>T:Saved %1 of %2 pages</translation>\n    </message>\n    <message numerus=\"yes\">\n        <source>%n file(s) deleted</source>\n        <translation>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n        </translation>\n    </message>\n</context>\n<context>\n    <name>Preferences</name>\n    <message>\n        <source>Settings</source>\n        <translation>T:Settings</translation>\n    </message>\n    <message>\n        <source>Tab<byte value=\"x9\"/>separated</source>\n        <translation>T:Tab<byte value=\"x9\"/>separated</translation>\n    </message>\n</context>\n</TS>\n",
+"de-DE": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!DOCTYPE TS>\n<TS version=\"2.1\" language=\"de_DE\" sourcelanguage=\"en_US\">\n<context>\n    <name>MainWindow</name>\n    <message>\n        <location filename=\"../src/mainwindow.cpp\" line=\"42\"/>\n        <source>&amp;Open file...</source>\n        <comment>menu entry</comment>\n        <translation>T:&amp;Open file...</translation>\n    </message>\n    <message>\n        <source>Saved %1 of %2 pages</source>\n        <extracomment>%1 and %2 are page counts</extracomment>\n        <translation>T:Saved %1 of %2 pages</translation>\n    </message>\n    <message numerus=\"yes\">\n        <source>%n file(s) deleted</source>\n        <translation>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n        </translation>\n    </message>\n</context>\n<context>\n    <name>Preferences</name>\n    <message>\n        <source>Settings</source>\n        <translation>T:Settings</translation>\n    </message>\n    <message>\n        <source>Tab<byte value=\"x9\"/>separated</source>\n        <translation>T:Tab<byte value=\"x9\"/>separated</translation>\n    </message>\n</context>\n</TS>\n"
+}
+},
+"lang_fr_cp1252.ts": {
+"units": [
+[
+0,
+"&Open file..."
+],
+[
+1,
+"Saved %1 of %2 pages"
+],
+[
+2,
+"%n file(s) deleted"
+],
+[
+3,
+"Settings"
+],
+[
+4,
+"Tab⟦x1⟧separated"
+]
+]
+},
+"lang_ja.ts": {
+"units": [
+[
+0,
+"&Open file..."
+],
+[
+1,
+"Saved %1 of %2 pages"
+],
+[
+2,
+"%n file(s) deleted"
+],
+[
+3,
+"Settings"
+],
+[
+4,
+"Tab⟦x1⟧separated"
+]
+],
+"merges": {
+"": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!DOCTYPE TS>\n<TS version=\"2.1\" language=\"ja_JP\" sourcelanguage=\"en_US\">\n<context>\n    <name>MainWindow</name>\n    <message>\n        <location filename=\"../src/mainwindow.cpp\" line=\"42\"/>\n        <source>&amp;Open file...</source>\n        <comment>menu entry</comment>\n        <translation>T:&amp;Open file...</translation>\n    </message>\n    <message>\n        <source>Saved %1 of %2 pages</source>\n        <extracomment>%1 and %2 are page counts</extracomment>\n        <translation>T:Saved %1 of %2 pages</translation>\n    </message>\n    <message numerus=\"yes\">\n        <source>%n file(s) deleted</source>\n        <translation>\n            <numerusform>T:%n file(s) deleted</numerusform>\n        </translation>\n    </message>\n</context>\n<context>\n    <name>Preferences</name>\n    <message>\n        <source>Settings</source>\n        <translation>T:Settings</translation>\n    </message>\n    <message>\n        <source>Tab<byte value=\"x9\"/>separated</source>\n        <translation>T:Tab<byte value=\"x9\"/>separated</translation>\n    </message>\n</context>\n</TS>\n",
+"pl-PL": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!DOCTYPE TS>\n<TS version=\"2.1\" language=\"pl_PL\" sourcelanguage=\"en_US\">\n<context>\n    <name>MainWindow</name>\n    <message>\n        <location filename=\"../src/mainwindow.cpp\" line=\"42\"/>\n        <source>&amp;Open file...</source>\n        <comment>menu entry</comment>\n        <translation>T:&amp;Open file...</translation>\n    </message>\n    <message>\n        <source>Saved %1 of %2 pages</source>\n        <extracomment>%1 and %2 are page counts</extracomment>\n        <translation>T:Saved %1 of %2 pages</translation>\n    </message>\n    <message numerus=\"yes\">\n        <source>%n file(s) deleted</source>\n        <translation>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n        </translation>\n    </message>\n</context>\n<context>\n    <name>Preferences</name>\n    <message>\n        <source>Settings</source>\n        <translation>T:Settings</translation>\n    </message>\n    <message>\n        <source>Tab<byte value=\"x9\"/>separated</source>\n        <translation>T:Tab<byte value=\"x9\"/>separated</translation>\n    </message>\n</context>\n</TS>\n",
+"ar-SA": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!DOCTYPE TS>\n<TS version=\"2.1\" language=\"ar_SA\" sourcelanguage=\"en_US\">\n<context>\n    <name>MainWindow</name>\n    <message>\n        <location filename=\"../src/mainwindow.cpp\" line=\"42\"/>\n        <source>&amp;Open file...</source>\n        <comment>menu entry</comment>\n        <translation>T:&amp;Open file...</translation>\n    </message>\n    <message>\n        <source>Saved %1 of %2 pages</source>\n        <extracomment>%1 and %2 are page counts</extracomment>\n        <translation>T:Saved %1 of %2 pages</translation>\n    </message>\n    <message numerus=\"yes\">\n        <source>%n file(s) deleted</source>\n        <translation>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n        </translation>\n    </message>\n</context>\n<context>\n    <name>Preferences</name>\n    <message>\n        <source>Settings</source>\n        <translation>T:Settings</translation>\n    </message>\n    <message>\n        <source>Tab<byte value=\"x9\"/>separated</source>\n        <translation>T:Tab<byte value=\"x9\"/>separated</translation>\n    </message>\n</context>\n</TS>\n",
+"ja": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!DOCTYPE TS>\n<TS version=\"2.1\" language=\"ja\" sourcelanguage=\"en_US\">\n<context>\n    <name>MainWindow</name>\n    <message>\n        <location filename=\"../src/mainwindow.cpp\" line=\"42\"/>\n        <source>&amp;Open file...</source>\n        <comment>menu entry</comment>\n        <translation>T:&amp;Open file...</translation>\n    </message>\n    <message>\n        <source>Saved %1 of %2 pages</source>\n        <extracomment>%1 and %2 are page counts</extracomment>\n        <translation>T:Saved %1 of %2 pages</translation>\n    </message>\n    <message numerus=\"yes\">\n        <source>%n file(s) deleted</source>\n        <translation>\n            <numerusform>T:%n file(s) deleted</numerusform>\n        </translation>\n    </message>\n</context>\n<context>\n    <name>Preferences</name>\n    <message>\n        <source>Settings</source>\n        <translation>T:Settings</translation>\n    </message>\n    <message>\n        <source>Tab<byte value=\"x9\"/>separated</source>\n        <translation>T:Tab<byte value=\"x9\"/>separated</translation>\n    </message>\n</context>\n</TS>\n",
+"de-DE": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!DOCTYPE TS>\n<TS version=\"2.1\" language=\"de_DE\" sourcelanguage=\"en_US\">\n<context>\n    <name>MainWindow</name>\n    <message>\n        <location filename=\"../src/mainwindow.cpp\" line=\"42\"/>\n        <source>&amp;Open file...</source>\n        <comment>menu entry</comment>\n        <translation>T:&amp;Open file...</translation>\n    </message>\n    <message>\n        <source>Saved %1 of %2 pages</source>\n        <extracomment>%1 and %2 are page counts</extracomment>\n        <translation>T:Saved %1 of %2 pages</translation>\n    </message>\n    <message numerus=\"yes\">\n        <source>%n file(s) deleted</source>\n        <translation>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n        </translation>\n    </message>\n</context>\n<context>\n    <name>Preferences</name>\n    <message>\n        <source>Settings</source>\n        <translation>T:Settings</translation>\n    </message>\n    <message>\n        <source>Tab<byte value=\"x9\"/>separated</source>\n        <translation>T:Tab<byte value=\"x9\"/>separated</translation>\n    </message>\n</context>\n</TS>\n"
+}
+},
+"lang_ja_eucjp.ts": {
+"units": [
+[
+0,
+"&Open file..."
+],
+[
+1,
+"Saved %1 of %2 pages"
+],
+[
+2,
+"%n file(s) deleted"
+],
+[
+3,
+"Settings"
+],
+[
+4,
+"Tab⟦x1⟧separated"
+]
+]
+},
+"lang_ja_shiftjis.ts": {
+"units": [
+[
+0,
+"&Open file..."
+],
+[
+1,
+"Saved %1 of %2 pages"
+],
+[
+2,
+"%n file(s) deleted"
+],
+[
+3,
+"Settings"
+],
+[
+4,
+"Tab⟦x1⟧separated"
+]
+]
+},
+"lang_ko.ts": {
+"units": [
+[
+0,
+"&Open file..."
+],
+[
+1,
+"Saved %1 of %2 pages"
+],
+[
+2,
+"%n file(s) deleted"
+],
+[
+3,
+"Settings"
+],
+[
+4,
+"Tab⟦x1⟧separated"
+]
+],
+"merges": {
+"": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!DOCTYPE TS>\n<TS version=\"2.1\" language=\"ko_KR\" sourcelanguage=\"en_US\">\n<context>\n    <name>MainWindow</name>\n    <message>\n        <location filename=\"../src/mainwindow.cpp\" line=\"42\"/>\n        <source>&amp;Open file...</source>\n        <comment>menu entry</comment>\n        <translation>T:&amp;Open file...</translation>\n    </message>\n    <message>\n        <source>Saved %1 of %2 pages</source>\n        <extracomment>%1 and %2 are page counts</extracomment>\n        <translation>T:Saved %1 of %2 pages</translation>\n    </message>\n    <message numerus=\"yes\">\n        <source>%n file(s) deleted</source>\n        <translation>\n            <numerusform>T:%n file(s) deleted</numerusform>\n        </translation>\n    </message>\n</context>\n<context>\n    <name>Preferences</name>\n    <message>\n        <source>Settings</source>\n        <translation>T:Settings</translation>\n    </message>\n    <message>\n        <source>Tab<byte value=\"x9\"/>separated</source>\n        <translation>T:Tab<byte value=\"x9\"/>separated</translation>\n    </message>\n</context>\n</TS>\n",
+"pl-PL": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!DOCTYPE TS>\n<TS version=\"2.1\" language=\"pl_PL\" sourcelanguage=\"en_US\">\n<context>\n    <name>MainWindow</name>\n    <message>\n        <location filename=\"../src/mainwindow.cpp\" line=\"42\"/>\n        <source>&amp;Open file...</source>\n        <comment>menu entry</comment>\n        <translation>T:&amp;Open file...</translation>\n    </message>\n    <message>\n        <source>Saved %1 of %2 pages</source>\n        <extracomment>%1 and %2 are page counts</extracomment>\n        <translation>T:Saved %1 of %2 pages</translation>\n    </message>\n    <message numerus=\"yes\">\n        <source>%n file(s) deleted</source>\n        <translation>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n        </translation>\n    </message>\n</context>\n<context>\n    <name>Preferences</name>\n    <message>\n        <source>Settings</source>\n        <translation>T:Settings</translation>\n    </message>\n    <message>\n        <source>Tab<byte value=\"x9\"/>separated</source>\n        <translation>T:Tab<byte value=\"x9\"/>separated</translation>\n    </message>\n</context>\n</TS>\n",
+"ar-SA": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!DOCTYPE TS>\n<TS version=\"2.1\" language=\"ar_SA\" sourcelanguage=\"en_US\">\n<context>\n    <name>MainWindow</name>\n    <message>\n        <location filename=\"../src/mainwindow.cpp\" line=\"42\"/>\n        <source>&amp;Open file...</source>\n        <comment>menu entry</comment>\n        <translation>T:&amp;Open file...</translation>\n    </message>\n    <message>\n        <source>Saved %1 of %2 pages</source>\n        <extracomment>%1 and %2 are page counts</extracomment>\n        <translation>T:Saved %1 of %2 pages</translation>\n    </message>\n    <message numerus=\"yes\">\n        <source>%n file(s) deleted</source>\n        <translation>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n        </translation>\n    </message>\n</context>\n<context>\n    <name>Preferences</name>\n    <message>\n        <source>Settings</source>\n        <translation>T:Settings</translation>\n    </message>\n    <message>\n        <source>Tab<byte value=\"x9\"/>separated</source>\n        <translation>T:Tab<byte value=\"x9\"/>separated</translation>\n    </message>\n</context>\n</TS>\n",
+"ja": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!DOCTYPE TS>\n<TS version=\"2.1\" language=\"ja\" sourcelanguage=\"en_US\">\n<context>\n    <name>MainWindow</name>\n    <message>\n        <location filename=\"../src/mainwindow.cpp\" line=\"42\"/>\n        <source>&amp;Open file...</source>\n        <comment>menu entry</comment>\n        <translation>T:&amp;Open file...</translation>\n    </message>\n    <message>\n        <source>Saved %1 of %2 pages</source>\n        <extracomment>%1 and %2 are page counts</extracomment>\n        <translation>T:Saved %1 of %2 pages</translation>\n    </message>\n    <message numerus=\"yes\">\n        <source>%n file(s) deleted</source>\n        <translation>\n            <numerusform>T:%n file(s) deleted</numerusform>\n        </translation>\n    </message>\n</context>\n<context>\n    <name>Preferences</name>\n    <message>\n        <source>Settings</source>\n        <translation>T:Settings</translation>\n    </message>\n    <message>\n        <source>Tab<byte value=\"x9\"/>separated</source>\n        <translation>T:Tab<byte value=\"x9\"/>separated</translation>\n    </message>\n</context>\n</TS>\n",
+"de-DE": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!DOCTYPE TS>\n<TS version=\"2.1\" language=\"de_DE\" sourcelanguage=\"en_US\">\n<context>\n    <name>MainWindow</name>\n    <message>\n        <location filename=\"../src/mainwindow.cpp\" line=\"42\"/>\n        <source>&amp;Open file...</source>\n        <comment>menu entry</comment>\n        <translation>T:&amp;Open file...</translation>\n    </message>\n    <message>\n        <source>Saved %1 of %2 pages</source>\n        <extracomment>%1 and %2 are page counts</extracomment>\n        <translation>T:Saved %1 of %2 pages</translation>\n    </message>\n    <message numerus=\"yes\">\n        <source>%n file(s) deleted</source>\n        <translation>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n        </translation>\n    </message>\n</context>\n<context>\n    <name>Preferences</name>\n    <message>\n        <source>Settings</source>\n        <translation>T:Settings</translation>\n    </message>\n    <message>\n        <source>Tab<byte value=\"x9\"/>separated</source>\n        <translation>T:Tab<byte value=\"x9\"/>separated</translation>\n    </message>\n</context>\n</TS>\n"
+}
+},
+"lang_ko_euckr.ts": {
+"units": [
+[
+0,
+"&Open file..."
+],
+[
+1,
+"Saved %1 of %2 pages"
+],
+[
+2,
+"%n file(s) deleted"
+],
+[
+3,
+"Settings"
+],
+[
+4,
+"Tab⟦x1⟧separated"
+]
+]
+},
+"lang_ko_utf16be.ts": {
+"units": [
+[
+0,
+"&Open file..."
+],
+[
+1,
+"Saved %1 of %2 pages"
+],
+[
+2,
+"%n file(s) deleted"
+],
+[
+3,
+"Settings"
+],
+[
+4,
+"Tab⟦x1⟧separated"
+]
+]
+},
+"lang_pt.ts": {
+"units": [
+[
+0,
+"&Open file..."
+],
+[
+1,
+"Saved %1 of %2 pages"
+],
+[
+2,
+"%n file(s) deleted"
+],
+[
+3,
+"Settings"
+],
+[
+4,
+"Tab⟦x1⟧separated"
+]
+],
+"merges": {
+"": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!DOCTYPE TS>\n<TS version=\"2.1\" language=\"pt_BR\" sourcelanguage=\"en_US\">\n<context>\n    <name>MainWindow</name>\n    <message>\n        <location filename=\"../src/mainwindow.cpp\" line=\"42\"/>\n        <source>&amp;Open file...</source>\n        <comment>menu entry</comment>\n        <translation>T:&amp;Open file...</translation>\n    </message>\n    <message>\n        <source>Saved %1 of %2 pages</source>\n        <extracomment>%1 and %2 are page counts</extracomment>\n        <translation>T:Saved %1 of %2 pages</translation>\n    </message>\n    <message numerus=\"yes\">\n        <source>%n file(s) deleted</source>\n        <translation>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n        </translation>\n    </message>\n</context>\n<context>\n    <name>Preferences</name>\n    <message>\n        <source>Settings</source>\n        <translation>T:Settings</translation>\n    </message>\n    <message>\n        <source>Tab<byte value=\"x9\"/>separated</source>\n        <translation>T:Tab<byte value=\"x9\"/>separated</translation>\n    </message>\n</context>\n</TS>\n",
+"pl-PL": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!DOCTYPE TS>\n<TS version=\"2.1\" language=\"pl_PL\" sourcelanguage=\"en_US\">\n<context>\n    <name>MainWindow</name>\n    <message>\n        <location filename=\"../src/mainwindow.cpp\" line=\"42\"/>\n        <source>&amp;Open file...</source>\n        <comment>menu entry</comment>\n        <translation>T:&amp;Open file...</translation>\n    </message>\n    <message>\n        <source>Saved %1 of %2 pages</source>\n        <extracomment>%1 and %2 are page counts</extracomment>\n        <translation>T:Saved %1 of %2 pages</translation>\n    </message>\n    <message numerus=\"yes\">\n        <source>%n file(s) deleted</source>\n        <translation>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n        </translation>\n    </message>\n</context>\n<context>\n    <name>Preferences</name>\n    <message>\n        <source>Settings</source>\n        <translation>T:Settings</translation>\n    </message>\n    <message>\n        <source>Tab<byte value=\"x9\"/>separated</source>\n        <translation>T:Tab<byte value=\"x9\"/>separated</translation>\n    </message>\n</context>\n</TS>\n",
+"ar-SA": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!DOCTYPE TS>\n<TS version=\"2.1\" language=\"ar_SA\" sourcelanguage=\"en_US\">\n<context>\n    <name>MainWindow</name>\n    <message>\n        <location filename=\"../src/mainwindow.cpp\" line=\"42\"/>\n        <source>&amp;Open file...</source>\n        <comment>menu entry</comment>\n        <translation>T:&amp;Open file...</translation>\n    </message>\n    <message>\n        <source>Saved %1 of %2 pages</source>\n        <extracomment>%1 and %2 are page counts</extracomment>\n        <translation>T:Saved %1 of %2 pages</translation>\n    </message>\n    <message numerus=\"yes\">\n        <source>%n file(s) deleted</source>\n        <translation>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n        </translation>\n    </message>\n</context>\n<context>\n    <name>Preferences</name>\n    <message>\n        <source>Settings</source>\n        <translation>T:Settings</translation>\n    </message>\n    <message>\n        <source>Tab<byte value=\"x9\"/>separated</source>\n        <translation>T:Tab<byte value=\"x9\"/>separated</translation>\n    </message>\n</context>\n</TS>\n",
+"ja": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!DOCTYPE TS>\n<TS version=\"2.1\" language=\"ja\" sourcelanguage=\"en_US\">\n<context>\n    <name>MainWindow</name>\n    <message>\n        <location filename=\"../src/mainwindow.cpp\" line=\"42\"/>\n        <source>&amp;Open file...</source>\n        <comment>menu entry</comment>\n        <translation>T:&amp;Open file...</translation>\n    </message>\n    <message>\n        <source>Saved %1 of %2 pages</source>\n        <extracomment>%1 and %2 are page counts</extracomment>\n        <translation>T:Saved %1 of %2 pages</translation>\n    </message>\n    <message numerus=\"yes\">\n        <source>%n file(s) deleted</source>\n        <translation>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n        </translation>\n    </message>\n</context>\n<context>\n    <name>Preferences</name>\n    <message>\n        <source>Settings</source>\n        <translation>T:Settings</translation>\n    </message>\n    <message>\n        <source>Tab<byte value=\"x9\"/>separated</source>\n        <translation>T:Tab<byte value=\"x9\"/>separated</translation>\n    </message>\n</context>\n</TS>\n",
+"de-DE": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!DOCTYPE TS>\n<TS version=\"2.1\" language=\"de_DE\" sourcelanguage=\"en_US\">\n<context>\n    <name>MainWindow</name>\n    <message>\n        <location filename=\"../src/mainwindow.cpp\" line=\"42\"/>\n        <source>&amp;Open file...</source>\n        <comment>menu entry</comment>\n        <translation>T:&amp;Open file...</translation>\n    </message>\n    <message>\n        <source>Saved %1 of %2 pages</source>\n        <extracomment>%1 and %2 are page counts</extracomment>\n        <translation>T:Saved %1 of %2 pages</translation>\n    </message>\n    <message numerus=\"yes\">\n        <source>%n file(s) deleted</source>\n        <translation>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n        </translation>\n    </message>\n</context>\n<context>\n    <name>Preferences</name>\n    <message>\n        <source>Settings</source>\n        <translation>T:Settings</translation>\n    </message>\n    <message>\n        <source>Tab<byte value=\"x9\"/>separated</source>\n        <translation>T:Tab<byte value=\"x9\"/>separated</translation>\n    </message>\n</context>\n</TS>\n"
+}
+},
+"lang_ru.ts": {
+"units": [
+[
+0,
+"&Open file..."
+],
+[
+1,
+"Saved %1 of %2 pages"
+],
+[
+2,
+"%n file(s) deleted"
+],
+[
+3,
+"Settings"
+],
+[
+4,
+"Tab⟦x1⟧separated"
+]
+],
+"merges": {
+"": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!DOCTYPE TS>\n<TS version=\"2.1\" language=\"ru_RU\" sourcelanguage=\"en_US\">\n<context>\n    <name>MainWindow</name>\n    <message>\n        <location filename=\"../src/mainwindow.cpp\" line=\"42\"/>\n        <source>&amp;Open file...</source>\n        <comment>menu entry</comment>\n        <translation>T:&amp;Open file...</translation>\n    </message>\n    <message>\n        <source>Saved %1 of %2 pages</source>\n        <extracomment>%1 and %2 are page counts</extracomment>\n        <translation>T:Saved %1 of %2 pages</translation>\n    </message>\n    <message numerus=\"yes\">\n        <source>%n file(s) deleted</source>\n        <translation>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n        </translation>\n    </message>\n</context>\n<context>\n    <name>Preferences</name>\n    <message>\n        <source>Settings</source>\n        <translation>T:Settings</translation>\n    </message>\n    <message>\n        <source>Tab<byte value=\"x9\"/>separated</source>\n        <translation>T:Tab<byte value=\"x9\"/>separated</translation>\n    </message>\n</context>\n</TS>\n",
+"pl-PL": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!DOCTYPE TS>\n<TS version=\"2.1\" language=\"pl_PL\" sourcelanguage=\"en_US\">\n<context>\n    <name>MainWindow</name>\n    <message>\n        <location filename=\"../src/mainwindow.cpp\" line=\"42\"/>\n        <source>&amp;Open file...</source>\n        <comment>menu entry</comment>\n        <translation>T:&amp;Open file...</translation>\n    </message>\n    <message>\n        <source>Saved %1 of %2 pages</source>\n        <extracomment>%1 and %2 are page counts</extracomment>\n        <translation>T:Saved %1 of %2 pages</translation>\n    </message>\n    <message numerus=\"yes\">\n        <source>%n file(s) deleted</source>\n        <translation>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n        </translation>\n    </message>\n</context>\n<context>\n    <name>Preferences</name>\n    <message>\n        <source>Settings</source>\n        <translation>T:Settings</translation>\n    </message>\n    <message>\n        <source>Tab<byte value=\"x9\"/>separated</source>\n        <translation>T:Tab<byte value=\"x9\"/>separated</translation>\n    </message>\n</context>\n</TS>\n",
+"ar-SA": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!DOCTYPE TS>\n<TS version=\"2.1\" language=\"ar_SA\" sourcelanguage=\"en_US\">\n<context>\n    <name>MainWindow</name>\n    <message>\n        <location filename=\"../src/mainwindow.cpp\" line=\"42\"/>\n        <source>&amp;Open file...</source>\n        <comment>menu entry</comment>\n        <translation>T:&amp;Open file...</translation>\n    </message>\n    <message>\n        <source>Saved %1 of %2 pages</source>\n        <extracomment>%1 and %2 are page counts</extracomment>\n        <translation>T:Saved %1 of %2 pages</translation>\n    </message>\n    <message numerus=\"yes\">\n        <source>%n file(s) deleted</source>\n        <translation>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n        </translation>\n    </message>\n</context>\n<context>\n    <name>Preferences</name>\n    <message>\n        <source>Settings</source>\n        <translation>T:Settings</translation>\n    </message>\n    <message>\n        <source>Tab<byte value=\"x9\"/>separated</source>\n        <translation>T:Tab<byte value=\"x9\"/>separated</translation>\n    </message>\n</context>\n</TS>\n",
+"ja": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!DOCTYPE TS>\n<TS version=\"2.1\" language=\"ja\" sourcelanguage=\"en_US\">\n<context>\n    <name>MainWindow</name>\n    <message>\n        <location filename=\"../src/mainwindow.cpp\" line=\"42\"/>\n        <source>&amp;Open file...</source>\n        <comment>menu entry</comment>\n        <translation>T:&amp;Open file...</translation>\n    </message>\n    <message>\n        <source>Saved %1 of %2 pages</source>\n        <extracomment>%1 and %2 are page counts</extracomment>\n        <translation>T:Saved %1 of %2 pages</translation>\n    </message>\n    <message numerus=\"yes\">\n        <source>%n file(s) deleted</source>\n        <translation>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n        </translation>\n    </message>\n</context>\n<context>\n    <name>Preferences</name>\n    <message>\n        <source>Settings</source>\n        <translation>T:Settings</translation>\n    </message>\n    <message>\n        <source>Tab<byte value=\"x9\"/>separated</source>\n        <translation>T:Tab<byte value=\"x9\"/>separated</translation>\n    </message>\n</context>\n</TS>\n",
+"de-DE": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!DOCTYPE TS>\n<TS version=\"2.1\" language=\"de_DE\" sourcelanguage=\"en_US\">\n<context>\n    <name>MainWindow</name>\n    <message>\n        <location filename=\"../src/mainwindow.cpp\" line=\"42\"/>\n        <source>&amp;Open file...</source>\n        <comment>menu entry</comment>\n        <translation>T:&amp;Open file...</translation>\n    </message>\n    <message>\n        <source>Saved %1 of %2 pages</source>\n        <extracomment>%1 and %2 are page counts</extracomment>\n        <translation>T:Saved %1 of %2 pages</translation>\n    </message>\n    <message numerus=\"yes\">\n        <source>%n file(s) deleted</source>\n        <translation>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n        </translation>\n    </message>\n</context>\n<context>\n    <name>Preferences</name>\n    <message>\n        <source>Settings</source>\n        <translation>T:Settings</translation>\n    </message>\n    <message>\n        <source>Tab<byte value=\"x9\"/>separated</source>\n        <translation>T:Tab<byte value=\"x9\"/>separated</translation>\n    </message>\n</context>\n</TS>\n"
+}
+},
+"lang_ru_cp1251.ts": {
+"units": [
+[
+0,
+"&Open file..."
+],
+[
+1,
+"Saved %1 of %2 pages"
+],
+[
+2,
+"%n file(s) deleted"
+],
+[
+3,
+"Settings"
+],
+[
+4,
+"Tab⟦x1⟧separated"
+]
+]
+},
+"lang_ru_koi8r.ts": {
+"units": [
+[
+0,
+"&Open file..."
+],
+[
+1,
+"Saved %1 of %2 pages"
+],
+[
+2,
+"%n file(s) deleted"
+],
+[
+3,
+"Settings"
+],
+[
+4,
+"Tab⟦x1⟧separated"
+]
+]
+},
+"lang_tr.ts": {
+"units": [
+[
+0,
+"&Open file..."
+],
+[
+1,
+"Saved %1 of %2 pages"
+],
+[
+2,
+"%n file(s) deleted"
+],
+[
+3,
+"Settings"
+],
+[
+4,
+"Tab⟦x1⟧separated"
+]
+],
+"merges": {
+"": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!DOCTYPE TS>\n<TS version=\"2.1\" language=\"tr_TR\" sourcelanguage=\"en_US\">\n<context>\n    <name>MainWindow</name>\n    <message>\n        <location filename=\"../src/mainwindow.cpp\" line=\"42\"/>\n        <source>&amp;Open file...</source>\n        <comment>menu entry</comment>\n        <translation>T:&amp;Open file...</translation>\n    </message>\n    <message>\n        <source>Saved %1 of %2 pages</source>\n        <extracomment>%1 and %2 are page counts</extracomment>\n        <translation>T:Saved %1 of %2 pages</translation>\n    </message>\n    <message numerus=\"yes\">\n        <source>%n file(s) deleted</source>\n        <translation>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n        </translation>\n    </message>\n</context>\n<context>\n    <name>Preferences</name>\n    <message>\n        <source>Settings</source>\n        <translation>T:Settings</translation>\n    </message>\n    <message>\n        <source>Tab<byte value=\"x9\"/>separated</source>\n        <translation>T:Tab<byte value=\"x9\"/>separated</translation>\n    </message>\n</context>\n</TS>\n",
+"pl-PL": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!DOCTYPE TS>\n<TS version=\"2.1\" language=\"pl_PL\" sourcelanguage=\"en_US\">\n<context>\n    <name>MainWindow</name>\n    <message>\n        <location filename=\"../src/mainwindow.cpp\" line=\"42\"/>\n        <source>&amp;Open file...</source>\n        <comment>menu entry</comment>\n        <translation>T:&amp;Open file...</translation>\n    </message>\n    <message>\n        <source>Saved %1 of %2 pages</source>\n        <extracomment>%1 and %2 are page counts</extracomment>\n        <translation>T:Saved %1 of %2 pages</translation>\n    </message>\n    <message numerus=\"yes\">\n        <source>%n file(s) deleted</source>\n        <translation>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n        </translation>\n    </message>\n</context>\n<context>\n    <name>Preferences</name>\n    <message>\n        <source>Settings</source>\n        <translation>T:Settings</translation>\n    </message>\n    <message>\n        <source>Tab<byte value=\"x9\"/>separated</source>\n        <translation>T:Tab<byte value=\"x9\"/>separated</translation>\n    </message>\n</context>\n</TS>\n",
+"ar-SA": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!DOCTYPE TS>\n<TS version=\"2.1\" language=\"ar_SA\" sourcelanguage=\"en_US\">\n<context>\n    <name>MainWindow</name>\n    <message>\n        <location filename=\"../src/mainwindow.cpp\" line=\"42\"/>\n        <source>&amp;Open file...</source>\n        <comment>menu entry</comment>\n        <translation>T:&amp;Open file...</translation>\n    </message>\n    <message>\n        <source>Saved %1 of %2 pages</source>\n        <extracomment>%1 and %2 are page counts</extracomment>\n        <translation>T:Saved %1 of %2 pages</translation>\n    </message>\n    <message numerus=\"yes\">\n        <source>%n file(s) deleted</source>\n        <translation>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n        </translation>\n    </message>\n</context>\n<context>\n    <name>Preferences</name>\n    <message>\n        <source>Settings</source>\n        <translation>T:Settings</translation>\n    </message>\n    <message>\n        <source>Tab<byte value=\"x9\"/>separated</source>\n        <translation>T:Tab<byte value=\"x9\"/>separated</translation>\n    </message>\n</context>\n</TS>\n",
+"ja": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!DOCTYPE TS>\n<TS version=\"2.1\" language=\"ja\" sourcelanguage=\"en_US\">\n<context>\n    <name>MainWindow</name>\n    <message>\n        <location filename=\"../src/mainwindow.cpp\" line=\"42\"/>\n        <source>&amp;Open file...</source>\n        <comment>menu entry</comment>\n        <translation>T:&amp;Open file...</translation>\n    </message>\n    <message>\n        <source>Saved %1 of %2 pages</source>\n        <extracomment>%1 and %2 are page counts</extracomment>\n        <translation>T:Saved %1 of %2 pages</translation>\n    </message>\n    <message numerus=\"yes\">\n        <source>%n file(s) deleted</source>\n        <translation>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n        </translation>\n    </message>\n</context>\n<context>\n    <name>Preferences</name>\n    <message>\n        <source>Settings</source>\n        <translation>T:Settings</translation>\n    </message>\n    <message>\n        <source>Tab<byte value=\"x9\"/>separated</source>\n        <translation>T:Tab<byte value=\"x9\"/>separated</translation>\n    </message>\n</context>\n</TS>\n",
+"de-DE": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!DOCTYPE TS>\n<TS version=\"2.1\" language=\"de_DE\" sourcelanguage=\"en_US\">\n<context>\n    <name>MainWindow</name>\n    <message>\n        <location filename=\"../src/mainwindow.cpp\" line=\"42\"/>\n        <source>&amp;Open file...</source>\n        <comment>menu entry</comment>\n        <translation>T:&amp;Open file...</translation>\n    </message>\n    <message>\n        <source>Saved %1 of %2 pages</source>\n        <extracomment>%1 and %2 are page counts</extracomment>\n        <translation>T:Saved %1 of %2 pages</translation>\n    </message>\n    <message numerus=\"yes\">\n        <source>%n file(s) deleted</source>\n        <translation>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n        </translation>\n    </message>\n</context>\n<context>\n    <name>Preferences</name>\n    <message>\n        <source>Settings</source>\n        <translation>T:Settings</translation>\n    </message>\n    <message>\n        <source>Tab<byte value=\"x9\"/>separated</source>\n        <translation>T:Tab<byte value=\"x9\"/>separated</translation>\n    </message>\n</context>\n</TS>\n"
+}
+},
+"lang_tr_cp1254.ts": {
+"units": [
+[
+0,
+"&Open file..."
+],
+[
+1,
+"Saved %1 of %2 pages"
+],
+[
+2,
+"%n file(s) deleted"
+],
+[
+3,
+"Settings"
+],
+[
+4,
+"Tab⟦x1⟧separated"
+]
+]
+},
+"lang_zh.ts": {
+"units": [
+[
+0,
+"&Open file..."
+],
+[
+1,
+"Saved %1 of %2 pages"
+],
+[
+2,
+"%n file(s) deleted"
+],
+[
+3,
+"Settings"
+],
+[
+4,
+"Tab⟦x1⟧separated"
+]
+],
+"merges": {
+"": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!DOCTYPE TS>\n<TS version=\"2.1\" language=\"zh_CN\" sourcelanguage=\"en_US\">\n<context>\n    <name>MainWindow</name>\n    <message>\n        <location filename=\"../src/mainwindow.cpp\" line=\"42\"/>\n        <source>&amp;Open file...</source>\n        <comment>menu entry</comment>\n        <translation>T:&amp;Open file...</translation>\n    </message>\n    <message>\n        <source>Saved %1 of %2 pages</source>\n        <extracomment>%1 and %2 are page counts</extracomment>\n        <translation>T:Saved %1 of %2 pages</translation>\n    </message>\n    <message numerus=\"yes\">\n        <source>%n file(s) deleted</source>\n        <translation>\n            <numerusform>T:%n file(s) deleted</numerusform>\n        </translation>\n    </message>\n</context>\n<context>\n    <name>Preferences</name>\n    <message>\n        <source>Settings</source>\n        <translation>T:Settings</translation>\n    </message>\n    <message>\n        <source>Tab<byte value=\"x9\"/>separated</source>\n        <translation>T:Tab<byte value=\"x9\"/>separated</translation>\n    </message>\n</context>\n</TS>\n",
+"pl-PL": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!DOCTYPE TS>\n<TS version=\"2.1\" language=\"pl_PL\" sourcelanguage=\"en_US\">\n<context>\n    <name>MainWindow</name>\n    <message>\n        <location filename=\"../src/mainwindow.cpp\" line=\"42\"/>\n        <source>&amp;Open file...</source>\n        <comment>menu entry</comment>\n        <translation>T:&amp;Open file...</translation>\n    </message>\n    <message>\n        <source>Saved %1 of %2 pages</source>\n        <extracomment>%1 and %2 are page counts</extracomment>\n        <translation>T:Saved %1 of %2 pages</translation>\n    </message>\n    <message numerus=\"yes\">\n        <source>%n file(s) deleted</source>\n        <translation>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n        </translation>\n    </message>\n</context>\n<context>\n    <name>Preferences</name>\n    <message>\n        <source>Settings</source>\n        <translation>T:Settings</translation>\n    </message>\n    <message>\n        <source>Tab<byte value=\"x9\"/>separated</source>\n        <translation>T:Tab<byte value=\"x9\"/>separated</translation>\n    </message>\n</context>\n</TS>\n",
+"ar-SA": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!DOCTYPE TS>\n<TS version=\"2.1\" language=\"ar_SA\" sourcelanguage=\"en_US\">\n<context>\n    <name>MainWindow</name>\n    <message>\n        <location filename=\"../src/mainwindow.cpp\" line=\"42\"/>\n        <source>&amp;Open file...</source>\n        <comment>menu entry</comment>\n        <translation>T:&amp;Open file...</translation>\n    </message>\n    <message>\n        <source>Saved %1 of %2 pages</source>\n        <extracomment>%1 and %2 are page counts</extracomment>\n        <translation>T:Saved %1 of %2 pages</translation>\n    </message>\n    <message numerus=\"yes\">\n        <source>%n file(s) deleted</source>\n        <translation>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n        </translation>\n    </message>\n</context>\n<context>\n    <name>Preferences</name>\n    <message>\n        <source>Settings</source>\n        <translation>T:Settings</translation>\n    </message>\n    <message>\n        <source>Tab<byte value=\"x9\"/>separated</source>\n        <translation>T:Tab<byte value=\"x9\"/>separated</translation>\n    </message>\n</context>\n</TS>\n",
+"ja": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!DOCTYPE TS>\n<TS version=\"2.1\" language=\"ja\" sourcelanguage=\"en_US\">\n<context>\n    <name>MainWindow</name>\n    <message>\n        <location filename=\"../src/mainwindow.cpp\" line=\"42\"/>\n        <source>&amp;Open file...</source>\n        <comment>menu entry</comment>\n        <translation>T:&amp;Open file...</translation>\n    </message>\n    <message>\n        <source>Saved %1 of %2 pages</source>\n        <extracomment>%1 and %2 are page counts</extracomment>\n        <translation>T:Saved %1 of %2 pages</translation>\n    </message>\n    <message numerus=\"yes\">\n        <source>%n file(s) deleted</source>\n        <translation>\n            <numerusform>T:%n file(s) deleted</numerusform>\n        </translation>\n    </message>\n</context>\n<context>\n    <name>Preferences</name>\n    <message>\n        <source>Settings</source>\n        <translation>T:Settings</translation>\n    </message>\n    <message>\n        <source>Tab<byte value=\"x9\"/>separated</source>\n        <translation>T:Tab<byte value=\"x9\"/>separated</translation>\n    </message>\n</context>\n</TS>\n",
+"de-DE": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!DOCTYPE TS>\n<TS version=\"2.1\" language=\"de_DE\" sourcelanguage=\"en_US\">\n<context>\n    <name>MainWindow</name>\n    <message>\n        <location filename=\"../src/mainwindow.cpp\" line=\"42\"/>\n        <source>&amp;Open file...</source>\n        <comment>menu entry</comment>\n        <translation>T:&amp;Open file...</translation>\n    </message>\n    <message>\n        <source>Saved %1 of %2 pages</source>\n        <extracomment>%1 and %2 are page counts</extracomment>\n        <translation>T:Saved %1 of %2 pages</translation>\n    </message>\n    <message numerus=\"yes\">\n        <source>%n file(s) deleted</source>\n        <translation>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n        </translation>\n    </message>\n</context>\n<context>\n    <name>Preferences</name>\n    <message>\n        <source>Settings</source>\n        <translation>T:Settings</translation>\n    </message>\n    <message>\n        <source>Tab<byte value=\"x9\"/>separated</source>\n        <translation>T:Tab<byte value=\"x9\"/>separated</translation>\n    </message>\n</context>\n</TS>\n"
+}
+},
+"lang_zh_gb2312.ts": {
+"units": [
+[
+0,
+"&Open file..."
+],
+[
+1,
+"Saved %1 of %2 pages"
+],
+[
+2,
+"%n file(s) deleted"
+],
+[
+3,
+"Settings"
+],
+[
+4,
+"Tab⟦x1⟧separated"
+]
+]
+},
+"lang_zh_gbk.ts": {
+"units": [
+[
+0,
+"&Open file..."
+],
+[
+1,
+"Saved %1 of %2 pages"
+],
+[
+2,
+"%n file(s) deleted"
+],
+[
+3,
+"Settings"
+],
+[
+4,
+"Tab⟦x1⟧separated"
+]
+]
+},
+"lang_zh_utf16le.ts": {
+"units": [
+[
+0,
+"&Open file..."
+],
+[
+1,
+"Saved %1 of %2 pages"
+],
+[
+2,
+"%n file(s) deleted"
+],
+[
+3,
+"Settings"
+],
+[
+4,
+"Tab⟦x1⟧separated"
+]
+]
+},
+"locos_app_de.ts": {
+"units": [
+[
+0,
+"&Open file..."
+],
+[
+1,
+"Saved %1 of %2 pages"
+],
+[
+2,
+"%n file(s) deleted"
+],
+[
+4,
+"Tab⟦x1⟧separated"
+]
+],
+"merges": {
+"": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!DOCTYPE TS>\n<TS version=\"2.1\" language=\"de_DE\" sourcelanguage=\"en_US\">\n<context>\n    <name>MainWindow</name>\n    <message>\n        <location filename=\"../src/mainwindow.cpp\" line=\"42\"/>\n        <source>&amp;Open file...</source>\n        <comment>menu entry</comment>\n        <translation>T:&amp;Open file...</translation>\n    </message>\n    <message>\n        <location filename=\"../src/mainwindow.cpp\" line=\"57\"/>\n        <source>Saved %1 of %2 pages</source>\n        <translation>T:Saved %1 of %2 pages</translation>\n    </message>\n    <message numerus=\"yes\">\n        <location filename=\"../src/mainwindow.cpp\" line=\"88\"/>\n        <source>%n file(s) deleted</source>\n        <translation>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n        </translation>\n    </message>\n    <message>\n        <source>Old caption</source>\n        <translation type=\"vanished\">Alte Beschriftung</translation>\n    </message>\n    <message>\n        <source>Tab<byte value=\"x9\"/>separated</source>\n        <translation>T:Tab<byte value=\"x9\"/>separated</translation>\n    </message>\n</context>\n</TS>\n",
+"pl-PL": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!DOCTYPE TS>\n<TS version=\"2.1\" language=\"pl_PL\" sourcelanguage=\"en_US\">\n<context>\n    <name>MainWindow</name>\n    <message>\n        <location filename=\"../src/mainwindow.cpp\" line=\"42\"/>\n        <source>&amp;Open file...</source>\n        <comment>menu entry</comment>\n        <translation>T:&amp;Open file...</translation>\n    </message>\n    <message>\n        <location filename=\"../src/mainwindow.cpp\" line=\"57\"/>\n        <source>Saved %1 of %2 pages</source>\n        <translation>T:Saved %1 of %2 pages</translation>\n    </message>\n    <message numerus=\"yes\">\n        <location filename=\"../src/mainwindow.cpp\" line=\"88\"/>\n        <source>%n file(s) deleted</source>\n        <translation>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n        </translation>\n    </message>\n    <message>\n        <source>Old caption</source>\n        <translation type=\"vanished\">Alte Beschriftung</translation>\n    </message>\n    <message>\n        <source>Tab<byte value=\"x9\"/>separated</source>\n        <translation>T:Tab<byte value=\"x9\"/>separated</translation>\n    </message>\n</context>\n</TS>\n",
+"ar-SA": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!DOCTYPE TS>\n<TS version=\"2.1\" language=\"ar_SA\" sourcelanguage=\"en_US\">\n<context>\n    <name>MainWindow</name>\n    <message>\n        <location filename=\"../src/mainwindow.cpp\" line=\"42\"/>\n        <source>&amp;Open file...</source>\n        <comment>menu entry</comment>\n        <translation>T:&amp;Open file...</translation>\n    </message>\n    <message>\n        <location filename=\"../src/mainwindow.cpp\" line=\"57\"/>\n        <source>Saved %1 of %2 pages</source>\n        <translation>T:Saved %1 of %2 pages</translation>\n    </message>\n    <message numerus=\"yes\">\n        <location filename=\"../src/mainwindow.cpp\" line=\"88\"/>\n        <source>%n file(s) deleted</source>\n        <translation>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n        </translation>\n    </message>\n    <message>\n        <source>Old caption</source>\n        <translation type=\"vanished\">Alte Beschriftung</translation>\n    </message>\n    <message>\n        <source>Tab<byte value=\"x9\"/>separated</source>\n        <translation>T:Tab<byte value=\"x9\"/>separated</translation>\n    </message>\n</context>\n</TS>\n",
+"ja": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!DOCTYPE TS>\n<TS version=\"2.1\" language=\"ja\" sourcelanguage=\"en_US\">\n<context>\n    <name>MainWindow</name>\n    <message>\n        <location filename=\"../src/mainwindow.cpp\" line=\"42\"/>\n        <source>&amp;Open file...</source>\n        <comment>menu entry</comment>\n        <translation>T:&amp;Open file...</translation>\n    </message>\n    <message>\n        <location filename=\"../src/mainwindow.cpp\" line=\"57\"/>\n        <source>Saved %1 of %2 pages</source>\n        <translation>T:Saved %1 of %2 pages</translation>\n    </message>\n    <message numerus=\"yes\">\n        <location filename=\"../src/mainwindow.cpp\" line=\"88\"/>\n        <source>%n file(s) deleted</source>\n        <translation>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n        </translation>\n    </message>\n    <message>\n        <source>Old caption</source>\n        <translation type=\"vanished\">Alte Beschriftung</translation>\n    </message>\n    <message>\n        <source>Tab<byte value=\"x9\"/>separated</source>\n        <translation>T:Tab<byte value=\"x9\"/>separated</translation>\n    </message>\n</context>\n</TS>\n",
+"de-DE": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<!DOCTYPE TS>\n<TS version=\"2.1\" language=\"de_DE\" sourcelanguage=\"en_US\">\n<context>\n    <name>MainWindow</name>\n    <message>\n        <location filename=\"../src/mainwindow.cpp\" line=\"42\"/>\n        <source>&amp;Open file...</source>\n        <comment>menu entry</comment>\n        <translation>T:&amp;Open file...</translation>\n    </message>\n    <message>\n        <location filename=\"../src/mainwindow.cpp\" line=\"57\"/>\n        <source>Saved %1 of %2 pages</source>\n        <translation>T:Saved %1 of %2 pages</translation>\n    </message>\n    <message numerus=\"yes\">\n        <location filename=\"../src/mainwindow.cpp\" line=\"88\"/>\n        <source>%n file(s) deleted</source>\n        <translation>\n            <numerusform>T:%n file(s) deleted</numerusform>\n            <numerusform>T:%n file(s) deleted</numerusform>\n        </translation>\n    </message>\n    <message>\n        <source>Old caption</source>\n        <translation type=\"vanished\">Alte Beschriftung</translation>\n    </message>\n    <message>\n        <source>Tab<byte value=\"x9\"/>separated</source>\n        <translation>T:Tab<byte value=\"x9\"/>separated</translation>\n    </message>\n</context>\n</TS>\n"
+}
+},
+"okapi/Complete_valid_utf8_bom_crlf.ts": {
+"units": []
+},
+"okapi/TSTest01.ts": {
+"units": [
+[
+0,
+"Text number 1"
+],
+[
+1,
+"Text number 2"
+],
+[
+2,
+"Text number 3"
+],
+[
+3,
+"Text number four"
+],
+[
+4,
+"Text number four"
+]
+]
+},
+"okapi/TestInQT.ts": {
+"units": [
+[
+1,
+"Test two"
+],
+[
+2,
+"Test three"
+],
+[
+3,
+"Test four"
+],
+[
+4,
+"Test five"
+]
+]
+},
+"okapi/TestInQT_Saved.ts": {
+"units": [
+[
+1,
+"Test two"
+],
+[
+2,
+"Test three"
+],
+[
+3,
+"Test four"
+],
+[
+4,
+"Test five"
+],
+[
+5,
+"Test six"
+],
+[
+6,
+"Test seven"
+]
+]
+},
+"okapi/alarm_ro.ts": {
+"units": [
+[
+0,
+"Add Entry To System Log 2"
+],
+[
+1,
+"What:"
+],
+[
+2,
+"Where:"
+],
+[
+3,
+"When:"
+],
+[
+4,
+"Severity:"
+],
+[
+5,
+"&Log"
+],
+[
+6,
+"Alt+L"
+],
+[
+7,
+"&Cancel"
+],
+[
+8,
+"Alt+C"
+],
+[
+9,
+"Alarm Notification"
+],
+[
+10,
+"<b><font size=\"+3\">Alarm Received</font></b>"
+],
+[
+11,
+"What"
+],
+[
+12,
+"Where"
+],
+[
+13,
+"When"
+],
+[
+14,
+"State"
+],
+[
+15,
+"Severity"
+],
+[
+16,
+"Send E-mail..."
+],
+[
+17,
+"Add To Log..."
+],
+[
+18,
+"Comments..."
+],
+[
+19,
+"Snooze"
+],
+[
+20,
+"Clear"
+],
+[
+21,
+"Acknowledge"
+],
+[
+22,
+"Alarm Notification"
+],
+[
+23,
+"Alarm Received"
+],
+[
+24,
+"What"
+],
+[
+25,
+"Where"
+],
+[
+26,
+"When"
+],
+[
+27,
+"Severity"
+],
+[
+28,
+"Comment"
+],
+[
+29,
+"Select All"
+],
+[
+30,
+"Ack"
+],
+[
+31,
+"Snooze"
+]
+]
+},
+"okapi/autoSample.ts": {
+"units": [
+[
+0,
+"Text"
+],
+[
+1,
+"Text"
+],
+[
+2,
+"Text"
+],
+[
+3,
+"Text"
+]
+]
+}
+}

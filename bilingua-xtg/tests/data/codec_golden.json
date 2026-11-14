@@ -1,0 +1,51 @@
+{
+ "mac_roman": {
+  "len": 256,
+  "chars": 256,
+  "text": "2ac543a0fa54b935",
+  "reenc": "4242dc5249c33625",
+  "same": true
+ },
+ "cp1252": {
+  "len": 251,
+  "chars": 251,
+  "text": "7600bdc5379b1032",
+  "reenc": "33fcdf4b7c9d884d",
+  "same": true
+ },
+ "latin-1": {
+  "len": 256,
+  "chars": 256,
+  "text": "73c4651f941fdc25",
+  "reenc": "4242dc5249c33625",
+  "same": true
+ },
+ "cp932": {
+  "len": 19404,
+  "chars": 9800,
+  "text": "8b713dce0798027d",
+  "reenc": "519ecf7ce7cc577e",
+  "same": false
+ },
+ "big5": {
+  "len": 27548,
+  "chars": 13838,
+  "text": "3fff628f5ffd891d",
+  "reenc": "09d572f2a37e2eff",
+  "same": false
+ },
+ "gbk": {
+  "len": 43710,
+  "chars": 21919,
+  "text": "b020cd9b77194ed0",
+  "reenc": "a2e85b2f7e3e65d9",
+  "same": true
+ },
+ "cp949": {
+  "len": 34224,
+  "chars": 17176,
+  "text": "aaf02b5c3870bdf1",
+  "reenc": "cf6713cd491c3de2",
+  "same": true
+ }
+}

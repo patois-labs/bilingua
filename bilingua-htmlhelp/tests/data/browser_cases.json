@@ -1,0 +1,198 @@
+[
+ {
+  "name": "plain_quote",
+  "source": "<OBJECT type=\"text/sitemap\"><param name=\"Name\" value=\"X\"><param name=\"Local\" value=\"y.htm\"></OBJECT>\n",
+  "translation": "\" onmouseover=alert(1) x=\"",
+  "expect": "out",
+  "out": "<OBJECT type=\"text/sitemap\"><param name=\"Name\" value=\"&quot; onmouseover=alert(1) x=&quot;\"><param name=\"Local\" value=\"y.htm\"></OBJECT>\n"
+ },
+ {
+  "name": "a_nospace_dq_unq",
+  "source": "<OBJECT type=\"text/sitemap\"><a b=\"x\"c=\"<param name=Name value=X>\"><param name=\"Local\" value=\"y.htm\"></OBJECT>\n",
+  "translation": "\" onmouseover=alert(1) x=\"",
+  "expect": "refused",
+  "out": null
+ },
+ {
+  "name": "a_nospace_dq_unq_s",
+  "source": "<OBJECT type=\"text/sitemap\"><a b=\"x\"c=\"<param name=Name value=X>\"><param name=\"Local\" value=\"y.htm\"></OBJECT>\n",
+  "translation": "a onmouseover=alert(1) b",
+  "expect": "refused",
+  "out": null
+ },
+ {
+  "name": "a_nospace_sq_dq",
+  "source": "<OBJECT type=\"text/sitemap\"><a b=\"x\"c='<param name=Name value=\"X\">'><param name=\"Local\" value=\"y.htm\"></OBJECT>\n",
+  "translation": "' onmouseover='alert(1)",
+  "expect": "refused",
+  "out": null
+ },
+ {
+  "name": "tagname_dot",
+  "source": "<OBJECT type=\"text/sitemap\"><a.b title=\"<param name=Name value=X>\"><param name=\"Local\" value=\"y.htm\"></OBJECT>\n",
+  "translation": "\" onmouseover=alert(1) x=\"",
+  "expect": "refused",
+  "out": null
+ },
+ {
+  "name": "tagname_quote",
+  "source": "<OBJECT type=\"text/sitemap\"><a\"x title='<param name=\"Name\" value=\"X\">'><param name=\"Local\" value=\"y.htm\"></OBJECT>\n",
+  "translation": "' onmouseover='alert(1)",
+  "expect": "refused",
+  "out": null
+ },
+ {
+  "name": "nbsp_unq",
+  "source": "<OBJECT type=\"text/sitemap\"><param name=Name value=X><param name=\"Local\" value=\"y.htm\"></OBJECT>\n",
+  "translation": "a onmouseover=alert(1) b",
+  "expect": "refused",
+  "out": null
+ },
+ {
+  "name": "vt_unq",
+  "source": "<OBJECT type=\"text/sitemap\"><param name=Name\u000bvalue=X><param name=\"Local\" value=\"y.htm\"></OBJECT>\n",
+  "translation": "a onmouseover=alert(1) b",
+  "expect": "refused",
+  "out": null
+ },
+ {
+  "name": "fs_unq",
+  "source": "<OBJECT type=\"text/sitemap\"><param name=Name\u001cvalue=X><param name=\"Local\" value=\"y.htm\"></OBJECT>\n",
+  "translation": "a onmouseover=alert(1) b",
+  "expect": "refused",
+  "out": null
+ },
+ {
+  "name": "nbsp_dq",
+  "source": "<OBJECT type=\"text/sitemap\"><param name=\"Name\" value=\"X\"><param name=\"Local\" value=\"y.htm\"></OBJECT>\n",
+  "translation": "a onmouseover=alert(1) b",
+  "expect": "refused",
+  "out": null
+ },
+ {
+  "name": "unq_quote_in_val",
+  "source": "<OBJECT type=\"text/sitemap\"><a title=x\"<param name=Name value=X><param name=\"Local\" value=\"y.htm\"></OBJECT>\n",
+  "translation": "' onmouseover='alert(1)",
+  "expect": "refused",
+  "out": null
+ },
+ {
+  "name": "comment_abrupt",
+  "source": "<OBJECT type=\"text/sitemap\"><!--><param name=\"Name\" value=\"X\"><!-- --><param name=\"Local\" value=\"y.htm\"></OBJECT>\n",
+  "translation": "\" onmouseover=alert(1) x=\"",
+  "expect": "parse_error",
+  "out": null
+ },
+ {
+  "name": "comment_bang",
+  "source": "<OBJECT type=\"text/sitemap\"><!-- --!><param name=\"Name\" value=\"X\"> --><param name=\"Local\" value=\"y.htm\"></OBJECT>\n",
+  "translation": "\" onmouseover=alert(1) x=\"",
+  "expect": "parse_error",
+  "out": null
+ },
+ {
+  "name": "cdata",
+  "source": "<OBJECT type=\"text/sitemap\"><![CDATA[ <param name=\"Name\" value=\"X\"> ]]><param name=\"Local\" value=\"y.htm\"></OBJECT>\n",
+  "translation": "\" onmouseover=alert(1) x=\"",
+  "expect": "out",
+  "out": "<OBJECT type=\"text/sitemap\"><![CDATA[ <param name=\"Name\" value=\"&quot;&#32;onmouseover&#61;alert(1)&#32;x&#61;&quot;\"> ]]><param name=\"Local\" value=\"y.htm\"></OBJECT>\n"
+ },
+ {
+  "name": "bogus_end",
+  "source": "<OBJECT type=\"text/sitemap\"></ x <param name=\"Name\" value=\"X\"><param name=\"Local\" value=\"y.htm\"></OBJECT>\n",
+  "translation": "\" onmouseover=alert(1) x=\"",
+  "expect": "out",
+  "out": "<OBJECT type=\"text/sitemap\"></ x <param name=\"Name\" value=\"&quot;&#32;onmouseover&#61;alert(1)&#32;x&#61;&quot;\"><param name=\"Local\" value=\"y.htm\"></OBJECT>\n"
+ },
+ {
+  "name": "textarea",
+  "source": "<OBJECT type=\"text/sitemap\"><textarea><param name=\"Name\" value=\"X\"><param name=\"Local\" value=\"y.htm\"></OBJECT>\n",
+  "translation": "</textarea><img src=x onerror=alert(1)>",
+  "expect": "out",
+  "out": "<OBJECT type=\"text/sitemap\"><textarea><param name=\"Name\" value=\"&lt;&#47;textarea&gt;&lt;img&#32;src&#61;x&#32;onerror&#61;alert(1)&gt;\"><param name=\"Local\" value=\"y.htm\"></OBJECT>\n"
+ },
+ {
+  "name": "svg_style",
+  "source": "<svg><style><OBJECT type=\"text/sitemap\"><param name=\"Name\" value=\"X\"><param name=\"Local\" value=\"y.htm\"></OBJECT>\n",
+  "translation": "\" onmouseover=alert(1) x=\"",
+  "expect": "refused",
+  "out": null
+ },
+ {
+  "name": "eq_attr",
+  "source": "<OBJECT type=\"text/sitemap\"><a =title=\"<param name=Name value=X>\"><param name=\"Local\" value=\"y.htm\"></OBJECT>\n",
+  "translation": "\" onmouseover=alert(1) x=\"",
+  "expect": "refused",
+  "out": null
+ },
+ {
+  "name": "slash_attr",
+  "source": "<OBJECT type=\"text/sitemap\"><a/title=\"<param name=Name value=X>\"><param name=\"Local\" value=\"y.htm\"></OBJECT>\n",
+  "translation": "\" onmouseover=alert(1) x=\"",
+  "expect": "refused",
+  "out": null
+ },
+ {
+  "name": "lt_attr",
+  "source": "<OBJECT type=\"text/sitemap\"><a <title=\"<param name=Name value=X>\"><param name=\"Local\" value=\"y.htm\"></OBJECT>\n",
+  "translation": "\" onmouseover=alert(1) x=\"",
+  "expect": "refused",
+  "out": null
+ },
+ {
+  "name": "backtick",
+  "source": "<OBJECT type=\"text/sitemap\"><a title=`<param name=Name value=X>`><param name=\"Local\" value=\"y.htm\"></OBJECT>\n",
+  "translation": "a onmouseover=alert(1) b",
+  "expect": "refused",
+  "out": null
+ },
+ {
+  "name": "ff_ws",
+  "source": "<OBJECT type=\"text/sitemap\"><param\fname=Name value=X><param name=\"Local\" value=\"y.htm\"></OBJECT>\n",
+  "translation": "a onmouseover=alert(1) b",
+  "expect": "out",
+  "out": "<OBJECT type=\"text/sitemap\"><param\fname=Name value=\"a onmouseover=alert(1) b\"><param name=\"Local\" value=\"y.htm\"></OBJECT>\n"
+ },
+ {
+  "name": "u2028",
+  "source": "<OBJECT type=\"text/sitemap\"><param name=Name value=X><param name=\"Local\" value=\"y.htm\"></OBJECT>\n",
+  "translation": "a onmouseover=alert(1) b",
+  "expect": "refused",
+  "out": null
+ },
+ {
+  "name": "u3000",
+  "source": "<OBJECT type=\"text/sitemap\"><param name=Name　value=X><param name=\"Local\" value=\"y.htm\"></OBJECT>\n",
+  "translation": "a onmouseover=alert(1) b",
+  "expect": "refused",
+  "out": null
+ },
+ {
+  "name": "u0085",
+  "source": "<OBJECT type=\"text/sitemap\"><param name=Namevalue=X><param name=\"Local\" value=\"y.htm\"></OBJECT>\n",
+  "translation": "a onmouseover=alert(1) b",
+  "expect": "refused",
+  "out": null
+ },
+ {
+  "name": "see_also",
+  "source": "<OBJECT type=\"text/sitemap\"><param name=\"Keyword\" value=\"K\"><param name=\"Local\" value=\"y.htm\"></OBJECT>\n<OBJECT type=\"text/sitemap\"><a b=\"x\"c=\"<param name='See Also' value=K>\"><param name=\"Local\" value=\"y.htm\"></OBJECT>\n",
+  "translation": "\" onmouseover=alert(1) x=\"",
+  "expect": "refused",
+  "out": null
+ },
+ {
+  "name": "ok_unquoted",
+  "source": "<OBJECT type=\"text/sitemap\"><param name=Name value=X><param name=\"Local\" value=\"y.htm\"></OBJECT>\n",
+  "translation": "a onmouseover=alert(1) b",
+  "expect": "out",
+  "out": "<OBJECT type=\"text/sitemap\"><param name=Name value=\"a onmouseover=alert(1) b\"><param name=\"Local\" value=\"y.htm\"></OBJECT>\n"
+ },
+ {
+  "name": "ok_single",
+  "source": "<OBJECT type=\"text/sitemap\"><param name=Name value='X'><param name=\"Local\" value=\"y.htm\"></OBJECT>\n",
+  "translation": "' onmouseover='alert(1)",
+  "expect": "out",
+  "out": "<OBJECT type=\"text/sitemap\"><param name=Name value='&#39; onmouseover=&#39;alert(1)'><param name=\"Local\" value=\"y.htm\"></OBJECT>\n"
+ }
+]

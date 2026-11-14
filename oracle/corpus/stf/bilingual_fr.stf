@@ -1,0 +1,26 @@
+# Use the Bilingual file to review translations and add translations.
+# - The TRANSLATED section of the file contains text that has been translated.
+# - The UNTRANSLATED section of the file contains text that hasn't been translated.
+Language code: fr
+Type: Bilingual
+Translation type: Metadata
+
+------------------TRANSLATED-------------------
+
+# KEY	LABEL	TRANSLATION	OUT OF DATE
+
+# CustomField
+CustomField.Account.Region.FieldLabel	Se connecter	Se connecter	-
+CustomField.Account.Region.HelpText	Cliquez sur "Enregistrer"\nDu pain frais chaque matin	Cliquez sur "Enregistrer"	*
+
+------------------UNTRANSLATED-----------------
+
+# KEY	LABEL
+
+# CustomLabel
+CustomLabel.Welcome	Se connecter, {0}! Articles dans votre panier {!$User.FirstName}.
+CustomLabel.Count	{0,number} Articles dans votre panier
+PicklistValue.Lumen.Bakery.Fresh	Du pain frais chaque matin
+CustomLabel.Blank	
+CustomLabel.Escapes	\n
+CustomLabel.Tabbed	Se connecter\tDu pain frais chaque matin\\done

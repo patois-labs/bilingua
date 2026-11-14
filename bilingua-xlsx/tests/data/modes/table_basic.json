@@ -1,0 +1,86 @@
+{
+ "parse": {
+  "columns": "source=en-US,target.de-DE=de-DE",
+  "source_locale": "en-US",
+  "target_locales": [
+   "de-DE"
+  ]
+ },
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Hello",
+   "style": "",
+   "note": ""
+  },
+  {
+   "p_index": 1,
+   "text": "Bye",
+   "style": "",
+   "note": ""
+  },
+  {
+   "p_index": 2,
+   "text": "Keep me",
+   "style": "",
+   "note": ""
+  },
+  {
+   "p_index": 3,
+   "text": "Hello",
+   "style": "",
+   "note": ""
+  }
+ ],
+ "error": false,
+ "builds": [
+  {
+   "name": "de",
+   "locale": "de-DE",
+   "map": {
+    "0": "DE Hello",
+    "1": "DE Bye",
+    "2": "Keep me",
+    "3": "DE Hello"
+   },
+   "file": "table_basic.de.xlsx"
+  },
+  {
+   "name": "stamp-only",
+   "locale": "de-DE",
+   "map": {},
+   "file": "table_basic.stamp-only.xlsx"
+  },
+  {
+   "name": "rtl",
+   "locale": "ar-SA",
+   "map": {
+    "0": "AR Hello",
+    "1": "AR Bye",
+    "2": "AR Keep me",
+    "3": "AR Hello"
+   },
+   "file": "table_basic.rtl.xlsx"
+  },
+  {
+   "name": "nolocale",
+   "locale": null,
+   "map": {
+    "0": "DE Hello",
+    "1": "DE Bye",
+    "2": "DE Keep me",
+    "3": "DE Hello"
+   },
+   "file": "table_basic.nolocale.xlsx"
+  },
+  {
+   "name": "partial",
+   "locale": "de-DE",
+   "map": {
+    "0": "Teil Hello",
+    "1": "Teil Bye"
+   },
+   "file": "table_basic.partial.xlsx"
+  }
+ ]
+}

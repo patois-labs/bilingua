@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head><meta charset="windows-1251"><title>С возвращением <?= $name ?></title><meta name="description" content="Ваши заказы"></head>
+<body>
+<?php // note: not text ?>
+<h1>С возвращением, <?= $name ?>!</h1>
+<?php if ($user): ?>
+<p>Войдите, чтобы продолжить. Это быстро. <b>Ваши заказы</b> <?= $name ?> <a href="<?= $url ?>" title="Открыть почту">Открыть почту</a>.</p>
+<?php endif; ?>
+<img src="logo.png" alt="Логотип">
+<ul><li>Ваши заказы</li><li><?= $name ?> &amp; С возвращением</li></ul>
+<script>var user = "<?= $name ?>"; if (a < b) { go(); }</script>
+</body>
+</html>

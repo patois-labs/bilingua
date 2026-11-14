@@ -1,0 +1,34 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<HTML>
+<HEAD>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1250">
+<meta name="GENERATOR" content="Microsoft&reg; HTML Help Workshop 4.1">
+<!-- Sitemap 1.0 -->
+</HEAD><BODY>
+<OBJECT type="text/site properties">
+	<param name="ImageType" value="Folder">
+	<param name="Font" value="Tahoma,8,238">
+</OBJECT>
+<UL>
+	<LI> <OBJECT type="text/sitemap">
+		<param name="Name" value="Pierwsze kroki">
+		<param name="Local" value="html/pl/start.htm">
+		<param name="ImageNumber" value="1">
+		</OBJECT>
+	<LI> <OBJECT type="text/sitemap">
+		<param name="Name" value="Zamów chleb online">
+		<param name="Local" value="html/pl/order.htm">
+		</OBJECT>
+	<UL>
+		<LI> <OBJECT type="text/sitemap">
+			<param name="Name" value="Dostawa i odbiór">
+			<param name="Local" value="html/pl/delivery.htm#top">
+			</OBJECT>
+	</UL>
+	<LI> <OBJECT type="text/sitemap">
+		<PARAM NAME=Name VALUE='Najczęściej zadawane pytania'>
+		<param name="Local" value="html/pl/faq.htm">
+		<param name="Comment" value="not translated">
+		</OBJECT>
+</UL>
+</BODY></HTML>

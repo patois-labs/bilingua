@@ -1,0 +1,18 @@
+[OPTIONS]
+Compatibility=1.1 or later
+Compiled file=manual.chm
+Contents file=toc.hhc
+Default topic=html/en/start.htm
+Display compile progress=No
+Index file=index.hhk
+Language=0x409 English (United States)
+Title=Bakery Handbook
+
+[WINDOWS]
+main="Bakery Help","toc.hhc","index.hhk","html/en/start.htm","html/en/start.htm",,,,,0x23520,,0x387e,,,,,,,,0
+
+[FILES]
+html/en/start.htm
+; Title=not an option here
+
+[INFOTYPES]

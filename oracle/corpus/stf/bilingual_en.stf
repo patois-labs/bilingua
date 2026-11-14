@@ -1,0 +1,26 @@
+# Use the Bilingual file to review translations and add translations.
+# - The TRANSLATED section of the file contains text that has been translated.
+# - The UNTRANSLATED section of the file contains text that hasn't been translated.
+Language code: en_US
+Type: Bilingual
+Translation type: Metadata
+
+------------------TRANSLATED-------------------
+
+# KEY	LABEL	TRANSLATION	OUT OF DATE
+
+# CustomField
+CustomField.Account.Region.FieldLabel	Log in	Log in	-
+CustomField.Account.Region.HelpText	Click "Save" to continue\nFresh bread every morning	Click "Save" to continue	*
+
+------------------UNTRANSLATED-----------------
+
+# KEY	LABEL
+
+# CustomLabel
+CustomLabel.Welcome	Log in, {0}! Items in your basket {!$User.FirstName}.
+CustomLabel.Count	{0,number} Items in your basket
+PicklistValue.Lumen.Bakery.Fresh	Fresh bread every morning
+CustomLabel.Blank	
+CustomLabel.Escapes	\n
+CustomLabel.Tabbed	Log in\tFresh bread every morning\\done

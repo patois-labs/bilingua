@@ -3,7 +3,7 @@
 //! Identical logic lives in `bilingua-xlsx`; the two crates do not share code on purpose.
 
 use bilingua_model::*;
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 /// Reserved code names in `Unit::codes` (never used by an inline).
 pub const C_ORIG: &str = "_o";
@@ -35,28 +35,46 @@ fn label_of(p: &str) -> &'static str {
     }
 }
 
+/// What a unit built from these atoms holds at least, counted as `guard::check_document` counts a unit: one per
+/// character of text and one per code. A paragraph already over `max_unit_chars` by this count is refused before
+/// `build` does any work on it (the finished document would be refused for the same unit anyway).
+pub fn check_size(atoms: &[Atom], l: &Limits) -> Result<(), Error> {
+    let mut chars = 0usize;
+    for a in atoms {
+        chars = chars.saturating_add(match a {
+            Atom::Text { text, .. } => text.chars().count(),
+            Atom::Code { .. } => 1,
+        });
+    }
+    guard::check_unit_chars(chars, l)
+}
+
 pub fn build(mut atoms: Vec<Atom>, props: Props) -> Built {
     // Whitespace-only runs take the formatting of their neighbour, so they do not open a tag of their own.
+    // One pass: the nearest text run before is carried along (`prev`), and the look ahead for the next run with
+    // text happens only while there is no run before, which is true for at most one run. A paragraph of many
+    // thousands of empty runs is then linear work, not a scan per run.
     let n = atoms.len();
+    let mut prev: Option<usize> = None;
     for i in 0..n {
-        let ws = matches!(&atoms[i], Atom::Text { text, .. } if text.trim().is_empty());
-        if !ws {
-            continue;
-        }
-        let prev = (0..i).rev().find_map(|j| match &atoms[j] {
-            Atom::Text { fmt, key, .. } => Some((fmt.clone(), key.clone())),
-            _ => None,
-        });
-        let next = (i + 1..n).find_map(|j| match &atoms[j] {
-            Atom::Text { fmt, key, text } if !text.trim().is_empty() => Some((fmt.clone(), key.clone())),
-            _ => None,
-        });
-        if let Some((f, k)) = prev.or(next) {
-            if let Atom::Text { fmt, key, .. } = &mut atoms[i] {
-                *fmt = f;
-                *key = k;
+        let ws = match &atoms[i] {
+            Atom::Text { text, .. } => text.trim().is_empty(),
+            Atom::Code { .. } => continue,
+        };
+        if ws {
+            let from = prev.or_else(|| (i + 1..n).find(|&j| matches!(&atoms[j], Atom::Text { text, .. } if !text.trim().is_empty())));
+            let taken = from.and_then(|j| match &atoms[j] {
+                Atom::Text { fmt, key, .. } => Some((fmt.clone(), key.clone())),
+                Atom::Code { .. } => None,
+            });
+            if let Some((f, k)) = taken {
+                if let Atom::Text { fmt, key, .. } = &mut atoms[i] {
+                    *fmt = f;
+                    *key = k;
+                }
             }
         }
+        prev = Some(i);
     }
     // Merge neighbouring runs with the same formatting.
     let mut merged: Vec<Atom> = Vec::new();
@@ -70,12 +88,18 @@ pub fn build(mut atoms: Vec<Atom>, props: Props) -> Built {
         }
     }
     // Base = formatting with the most text.
+    // The tally is kept in first-seen order (a tie goes to the formatting seen first) and found through a map, so
+    // many different formattings do not cost a search each.
     let mut weight: Vec<(String, String, usize)> = Vec::new();
+    let mut weight_at: HashMap<&str, usize> = HashMap::new();
     for a in &merged {
         if let Atom::Text { fmt, key, text } = a {
-            match weight.iter_mut().find(|(k, _, _)| k == key) {
-                Some(w) => w.2 += text.chars().count(),
-                None => weight.push((key.clone(), fmt.clone(), text.chars().count())),
+            match weight_at.get(key.as_str()) {
+                Some(&w) => weight[w].2 += text.chars().count(),
+                None => {
+                    weight_at.insert(key.as_str(), weight.len());
+                    weight.push((key.clone(), fmt.clone(), text.chars().count()));
+                }
             }
         }
     }
@@ -93,7 +117,7 @@ pub fn build(mut atoms: Vec<Atom>, props: Props) -> Built {
     let mut codes: BTreeMap<String, CodeData> = BTreeMap::new();
     codes.insert(
         C_BASE.into(),
-        CodeData { standalone: Some(base.1.clone()), ..Default::default() },
+        CodeData::new().with_standalone(base.1.clone()),
     );
     let mut counter = 0usize;
     let mut open: Option<(String, String)> = None; // (key, tag id)
@@ -104,6 +128,15 @@ pub fn build(mut atoms: Vec<Atom>, props: Props) -> Built {
         }
     };
     let n_merged = merged.len();
+    // For each atom, where the next text atom is: filled from the end, so a code does not search forward for it.
+    let mut next_text: Vec<Option<usize>> = vec![None; n_merged];
+    let mut seen: Option<usize> = None;
+    for i in (0..n_merged).rev() {
+        next_text[i] = seen;
+        if matches!(&merged[i], Atom::Text { .. }) {
+            seen = Some(i);
+        }
+    }
     for (ai, a) in merged.iter().cloned().enumerate().take(n_merged) {
         match a {
             Atom::Text { fmt, key, text } => {
@@ -123,7 +156,7 @@ pub fn build(mut atoms: Vec<Atom>, props: Props) -> Built {
                     };
                     codes.insert(
                         id.clone(),
-                        CodeData { open: Some(fmt), label: Some(label), ..Default::default() },
+                        CodeData::new().with_open(fmt).with_label(label),
                     );
                     inlines.push(Inline::tag(id.clone(), TagKind::Open, format!("<{name}>")));
                     close_display = format!("</{name}>");
@@ -133,18 +166,18 @@ pub fn build(mut atoms: Vec<Atom>, props: Props) -> Built {
             }
             Atom::Code { xml, display, label } => {
                 // The tag pair stays open across the code only when the next text has the same formatting.
-                let next_key = merged[ai + 1..].iter().find_map(|x| match x {
-                    Atom::Text { key, .. } => Some(key.clone()),
-                    _ => None,
+                let next_key = next_text[ai].and_then(|j| match &merged[j] {
+                    Atom::Text { key, .. } => Some(key),
+                    Atom::Code { .. } => None,
                 });
-                if open.as_ref().map(|(k, _)| Some(k) != next_key.as_ref()).unwrap_or(false) {
+                if open.as_ref().map(|(k, _)| Some(k) != next_key).unwrap_or(false) {
                     close_open(&mut inlines, &mut open, &close_display);
                 }
                 counter += 1;
                 let id = counter.to_string();
                 codes.insert(
                     id.clone(),
-                    CodeData { standalone: Some(xml), label: Some(label), ..Default::default() },
+                    CodeData::new().with_standalone(xml).with_label(label),
                 );
                 inlines.push(Inline::tag(id, TagKind::Standalone, display));
             }

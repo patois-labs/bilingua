@@ -1,0 +1,53 @@
+{
+ "format": "srt",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Hello {0}, welcome back!",
+   "style": ""
+  },
+  {
+   "p_index": 1,
+   "text": "You have <i>new</i> files.\nSecond line",
+   "style": ""
+  },
+  {
+   "p_index": 2,
+   "text": "<font color=\"#ff0000\">Red</font> text",
+   "style": ""
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "77u/MQ0KMDA6MDA6MDEsMDAwIC0tPiAwMDowMDowMyw1MDANCkhlbGxvIHswfSwgd2VsY29tZSBiYWNrIQ0KIAkNCjINCjAwOjAwOjA0LDAwMCAtLT4gMDA6MDA6MDYsMDAwDQpZb3UgaGF2ZSA8aT5uZXc8L2k+IGZpbGVzLg0KU2Vjb25kIGxpbmUgIA0KDQozDQowMDowMDowNywwMDAgLS0+IDAwOjAwOjA4LDAwMA0KPGZvbnQgY29sb3I9IiNmZjAwMDAiPlJlZDwvZm9udD4gdGV4dA0K"
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü Hello {0}, welcome back!",
+    "1": "Ü You have <i>new</i> files.\nSecond line",
+    "2": "Ü <font color=\"#ff0000\">Red</font> text"
+   },
+   "out_b64": "77u/MQ0KMDA6MDA6MDEsMDAwIC0tPiAwMDowMDowMyw1MDANCsOcIEhlbGxvIHswfSwgd2VsY29tZSBiYWNrIQ0KIAkNCjINCjAwOjAwOjA0LDAwMCAtLT4gMDA6MDA6MDYsMDAwDQrDnCBZb3UgaGF2ZSA8aT5uZXc8L2k+IGZpbGVzLg0KU2Vjb25kIGxpbmUNCg0KMw0KMDA6MDA6MDcsMDAwIC0tPiAwMDowMDowOCwwMDANCsOcIDxmb250IGNvbG9yPSIjZmYwMDAwIj5SZWQ8L2ZvbnQ+IHRleHQNCg=="
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Hello {0}, welcome back! & <\"'>",
+    "2": "<font color=\"#ff0000\">Red</font> text & <\"'>"
+   },
+   "out_b64": "77u/MQ0KMDA6MDA6MDEsMDAwIC0tPiAwMDowMDowMyw1MDANCkhlbGxvIHswfSwgd2VsY29tZSBiYWNrISAmIDwiJz4NCiAJDQoyDQowMDowMDowNCwwMDAgLS0+IDAwOjAwOjA2LDAwMA0KWW91IGhhdmUgPGk+bmV3PC9pPiBmaWxlcy4NClNlY29uZCBsaW5lICANCg0KMw0KMDA6MDA6MDcsMDAwIC0tPiAwMDowMDowOCwwMDANCjxmb250IGNvbG9yPSIjZmYwMDAwIj5SZWQ8L2ZvbnQ+IHRleHQgJiA8Iic+DQo="
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "out_b64": "77u/MQ0KMDA6MDA6MDEsMDAwIC0tPiAwMDowMDowMyw1MDANCkhlbGxvIHswfSwgd2VsY29tZSBiYWNrIQ0KIAkNCjINCjAwOjAwOjA0LDAwMCAtLT4gMDA6MDA6MDYsMDAwDQpZb3UgaGF2ZSA8aT5uZXc8L2k+IGZpbGVzLg0KU2Vjb25kIGxpbmUgIA0KDQozDQowMDowMDowNywwMDAgLS0+IDAwOjAwOjA4LDAwMA0KPGZvbnQgY29sb3I9IiNmZjAwMDAiPlJlZDwvZm9udD4gdGV4dA0K"
+  }
+ ]
+}

@@ -9,6 +9,7 @@ use std::collections::{HashMap, HashSet};
 
 /// What the writer wants the caller to know.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct MergeReport {
     pub warnings: Vec<String>,
 }

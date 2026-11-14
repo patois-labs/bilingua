@@ -2,6 +2,7 @@
 //! string values are left alone.
 
 use bilingua_model::*;
+use bilingua_model::profile::tokens as locos;
 use regex::Regex;
 use std::collections::BTreeMap;
 use std::sync::OnceLock;
@@ -81,7 +82,7 @@ pub fn tag_placeholders(s: &str) -> (Vec<Inline>, BTreeMap<String, CodeData>) {
                 let id = next.to_string();
                 next += 1;
                 ids[i] = Some(id.clone());
-                codes.insert(id.clone(), CodeData { open: Some(markup.to_string()), label: label(f), ..Default::default() });
+                codes.insert(id.clone(), CodeData::new().with_open(markup.to_string()).with_label(label(f)));
                 (TagKind::Open, id)
             }
             (TagKind::Close, Some(o)) => {
@@ -94,11 +95,15 @@ pub fn tag_placeholders(s: &str) -> (Vec<Inline>, BTreeMap<String, CodeData>) {
             _ => {
                 let id = next.to_string();
                 next += 1;
-                codes.insert(id.clone(), CodeData { standalone: Some(markup.to_string()), label: label(f), ..Default::default() });
+                codes.insert(id.clone(), CodeData::new().with_standalone(markup.to_string()).with_label(label(f)));
                 (TagKind::Standalone, id)
             }
         };
-        inl.push(Inline::tag(id, kind, markup));
+        if kind == TagKind::Standalone && !markup.starts_with('<') && locos::is_named_placeholder(markup) {
+            inl.push(Inline::free_tag(id, markup));
+        } else {
+            inl.push(Inline::tag(id, kind, markup));
+        }
     }
     if pos < s.len() {
         inl.push(Inline::Text(s[pos..].to_string()));
@@ -131,6 +136,7 @@ fn skip_res() -> &'static Vec<Regex> {
             r"^[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+$",                                                // CONSTANT_CASE
             r"^[a-z]+(?:[A-Z][a-z0-9]*)+$",                                                    // camelCase
             r"^[a-z]{2,3}[-_][A-Z]{2}$",                                                       // locale code
+            r"^@(?:\.[a-z]+)?:\(?[A-Za-z0-9_.:\-]+\)?$",                                        // vue-i18n linked message (@:key)
         ]
         .iter()
         .map(|p| Regex::new(p).expect("skip regex"))

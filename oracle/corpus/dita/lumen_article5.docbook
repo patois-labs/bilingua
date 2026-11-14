@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<article xmlns="http://docbook.org/ns/docbook" xmlns:xlink="http://www.w3.org/1999/xlink" version="5.0" xml:lang="en">
+  <info><title>Lumen Bakery news</title><author><personname>Ana Baker</personname></author></info>
+  <section xml:id="new" xreflabel="New breads">
+    <title>New breads</title>
+    <para>Try our <emphasis>rye</emphasis> loaf and the <link xlink:href="https://example.invalid/seeded">seeded</link> bar.<footnote><para>Contains sesame.</para></footnote></para>
+    <para>Prices start at <literal>€4.50</literal> &amp; go down on <quote>Fresh Friday</quote>.</para>
+    <para><![CDATA[Fish & chips <Friday>]]></para>
+    <programlisting>price --list</programlisting>
+  </section>
+</article>

@@ -1,0 +1,22 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<HTML><HEAD><meta http-equiv="Content-Type" content="text/html; charset=windows-1258">
+<!-- Sitemap 1.0 -->
+</HEAD><BODY>
+<UL>
+	<LI> <OBJECT type="text/sitemap">
+		<param name="Name" value="Đặt bánh mì trực tuyến">
+		<param name="Name" value="Bắt đầu">
+		<param name="Local" value="html/vi/start.htm">
+		<param name="Name" value="Giao hàng và nhận tại tiệm">
+		<param name="Local" value="html/vi/delivery.htm">
+		</OBJECT>
+	<LI> <OBJECT type="text/sitemap">
+		<param name="Keyword" value="Câu hỏi thường gặp">
+		<param name="Local" value="html/vi/faq.htm">
+		</OBJECT>
+	<LI> <OBJECT type="text/sitemap">
+		<param name="Name" value="Sổ tay tiệm bánh">
+		<param name="See Also" value="Đặt bánh mì trực tuyến">
+		</OBJECT>
+</UL>
+</BODY></HTML>

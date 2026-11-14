@@ -1,0 +1,378 @@
+{
+ "format": "xlsx",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Quarterly budget",
+   "style": ""
+  },
+  {
+   "p_index": 1,
+   "text": "Owner",
+   "style": ""
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "zip": [
+    {
+     "name": "docProps/app.xml",
+     "same": true
+    },
+    {
+     "name": "docProps/core.xml",
+     "same": true
+    },
+    {
+     "name": "xl/theme/theme1.xml",
+     "same": true
+    },
+    {
+     "name": "xl/worksheets/sheet1.xml",
+     "same": true
+    },
+    {
+     "name": "xl/comments/comment1.xml",
+     "same": true
+    },
+    {
+     "name": "xl/drawings/commentsDrawing1.vml",
+     "same": true
+    },
+    {
+     "name": "xl/worksheets/_rels/sheet1.xml.rels",
+     "same": true
+    },
+    {
+     "name": "xl/styles.xml",
+     "same": true
+    },
+    {
+     "name": "_rels/.rels",
+     "same": true
+    },
+    {
+     "name": "xl/workbook.xml",
+     "same": true
+    },
+    {
+     "name": "xl/_rels/workbook.xml.rels",
+     "same": true
+    },
+    {
+     "name": "[Content_Types].xml",
+     "same": true
+    },
+    {
+     "name": "xl/threadedComments/threadedComment1.xml",
+     "same": true
+    }
+   ]
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü Quarterly budget",
+    "1": "Ü Owner"
+   },
+   "zip": [
+    {
+     "name": "docProps/app.xml",
+     "same": true
+    },
+    {
+     "name": "docProps/core.xml",
+     "same": true
+    },
+    {
+     "name": "xl/theme/theme1.xml",
+     "same": true
+    },
+    {
+     "name": "xl/worksheets/sheet1.xml",
+     "sha1": "1bf0bfa3ec5f4673f8f1dc65f51cd7ba5c581284"
+    },
+    {
+     "name": "xl/comments/comment1.xml",
+     "same": true
+    },
+    {
+     "name": "xl/drawings/commentsDrawing1.vml",
+     "same": true
+    },
+    {
+     "name": "xl/worksheets/_rels/sheet1.xml.rels",
+     "same": true
+    },
+    {
+     "name": "xl/styles.xml",
+     "same": true
+    },
+    {
+     "name": "_rels/.rels",
+     "same": true
+    },
+    {
+     "name": "xl/workbook.xml",
+     "same": true
+    },
+    {
+     "name": "xl/_rels/workbook.xml.rels",
+     "same": true
+    },
+    {
+     "name": "[Content_Types].xml",
+     "same": true
+    },
+    {
+     "name": "xl/threadedComments/threadedComment1.xml",
+     "same": true
+    }
+   ]
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Quarterly budget & <\"'>"
+   },
+   "zip": [
+    {
+     "name": "docProps/app.xml",
+     "same": true
+    },
+    {
+     "name": "docProps/core.xml",
+     "sha1": "b57e0b567c18f54b93a4fc4d3e9b24b0e1d67541"
+    },
+    {
+     "name": "xl/theme/theme1.xml",
+     "same": true
+    },
+    {
+     "name": "xl/worksheets/sheet1.xml",
+     "sha1": "42f583d2f6baa62de231f0f8ea1b34e6c9fe1756"
+    },
+    {
+     "name": "xl/comments/comment1.xml",
+     "same": true
+    },
+    {
+     "name": "xl/drawings/commentsDrawing1.vml",
+     "same": true
+    },
+    {
+     "name": "xl/worksheets/_rels/sheet1.xml.rels",
+     "same": true
+    },
+    {
+     "name": "xl/styles.xml",
+     "same": true
+    },
+    {
+     "name": "_rels/.rels",
+     "same": true
+    },
+    {
+     "name": "xl/workbook.xml",
+     "same": true
+    },
+    {
+     "name": "xl/_rels/workbook.xml.rels",
+     "same": true
+    },
+    {
+     "name": "[Content_Types].xml",
+     "same": true
+    },
+    {
+     "name": "xl/threadedComments/threadedComment1.xml",
+     "same": true
+    }
+   ]
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "zip": [
+    {
+     "name": "docProps/app.xml",
+     "same": true
+    },
+    {
+     "name": "docProps/core.xml",
+     "sha1": "b57e0b567c18f54b93a4fc4d3e9b24b0e1d67541"
+    },
+    {
+     "name": "xl/theme/theme1.xml",
+     "same": true
+    },
+    {
+     "name": "xl/worksheets/sheet1.xml",
+     "same": true
+    },
+    {
+     "name": "xl/comments/comment1.xml",
+     "same": true
+    },
+    {
+     "name": "xl/drawings/commentsDrawing1.vml",
+     "same": true
+    },
+    {
+     "name": "xl/worksheets/_rels/sheet1.xml.rels",
+     "same": true
+    },
+    {
+     "name": "xl/styles.xml",
+     "same": true
+    },
+    {
+     "name": "_rels/.rels",
+     "same": true
+    },
+    {
+     "name": "xl/workbook.xml",
+     "same": true
+    },
+    {
+     "name": "xl/_rels/workbook.xml.rels",
+     "same": true
+    },
+    {
+     "name": "[Content_Types].xml",
+     "same": true
+    },
+    {
+     "name": "xl/threadedComments/threadedComment1.xml",
+     "same": true
+    }
+   ]
+  },
+  {
+   "name": "escape-ar-SA",
+   "locale": "ar-SA",
+   "map": {
+    "0": "Quarterly budget & <\"'>"
+   },
+   "zip": [
+    {
+     "name": "docProps/app.xml",
+     "same": true
+    },
+    {
+     "name": "docProps/core.xml",
+     "sha1": "3ca5f1f1729075ac0dca03d5afbe4a2019effd0e"
+    },
+    {
+     "name": "xl/theme/theme1.xml",
+     "same": true
+    },
+    {
+     "name": "xl/worksheets/sheet1.xml",
+     "sha1": "14c4cb32e881acf6392873cf1b8c61ed47cb835d"
+    },
+    {
+     "name": "xl/comments/comment1.xml",
+     "same": true
+    },
+    {
+     "name": "xl/drawings/commentsDrawing1.vml",
+     "same": true
+    },
+    {
+     "name": "xl/worksheets/_rels/sheet1.xml.rels",
+     "same": true
+    },
+    {
+     "name": "xl/styles.xml",
+     "same": true
+    },
+    {
+     "name": "_rels/.rels",
+     "same": true
+    },
+    {
+     "name": "xl/workbook.xml",
+     "same": true
+    },
+    {
+     "name": "xl/_rels/workbook.xml.rels",
+     "same": true
+    },
+    {
+     "name": "[Content_Types].xml",
+     "same": true
+    },
+    {
+     "name": "xl/threadedComments/threadedComment1.xml",
+     "same": true
+    }
+   ]
+  },
+  {
+   "name": "none-ar-SA",
+   "locale": "ar-SA",
+   "map": {},
+   "zip": [
+    {
+     "name": "docProps/app.xml",
+     "same": true
+    },
+    {
+     "name": "docProps/core.xml",
+     "sha1": "3ca5f1f1729075ac0dca03d5afbe4a2019effd0e"
+    },
+    {
+     "name": "xl/theme/theme1.xml",
+     "same": true
+    },
+    {
+     "name": "xl/worksheets/sheet1.xml",
+     "sha1": "4c4b1276a0f5aba38770cc560b2642fdc157c7e5"
+    },
+    {
+     "name": "xl/comments/comment1.xml",
+     "same": true
+    },
+    {
+     "name": "xl/drawings/commentsDrawing1.vml",
+     "same": true
+    },
+    {
+     "name": "xl/worksheets/_rels/sheet1.xml.rels",
+     "same": true
+    },
+    {
+     "name": "xl/styles.xml",
+     "same": true
+    },
+    {
+     "name": "_rels/.rels",
+     "same": true
+    },
+    {
+     "name": "xl/workbook.xml",
+     "same": true
+    },
+    {
+     "name": "xl/_rels/workbook.xml.rels",
+     "same": true
+    },
+    {
+     "name": "[Content_Types].xml",
+     "same": true
+    },
+    {
+     "name": "xl/threadedComments/threadedComment1.xml",
+     "same": true
+    }
+   ]
+  }
+ ]
+}

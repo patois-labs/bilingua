@@ -1,5 +1,10 @@
-//! A tolerant HTML tokenizer. It never fails and never copies: every token is a byte range of the input, and
-//! the ranges cover the input completely, so the original can always be rebuilt byte for byte.
+//! A tolerant HTML tokenizer for `sanitize_html`. It never fails and never copies: every token is a byte range of
+//! the input, and the ranges cover the input completely.
+//!
+//! Comments, declarations and tags end where a browser ends them (`<!-->`, `<!--->` and `--!>` end a comment; a
+//! `</` that starts no end tag is a bogus comment). Where a browser's reading depends on context this tokenizer
+//! cannot know (SVG and MathML content, raw-text elements), `sanitize_html` writes the token so that it is harmless
+//! under either reading.
 
 #[derive(Debug, Clone)]
 pub struct Attr {
@@ -17,30 +22,24 @@ pub struct Attr {
 pub enum Tok {
     Text(usize, usize),
     Comment(usize, usize),
-    /// Doctype, CDATA, processing instruction.
+    /// Doctype, processing instruction, bogus comment.
     Decl(usize, usize),
-    /// Content of script, style and textarea.
+    /// `<![CDATA[ ... ]]>` with its end: text in SVG and MathML, a bogus comment that ends at the first `>` in HTML.
+    CData(usize, usize),
+    /// Content of script and style.
     Raw(usize, usize),
-    Start { start: usize, end: usize, name: String, attrs: Vec<Attr>, self_close: bool },
+    /// `closed`: the tag ends with `>` (a tag that runs into the end of the input is dropped by a browser).
+    Start { start: usize, end: usize, name: String, attrs: Vec<Attr>, closed: bool },
     End { start: usize, end: usize, name: String },
 }
 
 impl Tok {
     pub fn range(&self) -> (usize, usize) {
         match self {
-            Tok::Text(a, b) | Tok::Comment(a, b) | Tok::Decl(a, b) | Tok::Raw(a, b) => (*a, *b),
+            Tok::Text(a, b) | Tok::Comment(a, b) | Tok::Decl(a, b) | Tok::CData(a, b) | Tok::Raw(a, b) => (*a, *b),
             Tok::Start { start, end, .. } | Tok::End { start, end, .. } => (*start, *end),
         }
     }
-}
-
-pub const VOID: &[&str] = &[
-    "area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source", "track", "wbr",
-    "basefont", "frame", "keygen",
-];
-
-pub fn is_void(name: &str) -> bool {
-    VOID.contains(&name)
 }
 
 fn is_ws(b: u8) -> bool {
@@ -57,12 +56,14 @@ pub fn tokenize(s: &str) -> Vec<Tok> {
     let mut out: Vec<Tok> = Vec::new();
     let mut i = 0;
     let mut text_start = 0;
+    // set once a `<![CDATA[` found no `]]>` after it: none of the later ones will either
+    let mut no_cdata_end = false;
     while i < n {
         if b[i] != b'<' {
             i += 1;
             continue;
         }
-        let Some(tok) = markup(s, i) else {
+        let Some(tok) = markup(s, i, &mut no_cdata_end) else {
             i += 1;
             continue;
         };
@@ -73,13 +74,13 @@ pub fn tokenize(s: &str) -> Vec<Tok> {
         let mut follow: Option<Tok> = None;
         if let Tok::Start { name, end, .. } = &tok {
             match name.as_str() {
-                "script" | "style" | "textarea" => {
+                "script" | "style" => {
                     let close = find_close(b, *end, name);
                     if close > *end {
                         follow = Some(Tok::Raw(*end, close));
                     }
                 }
-                "title" => {
+                "title" | "textarea" => {
                     let close = find_close(b, *end, name);
                     if close > *end {
                         follow = Some(Tok::Text(*end, close));
@@ -125,17 +126,37 @@ fn find_from(b: &[u8], from: usize, pat: &[u8]) -> Option<usize> {
     b[from..].windows(pat.len()).position(|w| w == pat).map(|p| p + from)
 }
 
-fn markup(s: &str, i: usize) -> Option<Tok> {
+/// Where a browser ends the comment whose text starts at `p` (just after `<!--`): at once for `<!-->` and `<!--->`,
+/// else at the first `-->` or `--!>`, else at the end of the input.
+fn comment_end(b: &[u8], p: usize) -> usize {
+    if b[p..].starts_with(b">") {
+        return p + 1;
+    }
+    if b[p..].starts_with(b"->") {
+        return p + 2;
+    }
+    let a = find_from(b, p, b"-->").map(|x| x + 3);
+    // `--!>` only counts before the first `-->` (and a search to the end for every comment would be quadratic)
+    let c = find_from(&b[..a.unwrap_or(b.len())], p, b"--!>").map(|x| x + 4);
+    match (a, c) {
+        (Some(x), Some(y)) => x.min(y),
+        (Some(x), None) | (None, Some(x)) => x,
+        _ => b.len(),
+    }
+}
+
+pub(crate) fn markup(s: &str, i: usize, no_cdata_end: &mut bool) -> Option<Tok> {
     let b = s.as_bytes();
     let n = b.len();
     let next = *b.get(i + 1)?;
     if b[i..].starts_with(b"<!--") {
-        let end = find_from(b, i + 4, b"-->").map(|p| p + 3).unwrap_or(n);
-        return Some(Tok::Comment(i, end));
+        return Some(Tok::Comment(i, comment_end(b, i + 4)));
     }
-    if b[i..].starts_with(b"<![CDATA[") {
-        let end = find_from(b, i, b"]]>").map(|p| p + 3).unwrap_or(n);
-        return Some(Tok::Decl(i, end));
+    if b[i..].starts_with(b"<![CDATA[") && !*no_cdata_end {
+        match find_from(b, i + 9, b"]]>") {
+            Some(p) => return Some(Tok::CData(i, p + 3)),
+            None => *no_cdata_end = true,
+        }
     }
     if next == b'!' || next == b'?' {
         let end = find_from(b, i, b">").map(|p| p + 1).unwrap_or(n);
@@ -144,7 +165,9 @@ fn markup(s: &str, i: usize) -> Option<Tok> {
     if next == b'/' {
         let c = *b.get(i + 2)?;
         if !c.is_ascii_alphabetic() {
-            return None;
+            // `</>` is dropped by a browser, and `</` before anything else but a letter is a comment up to `>`
+            let end = find_from(b, i, b">").map(|p| p + 1).unwrap_or(n);
+            return Some(Tok::Decl(i, end));
         }
         let mut j = i + 2;
         while j < n && name_byte(b[j]) {
@@ -163,10 +186,9 @@ fn markup(s: &str, i: usize) -> Option<Tok> {
     }
     let name = s[i + 1..j].to_ascii_lowercase();
     let mut attrs = Vec::new();
-    let mut self_close = false;
+    let mut closed = false;
     loop {
         while j < n && (is_ws(b[j]) || b[j] == b'/') {
-            self_close = b[j] == b'/';
             j += 1;
         }
         if j >= n {
@@ -174,9 +196,9 @@ fn markup(s: &str, i: usize) -> Option<Tok> {
         }
         if b[j] == b'>' {
             j += 1;
+            closed = true;
             break;
         }
-        self_close = false;
         let ns = j;
         // An attribute name may start with '=' in broken markup; take at least one byte.
         j += 1;
@@ -217,20 +239,9 @@ fn markup(s: &str, i: usize) -> Option<Tok> {
             attrs.push(Attr { name: aname, name_start: ns, name_end: j0, val: None, full: None });
         }
     }
-    Some(Tok::Start { start: i, end: j, name, attrs, self_close })
+    Some(Tok::Start { start: i, end: j, name, attrs, closed })
 }
 
-/// Parses one start tag held in its own string, e.g. a stored code. Returns the attributes with offsets
-/// relative to the string.
-pub fn parse_tag_str(tag: &str) -> Option<(String, Vec<Attr>)> {
-    if !tag.starts_with('<') {
-        return None;
-    }
-    match markup(tag, 0)? {
-        Tok::Start { name, attrs, .. } => Some((name, attrs)),
-        _ => None,
-    }
-}
 
 pub fn attr_value<'a>(s: &'a str, attrs: &[Attr], name: &str) -> Option<&'a str> {
     attrs.iter().find(|a| a.name == name).and_then(|a| a.val.map(|(x, y)| &s[x..y]))

@@ -1,0 +1,22 @@
+= Field Guide
+
+A short *field* guide for _new_ hikers.
+
+== Packing
+
+[NOTE]
+Bring water and a map.
+
+* First item with `code` inside.
+* Second item.
+
+[source,python]
+----
+print("not translated")
+----
+
+|===
+| Name | Use
+
+| Rope | Climbing
+|===

@@ -1,0 +1,1 @@
+<?xml version="1.0"?><!DOCTYPE x [<!ENTITY a "lol"><!ENTITY b "&a;&a;&a;&a;">]><xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform"><xsl:template match="/"><p>&b;</p></xsl:template></xsl:stylesheet>

@@ -1,0 +1,41 @@
+[
+ {
+  "name": "hostile",
+  "locale": null,
+  "map": {
+   "0": "⟦x4⟧⟦r3⟧ns⟦/r3⟧ first ⟦r1⟧B⟦/r1⟧",
+   "1": "no tokens\nsecond line\r\nthird",
+   "4": "",
+   "5": "bad ⟦x9⟧ ⟦r7⟧ ⟦/x4⟧ ⟦g1⟧ ⟦r١⟧one⟦/r1⟧ ctrl\u0001\u000bend",
+   "6": "⟦x1⟧ ⟦x2⟧",
+   "7": "Title & <\"'>",
+   "8": ""
+  }
+ },
+ {
+  "name": "hostile-ar-SA",
+  "locale": "ar-SA",
+  "map": {
+   "0": "⟦x4⟧⟦r3⟧ns⟦/r3⟧ first ⟦r1⟧B⟦/r1⟧",
+   "1": "no tokens\nsecond line\r\nthird",
+   "4": "",
+   "5": "bad ⟦x9⟧ ⟦r7⟧ ⟦/x4⟧ ⟦g1⟧ ⟦r١⟧one⟦/r1⟧ ctrl\u0001\u000bend",
+   "6": "⟦x1⟧ ⟦x2⟧",
+   "7": "Title & <\"'>",
+   "8": ""
+  }
+ },
+ {
+  "name": "hostile-de-DE",
+  "locale": "de-DE",
+  "map": {
+   "0": "⟦x4⟧⟦r3⟧ns⟦/r3⟧ first ⟦r1⟧B⟦/r1⟧",
+   "1": "no tokens\nsecond line\r\nthird",
+   "4": "",
+   "5": "bad ⟦x9⟧ ⟦r7⟧ ⟦/x4⟧ ⟦g1⟧ ⟦r١⟧one⟦/r1⟧ ctrl\u0001\u000bend",
+   "6": "⟦x1⟧ ⟦x2⟧",
+   "7": "Title & <\"'>",
+   "8": ""
+  }
+ }
+]

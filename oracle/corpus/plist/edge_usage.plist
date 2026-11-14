@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleName</key>
+	<string>Trail Notes</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Choose photos for your notes.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>%@ shows where you are.</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>Trail Link</string>
+		</dict>
+	</array>
+	<key>UTExportedTypeDeclarations</key>
+	<array>
+		<dict>
+			<key>UTTypeDescription</key>
+			<string>Trail Note</string>
+			<key>UTTypeIdentifier</key>
+			<string>com.example.trailnote</string>
+		</dict>
+	</array>
+</dict>
+</plist>

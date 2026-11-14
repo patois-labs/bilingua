@@ -1,0 +1,70 @@
+{
+ "parse": {
+  "columns": "source=1,target=2,context=3,key=4",
+  "source_locale": "en-US",
+  "target_locales": [
+   "de-DE"
+  ]
+ },
+ "units": [
+  {
+   "p_index": 0,
+   "text": "a&b",
+   "style": "",
+   "note": "Comment: Save file"
+  },
+  {
+   "p_index": 1,
+   "text": "x",
+   "style": "",
+   "note": ""
+  },
+  {
+   "p_index": 2,
+   "text": "Ünïcödé",
+   "style": "",
+   "note": "Key: True | Comment: =UPPER(A5)"
+  },
+  {
+   "p_index": 3,
+   "text": "Cancel",
+   "style": "",
+   "note": "Key: 12 | Comment: 0.0001"
+  },
+  {
+   "p_index": 4,
+   "text": "Total:",
+   "style": "",
+   "note": "Comment: 2024-02-29"
+  },
+  {
+   "p_index": 5,
+   "text": "Save file",
+   "style": "",
+   "note": "Notes: Hello"
+  },
+  {
+   "p_index": 6,
+   "text": "日本語",
+   "style": "",
+   "note": ""
+  }
+ ],
+ "error": false,
+ "builds": [
+  {
+   "name": "b",
+   "locale": "de-DE",
+   "map": {
+    "0": "a&b",
+    "1": "T x",
+    "2": "T Ünïcödé",
+    "3": "Cancel",
+    "4": "T Total:",
+    "5": "T Save file",
+    "6": "日本語"
+   },
+   "file": "fuzz_053.b.xlsx"
+  }
+ ]
+}

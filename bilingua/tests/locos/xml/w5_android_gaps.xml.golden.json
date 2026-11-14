@@ -1,0 +1,79 @@
+{
+ "format": "xml",
+ "units": [
+  {
+   "p_index": 1,
+   "text": "Hello, %1$s!",
+   "style": ""
+  },
+  {
+   "p_index": 5,
+   "text": "See you ⟦g1⟧soon⟦/g1⟧.",
+   "style": ""
+  },
+  {
+   "p_index": 6,
+   "text": "%d file",
+   "style": ""
+  },
+  {
+   "p_index": 7,
+   "text": "%d files",
+   "style": ""
+  },
+  {
+   "p_index": 8,
+   "text": "Monday",
+   "style": ""
+  },
+  {
+   "p_index": 10,
+   "text": "Tuesday",
+   "style": ""
+  },
+  {
+   "p_index": 11,
+   "text": "Can't stop now",
+   "style": ""
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4KPHJlc291cmNlcz4KICAgIDwhLS0gdGhlIGFwcCBuYW1lIHN0YXlzIC0tPgogICAgPHN0cmluZyBuYW1lPSJhcHBfbmFtZSIgdHJhbnNsYXRhYmxlPSJmYWxzZSI+SGFyYm9yPC9zdHJpbmc+CiAgICA8c3RyaW5nIG5hbWU9ImdyZWV0Ij5IZWxsbywgJTEkcyE8L3N0cmluZz4KICAgIDxzdHJpbmcgbmFtZT0icmVmIj5Ac3RyaW5nL2dyZWV0PC9zdHJpbmc+CiAgICA8c3RyaW5nIG5hbWU9ImJsYW5rIj48L3N0cmluZz4KICAgIDxzdHJpbmcgbmFtZT0iZG90cyI+Li4uPC9zdHJpbmc+CiAgICA8c3RyaW5nIG5hbWU9ImJ5ZSI+U2VlIHlvdSA8Yj5zb29uPC9iPi48L3N0cmluZz4KICAgIDxwbHVyYWxzIG5hbWU9ImZpbGVzIj4KICAgICAgICA8aXRlbSBxdWFudGl0eT0ib25lIj4lZCBmaWxlPC9pdGVtPgogICAgICAgIDxpdGVtIHF1YW50aXR5PSJvdGhlciI+JWQgZmlsZXM8L2l0ZW0+CiAgICA8L3BsdXJhbHM+CiAgICA8c3RyaW5nLWFycmF5IG5hbWU9ImRheXMiPgogICAgICAgIDxpdGVtPk1vbmRheTwvaXRlbT4KICAgICAgICA8aXRlbT5Ac3RyaW5nL3JlZjwvaXRlbT4KICAgICAgICA8aXRlbT5UdWVzZGF5PC9pdGVtPgogICAgPC9zdHJpbmctYXJyYXk+CiAgICA8c3RyaW5nIG5hbWU9Imxhc3QiPkNhblwndCBzdG9wIG5vdzwvc3RyaW5nPgo8L3Jlc291cmNlcz4K"
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "1": "Ü Hello, %1$s!",
+    "5": "Ü See you ⟦g1⟧Ü soon⟦/g1⟧Ü .",
+    "6": "Ü %d file",
+    "7": "Ü %d files",
+    "8": "Ü Monday",
+    "10": "Ü Tuesday",
+    "11": "Ü Can't stop now"
+   },
+   "out_b64": "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4KPHJlc291cmNlcz4KICAgIDwhLS0gdGhlIGFwcCBuYW1lIHN0YXlzIC0tPgogICAgPHN0cmluZyBuYW1lPSJhcHBfbmFtZSIgdHJhbnNsYXRhYmxlPSJmYWxzZSI+SGFyYm9yPC9zdHJpbmc+CiAgICA8c3RyaW5nIG5hbWU9ImdyZWV0Ij7DnCBIZWxsbywgJTEkcyE8L3N0cmluZz4KICAgIDxzdHJpbmcgbmFtZT0icmVmIj5Ac3RyaW5nL2dyZWV0PC9zdHJpbmc+CiAgICA8c3RyaW5nIG5hbWU9ImJsYW5rIj48L3N0cmluZz4KICAgIDxzdHJpbmcgbmFtZT0iZG90cyI+Li4uPC9zdHJpbmc+CiAgICA8c3RyaW5nIG5hbWU9ImJ5ZSI+w5wgU2VlIHlvdSA8Yj7DnCBzb29uPC9iPsOcIC48L3N0cmluZz4KICAgIDxwbHVyYWxzIG5hbWU9ImZpbGVzIj4KICAgICAgICA8aXRlbSBxdWFudGl0eT0ib25lIj7DnCAlZCBmaWxlPC9pdGVtPgogICAgICAgIDxpdGVtIHF1YW50aXR5PSJvdGhlciI+w5wgJWQgZmlsZXM8L2l0ZW0+CiAgICA8L3BsdXJhbHM+CiAgICA8c3RyaW5nLWFycmF5IG5hbWU9ImRheXMiPgogICAgICAgIDxpdGVtPsOcIE1vbmRheTwvaXRlbT4KICAgICAgICA8aXRlbT5Ac3RyaW5nL3JlZjwvaXRlbT4KICAgICAgICA8aXRlbT7DnCBUdWVzZGF5PC9pdGVtPgogICAgPC9zdHJpbmctYXJyYXk+CiAgICA8c3RyaW5nIG5hbWU9Imxhc3QiPsOcIENhblwndCBzdG9wIG5vdzwvc3RyaW5nPgo8L3Jlc291cmNlcz4K"
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "1": "Hello, %1$s! & <\"'>",
+    "6": "%d file & <\"'>",
+    "8": "Monday & <\"'>",
+    "11": "Can't stop now & <\"'>"
+   },
+   "out_b64": "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4KPHJlc291cmNlcz4KICAgIDwhLS0gdGhlIGFwcCBuYW1lIHN0YXlzIC0tPgogICAgPHN0cmluZyBuYW1lPSJhcHBfbmFtZSIgdHJhbnNsYXRhYmxlPSJmYWxzZSI+SGFyYm9yPC9zdHJpbmc+CiAgICA8c3RyaW5nIG5hbWU9ImdyZWV0Ij5IZWxsbywgJTEkcyEgJmFtcDsgJmx0O1wiXCcmZ3Q7PC9zdHJpbmc+CiAgICA8c3RyaW5nIG5hbWU9InJlZiI+QHN0cmluZy9ncmVldDwvc3RyaW5nPgogICAgPHN0cmluZyBuYW1lPSJibGFuayI+PC9zdHJpbmc+CiAgICA8c3RyaW5nIG5hbWU9ImRvdHMiPi4uLjwvc3RyaW5nPgogICAgPHN0cmluZyBuYW1lPSJieWUiPlNlZSB5b3UgPGI+c29vbjwvYj4uPC9zdHJpbmc+CiAgICA8cGx1cmFscyBuYW1lPSJmaWxlcyI+CiAgICAgICAgPGl0ZW0gcXVhbnRpdHk9Im9uZSI+JWQgZmlsZSAmYW1wOyAmbHQ7XCJcJyZndDs8L2l0ZW0+CiAgICAgICAgPGl0ZW0gcXVhbnRpdHk9Im90aGVyIj4lZCBmaWxlczwvaXRlbT4KICAgIDwvcGx1cmFscz4KICAgIDxzdHJpbmctYXJyYXkgbmFtZT0iZGF5cyI+CiAgICAgICAgPGl0ZW0+TW9uZGF5ICZhbXA7ICZsdDtcIlwnJmd0OzwvaXRlbT4KICAgICAgICA8aXRlbT5Ac3RyaW5nL3JlZjwvaXRlbT4KICAgICAgICA8aXRlbT5UdWVzZGF5PC9pdGVtPgogICAgPC9zdHJpbmctYXJyYXk+CiAgICA8c3RyaW5nIG5hbWU9Imxhc3QiPkNhblwndCBzdG9wIG5vdyAmYW1wOyAmbHQ7XCJcJyZndDs8L3N0cmluZz4KPC9yZXNvdXJjZXM+Cg=="
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "out_b64": "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4KPHJlc291cmNlcz4KICAgIDwhLS0gdGhlIGFwcCBuYW1lIHN0YXlzIC0tPgogICAgPHN0cmluZyBuYW1lPSJhcHBfbmFtZSIgdHJhbnNsYXRhYmxlPSJmYWxzZSI+SGFyYm9yPC9zdHJpbmc+CiAgICA8c3RyaW5nIG5hbWU9ImdyZWV0Ij5IZWxsbywgJTEkcyE8L3N0cmluZz4KICAgIDxzdHJpbmcgbmFtZT0icmVmIj5Ac3RyaW5nL2dyZWV0PC9zdHJpbmc+CiAgICA8c3RyaW5nIG5hbWU9ImJsYW5rIj48L3N0cmluZz4KICAgIDxzdHJpbmcgbmFtZT0iZG90cyI+Li4uPC9zdHJpbmc+CiAgICA8c3RyaW5nIG5hbWU9ImJ5ZSI+U2VlIHlvdSA8Yj5zb29uPC9iPi48L3N0cmluZz4KICAgIDxwbHVyYWxzIG5hbWU9ImZpbGVzIj4KICAgICAgICA8aXRlbSBxdWFudGl0eT0ib25lIj4lZCBmaWxlPC9pdGVtPgogICAgICAgIDxpdGVtIHF1YW50aXR5PSJvdGhlciI+JWQgZmlsZXM8L2l0ZW0+CiAgICA8L3BsdXJhbHM+CiAgICA8c3RyaW5nLWFycmF5IG5hbWU9ImRheXMiPgogICAgICAgIDxpdGVtPk1vbmRheTwvaXRlbT4KICAgICAgICA8aXRlbT5Ac3RyaW5nL3JlZjwvaXRlbT4KICAgICAgICA8aXRlbT5UdWVzZGF5PC9pdGVtPgogICAgPC9zdHJpbmctYXJyYXk+CiAgICA8c3RyaW5nIG5hbWU9Imxhc3QiPkNhblwndCBzdG9wIG5vdzwvc3RyaW5nPgo8L3Jlc291cmNlcz4K"
+  }
+ ]
+}

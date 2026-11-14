@@ -1,0 +1,40 @@
+{
+ "format": "html",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Hello ⟦g1⟧world⟦/g1⟧. This is ⟦g2⟧bold⟦/g2⟧ text.",
+   "style": ""
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "PHA+SGVsbG8gPGI+d29ybGQ8L2I+LiBUaGlzIGlzIDxpPmJvbGQ8L2k+IHRleHQuPC9wPg=="
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü Hello ⟦g1⟧Ü world⟦/g1⟧Ü . This is ⟦g2⟧Ü bold⟦/g2⟧Ü  text."
+   },
+   "out_b64": "PHA+w5wgSGVsbG8gPGI+w5wgd29ybGQ8L2I+w5wgLiBUaGlzIGlzIDxpPsOcIGJvbGQ8L2k+w5wgIHRleHQuPC9wPg=="
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Hello  & <\"'>⟦g1⟧world & <\"'>⟦/g1⟧. This is  & <\"'>⟦g2⟧bold & <\"'>⟦/g2⟧ text. & <\"'>"
+   },
+   "out_b64": "PHA+SGVsbG8gICZhbXA7ICZsdDsiJyZndDs8Yj53b3JsZCAmYW1wOyAmbHQ7IicmZ3Q7PC9iPi4gVGhpcyBpcyAgJmFtcDsgJmx0OyInJmd0OzxpPmJvbGQgJmFtcDsgJmx0OyInJmd0OzwvaT4gdGV4dC4gJmFtcDsgJmx0OyInJmd0OzwvcD4="
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "out_b64": "PHA+SGVsbG8gPGI+d29ybGQ8L2I+LiBUaGlzIGlzIDxpPmJvbGQ8L2k+IHRleHQuPC9wPg=="
+  }
+ ]
+}

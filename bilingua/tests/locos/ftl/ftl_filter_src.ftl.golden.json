@@ -1,0 +1,102 @@
+{
+ "format": "ftl",
+ "units": [
+  {
+   "p_index": 0,
+   "text": "Hello, { $name }!",
+   "style": "ftl:hello"
+  },
+  {
+   "p_index": 1,
+   "text": "You have one unread email.",
+   "style": "ftl:emails[one]"
+  },
+  {
+   "p_index": 2,
+   "text": "You have { $unread } unread emails in { -brand-name }.",
+   "style": "ftl:emails[other]"
+  },
+  {
+   "p_index": 3,
+   "text": "First line of the text\nsecond line { brace",
+   "style": "ftl:multi"
+  },
+  {
+   "p_index": 4,
+   "text": "Log in",
+   "style": "ftl:login-button"
+  },
+  {
+   "p_index": 5,
+   "text": "Click to log in",
+   "style": "ftl:login-button.title"
+  },
+  {
+   "p_index": 6,
+   "text": "L",
+   "style": "ftl:login-button.accesskey"
+  },
+  {
+   "p_index": 7,
+   "text": "Search the web",
+   "style": "ftl:only-attrs.placeholder"
+  }
+ ],
+ "builds": [
+  {
+   "name": "none",
+   "locale": null,
+   "map": {},
+   "out_b64": "IyMjIFJlc291cmNlIGNvbW1lbnQKCiMgU2ltcGxlIG1lc3NhZ2Ugd2l0aCBhIHZhcmlhYmxlLgpoZWxsbyA9IEhlbGxvLCB7ICRuYW1lIH0hCgojIyBHcm91cDogYnJhbmQKLWJyYW5kLW5hbWUgPSBGaXJlZm94CiAgICAuZ2VuZGVyID0gbWFzY3VsaW5lCgplbWFpbHMgPSB7ICR1bnJlYWQgLT4KICAgIFtvbmVdIFlvdSBoYXZlIG9uZSB1bnJlYWQgZW1haWwuCiAgICpbb3RoZXJdIFlvdSBoYXZlIHsgJHVucmVhZCB9IHVucmVhZCBlbWFpbHMgaW4geyAtYnJhbmQtbmFtZSB9Lgp9CgptdWx0aSA9CiAgICBGaXJzdCBsaW5lIG9mIHRoZSB0ZXh0CiAgICBzZWNvbmQgbGluZSB7ICJ7IiB9IGJyYWNlCgpsb2dpbi1idXR0b24gPSBMb2cgaW4KICAgIC50aXRsZSA9IENsaWNrIHRvIGxvZyBpbgogICAgLmFjY2Vzc2tleSA9IEwKCm9ubHktYXR0cnMgPQogICAgLnBsYWNlaG9sZGVyID0gU2VhcmNoIHRoZSB3ZWIKCm51bWJlcnMgPSB7IE5VTUJFUigkbiwgbWluaW11bUZyYWN0aW9uRGlnaXRzOiAyKSB9CmJyb2tlbiA9IHsgJHgKcmVmID0geyBoZWxsbyB9Cg=="
+  },
+  {
+   "name": "prefix",
+   "locale": null,
+   "map": {
+    "0": "Ü Hello, { $name }!",
+    "1": "Ü You have one unread email.",
+    "2": "Ü You have { $unread } unread emails in { -brand-name }.",
+    "3": "Ü First line of the text\nsecond line { brace",
+    "4": "Ü Log in",
+    "5": "Ü Click to log in",
+    "6": "Ü L",
+    "7": "Ü Search the web"
+   },
+   "out_b64": "IyMjIFJlc291cmNlIGNvbW1lbnQKCiMgU2ltcGxlIG1lc3NhZ2Ugd2l0aCBhIHZhcmlhYmxlLgpoZWxsbyA9IMOcIEhlbGxvLCB7ICRuYW1lIH0hCgojIyBHcm91cDogYnJhbmQKLWJyYW5kLW5hbWUgPSBGaXJlZm94CiAgICAuZ2VuZGVyID0gbWFzY3VsaW5lCgplbWFpbHMgPSB7ICR1bnJlYWQgLT4KICAgIFtvbmVdIMOcIFlvdSBoYXZlIG9uZSB1bnJlYWQgZW1haWwuCiAgICpbb3RoZXJdIMOcIFlvdSBoYXZlIHsgJHVucmVhZCB9IHVucmVhZCBlbWFpbHMgaW4geyAtYnJhbmQtbmFtZSB9Lgp9CgptdWx0aSA9CiAgICDDnCBGaXJzdCBsaW5lIG9mIHRoZSB0ZXh0CiAgICBzZWNvbmQgbGluZSB7InsifSBicmFjZQoKbG9naW4tYnV0dG9uID0gw5wgTG9nIGluCiAgICAudGl0bGUgPSDDnCBDbGljayB0byBsb2cgaW4KICAgIC5hY2Nlc3NrZXkgPSDDnCBMCgpvbmx5LWF0dHJzID0KICAgIC5wbGFjZWhvbGRlciA9IMOcIFNlYXJjaCB0aGUgd2ViCgpudW1iZXJzID0geyBOVU1CRVIoJG4sIG1pbmltdW1GcmFjdGlvbkRpZ2l0czogMikgfQpicm9rZW4gPSB7ICR4CnJlZiA9IHsgaGVsbG8gfQo="
+  },
+  {
+   "name": "escape-de-DE",
+   "locale": "de-DE",
+   "map": {
+    "0": "Hello, { $name }! & <\"'>",
+    "2": "You have { $unread } unread emails in { -brand-name }. & <\"'>",
+    "4": "Log in & <\"'>",
+    "6": "L & <\"'>"
+   },
+   "out_b64": "IyMjIFJlc291cmNlIGNvbW1lbnQKCiMgU2ltcGxlIG1lc3NhZ2Ugd2l0aCBhIHZhcmlhYmxlLgpoZWxsbyA9IEhlbGxvLCB7ICRuYW1lIH0hICYgPCInPgoKIyMgR3JvdXA6IGJyYW5kCi1icmFuZC1uYW1lID0gRmlyZWZveAogICAgLmdlbmRlciA9IG1hc2N1bGluZQoKZW1haWxzID0geyAkdW5yZWFkIC0+CiAgICBbb25lXSBZb3UgaGF2ZSBvbmUgdW5yZWFkIGVtYWlsLgogICAqW290aGVyXSBZb3UgaGF2ZSB7ICR1bnJlYWQgfSB1bnJlYWQgZW1haWxzIGluIHsgLWJyYW5kLW5hbWUgfS4gJiA8Iic+Cn0KCm11bHRpID0KICAgIEZpcnN0IGxpbmUgb2YgdGhlIHRleHQKICAgIHNlY29uZCBsaW5lIHsgInsiIH0gYnJhY2UKCmxvZ2luLWJ1dHRvbiA9IExvZyBpbiAmIDwiJz4KICAgIC50aXRsZSA9IENsaWNrIHRvIGxvZyBpbgogICAgLmFjY2Vzc2tleSA9IEwgJiA8Iic+Cgpvbmx5LWF0dHJzID0KICAgIC5wbGFjZWhvbGRlciA9IFNlYXJjaCB0aGUgd2ViCgpudW1iZXJzID0geyBOVU1CRVIoJG4sIG1pbmltdW1GcmFjdGlvbkRpZ2l0czogMikgfQpicm9rZW4gPSB7ICR4CnJlZiA9IHsgaGVsbG8gfQo="
+  },
+  {
+   "name": "none-de-DE",
+   "locale": "de-DE",
+   "map": {},
+   "out_b64": "IyMjIFJlc291cmNlIGNvbW1lbnQKCiMgU2ltcGxlIG1lc3NhZ2Ugd2l0aCBhIHZhcmlhYmxlLgpoZWxsbyA9IEhlbGxvLCB7ICRuYW1lIH0hCgojIyBHcm91cDogYnJhbmQKLWJyYW5kLW5hbWUgPSBGaXJlZm94CiAgICAuZ2VuZGVyID0gbWFzY3VsaW5lCgplbWFpbHMgPSB7ICR1bnJlYWQgLT4KICAgIFtvbmVdIFlvdSBoYXZlIG9uZSB1bnJlYWQgZW1haWwuCiAgICpbb3RoZXJdIFlvdSBoYXZlIHsgJHVucmVhZCB9IHVucmVhZCBlbWFpbHMgaW4geyAtYnJhbmQtbmFtZSB9Lgp9CgptdWx0aSA9CiAgICBGaXJzdCBsaW5lIG9mIHRoZSB0ZXh0CiAgICBzZWNvbmQgbGluZSB7ICJ7IiB9IGJyYWNlCgpsb2dpbi1idXR0b24gPSBMb2cgaW4KICAgIC50aXRsZSA9IENsaWNrIHRvIGxvZyBpbgogICAgLmFjY2Vzc2tleSA9IEwKCm9ubHktYXR0cnMgPQogICAgLnBsYWNlaG9sZGVyID0gU2VhcmNoIHRoZSB3ZWIKCm51bWJlcnMgPSB7IE5VTUJFUigkbiwgbWluaW11bUZyYWN0aW9uRGlnaXRzOiAyKSB9CmJyb2tlbiA9IHsgJHgKcmVmID0geyBoZWxsbyB9Cg=="
+  },
+  {
+   "name": "escape-pl-PL",
+   "locale": "pl-PL",
+   "map": {
+    "0": "Hello, { $name }! & <\"'>",
+    "2": "You have { $unread } unread emails in { -brand-name }. & <\"'>",
+    "4": "Log in & <\"'>",
+    "6": "L & <\"'>"
+   },
+   "out_b64": "IyMjIFJlc291cmNlIGNvbW1lbnQKCiMgU2ltcGxlIG1lc3NhZ2Ugd2l0aCBhIHZhcmlhYmxlLgpoZWxsbyA9IEhlbGxvLCB7ICRuYW1lIH0hICYgPCInPgoKIyMgR3JvdXA6IGJyYW5kCi1icmFuZC1uYW1lID0gRmlyZWZveAogICAgLmdlbmRlciA9IG1hc2N1bGluZQoKZW1haWxzID0geyAkdW5yZWFkIC0+CiAgICBbb25lXSBZb3UgaGF2ZSBvbmUgdW5yZWFkIGVtYWlsLgogICAgW2Zld10gWW91IGhhdmUgeyAkdW5yZWFkIH0gdW5yZWFkIGVtYWlscyBpbiB7IC1icmFuZC1uYW1lIH0uICYgPCInPgogICAgW21hbnldIFlvdSBoYXZlIHsgJHVucmVhZCB9IHVucmVhZCBlbWFpbHMgaW4geyAtYnJhbmQtbmFtZSB9LiAmIDwiJz4KICAgKltvdGhlcl0gWW91IGhhdmUgeyAkdW5yZWFkIH0gdW5yZWFkIGVtYWlscyBpbiB7IC1icmFuZC1uYW1lIH0uICYgPCInPgp9CgptdWx0aSA9CiAgICBGaXJzdCBsaW5lIG9mIHRoZSB0ZXh0CiAgICBzZWNvbmQgbGluZSB7ICJ7IiB9IGJyYWNlCgpsb2dpbi1idXR0b24gPSBMb2cgaW4gJiA8Iic+CiAgICAudGl0bGUgPSBDbGljayB0byBsb2cgaW4KICAgIC5hY2Nlc3NrZXkgPSBMICYgPCInPgoKb25seS1hdHRycyA9CiAgICAucGxhY2Vob2xkZXIgPSBTZWFyY2ggdGhlIHdlYgoKbnVtYmVycyA9IHsgTlVNQkVSKCRuLCBtaW5pbXVtRnJhY3Rpb25EaWdpdHM6IDIpIH0KYnJva2VuID0geyAkeApyZWYgPSB7IGhlbGxvIH0K"
+  },
+  {
+   "name": "none-pl-PL",
+   "locale": "pl-PL",
+   "map": {},
+   "out_b64": "IyMjIFJlc291cmNlIGNvbW1lbnQKCiMgU2ltcGxlIG1lc3NhZ2Ugd2l0aCBhIHZhcmlhYmxlLgpoZWxsbyA9IEhlbGxvLCB7ICRuYW1lIH0hCgojIyBHcm91cDogYnJhbmQKLWJyYW5kLW5hbWUgPSBGaXJlZm94CiAgICAuZ2VuZGVyID0gbWFzY3VsaW5lCgplbWFpbHMgPSB7ICR1bnJlYWQgLT4KICAgIFtvbmVdIFlvdSBoYXZlIG9uZSB1bnJlYWQgZW1haWwuCiAgICBbZmV3XSBZb3UgaGF2ZSB7ICR1bnJlYWQgfSB1bnJlYWQgZW1haWxzIGluIHsgLWJyYW5kLW5hbWUgfS4KICAgIFttYW55XSBZb3UgaGF2ZSB7ICR1bnJlYWQgfSB1bnJlYWQgZW1haWxzIGluIHsgLWJyYW5kLW5hbWUgfS4KICAgKltvdGhlcl0gWW91IGhhdmUgeyAkdW5yZWFkIH0gdW5yZWFkIGVtYWlscyBpbiB7IC1icmFuZC1uYW1lIH0uCn0KCm11bHRpID0KICAgIEZpcnN0IGxpbmUgb2YgdGhlIHRleHQKICAgIHNlY29uZCBsaW5lIHsgInsiIH0gYnJhY2UKCmxvZ2luLWJ1dHRvbiA9IExvZyBpbgogICAgLnRpdGxlID0gQ2xpY2sgdG8gbG9nIGluCiAgICAuYWNjZXNza2V5ID0gTAoKb25seS1hdHRycyA9CiAgICAucGxhY2Vob2xkZXIgPSBTZWFyY2ggdGhlIHdlYgoKbnVtYmVycyA9IHsgTlVNQkVSKCRuLCBtaW5pbXVtRnJhY3Rpb25EaWdpdHM6IDIpIH0KYnJva2VuID0geyAkeApyZWYgPSB7IGhlbGxvIH0K"
+  }
+ ]
+}

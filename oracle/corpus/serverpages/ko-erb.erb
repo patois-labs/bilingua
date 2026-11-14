@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head><meta charset="utf-8"><title>다시 오신 것을 환영합니다 <%= @user.name %></title><meta name="description" content="주문 내역"></head>
+<body>
+<%# note: not text %>
+<h1>다시 오신 것을 환영합니다, <%= @user.name %>!</h1>
+<% if @user -%>
+<p>계속하려면 로그인하세요. 빠르고 무료입니다. <b>주문 내역</b> <%= @user.name %> <a href="<%= url %>" title="받은 편지함 열기">받은 편지함 열기</a>.</p>
+<% end -%>
+<img src="logo.png" alt="회사 로고">
+<ul><li>주문 내역</li><li><%= @user.name %> &amp; 다시 오신 것을 환영합니다</li></ul>
+<script>var user = "<%= @user.name %>"; if (a < b) { go(); }</script>
+</body>
+</html>

@@ -20,8 +20,8 @@ let out = Srt.merge(&doc)?;
 - `extra["max_cpl"] = "42"` is the default maximum characters per line (`DEFAULT_MAX_CPL`). It is a hint for QA
   and the editor, not enforced here. Change it per project by overwriting the value.
 - Formatting: `<i>`, `<b>`, `<u>`, `<s>`, `<font ...>` (SRT); `<i>`, `<b>`, `<u>`, `<c.class>`, `<v Name>`,
-  `<lang xx>`, `<ruby>`, `<rt>` (VTT) become paired tags. VTT timestamp tags (`<00:00:05.000>`) and SRT style
-  overrides (`{\an8}`) are standalone tags. Unclosed or stray tags become standalone tags. Other `<` characters
+  `<lang xx>`, `<ruby>`, `<rt>` (VTT) become paired tags. VTT timestamp tags (`<00:00:05.000>`), word-timing
+  marks in SRT text (`<00:00:04.480>`, native mode) and SRT style overrides (`{\an8}`) are standalone tags. Unclosed or stray tags become standalone tags. Other `<` characters
   in SRT text stay text.
 - A line break inside a cue is a standalone tag with display `↵`. It is written with the file's own line
   ending. A translator can also type a newline in the text; it is written the same way.
