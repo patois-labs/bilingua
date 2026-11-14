@@ -1235,16 +1235,30 @@ impl Document {
     }
 }
 
-/// The merge-time tag check ([`guard::check_targets`]): `check_tags` with standalone repeats allowed, or with
-/// `counts` off only the rule that every tag comes from the source.
-pub(crate) fn check_target_tags(source: &[Inline], target: &[Inline], counts: bool) -> Result<(), Error> {
-    if counts {
-        return check_tags(source, target, true);
+/// The merge-time tag check ([`guard::check_targets`]). Each target tag must be a tag of the segment's source (same
+/// id and kind) or have its markup in the unit's `codes` (a reader that maps a stored translation's placeholders to
+/// the unit's codes, as PO and MO do for a plural form, gives such tags). With `counts`, a paired tag of the
+/// source may appear no more often than there.
+pub(crate) fn check_target_tags(source: &[Inline], target: &[Inline], codes: &BTreeMap<String, CodeData>, counts: bool) -> Result<(), Error> {
+    let mut allowed: BTreeMap<(&str, TagKind), usize> = BTreeMap::new();
+    for i in source {
+        if let Inline::Tag { id, kind, .. } = i {
+            *allowed.entry((id.as_str(), *kind)).or_default() += 1;
+        }
     }
+    let mut used: BTreeMap<(&str, TagKind), usize> = BTreeMap::new();
     for i in target {
         if let Inline::Tag { id, kind, .. } = i {
-            if !source.iter().any(|s| matches!(s, Inline::Tag { id: sid, kind: sk, .. } if sid == id && sk == kind)) {
-                return Err(Error::InventedTag(id.clone()));
+            match allowed.get(&(id.as_str(), *kind)) {
+                Some(max) => {
+                    let n = used.entry((id.as_str(), *kind)).or_default();
+                    *n += 1;
+                    if counts && *n > *max && *kind != TagKind::Standalone {
+                        return Err(Error::DuplicatedTag(id.clone()));
+                    }
+                }
+                None if codes.contains_key(id) => {}
+                None => return Err(Error::InventedTag(id.clone())),
             }
         }
     }

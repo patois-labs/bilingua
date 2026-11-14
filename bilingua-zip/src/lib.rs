@@ -439,13 +439,15 @@ fn single_entry_zip(name: &str, p: &Packed, bytes: &[u8]) -> Vec<u8> {
     z
 }
 
-/// Writes plain entries (each compressed as its metadata says).
+/// Writes plain entries (each compressed as its metadata says). The names are written as given, unchecked: for a
+/// package rebuilt from members [`read_zip`] read (and so checked), and for test fixtures that build hostile
+/// archives. A merge that writes names from a stored Document uses [`write_zip_parts`], which checks them.
 pub fn write_zip(entries: &[(EntryMeta, Vec<u8>)]) -> Result<Vec<u8>, Error> {
     let parts: Vec<(EntryMeta, Body)> = entries
         .iter()
         .map(|(m, d)| (m.clone(), Body::Plain(d)))
         .collect();
-    write_zip_parts(&parts)
+    write_entries(&parts)
 }
 
 /// The body to write for a skeleton entry kept as raw bytes: the original deflated bytes when `packed` (the
@@ -481,13 +483,20 @@ fn check_packed(src: &mut zip::ZipArchive<Cursor<Vec<u8>>>, p: &Packed) -> Resul
     Ok(())
 }
 
+/// Writes a zip from a skeleton's entries. Every name must pass [`safe_name`]: the names come from a stored
+/// Document, and one that never passed the reader's check is not written (BILI-105).
 pub fn write_zip_parts(entries: &[(EntryMeta, Body<'_>)]) -> Result<Vec<u8>, Error> {
+    for (m, _) in entries {
+        safe_name(&m.name)?;
+    }
+    write_entries(entries)
+}
+
+fn write_entries(entries: &[(EntryMeta, Body<'_>)]) -> Result<Vec<u8>, Error> {
     let werr =
         |name: &str, e: &dyn std::fmt::Display| Error::Write(format!("cannot write {name:?}: {e}"));
     let mut w = zip::ZipWriter::new(Cursor::new(Vec::new()));
     for (m, body) in entries {
-        // the names come from a stored Document: one that never passed the reader's check is not written (BILI-105)
-        safe_name(&m.name)?;
         let dt = m
             .modified
             .and_then(|t| {
