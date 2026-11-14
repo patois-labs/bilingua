@@ -154,6 +154,42 @@ fn doctype(raw: &str) -> (bool, HashMap<String, String>) {
     (external, ents)
 }
 
+/// The namespace bindings in scope, with an index per prefix, so a lookup does not walk every declaration in scope
+/// (one element may declare any number of prefixes, and every later name would be looked up past all of them).
+#[derive(Default)]
+struct Scopes {
+    bind: Vec<(String, String)>,
+    /// prefix to the indexes in `bind` that declare it, innermost last (`""` is the default namespace)
+    by_prefix: HashMap<String, Vec<usize>>,
+}
+
+impl Scopes {
+    fn len(&self) -> usize {
+        self.bind.len()
+    }
+
+    fn push(&mut self, prefix: String, uri: String) {
+        self.by_prefix.entry(prefix.clone()).or_default().push(self.bind.len());
+        self.bind.push((prefix, uri));
+    }
+
+    fn truncate(&mut self, n: usize) {
+        while self.bind.len() > n {
+            let Some((p, _)) = self.bind.pop() else { break };
+            if let Some(v) = self.by_prefix.get_mut(&p) {
+                v.pop();
+                if v.is_empty() {
+                    self.by_prefix.remove(&p);
+                }
+            }
+        }
+    }
+
+    fn lookup(&self, prefix: &str) -> Option<&str> {
+        self.by_prefix.get(prefix).and_then(|v| v.last()).map(|i| self.bind[*i].1.as_str())
+    }
+}
+
 struct Open {
     local: String,
     scope_mark: usize,
@@ -176,7 +212,7 @@ pub fn xml_view(text: &str) -> Option<XmlView> {
     }
     let mut view = XmlView { sigs: Vec::new(), bodies: HashSet::new(), bodies_cut: false };
     let mut stack: Vec<Open> = Vec::new();
-    let mut scopes: Vec<(String, String)> = Vec::new();
+    let mut scopes = Scopes::default();
     let mut captures: Vec<(String, String, bool)> = Vec::new(); // (name, text, open)
     // The captures still open, innermost last: a text goes to these only, not past every closed one. Their bytes
     // together stay within `budget`.
@@ -250,12 +286,12 @@ pub fn xml_view(text: &str) -> Option<XmlView> {
                     }
                     let v = expand(v, &ents, lenient)?;
                     if *an == "xmlns" {
-                        scopes.push((String::new(), v));
+                        scopes.push(String::new(), v);
                     } else if let Some(p) = an.strip_prefix("xmlns:") {
                         if v.is_empty() {
                             return None;
                         }
-                        scopes.push((p.to_string(), v));
+                        scopes.push(p.to_string(), v);
                     } else {
                         plain.push((an, v));
                     }
@@ -264,7 +300,7 @@ pub fn xml_view(text: &str) -> Option<XmlView> {
                     if prefix == "xml" {
                         return Some(XML_NS.to_string());
                     }
-                    scopes.iter().rev().find(|(p, _)| p == prefix).map(|(_, u)| u.clone())
+                    scopes.lookup(prefix).map(str::to_string)
                 };
                 let split = |q: &str| -> (String, String) {
                     match q.split_once(':') {

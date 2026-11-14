@@ -334,3 +334,18 @@ fn many_style_elements_in_a_well_formed_page_are_linear() {
     let t = t.elapsed();
     assert!(t < Duration::from_secs(20), "took {t:?}");
 }
+
+/// Resource limit: the XML reading of the export check looked every element and attribute name up through all the
+/// namespace declarations in scope, so one element declaring many prefixes above many elements took time in their
+/// product. The lookup is now one index probe.
+#[test]
+fn many_namespace_declarations_in_a_well_formed_page_are_linear() {
+    let n = 50_000;
+    let decls: String = (0..n).map(|i| format!(" xmlns:p{i}=\"urn:x\"")).collect();
+    let page = format!("<html xmlns=\"http://www.w3.org/1999/xhtml\"{decls}><body><p>Hello</p>{}</body></html>", "<i></i>".repeat(n));
+    let t = Instant::now();
+    let out = String::from_utf8(translated_merge(&page).expect("merge")).unwrap();
+    assert!(out.contains("<p>Hallo</p>"));
+    let t = t.elapsed();
+    assert!(t < Duration::from_secs(20), "took {t:?}");
+}
