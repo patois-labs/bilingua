@@ -90,3 +90,24 @@ fn doubled_bom_is_refused_for_xaml() {
     bytes.extend_from_slice(SAMPLES[0].1.as_bytes());
     assert!(matches!(extract("a.xaml", &bytes, &opts()), Err(Error::Parse { .. })));
 }
+
+/// RESX through the facade (0.9.1 security audit, BILI-98): two or three byte-order marks are a typed parse error,
+/// also for the shapes that used to panic or shift every span (a line break before the root, two-byte text).
+#[test]
+fn doubled_bom_is_refused_for_resx() {
+    let base = SAMPLES[1].1;
+    let cyrillic = base.replace("Hello", "\u{41F}\u{440}\u{438}\u{432}\u{435}\u{442}");
+    for body in [base.to_string(), format!("\n{base}"), cyrillic.clone(), format!("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n{cyrillic}")] {
+        for boms in [2, 3] {
+            let mut bytes = b"\xEF\xBB\xBF".repeat(boms);
+            bytes.extend_from_slice(body.as_bytes());
+            let r = std::panic::catch_unwind(|| extract("a.resx", &bytes, &opts()));
+            assert!(matches!(r, Ok(Err(Error::Parse { .. }))), "{boms} BOMs before {body:?}: {:?}", r.map(|r| r.map(|d| d.units.len())));
+        }
+        // one BOM still reads and merges back unchanged
+        let mut one = b"\xEF\xBB\xBF".to_vec();
+        one.extend_from_slice(body.as_bytes());
+        let d = extract("a.resx", &one, &opts()).unwrap();
+        assert_eq!(merge(&d).unwrap(), one);
+    }
+}
