@@ -79,6 +79,11 @@ fn matches_locos_on_random_files() {
                 ambiguous += 1;
                 continue;
             }
+            // BILI-59: a character XML forbids (U+0000, C0 controls) is refused on purpose; LocOS's scanner reads it
+            Err(Error::Parse { msg, .. }) if !png && msg.contains("is not allowed") => {
+                ambiguous += 1;
+                continue;
+            }
             Err(e) => {
                 bad.push(format!("{name}: we refuse ({e}), LocOS accepts"));
                 continue;
