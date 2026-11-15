@@ -34,6 +34,17 @@ is listed here).
   in the page (style elements, namespace declarations, pages without line breaks). An ITS rule's descendant steps
   skip context elements that lie inside another one, so chained `//*//*` selectors walk the tree once. PPTX and
   XLSX rich text no longer copy a run's formatting into every empty run next to it. Output is unchanged.
+- Resource limit fixes (security review run 2): PDF object stream members that share an offset are parsed once
+  and read only up to the next member, the ends of streams without a usable `/Length` come from one index of the
+  file, ToUnicode maps write at most 262,144 mappings and expand ranges only as they are written, the text-line
+  orientation pass is linear in the page's objects, and one page may hold a tenth of the document's text objects.
+  Fluent bounds its own parse nesting (braces in strings, calls inside calls) with a `Depth` limit error. SRX
+  segmentation and the tag-pair check of every cut are linear in the unit. `.properties` MessageFormat arguments
+  are matched in one pass, and `extract` applies the caller's limits inside the filter. MO refuses a message with
+  more than 32 forms. PNG text chunks: the chunk walk is linear and every inflated byte counts against the text
+  memory budget, kept or not. JS modules and PHP charge every unit's key to `max_context_bytes` as the units are
+  built (`bilingua_jsmodule::Limits::max_context_bytes`). EBU STL refuses a subtitle whose joined text is far over
+  the unit limit before decoding it. The PDF hostile-input tests count work instead of timing it (BILI-58).
 - Docs: the safety model says a stored Document (and the CLI sidecar) is host data, kept where uploaders,
   translators and other tenants cannot write it.
 

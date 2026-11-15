@@ -312,7 +312,7 @@ pub fn split(doc: &mut Document, seg_id: &str, at_char: usize) -> Result<(String
         return Err(Error::Unsupported("split position is outside the text".into()));
     };
     let p = settle_cut(&a, prev);
-    let pr = pairs(&a);
+    let pr = pair_depth(a.len(), &pairs(&a));
     let mut left = p;
     while left > 0 && is_ws(&a[left - 1]) {
         left -= 1;
