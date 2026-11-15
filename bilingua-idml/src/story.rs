@@ -949,7 +949,9 @@ pub struct Splices(Vec<(Id, Vec<Id>, Vec<Id>)>);
 impl Splices {
     /// Puts every recorded replacement in place: the new ranges where the first old range was, the old ranges out.
     pub fn apply(self, t: &mut Tree) {
-        let mut by_parent: HashMap<Id, (Vec<Id>, HashMap<Id, Vec<Id>>, Vec<Id>)> = HashMap::new();
+        // per parent: the first old range of each replacement, its new ranges, and every old range
+        type PerParent = (Vec<Id>, HashMap<Id, Vec<Id>>, Vec<Id>);
+        let mut by_parent: HashMap<Id, PerParent> = HashMap::new();
         let mut parents = vec![];
         for (parent, old, new) in self.0 {
             let e = by_parent.entry(parent).or_insert_with(|| {
