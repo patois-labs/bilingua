@@ -1833,8 +1833,23 @@ fn note_images(lines: &[&str], start: usize, spans: &[(usize, usize)], units: &m
     }
     let mut count: HashMap<usize, usize> = HashMap::new();
     let mut empty: HashMap<usize, Vec<String>> = HashMap::new();
+    // the first span on each line, and a sweep over the spans by line for the last one (in unit order) before an
+    // image's line: the images come in line order, so this is one pass, not a scan of every span per image (run 2
+    // G3-5)
+    let mut first_on: HashMap<usize, usize> = HashMap::new();
+    for (k, &(l, _)) in spans.iter().enumerate() {
+        first_on.entry(l).or_insert(k);
+    }
+    let mut by_line: Vec<usize> = (0..spans.len()).collect();
+    by_line.sort_by_key(|&k| spans[k].0);
+    let mut swept = 0usize;
+    let mut last_before: Option<usize> = None;
     for (li, alt, target) in found {
-        let anchor = spans.iter().find(|(l, _)| *l == li).or_else(|| spans.iter().rev().find(|(l, _)| *l < li)).or(spans.first());
+        while swept < by_line.len() && spans[by_line[swept]].0 < li {
+            last_before = last_before.max(Some(by_line[swept]));
+            swept += 1;
+        }
+        let anchor = first_on.get(&li).copied().or(last_before).or((!spans.is_empty()).then_some(0)).map(|k| &spans[k]);
         let Some(&(_, u)) = anchor else { continue };
         *count.entry(u).or_default() += 1;
         if py_strip(&alt).is_empty() {

@@ -72,7 +72,7 @@ impl Filter for MarkdownFilter {
         if opts.is_profile(profile::LOCOS) {
             return locos::extract(text, encoding, opts, std::mem::take(&mut dec.warnings));
         }
-        let ex = extract::extract(text, opts.include_locked, fm_keys(&opts.format_options).as_deref());
+        let ex = extract::extract(text, opts.include_locked, fm_keys(&opts.format_options).as_deref(), &opts.limits())?;
         let doc = Document::new(ID, ex.units, Skeleton::text(ex.parts, encoding, bilingua_model::parser_info!())).with_options(opts);
         // Safety net: nothing translated must mean nothing changed.
         if self.merge(&doc)? != bytes {

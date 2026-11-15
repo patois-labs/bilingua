@@ -48,10 +48,18 @@ pub fn fix(source: &[Item], mut target: Vec<Item>, raw_of: &dyn Fn(&str) -> Opti
         return target;
     }
     if tgt.len() > 1 {
-        for &p in tgt[1..].iter().rev() {
-            target.insert(p - 1, Item::Ch('&'));
+        // every accelerator after the first is doubled (`&&`, a literal ampersand), in one pass: an insert per
+        // accelerator shifts the rest of the target each time, quadratic for a long target (run 2, the rc pass)
+        let mut out = Vec::with_capacity(target.len() + tgt.len());
+        let mut next = tgt[1..].iter().map(|p| p - 1).peekable();
+        for (k, it) in target.into_iter().enumerate() {
+            if next.peek() == Some(&k) {
+                next.next();
+                out.push(Item::Ch('&'));
+            }
+            out.push(it);
         }
-        return target;
+        return out;
     }
     let Item::Ch(letter) = source[src[0]] else { return target };
     // the text before a tab code (the shortcut after the tab is never marked)
@@ -106,4 +114,34 @@ pub fn fix(source: &[Item], mut target: Vec<Item>, raw_of: &dyn Fn(&str) -> Opti
     out.extend(ins);
     out.extend_from_slice(&target[end..]);
     out
+}
+
+#[cfg(test)]
+mod run2 {
+    use super::*;
+
+    fn items(s: &str) -> Vec<Item> {
+        s.chars().map(Item::Ch).collect()
+    }
+
+    fn text(v: &[Item]) -> String {
+        v.iter().map(|i| if let Item::Ch(c) = i { *c } else { '?' }).collect()
+    }
+
+    /// A target with many accelerators keeps the first and doubles the rest: one insert per accelerator used to
+    /// shift the rest of the target each time.
+    #[test]
+    fn many_accelerators_are_doubled_in_one_pass() {
+        let n = 100_000;
+        let src = items("&File");
+        let t = std::time::Instant::now();
+        let out = fix(&src, items(&"&ab".repeat(n)), &|_| None);
+        let a = t.elapsed().as_secs_f64();
+        let t = std::time::Instant::now();
+        let _ = fix(&src, items(&"&&b".repeat(n)), &|_| None);
+        let c = t.elapsed().as_secs_f64();
+        assert!(a < c * 5.0 + 3.0, "accelerators {a:.2} s, control {c:.2} s");
+        assert_eq!(out.len(), 4 * n - 1);
+        assert_eq!(text(&fix(&src, items("&a &b &c"), &|_| None)), "&a &&b &&c");
+    }
 }

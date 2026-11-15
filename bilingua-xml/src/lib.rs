@@ -193,7 +193,7 @@ impl XmlFilter {
         let t = Tree::parse(&dec.text, &limits)?;
         if !matches!(self.ml, MlPolicy::Off) {
             if let Some(mp) = ml::plan(&t, self.ml_config().as_ref(), &limits, true, true)? {
-                let mut doc = skel::build_document(&t, &mp.planned, &[String::new()], &HashSet::new(), opts, dec.encoding.clone(), None, self.id);
+                let mut doc = skel::build_document(&t, &mp.planned, &[String::new()], &HashSet::new(), opts, dec.encoding.clone(), None, self.id)?;
                 doc.skeleton = Skeleton::text(vec![SkelPart::Raw(dec.text.clone())], dec.encoding.clone(), parser_info!());
                 if let Some(u) = doc.units.first_mut() {
                     u.set_hidden(ML_CODE, mp.cfg.encode());
@@ -212,7 +212,7 @@ impl XmlFilter {
             .or_else(|| Some(("xml:lang".to_string(), false)));
         let empty = HashSet::new();
         let alt = dialect.as_ref().map_or(&empty, |d| &d.alt_attrs);
-        let doc = skel::build_document(&t, &planned, &props.notes, alt, opts, dec.encoding.clone(), lang, self.id);
+        let doc = skel::build_document(&t, &planned, &props.notes, alt, opts, dec.encoding.clone(), lang, self.id)?;
         guard::finish(doc, dec.warnings, &limits)
     }
 }

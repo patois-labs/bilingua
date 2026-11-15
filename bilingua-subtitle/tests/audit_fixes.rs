@@ -69,3 +69,23 @@ fn ordinary_cues_are_written_as_before() {
     let out = String::from_utf8(Srt.merge(&doc).unwrap()).unwrap();
     assert_eq!(out, run_together.replace("Hello", "Hallo"));
 }
+
+/// Run 2 L1: one cue with many open tags and then many close tags of another name: each close tag used to walk the
+/// stack of open tags. Open tags are now found by name.
+#[test]
+fn many_unmatched_close_tags_in_one_cue_are_linear() {
+    let n = 40_000;
+    let secs = |cue: &str| {
+        let src = format!("1\n00:00:01,000 --> 00:00:02,000\n{cue}\n");
+        let t = std::time::Instant::now();
+        let _ = Srt.extract(src.as_bytes(), &ExtractOptions::new());
+        t.elapsed().as_secs_f64()
+    };
+    let c = secs(&format!("Hello {}{}", "<i>".repeat(n), "<b>x</b>".repeat(n)));
+    let a = secs(&format!("Hello {}{}", "<i>".repeat(n), "</b>".repeat(n)));
+    assert!(a < c * 5.0 + 3.0, "close tags {a:.2} s, control {c:.2} s");
+    // tags pair as before: a close tag closes the innermost open tag of its name and drops those above it
+    let doc = Srt.extract(b"1\n00:00:01,000 --> 00:00:02,000\n<b>a <i>b <u>c</b> d</u></i>\n", &ExtractOptions::new()).unwrap();
+    let pairs = doc.units[0].codes.values().filter(|c| c.close.is_some()).count();
+    assert_eq!(pairs, 1);
+}

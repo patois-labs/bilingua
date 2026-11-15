@@ -338,6 +338,8 @@ pub(crate) fn extract(bytes: &[u8], opts: &ExtractOptions, cfg: Cfg) -> Result<D
     let place = places(&toks, &wanted);
     let mut units: Vec<Unit> = Vec::with_capacity(body.len() + attrs.len());
     let mut heading: Option<String> = None;
+    // the heading is copied into every later unit: each copy is charged before it is made (run 2 G5-1)
+    let mut context = guard::ContextBudget::new();
     let mut attr_names: HashMap<usize, HashMap<usize, String>> = HashMap::new();
     for (i, u) in body.iter().enumerate() {
         let mut unit = body_unit(format!("u{}", i + 1), u);
@@ -348,6 +350,9 @@ pub(crate) fn extract(bytes: &[u8], opts: &ExtractOptions, cfg: Cfg) -> Result<D
         if kind == "heading" {
             heading = Some(plain_text(&unit.source()));
         } else {
+            if let Some(h) = &heading {
+                context.charge(h.len(), &limits)?;
+            }
             unit.context.heading = heading.clone();
         }
         units.push(unit);
@@ -364,6 +369,9 @@ pub(crate) fn extract(bytes: &[u8], opts: &ExtractOptions, cfg: Cfg) -> Result<D
         u.context.style = Some(a.style.clone());
         u.context.location = Some(format!("{own}[{attr}]"));
         u.context.key = Some(attr);
+        if let Some(h) = &heading {
+            context.charge(h.len(), &limits)?;
+        }
         u.context.heading = heading.clone();
         u.context.extra.insert("element".into(), elem);
         u.set_hidden(VALUE, "attr");

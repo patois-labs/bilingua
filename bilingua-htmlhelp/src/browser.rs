@@ -193,14 +193,22 @@ fn comment_end(text: &str, p: usize) -> usize {
     if rest.starts_with("->") {
         return p + 2;
     }
-    let a = rest.find("-->").map(|x| p + x + 3);
-    let b = rest.find("--!>").map(|x| p + x + 4);
-    match (a, b) {
-        (Some(a), Some(b)) => a.min(b),
-        (Some(a), None) => a,
-        (None, Some(b)) => b,
-        (None, None) => text.len(),
+    // one forward scan that stops at whichever of `-->` and `--!>` comes first: a search for each to the end of the
+    // file per comment is quadratic (run 2 G3-1)
+    let b = text.as_bytes();
+    let mut i = p;
+    while i + 2 < b.len() {
+        if b[i] == b'-' && b[i + 1] == b'-' {
+            if b[i + 2] == b'>' {
+                return i + 3;
+            }
+            if b[i + 2] == b'!' && b.get(i + 3) == Some(&b'>') {
+                return i + 4;
+            }
+        }
+        i += 1;
     }
+    text.len()
 }
 
 /// One character against an ASCII lowercase letter the way Python's `re.IGNORECASE` matches it (which also takes

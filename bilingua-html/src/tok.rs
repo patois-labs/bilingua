@@ -10,12 +10,8 @@
 pub struct Attr {
     /// Lowercase name.
     pub name: String,
-    pub name_start: usize,
-    pub name_end: usize,
     /// Inner value range (without quotes), when the attribute has a value.
     pub val: Option<(usize, usize)>,
-    /// The whole value token, with quotes when present.
-    pub full: Option<(usize, usize)>,
 }
 
 #[derive(Debug, Clone)]
@@ -135,14 +131,21 @@ fn comment_end(b: &[u8], p: usize) -> usize {
     if b[p..].starts_with(b"->") {
         return p + 2;
     }
-    let a = find_from(b, p, b"-->").map(|x| x + 3);
-    // `--!>` only counts before the first `-->` (and a search to the end for every comment would be quadratic)
-    let c = find_from(&b[..a.unwrap_or(b.len())], p, b"--!>").map(|x| x + 4);
-    match (a, c) {
-        (Some(x), Some(y)) => x.min(y),
-        (Some(x), None) | (None, Some(x)) => x,
-        _ => b.len(),
+    // one forward scan that stops at whichever of `-->` and `--!>` comes first: a search for either one to the end
+    // of the input per comment is quadratic when the other one ends every comment (run 2 G3-2)
+    let mut i = p;
+    while i + 2 < b.len() {
+        if b[i] == b'-' && b[i + 1] == b'-' {
+            if b[i + 2] == b'>' {
+                return i + 3;
+            }
+            if b[i + 2] == b'!' && b.get(i + 3) == Some(&b'>') {
+                return i + 4;
+            }
+        }
+        i += 1;
     }
+    b.len()
 }
 
 pub(crate) fn markup(s: &str, i: usize, no_cdata_end: &mut bool) -> Option<Tok> {
@@ -206,7 +209,6 @@ pub(crate) fn markup(s: &str, i: usize, no_cdata_end: &mut bool) -> Option<Tok> 
             j += 1;
         }
         let aname = s[ns..j].to_ascii_lowercase();
-        let j0 = j;
         let mut k = j;
         while k < n && is_ws(b[k]) {
             k += 1;
@@ -224,7 +226,7 @@ pub(crate) fn markup(s: &str, i: usize, no_cdata_end: &mut bool) -> Option<Tok> 
                     e += 1;
                 }
                 let full_end = if e < n { e + 1 } else { e };
-                attrs.push(Attr { name: aname, name_start: ns, name_end: j0, val: Some((vs, e)), full: Some((k, full_end)) });
+                attrs.push(Attr { name: aname, val: Some((vs, e)) });
                 j = full_end;
             } else {
                 let vs = k;
@@ -232,17 +234,13 @@ pub(crate) fn markup(s: &str, i: usize, no_cdata_end: &mut bool) -> Option<Tok> 
                 while e < n && !(is_ws(b[e]) || b[e] == b'>') {
                     e += 1;
                 }
-                attrs.push(Attr { name: aname, name_start: ns, name_end: j0, val: Some((vs, e)), full: Some((vs, e)) });
+                attrs.push(Attr { name: aname, val: Some((vs, e)) });
                 j = e;
             }
         } else {
-            attrs.push(Attr { name: aname, name_start: ns, name_end: j0, val: None, full: None });
+            attrs.push(Attr { name: aname, val: None });
         }
     }
     Some(Tok::Start { start: i, end: j, name, attrs, closed })
 }
 
-
-pub fn attr_value<'a>(s: &'a str, attrs: &[Attr], name: &str) -> Option<&'a str> {
-    attrs.iter().find(|a| a.name == name).and_then(|a| a.val.map(|(x, y)| &s[x..y]))
-}

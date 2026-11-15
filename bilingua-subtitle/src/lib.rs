@@ -4,7 +4,7 @@
 pub const SKELETON_SCHEMA: u32 = 1;
 
 use bilingua_model::*;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 
 mod locos;
 
@@ -369,14 +369,26 @@ fn cue_inlines(k: Kind, raw: &str) -> (Vec<Inline>, BTreeMap<String, CodeData>) 
     let n = toks.len();
     let mut pair: Vec<Option<usize>> = vec![None; n];
     let mut stack: Vec<usize> = Vec::new();
+    // the open tags by name, as (place on the stack, token): a close tag finds the topmost open tag of its name here
+    // instead of walking the stack (run 2 L1). An entry the stack has since dropped is skipped when met.
+    let mut named: HashMap<&str, Vec<(usize, usize)>> = HashMap::new();
     for idx in 0..n {
         match &toks[idx] {
             Tok::Open { name, .. } => {
-                let _ = name;
+                named.entry(name.as_str()).or_default().push((stack.len(), idx));
                 stack.push(idx);
             }
             Tok::Close { name, .. } => {
-                let found = stack.iter().rposition(|&o| matches!(&toks[o], Tok::Open { name: on, .. } if on == name));
+                let mut found = None;
+                if let Some(v) = named.get_mut(name.as_str()) {
+                    while let Some(&(p, o)) = v.last() {
+                        if stack.get(p) == Some(&o) {
+                            found = Some(p);
+                            break;
+                        }
+                        v.pop();
+                    }
+                }
                 if let Some(p) = found {
                     let o = stack[p];
                     pair[o] = Some(idx);

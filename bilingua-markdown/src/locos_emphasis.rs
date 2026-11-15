@@ -520,6 +520,16 @@ pub fn fix_cjk_autolinks(src: &str, new: &str) -> String {
     }
     boff.push(o);
     let char_at = |byte: usize| boff.partition_point(|&x| x < byte);
+    // where the run without blanks or `<` from each char ends, and the first char from each one that is not a URL
+    // trailer: a match then tests its run in constant time instead of counting to the end of a long glued run
+    // (run 2 G3-6)
+    let mut run_end = vec![s.len(); s.len() + 1];
+    let mut next_body = vec![s.len(); s.len() + 1];
+    for i in (0..s.len()).rev() {
+        let stop = py_isspace_char(s[i]) || s[i] == '<';
+        run_end[i] = if stop { i } else { run_end[i + 1] };
+        next_body[i] = if !URL_TRAIL.contains(&s[i]) { i } else { next_body[i + 1] };
+    }
     let mut edited = vec![false; s.len()];
     let mut edits: Vec<(usize, usize, String)> = Vec::new();
     let mut ordered: Vec<&String> = urls.iter().collect();
@@ -537,13 +547,12 @@ pub fn fix_cjk_autolinks(src: &str, new: &str) -> String {
             if masked[a] || edited[a..b].iter().any(|e| *e) {
                 continue;
             }
-            let run_len = s[b..].iter().take_while(|c| !py_isspace_char(**c) && **c != '<').count();
-            let run = &s[b..b + run_len];
-            if run.first().is_some_and(|c| c.is_ascii() && !URL_TRAIL.contains(c)) {
+            let run_to = run_end[b];
+            if b < run_to && s[b].is_ascii() && !URL_TRAIL.contains(&s[b]) {
                 continue;
             }
             let glued_before = glued_before(&s, a);
-            let glued_after = run.iter().any(|c| !URL_TRAIL.contains(c));
+            let glued_after = next_body[b] < run_to;
             if glued_before || glued_after {
                 let rep = if url.starts_with("www.") { format!("[{url}](http://{url})") } else { format!("<{url}>") };
                 for e in &mut edited[a..b] {

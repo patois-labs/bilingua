@@ -1372,7 +1372,17 @@ impl Extractor {
         unit.codes = codes;
         unit.context.kind = Some(kind.into());
         unit.context.style = style;
-        unit.context.heading = self.last_heading.clone();
+        // the last heading is copied into every later paragraph: each copy is charged first (run 2 G5-1)
+        if let Some(h) = &self.last_heading {
+            if self.refused.is_none() {
+                if let Err(e) = self.context.charge(h.len(), &self.limits) {
+                    self.refused = Some(e);
+                }
+            }
+            if self.refused.is_none() {
+                unit.context.heading = Some(h.clone());
+            }
+        }
         unit.context.location = Some(format!("{} paragraph {}", self.part_name, p.ord));
         for cid in &st.comment_ids {
             if let Some(t) = self.comments.get(cid) {

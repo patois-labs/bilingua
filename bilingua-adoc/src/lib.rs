@@ -90,6 +90,7 @@ impl Filter for Adoc {
         let mut items: Vec<Item> = Vec::new();
         let mut locked: Vec<(&block::Slot, Vec<Inline>, BTreeMap<String, CodeData>)> = Vec::new();
         let mut heading: Option<String> = None;
+        let mut context = guard::ContextBudget::new();
         for sl in &slots {
             let raw = &text[sl.start..sl.end];
             let (inl, codes) = inline::unit_of(raw);
@@ -119,6 +120,10 @@ impl Filter for Adoc {
             if sl.kind == "heading" {
                 u.context.extra.insert("level".into(), sl.level.to_string());
             } else {
+                // the heading is copied into every later unit: each copy is charged first (run 2 G5-1)
+                if let Some(h) = &heading {
+                    context.charge(h.len(), &limits)?;
+                }
                 u.context.heading = heading.clone();
             }
             u.context.location = Some(format!("line {}", sl.line));

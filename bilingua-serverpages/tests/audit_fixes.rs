@@ -57,3 +57,27 @@ fn tag_check_answers_are_unchanged() {
         assert!(matches!(f.extract(bad.as_bytes(), &o), Err(Error::Parse { .. })), "{bad}");
     }
 }
+
+/// Run 2 G3-4: many tag-library script elements with no end tag, each with a new prefix. Each one used to scan the
+/// rest of the page for its end tag (and parse every tag on the way). The end tags are now indexed once.
+#[test]
+fn serverpages_many_prefixed_scripts_linear() {
+    let n = 30_000;
+    let jsp = Dialect::from_extension("jsp").unwrap().filter();
+    let secs = |page: &str| {
+        let t = Instant::now();
+        let _ = jsp.extract(page.as_bytes(), &ExtractOptions::default());
+        t.elapsed().as_secs_f64()
+    };
+    let attack: String = format!("<html><body><p>Hello world</p>{}</body></html>", (0..n).map(|i| format!("<p{i}:script>")).collect::<String>());
+    let control: String = format!("<html><body><p>Hello world</p>{}</body></html>", (0..n).map(|i| format!("<p{i}:b>")).collect::<String>());
+    let c = secs(&control);
+    let a = secs(&attack);
+    assert!(a < c * 5.0 + 3.0, "scripts {a:.2} s, control {c:.2} s");
+    // a closed one is still one opaque run, and an unclosed one is read as HTML
+    let f = Dialect::from_extension("jsp").unwrap().filter();
+    let doc = f.extract(b"<p>Hello world</p><s:script>var a = 'Not text';</s:script><t:script><p>Kept text</p>", &ExtractOptions::default()).unwrap();
+    let texts: Vec<String> = doc.units.iter().map(|u| plain_text(&u.source())).collect();
+    assert!(texts.iter().any(|t| t == "Hello world") && texts.iter().any(|t| t == "Kept text"), "{texts:?}");
+    assert!(!texts.iter().any(|t| t.contains("Not text")), "{texts:?}");
+}

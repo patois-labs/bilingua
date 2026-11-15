@@ -103,3 +103,27 @@ fn nested_svg_style_bodies_are_refused_not_copied() {
     let (_, out) = translated(&format!("{HEAD}<svg><style><style>a{{}}</style></style></svg>"), MergeOptions::default());
     assert!(out.contains("value=\"Beta\""));
 }
+
+/// Run 2 G3-1: a contents file with many short comments and no entry after them. Each comment used to search the
+/// rest of the file for `--!>` (comments that end with `-->`) or for `-->` (comments that end with `--!>`), at
+/// extract and again at merge. A comment is now read once, up to whichever end comes first.
+#[test]
+fn htmlhelp_comment_scan_is_linear() {
+    let n = 120_000;
+    let secs = |data: &str| {
+        let t = Instant::now();
+        let _ = HhcFilter.extract(data.as_bytes(), &ExtractOptions::default());
+        let _ = merge_with(&HhcFilter, data.as_bytes(), &[(0, "Beta")], None, MergeOptions::default());
+        t.elapsed().as_secs_f64()
+    };
+    let control = secs(&format!("{HEAD}<noscript></noscript><select></select>{}", "<b>a</b>".repeat(n)));
+    for end in ["-->", "--!>"] {
+        let data = format!("{HEAD}<noscript></noscript><select></select>{}", format!("<!--a{end}").repeat(n));
+        let a = secs(&data);
+        assert!(a < control * 5.0 + 3.0, "comments ending {end}: {a:.2} s, control {control:.2} s");
+    }
+    // a comment still ends at whichever end comes first, so the entry after it is read
+    let data = format!("<HTML><BODY><!-- a --!><UL><LI><OBJECT type=\"text/sitemap\"><param name=\"Name\" value=\"Alpha\"></OBJECT></UL><!-- b -->");
+    let (_, out) = translated(&data, MergeOptions::default());
+    assert!(out.contains("value=\"Beta\""), "{out}");
+}

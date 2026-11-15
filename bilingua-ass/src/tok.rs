@@ -146,7 +146,11 @@ fn toggle_reset(open_block: &str) -> String {
 
 /// (opener, closer) piece indexes for style switches turned on and later off in the same line.
 fn pair_blocks(text: &str, pieces: &[Piece]) -> Vec<(usize, usize)> {
-    let mut stack: Vec<(usize, u8)> = Vec::new();
+    // The open switches, with what a walk of them would need kept as counts: how many open ones hold each key, and
+    // the open ones by key set, so a mixed block drops its keys' switches without filtering the whole stack and a
+    // closer knows at once whether any open switch holds its keys. A stack walk per block was quadratic in a long
+    // line (run 2, the ASS pass after L1). `alive` marks what is still open; a dropped switch is skipped when met.
+    let mut stack = Stack::new(pieces.len());
     let mut pairs = Vec::new();
     for (k, p) in pieces.iter().enumerate() {
         if !p.tok {
@@ -168,7 +172,7 @@ fn pair_blocks(text: &str, pieces: &[Piece]) -> Vec<(usize, usize)> {
                 }
             }
             if o != 0 && f != 0 {
-                stack.retain(|e| e.1 & (o | f) == 0);
+                stack.drop_keys(o | f);
                 continue;
             }
             on = o;
@@ -177,17 +181,84 @@ fn pair_blocks(text: &str, pieces: &[Piece]) -> Vec<(usize, usize)> {
             continue;
         }
         if on != 0 {
-            stack.push((k, on));
+            stack.push(k, on);
             continue;
         }
-        while !stack.is_empty() && (off.is_none() || stack.iter().any(|e| e.1 & off.unwrap_or(0) != 0)) {
-            let (o, keys) = stack.pop().unwrap_or((0, 0));
-            if off.is_none() || keys & !off.unwrap_or(0) == 0 {
+        while stack.open > 0 && off.is_none_or(|f| stack.holds(f)) {
+            let Some((o, keys)) = stack.pop() else { break };
+            if off.is_none_or(|f| keys & !f == 0) {
                 pairs.push((o, k));
             }
         }
     }
     pairs
+}
+
+/// The open style switches of [`pair_blocks`].
+struct Stack {
+    v: Vec<(usize, u8)>,
+    alive: Vec<bool>,
+    open: usize,
+    /// Open switches per key bit.
+    per_key: [usize; 4],
+    /// The switches by key set (a 4-bit mask), as pushed; some may be closed since.
+    by_set: [Vec<usize>; 16],
+}
+
+impl Stack {
+    fn new(n: usize) -> Stack {
+        Stack { v: Vec::new(), alive: vec![false; n], open: 0, per_key: [0; 4], by_set: Default::default() }
+    }
+    fn count(&mut self, keys: u8, up: bool) {
+        for (b, c) in self.per_key.iter_mut().enumerate() {
+            if keys & (1 << b) != 0 {
+                if up {
+                    *c += 1;
+                } else {
+                    *c -= 1;
+                }
+            }
+        }
+    }
+    fn push(&mut self, k: usize, keys: u8) {
+        self.v.push((k, keys));
+        self.alive[k] = true;
+        self.open += 1;
+        self.count(keys, true);
+        self.by_set[(keys & 15) as usize].push(k);
+    }
+    fn close(&mut self, k: usize, keys: u8) {
+        self.alive[k] = false;
+        self.open -= 1;
+        self.count(keys, false);
+    }
+    /// Whether an open switch holds any of `keys`.
+    fn holds(&self, keys: u8) -> bool {
+        self.per_key.iter().enumerate().any(|(b, c)| keys & (1 << b) != 0 && *c > 0)
+    }
+    /// The topmost open switch, taken off.
+    fn pop(&mut self) -> Option<(usize, u8)> {
+        while let Some((k, keys)) = self.v.pop() {
+            if self.alive[k] {
+                self.close(k, keys);
+                return Some((k, keys));
+            }
+        }
+        None
+    }
+    /// Closes every open switch that holds any of `keys`.
+    fn drop_keys(&mut self, keys: u8) {
+        for set in 1..16u8 {
+            if set & keys == 0 {
+                continue;
+            }
+            for k in std::mem::take(&mut self.by_set[set as usize]) {
+                if self.alive[k] {
+                    self.close(k, set);
+                }
+            }
+        }
+    }
 }
 
 /// [lo, hi) of the pieces that stay in the unit.
@@ -341,5 +412,48 @@ mod tests {
         assert!(in_drawing_mode("{\\p 2}m 0 0"));
         assert!(!in_drawing_mode("{\\pos(1,2)}Hi{\\p0}"));
         assert!(!in_drawing_mode("Hi \\p1 there"));
+    }
+}
+
+#[cfg(test)]
+mod run2 {
+    use super::*;
+
+    fn secs(f: impl FnOnce()) -> f64 {
+        let t = std::time::Instant::now();
+        f();
+        t.elapsed().as_secs_f64()
+    }
+
+    /// Many open switches and then many blocks that each turn a key on and another off, or turn off a key none of
+    /// them holds: each block used to filter or search the whole stack of open switches.
+    #[test]
+    fn many_switch_blocks_over_a_deep_stack_are_linear() {
+        let n = 30_000;
+        let c = secs(|| {
+            tokenize(&format!("Hello {}x{}", "{\u1}".repeat(n), "{\i1}a{\i0}".repeat(n)));
+        });
+        let a = secs(|| {
+            tokenize(&format!("Hello {}x{}", "{\u1}".repeat(n), "{\i1\b0}a".repeat(n)));
+        });
+        let b = secs(|| {
+            tokenize(&format!("Hello {}x{}", "{\u1}".repeat(n), "{\b0}a".repeat(n)));
+        });
+        assert!(a < c * 5.0 + 3.0 && b < c * 5.0 + 3.0, "mixed {a:.2} s, closers {b:.2} s, control {c:.2} s");
+    }
+
+    /// The pairs are the ones the stack walk found.
+    #[test]
+    fn switch_pairs_are_unchanged() {
+        let pairs = |t: &str| pair_blocks(t, &split_pieces(t));
+        assert_eq!(pairs("{\i1}a{\i0}"), [(0, 2)]);
+        // a closer pops what lies above the switch it closes; only a switch whose keys it closes pairs
+        assert_eq!(pairs("{\i1}a{\b1}b{\i0}c"), [(0, 4)]);
+        assert_eq!(pairs("{\i1\b1}a{\i0\b0}"), [(0, 2)]);
+        // a mixed block drops the open switches of its keys
+        assert_eq!(pairs("{\i1}a{\i1\b0}b{\i0}"), Vec::<(usize, usize)>::new());
+        // a reset closes everything open
+        assert_eq!(pairs("{\i1}a{\b1}b{\r}"), [(2, 4), (0, 4)]);
+        assert_eq!(pairs("{\u1}a{\i0}b{\u0}"), [(0, 4)]);
     }
 }
