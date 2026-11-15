@@ -14,6 +14,24 @@ is listed here).
 - Python: PyO3 0.29 and pythonize 0.29 (RUSTSEC-2026-0176, -0177). The Python API is unchanged. The
   `generate-import-lib` feature is kept but does nothing now: PyO3 links Windows wheels without an import library.
 
+### Fixed (wild-file backlog)
+
+- XML guard: an apostrophe or quote in a comment of a DOCTYPE's internal subset (`<!-- don't edit -->`) no longer
+  refuses the file (BILI-60). Every reader skips such a comment whole. A bracket or angle bracket in it, a quote in
+  a processing instruction of the subset, and every entity declaration are refused as before; when a subset
+  comment holds a quote, `<!ENTITY` anywhere after the DOCTYPE (attribute, comment, CDATA) is refused too, so a
+  scanner that paired that quote could not find a declaration there.
+- DXF: a drawing that declares `ANSI_950` (cp950) but holds Hong Kong (HKSCS) characters at byte pairs cp950
+  leaves undefined is read (BILI-57). It gets the skeleton code page `cp950-hkscs` (cp950 plus those pairs, as
+  WHATWG Big5 reads them); untouched text stays byte for byte, a translation may use those characters, and a
+  cp950-only drawing keeps `cp950` exactly as LocOS reads it.
+- MIF: new option `mif.extract_variables` (off by default, LocOS lists neither) makes user variable definitions
+  (`VariableDef`, building blocks such as `<$chapnum>` as point tags) and paragraph number strings (`PgfNumString`)
+  units, as Okapi does (BILI-54). A string needs a letter to be a unit; a dropped building block is kept.
+- SCC: a one-row pop-on or paint-on caption with no PAC that the translation wraps onto more rows now places each
+  row with a PAC (the caption ending on row 15) instead of a carriage return, which is a roll-up code (BILI-53).
+  Roll-up captions, captions whose rows already break with carriage returns and the `locos` profile are unchanged.
+
 ### Changed
 
 - Merge bounds what a stored Document can make it do (BILI-105). The `bilingua` facade's `merge` and `merge_with`

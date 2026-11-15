@@ -18,7 +18,8 @@ numbers, so `locos::to_locos_text` gives the LocOS text one to one.
 ANSI_932/936/949/950); no `$ACADVER` reads as UTF-8 when the file is valid UTF-8 with non-ASCII bytes, else
 Windows-1252. The code pages are Python's own (generated tables, `tools/`), so what LocOS reads and writes matches
 byte for byte. A translated character the page cannot hold is written as `\U+XXXX` (a surrogate pair above U+FFFF).
-Binary DXF is refused with a plain reason.
+An ANSI_950 drawing with Hong Kong (HKSCS) characters at pairs cp950 leaves undefined reads as `cp950-hkscs` (cp950
+plus those pairs as WHATWG Big5 reads them; LocOS refuses such a file). Binary DXF is refused with a plain reason.
 
 **Merge** splices only the changed values; every other byte is the original. The skeleton is bytes (one character per
 byte) so a file with stray bytes outside its text still merges back exactly. A changed MTEXT is re-chunked into
