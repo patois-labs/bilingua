@@ -338,6 +338,26 @@ fn rewrapped_rows_without_a_pac_do_not_run_together() {
 }
 
 #[test]
+fn a_row_added_to_a_pop_on_caption_starts_with_a_pac() {
+    // BILI-53: pop-on (RCL, text, EOC) with no PAC; decoders read a PAC for the next row more reliably than a
+    // carriage return (a roll-up code), so the rows are placed on rows 14 and 15 with a PAC each
+    for (mode, eoc) in [("9420 9420", " 942f 942f"), ("9429 9429", "")] {
+        let src = format!("Scenarist_SCC V1.0\n\n00:00:01:00\t{mode} {}{eoc}\n", hex_words("Works on Mac or Windows."));
+        let out = try_build(src.as_bytes(), &[(0, "Zqdoes it work on Mac or Windowsqz".into())]).unwrap();
+        assert_eq!(units(&out), vec!["Zqdoes it work on Mac or\nWindowsqz".to_string()]);
+        let text = String::from_utf8(out).unwrap();
+        assert!(!text.contains("94ad"), "no carriage return: {text}");
+        assert_eq!(text.matches("9440 9440").count(), 1, "row 14: {text}");
+        assert_eq!(text.matches("94e0 94e0").count(), 1, "row 15: {text}");
+        assert!(text.contains(&format!("00:00:01:00\t{mode} 9440 9440 ")), "the PAC follows the mode code: {text}");
+    }
+    // a caption that fits its one row is written with no PAC added
+    let src = format!("Scenarist_SCC V1.0\n\n00:00:01:00\t9420 9420 {} 942f 942f\n", hex_words("Works."));
+    let out = String::from_utf8(try_build(src.as_bytes(), &[(0, "Zqworks.".into())]).unwrap()).unwrap();
+    assert!(!out.contains("9440") && !out.contains("94e0") && !out.contains("94ad"), "{out}");
+}
+
+#[test]
 fn an_added_row_does_not_repeat_the_mode_codes() {
     // roll-up caption (ENM, RCL, RU3 then text, no PAC): a longer translation adds a row
     let src = format!("Scenarist_SCC V1.0\n\n00:00:01:00\t94ae 94ae 9420 9420 9426 9426 {}\n", hex_words("Works on Mac or Windows."));

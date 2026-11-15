@@ -11,7 +11,9 @@ Localization OS SCC filter (`app/filters/scc_filter.py`), which is the baseline 
 - An untouched caption is written back byte for byte. A changed caption is re-encoded: every character must exist
   in the 608 basic, special or extended set (typographic quotes, dashes and ellipses are mapped first), rows are at
   most 32 cells, the translator's own breaks are kept when they fit, otherwise the text is re-wrapped (balanced) into
-  at most 4 rows (pop-on, paint-on) or the roll-up depth, rows move up or left to fit. If any caption cannot be
+  at most 4 rows (pop-on, paint-on) or the roll-up depth, rows move up or left to fit. A pop-on or paint-on caption
+  with no PAC that wraps onto more rows gets a PAC on every row (ending on row 15); a roll-up row is added with a
+  carriage return. If any caption cannot be
   written the merge is refused with the list of captions (timecode and reason), never a broken caption.
 - Kept verbatim and not units: lines with text on data channel 2, lines that backspace or erase in the middle of
   text, several captions on one line, lines with no text.

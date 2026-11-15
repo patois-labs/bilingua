@@ -597,8 +597,10 @@ fn markup_bytes(bytes: &[u8]) -> std::borrow::Cow<'_, [u8]> {
 /// Comments, CDATA sections and processing instructions are skipped, so markup inside them is not counted.
 ///
 /// The count is only as good as the reader's agreement on where those regions end, so a part is also refused when
-/// the readers would not agree: a DOCTYPE that never ends, has a `<`, `>` or bracket in a quoted string, a quote or
-/// bracket in a comment of its internal subset, or a `<`/`>` that `quick-xml` pairs differently; a comment that
+/// the readers would not agree: a DOCTYPE that never ends, has a `<`, `>` or bracket in a quoted string, a bracket
+/// or angle bracket in a comment of its internal subset (a quote there is fine, but then no `<!ENTITY` may follow
+/// the DOCTYPE anywhere), a quote in a processing instruction of the subset, or a `<`/`>` that `quick-xml` pairs
+/// differently; a comment that
 /// starts with `>` or `->`; `<?>`; a `<!` declaration outside the DOCTYPE. Every reading a reader may give the
 /// bytes is scanned: UTF-16 and UTF-8 for `<\0` without a byte order mark, and the double-byte code pages for
 /// bytes that are not UTF-8.
@@ -715,40 +717,48 @@ fn reader_doctype_end(b: &[u8], i: usize) -> Option<usize> {
     None
 }
 
-/// True when every XML reader in the workspace ends the DOCTYPE at `i..=end` (`end` from [`doctype_end`]) at the
-/// same `>`. The readers differ in what they skip: `quick-xml` only pairs `<` with `>`; the hand-written scanners
-/// skip quoted strings, some also the `[ ... ]` subset, some the comments or processing instructions inside it. They
-/// all agree when no quoted string holds a `<`, `>`, `[` or `]`, no comment or processing instruction of the subset
-/// holds a quote, a bracket or an angle bracket of its own, and `quick-xml` stops at the same place. Real files meet
-/// that easily (`<!DOCTYPE plist PUBLIC "..." "...">`, an XMB subset of `<!ELEMENT>` and `<!ATTLIST>` declarations).
-fn doctype_is_unambiguous(b: &[u8], i: usize, end: usize) -> bool {
+/// `Some` when every XML reader in the workspace ends the DOCTYPE at `i..=end` (`end` from [`doctype_end`]) at
+/// the same `>`. The readers differ in what they skip: `quick-xml` only pairs `<` with `>` (and skips the comments
+/// of the subset whole); the hand-written scanners skip quoted strings, some also the `[ ... ]` subset, some the
+/// comments or processing instructions inside it. They all agree when no quoted string holds a `<`, `>`, `[` or
+/// `]`, no comment or processing instruction of the subset holds a bracket or an angle bracket of its own, no
+/// processing instruction a quote, and `quick-xml` stops at the same place. Real files meet that easily
+/// (`<!DOCTYPE plist PUBLIC "..." "...">`, an XMB subset of `<!ELEMENT>` and `<!ATTLIST>` declarations).
+///
+/// A quote in a comment of the subset (`<!-- don't edit -->`, BILI-60) ends the DOCTYPE in the same place for
+/// every reader that skips the comment; `Some(true)` says the DOCTYPE has one, so the caller can make sure a
+/// scanner that pairs that quote instead could not find an entity declaration in what follows.
+fn doctype_is_unambiguous(b: &[u8], i: usize, end: usize) -> Option<bool> {
     if end >= b.len() || reader_doctype_end(b, i) != Some(end) {
-        return false;
+        return None;
     }
+    let mut quoted_comment = false;
     let special = |s: &[u8], also_quotes: bool| s.iter().any(|c| matches!(c, b'<' | b'>' | b'[' | b']') || (also_quotes && matches!(c, b'"' | b'\'')));
     let (mut j, mut subset) = (i + 9, 0usize);
     while j < end {
         let c = b[j];
         if c == b'"' || c == b'\'' {
-            let Some(q) = b[j + 1..end].iter().position(|x| *x == c) else { return false };
+            let q = b[j + 1..end].iter().position(|x| *x == c)?;
             if special(&b[j + 1..j + 1 + q], false) {
-                return false;
+                return None;
             }
             j += q + 2;
             continue;
         }
         if subset > 0 && b[j..].starts_with(b"<!--") {
-            let Some(e) = find(b, j + 4, b"-->").filter(|e| *e < end) else { return false };
-            if special(&b[j + 4..e], true) {
-                return false;
+            let e = find(b, j + 4, b"-->").filter(|e| *e < end)?;
+            let body = &b[j + 4..e];
+            if special(body, false) {
+                return None;
             }
+            quoted_comment |= body.iter().any(|c| matches!(c, b'"' | b'\''));
             j = e + 3;
             continue;
         }
         if subset > 0 && b[j..].starts_with(b"<?") {
-            let Some(e) = find(b, j + 2, b"?>").filter(|e| *e < end) else { return false };
+            let e = find(b, j + 2, b"?>").filter(|e| *e < end)?;
             if special(&b[j + 2..e], true) {
-                return false;
+                return None;
             }
             j = e + 2;
             continue;
@@ -760,7 +770,7 @@ fn doctype_is_unambiguous(b: &[u8], i: usize, end: usize) -> bool {
         }
         j += 1;
     }
-    true
+    Some(quoted_comment)
 }
 
 fn ambiguous_markup(what: &str) -> Error {
@@ -843,10 +853,22 @@ fn scan_xml(b: &[u8], l: &Limits, keep_dtd: bool, internal_ok: bool) -> Result<(
             if strict && end >= b.len() {
                 return Err(unsafe_xml("This file has a DOCTYPE that is not closed. It was not processed."));
             }
-            if strict && !doctype_is_unambiguous(b, i, end) {
-                return Err(unsafe_xml(
-                    "This file has a DOCTYPE with a quoted '<', '>' or bracket, or a comment in its DTD with quotes or brackets, which XML readers do not agree on. It was not processed.",
-                ));
+            if strict {
+                match doctype_is_unambiguous(b, i, end) {
+                    None => {
+                        return Err(unsafe_xml(
+                            "This file has a DOCTYPE with a quoted '<', '>' or bracket, or a comment in its DTD with brackets, which XML readers do not agree on. It was not processed.",
+                        ))
+                    }
+                    // a scanner that pairs the comment's quote with a later one would still be in the subset
+                    // after the DOCTYPE: no `<!ENTITY` may follow anywhere, even in an attribute, comment or CDATA
+                    Some(true) if contains_ci(&b[end..], b"<!ENTITY") => {
+                        return Err(unsafe_xml(
+                            "This file declares XML entities, which are not allowed. It was not processed.",
+                        ))
+                    }
+                    Some(_) => {}
+                }
             }
             i = end + 1;
         } else if rest.starts_with(b"<!") {
@@ -1085,6 +1107,68 @@ mod tests {
         }
         // the keep-DTD check leaves this to its reader (the XML filter family refuses a mismatch itself)
         assert!(check_xml_keeping_dtd(b"<!DOCTYPE r [<!-- > --> ]><r/>", &Limits::default()).is_ok());
+    }
+
+    #[test]
+    fn a_quote_in_a_comment_of_the_subset_passes_but_hides_no_entity() {
+        // BILI-60: every reader skips a comment of the subset whole (quick-xml, the guard, the XML family), so an
+        // apostrophe in it changes no reading
+        let l = Limits::default();
+        for ok in [
+            "<!DOCTYPE r [ <!-- don't edit this file --> <!ELEMENT r ANY> ]><r/>",
+            "<!DOCTYPE r [ <!-- the \"r\" element --> <!ATTLIST r id CDATA #IMPLIED> <!-- it's 'r' --> ]><r id='a'>x</r>",
+            "<!DOCTYPE r [<!--'-->]><r/>",
+        ] {
+            assert!(check_xml(ok.as_bytes(), &l).is_ok(), "{ok}");
+            assert!(check_xml_internal_entities(ok.as_bytes(), &l).is_ok(), "{ok}");
+        }
+        let svg = "<!DOCTYPE svg [ <!-- Adobe's namespaces --> <!ENTITY ns_svg \"http://www.w3.org/2000/svg\"> ]><svg/>";
+        assert!(check_xml_internal_entities(svg.as_bytes(), &l).is_ok());
+        assert_eq!(kind(check_xml(svg.as_bytes(), &l)), Some(LimitKind::XmlEntities));
+        // an entity declaration next to, inside or after such a comment is still refused
+        for bad in [
+            "<!DOCTYPE r [ <!-- don't --> <!ENTITY a \"x\"> ]><r>&a;</r>",
+            "<!DOCTYPE r [ <!ENTITY a \"x\"> <!-- don't --> ]><r>&a;</r>",
+            "<!DOCTYPE r [ <!-- ' <!ENTITY a SYSTEM \"file:///etc/passwd\"> ' --> ]><r/>",
+            "<!DOCTYPE r [ <!-- ' --><!ENTITY % p SYSTEM \"http://example.invalid/x.dtd\"> %p; ]><r/>",
+            "<!DOCTYPE r [ <!-- ' --> ]><!ENTITY a \"x\"><r/>",
+        ] {
+            assert_eq!(kind(check_xml(bad.as_bytes(), &l)), Some(LimitKind::XmlEntities), "{bad}");
+        }
+        for bad in [
+            "<!DOCTYPE svg [ <!-- ' --> <!ENTITY a \"&b;&b;\"> ]><svg/>",
+            "<!DOCTYPE svg [ <!-- ' <!ENTITY a SYSTEM \"file:///etc/passwd\"> --> ]><svg/>",
+            "<!DOCTYPE svg [ <!-- ' --> <!ENTITY % p \"x\"> ]><svg/>",
+        ] {
+            assert_eq!(kind(check_xml_internal_entities(bad.as_bytes(), &l)), Some(LimitKind::XmlEntities), "{bad}");
+        }
+        // a reader that pairs quotes but does not skip comments would read the subset on to the next quote: an
+        // ENTITY anywhere after such a DOCTYPE (an attribute, a comment, CDATA) could be a declaration to it
+        for bad in [
+            "<!DOCTYPE r [ <!-- ' --> ]><r a='<!ENTITY b \"x\">'/>",
+            "<!DOCTYPE r [ <!-- \" --> ]><r><!-- <!entity b 'x'> --></r>",
+            "<!DOCTYPE r [ <!-- ' --> ]><r><![CDATA[<!ENTITY b 'x'>]]></r>",
+        ] {
+            assert_eq!(kind(check_xml(bad.as_bytes(), &l)), Some(LimitKind::XmlEntities), "{bad}");
+            assert_eq!(kind(check_xml_internal_entities(bad.as_bytes(), &l)), Some(LimitKind::XmlEntities), "{bad}");
+        }
+        // a bracket or an angle bracket in the comment, or a quote in a processing instruction, is still refused
+        for bad in [
+            "<!DOCTYPE r [ <!-- ' ] --> ]><r/>",
+            "<!DOCTYPE r [ <!-- \" > --> ]><r/>",
+            "<!DOCTYPE r [ <!-- ' < --> ]><r/>",
+            "<!DOCTYPE r [ <!-- ' [ --> ]><r/>",
+            "<!DOCTYPE r [ <!-- ok --> <?pi don't ?> ]><r/>",
+            "<!DOCTYPE r [ <!-- ' --> ",
+        ] {
+            assert_eq!(kind(check_xml(bad.as_bytes(), &l)), Some(LimitKind::XmlEntities), "{bad}");
+        }
+        // and the elements after it are counted as before
+        let tight = Limits { max_xml_depth: 2, max_xml_elements: 3, ..Limits::default() };
+        let deep = "<!DOCTYPE r [ <!-- don't --> ]><r><a><b><c/></b></a></r>";
+        assert_eq!(kind(check_xml(deep.as_bytes(), &tight)), Some(LimitKind::XmlDepth));
+        let wide = "<!DOCTYPE r [ <!-- don't --> ]><r><b/><b/><b/><b/></r>";
+        assert_eq!(kind(check_xml(wide.as_bytes(), &tight)), Some(LimitKind::XmlElements));
     }
 
     #[test]

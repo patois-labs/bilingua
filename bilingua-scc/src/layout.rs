@@ -366,6 +366,10 @@ pub fn encode_line(line: &Line, text: &[Atom], locos_glue: bool) -> Result<Vec<W
             let w = make_word(0x14, 0x2D);
             vec![w, w]
         });
+    // BILI-53: a one-row pop-on or paint-on caption with no PAC that the translation wraps onto more rows: every
+    // row gets a PAC, the caption ending on row 15 (the row a decoder starts on when no PAC says otherwise). A
+    // caption whose rows already break with carriage returns keeps them; the locos profile keeps LocOS's rows.
+    let anchor = (line.mode != Mode::RollUp && !locos_glue && n == 1 && src[0].rnum.is_none() && m > 1).then(|| 16 - m.min(15));
     let mut out: Vec<Word> = Vec::new();
     for (i, row_text) in rows.iter().enumerate() {
         let mut atoms = row_text.clone();
@@ -388,13 +392,27 @@ pub fn encode_line(line: &Line, text: &[Atom], locos_glue: bool) -> Result<Vec<W
                 // a row without a PAC has nothing that starts a new row: add a carriage return, or the
                 // rows of a re-wrapped caption would run together ("orWindows")
                 let has_break = if j >= 1 { s.head.iter().any(|e| e.name == Name::Cr) } else { line.mode == Mode::RollUp };
-                if i > 0 && !locos_glue && !has_break {
+                if let (Some(top), true) = (anchor, i > 0) {
+                    // BILI-53: in pop-on and paint-on a carriage return is a roll-up code that decoders treat
+                    // differently; a PAC for the next row is read the same everywhere
+                    words.extend(pac_words((top + i) as u8, 0, 0, &[]).0);
+                } else if i > 0 && !locos_glue && !has_break {
                     words.extend_from_slice(&cr_words);
                 }
                 // the first row's mode and style codes are not repeated on an added row (a second mode code
                 // makes the row read back as another caption)
                 if i == 0 || j >= 1 || locos_glue {
-                    words.extend(s.pos.iter().flat_map(|e| e.words.iter().copied()));
+                    match anchor {
+                        // the first row gets the PAC for the top row after its mode codes, before the tab offsets
+                        // and mid-row styles it applies to
+                        Some(top) if i == 0 => {
+                            let k = s.pos.iter().position(|e| matches!(e.name, Name::Mid | Name::To)).unwrap_or(s.pos.len());
+                            words.extend(s.pos[..k].iter().flat_map(|e| e.words.iter().copied()));
+                            words.extend(pac_words(top as u8, 0, 0, &[]).0);
+                            words.extend(s.pos[k..].iter().flat_map(|e| e.words.iter().copied()));
+                        }
+                        _ => words.extend(s.pos.iter().flat_map(|e| e.words.iter().copied())),
+                    }
                 }
             }
             Some(rnum) => {

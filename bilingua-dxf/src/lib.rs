@@ -167,7 +167,7 @@ impl Filter for Dxf {
         let limits = opts.limits();
         guard::check_input(bytes, &limits)?;
         let w = walk::walk(bytes, &limits)?;
-        let codec = pick_codec(bytes, &w)?;
+        let mut codec = pick_codec(bytes, &w)?;
         let mut units: Vec<Unit> = Vec::new();
         let mut slots: Vec<Slot> = Vec::new();
         for ru in &w.units {
@@ -179,7 +179,17 @@ impl Filter for Dxf {
             for p in &ordered {
                 raw.extend_from_slice(&bytes[p.val_s..p.val_e]);
             }
-            let value = decode_value(&raw, codec, ordered[0].val_s)?;
+            let value = match decode_value(&raw, codec, ordered[0].val_s) {
+                Ok(v) => v,
+                // BILI-57: a cp950 drawing with HKSCS bytes reads as cp950-hkscs (the values before read the same)
+                Err(e) => match codec.widened().and_then(|wide| decode_value(&raw, wide, ordered[0].val_s).ok().map(|v| (wide, v))) {
+                    Some((wide, v)) => {
+                        codec = wide;
+                        v
+                    }
+                    None => return Err(e),
+                },
+            };
             if py_strip(&value).is_empty() {
                 continue;
             }

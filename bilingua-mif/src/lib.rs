@@ -16,8 +16,30 @@ mod lang;
 mod para;
 mod render;
 mod scan;
+mod strs;
 
 pub use esc::{decode_string, encode_string};
+
+/// The `format_options` keys of the MIF filter.
+pub const FORMAT_OPTIONS: &[FormatOptionKey] = &[FormatOptionKey::bool(
+    "mif.extract_variables",
+    "Also list user variable definitions (VariableDef) and paragraph number strings (PgfNumString) as units, as Okapi does (off: LocOS lists neither).",
+)];
+
+/// A candidate unit: a paragraph or a string statement (with `mif.extract_variables`).
+enum Found {
+    Para(Box<para::Analysed>),
+    Str(strs::StrUnit),
+}
+
+impl Found {
+    fn start(&self) -> usize {
+        match self {
+            Found::Para(a) => a.span.0,
+            Found::Str(s) => s.span.0,
+        }
+    }
+}
 pub use lang::fm_language;
 
 use bilingua_model::guard::{self, LimitError, LimitKind};
@@ -202,6 +224,10 @@ impl Filter for Mif {
         ID
     }
 
+    fn format_option_keys(&self) -> &'static [FormatOptionKey] {
+        FORMAT_OPTIONS
+    }
+
     fn extensions(&self) -> &'static [&'static str] {
         &["mif"]
     }
@@ -233,12 +259,41 @@ impl Filter for Mif {
         let mut units: Vec<Unit> = Vec::new();
         let (mut pos, mut line_pos, mut line) = (0usize, 0usize, 1usize);
         let mut skipped = 0usize;
+        let mut found: Vec<Found> = Vec::new();
         for node in paragraphs(text, &tree) {
-            let a = match analyse(text, &tree, node, &pgf, nl) {
-                Outcome::Unit(a) => a,
-                Outcome::NoLines => continue,
-                Outcome::Skip { marker_chars } => {
-                    skipped += usize::from(marker_chars);
+            match analyse(text, &tree, node, &pgf, nl) {
+                Outcome::Unit(a) => found.push(Found::Para(a)),
+                Outcome::NoLines => {}
+                Outcome::Skip { marker_chars } => skipped += usize::from(marker_chars),
+            }
+        }
+        if opts.format_flag(strs::OPTION).unwrap_or(false) {
+            let (more, skip) = strs::string_units(text, &tree);
+            skipped += skip;
+            found.extend(more.into_iter().map(Found::Str));
+            // file order (stable: the paragraphs keep theirs)
+            found.sort_by_key(Found::start);
+        }
+        for f in found {
+            let a = match f {
+                Found::Para(a) => a,
+                Found::Str(su) => {
+                    let (s, e) = su.span;
+                    if s < pos {
+                        continue;
+                    }
+                    guard::check_unit_count(units.len() + 1, &limits)?;
+                    parts.push(SkelPart::Raw(text[pos..s].to_string()));
+                    pos = e;
+                    line += text.as_bytes()[line_pos..s].iter().filter(|&&b| b == b'\n').count();
+                    line_pos = s;
+                    let mut u = Unit::new(format!("u{}", units.len() + 1), su.inlines);
+                    u.codes = su.codes;
+                    u.context.kind = Some(su.kind.into());
+                    u.context.style = su.style.filter(|s| !s.is_empty());
+                    u.context.location = Some(format!("line {line}"));
+                    parts.push(SkelPart::Unit(units.len()));
+                    units.push(u);
                     continue;
                 }
             };
@@ -312,17 +367,20 @@ impl Filter for Mif {
                         .units
                         .get(*i)
                         .ok_or_else(|| Error::Write(format!("no unit {i}")))?;
-                    let original = u
-                        .codes
-                        .get(HIDDEN)
-                        .and_then(|h| h.standalone.as_deref())
+                    let string = u.codes.get(strs::STR_HIDDEN).and_then(|h| h.standalone.as_deref());
+                    let original = string
+                        .or_else(|| u.codes.get(HIDDEN).and_then(|h| h.standalone.as_deref()))
                         .ok_or_else(|| Error::Write(format!("unit {} lost its paragraph", u.id)))?;
                     if u.segments.iter().any(|s| s.has_target()) {
                         translated = true;
                         let o = u.output();
                         if !same_inlines(&o, &u.source()) {
                             changed = true;
-                            out.push_str(&render::render(u, &o)?);
+                            if string.is_some() {
+                                out.push_str(&strs::render(u, &o));
+                            } else {
+                                out.push_str(&render::render(u, &o)?);
+                            }
                             continue;
                         }
                     }

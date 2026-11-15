@@ -21,5 +21,10 @@ Adobe FrameMaker MIF (`.mif`), version 8 and later (Unicode, UTF-8), for Bilingu
   differently loses its font change and keeps its words. Missing point tags are appended so anchors survive.
   The result is re-scanned. With a target language and at least one translated unit, `PgfLanguage` and `FLanguage`
   are set to the target.
+- **Option `mif.extract_variables`** (off by default; LocOS lists neither): user variable definitions
+  (`VariableDef` in `VariableFormats`, `context.style` = the variable name) and paragraph number strings
+  (`PgfNumString`, `context.style` = the paragraph format) are units too, as in Okapi. Building blocks (`<$chapnum>`,
+  `<Emphasis>`) are point tags; a string with no letter outside them is not a unit. Only the string is rewritten,
+  and a building block the translation drops is appended.
 - **Refused:** MIF 7 and older (not Unicode: re-save from FrameMaker 8 or later), book files, non-UTF-8 bytes.
   `include_locked` adds nothing: LocOS lists no locked MIF units.
