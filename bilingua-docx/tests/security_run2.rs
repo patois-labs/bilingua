@@ -55,17 +55,18 @@ fn translate(u: &mut bilingua_model::Unit, text: &str) {
     u.segments[0].state = SegState::Translated;
 }
 
-/// 30,000 text paragraphs and 30,000 drawings in the last one: each drawing was anchored by a walk over the body
-/// units and a second walk over all units (about 2 x 10^9 steps). Now a binary search and a map.
+/// 45,000 text paragraphs and 300,000 drawings in a paragraph after them: each drawing was anchored by a walk over
+/// the body units and a second walk over all units (about 2.7 x 10^10 steps). Now a binary search and a map; the
+/// drawings count on the last text unit.
 #[test]
 fn docx_locos_many_drawings_one_paragraph_linear() {
-    let n = 30_000;
-    let mut body: String = (0..n).map(|i| format!("<w:p><w:r><w:t>Line {i}</w:t></w:r></w:p>")).collect();
-    let drawings: String = (0..n).map(|i| format!("<w:r><w:drawing><wp:inline><wp:docPr id=\"{i}\" name=\"d{i}\" descr=\"\"/></wp:inline></w:drawing></w:r>")).collect();
-    body.push_str(&format!("<w:p><w:r><w:t>Last</w:t></w:r>{drawings}</w:p>"));
+    let (paras, n) = (45_000, 300_000);
+    let mut body: String = (0..paras).map(|i| format!("<w:p><w:r><w:t>Line {i}</w:t></w:r></w:p>")).collect();
+    let drawings: String = (0..n).map(|i| format!("<w:r><w:drawing><wp:inline><wp:docPr id=\"{i}\" name=\"d\" descr=\"\"/></wp:inline></w:drawing></w:r>")).collect();
+    body.push_str(&format!("<w:p>{drawings}</w:p>"));
     let bytes = package(&body);
-    let doc = within(30, move || Docx.extract(&bytes, &locos()).unwrap());
-    let last = doc.units.iter().find(|u| plain_text(&u.segments[0].source).trim() == "Last").expect("last paragraph");
+    let doc = within(60, move || Docx.extract(&bytes, &locos()).unwrap());
+    let last = doc.units.iter().find(|u| plain_text(&u.segments[0].source).trim() == format!("Line {}", paras - 1)).expect("last paragraph");
     assert_eq!(last.context.extra.get("locos.a11y_images").map(String::as_str), Some(n.to_string().as_str()));
 }
 
