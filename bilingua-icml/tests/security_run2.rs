@@ -25,11 +25,12 @@ fn plain(u: &Unit) -> String {
     u.source().iter().filter_map(|i| if let Inline::Text(t) = i { Some(t.as_str()) } else { None }).collect()
 }
 
-/// One paragraph range with text and 100,000 bare `Br` children: about 10^10 element moves before the fix, at
-/// extract and again at merge. The first text is one unit and its translation is written.
+/// One paragraph range with text and 400,000 bare `Br` children: every move shifted all the children after it
+/// (about 10^11 element moves before the fix), at extract and again at merge. The first text is one unit and its
+/// translation is written.
 #[test]
 fn icml_many_bare_breaks_wrap_linear() {
-    let body = psr(&format!("<Content>Hello there</Content>{}<Content>The end</Content>", "<Br/>".repeat(100_000)));
+    let body = psr(&format!("<Content>Hello there</Content>{}<Content>The end</Content>", "<Br/>".repeat(400_000)));
     let data = icml(&body, "", "");
     let (merged, n) = within(60, move || {
         let d = extract(&data);
@@ -40,6 +41,25 @@ fn icml_many_bare_breaks_wrap_linear() {
     assert_eq!(again.units.len(), n);
     assert!(again.units.iter().any(|u| plain(u) == "Hallo zusammen"));
     assert!(again.units.iter().any(|u| plain(u) == "The end"));
+}
+
+/// 40,000 bare runs, each between two ranges: every run was looked up among all the children of the paragraph
+/// range several times over (bare run x children).
+#[test]
+fn icml_bare_runs_between_ranges_wrap_linear() {
+    let n = 40_000usize;
+    let body = psr(&(0..n).map(|k| format!("<Content>a{k}</Content><Br/>
+{}
+", csr(&format!("<Content>b{k}</Content><Br/>")))).collect::<String>());
+    let data = icml(&body, "", "");
+    let (merged, units) = within(60, move || {
+        let d = extract(&data);
+        let last = d.units.iter().find(|u| plain(u) == format!("b{}", n - 1)).map(p_index).expect("last unit");
+        (translate(&data, &[(last, "Ende")]), d.units.len())
+    });
+    let again: Vec<String> = extract(&merged).units.iter().map(plain).collect();
+    assert_eq!(again.len(), units);
+    assert_eq!((again[0].as_str(), again[1].as_str(), again[units - 1].as_str()), ("a0", "b0", "Ende"));
 }
 
 /// Bare runs between other children are wrapped in their own ranges, in place, and keep the text after them.
