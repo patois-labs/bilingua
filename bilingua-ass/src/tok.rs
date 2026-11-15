@@ -431,13 +431,13 @@ mod run2 {
     fn many_switch_blocks_over_a_deep_stack_are_linear() {
         let n = 30_000;
         let c = secs(|| {
-            tokenize(&format!("Hello {}x{}", "{\u1}".repeat(n), "{\i1}a{\i0}".repeat(n)));
+            tokenize(&format!("Hello {}x{}", "{\\u1}".repeat(n), "{\\i1}a{\\i0}".repeat(n)));
         });
         let a = secs(|| {
-            tokenize(&format!("Hello {}x{}", "{\u1}".repeat(n), "{\i1\b0}a".repeat(n)));
+            tokenize(&format!("Hello {}x{}", "{\\u1}".repeat(n), "{\\i1\\b0}a".repeat(n)));
         });
         let b = secs(|| {
-            tokenize(&format!("Hello {}x{}", "{\u1}".repeat(n), "{\b0}a".repeat(n)));
+            tokenize(&format!("Hello {}x{}", "{\\u1}".repeat(n), "{\\b0}a".repeat(n)));
         });
         assert!(a < c * 5.0 + 3.0 && b < c * 5.0 + 3.0, "mixed {a:.2} s, closers {b:.2} s, control {c:.2} s");
     }
@@ -446,14 +446,14 @@ mod run2 {
     #[test]
     fn switch_pairs_are_unchanged() {
         let pairs = |t: &str| pair_blocks(t, &split_pieces(t));
-        assert_eq!(pairs("{\i1}a{\i0}"), [(0, 2)]);
+        assert_eq!(pairs("{\\i1}a{\\i0}"), [(0, 2)]);
         // a closer pops what lies above the switch it closes; only a switch whose keys it closes pairs
-        assert_eq!(pairs("{\i1}a{\b1}b{\i0}c"), [(0, 4)]);
-        assert_eq!(pairs("{\i1\b1}a{\i0\b0}"), [(0, 2)]);
+        assert_eq!(pairs("{\\i1}a{\\b1}b{\\i0}c"), [(0, 4)]);
+        assert_eq!(pairs("{\\i1\\b1}a{\\i0\\b0}"), [(0, 2)]);
         // a mixed block drops the open switches of its keys
-        assert_eq!(pairs("{\i1}a{\i1\b0}b{\i0}"), Vec::<(usize, usize)>::new());
+        assert_eq!(pairs("{\\i1}a{\\i1\\b0}b{\\i0}"), Vec::<(usize, usize)>::new());
         // a reset closes everything open
-        assert_eq!(pairs("{\i1}a{\b1}b{\r}"), [(2, 4), (0, 4)]);
-        assert_eq!(pairs("{\u1}a{\i0}b{\u0}"), [(0, 4)]);
+        assert_eq!(pairs("{\\i1}a{\\b1}b{\\r}"), [(2, 4), (0, 4)]);
+        assert_eq!(pairs("{\\u1}a{\\i0}b{\\u0}"), [(0, 4)]);
     }
 }
