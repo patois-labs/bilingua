@@ -72,9 +72,9 @@ fn office_merge_uses_caller_limits() {
     assert!(sheet_xml(&Xlsx::default().merge_with(&doc, &MergeOptions::new().with_profile("locos")).unwrap()).contains("Zelle"));
 }
 
-fn refused(r: Result<bilingua_model::Document, Error>) {
+fn refused(r: Result<bilingua_model::Document, Error>, want: &str) {
     match r {
-        Err(Error::Parse { msg, .. }) => assert!(msg.contains("save it as .xlsx"), "{msg}"),
+        Err(Error::Parse { msg, .. }) => assert!(msg.contains(want), "{msg}"),
         Err(e) => panic!("expected a parse error, got {e}"),
         Ok(d) => panic!("a beta-namespace workbook opened with {} units", d.units.len()),
     }
@@ -88,7 +88,8 @@ fn refused(r: Result<bilingua_model::Document, Error>) {
 fn a_beta_namespace_workbook_is_refused_not_empty() {
     let rows = format!("<row r=\"1\">{}</row>", inline("A1", "Hello there"));
     let locos = ExtractOptions::new().with_profile("locos");
-    refused(Xlsx::default().extract(&workbook(BETA, &rows), &locos));
+    // the LocOS path finds no workbook part in the SpreadsheetML namespace and says so
+    refused(Xlsx::default().extract(&workbook(BETA, &rows), &locos), "not an Excel workbook");
     assert_eq!(Xlsx::default().extract(&workbook(BETA, &rows), &ExtractOptions::new()).unwrap().units.len(), 1);
     // a prefixed root: `x:workbook` in the beta namespace
     let prefixed = {
@@ -106,7 +107,7 @@ fn a_beta_namespace_workbook_is_refused_not_empty() {
             .collect();
         write_zip(&parts).unwrap()
     };
-    refused(Xlsx::default().extract(&prefixed, &ExtractOptions::new()));
+    refused(Xlsx::default().extract(&prefixed, &ExtractOptions::new()), "save it as .xlsx");
     for opts in [ExtractOptions::new(), locos] {
         assert_eq!(Xlsx::default().extract(&workbook(NS, &rows), &opts).unwrap().units.len(), 1);
     }

@@ -20,8 +20,8 @@ is listed here).
   damaged splice data is refused instead of panicking. Batches skip a member whose document name repeats another's.
   The facade sniffs a file with no extension only up to `SNIFF_MAX_BYTES` (4 MiB); a larger one needs its
   extension. The publish script checks the owner also when crates.io answers "already exists".
-- XLSX: a workbook outside the SpreadsheetML namespace (an Office 2007 beta file) is refused with a clear message
-  instead of opening with no units (BILI-50).
+- XLSX: a workbook whose prefixed root is outside the SpreadsheetML namespace (an Office 2007 beta file) is
+  refused with a clear message instead of opening with no units; an unprefixed one is read as before (BILI-50).
 - Email: a re-wrapped plain-text paragraph keeps each line's own indent, so a tab only the first line had is not
   added to the others (BILI-52).
 - Dependencies: quick-xml 0.41 (RUSTSEC-2026-0194, -0195) and pulldown-cmark 0.13.6 (RUSTSEC-2026-0433); attribute
