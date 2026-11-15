@@ -109,3 +109,92 @@ fn many_tags_on_both_sides_are_merged_once() {
     let want: Vec<String> = (0..t).map(|k| format!("s{k}")).chain((0..t).filter(|k| k % 2 == 1).map(|k| format!("t{k}"))).collect();
     assert_eq!(ids, want);
 }
+
+/// Resource limits (security review run 2): writing a target looks each tag's original markup up once, so a
+/// target of tens of thousands of tags is written in linear time, with the markup the source gave each tag.
+#[test]
+fn a_target_of_many_tags_is_written_in_linear_time() {
+    let t = 50_000;
+    let src: String = (0..t).map(|k| format!("<x id=\"s{k}\" ctype=\"k{k}\"/>")).collect();
+    let body = format!("<?xml version=\"1.0\" encoding=\"UTF-8\"?><xliff version=\"1.2\"><file source-language=\"en\" target-language=\"de\" datatype=\"plaintext\" original=\"f\"><body><trans-unit id=\"a\"><source>{src}</source></trans-unit></body></file></xliff>");
+    let mut doc = Doc::from_bytes(body.into_bytes()).unwrap();
+    let source = doc.seg(0).source.to_vec();
+    let start = Instant::now();
+    assert!(doc.put_target(0, source));
+    let out = String::from_utf8(doc.to_bytes()).unwrap();
+    assert!(start.elapsed() < Duration::from_secs(10), "took {:?}", start.elapsed());
+    let target = &out[out.find("<target").unwrap()..];
+    assert!(target.contains("<x id=\"s0\" ctype=\"k0\"/>") && target.contains(&format!("<x id=\"s{}\" ctype=\"k{}\"/>", t - 1, t - 1)));
+}
+
+/// Resource limits (security review run 2): a second byte order mark used to shift every content range three
+/// bytes early (the reader skips it without counting it), so a merge wrote into the start tags. It is refused.
+#[test]
+fn a_second_byte_order_mark_is_refused() {
+    let body = "<xliff version=\"1.2\"><file source-language=\"en\" datatype=\"plaintext\" original=\"f\"><body><trans-unit id=\"a\"><source>Hello</source><target>Hallo</target></trans-unit></body></file></xliff>";
+    let one = [&[0xEF, 0xBB, 0xBF][..], body.as_bytes()].concat();
+    let two = [&[0xEF, 0xBB, 0xBF, 0xEF, 0xBB, 0xBF][..], body.as_bytes()].concat();
+    let d = xliff().extract(&one, &ExtractOptions::new()).expect("one mark");
+    assert_eq!(d.units[0].segments[0].source, vec![bilingua_model::Inline::text("Hello")]);
+    assert!(Doc::from_bytes(two.clone()).is_err());
+    assert!(xliff().extract(&two, &ExtractOptions::new()).is_err());
+}
+
+/// A source whose content starts with U+FEFF keeps it as text, and its tags keep their own markup (the reader of
+/// the content used to drop it and cut every tag three bytes early).
+#[test]
+fn a_source_that_starts_with_u_feff_keeps_its_tags() {
+    let body = "<xliff version=\"1.2\"><file source-language=\"en\" datatype=\"plaintext\" original=\"f\"><body><trans-unit id=\"a\"><source>\u{feff}a<x id=\"1\" ctype=\"image\"/>b</source></trans-unit></body></file></xliff>";
+    let mut doc = Doc::from_bytes(body.as_bytes().to_vec()).unwrap();
+    let source = doc.seg(0).source.to_vec();
+    assert_eq!(source[0], bilingua_model::Inline::text("\u{feff}a"));
+    assert!(doc.put_target(0, source));
+    let out = String::from_utf8(doc.to_bytes()).unwrap();
+    assert!(out.contains(">\u{feff}a<x id=\"1\" ctype=\"image\"/>b</target>"), "{out}");
+}
+
+/// BILI-55: a root with XLIFF 2's namespace and no `version` attribute is XLIFF 2 (it was read as 1.2, so its
+/// units were not found); an own `version` still decides, and a prefixed `m:version` is not one.
+#[test]
+fn an_xliff_2_namespace_without_a_version_is_xliff_2() {
+    let x2 = "<xliff xmlns=\"urn:oasis:names:tc:xliff:document:2.0\" srcLang=\"en\" trgLang=\"de\"><file id=\"f\"><unit id=\"u1\"><segment><source>Hello</source></segment></unit></file></xliff>";
+    assert_eq!(bilingua_xliff::detect(x2.as_bytes()).unwrap(), bilingua_xliff::Format::Xliff2);
+    let d = xliff().extract(x2.as_bytes(), &ExtractOptions::new()).unwrap();
+    assert_eq!(d.units.len(), 1);
+    let v12 = "<xliff version=\"1.2\" xmlns=\"urn:oasis:names:tc:xliff:document:2.0\"><file><body/></file></xliff>";
+    assert_eq!(bilingua_xliff::detect(v12.as_bytes()).unwrap(), bilingua_xliff::Format::Xliff12);
+    let none = "<xliff xmlns=\"urn:oasis:names:tc:xliff:document:1.2\" xmlns:m=\"x\" m:version=\"2.9\"><file><body/></file></xliff>";
+    assert_eq!(bilingua_xliff::detect(none.as_bytes()).unwrap(), bilingua_xliff::Format::Xliff12);
+    let v2 = "<xliff version=\"2.1\" xmlns=\"urn:oasis:names:tc:xliff:document:2.0\"><file id=\"f\"/></xliff>";
+    assert_eq!(bilingua_xliff::detect(v2.as_bytes()).unwrap(), bilingua_xliff::Format::Xliff2);
+}
+
+/// BILI-59: U+0000 (and the other characters XML forbids) is refused, not passed into the units; under the
+/// LocOS profile as well.
+#[test]
+fn a_nul_character_is_refused() {
+    let x = "<xliff version=\"1.2\"><file source-language=\"en\" datatype=\"plaintext\" original=\"f\"><body><trans-unit id=\"a\"><source>He\u{0}llo</source></trans-unit></body></file></xliff>";
+    assert!(Doc::from_bytes(x.as_bytes().to_vec()).is_err());
+    assert!(xliff().extract(x.as_bytes(), &ExtractOptions::new()).is_err());
+    assert!(xliff().extract(x.as_bytes(), &bilingua_model::profile::locos().extract_options()).is_err());
+    assert!(xliff().extract(x.replace('\u{0}', "\u{ffff}").as_bytes(), &ExtractOptions::new()).is_err());
+    assert!(xliff().extract(x.replace('\u{0}', "\t").as_bytes(), &ExtractOptions::new()).is_ok());
+}
+
+/// BILI-39: a GlobalLink segment that was finished and is set back to draft says `in_progress` in its
+/// `iws:status`, so it does not read back as translated; accepting it again says `finished`.
+#[test]
+fn a_finished_globallink_segment_set_back_to_draft_is_no_longer_finished() {
+    let gl = "<?xml version=\"1.0\"?>\n<xliff version=\"1.2\" xmlns=\"urn:oasis:names:tc:xliff:document:1.2\" xmlns:iws=\"http://www.idiominc.com/ws/asset\"><file source-language=\"en\" target-language=\"de\" datatype=\"x\"><body><trans-unit id=\"g1\"><source>One</source><target>Eins</target><iws:segment-metadata><iws:status translation_status=\"finished\" lock_status=\"unlocked\"/></iws:segment-metadata></trans-unit></body></file></xliff>\n";
+    let f = xliff();
+    let mut d = f.extract(gl.as_bytes(), &ExtractOptions::new()).unwrap();
+    assert_eq!(d.find("g1").unwrap().1.state, bilingua_model::SegState::Translated);
+    d.set_state("g1", bilingua_model::SegState::Draft).unwrap();
+    let out = String::from_utf8(f.merge(&d).unwrap()).unwrap();
+    assert!(out.contains("translation_status=\"in_progress\" lock_status=\"unlocked\""), "{out}");
+    let back = f.extract(out.as_bytes(), &ExtractOptions::new()).unwrap();
+    assert_ne!(back.find("g1").unwrap().1.state, bilingua_model::SegState::Translated);
+    // untouched, it stays finished
+    let d = f.extract(gl.as_bytes(), &ExtractOptions::new()).unwrap();
+    assert_eq!(f.merge(&d).unwrap(), gl.as_bytes());
+}

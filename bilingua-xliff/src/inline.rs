@@ -208,7 +208,13 @@ pub fn parse_inlines(
         };
         return Ok(Parsed { inlines, raws: Vec::new() });
     }
-    let mut b = Builder { buf, flavor, defs, data, out: Parsed::default(), text: String::new(), counter: 0 };
+    // content that starts with U+FEFF: the reader would drop it as a byte order mark without counting its three
+    // bytes, so every raw tag would be cut three bytes early. It is text; read the rest from after it.
+    let (buf, lead) = match buf.strip_prefix(&[0xEF, 0xBB, 0xBF][..]) {
+        Some(rest) => (rest, "\u{feff}"),
+        None => (buf, ""),
+    };
+    let mut b = Builder { buf, flavor, defs, data, out: Parsed::default(), text: lead.to_string(), counter: 0 };
     let mut rd = Reader::from_reader(buf);
     // Open wrappers: their id.
     let mut stack: Vec<(String, Option<String>)> = Vec::new();
@@ -402,12 +408,17 @@ fn atom_id(b: &mut Builder<'_>, tag: &TagInfo, name: &str, kind: TagKind) -> Str
 /// Write inlines as markup. Tags use their original markup when known.
 pub fn serialize(inlines: &[Inline], flavor: Flavor, raws: &[RawTag]) -> String {
     let mut out = String::new();
+    // the first raw tag of each (id, kind), looked up once per tag (a scan per target tag was quadratic)
+    let mut by_key: HashMap<(&str, TagKind), &str> = HashMap::with_capacity(raws.len());
+    for r in raws {
+        by_key.entry((r.id.as_str(), r.kind)).or_insert(r.raw.as_str());
+    }
     for i in inlines {
         match i {
             Inline::Text(t) => escape_text(t, &mut out),
             Inline::Tag { id, kind, .. } => {
-                if let Some(r) = raws.iter().find(|r| &r.id == id && r.kind == *kind) {
-                    out.push_str(&r.raw);
+                if let Some(raw) = by_key.get(&(id.as_str(), *kind)) {
+                    out.push_str(raw);
                 } else {
                     generate_tag(id, *kind, flavor, &mut out);
                 }

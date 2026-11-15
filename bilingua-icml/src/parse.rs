@@ -2,7 +2,7 @@
 //! spans. Iterative, depth capped. Namespace prefixes must be declared, as lxml requires.
 
 use crate::dom::*;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 pub enum PErr {
     Syntax(String),
@@ -24,8 +24,48 @@ struct P<'a> {
     p: usize,
     nodes: Vec<Node>,
     uris: Vec<String>,
-    scope: Vec<(String, u32)>,
+    /// Each URI's number (its place in `uris` plus one).
+    uri_ids: HashMap<String, u32>,
+    scope: Scope,
     marks: Vec<usize>,
+}
+
+/// Most namespace declarations in scope at one element (as `bilingua-xmltree`): real files declare a few.
+const MAX_SCOPE: usize = 1024;
+
+/// The namespace declarations in scope: one binding stack per prefix, so a lookup costs the same however many
+/// prefixes are declared (a reverse scan of every declaration per element and attribute was quadratic).
+#[derive(Default)]
+struct Scope {
+    order: Vec<String>,
+    by_prefix: HashMap<String, Vec<u32>>,
+}
+
+impl Scope {
+    fn len(&self) -> usize {
+        self.order.len()
+    }
+
+    fn push(&mut self, prefix: String, uri: u32) {
+        self.by_prefix.entry(prefix.clone()).or_default().push(uri);
+        self.order.push(prefix);
+    }
+
+    fn truncate(&mut self, mark: usize) {
+        while self.order.len() > mark {
+            let p = self.order.pop().expect("above the mark");
+            if let Some(v) = self.by_prefix.get_mut(&p) {
+                v.pop();
+                if v.is_empty() {
+                    self.by_prefix.remove(&p);
+                }
+            }
+        }
+    }
+
+    fn lookup(&self, prefix: &str) -> Option<u32> {
+        self.by_prefix.get(prefix).and_then(|v| v.last()).copied()
+    }
 }
 
 fn is_ws(c: u8) -> bool {
@@ -47,7 +87,7 @@ pub fn parse(text: &str, max_depth: usize) -> Result<Parsed, PErr> {
     if text.len() >= u32::MAX as usize - 1 {
         return Err(PErr::Syntax("the file is too large for this reader".into()));
     }
-    let mut p = P { s: text, b: text.as_bytes(), p: 0, nodes: Vec::new(), uris: Vec::new(), scope: Vec::new(), marks: Vec::new() };
+    let mut p = P { s: text, b: text.as_bytes(), p: 0, nodes: Vec::new(), uris: Vec::new(), uri_ids: HashMap::new(), scope: Scope::default(), marks: Vec::new() };
     let enc = p.xml_decl()?;
     p.misc(true)?;
     let root = p.element_tree(max_depth)?;
@@ -355,15 +395,17 @@ impl<'a> P<'a> {
     }
 
     fn lookup(&self, prefix: &str) -> Option<u32> {
-        self.scope.iter().rev().find(|(p, _)| p == prefix).map(|(_, u)| *u)
+        self.scope.lookup(prefix)
     }
 
     fn intern(&mut self, uri: &str) -> u32 {
-        if let Some(i) = self.uris.iter().position(|u| u == uri) {
-            return i as u32 + 1;
+        if let Some(&i) = self.uri_ids.get(uri) {
+            return i;
         }
         self.uris.push(uri.to_string());
-        self.uris.len() as u32
+        let i = self.uris.len() as u32;
+        self.uri_ids.insert(uri.to_string(), i);
+        i
     }
 
     fn start_tag(&mut self, parent: Option<Id>) -> Result<(Id, bool), PErr> {
@@ -433,9 +475,12 @@ impl<'a> P<'a> {
         }
         let start_end = self.p;
         let mark = self.scope.len();
+        if mark + decls.len() > MAX_SCOPE {
+            return self.err("too many namespace declarations in scope");
+        }
         for (pfx, uri) in &decls {
             let idx = if uri.is_empty() { 0 } else { self.intern(uri) };
-            self.scope.push((pfx.clone(), idx));
+            self.scope.push(pfx.clone(), idx);
         }
         // resolve names
         let ns = match self.qname_ns(&name, true) {

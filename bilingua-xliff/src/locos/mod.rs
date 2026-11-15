@@ -172,17 +172,56 @@ fn pair_side_id(s: &str) -> bool {
     s.starts_with("START_") || s.starts_with("CLOSE_")
 }
 
+/// The `<data>` element each `dataRef` names: (nearest `unit` ancestor, id) to the first such element in document
+/// order. Built once per file, so every `<ph dataRef>` no longer walks its whole unit (quadratic in the unit).
+#[derive(Default)]
+pub(crate) struct DataIndex(HashMap<(usize, String), usize>);
+
+impl DataIndex {
+    fn of(d: &Dom) -> DataIndex {
+        let mut m: HashMap<(usize, String), usize> = HashMap::new();
+        for x in d.iter(d.root) {
+            if !d.local_name(x).eq_ignore_ascii_case("data") {
+                continue;
+            }
+            let Some(id) = d.get(x, "id") else { continue };
+            // the data element is in every unit it lies under; XLIFF 2 does not nest units, so the nearest is
+            // the one a placeholder's lookup starts from in all but a malformed file
+            let mut p = d.nodes[x].parent;
+            while let Some(u) = p {
+                if d.local_name(u).eq_ignore_ascii_case("unit") {
+                    m.entry((u, id.to_string())).or_insert(x);
+                    break;
+                }
+                p = d.nodes[u].parent;
+            }
+        }
+        DataIndex(m)
+    }
+}
+
+/// The nearest ancestor of `el` with this (lower-case) local name, without allocating per step.
+fn ancestor_named(d: &Dom, el: usize, local: &str) -> Option<usize> {
+    let mut p = d.nodes[el].parent;
+    while let Some(x) = p {
+        if d.is_el(x) && d.local_name(x).eq_ignore_ascii_case(local) {
+            return Some(x);
+        }
+        p = d.nodes[x].parent;
+    }
+    None
+}
+
 /// What an `<x>` / `<ph>` stands for (`_native_codes`).
-fn native_codes(d: &Dom, el: usize) -> Vec<String> {
+fn native_codes(d: &Dom, el: usize, data: &DataIndex) -> Vec<String> {
     let mut codes: Vec<String> = ["equiv-text", "equiv", "disp"].iter().filter_map(|a| d.get(el, a).map(str::to_string)).collect();
     let lead = d.lead_text(el);
     if !lead.is_empty() {
         codes.push(lead);
     }
     if let Some(r) = d.get(el, "dataRef") {
-        if let Some(unit) = d.ancestor(el, "unit") {
-            let hit = d.iter(unit).into_iter().find(|&x| d.local(x) == "data" && d.get(x, "id") == Some(r));
-            if let Some(x) = hit {
+        if let Some(unit) = ancestor_named(d, el, "unit") {
+            if let Some(&x) = data.0.get(&(unit, r.to_string())) {
                 codes.push(d.itertext(x));
             }
         }
@@ -191,7 +230,7 @@ fn native_codes(d: &Dom, el: usize) -> Vec<String> {
 }
 
 /// `_free_point`: an `<x id>` / `<ph id>` placeholder that may move in the translation.
-fn free_point(d: &Dom, el: usize, local: &str) -> bool {
+fn free_point(d: &Dom, el: usize, local: &str, data: &DataIndex) -> bool {
     if !(local == "x" || local == "ph") {
         return false;
     }
@@ -202,14 +241,15 @@ fn free_point(d: &Dom, el: usize, local: &str) -> bool {
     if ["bold", "italic", "underline", "link"].contains(&d.get(el, "ctype").unwrap_or("").to_lowercase().as_str()) {
         return false;
     }
-    !native_codes(d, el).iter().any(|c| (c.starts_with('<') && !c.ends_with("/>")) || order_bound(c))
+    !native_codes(d, el, data).iter().any(|c| (c.starts_with('<') && !c.ends_with("/>")) || order_bound(c))
 }
 
 /// `_tokenize_source`: the LocOS token stream of a source element and what each number stands for.
-fn tokenize_source(d: &Dom, src: usize) -> (Vec<Tok>, Vec<Code>) {
+/// `data` is `None` where only the codes are wanted (merge): no point is then marked free.
+fn tokenize_source(d: &Dom, src: usize, data: Option<&DataIndex>) -> (Vec<Tok>, Vec<Code>) {
     let mut toks = Vec::new();
     let mut codes = Vec::new();
-    fn walk(d: &Dom, el: usize, toks: &mut Vec<Tok>, codes: &mut Vec<Code>) {
+    fn walk(d: &Dom, el: usize, toks: &mut Vec<Tok>, codes: &mut Vec<Code>, data: Option<&DataIndex>) {
         for &c in &d.nodes[el].children {
             let n = &d.nodes[c];
             if n.kind == Kind::Text {
@@ -224,15 +264,15 @@ fn tokenize_source(d: &Dom, src: usize) -> (Vec<Tok>, Vec<Code>) {
             let num = codes.len();
             let local = d.local(c);
             if n.kind == Kind::Element && POINT.contains(&local.as_str()) {
-                toks.push(Tok::Point(num, free_point(d, c, &local)));
+                toks.push(Tok::Point(num, data.is_some_and(|data| free_point(d, c, &local, data))));
                 continue;
             }
             toks.push(Tok::Open(num));
-            walk(d, c, toks, codes);
+            walk(d, c, toks, codes, data);
             toks.push(Tok::Close(num));
         }
     }
-    walk(d, src, &mut toks, &mut codes);
+    walk(d, src, &mut toks, &mut codes, data);
     (join_text(toks), codes)
 }
 
@@ -295,13 +335,21 @@ fn text_tags(toks: Vec<Tok>, codes: &mut Vec<Code>) -> Vec<Tok> {
         return toks;
     }
     let mut pair_of: HashMap<usize, usize> = HashMap::new();
-    let mut stack: Vec<(String, usize)> = Vec::new();
+    // the open marks in order, as match index; a close pairs with the nearest open of its id and drops every
+    // open above that one. `by_id` holds each id's opens as (stack position, match index), stale entries removed
+    // lazily, so a close costs no scan of the whole stack (unmatched opens made that quadratic)
+    let mut stack: Vec<usize> = Vec::new();
+    let mut by_id: HashMap<&str, Vec<(usize, usize)>> = HashMap::new();
     for (i, m) in matches.iter().enumerate() {
         if m.2 == 1 {
-            stack.push((m.3.clone(), i));
+            by_id.entry(m.3.as_str()).or_default().push((stack.len(), i));
+            stack.push(i);
         } else if m.2 == 2 {
-            if let Some(j) = stack.iter().rposition(|(id, _)| *id == m.3) {
-                let o = stack[j].1;
+            let Some(opens) = by_id.get_mut(m.3.as_str()) else { continue };
+            while opens.last().is_some_and(|&(pos, o)| stack.get(pos) != Some(&o)) {
+                opens.pop();
+            }
+            if let Some((j, o)) = opens.pop() {
                 pair_of.insert(o, i);
                 pair_of.insert(i, o);
                 stack.truncate(j);
@@ -346,8 +394,8 @@ fn text_tags(toks: Vec<Tok>, codes: &mut Vec<Code>) -> Vec<Tok> {
     join_text(out)
 }
 
-fn tokenize(d: &Dom, el: usize, marks: bool) -> (Vec<Tok>, Vec<Code>) {
-    let (toks, mut codes) = tokenize_source(d, el);
+fn tokenize(d: &Dom, el: usize, marks: bool, data: &DataIndex) -> (Vec<Tok>, Vec<Code>) {
+    let (toks, mut codes) = tokenize_source(d, el, Some(data));
     if marks {
         let toks = text_tags(toks, &mut codes);
         return (toks, codes);
@@ -653,8 +701,8 @@ fn raw_markup(d: &Dom, text: &str, code: &Code) -> (Option<String>, Option<Strin
     match code {
         Code::Mark(o, c) => (Some(o.clone()), c.clone()),
         Code::Node(n) => match d.nodes[*n].span {
-            Some(sp) if sp.empty || POINT.contains(&d.local(*n).as_str()) => (Some(text[sp.start..sp.end].to_string()), None),
-            Some(sp) => (Some(text[sp.start..sp.start_end].to_string()), Some(text[sp.end_start..sp.end].to_string())),
+            Some(sp) if sp.empty || POINT.contains(&d.local(*n).as_str()) => (Some(text.get(sp.start..sp.end).unwrap_or_default().to_string()), None),
+            Some(sp) => (Some(text.get(sp.start..sp.start_end).unwrap_or_default().to_string()), Some(text.get(sp.end_start..sp.end).unwrap_or_default().to_string())),
             None => (Some(String::new()), None),
         },
     }
@@ -696,12 +744,13 @@ pub fn cat_units(raw: &[u8], format: &str, need_ns: Option<&str>) -> Result<(Vec
     check_version(&d, format, need_ns)?;
     let marks = marks_on(&d);
     let slots = walk(&d);
+    let data = DataIndex::of(&d);
     let mut units = Vec::new();
     for (pos, s) in slots.iter().enumerate() {
         if !s.skip.is_empty() {
             continue;
         }
-        let (toks, codes) = tokenize(&d, s.src, marks);
+        let (toks, codes) = tokenize(&d, s.src, marks, &data);
         let toks = strip_toks(toks);
         if toks.is_empty() {
             continue;
@@ -731,6 +780,7 @@ fn plain_units(d: &Dom, text: &str, max_units: usize) -> Result<Vec<LocosUnit>, 
     // #571: nested inline tags multiply LocOS's element copies; ten copies per allowed segment, counted before
     // any unit is made (LocOS `XliffFilter.parse`)
     let mut budget = (max_units as i64).saturating_mul(10);
+    let data = DataIndex::of(d);
     for (idx, src) in source_elements(d).into_iter().enumerate() {
         let tu = d.nodes[src].parent.unwrap();
         if !unit_skip(d, tu, d.child(tu, "target")).is_empty() {
@@ -744,7 +794,7 @@ fn plain_units(d: &Dom, text: &str, max_units: usize) -> Result<Vec<LocosUnit>, 
             )
             .into());
         }
-        let (toks, codes) = tokenize_source(d, src);
+        let (toks, codes) = tokenize_source(d, src, Some(&data));
         let toks = strip_toks(toks);
         if toks.is_empty() || only_tokens(&tok_string(&toks)) {
             continue;
@@ -777,7 +827,8 @@ pub fn extract(bytes: &[u8], format: &str, opts: &ExtractOptions) -> Result<Docu
         .with_source_lang(opts.source_lang.clone().or(src_lang))
         .with_target_lang(opts.target_lang.clone())
         .with_granularity(Granularity::Paragraph);
-    Ok(doc)
+    // the unit, segment and context caps every other filter's document passes
+    bilingua_model::guard::finish(doc, vec![], &opts.limits())
 }
 
 /// The source and target language the file declares (first `<file>` of 1.2, the root of 2.0).
@@ -867,9 +918,10 @@ fn xml_target_text(s: &str) -> String {
 fn rebuild_target(d: &mut Dom, tgt: usize, text: &str, codes: &[Code]) {
     d.clear(tgt);
     let mut used: std::collections::HashSet<String> = std::collections::HashSet::new();
-    // (element or None for a phantom, key)
-    let mut stack: Vec<(Option<usize>, String)> = Vec::new();
-    let container = |stack: &[(Option<usize>, String)]| stack.iter().rev().find_map(|(e, _)| *e).unwrap_or(tgt);
+    // (element or None for a phantom, key, the container text goes into while this entry is on top): a phantom
+    // open keeps the container below it, so the container is read off the top, not searched for
+    let mut stack: Vec<(Option<usize>, String, usize)> = Vec::new();
+    let container = |stack: &[(Option<usize>, String, usize)]| stack.last().map_or(tgt, |e| e.2);
     for piece in split_tokens(text) {
         match piece {
             Ok(t) => {
@@ -877,7 +929,7 @@ fn rebuild_target(d: &mut Dom, tgt: usize, text: &str, codes: &[Code]) {
                 d.append_text(c, &unesc_lit(&t));
             }
             Err((true, _, key)) => {
-                if stack.last().is_some_and(|(_, k)| *k == key) {
+                if stack.last().is_some_and(|(_, k, _)| *k == key) {
                     stack.pop();
                 }
             }
@@ -889,7 +941,8 @@ fn rebuild_target(d: &mut Dom, tgt: usize, text: &str, codes: &[Code]) {
                 });
                 let Some(el) = el.filter(|_| !used.contains(&key)) else {
                     if !is_point {
-                        stack.push((None, key));
+                        let c = container(&stack);
+                        stack.push((None, key, c));
                     }
                     continue;
                 };
@@ -899,7 +952,7 @@ fn rebuild_target(d: &mut Dom, tgt: usize, text: &str, codes: &[Code]) {
                 d.append(c, clone);
                 if !is_point {
                     d.clear(clone);
-                    stack.push((Some(clone), key));
+                    stack.push((Some(clone), key, clone));
                 }
             }
         }
@@ -1014,7 +1067,7 @@ fn build_plain(original: &[u8], text: &str, texts: &HashMap<i64, String>, tag: O
                 t
             }
         };
-        let (_, codes) = tokenize_source(&d, src);
+        let (_, codes) = tokenize_source(&d, src, None);
         rebuild_target(&mut d, tgt, &xml_target_text(new), &codes);
         if ["new", "needs-translation"].contains(&low(d.get(tgt, "state")).as_str()) {
             d.set(tgt, "state", "translated");
@@ -1207,10 +1260,11 @@ pub fn build_cat_escaped(raw: &[u8], texts: &HashMap<i64, String>, tag: Option<&
     let (text, codec, bom) = decode_cat(raw).map_err(werr)?;
     let d = dom::parse(&text).map_err(|e| werr(format!("XLIFF is not well-formed XML: {e}")))?;
     let marks = marks_on(&d);
+    let data = DataIndex::of(&d);
     let span = |id: usize| d.nodes[id].span.expect("parsed elements have spans");
     let mut edits = Edits { items: Vec::new() };
     let content_for = |slot: &Slot, new: &str| -> String {
-        let (toks, codes) = tokenize(&d, slot.src, marks);
+        let (toks, codes) = tokenize(&d, slot.src, marks, &data);
         let (lead, trail) = edges(&tok_string(&toks));
         let body = xml_target_text(new);
         let body = py_strip(&body);

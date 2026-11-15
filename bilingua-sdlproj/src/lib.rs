@@ -11,6 +11,7 @@ use bilingua_model::guard::{LimitError, LimitKind};
 use bilingua_model::*;
 use quick_xml::events::{BytesStart, Event};
 use quick_xml::Reader;
+use std::collections::{HashMap, HashSet};
 
 /// LocOS reads no `.sdlproj` over 16 MB (`MAX_SDLPROJ_BYTES`).
 pub const MAX_SDLPROJ_BYTES: usize = 16 * 1024 * 1024;
@@ -113,17 +114,55 @@ fn unescape(s: &str) -> String {
     out
 }
 
-fn lookup<'a>(ns: &'a [(String, String)], prefix: &str) -> Option<&'a str> {
-    if prefix == "xml" {
-        return Some("http://www.w3.org/XML/1998/namespace");
-    }
-    ns.iter().rev().find(|(p, _)| p == prefix).map(|(_, u)| u.as_str())
+/// The namespace declarations in scope: one binding stack per prefix, so a lookup costs the same however many
+/// prefixes are declared (a reverse scan of every declaration made each element quadratic).
+#[derive(Default)]
+struct Scope {
+    /// Prefixes in the order they were declared, so the bindings of an element can be undone.
+    order: Vec<String>,
+    by_prefix: HashMap<String, Vec<String>>,
 }
+
+impl Scope {
+    fn len(&self) -> usize {
+        self.order.len()
+    }
+
+    fn push(&mut self, prefix: &str, uri: &str) {
+        self.order.push(prefix.to_string());
+        self.by_prefix.entry(prefix.to_string()).or_default().push(uri.to_string());
+    }
+
+    fn truncate(&mut self, mark: usize) {
+        while self.order.len() > mark {
+            let p = self.order.pop().expect("len above mark");
+            if let Some(v) = self.by_prefix.get_mut(&p) {
+                v.pop();
+                if v.is_empty() {
+                    self.by_prefix.remove(&p);
+                }
+            }
+        }
+    }
+
+    fn lookup(&self, prefix: &str) -> Option<&str> {
+        if prefix == "xml" {
+            return Some("http://www.w3.org/XML/1998/namespace");
+        }
+        self.by_prefix.get(prefix).and_then(|v| v.last()).map(String::as_str)
+    }
+}
+
+/// Most target languages a project may name (Trados projects name a few dozen at most).
+pub const MAX_TARGET_LANGS: usize = 1000;
 
 /// The attributes of a tag as (qualified name, unescaped value); duplicates and bad references are errors.
 fn attrs_of(e: &BytesStart<'_>) -> Result<Vec<(String, String)>, Error> {
     let mut out: Vec<(String, String)> = Vec::new();
-    for a in e.attributes() {
+    // a few attributes are compared directly, a wide tag through a set (a scan per attribute is quadratic)
+    let mut seen: HashSet<String> = HashSet::new();
+    // quick-xml's own duplicate check scans every earlier attribute; the check below replaces it
+    for a in e.attributes().with_checks(false) {
         let a = a.map_err(|e| perr(format!("not well-formed XML: {e}")))?;
         let name = std::str::from_utf8(a.key.as_ref()).map_err(|_| perr("not well-formed XML: attribute name"))?.to_string();
         let raw = std::str::from_utf8(&a.value).map_err(|_| perr("not well-formed XML: attribute value"))?;
@@ -131,7 +170,15 @@ fn attrs_of(e: &BytesStart<'_>) -> Result<Vec<(String, String)>, Error> {
             return Err(perr("not well-formed XML: '<' in an attribute value"));
         }
         check_refs(raw)?;
-        if out.iter().any(|(n, _)| *n == name) {
+        let dup = if out.len() < 12 {
+            out.iter().any(|(n, _)| *n == name)
+        } else {
+            if seen.is_empty() {
+                seen.extend(out.iter().map(|(n, _)| n.clone()));
+            }
+            !seen.insert(name.clone())
+        };
+        if dup {
             return Err(perr(format!("not well-formed XML: attribute {name} appears twice")));
         }
         out.push((name, unescape(raw)));
@@ -151,7 +198,7 @@ fn read_project(text: &str, limits: &Limits) -> Result<ProjectInfo, Error> {
     let mut reader = Reader::from_str(text);
     reader.config_mut().check_end_names = true;
     reader.config_mut().check_comments = true;
-    let mut ns: Vec<(String, String)> = Vec::new();
+    let mut ns = Scope::default();
     let mut ns_marks: Vec<usize> = Vec::new();
     let mut depth = 0usize;
     let mut root_seen = false;
@@ -216,19 +263,19 @@ fn read_project(text: &str, limits: &Limits) -> Result<ProjectInfo, Error> {
                 let mark = ns.len();
                 for (n, v) in &attrs {
                     if n == "xmlns" {
-                        ns.push((String::new(), v.clone()));
+                        ns.push("", v);
                     } else if let Some(p) = n.strip_prefix("xmlns:") {
-                        ns.push((p.to_string(), v.clone()));
+                        ns.push(p, v);
                     }
                 }
                 let qname = std::str::from_utf8(e.name().into_inner()).map_err(|_| perr("not well-formed XML: element name"))?.to_string();
                 let (prefix, local) = qname.split_once(':').unwrap_or(("", &qname));
-                if !prefix.is_empty() && lookup(&ns, prefix).is_none() {
+                if !prefix.is_empty() && ns.lookup(prefix).is_none() {
                     return Err(perr(format!("not well-formed XML: namespace prefix {prefix} is not defined")));
                 }
                 for (n, _) in &attrs {
                     if let Some((p, _)) = n.split_once(':') {
-                        if p != "xmlns" && lookup(&ns, p).is_none() {
+                        if p != "xmlns" && ns.lookup(p).is_none() {
                             return Err(perr(format!("not well-formed XML: namespace prefix {p} is not defined")));
                         }
                     }
@@ -279,8 +326,12 @@ fn read_project(text: &str, limits: &Limits) -> Result<ProjectInfo, Error> {
         return Err(perr("This project has more than one source language; a project here has one."));
     }
     info.source_lang = pairs[0].0.clone();
+    let mut seen: HashSet<String> = HashSet::new();
     for (_, t) in &pairs {
-        if !info.target_langs.iter().any(|x| x.to_lowercase() == t.to_lowercase()) {
+        if seen.insert(t.to_lowercase()) {
+            if info.target_langs.len() >= MAX_TARGET_LANGS {
+                return Err(LimitError::new(LimitKind::Units, format!("This project names more than {MAX_TARGET_LANGS} target languages. It was not processed.")).into());
+            }
             info.target_langs.push(t.clone());
         }
     }

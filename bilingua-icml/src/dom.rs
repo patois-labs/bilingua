@@ -3,7 +3,7 @@
 //! written back from their source bytes; only nodes the rebuild created or changed are regenerated.
 
 use std::borrow::Cow;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 pub type Id = u32;
 pub const NIL: Id = u32::MAX;
@@ -361,12 +361,38 @@ impl Dom {
     /// subtree uses any prefix declared above it, so that it does not parse on its own.
     pub fn story_ns(&self, top: Id) -> StoryNs {
         let mut r = StoryNs { top, keep: HashSet::new(), added: Vec::new(), outside: false };
-        let mut stack = vec![top];
-        while let Some(e) = stack.pop() {
+        // the declarations above `top`, innermost of each prefix (one walk up), and those in the subtree as one
+        // binding stack per prefix kept while walking it: a lookup no longer walks every ancestor's declarations
+        let mut outer: HashMap<&str, (Id, usize)> = HashMap::new();
+        let mut x = self.n(top).parent;
+        while x != NIL {
+            for (i, (p, _)) in self.n(x).nsdecls.iter().enumerate().rev() {
+                outer.entry(p.as_str()).or_insert((x, i));
+            }
+            x = self.n(x).parent;
+        }
+        let own: HashSet<&str> = self.n(top).nsdecls.iter().map(|(q, _)| q.as_str()).collect();
+        let mut added: HashSet<String> = HashSet::new();
+        let mut inner: HashMap<&str, Vec<(Id, usize)>> = HashMap::new();
+        // (node, false) enters it, (node, true) leaves it and drops its bindings
+        let mut stack = vec![(top, false)];
+        while let Some((e, leave)) = stack.pop() {
             let n = self.n(e);
             if n.kind != Kind::Elem {
                 continue;
             }
+            if leave {
+                for (p, _) in &n.nsdecls {
+                    if let Some(v) = inner.get_mut(p.as_str()) {
+                        v.pop();
+                    }
+                }
+                continue;
+            }
+            for (i, (p, _)) in n.nsdecls.iter().enumerate() {
+                inner.entry(p.as_str()).or_default().push((e, i));
+            }
+            stack.push((e, true));
             let mut uses: Vec<&str> = Vec::new();
             uses.push(n.name.split_once(':').map_or("", |(p, _)| p));
             for (k, _) in &n.attrs {
@@ -377,7 +403,11 @@ impl Dom {
                 }
             }
             for p in uses {
-                match self.resolve_prefix(e, top, p) {
+                let found = match inner.get(p).and_then(|v| v.last()) {
+                    Some(&(x, i)) => Some((x, i, true)),
+                    None => outer.get(p).map(|&(x, i)| (x, i, false)),
+                };
+                match found {
                     Some((x, i, true)) => {
                         r.keep.insert((x, i));
                     }
@@ -385,8 +415,7 @@ impl Dom {
                         let (pf, uri) = &self.n(x).nsdecls[i];
                         if !uri.is_empty() {
                             r.outside = true;
-                            let own = self.n(top).nsdecls.iter().any(|(q, _)| q == pf);
-                            if !own && !r.added.iter().any(|(q, _)| q == pf) {
+                            if !own.contains(pf.as_str()) && added.insert(pf.clone()) {
                                 r.added.push((pf.clone(), uri.clone()));
                             }
                         }
@@ -395,30 +424,10 @@ impl Dom {
                 }
             }
             for c in n.children.iter().rev() {
-                stack.push(*c);
+                stack.push((*c, false));
             }
         }
         r
-    }
-
-    /// The nearest declaration of `prefix` seen from `from`: its node, its place in that node's list, and whether the
-    /// node is `top` or below it.
-    fn resolve_prefix(&self, from: Id, top: Id, prefix: &str) -> Option<(Id, usize, bool)> {
-        let mut x = from;
-        let mut inside = true;
-        loop {
-            if let Some(i) = self.n(x).nsdecls.iter().rposition(|(p, _)| p == prefix) {
-                return Some((x, i, inside));
-            }
-            if x == top {
-                inside = false;
-            }
-            let up = self.n(x).parent;
-            if up == NIL {
-                return None;
-            }
-            x = up;
-        }
     }
 
     fn ser_elem(&self, id: Id, out: &mut String, force: bool) {

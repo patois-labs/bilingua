@@ -14,6 +14,8 @@ use std::collections::HashMap;
 
 pub(crate) const MAX_RULES: usize = 100;
 pub(crate) const MAX_SELECTOR: usize = 512;
+/// XPath steps per element (plus 1000) that all the ITS rules of one document may spend together.
+const RULE_STEPS: u64 = 1000;
 
 pub(crate) fn bad(msg: impl Into<String>) -> Error {
     Error::Parse { format: "xml".into(), msg: msg.into() }
@@ -297,12 +299,15 @@ pub(crate) fn eval_props(t: &Tree, dialect: Option<&Dialect>, extra: &[Rule], li
             n
         )));
     }
-    let budget_per_rule = 400u64 * (n as u64 + 1000);
-    // string bytes are shared by every rule and note pointer of the document
+    // one step budget for the whole document, shared by every rule (and a second one by every note pointer), as the
+    // string bytes are: a budget per rule let 200 rules spend 200 times what one may
+    let mut steps = RULE_STEPS * (n as u64 + 1000);
+    let mut note_steps = 4 * steps;
     let mut bytes = Budget::new(t, 0).bytes;
     for rule in &rules {
-        let mut budget = Budget { steps: budget_per_rule, bytes };
+        let mut budget = Budget { steps, bytes };
         let hits = rule.xpath.select(t, Node::Doc, &mut budget).map_err(|e| bad(format!("ITS rule could not be evaluated: {e}")))?;
+        steps = budget.steps;
         if rule.pointer.is_some() && hits.len().saturating_mul(n) > cap {
             return Err(limit(format!(
                 "This XML file is too large for its ITS locNotePointer rule ({} selected elements, {} elements). Split it into smaller files or use a locNote text instead of a pointer.",
@@ -311,7 +316,7 @@ pub(crate) fn eval_props(t: &Tree, dialect: Option<&Dialect>, extra: &[Rule], li
             )));
         }
         bytes = budget.bytes;
-        let mut note_budget = Budget { steps: 4u64 * budget_per_rule, bytes };
+        let mut note_budget = Budget { steps: note_steps, bytes };
         for h in hits {
             match h {
                 Node::El(e) => {
@@ -355,6 +360,7 @@ pub(crate) fn eval_props(t: &Tree, dialect: Option<&Dialect>, extra: &[Rule], li
             }
         }
         bytes = note_budget.bytes;
+        note_steps = note_budget.steps;
     }
 
     // local ITS markup beats global rules; ITS elements are never content

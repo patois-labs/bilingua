@@ -307,3 +307,84 @@ fn public_writers_still_read_plain_locos_text() {
     assert_eq!(written_texts(doc2.units.iter())[&SEG_BASE], "\u{27e6}x1\u{27e7}");
     assert_eq!(written_texts_escaped(doc2.units.iter())[&SEG_BASE], "\u{e000}\u{e001}x1\u{27e7}");
 }
+
+// ------------------------------------------------------------- resource limits (security review run 2)
+
+fn timed<T>(what: &str, f: impl FnOnce() -> T) -> T {
+    let start = std::time::Instant::now();
+    let r = f();
+    assert!(start.elapsed() < std::time::Duration::from_secs(10), "{what} took {:?}", start.elapsed());
+    r
+}
+
+/// Every `<ph dataRef>` looked for its `<data>` by walking its whole unit, lower-casing each name: quadratic in the
+/// unit. The data elements are now indexed once per file, and the one a placeholder names is still found.
+#[test]
+fn many_dataref_points_are_linear() {
+    let p = 30_000;
+    let phs: String = (0..p).map(|k| format!("<ph id=\"{k}\" dataRef=\"z\"/>")).collect();
+    let x = format!("<xliff version=\"2.0\" xmlns=\"urn:oasis:names:tc:xliff:document:2.0\" srcLang=\"en\"><file id=\"f\"><unit id=\"u\"><segment><source>a{phs}</source></segment></unit></file></xliff>");
+    let doc = timed("extract", || filter("xliff").extract(x.as_bytes(), &opts(None)).unwrap());
+    assert_eq!(doc.units.len(), 1);
+    // a dataRef still finds its data: markup it stands for makes the point not free
+    let x = "<xliff version=\"2.0\" xmlns=\"urn:oasis:names:tc:xliff:document:2.0\" srcLang=\"en\"><file id=\"f\"><unit id=\"u\"><originalData><data id=\"d1\">&lt;b&gt;</data><data id=\"d2\">&lt;br/&gt;</data></originalData><segment><source>a<ph id=\"1\" dataRef=\"d1\"/>b<ph id=\"2\" dataRef=\"d2\"/>c</source></segment></unit></file></xliff>";
+    let doc = filter("xliff").extract(x.as_bytes(), &opts(None)).unwrap();
+    assert_eq!(texts(&doc)[0].1, "a\u{27e6}x1\u{27e7}b\u{27e6}p2\u{27e7}c");
+}
+
+/// A file whose text starts with a second byte order mark (UTF-8 or UTF-16) is refused with an error: the parser
+/// used to skip it without counting it, so a span fell inside a character and slicing there panicked.
+#[test]
+fn double_bom_is_refused_not_panicked() {
+    let body = "<xliff version=\"1.2\"><file><body><trans-unit id=\"1\"><source>a\u{1F600}<x id=\"1\"/></source></trans-unit></body></file></xliff>";
+    let utf8 = [&[0xEF, 0xBB, 0xBF, 0xEF, 0xBB, 0xBF][..], body.as_bytes()].concat();
+    let mut utf16 = vec![0xFF, 0xFE, 0xFF, 0xFE];
+    body.encode_utf16().for_each(|u| utf16.extend_from_slice(&u.to_le_bytes()));
+    for bytes in [utf8, utf16] {
+        let r = std::thread::Builder::new()
+            .stack_size(256 << 10)
+            .spawn(move || filter("xliff").extract(&bytes, &opts(None)).map(|d| d.units.len()))
+            .unwrap()
+            .join()
+            .expect("no panic");
+        assert!(r.is_err(), "{r:?}");
+    }
+    // one mark is fine
+    let one = [&[0xEF, 0xBB, 0xBF][..], body.as_bytes()].concat();
+    assert_eq!(filter("xliff").extract(&one, &opts(None)).unwrap().units.len(), 1);
+}
+
+/// MXLIFF text marks: every close looked for its open by scanning all the marks still open, so many unmatched
+/// opens followed by closes of another id were quadratic. Pairing still drops the opens above a matched one.
+#[test]
+fn many_unmatched_text_marks_are_linear() {
+    let n = 45_000;
+    let src = format!("{}{}", "{a>".repeat(n), "&lt;b}".repeat(n));
+    let x = format!("<xliff version=\"1.2\" xmlns:m=\"http://www.memsource.com/mxlf/2.0\"><file><body><trans-unit id=\"1\"><source>x{src}</source></trans-unit></body></file></xliff>");
+    let doc = timed("extract", || filter("mxliff").extract(x.as_bytes(), &opts(None)).unwrap());
+    assert_eq!(doc.units.len(), 1);
+    // {1> {2> <1} pairs 1 and leaves 2 a point; a later <2} has no open left
+    let mut codes = Vec::new();
+    let toks = text_tags(vec![Tok::Text("{1>a{2>b<1}c<2}".into())], &mut codes);
+    let kinds: Vec<&str> = toks
+        .iter()
+        .map(|t| match t {
+            Tok::Text(_) => "t",
+            Tok::Open(_) => "o",
+            Tok::Close(_) => "c",
+            Tok::Point(..) => "p",
+        })
+        .collect();
+    assert_eq!(kinds, ["o", "t", "p", "t", "c", "t", "p"]);
+}
+
+/// A translated target with many pair tokens that name no code (phantom opens) and text between them: the text's
+/// container was searched for over the whole stack of opens for every piece. It is now read off the top.
+#[test]
+fn many_phantom_opens_in_a_target_are_linear() {
+    let mut d = dom::parse("<xliff><target/></xliff>").unwrap();
+    let tgt = d.child(d.root, "target").unwrap();
+    let text = "\u{27e6}g9\u{27e7}a".repeat(80_000);
+    timed("rebuild", || rebuild_target(&mut d, tgt, &text, &[]));
+    assert_eq!(d.itertext(tgt), "a".repeat(80_000));
+}

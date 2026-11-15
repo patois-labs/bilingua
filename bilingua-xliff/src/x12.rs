@@ -1014,9 +1014,15 @@ pub fn patches(buf: &[u8], recs: &[SegRec], units: &[UnitInfo]) -> Vec<Patch> {
             plain_unit(buf, unit, r, &mut out);
         }
         // GlobalLink: a segment that became finished work says so in its `iws:status`.
+        // One that was finished and was edited back to unaccepted work (every segment of the unit) says
+        // `in_progress` instead (BILI-39): a file left at `finished` would read back as translated.
         if let Some(slot) = &unit.iws {
-            if segs.iter().any(|r| r.seg.state != r.orig_state && r.seg.state.is_accepted()) {
+            let changed = || segs.iter().filter(|r| r.seg.state != r.orig_state);
+            let was_finished = matches!(slot, AttrSlot::Existing { raw, .. } if raw.trim().eq_ignore_ascii_case("finished"));
+            if changed().any(|r| r.seg.state.is_accepted()) {
                 out.extend(slot.patch("translation_status", Some("finished"), None));
+            } else if was_finished && changed().next().is_some() && segs.iter().all(|r| !r.seg.state.is_accepted()) {
+                out.extend(slot.patch("translation_status", Some("in_progress"), None));
             }
         }
     }

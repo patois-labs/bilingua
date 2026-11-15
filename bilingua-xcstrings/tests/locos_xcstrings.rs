@@ -389,9 +389,21 @@ fn merge_of_a_catalog_at_the_merge_depth_limit_does_not_overflow_the_stack() {
         let out = out.unwrap();
         assert!(out.contains("\"value\" : \"Hallo\"") && out.matches('[').count() == 1020, "{}", &out[..200]);
     }
+    // a deeper catalog is refused when it is extracted, whatever depth the caller allows (security review run 2):
+    // the reader stops at its own cap, so the extraction no longer needs a large stack either
     let src = deep_catalog(5000);
     let o = opts(Some("de")).with_limits(Limits::new().with_max_xml_depth(8192));
-    let mut d = on_stack(64 << 20, move || Xcstrings.extract(src.as_bytes(), &o).unwrap());
-    set_all(&mut d, &[(0, "Hallo")]);
-    assert_eq!(on_stack(stack, move || both().map(|m| Xcstrings.merge_with(&d, &m).is_err())), [true, true]);
+    let r = on_stack(stack, move || Xcstrings.extract(src.as_bytes(), &o).map(|d| d.units.len()));
+    assert!(matches!(&r, Err(Error::Limit(e)) if e.kind == LimitKind::XmlDepth), "{r:?}");
+}
+
+/// Resource limits (security review run 2): a caller that raises the depth limit far past what the recursive
+/// reader can take gets a depth refusal for a very deep catalog or .xcloc contents, not a stack overflow.
+#[test]
+fn extraction_under_a_raised_depth_limit_does_not_overflow_the_stack() {
+    let stack = if cfg!(debug_assertions) { 4 << 20 } else { 1 << 20 };
+    let src = deep_catalog(200_000);
+    let o = opts(Some("de")).with_limits(Limits::new().with_max_xml_depth(1 << 30));
+    let r = on_stack(stack, move || Xcstrings.extract(src.as_bytes(), &o).map(|d| d.units.len()));
+    assert!(matches!(&r, Err(Error::Limit(e)) if e.kind == LimitKind::XmlDepth), "{r:?}");
 }

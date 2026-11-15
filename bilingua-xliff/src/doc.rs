@@ -138,25 +138,44 @@ pub struct Doc {
     unit_data: Vec<Vec<(String, Range<usize>)>>,
 }
 
-/// True when the root element's own `version` attribute starts with `2.` (a prefixed attribute such as Phrase's
-/// `m:version="2.9"` is not the XLIFF version).
-fn root_version_is_2(tag: &str) -> bool {
+/// True for an XLIFF 2 root: its own `version` says 2.x (a prefixed attribute such as Phrase's `m:version="2.9"`
+/// is not the XLIFF version), or it has no `version` and its default namespace is
+/// XLIFF 2's (BILI-55: such a file was read as 1.2).
+fn root_is_xliff2(tag: &str) -> bool {
+    match own_attr(tag, "version") {
+        Some(v) => v.starts_with("2."),
+        None => own_attr(tag, "xmlns").is_some_and(|ns| ns.starts_with("urn:oasis:names:tc:xliff:document:2.")),
+    }
+}
+
+/// The byte offset of the first character XML 1.0 does not allow; for bytes that are not UTF-8, of the first C0
+/// control byte that is not tab or a line end (no ASCII-compatible encoding makes those bytes XML characters).
+fn first_non_xml_char(b: &[u8]) -> Option<usize> {
+    match std::str::from_utf8(b) {
+        Ok(s) => s.char_indices().find(|(_, c)| !crate::attrs::is_xml_char(*c)).map(|(i, _)| i),
+        Err(_) => b.iter().position(|&c| c < 0x20 && !matches!(c, b'\t' | b'\n' | b'\r')),
+    }
+}
+
+/// The value of an unprefixed attribute of the start tag `tag` (a prefixed one such as Phrase's `m:version`, or
+/// `xmlns:x`, is another attribute), unescaped of nothing: what lies between the quotes.
+fn own_attr<'a>(tag: &'a str, name: &str) -> Option<&'a str> {
     let b = tag.as_bytes();
     let mut from = 0;
-    while let Some(p) = tag[from..].find("version") {
+    while let Some(p) = tag[from..].find(name) {
         let at = from + p;
-        from = at + 7;
+        from = at + name.len();
         if at == 0 || !b[at - 1].is_ascii_whitespace() {
             continue;
         }
-        let rest = tag[at + 7..].trim_start();
+        let rest = tag[at + name.len()..].trim_start();
         let Some(rest) = rest.strip_prefix('=') else { continue };
         let rest = rest.trim_start();
-        if rest.starts_with("\"2.") || rest.starts_with("'2.") {
-            return true;
-        }
+        let Some(q) = rest.chars().next().filter(|c| *c == '"' || *c == '\'') else { continue };
+        let body = &rest[1..];
+        return Some(body.find(q).map_or(body, |e| &body[..e]));
     }
-    false
+    None
 }
 
 /// The dialect of a file from its header.
@@ -174,7 +193,7 @@ pub fn detect(buf: &[u8]) -> Result<Format, Error> {
     };
     let tag_end = text[p..].find('>').map_or(text.len(), |e| p + e);
     let tag = &text[p..tag_end];
-    if root_version_is_2(tag) {
+    if root_is_xliff2(tag) {
         Ok(Format::Xliff2)
     } else if tag.contains("SdlXliff") || tag.contains("xmlns:sdl") {
         Ok(Format::Sdlxliff)
@@ -207,6 +226,16 @@ impl Doc {
 
     fn open(bytes: Vec<u8>, mxliff_ext: bool, limits: Option<&Limits>) -> Result<Doc, Error> {
         let bom = if bytes.starts_with(&[0xEF, 0xBB, 0xBF]) { 3 } else { 0 };
+        // a second byte order mark is not XML: the reader would skip it without counting it, so every content range
+        // would sit three bytes early and a merge would write into the start tags
+        if bytes[bom..].starts_with(&[0xEF, 0xBB, 0xBF]) {
+            return Err(Error::Xml { pos: bom, msg: "the file starts with two byte order marks".into() });
+        }
+        // BILI-59: U+0000 and the other characters XML 1.0 forbids (C0 controls but tab and line ends, U+FFFE,
+        // U+FFFF) are not XML; the reader passed them through into the units
+        if let Some(pos) = first_non_xml_char(&bytes[bom..]) {
+            return Err(Error::Xml { pos: bom + pos, msg: "a character that XML does not allow (such as U+0000)".into() });
+        }
         let mut format = detect(&bytes[bom..])?;
         if mxliff_ext && format == Format::Xliff12 {
             format = Format::Mxliff;
