@@ -5,7 +5,7 @@
 //! the original bytes.
 //!
 //! The reader accepts what Python's `json.loads` accepts (the Localization OS reader): strict strings (no raw
-//! control characters), `NaN`, `Infinity` and `-Infinity`, any depth up to the caller's cap.
+//! control characters), `NaN`, `Infinity` and `-Infinity`, any depth up to the caller's cap and [`MAX_DEPTH`].
 
 use std::collections::HashSet;
 
@@ -83,7 +83,12 @@ impl Obj {
     }
 }
 
+/// Deepest nesting the recursive reader goes to, whatever the caller's limit: a depth a 1 MB stack holds in a
+/// release build. A caller that raises `max_xml_depth` past it gets [`JsonError::Deep`], not a stack overflow.
+pub const MAX_DEPTH: usize = 1024;
+
 pub fn parse(text: &str, max_depth: usize) -> Result<Node, JsonError> {
+    let max_depth = max_depth.min(MAX_DEPTH);
     let mut p = P { b: text.as_bytes(), t: text, i: 0, max_depth };
     p.ws();
     let n = p.value(0)?;

@@ -14,6 +14,10 @@ use std::collections::HashMap;
 
 pub(crate) const MAX_RULES: usize = 100;
 pub(crate) const MAX_SELECTOR: usize = 512;
+/// XPath steps per element (plus 1000) that one ITS rule may spend.
+const RULE_STEPS: u64 = 400;
+/// XPath steps per element (plus 1000) that all the ITS rules of one document may spend together.
+const DOCUMENT_STEPS: u64 = 1000;
 
 pub(crate) fn bad(msg: impl Into<String>) -> Error {
     Error::Parse { format: "xml".into(), msg: msg.into() }
@@ -297,12 +301,17 @@ pub(crate) fn eval_props(t: &Tree, dialect: Option<&Dialect>, extra: &[Rule], li
             n
         )));
     }
-    let budget_per_rule = 400u64 * (n as u64 + 1000);
-    // string bytes are shared by every rule and note pointer of the document
+    // each rule may spend its own share, and every rule (and every note pointer) of the document draws on one
+    // shared budget, as the string bytes do: a budget per rule alone let 200 rules spend 200 times what one may
+    let per_rule = RULE_STEPS * (n as u64 + 1000);
+    let mut steps = DOCUMENT_STEPS * (n as u64 + 1000);
+    let mut note_steps = 4 * steps;
     let mut bytes = Budget::new(t, 0).bytes;
     for rule in &rules {
-        let mut budget = Budget { steps: budget_per_rule, bytes };
+        let mut budget = Budget { steps: steps.min(per_rule), bytes };
+        let given = budget.steps;
         let hits = rule.xpath.select(t, Node::Doc, &mut budget).map_err(|e| bad(format!("ITS rule could not be evaluated: {e}")))?;
+        steps -= given - budget.steps;
         if rule.pointer.is_some() && hits.len().saturating_mul(n) > cap {
             return Err(limit(format!(
                 "This XML file is too large for its ITS locNotePointer rule ({} selected elements, {} elements). Split it into smaller files or use a locNote text instead of a pointer.",
@@ -311,7 +320,8 @@ pub(crate) fn eval_props(t: &Tree, dialect: Option<&Dialect>, extra: &[Rule], li
             )));
         }
         bytes = budget.bytes;
-        let mut note_budget = Budget { steps: 4u64 * budget_per_rule, bytes };
+        let mut note_budget = Budget { steps: note_steps.min(4 * per_rule), bytes };
+        let note_given = note_budget.steps;
         for h in hits {
             match h {
                 Node::El(e) => {
@@ -355,6 +365,7 @@ pub(crate) fn eval_props(t: &Tree, dialect: Option<&Dialect>, extra: &[Rule], li
             }
         }
         bytes = note_budget.bytes;
+        note_steps -= note_given - note_budget.steps;
     }
 
     // local ITS markup beats global rules; ITS elements are never content

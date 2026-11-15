@@ -167,13 +167,15 @@ pub fn is_xml_char(c: char) -> bool {
     matches!(c, '\t' | '\n' | '\r' | '\u{20}'..='\u{D7FF}' | '\u{E000}'..='\u{FFFD}' | '\u{10000}'..='\u{10FFFF}')
 }
 
-/// Escape for element text.
+/// Escape for element text. A character XML does not allow (U+0000, most C0 controls) is dropped: written, it
+/// would make a file no XML reader (this one included, BILI-59) opens.
 pub fn escape_text(s: &str, out: &mut String) {
     for c in s.chars() {
         match c {
             '&' => out.push_str("&amp;"),
             '<' => out.push_str("&lt;"),
             '>' => out.push_str("&gt;"),
+            _ if !is_xml_char(c) => {}
             _ => out.push(c),
         }
     }
@@ -187,6 +189,7 @@ pub fn escape_attr(s: &str) -> String {
             '&' => out.push_str("&amp;"),
             '<' => out.push_str("&lt;"),
             '"' => out.push_str("&quot;"),
+            _ if !is_xml_char(c) => {}
             _ => out.push(c),
         }
     }

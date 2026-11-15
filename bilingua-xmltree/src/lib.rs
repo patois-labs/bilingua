@@ -65,6 +65,51 @@ pub struct Dom {
     /// Namespace scopes: each is every (prefix, uri) in scope, innermost declaration last ("" is the default).
     pub scopes: Vec<Vec<(String, String)>>,
     pub root: usize,
+    /// For each large scope made while parsing, its prefixes indexed (see [`ScopeIndex`]); a scope added later, or
+    /// one whose length no longer matches, is searched directly.
+    index: Vec<Option<ScopeIndex>>,
+}
+
+/// A scope's prefixes for a binary search: the position of each prefix's innermost declaration, sorted by prefix,
+/// with [`ANY_BOUND`] set when some declaration of it binds a namespace. A file may hold up to [`MAX_SCOPE`]
+/// declarations in scope, and every element and prefixed attribute looks its prefix up, so a scan per lookup cost
+/// up to a thousand times the input. Four bytes per entry, so the index adds little to the scopes themselves.
+#[derive(Debug, Clone)]
+struct ScopeIndex {
+    len: usize,
+    sorted: Vec<u32>,
+}
+
+/// Scopes this short are searched directly.
+const INDEX_FROM: usize = 16;
+const ANY_BOUND: u32 = 1 << 31;
+
+impl ScopeIndex {
+    fn of(scope: &[(String, String)]) -> ScopeIndex {
+        let mut order: Vec<u32> = (0..scope.len() as u32).collect();
+        // by prefix, innermost (last) declaration first
+        order.sort_by(|&a, &b| scope[a as usize].0.cmp(&scope[b as usize].0).then(b.cmp(&a)));
+        let mut sorted: Vec<u32> = Vec::new();
+        for &i in &order {
+            let bound = !scope[i as usize].1.is_empty();
+            match sorted.last_mut() {
+                Some(last) if scope[(*last & !ANY_BOUND) as usize].0 == scope[i as usize].0 => {
+                    if bound {
+                        *last |= ANY_BOUND;
+                    }
+                }
+                _ => sorted.push(if bound { i | ANY_BOUND } else { i }),
+            }
+        }
+        ScopeIndex { len: scope.len(), sorted }
+    }
+
+    /// (position of the innermost declaration, whether any declaration binds a namespace).
+    fn find(&self, scope: &[(String, String)], prefix: &str) -> Option<(usize, bool)> {
+        let k = self.sorted.binary_search_by(|&e| scope[(e & !ANY_BOUND) as usize].0.as_str().cmp(prefix)).ok()?;
+        let e = self.sorted[k];
+        Some(((e & !ANY_BOUND) as usize, e & ANY_BOUND != 0))
+    }
 }
 
 /// Deepest nesting the tree accepts (the XML guard allows 256 on extraction; this bounds the recursive walks for
@@ -222,7 +267,16 @@ fn flush(dom: &mut Dom, stack: &[usize], preserve: &[bool], pending: &mut Pendin
 fn parse_with(text: &str, noblanks: bool) -> Result<Dom, XmlError> {
     let mut r = quick_xml::Reader::from_str(text);
     r.config_mut().check_end_names = true;
-    let mut dom = Dom { nodes: Vec::new(), scopes: vec![vec![("xml".into(), "http://www.w3.org/XML/1998/namespace".into())]], root: usize::MAX };
+    // a second byte order mark (the caller dropped the first): quick-xml skips it without counting its three bytes,
+    // so every span would sit before its place in `text` (a slice there can split a character). It is not XML.
+    if text.starts_with('\u{feff}') {
+        return Err(err("not well-formed XML: the text starts with a byte order mark"));
+    }
+    // BILI-59: U+0000 and the other characters XML 1.0 forbids are not XML (libxml2 refuses them as well)
+    if let Some(c) = text.chars().find(|c| !is_xml_char(*c)) {
+        return Err(err(format!("not well-formed XML: character U+{:04X} is not allowed", c as u32)));
+    }
+    let mut dom = Dom { nodes: Vec::new(), scopes: vec![vec![("xml".into(), "http://www.w3.org/XML/1998/namespace".into())]], root: usize::MAX, index: vec![None] };
     let mut stack: Vec<usize> = Vec::new();
     let mut scope_entries = 0usize;
     // xml:space="preserve" in effect, per open element
@@ -281,18 +335,19 @@ fn parse_with(text: &str, noblanks: bool) -> Result<Dom, XmlError> {
                     }
                     let mut s = dom.scopes[parent_scope].clone();
                     s.extend(decls);
+                    dom.index.push((s.len() >= INDEX_FROM).then(|| ScopeIndex::of(&s)));
                     dom.scopes.push(s);
                     dom.scopes.len() - 1
                 };
                 let (prefix, _) = split_qname(&name);
-                let ns = dom.scopes[scope].iter().rev().find(|(p, _)| p == prefix).map(|(_, u)| u.clone()).filter(|u| !u.is_empty());
+                let ns = dom.bound(scope, prefix).map(str::to_string).filter(|u| !u.is_empty());
                 if !prefix.is_empty() && ns.is_none() {
                     return Err(err(format!("undeclared namespace prefix {prefix}")));
                 }
                 // an attribute's prefix must be bound too (libxml2's namespace error, which lxml raises)
                 for (k, _) in &attrs {
                     let (p, _) = split_qname(k);
-                    if !p.is_empty() && p != "xmlns" && p != "xml" && !dom.scopes[scope].iter().any(|(x, u)| x == p && !u.is_empty()) {
+                    if !p.is_empty() && p != "xmlns" && p != "xml" && !dom.binds(scope, p) {
                         return Err(err(format!("undeclared namespace prefix {p}")));
                     }
                 }
@@ -420,7 +475,27 @@ impl Dom {
         if p.is_empty() || p == "xmlns" {
             return None;
         }
-        self.scopes[self.nodes[id].scope].iter().rev().find(|(x, _)| x == p).map(|(_, u)| u.clone())
+        self.bound(self.nodes[id].scope, p).map(str::to_string)
+    }
+
+    fn scope_index(&self, scope: usize) -> Option<&ScopeIndex> {
+        self.index.get(scope)?.as_ref().filter(|ix| self.scopes.get(scope).is_some_and(|s| s.len() == ix.len))
+    }
+
+    /// The URI the innermost declaration of `prefix` in this scope binds ("" for an undeclaration), if any.
+    pub fn bound(&self, scope: usize, prefix: &str) -> Option<&str> {
+        match self.scope_index(scope) {
+            Some(ix) => ix.find(&self.scopes[scope], prefix).map(|(i, _)| self.scopes[scope][i].1.as_str()),
+            None => self.scopes[scope].iter().rev().find(|(x, _)| x == prefix).map(|(_, u)| u.as_str()),
+        }
+    }
+
+    /// True when some declaration of `prefix` in this scope binds a namespace.
+    fn binds(&self, scope: usize, prefix: &str) -> bool {
+        match self.scope_index(scope) {
+            Some(ix) => ix.find(&self.scopes[scope], prefix).is_some_and(|(_, any)| any),
+            None => self.scopes[scope].iter().any(|(x, u)| x == prefix && !u.is_empty()),
+        }
     }
 
     /// Every attribute with its namespace and local name.
@@ -430,13 +505,17 @@ impl Dom {
 
     /// The namespace URIs in scope (`el.nsmap.values()`), innermost declaration of each prefix.
     pub fn nsmap(&self, id: usize) -> Vec<(String, String)> {
+        // the innermost declaration of each prefix, in the order of those declarations (one pass from the end, so
+        // a large scope costs its length, not its length squared)
+        let scope = &self.scopes[self.nodes[id].scope];
+        let mut seen: std::collections::HashSet<&str> = std::collections::HashSet::new();
         let mut out: Vec<(String, String)> = Vec::new();
-        for (p, u) in self.scopes[self.nodes[id].scope].iter().skip(1) {
-            out.retain(|(x, _)| x != p);
-            if !u.is_empty() {
+        for (p, u) in scope.iter().skip(1).rev() {
+            if seen.insert(p.as_str()) && !u.is_empty() {
                 out.push((p.clone(), u.clone()));
             }
         }
+        out.reverse();
         out
     }
 
@@ -756,9 +835,10 @@ impl Dom {
     /// The prefix the innermost declaration in scope binds to `ns` (what lxml picks for a new element).
     pub fn inner_prefix(&self, id: usize, ns: &str) -> Option<String> {
         let scope = &self.scopes[self.nodes[id].scope];
-        for (i, (p, u)) in scope.iter().enumerate().rev() {
-            // not shadowed by a later declaration of the same prefix
-            if u == ns && !scope[i + 1..].iter().any(|(q, _)| q == p) {
+        // from the innermost declaration out; a prefix seen once is shadowed further out
+        let mut seen: std::collections::HashSet<&str> = std::collections::HashSet::new();
+        for (p, u) in scope.iter().rev() {
+            if seen.insert(p.as_str()) && u == ns {
                 return Some(p.clone());
             }
         }
@@ -816,7 +896,7 @@ impl Dom {
     /// Adds to `copy` the declarations of prefixes its subtree (a copy of `orig`) uses that `target`'s scope binds
     /// differently or not at all, as libxml2 does when it copies a node into another context.
     fn declare_for(&mut self, copy: usize, orig: usize, target: usize) {
-        let resolve = |d: &Dom, scope: usize, p: &str| d.scopes[scope].iter().rev().find(|(x, _)| x == p).map(|(_, u)| u.clone());
+        let resolve = |d: &Dom, scope: usize, p: &str| d.bound(scope, p).map(str::to_string);
         let mut need: Vec<(String, String)> = Vec::new();
         for e in self.iter(orig) {
             let n = &self.nodes[e];
@@ -1037,5 +1117,43 @@ mod tests {
             assert!(parse(bad).is_err(), "{bad}");
         }
         assert!(parse("<a xml:space='preserve' xml:lang='de' xmlns:p='P' p:x='1'/>").is_ok());
+    }
+
+    /// Resource limits (security review run 2): a text that still starts with a byte order mark (the caller dropped
+    /// one, a second follows) is refused; the parser skipped it without counting it, so every span was three bytes
+    /// short and a slice at one could split a character.
+    #[test]
+    fn a_second_byte_order_mark_is_refused() {
+        assert!(parse("\u{feff}<a>\u{1F600}<b/></a>").is_err());
+        assert!(parse_noblanks("\u{feff}<a/>").is_err());
+        let d = parse("<a>\u{1F600}<b/></a>").unwrap();
+        let b = d.nodes[d.root].children[1];
+        let sp = d.nodes[b].span.unwrap();
+        assert_eq!(&"<a>\u{1F600}<b/></a>"[sp.start..sp.end], "<b/>");
+    }
+
+    /// A scope near the declaration cap above many prefixed elements and attributes: each lookup scanned the whole
+    /// scope (a thousand times the input). Lookups now go through an index, and resolve as before.
+    #[test]
+    fn prefix_lookups_in_a_large_scope_are_fast() {
+        let decls: String = (0..1000).map(|i| format!(" xmlns:p{i}='u{i}'")).collect();
+        let kids = "<p0:k p0:x='1' p999:y='2'/>".repeat(200_000);
+        let src = format!("<a{decls}>{kids}</a>");
+        let t = std::time::Instant::now();
+        let d = parse(&src).unwrap();
+        let k = d.nodes[d.root].children[0];
+        assert_eq!(d.nodes[k].ns.as_deref(), Some("u0"));
+        assert_eq!(d.attr_ns(k, "p999:y").as_deref(), Some("u999"));
+        for _ in 0..2000 {
+            assert_eq!(d.nsmap(d.root).len(), 1000);
+        }
+        assert_eq!(d.inner_prefix(k, "u500").as_deref(), Some("p500"));
+        assert!(t.elapsed().as_secs() < 10, "took {:?}", t.elapsed());
+        // shadowing: the innermost declaration wins, an undeclared prefix is refused
+        let d = parse(&format!("<a{decls}><b xmlns:p0='inner'><p0:c/></b></a>")).unwrap();
+        let c = d.nodes[d.nodes[d.root].children[0]].children[0];
+        assert_eq!(d.nodes[c].ns.as_deref(), Some("inner"));
+        assert_eq!(d.nsmap(c).last().map(|(p, u)| (p.as_str(), u.as_str())), Some(("p0", "inner")));
+        assert!(parse(&format!("<a{decls}><q:c/></a>")).is_err());
     }
 }

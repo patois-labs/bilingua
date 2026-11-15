@@ -288,13 +288,23 @@ fn convert(inl: &[Inline], pair_letter: char, partner: Vec<Option<usize>>, nums:
 /// unpaired; a close whose id is not open at all is unpaired.
 fn pairs(inl: &[Inline]) -> Vec<Option<usize>> {
     let mut partner = vec![None; inl.len()];
-    let mut stack: Vec<(&str, usize)> = Vec::new();
+    // the opens still open, by position; per id, (place on that stack, position) of its opens, the entries the
+    // stack has dropped removed when they come up. A close finds its open without scanning the stack (unmatched
+    // closes over a deep stack were quadratic).
+    let mut stack: Vec<usize> = Vec::new();
+    let mut by_id: BTreeMap<&str, Vec<(usize, usize)>> = BTreeMap::new();
     for (pos, i) in inl.iter().enumerate() {
         match i {
-            Inline::Tag { id, kind: TagKind::Open, .. } => stack.push((id.as_str(), pos)),
+            Inline::Tag { id, kind: TagKind::Open, .. } => {
+                by_id.entry(id.as_str()).or_default().push((stack.len(), pos));
+                stack.push(pos);
+            }
             Inline::Tag { id, kind: TagKind::Close, .. } => {
-                if let Some(at) = stack.iter().rposition(|(oid, _)| oid == id) {
-                    let (_, o) = stack[at];
+                let Some(opens) = by_id.get_mut(id.as_str()) else { continue };
+                while opens.last().is_some_and(|&(at, o)| stack.get(at) != Some(&o)) {
+                    opens.pop();
+                }
+                if let Some((at, o)) = opens.pop() {
                     stack.truncate(at);
                     partner[o] = Some(pos);
                     partner[pos] = Some(o);
@@ -1353,5 +1363,55 @@ mod tests {
         assert_eq!(repair_tags(&twice, twice.clone(), true), twice);
         let invented = vec![Inline::tag("9", TagKind::Standalone, "<hr/>")];
         assert_eq!(repair_tags(&src, invented.clone(), true), invented);
+    }
+
+    /// `pairs` as it was written before the per-id index: a close pairs with the nearest open of its id still on
+    /// the stack and drops the opens above it.
+    fn pairs_by_scan(inl: &[Inline]) -> Vec<Option<usize>> {
+        let mut partner = vec![None; inl.len()];
+        let mut stack: Vec<(&str, usize)> = Vec::new();
+        for (pos, i) in inl.iter().enumerate() {
+            match i {
+                Inline::Tag { id, kind: TagKind::Open, .. } => stack.push((id.as_str(), pos)),
+                Inline::Tag { id, kind: TagKind::Close, .. } => {
+                    if let Some(at) = stack.iter().rposition(|(oid, _)| oid == id) {
+                        let (_, o) = stack[at];
+                        stack.truncate(at);
+                        partner[o] = Some(pos);
+                        partner[pos] = Some(o);
+                    }
+                }
+                _ => {}
+            }
+        }
+        partner
+    }
+
+    /// Resource limits (security review run 2): tens of thousands of opens followed by as many closes of an id
+    /// that is not open scanned the whole stack per close. The index pairs exactly as the scan did.
+    #[test]
+    fn locos_tokens_of_many_unmatched_closes_are_linear() {
+        let n = 50_000;
+        let mut inl: Vec<Inline> = (0..n).map(|k| Inline::tag(format!("a{k}"), TagKind::Open, "")).collect();
+        inl.extend((0..n).map(|_| Inline::tag("z", TagKind::Close, "")));
+        let start = std::time::Instant::now();
+        let (text, _) = to_locos_text(&inl);
+        assert!(start.elapsed().as_secs() < 10, "took {:?}", start.elapsed());
+        assert!(!text.is_empty());
+        // every sequence of up to seven opens and closes over three ids pairs as before
+        let tags = [("1", TagKind::Open), ("1", TagKind::Close), ("2", TagKind::Open), ("2", TagKind::Close), ("3", TagKind::Open), ("3", TagKind::Close)];
+        let mut cur: Vec<Vec<Inline>> = vec![Vec::new()];
+        for _ in 0..7 {
+            let mut next = Vec::new();
+            for v in &cur {
+                for (id, k) in tags {
+                    let mut w = v.clone();
+                    w.push(Inline::tag(id, k, ""));
+                    assert_eq!(pairs(&w), pairs_by_scan(&w), "{w:?}");
+                    next.push(w);
+                }
+            }
+            cur = next;
+        }
     }
 }

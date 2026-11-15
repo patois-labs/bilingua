@@ -45,6 +45,18 @@ is listed here).
   memory budget, kept or not. JS modules and PHP charge every unit's key to `max_context_bytes` as the units are
   built (`bilingua_jsmodule::Limits::max_context_bytes`). EBU STL refuses a subtitle whose joined text is far over
   the unit limit before decoding it. The PDF hostile-input tests count work instead of timing it (BILI-58).
+- Resource limit fixes in the XML family (security review run 2): the ITS rules of one document share one XPath
+  step budget; Trados `.sdlproj` names at most 1,000 target languages (`MAX_TARGET_LANGS`) and finds languages,
+  attributes and namespace prefixes through indexes; ICML and `bilingua-xmltree` look prefixes up through
+  indexes, and ICML refuses more than 1,024 namespace declarations in scope; LocOS-profile XLIFF indexes `<data>`
+  elements, pairs MXLIFF text marks and writes targets in linear time, and its documents pass the usual unit,
+  segment and context limits; native XLIFF writes a target's tags in linear time; LocOS token numbering pairs
+  tags in linear time; the String Catalog reader stops at 1,024 levels whatever depth the caller allows. A file
+  that starts with a second byte order mark is refused by native and LocOS-profile XLIFF and `bilingua-xmltree`
+  (DOCX, PPTX, XLSX, ODF under the profile), and a native XLIFF source whose text starts with U+FEFF keeps it.
+- XLIFF: a root with the XLIFF 2 namespace and no `version` is read as XLIFF 2 (BILI-55); XLIFF, SVG and
+  `bilingua-xmltree` refuse U+0000 and the other characters XML forbids (BILI-59); a finished GlobalLink segment
+  set back to draft writes `translation_status="in_progress"` (BILI-39).
 - Docs: the safety model says a stored Document (and the CLI sidecar) is host data, kept where uploaders,
   translators and other tenants cannot write it.
 
