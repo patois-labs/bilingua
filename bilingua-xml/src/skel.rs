@@ -194,7 +194,7 @@ pub(crate) fn lang_plan(t: &Tree, stamp: &LangStamp) -> Option<(String, bool)> {
 
 /// Builds the Bilingua units and skeleton from a plan.
 #[allow(clippy::too_many_arguments)]
-pub(crate) fn build_document(t: &Tree, p: &Planned, notes: &[String], alt: &std::collections::HashSet<String>, opts: &ExtractOptions, encoding: String, lang: Option<(String, bool)>, format: &str) -> Document {
+pub(crate) fn build_document(t: &Tree, p: &Planned, notes: &[String], alt: &std::collections::HashSet<String>, opts: &ExtractOptions, encoding: String, lang: Option<(String, bool)>, format: &str) -> Result<Document, Error> {
     let mut attr_unit = HashMap::new();
     for (i, u) in p.units.iter().enumerate() {
         if let Some(a) = &u.attr {
@@ -238,6 +238,8 @@ pub(crate) fn build_document(t: &Tree, p: &Planned, notes: &[String], alt: &std:
     let mut units: Vec<Unit> = Vec::with_capacity(p.units.len());
     let mut line = 1usize;
     let mut line_at = 0usize;
+    let mut note_budget = bilingua_model::guard::ContextBudget::new();
+    let note_limits = opts.limits();
     for (i, pu) in p.units.iter().enumerate() {
         let mut inl: Vec<Inline> = Vec::with_capacity(pu.pieces.len());
         let mut codes: std::collections::BTreeMap<String, CodeData> = Default::default();
@@ -317,13 +319,16 @@ pub(crate) fn build_document(t: &Tree, p: &Planned, notes: &[String], alt: &std:
         }
         u.context.location = Some(format!("line {line}"));
         if pu.note != 0 {
-            let text = notes[pu.note as usize].clone();
+            // one ITS note can apply to every unit, and it is written twice per unit: both copies are charged before
+            // they are made (run 2 G5-1)
+            let text = &notes[pu.note as usize];
+            note_budget.charge(text.len().saturating_mul(2), &note_limits)?;
             u.context.notes.push(text.clone());
-            u.notes.push(Note::new(text).with_kind("locNote".to_string()));
+            u.notes.push(Note::new(text.clone()).with_kind("locNote".to_string()));
         }
         units.push(u);
     }
-    Document::new(format, units, Skeleton::text(parts, encoding, parser_info!())).with_options(opts)
+    Ok(Document::new(format, units, Skeleton::text(parts, encoding, parser_info!())).with_options(opts))
 }
 
 impl Emit<'_, '_> {

@@ -173,14 +173,26 @@ fn comment_end(text: &str, p: usize) -> usize {
     if b[p..].starts_with(b"->") {
         return p + 2;
     }
-    let a = find_bytes(b, p, b"-->").map(|x| x + 3);
-    // `--!>` only counts when it ends the comment before `-->` does (and a full scan per comment would be quadratic)
-    let c = find_bytes(&b[..a.unwrap_or(n)], p, b"--!>").map(|x| x + 4);
-    match (a, c) {
-        (Some(x), Some(y)) => x.min(y),
-        (Some(x), None) | (None, Some(x)) => x,
-        _ => n,
+    // one forward scan that stops at whichever of `-->` and `--!>` comes first: a search for either one to the end
+    // of the input per comment is quadratic when the other one ends every comment (run 2 G3-2)
+    comment_close(b, p).unwrap_or(n)
+}
+
+/// The index after the first `-->` or `--!>` at or after `p`, whichever comes first.
+pub(crate) fn comment_close(b: &[u8], p: usize) -> Option<usize> {
+    let mut i = p;
+    while i + 2 < b.len() {
+        if b[i] == b'-' && b[i + 1] == b'-' {
+            if b[i + 2] == b'>' {
+                return Some(i + 3);
+            }
+            if b[i + 2] == b'!' && b.get(i + 3) == Some(&b'>') {
+                return Some(i + 4);
+            }
+        }
+        i += 1;
     }
+    None
 }
 
 /// Index of the `<` of the end tag of an RCDATA or RAWTEXT element.
@@ -215,6 +227,10 @@ struct Stack {
     v: Vec<Entry>,
     /// Positions of the open HTML elements by name, rising.
     html_named: HashMap<String, Vec<usize>>,
+    /// Positions of the open SVG and MathML elements by name, rising.
+    foreign_named: HashMap<String, Vec<usize>>,
+    /// Positions of the open HTML elements, rising.
+    html_at: Vec<usize>,
     /// Positions of the open integration points, rising.
     ip_at: Vec<usize>,
 }
@@ -224,6 +240,9 @@ impl Stack {
         let k = self.v.len();
         if e.ns == "html" {
             self.html_named.entry(e.name.clone()).or_default().push(k);
+            self.html_at.push(k);
+        } else {
+            self.foreign_named.entry(e.name.clone()).or_default().push(k);
         }
         if e.ip != IP_NONE {
             self.ip_at.push(k);
@@ -233,12 +252,14 @@ impl Stack {
     fn pop(&mut self) -> Option<Entry> {
         let e = self.v.pop()?;
         let k = self.v.len();
-        if e.ns == "html" {
-            if let Some(v) = self.html_named.get_mut(&e.name) {
-                if v.last() == Some(&k) {
-                    v.pop();
-                }
+        let named = if e.ns == "html" { &mut self.html_named } else { &mut self.foreign_named };
+        if let Some(v) = named.get_mut(&e.name) {
+            if v.last() == Some(&k) {
+                v.pop();
             }
+        }
+        if self.html_at.last() == Some(&k) {
+            self.html_at.pop();
         }
         if self.ip_at.last() == Some(&k) {
             self.ip_at.pop();
@@ -358,20 +379,15 @@ pub fn browser_view(text: &str, scripting: bool, legacy_select: bool) -> View {
                     pop_foreign(&mut stack, &mut view, text, i);
                     html_end(&mut stack, &mut view, text, &mut select_open, &name, i);
                 } else {
-                    let mut k = stack.len() as isize - 1;
-                    loop {
-                        if stack[k as usize].name == name {
-                            pop_to(&mut stack, &mut view, text, k as usize, i);
-                            break;
-                        }
-                        k -= 1;
-                        if k < 0 {
-                            break;
-                        }
-                        if stack[k as usize].ns == "html" {
-                            html_end(&mut stack, &mut view, text, &mut select_open, &name, i);
-                            break;
-                        }
+                    // The topmost foreign element of this name closes when no HTML element lies above it; otherwise
+                    // the end tag is handled as HTML does from the topmost HTML element down. Both are looked up in
+                    // the index: a walk down the open foreign elements per end tag is quadratic (run 2 G3-3).
+                    let html = stack.html_at.last().copied();
+                    let named = stack.foreign_named.get(&name).and_then(|v| v.last()).copied();
+                    match (named, html) {
+                        (Some(k), h) if h.is_none_or(|h| k > h) => pop_to(&mut stack, &mut view, text, k, i),
+                        (_, Some(_)) => html_end(&mut stack, &mut view, text, &mut select_open, &name, i),
+                        _ => {}
                     }
                 }
             } else {

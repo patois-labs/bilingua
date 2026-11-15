@@ -123,9 +123,14 @@ struct Ex<'a> {
     raw_cursor: usize,
     last_heading: Option<String>,
     newlines: Vec<usize>,
+    limits: Limits,
+    /// The heading copied into every later unit is charged here before each copy (run 2 G5-1): one long heading
+    /// over many paragraphs is refused before the copies are made, not after.
+    context: guard::ContextBudget,
+    refused: Option<Error>,
 }
 
-pub fn extract(full: &str, include_locked: bool, fm_keys: Option<&[String]>) -> Extracted {
+pub fn extract(full: &str, include_locked: bool, fm_keys: Option<&[String]>, limits: &Limits) -> Result<Extracted, Error> {
     let _ = include_locked;
     let mut newlines = vec![];
     for (i, b) in full.bytes().enumerate() {
@@ -135,7 +140,7 @@ pub fn extract(full: &str, include_locked: bool, fm_keys: Option<&[String]>) -> 
     }
     let fm = frontmatter::parse_with(full, fm_keys);
     let off = fm.as_ref().map(|f| f.end).unwrap_or(0);
-    let mut ex = Ex { full, off, body: &full[off..], units: vec![], parts: vec![], raw_cursor: 0, last_heading: None, newlines };
+    let mut ex = Ex { full, off, body: &full[off..], units: vec![], parts: vec![], raw_cursor: 0, last_heading: None, newlines, limits: *limits, context: guard::ContextBudget::new(), refused: None };
     if let Some(fm) = fm {
         for v in fm.values {
             let token = full[v.range.clone()].to_string();
@@ -151,10 +156,29 @@ pub fn extract(full: &str, include_locked: bool, fm_keys: Option<&[String]>) -> 
     ex.parse_body();
     ex.parts.push(SkelPart::Raw(full[ex.raw_cursor..].to_string()));
     ex.parts.retain(|p| !matches!(p, SkelPart::Raw(s) if s.is_empty()));
-    Extracted { units: ex.units, parts: ex.parts }
+    if let Some(e) = ex.refused {
+        return Err(e);
+    }
+    Ok(Extracted { units: ex.units, parts: ex.parts })
 }
 
 impl<'a> Ex<'a> {
+    /// A copy of the last heading for one more unit, charged to the context budget first; `None` (and the error
+    /// kept for the end of the extraction) once the budget is spent.
+    fn charged_heading(&mut self) -> Option<String> {
+        let h = self.last_heading.as_ref()?;
+        if self.refused.is_some() {
+            return None;
+        }
+        match self.context.charge(h.len(), &self.limits) {
+            Ok(()) => Some(h.clone()),
+            Err(e) => {
+                self.refused = Some(e);
+                None
+            }
+        }
+    }
+
     fn line(&self, abs: usize) -> usize {
         self.newlines.partition_point(|n| *n < abs) + 1
     }
@@ -345,15 +369,17 @@ impl<'a> Ex<'a> {
         if b.kind == "heading" {
             self.last_heading = Some(plain_text(&unit.segments[0].source).trim().to_string());
         } else {
-            unit.context.heading = self.last_heading.clone();
+            unit.context.heading = self.charged_heading();
         }
-        let heading = unit.context.heading.clone();
+        let heading_for_pending = !b.pending.is_empty() && unit.context.heading.is_some();
         self.add_unit_in_skeleton(unit, abs_start, abs_end);
         for p in b.pending {
             let mut u = Unit::new(format!("u{}", self.units.len() + 1), vec![Inline::Text(p.text)]);
             u.context.kind = Some(if p.title { "title" } else { "alt" }.into());
             u.context.location = Some(line.clone());
-            u.context.heading = heading.clone();
+            if heading_for_pending {
+                u.context.heading = self.charged_heading();
+            }
             self.units.push(u);
         }
     }

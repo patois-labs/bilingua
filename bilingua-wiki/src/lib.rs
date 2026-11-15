@@ -111,6 +111,7 @@ fn extract_wiki(id: &'static str, dw: bool, allow: &HashSet<(String, String)>, b
     let mut pos = 0usize;
     let (mut line, mut line_pos) = (1usize, 0usize);
     let mut heading: Option<String> = None;
+    let mut context = guard::ContextBudget::new();
     let (mut n_tr, mut n_lock) = (0usize, 0usize);
     let tb = text.as_bytes();
     for slot in &slots {
@@ -156,6 +157,10 @@ fn extract_wiki(id: &'static str, dw: bool, allow: &HashSet<(String, String)>, b
         if slot.kind == "heading" {
             u.context.extra.insert("level".into(), slot.level.to_string());
         } else {
+            // the heading is copied into every later unit: each copy is charged first (run 2 G5-1)
+            if let Some(h) = &heading {
+                context.charge(h.len(), &limits)?;
+            }
             u.context.heading = heading.clone();
         }
         u.context.location = Some(format!("line {line}"));

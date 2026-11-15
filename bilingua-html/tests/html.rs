@@ -484,7 +484,7 @@ fn render_segment_is_safe_and_escaped() {
     }
     d.set_target("u1", t).unwrap();
     let inner = Html.render_segment(&d, "u1").unwrap();
-    assert_eq!(inner, "A &lt; B &amp; C <i >hi</i>");
+    assert_eq!(inner, "A &lt; B &amp; C <i>hi</i>");
     assert!(!sanitize_html("<p onclick=x>a</p><script>1</script>", false).contains("onclick"));
 }
 

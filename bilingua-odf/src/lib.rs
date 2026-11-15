@@ -198,6 +198,7 @@ fn extract_doc(bytes: &[u8], opts: &ExtractOptions, id: &'static str, o: &OdfOpt
         }
     }
     let mut idx = 0usize;
+    let mut context = guard::ContextBudget::new();
     for part in &parts {
         warnings.extend(part.warnings.iter().cloned());
         let t = &part.tree;
@@ -216,6 +217,8 @@ fn extract_doc(bytes: &[u8], opts: &ExtractOptions, id: &'static str, o: &OdfOpt
                 };
                 let mut u = make_unit(t, p, &tok, format!("p{idx}"), kind);
                 u.context.location = Some(format!("{} paragraph {idx}", part.name));
+                // the heading is copied into every later paragraph: each copy is charged first (run 2 G5-1)
+                context.charge(heading.as_ref().map_or(0, |h| h.len()), &l)?;
                 u.context.heading = heading.clone();
                 u.context.extra.insert("p_index".into(), idx.to_string());
                 u.context.extra.insert("part".into(), part.name.to_string());

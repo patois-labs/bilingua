@@ -31,6 +31,20 @@ is listed here).
   values come out as before.
 - Python: PyO3 0.29 and pythonize 0.29 (RUSTSEC-2026-0176, -0177). The Python API is unchanged. The
   `generate-import-lib` feature is kept but does nothing now: PyO3 links Windows wheels without an import library.
+- HTML preview: `sanitize_html` (and so the HTML preview) is an allowlist now: text formatting, headings, lists,
+  tables, links, images, simple form controls and style sheets, a short list of attributes per element, and URLs
+  only to http, https, mailto and tel (images also to raster `data:image/`), checked after the value is decoded.
+  SVG and MathML (with their content), scripts, frames, objects, embeds, templates, forms, `base`, `link`, a `meta`
+  with `http-equiv`, event handlers, `srcdoc` and script-like CSS are left out. Tags are rebuilt with their kept
+  attributes in double quotes (`<br/>` becomes `<br>`); the segment markers of the preview are kept.
+- Resource limits (security review run 2): a long heading or ITS note copied into every later unit is charged to
+  `max_context_bytes` before each copy (HTML, Markdown, AsciiDoc, wiki, ODF, DOCX, XML), and an ITS rule's note
+  text is kept once. Linear now: comment scans in the HTML, HTML Help and preview readers, end tags in SVG and
+  MathML in the export check, tag-library script elements in server pages, image anchoring in LocOS-profile
+  Markdown, the autolink repair in Markdown and MDX, close tags in SRT and WebVTT cues, style switches in ASS
+  lines, style pairs in MicroDVD lines, and many accelerators in an rc target.
+- Markdown (native): a plain front-matter value that holds NEL, LS, PS, a tab or another control character, or a
+  colon before a tab, is written in double quotes, so a YAML 1.1 reader takes it as one value.
 
 ### Fixed (wild-file backlog)
 
@@ -63,6 +77,13 @@ is listed here).
   instead of lifted ones, so a file extracted under raised limits is merged with the same limits passed again.
   Ordinary files merge exactly as before.
 - Python: `merge` and `DocumentHandle.merge` take `limits=`, as `extract` does.
+- RC: a script that switches code pages reports its source encoding as `multiple` (BILI-49), and a script read in
+  a code page and written with `output_encoding: Utf8` has every `#pragma code_page` say 65001 (one is added when
+  there is none and the text is not ASCII) (BILI-48).
+- SRT, WebVTT, SBV and SubViewer/MicroDVD: a file with no byte order mark that is not UTF-8, opened with no source
+  language, is read as Simplified Chinese (GBK) when its bytes clearly read so (runs of two-byte GB2312
+  characters), with a `text_encoding` warning that says it was a guess (bilingua#11). Latin text in Windows-1252, a
+  given source language and the `locos` profile read as before.
 - Resource limits: the HTML and HTML Help export check bounds the script and style bodies it holds for one page
   (twice the page plus 1 MiB) and refuses a page over that; script or style elements nested inside each other in
   SVG are the only way to reach it. New public fields `View::body_bytes`, `View::bodies_cut` and

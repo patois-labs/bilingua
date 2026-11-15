@@ -191,7 +191,7 @@ fn tail_ok(t: &str) -> bool {
 pub fn write(text: &str, style: Style) -> String {
     match style {
         Style::Double => escape_double(text),
-        Style::Single => text.replace('\'', "''").replace(['\n', '\r'], " "),
+        Style::Single => text.replace('\'', "''").replace(YAML_BREAKS, " "),
         Style::Plain => {
             if needs_quotes(text) {
                 format!("\"{}\"", escape_double(text))
@@ -202,12 +202,26 @@ pub fn write(text: &str, style: Style) -> String {
     }
 }
 
+/// What a YAML 1.1 reader (PyYAML, Ruby Psych, go-yaml) takes as a line break: CR and LF, and also NEL, LS and PS.
+const YAML_BREAKS: [char; 5] = ['\n', '\r', '\u{85}', '\u{2028}', '\u{2029}'];
+
 fn escape_double(t: &str) -> String {
-    t.replace('\\', "\\\\").replace('"', "\\\"").replace(['\n', '\r'], " ")
+    t.replace('\\', "\\\\").replace('"', "\\\"").replace(YAML_BREAKS, " ")
 }
 
 fn needs_quotes(t: &str) -> bool {
-    if t.is_empty() || t != t.trim() || t.contains(": ") || t.contains(" #") || t.ends_with(':') || t.contains('\n') || t.contains('\r') {
+    // a line break of any YAML version, a tab or another control character, a colon before a blank and a `#` after
+    // one all read differently in a plain scalar: a value holding a Unicode line separator, a key and a colon with a
+    // tab would be read back as two keys by a YAML 1.1 reader (run 2 G3-7)
+    if t.is_empty()
+        || t != t.trim()
+        || t.ends_with(':')
+        || t.chars().any(|c| c.is_control() || YAML_BREAKS.contains(&c))
+        || t.contains(": ")
+        || t.contains(":\t")
+        || t.contains(" #")
+        || t.contains("\t#")
+    {
         return true;
     }
     let first = t.chars().next().unwrap_or(' ');

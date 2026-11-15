@@ -384,7 +384,23 @@ fn tokens<'m>(d: Dialect, m: &'m Masked, orig: &str, budget: &mut Option<i64>, l
     })?;
     let mut out: Vec<Tok<'m>> = Vec::with_capacity(raw.len() + m.codes.len() * 2);
     let mut skip_name = String::new();
-    let mut unclosed: std::collections::HashSet<String> = std::collections::HashSet::new();
+    // the end tags of tag-library script elements by name (token positions, rising), and the masked-text offset of
+    // every token: a start tag finds its end tag by a binary search, not by a scan of the rest of the page per
+    // distinct name (run 2 G3-4)
+    let mut script_ends: std::collections::HashMap<String, Vec<usize>> = std::collections::HashMap::new();
+    let mut offsets: Vec<usize> = Vec::with_capacity(raw.len() + 1);
+    let mut at = 0usize;
+    for (k, t) in raw.iter().enumerate() {
+        offsets.push(at);
+        at += t.s.len();
+        if t.k == K::Markup && t.s.starts_with("</") {
+            let (c, n, _) = html::parse_tag_str(&t.s);
+            if c && prefixed_script(&n) {
+                script_ends.entry(n).or_default().push(k);
+            }
+        }
+    }
+    offsets.push(at);
     let mut pos = 0;
     let mut ri = 0;
     while ri < raw.len() {
@@ -404,25 +420,14 @@ fn tokens<'m>(d: Dialect, m: &'m Masked, orig: &str, budget: &mut Option<i64>, l
                 }
             } else if html::SKIP_CONTAINERS.contains(&name.as_str()) && !closing {
                 skip_name = name;
-            } else if !closing && !sc && prefixed_script(&name) && !unclosed.contains(&name) {
+            } else if !closing && !sc && prefixed_script(&name) {
                 // `<s:script>` / `<aui:script>`: a tag library's script or style element. Its body is code for a
                 // browser, not text, so it becomes one opaque run (no units, no attributes) up to the matching end tag.
                 // Without an end tag the page does not compile on its server: read it as HTML (as 0.9.0 did) rather
-                // than lose the rest of the page's text. `unclosed` keeps a page of many such tags linear.
-                let mut j = ri;
-                let mut body_len = 0;
-                while j < raw.len() {
-                    if raw[j].k == K::Markup {
-                        let (c, n, _) = html::parse_tag_str(&raw[j].s);
-                        if c && n == name {
-                            break;
-                        }
-                    }
-                    body_len += raw[j].s.len();
-                    j += 1;
-                }
+                // than lose the rest of the page's text.
+                let j = script_ends.get(&name).and_then(|v| v.get(v.partition_point(|&k| k < ri)).copied()).unwrap_or(raw.len());
+                let body_len = offsets[j] - offsets[ri];
                 if j == raw.len() {
-                    unclosed.insert(name);
                     out.push(Tok { k: K::Markup, s: Cow::Borrowed(s) });
                     pos += len;
                     continue;

@@ -148,7 +148,9 @@ pub fn has_words(inl: &[Inline]) -> bool {
 struct R {
     out: Vec<String>,
     head: usize,
-    open_pairs: Vec<String>,
+    /// The pairs open at this point, by the place of their open tag (so in the order they opened): a close removes
+    /// its pair by key, not by a search of every open pair (run 2, the subtitle pass after L1).
+    open_pairs: BTreeMap<usize, String>,
     emitted: usize,
     /// Bytes written so far and the most this cue may take: every line break inside open pairs writes their codes
     /// again, so a translation that opens many pairs and then breaks many lines would multiply them (gate).
@@ -171,7 +173,7 @@ impl R {
                 self.push("\n".into());
                 self.head = self.out.len();
                 let mut codes = String::new();
-                for id in &self.open_pairs {
+                for id in self.open_pairs.values() {
                     let c = pair_code(id);
                     self.emitted += count_codes(&c);
                     codes.push_str(&c);
@@ -235,7 +237,7 @@ pub fn render(target: &[Inline], codes: &BTreeMap<String, CodeData>, heads: &Has
     let input: usize = t.iter().map(|i| if let Inline::Text(s) = i { s.len() } else { 0 }).sum::<usize>()
         + codes.iter().filter(|(k, _)| !k.starts_with('~')).map(|(_, c)| c.open.as_ref().or(c.standalone.as_ref()).map_or(0, |s| s.len())).sum::<usize>();
     let cap = input.saturating_mul(16).saturating_add(64 * 1024);
-    let mut r = R { out: vec![String::new()], head: 0, open_pairs: vec![], emitted: 0, size: 0, cap };
+    let mut r = R { out: vec![String::new()], head: 0, open_pairs: BTreeMap::new(), emitted: 0, size: 0, cap };
     for (k, i) in t.iter().enumerate() {
         match i {
             Inline::Text(s) => r.text(s, &pair_code),
@@ -261,13 +263,10 @@ pub fn render(target: &[Inline], codes: &BTreeMap<String, CodeData>, heads: &Has
                         } else {
                             r.push(c);
                         }
-                        r.open_pairs.push(id.clone());
+                        r.open_pairs.insert(a, id.clone());
                     }
                     TagKind::Close if k == b => {
-                        // pairs close mostly in reverse order: search from the end
-                        if let Some(p) = r.open_pairs.iter().rposition(|x| x == id) {
-                            r.open_pairs.remove(p);
-                        }
+                        r.open_pairs.remove(&a);
                     }
                     _ => {}
                 }
@@ -297,4 +296,54 @@ pub fn render(target: &[Inline], codes: &BTreeMap<String, CodeData>, heads: &Has
         return Err("the translation reads as a frame rate in a {0}{1} or {1}{1} cue, which the file would take as a declaration".into());
     }
     Ok(res)
+}
+
+#[cfg(test)]
+mod run2 {
+    use super::*;
+
+    /// A translation that opens many style pairs and closes them in the order they opened: each close used to
+    /// search the list of open pairs from the end and remove from its front.
+    #[test]
+    fn many_pairs_closed_in_opening_order_are_linear() {
+        let n = 30_000;
+        let mut codes = BTreeMap::new();
+        for i in 1..=n {
+            codes.insert(i.to_string(), CodeData::new().with_open("{y:i}".to_string()).with_close(Some(String::new())));
+        }
+        let heads = HashSet::new();
+        let opens = (1..=n).map(|i| Inline::tag(i.to_string(), TagKind::Open, "{y:i}"));
+        let target = |closes: Vec<usize>| -> Vec<Inline> {
+            let mut t: Vec<Inline> = opens.clone().collect();
+            t.push(Inline::text("Hello"));
+            t.extend(closes.into_iter().map(|i| Inline::tag(i.to_string(), TagKind::Close, "")));
+            t
+        };
+        let reverse = target((1..=n).rev().collect());
+        let in_order = target((1..=n).collect());
+        let t = std::time::Instant::now();
+        let _ = render(&reverse, &codes, &heads, false);
+        let c = t.elapsed().as_secs_f64();
+        let t = std::time::Instant::now();
+        let _ = render(&in_order, &codes, &heads, false);
+        let a = t.elapsed().as_secs_f64();
+        assert!(a < c * 5.0 + 3.0, "in order {a:.2} s, reverse {c:.2} s");
+    }
+
+    /// The codes a line break writes again are still the pairs open at that point, in the order they opened.
+    #[test]
+    fn codes_after_a_line_break_are_unchanged() {
+        let mut codes = BTreeMap::new();
+        codes.insert("1".to_string(), CodeData::new().with_open("{y:i}".to_string()).with_close(Some(String::new())));
+        codes.insert("2".to_string(), CodeData::new().with_open("{y:b}".to_string()).with_close(Some(String::new())));
+        let t = vec![
+            Inline::tag("1", TagKind::Open, "{y:i}"),
+            Inline::tag("2", TagKind::Open, "{y:b}"),
+            Inline::text("one\ntwo"),
+            Inline::tag("1", TagKind::Close, ""),
+            Inline::text(" three\nfour"),
+            Inline::tag("2", TagKind::Close, ""),
+        ];
+        assert_eq!(render(&t, &codes, &HashSet::new(), false).unwrap(), "{y:i}{y:b}one|{y:i}{y:b}two three|{y:b}four");
+    }
 }

@@ -255,6 +255,16 @@ pub fn decode(data: &[u8]) -> Result<Decoded, Error> {
 /// `#pragma code_page` (`utf-8` or `windows-1252`).
 const PRAGMAS: &str = "pragmas-";
 
+/// What the tag of a file that switches code pages starts with: `multiple;pragmas-utf-8`. The part before the `;`
+/// is what `Document::detected_source_encoding` reports (BILI-49: it reported `pragmas-utf-8`, which names no
+/// encoding). A tag stored before this, without the prefix, still reads.
+const MULTIPLE: &str = "multiple;";
+
+/// The tag with the `multiple;` prefix taken off.
+fn plain_tag(tag: &str) -> &str {
+    tag.strip_prefix(MULTIPLE).unwrap_or(tag)
+}
+
 /// The number a pragma names (`None` for `DEFAULT`, which goes back to the page of the beginning of the file).
 fn page_number(raw: &[u8]) -> Option<String> {
     let ws = |b: &u8| matches!(b, b' ' | b'\t' | b'\n' | b'\r' | 0x0B | 0x0C);
@@ -313,7 +323,7 @@ fn decode_pragmas(data: &[u8]) -> Result<Decoded, Error> {
             }
         }
     }
-    Ok(Decoded { text, tag: format!("{PRAGMAS}{base}") })
+    Ok(Decoded { text, tag: format!("{MULTIPLE}{PRAGMAS}{base}") })
 }
 
 /// Writes text read by `decode_pragmas` section by section; `None` when a character does not fit its section's page.
@@ -344,6 +354,7 @@ fn encode_pragmas(text: &str, base: &str) -> Option<Vec<u8>> {
 
 /// True when `tag` is a skeleton tag this module can write.
 pub fn known_tag(tag: &str) -> bool {
+    let tag = plain_tag(tag);
     matches!(tag, "utf-8" | "utf-8-bom" | "utf-16le" | "utf-16be" | "utf-16le-nobom")
         || tag.strip_prefix(PRAGMAS).is_some_and(|b| matches!(b, "utf-8" | "windows-1252"))
         || page_for_label(tag).is_some()
@@ -416,6 +427,19 @@ fn utf8_with_pragma(text: &str) -> Vec<u8> {
     t.into_bytes()
 }
 
+/// `text` for a UTF-8 file without a byte order mark (BILI-48): every `#pragma code_page(...)` says 65001, since
+/// the whole file is now UTF-8 and rc.exe would read a section under an old pragma in that code page; a file that
+/// has none and is not plain ASCII gets one at the top (rc.exe reads a file without a BOM in the ANSI page).
+pub fn utf8_pragmas(text: &str) -> String {
+    if pragma_text_re().is_match(text) {
+        pragma_text_re().replace_all(text, |m: &regex::Captures| format!("{}65001{}", &m[1], &m[3])).into_owned()
+    } else if !text.is_ascii() {
+        format!("#pragma code_page(65001){}{}", nl_of(text), text)
+    } else {
+        text.to_string()
+    }
+}
+
 fn utf16_bytes(text: &str, be: bool, bom: bool) -> Vec<u8> {
     let mut v: Vec<u8> = Vec::with_capacity(text.len() * 2 + 2);
     if bom {
@@ -430,7 +454,7 @@ fn utf16_bytes(text: &str, be: bool, bom: bool) -> Vec<u8> {
 /// Writes `text` back in the encoding it was read in. `changed` is false for text that is exactly the original,
 /// which never gets a code page pragma added.
 pub fn encode(text: &str, tag: &str, changed: bool) -> Vec<u8> {
-    match tag {
+    match plain_tag(tag) {
         "utf-16le" => utf16_bytes(text, false, true),
         "utf-16be" => utf16_bytes(text, true, true),
         "utf-16le-nobom" => utf16_bytes(text, false, false),
@@ -475,6 +499,7 @@ pub fn encode(text: &str, tag: &str, changed: bool) -> Vec<u8> {
 
 /// True when re-encoding the decoded text gives back different bytes (a multi-byte page with duplicate mappings).
 pub fn round_trip_differs(tag: &str, text: &str, data: &[u8]) -> bool {
+    let tag = plain_tag(tag);
     if let Some(base) = tag.strip_prefix(PRAGMAS) {
         return encode_pragmas(text, base).is_none_or(|b| b != data);
     }

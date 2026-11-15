@@ -275,9 +275,24 @@ fn masked_spans(s: &str) -> Vec<(usize, usize)> {
     v
 }
 
-fn inside(spans: &[(usize, usize)], a: usize) -> bool {
-    spans.iter().any(|&(x, y)| x <= a && a < y)
+/// The bytes of `s` inside a masked span, as one flag per byte: a lookup per URL match is then constant time, not a
+/// scan of every span (run 2 G3-6).
+fn masked_bytes(s: &str) -> Vec<bool> {
+    let mut m = vec![false; s.len()];
+    for (x, y) in masked_spans(s) {
+        for f in &mut m[x.min(s.len())..y.min(s.len())] {
+            if *f {
+                break;
+            }
+            *f = true;
+        }
+    }
+    m
 }
+
+/// Most URL x target-length work one autolink repair may do (as the Markdown repair): a longer target is left as
+/// the translator wrote it.
+const AUTOLINK_BUDGET: usize = 1 << 26;
 
 fn bare_url_re() -> &'static Regex {
     static R: OnceLock<Regex> = OnceLock::new();
@@ -285,17 +300,18 @@ fn bare_url_re() -> &'static Regex {
 }
 
 fn source_urls(src: &str) -> Vec<String> {
-    let spans = masked_spans(src);
+    let masked = masked_bytes(src);
     let mut out: Vec<String> = Vec::new();
+    let mut seen: std::collections::HashSet<String> = std::collections::HashSet::new();
     for m in bare_url_re().find_iter(src) {
-        if inside(&spans, m.start()) {
+        if masked[m.start()] {
             continue;
         }
         let mut url = m.as_str().trim_end_matches(|c| URL_TRAIL.contains(c));
         if url.ends_with(')') && url.matches('(').count() < url.matches(')').count() {
             url = &url[..url.len() - 1];
         }
-        if !out.iter().any(|u| u == url) {
+        if seen.insert(url.to_string()) {
             out.push(url.to_string());
         }
     }
@@ -311,8 +327,30 @@ pub(crate) fn fix_cjk_autolinks(src: &str, new: &str, mdx: bool) -> String {
     if urls.is_empty() {
         return new.to_string();
     }
+    if urls.len().saturating_mul(new.len()) > AUTOLINK_BUDGET {
+        return new.to_string();
+    }
     urls.sort_by_key(|u| std::cmp::Reverse(u.chars().count()));
-    let spans = masked_spans(new);
+    let masked = masked_bytes(new);
+    // per byte: where the run without blanks or `<` from there ends, and where the first char in it that is not a URL
+    // trailer is (none: the run is all trailers). One backward pass, so each match is tested in constant
+    // time instead of scanning the rest of a long glued run.
+    let nb = new.len();
+    let mut run_end = vec![nb; nb + 1];
+    let mut first_body = vec![nb; nb + 1];
+    for (i, c) in new.char_indices().rev() {
+        let after = i + c.len_utf8();
+        let stop = is_space(c) || c == '<';
+        run_end[i] = if stop { i } else { run_end[after] };
+        first_body[i] = if stop {
+            nb
+        } else if URL_TRAIL.contains(c) {
+            first_body[after]
+        } else {
+            i
+        };
+    }
+    let mut edited = vec![false; nb];
     let mut edits: Vec<(usize, usize, String)> = Vec::new();
     for url in &urls {
         let mut start = 0;
@@ -320,21 +358,22 @@ pub(crate) fn fix_cjk_autolinks(src: &str, new: &str, mdx: bool) -> String {
             let a = start + p;
             let b = a + url.len();
             start = b;
-            if inside(&spans, a) || edits.iter().any(|&(x, y, _)| x < b && a < y) {
+            if masked[a] || edited[a..b].iter().any(|e| *e) {
                 continue;
             }
             let before = char_before(new, a);
-            let tail = &new[b..];
-            let run_len = tail.find(|c: char| is_space(c) || c == '<').unwrap_or(tail.len());
-            let run = &tail[..run_len];
-            if let Some(f) = run.chars().next() {
+            let run_to = run_end[b];
+            if let Some(f) = new[b..run_to].chars().next() {
                 if f.is_ascii() && !URL_TRAIL.contains(f) {
                     continue;
                 }
             }
             let glued_before = before.is_some_and(|c| !is_space(c) && !"*_~(".contains(c));
-            let glued_after = !run.trim_end_matches(|c| URL_TRAIL.contains(c)).is_empty();
+            let glued_after = first_body[b] < run_to;
             if glued_before || glued_after {
+                for e in &mut edited[a..b] {
+                    *e = true;
+                }
                 let rep = if url.starts_with("www.") {
                     format!("[{url}](http://{url})")
                 } else if mdx {
@@ -347,10 +386,14 @@ pub(crate) fn fix_cjk_autolinks(src: &str, new: &str, mdx: bool) -> String {
         }
     }
     edits.sort();
-    let mut out = new.to_string();
-    for (a, b, rep) in edits.into_iter().rev() {
-        out.replace_range(a..b, &rep);
+    let mut out = String::with_capacity(new.len() + 2 * edits.len());
+    let mut pos = 0;
+    for (a, b, rep) in edits {
+        out.push_str(&new[pos..a]);
+        out.push_str(&rep);
+        pos = b;
     }
+    out.push_str(&new[pos..]);
     out
 }
 
@@ -553,5 +596,34 @@ mod tests {
     fn line_breaks_fold() {
         assert_eq!(fold_line_breaks("one", "a \r\n b\n"), "a b");
         assert_eq!(fold_line_breaks("two\nlines", "a\nb"), "a\nb");
+    }
+}
+
+#[cfg(test)]
+mod run2 {
+    use super::*;
+
+    /// G3-6: a target that repeats a source URL back to back with no blank. For each match the repair used to scan to
+    /// the end of the run, check every earlier edit and splice the output once per edit.
+    #[test]
+    fn autolinks_glued_repeat_linear() {
+        let url = "https://example.com/x";
+        let n = 15_000;
+        let src = format!("See {url} now");
+        let secs = |t: &str| {
+            let s = std::time::Instant::now();
+            let out = fix_cjk_autolinks(&src, t, true);
+            (s.elapsed().as_secs_f64(), out)
+        };
+        let (c, _) = secs(&format!("{url} ").repeat(n));
+        let glued = format!("見て{}", url.repeat(n));
+        let (a, out) = secs(&glued);
+        assert!(a < c * 5.0 + 3.0, "glued {a:.2} s, control {c:.2} s");
+        // a URL followed by more ASCII is a longer URL, not the source's: left as written; the last one ends the text
+        assert_eq!(out, format!("見て{}[{url}]({url})", url.repeat(n - 1)));
+        // unchanged for one glued URL, a spaced one, and one inside a link
+        assert_eq!(fix_cjk_autolinks(&src, &format!("{url}を見て"), true), format!("[{url}]({url})を見て"));
+        assert_eq!(fix_cjk_autolinks(&src, &format!("見て {url} 。"), false), format!("見て {url} 。"));
+        assert_eq!(fix_cjk_autolinks(&src, &format!("[見て]({url})を"), false), format!("[見て]({url})を"));
     }
 }

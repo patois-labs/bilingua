@@ -1,53 +1,240 @@
-//! `sanitize_html`: scripts, event handlers, script URLs, `<base>` and meta refresh removed from HTML (the
-//! preview and any other caller that shows translated HTML in a browser).
+//! `sanitize_html`: HTML for a browser to show (the preview, and any other caller that shows translated HTML), cut
+//! down to an **allowlist**: the elements a translator needs to see (text formatting, headings, lists, tables, links,
+//! images, simple form controls, style sheets), a short list of attributes per element, and links and images only to
+//! http, https, mailto and tel addresses (images also to `data:image/...`, not SVG).
 //!
-//! The tokenizer here is small and a browser's parser is not, so the output is written in a way that leaves the two
-//! nothing to disagree about: **every `<` in the output starts a tag this pass has checked** (or the doctype, or sits
-//! in a style sheet where it cannot start a tag). Text and attribute values get `&lt;` for `<`, comments and
-//! declarations are left out, end tags are written bare. Whatever state a browser is in when it meets one of those
-//! tags (inside a raw-text element, inside SVG, after a comment this pass read differently), it either ignores the
-//! tag as text or reads the same checked tag; and removing a token cannot join its neighbours into a new tag.
+//! Everything else is left out: scripts, SVG and MathML (with their content), frames, objects, embeds, templates,
+//! forms, `<base>`, `<link>`, `<meta http-equiv>`, event handlers, `srcdoc`, and any URL with another scheme. Run 2 of the
+//! security review (G3-8) showed the old blocklist could be passed through an SVG animation value or a meta
+//! refresh written with character references; an allowlist has no list of bad things to keep complete.
+//!
+//! Tags are **rebuilt**, not copied: the element name from the allowlist, each kept attribute once (the first, as a
+//! browser takes it), with its value decoded once and written back escaped. What is checked is then exactly what the
+//! browser reads. The rest keeps the invariant of the BILI-73 rewrite: every `<` in the output starts a tag this pass
+//! wrote (or the doctype, or sits in a style sheet where it cannot start a tag). Text gets `&lt;` for `<`, comments
+//! and declarations are left out. With no SVG or MathML in the output, a browser never reads any of it as foreign
+//! content.
 
 use crate::tok::*;
 use bilingua_htmlcore::pyx::unescape;
 
-/// `s` with the edits (start, end, replacement) applied; they do not overlap.
-fn apply_edits(s: &str, mut edits: Vec<(usize, usize, &str)>) -> String {
-    edits.sort_by_key(|e| e.0);
-    let mut out = String::with_capacity(s.len() + edits.len() * 3);
-    let mut pos = 0;
-    for (a, b, r) in edits {
-        if pos <= a && a <= b && b <= s.len() && s.is_char_boundary(a) && s.is_char_boundary(b) {
-            out.push_str(&s[pos..a]);
-            out.push_str(r);
-            pos = b;
-        }
-    }
-    out.push_str(&s[pos..]);
-    out
-}
-
 const PREVIEW_STYLE: &str = "<style>[data-bl-seg]{outline:none}[data-bl-seg].bl-active{outline:2px solid #3b82f6;outline-offset:2px}</style>";
 
-fn unsafe_url(v: &str) -> bool {
-    let d: String = unescape(v).chars().filter(|c| !c.is_whitespace() && !c.is_control()).collect::<String>().to_ascii_lowercase();
-    d.starts_with("javascript:") || d.starts_with("vbscript:") || d.starts_with("data:text/html")
+/// The elements that are written (rebuilt), with the attributes each may keep besides the global ones.
+const ELEMENTS: &[(&str, &[&str])] = &[
+    ("html", &[]),
+    ("head", &[]),
+    ("body", &["bgcolor", "text", "link", "vlink", "alink"]),
+    ("title", &[]),
+    // a meta element only as a name and its content (a page description the preview marks as a segment), never
+    // with `http-equiv`: an element that has one is left out whole
+    ("meta", &["name", "content", "charset"]),
+    ("style", &["media"]),
+    // sections and blocks
+    ("address", &[]),
+    ("article", &[]),
+    ("aside", &[]),
+    ("footer", &[]),
+    ("header", &[]),
+    ("main", &[]),
+    ("nav", &[]),
+    ("section", &[]),
+    ("hgroup", &[]),
+    ("h1", &["align"]),
+    ("h2", &["align"]),
+    ("h3", &["align"]),
+    ("h4", &["align"]),
+    ("h5", &["align"]),
+    ("h6", &["align"]),
+    ("p", &["align"]),
+    ("div", &["align"]),
+    ("center", &[]),
+    ("blockquote", &["cite"]),
+    ("pre", &[]),
+    ("hr", &["align", "size", "width", "noshade"]),
+    ("br", &["clear"]),
+    ("figure", &[]),
+    ("figcaption", &[]),
+    ("details", &["open"]),
+    ("summary", &[]),
+    // lists
+    ("ul", &["type"]),
+    ("ol", &["start", "type", "reversed"]),
+    ("li", &["value", "type"]),
+    ("dl", &[]),
+    ("dt", &[]),
+    ("dd", &[]),
+    ("menu", &[]),
+    // text
+    ("a", &["href", "name", "rel", "hreflang"]),
+    ("abbr", &[]),
+    ("acronym", &[]),
+    ("b", &[]),
+    ("bdi", &[]),
+    ("bdo", &[]),
+    ("big", &[]),
+    ("cite", &[]),
+    ("code", &[]),
+    ("data", &["value"]),
+    ("del", &["cite", "datetime"]),
+    ("dfn", &[]),
+    ("em", &[]),
+    ("font", &["color", "face", "size"]),
+    ("i", &[]),
+    ("ins", &["cite", "datetime"]),
+    ("kbd", &[]),
+    ("mark", &[]),
+    ("nobr", &[]),
+    ("q", &["cite"]),
+    ("rp", &[]),
+    ("rt", &[]),
+    ("ruby", &[]),
+    ("s", &[]),
+    ("samp", &[]),
+    ("small", &[]),
+    ("span", &[]),
+    ("strike", &[]),
+    ("strong", &[]),
+    ("sub", &[]),
+    ("sup", &[]),
+    ("time", &["datetime"]),
+    ("tt", &[]),
+    ("u", &[]),
+    ("var", &[]),
+    ("wbr", &[]),
+    // images
+    ("img", &["src", "alt", "width", "height", "border", "align", "hspace", "vspace"]),
+    // tables
+    ("table", &["border", "cellpadding", "cellspacing", "width", "align", "bgcolor", "summary", "frame", "rules"]),
+    ("caption", &["align"]),
+    ("colgroup", &["span", "width", "align", "valign"]),
+    ("col", &["span", "width", "align", "valign"]),
+    ("thead", &["align", "valign", "bgcolor"]),
+    ("tbody", &["align", "valign", "bgcolor"]),
+    ("tfoot", &["align", "valign", "bgcolor"]),
+    ("tr", &["align", "valign", "bgcolor", "height"]),
+    ("td", &["colspan", "rowspan", "headers", "scope", "abbr", "align", "valign", "width", "height", "bgcolor", "nowrap"]),
+    ("th", &["colspan", "rowspan", "headers", "scope", "abbr", "align", "valign", "width", "height", "bgcolor", "nowrap"]),
+    // form controls, shown but with nowhere to send to (no form, and no form or formaction attribute)
+    ("label", &["for"]),
+    ("fieldset", &["disabled"]),
+    ("legend", &[]),
+    ("button", &["type", "name", "value", "disabled"]),
+    ("input", &["type", "name", "value", "placeholder", "checked", "disabled", "readonly", "size", "maxlength"]),
+    ("select", &["name", "multiple", "size", "disabled"]),
+    ("optgroup", &["label", "disabled"]),
+    ("option", &["value", "label", "selected", "disabled"]),
+    ("textarea", &["name", "rows", "cols", "placeholder", "disabled", "readonly"]),
+];
+
+/// Attributes any written element may keep (plus `aria-*` and `data-*`).
+const GLOBAL_ATTRS: &[&str] = &["id", "class", "title", "lang", "xml:lang", "dir", "style", "translate", "role", "hidden"];
+
+/// Elements left out together with everything inside them, up to their end tag.
+const DROP_WITH_CONTENT: &[&str] = &["script", "svg", "math", "template", "iframe", "object", "applet", "noembed", "noframes", "xmp"];
+
+/// Allowed elements that have no end tag.
+const VOID: &[&str] = &["br", "hr", "img", "input", "col", "wbr", "meta"];
+
+/// Image types a `data:` URL of an image may have.
+const DATA_IMAGES: &[&str] = &["png", "jpeg", "jpg", "gif", "webp", "bmp", "avif", "x-icon"];
+
+fn element(name: &str) -> Option<(&'static str, &'static [&'static str])> {
+    ELEMENTS.iter().find(|(n, _)| *n == name).copied()
 }
 
-/// An attribute that must not reach a browser: an event handler, `srcdoc`, a script URL, or a script URL that an SVG
-/// animation element would write into a link (`<set attributeName=href to=javascript:...>`).
-fn bad_attr(html: &str, elem: &str, at: &Attr) -> bool {
-    if (at.name.starts_with("on") && at.name.len() > 2) || at.name == "srcdoc" {
-        return true;
-    }
-    let value = at.val.map(|(x, y)| &html[x..y]);
-    match at.name.as_str() {
-        "href" | "src" | "action" | "formaction" | "xlink:href" | "data" | "poster" => value.is_some_and(unsafe_url),
-        "to" | "from" | "by" | "values" if matches!(elem, "set" | "animate" | "animatetransform" | "animatemotion") => {
-            value.is_some_and(|v| v.split(';').any(unsafe_url))
-        }
+/// A name made only of ASCII lowercase letters, digits, `-`, `_` and `.` after the given prefix.
+fn prefixed(name: &str, prefix: &str) -> bool {
+    name.strip_prefix(prefix)
+        .is_some_and(|r| !r.is_empty() && r.bytes().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || matches!(c, b'-' | b'_' | b'.')))
+}
+
+fn allowed_attr(elem_attrs: &[&str], name: &str) -> bool {
+    GLOBAL_ATTRS.contains(&name) || elem_attrs.contains(&name) || prefixed(name, "aria-") || prefixed(name, "data-")
+}
+
+/// A decoded URL with every blank and control character taken out, lowercase: a browser drops tabs and line breaks
+/// anywhere in a URL and controls and spaces at its ends, so this holds whatever scheme a browser could read.
+fn squeezed_url(decoded: &str) -> String {
+    decoded.chars().filter(|c| !c.is_whitespace() && !c.is_control()).collect::<String>().to_ascii_lowercase()
+}
+
+/// The scheme of a URL: what comes before a `:` that comes before any `/`, `?` or `#`. `None` for a relative URL.
+fn scheme(squeezed: &str) -> Option<&str> {
+    let end = squeezed.find([':', '/', '?', '#'])?;
+    (squeezed.as_bytes()[end] == b':').then(|| &squeezed[..end])
+}
+
+/// Whether a decoded URL may be kept: relative, or http or https; for links also mailto and tel, for images also
+/// `data:image/...` of a raster type.
+fn url_ok(decoded: &str, image: bool) -> bool {
+    let s = squeezed_url(decoded);
+    match scheme(&s) {
+        None | Some("http") | Some("https") => true,
+        Some("mailto") | Some("tel") => !image,
+        Some("data") if image => s
+            .strip_prefix("data:image/")
+            .is_some_and(|r| DATA_IMAGES.iter().any(|t| r.strip_prefix(t).is_some_and(|rest| rest.starts_with([';', ','])))),
         _ => false,
     }
+}
+
+/// CSS as a style sheet reads it: comments taken out and escapes decoded, lowercase.
+fn css_plain(s: &str) -> String {
+    let c: Vec<char> = s.chars().collect();
+    let mut out = String::with_capacity(s.len());
+    let mut i = 0;
+    while i < c.len() {
+        if c[i] == '/' && c.get(i + 1) == Some(&'*') {
+            i += 2;
+            while i < c.len() && !(c[i] == '*' && c.get(i + 1) == Some(&'/')) {
+                i += 1;
+            }
+            i += 2;
+            continue;
+        }
+        if c[i] == '\\' {
+            i += 1;
+            let start = i;
+            while i < c.len() && i - start < 6 && c[i].is_ascii_hexdigit() {
+                i += 1;
+            }
+            if i > start {
+                let v = c[start..i].iter().fold(0u32, |a, d| a * 16 + d.to_digit(16).unwrap_or(0));
+                out.push(char::from_u32(v).filter(|&x| x != '\0').unwrap_or('\u{FFFD}'));
+                if i < c.len() && c[i].is_whitespace() {
+                    i += 1;
+                }
+            } else if i < c.len() {
+                if c[i] != '\n' {
+                    out.push(c[i]);
+                }
+                i += 1;
+            }
+            continue;
+        }
+        out.push(c[i]);
+        i += 1;
+    }
+    out.to_lowercase()
+}
+
+/// CSS that holds nothing that runs code in any browser, read after comments and escapes: no `expression(`, no
+/// script URL, no `-moz-binding` and no `behavior` property.
+fn css_ok(s: &str) -> bool {
+    let p: String = css_plain(s).chars().filter(|c| !c.is_whitespace()).collect();
+    if ["expression(", "javascript:", "vbscript:", "-moz-binding"].iter().any(|w| p.contains(w)) {
+        return false;
+    }
+    // `behavior:` as a property of its own (IE), not the end of `scroll-behavior`
+    for w in ["behavior:", "behaviour:"] {
+        for (i, _) in p.match_indices(w) {
+            if !p[..i].ends_with(|c: char| c.is_alphanumeric() || c == '-' || c == '_') {
+                return false;
+            }
+        }
+    }
+    true
 }
 
 /// Text: a `<` is written `&lt;`, so it starts no tag wherever a browser reads it.
@@ -61,10 +248,13 @@ fn push_text(out: &mut String, s: &str) {
     out.push_str(&s[last..]);
 }
 
-/// A style sheet: in HTML it is raw text and must stay as typed (`<!--` wrappers included), but inside SVG or MathML
-/// a browser reads it as markup. A `<` that could start a tag there is written as the CSS escape `\3c `, which means
-/// the same to a style sheet.
+/// A style sheet: raw text in HTML, kept as typed (`<!--` wrappers included), but with every `<` that could start a
+/// tag written as the CSS escape `\3c `, which means the same to a style sheet. A sheet that fails [`css_ok`] is
+/// left out.
 fn push_css(out: &mut String, s: &str) {
+    if !css_ok(s) {
+        return;
+    }
     let b = s.as_bytes();
     let mut last = 0;
     for (i, _) in s.match_indices('<') {
@@ -77,53 +267,63 @@ fn push_css(out: &mut String, s: &str) {
     out.push_str(&s[last..]);
 }
 
-/// A start tag with its unwanted attributes cut, or `None` when it cannot be written so that it holds no second `<`
-/// (one in the tag name or an attribute name): the caller then shows it as text.
-fn start_tag(tag: &str, name: &str, attrs: &[Attr], a: usize, html: &str) -> Option<String> {
-    if name.contains('<') {
-        return None;
-    }
-    let mut edits: Vec<(usize, usize, &str)> = Vec::new();
-    let mut cut = false;
-    for at in attrs {
-        if bad_attr(html, name, at) {
-            let end = at.full.map(|f| f.1).unwrap_or(at.name_end);
-            edits.push((at.name_start - a, end - a, ""));
-            cut = true;
-            continue;
-        }
-        if at.name.contains('<') {
-            return None;
-        }
-        if let Some((x, y)) = at.val {
-            // a `<` inside a value means the same as `&lt;`, and cannot end a raw-text element a browser may be in
-            edits.extend(html[x..y].match_indices('<').map(|(i, _)| (x + i - a, x + i + 1 - a, "&lt;")));
+/// An attribute value, written between double quotes.
+fn push_value(out: &mut String, v: &str) {
+    for c in v.chars() {
+        match c {
+            '&' => out.push_str("&amp;"),
+            '"' => out.push_str("&quot;"),
+            '<' => out.push_str("&lt;"),
+            '>' => out.push_str("&gt;"),
+            _ => out.push(c),
         }
     }
-    if edits.is_empty() {
-        return Some(tag.to_string());
-    }
-    let out = apply_edits(tag, edits);
-    if cut {
-        // what is left must still read as this one tag, with nothing unwanted in it
-        let ok = match markup(&out, 0, &mut false) {
-            Some(Tok::Start { end, name: n2, attrs: a2, closed: true, .. }) => {
-                end == out.len() && n2 == name && !out[1..].contains('<') && !a2.iter().any(|at| bad_attr(&out, name, at))
-            }
-            _ => false,
-        };
-        if !ok {
-            return None;
-        }
-    }
-    Some(out)
 }
 
-/// Removes scripts, event handler attributes, script URLs, `<base>` and meta refresh from HTML. With
-/// `inject`, also adds the preview `<style>`.
+/// The start tag of an allowed element, rebuilt from the attributes it may keep.
+fn start_tag(out: &mut String, html: &str, name: &str, elem_attrs: &[&str], attrs: &[Attr]) {
+    out.push('<');
+    out.push_str(name);
+    let mut seen: Vec<&str> = Vec::new();
+    for at in attrs {
+        let an = at.name.as_str();
+        if seen.contains(&an) {
+            continue; // a browser keeps the first of two attributes with one name
+        }
+        seen.push(an);
+        if !allowed_attr(elem_attrs, an) {
+            continue;
+        }
+        let value = at.val.map(|(x, y)| unescape(&html[x..y]));
+        let ok = match (an, value.as_deref()) {
+            ("href", Some(v)) => url_ok(v, false),
+            ("src", Some(v)) => url_ok(v, true),
+            ("cite", Some(v)) => matches!(scheme(&squeezed_url(v)), None | Some("http") | Some("https")),
+            ("style", Some(v)) => css_ok(v),
+            ("href" | "src" | "cite", None) => false,
+            _ => true,
+        };
+        if !ok {
+            continue;
+        }
+        out.push(' ');
+        out.push_str(an);
+        if let Some(v) = value {
+            out.push_str("=\"");
+            push_value(out, &v);
+            out.push('"');
+        }
+    }
+    out.push('>');
+}
+
+/// Cuts HTML down to the allowlist of this module (see the module notes). With `inject`, also adds the preview
+/// `<style>`.
 ///
 /// Comments, processing instructions and CDATA markers are left out (the text of a CDATA section stays), a `<`
-/// that starts no tag is written `&lt;`, and end tags are written bare (`</p>`).
+/// that starts no tag is written `&lt;`, tags are rebuilt (`<p class="x">`, `</p>`), and an element that is not
+/// allowed is left out while its text stays (apart from those of [`DROP_WITH_CONTENT`], which go with everything in
+/// them).
 pub fn sanitize_html(html: &str, inject: bool) -> String {
     let toks = tokenize(html);
     let mut insert_at: Option<usize> = None; // token index to insert before
@@ -141,49 +341,49 @@ pub fn sanitize_html(html: &str, inject: bool) -> String {
         insert_at = insert_at.or(after_html).or(first_content).or(Some(0));
     }
     let mut out = String::with_capacity(html.len() + 200);
-    let mut in_script = false;
+    // inside an element of DROP_WITH_CONTENT: its name, and how many more of that name are open inside it
+    let mut dropping: Option<(&str, usize)> = None;
     for (i, t) in toks.iter().enumerate() {
         if insert_at == Some(i) {
             out.push_str(PREVIEW_STYLE);
         }
         let (a, b) = t.range();
+        if let Some((dn, depth)) = dropping {
+            match t {
+                Tok::Start { name, closed: true, .. } if name == dn => dropping = Some((dn, depth + 1)),
+                Tok::End { name, .. } if name == dn => dropping = depth.checked_sub(1).map(|d| (dn, d)),
+                _ => {}
+            }
+            continue;
+        }
         match t {
             Tok::Start { name, attrs, closed, .. } => {
-                if name == "script" {
-                    in_script = true;
+                if let Some(d) = DROP_WITH_CONTENT.iter().copied().find(|d| *d == name.as_str()) {
+                    // `<svg/>` and `<math/>` close themselves; every other element of the list runs to its end tag
+                    let self_closed = matches!(d, "svg" | "math") && html[a..b].ends_with("/>");
+                    if *closed && !self_closed {
+                        dropping = Some((d, 0));
+                    }
                     continue;
                 }
                 // a tag that runs into the end of the input: a browser drops it
-                if in_script || !closed || name == "base" {
+                if !closed {
                     continue;
                 }
-                if name == "meta" && attr_value(html, attrs, "http-equiv").is_some_and(|v| v.trim().eq_ignore_ascii_case("refresh")) {
+                if name == "meta" && attrs.iter().any(|at| at.name == "http-equiv") {
                     continue;
                 }
-                match start_tag(&html[a..b], name, attrs, a, html) {
-                    Some(tag) => out.push_str(&tag),
-                    None => push_text(&mut out, &html[a..b]),
+                if let Some((n, elem_attrs)) = element(name) {
+                    start_tag(&mut out, html, n, elem_attrs, attrs);
                 }
             }
-            Tok::End { name, .. } if name == "script" => {
-                in_script = false;
-            }
-            _ if in_script => {}
             Tok::End { name, .. } => {
-                if name == "base" {
-                    continue;
-                }
-                let tag = &html[a..b];
-                let typed = &tag[2..2 + name.len()];
-                if typed.contains('<') {
-                    push_text(&mut out, tag);
-                } else if tag.strip_suffix('>').is_some_and(|t| t[2 + name.len()..].bytes().all(|c| c.is_ascii_whitespace())) {
-                    out.push_str(tag);
-                } else {
-                    // junk after the name (a browser reads it as attributes and ignores them)
-                    out.push_str("</");
-                    out.push_str(typed);
-                    out.push('>');
+                if let Some((n, _)) = element(name) {
+                    if !VOID.contains(&n) {
+                        out.push_str("</");
+                        out.push_str(n);
+                        out.push('>');
+                    }
                 }
             }
             Tok::Text(..) => push_text(&mut out, &html[a..b]),

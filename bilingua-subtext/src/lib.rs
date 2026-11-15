@@ -3,6 +3,7 @@
 /// Skeleton schema number: bump only when this crate's skeleton layout changes (see `bilingua_model::check_parser`).
 pub const SKELETON_SCHEMA: u32 = 1;
 
+mod gbk;
 mod mdvd;
 mod scan;
 
@@ -247,6 +248,27 @@ fn mdvd_slots(text: &str, limits: &Limits) -> Result<Vec<Slot>, Error> {
     Ok(slots)
 }
 
+/// The source language to decode with: the caller's, or `zh-CN` for a file with no byte order mark that is not UTF-8
+/// and reads as GB2312 / GBK (bilingua#11, native mode only), with the warning that says so.
+fn decode_lang(bytes: &[u8], opts: &ExtractOptions) -> (Option<String>, Option<Warning>) {
+    let guess = opts.source_lang.is_none()
+        && !opts.is_profile(profile::LOCOS)
+        && !bytes.starts_with(&[0xEF, 0xBB, 0xBF])
+        && !bytes.starts_with(&[0xFF, 0xFE])
+        && !bytes.starts_with(&[0xFE, 0xFF])
+        && std::str::from_utf8(bytes).is_err()
+        && gbk::looks_gbk(bytes);
+    if !guess {
+        return (opts.source_lang.clone(), None);
+    }
+    let w = Warning::new(
+        "text_encoding",
+        "text encoding",
+        "This file has no byte order mark and is not UTF-8. Its bytes read as Simplified Chinese (GBK), so it was read that way. If that is wrong, set the source language and open it again.",
+    );
+    (Some("zh-CN".to_string()), Some(w))
+}
+
 fn extract(fmt: &'static str, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
     if fmt == "sub" && bytes.starts_with(VOBSUB_MAGIC) {
         return Err(perr(
@@ -255,7 +277,9 @@ fn extract(fmt: &'static str, bytes: &[u8], opts: &ExtractOptions) -> Result<Doc
         ));
     }
     let limits = opts.limits();
-    let mut dec = enc::decode_text(bytes, &enc::DecodeOptions::new(opts).mark_before_legacy())?;
+    let (lang, guessed) = decode_lang(bytes, opts);
+    let mut dec = enc::decode_text(bytes, &enc::DecodeOptions::new(opts).with_source_lang(lang.as_deref()).mark_before_legacy())?;
+    dec.warnings.extend(guessed);
     let text_owned = std::mem::take(&mut dec.text);
     let text = text_owned.as_str();
     let dialect = if fmt == "sbv" { Dialect::Sbv } else { sniff_text(text)? };
