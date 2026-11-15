@@ -55,8 +55,8 @@ fn autolinks_glued_repeat_linear() {
     let glued = format!("見て{}", url.repeat(n));
     let (a, out) = run(glued.clone());
     assert!(a < c * 5.0 + 3.0, "glued {a:.2} s, control {c:.2} s");
-    // a URL followed by more ASCII is a longer URL, not the source's: left as written
-    assert_eq!(out, format!("{glued}\n"));
+    // a URL followed by more ASCII is a longer URL, not the source's: left as written; the last one ends the line
+    assert_eq!(out, format!("見て{}<{url}>\n", url.repeat(n - 1)));
     // the repair is unchanged for an ordinary glued URL
     let (_, one) = run(format!("{url}を見て"));
     assert_eq!(one, format!("<{url}>を見て\n"));

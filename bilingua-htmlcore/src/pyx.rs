@@ -260,26 +260,6 @@ pub fn escape_text_with(s: &str, quotes: bool, out: &mut String) {
     out.push_str(&s[last..]);
 }
 
-/// Text for the inside of a `<title>` or `<textarea>` (RCDATA): a browser reads only character references and the
-/// element's own end tag there, so `<` and `>` are written as typed (BILI-51: a literal `<` written `&lt;` read
-/// back as four letters, and the text changed on every round trip). Only a `<` before `/` is written `&lt;`, so
-/// the text can never end its element, and an `&` that would start a reference is written `&amp;`.
-pub fn escape_rcdata(s: &str, out: &mut String) {
-    let b = s.as_bytes();
-    let mut last = 0;
-    for (i, &c) in b.iter().enumerate() {
-        let rep = match c {
-            b'<' if b.get(i + 1) == Some(&b'/') => "&lt;",
-            b'&' if !entity_follows(&b[i + 1..]) => "&amp;",
-            _ => continue,
-        };
-        out.push_str(&s[last..i]);
-        out.push_str(rep);
-        last = i + 1;
-    }
-    out.push_str(&s[last..]);
-}
-
 /// The legacy named references written without `;` in `s` (`&nbsp` in `&nbsp&nbsp text`: HTML5 reads the names of
 /// its legacy list as references in text even without the `;`), each once, as `&name` with the longest such name
 /// (as [`unescape`] matches them). A writer keeps these as written in a target whose source had them

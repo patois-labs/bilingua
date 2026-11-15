@@ -26,7 +26,7 @@ fn a_script_with_several_code_pages_reports_multiple() {
     // the merge writes each section in its own page again
     assert_eq!(Rc.merge(&doc).unwrap(), TWO_PAGES);
     let out = Rc.merge(&translated(TWO_PAGES)).unwrap();
-    assert!(out.windows(10).any(|w| w == b"Caf\xe9 cr\xe8m"), "{}", String::from_utf8_lossy(&out));
+    assert!(out.windows(9).any(|w| w == b"Caf\xe9 cr\xe8m"), "{}", String::from_utf8_lossy(&out));
     // a Document stored before the tag changed still merges
     let mut old = translated(TWO_PAGES);
     if let Skeleton::Text { encoding, .. } = &mut old.skeleton {

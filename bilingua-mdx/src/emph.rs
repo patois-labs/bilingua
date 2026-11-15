@@ -619,8 +619,8 @@ mod run2 {
         let glued = format!("見て{}", url.repeat(n));
         let (a, out) = secs(&glued);
         assert!(a < c * 5.0 + 3.0, "glued {a:.2} s, control {c:.2} s");
-        // a URL followed by more ASCII is a longer URL, not the source's: left as written
-        assert_eq!(out, glued);
+        // a URL followed by more ASCII is a longer URL, not the source's: left as written; the last one ends the text
+        assert_eq!(out, format!("見て{}[{url}]({url})", url.repeat(n - 1)));
         // unchanged for one glued URL, a spaced one, and one inside a link
         assert_eq!(fix_cjk_autolinks(&src, &format!("{url}を見て"), true), format!("[{url}]({url})を見て"));
         assert_eq!(fix_cjk_autolinks(&src, &format!("見て {url} 。"), false), format!("見て {url} 。"));

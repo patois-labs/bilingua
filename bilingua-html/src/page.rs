@@ -567,20 +567,10 @@ pub(crate) fn merge(doc: &Document, opts: &MergeOptions, cfg: Cfg) -> Result<Vec
         if body.len() != n_body {
             return Err(Error::Write("the page changed shape while its attributes were written".into()));
         }
-        let locos = opts.is_profile(profile::LOCOS);
         for (k, u) in body.iter().enumerate() {
             if let Some(t) = &targets[k] {
                 let protected = protected_for(cfg, u);
-                let inner = if !locos && in_rcdata(&toks, u.start) {
-                    // BILI-51: the text of a title or textarea is written as a browser reads it there, so it reads back
-                    // the same (LocOS escapes it as body text, and the profile keeps that)
-                    let mut o = String::new();
-                    escape_rcdata(&plain_text(t), &mut o);
-                    o
-                } else {
-                    materialize(t, &u.map, quotes, &protected)
-                };
-                repl.push((u.start, u.end, format!("{}{}{}", u.lead, inner, u.trail)));
+                repl.push((u.start, u.end, format!("{}{}{}", u.lead, materialize(t, &u.map, quotes, &protected), u.trail)));
             }
         }
     }
@@ -599,17 +589,6 @@ pub(crate) fn merge(doc: &Document, opts: &MergeOptions, cfg: Cfg) -> Result<Vec
         }
     }
     enc::encode_declared_with(&out, encoding, opts)
-}
-
-/// Whether the unit whose first token is `start` is the text of a `<title>` or `<textarea>` (the token before it is
-/// that start tag).
-fn in_rcdata(toks: &[Tok], start: usize) -> bool {
-    let Some(prev) = start.checked_sub(1).and_then(|i| toks.get(i)) else { return false };
-    if prev.k != K::Markup {
-        return false;
-    }
-    let (closing, name, _) = html::parse_tag_str(&prev.s);
-    !closing && (name == "title" || name == "textarea")
 }
 
 /// The page tokens for the preview (no budget: the page was accepted at extract).
