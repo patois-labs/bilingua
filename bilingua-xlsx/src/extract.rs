@@ -297,12 +297,26 @@ struct Extractor<'a> {
     context: bilingua_model::guard::ContextBudget,
     /// The first limit a sheet went over; the walk stops and the extraction returns it.
     refused: Option<Error>,
+    /// How often each cell unit id was made so far: a repeated cell reference gets a suffixed id, so no unit's
+    /// marker resolves to another unit.
+    ids: HashMap<String, usize>,
 }
 
 impl Extractor<'_> {
     fn refuse(&mut self, e: Error) {
         if self.refused.is_none() {
             self.refused = Some(e);
+        }
+    }
+
+    /// `id` the first time, `id~2`, `id~3`, ... when a file repeats a cell reference (cell ids hold no `~`).
+    fn unique_id(&mut self, id: String) -> String {
+        let n = self.ids.entry(id.clone()).or_insert(0);
+        *n += 1;
+        if *n == 1 {
+            id
+        } else {
+            format!("{id}~{n}")
         }
     }
 
@@ -520,7 +534,7 @@ impl Extractor<'_> {
                         self.refuse(e);
                         return;
                     }
-                    let id = format!("is{}-{}", sh.idx, r);
+                    let id = self.unique_id(format!("is{}-{}", sh.idx, r));
                     let built = build(atoms, props_of);
                     let mut cx = UnitContext::new().with_kind("cell".to_string()).with_location(loc).with_max_len(max_len).with_notes(notes);
                     hidden_extra(&mut cx, hidden);
@@ -549,7 +563,7 @@ impl Extractor<'_> {
             if !self.fits(&atoms) {
                 return;
             }
-            let id = format!("sh{}-{}", sh.idx, name);
+            let id = self.unique_id(format!("sh{}-{}", sh.idx, name));
             let kind = if name.ends_with("Header") { "header" } else { "footer" };
             let which = name.trim_end_matches("Header").trim_end_matches("Footer");
             let built = build(atoms, props_of);
@@ -667,7 +681,7 @@ impl Extractor<'_> {
                     let body = te.text();
                     self.add_note(sh, &cell, author.as_deref(), body.trim());
                     if self.xo.translate_comments && body.chars().any(|c| c.is_alphabetic()) {
-                        let id = format!("threaded{}-{}-{}", sh.idx, cell, k);
+                        let id = self.unique_id(format!("threaded{}-{}-{}", sh.idx, cell, k));
                         let atoms = vec![Atom::Text { fmt: String::new(), key: String::new(), text: body.clone() }];
                         if !self.fits(&atoms) {
                             return;
@@ -713,7 +727,7 @@ impl Extractor<'_> {
                         if !self.fits(&atoms) {
                             return;
                         }
-                        let id = format!("comment{}-{}", sh.idx, cell);
+                        let id = self.unique_id(format!("comment{}-{}", sh.idx, cell));
                         let cx = UnitContext::new().with_kind("comment".to_string()).with_location(self.sheet_cell(sh, &cell));
                         self.u_comments.push(make_unit(id.clone(), build(atoms, props_of), raw_children(te), "si", &ns.pfx, cx));
                         te.children = vec![marker(&id)];
@@ -774,8 +788,24 @@ fn extract_doc_inner(bytes: &[u8], opts: &ExtractOptions, xo: &XlsxOptions) -> R
         return Err(Error::Unsupported("the workbook uses private-use characters U+E000 to U+E005".into()));
     }
     let mut wb_nodes = parse(wb_text).map_err(|m| perr(format!("{wb_name}: {m}")))?;
+    // a workbook in another namespace (an Office 2007 beta file) would open with no units: refused (BILI-50)
+    let root_ns_known = wb_nodes.iter().find_map(|n| if let Node::El(e) = n { Some(e) } else { None }).is_some_and(|root| {
+        let decl = match root.name.split_once(':') {
+            Some((p, _)) => format!("xmlns:{p}"),
+            None => "xmlns".to_string(),
+        };
+        root.attr(&decl).is_some_and(|u| SS_URIS.contains(&u.as_str()))
+    });
+    if !root_ns_known {
+        return Err(perr(crate::OLD_NAMESPACE));
+    }
     let wb_ns = Ns::detect(&wb_nodes, SS_URIS, "");
     let rels = read_rels(&entries, &wb_name);
+    // relationship id to the first relationship with it, looked up once per sheet
+    let mut rel_by_id: HashMap<&str, &Rel> = HashMap::new();
+    for x in &rels {
+        rel_by_id.entry(x.id.as_str()).or_insert(x);
+    }
 
     // Sheets in workbook order.
     let mut sheets: Vec<SheetInfo> = vec![];
@@ -793,7 +823,7 @@ fn extract_doc_inner(bytes: &[u8], opts: &ExtractOptions, xo: &XlsxOptions) -> R
                 let hidden = matches!(s.attr("state").as_deref(), Some("hidden") | Some("veryHidden"));
                 all_names.push((idx, name.clone(), hidden));
                 let rid = s.attrs().into_iter().find(|(k, _)| local_name(k) == "id" && k.contains(':') && !k.starts_with("xml")).map(|(_, v)| v);
-                let Some(rel) = rid.and_then(|r| rels.iter().find(|x| x.id == r)) else {
+                let Some(rel) = rid.and_then(|r| rel_by_id.get(r.as_str()).copied()) else {
                     continue;
                 };
                 if !rel.typ.ends_with("/worksheet") {
@@ -823,6 +853,7 @@ fn extract_doc_inner(bytes: &[u8], opts: &ExtractOptions, xo: &XlsxOptions) -> R
         budget: crate::budget::SheetBudget::new(opts.limits()),
         context: bilingua_model::guard::ContextBudget::new(),
         refused: None,
+        ids: HashMap::new(),
     };
 
     // Sheet name units.

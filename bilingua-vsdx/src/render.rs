@@ -29,6 +29,11 @@ pub fn merge(doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<
     }
     let mut r = Renderer::new(doc, opts);
     let mut out: Vec<(EntryMeta, bilingua_zip::Body)> = Vec::with_capacity(real.len());
+    // the stored entry metadata by name (the first of a repeated name), looked up once per entry
+    let mut by_name: std::collections::HashMap<&str, &EntryMeta> = std::collections::HashMap::new();
+    for x in meta.iter().flat_map(|m| m.entries.iter()) {
+        by_name.entry(x.name.as_str()).or_insert(x);
+    }
     for e in real {
         let body = match &e.data {
             ZipData::Raw(b) => bilingua_zip::raw_body(meta.as_ref().map(|m| &m.packed), &e.name, b),
@@ -40,7 +45,7 @@ pub fn merge(doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<
                 }
             }
         };
-        let em = meta.as_ref().and_then(|m| m.entries.iter().find(|x| x.name == e.name).cloned()).unwrap_or(EntryMeta {
+        let em = by_name.get(e.name.as_str()).map(|x| (*x).clone()).unwrap_or(EntryMeta {
             name: e.name.clone(),
             stored: false,
             dir: e.name.ends_with('/'),

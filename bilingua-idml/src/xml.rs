@@ -476,6 +476,27 @@ impl Tree {
             self.nodes[p].children.retain(|c| *c != id);
         }
     }
+    /// Removes several nodes (with their tails) from their parents: one pass over each parent's children, where
+    /// [`Tree::detach`] per node would pass over them once per node.
+    pub fn detach_all(&mut self, ids: &[Id]) {
+        let mut by_parent: std::collections::HashMap<Id, HashSet<Id>> = std::collections::HashMap::new();
+        for &id in ids {
+            if let Some(p) = self.nodes[id].parent.take() {
+                by_parent.entry(p).or_default().insert(id);
+            }
+        }
+        for (p, gone) in by_parent {
+            self.nodes[p].children.retain(|c| !gone.contains(c));
+        }
+    }
+    /// Makes `kids` the children of `parent`, in this order. Each must be a child of `parent` already or in no
+    /// parent (detached or new): one pass, for regrouping many children at once.
+    pub fn set_children(&mut self, parent: Id, kids: Vec<Id>) {
+        for &k in &kids {
+            self.nodes[k].parent = Some(parent);
+        }
+        self.nodes[parent].children = kids;
+    }
     /// Moves `child` (with its tail) to the end of `parent`.
     pub fn append(&mut self, parent: Id, child: Id) {
         self.detach(child);

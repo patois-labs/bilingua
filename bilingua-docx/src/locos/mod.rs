@@ -27,7 +27,7 @@ use bilingua_model::{profile, CodeData, Document, Error, ExtractOptions, Granula
 use bilingua_xmltree::Dom;
 use para::Piece;
 use pkg::{rt, Pkg};
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use tree::*;
 use walk::{Walk, P};
 
@@ -231,17 +231,13 @@ fn image_inventory(pkg: &Pkg, w: &Walk, body: &[usize]) -> Vec<(Option<usize>, O
     let d = pkg.parts[main].dom.as_ref().unwrap();
     let Some(root) = find_w(d, d.root, "body") else { return Vec::new() };
     let index_of: HashMap<usize, usize> = w.paras.iter().enumerate().filter(|(_, (part, _))| *part == main).map(|(i, &(_, p))| (p, i)).collect();
+    // `body` is in document order (ascending): the unit at `pos`, else the nearest one before it, by binary search
     let anchor_for = |pos: usize| -> Option<usize> {
-        let mut before = None;
-        for &p in body {
-            if p == pos {
-                return Some(p);
-            }
-            if p < pos {
-                before = Some(p);
-            }
+        match body.binary_search(&pos) {
+            Ok(_) => Some(pos),
+            Err(0) => body.first().copied(),
+            Err(i) => Some(body[i - 1]),
         }
-        before.or_else(|| body.first().copied())
     };
     let mut out = Vec::new();
     for dp in d.iter(root).into_iter().filter(|&x| d.is(x, WP, "docPr")) {
@@ -271,16 +267,47 @@ fn image_inventory(pkg: &Pkg, w: &Walk, body: &[usize]) -> Vec<(Option<usize>, O
     out
 }
 
-/// `_set_alt`.
-fn set_alt(d: &mut Dom, dp: usize, attr: &str, new: &str) {
+/// The `pic:cNvPr` elements below a drawing container, by the value of one attribute: (part, container, attribute)
+/// to value to elements. Each container is walked once, the first time an alt text below it is written, and kept
+/// current as values change, so many alt texts in one large container do not each walk all of it.
+type CnvIndex = HashMap<(usize, usize, &'static str), HashMap<String, BTreeSet<usize>>>;
+
+/// `_set_alt`: the drawing's `attr` becomes `new`, and so does every `pic:cNvPr` below the drawing's parent that had
+/// the drawing's old value.
+fn set_alt(d: &mut Dom, part: usize, dp: usize, attr: &'static str, new: &str, index: &mut CnvIndex) {
     let old = d.get(dp, attr).map(str::to_string);
     d.set(dp, attr, new);
-    let Some(container) = d.nodes[dp].parent else { return };
-    for cnv in d.iter(container) {
-        if d.is(cnv, PIC, "cNvPr") && old.is_some() && d.get(cnv, attr).map(str::to_string) == old {
-            d.set(cnv, attr, new);
+    let (Some(container), Some(old)) = (d.nodes[dp].parent, old) else { return };
+    if old == new {
+        return;
+    }
+    let key = (part, container, attr);
+    let by_value = index.entry(key).or_insert_with(|| {
+        let mut m: HashMap<String, BTreeSet<usize>> = HashMap::new();
+        for cnv in d.iter(container) {
+            if let Some(v) = d.get(cnv, attr).filter(|_| d.is(cnv, PIC, "cNvPr")) {
+                m.entry(v.to_string()).or_default().insert(cnv);
+            }
+        }
+        m
+    });
+    let Some(nodes) = by_value.remove(&old) else { return };
+    for &cnv in &nodes {
+        d.set(cnv, attr, new);
+        // another container above this element that was indexed already finds it under its new value
+        let mut up = d.nodes[cnv].parent;
+        while let Some(x) = up {
+            if x != container {
+                if let Some(m) = index.get_mut(&(part, x, attr)) {
+                    if m.get_mut(&old).is_some_and(|set| set.remove(&cnv)) {
+                        m.entry(new.to_string()).or_default().insert(cnv);
+                    }
+                }
+            }
+            up = d.nodes[x].parent;
         }
     }
+    index.get_mut(&key).expect("inserted above").entry(new.to_string()).or_default().extend(nodes);
 }
 
 /// `DocxFilter.parse`: the LocOS units of a package.
@@ -315,8 +342,13 @@ fn locos_units(pkg: &mut Pkg, comments: bool) -> Result<(Vec<LUnit>, Walk, Optio
             units.push(LUnit { p: base + j, pieces: vec![Piece::Text(a.value)], style: a.style.to_string(), part: a.part, rprs: BTreeMap::new(), alt: true, images: 0, missing_alt: Vec::new() });
         }
     }
+    // the first non-alt unit of each paragraph index, looked up once per drawing
+    let mut unit_at: HashMap<usize, usize> = HashMap::new();
+    for (k, u) in units.iter().enumerate().filter(|(_, u)| !u.alt) {
+        unit_at.entry(u.p).or_insert(k);
+    }
     for (anchor, finding) in image_inventory(pkg, &w, &body) {
-        let Some(u) = anchor.and_then(|a| units.iter_mut().find(|u| u.p == a && !u.alt)) else { continue };
+        let Some(u) = anchor.and_then(|a| unit_at.get(&a)).map(|&k| &mut units[k]) else { continue };
         u.images += 1;
         u.missing_alt.extend(finding);
     }
@@ -442,7 +474,8 @@ pub fn merge(doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
     };
     let texts = written_texts(doc);
     let locale = opts.stamp_lang(doc, !texts.is_empty()).map(str::to_string);
-    let limits = bilingua_model::Limits::default();
+    // the stored package is read under the caller's merge limits
+    let limits = opts.limits();
     // LocOS's B-bytes guard: a plain build that writes nothing, or only each unit's own source, is the upload
     if locale.is_none() && texts.values().all(|(_, same)| *same) {
         Pkg::load(data, &limits)?;
@@ -458,6 +491,7 @@ pub fn merge(doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
     };
     let mut translated: Vec<P> = Vec::new();
     let mut touched: HashSet<usize> = HashSet::new();
+    let mut cnv_index = CnvIndex::new();
     for (&i, (text, _)) in &texts {
         let text = xml_target_text(text);
         if i < w.paras.len() {
@@ -479,7 +513,7 @@ pub fn merge(doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
                 }
             }
         } else if let Some(a) = alts.get(i - w.paras.len()) {
-            set_alt(pkg.parts[a.part].dom.as_mut().unwrap(), a.dp, a.attr, &para::unesc_lit(&text));
+            set_alt(pkg.parts[a.part].dom.as_mut().unwrap(), a.part, a.dp, a.attr, &para::unesc_lit(&text), &mut cnv_index);
             touched.insert(a.part);
         }
     }

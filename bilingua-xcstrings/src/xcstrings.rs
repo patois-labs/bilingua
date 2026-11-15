@@ -394,8 +394,29 @@ fn locos_dump(edited: &str, source: &str, limits: &Limits) -> Result<String, Err
 
 type Trans = Vec<(Vec<String>, String)>;
 
+/// The first translation at `path`. `t` is sorted by path (a stable sort, see [`sorted_trans`]), so this is a
+/// binary search, not a scan per string unit.
 fn lookup<'a>(t: &'a Trans, path: &[String]) -> Option<&'a str> {
-    t.iter().find(|(p, _)| p.as_slice() == path).map(|(_, v)| v.as_str())
+    let i = t.partition_point(|(p, _)| p.as_slice() < path);
+    t.get(i).filter(|(p, _)| p.as_slice() == path).map(|(_, v)| v.as_str())
+}
+
+/// `trans` sorted by path, equal paths kept in their order, for [`mirror`]'s lookups.
+fn sorted_trans(trans: &Trans) -> Trans {
+    let mut t = trans.clone();
+    t.sort_by(|a, b| a.0.cmp(&b.0));
+    t
+}
+
+/// The members of a JSON object by key, the first of a repeated key (as `J::get`), for lookups in a loop.
+fn obj_index(o: Option<&J>) -> std::collections::HashMap<&str, &J> {
+    let mut m = std::collections::HashMap::new();
+    if let Some(J::Obj(members)) = o {
+        for (k, v) in members {
+            m.entry(k.as_str()).or_insert(v);
+        }
+    }
+    m
 }
 
 /// What the writer may use of the source localization.
@@ -497,8 +518,12 @@ fn mirror(shape: &Shape, old: Option<&J>, trans: &Trans, path: &mut Vec<String>,
                 };
                 // translations of this set by position, found in one pass (a set can hold many values)
                 let mut by_pos: std::collections::HashMap<usize, &str> = std::collections::HashMap::new();
-                for (p, v) in trans {
-                    if p.len() == path.len() + 2 && p[..path.len()] == path[..] && p[path.len()] == "stringSet" {
+                // `trans` is sorted by path: the paths below `path` + "stringSet" are one run, found by binary search
+                let mut set_path = path.clone();
+                set_path.push("stringSet".into());
+                let from = trans.partition_point(|(p, _)| p.as_slice() < set_path.as_slice());
+                for (p, v) in trans[from..].iter().take_while(|(p, _)| p.starts_with(&set_path)) {
+                    if p.len() == path.len() + 2 {
                         if let Ok(i) = p[path.len() + 1].parse::<usize>() {
                             by_pos.insert(i, v.as_str());
                         }
@@ -530,10 +555,15 @@ fn mirror(shape: &Shape, old: Option<&J>, trans: &Trans, path: &mut Vec<String>,
                 }
             }
             ShapeItem::Variations(types) => {
-                let ovar = old.and_then(|o| o.get("variations")).filter(|o| matches!(o, J::Obj(_)));
+                let ovar = obj_index(old.and_then(|o| o.get("variations")));
                 let mut vout: Vec<(String, J)> = Vec::new();
                 for (vtype, vm) in types {
-                    let has = |c: &str| vm.iter().any(|(k, _)| k == c);
+                    // category to shape, the first of a repeated category: one lookup per category, not a scan
+                    let mut by_cat: std::collections::HashMap<&str, &Option<Shape>> = std::collections::HashMap::new();
+                    for (k, sh) in vm {
+                        by_cat.entry(k.as_str()).or_insert(sh);
+                    }
+                    let has = |c: &str| by_cat.contains_key(c);
                     let order: Vec<String> = match cats {
                         Some(cs) if vtype == "plural" && !cs.is_empty() => {
                             let keep_zero = has("zero") && !cs.contains(&"zero");
@@ -541,7 +571,7 @@ fn mirror(shape: &Shape, old: Option<&J>, trans: &Trans, path: &mut Vec<String>,
                         }
                         _ => vm.iter().map(|(k, _)| k.clone()).collect(),
                     };
-                    let omap = ovar.and_then(|o| o.get(vtype)).filter(|o| matches!(o, J::Obj(_)));
+                    let omap = obj_index(ovar.get(vtype.as_str()).copied());
                     let mut cout: Vec<(String, J)> = Vec::new();
                     for cat in order {
                         let scat = if has(&cat) {
@@ -551,10 +581,10 @@ fn mirror(shape: &Shape, old: Option<&J>, trans: &Trans, path: &mut Vec<String>,
                         } else {
                             continue;
                         };
-                        let Some(Some(sshape)) = vm.iter().find(|(k, _)| k == scat).map(|(_, s)| s) else { continue };
+                        let Some(Some(sshape)) = by_cat.get(scat).copied() else { continue };
                         let n = path.len();
                         path.extend(["variations".to_string(), vtype.clone(), scat.to_string()]);
-                        let sub = mirror(sshape, omap.and_then(|o| o.get(&cat)), trans, path, cats);
+                        let sub = mirror(sshape, omap.get(cat.as_str()).copied(), trans, path, cats);
                         path.truncate(n);
                         if !sub.is_empty() {
                             cout.push((cat.clone(), J::Obj(sub)));
@@ -569,12 +599,12 @@ fn mirror(shape: &Shape, old: Option<&J>, trans: &Trans, path: &mut Vec<String>,
                 }
             }
             ShapeItem::Substitutions(subs) => {
-                let osub = old.and_then(|o| o.get("substitutions")).filter(|o| matches!(o, J::Obj(_)));
+                let osub = obj_index(old.and_then(|o| o.get("substitutions")));
                 let mut sout: Vec<(String, J)> = Vec::new();
                 for (name, sshape, meta) in subs {
                     let n = path.len();
                     path.extend(["substitutions".to_string(), name.clone()]);
-                    let m = mirror(sshape, osub.and_then(|o| o.get(name)), trans, path, cats);
+                    let m = mirror(sshape, osub.get(name.as_str()).copied(), trans, path, cats);
                     path.truncate(n);
                     if !m.is_empty() {
                         let mut all = meta.clone();
@@ -723,7 +753,7 @@ fn apply(cat: &Catalog, entries: &[Entry<'_>], doc: &Document) -> Result<String,
             Some(s) => shape_of(text, s),
             None => Shape { items: vec![ShapeItem::StringUnit] },
         };
-        let new_loc = mirror(&shape, old_j.as_ref(), &trans, &mut Vec::new(), cats.as_deref());
+        let new_loc = mirror(&shape, old_j.as_ref(), &sorted_trans(&trans), &mut Vec::new(), cats.as_deref());
         if new_loc.is_empty() {
             continue;
         }

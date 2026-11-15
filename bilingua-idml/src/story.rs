@@ -251,30 +251,30 @@ impl Walker<'_> {
     }
 }
 
+/// Every run of bare `Content` and `Br` children of `block` goes into a new range in its place. The children are
+/// regrouped in one pass (moving them one at a time scanned the block's children once per move).
 fn wrap_bare(t: &mut Tree, block: Id) {
-    let mut groups: Vec<Vec<Id>> = vec![];
-    let mut cur: Vec<Id> = vec![];
-    for c in t.children(block).to_vec() {
-        if t.is_element(c) && matches!(t.local(c), "Content" | "Br") {
-            cur.push(c);
+    let bare = |t: &Tree, c: Id| t.is_element(c) && matches!(t.local(c), "Content" | "Br");
+    let kids = t.children(block).to_vec();
+    if !kids.iter().any(|&c| bare(t, c)) {
+        return;
+    }
+    let mut out: Vec<Id> = Vec::with_capacity(kids.len());
+    let mut i = 0;
+    while i < kids.len() {
+        if !bare(t, kids[i]) {
+            out.push(kids[i]);
+            i += 1;
             continue;
         }
-        if !cur.is_empty() {
-            groups.push(std::mem::take(&mut cur));
-        }
-    }
-    if !cur.is_empty() {
-        groups.push(cur);
-    }
-    for group in groups {
-        let name = sibling_name(t, group[0], "CharacterStyleRange");
+        let j = (i..kids.len()).find(|&j| !bare(t, kids[j])).unwrap_or(kids.len());
+        let name = sibling_name(t, kids[i], "CharacterStyleRange");
         let csr = t.new_element(&name, &[]);
-        let at = t.index_of(block, group[0]).unwrap_or(0);
-        t.insert(block, at, csr);
-        for c in group {
-            t.append(csr, c);
-        }
+        t.set_children(csr, kids[i..j].to_vec());
+        out.push(csr);
+        i = j;
     }
+    t.set_children(block, out);
 }
 
 fn content_items(t: &Tree, content: Id, items: &mut Vec<Item>) {
@@ -597,16 +597,25 @@ pub fn normalize(t: &mut Tree, paras: &[Para]) {
             }
         }
         groups.retain(|g| !g.is_empty());
-        let mut anchor = csr;
+        // the moved children leave the range in one pass, and the clones go in after it in one pass: a range of
+        // many breaks is split in linear time. Each clone gets the range's tail, as the chain of clones did.
+        let moved: Vec<Id> = groups.iter().skip(1).flatten().copied().collect();
+        t.detach_all(&moved);
+        let tail = t.tail_raw(csr).to_string();
+        let mut clones: Vec<Id> = Vec::with_capacity(groups.len().saturating_sub(1));
         for g in groups.iter().skip(1) {
             let clone = shallow(t, csr);
-            for c in g {
-                t.append(clone, *c);
-            }
-            t.add_next(anchor, clone);
-            let tail = t.tail_raw(anchor).to_string();
+            let mut kids = t.children(clone).to_vec();
+            kids.extend(g.iter().copied());
+            t.set_children(clone, kids);
             t.set_tail_raw(clone, &tail);
-            anchor = clone;
+            clones.push(clone);
+        }
+        if let Some(parent) = t.parent(csr) {
+            let mut kids = t.children(parent).to_vec();
+            let at = kids.iter().position(|&c| c == csr).map_or(kids.len(), |i| i + 1);
+            kids.splice(at..at, clones);
+            t.set_children(parent, kids);
         }
     }
 }
@@ -970,9 +979,7 @@ pub fn rebuild(t: &mut Tree, para: &Para, tok: &Tok, target: &[Inline]) -> Vec<I
             t.append(last, b);
         }
         let tail = t.tail_raw(*old.last().expect("one range")).to_string();
-        for c in &old {
-            t.detach(*c);
-        }
+        t.detach_all(&old);
         for (k, c) in new_csrs.iter().enumerate() {
             t.insert(parent, index + k, *c);
             t.set_tail_raw(*c, &tail);
@@ -1001,11 +1008,8 @@ pub fn rebuild(t: &mut Tree, para: &Para, tok: &Tok, target: &[Inline]) -> Vec<I
     }
     for &ri in &live {
         let r = &para.runs[ri];
-        for m in &r.members {
-            if t.parent(*m) == Some(r.csr) {
-                t.detach(*m);
-            }
-        }
+        let members: Vec<Id> = r.members.iter().copied().filter(|m| t.parent(*m) == Some(r.csr)).collect();
+        t.detach_all(&members);
         if let Some(b) = r.br {
             if t.parent(b) == Some(r.csr) {
                 t.detach(b);

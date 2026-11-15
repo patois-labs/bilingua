@@ -7,6 +7,7 @@
 use crate::edit::Edits;
 use crate::lang::{self, Slot};
 use crate::xml::*;
+use std::collections::{HashMap, HashSet};
 
 pub struct Lang {
     names: [(u16, &'static str); 3],
@@ -219,27 +220,29 @@ fn flip_sheets(t: &Tree, ed: &mut Edits) {
     ed.mark_rewritten();
     let lx = ed.lxml_prefixes;
     let autos = child_el(t, root, NS_OFFICE, "automatic-styles");
-    let mut by_name: Vec<(String, u32)> = Vec::new();
-    let mut taken: Vec<String> = Vec::new();
+    // hashed lookups and a counter that only moves forward: many sheets and many taken names stay linear
+    let mut by_name: HashMap<String, u32> = HashMap::new();
+    let mut taken: HashSet<String> = HashSet::new();
     if let Some(a) = autos {
         for st in t.children(a).filter(|c| t.is(*c, NS_STYLE, "style")) {
             let name = t.attr(st, NS_STYLE, "name").unwrap_or_default();
             if t.attr(st, NS_STYLE, "family").as_deref() == Some("table") {
-                by_name.push((name.clone(), st));
+                by_name.entry(name.clone()).or_insert(st);
             }
-            taken.push(name);
+            taken.insert(name);
         }
     }
-    let mut made: Vec<(Option<String>, String)> = Vec::new(); // (old name, new name)
+    let mut made: HashMap<Option<String>, String> = HashMap::new(); // old name to new name
     let mut new_styles = String::new();
-    let mut edited: Vec<u32> = Vec::new();
+    let mut edited: HashSet<u32> = HashSet::new();
+    // the lowest free taRtlN never goes down, as names are only added
+    let mut k = 1usize;
     for table in tables {
         let name = t.attr(table, NS_TABLE, "style-name");
-        let found = name.as_ref().and_then(|nm| by_name.iter().find(|(k, _)| k == nm)).map(|(_, n)| *n);
+        let found = name.as_ref().and_then(|nm| by_name.get(nm)).copied();
         match found {
             Some(st) => {
-                if !edited.contains(&st) {
-                    edited.push(st);
+                if edited.insert(st) {
                     match child_el(t, st, NS_STYLE, "table-properties") {
                         Some(tp) => set_attr(t, ed, tp, NS_STYLE, "writing-mode", Some("rl-tb")),
                         None => {
@@ -250,22 +253,21 @@ fn flip_sheets(t: &Tree, ed: &mut Edits) {
                 }
             }
             None => {
-                let new_name = match made.iter().find(|(old, _)| *old == name) {
-                    Some((_, nn)) => nn.clone(),
+                let new_name = match made.get(&name) {
+                    Some(nn) => nn.clone(),
                     None => {
-                        let mut k = 1;
                         while taken.contains(&format!("taRtl{k}")) {
                             k += 1;
                         }
                         let nn = format!("taRtl{k}");
-                        taken.push(nn.clone());
+                        taken.insert(nn.clone());
                         let mut attrs: Vec<(u16, &str, String)> = vec![(NS_STYLE, "name", nn.clone()), (NS_STYLE, "family", "table".to_string())];
                         if let Some(p) = &name {
                             attrs.push((NS_STYLE, "parent-style-name", p.clone()));
                         }
                         let tp = make_el(t, autos.unwrap_or(root), NS_STYLE, "table-properties", &[(NS_STYLE, "writing-mode", "rl-tb".to_string())], "", lx);
                         new_styles.push_str(&make_el(t, autos.unwrap_or(root), NS_STYLE, "style", &attrs, &tp, lx));
-                        made.push((name.clone(), nn.clone()));
+                        made.insert(name.clone(), nn.clone());
                         nn
                     }
                 };

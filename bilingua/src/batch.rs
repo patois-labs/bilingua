@@ -223,6 +223,8 @@ pub fn expand_with(bytes: &[u8], opts: &BatchOptions) -> Result<Batch, Error> {
     let exts = supported_exts();
     let mut batch = Batch::default();
     let mut seen = std::collections::HashSet::new();
+    // document names given so far (case folded): `a/b.md` and `a__b.md` would both be `a__b.md`
+    let mut names = std::collections::HashSet::new();
     for e in entries {
         if e.meta.dir {
             continue; // a folder entry carries no content
@@ -264,6 +266,10 @@ pub fn expand_with(bytes: &[u8], opts: &BatchOptions) -> Result<Batch, Error> {
             )));
         }
         let name = document_name(&path);
+        if !names.insert(name.to_lowercase()) {
+            batch.skipped.push(Skipped { path, reason: "duplicate name (another member is written under the same document name)".to_string() });
+            continue;
+        }
         batch.members.push(Member { path, name, data: e.data });
     }
     Ok(batch)

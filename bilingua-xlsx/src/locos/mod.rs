@@ -258,6 +258,10 @@ impl Package {
         let wrels = pkg.rels(&wb)?;
         pkg.shared_strings = wrels.iter().find(|(_, k, _)| k == "sharedStrings").map(|(_, _, p)| p.clone());
         let d = &pkg.roots[&wb];
+        // a workbook in another namespace (an Office 2007 beta file) would open with no units: refused (BILI-50)
+        if d.nodes[d.root].ns.as_deref() != Some(M) {
+            return Err(bad(crate::OLD_NAMESPACE));
+        }
         let mut sheets = Vec::new();
         let mut visible = Vec::new();
         if let Some(list) = d.find(d.root, M, "sheets") {
@@ -1265,7 +1269,8 @@ pub fn merge(doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
     if texts.is_empty() && tag.is_none() {
         return Ok(data.clone());
     }
-    let l = bilingua_model::Limits::default();
+    // the stored package is read under the caller's merge limits
+    let l = opts.limits();
     let entries = read(data, &l)?;
     let mut pkg = Package::open(&entries)?;
     let rtl = tag.as_deref().is_some_and(profile::is_rtl);

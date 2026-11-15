@@ -214,7 +214,8 @@ impl Package {
         }
         let spine = opf.dom.child(opf.dom.root, NS_OPF, "spine");
         let mut xhtml = Vec::new();
-        let mut seen: Vec<usize> = Vec::new();
+        // chapters already in the spine, a set so a long spine of repeats stays linear
+        let mut seen: std::collections::HashSet<usize> = std::collections::HashSet::new();
         if let Some(s) = spine {
             for d in opf.dom.descendants(s) {
                 let n = opf.dom.node(d);
@@ -229,10 +230,9 @@ impl Package {
                     continue;
                 }
                 let Some(&ei) = names.get(path) else { continue };
-                if seen.contains(&ei) {
+                if !seen.insert(ei) {
                     continue;
                 }
-                seen.push(ei);
                 xhtml.push(ei);
             }
         }

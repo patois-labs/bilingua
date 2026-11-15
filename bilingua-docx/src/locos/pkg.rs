@@ -92,6 +92,8 @@ pub struct Pkg {
     pub main: usize,
     /// The input entries as read (Strict names), and as normalised (Transitional names; the same when not Strict).
     original: Vec<RawEntry>,
+    /// Entry name to its first position in `original`, so a lookup by name is not a scan of every entry.
+    position: HashMap<String, usize>,
     normalized: Vec<Vec<u8>>,
     strict: bool,
     /// The limits the package was loaded under, for the parts parsed later (`open`).
@@ -324,7 +326,7 @@ fn parse_xml(data: &[u8], what: &str) -> Result<Dom, Error> {
 
 impl Pkg {
     fn entry(&self, member: &str) -> Option<&[u8]> {
-        self.original.iter().position(|e| e.name == member).map(|i| self.normalized[i].as_slice())
+        self.position.get(member).map(|&i| self.normalized[i].as_slice())
     }
 
     fn srels(&self, partname: &str) -> Result<Vec<SRel>, Error> {
@@ -349,7 +351,11 @@ impl Pkg {
         let paragraphs = crate::guard_named_parts(&entries, limits)?;
         let strict = entries.iter().any(|e| e.name == "_rels/.rels" && contains(&e.data, format!("{STRICT_RELS}/officeDocument").as_bytes()));
         let normalized = entries.iter().map(|e| if strict && xml_member(&e.name) { part_to_transitional(&e.data) } else { Ok(e.data.clone()) }).collect::<Result<Vec<_>, _>>()?;
-        let mut pkg = Pkg { parts: Vec::new(), rels: Vec::new(), main: 0, original: entries, normalized, strict, limits: *limits, paragraphs };
+        let mut position: HashMap<String, usize> = HashMap::new();
+        for (i, e) in entries.iter().enumerate() {
+            position.entry(e.name.clone()).or_insert(i);
+        }
+        let mut pkg = Pkg { parts: Vec::new(), rels: Vec::new(), main: 0, original: entries, position, normalized, strict, limits: *limits, paragraphs };
 
         // content types
         let ct = pkg.entry("[Content_Types].xml").ok_or_else(|| perr("not a Word document: no [Content_Types].xml"))?;
@@ -545,7 +551,7 @@ impl Pkg {
         }
         let mut written: Vec<(EntryMeta, Vec<u8>)> = Vec::new();
         for (name, bytes) in out {
-            let at = self.original.iter().position(|e| e.name == name);
+            let at = self.position.get(&name).copied();
             let mut bytes = bytes;
             if let Some(i) = at {
                 let norm = &self.normalized[i];

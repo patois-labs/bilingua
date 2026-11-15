@@ -9,6 +9,21 @@ is listed here).
 
 ### Security
 
+- Office and package formats (security review run 2): ODF comment paragraphs are listed once however comments
+  nest, and right-to-left sheet styles are named in linear time; DOCX and PPTX LocOS image, alt-text and SmartArt
+  lookups, the EPUB package reader's namespace and attribute checks, IDML bare-break wrapping, the xcstrings
+  variation mirror, xcloc member lookups and xlsx sheet relationships are hashed or done in one pass. ODF, DOCX,
+  PPTX, XLSX, IDML, ARB and xcloc merges read the stored file under the caller's merge limits. The native DOCX and
+  PPTX writers stamp only a valid language tag, escaped for either quote. XLSX gives a repeated cell reference its
+  own unit id. A PO plural entry may ask for at most 32 forms, and PO and ARB plural copies of a key and notes count
+  against `max_context_bytes`. The MIME walker stops collecting parts past the part cap. A TTX Document with
+  damaged splice data is refused instead of panicking. Batches skip a member whose document name repeats another's.
+  The facade sniffs a file with no extension only up to `SNIFF_MAX_BYTES` (4 MiB); a larger one needs its
+  extension. The publish script checks the owner also when crates.io answers "already exists".
+- XLSX: a workbook outside the SpreadsheetML namespace (an Office 2007 beta file) is refused with a clear message
+  instead of opening with no units (BILI-50).
+- Email: a re-wrapped plain-text paragraph keeps each line's own indent, so a tab only the first line had is not
+  added to the others (BILI-52).
 - Dependencies: quick-xml 0.41 (RUSTSEC-2026-0194, -0195) and pulldown-cmark 0.13.6 (RUSTSEC-2026-0433); attribute
   values come out as before.
 - Python: PyO3 0.29 and pythonize 0.29 (RUSTSEC-2026-0176, -0177). The Python API is unchanged. The

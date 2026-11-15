@@ -13,6 +13,9 @@ pub struct Para {
     pub text: String,
     pub raw: String,
     pub lead: String,
+    /// The indent of each original line of a fixed (not flowed) paragraph: a re-wrapped line gets the indent of the
+    /// line it replaces, so an indent only the first line had is not added to the others (BILI-52).
+    pub line_leads: Vec<String>,
     pub trail: String,
     pub width: usize,
     pub multi: bool,
@@ -84,6 +87,7 @@ pub fn items(text: &str, flowed: bool, delsp: bool) -> Vec<Item> {
                     out.push(Item::Para(Para {
                         text: strip(&joined).to_string(),
                         lead: joined[..joined.len() - lstrip(&joined).len()].to_string(),
+                        line_leads: Vec::new(),
                         trail: String::new(),
                         width,
                         multi: true,
@@ -108,6 +112,7 @@ pub fn items(text: &str, flowed: bool, delsp: bool) -> Vec<Item> {
         out.push(Item::Para(Para {
             text: bodies.iter().map(|b| strip(b)).collect::<Vec<_>>().join(" "),
             lead: first[..first.len() - lstrip(first).len()].to_string(),
+            line_leads: bodies.iter().map(|b| b[..b.len() - lstrip(b).len()].to_string()).collect(),
             trail: if group.len() == 1 { last[rstrip(last).len()..].to_string() } else { String::new() },
             width: bodies.iter().map(|b| clen(rstrip(b))).max().unwrap_or(0),
             multi: group.len() > 1,
@@ -171,7 +176,9 @@ pub fn render(p: &Para, new: &str, flowed: bool, delsp: bool) -> String {
     if chunks.is_empty() {
         chunks.push(String::new());
     }
-    chunks.iter().map(|c| format!("{}{}", p.lead, c)).collect::<Vec<_>>().join(sep) + &p.eol
+    // each line keeps the indent of the original line at its place; lines past the original ones take the last one's
+    let lead_at = |k: usize| p.line_leads.get(k).or(p.line_leads.last()).map_or(p.lead.as_str(), String::as_str);
+    chunks.iter().enumerate().map(|(k, c)| format!("{}{}", lead_at(k), c)).collect::<Vec<_>>().join(sep) + &p.eol
 }
 
 #[cfg(test)]

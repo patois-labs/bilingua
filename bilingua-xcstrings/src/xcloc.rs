@@ -234,7 +234,8 @@ impl Filter for Xcloc {
                 _ => None,
             })
             .ok_or_else(|| Error::Write("xcloc skeleton has no archive".into()))?;
-        let limits = Limits::default();
+        // the stored bundle is read under the caller's merge limits
+        let limits = opts.limits();
         let entries = read_bundle(original, &limits)?;
         let lay = layout(&entries)?;
         let tag = doc.target_lang.as_deref().and_then(canonical_tag);
@@ -243,17 +244,27 @@ impl Filter for Xcloc {
             return merge_locos(doc, opts, original, &entries, &lay, replaced);
         }
         let mut any_touched = false;
+        // the segments of each XLIFF member (`x<k>/<id>`), in document order, found in one pass over the units
+        let mut by_member: std::collections::HashMap<usize, Vec<(&str, &bilingua_model::Segment)>> = std::collections::HashMap::new();
+        for u in doc.units.iter().filter(|u| u.translate) {
+            for s in &u.segments {
+                let Some((num, local)) = s.id.strip_prefix('x').and_then(|r| r.split_once('/')) else { continue };
+                // only the number as the extraction wrote it (`x1/`, never `x01/` or `x+1/`)
+                if let Some(k) = num.parse::<usize>().ok().filter(|k| num == k.to_string()) {
+                    by_member.entry(k).or_default().push((local, s));
+                }
+            }
+        }
         for (k, &ei) in lay.xliffs.iter().enumerate() {
+            let segs = by_member.get(&(k + 1)).map(Vec::as_slice).unwrap_or(&[]);
             let e = &entries[ei];
             let mut x = xliff_doc(e, &limits)?;
-            let prefix = format!("x{}/", k + 1);
             let mut touched = false;
             // the ids `to_document` gave the segments (a one-segment trans-unit is named by its unit id)
             let ids: std::collections::HashMap<String, usize> =
                 bilingua_xliff::segment_ids(&x).1.into_iter().enumerate().map(|(i, s)| (s, i)).collect();
-            for u in doc.units.iter().filter(|u| u.translate) {
-                for s in &u.segments {
-                    let Some(local) = s.id.strip_prefix(&prefix) else { continue };
+            {
+                for &(local, s) in segs {
                     let Some(&i) = ids.get(local) else { continue };
                     if x.seg(i).locked || s.target == x.seg(i).target || !s.has_target() {
                         continue;

@@ -121,7 +121,13 @@ for c in $order; do
     out="$(cargo publish -p "$c" --locked 2>&1)"; rc=$?
     printf '%s\n' "$out" >> "$log"
     if [ $rc = 0 ]; then say "[$i/$count] $c $version: published"; break; fi
-    if echo "$out" | grep -q 'already exists\|already uploaded'; then say "[$i/$count] $c $version: was already up"; break; fi
+    if echo "$out" | grep -q 'already exists\|already uploaded'; then
+      # someone may have published this name between the check above and this publish: done only when it is ours
+      owned_by_us "$c" "$ours"; own=$?
+      if [ $own = 0 ]; then say "[$i/$count] $c $version: was already up under our account"; break; fi
+      if [ $own = 1 ]; then say "[$i/$count] $c $version: already on crates.io but NOT owned by $ours (owners: $(owners_of "$c" | tr '\n' ' ')); stopping"; exit 1; fi
+      say "[$i/$count] $c $version: already on crates.io but its owners could not be read; stopping (run again to retry)"; exit 1
+    fi
     if echo "$out" | grep -qi '429\|too many'; then
       when="$(echo "$out" | grep -oE 'try again after [^.]+ GMT' | head -1 | sed 's/try again after //')"
       wait=600

@@ -65,21 +65,28 @@ pub fn paragraphs(t: &Tree, styles_part: bool) -> Vec<u32> {
 }
 
 /// Comment (`office:annotation`) paragraphs in document order, a comment inside a tracked deletion left out.
+/// One pass over the nodes: a paragraph is listed once however many comments enclose it, so nested comments cannot
+/// multiply the list.
 pub fn annotation_paragraphs(t: &Tree) -> Vec<u32> {
+    const IN_TC: u8 = 1;
+    const IN_NOTE: u8 = 2;
+    let mut state = vec![0u8; t.nodes.len()];
     let mut out = Vec::new();
     for i in 0..t.nodes.len() as u32 {
-        if !t.is(i, NS_OFFICE, "annotation") || t.ancestors(i).any(|a| t.is(a, NS_TEXT, "tracked-changes")) {
+        let node = t.node(i);
+        if node.kind != Kind::Elem {
             continue;
         }
-        // all paragraphs below it, in document order (pre-order ids of one subtree are contiguous)
-        let end = t.node(i).e1;
-        let mut j = i + 1;
-        while (j as usize) < t.nodes.len() && t.node(j).s0 < end {
-            if t.node(j).kind == Kind::Elem && t.node(j).ns == NS_TEXT && matches!(t.local(j), "p" | "h") {
-                out.push(j);
-            }
-            j += 1;
+        let mut st = if node.parent == NIL { 0 } else { state[node.parent as usize] };
+        if st & IN_NOTE != 0 && node.ns == NS_TEXT && matches!(t.local(i), "p" | "h") {
+            out.push(i);
         }
+        if t.is(i, NS_TEXT, "tracked-changes") {
+            st |= IN_TC;
+        } else if st & IN_TC == 0 && t.is(i, NS_OFFICE, "annotation") {
+            st |= IN_NOTE;
+        }
+        state[i as usize] = st;
     }
     out
 }

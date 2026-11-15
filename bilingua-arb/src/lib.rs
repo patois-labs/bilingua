@@ -93,6 +93,9 @@ impl Arb {
         let mut parts: Vec<SkelPart> = Vec::new();
         let mut units: Vec<Unit> = Vec::new();
         let mut pos = 0usize;
+        // the context cap is the caller's (`ExtractOptions::limits`)
+        let caller = opts.limits();
+        let mut context = guard::ContextBudget::new();
         for m in msgs.into_iter().filter(|m| !m.plan.units.is_empty()) {
             if units.len() + m.plan.units.len() > limits.max_units {
                 return Err(LimitError::new(LimitKind::Units, format!("the file has more than {} units", limits.max_units)).into());
@@ -104,6 +107,8 @@ impl Arb {
             parts.push(SkelPart::Unit(units.len()));
             let meta = m.meta.map(|n| Meta::read(text, n));
             for (k, up) in m.plan.units.into_iter().enumerate() {
+                // the key and the notes are copied into each plural or select unit: every copy is charged
+                context.charge(m.key.len() + meta.as_ref().map_or(0, |mt| mt.notes.iter().map(String::len).sum()), &caller)?;
                 let mut unit = Unit::new(format!("u{}", units.len() + 1), up.inlines);
                 unit.codes = up.codes;
                 if let Some(meta) = &meta {
@@ -196,7 +201,7 @@ impl Filter for Arb {
         // the LocOS profile: an entry added on its own line ends with `\n` whatever the file uses, and a
         // translation is written as it is (a token its unit does not have stays in it as text)
         let locos = opts.is_profile(profile::LOCOS);
-        let out = if stamp || doc.units.iter().any(touched) { splice(&orig, doc, locos)? } else { orig };
+        let out = if stamp || doc.units.iter().any(touched) { splice(&orig, doc, locos, &Limits::from_model(&opts.limits()))? } else { orig };
         let mut bytes = Vec::with_capacity(out.len() + 3);
         if encoding == "utf-8-bom" {
             bytes.extend_from_slice(BOM);
@@ -453,9 +458,9 @@ impl Trans {
     }
 }
 
-fn splice(orig: &str, doc: &Document, locos: bool) -> Result<String, Error> {
-    let limits = Limits::default();
-    let root = scan_root(orig, &limits).map_err(|e| Error::Write(format!("the skeleton is not an ARB file any more: {e}")))?;
+fn splice(orig: &str, doc: &Document, locos: bool, limits: &Limits) -> Result<String, Error> {
+    // the stored text is read again under the caller's merge limits
+    let root = scan_root(orig, limits).map_err(|e| Error::Write(format!("the skeleton is not an ARB file any more: {e}")))?;
     let Node::Obj { pairs, start: root_start, end: root_end } = &root else { return Err(Error::Write("not an object".into())) };
     let target = doc.target_lang.as_deref().map(str::trim).filter(|t| !t.is_empty());
     // The units were planned when the file was extracted, maybe under another profile than this merge's (a message
