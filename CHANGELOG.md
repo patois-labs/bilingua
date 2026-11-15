@@ -20,6 +20,9 @@ is listed here).
   damaged splice data is refused instead of panicking. Batches skip a member whose document name repeats another's.
   The facade sniffs a file with no extension only up to `SNIFF_MAX_BYTES` (4 MiB); a larger one needs its
   extension. The publish script checks the owner also when crates.io answers "already exists".
+- ICML: bare `Content` and `Br` children of a range are wrapped in one pass and marking a change stops at an already changed node, so tens of thousands of bare runs read in seconds instead of minutes.
+- IDML: a merge puts the rebuilt ranges of all paragraphs in place together, one pass per parent, instead of one lookup and insert per paragraph.
+- WXL: writing `Culture` skips comments and processing instructions in a DOCTYPE internal subset, so a quote in a subset comment no longer hides the root tag.
 - XLSX: a workbook whose prefixed root is outside the SpreadsheetML namespace (an Office 2007 beta file) is
   refused with a clear message instead of opening with no units; an unprefixed one is read as before (BILI-50).
 - Email: a re-wrapped plain-text paragraph keeps each line's own indent, so a tab only the first line had is not
