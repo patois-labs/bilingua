@@ -1088,6 +1088,68 @@ mod tests {
     }
 
     #[test]
+    fn a_quote_in_a_comment_of_the_subset_passes_but_hides_no_entity() {
+        // BILI-60: every reader skips a comment of the subset whole (quick-xml, the guard, the XML family), so an
+        // apostrophe in it changes no reading
+        let l = Limits::default();
+        for ok in [
+            "<!DOCTYPE r [ <!-- don't edit this file --> <!ELEMENT r ANY> ]><r/>",
+            "<!DOCTYPE r [ <!-- the \"r\" element --> <!ATTLIST r id CDATA #IMPLIED> <!-- it's 'r' --> ]><r id='a'>x</r>",
+            "<!DOCTYPE r [<!--'-->]><r/>",
+        ] {
+            assert!(check_xml(ok.as_bytes(), &l).is_ok(), "{ok}");
+            assert!(check_xml_internal_entities(ok.as_bytes(), &l).is_ok(), "{ok}");
+        }
+        let svg = "<!DOCTYPE svg [ <!-- Adobe's namespaces --> <!ENTITY ns_svg \"http://www.w3.org/2000/svg\"> ]><svg/>";
+        assert!(check_xml_internal_entities(svg.as_bytes(), &l).is_ok());
+        assert_eq!(kind(check_xml(svg.as_bytes(), &l)), Some(LimitKind::XmlEntities));
+        // an entity declaration next to, inside or after such a comment is still refused
+        for bad in [
+            "<!DOCTYPE r [ <!-- don't --> <!ENTITY a \"x\"> ]><r>&a;</r>",
+            "<!DOCTYPE r [ <!ENTITY a \"x\"> <!-- don't --> ]><r>&a;</r>",
+            "<!DOCTYPE r [ <!-- ' <!ENTITY a SYSTEM \"file:///etc/passwd\"> ' --> ]><r/>",
+            "<!DOCTYPE r [ <!-- ' --><!ENTITY % p SYSTEM \"http://example.invalid/x.dtd\"> %p; ]><r/>",
+            "<!DOCTYPE r [ <!-- ' --> ]><!ENTITY a \"x\"><r/>",
+        ] {
+            assert_eq!(kind(check_xml(bad.as_bytes(), &l)), Some(LimitKind::XmlEntities), "{bad}");
+        }
+        for bad in [
+            "<!DOCTYPE svg [ <!-- ' --> <!ENTITY a \"&b;&b;\"> ]><svg/>",
+            "<!DOCTYPE svg [ <!-- ' <!ENTITY a SYSTEM \"file:///etc/passwd\"> --> ]><svg/>",
+            "<!DOCTYPE svg [ <!-- ' --> <!ENTITY % p \"x\"> ]><svg/>",
+        ] {
+            assert_eq!(kind(check_xml_internal_entities(bad.as_bytes(), &l)), Some(LimitKind::XmlEntities), "{bad}");
+        }
+        // a reader that pairs quotes but does not skip comments would read the subset on to the next quote: an
+        // ENTITY anywhere after such a DOCTYPE (an attribute, a comment, CDATA) could be a declaration to it
+        for bad in [
+            "<!DOCTYPE r [ <!-- ' --> ]><r a='<!ENTITY b \"x\">'/>",
+            "<!DOCTYPE r [ <!-- \" --> ]><r><!-- <!entity b 'x'> --></r>",
+            "<!DOCTYPE r [ <!-- ' --> ]><r><![CDATA[<!ENTITY b 'x'>]]></r>",
+        ] {
+            assert_eq!(kind(check_xml(bad.as_bytes(), &l)), Some(LimitKind::XmlEntities), "{bad}");
+            assert_eq!(kind(check_xml_internal_entities(bad.as_bytes(), &l)), Some(LimitKind::XmlEntities), "{bad}");
+        }
+        // a bracket or an angle bracket in the comment, or a quote in a processing instruction, is still refused
+        for bad in [
+            "<!DOCTYPE r [ <!-- ' ] --> ]><r/>",
+            "<!DOCTYPE r [ <!-- \" > --> ]><r/>",
+            "<!DOCTYPE r [ <!-- ' < --> ]><r/>",
+            "<!DOCTYPE r [ <!-- ' [ --> ]><r/>",
+            "<!DOCTYPE r [ <!-- ok --> <?pi don't ?> ]><r/>",
+            "<!DOCTYPE r [ <!-- ' --> ",
+        ] {
+            assert_eq!(kind(check_xml(bad.as_bytes(), &l)), Some(LimitKind::XmlEntities), "{bad}");
+        }
+        // and the elements after it are counted as before
+        let tight = Limits { max_xml_depth: 2, max_xml_elements: 3, ..Limits::default() };
+        let deep = "<!DOCTYPE r [ <!-- don't --> ]><r><a><b><c/></b></a></r>";
+        assert_eq!(kind(check_xml(deep.as_bytes(), &tight)), Some(LimitKind::XmlDepth));
+        let wide = "<!DOCTYPE r [ <!-- don't --> ]><r><b/><b/><b/><b/></r>";
+        assert_eq!(kind(check_xml(wide.as_bytes(), &tight)), Some(LimitKind::XmlElements));
+    }
+
+    #[test]
     fn every_reading_of_the_bytes_is_scanned() {
         let l = Limits { max_xml_depth: 2, max_xml_elements: 3, ..Limits::default() };
         let body = "<a><b><c/></b></a>";
