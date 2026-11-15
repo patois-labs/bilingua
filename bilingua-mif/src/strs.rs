@@ -70,7 +70,7 @@ fn next_block(s: &str) -> Option<(usize, usize)> {
     None
 }
 
-/// `None` when the statement is not one string or has no letter or digit outside its building blocks;
+/// `None` when the statement is not one string or has no letter outside its building blocks (`2.`, `<$year>`);
 /// `Some(Err)` when its text holds the marker characters.
 fn one(text: &str, tree: &Tree, node: u32, kind: &'static str, style: Option<String>) -> Option<Result<StrUnit, ()>> {
     let s = tree.string_arg(text, node)?;
@@ -98,7 +98,7 @@ fn one(text: &str, tree: &Tree, node: u32, kind: &'static str, style: Option<Str
     if words.contains('\u{27e6}') || words.contains('\u{27e7}') {
         return Some(Err(()));
     }
-    if !bilingua_model::py_has_alnum(&words) {
+    if !bilingua_model::py_has_alpha(&words) {
         return None;
     }
     codes.insert(STR_HIDDEN.into(), CodeData::new().with_standalone(text[a.start..a.end].to_string()));
