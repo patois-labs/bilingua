@@ -141,7 +141,7 @@ const HKSCS_NAME: &str = "cp950-hkscs";
 /// The character of an HKSCS byte pair that cp950 leaves undefined (WHATWG Big5, which is Big5-HKSCS), when the
 /// pair reads as exactly one character.
 fn hkscs_pair(lead: u8, trail: u8) -> Option<char> {
-    let s = encoding_rs::BIG5.decode_without_bom_handling_and_without_replacement(&[lead, trail])?;
+    let s = bilingua_model::encoding_rs::BIG5.decode_without_bom_handling_and_without_replacement(&[lead, trail])?;
     let mut it = s.chars();
     let c = it.next()?;
     it.next().is_none().then_some(c)
