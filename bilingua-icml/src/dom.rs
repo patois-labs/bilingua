@@ -135,12 +135,17 @@ impl Dom {
         self.n(parent).children.iter().position(|c| *c == child)
     }
 
-    /// Marks `id` and its ancestors as changed (their bytes are regenerated, not copied).
+    /// Marks `id` and its ancestors as changed (their bytes are regenerated, not copied). Stops at a changed node
+    /// under a changed parent: every change marks the whole path to the root, so the ancestors above are changed
+    /// too (walking to the root on every move made regrouping many children cost children x depth).
     pub fn touch(&mut self, mut id: Id) {
         while id != NIL {
-            let n = self.nm(id);
-            n.dirty = true;
-            id = n.parent;
+            let p = self.n(id).parent;
+            if self.n(id).dirty && (p == NIL || self.n(p).dirty) {
+                return;
+            }
+            self.nm(id).dirty = true;
+            id = p;
         }
     }
 
@@ -187,16 +192,6 @@ impl Dom {
         let at = at.min(self.n(parent).children.len());
         self.nm(parent).children.insert(at, child);
         self.touch(parent);
-    }
-
-    /// Inserts `child` right before `anchor`.
-    pub fn insert_before(&mut self, anchor: Id, child: Id) {
-        let p = self.n(anchor).parent;
-        if p == NIL {
-            return;
-        }
-        let at = self.index_of(p, anchor).unwrap_or(0);
-        self.insert(p, at, child);
     }
 
     /// Removes `id` from its parent together with its tail text (the text node right after it); returns that

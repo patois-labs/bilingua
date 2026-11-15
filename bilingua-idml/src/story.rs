@@ -934,6 +934,58 @@ fn clean_target(s: &str) -> String {
 /// ranges that now hold the translated text, for [`stamp_language`] and [`stamp_rtl`]. Inline codes are moved,
 /// never copied or dropped: a code the translation lost is appended to the end of its paragraph.
 pub fn rebuild(t: &mut Tree, para: &Para, tok: &Tok, target: &[Inline]) -> Vec<Id> {
+    let mut splices = Splices::default();
+    let ranges = rebuild_into(t, para, tok, target, &mut splices);
+    splices.apply(t);
+    ranges
+}
+
+/// Paragraph ranges that [`rebuild_into`] replaced, put in place together by [`Splices::apply`]: one pass over
+/// each parent's children for all the paragraphs of a story (looking each range up and inserting its new ranges
+/// one at a time cost paragraphs x children).
+#[derive(Default)]
+pub struct Splices(Vec<(Id, Vec<Id>, Vec<Id>)>);
+
+impl Splices {
+    /// Puts every recorded replacement in place: the new ranges where the first old range was, the old ranges out.
+    pub fn apply(self, t: &mut Tree) {
+        let mut by_parent: HashMap<Id, (Vec<Id>, HashMap<Id, Vec<Id>>, Vec<Id>)> = HashMap::new();
+        let mut parents = vec![];
+        for (parent, old, new) in self.0 {
+            let e = by_parent.entry(parent).or_insert_with(|| {
+                parents.push(parent);
+                Default::default()
+            });
+            e.0.push(old[0]);
+            e.1.insert(old[0], new);
+            e.2.extend(old);
+        }
+        for parent in parents {
+            let (firsts, mut at, gone) = by_parent.remove(&parent).expect("recorded parent");
+            let gone_set: HashSet<Id> = gone.iter().copied().collect();
+            let mut kids = Vec::with_capacity(t.children(parent).len());
+            for &c in t.children(parent) {
+                if let Some(new) = at.remove(&c) {
+                    kids.extend(new);
+                } else if !gone_set.contains(&c) {
+                    kids.push(c);
+                }
+            }
+            // a first range no longer under its parent: its new ranges go in front, as the insert at the index
+            // it was not found at (0) did
+            let front: Vec<Id> = firsts.iter().filter_map(|f| at.remove(f)).flatten().collect();
+            if !front.is_empty() {
+                kids.splice(0..0, front);
+            }
+            t.detach_all(&gone);
+            t.set_children(parent, kids);
+        }
+    }
+}
+
+/// [`rebuild`] with the replacement of the paragraph's ranges left in `splices` (mode A): call
+/// [`Splices::apply`] before anything reads the parent's children or the new ranges' parent.
+pub fn rebuild_into(t: &mut Tree, para: &Para, tok: &Tok, target: &[Inline], splices: &mut Splices) -> Vec<Id> {
     let (lead, trail) = tok.edges();
     let parts = target_parts(target, &lead, &trail);
     let pcs = pieces(&parts, tok);
@@ -949,7 +1001,6 @@ pub fn rebuild(t: &mut Tree, para: &Para, tok: &Tok, target: &[Inline]) -> Vec<I
                 old.push(r.csr);
             }
         }
-        let index = t.index_of(parent, old[0]).unwrap_or(0);
         let base = tok.dominant.or_else(|| (0..para.runs.len()).find(|i| !para.runs[*i].items.is_empty())).unwrap_or(0);
         let mut new_csrs: Vec<Id> = vec![];
         let mut filler: Option<Filler> = None;
@@ -979,11 +1030,10 @@ pub fn rebuild(t: &mut Tree, para: &Para, tok: &Tok, target: &[Inline]) -> Vec<I
             t.append(last, b);
         }
         let tail = t.tail_raw(*old.last().expect("one range")).to_string();
-        t.detach_all(&old);
-        for (k, c) in new_csrs.iter().enumerate() {
-            t.insert(parent, index + k, *c);
+        for c in &new_csrs {
             t.set_tail_raw(*c, &tail);
         }
+        splices.0.push((parent, old, new_csrs.clone()));
         return new_csrs;
     }
     // Mode B: rebuild each visible run in place, in its own range.

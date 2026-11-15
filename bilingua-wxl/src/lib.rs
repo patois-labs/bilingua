@@ -538,23 +538,33 @@ fn set_culture(raw: &str, culture: &str) -> String {
     }
 }
 
-/// Length of a `<!DOCTYPE ...>` declaration, with an internal subset in brackets.
+/// Length of a `<!DOCTYPE ...>` declaration, with an internal subset in brackets. Comments and processing
+/// instructions in the subset are skipped whole, as the XML guard reads them: a quote inside one is not a quote.
 fn doctype_len(rest: &str) -> Option<usize> {
-    let (mut q, mut sub) = (0u8, 0usize);
-    for (k, &c) in rest.as_bytes().iter().enumerate() {
-        if q != 0 {
-            if c == q {
-                q = 0;
-            }
-        } else if c == b'"' || c == b'\'' {
-            q = c;
-        } else if c == b'[' {
+    let b = rest.as_bytes();
+    let (mut k, mut sub) = (0usize, 0usize);
+    while k < b.len() {
+        let c = b[k];
+        if c == b'"' || c == b'\'' {
+            k += 1 + b[k + 1..].iter().position(|x| *x == c)? + 1;
+            continue;
+        }
+        if sub > 0 && b[k..].starts_with(b"<!--") {
+            k += 4 + rest[k + 4..].find("-->")? + 3;
+            continue;
+        }
+        if sub > 0 && b[k..].starts_with(b"<?") {
+            k += 2 + rest[k + 2..].find("?>")? + 2;
+            continue;
+        }
+        if c == b'[' {
             sub += 1;
         } else if c == b']' {
             sub = sub.saturating_sub(1);
         } else if c == b'>' && sub == 0 {
             return Some(k + 1);
         }
+        k += 1;
     }
     None
 }

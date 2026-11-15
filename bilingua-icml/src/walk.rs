@@ -242,19 +242,51 @@ fn wrap_bare(dom: &mut Dom, block: Id) {
     if !cur.is_empty() {
         groups.push(cur);
     }
-    for group in groups {
-        let csr = sibling_elem(dom, group[0], "CharacterStyleRange", Vec::new());
-        dom.insert_before(group[0], csr);
-        for c in group {
-            // lxml's append moves an element's tail text with it
-            let p = dom.n(c).parent;
-            let tail = dom.index_of(p, c).and_then(|i| dom.n(p).children.get(i + 1).copied()).filter(|t| dom.n(*t).kind == Kind::Text);
-            dom.append(csr, c);
-            if let Some(t) = tail {
-                dom.append(csr, t);
-            }
+    if groups.is_empty() {
+        return;
+    }
+    // one pass over the block's children: each group goes into a new range at the place of its first member, and
+    // every member takes its tail text (the text node right after it) along, as lxml's append does. Moving one
+    // child at a time looked it up among all the others and shifted the rest each time.
+    let mut owner: HashMap<Id, usize> = HashMap::new();
+    let mut csrs: Vec<Id> = Vec::with_capacity(groups.len());
+    for (gi, g) in groups.iter().enumerate() {
+        csrs.push(sibling_elem(dom, g[0], "CharacterStyleRange", Vec::new()));
+        for c in g {
+            owner.insert(*c, gi);
         }
     }
+    let old = std::mem::take(&mut dom.nm(block).children);
+    let mut kept = Vec::with_capacity(old.len());
+    let mut placed = vec![false; csrs.len()];
+    let mut tail_of: Option<usize> = None;
+    for c in old {
+        let to = match owner.get(&c) {
+            Some(&g) => {
+                if !placed[g] {
+                    placed[g] = true;
+                    dom.nm(csrs[g]).parent = block;
+                    kept.push(csrs[g]);
+                }
+                tail_of = Some(g);
+                Some(g)
+            }
+            None if dom.n(c).kind == Kind::Text => tail_of.take(),
+            None => {
+                tail_of = None;
+                None
+            }
+        };
+        match to {
+            Some(g) => {
+                dom.nm(c).parent = csrs[g];
+                dom.nm(csrs[g]).children.push(c);
+            }
+            None => kept.push(c),
+        }
+    }
+    dom.nm(block).children = kept;
+    dom.touch(block);
 }
 
 fn content_items(dom: &Dom, content: Id, items: &mut Vec<Item>) {

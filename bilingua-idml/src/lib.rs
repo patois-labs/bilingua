@@ -129,13 +129,19 @@ fn merge_doc(doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
                 }
             }
             if !plans.is_empty() {
+                // the new ranges of every paragraph go in place together (one pass per parent), then get stamped
+                let mut splices = story::Splices::default();
+                let mut rebuilt = Vec::with_capacity(plans.len());
                 for (para, tok, new) in plans {
-                    let ranges = story::rebuild(&mut tree, para, &tok, new);
+                    rebuilt.push(story::rebuild_into(&mut tree, para, &tok, new, &mut splices));
+                }
+                splices.apply(&mut tree);
+                for ranges in &rebuilt {
                     if let Some(lg) = &language {
-                        story::stamp_language(&mut tree, &ranges, lg);
+                        story::stamp_language(&mut tree, ranges, lg);
                     }
                     if rtl {
-                        story::stamp_rtl(&mut tree, &ranges);
+                        story::stamp_rtl(&mut tree, ranges);
                     }
                 }
                 if opts.is_profile(bilingua_model::profile::LOCOS) {
