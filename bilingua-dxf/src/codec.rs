@@ -4,6 +4,10 @@
 //! Single-byte pages come from `sbcs.rs`, the four double-byte pages (cp932, gbk, cp949, cp950) from `cjk.bin`;
 //! both are generated from Python (see `tools/`). Decoding is strict: a byte the codec rejects is an error with its
 //! position. Encoding says "cannot write" for a character the codec lacks, and the caller then writes `\U+XXXX`.
+//!
+//! `cp950-hkscs` is cp950 with the Hong Kong (HKSCS) characters that Big5-HKSCS adds at byte pairs cp950 leaves
+//! undefined (BILI-57: real `ANSI_950` drawings carry them). A drawing gets it only when one of its values needs
+//! it; every pair cp950 defines reads and writes as cp950.
 
 use crate::sbcs::{PAGES, UNDEF};
 use std::sync::OnceLock;
@@ -127,6 +131,47 @@ pub enum Codec {
     Sb(usize),
     /// Index into `CJK_NAMES`.
     Cjk(usize),
+    /// cp950 plus the HKSCS pairs cp950 leaves undefined.
+    Cp950Hkscs,
+}
+
+const CP950: usize = 3;
+const HKSCS_NAME: &str = "cp950-hkscs";
+
+/// The character of an HKSCS byte pair that cp950 leaves undefined (WHATWG Big5, which is Big5-HKSCS), when the
+/// pair reads as exactly one character.
+fn hkscs_pair(lead: u8, trail: u8) -> Option<char> {
+    let s = encoding_rs::BIG5.decode_without_bom_handling_and_without_replacement(&[lead, trail])?;
+    let mut it = s.chars();
+    let c = it.next()?;
+    it.next().is_none().then_some(c)
+}
+
+/// Character to HKSCS pair for every pair [`hkscs_pair`] reads that cp950 leaves undefined (the lowest pair wins
+/// for a character several pairs read as), sorted by character: so a written character reads back as itself.
+fn hkscs_reverse() -> &'static [(u32, u16)] {
+    static R: OnceLock<Vec<(u32, u16)>> = OnceLock::new();
+    R.get_or_init(|| {
+        let t = &cjk()[CP950];
+        let mut r = Vec::new();
+        for lead in 0x81..=0xFEu8 {
+            for trail in 0x40..=0xFEu8 {
+                if cp950_pair(t, lead, trail) == 0 {
+                    if let Some(c) = hkscs_pair(lead, trail) {
+                        r.push((c as u32, (u16::from(lead) << 8) | u16::from(trail)));
+                    }
+                }
+            }
+        }
+        r.sort();
+        r.dedup_by_key(|e| e.0);
+        r
+    })
+}
+
+fn cp950_pair(t: &Cjk, lead: u8, trail: u8) -> u16 {
+    let o = 2 * ((usize::from(lead) - 0x81) * TRAILS + (usize::from(trail) - 0x40));
+    u16::from_le_bytes([t.pairs[o], t.pairs[o + 1]])
 }
 
 impl Codec {
@@ -144,7 +189,15 @@ impl Codec {
         if let Some(i) = PAGES.iter().position(|p| p.name == name) {
             return Some(Codec::Sb(i));
         }
+        if name == HKSCS_NAME {
+            return Some(Codec::Cp950Hkscs);
+        }
         CJK_NAMES.iter().position(|n| *n == name).map(Codec::Cjk)
+    }
+
+    /// The codec a drawing gets when its declared code page cannot read a value: cp950-hkscs for cp950, else none.
+    pub fn widened(self) -> Option<Codec> {
+        (self == Codec::Cjk(CP950)).then_some(Codec::Cp950Hkscs)
     }
 
     /// Python's name for the codec.
@@ -153,6 +206,7 @@ impl Codec {
             Codec::Utf8 => "utf-8",
             Codec::Sb(i) => PAGES[i].name,
             Codec::Cjk(i) => CJK_NAMES[i],
+            Codec::Cp950Hkscs => HKSCS_NAME,
         }
     }
 
@@ -176,8 +230,9 @@ impl Codec {
                 }
                 Ok(s)
             }
-            Codec::Cjk(k) => {
-                let t = &cjk()[k];
+            Codec::Cjk(_) | Codec::Cp950Hkscs => {
+                let hk = self == Codec::Cp950Hkscs;
+                let t = &cjk()[if let Codec::Cjk(k) = self { k } else { CP950 }];
                 let mut s = String::with_capacity(raw.len());
                 let mut i = 0;
                 while i < raw.len() {
@@ -200,12 +255,15 @@ impl Codec {
                     if !(0x40..=0xFE).contains(&tr) {
                         return Err(i);
                     }
-                    let o = 2 * ((usize::from(b) - 0x81) * TRAILS + (usize::from(tr) - 0x40));
-                    let c = u16::from_le_bytes([t.pairs[o], t.pairs[o + 1]]);
+                    let c = cp950_pair(t, b, tr);
                     if c == 0 {
-                        return Err(i);
+                        match hk.then(|| hkscs_pair(b, tr)).flatten() {
+                            Some(ch) => s.push(ch),
+                            None => return Err(i),
+                        }
+                    } else {
+                        s.push(char::from_u32(u32::from(c)).ok_or(i)?);
                     }
-                    s.push(char::from_u32(u32::from(c)).ok_or(i)?);
                     i += 2;
                 }
                 Ok(s)
@@ -231,6 +289,19 @@ impl Codec {
                 match r.binary_search_by_key(&u, |e| e.0) {
                     Ok(i) => {
                         out.push(r[i].1);
+                        true
+                    }
+                    Err(_) => false,
+                }
+            }
+            Codec::Cp950Hkscs => {
+                if Codec::Cjk(CP950).encode_char(c, out) {
+                    return true;
+                }
+                let r = hkscs_reverse();
+                match r.binary_search_by_key(&(c as u32), |e| e.0) {
+                    Ok(i) => {
+                        out.extend_from_slice(&r[i].1.to_be_bytes());
                         true
                     }
                     Err(_) => false,
