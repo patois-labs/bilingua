@@ -69,9 +69,9 @@ fn odt(h: &str, paras: usize) -> Vec<u8> {
 fn a_long_heading_over_many_paragraphs_is_refused_before_copying() {
     let opts = ExtractOptions::new().with_limits(Limits::new().with_max_context_bytes(BUDGET));
     let bytes = odt(&heading(), PARAS);
-    let (r, n) = asked(|| Odt.extract(&bytes, &opts));
+    let (r, n) = asked(|| Odt::default().extract(&bytes, &opts));
     context_refusal(r);
     assert!(n < MOST_ASKED, "asked for {n} bytes");
-    let d = Odt.extract(&odt("Top", 2), &opts).unwrap();
+    let d = Odt::default().extract(&odt("Top", 2), &opts).unwrap();
     assert_eq!(d.units.iter().filter(|u| u.context.heading.as_deref() == Some("Top")).count(), 2);
 }
