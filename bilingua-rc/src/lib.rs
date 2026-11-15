@@ -287,7 +287,13 @@ impl Filter for Rc {
                 edited = true;
             }
         }
-        if let Some(b) = bilingua_model::enc::utf8_output(&out, encoding, opts) {
+        // a file read in a code page and written as UTF-8 says so in its code page pragmas (BILI-48)
+        let utf8_text = if opts.output_encoding == OutputEncoding::Utf8 && !matches!(encoding.as_str(), "utf-8" | "utf-8-bom") {
+            std::borrow::Cow::Owned(codec::utf8_pragmas(&out))
+        } else {
+            std::borrow::Cow::Borrowed(out.as_str())
+        };
+        if let Some(b) = bilingua_model::enc::utf8_output(&utf8_text, encoding, opts) {
             return Ok(b);
         }
         Ok(codec::encode(&out, encoding, edited))

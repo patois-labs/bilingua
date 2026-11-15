@@ -52,9 +52,11 @@ fn autolinks_glued_repeat_linear() {
         (t.elapsed().as_secs_f64(), String::from_utf8(out).unwrap())
     };
     let (c, _) = run(format!("{url} ").repeat(n));
-    let (a, out) = run(format!("見て{}", url.repeat(n)));
+    let glued = format!("見て{}", url.repeat(n));
+    let (a, out) = run(glued.clone());
     assert!(a < c * 5.0 + 3.0, "glued {a:.2} s, control {c:.2} s");
-    assert!(out.starts_with(&format!("見て<{url}>")), "{:.80}", out);
+    // a URL followed by more ASCII is a longer URL, not the source's: left as written
+    assert_eq!(out, format!("{glued}\n"));
     // the repair is unchanged for an ordinary glued URL
     let (_, one) = run(format!("{url}を見て"));
     assert_eq!(one, format!("<{url}>を見て\n"));

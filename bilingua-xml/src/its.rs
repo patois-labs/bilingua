@@ -312,6 +312,9 @@ pub(crate) fn eval_props(t: &Tree, dialect: Option<&Dialect>, extra: &[Rule], li
         }
         bytes = budget.bytes;
         let mut note_budget = Budget { steps: 4u64 * budget_per_rule, bytes };
+        // a rule with a locNote text gives every element it selects the same note: it is kept once, not once per
+        // element (run 2 G5-1)
+        let mut fixed_note: Option<u32> = None;
         for h in hits {
             match h {
                 Node::El(e) => {
@@ -327,8 +330,16 @@ pub(crate) fn eval_props(t: &Tree, dialect: Option<&Dialect>, extra: &[Rule], li
                         }
                         RuleKind::PreserveSpace => pre_x[i] = if rule.value == "preserve" { 2 } else { 1 },
                         RuleKind::LocNote => {
-                            let s = note_for(t, rule, e, &mut note_budget);
-                            note_x[i] = intern(s, &mut notes);
+                            note_x[i] = match fixed_note {
+                                Some(id) => id,
+                                None => {
+                                    let id = intern(note_for(t, rule, e, &mut note_budget), &mut notes);
+                                    if rule.pointer.is_none() {
+                                        fixed_note = Some(id);
+                                    }
+                                    id
+                                }
+                            };
                             if note_x[i] == 0 {
                                 note_x[i] = u32::MAX; // explicitly empty
                             }
@@ -345,8 +356,16 @@ pub(crate) fn eval_props(t: &Tree, dialect: Option<&Dialect>, extra: &[Rule], li
                         }
                     }
                     RuleKind::LocNote => {
-                        let s = note_for(t, rule, e, &mut note_budget);
-                        let id = intern(s, &mut notes);
+                        let id = match fixed_note {
+                            Some(id) => id,
+                            None => {
+                                let id = intern(note_for(t, rule, e, &mut note_budget), &mut notes);
+                                if rule.pointer.is_none() {
+                                    fixed_note = Some(id);
+                                }
+                                id
+                            }
+                        };
                         attr_note.insert(a, if id == 0 { u32::MAX } else { id });
                     }
                     _ => {}

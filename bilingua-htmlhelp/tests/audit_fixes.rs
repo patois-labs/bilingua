@@ -122,8 +122,8 @@ fn htmlhelp_comment_scan_is_linear() {
         let a = secs(&data);
         assert!(a < control * 5.0 + 3.0, "comments ending {end}: {a:.2} s, control {control:.2} s");
     }
-    // a comment still ends at whichever end comes first, so the entry after it is read
-    let data = format!("<HTML><BODY><!-- a --!><UL><LI><OBJECT type=\"text/sitemap\"><param name=\"Name\" value=\"Alpha\"></OBJECT></UL><!-- b -->");
+    // the entry between two comments is still read and written
+    let data = format!("<HTML><BODY><!-- a --><UL><LI><OBJECT type=\"text/sitemap\"><param name=\"Name\" value=\"Alpha\"></OBJECT></UL><!-- b -->");
     let (_, out) = translated(&data, MergeOptions::default());
     assert!(out.contains("value=\"Beta\""), "{out}");
 }

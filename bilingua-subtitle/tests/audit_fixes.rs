@@ -89,3 +89,25 @@ fn many_unmatched_close_tags_in_one_cue_are_linear() {
     let pairs = doc.units[0].codes.values().filter(|c| c.close.is_some()).count();
     assert_eq!(pairs, 1);
 }
+
+/// bilingua#11: an SRT file in GB2312 with no byte order mark and no source language is read as Chinese (with a
+/// warning that says it was a guess), not as Windows-1252; French in Windows-1252, a source language and the LocOS
+/// profile read as before.
+#[test]
+fn a_gb2312_srt_without_a_source_language_reads_as_chinese() {
+    let gb: &[u8] = b"1\r\n00:00:01,000 --> 00:00:02,000\r\n\xd3\xee\xd6\xe6\xca\xd8\xbb\xa4\xc9\xf1\r\n\r\n2\r\n00:00:03,000 --> 00:00:04,000\r\n\xc4\xe3\xba\xc3\xa3\xac\xca\xc0\xbd\xe7\r\n";
+    let doc = Srt.extract(gb, &ExtractOptions::new()).unwrap();
+    let texts: Vec<String> = doc.units.iter().map(|u| bilingua_model::plain_text(&u.source())).collect();
+    assert_eq!(texts, ["\u{5b87}\u{5b99}\u{5b88}\u{62a4}\u{795e}", "\u{4f60}\u{597d}\u{ff0c}\u{4e16}\u{754c}"]);
+    assert!(doc.warnings.iter().any(|w| w.kind == "text_encoding" && w.message.contains("GBK")), "{:?}", doc.warnings);
+    // an untouched merge gives the file back
+    assert_eq!(Srt.merge(&doc).unwrap(), gb);
+    // a source language decides, as before
+    let fr = Srt.extract(gb, &ExtractOptions::new().with_source_lang("fr")).unwrap();
+    assert!(bilingua_model::plain_text(&fr.units[0].source()).starts_with('\u{d3}'));
+    // French in Windows-1252 is not taken for Chinese
+    let latin: &[u8] = b"1\r\n00:00:01,000 --> 00:00:02,000\r\n\xc9l\xe8ve \xe0 l'\xe9cole, d\xe9j\xe0 l\xe0, \xe9t\xe9 \xe9l\xe9gant\r\n";
+    let d = Srt.extract(latin, &ExtractOptions::new()).unwrap();
+    assert_eq!(bilingua_model::plain_text(&d.units[0].source()), "\u{c9}l\u{e8}ve \u{e0} l'\u{e9}cole, d\u{e9}j\u{e0} l\u{e0}, \u{e9}t\u{e9} \u{e9}l\u{e9}gant");
+    assert!(d.warnings.iter().all(|w| !w.message.contains("GBK")));
+}
