@@ -138,7 +138,8 @@ fn limits_give_typed_errors() {
 fn big_and_odd_inputs_are_handled() {
     // a very long line, a long run of backslashes, many continuation lines, deep braces
     let long = format!("k = {}\n", "a".repeat(200_000));
-    assert!(Properties.extract(long.as_bytes(), &opts()).is_ok());
+    // over the 100,000 characters of the default ExtractOptions limits, so with the crate's own limits
+    assert!(Properties.extract_with(long.as_bytes(), &opts(), &Limits::default()).is_ok());
     let bs = format!("k = {}\n", "\\".repeat(100_001));
     check(bs.as_bytes());
     let cont: String = std::iter::once("k = start \\\n".to_string()).chain((0..20_000).map(|_| "  more \\\n".to_string())).collect();

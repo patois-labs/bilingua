@@ -12,10 +12,10 @@ fn ex_default(b: &[u8]) -> Result<Document, Error> {
 }
 
 /// Work counted for `n` and `2n`: at most a little over twice as much (linear), not four times.
-fn linear(n: usize, make: impl Fn(usize) -> Vec<u8>) {
+fn linear(n: usize, o: &ExtractOptions, make: impl Fn(usize) -> Vec<u8>) {
     let (a, b) = (make(n), make(2 * n));
-    let small = bilingua_model::work::count(|| ex_default(&a)).1;
-    let big = bilingua_model::work::count(|| ex_default(&b)).1;
+    let small = bilingua_model::work::count(|| Pdf.extract(&a, o)).1;
+    let big = bilingua_model::work::count(|| Pdf.extract(&b, o)).1;
     assert!(small > 0 && big * 10 <= small * 25 + 2_000, "{small} steps for n={n}, {big} for n={}: more than linear", 2 * n);
 }
 
@@ -43,8 +43,11 @@ fn objstm_shared_offset_is_parsed_once() {
 #[test]
 fn many_streams_without_length_scan_linear() {
     // stream objects with no /Length and no endstream of their own, one endstream after the last: finding the
-    // end of each must not scan the rest of the file again
-    linear(1_500, |n| {
+    // end of each must not scan the rest of the file again. Each such stream really is the rest of the file (as
+    // PDFium reads it), so the copies are bounded by the stream budget, set small here; once it is spent no more
+    // objects are read, and what is left to count is finding the ends.
+    let o = ExtractOptions::default().with_format_option("pdf.max_stream_bytes", 100_000);
+    linear(1_500, &o, |n| {
         let first = 4;
         let refs: String = (0..n).map(|i| format!("{} 0 R ", first + i)).collect();
         let mut b = b"%PDF-1.7\n".to_vec();
@@ -70,13 +73,13 @@ fn many_streams_without_length_scan_linear() {
     });
 }
 
-/// One page drawing `(a)` with font /F1, whose ToUnicode stream is `cmap`.
+/// One page drawing `(abab...)` with font /F1, whose ToUnicode stream is `cmap`.
 fn tounicode_page(cmap: &[u8]) -> Vec<u8> {
     let objs = vec![
         O::Plain("<</Type /Catalog /Pages 2 0 R>>".into()),
         O::Plain("<</Type /Pages /Kids [3 0 R] /Count 1>>".into()),
         O::Plain("<</Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources <</Font <</F1 5 0 R>>>> /Contents 4 0 R>>".into()),
-        O::Stream(String::new(), b"BT /F1 12 Tf 72 700 Td (a) Tj ET".to_vec()),
+        O::Stream(String::new(), b"BT /F1 12 Tf 72 700 Td (abababababababababab) Tj ET".to_vec()),
         O::Plain("<</Type /Font /Subtype /Type1 /BaseFont /Helvetica /ToUnicode 6 0 R>>".into()),
         O::Stream("/Filter /FlateDecode".into(), deflate(cmap)),
     ];
@@ -109,7 +112,7 @@ fn tounicode_bfrange_bomb_is_a_limit_error() {
     assert!(bytes < 32 << 20, "{bytes} bytes held for a ToUnicode map of {} bytes", cmap.len());
     // an ordinary map still applies
     let b = tounicode_page(b"1 beginbfrange <0061> <0062> <0058> endbfrange");
-    assert_eq!(texts(&ex_default(&b).unwrap()), vec!["X".to_string()]);
+    assert_eq!(texts(&ex_default(&b).unwrap()), vec!["XY".repeat(10)]);
 }
 
 #[test]
