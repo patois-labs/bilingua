@@ -82,6 +82,14 @@ fn limit_err(kind: bilingua_model::LimitKind, msg: String) -> Error {
     bilingua_model::LimitError::new(kind, msg).into()
 }
 
+/// The parser went past its own nesting bound (braces inside strings, calls inside calls).
+fn too_deep_err() -> Error {
+    limit_err(
+        bilingua_model::LimitKind::Depth,
+        format!("This Fluent file nests placeables or function calls more than {} deep.", parser::MAX_PARSE_DEPTH),
+    )
+}
+
 /// A decode refusal: code `encoding` (LocOS UnsupportedEncodingError).
 fn enc_err(msg: &str) -> Error {
     Error::Encoding(msg.into())
@@ -290,7 +298,10 @@ pub struct Structure {
 pub fn structure(bytes: &[u8]) -> Result<Structure, Error> {
     let (text, _) = decode(bytes)?;
     check_budget(text, &Limits::default())?;
-    let (items, junk) = parser::parse_counted(text);
+    let (items, junk, too_deep) = parser::parse_counted(text);
+    if too_deep {
+        return Err(too_deep_err());
+    }
     Ok(Structure {
         messages: items.iter().filter(|i| !i.is_term).count(),
         terms: items.iter().filter(|i| i.is_term).count(),
@@ -305,7 +316,10 @@ impl FtlFilter {
         bilingua_model::guard::check_input(bytes, &limits.model())?;
         let (text, bom) = decode(bytes)?;
         check_budget(text, limits)?;
-        let items = parser::parse(text);
+        let (items, _, too_deep) = parser::parse_counted(text);
+        if too_deep {
+            return Err(too_deep_err());
+        }
         let crlf = text.contains("\r\n");
         let mut parts: Vec<SkelPart> = Vec::new();
         let mut units: Vec<Unit> = Vec::new();

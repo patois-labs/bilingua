@@ -134,15 +134,21 @@ fn flow_orientation_is_linear_in_objects() {
 }
 
 #[test]
-fn text_objects_per_page_memory() {
-    // lead L1: the memory one page of many small text objects holds
-    let n = 50_000;
-    let mut c = String::from("BT /F1 1 Tf\n");
-    for _ in 0..n {
-        c.push_str("(a)Tj ");
-    }
-    c.push_str("ET");
-    let b = pages(&[c.into_bytes()], true);
-    let (_, bytes) = peak::peak(|| ex_default(&b));
-    assert!(bytes / n < 100, "{} bytes per text object ({bytes} for {n})", bytes / n);
+fn one_page_of_many_text_objects_is_refused() {
+    // lead L1: every text object of a page is held at once (about 420 bytes each), so one page may hold a tenth
+    // of the document's allowance of 80 objects per segment: with 1,000 segments, 8,000 on a page
+    let page = |n: usize| {
+        let mut c = String::from("BT /F1 1 Tf
+");
+        for _ in 0..n {
+            c.push_str("(a)Tj ");
+        }
+        c.push_str("ET");
+        pages(&[c.into_bytes()], true)
+    };
+    let o = ExtractOptions::new().with_limits(Limits::new().with_max_units(1_000));
+    let (r, bytes) = peak::peak(|| Pdf.extract(&page(20_000), &o));
+    assert!(matches!(r, Err(Error::Limit(_))), "{:?}", r.map(|d| d.units.len()));
+    assert!(bytes < 16 << 20, "{bytes} bytes held");
+    assert!(Pdf.extract(&page(5_000), &o).is_ok());
 }

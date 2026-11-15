@@ -108,12 +108,19 @@ pub struct ToUnicode {
     pub writes: usize,
 }
 
+/// The most mappings one ToUnicode map may write. Only 65,536 codes exist, so a real map writes each about once;
+/// a hostile one repeats 256-code ranges millions of times. Past this the map stops where it is.
+const MAX_CMAP_WRITES: usize = 4 * 0x10000;
+
 impl ToUnicode {
     /// PDFium's `CPDF_ToUnicodeMap`: bfchar and bfrange sections whose declared count matches (an over-long or
-    /// malformed section is dropped whole), codes up to 0xFFFF, later mappings replace earlier ones.
+    /// malformed section is dropped whole), codes up to 0xFFFF, later mappings replace earlier ones. A map that
+    /// would write more than [`MAX_CMAP_WRITES`] mappings keeps the sections before the one that goes over.
     pub fn parse(data: &[u8]) -> ToUnicode {
         let mut t = ToUnicode::default();
         let words = cmap_words(data);
+        // mappings the sections read so far will write, counted before any is written
+        let mut planned = 0usize;
         let mut i = 0;
         while i < words.len() {
             let w = &words[i];
@@ -137,6 +144,10 @@ impl ToUnicode {
                     }
                     j += 1;
                 }
+                planned = planned.saturating_add(items.len());
+                if planned > MAX_CMAP_WRITES {
+                    break;
+                }
                 if valid && items.len() as i64 == count {
                     for (c, dst) in items {
                         t.set(c, wide_of(&dst));
@@ -150,9 +161,11 @@ impl ToUnicode {
                 enum R {
                     Words(u32, Vec<Vec<u8>>),
                     Single(u32, u32, u32),
-                    Multi(u32, Vec<Vec<u16>>),
+                    /// The first destination; each next code's is the previous one plus one (expanded when written).
+                    Multi(u32, u32, Vec<u16>),
                 }
                 let mut ranges: Vec<R> = Vec::new();
+                let mut over = false;
                 while j < words.len() && words[j] != b"endbfrange" {
                     if !valid {
                         j += 1;
@@ -173,6 +186,11 @@ impl ToUnicode {
                         valid = false;
                         break;
                     };
+                    planned = planned.saturating_add((hi - lo + 1) as usize);
+                    if planned > MAX_CMAP_WRITES {
+                        over = true;
+                        break;
+                    }
                     if start == b"[" {
                         let mut list = Vec::new();
                         let mut k = j + 3;
@@ -192,18 +210,16 @@ impl ToUnicode {
                         if dst.len() == 1 {
                             ranges.push(R::Single(lo, hi, dst[0] as u32));
                         } else {
-                            let mut list = vec![dst];
-                            for _ in lo + 1..=hi {
-                                let next = string_add(list.last().unwrap());
-                                list.push(next);
-                            }
-                            ranges.push(R::Multi(lo, list));
+                            ranges.push(R::Multi(lo, hi, dst));
                         }
                         j += 3;
                     }
                     if ranges.len() as i64 > count {
                         valid = false;
                     }
+                }
+                if over {
+                    break;
                 }
                 if valid && ranges.len() as i64 == count {
                     for r in ranges {
@@ -218,9 +234,15 @@ impl ToUnicode {
                                     t.insert(c, vec![(start + k as u32) as u16]);
                                 }
                             }
-                            R::Multi(lo, list) => {
-                                for (k, w) in list.into_iter().enumerate() {
-                                    t.insert(lo + k as u32, w);
+                            R::Multi(lo, hi, first) => {
+                                let mut w = first;
+                                for c in lo..=hi {
+                                    let next = if c < hi { Some(string_add(&w)) } else { None };
+                                    t.insert(c, w);
+                                    match next {
+                                        Some(n) => w = n,
+                                        None => break,
+                                    }
                                 }
                             }
                         }

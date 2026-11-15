@@ -31,6 +31,9 @@ pub struct Limits {
     pub max_value_chars: usize,
     /// Bytes in one file.
     pub max_bytes: usize,
+    /// Key bytes copied into the units, all together (`bilingua_model::Limits::max_context_bytes`): one long key
+    /// over many values is refused before every unit holds a copy of it.
+    pub max_context_bytes: u64,
 }
 
 impl Default for Limits {
@@ -39,6 +42,7 @@ impl Default for Limits {
             max_units: 50_000,
             max_value_chars: 100_000,
             max_bytes: 128 * 1024 * 1024,
+            max_context_bytes: bilingua_model::Limits::default().max_context_bytes,
         }
     }
 }
@@ -52,6 +56,7 @@ impl Limits {
             max_units: l.max_units,
             max_value_chars: l.max_unit_chars,
             max_bytes: d.max_bytes.min(usize::try_from(l.max_input_bytes).unwrap_or(usize::MAX)),
+            max_context_bytes: l.max_context_bytes,
         }
     }
 }
@@ -63,6 +68,8 @@ pub(crate) enum ModuleError {
     Refused(String),
     /// Over a size limit.
     Limit(String),
+    /// Over the context limit (key text copied into the units).
+    Context(String),
 }
 
 impl From<ModuleError> for Error {
@@ -77,6 +84,7 @@ impl From<ModuleError> for Error {
                 let kind = if msg.contains("nested") { LimitKind::Depth } else { LimitKind::Units };
                 LimitError::new(kind, msg).into()
             }
+            ModuleError::Context(msg) => LimitError::new(LimitKind::Context, msg).into(),
         }
     }
 }

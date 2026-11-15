@@ -34,6 +34,8 @@ struct Parser<'a, 'l> {
     i: usize,
     limits: &'l Limits,
     out: Parsed,
+    /// Key bytes copied into the units so far (each unit and its context hold the dotted path).
+    context: bilingua_model::guard::ContextBudget,
 }
 
 /// Where the code starts: after an optional BOM and white space, `<?php` followed by white space.
@@ -70,6 +72,7 @@ pub fn parse(text: &str, limits: &Limits) -> Result<Parsed, Error> {
             translatable: 0,
             statements: 0,
         },
+        context: bilingua_model::guard::ContextBudget::new(),
     };
     p.walk()?;
     Ok(p.out)
@@ -305,6 +308,8 @@ impl<'a> Parser<'a, '_> {
             }
             let translatable = bilingua_model::py_has_alnum(&value);
             if translatable || !value.trim().is_empty() {
+                let key_len = path.iter().map(|p| p.len() + 1).sum::<usize>();
+                self.context.charge(2 * key_len, self.limits)?;
                 self.out.units.push(RawUnit {
                     start,
                     end,

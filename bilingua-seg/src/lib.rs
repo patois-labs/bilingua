@@ -90,12 +90,29 @@ fn pairs(a: &[Atom]) -> Vec<(usize, usize)> {
     out
 }
 
-/// True when a cut placed before `a[p]` would fall inside a tag pair.
-fn inside_pair(pairs: &[(usize, usize)], p: usize) -> bool {
-    pairs.iter().any(|(o, c)| {
+/// For every cut position `p` (a cut before `a[p]`, `0..=len`), how many tag pairs it would fall inside (open
+/// before it, close at or after it). Built once per unit, so testing each cut costs one lookup instead of a walk
+/// over every pair (many sentences among many pairs would be quadratic).
+fn pair_depth(len: usize, pairs: &[(usize, usize)]) -> Vec<u32> {
+    let mut diff = vec![0i64; len + 2];
+    for &(o, c) in pairs {
+        diff[o + 1] += 1;
+        diff[c + 1] -= 1;
+    }
+    let mut depth = Vec::with_capacity(len + 1);
+    let mut run = 0i64;
+    for d in diff.iter().take(len + 1) {
         bilingua_model::work::tick(1);
-        *o < p && p <= *c
-    })
+        run += d;
+        depth.push(run.max(0) as u32);
+    }
+    depth
+}
+
+/// True when a cut placed before `a[p]` would fall inside a tag pair (`depth` is [`pair_depth`]).
+fn inside_pair(depth: &[u32], p: usize) -> bool {
+    bilingua_model::work::tick(1);
+    depth.get(p).is_some_and(|d| *d > 0)
 }
 
 /// Moves a cut past close and standalone tags that follow the previous character, so a closing tag stays with
@@ -142,7 +159,7 @@ fn collapse(unit: &mut Unit) {
 /// Splits a unit's single segment at the given atom cuts. Each cut is an index into the atoms: the new segment
 /// starts there (after whitespace is moved to the separator).
 fn split_at_cuts(unit: &mut Unit, a: &[Atom], cuts: &[usize]) {
-    let pr = pairs(a);
+    let pr = pair_depth(a.len(), &pairs(a));
     let mut segs: Vec<Vec<Atom>> = Vec::new();
     let mut seps: Vec<String> = Vec::new();
     let mut start = 0usize;
@@ -560,7 +577,7 @@ mod tests {
         // split it again after "One."
         let (a, b) = split(&mut d, "u1#1", 4).unwrap();
         assert_eq!((a.as_str(), b.as_str()), ("u1#1", "u1#2"));
-        assert_eq!(d.units[0].segments.len(), 4);
+        assert_eq!(d.units[0].segments.len(), 3);
         assert_eq!(d.units[0].separators, vec!["  ", " "]);
         assert_eq!(plain_text(&d.units[0].output()), "One.  Two. Three.");
         // join everything: the id goes back to the unit id
@@ -591,14 +608,14 @@ mod tests {
         assert!(matches!(join(&mut d, "u1#1", "u1#2"), Err(Error::Locked(id)) if id == "u1#2"));
         assert!(matches!(join(&mut d, "u1#2", "u1#3"), Err(Error::Locked(id)) if id == "u1#2"));
         assert!(matches!(split(&mut d, "u1#2", 2), Err(Error::Locked(_))));
-        assert_eq!(d.units[0].segments.len(), 4);
+        assert_eq!(d.units[0].segments.len(), 3);
         assert_eq!(d.units[0].segments[1].state, SegState::Locked);
         // A unit with a lock reason refuses both operations too.
         d.units[0].segments[1].state = SegState::New;
         d.units[0].lock_reason = Some("context match".into());
         assert!(matches!(join(&mut d, "u1#1", "u1#2"), Err(Error::Locked(_))));
         assert!(matches!(split(&mut d, "u1#1", 2), Err(Error::Locked(_))));
-        assert_eq!(d.units[0].segments.len(), 4);
+        assert_eq!(d.units[0].segments.len(), 3);
         // Unlocked again, it works.
         d.units[0].lock_reason = None;
         assert!(join(&mut d, "u1#1", "u1#2").is_ok());
@@ -633,7 +650,7 @@ mod tests {
         let r = Rules::from_srx(xml).unwrap();
         let mut d = doc_of(vec![vec![Inline::text("a; b; c")]]);
         segment(&mut d, "xx", Granularity::Sentence, &r);
-        assert_eq!(d.units[0].segments.len(), 4);
+        assert_eq!(d.units[0].segments.len(), 3);
         assert!(Rules::from_srx("<srx><body><maprules><languagemap languagepattern='.*' languagerulename='nope'/></maprules></body></srx>").is_err());
         let bad = xml.replace("[;]", "").replace(">;<", ">(<");
         assert!(Rules::from_srx(&bad).is_err());

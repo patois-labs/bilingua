@@ -73,6 +73,9 @@ pub fn page_texts(bytes: &[u8], opts: &ExtractOptions) -> Result<Vec<PageInfo>, 
         return Err(parse_err("a page of the page tree does not load"));
     }
     let max_objects = limits.max_units.saturating_mul(80);
+    // One page's text objects are all held at once (about 420 bytes each with the text page pass), so one page
+    // may have a tenth of the document's allowance: 400,000 under the default limits, far more than any real page.
+    let max_page_objects = max_objects / 10;
     let mut fonts = content::FontCache::default();
     let rtl = d.rtl();
     let min_chars = uint_option(opts, "pdf.ocr_min_chars")?.map_or(OCR_MIN_CHARS, |v| v.min(usize::MAX as u64) as usize);
@@ -84,10 +87,10 @@ pub fn page_texts(bytes: &[u8], opts: &ExtractOptions) -> Result<Vec<PageInfo>, 
     for (i, p) in pages.iter().enumerate() {
         let Some(p) = p else { return Err(parse_err("a page of the page tree does not load")) };
         let data = d.page_content(p);
-        let mut it = content::Interp::new(&d, &mut fonts, max_objects);
+        let mut it = content::Interp::new(&d, &mut fonts, max_page_objects);
         let objs = it.run_page(&data, p.resources.clone());
         objects_left -= it.top_level_count as i64;
-        if objects_left < 0 || it.text_objects > max_objects {
+        if objects_left < 0 || it.text_objects > max_page_objects {
             return Err(LimitError::new(
                 LimitKind::Units,
                 format!("This PDF has far more text and drawing objects than MAX_DOCUMENT_SEGMENTS allows ({} segments). Split it into smaller files.", limits.max_units),

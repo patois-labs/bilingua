@@ -266,7 +266,15 @@ impl<'a> Lexer<'a> {
         }
     }
 
+    /// The next token. Counts one step plus the bytes it read (`bilingua_model::work`, tests only).
     pub fn next(&mut self) -> Tok<'a> {
+        let at = self.pos;
+        let t = self.next_token();
+        bilingua_model::work::tick(1 + self.pos.saturating_sub(at) as u64);
+        t
+    }
+
+    fn next_token(&mut self) -> Tok<'a> {
         self.skip_ws();
         let b = self.b;
         if self.pos >= b.len() {
@@ -332,6 +340,13 @@ impl<'a> Lexer<'a> {
 
     /// Reads a literal string; the opening parenthesis is already consumed.
     pub fn read_string(&mut self) -> Vec<u8> {
+        let at = self.pos;
+        let s = self.read_string_body();
+        bilingua_model::work::tick(self.pos.saturating_sub(at) as u64);
+        s
+    }
+
+    fn read_string_body(&mut self) -> Vec<u8> {
         let b = self.b;
         let mut out = Vec::new();
         let mut depth = 1usize;
@@ -390,6 +405,13 @@ impl<'a> Lexer<'a> {
 
     /// Reads a hex string; the `<` is already consumed.
     pub fn read_hex(&mut self) -> Vec<u8> {
+        let at = self.pos;
+        let s = self.read_hex_body();
+        bilingua_model::work::tick(self.pos.saturating_sub(at) as u64);
+        s
+    }
+
+    fn read_hex_body(&mut self) -> Vec<u8> {
         let b = self.b;
         let mut out = Vec::new();
         let mut hi: Option<u8> = None;

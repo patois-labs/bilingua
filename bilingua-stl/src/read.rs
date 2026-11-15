@@ -79,6 +79,14 @@ pub fn parse(raw: &[u8], limits: Option<&Limits>) -> Result<Parsed, Error> {
         let tf = &blk[16..];
         let end = tf.iter().rposition(|b| *b != 0x8F).map_or(0, |p| p + 1);
         g.tf.extend_from_slice(&tf[..end]);
+        // One subtitle may join up to 99,999 blocks, and decoding costs far more memory than the bytes: a text
+        // field longer than a unit may be is refused while the blocks are joined. A character takes one byte or
+        // two (a diacritic and its letter), so twice the unit limit leaves room for any unit that is allowed.
+        if let Some(l) = limits {
+            if g.tf.len() > l.max_unit_chars.saturating_mul(2) {
+                bilingua_model::guard::check_unit_chars(g.tf.len(), l)?;
+            }
+        }
         cur = if ebn == 0xFF { None } else { Some(gi) };
     }
     Ok(Parsed { cct, nblocks: n, groups })

@@ -996,8 +996,11 @@ fn flow_orientation(objs: &[PageObj], w: f32, h: f32) -> Orient {
     if pw <= 0 || ph <= 0 || pw > 100_000 || ph > 100_000 {
         return Orient::Unknown;
     }
-    let mut hm = vec![false; pw as usize];
-    let mut vm = vec![false; ph as usize];
+    // Each text object marks the columns and rows it covers. Marking them one by one costs the page width per
+    // object (a stroked text with a huge line width covers the whole page); a +1/-1 at each end and one running
+    // sum per page give the same marks for the cost of the objects plus the page.
+    let mut dh = vec![0i32; pw as usize + 1];
+    let mut dv = vec![0i32; ph as usize + 1];
     let mut line_h = 0.0f32;
     let (mut sh, mut eh, mut sv, mut ev) = (pw, 0i64, ph, 0i64);
     for o in objs {
@@ -1010,13 +1013,11 @@ fn flow_orientation(objs: &[PageObj], w: f32, h: f32) -> Orient {
         if min_h >= max_h || min_v >= max_v {
             continue;
         }
-        bilingua_model::work::tick((max_h - min_h + max_v - min_v) as u64);
-        for x in hm.iter_mut().take(max_h as usize).skip(min_h as usize) {
-            *x = true;
-        }
-        for x in vm.iter_mut().take(max_v as usize).skip(min_v as usize) {
-            *x = true;
-        }
+        bilingua_model::work::tick(1);
+        dh[min_h as usize] += 1;
+        dh[max_h as usize] -= 1;
+        dv[min_v as usize] += 1;
+        dv[max_v as usize] -= 1;
         sh = sh.min(min_h);
         eh = eh.max(max_h);
         sv = sv.min(min_v);
@@ -1025,6 +1026,18 @@ fn flow_orientation(objs: &[PageObj], w: f32, h: f32) -> Orient {
             line_h = r.height();
         }
     }
+    let marks = |d: &[i32]| -> Vec<bool> {
+        bilingua_model::work::tick(d.len() as u64);
+        let mut run = 0i32;
+        d[..d.len() - 1]
+            .iter()
+            .map(|x| {
+                run += x;
+                run > 0
+            })
+            .collect()
+    };
+    let (hm, vm) = (marks(&dh), marks(&dv));
     let dbl = (2.0 * line_h) as i64;
     if ev - sv < dbl {
         return Orient::Horizontal;

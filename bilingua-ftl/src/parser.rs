@@ -94,11 +94,20 @@ enum Arg {
 
 const EOL: u8 = b'\n';
 
+/// Most placeables and call argument lists open at once. The byte pre-check in `lib.rs` counts braces, but braces
+/// inside string literals (`{F("}", {F("}", ...`) and calls nested in calls (`F(F(F(...`) get past it, so the
+/// parser bounds its own recursion: past this depth the entry is junk and the file is refused.
+pub(crate) const MAX_PARSE_DEPTH: usize = 80;
+
 struct Ps<'a> {
     src: &'a str,
     s: &'a [u8],
     index: usize,
     peek_offset: usize,
+    /// Placeables and call argument lists open now.
+    depth: usize,
+    /// Set once an entry went past [`MAX_PARSE_DEPTH`].
+    too_deep: bool,
 }
 
 fn is_id_start(c: Option<u8>) -> bool {
@@ -111,7 +120,17 @@ fn is_id_char(c: u8) -> bool {
 
 impl<'a> Ps<'a> {
     fn new(src: &'a str) -> Ps<'a> {
-        Ps { src, s: src.as_bytes(), index: 0, peek_offset: 0 }
+        Ps { src, s: src.as_bytes(), index: 0, peek_offset: 0, depth: 0, too_deep: false }
+    }
+
+    /// Enters a placeable or an argument list; `Err` past [`MAX_PARSE_DEPTH`].
+    fn enter(&mut self) -> R<()> {
+        if self.depth >= MAX_PARSE_DEPTH {
+            self.too_deep = true;
+            return Err(Perr);
+        }
+        self.depth += 1;
+        Ok(())
     }
 
     fn get(&self, off: usize) -> Option<u8> {
@@ -332,8 +351,9 @@ pub(crate) fn parse(src: &str) -> Vec<Item> {
     parse_counted(src).0
 }
 
-/// Like [`parse`], also returning how many Junk entries the file has.
-pub(crate) fn parse_counted(src: &str) -> (Vec<Item>, usize) {
+/// Like [`parse`], also returning how many Junk entries the file has and whether an entry nested deeper than
+/// [`MAX_PARSE_DEPTH`] (it is one of the Junk entries).
+pub(crate) fn parse_counted(src: &str) -> (Vec<Item>, usize, bool) {
     let mut p = Ps::new(src);
     p.skip_blank_block();
     let mut out: Vec<Item> = Vec::new();
@@ -358,11 +378,12 @@ pub(crate) fn parse_counted(src: &str) -> (Vec<Item>, usize) {
             _ => {}
         }
     }
-    (out, junk)
+    (out, junk, p.too_deep)
 }
 
 fn entry_or_junk(p: &mut Ps) -> Entry {
     let start = p.index;
+    p.depth = 0;
     let r = entry(p).and_then(|e| p.expect_line_end().map(|_| e));
     match r {
         Ok(e) => e,
@@ -574,6 +595,13 @@ fn dedent(src: &str, els: Vec<Raw>, common: usize) -> Vec<El> {
 }
 
 fn placeable(p: &mut Ps) -> R<PKind> {
+    p.enter()?;
+    let r = placeable_body(p);
+    p.depth -= 1;
+    r
+}
+
+fn placeable_body(p: &mut Ps) -> R<PKind> {
     p.expect_char(b'{')?;
     p.skip_blank();
     let e = expression(p)?;
@@ -768,6 +796,13 @@ fn call_argument(p: &mut Ps) -> R<Arg> {
 
 /// Parses `( ... )`; returns true when a named argument `type` is the string "ordinal".
 fn call_arguments(p: &mut Ps) -> R<bool> {
+    p.enter()?;
+    let r = call_arguments_body(p);
+    p.depth -= 1;
+    r
+}
+
+fn call_arguments_body(p: &mut Ps) -> R<bool> {
     let mut names: Vec<String> = Vec::new();
     let mut type_ordinal = false;
     p.expect_char(b'(')?;

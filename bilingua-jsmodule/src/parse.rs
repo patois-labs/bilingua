@@ -71,6 +71,9 @@ struct P<'a, 'l> {
     default_ref: Option<String>,
     statements: usize,
     path: Vec<String>,
+    /// Key bytes copied into the units so far (each unit keeps its dotted path, and the record and the unit's
+    /// context copy it again).
+    context: u64,
 }
 
 pub fn parse(text: &str, limits: &Limits) -> R<Parsed> {
@@ -85,6 +88,7 @@ pub fn parse(text: &str, limits: &Limits) -> R<Parsed> {
         default_ref: None,
         statements: 0,
         path: Vec::new(),
+        context: 0,
     };
     p.walk()?;
     Ok(Parsed {
@@ -575,6 +579,14 @@ impl<'a> P<'a, '_> {
                 value.push_str(&self.toks[j].cooked);
             }
             j += 1;
+        }
+        let path_len = self.path.iter().map(|p| p.len() + 1).sum::<usize>() + root.len();
+        self.context = self.context.saturating_add(3 * path_len as u64);
+        if self.context > self.limits.max_context_bytes {
+            return Err(ModuleError::Context(format!(
+                "This file carries more key text than the limit of {} bytes allows. Split it into smaller files.",
+                self.limits.max_context_bytes
+            )));
         }
         let f = &self.toks[first];
         let multiline = f.quote == b'`' && self.text[f.start..f.end].contains('\n');

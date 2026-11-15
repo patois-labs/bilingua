@@ -52,12 +52,11 @@ pub fn walk(b: &[u8], verify_pixels: bool) -> Result<Png, Error> {
     let (mut w, mut h) = (0u32, 0u32);
     let mut ihdr: Option<[u8; 13]> = None;
     let mut seen_end = false;
+    // set when an IDAT chunk is kept: looking back over every chunk at each step is quadratic in the chunk count
+    let mut seen_idat = false;
     while pos < b.len() && !seen_end {
+        bilingua_model::work::tick(1);
         // Pillow stops quietly at a file cut off after the image data has started, as long as the pixels decode
-        let seen_idat = chunks.iter().any(|c| {
-            bilingua_model::work::tick(1);
-            &c.ty == b"IDAT"
-        });
         if b.len() - pos < 12 {
             if seen_idat {
                 break;
@@ -69,6 +68,7 @@ pub fn walk(b: &[u8], verify_pixels: bool) -> Result<Png, Error> {
             if seen_idat || (&b[pos + 4..pos + 8] == b"IDAT" && len <= 0x7FFF_FFFF) {
                 if &b[pos + 4..pos + 8] == b"IDAT" && len <= 0x7FFF_FFFF && !chunks.is_empty() {
                     chunks.push(Chunk { ty: *b"IDAT", start: pos, data_end: b.len(), end: b.len() });
+                    seen_idat = true;
                 }
                 break;
             }
@@ -96,11 +96,14 @@ pub fn walk(b: &[u8], verify_pixels: bool) -> Result<Png, Error> {
         if &ty == b"IEND" {
             seen_end = true;
         }
+        if &ty == b"IDAT" {
+            seen_idat = true;
+        }
         chunks.push(Chunk { ty, start: pos, data_end: end - 4, end });
         pos = end;
     }
     let Some(ihdr) = ihdr else { return Err(refuse("not a decodable image: empty PNG")) };
-    if !seen_end && !chunks.iter().any(|c| &c.ty == b"IDAT") {
+    if !seen_end && !seen_idat {
         return Err(refuse("not a decodable image: the PNG has no image data (truncated)"));
     }
     if w == 0 || h == 0 {
@@ -218,8 +221,9 @@ fn check_pixels(b: &[u8], chunks: &[Chunk], expected: u64) -> Result<(), Error> 
     Ok(())
 }
 
-fn inflate_limited(data: &[u8]) -> Result<Option<Vec<u8>>, Error> {
-    // Err = too large (refuse), Ok(None) = zlib error (Pillow keeps nothing)
+/// Inflates a text chunk. `Err` = too large (refuse); `Ok(Err(n))` = a zlib error after `n` bytes came out (Pillow
+/// keeps nothing, but the bytes were still produced and are charged by the caller).
+fn inflate_limited(data: &[u8]) -> Result<Result<Vec<u8>, usize>, Error> {
     let mut d = Decompress::new(true);
     let mut out: Vec<u8> = Vec::new();
     let mut buf = vec![0u8; 16 * 1024];
@@ -228,7 +232,7 @@ fn inflate_limited(data: &[u8]) -> Result<Option<Vec<u8>>, Error> {
         let (ti, to) = (d.total_in(), d.total_out());
         let st = match d.decompress(input, &mut buf, FlushDecompress::None) {
             Ok(s) => s,
-            Err(_) => return Ok(None),
+            Err(_) => return Ok(Err(out.len())),
         };
         input = &input[(d.total_in() - ti) as usize..];
         let n = (d.total_out() - to) as usize;
@@ -237,10 +241,10 @@ fn inflate_limited(data: &[u8]) -> Result<Option<Vec<u8>>, Error> {
             return Err(refuse("not a decodable image: decompressed PNG text is too large"));
         }
         if st == Status::StreamEnd {
-            return Ok(Some(out));
+            return Ok(Ok(out));
         }
         if d.total_in() == ti && d.total_out() == to {
-            return Ok(Some(out));
+            return Ok(Ok(out));
         }
     }
 }
@@ -261,7 +265,9 @@ fn latin1(b: &[u8]) -> String {
 }
 
 /// Every text chunk in file order, with Pillow's rules (broken ones skipped, a bomb or an unknown compression
-/// refused). The effective value of a key is the last one.
+/// refused). The effective value of a key is the last one. Inflated bytes that are not kept (an empty keyword, a
+/// zlib error part way) count against the text memory budget too, so many such chunks cannot cost 1 MB of
+/// inflate each for free.
 pub fn texts(b: &[u8], png: &Png) -> Result<Vec<Text>, Error> {
     let mut out = Vec::new();
     let mut memory = 0usize;
@@ -296,11 +302,20 @@ pub fn texts(b: &[u8], png: &Png) -> Result<Vec<Text>, Error> {
                 if method != 0 {
                     return Err(refuse(&format!("not a decodable image: unknown compression method {method} in zTXt chunk")));
                 }
-                let plain = if v.is_empty() { Some(Vec::new()) } else { inflate_limited(&v[1..])? }.unwrap_or_default();
+                let plain = if v.is_empty() { Ok(Vec::new()) } else { inflate_limited(&v[1..])? };
+                let plain = match plain {
+                    Ok(p) => p,
+                    Err(n) => {
+                        bump(n)?;
+                        Vec::new()
+                    }
+                };
                 if !k.is_empty() {
                     let s = latin1(&plain);
                     bump(s.chars().count())?;
                     out.push(Text { chunk: ci, key: latin1(k), value: s, itxt: None });
+                } else {
+                    bump(plain.len())?;
                 }
             }
             b"iTXt" => {
@@ -317,13 +332,21 @@ pub fn texts(b: &[u8], png: &Png) -> Result<Vec<Text>, Error> {
                         continue;
                     }
                     match inflate_limited(v)? {
-                        Some(x) => x,
-                        None => continue,
+                        Ok(x) => x,
+                        Err(n) => {
+                            bump(n)?;
+                            continue;
+                        }
                     }
                 } else {
                     v.to_vec()
                 };
-                let (Ok(_), Ok(_), Ok(vs)) = (std::str::from_utf8(lang), std::str::from_utf8(tk), std::str::from_utf8(&v)) else { continue };
+                let (Ok(_), Ok(_), Ok(vs)) = (std::str::from_utf8(lang), std::str::from_utf8(tk), std::str::from_utf8(&v)) else {
+                    if cf != 0 {
+                        bump(v.len())?;
+                    }
+                    continue;
+                };
                 bump(vs.chars().count())?;
                 out.push(Text { chunk: ci, key: latin1(k), value: vs.to_string(), itxt: Some((lang.to_vec(), tk.to_vec())) });
             }

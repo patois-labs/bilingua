@@ -33,6 +33,19 @@ impl Default for Limits {
     }
 }
 
+impl Limits {
+    /// The crate's limits under the call's `ExtractOptions::limits`: each the smaller of the two, so a host that
+    /// lowers its limits for untrusted uploads gets them inside the filter too.
+    pub fn from_model(l: &bilingua_model::Limits) -> Limits {
+        let d = Limits::default();
+        Limits {
+            max_input_bytes: d.max_input_bytes.min(usize::try_from(l.max_input_bytes).unwrap_or(usize::MAX)),
+            max_units: d.max_units.min(l.max_units),
+            max_value_chars: d.max_value_chars.min(l.max_unit_chars),
+        }
+    }
+}
+
 /// One entry as a key-based project sees it (translatable or not).
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[non_exhaustive]
@@ -359,7 +372,7 @@ impl Filter for Properties {
 
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
         bilingua_model::check_own_options(self, &opts.format_options)?;
-        self.extract_with(bytes, opts, &Limits::default())
+        self.extract_with(bytes, opts, &Limits::from_model(&opts.limits()))
     }
 
     fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {

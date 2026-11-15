@@ -1,40 +1,34 @@
 //! Hostile files built to make the reader do far more work than the file is large: page-tree DAGs, Type 3 fonts
 //! that draw with themselves, filter bombs, huge predictor rows, huge dictionaries, streams without an end, form
-//! fan-out, one line of many objects, CFF glyphs that loop through subroutines. Each must end quickly with a
-//! result or a typed error. Run in release (`cargo test --release -p bilingua-pdf --test gate_attacks`); the time
-//! bounds are generous for a debug build.
+//! fan-out, one line of many objects, CFF glyphs that loop through subroutines. Each must end with a result or a
+//! typed error after work in proportion to the file and its stream budget. The work is counted
+//! (`bilingua_model::work`: tokens and bytes read, bytes decoded, page-tree nodes, glyph program operations), not
+//! timed, so a loaded machine cannot make a test fail and a slow walk cannot hide behind a fast one (BILI-58).
 
 mod common;
 use bilingua_model::*;
 use bilingua_pdf::Pdf;
 use common::*;
-use std::time::{Duration, Instant};
 
-const BOUND: Duration = Duration::from_secs(20);
+/// Steps allowed per byte of the file and per byte of the stream budget. A quadratic or exponential walk over any
+/// of these files is orders of magnitude over.
+const PER_FILE_BYTE: u64 = 64;
+const PER_BUDGET_BYTE: u64 = 4;
 
 fn run(name: &str, b: &[u8]) -> Result<Document, Error> {
     run_with(name, b, &ExtractOptions::default())
 }
 
 fn run_with(name: &str, b: &[u8], o: &ExtractOptions) -> Result<Document, Error> {
-    // The limit stays 20 s. A loaded machine can stall one run past it, so a run over the limit is repeated (3 runs
-    // at most) and the test fails only when every run is over: a quadratic or exponential walk is slow each time.
-    let mut slow = Vec::new();
-    loop {
-        let t = Instant::now();
-        let r = Pdf.extract(b, o);
-        let took = t.elapsed();
-        eprintln!("{name}: {:?} in {took:?}", r.as_ref().map(|d| d.units.len()).map_err(|e| e.to_string()));
-        if took < BOUND {
-            if let Err(e) = &r {
-                assert!(matches!(e, Error::Limit(_) | Error::Parse { .. } | Error::Unsupported(_)), "{name}: {e:?}");
-            }
-            return r;
-        }
-        slow.push(took);
-        assert!(slow.len() < 3, "{name}: over {BOUND:?} in each of {} runs (retried {} times, one after the other): {slow:?}", slow.len(), slow.len() - 1);
-        eprintln!("{name}: run {} took {took:?}, over {BOUND:?}; retrying", slow.len());
+    let budget = o.format_options.get("pdf.max_stream_bytes").and_then(|v| v.parse::<u64>().ok()).unwrap_or(o.limits().max_zip_bytes);
+    let bound = PER_FILE_BYTE * b.len() as u64 + PER_BUDGET_BYTE * budget;
+    let (r, work) = bilingua_model::work::count(|| Pdf.extract(b, o));
+    eprintln!("{name}: {:?} after {work} steps (bound {bound})", r.as_ref().map(|d| d.units.len()).map_err(|e| e.to_string()));
+    assert!(work <= bound, "{name}: {work} steps for a {} byte file, over {bound}", b.len());
+    if let Err(e) = &r {
+        assert!(matches!(e, Error::Limit(_) | Error::Parse { .. } | Error::Unsupported(_)), "{name}: {e:?}");
     }
+    r
 }
 
 fn page_with(resources: &str, content: &[u8], extra: Vec<O>) -> Vec<u8> {

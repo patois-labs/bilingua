@@ -643,6 +643,7 @@ impl Cff {
         let mut st = Cs { x: 0.0, y: 0.0, bbox: None, stack: Vec::new(), stems: 0, width: None, ops: 0, done: false };
         st.exec(&self.data, (o, l), &subrs, &self.gsubrs, 0);
         work.set(work.get().saturating_sub(st.ops as u64));
+        bilingua_model::work::tick(st.ops as u64);
         let w = match st.width {
             Some(w) if !w.is_nan() => w + nominal_w,
             _ => default_w,

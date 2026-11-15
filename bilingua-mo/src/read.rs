@@ -46,6 +46,9 @@ pub struct Catalog {
     pub codec: Codec,
 }
 
+/// The most translation forms one message may have (gettext languages use at most six).
+pub const MAX_PLURAL_FORMS: usize = 32;
+
 pub fn damaged(msg: impl Into<String>) -> Error {
     Error::Parse { format: "mo".into(), msg: msg.into() }
 }
@@ -261,6 +264,14 @@ pub fn read(buf: &[u8], limits: &Limits) -> Result<Catalog, Error> {
         let strs: Vec<&str> = str_text.split('\0').collect();
         if ids.len() > 2 || (ids.len() == 1 && strs.len() > 1) {
             return Err(damaged("this MO file is damaged: a message has stray NUL bytes"));
+        }
+        // A merge fills every empty form with a copy of the plural source text: thousands of empty forms would
+        // turn a small file into a huge one. No language has more than six forms.
+        if strs.len() > MAX_PLURAL_FORMS {
+            return Err(limit(
+                LimitKind::Units,
+                format!("this MO file has a message with {} plural forms; no language has more than {MAX_PLURAL_FORMS}", strs.len()),
+            ));
         }
         entries.push(Entry {
             index: i + 1,

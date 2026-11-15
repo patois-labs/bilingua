@@ -14,8 +14,31 @@ fn digits(b: &[u8], mut i: usize) -> usize {
     i
 }
 
-/// `{ 0 }`, `{0}`, `{1,number,#.##}`, `{0,choice,0#none|1<{0} items}` (braces balanced).
-fn mf_arg(b: &[u8], start: usize) -> Option<usize> {
+/// For every `{` of `b`, the index of its matching `}` on the same line (braces counted as nested pairs), or
+/// `usize::MAX` when it has none; other entries are unused. One pass with a stack, so a value of many unclosed
+/// `{0,` arguments costs time in proportion to its length, not to its length squared.
+fn brace_matches(b: &[u8]) -> Vec<usize> {
+    let mut m = vec![usize::MAX; b.len()];
+    let mut open: Vec<usize> = Vec::new();
+    for (i, &c) in b.iter().enumerate() {
+        bilingua_model::work::tick(1);
+        match c {
+            b'{' => open.push(i),
+            b'}' => {
+                if let Some(o) = open.pop() {
+                    m[o] = i;
+                }
+            }
+            b'\n' | b'\r' => open.clear(),
+            _ => {}
+        }
+    }
+    m
+}
+
+/// `{ 0 }`, `{0}`, `{1,number,#.##}`, `{0,choice,0#none|1<{0} items}` (braces balanced). `close` is
+/// [`brace_matches`] of `b`: the argument after the comma runs to the `}` that matches the opening one.
+fn mf_arg(b: &[u8], start: usize, close: &[usize]) -> Option<usize> {
     let mut i = start + 1;
     while b.get(i).is_some_and(|c| matches!(c, b' ' | b'\t')) {
         i += 1;
@@ -30,26 +53,9 @@ fn mf_arg(b: &[u8], start: usize) -> Option<usize> {
     }
     match b.get(i) {
         Some(b'}') => Some(i + 1),
-        Some(b',') => {
-            let mut depth = 1;
-            i += 1;
-            while i < b.len() {
-                bilingua_model::work::tick(1);
-                match b[i] {
-                    b'{' => depth += 1,
-                    b'}' => {
-                        depth -= 1;
-                        if depth == 0 {
-                            return Some(i + 1);
-                        }
-                    }
-                    b'\n' | b'\r' => return None,
-                    _ => {}
-                }
-                i += 1;
-            }
-            None
-        }
+        // only digits and blanks lie between the opening brace and the comma, so the first `}` that brings the
+        // depth counted from the comma back to zero is the one that matches the opening brace
+        Some(b',') => close.get(start).copied().filter(|&c| c != usize::MAX).map(|c| c + 1),
         _ => None,
     }
 }
@@ -102,6 +108,7 @@ fn percent(b: &[u8], start: usize) -> Option<usize> {
 
 pub fn split(s: &str, mozilla: bool) -> Vec<Piece<'_>> {
     let b = s.as_bytes();
+    let close = if b.contains(&b'{') { brace_matches(b) } else { Vec::new() };
     let mut out = Vec::new();
     let mut text_start = 0;
     let mut i = 0;
@@ -114,7 +121,7 @@ pub fn split(s: &str, mozilla: bool) -> Vec<Piece<'_>> {
                 }
                 percent(b, i)
             }
-            b'{' => mf_arg(b, i).or_else(|| named(b, i)),
+            b'{' => mf_arg(b, i, &close).or_else(|| named(b, i)),
             b'$' => dollar(b, i),
             b'#' if mozilla => {
                 let prev_ok = s[..i].chars().next_back().is_none_or(|p| !(p == '&' || bilingua_model::py_isalnum_char(p) || p == '_'));

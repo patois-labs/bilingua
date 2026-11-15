@@ -225,6 +225,7 @@ fn srx_breaks(rules: &[&Rule], text: &str) -> Vec<usize> {
     let mut decided: HashMap<usize, (usize, bool)> = HashMap::new();
     for (idx, rule) in rules.iter().enumerate() {
         let mut start = 0usize;
+        let mut last_pos = usize::MAX;
         while start <= text.len() {
             let Some(caps) = rule.re.captures_at(text, start) else { break };
             let m = caps.get(0).expect("group 0");
@@ -240,6 +241,13 @@ fn srx_breaks(rules: &[&Rule], text: &str) -> Vec<usize> {
                 Some(c) => m.start() + c.len_utf8(),
                 None => break,
             };
+            // A greedy before-part (`[.?!]+`) matches again from every character of a long run and finds the same
+            // break each time: once a break repeats, the next search starts at the break itself, so a run costs
+            // two searches instead of one per character.
+            if pos == last_pos && pos > start {
+                start = pos;
+            }
+            last_pos = pos;
         }
     }
     let mut out: Vec<usize> = decided

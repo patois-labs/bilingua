@@ -17,6 +17,7 @@ impl Budget {
         Budget { left: n, exceeded: false }
     }
     fn take(&mut self, n: usize) -> bool {
+        bilingua_model::work::tick(n as u64);
         if (n as u64) > self.left {
             self.left = 0;
             self.exceeded = true;

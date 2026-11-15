@@ -19,8 +19,9 @@ const MAX_READ_DEPTH: usize = 64;
 /// PDFium's `CPDF_Document::kPageMaxNum`.
 const PAGE_MAX_NUM: i64 = 0xFFFFF;
 
-/// A decoded object stream: its data, the (number, offset) pairs of its header, and `/First`.
-type ObjStmIndex = Rc<(Vec<u8>, Vec<(u32, usize)>, usize)>;
+/// A decoded object stream: its data, the (number, offset) pairs of its header, `/First`, and the header's offsets
+/// sorted with duplicates removed (where each member's slot ends).
+type ObjStmIndex = Rc<(Vec<u8>, Vec<(u32, usize)>, usize, Vec<usize>)>;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Entry {
@@ -48,6 +49,10 @@ pub struct Doc<'a> {
     cache: RefCell<HashMap<u32, Obj>>,
     reading: RefCell<HashSet<u32>>,
     objstm: RefCell<HashMap<u32, ObjStmIndex>>,
+    /// Members of object streams by (stream, offset): numbers that share an offset share one parsed object.
+    objstm_objs: RefCell<HashMap<(u32, usize), Obj>>,
+    /// Offsets of every `endstream` and `endobj` in the file, found once (see [`Doc::stream_end`]).
+    ends: std::cell::OnceCell<(Vec<usize>, Vec<usize>)>,
     crypt: Option<Handler>,
     encrypt_num: u32,
     pub budget: RefCell<Budget>,
@@ -75,6 +80,8 @@ impl<'a> Doc<'a> {
             cache: RefCell::new(HashMap::new()),
             reading: RefCell::new(HashSet::new()),
             objstm: RefCell::new(HashMap::new()),
+            objstm_objs: RefCell::new(HashMap::new()),
+            ends: std::cell::OnceCell::new(),
             crypt: None,
             encrypt_num: 0,
             budget: RefCell::new(Budget::new(budget)),
@@ -97,6 +104,7 @@ impl<'a> Doc<'a> {
             doc.crypt = None;
             doc.cache.borrow_mut().clear();
             doc.objstm.borrow_mut().clear();
+            doc.objstm_objs.borrow_mut().clear();
             if !doc.rebuild() {
                 return Err(OpenError::Format("no cross reference"));
             }
@@ -402,6 +410,11 @@ impl<'a> Doc<'a> {
         if let Some(o) = self.cache.borrow().get(&num) {
             return o.clone();
         }
+        // Over the stream budget the extraction ends with the limit error: reading more objects (each maybe a
+        // stream whose end must be found) only costs time.
+        if self.budget.try_borrow().is_ok_and(|b| b.exceeded) {
+            return Obj::Null;
+        }
         // A chain of objects each needed to read the next (a /Length that is a reference, an object stream) is
         // bounded, and an object that needs itself is null.
         if self.reading.borrow().len() > MAX_READ_DEPTH || !self.reading.borrow_mut().insert(num) {
@@ -480,10 +493,9 @@ impl<'a> Doc<'a> {
                 }
             }
         }
-        // `endobj` only counts before the first `endstream`: looking for it past that point would scan the rest
-        // of the file for every such stream.
-        let es = find(d, b"endstream", start);
-        let eo = find(&d[..es.unwrap_or(d.len())], b"endobj", start);
+        // `endobj` only counts before the first `endstream`. Both come from an index of the file built once: a
+        // search per stream would scan the rest of the file for every stream without a usable /Length.
+        let (es, eo) = self.stream_end(start);
         let stop = match (es, eo) {
             (Some(a), Some(b)) => a.min(b),
             (Some(a), None) | (None, Some(a)) => a,
@@ -498,6 +510,29 @@ impl<'a> Doc<'a> {
         }
         let next = if es == Some(stop) { stop + 9 } else { stop };
         (self.copy_raw(&d[start..end.max(start)]), next)
+    }
+
+    /// The first `endstream` at or after `start`, and the first `endobj` at or after `start` that ends before that
+    /// `endstream` (as two searches of the file from `start` would find them).
+    fn stream_end(&self, start: usize) -> (Option<usize>, Option<usize>) {
+        let d = self.data;
+        let (es_all, eo_all) = self.ends.get_or_init(|| {
+            let all = |pat: &[u8]| {
+                let mut v = Vec::new();
+                let mut at = 0;
+                while let Some(p) = find(d, pat, at) {
+                    v.push(p);
+                    at = p + pat.len();
+                }
+                v
+            };
+            (all(b"endstream"), all(b"endobj"))
+        });
+        let first = |v: &[usize]| v.get(v.partition_point(|&p| p < start)).copied();
+        let es = first(es_all);
+        let limit = es.unwrap_or(d.len());
+        let eo = first(eo_all).filter(|&p| p + 6 <= limit);
+        (es, eo)
     }
 
     /// Charges raw stream bytes read, copied or decrypted to the raw budget. A file can make every one of many
@@ -543,7 +578,10 @@ impl<'a> Doc<'a> {
             }
             idx.push((on, atoui(b) as usize));
         }
-        let rc = Rc::new((data, idx, first));
+        let mut offs: Vec<usize> = idx.iter().map(|x| x.1).collect();
+        offs.sort_unstable();
+        offs.dedup();
+        let rc = Rc::new((data, idx, first, offs));
         self.objstm.borrow_mut().insert(num, rc.clone());
         Some(rc)
     }
@@ -561,21 +599,30 @@ impl<'a> Doc<'a> {
             return Obj::Null;
         }
         let Some(ix) = self.objstm_index(stm, &s) else { return Obj::Null };
-        let (data, list, first) = (&ix.0, &ix.1, ix.2);
+        let (data, list, first, offs) = (&ix.0, &ix.1, ix.2, &ix.3);
         let Some(&(on, off)) = list.get(idx as usize) else { return Obj::Null };
         if on != num {
             return Obj::Null;
+        }
+        // Numbers that share an offset get the one object parsed there, and a member is read only up to the next
+        // member's offset: otherwise many numbers at one offset (or at offsets inside one large array) parse and
+        // keep the same bytes once each.
+        if let Some(o) = self.objstm_objs.borrow().get(&(stm, off)) {
+            return o.clone();
         }
         let at = first.saturating_add(off);
         if at >= data.len() {
             return Obj::Null;
         }
-        let mut lx = Lexer::new(data);
+        let end = offs.get(offs.partition_point(|&o| o <= off)).map_or(data.len(), |&n| first.saturating_add(n).min(data.len()));
+        let mut lx = Lexer::new(&data[..end]);
         lx.pos = at;
-        match obj::parse_obj(&mut lx, 0, true) {
+        let o = match obj::parse_obj(&mut lx, 0, true) {
             Some(Parsed::Obj(o)) => o,
             _ => Obj::Null,
-        }
+        };
+        self.objstm_objs.borrow_mut().insert((stm, off), o.clone());
+        o
     }
 
     /// The decrypted, decoded data of a stream. `None` for an image codec or unknown filter.
@@ -692,6 +739,7 @@ impl<'a> Doc<'a> {
             return;
         }
         let Some(Obj::Array(kids)) = node.get(b"Kids").map(|o| self.resolve(o)) else { return };
+        bilingua_model::work::tick(1 + kids.len() as u64);
         for k in kids.iter() {
             if out.len() >= want {
                 return;
