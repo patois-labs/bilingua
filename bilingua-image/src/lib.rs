@@ -140,9 +140,13 @@ fn svg_read(bytes: &[u8], opts: &ExtractOptions, keep_whole: bool) -> Result<Doc
     guard::check_xml_internal_entities(bytes, &limits)?;
     let dec = enc::decode_text(bytes, &DecodeOptions::new(opts).declared())?;
     let text = &dec.text;
-    // BILI-59: U+0000 and the other characters XML 1.0 forbids are not XML (LocOS's parser refuses them too)
-    if let Some(c) = text.chars().find(|&c| !matches!(c, '\t' | '\n' | '\r' | '\u{20}'..='\u{D7FF}' | '\u{E000}'..='\u{FFFD}' | '\u{10000}'..='\u{10FFFF}')) {
-        return Err(Error::Parse { format: "svg".into(), msg: format!("This SVG file is not well-formed XML: character U+{:04X} is not allowed.", c as u32) });
+    // BILI-59: U+0000 and the other characters XML 1.0 forbids are not XML; refused when a file is extracted.
+    // LocOS's SVG reader is a scanner that accepts them, so the profile does too, and a merge reads what its own
+    // extraction accepted.
+    if keep_whole && !opts.is_profile(profile::LOCOS) {
+        if let Some(c) = text.chars().find(|&c| !matches!(c, '\t' | '\n' | '\r' | '\u{20}'..='\u{D7FF}' | '\u{E000}'..='\u{FFFD}' | '\u{10000}'..='\u{10FFFF}')) {
+            return Err(Error::Parse { format: "svg".into(), msg: format!("This SVG file is not well-formed XML: character U+{:04X} is not allowed.", c as u32) });
+        }
     }
     // twenty markup characters per allowed segment, as LocOS does before it splits a tag at a time
     if text.bytes().filter(|&b| b == b'<').count() > 20usize.saturating_mul(limits.max_units) {
