@@ -64,12 +64,12 @@ fn locos() -> ExtractOptions {
     ExtractOptions::new().with_profile("locos")
 }
 
-/// A SmartArt diagram of 40,000 points with distinct modelIds and a cached drawing of 40,000 shapes: the merge
-/// looked each point and each shape up by a scan (about 3 x 10^9 compares). Now by hash; the translated point's
+/// A SmartArt diagram of 150,000 points with distinct modelIds and a cached drawing of 150,000 shapes: the merge
+/// looked each point and each shape up by a scan (about 4 x 10^10 compares). Now by hash; the translated point's
 /// cached shape gets the translation.
 #[test]
 fn pptx_locos_many_smartart_points_merge_linear() {
-    let n = 40_000;
+    let n = 150_000;
     let mut pts: String = (0..n).map(|i| format!("<dgm:pt modelId=\"m{i}\"><dgm:t/></dgm:pt>")).collect();
     pts.push_str("<dgm:pt modelId=\"hello\"><dgm:t><a:bodyPr/><a:p><a:r><a:t>Hello there</a:t></a:r></a:p></dgm:t></dgm:pt>");
     let data = format!(

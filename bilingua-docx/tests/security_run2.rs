@@ -61,7 +61,7 @@ fn translate(u: &mut bilingua_model::Unit, text: &str) {
 fn docx_locos_many_drawings_one_paragraph_linear() {
     let n = 30_000;
     let mut body: String = (0..n).map(|i| format!("<w:p><w:r><w:t>Line {i}</w:t></w:r></w:p>")).collect();
-    let drawings: String = (0..n).map(|i| format!("<w:r><w:drawing><wp:inline><wp:docPr id=\"{i}\" name=\"d{i}\" descr=\"x\"/></wp:inline></w:drawing></w:r>")).collect();
+    let drawings: String = (0..n).map(|i| format!("<w:r><w:drawing><wp:inline><wp:docPr id=\"{i}\" name=\"d{i}\" descr=\"\"/></wp:inline></w:drawing></w:r>")).collect();
     body.push_str(&format!("<w:p><w:r><w:t>Last</w:t></w:r>{drawings}</w:p>"));
     let bytes = package(&body);
     let doc = within(30, move || Docx.extract(&bytes, &locos()).unwrap());

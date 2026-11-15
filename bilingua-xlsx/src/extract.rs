@@ -788,15 +788,13 @@ fn extract_doc_inner(bytes: &[u8], opts: &ExtractOptions, xo: &XlsxOptions) -> R
         return Err(Error::Unsupported("the workbook uses private-use characters U+E000 to U+E005".into()));
     }
     let mut wb_nodes = parse(wb_text).map_err(|m| perr(format!("{wb_name}: {m}")))?;
-    // a workbook in another namespace (an Office 2007 beta file) would open with no units: refused (BILI-50)
-    let root_ns_known = wb_nodes.iter().find_map(|n| if let Node::El(e) = n { Some(e) } else { None }).is_some_and(|root| {
-        let decl = match root.name.split_once(':') {
-            Some((p, _)) => format!("xmlns:{p}"),
-            None => "xmlns".to_string(),
-        };
-        root.attr(&decl).is_some_and(|u| SS_URIS.contains(&u.as_str()))
+    // This reader matches unprefixed names whatever their namespace, so an Office 2007 beta workbook without
+    // prefixes reads as before; a prefixed root in another namespace would open with no units: refused (BILI-50).
+    let unreadable = wb_nodes.iter().find_map(|n| if let Node::El(e) = n { Some(e) } else { None }).is_some_and(|root| match root.name.split_once(':') {
+        Some((p, _)) => !root.attr(&format!("xmlns:{p}")).is_some_and(|u| SS_URIS.contains(&u.as_str())),
+        None => false,
     });
-    if !root_ns_known {
+    if unreadable {
         return Err(perr(crate::OLD_NAMESPACE));
     }
     let wb_ns = Ns::detect(&wb_nodes, SS_URIS, "");

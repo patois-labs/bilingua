@@ -72,17 +72,42 @@ fn office_merge_uses_caller_limits() {
     assert!(sheet_xml(&Xlsx::default().merge_with(&doc, &MergeOptions::new().with_profile("locos")).unwrap()).contains("Zelle"));
 }
 
-/// BILI-50: a workbook in the Office 2007 beta namespace opened with no units and no word. It is refused with a
-/// message that says how to fix it, on both paths; the same file in the SpreadsheetML namespace still opens.
+fn refused(r: Result<bilingua_model::Document, Error>) {
+    match r {
+        Err(Error::Parse { msg, .. }) => assert!(msg.contains("save it as .xlsx"), "{msg}"),
+        Err(e) => panic!("expected a parse error, got {e}"),
+        Ok(d) => panic!("a beta-namespace workbook opened with {} units", d.units.len()),
+    }
+}
+
+/// BILI-50: a workbook in the Office 2007 beta namespace opened with no units and no word where names are read by
+/// namespace (the LocOS profile, and a prefixed workbook root on the native path). It is refused there with a
+/// message that says how to fix it; the native reader, which matches unprefixed names, still reads an unprefixed
+/// one; the same file in the SpreadsheetML namespace opens on both paths.
 #[test]
 fn a_beta_namespace_workbook_is_refused_not_empty() {
     let rows = format!("<row r=\"1\">{}</row>", inline("A1", "Hello there"));
-    for opts in [ExtractOptions::new(), ExtractOptions::new().with_profile("locos")] {
-        match Xlsx::default().extract(&workbook(BETA, &rows), &opts) {
-            Err(Error::Parse { msg, .. }) => assert!(msg.contains("save it as .xlsx"), "{msg}"),
-            Err(e) => panic!("expected a parse error, got {e}"),
-            Ok(d) => panic!("a beta-namespace workbook opened with {} units", d.units.len()),
-        }
+    let locos = ExtractOptions::new().with_profile("locos");
+    refused(Xlsx::default().extract(&workbook(BETA, &rows), &locos));
+    assert_eq!(Xlsx::default().extract(&workbook(BETA, &rows), &ExtractOptions::new()).unwrap().units.len(), 1);
+    // a prefixed root: `x:workbook` in the beta namespace
+    let prefixed = {
+        let e = read_zip("xlsx", &workbook(BETA, &rows), &ZipLimits::default()).unwrap();
+        let parts: Vec<(EntryMeta, Vec<u8>)> = e
+            .into_iter()
+            .map(|e| {
+                let data = if e.name == "xl/workbook.xml" {
+                    String::from_utf8(e.data).unwrap().replace("<workbook xmlns=", "<x:workbook xmlns:x=").replace("</workbook>", "</x:workbook>").replace("<sheets>", "<x:sheets>").replace("</sheets>", "</x:sheets>").replace("<sheet ", "<x:sheet ").into_bytes()
+                } else {
+                    e.data
+                };
+                (EntryMeta { name: e.name, stored: false, dir: false, modified: None }, data)
+            })
+            .collect();
+        write_zip(&parts).unwrap()
+    };
+    refused(Xlsx::default().extract(&prefixed, &ExtractOptions::new()));
+    for opts in [ExtractOptions::new(), locos] {
         assert_eq!(Xlsx::default().extract(&workbook(NS, &rows), &opts).unwrap().units.len(), 1);
     }
 }

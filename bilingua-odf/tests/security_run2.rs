@@ -95,7 +95,11 @@ fn odf_rtl_many_sheets_style_names_linear() {
 fn odf_rtl_sheet_styles_are_shared_as_before() {
     let body = "<office:automatic-styles><style:style style:name=\"ta1\" style:family=\"table\"/><style:style style:name=\"taRtl1\" style:family=\"paragraph\"/></office:automatic-styles><office:body><office:spreadsheet><table:table table:style-name=\"ta1\"><table:table-row><table:table-cell office:value-type=\"string\"><text:p>One</text:p></table:table-cell></table:table-row></table:table><table:table table:style-name=\"gone\"><table:table-row><table:table-cell office:value-type=\"string\"><text:p>Two</text:p></table:table-cell></table:table-row></table:table><table:table table:style-name=\"gone\"/></office:spreadsheet></office:body>";
     let bytes = Pkg::new(content(body)).mime(MIME_SHEET).build();
-    let out = build("ods", &bytes, &[], Some("ar"));
+    let f = filter_for("ods");
+    let mut doc = f.extract(&bytes, &opts(Some("ar"))).unwrap();
+    doc.units[0].segments[0].target = vec![Inline::text("واحد")];
+    doc.units[0].segments[0].state = SegState::Translated;
+    let out = f.merge(&doc).unwrap();
     let text = member_str(&out, "content.xml");
     assert_eq!(text.matches("table:style-name=\"taRtl2\"").count(), 2, "{text}");
     assert_eq!(text.matches("style:name=\"taRtl2\"").count(), 1);
