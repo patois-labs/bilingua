@@ -313,3 +313,46 @@ proptest! {
         prop_assert_eq!(start_names(&out), start_names(INJ));
     }
 }
+
+// ---- resource limits (security review run 2) -------------------------------------------------------------------------
+
+#[test]
+fn many_small_chunks_walk_linearly() {
+    // zero-length ancillary chunks before the image data: the chunk walk must not look back over all of them
+    let make = |n: usize| {
+        let extra: Vec<(&[u8; 4], Vec<u8>)> = (0..n).map(|_| (b"abCd", Vec::new())).collect();
+        png(None, 10, 10, &extra)
+    };
+    let n = 20_000;
+    let (a, b) = (make(n), make(2 * n));
+    let small = bilingua_model::work::count(|| image_extract(&a)).1;
+    let big = bilingua_model::work::count(|| image_extract(&b)).1;
+    assert!(big * 10 <= small * 25 + 2_000, "{small} steps for {n} chunks, {big} for {}: more than linear", 2 * n);
+}
+
+#[test]
+fn empty_key_ztxt_bombs_are_charged() {
+    // a zTXt with an empty keyword is inflated (as Pillow does) but its value is dropped: the inflated bytes still
+    // count against the text memory budget, so many of them are refused instead of costing 1 MB of inflate each
+    let mut e = flate2::write::ZlibEncoder::new(Vec::new(), flate2::Compression::best());
+    std::io::Write::write_all(&mut e, &vec![0u8; 1_000_000]).unwrap();
+    let mut z = b"\0\0".to_vec();
+    z.extend_from_slice(&e.finish().unwrap());
+    let extra: Vec<(&[u8; 4], Vec<u8>)> = (0..80).map(|_| (b"zTXt", z.clone())).collect();
+    let img = png(None, 10, 10, &extra);
+    assert!(image_extract(&img).unwrap_err().to_string().contains("too much memory"));
+    // broken zlib data after a large inflated prefix is charged too
+    let mut e = flate2::write::ZlibEncoder::new(Vec::new(), flate2::Compression::best());
+    std::io::Write::write_all(&mut e, &vec![0u8; 1_000_000]).unwrap();
+    let mut packed = e.finish().unwrap();
+    packed.truncate(packed.len() - 4); // no checksum: a zlib error at the end
+    packed.extend_from_slice(b"\xff\xff\xff\xff\xff");
+    let mut z = b"Comment\0\0".to_vec();
+    z.extend_from_slice(&packed);
+    let extra: Vec<(&[u8; 4], Vec<u8>)> = (0..80).map(|_| (b"zTXt", z.clone())).collect();
+    let img = png(None, 10, 10, &extra);
+    assert!(image_extract(&img).unwrap_err().to_string().contains("too much memory"));
+    // a few of them are fine
+    let img = png(None, 10, 10, &extra[..3]);
+    assert!(image_extract(&img).is_ok());
+}

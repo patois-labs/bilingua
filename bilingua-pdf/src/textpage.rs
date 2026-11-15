@@ -1010,6 +1010,7 @@ fn flow_orientation(objs: &[PageObj], w: f32, h: f32) -> Orient {
         if min_h >= max_h || min_v >= max_v {
             continue;
         }
+        bilingua_model::work::tick((max_h - min_h + max_v - min_v) as u64);
         for x in hm.iter_mut().take(max_h as usize).skip(min_h as usize) {
             *x = true;
         }

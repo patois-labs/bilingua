@@ -291,3 +291,21 @@ proptest! {
 fn flat_target_of(u: &Unit) -> String {
     u.segments[0].target.iter().map(|i| match i { Inline::Text(t) => t.clone(), Inline::Tag { display, .. } => display.clone() }).collect()
 }
+
+// ---- resource limits (security review run 2) -------------------------------------------------------------------------
+
+#[test]
+fn many_empty_plural_slots_are_refused() {
+    // a plural message whose translation is thousands of empty forms: a merge would fill every one with a copy of
+    // the plural source text, so the reader refuses more forms than any language has
+    let plural = "P".repeat(2_000);
+    let id = format!("a\0{plural}");
+    let msgstr = format!("x{}", "\0".repeat(5_000));
+    let file = pack(&pairs(&[("", HEADER_FR), (id.as_str(), msgstr.as_str())]));
+    let e = Mo.extract(&file, &opts(None)).unwrap_err();
+    assert!(matches!(e, Error::Limit(_)), "{e:?}");
+    // six forms (the most gettext knows) still read
+    let six = format!("x{}", "\0y".repeat(5));
+    let file = pack(&pairs(&[("", HEADER_FR), (id.as_str(), six.as_str())]));
+    assert!(Mo.extract(&file, &opts(None)).is_ok());
+}

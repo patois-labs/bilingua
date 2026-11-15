@@ -18,5 +18,7 @@ bilingua-model = { workspace = true }
 flate2 = { version = "1.1", default-features = false, features = ["zlib-rs"] }
 
 [dev-dependencies]
+# the linearity tests count work (bilingua_model::work), which only counts with this feature
+bilingua-model = { workspace = true, features = ["work-count"] }
 proptest = { workspace = true }
 serde_json = { workspace = true }

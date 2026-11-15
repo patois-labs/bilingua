@@ -54,7 +54,10 @@ pub fn walk(b: &[u8], verify_pixels: bool) -> Result<Png, Error> {
     let mut seen_end = false;
     while pos < b.len() && !seen_end {
         // Pillow stops quietly at a file cut off after the image data has started, as long as the pixels decode
-        let seen_idat = chunks.iter().any(|c| &c.ty == b"IDAT");
+        let seen_idat = chunks.iter().any(|c| {
+            bilingua_model::work::tick(1);
+            &c.ty == b"IDAT"
+        });
         if b.len() - pos < 12 {
             if seen_idat {
                 break;

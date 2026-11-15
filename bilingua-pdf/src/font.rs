@@ -240,6 +240,7 @@ impl ToUnicode {
     }
 
     fn insert(&mut self, code: u32, dst: Vec<u16>) {
+        bilingua_model::work::tick(1);
         self.writes += 1;
         if dst.len() == 1 {
             self.reverse.insert(dst[0], code);

@@ -34,6 +34,7 @@ fn mf_arg(b: &[u8], start: usize) -> Option<usize> {
             let mut depth = 1;
             i += 1;
             while i < b.len() {
+                bilingua_model::work::tick(1);
                 match b[i] {
                     b'{' => depth += 1,
                     b'}' => {

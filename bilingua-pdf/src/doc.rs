@@ -833,6 +833,12 @@ impl Page {
 }
 
 pub fn find(hay: &[u8], needle: &[u8], from: usize) -> Option<usize> {
+    let r = find_from(hay, needle, from);
+    bilingua_model::work::tick(r.map_or(hay.len(), |p| p + needle.len()).saturating_sub(from) as u64);
+    r
+}
+
+fn find_from(hay: &[u8], needle: &[u8], from: usize) -> Option<usize> {
     if from >= hay.len() || needle.is_empty() {
         return None;
     }

@@ -228,6 +228,7 @@ fn srx_breaks(rules: &[&Rule], text: &str) -> Vec<usize> {
         while start <= text.len() {
             let Some(caps) = rule.re.captures_at(text, start) else { break };
             let m = caps.get(0).expect("group 0");
+            bilingua_model::work::tick(1 + m.len() as u64);
             let pos = caps.name("bl_after").map(|g| g.start()).unwrap_or(m.end());
             match decided.get(&pos) {
                 Some((i, _)) if *i <= idx => {}

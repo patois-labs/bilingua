@@ -92,7 +92,10 @@ fn pairs(a: &[Atom]) -> Vec<(usize, usize)> {
 
 /// True when a cut placed before `a[p]` would fall inside a tag pair.
 fn inside_pair(pairs: &[(usize, usize)], p: usize) -> bool {
-    pairs.iter().any(|(o, c)| *o < p && p <= *c)
+    pairs.iter().any(|(o, c)| {
+        bilingua_model::work::tick(1);
+        *o < p && p <= *c
+    })
 }
 
 /// Moves a cut past close and standalone tags that follow the previous character, so a closing tag stays with
@@ -319,6 +322,47 @@ pub fn split(doc: &mut Document, seg_id: &str, at_char: usize) -> Result<(String
 mod tests {
     use super::*;
 
+    /// Work counted for `n` and `2n`: at most a little over twice as much (linear), not four times.
+    fn linear(n: usize, work: impl Fn(usize) -> u64) {
+        let (small, big) = (work(n), work(2 * n));
+        assert!(small > 0 && big * 10 <= small * 25 + 2_000, "{small} steps for n={n}, {big} for n={}: more than linear", 2 * n);
+    }
+
+    #[test]
+    fn long_punctuation_run_segments_in_linear_time() {
+        for (lang, stop) in [("en", "."), ("en", "!?"), ("ja", "\u{3002}")] {
+            let work = |n: usize| {
+                let text = format!("{} x", stop.repeat(n));
+                let mut d = doc_of(vec![vec![Inline::text(text)]]);
+                bilingua_model::work::count(|| segment(&mut d, lang, Granularity::Sentence, Rules::bundled())).1
+            };
+            linear(2_000, work);
+        }
+        assert_eq!(segs("en", "Wait..... Then go."), vec!["Wait.....", "Then go."]);
+    }
+
+    #[test]
+    fn many_sentences_among_many_pairs_split_in_linear_time() {
+        let make = |n: usize| -> Vec<Inline> {
+            let mut v = Vec::new();
+            for i in 0..n {
+                v.push(Inline::text("Go now. "));
+                v.push(Inline::tag(format!("b{i}"), TagKind::Open, "<b>"));
+                v.push(Inline::text("Yes"));
+                v.push(Inline::tag(format!("b{i}"), TagKind::Close, "</b>"));
+                v.push(Inline::text(" "));
+            }
+            v
+        };
+        linear(1_000, |n| {
+            let mut d = doc_of(vec![make(n)]);
+            bilingua_model::work::count(|| segment(&mut d, "en", Granularity::Sentence, Rules::bundled())).1
+        });
+        let mut d = doc_of(vec![make(3)]);
+        segment(&mut d, "en", Granularity::Sentence, Rules::bundled());
+        assert_eq!(d.units[0].segments.len(), 4);
+    }
+
     fn doc_of(units: Vec<Vec<Inline>>) -> Document {
         let n = units.len();
         Document::new("test", units.into_iter().enumerate().map(|(i, s)| Unit::new(format!("u{}", i + 1), s)).collect(), Skeleton::Text { parts: (0..n).map(SkelPart::Unit).collect(), encoding: "utf-8".into(), parser: None })
@@ -516,7 +560,7 @@ mod tests {
         // split it again after "One."
         let (a, b) = split(&mut d, "u1#1", 4).unwrap();
         assert_eq!((a.as_str(), b.as_str()), ("u1#1", "u1#2"));
-        assert_eq!(d.units[0].segments.len(), 3);
+        assert_eq!(d.units[0].segments.len(), 4);
         assert_eq!(d.units[0].separators, vec!["  ", " "]);
         assert_eq!(plain_text(&d.units[0].output()), "One.  Two. Three.");
         // join everything: the id goes back to the unit id
@@ -547,14 +591,14 @@ mod tests {
         assert!(matches!(join(&mut d, "u1#1", "u1#2"), Err(Error::Locked(id)) if id == "u1#2"));
         assert!(matches!(join(&mut d, "u1#2", "u1#3"), Err(Error::Locked(id)) if id == "u1#2"));
         assert!(matches!(split(&mut d, "u1#2", 2), Err(Error::Locked(_))));
-        assert_eq!(d.units[0].segments.len(), 3);
+        assert_eq!(d.units[0].segments.len(), 4);
         assert_eq!(d.units[0].segments[1].state, SegState::Locked);
         // A unit with a lock reason refuses both operations too.
         d.units[0].segments[1].state = SegState::New;
         d.units[0].lock_reason = Some("context match".into());
         assert!(matches!(join(&mut d, "u1#1", "u1#2"), Err(Error::Locked(_))));
         assert!(matches!(split(&mut d, "u1#1", 2), Err(Error::Locked(_))));
-        assert_eq!(d.units[0].segments.len(), 3);
+        assert_eq!(d.units[0].segments.len(), 4);
         // Unlocked again, it works.
         d.units[0].lock_reason = None;
         assert!(join(&mut d, "u1#1", "u1#2").is_ok());
@@ -589,7 +633,7 @@ mod tests {
         let r = Rules::from_srx(xml).unwrap();
         let mut d = doc_of(vec![vec![Inline::text("a; b; c")]]);
         segment(&mut d, "xx", Granularity::Sentence, &r);
-        assert_eq!(d.units[0].segments.len(), 3);
+        assert_eq!(d.units[0].segments.len(), 4);
         assert!(Rules::from_srx("<srx><body><maprules><languagemap languagepattern='.*' languagerulename='nope'/></maprules></body></srx>").is_err());
         let bad = xml.replace("[;]", "").replace(">;<", ">(<");
         assert!(Rules::from_srx(&bad).is_err());
