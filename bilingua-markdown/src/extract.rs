@@ -140,7 +140,7 @@ pub fn extract(full: &str, include_locked: bool, fm_keys: Option<&[String]>, lim
     }
     let fm = frontmatter::parse_with(full, fm_keys);
     let off = fm.as_ref().map(|f| f.end).unwrap_or(0);
-    let mut ex = Ex { full, off, body: &full[off..], units: vec![], parts: vec![], raw_cursor: 0, last_heading: None, newlines, limits: limits.clone(), context: guard::ContextBudget::new(), refused: None };
+    let mut ex = Ex { full, off, body: &full[off..], units: vec![], parts: vec![], raw_cursor: 0, last_heading: None, newlines, limits: *limits, context: guard::ContextBudget::new(), refused: None };
     if let Some(fm) = fm {
         for v in fm.values {
             let token = full[v.range.clone()].to_string();
