@@ -46,3 +46,27 @@ fn idml_bare_runs_keep_their_places() {
     let texts = units_of(&package(body));
     assert_eq!(texts.iter().map(|t| t.trim()).collect::<Vec<_>>(), ["One", "Mid", "Two"], "{texts:?}");
 }
+
+/// One paragraph range with 40,000 paragraphs, each its own character range, every one translated: each rebuild
+/// looked its range up among all the others and moved the new range in place one child at a time (units x range
+/// children). The translations come back in their places.
+#[test]
+fn idml_many_translated_ranges_rebuild_linear() {
+    let n = 40_000usize;
+    let body = psr(&(0..n).map(|k| csr(&format!("<Content>Line {k}</Content><Br/>"))).collect::<String>());
+    let bytes = package(body);
+    let merged = within(60, move || {
+        let mut doc = extract(&bytes);
+        for u in doc.units.iter_mut() {
+            let t = plain_text(&u.segments[0].source).replace("Line", "Zeile");
+            u.segments[0].target = vec![Inline::text(t)];
+            u.segments[0].state = SegState::Translated;
+        }
+        merge(&doc)
+    });
+    let again: Vec<String> = extract(&merged).units.iter().map(|u| plain_text(&u.segments[0].source)).collect();
+    assert_eq!(again.len(), n);
+    for k in [0, 1, n / 2, n - 1] {
+        assert_eq!(again[k], format!("Zeile {k}"));
+    }
+}
