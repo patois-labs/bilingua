@@ -123,7 +123,7 @@ fn htmlhelp_comment_scan_is_linear() {
         assert!(a < control * 5.0 + 3.0, "comments ending {end}: {a:.2} s, control {control:.2} s");
     }
     // the entry between two comments is still read and written
-    let data = format!("<HTML><BODY><!-- a --><UL><LI><OBJECT type=\"text/sitemap\"><param name=\"Name\" value=\"Alpha\"></OBJECT></UL><!-- b -->");
-    let (_, out) = translated(&data, MergeOptions::default());
+    let data = "<HTML><BODY><!-- a --><UL><LI><OBJECT type=\"text/sitemap\"><param name=\"Name\" value=\"Alpha\"></OBJECT></UL><!-- b -->";
+    let (_, out) = translated(data, MergeOptions::default());
     assert!(out.contains("value=\"Beta\""), "{out}");
 }
