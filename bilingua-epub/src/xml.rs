@@ -3,6 +3,8 @@
 //! value and leave every other byte alone. It reads no DTD, expands no entity (only the five predefined ones and
 //! character references are allowed, as libxml2 without a DTD), and is iterative: deep nesting is a typed error,
 //! never a stack overflow.
+use std::collections::{HashMap, HashSet};
+
 
 pub const XML_NS: &str = "http://www.w3.org/XML/1998/namespace";
 
@@ -93,8 +95,10 @@ impl Dom {
 }
 
 struct Scope {
-    /// (prefix, uri) pairs, innermost last.
-    binds: Vec<(String, String)>,
+    /// The prefixes bound so far, innermost last (the empty prefix is the default namespace).
+    binds: Vec<String>,
+    /// Each prefix's URIs, innermost last: a lookup is one hash, however many prefixes are in scope.
+    uris: HashMap<String, Vec<String>>,
     /// Number of bindings each open element added.
     marks: Vec<usize>,
 }
@@ -104,7 +108,23 @@ impl Scope {
         if prefix == "xml" {
             return Some(XML_NS);
         }
-        self.binds.iter().rev().find(|(p, _)| p == prefix).map(|(_, u)| u.as_str())
+        self.uris.get(prefix).and_then(|v| v.last()).map(String::as_str)
+    }
+    fn bind(&mut self, prefix: &str, uri: String) {
+        self.binds.push(prefix.to_string());
+        self.uris.entry(prefix.to_string()).or_default().push(uri);
+    }
+    /// Drops the last `n` bindings.
+    fn unbind(&mut self, n: usize) {
+        for _ in 0..n {
+            let Some(p) = self.binds.pop() else { return };
+            if let Some(v) = self.uris.get_mut(&p) {
+                v.pop();
+                if v.is_empty() {
+                    self.uris.remove(&p);
+                }
+            }
+        }
     }
 }
 
@@ -254,7 +274,7 @@ pub fn parse(text: &str, max_depth: usize) -> Result<Dom, XmlError> {
     let b = text.as_bytes();
     let mut dom = Dom::default();
     let mut stack: Vec<usize> = Vec::new();
-    let mut scope = Scope { binds: Vec::new(), marks: Vec::new() };
+    let mut scope = Scope { binds: Vec::new(), uris: HashMap::new(), marks: Vec::new() };
     let mut i = 0;
     let mut seen_root = false;
     let mut root_closed = false;
@@ -336,7 +356,7 @@ pub fn parse(text: &str, max_depth: usize) -> Result<Dom, XmlError> {
             dom.nodes[top].close_start = i;
             stack.pop();
             let added = scope.marks.pop().unwrap_or(0);
-            scope.binds.truncate(scope.binds.len() - added);
+            scope.unbind(added);
             if stack.is_empty() {
                 root_closed = true;
             }
@@ -418,10 +438,10 @@ pub fn parse(text: &str, max_depth: usize) -> Result<Dom, XmlError> {
             let mut added = 0;
             for &(_, _, _, vs, ve, aname) in &raw_attrs {
                 if aname == "xmlns" {
-                    scope.binds.push((String::new(), decode_attr(&text[vs..ve])));
+                    scope.bind("", decode_attr(&text[vs..ve]));
                     added += 1;
                 } else if let Some(p) = aname.strip_prefix("xmlns:") {
-                    scope.binds.push((p.to_string(), decode_attr(&text[vs..ve])));
+                    scope.bind(p, decode_attr(&text[vs..ve]));
                     added += 1;
                 }
             }
@@ -439,6 +459,8 @@ pub fn parse(text: &str, max_depth: usize) -> Result<Dom, XmlError> {
                 }
             };
             let mut attrs: Vec<Attr> = Vec::with_capacity(raw_attrs.len());
+            // the repeated-attribute check is a scan for a few attributes, a set for many (linear either way)
+            let mut names: Option<HashSet<(String, String)>> = (raw_attrs.len() > 16).then(HashSet::new);
             for &(_, _, _, vs, ve, aname) in &raw_attrs {
                 let (ap, al) = match aname.split_once(':') {
                     Some((p, l)) if !p.is_empty() && !l.is_empty() => (p, l),
@@ -453,7 +475,11 @@ pub fn parse(text: &str, max_depth: usize) -> Result<Dom, XmlError> {
                         None => return syn(format!("namespace prefix {ap} is not declared")),
                     }
                 };
-                if attrs.iter().any(|x| x.local == al && x.ns == ans) {
+                let twice = match names.as_mut() {
+                    Some(set) => !set.insert((ans.clone(), al.to_string())),
+                    None => attrs.iter().any(|x| x.local == al && x.ns == ans),
+                };
+                if twice {
                     return syn(format!("attribute {aname} appears twice"));
                 }
                 attrs.push(Attr {
@@ -487,7 +513,7 @@ pub fn parse(text: &str, max_depth: usize) -> Result<Dom, XmlError> {
                 close_start: open_end,
             });
             if self_closed {
-                scope.binds.truncate(scope.binds.len() - added);
+                scope.unbind(added);
                 if parent.is_none() {
                     root_closed = true;
                 }

@@ -194,8 +194,9 @@ fn content_type_of(v: Option<&str>) -> String {
     }
 }
 
-/// Byte ranges of the body parts between the delimiters (RFC 2046 section 5.1.1).
-fn split_multipart(data: &[u8], start: usize, end: usize, boundary: &[u8]) -> Vec<(usize, usize)> {
+/// Byte ranges of the body parts between the delimiters (RFC 2046 section 5.1.1). It stops after `max` + 1 ranges:
+/// that many already put the message over the part cap, so a body of millions of delimiters is not collected.
+fn split_multipart(data: &[u8], start: usize, end: usize, boundary: &[u8], max: usize) -> Vec<(usize, usize)> {
     let mut ranges = Vec::new();
     let mut open_at: Option<usize> = None;
     let next_line = |from: usize| find_from(data, from, end, b'\n').map(|n| n + 1);
@@ -216,6 +217,9 @@ fn split_multipart(data: &[u8], start: usize, end: usize, boundary: &[u8]) -> Ve
                 stop -= 1;
             }
             ranges.push((o, o.max(stop)));
+            if ranges.len() > max {
+                return ranges;
+            }
         }
         if close {
             return ranges;
@@ -296,7 +300,9 @@ pub fn walk(data: &[u8], mbox_from: bool) -> Result<Vec<Part>, WalkError> {
         }
         if let Some(b) = boundary {
             if !b.is_empty() && b.chars().count() <= MAX_BOUNDARY && b.is_ascii() {
-                let ranges = split_multipart(data, body_start, e, b.as_bytes());
+                // the parts this message may still have: more than that is refused when the walk reaches them
+                let room = MAX_PARTS.saturating_sub(parts.len() + stack.len());
+                let ranges = split_multipart(data, body_start, e, b.as_bytes(), room);
                 for (cs, ce) in ranges.into_iter().rev() {
                     stack.push((cs, ce, depth + 1, Some(idx)));
                 }
@@ -446,6 +452,17 @@ pub fn get_param(header: &str, name: &str) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// G5-7: a body of a million delimiters collects at most the part allowance plus one range, so the walk refuses
+    /// it without holding a range (and a stack entry) for every delimiter.
+    #[test]
+    fn many_boundaries_are_not_all_collected() {
+        let body = "--b\n".repeat(1_000_000);
+        let ranges = split_multipart(body.as_bytes(), 0, body.len(), b"b", MAX_PARTS);
+        assert_eq!(ranges.len(), MAX_PARTS + 1);
+        let few = "--b\nx\n--b\ny\n--b--\n";
+        assert_eq!(split_multipart(few.as_bytes(), 0, few.len(), b"b", MAX_PARTS).len(), 2);
+    }
 
     #[test]
     fn params() {

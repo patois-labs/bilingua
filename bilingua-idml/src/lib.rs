@@ -96,7 +96,8 @@ fn merge_doc(doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
     if wanted.is_empty() {
         return Ok(original.clone());
     }
-    let l = Limits::default();
+    // the stored package is read under the caller's merge limits
+    let l = opts.limits();
     let entries = read(original, &l)?;
     let pkg = package::open(&entries, &l, &mut Budget::new(&l))?;
     // InDesign keeps the language per paragraph: the stories this merge rewrites (the translated ones) get it, so

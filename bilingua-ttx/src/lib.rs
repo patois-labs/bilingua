@@ -483,8 +483,11 @@ fn write_unit(u: &Unit, tgt_lang: &str, crlf: bool, out: &mut String) -> Result<
     let (open, close) = match f[0] {
         "e" => (String::new(), String::new()),
         "s" => {
-            let t = &raw[rs..re];
-            (format!("{}>", t[..t.len() - 2].trim_end()), format!("</{nm}>"))
+            // a self-closed start tag; stored splice data that does not point at one is refused, not sliced
+            let Some(t) = raw[rs..re].strip_suffix("/>") else {
+                return Err(Error::Write(format!("unit {} has damaged splice data", u.id)));
+            };
+            (format!("{}>", t.trim_end()), format!("</{nm}>"))
         }
         _ => {
             if tgt_lang.is_empty() {

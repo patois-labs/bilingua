@@ -304,16 +304,22 @@ fn merge_doc(doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
     if work.is_empty() && stamp.is_none() {
         return Ok(archive.clone());
     }
-    let l = Limits::default();
+    // the stored archive is read under the caller's merge limits, as it was read at extraction
+    let l = opts.limits();
     let entries = bilingua_zip::read_zip("odf", archive, &ZipLimits::from(&l)).map_err(|e| Error::Write(format!("the stored archive is unreadable: {e}")))?;
     let mut parts: Vec<Loaded> = Vec::new();
     for name in PARTS {
-        if let Some(p) = load_part(&entries, name, &l.with_max_xml_elements(usize::MAX).with_max_xml_depth(4096), false)? {
+        if let Some(p) = load_part(&entries, name, &l, false)? {
             parts.push(p);
         }
     }
     let body: Vec<(usize, u32)> = parts.iter().enumerate().flat_map(|(pi, p)| p.paras.iter().map(move |n| (pi, *n))).collect();
-    let notes: Vec<(usize, u32)> = parts.iter().enumerate().flat_map(|(pi, p)| walk::annotation_paragraphs(&p.tree).into_iter().map(move |n| (pi, n))).collect();
+    // comment paragraphs are listed only when a comment unit needs them
+    let notes: Vec<(usize, u32)> = if work.iter().any(|u| u.id.starts_with('c')) {
+        parts.iter().enumerate().flat_map(|(pi, p)| walk::annotation_paragraphs(&p.tree).into_iter().map(move |n| (pi, n))).collect()
+    } else {
+        Vec::new()
+    };
     let mut edits: Vec<Edits> = parts.iter().map(|p| Edits::new(&p.tree)).collect();
     for e in &mut edits {
         e.lxml_prefixes = locos;

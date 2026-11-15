@@ -49,7 +49,8 @@ fn clean_rpr(rpr: &str, lang: Option<&str>) -> String {
             let vs = p + pat.len();
             if let Some(q) = tag[vs..].chars().next().filter(|c| *c == '"' || *c == '\'') {
                 if let Some(e) = tag[vs + 1..].find(q) {
-                    tag.replace_range(vs + 1..vs + 1 + e, &escape_text(l).replace('"', "&quot;"));
+                    // escaped for either quote, so the value cannot end the attribute it is written into
+                    tag.replace_range(vs + 1..vs + 1 + e, &escape_text(l).replace('"', "&quot;").replace('\'', "&apos;"));
                 }
             }
         }
@@ -98,7 +99,9 @@ fn with_rtl(lead: &str, a: &str) -> String {
 impl<'a> Renderer<'a> {
     pub fn new(doc: &'a Document) -> Renderer<'a> {
         let ids = doc.units.iter().enumerate().map(|(i, u)| (u.id.as_str(), i)).collect();
-        Renderer { doc, ids, target_lang: doc.target_lang.clone(), warnings: vec![] }
+        // only a value that can be a language tag is stamped, in its canonical form (as the other writers do)
+        let target_lang = doc.target_lang.as_deref().map(str::trim).filter(|t| bilingua_model::MergeOptions::plausible_lang(t)).and_then(bilingua_model::profile::lang_tag);
+        Renderer { doc, ids, target_lang, warnings: vec![] }
     }
 
     pub fn unit(&mut self, idx: usize) -> Result<String, Error> {

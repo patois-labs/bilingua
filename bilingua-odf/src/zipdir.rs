@@ -21,10 +21,11 @@ pub fn duplicate_name(b: &[u8]) -> Option<String> {
     let mut at = u32at(b, eocd + 16)?;
     let mut seen: HashSet<String> = HashSet::new();
     for _ in 0..count {
-        if b.get(at..at + 4)? != b"PK\x01\x02" {
+        // checked offsets: a forged directory offset near the top of the address space (32-bit targets) is no panic
+        if b.get(at..at.checked_add(4)?)? != b"PK\x01\x02" {
             return None;
         }
-        let (n, x, c) = (u16at(b, at + 28)?, u16at(b, at + 30)?, u16at(b, at + 32)?);
+        let (n, x, c) = (u16at(b, at.checked_add(28)?)?, u16at(b, at.checked_add(30)?)?, u16at(b, at.checked_add(32)?)?);
         let name0 = at.checked_add(46)?;
         let raw = String::from_utf8_lossy(b.get(name0..name0.checked_add(n)?)?).into_owned();
         let key = raw.replace('\\', "/").trim_start_matches("./").to_ascii_lowercase();

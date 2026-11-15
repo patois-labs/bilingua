@@ -248,8 +248,18 @@ pub fn detect_with(name: &str, bytes: &[u8], prof: Option<&str>) -> Option<Box<d
     if !ext.is_empty() {
         return filters().into_iter().find(|f| f.extensions().contains(&ext.as_str()));
     }
+    // Several sniffers parse the whole input under their own default limits, one after another. A file with no
+    // extension is sniffed only up to SNIFF_MAX_BYTES; a larger one needs its extension (sniffing a prefix could
+    // take a cut JSON file for plain text).
+    if bytes.len() > SNIFF_MAX_BYTES {
+        return None;
+    }
     filters().into_iter().find(|f| f.sniff(bytes))
 }
+
+/// The largest file with no extension whose format is found by sniffing (4 MiB). A larger one is refused with
+/// [`Error::Unsupported`]; give it its extension.
+pub const SNIFF_MAX_BYTES: usize = 4 * 1024 * 1024;
 
 /// Extracts and segments a file. The returned document's `format` names the filter that `merge` will use.
 /// The source language comes from `opts.source_lang` (default "en"); it picks the sentence rules.

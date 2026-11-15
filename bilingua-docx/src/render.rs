@@ -58,7 +58,8 @@ impl<'a> Renderer<'a> {
             doc,
             ids,
             w,
-            target_lang: doc.target_lang.clone(),
+            // only a value that can be a language tag is stamped, in its canonical form (as the other writers do)
+            target_lang: doc.target_lang.as_deref().map(str::trim).filter(|t| bilingua_model::MergeOptions::plausible_lang(t)).and_then(bilingua_model::profile::lang_tag),
             warnings: vec![],
             warned: HashSet::new(),
         }
@@ -337,10 +338,11 @@ fn replace_attr(tag: &str, name: &str, value: &str) -> String {
         if let Some(p) = tag.find(&pat) {
             let vs = p + pat.len();
             if let Some(e) = tag[vs..].find(q) {
+                // escaped for either quote, so the value cannot end the attribute it is written into
                 return format!(
                     "{}{}{}",
                     &tag[..vs],
-                    crate::xml::escape_text(value).replace('"', "&quot;"),
+                    crate::xml::escape_text(value).replace('"', "&quot;").replace('\'', "&apos;"),
                     &tag[vs + e..]
                 );
             }

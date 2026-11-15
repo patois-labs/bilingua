@@ -28,6 +28,9 @@ use zipio::EntryMeta;
 /// The pseudo entry that carries zip details (compression, times). It holds a NUL, which no real zip entry name
 /// can, and it is never written to the output file.
 const META_NAME: &str = "\0bilingua-xlsx-meta";
+/// The refusal of a workbook that is not in the SpreadsheetML namespace (an Office 2007 beta file), which would
+/// otherwise open with no units (BILI-50).
+pub(crate) const OLD_NAMESPACE: &str = "This Excel file uses a workbook format this version cannot read (not the SpreadsheetML namespace, for example a file from a pre-release of Excel 2007). Open it in Excel, save it as .xlsx and upload it again.";
 
 /// Markers inside skeleton text. Workbooks that already contain these characters are refused.
 pub(crate) const M_UNIT: char = '\u{E000}';

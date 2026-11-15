@@ -1265,7 +1265,8 @@ pub fn merge(doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
     if texts.is_empty() && tag.is_none() {
         return Ok(data.clone());
     }
-    let l = bilingua_model::Limits::default();
+    // the stored package is read under the caller's merge limits
+    let l = opts.limits();
     let entries = read(data, &l)?;
     let mut pkg = Package::open(&entries)?;
     let rtl = tag.as_deref().is_some_and(profile::is_rtl);

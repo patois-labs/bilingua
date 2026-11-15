@@ -200,6 +200,8 @@ impl Filter for Po {
         // (start, end, role) replaced ranges in the file; units referenced by index.
         let mut edits: Vec<(usize, usize, Vec<usize>)> = Vec::new();
         let mut header_end = 0;
+        let limits = opts.limits();
+        let mut context = bilingua_model::guard::ContextBudget::new();
 
         for (ei, e) in parsed.entries.iter().enumerate() {
             if Some(ei) == header_idx {
@@ -210,7 +212,7 @@ impl Filter for Po {
             if id.value.is_empty() {
                 continue;
             }
-            entry_units(text, e, id, ei, table, file_np, &mut units, &mut edits)?;
+            entry_units(text, e, id, ei, table, file_np, &mut units, &mut edits, (&limits, &mut context))?;
         }
         edits.sort_by_key(|e| e.0);
 
@@ -294,6 +296,9 @@ impl Filter for Po {
     }
 }
 
+/// Most plural forms one entry may ask for (CLDR has at most six; gettext files in the wild stay far below this).
+const MAX_PLURAL_FORMS: usize = 32;
+
 #[allow(clippy::too_many_arguments)]
 fn entry_units(
     text: &str,
@@ -304,6 +309,7 @@ fn entry_units(
     file_np: Option<usize>,
     units: &mut Vec<Unit>,
     edits: &mut Vec<(usize, usize, Vec<usize>)>,
+    (limits, context): (&Limits, &mut bilingua_model::guard::ContextBudget),
 ) -> Result<(), Error> {
     let plural = e.id_plural.is_some();
     let first_str = &e.strs[0].1;
@@ -318,6 +324,18 @@ fn entry_units(
     }
     // Target plural count: the target language's rule, else what the entry has, else the header's.
     let n = if plural { table.or(Some(existing)).or(file_np).unwrap_or(2).max(1) } else { 1 };
+    // no language has more than six plural forms: an entry asking for far more is refused before its units are made
+    if n > MAX_PLURAL_FORMS {
+        return Err(Error::Limit(LimitError::new(
+            LimitKind::Units,
+            format!("line {}: a plural entry with {n} forms (at most {MAX_PLURAL_FORMS} are read). Fix the entry and upload it again.", id.line_no),
+        )));
+    }
+    // each plural index's msgstr, the first one given (as the scan per form found it)
+    let mut by_index: HashMap<usize, &Field> = HashMap::new();
+    for (i, f) in &e.strs {
+        by_index.entry(i.unwrap_or(0)).or_insert(f);
+    }
     let fuzzy = e.flags.iter().any(|f| f == "fuzzy");
     let key = match &e.ctxt {
         Some(c) => format!("{} :: {}", c.value, id.value),
@@ -334,7 +352,7 @@ fn entry_units(
         let src_text = if k == 0 { id.value.as_str() } else { plural_src };
         let uid = if plural { format!("{entry_id}.{k}") } else { entry_id.clone() };
         let (src, codes, tags) = source_inlines(src_text);
-        let field = e.strs.iter().find(|(i, _)| i.unwrap_or(0) == k).map(|(_, f)| f);
+        let field = by_index.get(&k).copied();
         let tgt_text = field.map(|f| f.value.as_str()).unwrap_or("");
         let mut u = Unit::new(uid, src);
         u.codes = codes;
@@ -350,6 +368,8 @@ fn entry_units(
         u.context.key = Some(key.clone());
         u.context.style = Some(if plural { format!("msgstr[{k}]") } else { "msgstr".into() });
         u.context.location = Some(format!("line {}", id.line_no));
+        // the key and the notes are copied into every form's unit: each copy counts against the context budget
+        context.charge(key.len() + notes.iter().map(String::len).sum::<usize>(), limits)?;
         u.context.notes = notes.clone();
         if let Some(c) = &e.ctxt {
             u.context.extra.insert("msgctxt".into(), c.value.clone());
@@ -377,6 +397,7 @@ fn entry_units(
         }
         idxs.push(units.len());
         units.push(u);
+        guard::check_unit_count(units.len(), limits)?;
     }
     let block = (first_str.start, last_str.end);
     units[idxs[0]].set_hidden(RAW, text[block.0..block.1].to_string());

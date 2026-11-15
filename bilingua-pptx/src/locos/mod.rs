@@ -260,16 +260,38 @@ fn rels_name(part: &str) -> String {
 
 /// A relationship: (type suffix, resolved path).
 type RelTarget = (String, String);
-/// `rId -> (type, path)` in Python dict order (first insertion keeps its place, the last value wins).
-type Rels = Vec<(Option<String>, RelTarget)>;
+/// `rId -> (type, path)` in Python dict order (first insertion keeps its place, the last value wins), with an
+/// index by id so building it and looking an id up are not scans of every relationship.
+#[derive(Clone, Default)]
+struct Rels {
+    list: Vec<(Option<String>, RelTarget)>,
+    index: HashMap<Option<String>, usize>,
+}
+
+impl Rels {
+    fn insert(&mut self, id: Option<String>, v: RelTarget) {
+        match self.index.get(&id) {
+            Some(&k) => self.list[k].1 = v,
+            None => {
+                self.index.insert(id.clone(), self.list.len());
+                self.list.push((id, v));
+            }
+        }
+    }
+    fn iter(&self) -> std::slice::Iter<'_, (Option<String>, RelTarget)> {
+        self.list.iter()
+    }
+}
 
 fn rel_get<'a>(rels: &'a Rels, id: Option<&str>) -> Option<&'a RelTarget> {
-    rels.iter().find(|(k, _)| k.as_deref() == id).map(|(_, v)| v)
+    rels.index.get(&id.map(str::to_string)).map(|&k| &rels.list[k].1)
 }
 
 /// The package: its entries, the (Transitional) bytes of every part and the parsed parts.
 struct Pkg {
     entries: Vec<RawEntry>,
+    /// File (not folder) entry name to its first position in `entries`, so a lookup is not a scan of every entry.
+    files: HashMap<String, usize>,
     names: HashSet<String>,
     /// Normalised bytes of a Strict package's XML parts (absent: the entry's own bytes).
     normal: HashMap<String, Vec<u8>>,
@@ -316,14 +338,18 @@ impl Pkg {
                 }
             }
         }
-        Ok(Pkg { entries, names, normal, strict, doms: HashMap::new(), texts: HashMap::new() })
+        let mut files: HashMap<String, usize> = HashMap::new();
+        for (i, e) in entries.iter().enumerate().filter(|(_, e)| !e.meta.dir) {
+            files.entry(e.name.clone()).or_insert(i);
+        }
+        Ok(Pkg { entries, files, names, normal, strict, doms: HashMap::new(), texts: HashMap::new() })
     }
 
     fn bytes(&self, name: &str) -> Option<&[u8]> {
         if let Some(b) = self.normal.get(name) {
             return Some(b);
         }
-        self.entries.iter().find(|e| e.name == name && !e.meta.dir).map(|e| e.data.as_slice())
+        self.files.get(name).map(|&i| self.entries[i].data.as_slice())
     }
 
     /// `_Package.xml`: the parsed part, `None` when there is no such entry.
@@ -355,7 +381,7 @@ impl Pkg {
     /// `_Package.rels`: the internal relationships of `part`.
     fn rels(&mut self, part: &str) -> Result<Rels, Error> {
         let rn = rels_name(part);
-        let mut out: Rels = Vec::new();
+        let mut out = Rels::default();
         if !self.load(&rn)? {
             return Ok(out);
         }
@@ -367,17 +393,14 @@ impl Pkg {
             let Some(path) = resolve(part, d.get(rel, "Target").unwrap_or("")) else { continue };
             let kind = d.get(rel, "Type").unwrap_or("").rsplit('/').next().unwrap_or("").to_string();
             let id = d.get(rel, "Id").map(str::to_string);
-            match out.iter_mut().find(|(k, _)| *k == id) {
-                Some((_, v)) => *v = (kind, path),
-                None => out.push((id, (kind, path))),
-            }
+            out.insert(id, (kind, path));
         }
         Ok(out)
     }
 }
 
 fn main_part(pkg: &mut Pkg) -> Result<String, Error> {
-    let mut rels = pkg.rels("")?;
+    let mut rels = pkg.rels("")?.list;
     rels.sort_by(|a, b| a.0.cmp(&b.0).then_with(|| a.1.cmp(&b.1)));
     for (_, (kind, path)) in rels {
         if kind == "officeDocument" && pkg.names.contains(&path) && pkg.load(&path)? {
@@ -494,7 +517,7 @@ impl Walk {
                     }
                 }
             }
-            for (_, (kind2, sub)) in &srels {
+            for (_, (kind2, sub)) in srels.iter() {
                 if kind2 == "notesSlide" && !seen.contains(sub) && pkg.names.contains(sub) {
                     seen.insert(sub.clone());
                     pkg.load(sub)?;
@@ -547,7 +570,7 @@ fn comment_slots(pkg: &mut Pkg, walk: &Walk) -> Result<Vec<CSlot>, Error> {
     let mut out = Vec::new();
     let mut seen: HashSet<String> = HashSet::new();
     for (_, label, srels) in &walk.slides {
-        for (_, (kind, sub)) in srels {
+        for (_, (kind, sub)) in srels.iter() {
             if kind != "comments" || seen.contains(sub) || !pkg.names.contains(sub) {
                 continue;
             }
@@ -896,16 +919,26 @@ fn stamp_language(d: &mut Dom, p: usize, tag: &str, rtl: bool) {
 /// `_point_paragraphs`: modelId -> the `a:p` of every SmartArt point with text, in dict order.
 fn point_paragraphs(d: &Dom) -> Vec<(String, Vec<usize>)> {
     let mut out: Vec<(String, Vec<usize>)> = Vec::new();
+    // modelId to its slot in `out`: a later point with the same id replaces the paragraphs in place
+    let mut slot: HashMap<String, usize> = HashMap::new();
     for pt in d.iter(d.root).into_iter().filter(|&e| d.is(e, DGM, "pt")) {
         let Some(t) = d.find(pt, DGM, "t") else { continue };
         let Some(mid) = d.get(pt, "modelId").filter(|m| !m.is_empty()) else { continue };
         let ps: Vec<usize> = d.iter(t).into_iter().filter(|&e| d.is(e, A, "p")).collect();
-        match out.iter_mut().find(|(m, _)| m == mid) {
-            Some((_, v)) => *v = ps,
-            None => out.push((mid.to_string(), ps)),
+        match slot.get(mid) {
+            Some(&k) => out[k].1 = ps,
+            None => {
+                slot.insert(mid.to_string(), out.len());
+                out.push((mid.to_string(), ps));
+            }
         }
     }
     out
+}
+
+/// The point texts by modelId, for lookups (ids are unique in a [`point_paragraphs`] list).
+fn by_model_id(texts: &PointTexts) -> HashMap<&str, &[String]> {
+    texts.iter().map(|(m, v)| (m.as_str(), v.as_slice())).collect()
 }
 
 /// Each SmartArt point's paragraphs as LocOS text, by modelId.
@@ -914,15 +947,16 @@ type PointTexts = Vec<(String, Vec<String>)>;
 /// `_mirror_drawing`: `translated` is each point's translated paragraphs as LocOS text.
 fn mirror_drawing(source: &PointTexts, translated: &PointTexts, dr: &mut Dom) -> bool {
     let mut changed = false;
+    let (source, translated) = (by_model_id(source), by_model_id(translated));
     let sps: Vec<usize> = dr.iter(dr.root).into_iter().filter(|&e| dr.is(e, DSP, "sp")).collect();
     for sp in sps {
         let Some(mid) = dr.get(sp, "modelId").map(str::to_string) else { continue };
-        let Some((_, src)) = source.iter().find(|(m, _)| *m == mid) else { continue };
+        let Some(&src) = source.get(mid.as_str()) else { continue };
         let Some(body) = dr.find(sp, DSP, "txBody") else { continue };
         let cached: Vec<usize> = dr.iter(body).into_iter().filter(|&e| dr.is(e, A, "p")).collect();
-        let tr = translated.iter().find(|(m, _)| *m == mid).map(|(_, v)| v.as_slice()).unwrap_or(&[]);
+        let tr = translated.get(mid.as_str()).copied().unwrap_or(&[]);
         let now: Vec<String> = cached.iter().map(|&p| tok_text(dr, p)).collect();
-        if now != *src || cached.len() != tr.len() {
+        if now != src || cached.len() != tr.len() {
             continue;
         }
         for (&cp, t) in cached.iter().zip(tr) {
@@ -1046,16 +1080,17 @@ fn written_texts(doc: &Document) -> Vec<(i64, String)> {
 pub fn rebuild(original: &[u8], texts: &[(i64, String)], target: Option<&str>) -> Result<Vec<u8>, Error> {
     // plain LocOS text has no escaped look-alike: doubling its own U+E000 is all the escape it needs
     let texts: Vec<(i64, String)> = texts.iter().map(|(i, t)| (*i, t.replace('\u{e000}', "\u{e000}\u{e000}"))).collect();
-    rebuild_escaped(original, &texts, target)
+    rebuild_escaped(original, &texts, target, &Limits::default())
 }
 
 /// [`rebuild`] for texts whose literal text is escaped (`esc_lit`).
-fn rebuild_escaped(original: &[u8], texts: &[(i64, String)], target: Option<&str>) -> Result<Vec<u8>, Error> {
+fn rebuild_escaped(original: &[u8], texts: &[(i64, String)], target: Option<&str>, limits: &Limits) -> Result<Vec<u8>, Error> {
     let werr = |e: Error| match e {
         Error::Parse { msg, .. } => Error::Write(msg),
         e => e,
     };
-    let mut pkg = Pkg::open(original, &Limits::default()).map_err(werr)?;
+    // the stored package is read under the caller's merge limits
+    let mut pkg = Pkg::open(original, limits).map_err(werr)?;
     let walk = Walk::new(&mut pkg).map_err(werr)?;
     let tag = target.and_then(profile::lang_tag);
     let rtl = tag.is_some() && target.is_some_and(profile::is_rtl);
@@ -1108,9 +1143,10 @@ fn rebuild_escaped(original: &[u8], texts: &[(i64, String)], target: Option<&str
         let dr = pkg.doms.get_mut(drawing).unwrap();
         if mirror_drawing(src, &translated, dr) {
             if let Some(tag) = &tag {
+                let ids: HashSet<&str> = src.iter().map(|(x, _)| x.as_str()).collect();
                 let sps: Vec<usize> = dr.iter(dr.root).into_iter().filter(|&e| dr.is(e, DSP, "sp")).collect();
                 for sp in sps {
-                    if dr.get(sp, "modelId").is_some_and(|m| src.iter().any(|(x, _)| x == m)) {
+                    if dr.get(sp, "modelId").is_some_and(|m| ids.contains(m)) {
                         let ps: Vec<usize> = dr.iter(sp).into_iter().filter(|&e| dr.is(e, A, "p")).collect();
                         for p in ps {
                             stamp_language(dr, p, tag, rtl);
@@ -1150,5 +1186,5 @@ pub fn merge(doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
         return Err(Error::Write("pptx: a LocOS-profile document needs its original file".into()));
     };
     let texts = written_texts(doc);
-    rebuild_escaped(data, &texts, opts.stamp_lang(doc, true))
+    rebuild_escaped(data, &texts, opts.stamp_lang(doc, true), &opts.limits())
 }
