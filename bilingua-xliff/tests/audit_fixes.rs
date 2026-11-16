@@ -197,4 +197,35 @@ fn a_finished_globallink_segment_set_back_to_draft_is_no_longer_finished() {
     // untouched, it stays finished
     let d = f.extract(gl.as_bytes(), &ExtractOptions::new()).unwrap();
     assert_eq!(f.merge(&d).unwrap(), gl.as_bytes());
+    // edited (a new target) and set back to draft
+    let mut d = f.extract(gl.as_bytes(), &ExtractOptions::new()).unwrap();
+    d.set_target("g1", vec![bilingua_model::Inline::text("Eins!")]).unwrap();
+    d.set_state("g1", bilingua_model::SegState::Draft).unwrap();
+    let out = String::from_utf8(f.merge(&d).unwrap()).unwrap();
+    assert!(out.contains("translation_status=\"in_progress\""), "{out}");
+    assert!(!out.contains("translation_status=\"finished\""), "{out}");
+}
+
+/// BILI-39: `iws:status` is one per trans-unit. A finished unit of several segments with one of them set back to
+/// draft is no longer finished, also while its other segments stay accepted; accepting that segment again (every
+/// segment accepted) says `finished` once more.
+#[test]
+fn a_finished_globallink_unit_with_one_segment_back_at_draft_is_in_progress() {
+    let gl = "<?xml version=\"1.0\"?>\n<xliff version=\"1.2\" xmlns=\"urn:oasis:names:tc:xliff:document:1.2\" xmlns:iws=\"http://www.idiominc.com/ws/asset\"><file source-language=\"en\" target-language=\"de\" datatype=\"x\"><body><trans-unit id=\"g1\"><source>One. Two.</source><seg-source><mrk mtype=\"seg\" mid=\"1\">One.</mrk> <mrk mtype=\"seg\" mid=\"2\">Two.</mrk></seg-source><target><mrk mtype=\"seg\" mid=\"1\">Eins.</mrk> <mrk mtype=\"seg\" mid=\"2\">Zwei.</mrk></target><iws:segment-metadata><iws:status translation_status=\"finished\" lock_status=\"unlocked\"/></iws:segment-metadata></trans-unit></body></file></xliff>\n";
+    let f = xliff();
+    let d = f.extract(gl.as_bytes(), &ExtractOptions::new()).unwrap();
+    assert_eq!(d.units[0].segments.len(), 2, "{:?}", d.units[0].segments);
+    assert!(d.units[0].segments.iter().all(|s| s.state == bilingua_model::SegState::Translated));
+    let second = d.units[0].segments[1].id.clone();
+    let mut back = d.clone();
+    back.set_state(&second, bilingua_model::SegState::Draft).unwrap();
+    let out = String::from_utf8(f.merge(&back).unwrap()).unwrap();
+    assert!(out.contains("translation_status=\"in_progress\" lock_status=\"unlocked\""), "{out}");
+    let again = f.extract(out.as_bytes(), &ExtractOptions::new()).unwrap();
+    assert_ne!(again.units[0].segments[1].state, bilingua_model::SegState::Translated);
+    // accepted again: finished
+    let mut done = again.clone();
+    done.set_state(&second, bilingua_model::SegState::Translated).unwrap();
+    let out2 = String::from_utf8(f.merge(&done).unwrap()).unwrap();
+    assert!(out2.contains("translation_status=\"finished\" lock_status=\"unlocked\""), "{out2}");
 }
