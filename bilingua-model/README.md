@@ -50,7 +50,7 @@ dict may list only the fields it changes).
 
 A refusal is `Error::Limit(LimitError { kind: LimitKind, msg })`: `kind` is a stable value to branch on
 (`input_bytes`, `lines`, `units`, `unit_chars`, `xml_depth`, `xml_elements`, `xml_entities`, `paragraphs`,
-`spreadsheet`, `zip_entries`, `zip_bytes`, `zip_ratio`, `zip_malformed`, `output_bytes`), `msg` is short and safe to show the person
+`spreadsheet`, `zip_entries`, `zip_bytes`, `zip_ratio`, `zip_malformed`, `output_bytes`, and at merge `skeleton`), `msg` is short and safe to show the person
 who uploaded the file. Unreadable text is `Error::Encoding(msg)`.
 
 **What a new format crate calls** (all in `guard`):

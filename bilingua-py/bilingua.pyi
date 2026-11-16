@@ -106,10 +106,13 @@ class BilinguaError(Exception):
     "invalid_argument" (also an unknown format option or profile), "invalid_document", "internal"; "error" for a
     failure a later release gives its own code. `detail` is the parser's own sentence: the message without the
     `not a <format> file:` prefix of a "parse" error, the message itself for every other code. Size and budget
-    refusals are "limit", a file whose bytes cannot be read as text "encoding"."""
+    refusals are "limit", a file whose bytes cannot be read as text "encoding". For a "limit" error, `limit` names
+    the limit ("input_bytes", "units", "unit_chars", "context", "zip_entries", "zip_malformed", "output_bytes",
+    "skeleton", ...); it is None for every other code."""
 
     code: str
     detail: str
+    limit: str | None
 
 def formats() -> list[FormatInfo]:
     """All formats, most specific first."""

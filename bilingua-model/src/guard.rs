@@ -51,9 +51,11 @@ pub enum LimitKind {
     ZipRatio,
     /// A zip whose declared sizes or names are unsafe or do not match its data.
     ZipMalformed,
-    /// A merge would write more than `Limits::max_output_bytes`, or a stored document's skeleton is larger or
-    /// refers to its units more often than any extraction makes it.
+    /// A merge would write more than `Limits::max_output_bytes`.
     OutputBytes,
+    /// A stored document's skeleton is larger, or refers to its units more often (in all, or to any one unit), than
+    /// any extraction makes it, or refers to a unit the document does not have. Merge only.
+    Skeleton,
 }
 
 /// A file refused for being over a limit or unsafe.
@@ -412,25 +414,38 @@ pub fn check_document(doc: &Document, l: &Limits) -> Result<(), Error> {
     Ok(())
 }
 
-/// How often a skeleton may refer to units, per allowed unit (`max_units`). Extraction writes each unit into the
-/// skeleton once or a few times; a stored Document that refers to one unit many more times would make a merge
-/// write that unit over and over.
+/// How often a skeleton may refer to units: in all, per allowed unit (`max_units`), and to any one unit.
+/// Extraction writes each unit into the skeleton once or a few times; a stored Document that refers to one unit
+/// many more times would make a merge write that unit over and over (a small Document, a large output).
 pub const MERGE_REFS_PER_UNIT: usize = 4;
 
-/// The checks a merge runs on a stored Document before writing it (BILI-105). A Document is the caller's data, but
-/// it is plain JSON between extract and merge, so these bound what one that was edited by hand can make a merge
-/// do, under the caller's merge limits (`MergeOptions::limits`): no more units or segments than `max_units`; no
-/// more zip entries than `max_zip_entries`; at most [`MERGE_REFS_PER_UNIT`] x `max_units` unit slots and
-/// `max_lines` + that many skeleton parts; and an estimate of the output (the skeleton's own bytes, each unit slot
-/// counted at its unit's size, and the units once more for formats that rebuild from them) within
-/// `max_output_bytes`. An ordinary extraction is far inside every one of these.
+/// How long a stored target may be, as a multiple of `max_unit_chars` (a source over that one is refused at
+/// extract; a translation may be longer than its source, but not without bound).
+pub const MERGE_TARGET_CHARS_FACTOR: usize = 4;
+
+/// The checks a merge runs on a stored Document before writing it (BILI-105). A Document is the caller's data, and
+/// a host should keep a stored one where only it can write it, but it is plain JSON between extract and merge, so
+/// these bound what one that was edited by hand can make a merge do, under the caller's merge limits
+/// (`MergeOptions::limits`):
+/// * the checks of an extraction ([`check_document`]): units and segments within `max_units`, every unit's source
+///   within `max_unit_chars`, the context within `max_context_bytes`; and every unit's target within
+///   [`MERGE_TARGET_CHARS_FACTOR`] x `max_unit_chars`;
+/// * no more zip entries than `max_zip_entries`, and every zip entry name one the zip reader gives
+///   ([`check_zip_name`]), none listed twice (case and `\` against `/` ignored, as the reader compares them);
+/// * at most [`MERGE_REFS_PER_UNIT`] x `max_units` unit slots in all, at most [`MERGE_REFS_PER_UNIT`] to any one
+///   unit, none to a unit the document does not have, and `max_lines` + the slot cap skeleton parts
+///   ([`LimitKind::Skeleton`]);
+/// * an estimate of the output (the skeleton's own bytes, each unit slot counted at its unit's size, and the units
+///   once more for formats that rebuild from them) within `max_output_bytes`.
+///
+/// An ordinary extraction is far inside every one of these.
 pub fn check_merge(doc: &Document, l: &Limits) -> Result<(), Error> {
-    check_unit_count(doc.units.len(), l)?;
-    check_unit_count(doc.segment_count(), l)?;
+    check_document(doc, l)?;
+    check_target_chars(doc, l)?;
     let max_refs = MERGE_REFS_PER_UNIT.saturating_mul(l.max_units);
     let max_parts = l.max_lines.saturating_add(max_refs);
     let sizes: Vec<u64> = doc.units.iter().map(unit_output_bytes).collect();
-    let mut walk = SkeletonWalk { parts: 0, refs: 0, estimate: sizes.iter().fold(0u64, |a, b| a.saturating_add(*b)) };
+    let mut walk = SkeletonWalk { parts: 0, refs: 0, per_unit: vec![0; sizes.len()], estimate: sizes.iter().fold(0u64, |a, b| a.saturating_add(*b)) };
     check_output_estimate(walk.estimate, l)?;
     match &doc.skeleton {
         crate::Skeleton::Text { parts, .. } => walk.parts(parts, &sizes, max_parts, max_refs, l)?,
@@ -441,6 +456,13 @@ pub fn check_merge(doc: &Document, l: &Limits) -> Result<(), Error> {
                     format!("This document lists more than {} zip entries. It was not written.", l.max_zip_entries),
                 )
                 .into());
+            }
+            let mut seen = std::collections::HashSet::with_capacity(entries.len());
+            for e in entries {
+                check_zip_name(&e.name)?;
+                if !seen.insert(e.name.to_ascii_lowercase()) {
+                    return Err(zip_name_error(&e.name, "is listed twice"));
+                }
             }
             for e in entries {
                 match &e.data {
@@ -460,10 +482,72 @@ pub fn check_merge(doc: &Document, l: &Limits) -> Result<(), Error> {
     Ok(())
 }
 
+/// Refuses a stored target longer than [`MERGE_TARGET_CHARS_FACTOR`] x `max_unit_chars` (codes count one each,
+/// as in [`check_document`]).
+fn check_target_chars(doc: &Document, l: &Limits) -> Result<(), Error> {
+    let max = l.max_unit_chars.saturating_mul(MERGE_TARGET_CHARS_FACTOR);
+    for u in &doc.units {
+        let chars: usize = u
+            .segments
+            .iter()
+            .flat_map(|s| s.target.iter())
+            .map(|i| match i {
+                crate::Inline::Text(t) => t.chars().count(),
+                crate::Inline::Tag { .. } => 1,
+            })
+            .fold(0usize, usize::saturating_add);
+        if chars > max {
+            return Err(LimitError::new(
+                LimitKind::UnitChars,
+                format!("This document has a translation longer than {max} characters. It was not written."),
+            )
+            .into());
+        }
+    }
+    Ok(())
+}
+
+fn zip_name_error(raw: &str, what: &str) -> Error {
+    // the name is the caller's own data; shown escaped and cut short
+    let shown: String = raw.chars().take(80).flat_map(char::escape_debug).collect();
+    LimitError::new(LimitKind::ZipMalformed, format!("This document has a zip entry name that {what} (\"{shown}\"). It was not written.")).into()
+}
+
+/// Refuses a zip entry name the zip reader never gives (BILI-105): a stored Document's names are written into the
+/// output archive, so one that was changed by hand must not reach it. A name the reader gives is relative, uses
+/// `/`, and has no empty, `.` or `..` component, no component made only of dots and spaces, no colon and no
+/// control character; a folder ends in `/`. Duplicates are checked over the whole list by [`check_merge`].
+pub fn check_zip_name(raw: &str) -> Result<(), Error> {
+    if raw.is_empty() {
+        return Err(zip_name_error(raw, "is empty"));
+    }
+    if raw.chars().any(char::is_control) {
+        return Err(zip_name_error(raw, "holds a control character"));
+    }
+    if raw.starts_with('/') || raw.contains('\\') {
+        return Err(zip_name_error(raw, "is an absolute path or uses a backslash"));
+    }
+    if raw.contains(':') {
+        return Err(zip_name_error(raw, "contains a colon"));
+    }
+    let body = raw.strip_suffix('/').unwrap_or(raw);
+    for part in body.split('/') {
+        if part == ".." {
+            return Err(zip_name_error(raw, "climbs out of the archive (..)"));
+        }
+        if part.is_empty() || part.trim_end_matches(['.', ' ']).is_empty() {
+            return Err(zip_name_error(raw, "has an empty component or one made of dots or spaces"));
+        }
+    }
+    Ok(())
+}
+
 /// The running totals of [`check_merge`] over every part list of a skeleton.
 struct SkeletonWalk {
     parts: usize,
     refs: usize,
+    /// References so far to each unit.
+    per_unit: Vec<usize>,
     estimate: u64,
 }
 
@@ -481,7 +565,24 @@ impl SkeletonWalk {
                     if self.refs > max_refs {
                         return Err(over_skeleton(l));
                     }
-                    self.estimate = self.estimate.saturating_add(sizes.get(*i).copied().unwrap_or(0));
+                    let Some(n) = self.per_unit.get_mut(*i) else {
+                        return Err(LimitError::new(
+                            LimitKind::Skeleton,
+                            format!("This document's skeleton refers to unit {i}, which the document does not have. It was not written."),
+                        )
+                        .into());
+                    };
+                    *n += 1;
+                    if *n > MERGE_REFS_PER_UNIT {
+                        return Err(LimitError::new(
+                            LimitKind::Skeleton,
+                            format!(
+                                "This document's skeleton writes one unit more than {MERGE_REFS_PER_UNIT} times, more than any extraction makes it. It was not written."
+                            ),
+                        )
+                        .into());
+                    }
+                    self.estimate = self.estimate.saturating_add(sizes[*i]);
                 }
             }
         }
@@ -507,7 +608,7 @@ fn check_output_estimate(n: u64, l: &Limits) -> Result<(), Error> {
 
 fn over_skeleton(l: &Limits) -> Error {
     LimitError::new(
-        LimitKind::OutputBytes,
+        LimitKind::Skeleton,
         format!(
             "This document's skeleton is larger, or refers to its units more often, than a file of {} segments. It was not written.",
             l.max_units

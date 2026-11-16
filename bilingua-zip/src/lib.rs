@@ -483,13 +483,29 @@ fn check_packed(src: &mut zip::ZipArchive<Cursor<Vec<u8>>>, p: &Packed) -> Resul
     Ok(())
 }
 
-/// Writes a zip from a skeleton's entries. Every name must pass [`safe_name`]: the names come from a stored
-/// Document, and one that never passed the reader's check is not written (BILI-105).
+/// Writes a zip from a skeleton's entries. The names come from a stored Document, so every one must be a name the
+/// reader gives (BILI-105): it passes [`safe_name`] and is already in the form `safe_name` gives it (no `\`, no
+/// `./` or empty component), and no two are the same once case is ignored, as [`read_zip`] compares them.
 pub fn write_zip_parts(entries: &[(EntryMeta, Body<'_>)]) -> Result<Vec<u8>, Error> {
-    for (m, _) in entries {
-        safe_name(&m.name)?;
-    }
+    check_written_names(entries.iter().map(|(m, _)| m.name.as_str()))?;
     write_entries(entries)
+}
+
+/// The name check of [`write_zip_parts`], for a writer that builds its own entry list.
+pub fn check_written_names<'a>(names: impl Iterator<Item = &'a str>) -> Result<(), Error> {
+    let mut seen: HashSet<String> = HashSet::new();
+    for name in names {
+        if safe_name(name)? != name {
+            return Err(limit(
+                LimitKind::ZipMalformed,
+                format!("The entry name {name:?} is not in the form the zip reader gives it. It was not written."),
+            ));
+        }
+        if !seen.insert(name.to_ascii_lowercase()) {
+            return Err(limit(LimitKind::ZipMalformed, format!("The entry name {name:?} is listed twice. It was not written.")));
+        }
+    }
+    Ok(())
 }
 
 fn write_entries(entries: &[(EntryMeta, Body<'_>)]) -> Result<Vec<u8>, Error> {
@@ -582,8 +598,15 @@ mod tests {
     fn writer_refuses_an_unsafe_name() {
         let meta = |name: &str| EntryMeta { name: name.into(), stored: false, dir: false, modified: None };
         assert!(write_zip_parts(&[(meta("word/document.xml"), Body::Plain(b"x"))]).is_ok());
-        for bad in ["../x.xml", "/abs.xml", "a/b:stream", "a\0b"] {
+        for bad in ["../x.xml", "/abs.xml", "a/b:stream", "a\0b", "a\u{1b}b", "word\\document.xml", "./word/x.xml", "word//x.xml", ""] {
             assert!(write_zip_parts(&[(meta(bad), Body::Plain(b"x"))]).is_err(), "{bad:?} must be refused");
+        }
+        // a folder keeps its slash
+        assert!(write_zip_parts(&[(meta("word/"), Body::Plain(b""))]).is_ok());
+        // a name listed twice, also in another case
+        for (a, b) in [("word/a.xml", "word/a.xml"), ("word/a.xml", "Word/A.xml")] {
+            let e = write_zip_parts(&[(meta(a), Body::Plain(b"x")), (meta(b), Body::Plain(b"y"))]).unwrap_err();
+            assert!(e.to_string().contains("twice"), "{e}");
         }
     }
 }

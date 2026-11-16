@@ -39,9 +39,13 @@ open("messages.es.po", "wb").write(bilingua.merge(doc))
 - `merge(..., limits=None)`: the limits the merge runs under, as for `extract` (the defaults when left out). A file
   extracted under raised limits is merged with the same ones. The Document dict is your data: merge writes what its
   skeleton says, so keep a stored one where uploaders, translators and other tenants cannot write it. Merge still
-  refuses a Document no extraction under these limits makes (too many units or unit slots, output over
-  `max_output_bytes`, 1 GB by default, an unsafe zip entry name) and, outside the `locos` profile, a target with a
-  tag its source does not have (`invented_tag`) or a paired tag more often than the source (`duplicated_tag`).
+  applies the limits of an extraction and refuses a Document no extraction under these limits makes, with code
+  `limit` and the limit in the error's `limit` attribute: too many units (`units`), a unit or target too long
+  (`unit_chars`), a skeleton with more unit slots than an extraction makes or one unit written more than four times
+  (`skeleton`), output over `max_output_bytes`, 1 GB by default (`output_bytes`), an unsafe or repeated zip entry
+  name (`zip_malformed`). Every target, also one set straight into the dict, is checked for tags: a tag its source
+  does not have is `invented_tag`, and (outside the `locos` profile and bilingual files) a paired tag more often
+  than the source is `duplicated_tag`.
 - `extract(..., format_options=None)`: a dict of `"<format>.<name>"` options to str, bool or int values, e.g.
   `{"ftl.translate_terms": True, "csv.columns": "source=1, target.de=2"}`. A key no format declares, or a value of the
   wrong kind, raises `invalid_argument`.
@@ -59,7 +63,7 @@ open("messages.es.po", "wb").write(bilingua.merge(doc))
 - `version() -> str`.
 
 Every failure raises `bilingua.BilinguaError` with a `code` attribute: `parse`, `unsupported`, `unknown_segment`,
-`locked`, `invented_tag`, `duplicated_tag`, `parser_version`, `write`, `unwritable` (the translation cannot be written in this format), `limit` (over a safety limit or unsafe XML/zip), `encoding` (unreadable text), `io`, `invalid_argument`, `invalid_document`, `internal`.
+`locked`, `invented_tag`, `duplicated_tag`, `parser_version`, `write`, `unwritable` (the translation cannot be written in this format), `limit` (over a safety limit or unsafe XML/zip; the `limit` attribute names which one), `encoding` (unreadable text), `io`, `invalid_argument`, `invalid_document`, `internal`.
 Panics inside the engine become `internal`. The GIL is released while parsing and merging, so threads run in
 parallel. The Document is converted through its serde JSON form, so new model fields appear in Python with no change
 here.

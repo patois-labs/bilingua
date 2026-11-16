@@ -29,11 +29,13 @@ struct Fail {
     msg: String,
     /// The parser's own sentence (`Error::Parse` without its prefix); `msg` for every other error.
     detail: Option<String>,
+    /// For a "limit" error, which limit (`LimitKind` in snake case: "units", "zip_malformed", "skeleton", ...).
+    limit: Option<String>,
 }
 
 impl Fail {
     fn new(code: &'static str, msg: impl Into<String>) -> Fail {
-        Fail { code, msg: msg.into(), detail: None }
+        Fail { code, msg: msg.into(), detail: None, limit: None }
     }
 }
 
@@ -61,7 +63,11 @@ impl From<engine::Error> for Fail {
             E::Parse { msg, .. } => msg.clone(),
             other => other.to_string(),
         };
-        Fail { code, msg: e.to_string(), detail: Some(detail) }
+        let limit = match &e {
+            E::Limit(l) => serde_json::to_value(l.kind).ok().and_then(|v| v.as_str().map(str::to_owned)),
+            _ => None,
+        };
+        Fail { code, msg: e.to_string(), detail: Some(detail), limit }
     }
 }
 
@@ -71,6 +77,7 @@ fn to_py_err(py: Python<'_>, f: Fail) -> PyErr {
     // Setting an attribute on a fresh exception instance cannot fail in practice; ignore if it does.
     let _ = err.value(py).setattr("code", f.code);
     let _ = err.value(py).setattr("detail", detail);
+    let _ = err.value(py).setattr("limit", f.limit);
     err
 }
 

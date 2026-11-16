@@ -235,9 +235,16 @@ pub(crate) fn read_zip(bytes: &[u8], limits: &ZipLimits) -> Result<Vec<Entry>, E
 /// Write entries as a zip (deflate), in the given order.
 pub fn write_zip(entries: &[Entry], default_time: (u16, u8, u8, u8, u8, u8)) -> Result<Vec<u8>, Error> {
     let mut w = zip::ZipWriter::new(Cursor::new(Vec::new()));
+    let mut seen: HashSet<String> = HashSet::new();
     for e in entries {
-        // a name that never passed the reader's check is not written (BILI-105)
-        safe_name(&e.name)?;
+        // a name that never passed the reader's check, or is not in the form it gives, is not written; nor one
+        // listed twice (case ignored, as the reader compares them) (BILI-105)
+        if safe_name(&e.name)? != e.name {
+            return Err(bad(format!("entry name {:?} is not in the form the package reader gives it", e.name)));
+        }
+        if !seen.insert(e.name.to_ascii_lowercase()) {
+            return Err(bad(format!("entry name {:?} is listed twice", e.name)));
+        }
         let t = e.modified.unwrap_or(default_time);
         let dt = zip::DateTime::from_date_and_time(t.0, t.1, t.2, t.3, t.4, t.5)
             .unwrap_or_else(|_| zip::DateTime::default());

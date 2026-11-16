@@ -76,7 +76,25 @@ is listed here).
   check every entry name with `safe_name`. Email, MO and xcstrings re-read their stored bytes under the merge limits
   instead of lifted ones, so a file extracted under raised limits is merged with the same limits passed again.
   Ordinary files merge exactly as before.
-- Python: `merge` and `DocumentHandle.merge` take `limits=`, as `extract` does.
+- Merge limits, as decided (BILI-105, D48): merge applies the limits of an extraction (unit length and context
+  text too), and a stored target may be at most four times `max_unit_chars`. A skeleton may write any one unit at
+  most `MERGE_REFS_PER_UNIT` (4) times and may not refer to a unit the document lacks, so a small Document cannot
+  make a large output; these and the slot cap are the new `LimitKind::Skeleton` (they were `OutputBytes`). Every
+  zip entry name of a stored Document is checked before anything is written (`guard::check_zip_name`: relative, no
+  `..`, no empty or dot component, no backslash, colon or control character) and none may be listed twice with case
+  ignored (`ZipMalformed`); the zip writers refuse a name not in the reader's form or listed twice. The tag check
+  runs on every stored target, also of bilingual files and under the `locos` profile (there a repeated pair still
+  passes). No keyed MAC: the README states the contract that a Document should come from storage the host
+  controls, and merge enforces its limits either way.
+- Python: `merge` and `DocumentHandle.merge` take `limits=`, as `extract` does. A `limit` error has a `limit`
+  attribute naming the `LimitKind` (`"skeleton"`, `"zip_malformed"`, ...), None for other errors.
+- HTML: `<title>` and `<textarea>` follow the HTML spec (RCDATA) in reader and writer (BILI-51, D48): their content
+  is text up to the element's own end tag (a `<`, tag or comment inside is text, not a code or a unit break), and a
+  translation is written as typed, so a literal `<` round-trips identically; only a `</title` in a translation is
+  written `&lt;/title`. XHTML pages keep XML escaping there, and `<title>` inside SVG or MathML is unchanged. This
+  is no longer held to Localization OS's old output.
+- XLIFF (GlobalLink): a finished unit with any segment edited back to draft writes `translation_status="in_progress"`,
+  also while its other segments stay accepted (BILI-39, D48).
 - RC: a script that switches code pages reports its source encoding as `multiple` (BILI-49), and a script read in
   a code page and written with `output_encoding: Utf8` has every `#pragma code_page` say 65001 (one is added when
   there is none and the text is not ASCII) (BILI-48).
