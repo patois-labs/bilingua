@@ -14,7 +14,7 @@ use std::collections::HashMap;
 
 /// LocOS `_html()`: the HTML filter without page metadata units (chapters are joined into one document).
 fn html() -> HtmlFilter {
-    HtmlFilter::new().with_page_meta(false)
+    HtmlFilter::new().with_page_meta(false).with_xhtml(true)
 }
 
 pub struct Chapter {

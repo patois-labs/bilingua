@@ -19,12 +19,24 @@ pub const VALUE: &str = "v";
 pub(crate) struct Cfg<'a> {
     pub page_meta: bool,
     pub template: Option<&'a Regex>,
+    pub xhtml: bool,
 }
 
 impl Cfg<'_> {
     /// LocOS `_server_page`: only a plain HTML filter with no template pattern routes server code.
     fn routes(&self) -> bool {
         self.template.is_none()
+    }
+
+    /// True when `<title>` and `<textarea>` of this page are RCDATA (BILI-51): an HTML page, not XHTML (the
+    /// filter's `xhtml`, or a page that starts with an XML declaration).
+    pub(crate) fn rcdata(&self, text: &str) -> bool {
+        !self.xhtml && !text.trim_start_matches('\u{feff}').trim_start().starts_with("<?xml")
+    }
+
+    /// The page's tokens, RCDATA as [`Cfg::rcdata`] says.
+    pub(crate) fn tokenize<'t>(&self, text: &'t str, budget: &mut Option<i64>) -> Result<Vec<Tok<'t>>, html::BudgetExceeded> {
+        html::tokenize_opts(text, self.template, self.rcdata(text), budget)
     }
 }
 
@@ -324,7 +336,7 @@ pub(crate) fn extract(bytes: &[u8], opts: &ExtractOptions, cfg: Cfg) -> Result<D
     }
     guard::check_markup(text, &limits)?;
     let mut budget = Some(i64::try_from(limits.max_units).unwrap_or(i64::MAX).saturating_mul(100));
-    let toks = html::tokenize_with(text, cfg.template, &mut budget).map_err(|_| units_limit(&limits))?;
+    let toks = cfg.tokenize(text, &mut budget).map_err(|_| units_limit(&limits))?;
     check_depth(&toks, &limits)?;
     let body = match html::iter_units(&toks, Some(limits.max_units)) {
         Ok(b) => b,
@@ -573,7 +585,7 @@ pub(crate) fn merge(doc: &Document, opts: &MergeOptions, cfg: Cfg) -> Result<Vec
         }
         return enc::encode_text_with(&text, encoding, opts);
     }
-    let mut toks = html::tokenize_with(&text, cfg.template, &mut None).map_err(|_| Error::Write("token budget".into()))?;
+    let mut toks = cfg.tokenize(&text, &mut None).map_err(|_| Error::Write("token budget".into()))?;
     if let Some(tag) = &tag {
         // LocOS build_localized: declared on the original token stream, before any translation is written
         html::declare_language(&mut toks, tag, html::text_direction(tag));
@@ -597,15 +609,14 @@ pub(crate) fn merge(doc: &Document, opts: &MergeOptions, cfg: Cfg) -> Result<Vec
         if body.len() != n_body {
             return Err(Error::Write("the page changed shape while its attributes were written".into()));
         }
-        let rcdata = html::rcdata_texts(&toks);
-        let mut xml: Option<bool> = None;
+        // XHTML has no RCDATA: its title text is XML text, escaped as everywhere else
+        let rcdata = if cfg.rcdata(&text) { html::rcdata_texts(&toks) } else { HashMap::new() };
         for (k, u) in body.iter().enumerate() {
             if let Some(t) = &targets[k] {
                 let protected = protected_for(cfg, u);
                 let text = match rcdata.get(&u.start) {
-                    // XHTML (the page reads as XML) keeps XML text: escaped as everywhere else
-                    Some(name) if !*xml.get_or_insert_with(|| bilingua_htmlcore::xml::xml_view(&before).is_some()) => rcdata_text(t, name),
-                    _ => materialize(t, &u.map, quotes, &protected),
+                    Some(name) => rcdata_text(t, name),
+                    None => materialize(t, &u.map, quotes, &protected),
                 };
                 repl.push((u.start, u.end, format!("{}{}{}", u.lead, text, u.trail)));
             }
@@ -630,7 +641,7 @@ pub(crate) fn merge(doc: &Document, opts: &MergeOptions, cfg: Cfg) -> Result<Vec
 
 /// The page tokens for the preview (no budget: the page was accepted at extract).
 pub(crate) fn preview_tokens<'a>(text: &'a str, cfg: Cfg<'_>) -> Option<Vec<Tok<'a>>> {
-    html::tokenize_with(text, cfg.template, &mut None).ok()
+    cfg.tokenize(text, &mut None).ok()
 }
 
 pub(crate) fn skeleton_page(doc: &Document) -> Option<String> {

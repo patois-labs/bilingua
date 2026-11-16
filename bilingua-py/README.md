@@ -43,9 +43,9 @@ open("messages.es.po", "wb").write(bilingua.merge(doc))
   `limit` and the limit in the error's `limit` attribute: too many units (`units`), a unit or target too long
   (`unit_chars`), a skeleton with more unit slots than an extraction makes or one unit written more than four times
   (`skeleton`), output over `max_output_bytes`, 1 GB by default (`output_bytes`), an unsafe or repeated zip entry
-  name (`zip_malformed`). Every target, also one set straight into the dict, is checked for tags: a tag its source
-  does not have is `invented_tag`, and (outside the `locos` profile and bilingual files) a paired tag more often
-  than the source is `duplicated_tag`.
+  name (`zip_malformed`). Outside the `locos` profile, every target, also one set straight into the dict, is
+  checked for tags: a tag its source does not have is `invented_tag`, and (outside bilingual files) a paired tag
+  more often than the source is `duplicated_tag`.
 - `extract(..., format_options=None)`: a dict of `"<format>.<name>"` options to str, bool or int values, e.g.
   `{"ftl.translate_terms": True, "csv.columns": "source=1, target.de=2"}`. A key no format declares, or a value of the
   wrong kind, raises `invalid_argument`.

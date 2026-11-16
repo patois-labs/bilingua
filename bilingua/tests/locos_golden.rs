@@ -415,6 +415,11 @@ const KNOWN_BUILDS: &[(&str, &[&str], &str)] = &[
         PAIR_AS_POINT,
     ),
     (
+        "w5_cp1252.html",
+        &["escape-de-DE"],
+        "BILI-51 (D48): a <title> translation is written as typed (RCDATA, the HTML spec); LocOS escapes & < > there",
+    ),
+    (
     "hostile_tails.pptx",
     &["prefix", "hostile", "hostile-ar-SA", "hostile-de-DE"],
     "token look-alikes and tokens naming no code: since LocOS 814 both keep them as text, but LocOS writes each one in a run of its own and Bilingua keeps it in its run's text (same text, other runs)",

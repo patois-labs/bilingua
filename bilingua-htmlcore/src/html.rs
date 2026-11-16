@@ -48,7 +48,8 @@ impl Foreign {
     }
 }
 
-/// The RCDATA bodies of a token stream from [`tokenize_with`]: text token index to the element's name.
+/// The RCDATA bodies of a token stream from [`tokenize_opts`] with `rcdata`: text token index to the element's
+/// name.
 pub fn rcdata_texts(tokens: &[Tok]) -> HashMap<usize, String> {
     let mut out = HashMap::new();
     let mut foreign = Foreign::default();
@@ -402,6 +403,13 @@ fn template_spans(text: &str, template: Option<&regex::Regex>) -> (HashMap<usize
 /// LocOS `_tokenize(text, template_pattern)`: as [`tokenize`], and a template span (a `{{ ... }}` of a template
 /// language) that starts in ordinary text stays in that text, so a `<` inside it never starts a tag.
 pub fn tokenize_with<'a>(text: &'a str, template: Option<&regex::Regex>, budget: &mut Option<i64>) -> Result<Vec<Tok<'a>>, BudgetExceeded> {
+    tokenize_opts(text, template, false, budget)
+}
+
+/// [`tokenize_with`], and with `rcdata` the content of every [`RCDATA`] element (outside `<svg>` and `<math>`) is
+/// one text token up to the element's own end tag, as an HTML5 browser reads it (BILI-51). Off for XHTML, which
+/// has no RCDATA.
+pub fn tokenize_opts<'a>(text: &'a str, template: Option<&regex::Regex>, rcdata: bool, budget: &mut Option<i64>) -> Result<Vec<Tok<'a>>, BudgetExceeded> {
     let b = text.as_bytes();
     let size = b.len();
     let (templates, starts) = template_spans(text, template);
@@ -448,7 +456,7 @@ pub fn tokenize_with<'a>(text: &'a str, template: Option<&regex::Regex>, budget:
         pos = end;
         if !closing && SKIP_CONTAINERS.contains(&name.as_str()) {
             i = raw_end(b, pos, &name);
-        } else if foreign.opens_rcdata(closing, &name, sc) {
+        } else if foreign.opens_rcdata(closing, &name, sc) && rcdata {
             i = rcdata_end(b, pos, &name);
         }
     }

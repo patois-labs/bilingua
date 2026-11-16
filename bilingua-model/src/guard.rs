@@ -459,6 +459,11 @@ pub fn check_merge(doc: &Document, l: &Limits) -> Result<(), Error> {
             }
             let mut seen = std::collections::HashSet::with_capacity(entries.len());
             for e in entries {
+                // a format's own records (`\0bilingua-docx-meta`, ...) are never written as entries: the zip
+                // writers refuse a name with a control character, so one changed by hand cannot reach the output
+                if e.name.starts_with(INTERNAL_ENTRY_PREFIX) {
+                    continue;
+                }
                 check_zip_name(&e.name)?;
                 if !seen.insert(e.name.to_ascii_lowercase()) {
                     return Err(zip_name_error(&e.name, "is listed twice"));
@@ -506,6 +511,10 @@ fn check_target_chars(doc: &Document, l: &Limits) -> Result<(), Error> {
     }
     Ok(())
 }
+
+/// The prefix of the zip skeleton entries a format keeps for itself (its metadata, the original archive), which no
+/// writer puts in the output archive.
+pub const INTERNAL_ENTRY_PREFIX: &str = "\0bilingua-";
 
 fn zip_name_error(raw: &str, what: &str) -> Error {
     // the name is the caller's own data; shown escaped and cut short

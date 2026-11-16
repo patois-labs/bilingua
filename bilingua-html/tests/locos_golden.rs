@@ -188,6 +188,51 @@ fn nobom(b: &[u8]) -> Vec<u8> {
     b.strip_prefix(&[0xEF, 0xBB, 0xBF]).unwrap_or(b).to_vec()
 }
 
+/// The byte ranges of the content of every `<title>` and `<textarea>` of an HTML page (to the element's own end
+/// tag), as an HTML5 browser reads them (RCDATA).
+fn rcdata_bodies(b: &[u8]) -> Vec<(usize, usize)> {
+    let lower = b.to_ascii_lowercase();
+    let mut out = Vec::new();
+    let mut i = 0;
+    while let Some(p) = lower[i..].iter().position(|&c| c == b'<').map(|p| p + i) {
+        i = p + 1;
+        for name in ["title", "textarea"] {
+            let e = p + 1 + name.len();
+            if lower.get(p + 1..e) != Some(name.as_bytes()) || !lower.get(e).is_some_and(|c| matches!(c, b'>' | b' ' | b'\t' | b'\n' | b'\r' | b'/')) {
+                continue;
+            }
+            let Some(gt) = lower[e..].iter().position(|&c| c == b'>').map(|q| q + e + 1) else { continue };
+            let close = format!("</{name}");
+            let end = lower[gt..].windows(close.len()).position(|w| w == close.as_bytes()).map_or(b.len(), |q| q + gt);
+            out.push((gt, end));
+            i = end;
+        }
+    }
+    out
+}
+
+/// BILI-51 (D48): a title or textarea whose source holds a `<` is read as text (RCDATA, the HTML spec), where LocOS
+/// reads tags and comments in it; such pages differ from LocOS on purpose.
+fn rcdata_with_markup(b: &[u8]) -> bool {
+    rcdata_bodies(b).iter().any(|&(s, e)| b[s..e].contains(&b'<'))
+}
+
+/// A build with the text of its titles and textareas read back the way a browser shows it: Bilingua writes a
+/// translation there as typed (BILI-51), LocOS escapes `&`, `<`, `>` and quotes; both mean the same text.
+fn rcdata_as_read(b: &[u8]) -> Vec<u8> {
+    let mut out = Vec::with_capacity(b.len());
+    let mut last = 0;
+    for (s, e) in rcdata_bodies(b) {
+        out.extend_from_slice(&b[last..s]);
+        let t = String::from_utf8_lossy(&b[s..e]);
+        let t = t.replace("&lt;", "<").replace("&gt;", ">").replace("&quot;", "\"").replace("&#x27;", "'").replace("&#39;", "'").replace("&amp;", "&");
+        out.extend_from_slice(t.as_bytes());
+        last = e;
+    }
+    out.extend_from_slice(&b[last..]);
+    out
+}
+
 /// A difference kept on purpose (see the README, "Differences from LocOS"); `None` when there is none.
 fn known_difference(name: &str, err: &Error) -> Option<&'static str> {
     match err {
@@ -234,6 +279,11 @@ fn matches_locos_on_random_pages_and_hostile_cases() {
         // LocOS reads the mark as a text character, so white space right after it is not leading white space there
         if bom && std::str::from_utf8(&data[3..]).is_ok_and(|s| s.starts_with(|c: char| c.is_whitespace())) {
             skipped += 1;
+            continue;
+        }
+        // kept on purpose (BILI-51, D48): markup in a title or textarea is text there, as the HTML spec reads it
+        if rcdata_with_markup(&data) {
+            kept.push(format!("{name}: markup inside a title or textarea is its text (RCDATA), not compared"));
             continue;
         }
         let doc = match f.extract(&data, &ExtractOptions::default()) {
@@ -336,7 +386,8 @@ fn matches_locos_on_random_pages_and_hostile_cases() {
                     // kept (bilingua-serverpages): a JSP translation ending in a backslash before `${` gets the
                     // backslash as `&#92;` so the expression stays live; LocOS writes it raw
                     let g = if jsp { String::from_utf8_lossy(&g).replace("&#92;", "\\").into_bytes() } else { g };
-                    if nobom(&g) != nobom(&e) {
+                    // titles and textareas compared as a browser reads them (BILI-51: written as typed here)
+                    if nobom(&rcdata_as_read(&g)) != nobom(&rcdata_as_read(&e)) {
                         bad.push(format!("{name}: build {what}:\n  got  {:?}\n  want {:?}", String::from_utf8_lossy(&g), String::from_utf8_lossy(&e)));
                     } else {
                         builds += 1;

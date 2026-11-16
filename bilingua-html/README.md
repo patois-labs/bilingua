@@ -73,6 +73,10 @@ let hubl = HtmlFilter::new().with_template_pattern(regex::Regex::new(r"(?s)\{\{.
   fallback; the LocOS profile (`OutputEncoding::Utf8`) writes what LocOS writes.
 - JSP pages routed from `.html` get the server-page difference (a backslash before `${` written as `&#92;`).
 - LocOS's missing-alt findings (`a11y_images`) are not reported.
+- `<title>` and `<textarea>` are RCDATA (BILI-51, also under the LocOS profile): tags and comments inside are text,
+  and a translation there is written as typed where LocOS escapes `&`, `<` and `>`. Localization OS gets the same
+  reading when it moves to Bilingua (D27). The differential test skips pages with markup in a title or textarea
+  and compares title and textarea text as a browser reads it.
 
 The differential test `tests/locos_golden.rs` holds 636 LocOS cases (`tests/tools/gen_golden.py`).
 

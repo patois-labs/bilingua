@@ -331,8 +331,8 @@ pub fn merge(doc: &Document) -> Result<Vec<u8>, Error> {
 /// bounds what it can be made to do, under `opts.limits` (the defaults when unset): the limits of an extraction and
 /// the skeleton, zip name and output checks of [`bilingua_model::guard::check_merge`], the tag check of
 /// [`bilingua_model::guard::check_targets`] on every stored target (repeated pairs allowed in a bilingual file,
-/// whose own targets come from the file, and under the `locos` profile, which keeps them as Localization OS writes
-/// them), and `Limits::max_output_bytes` on the bytes written. Each refusal is an [`Error::Limit`] with a
+/// whose own targets come from the file; not under the `locos` profile, whose targets keep tags as Localization OS
+/// writes them), and `Limits::max_output_bytes` on the bytes written. Each refusal is an [`Error::Limit`] with a
 /// [`LimitKind`], or [`Error::InventedTag`] / [`Error::DuplicatedTag`] for a target's tags.
 pub fn merge_with(doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
     profile::check(opts.profile.as_deref())?;
@@ -342,10 +342,13 @@ pub fn merge_with(doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error>
     bilingua_model::guard::check_merge(doc, &limits)?;
     // Every stored target, also one set straight into a Python dict or the JSON (BILI-105): no tag its segment's
     // source does not have and whose markup the unit does not hold. A pair repeated more often than in the source
-    // is refused too, except in a bilingual file (its own targets come from the file and may repeat a tag) and
-    // under the locos profile (it keeps a repeated tag as typed, as Localization OS writes them).
-    let counts = !own_segmentation(&doc.format) && !opts.is_profile(profile::LOCOS);
-    bilingua_model::guard::check_targets(doc, counts)?;
+    // is refused too, except in a bilingual file, whose own targets come from the file and may repeat a tag.
+    // Not under the locos profile: it turns some source codes back into text at extract (Track D) while a target
+    // read from the file keeps them as tags (an MO msgstr), and keeps a repeated tag as typed, as Localization OS
+    // writes them.
+    if !opts.is_profile(profile::LOCOS) {
+        bilingua_model::guard::check_targets(doc, !own_segmentation(&doc.format))?;
+    }
     let out = filter.merge_with(doc, opts)?;
     bilingua_model::guard::check_output(out.len(), &limits)?;
     Ok(out)

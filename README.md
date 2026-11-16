@@ -256,8 +256,10 @@ Bilingua is built to open files from people you do not know.
     relative, no `..`, no empty or dot component, no backslash, colon or control character, none listed twice
     with case ignored (`ZipMalformed`);
   - every stored target, also one set straight into a Python dict or the JSON, is checked for tags: no tag its
-    source does not have (`Error::InventedTag`) and, outside bilingual files and the `locos` profile (which keep
-    a repeated tag as written), no paired tag more often than the source (`Error::DuplicatedTag`).
+    source does not have (`Error::InventedTag`) and, outside bilingual files (which keep a repeated tag as the
+    file has it), no paired tag more often than the source (`Error::DuplicatedTag`). Not under the `locos`
+    profile, whose targets keep tags as Localization OS writes them (its extraction turns some source codes into
+    text while a target read from the file keeps them as tags).
 
   A format that re-reads stored bytes at merge (email, MO, xcstrings, EPUB, Flare) reads them under the same
   limits, so a file extracted under raised limits is merged with the same ones. A holder of the Document can still

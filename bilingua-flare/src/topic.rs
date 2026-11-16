@@ -16,7 +16,7 @@ use std::collections::HashMap;
 
 /// The HTML filter for a topic: no page metadata units (LocOS Flare offers the accessibility attributes only).
 fn html() -> HtmlFilter {
-    HtmlFilter::new().with_page_meta(false)
+    HtmlFilter::new().with_page_meta(false).with_xhtml(true)
 }
 
 pub const STYLE_KEYWORD: &str = "flare:index-keyword";

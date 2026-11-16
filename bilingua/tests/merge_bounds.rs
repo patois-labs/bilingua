@@ -130,8 +130,10 @@ fn the_limits_of_extract_apply_at_merge() {
 #[test]
 fn an_unsafe_zip_entry_name_is_not_written() {
     let doc = extract("page.docx", include_bytes!("fixtures/page.docx"), &opts()).unwrap();
-    let last = zip_entries(&mut doc.clone()).last().unwrap().name.clone();
-    let first = zip_entries(&mut doc.clone())[0].name.clone();
+    // the last entry the archive itself holds (a format's own records start with "\0bilingua-")
+    let at = zip_entries(&mut doc.clone()).iter().rposition(|e| !e.name.starts_with('\0')).unwrap();
+    let last = zip_entries(&mut doc.clone())[at].name.clone();
+    let first = zip_entries(&mut doc.clone()).iter().find(|e| !e.name.starts_with('\0') && e.name != last).unwrap().name.clone();
     for bad in [
         format!("../{last}"),
         format!("/{last}"),
@@ -147,13 +149,13 @@ fn an_unsafe_zip_entry_name_is_not_written() {
         first.to_uppercase(),
     ] {
         let mut d = doc.clone();
-        zip_entries(&mut d).last_mut().unwrap().name = bad.clone();
+        zip_entries(&mut d)[at].name = bad.clone();
         let r = merge(&d);
         assert_eq!(limit_kind(r), LimitKind::ZipMalformed, "{bad:?}");
     }
     // the message names the reason
     let mut d = doc.clone();
-    zip_entries(&mut d).last_mut().unwrap().name = format!("../{last}");
+    zip_entries(&mut d)[at].name = format!("../{last}");
     assert!(merge(&d).unwrap_err().to_string().contains(".."));
 }
 
@@ -175,10 +177,11 @@ fn a_stored_target_with_tags_the_source_does_not_have_is_refused() {
     let mut invented = doc.clone();
     invented.units[0].segments[0].target = vec![Inline::tag("zz", TagKind::Open, "<i>"), Inline::text("Hallo")];
     assert!(matches!(merge(&invented), Err(Error::InventedTag(_))));
-    // under the locos profile too (it allows a repeated pair, never a tag the source does not have)
-    let locos = bilingua_model::profile::locos().merge_options("html");
-    assert!(matches!(merge_with(&invented, &locos), Err(Error::InventedTag(_))));
-    assert!(merge_with(&twice, &locos).is_ok());
+    // a close tag where the source has an open of that id: not one of the source's tags
+    let mut wrong_kind = doc.clone();
+    let Inline::Tag { id, .. } = &open else { unreachable!() };
+    wrong_kind.units[0].segments[0].target = vec![Inline::tag(id.clone(), TagKind::Standalone, "<b>"), Inline::text("Hallo")];
+    assert!(matches!(merge(&wrong_kind), Err(Error::InventedTag(_))));
 }
 
 #[test]
@@ -230,11 +233,8 @@ fn no_extraction_of_the_corpus_trips_a_merge_bound() {
                     let _ = t.set_target(&id, tgt);
                 }
                 for (what, d) in [("untouched", &doc), ("translated", &t)] {
-                    match merge_with(d, &mo) {
-                        Err(e @ (Error::Limit(_) | Error::InventedTag(_) | Error::DuplicatedTag(_))) => {
-                            failures.push(format!("{name} {mode:?} locos={locos} {what}: {e}"))
-                        }
-                        _ => {}
+                    if let Err(e @ (Error::Limit(_) | Error::InventedTag(_) | Error::DuplicatedTag(_))) = merge_with(d, &mo) {
+                        failures.push(format!("{name} {mode:?} locos={locos} {what}: {e}"));
                     }
                 }
             }

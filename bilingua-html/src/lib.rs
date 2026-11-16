@@ -35,6 +35,9 @@ pub struct Html;
 /// * `template_pattern` (default none): spans of a template language (`{{ ... }}`, `{% ... %}`) that stay in their
 ///   text: a `<` inside one never starts a tag and a translation writes them unescaped. With a pattern, quotes in
 ///   text are always escaped and server code is not routed to the server-page filters.
+/// * `xhtml` (default off): the page is XHTML, read as XML: `<title>` and `<textarea>` are ordinary elements, not
+///   the RCDATA text an HTML page gives them (BILI-51). On for EPUB chapters and Flare topics; a page that starts
+///   with an XML declaration (`<?xml`) is read so in any case.
 ///
 /// A plain `.html` page with closed PHP or `<% %>` islands is read through `bilingua-serverpages` (LocOS
 /// `server_page_for_html`); its document says `html` and merges back through the same dialect.
@@ -43,6 +46,7 @@ pub struct Html;
 pub struct HtmlFilter {
     pub page_meta: bool,
     pub template_pattern: Option<Regex>,
+    pub xhtml: bool,
 }
 
 impl Default for HtmlFilter {
@@ -52,9 +56,15 @@ impl Default for HtmlFilter {
 }
 
 impl HtmlFilter {
-    /// LocOS's defaults: page metadata on, no template pattern.
+    /// LocOS's defaults: page metadata on, no template pattern, HTML (not XHTML).
     pub fn new() -> Self {
-        HtmlFilter { page_meta: true, template_pattern: None }
+        HtmlFilter { page_meta: true, template_pattern: None, xhtml: false }
+    }
+
+    /// Reads every page as XHTML (see the type docs).
+    pub fn with_xhtml(mut self, on: bool) -> Self {
+        self.xhtml = on;
+        self
     }
 
     /// Offers the page metadata units (or not).
@@ -70,7 +80,7 @@ impl HtmlFilter {
     }
 
     fn cfg(&self) -> page::Cfg<'_> {
-        page::Cfg { page_meta: self.page_meta, template: self.template_pattern.as_ref() }
+        page::Cfg { page_meta: self.page_meta, template: self.template_pattern.as_ref(), xhtml: self.xhtml }
     }
 }
 

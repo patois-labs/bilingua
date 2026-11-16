@@ -82,9 +82,9 @@ is listed here).
   make a large output; these and the slot cap are the new `LimitKind::Skeleton` (they were `OutputBytes`). Every
   zip entry name of a stored Document is checked before anything is written (`guard::check_zip_name`: relative, no
   `..`, no empty or dot component, no backslash, colon or control character) and none may be listed twice with case
-  ignored (`ZipMalformed`); the zip writers refuse a name not in the reader's form or listed twice. The tag check
-  runs on every stored target, also of bilingual files and under the `locos` profile (there a repeated pair still
-  passes). No keyed MAC: the README states the contract that a Document should come from storage the host
+  ignored (`ZipMalformed`); the zip writers refuse a name not in the reader's form or listed twice (a format's own
+  `\0bilingua-` records are never written and are not checked). The tag check runs on every stored target, now
+  also of bilingual files (there a repeated pair still passes); still not under the `locos` profile. No keyed MAC: the README states the contract that a Document should come from storage the host
   controls, and merge enforces its limits either way.
 - Python: `merge` and `DocumentHandle.merge` take `limits=`, as `extract` does. A `limit` error has a `limit`
   attribute naming the `LimitKind` (`"skeleton"`, `"zip_malformed"`, ...), None for other errors.

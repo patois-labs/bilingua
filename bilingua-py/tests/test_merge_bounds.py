@@ -55,7 +55,9 @@ def test_the_extract_limits_apply_at_merge():
 def test_an_unsafe_or_repeated_zip_name_is_not_written(name):
     doc = bilingua.extract("page.docx", (FIXTURES / "page.docx").read_bytes(), source_lang="en")
     entries = doc["skeleton"]["zip"]["entries"]
-    entries[-1]["name"] = entries[0]["name"] if name == "dup" else name
+    # the archive's own entries (a format's records start with "\0bilingua-" and are never written)
+    real = [i for i, e in enumerate(entries) if not e["name"].startswith("\0")]
+    entries[real[-1]]["name"] = entries[real[0]]["name"] if name == "dup" else name
     e = refusal(bilingua.merge, doc)
     assert e.code == "limit" and e.limit == "zip_malformed", (name, e.code, str(e))
 
@@ -71,7 +73,6 @@ def test_targets_set_in_the_dict_get_the_tag_check():
     invented = copy.deepcopy(doc)
     invented["units"][0]["segments"][0]["target"] = [{"tag": {"id": "zz", "kind": "open", "display": "<i>"}}, {"text": "Hallo"}]
     assert refusal(bilingua.merge, invented).code == "invented_tag"
-    assert refusal(bilingua.merge, invented, profile="locos").code == "invented_tag"
     twice = copy.deepcopy(doc)
     twice["units"][0]["segments"][0]["target"] = [open_, {"text": "a"}, close, open_, {"text": "b"}, close]
     assert refusal(bilingua.merge, twice).code == "duplicated_tag"
