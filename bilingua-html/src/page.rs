@@ -609,14 +609,17 @@ pub(crate) fn merge(doc: &Document, opts: &MergeOptions, cfg: Cfg) -> Result<Vec
         if body.len() != n_body {
             return Err(Error::Write("the page changed shape while its attributes were written".into()));
         }
-        // XHTML has no RCDATA: its title text is XML text, escaped as everywhere else
+        // XHTML has no RCDATA: its title text is XML text, escaped as everywhere else. So is the text of an HTML
+        // page that reads as well-formed XML (a polyglot page, which cannot hold a literal `<` in a title): it stays
+        // well-formed, and the XML reading of the export check sees no new element.
         let rcdata = if cfg.rcdata(&text) { html::rcdata_texts(&toks) } else { HashMap::new() };
+        let mut polyglot: Option<bool> = None;
         for (k, u) in body.iter().enumerate() {
             if let Some(t) = &targets[k] {
                 let protected = protected_for(cfg, u);
                 let text = match rcdata.get(&u.start) {
-                    Some(name) => rcdata_text(t, name),
-                    None => materialize(t, &u.map, quotes, &protected),
+                    Some(name) if !*polyglot.get_or_insert_with(|| bilingua_htmlcore::xml::xml_view(&before).is_some()) => rcdata_text(t, name),
+                    _ => materialize(t, &u.map, quotes, &protected),
                 };
                 repl.push((u.start, u.end, format!("{}{}{}", u.lead, text, u.trail)));
             }

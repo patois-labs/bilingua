@@ -33,8 +33,10 @@ let hubl = HtmlFilter::new().with_template_pattern(regex::Regex::new(r"(?s)\{\{.
 - `<title>` and `<textarea>` follow the HTML spec (RCDATA, BILI-51; not Localization OS's old reading): their
   content is text up to the element's own end tag, so a `<`, a tag or a comment inside one is part of the text,
   and a translation is written as typed (a literal `<` stays literal and reads back the same). Only the `<` of a
-  `</title` (or `</textarea`) in a translation is written `&lt;`, so it cannot end the element early. A page that
-  reads as well-formed XML (XHTML) keeps XML text there: `<` is escaped as in the body. Inside `<svg>` and
+  `</title` (or `</textarea`) in a translation is written `&lt;`, so it cannot end the element early. XHTML (the
+  `xhtml` option, on for EPUB and Flare, or a page that starts with `<?xml`) has no RCDATA, and a page that reads
+  as well-formed XML (which cannot hold a literal `<` in a title) keeps XML text there: `<` is escaped as in the
+  body. Inside `<svg>` and
   `<math>` a `<title>` is an ordinary element, as browsers read it.
 - `translate="no"` and `class="notranslate"` (`translate="yes"` re-enables a subtree): a block holding only such
   content is no unit; a run inside a block is one point code written back verbatim. `include_locked` has no

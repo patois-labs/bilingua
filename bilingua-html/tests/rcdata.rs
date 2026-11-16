@@ -5,8 +5,9 @@
 use bilingua_html::Html;
 use bilingua_model::*;
 
+/// An ordinary HTML page (not well-formed XML: the `<hr>` is not closed).
 fn page(head: &str, body: &str) -> String {
-    format!("<!DOCTYPE html>\n<html><head>{head}</head><body>{body}<p>Para</p></body></html>\n")
+    format!("<!DOCTYPE html>\n<html><head>{head}</head><body>{body}<p>Para</p><hr></body></html>\n")
 }
 
 fn open(s: &str) -> Document {
@@ -124,6 +125,17 @@ fn a_self_closed_title_holds_nothing() {
     let src = "<?xml version=\"1.0\"?>\n<html xmlns=\"http://www.w3.org/1999/xhtml\"><head><title/></head><body><p>One</p><p>Two</p></body></html>\n";
     let d = open(src);
     assert_eq!(sources(&d), vec![vec![Inline::text("One")], vec![Inline::text("Two")]]);
+}
+
+#[test]
+fn a_page_that_reads_as_xml_keeps_xml_text_in_a_title() {
+    // well-formed as XML (a polyglot page): a `<` a translation adds is written as a reference, so the page stays
+    // XML and the export check's XML reading sees no new element; a browser shows the same text
+    let src = "<!DOCTYPE html>\n<html><head><title>Home</title></head><body><p>One</p></body></html>\n";
+    let d = open(src);
+    let out = set_first(&d, "a <b>x</b> < 2");
+    assert!(out.contains("<title>a &lt;b&gt;x&lt;/b&gt; &lt; 2</title>"), "{out}");
+    assert_eq!(open(&out).units[0].source(), vec![Inline::text("a &lt;b&gt;x&lt;/b&gt; &lt; 2")]);
 }
 
 #[test]

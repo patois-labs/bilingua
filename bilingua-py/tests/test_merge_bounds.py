@@ -76,10 +76,10 @@ def test_targets_set_in_the_dict_get_the_tag_check():
     twice = copy.deepcopy(doc)
     twice["units"][0]["segments"][0]["target"] = [open_, {"text": "a"}, close, open_, {"text": "b"}, close]
     assert refusal(bilingua.merge, twice).code == "duplicated_tag"
-    # a close with no open: a tag of the wrong kind for its id is not in the source either
-    wrong = copy.deepcopy(doc)
-    wrong["units"][0]["segments"][0]["target"] = [{"tag": {"id": "zz", "kind": "standalone", "display": "<x>"}}]
-    assert refusal(bilingua.merge, wrong).code == "invented_tag"
+    # a standalone code the unit does not have
+    point = copy.deepcopy(doc)
+    point["units"][0]["segments"][0]["target"] = [{"tag": {"id": "zz", "kind": "standalone", "display": "<x>"}}]
+    assert refusal(bilingua.merge, point).code == "invented_tag"
 
 
 def test_a_bilingual_file_gets_the_tag_check_too():

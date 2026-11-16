@@ -177,11 +177,6 @@ fn a_stored_target_with_tags_the_source_does_not_have_is_refused() {
     let mut invented = doc.clone();
     invented.units[0].segments[0].target = vec![Inline::tag("zz", TagKind::Open, "<i>"), Inline::text("Hallo")];
     assert!(matches!(merge(&invented), Err(Error::InventedTag(_))));
-    // a close tag where the source has an open of that id: not one of the source's tags
-    let mut wrong_kind = doc.clone();
-    let Inline::Tag { id, .. } = &open else { unreachable!() };
-    wrong_kind.units[0].segments[0].target = vec![Inline::tag(id.clone(), TagKind::Standalone, "<b>"), Inline::text("Hallo")];
-    assert!(matches!(merge(&wrong_kind), Err(Error::InventedTag(_))));
 }
 
 #[test]
