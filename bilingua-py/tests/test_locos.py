@@ -25,6 +25,8 @@ KNOWN_BUILDS = {
     # a pair named by a point token in a plain XLIFF: LocOS copies the source element with its source text
     "docx_po_fidelity_1.xliff": ("repair-point", "repair-point-de-DE"),
     "xliff_package_filter_1.xliff": ("repair-point", "repair-point-de-DE"),
+    # BILI-51 (D48): a <title> translation is written as typed (RCDATA, the HTML spec); LocOS escapes & < > there
+    "w5_cp1252.html": ("escape-de-DE",),
 }
 
 
