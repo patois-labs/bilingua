@@ -453,6 +453,36 @@ pub(crate) fn materialize(target: &[Inline], map: &[Entry], quotes: bool, protec
     out
 }
 
+/// The text of an RCDATA element (`<title>`, `<textarea>`) as the HTML spec reads it (BILI-51): written as typed,
+/// so a literal `<` or `&` stays literal and reads back the same, except that the `<` of the element's own end tag
+/// (`</title`) is written `&lt;` so the text cannot end the element early. The source text of such an element has
+/// no inline codes; a code in the target is dropped, as [`materialize`] drops one the unit does not have.
+pub(crate) fn rcdata_text(target: &[Inline], name: &str) -> String {
+    let mut s = String::new();
+    for i in target {
+        if let Inline::Text(t) = i {
+            s.push_str(t);
+        }
+    }
+    let end = format!("</{name}");
+    let mut out = String::with_capacity(s.len());
+    let mut last = 0;
+    let b = s.as_bytes();
+    let mut i = 0;
+    while let Some(p) = find_bytes(b, i, b"</") {
+        // an end tag when white space, `/`, `>` or the end of the text (where the page's own text follows) comes next
+        let e = p + end.len();
+        if b.len() >= e && b[p..e].eq_ignore_ascii_case(end.as_bytes()) && b.get(e).is_none_or(|c| matches!(c, b' ' | b'\t' | b'\n' | b'\r' | 0x0c | b'/' | b'>')) {
+            out.push_str(&s[last..p]);
+            out.push_str("&lt;");
+            last = p + 1;
+        }
+        i = p + 1;
+    }
+    out.push_str(&s[last..]);
+    out
+}
+
 /// The page tokens with the translated attribute values written in (LocOS `_apply_attr_units`). Returns the
 /// number of body units.
 pub(crate) fn apply_attrs(toks: &mut [Tok], doc: &Document, page_meta: bool, values: impl Fn(&Unit) -> Option<String>) -> Result<usize, Error> {
@@ -567,10 +597,17 @@ pub(crate) fn merge(doc: &Document, opts: &MergeOptions, cfg: Cfg) -> Result<Vec
         if body.len() != n_body {
             return Err(Error::Write("the page changed shape while its attributes were written".into()));
         }
+        let rcdata = html::rcdata_texts(&toks);
+        let mut xml: Option<bool> = None;
         for (k, u) in body.iter().enumerate() {
             if let Some(t) = &targets[k] {
                 let protected = protected_for(cfg, u);
-                repl.push((u.start, u.end, format!("{}{}{}", u.lead, materialize(t, &u.map, quotes, &protected), u.trail)));
+                let text = match rcdata.get(&u.start) {
+                    // XHTML (the page reads as XML) keeps XML text: escaped as everywhere else
+                    Some(name) if !*xml.get_or_insert_with(|| bilingua_htmlcore::xml::xml_view(&before).is_some()) => rcdata_text(t, name),
+                    _ => materialize(t, &u.map, quotes, &protected),
+                };
+                repl.push((u.start, u.end, format!("{}{}{}", u.lead, text, u.trail)));
             }
         }
     }

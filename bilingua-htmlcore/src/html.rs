@@ -8,6 +8,73 @@ use std::collections::HashMap;
 
 pub const SKIP_CONTAINERS: [&str; 2] = ["script", "style"];
 
+/// Elements whose content an HTML5 browser reads as text (RCDATA, BILI-51): no tag, comment or CDATA section starts
+/// inside one, and only the element's own end tag ends it. Their content is one text token, read as typed (character
+/// references stay as written, as in all text here). Not inside `<svg>` or `<math>`, where `<title>` is an
+/// ordinary element, and not when the start tag closes itself (`<title/>` in XHTML is empty).
+pub const RCDATA: [&str; 2] = ["title", "textarea"];
+
+/// Where the RCDATA body of `name` that starts at `pos` ends: at `</name` followed by white space, `/` or `>` (an
+/// appropriate end tag, case-insensitive), else at the end of the input.
+pub fn rcdata_end(b: &[u8], pos: usize, name: &str) -> usize {
+    let nb = name.as_bytes();
+    let mut i = pos;
+    while let Some(p) = find_bytes(b, i, b"</") {
+        let end = p + 2 + nb.len();
+        if end < b.len() && b[p + 2..end].eq_ignore_ascii_case(nb) && matches!(b[end], b' ' | b'\t' | b'\n' | b'\r' | 0x0c | b'/' | b'>') {
+            return p;
+        }
+        i = p + 1;
+    }
+    b.len()
+}
+
+/// Tracks `<svg>` and `<math>` nesting over the tag tokens in order: inside them `<title>` is not RCDATA.
+#[derive(Default)]
+struct Foreign(usize);
+
+impl Foreign {
+    /// Feeds one tag; true when it opens an RCDATA body.
+    fn opens_rcdata(&mut self, closing: bool, name: &str, self_closing: bool) -> bool {
+        if name == "svg" || name == "math" {
+            if closing {
+                self.0 = self.0.saturating_sub(1);
+            } else if !self_closing {
+                self.0 += 1;
+            }
+            return false;
+        }
+        !closing && !self_closing && self.0 == 0 && RCDATA.contains(&name)
+    }
+}
+
+/// The RCDATA bodies of a token stream from [`tokenize_with`]: text token index to the element's name.
+pub fn rcdata_texts(tokens: &[Tok]) -> HashMap<usize, String> {
+    let mut out = HashMap::new();
+    let mut foreign = Foreign::default();
+    let mut skip: Option<String> = None;
+    for (ti, t) in tokens.iter().enumerate() {
+        if t.k != K::Markup {
+            continue;
+        }
+        let (closing, name, sc) = parse_tag_str(&t.s);
+        if let Some(n) = &skip {
+            if closing && *n == name {
+                skip = None;
+            }
+            continue;
+        }
+        if !closing && SKIP_CONTAINERS.contains(&name.as_str()) {
+            skip = Some(name);
+            continue;
+        }
+        if foreign.opens_rcdata(closing, &name, sc) && tokens.get(ti + 1).is_some_and(|n| n.k == K::Text) {
+            out.insert(ti + 1, name);
+        }
+    }
+    out
+}
+
 /// What a token is. `Island` and `InlineIsland` are masked server code (markup tokens that are not tags).
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum K {
@@ -341,6 +408,7 @@ pub fn tokenize_with<'a>(text: &'a str, template: Option<&regex::Regex>, budget:
     let mut tokens: Vec<Tok<'a>> = Vec::new();
     let mut pos = 0;
     let mut i = 0;
+    let mut foreign = Foreign::default();
     while i < size {
         if let Some(&e) = templates.get(&i) {
             i = e;
@@ -375,11 +443,13 @@ pub fn tokenize_with<'a>(text: &'a str, template: Option<&regex::Regex>, budget:
         }
         tokens.push(Tok { k: K::Text, s: Cow::Borrowed(&text[pos..i]) });
         tokens.push(Tok { k: K::Markup, s: Cow::Borrowed(&text[i..end]) });
-        let (closing, name, _sc) = parse_tag_str(&text[i..end]);
+        let (closing, name, sc) = parse_tag_str(&text[i..end]);
         i = end;
         pos = end;
         if !closing && SKIP_CONTAINERS.contains(&name.as_str()) {
             i = raw_end(b, pos, &name);
+        } else if foreign.opens_rcdata(closing, &name, sc) {
+            i = rcdata_end(b, pos, &name);
         }
     }
     tokens.push(Tok { k: K::Text, s: Cow::Borrowed(&text[pos..]) });
