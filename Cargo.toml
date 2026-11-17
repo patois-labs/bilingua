@@ -106,3 +106,8 @@ proptest = { version = "1", default-features = false, features = ["std"] }
 [profile.release]
 opt-level = 3
 lto = "thin"
+
+# Build scripts and proc macros are not stripped: stripping a proc-macro dylib on some toolchains broke the
+# release build (it needed CARGO_PROFILE_RELEASE_BUILD_OVERRIDE_STRIP=none, BILI-117).
+[profile.release.build-override]
+strip = "none"
