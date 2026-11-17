@@ -249,3 +249,24 @@ fn large_docx() {
 fn large_xlsx() {
     check("big.xlsx", &xlsx(), 500_001);
 }
+
+/// A whole-document pass of `set_target` + `set_state` (the CLI's pseudo and merge loops) is linear: it used to
+/// scan every segment on each `set_state` call, 440 s for the 260,000 segments of a 12 MB docx (BILI-112).
+#[test]
+#[ignore = "large generated files; run with --release -- --ignored"]
+fn per_segment_edits_are_linear() {
+    let big: String = (0..300_000).map(|i| format!("Line {i} here.\n\n")).collect();
+    let opts = ExtractOptions::new().with_source_lang("en").with_granularity(Granularity::Paragraph).with_limits(Limits::large());
+    let mut doc = extract("big.txt", big.as_bytes(), &opts).unwrap();
+    let ids: Vec<String> = doc.segments().map(|(_, s)| s.id.clone()).collect();
+    assert_eq!(ids.len(), 300_000);
+    let t = std::time::Instant::now();
+    for id in &ids {
+        doc.set_target(id, vec![Inline::text("x")]).unwrap();
+        doc.set_state(id, SegState::Translated).unwrap();
+    }
+    for id in ids.iter().step_by(3) {
+        doc.set_target_empty(id).unwrap();
+    }
+    assert!(t.elapsed().as_secs() < 10, "300,000 edits took {:?}", t.elapsed());
+}

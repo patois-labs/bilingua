@@ -1202,12 +1202,7 @@ impl Document {
     /// empty value for it. State `Draft`, as for any new target. Rejects unknown segments, untranslatable units
     /// and locked segments.
     pub fn set_target_empty(&mut self, seg_id: &str) -> Result<(), Error> {
-        let (ui, si) = self
-            .units
-            .iter()
-            .enumerate()
-            .find_map(|(ui, u)| u.segments.iter().position(|s| s.id == seg_id).map(|si| (ui, si)))
-            .ok_or_else(|| Error::UnknownSegment(seg_id.to_string()))?;
+        let (ui, si) = self.locate(seg_id).ok_or_else(|| Error::UnknownSegment(seg_id.to_string()))?;
         let unit = &mut self.units[ui];
         if !unit.translate {
             return Err(Error::Locked(seg_id.to_string()));
@@ -1224,13 +1219,9 @@ impl Document {
 
     /// Sets a segment's state (for many, [`Document::set_states`]).
     pub fn set_state(&mut self, seg_id: &str, state: SegState) -> Result<(), Error> {
-        let seg = self
-            .units
-            .iter_mut()
-            .flat_map(|u| u.segments.iter_mut())
-            .find(|s| s.id == seg_id)
-            .ok_or_else(|| Error::UnknownSegment(seg_id.to_string()))?;
-        seg.state = state;
+        // through the cached index, as set_target: a scan per call made a whole-document pass quadratic (BILI-112)
+        let (ui, si) = self.locate(seg_id).ok_or_else(|| Error::UnknownSegment(seg_id.to_string()))?;
+        self.units[ui].segments[si].state = state;
         Ok(())
     }
 }
