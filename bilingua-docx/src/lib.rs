@@ -365,9 +365,8 @@ fn extract_doc_inner(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Er
             format!("{stem}-")
         };
         ex.begin_part(kind, &e.name, prefix, ns);
-        let template = ex.run_part(&nodes);
-        // the tree is done with: free it before the next part is parsed
-        drop(nodes);
+        // the walk frees the tree as it goes
+        let template = ex.run_part(nodes);
         // a comment copied into more units than the context budget allows: refused as soon as the part is walked
         ex.check_refused()?;
         if template.contains(M_UNIT) {

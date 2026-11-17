@@ -232,12 +232,53 @@ impl Extractor {
         self.nesting = 0;
     }
 
-    pub fn run_part(&mut self, nodes: &[Node]) -> String {
+    /// Walks a part's tree and frees it as it goes: each child of a plain container (the document, the body, a
+    /// table, a row, a cell) is freed as soon as it is written, so the tree shrinks while the units grow. A child is
+    /// written in place (never moved), so the walk's address-keyed memos see the same addresses as before.
+    pub fn run_part(&mut self, mut nodes: Vec<Node>) -> String {
         let mut out = String::new();
-        for n in nodes {
-            out.push_str(&self.emit(n, Flags::default()));
-        }
+        self.emit_children_owned(&mut nodes, Flags::default(), &mut out);
         out
+    }
+
+    fn emit_children_owned(&mut self, children: &mut [Node], fl: Flags, out: &mut String) {
+        for c in children.iter_mut() {
+            let s = match c {
+                Node::El(e) if self.plain_container(e) => {
+                    let fl2 = self.child_flags(e, fl);
+                    let mut s = e.start.to_string();
+                    self.emit_children_owned(&mut e.children, fl2, &mut s);
+                    s.push_str(&e.end);
+                    s
+                }
+                _ => self.emit(c, fl),
+            };
+            // written: free the child (an empty Raw allocates nothing)
+            *c = Node::Raw(String::new());
+            out.push_str(&s);
+        }
+    }
+
+    /// True for an element `emit_el` hands straight to `emit_default`.
+    fn plain_container(&self, e: &El) -> bool {
+        let ns = &self.ns;
+        !(ns.is_w(&e.name, "p")
+            || ns.is_mc(&e.name, "AlternateContent")
+            || (self.part_kind == PartKind::Core && (e.name == "dc:title" || e.name == "dc:subject"))
+            || (e.name == "a:p" && self.part_kind != PartKind::Core))
+    }
+
+    /// The flags for the children of `e`.
+    fn child_flags(&self, e: &El, fl: Flags) -> Flags {
+        let mut fl2 = fl;
+        if self.ns.is_w(&e.name, "tc") {
+            fl2.in_cell = true;
+        }
+        if self.ns.is_w(&e.name, "txbxContent") {
+            fl2.in_textbox = true;
+            fl2.in_cell = false;
+        }
+        fl2
     }
 
     /// Units in document order (part order, then paragraph order).
@@ -280,15 +321,7 @@ impl Extractor {
     }
 
     fn emit_default(&mut self, e: &El, fl: Flags) -> String {
-        let ns = self.ns.clone();
-        let mut fl2 = fl;
-        if ns.is_w(&e.name, "tc") {
-            fl2.in_cell = true;
-        }
-        if ns.is_w(&e.name, "txbxContent") {
-            fl2.in_textbox = true;
-            fl2.in_cell = false;
-        }
+        let fl2 = self.child_flags(e, fl);
         let mut s = e.start.to_string();
         for c in &e.children {
             s.push_str(&self.emit(c, fl2));

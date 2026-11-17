@@ -186,9 +186,10 @@ fn cmd_extract(a: &Args, out: &mut dyn Write) -> Result<(), String> {
     let o = a.output.as_ref().ok_or("extract needs -o out.xlf")?;
     let (doc, name) = open(a, path)?;
     let src = doc.source_lang.clone().unwrap_or_else(|| "en".into());
-    let xml = xliff::write(&doc, &name, &src, a.target.as_deref());
-    std::fs::write(o, &xml).map_err(|e| format!("cannot write {}: {e}", o.display()))?;
-    drop(xml);
+    let f = std::fs::File::create(o).map_err(|e| format!("cannot write {}: {e}", o.display()))?;
+    let mut x = xliff::Out::new(std::io::BufWriter::with_capacity(1 << 20, f));
+    xliff::write(&mut x, &doc, &name, &src, a.target.as_deref());
+    x.finish().map_err(|e| format!("cannot write {}: {e}", o.display()))?;
     let skl = skeleton_path(o);
     write_skeleton(&skl, &doc)?;
     let _ = writeln!(out, "{}: {} units, {} segments -> {} and {}", name, doc.units.len(), doc.segment_count(), o.display(), skl.display());

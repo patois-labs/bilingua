@@ -89,8 +89,34 @@ fn state_name(s: SegState) -> &'static str {
     }
 }
 
-pub fn write(doc: &Document, original: &str, src: &str, trg: Option<&str>) -> String {
-    let mut x = String::new();
+/// A writer that keeps the first error, so the XLIFF goes to its file as it is written instead of being built as
+/// one string first (BILI-114).
+pub struct Out<W: std::io::Write> {
+    w: W,
+    err: Option<std::io::Error>,
+}
+
+impl<W: std::io::Write> Out<W> {
+    pub fn new(w: W) -> Out<W> {
+        Out { w, err: None }
+    }
+    fn push_str(&mut self, s: &str) {
+        if self.err.is_none() {
+            if let Err(e) = self.w.write_all(s.as_bytes()) {
+                self.err = Some(e);
+            }
+        }
+    }
+    /// The first write error, else the flush's result.
+    pub fn finish(mut self) -> std::io::Result<()> {
+        match self.err.take() {
+            Some(e) => Err(e),
+            None => self.w.flush(),
+        }
+    }
+}
+
+pub fn write<W: std::io::Write>(x: &mut Out<W>, doc: &Document, original: &str, src: &str, trg: Option<&str>) {
     x.push_str("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
     x.push_str(&format!(
         "<xliff xmlns=\"urn:oasis:names:tc:xliff:document:2.0\" version=\"2.1\" srcLang=\"{}\"{}>\n",
@@ -122,7 +148,6 @@ pub fn write(doc: &Document, original: &str, src: &str, trg: Option<&str>) -> St
         x.push_str("    </unit>\n");
     }
     x.push_str("  </file>\n</xliff>\n");
-    x
 }
 
 pub struct Read {
