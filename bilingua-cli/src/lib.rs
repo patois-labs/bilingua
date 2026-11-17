@@ -187,24 +187,51 @@ fn cmd_extract(a: &Args, out: &mut dyn Write) -> Result<(), String> {
     let (doc, name) = open(a, path)?;
     let src = doc.source_lang.clone().unwrap_or_else(|| "en".into());
     let xml = xliff::write(&doc, &name, &src, a.target.as_deref());
-    std::fs::write(o, xml).map_err(|e| format!("cannot write {}: {e}", o.display()))?;
+    std::fs::write(o, &xml).map_err(|e| format!("cannot write {}: {e}", o.display()))?;
+    drop(xml);
     let skl = skeleton_path(o);
-    let json = serde_json::json!({ "bilingua_cli": 1, "document": doc });
-    std::fs::write(&skl, serde_json::to_vec(&json).map_err(|e| e.to_string())?).map_err(|e| format!("cannot write {}: {e}", skl.display()))?;
+    write_skeleton(&skl, &doc)?;
     let _ = writeln!(out, "{}: {} units, {} segments -> {} and {}", name, doc.units.len(), doc.segment_count(), o.display(), skl.display());
     Ok(())
+}
+
+/// The skeleton file: `{"bilingua_cli": 1, "document": {...}}`.
+#[derive(serde::Serialize)]
+struct SkeletonOut<'a> {
+    bilingua_cli: u32,
+    document: &'a Document,
+}
+
+#[derive(serde::Deserialize)]
+struct SkeletonIn {
+    document: Document,
+}
+
+/// Writes the Document straight from the struct, through a buffer. Building a `serde_json::Value` first held a
+/// second, several times larger copy of the whole document (BILI-114).
+fn write_skeleton(skl: &Path, doc: &Document) -> Result<(), String> {
+    let f = std::fs::File::create(skl).map_err(|e| format!("cannot write {}: {e}", skl.display()))?;
+    let mut w = std::io::BufWriter::with_capacity(1 << 20, f);
+    serde_json::to_writer(&mut w, &SkeletonOut { bilingua_cli: 1, document: doc }).map_err(|e| format!("cannot write {}: {e}", skl.display()))?;
+    w.flush().map_err(|e| format!("cannot write {}: {e}", skl.display()))
+}
+
+/// Reads the Document straight into the struct. Parsing into a `Value` and cloning its document first held the
+/// file, the value tree and its copy at once (BILI-114).
+fn read_skeleton(skl: &Path) -> Result<Document, String> {
+    let raw = std::fs::read(skl).map_err(|e| format!("cannot read the skeleton {}: {e}", skl.display()))?;
+    let s: SkeletonIn = serde_json::from_slice(&raw).map_err(|e| format!("{} is not a Bilingua skeleton: {e}", skl.display()))?;
+    Ok(s.document)
 }
 
 fn cmd_merge(a: &Args, out: &mut dyn Write) -> Result<(), String> {
     let path = one_file(a)?;
     let o = a.output.as_ref().ok_or("merge needs -o translated-file")?;
     let skl = a.skeleton.clone().unwrap_or_else(|| skeleton_path(Path::new(path)));
-    let raw = std::fs::read(&skl).map_err(|e| format!("cannot read the skeleton {}: {e}", skl.display()))?;
-    let v: serde_json::Value = serde_json::from_slice(&raw).map_err(|e| format!("{} is not a Bilingua skeleton: {e}", skl.display()))?;
-    let mut doc: Document = serde_json::from_value(v.get("document").cloned().ok_or("the skeleton file has no document")?)
-        .map_err(|e| format!("{} is not a Bilingua skeleton: {e}", skl.display()))?;
+    let mut doc = read_skeleton(&skl)?;
     let xml = std::fs::read_to_string(path).map_err(|e| format!("cannot read {path}: {e}"))?;
     let read = xliff::read(&xml, &doc)?;
+    drop(xml);
     if doc.target_lang.is_none() {
         doc.target_lang = read.target_lang.clone();
     }
