@@ -141,6 +141,11 @@ pub struct Extractor {
     pending: Vec<Pending>,
     index: HashMap<String, usize>,
     memo: HashMap<usize, String>,
+    /// `alt_memo`, `dml_memo` and `dml_ids` are keyed by the ADDRESS of an `El` in the parsed part tree. `run_part`
+    /// frees subtrees while it walks (BILI-114), so a freed address can be reused by a later allocation. That is
+    /// safe only while every lookup key is an `El` of the live parsed tree: never call `emit_el`, `dml_paragraph`,
+    /// `alt_content` or `fallback` on an `El` built or cloned during the walk (a re-parsed run, a copied
+    /// fallback), or key these memos by a number given out at parse time first.
     alt_memo: HashMap<usize, String>,
     nesting: usize,
     field: FieldState,
