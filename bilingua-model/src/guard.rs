@@ -162,10 +162,81 @@ impl Default for Limits {
     }
 }
 
+/// The largest count or size the `unbounded` profile allows: far beyond any real file, and small enough that the
+/// budgets formats derive from a limit (`40 * max_units`, `20 * max_units` lines) cannot overflow.
+/// On a 32-bit target (WASM) it is about 16 million, so `200 * max_units` still fits.
+const UNBOUNDED_COUNT: usize = if usize::BITS >= 64 { usize::MAX >> 12 } else { usize::MAX >> 8 };
+const UNBOUNDED_BYTES: u64 = u64::MAX >> 12;
+
 impl Limits {
     /// Localization OS's limits (the same as `Limits::default()`); change any of them with the `with_*` methods.
+    /// These are the limits for a server that takes uploads from people it does not know (`hosted`).
     pub fn new() -> Limits {
         Limits::default()
+    }
+
+    /// The limits for a person's own files on their own machine (the CLI, the desktop app, a batch job): large
+    /// enough for any ordinary document (a 4 GB input, 20 million units or paragraphs, every row Excel allows,
+    /// 200 million cells), so big manuals, spreadsheets and pages are processed at the cost of memory. The
+    /// structural guards stay: XML nesting depth, zip entry count, and a zip ratio check that still stops a
+    /// zip bomb (1000:1 instead of 200:1).
+    pub fn large() -> Limits {
+        Limits {
+            max_input_bytes: 4 << 30,
+            max_units: 20_000_000,
+            max_unit_chars: 10_000_000,
+            max_lines: 400_000_000,
+            max_xml_depth: 256,
+            max_xml_elements: 400_000_000,
+            max_zip_entries: 200_000,
+            max_zip_bytes: 16 << 30,
+            max_zip_entry_bytes: 8 << 30,
+            max_zip_ratio: 1000,
+            zip_ratio_floor_bytes: 1024 * 1024,
+            max_paragraphs: 20_000_000,
+            xlsx_max_cells: 200_000_000,
+            xlsx_max_rows: 1_048_576,
+            xlsx_max_cell_chars: 32_767,
+            xlsx_max_total_text_chars: 2_000_000_000,
+            max_context_bytes: 16 << 30,
+            max_output_bytes: 32 << 30,
+        }
+    }
+
+    /// No size or count limits at all: only what the machine's memory allows. The XML depth limit stays (it
+    /// protects the stack, and no real document nests 256 elements deep). Use it only for trusted files.
+    pub fn unbounded() -> Limits {
+        Limits {
+            max_input_bytes: UNBOUNDED_BYTES,
+            max_units: UNBOUNDED_COUNT,
+            max_unit_chars: UNBOUNDED_COUNT,
+            max_lines: UNBOUNDED_COUNT,
+            max_xml_depth: 256,
+            max_xml_elements: UNBOUNDED_COUNT,
+            max_zip_entries: UNBOUNDED_COUNT,
+            max_zip_bytes: UNBOUNDED_BYTES,
+            max_zip_entry_bytes: UNBOUNDED_BYTES,
+            max_zip_ratio: UNBOUNDED_BYTES,
+            zip_ratio_floor_bytes: 1024 * 1024,
+            max_paragraphs: UNBOUNDED_COUNT,
+            xlsx_max_cells: UNBOUNDED_COUNT,
+            xlsx_max_rows: u32::MAX >> 4,
+            xlsx_max_cell_chars: UNBOUNDED_COUNT,
+            xlsx_max_total_text_chars: UNBOUNDED_COUNT,
+            max_context_bytes: UNBOUNDED_BYTES,
+            max_output_bytes: UNBOUNDED_BYTES,
+        }
+    }
+
+    /// A profile by name: `hosted` (the default, [`Limits::new`]), `large` ([`Limits::large`]) or `unbounded`
+    /// ([`Limits::unbounded`]; `none` is accepted too). `None` for any other name.
+    pub fn profile(name: &str) -> Option<Limits> {
+        match name.trim().to_ascii_lowercase().as_str() {
+            "hosted" | "default" | "server" => Some(Limits::new()),
+            "large" | "desktop" | "local" => Some(Limits::large()),
+            "unbounded" | "none" => Some(Limits::unbounded()),
+            _ => None,
+        }
     }
     /// Sets `max_input_bytes`.
     pub fn with_max_input_bytes(mut self, v: u64) -> Limits {

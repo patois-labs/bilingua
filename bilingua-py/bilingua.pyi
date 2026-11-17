@@ -128,7 +128,7 @@ def extract(
     source_lang: str | None = None,
     target_lang: str | None = None,
     granularity: Granularity = "paragraph",
-    limits: Mapping[str, int] | None = None,
+    limits: Mapping[str, int] | str | None = None,
     format_options: Mapping[str, FormatOptionValue] | None = None,
     profile: str | None = None,
     profile_version: int | None = None,
@@ -142,7 +142,7 @@ def extract(
     source_lang: str | None = None,
     target_lang: str | None = None,
     granularity: Granularity = "paragraph",
-    limits: Mapping[str, int] | None = None,
+    limits: Mapping[str, int] | str | None = None,
     format_options: Mapping[str, FormatOptionValue] | None = None,
     profile: str | None = None,
     profile_version: int | None = None,
@@ -155,13 +155,13 @@ def extract(
     source_lang: str | None = None,
     target_lang: str | None = None,
     granularity: Granularity = "paragraph",
-    limits: Mapping[str, int] | None = None,
+    limits: Mapping[str, int] | str | None = None,
     format_options: Mapping[str, FormatOptionValue] | None = None,
     profile: str | None = None,
     profile_version: int | None = None,
     locos_units: bool = False,
 ) -> Document | tuple[Document, list[LocosUnit]]:
-    """Opens a file. `limits` changes any of the safety limits by name (`max_units`, ...). `format_options` are
+    """Opens a file. `limits` is a profile name (`"hosted"`, the default; `"large"` for big local files; `"unbounded"`) or a mapping that changes any of the safety limits by name (`max_units`, ...). `format_options` are
     `"<format>.<name>"` keys (`"csv.columns"`, `"odf.translate_comments"`) to str, bool or int; a key no format
     declares, a value of the wrong kind, or an unknown `profile` raises BilinguaError with code
     "invalid_argument". `profile="locos"` gives Localization OS's behaviour; `profile="locos@1"` or
@@ -178,7 +178,7 @@ def merge(
     profile: str | None = None,
     format_options: Mapping[str, FormatOptionValue] | None = None,
     profile_version: int | None = None,
-    limits: Mapping[str, int] | None = None,
+    limits: Mapping[str, int] | str | None = None,
 ) -> bytes:
     """Writes a Document back to file bytes. Every option is keyword-only. `output_encoding="utf-8"` writes UTF-8
     whatever the file's own encoding ("keep" is the default); `stamp_target_always` stamps the target language and
@@ -261,7 +261,7 @@ class DocumentHandle:
         profile: str | None = None,
         format_options: Mapping[str, FormatOptionValue] | None = None,
         profile_version: int | None = None,
-        limits: Mapping[str, int] | None = None,
+        limits: Mapping[str, int] | str | None = None,
     ) -> bytes: ...
     @property
     def format(self) -> str: ...
@@ -296,7 +296,7 @@ def extract_handle(
     source_lang: str | None = None,
     target_lang: str | None = None,
     granularity: Granularity = "paragraph",
-    limits: Mapping[str, int] | None = None,
+    limits: Mapping[str, int] | str | None = None,
     format_options: Mapping[str, FormatOptionValue] | None = None,
     profile: str | None = None,
     profile_version: int | None = None,

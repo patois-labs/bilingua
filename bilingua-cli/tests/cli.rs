@@ -282,3 +282,37 @@ fn pseudo_and_merge_skip_a_locked_segment_in_an_open_unit() {
     let out = std::fs::read_to_string(&outp).unwrap();
     assert!(out.contains(">Offnen.</mrk>") && out.contains("<mrk mtype=\"seg\" mid=\"2\">Behalten.</mrk>"), "{out}");
 }
+
+/// BILI-112: the CLI takes big local files by default, `--limits hosted` gives the server's caps, and the
+/// `--max-*` overrides apply on top of the profile in any order.
+#[test]
+fn limits_profiles_and_overrides() {
+    let d = tmp("limits");
+    let big: String = (0..60_000).map(|i| format!("Paragraph {i} is here.\n\n")).collect();
+    std::fs::write(d.join("big.txt"), &big).unwrap();
+    let xlf = p(&d, "big.xlf");
+    let msg = run(&["extract", &p(&d, "big.txt"), "--mode", "paragraph", "-o", &xlf]).unwrap();
+    assert!(msg.contains("60000 units"), "{msg}");
+    let outp = p(&d, "big-out.txt");
+    run(&["merge", &xlf, "-o", &outp]).unwrap();
+    assert_eq!(std::fs::read(&outp).unwrap(), big.as_bytes());
+    let e = run(&["extract", &p(&d, "big.txt"), "--mode", "paragraph", "--limits", "hosted", "-o", &xlf]).unwrap_err();
+    assert!(e.contains("big.txt"), "{e}");
+    // an override on top of hosted, typed before the profile
+    run(&["extract", &p(&d, "big.txt"), "--max-units", "70000", "--mode", "paragraph", "--limits", "hosted", "-o", &xlf]).unwrap();
+    // and one that lowers large
+    assert!(run(&["extract", &p(&d, "big.txt"), "--mode", "paragraph", "--max-units", "10", "-o", &xlf]).is_err());
+    assert!(run(&["extract", &p(&d, "big.txt"), "--limits", "huge", "-o", &xlf]).unwrap_err().contains("unknown limits"));
+    assert!(run(&["extract", &p(&d, "big.txt"), "--max-units", "lots", "-o", &xlf]).unwrap_err().contains("whole number"));
+}
+
+#[test]
+fn formats_lists_the_registry_and_usage_is_current() {
+    let f = run(&["formats"]).unwrap();
+    for ext in [".docx", ".xlsx", ".pptx", ".html", ".po", ".srt"] {
+        assert!(f.contains(ext), "{ext} missing from:\n{f}");
+    }
+    let u = run(&["help"]).unwrap();
+    assert!(!u.contains("Formats: .txt, .json, .md"), "{u}");
+    assert!(u.contains("--limits"), "{u}");
+}

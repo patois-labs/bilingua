@@ -24,8 +24,16 @@ Usage:
       Pseudo-translate: accented letters, about 30 percent longer, in brackets, tags kept.
   bilingua options
       List the format options (--option key=value on extract, segment, wordcount and pseudo).
+  bilingua formats
+      List the formats Bilingua reads, with their file extensions.
 
-Formats: .txt, .json, .md (more come with the Bilingua format crates).
+Limits (every command):
+  --limits large|hosted|unbounded
+      large (the default) takes any ordinary file: up to 4 GB, 20 million units or paragraphs, every row
+      Excel allows; big files cost memory. hosted is the server profile for uploads from strangers
+      (100 MB, 50,000 units, 500,000 cells). unbounded has no size limits at all: trusted files only.
+  --max-units N, --max-input-mb N, --max-cells N
+      Raise or lower one limit on top of the profile.
 ";
 
 struct Args {
@@ -39,12 +47,24 @@ struct Args {
     json: bool,
     /// `--option key=value`, repeatable: `ExtractOptions::format_options`.
     options: Vec<(String, String)>,
+    /// The limits for extract and merge: `--limits` and the `--max-*` overrides (large by default).
+    limits: Limits,
+}
+
+fn number(name: &str, v: &str) -> Result<u64, String> {
+    v.trim().replace('_', "").parse::<u64>().map_err(|_| format!("{name} needs a whole number, not {v}"))
+}
+
+fn count(name: &str, v: &str) -> Result<usize, String> {
+    usize::try_from(number(name, v)?).map_err(|_| format!("{name} is too large: {v}"))
 }
 
 fn parse_args(args: &[String]) -> Result<Args, String> {
     let mut it = args.iter();
     let cmd = it.next().ok_or("no command given")?.clone();
-    let mut a = Args { cmd, positional: vec![], source: None, target: None, mode: Granularity::Sentence, output: None, skeleton: None, json: false, options: vec![] };
+    let mut a = Args { cmd, positional: vec![], source: None, target: None, mode: Granularity::Sentence, output: None, skeleton: None, json: false, options: vec![], limits: Limits::large() };
+    // the profile first, then the overrides on top of it, whatever order they were typed in
+    let mut overrides: Vec<(String, String)> = vec![];
     while let Some(x) = it.next() {
         let mut value = |name: &str| it.next().cloned().ok_or(format!("{name} needs a value"));
         match x.as_str() {
@@ -66,9 +86,29 @@ fn parse_args(args: &[String]) -> Result<Args, String> {
                 let (k, v) = kv.split_once('=').ok_or(format!("--option needs key=value, not {kv}"))?;
                 a.options.push((k.trim().to_string(), v.trim().to_string()));
             }
+            "--limits" => {
+                let v = value("--limits")?;
+                a.limits = Limits::profile(&v).ok_or(format!("unknown limits '{v}' (use large, hosted or unbounded)"))?;
+            }
+            "--max-units" | "--max-input-mb" | "--max-cells" => overrides.push((x.clone(), value(x)?)),
             s if s.starts_with('-') && s.len() > 1 => return Err(format!("unknown option {s}")),
             _ => a.positional.push(x.clone()),
         }
+    }
+    for (k, v) in overrides {
+        a.limits = match k.as_str() {
+            "--max-units" => {
+                let n = count(&k, &v)?;
+                // a document's paragraphs and its lines are budgets of the same size as its units
+                a.limits.with_max_units(n).with_max_paragraphs(n).with_max_lines(n.saturating_mul(20))
+            }
+            "--max-input-mb" => {
+                let b = number(&k, &v)?.saturating_mul(1024 * 1024);
+                // a zip's unpacked size gets the same room, and at least what the profile gave
+                a.limits.with_max_input_bytes(b).with_max_zip_bytes(b.saturating_mul(4).max(a.limits.max_zip_bytes))
+            }
+            _ => a.limits.with_xlsx_max_cells(count(&k, &v)?),
+        };
     }
     Ok(a)
 }
@@ -85,7 +125,7 @@ fn open(a: &Args, path: &str) -> Result<(Document, String), String> {
     let bytes = std::fs::read(path).map_err(|e| format!("cannot read {path}: {e}"))?;
     let name = Path::new(path).file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_else(|| path.to_string());
     let src = a.source.clone().unwrap_or_else(|| "en".to_string());
-    let mut opts = ExtractOptions::new().with_source_lang(src.clone()).with_target_lang(a.target.clone()).with_granularity(a.mode);
+    let mut opts = ExtractOptions::new().with_source_lang(src.clone()).with_target_lang(a.target.clone()).with_granularity(a.mode).with_limits(a.limits);
     for (k, v) in &a.options {
         opts = opts.with_format_option(k.as_str(), v);
     }
@@ -107,6 +147,13 @@ pub fn run(args: &[String], out: &mut dyn Write) -> Result<(), String> {
         "segment" => cmd_segment(&a, out),
         "wordcount" => cmd_wordcount(&a, out),
         "pseudo" => cmd_pseudo(&a, out),
+        "formats" => {
+            for f in filters() {
+                let exts: Vec<String> = f.extensions().iter().map(|e| format!(".{e}")).collect();
+                let _ = writeln!(out, "{}	{}", f.id(), exts.join(" "));
+            }
+            Ok(())
+        }
         "options" => {
             for k in format_option_keys() {
                 let kind = match k.kind {
@@ -170,7 +217,7 @@ fn cmd_merge(a: &Args, out: &mut dyn Write) -> Result<(), String> {
         doc.set_state(&id, state).map_err(|e| format!("segment {id}: {e}"))?;
         n += 1;
     }
-    let bytes = bilingua::merge(&doc).map_err(|e| e.to_string())?;
+    let bytes = bilingua::merge_with(&doc, &MergeOptions::new().with_limits(a.limits)).map_err(|e| e.to_string())?;
     std::fs::write(o, bytes).map_err(|e| format!("cannot write {}: {e}", o.display()))?;
     let _ = writeln!(out, "{} targets merged -> {}", n, o.display());
     Ok(())
@@ -270,7 +317,7 @@ fn cmd_pseudo(a: &Args, out: &mut dyn Write) -> Result<(), String> {
             p.with_file_name(format!("{stem}.pseudo{ext}"))
         }
     };
-    let bytes = bilingua::merge(&doc).map_err(|e| e.to_string())?;
+    let bytes = bilingua::merge_with(&doc, &MergeOptions::new().with_limits(a.limits)).map_err(|e| e.to_string())?;
     std::fs::write(&dest, bytes).map_err(|e| format!("cannot write {}: {e}", dest.display()))?;
     let _ = writeln!(out, "{} segments pseudo-translated -> {}", n, dest.display());
     Ok(())

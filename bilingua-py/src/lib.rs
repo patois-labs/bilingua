@@ -477,6 +477,13 @@ fn parse_limits(py: Python<'_>, limits: Option<&Bound<'_, PyAny>>) -> PyResult<O
     match limits {
         None => Ok(None),
         Some(l) if l.is_none() => Ok(None),
+        // a profile by name: "hosted" (the default), "large" (big local files) or "unbounded"
+        Some(l) if l.is_instance_of::<pyo3::types::PyString>() => {
+            let name: String = l.extract()?;
+            engine::Limits::profile(&name)
+                .map(Some)
+                .ok_or_else(|| to_py_err(py, Fail::new("invalid_argument", format!("limits: unknown profile '{name}' (use hosted, large or unbounded)"))))
+        }
         Some(l) => {
             let v = from_py(l, 0).map_err(|f| to_py_err(py, f))?;
             Ok(Some(serde_json::from_value(v).map_err(|e| to_py_err(py, Fail::new("invalid_argument", format!("limits: {e}"))))?))
