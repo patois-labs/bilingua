@@ -321,7 +321,7 @@ fn merge_impl(kind: Kind, doc: &Document, mo: &MergeOptions) -> Result<Vec<u8>, 
             }
         }
     }
-    let limits = Limits::new().with_max_units(usize::MAX).with_max_lines(usize::MAX);
+    let limits = mo.limits().with_max_units(usize::MAX).with_max_lines(usize::MAX);
     let (spans, extra_see, extra_fonts, lang) = if kind == Kind::Hhp {
         let (u, l) = hhp::walk(&orig, &limits)?;
         (u, Vec::new(), Vec::new(), l)

@@ -47,6 +47,15 @@ impl Default for Limits {
     }
 }
 
+impl Limits {
+    /// The crate's limits from the call's `ExtractOptions::limits`: the unit, value-length, line and context caps
+    /// are the caller's. Under the hosted limits (`Limits::new()`) these are the crate's defaults exactly (50,000
+    /// units, 100,000 characters, 1,000,000 lines); `Limits::large()` raises them all.
+    pub fn from_model(l: &bilingua_model::Limits) -> Limits {
+        Limits { max_units: l.max_units, max_value_chars: l.max_unit_chars, max_lines: l.max_lines, max_context_bytes: l.max_context_bytes }
+    }
+}
+
 /// One entry as a key-based project sees it (translatable or not).
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[non_exhaustive]
@@ -202,8 +211,8 @@ impl Filter for IniFilter {
 
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
         bilingua_model::check_own_options(self, &opts.format_options)?;
-        // the context budget is the call's; the other caps stay the crate's own
-        self.extract_with(bytes, opts, &Limits { max_context_bytes: opts.limits().max_context_bytes, ..Limits::default() })
+        // the caps are the call's (the hosted ones are the crate's defaults, so a server sees no change)
+        self.extract_with(bytes, opts, &Limits::from_model(&opts.limits()))
     }
 
     fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {

@@ -270,7 +270,7 @@ impl Filter for Rc {
         // the target language: only when something was translated
         let translated = doc.units.iter().any(|u| u.translate && u.segments.iter().any(|s| s.has_target()));
         if let Some(loc) = opts.stamp_lang(doc, translated) {
-            let sc = Script::new(&out, false, false, &Limits::default())?;
+            let sc = Script::new(&out, false, false, &opts.limits())?;
             let mut edits = stamp_edits(&sc, &out, loc);
             edits.retain(|(a, b, v)| out[*a..*b] != *v);
             if !edits.is_empty() {

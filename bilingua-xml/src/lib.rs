@@ -307,7 +307,7 @@ impl Filter for XmlFilter {
                 let Some(SkelPart::Raw(text)) = parts.first() else {
                     return Err(Error::Write("multilingual xml needs its source text in the skeleton".into()));
                 };
-                ml::merge(doc, text, blob, tag.as_deref(), &Limits::default())?
+                ml::merge(doc, text, blob, tag.as_deref(), &opts.limits())?
             }
             None => {
                 let stamp = opts.stamp_lang(doc, doc.units.iter().any(skel::translated)).is_some();

@@ -30,6 +30,37 @@ pub const MAX_UNITS: usize = 200_000;
 /// A unit longer than this many characters is refused.
 pub const MAX_UNIT_CHARS: usize = 100_000;
 
+/// The crate's caps under the caller's limits: `MAX_BYTES`, `MAX_UNITS`, `MAX_UNIT_CHARS` and the scanner's
+/// `MAX_STRINGS` / `MAX_VALUES` exactly as before while the caller's number is at or below the hosted one (a
+/// server sees the same refusals, in the same order), the caller's once raised (`Limits::large()`): bytes, units,
+/// characters, then 40 strings and 160 values per allowed unit.
+struct Caps {
+    bytes: usize,
+    units: usize,
+    unit_chars: usize,
+    strings: usize,
+    values: usize,
+}
+
+fn raised<T: Ord>(own: T, hosted: T, caller: T) -> T {
+    if caller > hosted {
+        caller
+    } else {
+        own
+    }
+}
+
+fn caps(l: &Limits) -> Caps {
+    let h = Limits::new();
+    Caps {
+        bytes: raised(MAX_BYTES, usize::try_from(h.max_input_bytes).unwrap_or(usize::MAX), usize::try_from(l.max_input_bytes).unwrap_or(usize::MAX)),
+        units: raised(MAX_UNITS, h.max_units, l.max_units),
+        unit_chars: raised(MAX_UNIT_CHARS, h.max_unit_chars, l.max_unit_chars),
+        strings: raised(scan::MAX_STRINGS, h.max_units.saturating_mul(40), l.max_units.saturating_mul(40)),
+        values: raised(scan::MAX_VALUES, h.max_units.saturating_mul(160), l.max_units.saturating_mul(160)),
+    }
+}
+
 const PLURAL_KEYS: [&str; 6] = ["zero", "one", "two", "few", "many", "other"];
 const META_KEYS: [&str; 4] = ["id", "hash", "leftdelim", "rightdelim"];
 const ACTION_MAX: usize = 500;
@@ -58,8 +89,9 @@ fn scan_err(e: ScanError) -> Error {
 /// UTF-8 text of a TOML file and whether it had a BOM.
 /// Size refusals are code `limit`, decode refusals code `encoding` with LocOS's `_decode` sentences.
 fn decode<'a>(bytes: &'a [u8], l: &Limits) -> Result<(&'a str, bool), Error> {
-    if bytes.len() > MAX_BYTES {
-        return Err(LimitError::new(LimitKind::InputBytes, "This TOML file is larger than 256 MB. Split it into smaller files.").into());
+    let max = caps(l).bytes;
+    if bytes.len() > max {
+        return Err(LimitError::new(LimitKind::InputBytes, format!("This TOML file is larger than {} MB. Split it into smaller files.", max / (1024 * 1024))).into());
     }
     guard::check_input(bytes, l)?;
     let (body, bom) = match bytes.strip_prefix(BOM) {
@@ -247,7 +279,8 @@ impl Filter for TomlFilter {
         bilingua_model::check_own_options(self, &opts.format_options)?;
         let limits = opts.limits();
         let (text, bom) = decode(bytes, &limits)?;
-        let scan = scan::scan(text, limits.max_context_bytes).map_err(scan_err)?;
+        let caps = caps(&limits);
+        let scan = scan::scan_with(text, limits.max_context_bytes, caps.strings, caps.values).map_err(scan_err)?;
         // what the units copy: their key path, and the description of a message table once per string of it
         let mut context = guard::ContextBudget::new();
         let nl = match text.find('\n') {
@@ -278,12 +311,12 @@ impl Filter for TomlFilter {
             if !translatable && (!opts.include_locked || v.trim().is_empty()) {
                 continue;
             }
-            if units.len() >= MAX_UNITS {
-                return Err(LimitError::new(LimitKind::Units, format!("this TOML file has more than {MAX_UNITS} translatable strings; split it")).into());
+            if units.len() >= caps.units {
+                return Err(LimitError::new(LimitKind::Units, format!("this TOML file has more than {} translatable strings; split it", caps.units)).into());
             }
             guard::check_unit_count(units.len() + 1, &limits)?;
-            if v.chars().count() > MAX_UNIT_CHARS {
-                return Err(LimitError::new(LimitKind::UnitChars, format!("a string in this TOML file is longer than {MAX_UNIT_CHARS} characters")).into());
+            if v.chars().count() > caps.unit_chars {
+                return Err(LimitError::new(LimitKind::UnitChars, format!("a string in this TOML file is longer than {} characters", caps.unit_chars)).into());
             }
             guard::check_unit_chars(v.chars().count(), &limits)?;
             if s.start > pos {
@@ -343,7 +376,7 @@ impl Filter for TomlFilter {
             }
         }
         if edited {
-            verify(&out, &placed, doc)?;
+            verify(&out, &placed, doc, &opts.limits())?;
         }
         let mut bytes = Vec::with_capacity(out.len() + 3);
         if encoding == "utf-8-bom" {
@@ -391,10 +424,12 @@ fn render_unit(u: &Unit) -> (String, bool) {
 
 /// The rebuilt file must still be valid TOML and hold, at every unit's place, the same key and the value the
 /// unit wrote. Never ship a broken file.
-fn verify(out: &str, placed: &[(usize, usize)], doc: &Document) -> Result<(), Error> {
+fn verify(out: &str, placed: &[(usize, usize)], doc: &Document, limits: &Limits) -> Result<(), Error> {
     let bad = |m: &str| Error::Write(format!("the translated TOML file could not be rebuilt safely ({m})"));
-    // the document already holds these keys; the cap belongs to extraction
-    let sc = scan::scan(out, u64::MAX).map_err(|e| bad(&match e {
+    // the document already holds these keys; the cap belongs to extraction. The string and value caps are the
+    // merge's limits, so a file extracted under raised limits is read back under them.
+    let c = caps(limits);
+    let sc = scan::scan_with(out, u64::MAX, c.strings, c.values).map_err(|e| bad(&match e {
         ScanError::Syntax(m) | ScanError::Limit(m) => m,
     }))?;
     for (at, ui) in placed {

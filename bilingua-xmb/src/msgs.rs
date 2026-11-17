@@ -406,8 +406,9 @@ pub fn set_lang(head: &str, lang: &str) -> Result<String, Error> {
 }
 
 /// A fresh XTB from an XMB: one `<translation>` per distinct message id, in XMB order, ids copied byte for byte.
-pub fn xtb_from_xmb(original: &str, doc: &Document) -> Result<String, Error> {
-    let parsed = read(original.to_string(), &Limits::default()).map_err(|e| Error::Write(format!("the skeleton is not an XMB any more: {e}")))?;
+/// `limits` are the merge's (the caller's), so an XMB extracted under raised limits is read again under them.
+pub fn xtb_from_xmb(original: &str, doc: &Document, limits: &Limits) -> Result<String, Error> {
+    let parsed = read(original.to_string(), limits).map_err(|e| Error::Write(format!("the skeleton is not an XMB any more: {e}")))?;
     if parsed.kind != Kind::Xmb {
         return Err(Error::Write("the skeleton is not an XMB".into()));
     }

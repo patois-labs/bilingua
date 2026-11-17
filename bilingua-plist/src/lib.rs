@@ -284,9 +284,9 @@ fn plural_vars(tree: &Tree) -> Vec<usize> {
 
 /// Adds the target language's plural categories that the XML text lacks, before `other`, filled with the `other`
 /// text (LocOS `build_localized`).
-fn fill_xml(text: &str, locale: &str) -> Result<String, Error> {
+fn fill_xml(text: &str, locale: &str, limits: &Limits) -> Result<String, Error> {
     let Some(cats) = cldr::categories(locale) else { return Ok(text.to_string()) };
-    let tree = xml::scan(text, "stringsdict", &Limits::default()).map_err(|e| Error::Write(format!("the merged file could not be read again: {e}")))?;
+    let tree = xml::scan(text, "stringsdict", limits).map_err(|e| Error::Write(format!("the merged file could not be read again: {e}")))?;
     let mut splices: Vec<(usize, String)> = Vec::new();
     for var in plural_vars(&tree) {
         let v = &tree.nodes[var];
@@ -360,8 +360,9 @@ fn merge_impl(fmt: Fmt, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, 
     if encoding == BINARY {
         let Some(SkelPart::Raw(b)) = parts.first() else { return Err(Error::Write("binary plist skeleton lost the original file".into())) };
         let original = b64::decode(b).map_err(|e| Error::Write(format!("binary plist skeleton is damaged: {e}")))?;
-        let mut tree = bin::read(&original, fmt.id(), &Limits::default())?;
-        let leaves: Vec<Leaf> = policy::walk(&tree, Limits::default().max_units)?;
+        let limits = opts.limits();
+        let mut tree = bin::read(&original, fmt.id(), &limits)?;
+        let leaves: Vec<Leaf> = policy::walk(&tree, limits.max_units)?;
         let mut changed = false;
         for p in parts {
             let SkelPart::Unit(i) = p else { continue };
@@ -393,7 +394,7 @@ fn merge_impl(fmt: Fmt, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, 
         }
     }
     if let Some(lang) = wants_fill(fmt, doc, opts) {
-        out = fill_xml(&out, lang)?;
+        out = fill_xml(&out, lang, &opts.limits())?;
     }
     // A UTF-16 plist stays UTF-16 with its byte order mark under the LocOS profile whatever the output encoding is
     // (LocOS writes the source's codec back). Native UTF-8 output writes UTF-8 and says so in the declaration; 8-bit

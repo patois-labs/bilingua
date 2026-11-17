@@ -330,6 +330,29 @@ impl Limits {
     }
 }
 
+/// A format crate's own cap under the caller's limit for the same thing. While the caller's number is at or below
+/// the hosted one (`hosted`, the field of [`Limits::new`]) the cap is the smaller of the crate's own and the
+/// caller's, so a server gets exactly the crate's numbers it always had; once the caller raised it above the
+/// hosted number (`Limits::large`, `Limits::unbounded`, a desktop's own choice) the caller's number decides, so a
+/// raised profile raises every format.
+pub fn own_cap<T: Ord + Copy>(own: T, hosted: T, caller: T) -> T {
+    if caller > hosted {
+        caller
+    } else {
+        own.min(caller)
+    }
+}
+
+/// [`own_cap`] for a byte cap kept as `usize` against a `u64` limit.
+pub fn own_cap_bytes(own: usize, hosted: u64, caller: u64) -> usize {
+    let c = usize::try_from(caller).unwrap_or(usize::MAX);
+    if caller > hosted {
+        c
+    } else {
+        own.min(c)
+    }
+}
+
 fn mb(n: u64) -> String {
     if n >= 1024 * 1024 {
         format!("{} MB", n / (1024 * 1024))
@@ -1418,6 +1441,21 @@ mod tests {
     fn counts_elements_by_local_name() {
         let x = b"<w:body><w:p/><w:p w:x='1'>a</w:p><!-- <w:p/> --><w:pPr/><p>x</p></w:body>";
         assert_eq!(count_elements(x, "p"), 3);
+    }
+
+    #[test]
+    fn own_caps_follow_a_raised_limit_only() {
+        let h = Limits::new();
+        // hosted and lowered: the smaller of the crate's own and the caller's, as before
+        assert_eq!(own_cap(500_000, h.max_units, h.max_units), 50_000);
+        assert_eq!(own_cap(20_000, h.max_units, h.max_units), 20_000);
+        assert_eq!(own_cap(500_000, h.max_units, 10), 10);
+        assert_eq!(own_cap_bytes(64 << 20, h.max_input_bytes, h.max_input_bytes), 64 << 20);
+        assert_eq!(own_cap_bytes(256 << 20, h.max_input_bytes, h.max_input_bytes), 100 << 20);
+        // raised: the caller's
+        let l = Limits::large();
+        assert_eq!(own_cap(500_000, h.max_units, l.max_units), l.max_units);
+        assert_eq!(own_cap_bytes(64 << 20, h.max_input_bytes, l.max_input_bytes) as u64, l.max_input_bytes);
     }
 
     #[test]

@@ -222,7 +222,7 @@ fn svg_merge(doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
         if opts.stamp_lang(doc, false).and_then(lang::canonical_tag).is_none() && opts.output_encoding != OutputEncoding::Utf8 {
             return Ok(data.to_vec());
         }
-        let mut inner = svg_read(data, &ExtractOptions::new(), false)?;
+        let mut inner = svg_read(data, &ExtractOptions::new().with_limits(opts.limits()), false)?;
         inner.target_lang = doc.target_lang.clone();
         return svg_merge(&inner, opts);
     }

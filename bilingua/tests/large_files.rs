@@ -158,6 +158,144 @@ fn xlsx() -> Vec<u8> {
     ])
 }
 
+fn ini() -> Vec<u8> {
+    let mut s = String::from("[main]\n");
+    for i in 0..N {
+        s.push_str(&format!("key_{i}={}\n", sentence(i)));
+    }
+    s.into_bytes()
+}
+
+fn apple_strings() -> Vec<u8> {
+    let mut s = String::new();
+    for i in 0..N {
+        s.push_str(&format!("/* Note {i} */\n\"key_{i}\" = \"{}\";\n", sentence(i)));
+    }
+    s.into_bytes()
+}
+
+fn json5() -> Vec<u8> {
+    let body: Vec<String> = (0..N).map(|i| format!("  // note {i}\n  key_{i}: '{}'", sentence(i))).collect();
+    format!("{{\n{},\n}}\n", body.join(",\n")).into_bytes()
+}
+
+fn arb() -> Vec<u8> {
+    let body: Vec<String> = (0..N).map(|i| format!("  \"key_{i}\": \"{}\"", sentence(i))).collect();
+    format!("{{\n  \"@@locale\": \"en\",\n{}\n}}\n", body.join(",\n")).into_bytes()
+}
+
+fn resjson() -> Vec<u8> {
+    let body: Vec<String> = (0..N).map(|i| format!("  \"key_{i}\": \"{}\"", sentence(i))).collect();
+    format!("{{\n{}\n}}\n", body.join(",\n")).into_bytes()
+}
+
+fn toml() -> Vec<u8> {
+    let mut s = String::from("[strings]\n");
+    for i in 0..N {
+        s.push_str(&format!("key_{i} = \"{}\"\n", sentence(i)));
+    }
+    s.into_bytes()
+}
+
+fn ftl() -> Vec<u8> {
+    let mut s = String::new();
+    for i in 0..N {
+        s.push_str(&format!("key-{i} = {}\n", sentence(i)));
+    }
+    s.into_bytes()
+}
+
+fn rc() -> Vec<u8> {
+    let mut s = String::from("#include \"resource.h\"\r\n\r\nLANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US\r\n\r\nSTRINGTABLE\r\nBEGIN\r\n");
+    for i in 0..N {
+        s.push_str(&format!("    {} \"{}\"\r\n", 1000 + i, sentence(i)));
+    }
+    s.push_str("END\r\n");
+    s.into_bytes()
+}
+
+/// A PHP template (server pages): page text around PHP islands.
+fn phtml() -> Vec<u8> {
+    let mut s = String::from("<?php $title = 'Manual'; ?>\n<!DOCTYPE html><html lang=\"en\"><head><title><?= $title ?></title></head><body>\n");
+    for i in 0..N {
+        s.push_str(&format!("<p>{} See part <?= $part ?>.</p>\n", sentence(i)));
+    }
+    s.push_str("</body></html>\n");
+    s.into_bytes()
+}
+
+/// Multilingual XML: groups of language siblings (`xml:lang`), the English ones are the units.
+fn ml_xml() -> Vec<u8> {
+    let mut s = String::from("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<catalog>\n");
+    for i in 0..N {
+        s.push_str(&format!("  <item id=\"i{i}\"><text xml:lang=\"en\">{}</text><text xml:lang=\"fr\">Texte {i}</text></item>\n", sentence(i)));
+    }
+    s.push_str("</catalog>\n");
+    s.into_bytes()
+}
+
+/// A binary property list (`bplist00`): one dictionary of N keys to N ASCII strings, 4-byte offsets and refs.
+fn bplist() -> Vec<u8> {
+    fn ascii(out: &mut Vec<u8>, offsets: &mut Vec<usize>, s: &str) {
+        offsets.push(out.len());
+        let n = s.len();
+        if n < 15 {
+            out.push(0x50 | n as u8);
+        } else if n < 256 {
+            out.extend([0x5F, 0x10, n as u8]);
+        } else {
+            out.extend([0x5F, 0x11]);
+            out.extend((n as u16).to_be_bytes());
+        }
+        out.extend(s.bytes());
+    }
+    let mut out = b"bplist00".to_vec();
+    let mut offsets = vec![out.len()];
+    out.extend([0xDF, 0x12]);
+    out.extend((N as u32).to_be_bytes());
+    for i in 0..2 * N {
+        out.extend(((1 + i) as u32).to_be_bytes());
+    }
+    for i in 0..N {
+        ascii(&mut out, &mut offsets, &format!("key_{i}"));
+    }
+    for i in 0..N {
+        ascii(&mut out, &mut offsets, &sentence(i));
+    }
+    let table = out.len();
+    for o in &offsets {
+        out.extend((*o as u32).to_be_bytes());
+    }
+    out.extend([0u8; 6]);
+    out.extend([4u8, 4u8]);
+    out.extend((offsets.len() as u64).to_be_bytes());
+    out.extend(0u64.to_be_bytes());
+    out.extend((table as u64).to_be_bytes());
+    out
+}
+
+/// A WorldServer / Idiom package: the XLIFF of [`xliff`] and its skeleton.
+fn xlz() -> Vec<u8> {
+    zip(&[("content.xlf", String::from_utf8(xliff()).unwrap()), ("content.skl", "<skl>{1}</skl>".into())])
+}
+
+/// A Trados project package: the project file, the English source file and one Japanese work file of N segments.
+fn sdlppx() -> Vec<u8> {
+    let proj = "<?xml version=\"1.0\"?><PackageProject PackageType=\"ProjectPackage\"><GeneralProjectInfo Name=\"Big\"/><LanguageDirections><SourceLanguageCode>en-US</SourceLanguageCode><LanguageDirection SourceLanguageCode=\"en-US\" TargetLanguageCode=\"ja-JP\"/></LanguageDirections><Files><LanguageFile LanguageCode=\"en-US\"><FileVersion PhysicalPath=\"en-US/big.sdlxliff\"/></LanguageFile><LanguageFile LanguageCode=\"ja-JP\"><FileVersion PhysicalPath=\"ja-JP/big.sdlxliff\"/></LanguageFile></Files></PackageProject>";
+    let sdlx = |lang: &str| {
+        let mut s = format!("<?xml version=\"1.0\"?>\n<xliff version=\"1.2\" xmlns=\"urn:oasis:names:tc:xliff:document:1.2\" xmlns:sdl=\"http://sdl.com/FileTypes/SdlXliff/1.0\"><file original=\"big.txt\" source-language=\"en-US\" target-language=\"{lang}\" datatype=\"x\"><body>\n");
+        for i in 0..N {
+            s.push_str(&format!(
+                "<trans-unit id=\"t{i}\"><source>{0}</source><seg-source><mrk mtype=\"seg\" mid=\"1\">{0}</mrk></seg-source><target><mrk mtype=\"seg\" mid=\"1\"></mrk></target><sdl:seg-defs><sdl:seg id=\"1\"/></sdl:seg-defs></trans-unit>\n",
+                sentence(i)
+            ));
+        }
+        s.push_str("</body></file></xliff>\n");
+        s
+    };
+    zip(&[("big.sdlproj", proj.into()), ("en-US/big.sdlxliff", sdlx("en-US")), ("ja-JP/big.sdlxliff", sdlx("ja-JP"))])
+}
+
 fn units(doc: &Document) -> usize {
     doc.units.iter().filter(|u| u.translate).count()
 }
@@ -170,7 +308,8 @@ fn check(name: &str, bytes: &[u8], min_units: usize) {
     let n = units(&doc);
     assert!(n >= min_units, "{name}: only {n} units, expected at least {min_units}");
     let same = merge_with(&doc, &mopts).unwrap_or_else(|e| panic!("{name}: large identity merge failed: {e}"));
-    if !name.ends_with(".xlsx") && !name.ends_with(".docx") {
+    // a rebuilt zip (new dates and compression) is a different file with the same content
+    if !name.ends_with(".xlsx") && !name.ends_with(".docx") && !name.ends_with(".sdlppx") {
         assert!(same == bytes, "{name}: the identity merge changed the file");
     }
     let mut t = doc.clone();
@@ -188,6 +327,23 @@ fn check(name: &str, bytes: &[u8], min_units: usize) {
         Err(e) => panic!("{name}: hosted refusal is not a limit error: {e}"),
         Ok(d) => panic!("{name}: hosted limits accepted {} units", units(&d)),
     }
+}
+
+/// [`check`]'s translated merge with a target language and `stamp_target_always`, so the merges that stamp the
+/// language or fill plurals re-read the merged text (rc, Fluent, server pages, multilingual XML): under `large`.
+fn check_stamped(name: &str, bytes: &[u8]) {
+    let large = ExtractOptions::new().with_source_lang("en").with_target_lang("de").with_granularity(Granularity::Paragraph).with_limits(Limits::large());
+    let mopts = MergeOptions::new().with_limits(Limits::large()).with_stamp_target_always(true);
+    let mut doc = extract(name, bytes, &large).unwrap_or_else(|e| panic!("{name}: large extract failed: {e}"));
+    let n = units(&doc);
+    merge_with(&doc, &mopts).unwrap_or_else(|e| panic!("{name}: large stamped identity merge failed: {e}"));
+    let ids: Vec<String> = doc.units.iter().filter(|u| u.translate).flat_map(|u| u.segments.iter().map(|s| s.id.clone())).collect();
+    for id in &ids {
+        doc.set_target(id, vec![Inline::text("Übersetzter Text")]).unwrap();
+    }
+    let out = merge_with(&doc, &mopts).unwrap_or_else(|e| panic!("{name}: large stamped merge failed: {e}"));
+    let back = extract(name, &out, &large).unwrap_or_else(|e| panic!("{name}: re-extract of the stamped file failed: {e}"));
+    assert!(units(&back) >= n, "{name}: the stamped file has {} units, the original {n}", units(&back));
 }
 
 #[test]
@@ -269,4 +425,61 @@ fn per_segment_edits_are_linear() {
         doc.set_target_empty(id).unwrap();
     }
     assert!(t.elapsed().as_secs() < 10, "300,000 edits took {:?}", t.elapsed());
+}
+
+/// Formats whose own caps or merge paths ignored raised limits (BILI-112 review).
+#[test]
+#[ignore = "large generated files; run with --release -- --ignored"]
+fn large_resource_files() {
+    check("big.ini", &ini(), N);
+    check("big.strings", &apple_strings(), N);
+    check("big.json5", &json5(), N);
+    check("big.arb", &arb(), N);
+    check("big.resjson", &resjson(), N);
+    check("big.toml", &toml(), N);
+    check("big.plist", &bplist(), N);
+}
+
+#[test]
+#[ignore = "large generated files; run with --release -- --ignored"]
+fn large_code_and_template_files() {
+    check("big.rc", &rc(), N);
+    check_stamped("big.rc", &rc());
+    check("big.ftl", &ftl(), N);
+    check_stamped("big.ftl", &ftl());
+    check("big.phtml", &phtml(), N);
+    check_stamped("big.phtml", &phtml());
+}
+
+#[test]
+#[ignore = "large generated files; run with --release -- --ignored"]
+fn large_multilingual_xml() {
+    check("big.xml", &ml_xml(), N);
+    check_stamped("big.xml", &ml_xml());
+}
+
+#[test]
+#[ignore = "large generated files; run with --release -- --ignored"]
+fn large_packages() {
+    check("big.xlz", &xlz(), N);
+    check_stamped("big.xlz", &xlz());
+    check("big.sdlppx", &sdlppx(), N);
+}
+
+/// `FtlFilter::merge_localized_with` fills plurals under the caller's limits; `merge_localized` keeps the hosted
+/// ones and so refuses a file over them (here the hosted 1,000,000-line budget: 18 lines per message).
+#[test]
+#[ignore = "large generated files; run with --release -- --ignored"]
+fn ftl_merge_localized_takes_the_callers_limits() {
+    let opts = ExtractOptions::new().with_source_lang("en").with_target_lang("pl").with_limits(Limits::large());
+    let tall: String = (0..N).map(|i| format!("key-{i} = {}\n{}", sentence(i), "#\n".repeat(17))).collect();
+    let mut doc = extract("big.ftl", tall.as_bytes(), &opts).unwrap();
+    let ids: Vec<String> = doc.segments().map(|(_, s)| s.id.clone()).collect();
+    for id in &ids {
+        doc.set_target(id, vec![Inline::text("Tekst")]).unwrap();
+    }
+    let f = bilingua_ftl::FtlFilter;
+    assert!(f.merge_localized_with(&doc, Some("pl"), &Limits::large()).is_ok());
+    // the re-read's refusal is a write error (the merged text, not the upload, is over the budget)
+    assert!(f.merge_localized(&doc, Some("pl")).is_err());
 }

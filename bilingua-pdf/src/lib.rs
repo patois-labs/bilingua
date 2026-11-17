@@ -64,7 +64,11 @@ pub fn page_texts(bytes: &[u8], opts: &ExtractOptions) -> Result<Vec<PageInfo>, 
     let budget = uint_option(opts, "pdf.max_stream_bytes")?.unwrap_or(limits.max_zip_bytes);
     let d = doc::Doc::open(bytes, budget).map_err(|e| open_error(e, budget))?;
     let n = d.page_count();
-    let max_pages = uint_option(opts, "pdf.max_pages")?.map_or(MAX_PAGES, |v| v.min(usize::MAX as u64) as usize);
+    // LocOS's 1000 pages under the hosted limits; a caller that raised the unit limit (`Limits::large()`) gets as
+    // many more pages, in proportion (400,000 under large)
+    let hosted_units = Limits::new().max_units;
+    let default_pages = if limits.max_units > hosted_units { MAX_PAGES.saturating_mul(limits.max_units / hosted_units) } else { MAX_PAGES };
+    let max_pages = uint_option(opts, "pdf.max_pages")?.map_or(default_pages, |v| v.min(usize::MAX as u64) as usize);
     if n > max_pages {
         return Err(LimitError::new(LimitKind::Units, format!("This PDF has {n} pages; the limit is {max_pages}. Split it into smaller files and upload those.")).into());
     }

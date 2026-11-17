@@ -397,7 +397,7 @@ impl Filter for XliffFilter {
         if let Skeleton::Binary { data, .. } = &doc.skeleton {
             // a document extracted under the Localization OS profile
             bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
-            bilingua_model::guard::check_xml(data, &bilingua_model::Limits::default())?;
+            bilingua_model::guard::check_xml(data, &opts.limits())?;
             return locos::merge(doc, self.id, opts);
         }
         merge_document_with(doc, self.id, opts)

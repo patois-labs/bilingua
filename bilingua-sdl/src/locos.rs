@@ -151,7 +151,7 @@ fn find(hay: &[u8], needle: &[u8], from: usize) -> Option<usize> {
 }
 
 pub(crate) fn merge(document: &Document, original: &[u8], opts: &MergeOptions) -> Result<Vec<u8>, Error> {
-    let l = bilingua_model::Limits::default();
+    let l = opts.limits();
     let entries = read_zip(original, &ZipLimits::of(&l, true)).map_err(|e| crate::perr("sdlppx", e))?;
     let (p, member) = inspect(&entries)?;
     let texts = bilingua_xliff::locos::written_texts_escaped(document.units.iter());

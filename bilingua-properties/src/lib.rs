@@ -34,14 +34,17 @@ impl Default for Limits {
 }
 
 impl Limits {
-    /// The crate's limits under the call's `ExtractOptions::limits`: each the smaller of the two, so a host that
-    /// lowers its limits for untrusted uploads gets them inside the filter too.
+    /// The crate's limits under the call's `ExtractOptions::limits`: each the smaller of the two while the caller's
+    /// number is at or below the hosted one, so a host that lowers its limits for untrusted uploads gets them inside
+    /// the filter too; the caller's number once it raised it above the hosted one (`Limits::large()`), so a raised
+    /// profile is not held at the crate's own 256 MiB, 1,000,000 units or 1,000,000 characters.
     pub fn from_model(l: &bilingua_model::Limits) -> Limits {
         let d = Limits::default();
+        let h = bilingua_model::Limits::new();
         Limits {
-            max_input_bytes: d.max_input_bytes.min(usize::try_from(l.max_input_bytes).unwrap_or(usize::MAX)),
-            max_units: d.max_units.min(l.max_units),
-            max_value_chars: d.max_value_chars.min(l.max_unit_chars),
+            max_input_bytes: bilingua_model::guard::own_cap_bytes(d.max_input_bytes, h.max_input_bytes, l.max_input_bytes),
+            max_units: bilingua_model::guard::own_cap(d.max_units, h.max_units, l.max_units),
+            max_value_chars: bilingua_model::guard::own_cap(d.max_value_chars, h.max_unit_chars, l.max_unit_chars),
         }
     }
 }

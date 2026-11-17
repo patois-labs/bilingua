@@ -31,6 +31,20 @@ impl Default for Limits {
     }
 }
 
+impl Limits {
+    /// The crate's limits from the call's `ExtractOptions::limits`. Units and value length are the caller's (the
+    /// hosted ones are the crate's 50,000 and 100,000). The byte cap stays the crate's 64 MiB while the caller's
+    /// input limit is at or below the hosted 100 MB, and is the caller's once raised (`Limits::large()`).
+    pub fn from_model(l: &bilingua_model::Limits) -> Limits {
+        let d = Limits::default();
+        Limits {
+            max_units: l.max_units,
+            max_value_chars: l.max_unit_chars,
+            max_bytes: bilingua_model::guard::own_cap_bytes(d.max_bytes, bilingua_model::Limits::new().max_input_bytes, l.max_input_bytes),
+        }
+    }
+}
+
 // Reserved hidden code ids (start with `~`, never a numeric tag id).
 const OV: &str = "ov"; // original core text of the value (unescaped)
 const RAW: &str = "raw"; // original raw value as written in the file
@@ -243,7 +257,7 @@ impl Filter for Strings {
 
     fn extract(&self, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
         bilingua_model::check_own_options(self, &opts.format_options)?;
-        self.extract_with(bytes, opts, &Limits::default())
+        self.extract_with(bytes, opts, &Limits::from_model(&opts.limits()))
     }
 
     fn merge_with(&self, doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {

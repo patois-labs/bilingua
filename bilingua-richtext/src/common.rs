@@ -338,9 +338,9 @@ pub(crate) fn merge_doc(id: &'static str, doc: &Document, opts: &MergeOptions, p
         return enc::encode_text_with(text, encoding, opts);
     }
     // the same bounds as extract, for a Document whose stored text did not come from this filter: the budget of
-    // the default limits (wider when the document itself has more units), and a walk that stops one plan past
+    // the caller's limits (wider when the document itself has more units), and a walk that stops one plan past
     // the document's unit count
-    let limits = Limits::default();
+    let limits = opts.limits();
     let limits = limits.with_max_units(limits.max_units.max(doc.units.len()));
     check_json_budget(text, id, &limits)?;
     let parsed = json::parse(text).map_err(|e| reparse(id, e))?;

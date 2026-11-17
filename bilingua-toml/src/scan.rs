@@ -131,6 +131,8 @@ struct P<'a> {
     has_content: bool,
     key_bytes: u64,
     max_key_bytes: u64,
+    max_strings: usize,
+    max_values: usize,
 }
 
 /// The refusal for key paths over the cap (`scan_err` reads it to choose `LimitKind::Context`).
@@ -140,6 +142,11 @@ pub const KEY_BYTES_MSG: &str = "the key paths of the TOML file take more room t
 /// are capped at `max_key_bytes` (one long table name over many values would otherwise grow with the square of
 /// the file).
 pub fn scan(text: &str, max_key_bytes: u64) -> R<Scan<'_>> {
+    scan_with(text, max_key_bytes, MAX_STRINGS, MAX_VALUES)
+}
+
+/// [`scan`] with the string and value caps given (raised with the caller's limits, BILI-112).
+pub fn scan_with(text: &str, max_key_bytes: u64, max_strings: usize, max_values: usize) -> R<Scan<'_>> {
     let mut p = P {
         t: text,
         b: text.as_bytes(),
@@ -151,6 +158,8 @@ pub fn scan(text: &str, max_key_bytes: u64) -> R<Scan<'_>> {
         has_content: false,
         key_bytes: 0,
         max_key_bytes,
+        max_strings,
+        max_values,
     };
     p.run()?;
     Ok(Scan { strings: p.strings, tables: p.tables, has_content: p.has_content })
@@ -521,13 +530,13 @@ impl<'a> P<'a> {
             return Err(ScanError::Limit("the TOML file is nested too deeply".into()));
         }
         self.nvals += 1;
-        if self.nvals > MAX_VALUES {
+        if self.nvals > self.max_values {
             return Err(ScanError::Limit("the TOML file has too many values".into()));
         }
         match self.peek() {
             Some(b'"' | b'\'') => {
                 let tok = self.string()?;
-                if self.strings.len() >= MAX_STRINGS {
+                if self.strings.len() >= self.max_strings {
                     return Err(ScanError::Limit("the TOML file has too many strings".into()));
                 }
                 let key = self.key_text();
