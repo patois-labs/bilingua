@@ -557,7 +557,7 @@ pub fn extract_doc(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Erro
 }
 
 fn extract_doc_inner(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
-    let entries = zipio::read_zip(bytes, &ZipLimits::from(&opts.limits()))?;
+    let mut entries = zipio::read_zip(bytes, &ZipLimits::from(&opts.limits()))?;
     bilingua_zip::check_xml_parts(&entries, &opts.limits())?;
     let ct = find_entry(&entries, "[Content_Types].xml")
         .ok_or_else(|| perr("not a PowerPoint file: no [Content_Types].xml"))?
@@ -654,7 +654,9 @@ fn extract_doc_inner(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Er
         limits: opts.limits(),
         refused: None,
     };
-    let mut trees: HashMap<usize, Vec<Node>> = HashMap::new();
+    // Every part we change, written back as its template (markers for the units) as soon as its tree is done
+    // with, so no more than one tree is alive at a time.
+    let mut trees: HashMap<usize, String> = HashMap::new();
     for pi in parts.iter_mut() {
         let e = &entries[pi.idx];
         let Ok(text) = std::str::from_utf8(&e.data) else {
@@ -696,7 +698,7 @@ fn extract_doc_inner(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Er
         if let Some(e) = ex.refused.take() {
             return Err(e);
         }
-        trees.insert(pi.idx, nodes);
+        trees.insert(pi.idx, raw_of(&nodes));
     }
 
     ex.units.sort_by_key(|(k, _)| *k);
@@ -705,21 +707,17 @@ fn extract_doc_inner(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Er
 
     let mut zentries = Vec::with_capacity(entries.len() + 1);
     let mut packed = std::collections::BTreeMap::new();
-    for (i, e) in entries.iter().enumerate() {
-        let data = match trees.get(&i) {
-            Some(nodes) => {
-                let t = raw_of(nodes);
-                if has_marker_chars(&t) {
-                    ZipData::Parts(split_template(&t, &idx)?)
-                } else {
-                    ZipData::Raw(e.keep(&mut packed))
-                }
-            }
-            None => ZipData::Raw(e.keep(&mut packed)),
+    let metas: Vec<zipio::EntryMeta> = entries.iter().map(|e| e.meta.clone()).collect();
+    // each template and each entry's bytes are freed as soon as the skeleton has its own copy
+    for (i, e) in entries.iter_mut().enumerate() {
+        let data = match trees.remove(&i) {
+            Some(t) if has_marker_chars(&t) => ZipData::Parts(split_template(&t, &idx)?),
+            _ => ZipData::Raw(e.take_kept(&mut packed)),
         };
         zentries.push(ZipEntry::new(e.name.clone(), data));
     }
-    let meta = Meta { entries: entries.iter().map(|e| e.meta.clone()).collect(), packed };
+    drop(entries);
+    let meta = Meta { entries: metas, packed };
     let meta_json = serde_json::to_vec(&meta).map_err(|e| perr(e.to_string()))?;
     zentries.push(ZipEntry::raw(META_NAME, meta_json));
 

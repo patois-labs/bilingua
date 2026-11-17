@@ -116,6 +116,19 @@ impl RawEntry {
             None => self.data.clone(),
         }
     }
+
+    /// [`keep`](Self::keep) without the copy: moves the bytes out and leaves the entry's `data` and `packed` empty
+    /// (its name and metadata stay). For the last pass over the entries, when nothing reads them afterwards.
+    pub fn take_kept(&mut self, packed: &mut BTreeMap<String, Packed>) -> Vec<u8> {
+        match self.packed.take() {
+            Some((p, bytes)) => {
+                packed.insert(self.name.clone(), p);
+                self.data = Vec::new();
+                bytes
+            }
+            None => std::mem::take(&mut self.data),
+        }
+    }
 }
 
 /// What `write_zip_parts` writes for one entry.

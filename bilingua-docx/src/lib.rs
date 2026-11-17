@@ -255,7 +255,7 @@ fn extract_doc(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
 }
 
 fn extract_doc_inner(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
-    let entries = zipio::read_zip(bytes, &ZipLimits::from(&opts.limits()))?;
+    let mut entries = zipio::read_zip(bytes, &ZipLimits::from(&opts.limits()))?;
     let l = opts.limits();
     let mut paragraphs = guard_named_parts(&entries, &l)?;
     let ct = entries
@@ -365,9 +365,18 @@ fn extract_doc_inner(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Er
             format!("{stem}-")
         };
         ex.begin_part(kind, &e.name, prefix, ns);
-        templates.insert(i, ex.run_part(&nodes));
+        let template = ex.run_part(&nodes);
+        // the tree is done with: free it before the next part is parsed
+        drop(nodes);
         // a comment copied into more units than the context budget allows: refused as soon as the part is walked
         ex.check_refused()?;
+        if template.contains(M_UNIT) {
+            // the skeleton keeps this part as its template: its unpacked and deflated bytes are not read again
+            let e = &mut entries[i];
+            e.data = Vec::new();
+            e.packed = None;
+        }
+        templates.insert(i, template);
     }
     let mut units = ex.finish();
     // A Storyline "Export to Word" table: only the Translation cells are translated (LocOS docx_bilingual)
@@ -388,17 +397,20 @@ fn extract_doc_inner(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Er
 
     let mut zentries = Vec::with_capacity(entries.len() + 1);
     let mut packed = std::collections::BTreeMap::new();
-    for (i, e) in entries.iter().enumerate() {
-        let data = match templates.get(&i) {
-            Some(t) if t.contains(M_UNIT) => ZipData::Parts(split_template(t, &idx)?),
-            _ => ZipData::Raw(e.keep(&mut packed)),
+    let metas: Vec<EntryMeta> = entries.iter().map(|e| e.meta.clone()).collect();
+    // each template and each entry's bytes are freed as soon as the skeleton has its own copy
+    for (i, e) in entries.iter_mut().enumerate() {
+        let data = match templates.remove(&i) {
+            Some(t) if t.contains(M_UNIT) => ZipData::Parts(split_template(&t, &idx)?),
+            _ => ZipData::Raw(e.take_kept(&mut packed)),
         };
         zentries.push(ZipEntry::new(e.name.clone(), data));
     }
+    drop(entries);
     let meta = Meta {
         wp,
         main: main.clone(),
-        entries: entries.iter().map(|e| e.meta.clone()).collect(),
+        entries: metas,
         packed,
     };
     let meta_json = serde_json::to_vec(&meta).map_err(|e| perr(e.to_string()))?;

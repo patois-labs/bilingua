@@ -1,6 +1,9 @@
 //! A small lossless XML tree. Every node keeps its original bytes, so writing the tree back gives the input
 //! exactly. Only what OOXML needs: no DOCTYPE, no entity declarations.
 
+use std::collections::HashMap;
+use std::sync::Arc;
+
 pub const MAX_DEPTH: usize = 200;
 
 #[derive(Debug, Clone)]
@@ -14,14 +17,133 @@ pub enum Node {
 
 #[derive(Debug, Clone, Default)]
 pub struct El {
-    pub name: String,
+    pub name: Tag,
     /// The start tag as written, e.g. `<w:p w:rsidR="00A1">`.
-    pub start: String,
+    pub start: Tag,
     /// The end tag as written; empty for a self-closing element.
-    pub end: String,
+    pub end: Tag,
     pub children: Vec<Node>,
     /// Paragraph number within the part (1-based), set by [`number`].
     pub ord: usize,
+}
+
+/// A tag string as written (an element name, a start tag or an end tag), shared by every element of one parse that
+/// writes it the same way: a large part repeats `<w:r>`, `</w:t>` and `<w:t xml:space="preserve">` millions of
+/// times, and each copy costs one reference count instead of one allocation. Reads like a `&str`.
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct Tag(Arc<str>);
+
+impl Tag {
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl Default for Tag {
+    fn default() -> Tag {
+        Tag(Arc::from(""))
+    }
+}
+
+impl std::ops::Deref for Tag {
+    type Target = str;
+    fn deref(&self) -> &str {
+        &self.0
+    }
+}
+
+impl AsRef<str> for Tag {
+    fn as_ref(&self) -> &str {
+        &self.0
+    }
+}
+
+impl std::borrow::Borrow<str> for Tag {
+    fn borrow(&self) -> &str {
+        &self.0
+    }
+}
+
+impl std::fmt::Debug for Tag {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        std::fmt::Debug::fmt(&*self.0, f)
+    }
+}
+
+impl std::fmt::Display for Tag {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.0)
+    }
+}
+
+impl From<String> for Tag {
+    fn from(s: String) -> Tag {
+        Tag(Arc::from(s))
+    }
+}
+
+impl From<&str> for Tag {
+    fn from(s: &str) -> Tag {
+        Tag(Arc::from(s))
+    }
+}
+
+impl From<&String> for Tag {
+    fn from(s: &String) -> Tag {
+        Tag(Arc::from(s.as_str()))
+    }
+}
+
+impl From<Tag> for String {
+    fn from(t: Tag) -> String {
+        t.0.to_string()
+    }
+}
+
+impl PartialEq<str> for Tag {
+    fn eq(&self, o: &str) -> bool {
+        &*self.0 == o
+    }
+}
+
+impl PartialEq<&str> for Tag {
+    fn eq(&self, o: &&str) -> bool {
+        &*self.0 == *o
+    }
+}
+
+impl PartialEq<String> for Tag {
+    fn eq(&self, o: &String) -> bool {
+        *self.0 == **o
+    }
+}
+
+impl PartialEq<Tag> for str {
+    fn eq(&self, o: &Tag) -> bool {
+        self == &*o.0
+    }
+}
+
+impl PartialEq<Tag> for &str {
+    fn eq(&self, o: &Tag) -> bool {
+        *self == &*o.0
+    }
+}
+
+impl PartialEq<Tag> for String {
+    fn eq(&self, o: &Tag) -> bool {
+        **self == *o.0
+    }
+}
+
+/// One [`Tag`] per distinct string within a parse.
+#[derive(Default)]
+struct Interner<'a>(HashMap<&'a str, Tag>);
+
+impl<'a> Interner<'a> {
+    fn get(&mut self, s: &'a str) -> Tag {
+        self.0.entry(s).or_insert_with(|| Tag::from(s)).clone()
+    }
 }
 
 impl Node {
@@ -134,78 +256,87 @@ pub fn parse(s: &str) -> Result<Vec<Node>, String> {
     let b = s.as_bytes();
     let n = b.len();
     let mut i = 0;
-    let mut stack: Vec<El> = Vec::new();
+    let mut tags = Interner::default();
+    // The open elements, each with where its children start in `kids`: the children of every open element wait on
+    // one shared stack and move into an exact-size Vec when their element closes (no growth slack per element).
+    let mut stack: Vec<(El, usize)> = Vec::new();
+    let mut kids: Vec<Node> = Vec::new();
     let mut top: Vec<Node> = Vec::new();
-    fn push(stack: &mut [El], top: &mut Vec<Node>, node: Node) {
-        match stack.last_mut() {
-            Some(p) => p.children.push(node),
-            None => top.push(node),
+    fn push(stack: &[(El, usize)], kids: &mut Vec<Node>, top: &mut Vec<Node>, node: Node) {
+        if stack.is_empty() {
+            top.push(node);
+        } else {
+            kids.push(node);
         }
     }
     while i < n {
         if b[i] != b'<' {
             let j = s[i..].find('<').map(|k| i + k).unwrap_or(n);
-            push(&mut stack, &mut top, Node::Text(s[i..j].to_string()));
+            push(&stack, &mut kids, &mut top, Node::Text(s[i..j].to_string()));
             i = j;
             continue;
         }
         let rest = &s[i..];
         if rest.starts_with("<!--") {
             let e = rest.find("-->").ok_or("unterminated comment")? + 3;
-            push(&mut stack, &mut top, Node::Raw(rest[..e].to_string()));
+            push(&stack, &mut kids, &mut top, Node::Raw(rest[..e].to_string()));
             i += e;
         } else if rest.starts_with("<![CDATA[") {
             let e = rest.find("]]>").ok_or("unterminated CDATA section")? + 3;
-            push(&mut stack, &mut top, Node::Text(rest[..e].to_string()));
+            push(&stack, &mut kids, &mut top, Node::Text(rest[..e].to_string()));
             i += e;
         } else if rest.starts_with("<?") {
             let e = rest
                 .find("?>")
                 .ok_or("unterminated processing instruction")?
                 + 2;
-            push(&mut stack, &mut top, Node::Raw(rest[..e].to_string()));
+            push(&stack, &mut kids, &mut top, Node::Raw(rest[..e].to_string()));
             i += e;
         } else if rest.starts_with("<!") {
             return Err("DOCTYPE and entity declarations are not allowed".into());
         } else if rest.starts_with("</") {
             let e = rest.find('>').ok_or("unterminated end tag")?;
             let name = rest[2..e].trim();
-            let mut el = stack
+            let (mut el, mark) = stack
                 .pop()
                 .ok_or_else(|| format!("unexpected end tag </{name}>"))?;
             if el.name != name {
                 return Err(format!("end tag </{name}> does not match <{}>", el.name));
             }
-            el.end = rest[..=e].to_string();
-            push(&mut stack, &mut top, Node::El(el));
+            el.end = tags.get(&rest[..=e]);
+            el.children = kids.drain(mark..).collect();
+            push(&stack, &mut kids, &mut top, Node::El(el));
             i += e + 1;
         } else {
             let e = tag_end(rest)?;
             let raw = &rest[..=e];
-            let name: String = raw[1..]
-                .chars()
-                .take_while(|c| !c.is_whitespace() && *c != '/' && *c != '>')
-                .collect();
+            let name_end = raw[1..]
+                .char_indices()
+                .find(|&(_, c)| c.is_whitespace() || c == '/' || c == '>')
+                .map_or(raw.len(), |(k, _)| k + 1);
+            let name = &raw[1..name_end];
             if name.is_empty() {
                 return Err("an element has no name".into());
             }
             let el = El {
-                name,
-                start: raw.to_string(),
-                ..Default::default()
+                name: tags.get(name),
+                start: tags.get(raw),
+                end: tags.get(""),
+                children: Vec::new(),
+                ord: 0,
             };
             if raw.ends_with("/>") {
-                push(&mut stack, &mut top, Node::El(el));
+                push(&stack, &mut kids, &mut top, Node::El(el));
             } else {
                 if stack.len() >= MAX_DEPTH {
                     return Err(format!("elements nested deeper than {MAX_DEPTH}"));
                 }
-                stack.push(el);
+                stack.push((el, kids.len()));
             }
             i += e + 1;
         }
     }
-    if let Some(el) = stack.last() {
+    if let Some((el, _)) = stack.last() {
         return Err(format!("element <{}> is not closed", el.name));
     }
     Ok(top)

@@ -289,7 +289,7 @@ impl Extractor {
             fl2.in_textbox = true;
             fl2.in_cell = false;
         }
-        let mut s = e.start.clone();
+        let mut s = e.start.to_string();
         for c in &e.children {
             s.push_str(&self.emit(c, fl2));
         }
@@ -352,7 +352,7 @@ impl Extractor {
         if !seen_run || runs.iter().all(|r| r.2.trim().is_empty()) {
             return None;
         }
-        let mut shell = e.start.clone();
+        let mut shell = e.start.to_string();
         for n in &e.children[..start] {
             n.write_raw(&mut shell);
         }
@@ -486,7 +486,7 @@ impl Extractor {
             return s.clone();
         }
         let choice_out = self.emit_default(choice, fl);
-        let mut out = e.start.clone();
+        let mut out = e.start.to_string();
         for n in &e.children {
             match n {
                 Node::El(c) if std::ptr::eq(c, choice) => out.push_str(&choice_out),
@@ -597,7 +597,7 @@ impl Extractor {
                     .children
                     .iter()
                     .position(|n| matches!(n, Node::El(x) if ns.is_w(&x.name, "pPr")));
-                let mut shell = e.start.clone();
+                let mut shell = e.start.to_string();
                 let from = match ppr_pos {
                     Some(k) => {
                         for n in &e.children[..=k] {
@@ -651,7 +651,7 @@ impl Extractor {
                 }
             }
         }
-        let mut s = e.start.clone();
+        let mut s = e.start.to_string();
         for n in &e.children {
             match n {
                 Node::El(c) => s.push_str(&self.emit_fallback(c, map)),
@@ -687,7 +687,7 @@ impl Extractor {
 
     fn paragraph_inner(&mut self, p: &El, fl: Flags) -> String {
         if p.end.is_empty() {
-            return p.start.clone();
+            return p.start.to_string();
         }
         self.cur_ord = p.ord;
         self.nesting += 1;
@@ -696,7 +696,7 @@ impl Extractor {
             .children
             .iter()
             .position(|n| matches!(n, Node::El(e) if ns.is_w(&e.name, "pPr")));
-        let mut shell = p.start.clone();
+        let mut shell = p.start.to_string();
         let from = match ppr_pos {
             Some(k) => {
                 for n in &p.children[..=k] {
@@ -872,8 +872,8 @@ impl Extractor {
             self.run(e, out, st, fl);
         } else if let Some((display, label)) = is_wrapper_local(local) {
             out.push(Atom::Open {
-                open: e.start.clone(),
-                close: e.end.clone(),
+                open: e.start.to_string(),
+                close: e.end.to_string(),
                 display: display.into(),
                 close_display: display.replace('<', "</"),
                 label,
@@ -884,7 +884,7 @@ impl Extractor {
             let content = e.elements().find(|c| ns.is_w(&c.name, "sdtContent"));
             match content {
                 Some(c) if !c.end.is_empty() => {
-                    let mut open = e.start.clone();
+                    let mut open = e.start.to_string();
                     for n in &e.children {
                         match n {
                             Node::El(x) if std::ptr::eq(x, c) => break,
@@ -1078,7 +1078,7 @@ impl Extractor {
                         }
                     }
                     let b = base.expect("checked");
-                    let mut close = b.end.clone();
+                    let mut close = b.end.to_string();
                     let mut after = false;
                     for n in &c.children {
                         match n {

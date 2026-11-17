@@ -54,6 +54,15 @@ fn find_entry<'a>(entries: &'a [RawEntry], name: &str) -> Option<(usize, &'a Raw
     entries.iter().enumerate().find(|(_, e)| e.name == name)
 }
 
+/// The tree written back as it reads.
+fn write_nodes(nodes: &[Node]) -> String {
+    let mut t = String::new();
+    for n in nodes {
+        n.write_raw(&mut t);
+    }
+    t
+}
+
 fn parse_part(e: &RawEntry) -> Option<Vec<Node>> {
     let t = std::str::from_utf8(&e.data).ok()?;
     if has_marker_chars(t) {
@@ -776,7 +785,7 @@ pub fn extract_doc(bytes: &[u8], opts: &ExtractOptions, xo: &XlsxOptions) -> Res
 }
 
 fn extract_doc_inner(bytes: &[u8], opts: &ExtractOptions, xo: &XlsxOptions) -> Result<Document, Error> {
-    let entries = zipio::read_zip(bytes, &ZipLimits::from(&opts.limits()))?;
+    let mut entries = zipio::read_zip(bytes, &ZipLimits::from(&opts.limits()))?;
     bilingua_zip::check_xml_parts(&entries, &opts.limits())?;
     let ct = find_entry(&entries, "[Content_Types].xml")
         .ok_or_else(|| perr("not an Excel workbook: no [Content_Types].xml"))?
@@ -869,8 +878,9 @@ fn extract_doc_inner(bytes: &[u8], opts: &ExtractOptions, xo: &XlsxOptions) -> R
         }
     }
 
-    // Trees of every part we change.
-    let mut trees: HashMap<usize, Vec<Node>> = HashMap::new();
+    // Every part we change, written back as its template (markers for the units) as soon as its tree is done
+    // with, so no more than one tree is alive at a time.
+    let mut trees: HashMap<usize, String> = HashMap::new();
 
     // Comments and tables hang off sheets.
     let persons: HashMap<String, String> = entries
@@ -910,7 +920,7 @@ fn extract_doc_inner(bytes: &[u8], opts: &ExtractOptions, xo: &XlsxOptions) -> R
                 if let Some(e) = ex.refused.take() {
                     return Err(e);
                 }
-                trees.insert(i, nodes);
+                trees.insert(i, write_nodes(&nodes));
             }
         }
     }
@@ -928,7 +938,7 @@ fn extract_doc_inner(bytes: &[u8], opts: &ExtractOptions, xo: &XlsxOptions) -> R
         if let Some(e) = ex.refused.take() {
             return Err(e);
         }
-        trees.insert(i, nodes);
+        trees.insert(i, write_nodes(&nodes));
     }
 
     // Shared strings.
@@ -987,7 +997,7 @@ fn extract_doc_inner(bytes: &[u8], opts: &ExtractOptions, xo: &XlsxOptions) -> R
                 final_ids.insert(id);
             }
         }
-        trees.insert(i, nodes);
+        trees.insert(i, write_nodes(&nodes));
     }
     for u in &ex.u_inline {
         final_ids.insert(u.id.clone());
@@ -1006,7 +1016,7 @@ fn extract_doc_inner(bytes: &[u8], opts: &ExtractOptions, xo: &XlsxOptions) -> R
                             if ns.is(&s.name, "sheet") {
                                 pos += 1;
                                 if let Some((_, id)) = ex.sheet_units.get(pos - 1) {
-                                    s.start = map_attr(&s.start, "name", |raw| format!("{M_NAME}{id}{M_END}{raw}{M_ORIG}"));
+                                    s.start = map_attr(&s.start, "name", |raw| format!("{M_NAME}{id}{M_END}{raw}{M_ORIG}")).into();
                                 }
                             }
                         }
@@ -1018,7 +1028,7 @@ fn extract_doc_inner(bytes: &[u8], opts: &ExtractOptions, xo: &XlsxOptions) -> R
         }
         sheets_only(&mut wb_nodes, &wb_ns, &ex);
         ex.rewrite_formulas(&mut wb_nodes);
-        trees.insert(wb_i, wb_nodes);
+        trees.insert(wb_i, write_nodes(&wb_nodes));
     }
 
     // Tables: column names follow the header cell.
@@ -1053,13 +1063,13 @@ fn extract_doc_inner(bytes: &[u8], opts: &ExtractOptions, xo: &XlsxOptions) -> R
                     if !final_ids.contains(&id) {
                         continue;
                     }
-                    tc.start = map_attr(&tc.start, "name", |raw| format!("{M_COL}{id}{M_END}{raw}{M_ORIG}"));
+                    tc.start = map_attr(&tc.start, "name", |raw| format!("{M_COL}{id}{M_END}{raw}{M_ORIG}")).into();
                     changed = true;
                 }
             }
         }
         if changed {
-            trees.insert(i, nodes);
+            trees.insert(i, write_nodes(&nodes));
         }
     }
 
@@ -1074,24 +1084,17 @@ fn extract_doc_inner(bytes: &[u8], opts: &ExtractOptions, xo: &XlsxOptions) -> R
 
     let mut zentries = Vec::with_capacity(entries.len() + 1);
     let mut packed = std::collections::BTreeMap::new();
-    for (i, e) in entries.iter().enumerate() {
-        let data = match trees.get(&i) {
-            Some(nodes) => {
-                let mut t = String::new();
-                for n in nodes {
-                    n.write_raw(&mut t);
-                }
-                if has_marker_chars(&t) {
-                    ZipData::Parts(split_template(&t, &idx)?)
-                } else {
-                    ZipData::Raw(e.keep(&mut packed))
-                }
-            }
-            None => ZipData::Raw(e.keep(&mut packed)),
+    let metas: Vec<zipio::EntryMeta> = entries.iter().map(|e| e.meta.clone()).collect();
+    // each template and each entry's bytes are freed as soon as the skeleton has its own copy
+    for (i, e) in entries.iter_mut().enumerate() {
+        let data = match trees.remove(&i) {
+            Some(t) if has_marker_chars(&t) => ZipData::Parts(split_template(&t, &idx)?),
+            _ => ZipData::Raw(e.take_kept(&mut packed)),
         };
         zentries.push(ZipEntry::new(e.name.clone(), data));
     }
-    let meta = Meta { entries: entries.iter().map(|e| e.meta.clone()).collect(), packed };
+    drop(entries);
+    let meta = Meta { entries: metas, packed };
     let meta_json = serde_json::to_vec(&meta).map_err(|e| perr(e.to_string()))?;
     zentries.push(ZipEntry::raw(META_NAME, meta_json));
 
