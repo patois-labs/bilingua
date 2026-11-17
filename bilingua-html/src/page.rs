@@ -401,11 +401,15 @@ pub(crate) fn extract(bytes: &[u8], opts: &ExtractOptions, cfg: Cfg) -> Result<D
     guard::finish(doc, dec.warnings, &limits)
 }
 
-/// The page of a document's skeleton.
-fn skeleton_text(doc: &Document) -> Result<(String, &str), Error> {
+/// The page of a document's skeleton: borrowed when it is one part (as extract writes it), so a large page is not
+/// copied once more for the merge.
+fn skeleton_text(doc: &Document) -> Result<(Cow<'_, str>, &str), Error> {
     let Skeleton::Text { parts, encoding, .. } = &doc.skeleton else {
         return Err(Error::Write("html needs a text skeleton".into()));
     };
+    if let [SkelPart::Raw(s)] = parts.as_slice() {
+        return Ok((Cow::Borrowed(s.as_str()), encoding));
+    }
     let mut text = String::new();
     for p in parts {
         match p {
@@ -413,7 +417,7 @@ fn skeleton_text(doc: &Document) -> Result<(String, &str), Error> {
             _ => return Err(Error::Write("this HTML skeleton comes from an older Bilingua; open the file again".into())),
         }
     }
-    Ok((text, encoding))
+    Ok((Cow::Owned(text), encoding))
 }
 
 /// A target the page writes: the unit's output when it is translated and differs from the source.
@@ -632,6 +636,9 @@ pub(crate) fn merge(doc: &Document, opts: &MergeOptions, cfg: Cfg) -> Result<Vec
         }
     }
     let out: String = toks.iter().map(|t| t.s.as_ref()).collect();
+    // the tokens and targets are written into `out`: freed before the checks below parse both pages
+    drop(toks);
+    drop(targets);
     // #676: a browser-equivalent re-parse (and an XML one for XHTML) must find only the source's elements
     if before != out {
         let sources = browser::browser_views(&before);
@@ -652,7 +659,7 @@ pub(crate) fn skeleton_page(doc: &Document) -> Option<String> {
     if doc.skeleton.parser().is_some_and(|p| p.name == SERVER_PAGES) {
         return None;
     }
-    Some(text)
+    Some(text.into_owned())
 }
 
 pub(crate) fn translated_value(u: &Unit) -> Option<String> {
