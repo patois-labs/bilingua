@@ -156,7 +156,7 @@ pub fn run(args: &[String], out: &mut dyn Write) -> Result<(), String> {
         "formats" => {
             for f in filters() {
                 let exts: Vec<String> = f.extensions().iter().map(|e| format!(".{e}")).collect();
-                let _ = writeln!(out, "{}	{}", f.id(), exts.join(" "));
+                let _ = writeln!(out, "{}\t{}", f.id(), exts.join(" "));
             }
             Ok(())
         }
