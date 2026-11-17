@@ -162,7 +162,7 @@ impl Default for Limits {
     }
 }
 
-/// The largest count or size the `unbounded` profile allows: far beyond any real file, and small enough that the
+/// The largest count or size the `unbounded` profile allows (and [`Limits::clamped`] keeps any limit to): far beyond any real file, and small enough that the
 /// budgets formats derive from a limit (`40 * max_units`, `20 * max_units` lines) cannot overflow.
 /// On a 32-bit target (WASM) it is about 16 million, so `200 * max_units` still fits.
 const UNBOUNDED_COUNT: usize = if usize::BITS >= 64 { usize::MAX >> 12 } else { usize::MAX >> 8 };
@@ -178,8 +178,9 @@ impl Limits {
     /// The limits for a person's own files on their own machine (the CLI, the desktop app, a batch job): large
     /// enough for any ordinary document (a 4 GB input, 20 million units or paragraphs, every row Excel allows,
     /// 200 million cells), so big manuals, spreadsheets and pages are processed at the cost of memory. The
-    /// structural guards stay: XML nesting depth, zip entry count, and a zip ratio check that still stops a
-    /// zip bomb (1000:1 instead of 200:1).
+    /// structural guards stay: XML nesting depth, zip entry count, a zip that unpacks to at most 4 GB (2 GB per
+    /// part, more than a full million-row sheet needs) and a ratio check that still stops a zip bomb (1000:1
+    /// instead of 200:1). It is the CLI's default, so it must stay safe for a downloaded attachment.
     pub fn large() -> Limits {
         Limits {
             max_input_bytes: 4 << 30,
@@ -189,8 +190,8 @@ impl Limits {
             max_xml_depth: 256,
             max_xml_elements: 400_000_000,
             max_zip_entries: 200_000,
-            max_zip_bytes: 16 << 30,
-            max_zip_entry_bytes: 8 << 30,
+            max_zip_bytes: 4 << 30,
+            max_zip_entry_bytes: 2 << 30,
             max_zip_ratio: 1000,
             zip_ratio_floor_bytes: 1024 * 1024,
             max_paragraphs: 20_000_000,
@@ -228,14 +229,42 @@ impl Limits {
         }
     }
 
-    /// A profile by name: `hosted` (the default, [`Limits::new`]), `large` ([`Limits::large`]) or `unbounded`
-    /// ([`Limits::unbounded`]; `none` is accepted too). `None` for any other name.
+    /// A profile by name, any case: `hosted` (the default, [`Limits::new`]; also `default`, `server`), `large`
+    /// ([`Limits::large`]; also `desktop`, `local`) or `unbounded` ([`Limits::unbounded`]; also `none`). `None`
+    /// for any other name.
     pub fn profile(name: &str) -> Option<Limits> {
         match name.trim().to_ascii_lowercase().as_str() {
             "hosted" | "default" | "server" => Some(Limits::new()),
             "large" | "desktop" | "local" => Some(Limits::large()),
             "unbounded" | "none" => Some(Limits::unbounded()),
             _ => None,
+        }
+    }
+
+    /// The same limits with every count and size kept to what [`Limits::unbounded`] allows, so no budget a
+    /// format derives from a limit (`200 * max_units`, `10 * max_units as i64`) can overflow. Extract and merge
+    /// apply it to the caller's limits; it changes nothing under `hosted` or `large`.
+    pub fn clamped(self) -> Limits {
+        let u = Limits::unbounded();
+        Limits {
+            max_input_bytes: self.max_input_bytes.min(u.max_input_bytes),
+            max_units: self.max_units.min(u.max_units),
+            max_unit_chars: self.max_unit_chars.min(u.max_unit_chars),
+            max_lines: self.max_lines.min(u.max_lines),
+            max_xml_depth: self.max_xml_depth,
+            max_xml_elements: self.max_xml_elements.min(u.max_xml_elements),
+            max_zip_entries: self.max_zip_entries.min(u.max_zip_entries),
+            max_zip_bytes: self.max_zip_bytes.min(u.max_zip_bytes),
+            max_zip_entry_bytes: self.max_zip_entry_bytes.min(u.max_zip_entry_bytes),
+            max_zip_ratio: self.max_zip_ratio.min(u.max_zip_ratio),
+            zip_ratio_floor_bytes: self.zip_ratio_floor_bytes,
+            max_paragraphs: self.max_paragraphs.min(u.max_paragraphs),
+            xlsx_max_cells: self.xlsx_max_cells.min(u.xlsx_max_cells),
+            xlsx_max_rows: self.xlsx_max_rows.min(u.xlsx_max_rows),
+            xlsx_max_cell_chars: self.xlsx_max_cell_chars.min(u.xlsx_max_cell_chars),
+            xlsx_max_total_text_chars: self.xlsx_max_total_text_chars.min(u.xlsx_max_total_text_chars),
+            max_context_bytes: self.max_context_bytes.min(u.max_context_bytes),
+            max_output_bytes: self.max_output_bytes.min(u.max_output_bytes),
         }
     }
     /// Sets `max_input_bytes`.

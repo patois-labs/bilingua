@@ -187,13 +187,16 @@ fn formats(py: Python<'_>) -> PyResult<Py<PyAny>> {
     to_py(py, &Value::Array(list))
 }
 
-/// The format id for a file name and its bytes, or None when no parser accepts it.
+/// The format id for a file name and its bytes, or None when no parser accepts it. `limits` as in `extract`
+/// (a profile name or a mapping; the hosted defaults when unset) bounds the input size.
 #[pyfunction]
-fn detect(py: Python<'_>, name: &str, data: &[u8]) -> PyResult<Option<String>> {
+#[pyo3(signature = (name, data, *, limits=None))]
+fn detect(py: Python<'_>, name: &str, data: &[u8], limits: Option<&Bound<'_, PyAny>>) -> PyResult<Option<String>> {
+    let limits = parse_limits(py, limits)?.unwrap_or_default().clamped();
     let (name, data) = (name.to_string(), data.to_vec());
     guarded(py, move || {
         // the sniffers of a file with no extension read the whole input: the size gate comes first, as in extract
-        engine::guard::check_input(&data, &engine::Limits::default())?;
+        engine::guard::check_input(&data, &limits)?;
         Ok(engine::detect(&name, &data).map(|f| f.id().to_string()))
     })
 }

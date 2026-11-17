@@ -33,7 +33,8 @@ Limits (every command):
       Excel allows; big files cost memory. hosted is the server profile for uploads from strangers
       (100 MB, 50,000 units, 500,000 cells). unbounded has no size limits at all: trusted files only.
   --max-units N, --max-input-mb N, --max-cells N
-      Raise or lower one limit on top of the profile.
+      Set one limit on top of the profile (units also sets paragraphs and lines; input also lets a zip
+      unpack to 4 times that, and one part to as much; cells also allows as many rows and their text).
 ";
 
 struct Args {
@@ -104,10 +105,15 @@ fn parse_args(args: &[String]) -> Result<Args, String> {
             }
             "--max-input-mb" => {
                 let b = number(&k, &v)?.saturating_mul(1024 * 1024);
-                // a zip's unpacked size gets the same room, and at least what the profile gave
-                a.limits.with_max_input_bytes(b).with_max_zip_bytes(b.saturating_mul(4).max(a.limits.max_zip_bytes))
+                // a zip unpacks to at most 4 times the input, and one part to as much as the input
+                a.limits.with_max_input_bytes(b).with_max_zip_bytes(b.saturating_mul(4)).with_max_zip_entry_bytes(b.saturating_mul(4))
             }
-            _ => a.limits.with_xlsx_max_cells(count(&k, &v)?),
+            _ => {
+                let n = count(&k, &v)?;
+                // a sheet of that many cells may have as many rows (up to Excel's own) and 64 characters a cell
+                let rows = u32::try_from(n).unwrap_or(u32::MAX).min(1_048_576);
+                a.limits.with_xlsx_max_cells(n).with_xlsx_max_rows(rows.max(a.limits.xlsx_max_rows)).with_xlsx_max_total_text_chars(n.saturating_mul(64))
+            }
         };
     }
     Ok(a)

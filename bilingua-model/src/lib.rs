@@ -1218,6 +1218,8 @@ impl Document {
     }
 
     /// Sets a segment's state (for many, [`Document::set_states`]).
+    ///
+    /// Like `set_target`, the first segment with the id wins as long as the units are not edited between calls.
     pub fn set_state(&mut self, seg_id: &str, state: SegState) -> Result<(), Error> {
         // through the cached index, as set_target: a scan per call made a whole-document pass quadratic (BILI-112)
         let (ui, si) = self.locate(seg_id).ok_or_else(|| Error::UnknownSegment(seg_id.to_string()))?;
@@ -1378,7 +1380,9 @@ impl ExtractOptions {
 
     /// The limits in force: the caller's, or the defaults.
     pub fn limits(&self) -> Limits {
-        self.limits.unwrap_or_default()
+        // clamped, so a caller's huge number (2^62 units from a CLI flag or a Python dict) cannot overflow the
+        // budgets formats derive from a limit (`40 * max_units`)
+        self.limits.unwrap_or_default().clamped()
     }
 }
 
@@ -1574,7 +1578,9 @@ impl MergeOptions {
     }
     /// The limits in force: the caller's, or the defaults.
     pub fn limits(&self) -> Limits {
-        self.limits.unwrap_or_default()
+        // clamped, so a caller's huge number (2^62 units from a CLI flag or a Python dict) cannot overflow the
+        // budgets formats derive from a limit (`40 * max_units`)
+        self.limits.unwrap_or_default().clamped()
     }
     /// Sets one format option (`"<format>.<name>"`).
     pub fn with_format_option(mut self, key: impl Into<String>, value: impl ToString) -> MergeOptions {

@@ -117,8 +117,9 @@ class BilinguaError(Exception):
 def formats() -> list[FormatInfo]:
     """All formats, most specific first."""
 
-def detect(name: str, data: bytes) -> str | None:
-    """The format id for a file name and its bytes, or None when no parser accepts it."""
+def detect(name: str, data: bytes, *, limits: Mapping[str, int] | str | None = None) -> str | None:
+    """The format id for a file name and its bytes, or None when no parser accepts it. `limits` as in `extract`
+    bounds the input size (hosted defaults when unset)."""
 
 @overload
 def extract(

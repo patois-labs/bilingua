@@ -270,3 +270,18 @@ fn per_segment_edits_are_linear() {
     }
     assert!(t.elapsed().as_secs() < 10, "300,000 edits took {:?}", t.elapsed());
 }
+
+/// A caller's huge limit (a CLI flag, a Python dict) is clamped, so no derived budget overflows (review of
+/// BILI-112): 2^62 units on a file that multiplies `max_units` by 40 must neither panic nor refuse everything.
+#[test]
+fn huge_caller_limits_are_clamped() {
+    let huge = Limits::new().with_max_units(1 << 62).with_max_lines(usize::MAX).with_max_input_bytes(u64::MAX);
+    let c = huge.clamped();
+    assert!(c.max_units.checked_mul(200).is_some());
+    assert_eq!(Limits::new().clamped(), Limits::new());
+    assert_eq!(Limits::large().clamped(), Limits::large());
+    let opts = ExtractOptions::new().with_source_lang("en").with_limits(huge);
+    assert!(opts.limits().max_units.checked_mul(200).is_some());
+    let doc = extract("a.txt", b"One line.\n\nTwo lines.\n", &opts).unwrap();
+    assert_eq!(doc.units.len(), 2);
+}
