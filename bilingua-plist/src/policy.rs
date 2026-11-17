@@ -94,7 +94,10 @@ pub(crate) fn walk(tree: &Tree, max_units: usize) -> Result<Vec<Leaf>, Error> {
             Ok(())
         }
     }
-    let mut w = W { tree, out: Vec::new(), budget: 64 << 20, max_units };
+    // 64 MiB of path text under the hosted unit limit; a raised one (`Limits::large()`) raises it in proportion
+    let hosted = bilingua_model::Limits::new().max_units;
+    let budget = if max_units > hosted { (64usize << 20).saturating_mul(max_units / hosted) } else { 64 << 20 };
+    let mut w = W { tree, out: Vec::new(), budget, max_units };
     w.rec(tree.root, "", 0, "", false)?;
     Ok(w.out)
 }

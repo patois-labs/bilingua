@@ -804,7 +804,7 @@ fn merge_with(d: Dialect, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>
     if !translated && tag.is_none() {
         return enc::encode_text_with(&text, encoding, opts);
     }
-    let limits = Limits::default();
+    let limits = opts.limits();
     let m = mask(d, &text, &limits)?;
     let mut toks = tokens(d, &m, &text, &mut None, &limits)?;
     if let Some(tag) = tag {

@@ -477,7 +477,13 @@ impl FtlFilter {
     /// `build_localized`, decision 13). Nothing is added when no unit has a target. The added variants are new
     /// units when the file is read again, which is why plain `merge` does not do this.
     pub fn merge_localized(&self, doc: &Document, locale: Option<&str>) -> Result<Vec<u8>, Error> {
-        self.merge_inner(doc, locale.or(doc.target_lang.as_deref()), false, &Limits::default())
+        self.merge_localized_with(doc, locale, &bilingua_model::Limits::default())
+    }
+
+    /// [`FtlFilter::merge_localized`] under the caller's limits (the same ones the file was extracted under, for
+    /// a file over the hosted caps): they bound the re-read of the merged text the plural fill does.
+    pub fn merge_localized_with(&self, doc: &Document, locale: Option<&str>, limits: &bilingua_model::Limits) -> Result<Vec<u8>, Error> {
+        self.merge_inner(doc, locale.or(doc.target_lang.as_deref()), false, &Limits::from_model(limits))
     }
 
     /// `limits` bound the plural fill's re-read of the merged text (the caller's merge limits, BILI-112).

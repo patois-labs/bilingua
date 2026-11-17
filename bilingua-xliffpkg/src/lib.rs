@@ -99,18 +99,23 @@ fn open_package(bytes: &[u8], l: &Limits) -> Result<Opened, Error> {
     if members.is_empty() {
         return Err(perr("This XLIFF package contains no XLIFF file (.mqxliff, .xlf, .xliff or .sdlxliff) to translate."));
     }
-    if members.len() > MAX_XLIFF_MEMBERS {
+    // LocOS's own caps (200 members, 64 MB each) under the hosted limits; a caller that raised the zip limits
+    // (`Limits::large`) gets its own numbers instead
+    let hosted = Limits::new();
+    let max_members = guard::own_cap(MAX_XLIFF_MEMBERS, hosted.max_zip_entries, l.max_zip_entries);
+    let max_member_bytes = guard::own_cap(MAX_MEMBER_BYTES, hosted.max_zip_entry_bytes, l.max_zip_entry_bytes);
+    if members.len() > max_members {
         return Err(limit(
             LimitKind::ZipEntries,
-            format!("This XLIFF package has {} XLIFF files; the limit is {MAX_XLIFF_MEMBERS}. Ask the sender to split the package.", members.len()),
+            format!("This XLIFF package has {} XLIFF files; the limit is {max_members}. Ask the sender to split the package.", members.len()),
         ));
     }
     for &i in &members {
         let e = &entries[i];
-        if e.data.len() as u64 > MAX_MEMBER_BYTES {
+        if e.data.len() as u64 > max_member_bytes {
             return Err(limit(
                 LimitKind::ZipBytes,
-                format!("The XLIFF file {:?} in this package is larger than {} MB.", e.name, MAX_MEMBER_BYTES / (1024 * 1024)),
+                format!("The XLIFF file {:?} in this package is larger than {} MB.", e.name, max_member_bytes / (1024 * 1024)),
             ));
         }
     }
@@ -152,7 +157,7 @@ impl XliffPackage {
     /// `xliff_package.build_package`: each member with something to write (or a target language to stamp) through
     /// the CAT XLIFF splice; the original package when nothing changed.
     fn merge_locos(&self, document: &Document, original: &[u8], opts: &MergeOptions) -> Result<Vec<u8>, Error> {
-        let l = Limits::default();
+        let l = opts.limits();
         let opened = open_package(original, &l)?;
         let any = document.units.iter().any(|u| u.segments.iter().any(|s| s.has_target()));
         let tag = opts.stamp_lang(document, any).and_then(profile::lang_tag);
@@ -219,7 +224,7 @@ impl XliffPackage {
             .find(|e| e.name == ORIGINAL)
             .and_then(|e| if let ZipData::Raw(b) = &e.data { Some(b) } else { None })
             .ok_or_else(|| Error::Write(format!("the {} skeleton lost the original package", self.id)))?;
-        let l = Limits::default();
+        let l = opts.limits();
         let opened = open_package(original, &l)?;
         struct Work {
             idx: usize,

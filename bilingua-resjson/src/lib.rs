@@ -70,7 +70,7 @@ impl Limits {
             max_units: l.max_units,
             max_unit_chars: l.max_unit_chars,
             max_depth: d.max_depth,
-            max_bytes: d.max_bytes.min(usize::try_from(l.max_input_bytes).unwrap_or(usize::MAX)),
+            max_bytes: bilingua_model::guard::own_cap_bytes(d.max_bytes, bilingua_model::Limits::new().max_input_bytes, l.max_input_bytes),
         }
     }
 }

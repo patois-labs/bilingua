@@ -140,7 +140,7 @@ fn merge(doc: &Document, force: bool, opts: &bilingua_model::MergeOptions) -> Re
                     SkelPart::Unit(i) => original.push_str(&code(unit_of(*i)?, RAW)),
                 }
             }
-            let xtb = msgs::xtb_from_xmb(&original, doc)?;
+            let xtb = msgs::xtb_from_xmb(&original, doc, &opts.limits())?;
             Ok(xtb.into_bytes())
         }
         Kind::Xmb => {

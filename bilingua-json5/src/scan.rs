@@ -88,6 +88,24 @@ impl Limits {
             max_context_bytes: self.max_context_bytes.min(l.max_context_bytes),
         }
     }
+
+    /// The limits one call runs under. A filter with its own limits (`Json5Filter::with_limits`) keeps them, lowered
+    /// to the call's ([`Limits::capped_by`]). A default filter has the caller decide: each cap is the smaller of the
+    /// crate's and the caller's while the caller's number is at or below the hosted one (so a server sees the same
+    /// 50,000 strings, 100,000 characters and 100 MB as before), and the caller's once raised (`Limits::large()`).
+    pub fn for_call(&self, l: &bilingua_model::Limits) -> Limits {
+        if *self != Limits::default() {
+            return self.capped_by(l);
+        }
+        let h = bilingua_model::Limits::new();
+        Limits {
+            max_depth: self.max_depth,
+            max_units: bilingua_model::guard::own_cap(self.max_units, h.max_units, l.max_units),
+            max_unit_chars: bilingua_model::guard::own_cap(self.max_unit_chars, h.max_unit_chars, l.max_unit_chars),
+            max_bytes: bilingua_model::guard::own_cap_bytes(self.max_bytes, h.max_input_bytes, l.max_input_bytes),
+            max_context_bytes: bilingua_model::guard::own_cap(self.max_context_bytes, h.max_context_bytes, l.max_context_bytes),
+        }
+    }
 }
 
 fn is_line_end(c: char) -> bool {

@@ -369,7 +369,7 @@ impl Filter for DesktopFilter {
             }
         }
         let out = match &loc {
-            Some(loc) => localize(&orig, doc, &tr, loc)?,
+            Some(loc) => localize(&orig, doc, &tr, loc, &opts.limits())?,
             _ => spliced,
         };
         bilingua_model::enc::encode_text_with(&out, encoding, opts)
@@ -377,8 +377,8 @@ impl Filter for DesktopFilter {
 }
 
 /// Adds or replaces `Key[loc]=value` for every entry that has a translated unit.
-fn localize(orig: &str, doc: &Document, tr: &[Option<String>], loc: &str) -> Result<String, Error> {
-    let sc = scan(orig, &Limits::new().with_max_units(usize::MAX).with_max_lines(usize::MAX))?;
+fn localize(orig: &str, doc: &Document, tr: &[Option<String>], loc: &str, limits: &Limits) -> Result<String, Error> {
+    let sc = scan(orig, &limits.with_max_units(usize::MAX).with_max_lines(usize::MAX))?;
     if sc.units.len() != doc.units.len() {
         return Err(Error::Write("the skeleton does not match the units".into()));
     }

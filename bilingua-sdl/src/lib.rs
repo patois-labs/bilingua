@@ -188,9 +188,9 @@ impl Filter for PackageFilter {
             })
             .collect();
         let zipped = zipio::write_zip(&raw, (1980, 1, 1, 0, 0, 0)).map_err(werr)?;
-        // The skeleton is whatever the holder of the document passes in, so its XML is guarded again (the default
+        // The skeleton is whatever the holder of the document passes in, so its XML is guarded again (the caller's
         // XML limits, as the other merges use). The unit count is not: extraction already decided it.
-        let guard = bilingua_model::Limits::default().with_max_units(usize::MAX);
+        let guard = opts.limits().with_max_units(usize::MAX);
         match self.family {
             Family::Sdl => {
                 let mut p = SdlPackage::<Doc>::open(&zipped, &ZipLimits::unlimited(), Some(&guard)).map_err(werr)?;
