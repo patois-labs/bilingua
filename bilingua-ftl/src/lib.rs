@@ -465,8 +465,8 @@ impl Filter for FtlFilter {
         bilingua_model::check_own_options(self, &opts.format_options)?;
         // plain `merge` never fills (see `merge_localized`), so only the "always" half of the stamp rule applies
         match opts.stamp_lang(doc, false) {
-            Some(t) => self.merge_inner(doc, Some(t), true),
-            None => self.merge_inner(doc, None, false),
+            Some(t) => self.merge_inner(doc, Some(t), true, &Limits::from_model(&opts.limits())),
+            None => self.merge_inner(doc, None, false, &Limits::from_model(&opts.limits())),
         }
     }
 }
@@ -477,10 +477,11 @@ impl FtlFilter {
     /// `build_localized`, decision 13). Nothing is added when no unit has a target. The added variants are new
     /// units when the file is read again, which is why plain `merge` does not do this.
     pub fn merge_localized(&self, doc: &Document, locale: Option<&str>) -> Result<Vec<u8>, Error> {
-        self.merge_inner(doc, locale.or(doc.target_lang.as_deref()), false)
+        self.merge_inner(doc, locale.or(doc.target_lang.as_deref()), false, &Limits::default())
     }
 
-    fn merge_inner(&self, doc: &Document, fill: Option<&str>, even_untranslated: bool) -> Result<Vec<u8>, Error> {
+    /// `limits` bound the plural fill's re-read of the merged text (the caller's merge limits, BILI-112).
+    fn merge_inner(&self, doc: &Document, fill: Option<&str>, even_untranslated: bool, limits: &Limits) -> Result<Vec<u8>, Error> {
         bilingua_model::check_parser(doc, &bilingua_model::parser_info!())?;
         let Skeleton::Text { parts, encoding, .. } = &doc.skeleton else {
             return Err(Error::Write("ftl needs a text skeleton".into()));
@@ -497,7 +498,7 @@ impl FtlFilter {
         }
         let translated = doc.units.iter().any(|u| u.segments.iter().any(|s| s.has_target()));
         if let (Some(loc), true) = (fill, translated || even_untranslated) {
-            check_budget(&out, &Limits::default()).map_err(|e| Error::Write(e.to_string()))?;
+            check_budget(&out, limits).map_err(|e| Error::Write(e.to_string()))?;
             out = fill_plurals(&out, loc);
         }
         let mut bytes = Vec::with_capacity(out.len() + 3);

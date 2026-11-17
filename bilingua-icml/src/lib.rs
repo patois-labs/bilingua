@@ -558,7 +558,8 @@ impl Filter for Icml {
         if wanted.is_empty() {
             return Ok(finish(&text));
         }
-        let limits = Limits::default();
+        // the caller's merge limits, so a story extracted under raised limits merges under them too (BILI-112)
+        let limits = opts.limits();
         let mut prep = prepare_text(text, &limits)?;
         // the walk the document was extracted with (the profile's has no block-level tables)
         let block_tables = !opts.is_profile(bilingua_model::profile::LOCOS);
