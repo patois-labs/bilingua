@@ -129,3 +129,22 @@ fn the_locos_profile_adds_nothing_and_fills_no_slot() {
     let j = serde_json::to_string(&d).unwrap();
     assert!(!j.contains("\"plural\":{"), "{j}");
 }
+
+#[test]
+fn a_document_extracted_for_one_language_never_writes_its_added_forms_into_another() {
+    // extracted for Polish (few, many added), merged for Slovenian (one, two, few, other): the counts match, the
+    // categories do not; the merge refuses or falls back, it never writes `few`'s text as `two`
+    let mut d = extract(Some("pl"), false);
+    translate(&mut d, "count: plural few", "files", |_| " pliki".into());
+    d.target_lang = Some("sl".into());
+    let merge = |d: &Document| Arb.merge_with(d, &MergeOptions::new()).map(|b| String::from_utf8(b).unwrap());
+    match merge(&d) {
+        Err(_) => {}
+        Ok(out) => assert!(!out.contains("two{# pliki}") && !out.contains("few{# pliki}"), "{out}"),
+    }
+    // the added units carry their ICU path as a hidden value
+    let d = extract(Some("pl"), false);
+    let few = d.units.iter().find(|u| path(u) == "count: plural few").unwrap();
+    assert_eq!(few.hidden(bilingua_model::icu::ADDED_HIDDEN), Some("count: plural few"));
+    assert!(d.units.iter().filter(|u| !u.plural().is_some_and(PluralSlot::is_added)).all(|u| u.hidden(bilingua_model::icu::ADDED_HIDDEN).is_none()));
+}

@@ -462,6 +462,17 @@ fn walk<'a>(
     }
 }
 
+/// The hidden key ([`crate::Unit::hidden`]) of a unit added for a target category the source lacks: its ICU path
+/// (`count: plural few`). A merge checks it against its own plan, so a document extracted for one language and
+/// merged for another (`few` against `two`) never writes one category's text as another's.
+pub const ADDED_HIDDEN: &str = "icu_added";
+
+/// True when `unit` is what a plan expects at its place: an added unit with the same ICU path where the plan has
+/// an added level (`added_path`), no added mark where it has a source level.
+pub fn added_matches(unit: &crate::Unit, added_path: Option<&str>) -> bool {
+    unit.hidden(ADDED_HIDDEN) == added_path
+}
+
 /// A complex argument rebuilt from its rendered branches. Plural and selectordinal follow the target's
 /// categories `cats`: unused ones go, missing ones take the text of `added` for that category (an added unit's
 /// rendering) or else copy the `other` text, `=N` branches stay.

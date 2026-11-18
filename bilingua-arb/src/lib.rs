@@ -115,6 +115,9 @@ impl Arb {
                 unit.set_codes(up.codes);
                 if let (Some(slot), false) = (&up.slot, locos) {
                     unit.set_plural(icu::plural_slot(&first, slot));
+                    if slot.added {
+                        unit.set_hidden(icu::ADDED_HIDDEN, up.path.clone());
+                    }
                 }
                 if let Some(meta) = &meta {
                     unit.context.notes = meta.notes.clone();
@@ -486,6 +489,11 @@ fn splice(orig: &str, doc: &Document, locos: bool, limits: &Limits) -> Result<St
             msgs = other;
         }
     }
+    // nothing lines up: the plan without added units under this merge's profile, as before step 6, so the error
+    // (or the old behaviour) is the one it always was
+    if !aligned(orig, &msgs, doc) {
+        msgs = messages(orig, &root, locos, None);
+    }
 
     let mut edits: Vec<(usize, usize, String)> = Vec::new();
     // Added first so that, at the same position, @@locale comes before added plural keys.
@@ -542,6 +550,12 @@ fn aligned(orig: &str, msgs: &[Msg], doc: &Document) -> bool {
         let k = m.plan.units.len();
         let Some(units) = doc.units.get(head..head + k) else { return false };
         if units.first().is_some_and(|u| u.codes().get(RAW_KEY).and_then(|c| c.standalone_markup()) != Some(&orig[m.start..m.end])) {
+            return false;
+        }
+        // an added unit stands where this plan adds the same category (a document extracted for Polish and merged
+        // for Slovenian does not line up: `few` is not written as `two`)
+        let added = |up: &UnitPlan| up.slot.as_ref().filter(|s| s.added).map(|_| up.path.as_str());
+        if !units.iter().zip(&m.plan.units).all(|(u, up)| icu::added_matches(u, added(up))) {
             return false;
         }
         head += k;

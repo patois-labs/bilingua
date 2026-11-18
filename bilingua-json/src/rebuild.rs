@@ -20,7 +20,7 @@ pub fn splice(orig: &str, doc: &Document, d: Dialect, target: Option<&str>, loco
     // under the LocOS profile (or had no target): plan the messages as the extract did
     let mut added = doc.target_lang.as_deref();
     let mut plans: Vec<plan::Plan> = msgs.iter().map(|m| plan::plan_message(m.value, m.syntax, added)).collect();
-    if added.is_some() && !aligned(orig, &msgs, &plans, doc) {
+    if !aligned(orig, &msgs, &plans, doc) && added.is_some() {
         added = None;
         plans = msgs.iter().map(|m| plan::plan_message(m.value, m.syntax, None)).collect();
     }
@@ -83,13 +83,17 @@ pub fn splice(orig: &str, doc: &Document, d: Dialect, target: Option<&str>, loco
 }
 
 /// True when the document's units are the planned units, message by message (each message's first unit holds its
-/// original token).
+/// original token, and an added unit stands where the plan adds the same category, see `icu::added_matches`).
 fn aligned(orig: &str, msgs: &[dialect::Msg], plans: &[plan::Plan], doc: &Document) -> bool {
     let mut head = 0usize;
     for (m, plan) in msgs.iter().zip(plans) {
         let k = plan.units.len();
         let Some(units) = doc.units.get(head..head + k) else { return false };
         if units.first().is_some_and(|u| u.codes().get(RAW_KEY).and_then(|c| c.standalone_markup()) != Some(&orig[m.start..m.end])) {
+            return false;
+        }
+        let added = |up: &plan::UnitPlan| up.slot.as_ref().filter(|s| s.added).map(|_| up.path.as_str());
+        if !units.iter().zip(&plan.units).all(|(u, up)| bilingua_model::icu::added_matches(u, added(up))) {
             return false;
         }
         head += k;

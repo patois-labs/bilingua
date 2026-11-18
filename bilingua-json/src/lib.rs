@@ -270,6 +270,9 @@ fn extract_dialect(text: &str, encoding: &str, root: &tree::Node, d: Dialect, op
             let mut unit = Unit::new(format!("u{}", units.len() + 1), up.inlines);
             if let (Some(slot), false) = (&up.slot, locos) {
                 unit.set_plural(bilingua_model::icu::plural_slot(&first, slot));
+                if slot.added {
+                    unit.set_hidden(bilingua_model::icu::ADDED_HIDDEN, up.path.clone());
+                }
             }
             unit.set_codes(up.codes);
             if k == 0 {
