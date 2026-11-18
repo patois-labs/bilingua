@@ -19,7 +19,6 @@
 //! [`profile::tokens`], which converts inline codes to and from LocOS's text tokens, one token per tag).
 
 #![warn(missing_docs)]
-// The only unsafe code is the four reference casts in `shim` (removed when the fields become `Codes` and `TextMap`).
 #![deny(unsafe_code)]
 
 use serde::{Deserialize, Serialize};
@@ -39,7 +38,6 @@ pub mod plural_table;
 pub mod profile;
 mod pytables;
 pub mod pytext;
-pub mod shim;
 pub mod smallmap;
 /// A scanning-step counter for tests that show a parser is linear without timing it (not part of the semver API).
 #[doc(hidden)]
@@ -259,8 +257,7 @@ impl CodeData {
 }
 
 /// The original markup of a unit's inline codes, by code id: a compact sorted map (see [`SmallMap`]).
-/// What [`Unit::set_codes`] and [`Unit::with_codes`] take, and what [`Unit::codes`] will return once the field
-/// holds it (see [`shim`]).
+/// The type of [`Unit::codes`]; what [`Unit::set_codes`] and [`Unit::with_codes`] take.
 pub type Codes = SmallMap<CodeData>;
 
 /// Where a segment is in its life, from untouched to signed off. Monolingual files only use `New`, `Draft`,
@@ -512,7 +509,7 @@ pub struct UnitContext {
     pub notes: Vec<String>,
     /// Subtitle timing and similar extras the editor may show.
     #[serde(default)]
-    pub extra: BTreeMap<String, String>,
+    pub extra: TextMap,
 }
 
 impl UnitContext {
@@ -602,18 +599,16 @@ impl UnitContext {
         self.location = location.into_option_string();
     }
 
-    /// The extras, read-only. Today a view of the `extra` field with the API of [`TextMap`]; once the field is a
-    /// `TextMap`, `&TextMap` itself. Code written against this accessor compiles either way (see [`shim`]).
-    pub fn extra(&self) -> &shim::TextShim {
-        shim::TextShim::wrap(&self.extra)
+    /// The extras, read-only.
+    pub fn extra(&self) -> &TextMap {
+        &self.extra
     }
-    /// The extras, to change in place (see [`UnitContext::extra`]).
-    pub fn extra_mut(&mut self) -> &mut shim::TextShim {
-        shim::TextShim::wrap_mut(&mut self.extra)
+    /// The extras, to change in place.
+    pub fn extra_mut(&mut self) -> &mut TextMap {
+        &mut self.extra
     }
     /// Replaces the extras (a [`TextMap`], or a `BTreeMap<String, String>`).
     pub fn set_extra(&mut self, extra: impl Into<TextMap>) {
-        let extra: TextMap = extra.into();
         self.extra = extra.into();
     }
 }
@@ -634,7 +629,7 @@ pub struct Unit {
     pub separators: Vec<String>,
     /// Original markup per inline code id.
     #[serde(default)]
-    pub codes: BTreeMap<String, CodeData>,
+    pub codes: Codes,
     /// What helps a translator understand the unit.
     #[serde(default)]
     pub context: UnitContext,
@@ -652,8 +647,8 @@ pub struct Unit {
     /// white space, a layout flag. Keyed by a short name the parser picks ("raw", "lead"). It is not an inline code,
     /// so editors, the LocOS token map and tag checks never see it. Left out of the JSON when empty. (Parsers used
     /// to keep this in `codes` under `~` names; such codes in an old JSON document are moved here when it is read.)
-    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
-    pub hidden: BTreeMap<String, String>,
+    #[serde(default, skip_serializing_if = "TextMap::is_empty")]
+    pub hidden: TextMap,
 }
 
 fn yes() -> bool {
@@ -668,7 +663,7 @@ struct UnitRepr {
     #[serde(default)]
     separators: Vec<String>,
     #[serde(default)]
-    codes: BTreeMap<String, CodeData>,
+    codes: Codes,
     #[serde(default)]
     context: UnitContext,
     #[serde(default = "yes")]
@@ -678,23 +673,29 @@ struct UnitRepr {
     #[serde(default)]
     lock_reason: Option<String>,
     #[serde(default)]
-    hidden: BTreeMap<String, String>,
+    hidden: TextMap,
 }
 
 impl From<UnitRepr> for Unit {
     fn from(r: UnitRepr) -> Unit {
         let mut hidden = r.hidden;
-        let mut codes = BTreeMap::new();
-        for (k, c) in r.codes {
-            match k.strip_prefix('~') {
-                // an old parser's hidden value: `standalone` (or, for a flag, `label`) held it
-                Some(name) if c.open.is_none() && c.close.is_none() => {
-                    hidden.entry(name.to_string()).or_insert_with(|| c.standalone.or(c.label).unwrap_or_default());
-                }
-                _ => {
-                    codes.insert(k, c);
+        let mut codes = r.codes;
+        // an old parser's hidden value: a `~` code with no open or close markup, whose `standalone` (or, for a
+        // flag, `label`) held it. Most documents have none, so the map is only rebuilt when one is there.
+        let old = |k: &str, c: &CodeData| k.starts_with('~') && c.open.is_none() && c.close.is_none();
+        if codes.iter().any(|(k, c)| old(k, c)) {
+            let mut kept = Vec::with_capacity(codes.len());
+            for (k, c) in codes {
+                if old(&k, &c) {
+                    let name = &k[1..];
+                    if !hidden.contains_key(name) {
+                        hidden.insert(name, c.standalone.or(c.label).unwrap_or_default());
+                    }
+                } else {
+                    kept.push((k, c));
                 }
             }
+            codes = kept.into_iter().collect();
         }
         Unit {
             id: r.id,
@@ -724,17 +725,17 @@ impl Unit {
             separators: vec![String::new(); segments.len().saturating_sub(1)],
             segments,
             id: id.into(),
-            codes: BTreeMap::new(),
+            codes: Codes::new(),
             context: UnitContext::default(),
             translate: true,
             notes: vec![],
             lock_reason: None,
-            hidden: BTreeMap::new(),
+            hidden: TextMap::new(),
         }
     }
     /// A hidden value (see [`Unit::hidden`]).
     pub fn hidden(&self, key: &str) -> Option<&str> {
-        self.hidden.get(key).map(String::as_str)
+        self.hidden.get(key)
     }
     /// Sets a hidden value.
     pub fn set_hidden(&mut self, key: impl Into<String>, value: impl Into<String>) {
@@ -749,38 +750,29 @@ impl Unit {
         self.set_hidden(key, value);
         self
     }
-    /// Every hidden value, read-only, with the API of [`TextMap`] (see [`Unit::codes`] for why the type is a view
-    /// today).
-    pub fn hidden_map(&self) -> &shim::TextShim {
-        shim::TextShim::wrap(&self.hidden)
+    /// Every hidden value, read-only.
+    pub fn hidden_map(&self) -> &TextMap {
+        &self.hidden
     }
-    /// Every hidden value, to change in place (see [`Unit::hidden_map`]).
-    pub fn hidden_map_mut(&mut self) -> &mut shim::TextShim {
-        shim::TextShim::wrap_mut(&mut self.hidden)
+    /// Every hidden value, to change in place.
+    pub fn hidden_map_mut(&mut self) -> &mut TextMap {
+        &mut self.hidden
     }
     /// Replaces the hidden values (a [`TextMap`], or a `BTreeMap<String, String>`).
     pub fn set_hidden_map(&mut self, hidden: impl Into<TextMap>) {
-        let hidden: TextMap = hidden.into();
         self.hidden = hidden.into();
     }
 
-    /// The original markup of the inline codes, read-only.
-    ///
-    /// The return type is chosen so callers never change again: today it is a view of the `codes` field
-    /// ([`shim::MapShim`]) with exactly the API of [`Codes`] (same methods, `&str` keys, `(&str, &CodeData)`
-    /// items, `codes["1"]`); once the field is `Codes`, this returns `&Codes`. Code that only calls methods on what
-    /// this returns, builds owned maps as `Codes`, and copies with `Codes::from(unit.codes())` compiles either
-    /// way. Prefer it to the field.
-    pub fn codes(&self) -> &shim::MapShim<CodeData> {
-        shim::MapShim::wrap(&self.codes)
+    /// The original markup of the inline codes, read-only. Prefer it to the field.
+    pub fn codes(&self) -> &Codes {
+        &self.codes
     }
     /// The original markup of the inline codes, to change in place (see [`Unit::codes`]).
-    pub fn codes_mut(&mut self) -> &mut shim::MapShim<CodeData> {
-        shim::MapShim::wrap_mut(&mut self.codes)
+    pub fn codes_mut(&mut self) -> &mut Codes {
+        &mut self.codes
     }
     /// Replaces the original markup of the inline codes (a [`Codes`], or a `BTreeMap<String, CodeData>`).
     pub fn set_codes(&mut self, codes: impl Into<Codes>) {
-        let codes: Codes = codes.into();
         self.codes = codes.into();
     }
     /// Replaces the separators (one per gap between segments).
@@ -1365,7 +1357,7 @@ impl Document {
 /// id and kind) or have its markup in the unit's `codes` (a reader that maps a stored translation's placeholders to
 /// the unit's codes, as PO and MO do for a plural form, gives such tags). With `counts`, a paired tag of the
 /// source may appear no more often than there.
-pub(crate) fn check_target_tags(source: &[Inline], target: &[Inline], codes: &BTreeMap<String, CodeData>, counts: bool) -> Result<(), Error> {
+pub(crate) fn check_target_tags(source: &[Inline], target: &[Inline], codes: &Codes, counts: bool) -> Result<(), Error> {
     let mut allowed: BTreeMap<(&str, TagKind), usize> = BTreeMap::new();
     for i in source {
         if let Inline::Tag { id, kind, .. } = i {

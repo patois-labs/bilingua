@@ -12,6 +12,7 @@
 
 use bilingua_model::*;
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 /// The CLI skeleton shape, fields in the CLI's order.
@@ -111,18 +112,19 @@ fn documents_survive_a_trip_through_a_json_value() {
 
 #[test]
 fn the_compact_maps_write_the_same_json_as_the_fields() {
+    // since step 3 the fields are the compact maps: each must write the same JSON as the BTreeMap it replaced
     let (mut units, mut codes, mut extras, mut hidden) = (0, 0, 0, 0);
     for (n, doc, _) in documents() {
         for u in &doc.units {
             units += 1;
             let field = serde_json::to_string(&u.codes).unwrap();
-            assert_eq!(serde_json::to_string(&Codes::from(u.codes.clone())).unwrap(), field, "{n} {}", u.id);
+            assert_eq!(serde_json::to_string(&BTreeMap::<String, CodeData>::from(u.codes.clone())).unwrap(), field, "{n} {}", u.id);
             assert_eq!(serde_json::to_string(&serde_json::from_str::<Codes>(&field).unwrap()).unwrap(), field, "{n} {}", u.id);
             assert_eq!(serde_json::to_string(u.codes()).unwrap(), field);
             codes += u.codes.len();
             for (m, count) in [(&u.context.extra, &mut extras), (&u.hidden, &mut hidden)] {
                 let field = serde_json::to_string(m).unwrap();
-                assert_eq!(serde_json::to_string(&TextMap::from(m.clone())).unwrap(), field, "{n} {}", u.id);
+                assert_eq!(serde_json::to_string(&BTreeMap::<String, String>::from(m.clone())).unwrap(), field, "{n} {}", u.id);
                 assert_eq!(serde_json::to_string(&serde_json::from_str::<TextMap>(&field).unwrap()).unwrap(), field, "{n} {}", u.id);
                 *count += m.len();
             }
@@ -188,8 +190,8 @@ fn bench_skeletons_write_back_the_same_bytes() {
         let out = serde_json::to_vec(&s).unwrap();
         assert!(out == raw, "{} differs", p.display());
         for u in &s.document.units {
-            assert_eq!(serde_json::to_string(&Codes::from(u.codes.clone())).unwrap(), serde_json::to_string(&u.codes).unwrap());
-            assert_eq!(serde_json::to_string(&TextMap::from(u.context.extra.clone())).unwrap(), serde_json::to_string(&u.context.extra).unwrap());
+            assert_eq!(serde_json::to_string(&BTreeMap::<String, CodeData>::from(u.codes.clone())).unwrap(), serde_json::to_string(&u.codes).unwrap());
+            assert_eq!(serde_json::to_string(&BTreeMap::<String, String>::from(u.context.extra.clone())).unwrap(), serde_json::to_string(&u.context.extra).unwrap());
         }
         seen += 1;
     }

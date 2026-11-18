@@ -447,7 +447,7 @@ fn setters_take_codes_text_maps_and_btreemaps() {
     let mut ctx = UnitContext::new().with_extra(BTreeMap::from([("story".to_string(), "s1".to_string())]));
     assert_eq!(ctx.extra().get("story"), Some("s1"));
     ctx.set_extra(TextMap::from([("cells", "A1")]));
-    assert_eq!(ctx.extra.get("cells").map(String::as_str), Some("A1"));
+    assert_eq!(ctx.extra.get("cells"), Some("A1"));
     assert!(!ctx.extra().contains_key("story"));
     let ctx = ctx.with_extra([("a", "b")]);
     assert_eq!(ctx.extra().iter().collect::<Vec<_>>(), [("a", "b")]);
@@ -483,8 +483,8 @@ fn accessors_write_through_to_the_fields() {
     u.hidden_map_mut().insert("raw", "v");
     u.context.extra_mut().insert("part", "a.xml");
     assert_eq!(u.codes.get("1").and_then(|c| c.standalone.as_deref()), Some("<x/>"));
-    assert_eq!(u.hidden.get("raw").map(String::as_str), Some("v"));
-    assert_eq!(u.context.extra.get("part").map(String::as_str), Some("a.xml"));
+    assert_eq!(u.hidden.get("raw"), Some("v"));
+    assert_eq!(u.context.extra.get("part"), Some("a.xml"));
     // and the JSON is what the fields would write
     let json = serde_json::to_string(&u).unwrap();
     assert!(json.contains(r#""codes":{"1":{"open":null,"close":null,"standalone":"<x/>","label":null}}"#), "{json}");

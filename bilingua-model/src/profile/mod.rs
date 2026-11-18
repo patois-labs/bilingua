@@ -173,7 +173,7 @@ pub fn annotate(doc: &mut Document, profile: Option<&str>) {
             // TTX: the position among every `<Tu>` (LocOS `ttx_filter.walk`), the crate's context key
             "ttx" => u.context.key.clone().filter(|k| k.parse::<usize>().is_ok()),
             // the formats that record LocOS's own index (odf, Qt ts, wxl)
-            _ => u.context.extra.get("p_index").cloned(),
+            _ => u.context.extra.get("p_index").map(str::to_string),
         };
         if let Some(p) = p {
             u.context.extra.insert(P_INDEX.to_string(), p);
@@ -363,7 +363,7 @@ pub fn locos_units(doc: &Document) -> Vec<LocosUnit> {
         .enumerate()
         .map(|(i, (u, s))| {
             let (text, map) = tokens::to_locos_text_coded(&doc.format, &s.source, &u.codes);
-            let style = u.context.extra.get(STYLE).filter(|s| !s.is_empty()).cloned().or_else(|| u.context.style.clone()).unwrap_or_default();
+            let style = u.context.extra.get(STYLE).filter(|s| !s.is_empty()).map(str::to_string).or_else(|| u.context.style.clone()).unwrap_or_default();
             let p_index = match (use_meta, metas[i]) {
                 (true, Some(p)) => p,
                 _ => i as i64,
