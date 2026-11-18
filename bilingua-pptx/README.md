@@ -48,7 +48,7 @@ For the facade (`bilingua/src/lib.rs`, `filters()`): `Box::new(bilingua_pptx::Pp
 | Notes slides | Own units, kind `notes` |
 | Layouts and masters | Only shapes that are not placeholders (a brand line, a confidentiality note). Placeholder prompt text ("Click to edit Master title style") is left out |
 | SmartArt | Text in `ppt/diagrams/data*.xml` is extracted. The cached drawing (`drawing*.xml`) that PowerPoint shows is updated to match: a drawing paragraph is matched to the data paragraph with the same text and rewritten as one run with the first run's properties |
-| Runs | The most common formatting of a paragraph needs no tag. Other runs become paired tags: `<b>`, `<i>`, `<u>`, `<sup>`, `<sub>`, `<link>`, or `<fmt>`. The raw `a:rPr` is kept in the tag's code. Language, spell-check and dirty marks do not count as formatting |
+| Runs | One formatting of a paragraph, the base, needs no tag: a plain one when there is one (no bold, italic, underline, super- or subscript or link; a size or font alone does not count), of those the one equal to `a:endParaRPr`, else the one with the most text. So in "**Bold claim** with an *italic aside*" only the bold and the italic run are tagged. Other runs become paired tags: `<b>`, `<i>`, `<u>`, `<sup>`, `<sub>`, `<link>`, or `<fmt>`. The raw `a:rPr` is kept in the tag's code. Language, spell-check and dirty marks do not count as formatting |
 | Line breaks (`a:br`) | Standalone tag `<br/>`. A `\n` in a target becomes a new `a:br` |
 | Fields (`a:fld`: slide number, date) | One locked standalone tag shown like `{slidenum}`. Never translated |
 | Other elements inside a paragraph (math, custom XML) | Standalone tags, kept as they are |

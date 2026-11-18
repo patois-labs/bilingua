@@ -890,7 +890,7 @@ fn drawingml_text_in_a_canvas_is_a_unit() {
     assert_eq!(src(&doc, "p1"), "Before");
     assert_eq!(src(&doc, "d1"), "Young ecologists & co");
     assert_eq!(doc.units[1].context.kind.as_deref(), Some("textbox"));
-    // the larger first run is a formatting tag; the most common formatting is the base
+    // the larger first run is a formatting tag; the plain run that is the paragraph default is the base
     let s = seg_of(&doc, "d1");
     assert_eq!(tag_displays(s), vec!["<fmt>", "</fmt>"]);
     assert_eq!(doc.units[1].codes["1"].label.as_deref(), Some("size"));

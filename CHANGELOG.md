@@ -66,6 +66,11 @@ is listed here).
 
 ### Changed
 
+- PPTX and DOCX (native): the base formatting of a paragraph, the one that needs no tag, is a plain one when
+  the paragraph has one, then the paragraph default (`a:endParaRPr`, or the paragraph mark's `w:rPr`), then the most
+  text (BILI-116). Before, it was the most text, so in "[b]Bold claim[/b] with an [i]italic aside[/i]" the plain
+  text sat in a tag and the italic run had none; now the bold and the italic run are tagged, as Okapi and neokapi
+  tag them. Merges are unchanged; the LocOS profile tags every run as before.
 - Merge bounds what a stored Document can make it do (BILI-105). The `bilingua` facade's `merge` and `merge_with`
   (and so the CLI and Python) check the Document under the caller's merge limits (`MergeOptions::limits`, the
   defaults when unset) before writing: units and segments within `max_units`, zip entries within `max_zip_entries`,

@@ -338,7 +338,7 @@ impl Extractor {
     /// A DrawingML paragraph (`a:p`) inside a drawing that is not a Word text box (a lockedCanvas or a group shape
     /// with `a:txBody`). Only the plain shape is taken: optional `a:pPr`, then runs that each hold an optional
     /// `a:rPr` and one `a:t`, then an optional `a:endParaRPr`. Anything else (`a:br`, `a:fld`, ...) leaves the
-    /// paragraph as it is. The unit is the text of all runs; run formatting other than the most common one is a
+    /// paragraph as it is. The unit is the text of all runs; run formatting other than the base (`pick_base`) is a
     /// paired tag holding that run's `a:rPr`, as for Word runs. Returns the template for the paragraph, or None to walk it as plain XML.
     fn dml_paragraph(&mut self, e: &El) -> Option<String> {
         let key = e as *const El as usize;
