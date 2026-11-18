@@ -17,7 +17,6 @@ pub const SKELETON_SCHEMA: u32 = 1;
 mod cldr;
 mod dialect;
 mod i18next;
-mod icu;
 mod inline;
 mod plan;
 mod rebuild;
@@ -254,8 +253,10 @@ fn extract_dialect(text: &str, encoding: &str, root: &tree::Node, d: Dialect, op
     // every unit of a message (an ICU message has one per branch) keeps its own copy of the pointer and the notes
     let limits = opts.limits();
     let mut context = bilingua_model::guard::ContextBudget::new();
+    // outside the LocOS profile, the plural categories the target needs and a message lacks get units of their own
+    let added = if locos { None } else { opts.target_lang.as_deref() };
     for m in dialect::messages(root, d) {
-        let plan = plan::plan_message(m.value, m.syntax);
+        let plan = plan::plan_message(m.value, m.syntax, added);
         if plan.units.is_empty() {
             continue;
         }
@@ -264,8 +265,12 @@ fn extract_dialect(text: &str, encoding: &str, root: &tree::Node, d: Dialect, op
         }
         pos = m.end;
         parts.push(SkelPart::Unit(units.len()));
+        let first = format!("u{}", units.len() + 1);
         for (k, up) in plan.units.into_iter().enumerate() {
             let mut unit = Unit::new(format!("u{}", units.len() + 1), up.inlines);
+            if let (Some(slot), false) = (&up.slot, locos) {
+                unit.set_plural(bilingua_model::icu::plural_slot(&first, slot));
+            }
             unit.set_codes(up.codes);
             if k == 0 {
                 unit.codes_mut().insert(RAW_KEY, CodeData::new().with_standalone(text[m.start..m.end].to_string()));

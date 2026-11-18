@@ -377,6 +377,8 @@ fn entry_units(
         if plural {
             u.context.extra_mut().insert("plural", k.to_string());
             u.set_hidden(PN, n.to_string());
+            // the forms of one entry are one group; gettext's msgstr order is not CLDR order, so no category
+            u.set_plural(PluralSlot::new(entry_id.as_str(), PluralKind::Cardinal).with_index(k as u8));
         }
         if fuzzy {
             u.context.extra_mut().insert("fuzzy", "true");

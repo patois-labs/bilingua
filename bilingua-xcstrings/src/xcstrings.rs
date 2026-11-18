@@ -264,6 +264,47 @@ fn unit_for(id: String, e: &Entry<'_>, leaf: &Leaf, source: &str, limits: &Limit
     Ok(u)
 }
 
+/// The index of the innermost `variations` / `plural` / category triple of a leaf path.
+fn plural_at(path: &[String]) -> Option<usize> {
+    (0..path.len().saturating_sub(2)).rev().find(|&i| path[i] == "variations" && path[i + 1] == "plural")
+}
+
+/// The plural slot of a leaf path (`None` outside a plural variation): the group is the entry key and the path of
+/// the plural map (`%lld items#substitutions.count.variations.plural`), the argument a substitution's name, the
+/// parent an enclosing plural map.
+fn slot_of(key: &str, path: &[String], added: bool) -> Option<bilingua_model::PluralSlot> {
+    let i = plural_at(path)?;
+    let group = |end: usize| format!("{key}#{}", path[..end].join("."));
+    let mut slot = bilingua_model::PluralSlot::new(group(i + 2), bilingua_model::PluralKind::Cardinal).with_category(path[i + 2].as_str()).with_added(added);
+    if i >= 2 && path[i - 2] == "substitutions" {
+        slot = slot.with_arg(path[i - 1].as_str());
+    }
+    if let Some(j) = plural_at(&path[..i]) {
+        slot = slot.with_parent(group(j + 2));
+    }
+    Some(slot)
+}
+
+/// For a leaf under the `other` form of a plural variation: one path per target category the plural map lacks
+/// (the categories the merge fills from `other`), the category in place of `other`.
+fn added_paths(e: &Entry<'_>, path: &[String], cats: &[&'static str]) -> Vec<(&'static str, Vec<String>)> {
+    let Some(i) = plural_at(path) else { return vec![] };
+    if path[i + 2] != "other" {
+        return vec![];
+    }
+    let prefix: Vec<&str> = path[..i + 2].iter().map(String::as_str).collect();
+    let Some(map) = e.src.and_then(|s| nav(s, &prefix)).and_then(Node::obj) else { return vec![] };
+    let have: Vec<&str> = map.items().into_iter().map(|(k, _)| k).collect();
+    cats.iter()
+        .filter(|c| !have.contains(*c))
+        .map(|c| {
+            let mut p = path.to_vec();
+            p[i + 2] = (*c).to_string();
+            (*c, p)
+        })
+        .collect()
+}
+
 impl Filter for Xcstrings {
     fn id(&self) -> &'static str {
         FORMAT
@@ -291,15 +332,38 @@ impl Filter for Xcstrings {
         let cat = Catalog::load(bytes, &limits, true)?;
         let source = cat.source().to_string();
         let entries = cat.walk(&limits)?;
+        let locos = opts.is_profile(bilingua_model::profile::LOCOS);
+        // outside the LocOS profile, a plural category the target needs and the source lacks gets a unit of its
+        // own (a copy of `other`, id `u<n>.<category>`), which the merge fills from `other` while untranslated
+        let target = opts.target_lang.as_deref().map(str::trim).unwrap_or("");
+        let cats = if locos || target.is_empty() || norm(target) == norm(&source) { None } else { plural::categories(target) };
         let mut units = Vec::new();
         let mut locked = 0usize;
         for e in &entries {
             for leaf in &e.leaves {
                 match leaf.idx {
-                    Some(i) => units.push(unit_for(format!("u{}", i + 1), e, leaf, &source, &limits)?),
+                    Some(i) => {
+                        let mut u = unit_for(format!("u{}", i + 1), e, leaf, &source, &limits)?;
+                        if !locos {
+                            u.set_plural(slot_of(e.key, &leaf.path, false));
+                        }
+                        units.push(u);
+                        if let Some(cats) = &cats {
+                            for (cat, path) in added_paths(e, &leaf.path, cats) {
+                                let copy = Leaf { path, value: leaf.value.clone(), span: leaf.span, idx: None };
+                                let mut u = unit_for(format!("u{}.{cat}", i + 1), e, &copy, &source, &limits)?;
+                                u.set_plural(slot_of(e.key, &copy.path, true));
+                                units.push(u);
+                                guard::check_unit_count(units.len(), &limits)?;
+                            }
+                        }
+                    }
                     None if opts.include_locked && !ph::split_ws(&leaf.value).1.is_empty() => {
                         locked += 1;
                         let mut u = unit_for(format!("l{locked}"), e, leaf, &source, &limits)?;
+                        if !locos {
+                            u.set_plural(slot_of(e.key, &leaf.path, false));
+                        }
                         u.translate = false;
                         u.lock_reason = Some(
                             if !e.wanted {
@@ -583,8 +647,11 @@ fn mirror(shape: &Shape, old: Option<&J>, trans: &Trans, path: &mut Vec<String>,
                         };
                         let Some(Some(sshape)) = by_cat.get(scat).copied() else { continue };
                         let n = path.len();
+                        // a category filled from `other`: the translations of the units added for it, if any,
+                        // stand in for `other`'s (with none, the fill is `other`'s, as before)
+                        let added = if scat == cat { None } else { stand_in(trans, path, vtype, &cat) };
                         path.extend(["variations".to_string(), vtype.clone(), scat.to_string()]);
-                        let sub = mirror(sshape, omap.get(cat.as_str()).copied(), trans, path, cats);
+                        let sub = mirror(sshape, omap.get(cat.as_str()).copied(), added.as_ref().unwrap_or(trans), path, cats);
                         path.truncate(n);
                         if !sub.is_empty() {
                             cout.push((cat.clone(), J::Obj(sub)));
@@ -619,6 +686,30 @@ fn mirror(shape: &Shape, old: Option<&J>, trans: &Trans, path: &mut Vec<String>,
         }
     }
     out
+}
+
+/// `trans` with the translations below `path` / variations / `vtype` / `cat` (units added for a category the
+/// source lacks) moved to the same place under `other`, replacing `other`'s; `None` when there are none.
+fn stand_in(trans: &Trans, path: &[String], vtype: &str, cat: &str) -> Option<Trans> {
+    let mut from = path.to_vec();
+    from.extend(["variations".to_string(), vtype.to_string(), cat.to_string()]);
+    let at = trans.partition_point(|(p, _)| p.as_slice() < from.as_slice());
+    let moved: Trans = trans[at..]
+        .iter()
+        .take_while(|(p, _)| p.starts_with(&from))
+        .map(|(p, v)| {
+            let mut q = p.clone();
+            q[path.len() + 2] = "other".to_string();
+            (q, v.clone())
+        })
+        .collect();
+    if moved.is_empty() {
+        return None;
+    }
+    let mut t: Trans = trans.iter().filter(|(p, _)| !moved.iter().any(|(q, _)| q == p)).cloned().collect();
+    t.extend(moved);
+    t.sort_by(|a, b| a.0.cmp(&b.0));
+    Some(t)
 }
 
 fn norm(s: &str) -> String {
@@ -691,17 +782,24 @@ fn apply(cat: &Catalog, entries: &[Entry<'_>], doc: &Document) -> Result<String,
     let text = &cat.text;
     // translations by unit number
     let mut by_idx: std::collections::HashMap<usize, &Unit> = std::collections::HashMap::new();
+    // units added at extract for a plural category the source lacks (`u<n>.<category>`), by unit number
+    let mut added: std::collections::HashMap<usize, Vec<(&str, &Unit)>> = std::collections::HashMap::new();
     for u in &doc.units {
-        if !u.translate {
+        if !u.translate || !u.segments.iter().any(|s| s.has_target()) {
             continue;
         }
-        if let Some(n) = u.id.strip_prefix('u').and_then(|s| s.parse::<usize>().ok()) {
-            if n >= 1 && u.segments.iter().any(|s| s.has_target()) {
+        let Some(rest) = u.id.strip_prefix('u') else { continue };
+        if let Ok(n) = rest.parse::<usize>() {
+            if n >= 1 {
                 by_idx.insert(n - 1, u);
+            }
+        } else if let Some((n, cat)) = rest.split_once('.').and_then(|(n, c)| Some((n.parse::<usize>().ok()?, c))) {
+            if n >= 1 && plural::ORDER.contains(&cat) {
+                added.entry(n - 1).or_default().push((cat, u));
             }
         }
     }
-    if by_idx.is_empty() {
+    if by_idx.is_empty() && added.is_empty() {
         return Ok(text.clone());
     }
     let source = cat.source();
@@ -714,16 +812,33 @@ fn apply(cat: &Catalog, entries: &[Entry<'_>], doc: &Document) -> Result<String,
         let mut trans: Trans = Vec::new();
         // the leaf of each translation, by the same index (a `stringSet` can make an entry with many leaves)
         let mut trans_leaf: Vec<&Leaf> = Vec::new();
-        for leaf in &e.leaves {
-            let Some(idx) = leaf.idx else { continue };
-            let Some(u) = by_idx.get(&idx) else { continue };
+        // the translations of added units, at their own paths (written only into a target localization)
+        let mut added_trans: Trans = Vec::new();
+        let render = |leaf: &Leaf, u: &Unit| {
             let (lead, core, trail) = ph::split_ws(&leaf.value);
             let new_core = ph::render(u, &u.output());
-            let full = if new_core == core { leaf.value.clone() } else { format!("{lead}{new_core}{trail}") };
-            trans.push((leaf.path.clone(), full));
+            if new_core == core {
+                leaf.value.clone()
+            } else {
+                format!("{lead}{new_core}{trail}")
+            }
+        };
+        for leaf in &e.leaves {
+            let Some(idx) = leaf.idx else { continue };
+            if let Some(list) = added.get(&idx) {
+                if let Some(i) = plural_at(&leaf.path) {
+                    for (cat, u) in list {
+                        let mut p = leaf.path.clone();
+                        p[i + 2] = (*cat).to_string();
+                        added_trans.push((p, render(leaf, u)));
+                    }
+                }
+            }
+            let Some(u) = by_idx.get(&idx) else { continue };
+            trans.push((leaf.path.clone(), render(leaf, u)));
             trans_leaf.push(leaf);
         }
-        if trans.is_empty() {
+        if trans.is_empty() && (added_trans.is_empty() || in_source) {
             continue;
         }
         let locs_member = e.obj.members.iter().rev().find(|m| m.key == "localizations");
@@ -753,6 +868,7 @@ fn apply(cat: &Catalog, entries: &[Entry<'_>], doc: &Document) -> Result<String,
             Some(s) => shape_of(text, s),
             None => Shape { items: vec![ShapeItem::StringUnit] },
         };
+        trans.extend(added_trans);
         let new_loc = mirror(&shape, old_j.as_ref(), &sorted_trans(&trans), &mut Vec::new(), cats.as_deref());
         if new_loc.is_empty() {
             continue;

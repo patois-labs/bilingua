@@ -43,6 +43,11 @@ pub mod smallmap;
 #[doc(hidden)]
 pub mod work;
 
+// Unit model step 6 (BILI-119a): plural groups and the shared ICU parser.
+pub mod icu;
+mod plural;
+pub use plural::{PluralKind, PluralSlot};
+
 pub use encoding_rs;
 pub use guard::{LimitError, LimitKind, Limits};
 pub use smallmap::{SmallMap, TextMap};
@@ -649,6 +654,10 @@ pub struct Unit {
     /// to keep this in `codes` under `~` names; such codes in an old JSON document are moved here when it is read.)
     #[serde(default, skip_serializing_if = "TextMap::is_empty")]
     pub hidden: TextMap,
+    /// The plural group this unit is one form of (see [`PluralSlot`]); `None` for most units and under the LocOS
+    /// profile. Left out of the JSON when unset. No writer reads it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub plural: Option<Box<PluralSlot>>,
 }
 
 fn yes() -> bool {
@@ -674,6 +683,8 @@ struct UnitRepr {
     lock_reason: Option<String>,
     #[serde(default)]
     hidden: TextMap,
+    #[serde(default)]
+    plural: Option<Box<PluralSlot>>,
 }
 
 impl From<UnitRepr> for Unit {
@@ -707,6 +718,7 @@ impl From<UnitRepr> for Unit {
             notes: r.notes,
             lock_reason: r.lock_reason,
             hidden,
+            plural: r.plural,
         }
     }
 }
@@ -731,6 +743,7 @@ impl Unit {
             notes: vec![],
             lock_reason: None,
             hidden: TextMap::new(),
+            plural: None,
         }
     }
     /// A hidden value (see [`Unit::hidden`]).
@@ -840,6 +853,27 @@ impl Unit {
             out.extend(pick(seg).iter().cloned());
         }
         merge_text(out)
+    }
+}
+
+// Unit model step 6: the plural slot.
+impl Unit {
+    /// The plural group this unit is one form of, if any.
+    pub fn plural(&self) -> Option<&PluralSlot> {
+        self.plural.as_deref()
+    }
+    /// The plural slot, to change in place.
+    pub fn plural_mut(&mut self) -> Option<&mut PluralSlot> {
+        self.plural.as_deref_mut()
+    }
+    /// Sets (or with `None` clears) the plural slot.
+    pub fn set_plural(&mut self, plural: impl Into<Option<PluralSlot>>) {
+        self.plural = plural.into().map(Box::new);
+    }
+    /// Sets the plural slot (builder form of [`Unit::set_plural`]).
+    pub fn with_plural(mut self, plural: impl Into<Option<PluralSlot>>) -> Unit {
+        self.set_plural(plural);
+        self
     }
 }
 
@@ -1121,6 +1155,17 @@ impl PartialEq for SegIndex {
 }
 
 impl Eq for SegIndex {}
+
+// Unit model step 6: plural categories of the target.
+impl Document {
+    /// The categories the target language uses for `kind`, in CLDR order and always with `other` (`one`, `few`,
+    /// `many`, `other` for Polish cardinals), read from `target_lang` through the shared CLDR table (the Babel data
+    /// Localization OS uses; aliases such as `deu` and `iw` resolve). `None` for a select, without a target
+    /// language, or for one the table does not know. Units hold no copy of them.
+    pub fn plural_categories(&self, kind: PluralKind) -> Option<Vec<&'static str>> {
+        plural::categories(self.target_lang.as_deref(), kind)
+    }
+}
 
 /// A notice about a file that was read anyway: it never stops a merge. `kind` is a stable word for programs
 /// ("text_encoding"); `message` is plain text safe to show the person who uploaded the file.

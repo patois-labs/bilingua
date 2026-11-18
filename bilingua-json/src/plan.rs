@@ -5,7 +5,7 @@
 //! them as plain text).
 
 use crate::dialect::Syntax;
-use crate::icu::{self, Complex, Kind, Part};
+use bilingua_model::icu::{self, Kind, Part};
 use bilingua_model::*;
 use std::collections::BTreeMap;
 use std::sync::OnceLock;
@@ -27,6 +27,8 @@ pub struct UnitPlan {
     pub codes: BTreeMap<String, CodeData>,
     /// Where the unit sits in the message ("count: plural one"), empty for the message's own text.
     pub path: String,
+    /// The branch's plural slot (a unit of the message's own text has none).
+    pub slot: Option<icu::BranchSlot>,
 }
 
 pub struct Plan {
@@ -72,12 +74,30 @@ fn go_re() -> &'static regex::Regex {
     R.get_or_init(|| regex::Regex::new(r"(?s)\{\{.*?\}\}").expect("static regex"))
 }
 
-pub fn plan_message(value: &str, syntax: Syntax) -> Plan {
+/// The target categories of a plural kind for `added` (the target language whose missing categories get units of
+/// their own, unit model step 6); `None` for a select or no target.
+pub fn added_categories(added: Option<&str>, kind: Kind) -> Option<Vec<&'static str>> {
+    match kind {
+        Kind::Select => None,
+        _ => added.and_then(|t| crate::cldr::categories(t, kind == Kind::SelectOrdinal)),
+    }
+}
+
+/// The units of one message. `added`: the target language whose plural categories the source lacks become units
+/// too (copies of `other`, marked added); `None` under the LocOS profile and without a target.
+pub fn plan_message(value: &str, syntax: Syntax, added: Option<&str>) -> Plan {
     match syntax {
         Syntax::Icu => match icu::parse(value) {
             Ok(parts) => {
-                let mut units = Vec::new();
-                collect(&parts, String::new(), &mut units);
+                let units = icu::levels(&parts, &|k| added_categories(added, k))
+                    .into_iter()
+                    .filter(|l| level_translatable(l.parts))
+                    .map(|l| {
+                        let mut u = level_unit(l.parts, &l.path);
+                        u.slot = l.slot;
+                        u
+                    })
+                    .collect();
                 Plan { units, fallback: false }
             }
             Err(_) => {
@@ -104,7 +124,7 @@ pub fn plan_message(value: &str, syntax: Syntax) -> Plan {
                 inlines.push(Inline::Text(value[at..].to_string()));
                 probe.push_str(&value[at..]);
             }
-            let units = if translatable_text(&probe) { vec![UnitPlan { inlines, roles, codes: BTreeMap::new(), path: String::new() }] } else { vec![] };
+            let units = if translatable_text(&probe) { vec![UnitPlan { inlines, roles, codes: BTreeMap::new(), path: String::new(), slot: None }] } else { vec![] };
             Plan { units, fallback: false }
         }
     }
@@ -113,7 +133,7 @@ pub fn plan_message(value: &str, syntax: Syntax) -> Plan {
 /// LocOS `_translatable` of one ICU level: its text with each `#` and complex argument as a `⟦xN⟧` token (a
 /// literal token in the source does not count either).
 fn level_translatable(parts: &[Part]) -> bool {
-    if !icu::translatable(parts) {
+    if !icu::translatable(parts, false) {
         return false;
     }
     let mut text = String::new();
@@ -128,32 +148,6 @@ fn level_translatable(parts: &[Part]) -> bool {
         }
     }
     translatable_text(&text)
-}
-
-/// Pre-order: this level's text if it has words, then each complex argument's branches.
-fn collect(parts: &[Part], path: String, out: &mut Vec<UnitPlan>) {
-    if level_translatable(parts) {
-        out.push(level_unit(parts, &path));
-    }
-    for p in parts {
-        if let Part::Complex(cx) = p {
-            let arg = arg_name(&cx.head);
-            let kind = match cx.kind {
-                Kind::Plural => "plural",
-                Kind::SelectOrdinal => "selectordinal",
-                Kind::Select => "select",
-            };
-            for b in &cx.branches {
-                let here = if path.is_empty() { String::new() } else { format!("{path} / ") };
-                collect(&b.msg, format!("{here}{arg}: {kind} {}", b.selector), out);
-            }
-        }
-    }
-}
-
-fn arg_name(head: &str) -> String {
-    let inner = head.trim_start_matches('{').trim_start();
-    inner.split([',', '}']).next().unwrap_or("").trim().to_string()
 }
 
 fn level_unit(parts: &[Part], path: &str) -> UnitPlan {
@@ -182,7 +176,7 @@ fn level_unit(parts: &[Part], path: &str) -> UnitPlan {
             }
         }
     }
-    UnitPlan { inlines, roles, codes, path: path.to_string() }
+    UnitPlan { inlines, roles, codes, path: path.to_string(), slot: None }
 }
 
 /// An unparsable message: text plus `{name}` placeholders as free tags.
@@ -218,7 +212,7 @@ fn fallback_unit(value: &str) -> UnitPlan {
     if run < value.len() {
         inlines.push(Inline::Text(value[run..].to_string()));
     }
-    UnitPlan { inlines, roles, codes, path: String::new() }
+    UnitPlan { inlines, roles, codes, path: String::new(), slot: None }
 }
 
 /// Translations of one message's units, in unit order; `None` for a unit nobody translated.
@@ -235,7 +229,8 @@ impl Trans {
     }
 }
 
-pub fn rebuild_message(value: &str, plan: &Plan, syntax: Syntax, tr: &mut Trans, target: Option<&str>) -> String {
+/// `added`: the language the message was planned with added units for ([`plan_message`]).
+pub fn rebuild_message(value: &str, plan: &Plan, syntax: Syntax, tr: &mut Trans, target: Option<&str>, added: Option<&str>) -> String {
     if syntax != Syntax::Icu {
         let Some(unit) = plan.units.first() else { return value.to_string() };
         let Some(t) = tr.next() else { return value.to_string() };
@@ -258,7 +253,7 @@ pub fn rebuild_message(value: &str, plan: &Plan, syntax: Syntax, tr: &mut Trans,
         return s;
     }
     match icu::parse(value) {
-        Ok(parts) => rebuild_level(&parts, tr, target),
+        Ok(parts) => rebuild_level(&parts, tr, target, added),
         Err(_) => value.to_string(),
     }
 }
@@ -286,7 +281,7 @@ fn render_raw(inl: &[Inline], roles: &[Role]) -> Option<String> {
     Some(s)
 }
 
-fn rebuild_level(parts: &[Part], tr: &mut Trans, target: Option<&str>) -> String {
+fn rebuild_level(parts: &[Part], tr: &mut Trans, target: Option<&str>, added: Option<&str>) -> String {
     let translatable = level_translatable(parts);
     let mine = if translatable { tr.next() } else { None };
     let mut pieces: Vec<String> = Vec::new();
@@ -294,8 +289,27 @@ fn rebuild_level(parts: &[Part], tr: &mut Trans, target: Option<&str>) -> String
         match p {
             Part::Pound => pieces.push("#".into()),
             Part::Complex(cx) => {
-                let rendered: Vec<String> = cx.branches.iter().map(|b| rebuild_level(&b.msg, tr, target)).collect();
-                pieces.push(render_branches(cx, rendered, target));
+                let mut rendered: Vec<String> = Vec::with_capacity(cx.branches.len());
+                let mut other_units = None;
+                for b in &cx.branches {
+                    let from = tr.at;
+                    rendered.push(rebuild_level(&b.msg, tr, target, added));
+                    if other_units.is_none() && b.selector == "other" {
+                        other_units = Some(from..tr.at);
+                    }
+                }
+                // the units added for the categories the source lacks, each a copy of `other`'s units: an
+                // untranslated one takes `other`'s translation, so an untouched one writes what the fill from
+                // `other` writes
+                let mut extra: Vec<(&str, String)> = Vec::new();
+                if let (Some(cats), Some(span), Some(other)) = (added_categories(added, cx.kind), other_units, cx.other()) {
+                    for c in icu::missing(cx, &cats) {
+                        let list = span.clone().map(|i| tr.next().or_else(|| tr.list.get(i).cloned().flatten())).collect();
+                        extra.push((c, rebuild_level(&other.msg, &mut Trans { list, at: 0 }, target, added)));
+                    }
+                }
+                let cats = if cx.kind == Kind::Select { None } else { target.and_then(|t| crate::cldr::categories(t, cx.kind == Kind::SelectOrdinal)) };
+                pieces.push(icu::render_branches(cx, rendered, &extra, cats.as_deref()));
             }
             _ => {}
         }
@@ -360,49 +374,4 @@ fn render_translation(inl: &[Inline], roles: &[Role], pieces: &[String]) -> Opti
     }
     icu::parse(&safe).ok()?;
     Some(text)
-}
-
-/// A complex argument rebuilt from its rendered branches. Plural and selectordinal follow the target's
-/// categories: unused ones go, missing ones copy the `other` text, `=N` branches stay.
-fn render_branches(cx: &Complex, rendered: Vec<String>, target: Option<&str>) -> String {
-    struct B {
-        selector: String,
-        mid: String,
-        text: String,
-        trail: String,
-    }
-    let mut list: Vec<B> = cx
-        .branches
-        .iter()
-        .zip(rendered)
-        .map(|(b, text)| B { selector: b.selector.clone(), mid: b.mid.clone(), text, trail: b.trail.clone() })
-        .collect();
-    let cats = if cx.kind == Kind::Select { None } else { target.and_then(|t| crate::cldr::categories(t, cx.kind == Kind::SelectOrdinal)) };
-    if let Some(cats) = cats {
-        if let Some(o) = list.iter().find(|b| b.selector == "other") {
-            let (other_mid, other_text) = (o.mid.clone(), o.text.clone());
-            let mut kept: Vec<B> = list.into_iter().filter(|b| b.selector.starts_with('=') || cats.contains(&b.selector.as_str())).collect();
-            let missing: Vec<&str> = cats.iter().copied().filter(|c| !kept.iter().any(|b| b.selector == *c)).collect();
-            if !missing.is_empty() {
-                let idx = kept.iter().position(|b| b.selector == "other").unwrap_or(kept.len());
-                let sep = if idx > 0 && !kept[idx - 1].trail.is_empty() { kept[idx - 1].trail.clone() } else { " ".to_string() };
-                let new = missing.iter().map(|c| B { selector: (*c).to_string(), mid: other_mid.clone(), text: other_text.clone(), trail: sep.clone() });
-                let tail = kept.split_off(idx);
-                kept.extend(new);
-                kept.extend(tail);
-            }
-            list = kept;
-        }
-    }
-    let mut out = cx.head.clone();
-    for b in &list {
-        out.push_str(&b.selector);
-        out.push_str(&b.mid);
-        out.push('{');
-        out.push_str(&b.text);
-        out.push('}');
-        out.push_str(&b.trail);
-    }
-    out.push('}');
-    out
 }

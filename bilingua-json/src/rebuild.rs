@@ -16,10 +16,17 @@ type Edit = (usize, usize, String);
 pub fn splice(orig: &str, doc: &Document, d: Dialect, target: Option<&str>, locos: bool) -> Result<String, Error> {
     let root = crate::tree::scan(orig).map_err(|()| Error::Write("the skeleton is not a JSON resource file any more".into()))?;
     let msgs = dialect::messages(&root, d);
+    // the units were planned at extract, with a unit for each plural category the target lacked unless that was
+    // under the LocOS profile (or had no target): plan the messages as the extract did
+    let mut added = doc.target_lang.as_deref();
+    let mut plans: Vec<plan::Plan> = msgs.iter().map(|m| plan::plan_message(m.value, m.syntax, added)).collect();
+    if added.is_some() && !aligned(orig, &msgs, &plans, doc) {
+        added = None;
+        plans = msgs.iter().map(|m| plan::plan_message(m.value, m.syntax, None)).collect();
+    }
     let mut edits: Vec<Edit> = Vec::new();
     let mut head = 0usize;
-    for m in &msgs {
-        let plan = plan::plan_message(m.value, m.syntax);
+    for (m, plan) in msgs.iter().zip(&plans) {
         let k = plan.units.len();
         let units = doc.units.get(head..head + k).ok_or_else(|| Error::Write("the units no longer match the skeleton".into()))?;
         if units.first().is_some_and(|u| u.codes().get(RAW_KEY).and_then(|c| c.standalone_markup()) != Some(&orig[m.start..m.end])) {
@@ -31,7 +38,7 @@ pub fn splice(orig: &str, doc: &Document, d: Dialect, target: Option<&str>, loco
             continue;
         }
         let mut tr = Trans { list: units.iter().map(|u| if u.segments.iter().all(|s| !s.has_target()) { None } else { Some(u.output()) }).collect(), at: 0 };
-        let new = plan::rebuild_message(m.value, &plan, m.syntax, &mut tr, target);
+        let new = plan::rebuild_message(m.value, plan, m.syntax, &mut tr, target, added);
         if new != m.value {
             edits.push((m.start, m.end, scan::quote(&new)));
         }
@@ -73,6 +80,21 @@ pub fn splice(orig: &str, doc: &Document, d: Dialect, target: Option<&str>, loco
     }
     out.push_str(&orig[pos..]);
     Ok(out)
+}
+
+/// True when the document's units are the planned units, message by message (each message's first unit holds its
+/// original token).
+fn aligned(orig: &str, msgs: &[dialect::Msg], plans: &[plan::Plan], doc: &Document) -> bool {
+    let mut head = 0usize;
+    for (m, plan) in msgs.iter().zip(plans) {
+        let k = plan.units.len();
+        let Some(units) = doc.units.get(head..head + k) else { return false };
+        if units.first().is_some_and(|u| u.codes().get(RAW_KEY).and_then(|c| c.standalone_markup()) != Some(&orig[m.start..m.end])) {
+            return false;
+        }
+        head += k;
+    }
+    head == doc.units.len()
 }
 
 /// `\n` or `\r\n`, whichever line ending the newline at `nl` ends; always `\n` with `lf` (LocOS).

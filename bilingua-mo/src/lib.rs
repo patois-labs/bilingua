@@ -102,7 +102,7 @@ fn unit_id(e: &Entry, form: usize) -> String {
     }
 }
 
-fn make_unit(e: &Entry, form: usize, src: &str, tgt: &str) -> Unit {
+fn make_unit(e: &Entry, form: usize, src: &str, tgt: &str, locos: bool) -> Unit {
     let (inl, codes, tags) = source_inlines(src);
     let mut u = Unit::new(unit_id(e, form), inl);
     u.set_codes(codes);
@@ -120,6 +120,11 @@ fn make_unit(e: &Entry, form: usize, src: &str, tgt: &str) -> Unit {
     }
     if plural_unit(e) {
         u.context.extra_mut().insert("plural", form.to_string());
+        // the singular and plural of one message are one group (msgstr index, no CLDR category); not under the
+        // LocOS profile
+        if !locos {
+            u.set_plural(PluralSlot::new(format!("e{}", e.index), PluralKind::Cardinal).with_index(form as u8));
+        }
     }
     u
 }
@@ -359,10 +364,11 @@ impl Filter for Mo {
         guard::check_input(bytes, &limits)?;
         let cat = read::read(bytes, &limits)?;
         let mut units: Vec<Unit> = Vec::new();
+        let locos = opts.is_profile(bilingua_model::profile::LOCOS);
         for e in cat.entries.iter().filter(|e| is_message(e)) {
-            units.push(make_unit(e, 0, &e.id, e.strs.first().map_or("", String::as_str)));
+            units.push(make_unit(e, 0, &e.id, e.strs.first().map_or("", String::as_str), locos));
             if plural_unit(e) {
-                units.push(make_unit(e, 1, e.id_plural.as_deref().unwrap_or(""), e.strs.get(1).map_or("", String::as_str)));
+                units.push(make_unit(e, 1, e.id_plural.as_deref().unwrap_or(""), e.strs.get(1).map_or("", String::as_str), locos));
             }
             guard::check_unit_count(units.len(), &limits)?;
         }
