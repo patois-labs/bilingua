@@ -14,7 +14,7 @@ fn doc() -> Vec<u8> {
 #[test]
 fn extract_fills_types_and_attrs() {
     let d = extract("odt", &doc(), None);
-    let u = d.units.iter().find(|u| u.codes().values().any(|c| c.label() == Some("link"))).expect("the link paragraph");
+    let u = d.units.iter().find(|u| u.codes().values().any(|c| c.attr("href") == Some("https://x.com/"))).expect("the link paragraph");
     let by = |l: &str| u.codes().values().find(|c| c.label() == Some(l)).unwrap_or_else(|| panic!("no {l} in {:?}", u.codes()));
     let link = by("link");
     assert_eq!((link.code_type(), link.attr("href"), link.attr("title")), (Some(CodeType::Link), Some("https://x.com/"), Some("X")));
