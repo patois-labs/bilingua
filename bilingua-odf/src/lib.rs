@@ -214,6 +214,72 @@ fn role_of(t: &Tree, p: u32) -> (Option<Role>, Option<u8>) {
     (None, None)
 }
 
+const NS_DRAW_URI: &str = "urn:oasis:names:tc:opendocument:xmlns:drawing:1.0";
+
+/// The LocOS profile's kind of a body paragraph, as before bilingua#22: `heading` for a `text:h`, else `cell` inside
+/// a table cell, else `paragraph`. The profile reads it for the LocOS style (`heading`), so it stays as it is.
+fn locos_kind(t: &Tree, p: u32) -> &'static str {
+    if t.local(p) == "h" {
+        "heading"
+    } else if t.ancestors(p).any(|a| t.is(a, NS_TABLE, "table-cell")) {
+        "cell"
+    } else {
+        "paragraph"
+    }
+}
+
+/// The kind of a body paragraph, with the strings and the order of the DOCX reader (bilingua#22): the page header or
+/// footer, a footnote or endnote, speaker notes (`notes`, as PPTX), a text box (ODT only: on a slide every paragraph
+/// is in one), a heading, a list item, a table cell, else `paragraph`.
+fn kind_of(t: &Tree, p: u32, text_doc: bool) -> &'static str {
+    let (mut hf, mut note, mut notes, mut tbox, mut list, mut cell) = (None, None, false, false, false, false);
+    for a in t.ancestors(p) {
+        let n = t.node(a);
+        if n.kind != Kind::Elem {
+            continue;
+        }
+        let local = t.local(a);
+        if n.ns == NS_STYLE {
+            match local {
+                "header" | "header-left" | "header-first" => hf = hf.or(Some("header")),
+                "footer" | "footer-left" | "footer-first" => hf = hf.or(Some("footer")),
+                _ => {}
+            }
+        } else if n.ns == NS_TEXT {
+            match local {
+                "note" => {
+                    note = note.or(Some(if t.attr(a, NS_TEXT, "note-class").as_deref() == Some("endnote") { "endnote" } else { "footnote" }))
+                }
+                "list-item" => list = true,
+                _ => {}
+            }
+        } else if n.ns == NS_TABLE && local == "table-cell" {
+            cell = true;
+        } else if local == "notes" && t.ns_uri(n.ns) == NS_PRESENTATION_URI {
+            notes = true;
+        } else if text_doc && local == "text-box" && t.ns_uri(n.ns) == NS_DRAW_URI {
+            tbox = true;
+        }
+    }
+    if let Some(k) = hf {
+        k
+    } else if let Some(k) = note {
+        k
+    } else if notes {
+        "notes"
+    } else if tbox {
+        "textbox"
+    } else if t.local(p) == "h" {
+        "heading"
+    } else if list {
+        "list-item"
+    } else if cell {
+        "cell"
+    } else {
+        "paragraph"
+    }
+}
+
 fn extract_doc(bytes: &[u8], opts: &ExtractOptions, id: &'static str, o: &OdfOptions) -> Result<Document, Error> {
     let l = opts.limits();
     // structure roles are not filled under the LocOS profile (its units keep today's shape)
@@ -237,14 +303,7 @@ fn extract_doc(bytes: &[u8], opts: &ExtractOptions, id: &'static str, o: &OdfOpt
             let tok = walk::tokenize(t, p, l.max_unit_chars)?;
             if tok.has_letter() {
                 let is_h = t.local(p) == "h";
-                let in_cell = t.ancestors(p).any(|a| t.is(a, NS_TABLE, "table-cell"));
-                let kind = if is_h {
-                    "heading"
-                } else if in_cell {
-                    "cell"
-                } else {
-                    "paragraph"
-                };
+                let kind = if roles { kind_of(t, p, id == "odt") } else { locos_kind(t, p) };
                 let mut u = make_unit(t, p, &tok, format!("p{idx}"), kind);
                 if roles {
                     let (role, level) = role_of(t, p);
