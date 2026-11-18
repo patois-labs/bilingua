@@ -173,6 +173,9 @@ pub fn annotate(doc: &mut Document, profile: Option<&str>) {
         // under the profile, and this keeps any that slipped through out of LocOS's dicts
         u.context.role = None;
         u.context.level = None;
+        // plural groups (unit model step 6) likewise: no crate fills them under the profile; any that slipped
+        // through stay out of LocOS's dicts
+        u.plural = None;
         let p = match format.as_str() {
             "icml" => u.hidden("p").map(str::to_string),
             "idml" => u.id.strip_prefix('p').filter(|n| n.parse::<usize>().is_ok()).map(str::to_string),
