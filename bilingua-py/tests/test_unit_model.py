@@ -61,7 +61,9 @@ def test_arb_polish_target_has_plural_slots_and_added_units():
     plain = bilingua.extract("app_en.arb", ARB, source_lang="en")
     assert len(doc["units"]) == len(plain["units"]) + 2
     assert not any(u["plural"].get("added") for u in plain["units"] if "plural" in u)
-    # untranslated, the added units write the source `other` form, as the fill did
+    # untranslated, the added units write the source `other` form, as the fill did (a merge with nothing
+    # translated gives the file back as it was, so translate another message)
+    hi["segments"][0]["target"] = [{"text": "Cześć"}]
     out = bilingua.merge(doc).decode()
     assert "few{# files}" in out and "many{# files}" in out
 

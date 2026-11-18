@@ -134,6 +134,7 @@ dependencies = [
  "bilingua",
  "bilingua-seg",
  "quick-xml",
+ "serde",
  "serde_json",
 ]
 
