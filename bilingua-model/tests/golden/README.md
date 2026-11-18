@@ -11,5 +11,7 @@ can check that new code reads them and writes the same bytes back. Do not regene
 | `old_docx.state.json`, `old_po.state.json` | copies of `core/catos-server/tests/fixtures/old-skeletons/data/files/{f1a1db279dad005,f1a1db279daf007}/state.json`, stored by the server of image 5620cb3e (Bilingua before 0.9) |
 | `old_docx.state.resaved.json`, `old_po.state.resaved.json` | those two read by main into a `Document` and written again with `serde_json::to_vec` |
 
-All the source files are invented text (see `oracle/corpus/SOURCES.md`). The generator was a throwaway test on
-branch `tmp/bili-model-gen` (`bilingua-cli/tests/zz_golden_gen.rs`), run with `m5-test.sh`.
+All the source files are invented text (see `oracle/corpus/SOURCES.md`). The generator is the ignored test
+`bilingua-cli/tests/golden_gen.rs`: run it from the commit the fixtures should pin with
+`M5_TEST_ARGS="-p bilingua-cli --test golden_gen -- --ignored" m5-test.sh <branch> test` and copy the files from
+the directory it prints (it never writes into the repository).

@@ -5,6 +5,7 @@
 //! `Codes`, and on `ctx.extra_mut()` and a `TextMap`. Code that compiles and behaves the same on both keeps
 //! compiling and behaving the same when the fields become `Codes` and `TextMap`.
 
+use bilingua_model::smallmap::SMALL_MAX;
 use bilingua_model::*;
 use std::collections::BTreeMap;
 
@@ -106,6 +107,102 @@ fn small_map_matches_btreemap_on_random_sequences() {
             same(&s, &b, seed, step);
         }
     }
+}
+
+#[test]
+fn small_map_matches_btreemap_across_the_size_limit() {
+    // 120 keys whose string order is not their numeric order; phases of growth and shrinkage take every seed
+    // over SMALL_MAX and back under SMALL_MIN, so both representations and both moves are exercised
+    let mut moves = (0, 0);
+    for seed in 0..100u64 {
+        let mut r = Rng(seed ^ 0xB16);
+        let mut s: SmallMap<u32> = SmallMap::new();
+        let mut b: BTreeMap<String, u32> = BTreeMap::new();
+        for step in 0..1000 {
+            let growing = (step / 250) % 2 == 0;
+            // shrinking picks keys that are there, so the map empties
+            let k = match b.len() {
+                n if !growing && n > 0 => b.keys().nth(r.below(n as u64) as usize).unwrap().clone(),
+                _ => r.below(120).to_string(),
+            };
+            let v = r.below(1000) as u32;
+            let was = s.is_compact();
+            match r.below(10) {
+                0..=5 if growing => assert_eq!(s.insert(k.as_str(), v), b.insert(k.clone(), v), "seed {seed} step {step}"),
+                0..=5 => assert_eq!(s.remove(&k), b.remove(&k), "seed {seed} step {step}"),
+                6 => {
+                    *s.get_or_insert_with(k.clone(), || v) += 1;
+                    *b.entry(k.clone()).or_insert(v) += 1;
+                }
+                7 if growing => {
+                    let new: Vec<(String, u32)> = (0..r.below(8)).map(|_| (r.below(120).to_string(), r.below(9) as u32)).collect();
+                    s.extend(new.clone());
+                    b.extend(new);
+                }
+                7 => {
+                    s.retain(|k, _| !k.ends_with('7'));
+                    b.retain(|k, _| !k.ends_with('7'));
+                }
+                _ => {
+                    assert_eq!(s.get(&k), b.get(&k));
+                    assert_eq!(s.contains_key(&k), b.contains_key(&k));
+                }
+            }
+            match (was, s.is_compact()) {
+                (true, false) => moves.0 += 1,
+                (false, true) => moves.1 += 1,
+                _ => {}
+            }
+            assert!(s.len() <= SMALL_MAX || !s.is_compact(), "seed {seed} step {step}");
+            same(&s, &b, seed, step);
+            // a copy built in bulk may hold the other representation: still equal in every way
+            if step % 50 == 0 {
+                let bulk: SmallMap<u32> = b.clone().into_iter().collect();
+                assert_eq!(bulk, s);
+                assert_eq!(bulk.cmp(&s), std::cmp::Ordering::Equal);
+                assert_eq!(hash_of(&bulk), hash_of(&s));
+                assert_eq!(format!("{bulk:?}"), format!("{s:?}"));
+            }
+        }
+    }
+    assert!(moves.0 >= 100 && moves.1 >= 100, "{moves:?}");
+}
+
+fn hash_of<T: std::hash::Hash>(t: &T) -> u64 {
+    use std::hash::Hasher;
+    let mut h = std::hash::DefaultHasher::new();
+    t.hash(&mut h);
+    h.finish()
+}
+
+#[test]
+fn many_codes_in_one_unit_build_in_linear_log_time() {
+    // 200,000 inline codes in one paragraph, ids "1".."200000": numeric order, so every insert lands in the
+    // middle in string order. A sorted slice alone would shift and reallocate on each one (quadratic: hours in a
+    // debug build); the tree above SMALL_MAX makes it O(n log n).
+    const N: usize = 200_000;
+    let start = std::time::Instant::now();
+    let mut one = Codes::new();
+    for i in 1..=N {
+        one.insert(i.to_string(), CodeData::standalone("<x/>"));
+    }
+    let mut per_item = Codes::new();
+    for i in 1..=N {
+        per_item.extend([(i.to_string(), CodeData::new())]);
+    }
+    let mut entry = Codes::new();
+    for i in (1..=N).rev() {
+        entry.get_or_insert_with(i.to_string(), CodeData::new).set_label("x");
+    }
+    for i in 1..=N {
+        assert!(one.remove(&i.to_string()).is_some());
+    }
+    let took = start.elapsed();
+    assert_eq!((one.len(), per_item.len(), entry.len()), (0, N, N));
+    assert!(one.is_compact() && !per_item.is_compact());
+    eprintln!("4 x {N} map operations took {took:?}");
+    // a release build takes well under a second; the bound is loose for a debug build on a busy machine
+    assert!(took.as_secs_f64() < 20.0, "{took:?}");
 }
 
 #[test]
@@ -265,8 +362,8 @@ macro_rules! read_codes {
         let c = $c;
         let id = String::from("1");
         let mut out = vec![];
-        out.push(c["1"].label.as_deref().unwrap_or_default().to_string());
-        out.push(c[&id].open.as_deref().unwrap_or_default().to_string());
+        out.push(c["1"].label().unwrap_or_default().to_string());
+        out.push(c[&id].open_markup().unwrap_or_default().to_string());
         out.push(format!("{:?}", c.get(&id).and_then(|x| x.close.as_deref())));
         out.push(format!("{:?}", c.get(id.as_str()).is_some()));
         out.push(format!("{}", c.contains_key("_o")));
@@ -373,8 +470,10 @@ fn scalar_accessors_read_and_set_the_fields() {
     c.set_standalone(Some("<x/>"));
     c.set_label("bold");
     assert_eq!(c, CodeData::paired("<b>", "</b>").with_standalone("<x/>").with_label("bold"));
+    assert_eq!((c.open_markup(), c.close_markup(), c.standalone_markup(), c.label()), (Some("<b>"), Some("</b>"), Some("<x/>"), Some("bold")));
     c.set_label(None::<&str>);
     assert_eq!(c.label, None);
+    assert_eq!(c.label(), None);
 }
 
 #[test]

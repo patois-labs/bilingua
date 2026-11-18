@@ -19,6 +19,8 @@
 //! [`profile::tokens`], which converts inline codes to and from LocOS's text tokens, one token per tag).
 
 #![warn(missing_docs)]
+// The only unsafe code is the four reference casts in `shim` (removed when the fields become `Codes` and `TextMap`).
+#![deny(unsafe_code)]
 
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
@@ -221,8 +223,24 @@ impl CodeData {
         self.label = label.into_option_string();
         self
     }
-    /// Sets (or with `None` clears) the opening markup in place. Read the fields with `as_deref()`
-    /// (`code.open.as_deref()`), which works whatever string type the field holds.
+    /// The opening markup of a paired code. (`open_markup`, not `open`, to match [`CodeData::standalone_markup`],
+    /// whose plain name is taken by the [`CodeData::standalone`] constructor.)
+    pub fn open_markup(&self) -> Option<&str> {
+        self.open.as_deref()
+    }
+    /// The closing markup of a paired code.
+    pub fn close_markup(&self) -> Option<&str> {
+        self.close.as_deref()
+    }
+    /// The markup of a standalone code.
+    pub fn standalone_markup(&self) -> Option<&str> {
+        self.standalone.as_deref()
+    }
+    /// The chip label.
+    pub fn label(&self) -> Option<&str> {
+        self.label.as_deref()
+    }
+    /// Sets (or with `None` clears) the opening markup in place.
     pub fn set_open(&mut self, open: impl IntoOptionString) {
         self.open = open.into_option_string();
     }

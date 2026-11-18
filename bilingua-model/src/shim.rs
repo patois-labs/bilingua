@@ -61,11 +61,13 @@ fn as_str(s: &String) -> &str {
 }
 
 impl<V> MapShim<V> {
+    #[allow(unsafe_code)] // removed in unit model step 3, when the fields become Codes and TextMap
     pub(crate) fn wrap(m: &BTreeMap<String, V>) -> &MapShim<V> {
         // SAFETY: MapShim<V> is #[repr(transparent)] over BTreeMap<String, V>, so the two have the same layout;
         // the reference keeps its lifetime, and nothing else can reach the map while it is borrowed.
         unsafe { &*(m as *const BTreeMap<String, V> as *const MapShim<V>) }
     }
+    #[allow(unsafe_code)] // removed in unit model step 3, when the fields become Codes and TextMap
     pub(crate) fn wrap_mut(m: &mut BTreeMap<String, V>) -> &mut MapShim<V> {
         // SAFETY: as in `wrap`; the exclusive borrow is carried over unchanged.
         unsafe { &mut *(m as *mut BTreeMap<String, V> as *mut MapShim<V>) }
@@ -202,11 +204,13 @@ impl<V: Clone> From<&MapShim<V>> for SmallMap<V> {
 }
 
 impl TextShim {
+    #[allow(unsafe_code)] // removed in unit model step 3, when the fields become Codes and TextMap
     pub(crate) fn wrap(m: &BTreeMap<String, String>) -> &TextShim {
         // SAFETY: TextShim is #[repr(transparent)] over BTreeMap<String, String>, so the two have the same layout;
         // the reference keeps its lifetime.
         unsafe { &*(m as *const BTreeMap<String, String> as *const TextShim) }
     }
+    #[allow(unsafe_code)] // removed in unit model step 3, when the fields become Codes and TextMap
     pub(crate) fn wrap_mut(m: &mut BTreeMap<String, String>) -> &mut TextShim {
         // SAFETY: as in `wrap`; the exclusive borrow is carried over unchanged.
         unsafe { &mut *(m as *mut BTreeMap<String, String> as *mut TextShim) }

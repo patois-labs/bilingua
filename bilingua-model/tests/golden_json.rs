@@ -99,7 +99,8 @@ fn old_server_state_loads_as_main_reads_it() {
 
 #[test]
 fn documents_survive_a_trip_through_a_json_value() {
-    // a dict from Python reaches the model the same way: a self-describing tree, keys in any order
+    // a self-describing tree, as a dict from Python is: serde_json's Value (no `preserve_order`) holds its keys
+    // sorted, so struct fields arrive in another order than the bytes have them; the document must not care
     for (n, doc, raw) in documents() {
         let v = serde_json::to_value(&doc).unwrap();
         let back: Document = serde_json::from_value(v).unwrap();
@@ -143,6 +144,29 @@ fn rebuilding_every_map_through_the_accessors_writes_the_same_bytes() {
             u.context.set_extra(extra);
         }
         assert_eq!(serde_json::to_vec(&doc).unwrap(), raw, "{n}");
+    }
+}
+
+#[test]
+fn maps_written_out_of_order_load_and_write_sorted() {
+    // one hand-written object per map type, keys out of order and one repeated: it loads, last wins, and writes
+    // back sorted, exactly as the BTreeMap fields do
+    let json = r#"{"id":"u1","segments":[{"id":"u1","source":[{"text":"x"}]}],
+        "codes":{"2":{"open":null,"close":null,"standalone":"<b/>","label":null},"10":{"open":"<i>","close":"</i>","standalone":null,"label":"italic"},"1":{"open":null,"close":null,"standalone":"<x/>","label":null},"2":{"open":null,"close":null,"standalone":"<br/>","label":null}},
+        "context":{"kind":null,"style":null,"key":null,"heading":null,"location":null,"max_len":null,"extra":{"slide":"3","part":"a.xml","cells":"A1","part":"b.xml"}},
+        "hidden":{"raw":"r","lead":" ","raw":"r2"}}"#;
+    let u: Unit = serde_json::from_str(json).unwrap();
+    let out = serde_json::to_string(&u).unwrap();
+    assert!(out.contains(r#""codes":{"1":{"open":null,"close":null,"standalone":"<x/>","label":null},"10":{"open":"<i>","close":"</i>","standalone":null,"label":"italic"},"2":{"open":null,"close":null,"standalone":"<br/>","label":null}}"#), "{out}");
+    assert!(out.contains(r#""extra":{"cells":"A1","part":"b.xml","slide":"3"}"#), "{out}");
+    assert!(out.contains(r#""hidden":{"lead":" ","raw":"r2"}"#), "{out}");
+    // the compact maps read the same objects the same way
+    let raw = r#"{"2":{"open":null,"close":null,"standalone":"<b/>","label":null},"10":{"open":"<i>","close":"</i>","standalone":null,"label":"italic"},"1":{"open":null,"close":null,"standalone":"<x/>","label":null},"2":{"open":null,"close":null,"standalone":"<br/>","label":null}}"#;
+    let c: Codes = serde_json::from_str(raw).unwrap();
+    assert_eq!(serde_json::to_string(&c).unwrap(), serde_json::to_string(&u.codes).unwrap());
+    for (raw, field) in [(r#"{"slide":"3","part":"a.xml","cells":"A1","part":"b.xml"}"#, &u.context.extra), (r#"{"raw":"r","lead":" ","raw":"r2"}"#, &u.hidden)] {
+        let t: TextMap = serde_json::from_str(raw).unwrap();
+        assert_eq!(serde_json::to_string(&t).unwrap(), serde_json::to_string(field).unwrap());
     }
 }
 
