@@ -141,13 +141,15 @@ fn a_document_extracted_for_one_language_never_writes_its_added_forms_into_anoth
     let merge = |d: &Document| Arb.merge_with(d, &MergeOptions::new()).map(|b| String::from_utf8(b).unwrap());
     let many = d.units.iter().find(|u| path(u) == "count: plural many").unwrap().id.clone();
     assert!(matches!(merge(&d), Err(Error::TargetChanged { unit }) if unit == many), "{:?}", merge(&d));
-    // untranslated too: the units no longer fit the target's plan
+    // with the added units untranslated too, once anything is translated (an untouched merge gives the file back)
     let mut d = extract(Some("pl"), false);
+    translate(&mut d, "", "hi", |_| "Zdravo".into());
     d.target_lang = Some("sl".into());
     assert!(matches!(merge(&d), Err(Error::TargetChanged { .. })));
     // the same target merges; a plain skeleton mismatch (the first message's stored token changed) stays a write
     // error
     let mut d = extract(Some("pl"), false);
+    translate(&mut d, "", "hi", |_| "Cześć".into());
     assert!(merge(&d).is_ok());
     d.units[0].codes_mut().get_mut("$raw").expect("the first unit keeps its token").set_standalone("\"changed\"");
     assert!(matches!(merge(&d), Err(Error::Write(_))), "{:?}", merge(&d));

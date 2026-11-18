@@ -83,6 +83,7 @@ def test_locos_profile_dicts_have_none_of_the_new_keys():
 def test_a_changed_target_has_its_own_error():
     doc = bilingua.extract("app_en.arb", ARB, source_lang="en", target_lang="pl")
     many = next(u for u in doc["units"] if u.get("plural", {}).get("category") == "many")
+    many["segments"][0]["target"] = [{"text": " plików"}]
     doc["target_lang"] = "sl"
     try:
         bilingua.merge(doc)
