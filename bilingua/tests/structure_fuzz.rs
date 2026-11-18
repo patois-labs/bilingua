@@ -85,11 +85,11 @@ fn expand(n: Norm, u: &Unit, inl: &[Inline]) -> String {
             Inline::Tag { kind: TagKind::Open, .. } if !n.by_markup() => s.push_str("\u{27E6}o\u{27E7}"),
             Inline::Tag { kind: TagKind::Close, .. } if !n.by_markup() => s.push_str("\u{27E6}c\u{27E7}"),
             Inline::Tag { id, kind, .. } => {
-                if let Some(c) = u.codes.get(id) {
+                if let Some(c) = u.codes().get(id) {
                     let piece = match kind {
-                        TagKind::Open => c.open.as_deref(),
-                        TagKind::Close => c.close.as_deref(),
-                        TagKind::Standalone => c.standalone.as_deref(),
+                        TagKind::Open => c.open_markup(),
+                        TagKind::Close => c.close_markup(),
+                        TagKind::Standalone => c.standalone_markup(),
                     };
                     let piece = piece.unwrap_or_default();
                     // the AsciiDoc writer may double a constrained mark next to punctuation (`}*p*` to `}**p**`)
@@ -326,11 +326,11 @@ fn set(doc: &mut Document, i: usize, t: Vec<Inline>) {
 /// The markup of a tag in its unit.
 fn markup<'a>(u: &'a Unit, i: &Inline) -> Option<&'a str> {
     let Inline::Tag { id, kind, .. } = i else { return None };
-    let c = u.codes.get(id)?;
+    let c = u.codes().get(id)?;
     match kind {
-        TagKind::Open => c.open.as_deref(),
-        TagKind::Close => c.close.as_deref(),
-        TagKind::Standalone => c.standalone.as_deref(),
+        TagKind::Open => c.open_markup(),
+        TagKind::Close => c.close_markup(),
+        TagKind::Standalone => c.standalone_markup(),
     }
 }
 

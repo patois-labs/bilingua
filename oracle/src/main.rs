@@ -14,7 +14,7 @@ fn render(u: &bilingua::Unit) -> (String, usize) {
     for i in u.source() {
         match i {
             Inline::Text(t) => s.push_str(&t),
-            Inline::Tag { id, .. } if u.codes.get(&id).and_then(|c| c.label.as_deref()).is_some_and(|l| l.contains("line break")) => {
+            Inline::Tag { id, .. } if u.codes().get(&id).and_then(|c| c.label()).is_some_and(|l| l.contains("line break")) => {
                 s.push(' ')
             }
             Inline::Tag { kind, .. } => {
@@ -102,8 +102,8 @@ fn no_tags(s: &str) -> String {
 /// The plural form a unit stands for (the same rule as `tests/corpus.rs`): a merge with a target language fills
 /// the plural forms es-ES needs and the source lacks, and those new units are not a mismatch.
 fn plural_label(u: &bilingua::Unit) -> Option<(Option<String>, String)> {
-    if let Some(p) = u.context.extra.get("plural") {
-        return Some((u.context.key.clone(), p.clone()));
+    if let Some(p) = u.context.extra().get("plural") {
+        return Some((u.context.key.clone(), p.to_string()));
     }
     let key = u.context.key.as_deref()?;
     if let Some((base, last)) = key.rsplit_once('/') {
@@ -233,7 +233,7 @@ fn main() {
                 // `many`, an Arabic source loses `zero`, `two`, `few`) and adds suffix plurals (`itemCountMany`).
                 // A unit is its message key plus its ICU branch path; compare the units both files have.
                 type Label = (Option<String>, Option<String>);
-                let label = |u: &bilingua::Unit| -> Label { (u.context.key.clone(), u.context.extra.get("icu").cloned()) };
+                let label = |u: &bilingua::Unit| -> Label { (u.context.key.clone(), u.context.extra().get("icu").map(str::to_string)) };
                 let before: std::collections::BTreeSet<Label> = doc.units.iter().map(label).collect();
                 let after: std::collections::BTreeSet<Label> = d2.units.iter().map(label).collect();
                 let a: Vec<String> = doc.units.iter().filter(|u| u.translate && after.contains(&label(u))).map(|u| no_tags(&render(u).0)).collect();

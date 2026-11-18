@@ -35,8 +35,8 @@ fn parts(bytes: &[u8]) -> Option<BTreeMap<String, Vec<u8>>> {
 /// in `context.extra["plural"]` (PO index, YAML and Rails category), as `[label]` after the key (Fluent variants) or
 /// as the last `/` step of a stringsdict key path (`files_count/count/many`).
 fn plural_label(u: &bilingua::Unit) -> Option<(Option<String>, String)> {
-    if let Some(p) = u.context.extra.get("plural") {
-        return Some((u.context.key.clone(), p.clone()));
+    if let Some(p) = u.context.extra().get("plural") {
+        return Some((u.context.key.clone(), p.to_string()));
     }
     let key = u.context.key.as_deref()?;
     if let Some((base, last)) = key.rsplit_once('/') {

@@ -66,7 +66,7 @@ fn android_p_index_keeps_skipped_slots() {
     assert!(out.contains(r#"<string name="bye">Tschuess</string>"#) && out.contains(">Hello<"), "{out}");
     // Bilingua's own reading has no LocOS index
     let native = extract("strings.xml", ANDROID.as_bytes(), &ExtractOptions::new()).unwrap();
-    assert!(native.units.iter().all(|u| !u.context.extra.contains_key(profile::P_INDEX)));
+    assert!(native.units.iter().all(|u| !u.context.extra().contains_key(profile::P_INDEX)));
 }
 
 /// xml-1: Java XML properties too (an empty entry is a slot).
@@ -240,8 +240,8 @@ fn inventory(name: &str, data: &[u8]) -> Vec<(i64, String, Option<String>)> {
     let mut out = Vec::new();
     for n in profile::locos_units(&doc) {
         let u = doc.units.iter().find(|u| u.segments.iter().any(|s| s.id == n.segment_id)).unwrap();
-        if let Some(c) = u.context.extra.get(profile::A11Y_IMAGES) {
-            out.push((n.p_index, c.clone(), u.context.extra.get(profile::A11Y_MISSING_ALT).cloned()));
+        if let Some(c) = u.context.extra().get(profile::A11Y_IMAGES) {
+            out.push((n.p_index, c.to_string(), u.context.extra().get(profile::A11Y_MISSING_ALT).map(str::to_string)));
         }
     }
     out
@@ -259,7 +259,7 @@ fn html_image_inventory_for_missing_alt_prompts() {
     let page = "<p>X <img src=a.png alt=Cat> <img src=b.png alt></p>";
     assert_eq!(inventory("p.html", page.as_bytes()), vec![(0, "2".into(), Some(r#"[{"kind":"empty","where":""}]"#.into()))]);
     let native = extract("p.html", page.as_bytes(), &ExtractOptions::new()).unwrap();
-    assert!(native.units.iter().all(|u| !u.context.extra.contains_key(profile::A11Y_IMAGES)));
+    assert!(native.units.iter().all(|u| !u.context.extra().contains_key(profile::A11Y_IMAGES)));
 }
 
 /// mdx-2: MDX images (Markdown and JSX) as the same inventory, not as warnings, under the profile.

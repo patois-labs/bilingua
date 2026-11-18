@@ -267,8 +267,8 @@ fn a11y_inventory(doc: &Document) -> (u64, Vec<(String, i64, String)>) {
     let mut found = Vec::new();
     for n in numbered(doc) {
         let Some(u) = doc.units.iter().find(|u| u.segments.iter().any(|s| s.id == n.segment_id)) else { continue };
-        images += u.context.extra.get(profile::A11Y_IMAGES).and_then(|c| c.parse::<u64>().ok()).unwrap_or(0);
-        if let Some(list) = u.context.extra.get(profile::A11Y_MISSING_ALT) {
+        images += u.context.extra().get(profile::A11Y_IMAGES).and_then(|c| c.parse::<u64>().ok()).unwrap_or(0);
+        if let Some(list) = u.context.extra().get(profile::A11Y_MISSING_ALT) {
             let v: Value = serde_json::from_str(list).unwrap();
             for f in v.as_array().unwrap() {
                 found.push((f["kind"].as_str().unwrap().to_string(), n.p_index, f["where"].as_str().unwrap().to_string()));

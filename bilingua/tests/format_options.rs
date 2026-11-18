@@ -101,9 +101,9 @@ fn the_locos_profile() {
     let file = std::fs::read_dir(dir).unwrap().flatten().map(|e| e.path()).find(|p| p.extension().is_some_and(|e| e == "odt")).unwrap();
     let bytes = std::fs::read(&file).unwrap();
     let on = extract("a.odt", &bytes, &profile::locos().extract_options()).unwrap();
-    assert!(!on.units.is_empty() && on.units.iter().all(|u| u.context.extra.contains_key(profile::P_INDEX)));
+    assert!(!on.units.is_empty() && on.units.iter().all(|u| u.context.extra().contains_key(profile::P_INDEX)));
     let off = extract("a.odt", &bytes, &ExtractOptions::new()).unwrap();
-    assert!(off.units.iter().all(|u| !u.context.extra.contains_key(profile::P_INDEX)));
+    assert!(off.units.iter().all(|u| !u.context.extra().contains_key(profile::P_INDEX)));
     // the profile's merge options: UTF-8 out, except where LocOS keeps the encoding
     let m = profile::locos().merge_options("ini");
     assert_eq!((m.output_encoding, m.stamp_target_always, m.profile.as_deref()), (OutputEncoding::Keep, true, Some("locos")));
