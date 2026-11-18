@@ -382,8 +382,9 @@ fn extract(d: Dialect, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, 
         pos = b;
         parts.push(SkelPart::Unit(units.len()));
         if let (Kind::Plural(q), Some(g)) = (&s.kind, s.group) {
-            if q == "other" && unit.translate {
-                other_of.insert(g, units.len());
+            if q == "other" {
+                // the first `other` item, the one the plural fill copies
+                other_of.entry(g).or_insert(units.len());
             }
         }
         units.push(unit);
@@ -397,7 +398,7 @@ fn extract(d: Dialect, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, 
         let cats = cldr::categories(target);
         for (g, group) in p.scan.groups.iter().enumerate() {
             let Some(&oi) = other_of.get(&g) else { continue };
-            if group.off {
+            if group.off || !units[oi].translate {
                 continue;
             }
             for c in cats.iter().copied().filter(|c| !group.items.iter().any(|i| i.quantity == *c)) {

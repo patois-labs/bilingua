@@ -19,11 +19,16 @@ proptest! {
         let src = &srcs()[which];
         let mut d = Yaml.extract(src, &opts(tgt)).unwrap();
         let mut want: Vec<String> = Vec::new();
+        // units added for a plural category the target needs (unit model step 7) come after the others in the
+        // document and before `other` in the file: they are checked without their order
+        let mut added: Vec<String> = Vec::new();
         for (i, u) in d.units.iter_mut().enumerate() {
             let t: String = seed[i % seed.len()].clone();
             u.segments[0].target = vec![Inline::text(t.clone())];
             let tr: String = t.trim().to_string();
-            if tr.chars().any(|c: char| c.is_alphanumeric()) { want.push(tr); }
+            if tr.chars().any(|c: char| c.is_alphanumeric()) {
+                if u.has_hidden(icu::ADDED_HIDDEN) { added.push(tr) } else { want.push(tr) }
+            }
         }
         let out = Yaml.merge(&d).unwrap();
         let s = String::from_utf8_lossy(&out).to_string();
@@ -32,5 +37,6 @@ proptest! {
         let got: Vec<String> = back.unwrap().units.iter().map(text_of).collect();
         let mut it = got.iter();
         for e in &want { prop_assert!(it.any(|g: &String| g == e), "missing {:?} in {}", e, s); }
+        for e in &added { prop_assert!(got.contains(e), "missing added {:?} in {}", e, s); }
     }
 }

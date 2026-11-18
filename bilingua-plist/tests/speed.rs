@@ -64,7 +64,8 @@ fn large_files_round_trip_fast() {
         std::fs::write(std::path::Path::new(&dir).join("speed.stringsdict"), &sd).unwrap();
     }
     timed(F::Plist, "plist", &plist, 30_000 / k);
-    timed(F::Sd, "stringsdict", &sd, 24_000 / k);
+    // two forms per variable, and two more units each for the forms Russian adds (few, many; unit model step 7)
+    timed(F::Sd, "stringsdict", &sd, 48_000 / k);
     // UTF-16 doubles the bytes and takes the same path
     let mut u16 = vec![0xFF, 0xFE];
     for u in plist.encode_utf16() {

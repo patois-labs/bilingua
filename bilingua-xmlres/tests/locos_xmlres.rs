@@ -25,9 +25,10 @@ fn opts(lang: &str) -> ExtractOptions {
     ExtractOptions::new().with_target_lang(lang).with_granularity(Granularity::Paragraph)
 }
 
-/// The units as LocOS shows them (its token text).
+/// The units as LocOS shows them (its token text). LocOS has no units for the plural forms a target adds (unit
+/// model step 7 adds them outside its profile), so they are left out.
 fn locos_units(d: &Document) -> Vec<String> {
-    d.units.iter().filter(|u| u.translate).map(|u| to_locos_text(&u.source()).0).collect()
+    d.units.iter().filter(|u| u.translate && !u.has_hidden(icu::ADDED_HIDDEN)).map(|u| to_locos_text(&u.source()).0).collect()
 }
 
 /// Translates every unit from LocOS token texts, in order.
@@ -36,7 +37,7 @@ fn translate(f: &dyn Filter, data: &[u8], lang: &str, texts: &[String]) -> Vec<u
     let todo: Vec<(String, Vec<Inline>)> = d
         .units
         .iter()
-        .filter(|u| u.translate)
+        .filter(|u| u.translate && !u.has_hidden(icu::ADDED_HIDDEN))
         .zip(texts)
         .map(|(u, t)| {
             let (_, map) = to_locos_text(&u.source());

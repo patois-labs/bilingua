@@ -780,6 +780,38 @@ mod tests {
     }
 
     #[test]
+    fn key_style_added_forms_fit_only_the_same_categories() {
+        let other = crate::Unit::new("u3", vec![crate::Inline::text("# files")]);
+        let slot = key_slot("files", false, "other", false);
+        let u = key_added_copy(&other, "u3.few", "few", &["one", "few", "many", "other"], Some(slot.clone().with_category("few")));
+        assert_eq!((u.id.as_str(), u.segments[0].id.as_str()), ("u3.few", "u3.few"));
+        assert_eq!(u.hidden(ADDED_HIDDEN), Some("few of one few many other"));
+        assert!(u.plural().is_some_and(|p| p.is_added() && p.category() == Some("few") && p.group() == "files"));
+        assert_eq!(key_added(&u, Some(&["one", "few", "many", "other"])), KeyAdded::Fits("few"));
+        // Slovenian has `few` too, among other categories: not the same forms
+        assert_eq!(key_added(&u, Some(&["one", "two", "few", "other"])), KeyAdded::Foreign);
+        assert_eq!(key_added(&u, None), KeyAdded::Foreign);
+        assert_eq!(key_added(&other, Some(&["one", "other"])), KeyAdded::No);
+        // an ICU added path is not a key-style mark
+        let mut icu = other.clone();
+        icu.set_hidden(ADDED_HIDDEN, "count: plural few");
+        assert_eq!(key_added(&icu, Some(&["one", "few", "many", "other"])), KeyAdded::No);
+        assert!(!has_any_target(&u));
+    }
+
+    #[test]
+    fn suffix_keys_group_by_stem() {
+        let mut units: Vec<crate::Unit> = ["itemCountOne", "itemCountOther", "phone", "lonelyOther", "aOne", "aMany"].iter().map(|k| {
+            let mut u = crate::Unit::new(*k, vec![]);
+            u.context.key = Some((*k).to_string());
+            u
+        }).collect();
+        suffix_plural_slots(&mut units, &|u| u.context.key.clone());
+        let got: Vec<Option<(&str, &str)>> = units.iter().map(|u| u.plural().map(|p| (p.group(), p.category().unwrap()))).collect();
+        assert_eq!(got, [Some(("itemCount", "one")), Some(("itemCount", "other")), None, None, None, None]);
+    }
+
+    #[test]
     fn slots_name_groups_by_message() {
         let s = BranchSlot { group: 1, parent: Some(0), kind: Kind::Select, arg: "g".into(), category: "f".into(), added: false };
         let p = plural_slot("u3", &s);

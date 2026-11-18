@@ -148,3 +148,23 @@ fn a_document_extracted_for_one_language_never_writes_its_added_forms_into_anoth
     assert_eq!(few.hidden(bilingua_model::icu::ADDED_HIDDEN), Some("count: plural few"));
     assert!(d.units.iter().filter(|u| !u.plural().is_some_and(PluralSlot::is_added)).all(|u| u.hidden(bilingua_model::icu::ADDED_HIDDEN).is_none()));
 }
+
+/// Unit model step 7: suffix-style plurals (`itemCountOne`, `itemCountOther`) share a group by their stem; no
+/// units are added for them, and nothing is filled under the LocOS profile.
+#[test]
+fn suffix_style_plurals_share_a_group() {
+    let src = "{\n  \"@@locale\": \"en\",\n  \"itemCountOne\": \"One item\",\n  \"itemCountOther\": \"{n} items\",\n  \"phone\": \"Phone\"\n}\n";
+    let ex = |locos: bool| {
+        let mut o = ExtractOptions::new().with_source_lang("en").with_target_lang("pl");
+        if locos {
+            o = o.with_profile(profile::LOCOS);
+        }
+        Arb.extract(src.as_bytes(), &o).unwrap()
+    };
+    let d = ex(false);
+    let slots: Vec<(&str, &str, &str)> = d.units.iter().filter_map(|u| u.plural().map(|p| (u.context.key.as_deref().unwrap(), p.group(), p.category().unwrap()))).collect();
+    assert_eq!(slots, [("itemCountOne", "itemCount", "one"), ("itemCountOther", "itemCount", "other")]);
+    assert_eq!(d.units.len(), 3);
+    assert_eq!(Arb.merge(&d).unwrap(), src.as_bytes());
+    assert!(ex(true).units.iter().all(|u| u.plural().is_none()));
+}

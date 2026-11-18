@@ -145,7 +145,7 @@ struct Forms {
 fn plural_forms(tree: &Tree) -> Forms {
     let mut f = Forms { by_node: HashMap::new(), vars: Vec::new() };
     let root = &tree.nodes[tree.root];
-    let vars = plural_vars(tree);
+    let vars: std::collections::HashSet<usize> = plural_vars(tree).into_iter().collect();
     if root.kind != Kind::Dict {
         return f;
     }
@@ -157,18 +157,14 @@ fn plural_forms(tree: &Tree) -> Forms {
             let ek = entry.key.as_deref().unwrap_or("");
             let vk = var.key.as_deref().unwrap_or("");
             let group = format!("{ek}/{vk}");
-            let mut have = Vec::new();
-            let mut other = usize::MAX;
+            // every key of the variable counts as present (the fill's test), the string ones are forms
+            let have: Vec<String> = tree.nodes[var.node].kids.iter().filter_map(|k| k.key.clone()).collect();
+            let other = tree.find_key(var.node, "other").map(|i| tree.nodes[var.node].kids[i].node).filter(|&n| tree.nodes[n].kind == Kind::Str).unwrap_or(usize::MAX);
             for kid in &tree.nodes[var.node].kids {
                 let k = kid.key.as_deref().unwrap_or("");
-                if tree.nodes[kid.node].kind != Kind::Str || !PLURAL_KEYS.contains(&k) {
-                    continue;
+                if tree.nodes[kid.node].kind == Kind::Str && PLURAL_KEYS.contains(&k) {
+                    f.by_node.insert(kid.node, (group.clone(), k.to_string(), vk.to_string()));
                 }
-                if k == "other" {
-                    other = kid.node;
-                }
-                have.push(k.to_string());
-                f.by_node.insert(kid.node, (group.clone(), k.to_string(), vk.to_string()));
             }
             f.vars.push((other, have, group));
         }

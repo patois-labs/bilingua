@@ -125,7 +125,11 @@ fn target_locale_and_paragraph_mode() {
     let mut plain = extract(&data).unwrap();
     pseudo(&mut plain);
     let out = String::from_utf8(FtlFilter.merge(&plain).unwrap()).unwrap();
-    assert!(!String::from_utf8(FtlFilter.merge(&doc).unwrap()).unwrap().contains("[few]"), "plain merge adds no variants");
+    // plain merge adds no copies of `[other]`; it does write the translated units added for the target's
+    // categories (unit model step 7: extracted for Arabic, the selects got units for zero, two, few and many)
+    let plain_doc = String::from_utf8(FtlFilter.merge(&doc).unwrap()).unwrap();
+    assert!(plain_doc.contains("[few] [["), "translated added forms are written");
+    assert_eq!(plain_doc.matches("[few]").count(), out.matches("[few]").count() + doc.units.iter().filter(|u| u.has_hidden(icu::ADDED_HIDDEN) && u.context.key.as_deref().is_some_and(|k| k.ends_with("[few]"))).count());
     assert!(!out.contains("[few]"));
     assert!(out.contains("login = [[Log in]]"));
 }
