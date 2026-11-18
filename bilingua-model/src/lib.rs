@@ -184,6 +184,14 @@ pub struct CodeData {
     pub standalone: Option<String>,
     /// Human label for the tag chip, e.g. "bold", "link".
     pub label: Option<String>,
+    /// What the code is (bold, link, field...), when the format knows (BILI-118). JSON key `type`, left out when
+    /// unset. Extractors fill it; writers never read it. Unset under the LocOS profile.
+    #[serde(rename = "type", default, skip_serializing_if = "Option::is_none")]
+    pub ty: Option<CodeType>,
+    /// Facts about the code, keyed per type (see [`CodeType::attr_keys`]): `href` and `title` for a link, ...
+    /// Left out of the JSON when empty. Unset under the LocOS profile.
+    #[serde(default, skip_serializing_if = "TextMap::is_empty")]
+    pub attrs: TextMap,
 }
 
 impl CodeData {
@@ -253,6 +261,161 @@ impl CodeData {
     /// Sets (or clears) the chip label in place.
     pub fn set_label(&mut self, label: impl IntoOptionString) {
         self.label = label.into_option_string();
+    }
+}
+
+// --- BILI-118: typed inline codes (unit model step 5) ---------------------------------------------------
+
+impl CodeData {
+    /// Sets (or clears) the code type.
+    pub fn with_code_type(mut self, ty: Option<CodeType>) -> CodeData {
+        self.ty = ty;
+        self
+    }
+    /// Sets one attribute (`href`, `field`, ...); an empty value is not stored.
+    pub fn with_attr(mut self, key: &str, value: impl Into<Box<str>>) -> CodeData {
+        self.set_attr(key, value);
+        self
+    }
+    /// What the code is, when the format knows.
+    pub fn code_type(&self) -> Option<CodeType> {
+        self.ty
+    }
+    /// Sets (or with `None` clears) the code type in place.
+    pub fn set_code_type(&mut self, ty: Option<CodeType>) {
+        self.ty = ty;
+    }
+    /// The code's attributes (keys per [`CodeType::attr_keys`]).
+    pub fn attrs(&self) -> &TextMap {
+        &self.attrs
+    }
+    /// The code's attributes, for changing.
+    pub fn attrs_mut(&mut self) -> &mut TextMap {
+        &mut self.attrs
+    }
+    /// One attribute's value.
+    pub fn attr(&self, key: &str) -> Option<&str> {
+        self.attrs.get(key)
+    }
+    /// Sets one attribute in place; an empty value removes it instead.
+    pub fn set_attr(&mut self, key: &str, value: impl Into<Box<str>>) {
+        let value: Box<str> = value.into();
+        if value.is_empty() {
+            self.attrs.remove(key);
+        } else {
+            self.attrs.insert(key, value);
+        }
+    }
+    /// Clears the type and the attributes (what the LocOS profile does to every code).
+    pub fn clear_typing(&mut self) {
+        self.ty = None;
+        self.attrs.clear();
+    }
+}
+
+/// What an inline code is, for chips and QA ("bold", "link to x.com"). Closed list with a catch-all: match with a
+/// wildcard arm; a JSON value this release does not know reads as `Other`. Serialised lowercase.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+#[non_exhaustive]
+pub enum CodeType {
+    /// Bold or strong.
+    Bold,
+    /// Italic or emphasis.
+    Italic,
+    /// Underline.
+    Underline,
+    /// Strike-through.
+    Strike,
+    /// Superscript.
+    Superscript,
+    /// Subscript.
+    Subscript,
+    /// Inline code or a monospace span.
+    Code,
+    /// A named character style (attr `style`).
+    Style,
+    /// A hyperlink (attrs `href`, `title`).
+    Link,
+    /// An inline image (attrs `src`, `alt`).
+    Image,
+    /// A line break.
+    Linebreak,
+    /// A tab.
+    Tab,
+    /// A field (attr `field`: PAGE, DATE, TOC...).
+    Field,
+    /// A footnote or endnote reference.
+    Footnoteref,
+    /// A placeholder (attr `name`).
+    Placeholder,
+    /// Anything else. An unknown type in a JSON file also reads as `Other`.
+    #[serde(other)]
+    Other,
+}
+
+impl CodeType {
+    /// The JSON name (`"bold"`, `"link"`, ...).
+    pub fn as_str(self) -> &'static str {
+        match self {
+            CodeType::Bold => "bold",
+            CodeType::Italic => "italic",
+            CodeType::Underline => "underline",
+            CodeType::Strike => "strike",
+            CodeType::Superscript => "superscript",
+            CodeType::Subscript => "subscript",
+            CodeType::Code => "code",
+            CodeType::Style => "style",
+            CodeType::Link => "link",
+            CodeType::Image => "image",
+            CodeType::Linebreak => "linebreak",
+            CodeType::Tab => "tab",
+            CodeType::Field => "field",
+            CodeType::Footnoteref => "footnoteref",
+            CodeType::Placeholder => "placeholder",
+            CodeType::Other => "other",
+        }
+    }
+    /// The type for a JSON name; an unknown name is `Other`.
+    pub fn from_name(name: &str) -> CodeType {
+        CodeType::ALL.iter().copied().find(|t| t.as_str() == name).unwrap_or(CodeType::Other)
+    }
+    /// Every type, in declaration order.
+    pub const ALL: [CodeType; 16] = [
+        CodeType::Bold,
+        CodeType::Italic,
+        CodeType::Underline,
+        CodeType::Strike,
+        CodeType::Superscript,
+        CodeType::Subscript,
+        CodeType::Code,
+        CodeType::Style,
+        CodeType::Link,
+        CodeType::Image,
+        CodeType::Linebreak,
+        CodeType::Tab,
+        CodeType::Field,
+        CodeType::Footnoteref,
+        CodeType::Placeholder,
+        CodeType::Other,
+    ];
+    /// The `attrs` keys this type may carry: `href`, `title` (link); `field` (field); `src`, `alt` (image);
+    /// `style` (style); `name` (placeholder); none for the others.
+    pub fn attr_keys(self) -> &'static [&'static str] {
+        match self {
+            CodeType::Link => &["href", "title"],
+            CodeType::Field => &["field"],
+            CodeType::Image => &["src", "alt"],
+            CodeType::Style => &["style"],
+            CodeType::Placeholder => &["name"],
+            _ => &[],
+        }
+    }
+}
+
+impl std::fmt::Display for CodeType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())
     }
 }
 

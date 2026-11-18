@@ -16,6 +16,7 @@ pub mod locos;
 mod preview;
 mod render;
 mod storyline;
+mod typing;
 mod xml;
 mod zipio;
 
@@ -441,6 +442,7 @@ fn extract_doc_inner(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Er
             format!("{stem}-")
         };
         ex.begin_part(kind, &e.name, prefix, ns);
+        ex.set_rels(typing::part_rels(&entries, &e.name));
         // the walk frees the tree as it goes
         let template = ex.run_part(nodes);
         // a comment copied into more units than the context budget allows: refused as soon as the part is walked

@@ -164,6 +164,11 @@ pub fn annotate(doc: &mut Document, profile: Option<&str>) {
     }
     let format = doc.format.clone();
     for u in &mut doc.units {
+        // BILI-118 (unit model step 5): code types and attrs stay off under the LocOS profile, so its dicts keep
+        // today's shape (design section 4, rule 7)
+        for c in u.codes.values_mut() {
+            c.clear_typing();
+        }
         let p = match format.as_str() {
             "icml" => u.hidden("p").map(str::to_string),
             "idml" => u.id.strip_prefix('p').filter(|n| n.parse::<usize>().is_ok()).map(str::to_string),
