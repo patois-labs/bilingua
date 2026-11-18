@@ -92,8 +92,7 @@ fn aligned(orig: &str, msgs: &[dialect::Msg], plans: &[plan::Plan], doc: &Docume
         if units.first().is_some_and(|u| u.codes().get(RAW_KEY).and_then(|c| c.standalone_markup()) != Some(&orig[m.start..m.end])) {
             return false;
         }
-        let added = |up: &plan::UnitPlan| up.slot.as_ref().filter(|s| s.added).map(|_| up.path.as_str());
-        if !units.iter().zip(&plan.units).all(|(u, up)| bilingua_model::icu::added_matches(u, added(up))) {
+        if !units.iter().zip(&plan.units).all(|(u, up)| bilingua_model::icu::added_matches(u, up.slot.as_ref().filter(|s| s.added).map(|_| up.path.as_str()))) {
             return false;
         }
         head += k;

@@ -554,8 +554,7 @@ fn aligned(orig: &str, msgs: &[Msg], doc: &Document) -> bool {
         }
         // an added unit stands where this plan adds the same category (a document extracted for Polish and merged
         // for Slovenian does not line up: `few` is not written as `two`)
-        let added = |up: &UnitPlan| up.slot.as_ref().filter(|s| s.added).map(|_| up.path.as_str());
-        if !units.iter().zip(&m.plan.units).all(|(u, up)| icu::added_matches(u, added(up))) {
+        if !units.iter().zip(&m.plan.units).all(|(u, up)| icu::added_matches(u, up.slot.as_ref().filter(|s| s.added).map(|_| up.path.as_str()))) {
             return false;
         }
         head += k;
