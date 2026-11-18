@@ -28,7 +28,7 @@ fn attr_escape(s: &str) -> String {
 }
 
 fn code_str(u: &Unit, key: &str) -> String {
-    u.codes.get(key).and_then(|c| c.standalone.clone()).unwrap_or_default()
+    u.codes().get(key).and_then(|c| c.standalone_markup().map(String::from)).unwrap_or_default()
 }
 
 /// Excel refuses sheet names with : \ / ? * [ ], longer than 31 characters, or with a leading or trailing '.
@@ -94,7 +94,7 @@ impl<'a> Renderer<'a> {
         let pfx = code_str(u, crate::C_PFX);
         match code_str(u, C_MODE).as_str() {
             "si" => {
-                if u.codes.contains_key("_ph") && self.warned.insert(u.id.clone()) {
+                if u.codes().contains_key("_ph") && self.warned.insert(u.id.clone()) {
                     self.warnings.push(format!("{}: phonetic guides were removed because the text was translated", u.id));
                 }
                 let runs = out.iter().any(|i| matches!(i, Inline::Tag { .. })) || !code_str(u, C_BASE).is_empty();

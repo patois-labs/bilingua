@@ -28,7 +28,7 @@ fn seg_inner(u: &Unit, seg: &Segment) -> String {
         match i {
             Inline::Text(t) => s.push_str(&esc(t).replace('\n', "<br>")),
             Inline::Tag { id, kind, display, .. } => {
-                let label = u.codes.get(id).and_then(|c| c.label.as_deref()).unwrap_or("");
+                let label = u.codes().get(id).and_then(|c| c.label()).unwrap_or("");
                 match kind {
                     TagKind::Open => {
                         let tag = if label.contains("bold") && !label.contains(' ') {
@@ -88,7 +88,7 @@ pub fn render_segment(doc: &Document, seg_id: &str) -> Option<String> {
 }
 
 fn extra<'a>(u: &'a Unit, k: &str) -> &'a str {
-    u.context.extra.get(k).map(String::as_str).unwrap_or("")
+    u.context.extra().get(k).unwrap_or("")
 }
 
 fn slide_html(units: &[&Unit]) -> String {

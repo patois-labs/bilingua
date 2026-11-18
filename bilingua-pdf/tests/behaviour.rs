@@ -15,7 +15,7 @@ fn ids_are_stable_and_name_the_page() {
     assert_eq!(ids, again.units.iter().map(|u| u.id.as_str()).collect::<Vec<_>>());
     assert_eq!(ids[0], "p1u1");
     assert_eq!(a.units[1].id, "p2u1");
-    assert_eq!(a.units[1].context.extra.get("page").map(String::as_str), Some("2"));
+    assert_eq!(a.units[1].context.extra().get("page"), Some("2"));
     assert_eq!(a.units[0].context.kind.as_deref(), Some("paragraph"));
 }
 

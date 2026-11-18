@@ -337,7 +337,7 @@ impl Builder {
     /// shape text and data label, so the numbers have gaps).
     fn mark(&self, u: &mut Unit, p_index: usize) {
         if self.locos {
-            u.context.extra.insert(bilingua_model::profile::P_INDEX.to_string(), p_index.to_string());
+            u.context.extra_mut().insert(bilingua_model::profile::P_INDEX.to_string(), p_index.to_string());
         }
     }
 }
@@ -457,8 +457,8 @@ fn extract_inner(bytes: &[u8], opts: &ExtractOptions, with_comments: bool) -> Re
             u.context.kind = Some("page-name".into());
             u.context.style = Some(STYLE_PAGE.into());
             u.context.location = Some(format!("pages.xml, page {n}"));
-            u.codes.insert(C_KIND.into(), code("attr"));
-            u.codes.insert(C_QUOTE.into(), code(q));
+            u.codes_mut().insert(C_KIND, code("attr"));
+            u.codes_mut().insert(C_QUOTE, code(q));
             let a = {
                 let root = root_of(&part.parsed.nodes).expect("root");
                 let page = root.elements().find(|p| p.id == id).expect("page");
@@ -466,7 +466,7 @@ fn extract_inner(bytes: &[u8], opts: &ExtractOptions, with_comments: bool) -> Re
             };
             let root = root_of(&part.parsed.nodes).expect("root");
             let page = root.elements().find(|p| p.id == id).expect("page");
-            u.codes.insert(C_ORIG.into(), code(page.start[a.vs..a.ve].to_string()));
+            u.codes_mut().insert(C_ORIG, code(page.start[a.vs..a.ve].to_string()));
             b.mark(&mut u, b.slots - 1);
             b.units.push(u);
             part.edits.insert(id, Edit::Attr { unit, name: "Name", nameu: !has_nameu });
@@ -638,12 +638,12 @@ fn extract_inner(bytes: &[u8], opts: &ExtractOptions, with_comments: bool) -> Re
 fn set_run_codes(u: &mut Unit, core: &Core, children: &[Node], kind: &str) {
     let orig = raw_of(children);
     if orig.contains("\r\n") {
-        u.codes.insert(C_CRLF.into(), code("1"));
+        u.codes_mut().insert(C_CRLF, code("1"));
     }
-    u.codes.insert(C_ORIG.into(), code(orig));
-    u.codes.insert(C_PRE.into(), code(core.pre.clone()));
-    u.codes.insert(C_SUF.into(), code(core.suf.clone()));
-    u.codes.insert(C_KIND.into(), code(kind));
+    u.codes_mut().insert(C_ORIG, code(orig));
+    u.codes_mut().insert(C_PRE, code(core.pre.clone()));
+    u.codes_mut().insert(C_SUF, code(core.suf.clone()));
+    u.codes_mut().insert(C_KIND, code(kind));
 }
 
 struct PageWalk<'b> {
@@ -685,7 +685,7 @@ impl PageWalk<'_> {
                                 tags += 1;
                                 let id = tags.to_string();
                                 src.push(Inline::tag(id.clone(), TagKind::Standalone, raw.clone()));
-                                u.codes.insert(id, CodeData::new().with_standalone(raw.clone()).with_label(mark_label(raw).to_string()));
+                                u.codes_mut().insert(id, CodeData::new().with_standalone(raw.clone()).with_label(mark_label(raw).to_string()));
                             }
                         }
                     }
@@ -694,7 +694,7 @@ impl PageWalk<'_> {
                     u.context.style = Some(STYLE_TEXT.into());
                     u.context.location = Some(self.location(Some(shape)));
                     set_run_codes(&mut u, &core, &el.children, "text");
-                    u.codes.insert(C_SHAPE.into(), code(shape.start.clone()));
+                    u.codes_mut().insert(C_SHAPE, code(shape.start.clone()));
                     self.b.mark(&mut u, self.b.slots - 1);
                     self.b.units.push(u);
                     self.edits.insert(el.id, Edit::Children { unit });
@@ -713,9 +713,9 @@ impl PageWalk<'_> {
                 u.context.style = Some(STYLE_LABEL.into());
                 u.context.location = Some(self.location(shape));
                 let a = find_attr(&el.start, "V").expect("V");
-                u.codes.insert(C_KIND.into(), code("attr"));
-                u.codes.insert(C_QUOTE.into(), code((a.quote as char).to_string()));
-                u.codes.insert(C_ORIG.into(), code(el.start[a.vs..a.ve].to_string()));
+                u.codes_mut().insert(C_KIND, code("attr"));
+                u.codes_mut().insert(C_QUOTE, code((a.quote as char).to_string()));
+                u.codes_mut().insert(C_ORIG, code(el.start[a.vs..a.ve].to_string()));
                 self.b.mark(&mut u, self.b.slots - 1);
                 self.b.units.push(u);
                 self.edits.insert(el.id, Edit::Attr { unit, name: "V", nameu: false });

@@ -88,7 +88,7 @@ proptest! {
         let data = fixture().build();
         let mut doc = extract(&data);
         for u in &mut doc.units {
-            let n = u.codes.len();
+            let n = u.codes().len();
             let mut t = vec![];
             for (k, s) in &picks {
                 match k % 4 {

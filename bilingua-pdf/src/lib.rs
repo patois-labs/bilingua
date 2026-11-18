@@ -350,7 +350,7 @@ impl Filter for Pdf {
                     let mut u = Unit::new(format!("p{}u{}", p.page + 1, k), vec![Inline::text(para)]);
                     u.context.kind = Some("paragraph".into());
                     u.context.location = Some(format!("page {} paragraph {}", p.page + 1, k));
-                    u.context.extra.insert("page".into(), (p.page + 1).to_string());
+                    u.context.extra_mut().insert("page", (p.page + 1).to_string());
                     units.push(u);
                     guard::check_unit_count(units.len(), &limits)?;
                 }

@@ -244,7 +244,7 @@ fn drop_code_tokens(text: &str, u: &Unit) -> String {
         .replace_all(text, |c: &regex::Captures| {
             // the digits as written (LocOS `token_number`: `x07` names no code `7`)
             let num: String = c[0].chars().filter(char::is_ascii_digit).collect();
-            if u.codes.contains_key(&num) {
+            if u.codes().contains_key(&num) {
                 String::new()
             } else {
                 c[0].to_string()
@@ -441,20 +441,20 @@ pub fn render(u: &Unit, target: &[Inline]) -> String {
                 out.push(s);
             }
             Inline::Tag { id, kind, .. } => {
-                let Some(code) = u.codes.get(id) else { continue };
+                let Some(code) = u.codes().get(id) else { continue };
                 match kind {
                     TagKind::Open => {
-                        if let (Some(o), Some(_)) = (&code.open, &code.close) {
+                        if let (Some(o), Some(_)) = (code.open_markup(), code.close_markup()) {
                             if !opened.contains(&id.as_str()) {
                                 opened.push(id);
-                                out.push(o.clone());
+                                out.push(o.to_string());
                             }
                         }
                     }
                     TagKind::Close => {
                         if opened.contains(&id.as_str()) {
                             while let Some(k) = opened.pop() {
-                                if let Some(c) = u.codes.get(k).and_then(|c| c.close.clone()) {
+                                if let Some(c) = u.codes().get(k).and_then(|c| c.close_markup().map(String::from)) {
                                     out.push(c);
                                 }
                                 if k == id {
@@ -464,7 +464,7 @@ pub fn render(u: &Unit, target: &[Inline]) -> String {
                         }
                     }
                     TagKind::Standalone => {
-                        if let Some(r) = &code.standalone {
+                        if let Some(r) = code.standalone_markup() {
                             if ends_in_control_word(r) {
                                 words.push(out.len());
                             } else if ends_in_lone_backslash(r) {
@@ -473,7 +473,7 @@ pub fn render(u: &Unit, target: &[Inline]) -> String {
                             if is_bare_newline(r) && !bracket_after_in_source(u, id) {
                                 breaks.push(out.len());
                             }
-                            out.push(r.clone());
+                            out.push(r.to_string());
                         }
                     }
                 }
@@ -481,7 +481,7 @@ pub fn render(u: &Unit, target: &[Inline]) -> String {
         }
     }
     while let Some(k) = opened.pop() {
-        if let Some(c) = u.codes.get(k).and_then(|c| c.close.clone()) {
+        if let Some(c) = u.codes().get(k).and_then(|c| c.close_markup().map(String::from)) {
             out.push(c);
         }
     }

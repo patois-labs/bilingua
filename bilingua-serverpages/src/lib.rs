@@ -550,7 +550,7 @@ fn body_unit(id: String, u: &html::BodyUnit, m: &Masked, orig: &str) -> Unit {
         }
     }
     let mut unit = Unit::new(id, merge_text(inl));
-    unit.codes = codes;
+    unit.set_codes(codes);
     unit.context.kind = Some("paragraph".into());
     unit
 }

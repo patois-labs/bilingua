@@ -361,10 +361,11 @@ fn make_unit(
     ctx: UnitContext,
 ) -> Unit {
     let mut u = Unit::new(id, built.inlines);
-    u.codes = built.codes;
-    u.codes.insert(C_ORIG.into(), CodeData::new().with_standalone(orig));
-    u.codes.insert(C_MODE.into(), CodeData::new().with_standalone(mode.to_string()));
-    u.codes.insert(C_PFX.into(), CodeData::new().with_standalone(pfx.to_string()));
+    let mut codes = built.codes;
+    codes.insert(C_ORIG.into(), CodeData::new().with_standalone(orig));
+    codes.insert(C_MODE.into(), CodeData::new().with_standalone(mode.to_string()));
+    codes.insert(C_PFX.into(), CodeData::new().with_standalone(pfx.to_string()));
+    u.set_codes(codes);
     u.context = ctx;
     u
 }
@@ -372,7 +373,7 @@ fn make_unit(
 fn hidden_extra(ctx: &mut UnitContext, hidden: Option<&str>) {
     if let Some(k) = hidden {
         ctx.notes.insert(0, "hidden".into());
-        ctx.extra.insert("hidden".into(), k.into());
+        ctx.extra_mut().insert("hidden", k);
     }
 }
 
@@ -872,8 +873,8 @@ fn extract_doc_inner(bytes: &[u8], opts: &ExtractOptions, xo: &XlsxOptions) -> R
         for (idx, name, hidden) in &all_names {
             let id = format!("sheetname-{idx}");
             let mut u = Unit::new(id.clone(), vec![Inline::text(name.clone())]);
-            u.codes.insert(C_BASE.into(), CodeData::new().with_standalone(String::new()));
-            u.codes.insert(C_MODE.into(), CodeData::new().with_standalone("attr".to_string()));
+            u.codes_mut().insert(C_BASE, CodeData::new().with_standalone(String::new()));
+            u.codes_mut().insert(C_MODE, CodeData::new().with_standalone("attr".to_string()));
             u.context = UnitContext::new().with_kind("sheet-name".to_string()).with_location(format!("workbook, sheet {idx}")).with_max_len(Some(31));
             hidden_extra(&mut u.context, hidden.then_some("sheet"));
             u_names.push(u);
@@ -997,7 +998,7 @@ fn extract_doc_inner(bytes: &[u8], opts: &ExtractOptions, xo: &XlsxOptions) -> R
                     built.codes.insert("_ph".into(), CodeData::default());
                 }
                 let mut cx = UnitContext::new().with_kind("cell".to_string()).with_location(u.loc.clone()).with_max_len(u.max_len).with_notes(u.notes.clone());
-                cx.extra.insert("cells".into(), u.count.to_string());
+                cx.extra_mut().insert("cells", u.count.to_string());
                 if u.all_hidden {
                     hidden_extra(&mut cx, u.hidden_kind);
                 }

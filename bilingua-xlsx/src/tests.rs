@@ -78,7 +78,7 @@ fn extracts_units_with_context() {
     // Shared by two cells: one unit, first cell, count.
     let sub = unit(&doc, "ss14");
     assert_eq!(sub.context.location.as_deref(), Some("Ventas!A14"));
-    assert_eq!(sub.context.extra.get("cells").map(String::as_str), Some("2"));
+    assert_eq!(sub.context.extra().get("cells"), Some("2"));
     // Inline string.
     assert_eq!(src_text(&doc, "is1-B13"), "Inline text");
     // The formula result is not a unit.
@@ -87,9 +87,9 @@ fn extracts_units_with_context() {
     assert!(doc.units.iter().all(|u| !u.id.starts_with("sheetname-")));
     // Hidden row, column and sheet carry a note.
     assert!(unit(&doc, "ss16").context.notes.contains(&"hidden".to_string()));
-    assert_eq!(unit(&doc, "ss16").context.extra.get("hidden").map(String::as_str), Some("row"));
-    assert_eq!(unit(&doc, "ss17").context.extra.get("hidden").map(String::as_str), Some("column"));
-    assert_eq!(unit(&doc, "ss19").context.extra.get("hidden").map(String::as_str), Some("sheet"));
+    assert_eq!(unit(&doc, "ss16").context.extra().get("hidden"), Some("row"));
+    assert_eq!(unit(&doc, "ss17").context.extra().get("hidden"), Some("column"));
+    assert_eq!(unit(&doc, "ss19").context.extra().get("hidden"), Some("sheet"));
     assert!(!unit(&doc, "ss0").context.notes.contains(&"hidden".to_string()));
     // Text length limit from the data validation.
     assert_eq!(unit(&doc, "ss18").context.max_len, Some(20));

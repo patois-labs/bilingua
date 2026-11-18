@@ -86,11 +86,11 @@ fn point_and_paired_codes_have_display_and_labels() {
             r#"Standalone:<text:bookmark text:name="b1"/>"#
         ]
     );
-    assert_eq!(u.codes["2"].label.as_deref(), Some("link"));
-    assert_eq!(u.codes["1"].label.as_deref(), Some("tab"));
+    assert_eq!(u.codes()["2"].label(), Some("link"));
+    assert_eq!(u.codes()["1"].label(), Some("tab"));
     // the footnote anchor is one point code; the footnote body is its own unit
     let u1 = &d.units[1];
-    assert!(u1.codes["2"].standalone.as_ref().unwrap().starts_with("<text:note "));
+    assert!(u1.codes()["2"].standalone_markup().unwrap().starts_with("<text:note "));
     assert_eq!(d.units[2].context.kind.as_deref(), Some("paragraph"));
     assert_eq!(d.units[1].context.location.as_deref(), Some("content.xml paragraph 1"));
 }

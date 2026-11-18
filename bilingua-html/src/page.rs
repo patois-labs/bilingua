@@ -280,7 +280,7 @@ fn body_unit(id: String, u: &html::BodyUnit) -> Unit {
         }
     }
     let mut unit = Unit::new(id, merge_text(inl));
-    unit.codes = codes;
+    unit.set_codes(codes);
     unit
 }
 
@@ -385,7 +385,7 @@ pub(crate) fn extract(bytes: &[u8], opts: &ExtractOptions, cfg: Cfg) -> Result<D
             context.charge(h.len(), &limits)?;
         }
         u.context.heading = heading.clone();
-        u.context.extra.insert("element".into(), elem);
+        u.context.extra_mut().insert("element", elem);
         u.set_hidden(VALUE, "attr");
         units.push(u);
     }

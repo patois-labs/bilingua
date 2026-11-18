@@ -54,11 +54,11 @@ pub fn inline_html(unit: &Unit, inlines: &[Inline]) -> String {
         match i {
             Inline::Text(t) => out.push_str(&esc(t)),
             Inline::Tag { id, kind, display, .. } => {
-                let code = unit.codes.get(id);
-                let label = code.and_then(|c| c.label.clone()).unwrap_or_default();
+                let code = unit.codes().get(id);
+                let label = code.and_then(|c| c.label().map(String::from)).unwrap_or_default();
                 match kind {
                     TagKind::Open => {
-                        let wrapper = code.is_some_and(|c| c.standalone.is_some());
+                        let wrapper = code.is_some_and(|c| c.standalone_markup().is_some());
                         let (o, c) = if wrapper {
                             (
                                 "<span class=\"bl-link\">".to_string(),
@@ -88,7 +88,7 @@ pub fn inline_html(unit: &Unit, inlines: &[Inline]) -> String {
                             out.push_str("<span class=\"bl-img\">[image]</span>")
                         }
                         "field" => {
-                            let r = code.and_then(|c| c.open.clone()).unwrap_or_default();
+                            let r = code.and_then(|c| c.open_markup().map(String::from)).unwrap_or_default();
                             out.push_str(&esc(&r));
                         }
                         "footnote-ref" => out.push_str(&format!("<sup>{}</sup>", esc(display))),

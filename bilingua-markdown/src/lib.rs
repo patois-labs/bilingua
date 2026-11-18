@@ -97,7 +97,7 @@ impl Filter for MarkdownFilter {
                 SkelPart::Raw(s) => out.push_str(s),
                 SkelPart::Unit(i) => {
                     let unit = doc.units.get(*i).ok_or_else(|| Error::Write(format!("no unit {i}")))?;
-                    if unit.segments.iter().any(|s| s.has_target()) && !unit.codes.contains_key(extract::FM_KEY) {
+                    if unit.segments.iter().any(|s| s.has_target()) && !unit.codes().contains_key(extract::FM_KEY) {
                         // a translation opens no block, splits no cell and breaks no link its source did not
                         // (LocOS #704, #790, structure fuzz)
                         let text = render::inlines_md(doc, unit, &render::escape_link_text(unit, &unit.output()));

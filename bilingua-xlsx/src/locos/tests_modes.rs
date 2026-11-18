@@ -41,11 +41,11 @@ fn extract_case(name: &str, parse: &Value, locale: Option<&str>, locos_profile: 
 }
 
 fn p_index(u: &Unit) -> String {
-    u.context.extra[profile::P_INDEX].clone()
+    u.context.extra()[profile::P_INDEX].to_string()
 }
 
 fn style(u: &Unit) -> String {
-    u.context.extra.get(profile::STYLE).cloned().unwrap_or_default()
+    u.context.extra().get(profile::STYLE).map(String::from).unwrap_or_default()
 }
 
 fn plain(inl: &[Inline]) -> String {

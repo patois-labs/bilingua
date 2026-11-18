@@ -12,10 +12,10 @@ pub fn inlines_md(doc: &Document, unit: &Unit, inl: &[Inline]) -> String {
         match i {
             Inline::Text(t) => out.push_str(t),
             Inline::Tag { id, kind, .. } => {
-                let piece = unit.codes.get(id).and_then(|c| match kind {
-                    TagKind::Open => c.open.as_deref(),
-                    TagKind::Close => c.close.as_deref(),
-                    TagKind::Standalone => c.standalone.as_deref(),
+                let piece = unit.codes().get(id).and_then(|c| match kind {
+                    TagKind::Open => c.open_markup(),
+                    TagKind::Close => c.close_markup(),
+                    TagKind::Standalone => c.standalone_markup(),
                 });
                 if let Some(p) = piece {
                     out.push_str(&map_markers(p, |kind, idx| Some(side_text(doc, kind, idx))));
@@ -49,15 +49,15 @@ fn side_text(doc: &Document, kind: char, idx: usize) -> String {
 
 /// The bytes a unit writes in the skeleton.
 pub fn render_unit(doc: &Document, unit: &Unit) -> String {
-    if let Some(style) = unit.codes.get(FM_KEY) {
+    if let Some(style) = unit.codes().get(FM_KEY) {
         let touched = unit.segments.iter().any(|s| s.has_target());
         if !touched {
-            if let Some(raw) = unit.codes.get(RAW_KEY).and_then(|c| c.standalone.clone()) {
+            if let Some(raw) = unit.codes().get(RAW_KEY).and_then(|c| c.standalone_markup().map(String::from)) {
                 return raw;
             }
         }
         let text = plain_text(&unit.output());
-        return frontmatter::write(&text, Style::from_name(style.label.as_deref().unwrap_or("plain")));
+        return frontmatter::write(&text, Style::from_name(style.label().unwrap_or("plain")));
     }
     inlines_md(doc, unit, &unit.output())
 }
@@ -166,7 +166,7 @@ pub fn escape_link_text(unit: &Unit, inl: &[Inline]) -> Vec<Inline> {
     let mut links: Vec<&str> = Vec::new();
     inl.iter()
         .map(|i| match i {
-            Inline::Tag { id, kind: TagKind::Open, .. } if unit.codes.get(id).and_then(|c| c.open.as_deref()).is_some_and(|o| o.starts_with('[')) => {
+            Inline::Tag { id, kind: TagKind::Open, .. } if unit.codes().get(id).and_then(|c| c.open_markup()).is_some_and(|o| o.starts_with('[')) => {
                 links.push(id);
                 i.clone()
             }
@@ -223,7 +223,7 @@ pub fn preview(doc: &Document) -> Option<String> {
             SkelPart::Raw(s) => md.push_str(&clean(s)),
             SkelPart::Unit(i) => {
                 let unit = doc.units.get(*i)?;
-                if unit.codes.contains_key(FM_KEY) || !unit.translate {
+                if unit.codes().contains_key(FM_KEY) || !unit.translate {
                     md.push_str(&clean(&render_unit(doc, unit)));
                     continue;
                 }

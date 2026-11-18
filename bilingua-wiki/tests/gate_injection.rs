@@ -49,13 +49,13 @@ fn raws(doc: &Document) -> Vec<String> {
 
 fn code_set(u: &Unit) -> Vec<String> {
     let mut v: Vec<String> = u
-        .codes
+        .codes()
         .iter()
         .filter(|(k, _)| !k.starts_with('~'))
         // white space at a label edge moves between the text and the code: not markup
         .map(|(_, c)| {
-            let t = |o: &Option<String>| o.as_deref().map(|s| s.trim().to_string());
-            format!("{:?}|{:?}|{:?}", t(&c.open), t(&c.close), t(&c.standalone))
+            let t = |o: Option<&str>| o.map(|s| s.trim().to_string());
+            format!("{:?}|{:?}|{:?}", t(c.open_markup()), t(c.close_markup()), t(c.standalone_markup()))
         })
         // the inert wrapper and the separator escapes a translation needs, and a character entity the translator
         // typed, are the only new codes

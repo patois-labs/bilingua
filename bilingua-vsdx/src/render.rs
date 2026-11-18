@@ -8,7 +8,7 @@ use crate::*;
 use std::collections::{BTreeMap, BTreeSet};
 
 fn code_str(u: &Unit, key: &str) -> String {
-    u.codes.get(key).and_then(|c| c.standalone.clone()).unwrap_or_default()
+    u.codes().get(key).and_then(|c| c.standalone_markup().map(String::from)).unwrap_or_default()
 }
 
 pub fn merge(doc: &Document, opts: &bilingua_model::MergeOptions) -> Result<Vec<u8>, Error> {
@@ -155,14 +155,14 @@ impl<'a> Renderer<'a> {
         }
         // run content: prefix, body, suffix
         let markers: BTreeMap<usize, &str> = u
-            .codes
+            .codes()
             .iter()
-            .filter_map(|(k, c)| k.parse::<usize>().ok().and_then(|n| c.standalone.as_deref().map(|s| (n, s))))
+            .filter_map(|(k, c)| k.parse::<usize>().ok().and_then(|n| c.standalone_markup().map(|s| (n, s))))
             .collect();
         let mut used: BTreeSet<usize> = BTreeSet::new();
         let mut body = String::new();
         // CRLF files: only the translated text gets CRLF; markers are original markup and keep their own line ends
-        let crlf = u.codes.contains_key(C_CRLF);
+        let crlf = u.codes().contains_key(C_CRLF);
         for i in &out {
             match i {
                 Inline::Text(t) => {
@@ -203,7 +203,7 @@ impl<'a> Renderer<'a> {
             let mut used: BTreeSet<u32> = BTreeSet::new();
             used.insert(0);
             let mut raws: Vec<String> = vec![code_str(u, C_PRE), code_str(u, C_SUF)];
-            raws.extend(u.codes.iter().filter(|(k, _)| k.parse::<usize>().is_ok()).filter_map(|(_, c)| c.standalone.clone()));
+            raws.extend(u.codes().iter().filter(|(k, _)| k.parse::<usize>().is_ok()).filter_map(|(_, c)| c.standalone_markup().map(String::from)));
             for r in raws {
                 if let Ok(f) = parse_fragment(&r, DEFAULT_MAX_DEPTH_CAP) {
                     collect_pp(&f.nodes, &mut used);

@@ -47,7 +47,7 @@ fn hostile_targets_never_break_the_xml() {
     let d0 = Icml.extract(&data, &opts(Some("de-DE"))).unwrap();
     assert_eq!(d0.units.len(), 2);
     assert!(d0.units[0].source().iter().any(|i| matches!(i, Inline::Text(t) if t.contains('\u{27E6}'))));
-    let ids: Vec<String> = d0.units[0].codes.keys().filter(|k| !k.starts_with('~')).cloned().collect();
+    let ids: Vec<String> = d0.units[0].codes().keys().filter(|k| !k.starts_with('~')).map(String::from).collect();
     let variants: Vec<Vec<Inline>> = vec![
         vec![Inline::text("]]> <&> \r\n \u{0}\u{FFFE} \u{1F600}")],
         vec![Inline::tag("99", TagKind::Open, ""), Inline::text("x"), Inline::tag("1", TagKind::Close, "")],

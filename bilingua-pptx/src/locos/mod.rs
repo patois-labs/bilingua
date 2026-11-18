@@ -1035,11 +1035,11 @@ pub fn extract(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
 
 fn unit(p_index: usize, source: Vec<Inline>, codes: BTreeMap<String, CodeData>, part: &str, style: &str, kind: &str) -> Unit {
     let mut u = Unit::new(p_index.to_string(), source);
-    u.codes = codes;
+    u.set_codes(codes);
     let mut ctx = UnitContext::new().with_kind(kind).with_location(format!("{part} {kind} {p_index}"));
-    ctx.extra.insert(profile::P_INDEX.to_string(), p_index.to_string());
-    ctx.extra.insert(profile::STYLE.to_string(), style.to_string());
-    ctx.extra.insert(PART.to_string(), part.to_string());
+    ctx.extra_mut().insert(profile::P_INDEX.to_string(), p_index.to_string());
+    ctx.extra_mut().insert(profile::STYLE.to_string(), style.to_string());
+    ctx.extra_mut().insert(PART.to_string(), part.to_string());
     u.context = ctx;
     u
 }
@@ -1070,7 +1070,7 @@ fn tagged_text(target: &[Inline], esc: bool) -> String {
 fn written_texts(doc: &Document) -> Vec<(i64, String)> {
     let mut out = Vec::new();
     for u in doc.units.iter().filter(|u| u.translate) {
-        let Some(p) = u.context.extra.get(profile::P_INDEX).and_then(|p| p.parse::<i64>().ok()) else { continue };
+        let Some(p) = u.context.extra().get(profile::P_INDEX).and_then(|p| p.parse::<i64>().ok()) else { continue };
         if u.segments.is_empty() || !u.segments.iter().all(|s| s.has_target()) {
             continue;
         }
@@ -1196,7 +1196,7 @@ pub fn merge(doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
         return Err(Error::Write("pptx: a LocOS-profile document needs its original file".into()));
     };
     // BILI-126: one number on two units (a hand edit that dropped a comment's kind, say) could write one into the other
-    guard::check_distinct_numbers(doc.units.iter().filter_map(|u| u.context.extra.get(profile::P_INDEX)?.parse::<i64>().ok()))?;
+    guard::check_distinct_numbers(doc.units.iter().filter_map(|u| u.context.extra().get(profile::P_INDEX)?.parse::<i64>().ok()))?;
     let texts = written_texts(doc);
     let comments = doc.units.iter().any(|u| u.context.kind.as_deref() == Some("comment"));
     rebuild_escaped(data, &texts, opts.stamp_lang(doc, true), &opts.limits(), comments)

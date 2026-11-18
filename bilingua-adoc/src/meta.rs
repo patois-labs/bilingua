@@ -121,7 +121,7 @@ pub fn meta_render(unit: &Unit, target: &[Inline]) -> String {
         match i {
             Inline::Text(t) => s.push_str(t),
             Inline::Tag { id, kind, .. } if *kind != TagKind::Close => {
-                if let Some(raw) = unit.codes.get(id).and_then(|c| c.standalone.as_deref()) {
+                if let Some(raw) = unit.codes().get(id).and_then(|c| c.standalone_markup()) {
                     s.push_str(raw);
                 }
             }

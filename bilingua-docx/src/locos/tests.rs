@@ -58,7 +58,7 @@ fn units(data: &[u8]) -> Vec<(String, String, String)> {
         .iter()
         .map(|u| {
             let (t, _) = tokens::to_locos_text_for("docx", &u.segments[0].source);
-            (u.context.extra[profile::P_INDEX].clone(), t, u.context.style.clone().unwrap_or_default())
+            (u.context.extra()[profile::P_INDEX].to_string(), t, u.context.style.clone().unwrap_or_default())
         })
         .collect()
 }
@@ -67,7 +67,7 @@ fn units(data: &[u8]) -> Vec<(String, String, String)> {
 fn build(data: &[u8], target: Option<&str>, texts: &[(usize, &str)]) -> Vec<u8> {
     let mut doc = crate::Docx.extract(data, &opts(target)).unwrap();
     for u in doc.units.clone() {
-        let p: usize = u.context.extra[profile::P_INDEX].parse().unwrap();
+        let p: usize = u.context.extra()[profile::P_INDEX].parse().unwrap();
         if let Some((_, t)) = texts.iter().find(|(q, _)| *q == p) {
             let (_, map) = tokens::to_locos_text_for("docx", &u.segments[0].source);
             profile::locos_set_target(&mut doc, &u.segments[0].id, tokens::from_locos_text(t, &map)).unwrap();
@@ -398,7 +398,7 @@ fn image_inventory_for_missing_alt_prompts() {
     );
     let d = docx(&body, NORMAL, &[]);
     let doc = crate::Docx.extract(&d, &opts(None)).unwrap();
-    let ex = |p: &str, k: &str| doc.units.iter().find(|u| u.context.extra[profile::P_INDEX] == p).and_then(|u| u.context.extra.get(k).cloned());
+    let ex = |p: &str, k: &str| doc.units.iter().find(|u| &u.context.extra()[profile::P_INDEX] == p).and_then(|u| u.context.extra().get(k).map(String::from));
     // the picture-only paragraph (1) is no unit: its drawing belongs to the unit before it
     assert_eq!(ex("0", profile::A11Y_IMAGES).as_deref(), Some("3"));
     assert_eq!(ex("0", profile::A11Y_MISSING_ALT).as_deref(), Some(r#"[{"kind":"missing","where":"Picture 1"},{"kind":"empty","where":"Spacer"}]"#));
@@ -408,9 +408,9 @@ fn image_inventory_for_missing_alt_prompts() {
     assert_eq!(ex("2", profile::A11Y_MISSING_ALT), None);
     // the alt text unit carries no inventory; without the profile there is none at all
     let alt = doc.units.iter().find(|u| u.context.kind.as_deref() == Some("alt-text")).unwrap();
-    assert!(!alt.context.extra.contains_key(profile::A11Y_IMAGES));
+    assert!(!alt.context.extra().contains_key(profile::A11Y_IMAGES));
     let plain = crate::Docx.extract(&d, &ExtractOptions::new()).unwrap();
-    assert!(plain.units.iter().all(|u| !u.context.extra.contains_key(profile::A11Y_IMAGES)));
+    assert!(plain.units.iter().all(|u| !u.context.extra().contains_key(profile::A11Y_IMAGES)));
 }
 
 /// W4 docx-2: a `customXml/` part is never parsed into units, so one nested past the XML guard's depth does not

@@ -268,7 +268,7 @@ fn unit_for(dom: &Dom, tok: &Tok, para: &Para, p_index: usize, story: Id) -> Uni
         }
     }
     let mut u = Unit::new(format!("u{p_index}"), merge_text(inl));
-    u.codes = codes;
+    u.set_codes(codes);
     u.set_hidden(PIDX, p_index.to_string());
     u.context.kind = Some("paragraph".into());
     let style = style_of(dom, para);

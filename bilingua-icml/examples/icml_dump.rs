@@ -14,7 +14,7 @@ fn tok_text(u: &Unit, v: &[Inline]) -> String {
         match i {
             Inline::Text(t) => s.push_str(t),
             Inline::Tag { id, kind, .. } => {
-                let run = u.codes.get(id).and_then(|c| c.label.as_deref()) == Some("run");
+                let run = u.codes().get(id).and_then(|c| c.label()) == Some("run");
                 let l = if run { 'r' } else { 'g' };
                 match kind {
                     TagKind::Open => s.push_str(&format!("\u{27E6}{l}{id}\u{27E7}")),

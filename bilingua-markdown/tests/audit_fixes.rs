@@ -32,7 +32,7 @@ fn locos_note_images_linear() {
     assert!(a < c * 5.0 + 3.0, "images {a:.2} s, control {c:.2} s");
     // the images still land on the unit of their line, else on the nearest one before
     let doc = MarkdownFilter.extract(b"Intro\n\nSee ![a](x.png) here\n\n![](y.png)\n", &locos()).unwrap();
-    let counts: Vec<usize> = doc.units.iter().map(|u| u.context.extra.get(profile::A11Y_IMAGES).map_or(0, |n| n.parse().unwrap())).collect();
+    let counts: Vec<usize> = doc.units.iter().map(|u| u.context.extra().get(profile::A11Y_IMAGES).map_or(0, |n| n.parse().unwrap())).collect();
     assert_eq!(counts[0], 0, "{counts:?}");
     assert_eq!(counts.iter().sum::<usize>(), 2, "{counts:?}");
 }

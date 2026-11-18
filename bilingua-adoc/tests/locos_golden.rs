@@ -54,16 +54,16 @@ fn run(data: &[u8], map: &[(usize, String)], target: Option<&str>) -> Vec<u8> {
 /// LocOS inline map of a unit as JSON: `"1": "raw"` or `"1": [open, close]`.
 fn codes_json(u: &Unit) -> serde_json::Value {
     let mut m = serde_json::Map::new();
-    for (k, c) in &u.codes {
+    for (k, c) in u.codes() {
         if k.starts_with('~') {
             continue;
         }
-        let v = match (&c.standalone, &c.open, &c.close) {
-            (Some(s), _, _) => serde_json::Value::String(s.clone()),
+        let v = match (c.standalone_markup(), c.open_markup(), c.close_markup()) {
+            (Some(s), _, _) => serde_json::Value::String(s.to_string()),
             (None, Some(o), Some(cl)) => serde_json::json!([o, cl]),
             _ => panic!("odd code {k}"),
         };
-        m.insert(k.clone(), v);
+        m.insert(k.to_string(), v);
     }
     serde_json::Value::Object(m)
 }

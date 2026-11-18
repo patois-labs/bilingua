@@ -460,9 +460,9 @@ impl Extractor {
             Kind::Layout => "layout",
             Kind::Master => "master",
         };
-        cx.extra.insert("part".into(), part_name.into());
+        cx.extra_mut().insert("part", part_name);
         if matches!(pi.kind, Kind::Slide | Kind::Notes | Kind::Diagram) {
-            cx.extra.insert("slide".into(), slide.to_string());
+            cx.extra_mut().insert("slide", slide.to_string());
             if let Some(t) = self.titles.get(&slide) {
                 if kind != "title" {
                     cx.heading = Some(t.clone());
@@ -470,9 +470,9 @@ impl Extractor {
             }
         }
         if let Some(c) = cell {
-            cx.extra.insert("table".into(), c.table.clone());
-            cx.extra.insert("row".into(), c.row.to_string());
-            cx.extra.insert("col".into(), c.col.to_string());
+            cx.extra_mut().insert("table", c.table.clone());
+            cx.extra_mut().insert("row", c.row.to_string());
+            cx.extra_mut().insert("col", c.col.to_string());
         }
         if kind == "title" && matches!(pi.kind, Kind::Slide) {
             let t: String = built
@@ -485,10 +485,11 @@ impl Extractor {
 
         let orig = raw_of(&orig_nodes);
         let mut u = Unit::new(id.clone(), built.inlines);
-        u.codes = built.codes;
-        u.codes.insert(C_ORIG.into(), CodeData::new().with_standalone(orig));
-        u.codes.insert(C_LEAD.into(), CodeData::new().with_standalone(lead));
-        u.codes.insert(C_PFX.into(), CodeData::new().with_standalone(ns.a.pfx.clone()));
+        let mut codes = built.codes;
+        codes.insert(C_ORIG.into(), CodeData::new().with_standalone(orig));
+        codes.insert(C_LEAD.into(), CodeData::new().with_standalone(lead));
+        codes.insert(C_PFX.into(), CodeData::new().with_standalone(ns.a.pfx.clone()));
+        u.set_codes(codes);
         u.context = cx;
         let plain = plain_text(&u.source());
         if matches!(pi.kind, Kind::Diagram) {

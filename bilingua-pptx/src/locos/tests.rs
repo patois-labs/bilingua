@@ -49,7 +49,7 @@ fn units(doc: &Document) -> Vec<(String, String, String)> {
         .iter()
         .map(|u| {
             let (t, _) = profile::tokens::to_locos_text_for("pptx", &u.segments[0].source);
-            (u.context.extra[profile::P_INDEX].clone(), t, u.context.extra[profile::STYLE].clone())
+            (u.context.extra()[profile::P_INDEX].to_string(), t, u.context.extra()[profile::STYLE].to_string())
         })
         .collect()
 }
@@ -58,7 +58,7 @@ fn units(doc: &Document) -> Vec<(String, String, String)> {
 fn write(data: &[u8], lang: Option<&str>, set: &[(&str, &str)]) -> Result<Vec<u8>, Error> {
     let mut doc = crate::Pptx.extract(data, &opts(lang))?;
     for (p, t) in set {
-        let id = doc.units.iter().find(|u| u.context.extra[profile::P_INDEX] == *p).unwrap().segments[0].id.clone();
+        let id = doc.units.iter().find(|u| &u.context.extra()[profile::P_INDEX] == *p).unwrap().segments[0].id.clone();
         let u = doc.units.iter().find(|u| u.segments[0].id == id).unwrap();
         let (_, map) = profile::tokens::to_locos_text_for("pptx", &u.segments[0].source);
         profile::locos_set_target(&mut doc, &id, profile::tokens::from_locos_text(t, &map))?;
@@ -91,7 +91,7 @@ fn runs_breaks_and_fields_are_numbered_like_locos() {
     // without the profile, the 0.9.0 extraction is unchanged (a zip skeleton, its own ids)
     let plain = crate::Pptx.extract(&d, &ExtractOptions::new()).unwrap();
     assert!(matches!(plain.skeleton, Skeleton::Zip { .. }));
-    assert!(plain.units.iter().all(|u| !u.context.extra.contains_key(profile::P_INDEX)));
+    assert!(plain.units.iter().all(|u| !u.context.extra().contains_key(profile::P_INDEX)));
 }
 
 #[test]
@@ -222,7 +222,7 @@ proptest! {
         well_formed(&out);
         // the result is a deck LocOS's walk reads again, with the same paragraph slots
         let again = crate::Pptx.extract(&out, &opts(None)).unwrap();
-        prop_assert!(again.units.iter().all(|u| u.context.extra[profile::P_INDEX].parse::<usize>().is_ok()));
+        prop_assert!(again.units.iter().all(|u| u.context.extra()[profile::P_INDEX].parse::<usize>().is_ok()));
     }
 
     #[test]
@@ -374,7 +374,7 @@ fn slide_comments_are_written_back() {
     let mut doc = crate::Pptx.extract(&d, &comment_opts()).unwrap();
     let set = [("1000000", "Pr\u{fc}fen."), ("1000002", &*format!("{O}r2{Z}Neue{O}/r2{Z}{O}r1{Z} Notiz{O}/r1{Z}")), ("1000003", "Eine Antwort")];
     for (p, t) in set {
-        let u = doc.units.iter().find(|u| u.context.extra[profile::P_INDEX] == p).unwrap();
+        let u = doc.units.iter().find(|u| &u.context.extra()[profile::P_INDEX] == p).unwrap();
         let id = u.segments[0].id.clone();
         let (_, map) = profile::tokens::to_locos_text_for("pptx", &u.segments[0].source);
         profile::locos_set_target(&mut doc, &id, profile::tokens::from_locos_text(t, &map)).unwrap();
@@ -479,7 +479,7 @@ fn comments_just_under_a_million_paragraphs_round_trip() {
     let got: Vec<String> = units(&doc).into_iter().map(|u| u.0).collect();
     assert_eq!(got, ["999998", "1000000", "1000002", "1000003"]);
     for (p, t) in [("999998", "Inhalt"), ("1000000", "Pr\u{fc}fen.")] {
-        let u = doc.units.iter().find(|u| u.context.extra[profile::P_INDEX] == p).unwrap();
+        let u = doc.units.iter().find(|u| &u.context.extra()[profile::P_INDEX] == p).unwrap();
         let id = u.segments[0].id.clone();
         profile::locos_set_target(&mut doc, &id, vec![Inline::text(t)]).unwrap();
     }
@@ -499,7 +499,7 @@ fn a_merge_refuses_one_number_on_two_units() {
     let mut doc = crate::Pptx.extract(&d, &comment_opts()).unwrap();
     let c = doc.units.iter_mut().find(|u| u.context.kind.as_deref() == Some("comment")).unwrap();
     c.context.kind = Some("paragraph".into());
-    c.context.extra.insert(profile::P_INDEX.to_string(), "0".into());
+    c.context.extra_mut().insert(profile::P_INDEX.to_string(), "0");
     match crate::Pptx.merge_with(&doc, &profile::locos().merge_options("pptx")) {
         Err(Error::Limit(e)) => assert!(e.msg.contains("comments and body text share numbers"), "{e}"),
         other => panic!("not refused: {:?}", other.map(|b| b.len())),

@@ -178,8 +178,8 @@ fn extract_impl(kind: Kind, bytes: &[u8], opts: &ExtractOptions, hint: Option<u1
         parts.push(SkelPart::Raw(text[pos..sp.start].to_string()));
         pos = sp.end;
         let mut unit = Unit::new(format!("u{}", units.len() + 1), vec![Inline::text(sp.text.clone())]);
-        unit.codes.insert(
-            HIDDEN.into(),
+        unit.codes_mut().insert(
+            HIDDEN,
             CodeData::new().with_open(owned(sp.quote)).with_standalone(text[sp.start..sp.end].to_string()).with_label(fallback.then(|| FALLBACK_MARK.to_string())),
         );
         unit.context.kind = Some(match sp.kind {
@@ -187,8 +187,8 @@ fn extract_impl(kind: Kind, bytes: &[u8], opts: &ExtractOptions, hint: Option<u1
             k => k.to_string(),
         });
         if keep_raw && units.is_empty() {
-            if let Some(c) = unit.codes.get_mut(HIDDEN) {
-                c.close = Some(bilingua_model::b64::encode(bytes));
+            if let Some(c) = unit.codes_mut().get_mut(HIDDEN) {
+                c.set_close(bilingua_model::b64::encode(bytes));
             }
         }
         parts.push(SkelPart::Unit(units.len()));
@@ -313,7 +313,7 @@ fn merge_impl(kind: Kind, doc: &Document, mo: &MergeOptions) -> Result<Vec<u8>, 
             SkelPart::Raw(s) => orig.push_str(s),
             SkelPart::Unit(i) => {
                 let u = doc.units.get(*i).ok_or_else(|| Error::Write(format!("no unit {i}")))?;
-                let raw = u.codes.get(HIDDEN).and_then(|c| c.standalone.as_deref()).unwrap_or("");
+                let raw = u.codes().get(HIDDEN).and_then(|c| c.standalone_markup()).unwrap_or("");
                 let s = orig.len();
                 orig.push_str(raw);
                 order.push(*i);
@@ -339,9 +339,9 @@ fn merge_impl(kind: Kind, doc: &Document, mo: &MergeOptions) -> Result<Vec<u8>, 
     let target = doc.target_lang.as_deref().filter(|t| !t.trim().is_empty());
     // Localization OS's build_localized always stamps; Bilingua only when something is translated, unless asked.
     let localized = target.is_some() && (translated || mo.stamp_target_always);
-    let fallback = doc.units.iter().any(|u| u.codes.get(HIDDEN).and_then(|c| c.label.as_deref()) == Some(FALLBACK_MARK));
+    let fallback = doc.units.iter().any(|u| u.codes().get(HIDDEN).and_then(|c| c.label()) == Some(FALLBACK_MARK));
     if !localized && edits_none(&spans, &order, doc) && mo.output_encoding == OutputEncoding::Keep {
-        let raw = order.first().and_then(|&i| doc.units[i].codes.get(HIDDEN)).and_then(|c| c.close.as_deref());
+        let raw = order.first().and_then(|&i| doc.units[i].codes().get(HIDDEN)).and_then(|c| c.close_markup());
         return match raw {
             Some(b) => bilingua_model::b64::decode(b).map_err(|e| Error::Write(format!("the skeleton's original bytes are damaged: {e}"))),
             None => Ok(original_bytes(&orig, tag)),

@@ -1858,10 +1858,10 @@ fn note_images(lines: &[&str], start: usize, spans: &[(usize, usize)], units: &m
         }
     }
     for (u, n) in count {
-        units[u].context.extra.insert(profile::A11Y_IMAGES.into(), n.to_string());
+        units[u].context.extra_mut().insert(profile::A11Y_IMAGES, n.to_string());
     }
     for (u, names) in empty {
-        units[u].context.extra.insert(profile::A11Y_EMPTY_ALT.into(), names.join("\n"));
+        units[u].context.extra_mut().insert(profile::A11Y_EMPTY_ALT, names.join("\n"));
     }
 }
 
@@ -1883,7 +1883,7 @@ pub fn extract(text: &str, encoding: &str, opts: &ExtractOptions, warnings: Vec<
         let mut u = Unit::new(format!("u{}", units.len() + 1), vec![Inline::text(t)]);
         u.context.kind = Some("line".into());
         if image {
-            u.context.extra.insert(profile::STYLE.into(), "a11y:md-image".into());
+            u.context.extra_mut().insert(profile::STYLE, "a11y:md-image");
         }
         units.push(u);
     };

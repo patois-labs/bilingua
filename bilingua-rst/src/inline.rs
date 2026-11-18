@@ -3,7 +3,7 @@
 //! (`_render`, with the #695 boundary guard).
 
 use crate::pyu::*;
-use bilingua_model::{CodeData, Inline, TagKind};
+use bilingua_model::{CodeData, Inline, TagKind, Unit};
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 const MAX_TOKENS: usize = 1000;
@@ -541,9 +541,9 @@ impl Tok {
                     let id = n.to_string();
                     let cd = &codes[&id];
                     let (kind, display) = match p {
-                        Piece::Open(_) => (TagKind::Open, cd.open.clone().unwrap_or_default()),
-                        Piece::Close(_) => (TagKind::Close, cd.close.clone().unwrap_or_default()),
-                        _ => (TagKind::Standalone, cd.standalone.clone().unwrap_or_default()),
+                        Piece::Open(_) => (TagKind::Open, cd.open_markup().map(String::from).unwrap_or_default()),
+                        Piece::Close(_) => (TagKind::Close, cd.close_markup().map(String::from).unwrap_or_default()),
+                        _ => (TagKind::Standalone, cd.standalone_markup().map(String::from).unwrap_or_default()),
                     };
                     v.push(Inline::tag(id, kind, display));
                 }
@@ -658,7 +658,8 @@ fn guard_boundaries(mut out: Vec<String>, spans: &[(usize, usize)]) -> String {
 }
 
 /// `_render`: a translated unit back as one line of reStructuredText.
-pub fn render(translation: &[Inline], codes: &BTreeMap<String, CodeData>) -> String {
+pub fn render(translation: &[Inline], unit: &Unit) -> String {
+    let codes = unit.codes();
     let mut items: Vec<(Option<String>, Option<&Inline>)> = Vec::new();
     let last_idx = translation.len().saturating_sub(1);
     for (k, it) in translation.iter().enumerate() {
@@ -691,24 +692,24 @@ pub fn render(translation: &[Inline], codes: &BTreeMap<String, CodeData>) -> Str
         let Some(Inline::Tag { id, kind, .. }) = tag else { continue };
         let Some(cd) = codes.get(id) else { continue };
         let closing = *kind == TagKind::Close;
-        if cd.standalone.is_none() && cd.open.is_some() {
+        if cd.standalone_markup().is_none() && cd.open_markup().is_some() {
             if !closing {
                 if !opened.contains(id) {
                     opened.push(id.clone());
                     open_at.insert(id.clone(), out.len());
-                    out.push(plain(cd.open.as_deref().unwrap_or("")));
+                    out.push(plain(cd.open_markup().unwrap_or("")));
                 }
             } else if opened.contains(id) {
                 while let Some(k) = opened.pop() {
                     spans.push((open_at[&k], out.len()));
-                    out.push(plain(codes.get(&k).and_then(|c| c.close.as_deref()).unwrap_or("")));
+                    out.push(plain(codes.get(&k).and_then(|c| c.close_markup()).unwrap_or("")));
                     if &k == id {
                         break;
                     }
                 }
             }
         } else if !closing {
-            let val = cd.standalone.as_deref().unwrap_or("");
+            let val = cd.standalone_markup().unwrap_or("");
             if !is_escape_token(val) {
                 spans.push((out.len(), out.len()));
             }
@@ -717,7 +718,7 @@ pub fn render(translation: &[Inline], codes: &BTreeMap<String, CodeData>) -> Str
     }
     while let Some(k) = opened.pop() {
         spans.push((open_at[&k], out.len()));
-        out.push(plain(codes.get(&k).and_then(|c| c.close.as_deref()).unwrap_or("")));
+        out.push(plain(codes.get(&k).and_then(|c| c.close_markup()).unwrap_or("")));
     }
     guard_boundaries(out, &spans)
 }

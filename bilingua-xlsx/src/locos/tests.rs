@@ -94,7 +94,7 @@ fn walks_the_fixture_like_openpyxl() {
         .map(String::from),
     );
     assert_eq!(unit_texts(&doc), want);
-    let ps: Vec<String> = doc.units.iter().map(|u| u.context.extra[profile::P_INDEX].clone()).collect();
+    let ps: Vec<String> = doc.units.iter().map(|u| u.context.extra()[profile::P_INDEX].to_string()).collect();
     assert_eq!(ps, (0..want.len()).map(|i| i.to_string()).collect::<Vec<_>>());
     assert!(matches!(doc.skeleton, Skeleton::Binary { .. }));
     // a formula's cached text (C14) and a hidden-sheet formula are never units
@@ -195,7 +195,7 @@ fn drawing_book() -> Vec<u8> {
 fn text_boxes_come_after_the_cells_with_run_tokens() {
     let doc = extract(&drawing_book(), &opts(None)).unwrap();
     assert_eq!(doc.units.len(), 3);
-    assert_eq!(doc.units[1].context.extra[profile::STYLE], TEXT_BOX);
+    assert_eq!(&doc.units[1].context.extra()[profile::STYLE], TEXT_BOX);
     let src = &doc.units[1].segments[0].source;
     let ids: Vec<(String, TagKind)> = src.iter().filter_map(|i| if let Inline::Tag { id, kind, .. } = i { Some((id.clone(), *kind)) } else { None }).collect();
     // runs are pairs 1..3, the break is point 4 (numbered after the runs, as LocOS's PowerPoint tokens)
@@ -395,7 +395,7 @@ fn equals_sign_text_cells_are_not_units() {
     let data = book(sheet, sst, &[], &[]);
     let mut doc = extract(&data, &opts(None)).unwrap();
     assert_eq!(unit_texts(&doc), ["Name", " =spaced"]);
-    let ps: Vec<String> = doc.units.iter().map(|u| u.context.extra[profile::P_INDEX].clone()).collect();
+    let ps: Vec<String> = doc.units.iter().map(|u| u.context.extra()[profile::P_INDEX].to_string()).collect();
     assert_eq!(ps, ["0", "1"]);
     set(&mut doc, 0, "Nom");
     let out = merged(&doc);
@@ -466,7 +466,7 @@ fn comments_past_a_million_cells_are_refused() {
     let mut doc = extract(&data, &large_opts()).unwrap();
     assert_eq!(doc.units.len(), comments::COMMENT_BASE + 1);
     let last = doc.units.len() - 1;
-    assert_eq!(doc.units[last].context.extra[profile::P_INDEX], comments::COMMENT_BASE.to_string());
+    assert_eq!(&doc.units[last].context.extra()[profile::P_INDEX], comments::COMMENT_BASE.to_string());
     set(&mut doc, last, "Anders");
     let out = large_merge(&doc).unwrap();
     // the cell takes the text and the note keeps its own: before BILI-126 the cell's key 1000000 also overwrote the
@@ -476,7 +476,7 @@ fn comments_past_a_million_cells_are_refused() {
     assert_eq!(entry_large(&out, "xl/comments1.xml"), entry_large(&data, "xl/comments1.xml"));
     // a document with a comment unit over such a body (changed by hand) is refused at the merge
     let mut c = Unit::new("c", vec![Inline::text("Check this cell.")]);
-    c.hidden.insert(comments::SLOT.to_string(), "0".into());
+    c.hidden_map_mut().insert(comments::SLOT.to_string(), "0");
     doc.units.push(c);
     assert!(matches!(large_merge(&doc), Err(Error::Limit(_))));
 }
@@ -488,8 +488,8 @@ fn comments_just_under_a_million_cells_round_trip() {
     let mut doc = super::extract(&data, &large_opts(), &with_comments()).unwrap();
     assert_eq!(doc.units.len(), comments::COMMENT_BASE);
     let (cell, note) = (doc.units.len() - 2, doc.units.len() - 1);
-    assert_eq!(doc.units[cell].context.extra[profile::P_INDEX], "999998");
-    assert_eq!(doc.units[note].context.extra[profile::P_INDEX], "1000000");
+    assert_eq!(&doc.units[cell].context.extra()[profile::P_INDEX], "999998");
+    assert_eq!(&doc.units[note].context.extra()[profile::P_INDEX], "1000000");
     set(&mut doc, cell, "Anders");
     set(&mut doc, note, "Diese Zelle pr\u{fc}fen.");
     let out = large_merge(&doc).unwrap();
@@ -506,7 +506,7 @@ fn a_merge_refuses_one_key_on_two_units() {
     let sheet = "<sheetData><row r=\"1\"><c r=\"A1\" t=\"s\"><v>0</v></c><c r=\"B1\" t=\"s\"><v>0</v></c></row></sheetData>";
     let mut doc = extract(&book(sheet, "<si><t>Item</t></si>", &[], &[]), &opts(Some("de-DE"))).unwrap();
     assert_eq!(doc.units.len(), 2);
-    doc.units[1].hidden.insert(KEY.to_string(), "0".into());
+    doc.units[1].hidden_map_mut().insert(KEY.to_string(), "0");
     set(&mut doc, 1, "Anders");
     match merge(&doc, &profile::locos().merge_options("xlsx")) {
         Err(Error::Limit(e)) => assert!(e.msg.contains("comments and body text share numbers"), "{e}"),
@@ -521,8 +521,8 @@ fn comments_at_exactly_a_million_cells_still_apply() {
     let data = big_book_with_a_note(comments::COMMENT_BASE);
     let mut doc = super::extract(&data, &large_opts(), &with_comments()).unwrap();
     let (cell, note) = (doc.units.len() - 2, doc.units.len() - 1);
-    assert_eq!(doc.units[cell].context.extra[profile::P_INDEX], "999999");
-    assert_eq!(doc.units[note].context.extra[profile::P_INDEX], "1000000");
+    assert_eq!(&doc.units[cell].context.extra()[profile::P_INDEX], "999999");
+    assert_eq!(&doc.units[note].context.extra()[profile::P_INDEX], "1000000");
     set(&mut doc, cell, "Anders");
     set(&mut doc, note, "Diese Zelle pr\u{fc}fen.");
     let out = large_merge(&doc).unwrap();

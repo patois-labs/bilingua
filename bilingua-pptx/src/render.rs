@@ -21,7 +21,7 @@ pub struct Renderer<'a> {
 }
 
 fn code_str(u: &Unit, key: &str) -> String {
-    u.codes.get(key).and_then(|c| c.standalone.clone()).unwrap_or_default()
+    u.codes().get(key).and_then(|c| c.standalone_markup().map(String::from)).unwrap_or_default()
 }
 
 fn primary(lang: &str) -> String {

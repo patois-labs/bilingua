@@ -49,7 +49,7 @@ fn odt_units() {
     let d = extract("odt", &odt(), None);
     assert_eq!(d.format, "odt");
     assert_eq!(d.units[0].context.kind.as_deref(), Some("heading"));
-    assert_eq!(d.units.last().unwrap().context.extra["part"], "styles.xml");
+    assert_eq!(&d.units.last().unwrap().context.extra()["part"], "styles.xml");
     assert_eq!(d.units[7].context.kind.as_deref(), Some("cell"));
     assert_eq!(d.units[1].context.style.as_deref(), Some("P1"));
     assert_eq!(d.units[1].context.heading.as_deref(), Some("Getting started"));

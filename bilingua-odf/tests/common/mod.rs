@@ -171,7 +171,7 @@ pub fn filter_for(ext: &str) -> Box<dyn Filter> {
 }
 
 pub fn p_index(u: &Unit) -> usize {
-    u.context.extra["p_index"].parse().unwrap()
+    u.context.extra()["p_index"].parse().unwrap()
 }
 
 /// The unit text as Localization OS shows it: inline codes as tokens.

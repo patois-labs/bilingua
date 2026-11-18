@@ -134,7 +134,7 @@ fn context_names_the_unit_kinds_and_headings() {
     let doc = extract(&mw(), MW.as_bytes()).unwrap();
     let kinds: Vec<&str> = doc.units.iter().map(|u| u.context.kind.as_deref().unwrap()).collect();
     assert_eq!(kinds[1], "heading");
-    assert_eq!(doc.units[1].context.extra["level"], "2");
+    assert_eq!(&doc.units[1].context.extra()["level"], "2");
     assert_eq!(kinds[6], "term");
     assert_eq!(kinds[7], "definition");
     assert_eq!(doc.units[3].context.heading.as_deref(), Some("Early days <!-- note -->"));

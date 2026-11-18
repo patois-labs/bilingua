@@ -26,7 +26,7 @@ fn bare_story_round_trip_through_the_public_api() {
             Inline::text(" world"),
         ]
     );
-    assert_eq!(tok.codes()["1"].label.as_deref(), Some("run"));
+    assert_eq!(tok.codes()["1"].label(), Some("run"));
     let target = vec![Inline::tag("1", TagKind::Open, ""), Inline::text("gro\u{00df}"), Inline::tag("1", TagKind::Close, ""), Inline::text(" Welt, hallo")];
     let ranges = story::rebuild(&mut tree, &paras[0], &tok, &target);
     story::stamp_language(&mut tree, &ranges, "$ID/de_DE_2006");

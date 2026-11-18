@@ -44,7 +44,7 @@ fn inline_codes_are_range_pairs_and_points() {
         .source()
         .iter()
         .filter_map(|i| match i {
-            Inline::Tag { kind, id, .. } => Some((*kind, u.codes[id].label.clone().unwrap_or_default())),
+            Inline::Tag { kind, id, .. } => Some((*kind, u.codes()[id].label().map(String::from).unwrap_or_default())),
             _ => None,
         })
         .collect();

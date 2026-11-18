@@ -27,7 +27,7 @@ pub fn texts(f: &dyn Filter, data: &[u8]) -> Vec<String> {
 }
 
 pub fn code<'a>(u: &'a Unit, n: &str) -> &'a CodeData {
-    u.codes.get(n).unwrap_or_else(|| panic!("no code {n}"))
+    u.codes().get(n).unwrap_or_else(|| panic!("no code {n}"))
 }
 
 pub fn target_of(u: &Unit, text: &str) -> Vec<Inline> {

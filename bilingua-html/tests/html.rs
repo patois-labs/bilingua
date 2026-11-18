@@ -141,7 +141,7 @@ fn nested_inline_tags() {
     let ntags = seg.source.iter().filter(|i| matches!(i, Inline::Tag { .. })).count();
     assert_eq!(ntags, 9, "{:?}", seg.source);
     assert_eq!(plain_text(&seg.source), "One bold and italic and a link.Next line.");
-    assert_eq!(u.codes["1"].label.as_deref(), Some("bold"));
+    assert_eq!(u.codes()["1"].label(), Some("bold"));
     // Translate the paragraph and the attribute.
     let mut d = d;
     let mut t = seg.source.clone();
@@ -197,7 +197,7 @@ fn attributes_are_units() {
     ];
     assert_eq!(got, want.iter().map(|(a, b, c)| (a.to_string(), b.to_string(), c.to_string())).collect::<Vec<_>>());
     assert_eq!(d.units[1].context.key.as_deref(), Some("alt"));
-    assert_eq!(d.units[1].context.extra.get("element").map(String::as_str), Some("img"));
+    assert_eq!(d.units[1].context.extra().get("element"), Some("img"));
     let mut d = d;
     d.set_target("u2", vec![Inline::text("Casa \"azul\"")]).unwrap();
     d.set_target("u4", vec![Inline::text("tetera, t\u{e9}")]).unwrap();
@@ -241,7 +241,7 @@ fn code_pre_and_notranslate_as_locos() {
     let first = &d.units[0].segments[0].source;
     assert!(first.iter().any(|i| matches!(i, Inline::Tag { kind: TagKind::Open, display, .. } if display == "<code>")));
     let brand = &d.units[2];
-    assert_eq!(brand.codes["1"].standalone.as_deref(), Some("<span class=\"notranslate\">Larchmoor&reg;</span>"));
+    assert_eq!(brand.codes()["1"].standalone_markup(), Some("<span class=\"notranslate\">Larchmoor&reg;</span>"));
     let mut d = d;
     let mut t = d.units[0].segments[0].source.clone();
     if let Inline::Text(x) = &mut t[0] {
@@ -265,7 +265,7 @@ fn malformed_markup() {
     let tags: Vec<&Inline> = d.units[1].segments[0].source.iter().filter(|i| matches!(i, Inline::Tag { .. })).collect();
     assert_eq!(tags.len(), 1);
     assert!(matches!(tags[0], Inline::Tag { kind: TagKind::Open, .. }));
-    assert_eq!(d.units[1].codes["1"].close, None);
+    assert_eq!(d.units[1].codes()["1"].close_markup(), None);
     let mut d = d;
     d.set_target("u6", vec![Inline::text("Ultimo")]).unwrap();
     assert!(merged(&d).ends_with("<p>Ultimo"));

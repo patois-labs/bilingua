@@ -181,7 +181,7 @@ fn make_unit(t: &Tree, p: u32, tok: &walk::Tok, id: String, kind: &str) -> Unit 
         }
     }
     let mut u = Unit::new(id, inl);
-    u.codes = codes;
+    u.set_codes(codes);
     u.context.kind = Some(kind.to_string());
     u.context.style = t.attr(p, xml::NS_TEXT, "style-name");
     u
@@ -221,8 +221,8 @@ fn extract_doc(bytes: &[u8], opts: &ExtractOptions, id: &'static str, o: &OdfOpt
                 // the heading is copied into every later paragraph: each copy is charged first (run 2 G5-1)
                 context.charge(heading.as_ref().map_or(0, |h| h.len()), &l)?;
                 u.context.heading = heading.clone();
-                u.context.extra.insert("p_index".into(), idx.to_string());
-                u.context.extra.insert("part".into(), part.name.to_string());
+                u.context.extra_mut().insert("p_index", idx.to_string());
+                u.context.extra_mut().insert("part", part.name.to_string());
                 if is_h {
                     heading = Some(tok.parts.iter().filter_map(|x| if let walk::Part::Text(s) = x { Some(s.as_str()) } else { None }).collect());
                 }
@@ -245,8 +245,8 @@ fn extract_doc(bytes: &[u8], opts: &ExtractOptions, id: &'static str, o: &OdfOpt
                     guard::check_comment_base(idx)?;
                     let mut u = make_unit(&part.tree, p, &tok, format!("c{j}"), "comment");
                     u.context.location = Some(format!("{} comment paragraph {j}", part.name));
-                    u.context.extra.insert("p_index".into(), (COMMENT_BASE + j).to_string());
-                    u.context.extra.insert("part".into(), part.name.to_string());
+                    u.context.extra_mut().insert("p_index", (COMMENT_BASE + j).to_string());
+                    u.context.extra_mut().insert("part", part.name.to_string());
                     units.push(u);
                     guard::check_unit_count(units.len(), &l)?;
                 }

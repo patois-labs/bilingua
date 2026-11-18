@@ -58,9 +58,9 @@ fn code_strings(d: &Document) -> Vec<Vec<String>> {
     d.units
         .iter()
         .map(|u| {
-            u.codes
+            u.codes()
                 .values()
-                .flat_map(|c| [c.open.clone(), c.close.clone(), c.standalone.clone()])
+                .flat_map(|c| [c.open_markup().map(String::from), c.close_markup().map(String::from), c.standalone_markup().map(String::from)])
                 .flatten()
                 .map(|s| s.replace(['\u{ab}', '\u{bb}'], ""))
                 .collect()

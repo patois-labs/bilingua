@@ -148,8 +148,8 @@ pub fn extract(full: &str, include_locked: bool, fm_keys: Option<&[String]>, lim
             u.context.kind = Some(v.key.clone());
             u.context.key = Some(v.key.clone());
             u.context.location = Some(format!("line {}", ex.line(v.range.start)));
-            u.codes.insert(RAW_KEY.into(), CodeData::new().with_standalone(token));
-            u.codes.insert(FM_KEY.into(), CodeData::new().with_label(v.style.name().to_string()));
+            u.codes_mut().insert(RAW_KEY, CodeData::new().with_standalone(token));
+            u.codes_mut().insert(FM_KEY, CodeData::new().with_label(v.style.name().to_string()));
             ex.add_unit_in_skeleton(u, v.range.start, v.range.end);
         }
     }
@@ -355,13 +355,19 @@ impl<'a> Ex<'a> {
         let base = self.units.len();
         // Global unit index of pending item j is base + 1 + j.
         for code in b.codes.values_mut() {
-            for s in [&mut code.open, &mut code.close, &mut code.standalone].into_iter().flatten() {
-                *s = globalise(s, base + 1);
+            if let Some(s) = code.open_markup().map(|s| globalise(s, base + 1)) {
+                code.set_open(s);
+            }
+            if let Some(s) = code.close_markup().map(|s| globalise(s, base + 1)) {
+                code.set_close(s);
+            }
+            if let Some(s) = code.standalone_markup().map(|s| globalise(s, base + 1)) {
+                code.set_standalone(s);
             }
         }
         let line = format!("line {}", self.line(abs_start));
         let mut unit = Unit::new(format!("u{}", base + 1), b.inl);
-        unit.codes = b.codes;
+        unit.set_codes(b.codes);
         unit.context.kind = Some(if has_text { b.kind.clone() } else { "image".into() });
         unit.context.style = b.style.clone();
         unit.context.location = Some(line.clone());
@@ -476,9 +482,9 @@ fn end_container(b: &mut Block, src: &str, evs: &[(Event, Range<usize>)], i: usi
     }
     b.flush_text();
     if let Some(c) = b.codes.get_mut(&frame.id) {
-        c.close = Some(close);
+        c.set_close(close);
     }
-    let display = match b.codes.get(&frame.id).and_then(|c| c.label.as_deref()) {
+    let display = match b.codes.get(&frame.id).and_then(|c| c.label()) {
         Some("bold") => "</b>",
         Some("italic") => "</i>",
         Some("strikethrough") => "</s>",
@@ -625,9 +631,9 @@ fn render_check(inl: &[Inline], codes: &BTreeMap<String, CodeData>, pending: &[P
             Inline::Text(t) => out.push_str(t),
             Inline::Tag { id, kind, .. } => {
                 let piece = codes.get(id).and_then(|c| match kind {
-                    TagKind::Open => c.open.as_deref(),
-                    TagKind::Close => c.close.as_deref(),
-                    TagKind::Standalone => c.standalone.as_deref(),
+                    TagKind::Open => c.open_markup(),
+                    TagKind::Close => c.close_markup(),
+                    TagKind::Standalone => c.standalone_markup(),
                 });
                 if let Some(p) = piece {
                     out.push_str(&map_markers(p, |_, j| pending.get(j).map(|x| x.text.clone())));

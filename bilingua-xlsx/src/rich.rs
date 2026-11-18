@@ -238,9 +238,9 @@ pub fn render(
     mut write_code: impl FnMut(&str, &mut String),
 ) -> String {
     let base = u
-        .codes
+        .codes()
         .get(C_BASE)
-        .and_then(|c| c.standalone.clone())
+        .and_then(|c| c.standalone_markup().map(String::from))
         .unwrap_or_default();
     let mut stack: Vec<String> = Vec::new();
     let mut s = String::new();
@@ -251,14 +251,14 @@ pub fn render(
                 write_text(&f, t, &mut s);
             }
             Inline::Tag { id, kind, .. } => {
-                let Some(code) = u.codes.get(id) else { continue };
+                let Some(code) = u.codes().get(id) else { continue };
                 match kind {
-                    TagKind::Open => stack.push(code.open.clone().unwrap_or_default()),
+                    TagKind::Open => stack.push(code.open_markup().map(String::from).unwrap_or_default()),
                     TagKind::Close => {
                         stack.pop();
                     }
                     TagKind::Standalone => {
-                        if let Some(x) = &code.standalone {
+                        if let Some(x) = code.standalone_markup() {
                             write_code(x, &mut s);
                         }
                     }

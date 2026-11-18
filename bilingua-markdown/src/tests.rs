@@ -62,7 +62,7 @@ fn inline_markup_becomes_tags_without_urls_in_the_text() {
     let displays: Vec<String> = u.source().iter().filter_map(|i| if let Inline::Tag { display, .. } = i { Some(display.clone()) } else { None }).collect();
     assert_eq!(displays, vec!["<b>", "</b>", "<a>", "</a>", "`x = 1`", "<i>", "</i>", "<s>", "</s>"]);
     // the URL lives in the code data
-    let close = u.codes.values().find_map(|c| c.close.clone().filter(|x| x.contains("example.test"))).unwrap();
+    let close = u.codes().values().find_map(|c| c.close_markup().map(String::from).filter(|x| x.contains("example.test"))).unwrap();
     assert_eq!(close, "](https://example.test/a?b=1)");
     assert!(!plain_text(&u.source()).contains("example.test"));
 }
@@ -111,7 +111,7 @@ fn soft_breaks_stay_in_the_text_and_prefixes_become_tags() {
     assert_eq!(texts(&d)[1], "quoted onequoted two");
     let tags = d.units[1].source().iter().filter(|i| matches!(i, Inline::Tag { .. })).count();
     assert_eq!(tags, 1);
-    let code = d.units[1].codes.values().next().unwrap().standalone.clone().unwrap();
+    let code = d.units[1].codes().values().next().unwrap().standalone_markup().map(String::from).unwrap();
     assert_eq!(code, "\n> ");
     assert_eq!(merged(&d), "line one\nline two\n\n> quoted one\n> quoted two\n\nhard  \nbreak\n");
 }
@@ -516,7 +516,7 @@ fn image_inventory_under_the_locos_profile() {
     // LocOS a11y_images: every image outside fences, on the unit of its line; empty alt text names the file
     let src = "---\ntitle: Pics\n---\n![](img/one.png \"t\")\n\n```\n![](in/fence.png)\n```\n\nSee ![A cat](cat.png) and ![ ](x/two.gif).\n\n![ok](three.png)\n";
     let d = MarkdownFilter.extract(src.as_bytes(), &ExtractOptions::default().with_profile(Some(profile::LOCOS))).unwrap();
-    let extra = |i: usize, k: &str| d.units[i].context.extra.get(k).cloned();
+    let extra = |i: usize, k: &str| d.units[i].context.extra().get(k).map(String::from);
     assert_eq!(texts(&d), vec!["Pics", "![](img/one.png \"t\")", "See ![A cat](cat.png) and ![ ](x/two.gif).", "![ok](three.png)"]);
     assert_eq!(extra(0, profile::A11Y_IMAGES), None);
     assert_eq!(extra(1, profile::A11Y_IMAGES).as_deref(), Some("1"));

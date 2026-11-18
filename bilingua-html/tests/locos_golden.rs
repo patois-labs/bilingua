@@ -44,7 +44,7 @@ fn orphan_ids(u: &Unit) -> Vec<String> {
         .iter()
         .filter_map(|i| match i {
             Inline::Tag { id, kind: TagKind::Standalone, .. }
-                if u.codes.get(id).and_then(|c| c.standalone.as_deref()).is_some_and(|t| t.starts_with("</")) =>
+                if u.codes().get(id).and_then(|c| c.standalone_markup()).is_some_and(|t| t.starts_with("</")) =>
             {
                 Some(id.clone())
             }
@@ -325,7 +325,7 @@ fn matches_locos_on_random_pages_and_hostile_cases() {
                 if orphans.contains(&id) {
                     continue;
                 }
-                let (Some(entry), Some(code)) = (map.get(&locos_id(&id, &orphans)), u.codes.get(&id)) else {
+                let (Some(entry), Some(code)) = (map.get(&locos_id(&id, &orphans)), u.codes().get(&id)) else {
                     bad.push(format!("{name}: unit {k}: token {id} missing"));
                     unit_bad = true;
                     break;
@@ -333,11 +333,11 @@ fn matches_locos_on_random_pages_and_hostile_cases() {
                 let ok = match kind {
                     TagKind::Open => {
                         seen += 1;
-                        entry["open"].as_str() == code.open.as_deref() && entry["close"].as_str() == code.close.as_deref()
+                        entry["open"].as_str() == code.open_markup() && entry["close"].as_str() == code.close_markup()
                     }
                     TagKind::Standalone => {
                         seen += 1;
-                        entry["point"].as_str() == code.standalone.as_deref()
+                        entry["point"].as_str() == code.standalone_markup()
                     }
                     TagKind::Close => true,
                 };

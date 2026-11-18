@@ -467,10 +467,10 @@ impl Extractor {
         self.dml_n += 1;
         let id = format!("{}d{}", self.prefix, self.dml_n);
         let mut u = Unit::new(id.clone(), merge_text(inl));
-        u.codes = codes;
-        u.codes.insert(C_ORIG.into(), CodeData::new().with_standalone(orig));
-        u.codes.insert(C_BASE.into(), CodeData::new().with_standalone(base_rpr.map(|r| r.raw()).unwrap_or_default()));
-        u.codes.insert(C_DML.into(), CodeData::default());
+        codes.insert(C_ORIG.into(), CodeData::new().with_standalone(orig));
+        codes.insert(C_BASE.into(), CodeData::new().with_standalone(base_rpr.map(|r| r.raw()).unwrap_or_default()));
+        codes.insert(C_DML.into(), CodeData::default());
+        u.set_codes(codes);
         self.dml_ids.insert(key, id.clone());
         self.dml_runs.insert(id.clone(), run_codes);
         u.context.kind = Some("textbox".into());
@@ -498,11 +498,11 @@ impl Extractor {
         let mut u = Unit::new(id.clone(), vec![Inline::text(text)]);
         u.context.kind = Some(local);
         u.context.location = Some(format!("{} {}", self.part_name, e.name));
-        u.codes.insert(
-            C_ORIG.into(),
+        u.codes_mut().insert(
+            C_ORIG,
             CodeData::new().with_standalone(inner),
         );
-        u.codes.insert(C_SIMPLE.into(), CodeData::default());
+        u.codes_mut().insert(C_SIMPLE, CodeData::default());
         self.add_unit(u, self.core_ord);
         format!("{}{M_UNIT}{id}{M_END}{}", e.start, e.end)
     }
@@ -686,14 +686,14 @@ impl Extractor {
                         }
                     }
                     let unit = &mut self.pending[pi].unit;
-                    let k = unit.codes.keys().filter(|k| k.starts_with("_m")).count();
-                    unit.codes.insert(
+                    let k = unit.codes().keys().filter(|k| k.starts_with("_m")).count();
+                    unit.codes_mut().insert(
                         format!("_m{k}"),
                         CodeData::new().with_standalone(inner),
                     );
                     for (name, rpr) in fb_codes {
                         // `_fb{k}` is the base, `_fb{k}.{tag}` a formatting tag
-                        unit.codes.insert(format!("_fb{k}{name}"), CodeData::new().with_standalone(rpr));
+                        unit.codes_mut().insert(format!("_fb{k}{name}"), CodeData::new().with_standalone(rpr));
                     }
                     return format!("{shell}{M_MIRROR}{uid}:{k}{M_END}{}", e.end);
                 }
@@ -1424,7 +1424,7 @@ impl Extractor {
         };
         let id = format!("{}p{}", self.prefix, p.ord);
         let mut unit = Unit::new(id, source);
-        unit.codes = codes;
+        unit.set_codes(codes);
         unit.context.kind = Some(kind.into());
         unit.context.style = style;
         // the last heading is copied into every later paragraph: each copy is charged first (run 2 G5-1)

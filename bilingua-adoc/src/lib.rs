@@ -105,7 +105,7 @@ impl Filter for Adoc {
                 continue;
             }
             let mut u = Unit::new(format!("u{}", units.len() + 1), inl);
-            u.codes = codes;
+            u.set_codes(codes);
             u.set_hidden(RAW, raw.to_string());
             if let Some(sep) = sl.sep {
                 u.set_hidden(SEP, sep.to_string());
@@ -118,7 +118,7 @@ impl Filter for Adoc {
             }
             u.context.kind = Some(sl.kind.to_string());
             if sl.kind == "heading" {
-                u.context.extra.insert("level".into(), sl.level.to_string());
+                u.context.extra_mut().insert("level", sl.level.to_string());
             } else {
                 // the heading is copied into every later unit: each copy is charged first (run 2 G5-1)
                 if let Some(h) = &heading {
@@ -139,7 +139,7 @@ impl Filter for Adoc {
             }
             let (inl, codes) = meta::meta_unit(&m.value);
             let mut u = Unit::new(format!("u{}", units.len() + 1), inl);
-            u.codes = codes;
+            u.set_codes(codes);
             u.set_hidden(RAW, text[m.start..m.end].to_string());
             u.set_hidden(META, "1");
             u.context.kind = Some("metadata".into());
@@ -154,7 +154,7 @@ impl Filter for Adoc {
                 continue;
             }
             let mut u = Unit::new(format!("k{}", n + 1), inl);
-            u.codes = codes;
+            u.set_codes(codes);
             u.set_hidden(RAW, text[sl.start..sl.end].to_string());
             u.translate = false;
             u.lock_reason = Some("no translatable text".into());

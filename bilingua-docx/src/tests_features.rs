@@ -45,8 +45,8 @@ fn bold_and_italic_become_paired_tags() {
     assert_eq!(tag_displays(s), vec!["<b>", "</b>", "<fmt>", "</fmt>"]);
     assert_eq!(plain_text(&s.source), "Press Save to keep");
     let u = &doc.units[0];
-    assert_eq!(u.codes["1"].label.as_deref(), Some("bold"));
-    assert_eq!(u.codes["2"].label.as_deref(), Some("italic color"));
+    assert_eq!(u.codes()["1"].label(), Some("bold"));
+    assert_eq!(u.codes()["2"].label(), Some("italic color"));
     // Translator reorders: the italic part first.
     let t = vec![
         Inline::tag("2", TagKind::Open, "<fmt>"),
@@ -848,7 +848,7 @@ fn ruby_base_text_is_the_unit_text_and_the_guide_is_kept() {
     let s = seg_of(&doc, "p1");
     assert_eq!(plain_text(&s.source), "Visit \u{6771}\u{4EAC} soon.");
     assert_eq!(tag_displays(s), vec!["<ruby>", "</ruby>"]);
-    assert_eq!(doc.units[0].codes["1"].label.as_deref(), Some("ruby"));
+    assert_eq!(doc.units[0].codes()["1"].label(), Some("ruby"));
     doc.set_target(
         "p1",
         vec![
@@ -893,7 +893,7 @@ fn drawingml_text_in_a_canvas_is_a_unit() {
     // the larger first run is a formatting tag; the plain run that is the paragraph default is the base
     let s = seg_of(&doc, "d1");
     assert_eq!(tag_displays(s), vec!["<fmt>", "</fmt>"]);
-    assert_eq!(doc.units[1].codes["1"].label.as_deref(), Some("size"));
+    assert_eq!(doc.units[1].codes()["1"].label(), Some("size"));
     doc.target_lang = Some("de-DE".into());
     doc.set_target(
         "d1",
@@ -919,7 +919,7 @@ fn drawingml_text_in_a_canvas_is_a_unit() {
 <a:r><a:rPr lang=\"en-GB\" err=\"1\"/><a:t>text </a:t></a:r><a:r><a:rPr lang=\"en-US\" b=\"1\"/><a:t>here</a:t></a:r></a:p></w:drawing></w:r></w:p>";
     let m = round_trip(&doc_of(marks));
     assert_eq!(tag_displays(seg_of(&m, "d1")), vec!["<b>", "</b>"]);
-    assert_eq!(m.find("d1").unwrap().0.codes["1"].label.as_deref(), Some("bold"));
+    assert_eq!(m.find("d1").unwrap().0.codes()["1"].label(), Some("bold"));
     // a line break in the paragraph: left alone
     let br = "<w:p><w:r><w:drawing><a:p><a:r><a:t>One</a:t></a:r><a:br/><a:r><a:t>Two</a:t></a:r></a:p></w:drawing></w:r></w:p>";
     let none = round_trip(&doc_of(br));
@@ -992,7 +992,7 @@ fn the_plain_run_is_the_base_though_the_italic_run_is_longer() {
     let heading = "<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>All of this is bold</w:t></w:r><w:r><w:t xml:space=\"preserve\"> </w:t></w:r></w:p>";
     let h = round_trip(&doc_of(heading));
     assert_eq!(tag_displays(seg_of(&h, "p1")), vec!["<fmt>", "</fmt>"]);
-    assert_eq!(h.find("p1").unwrap().0.codes["1"].label.as_deref(), Some("no formatting"));
+    assert_eq!(h.find("p1").unwrap().0.codes()["1"].label(), Some("no formatting"));
     // no plain run: the paragraph mark's formatting is the base, before the most text
     let marked = "<w:p><w:pPr><w:rPr><w:b/></w:rPr></w:pPr><w:r><w:rPr><w:b/></w:rPr><w:t>Short</w:t></w:r>\
 <w:r><w:rPr><w:i/></w:rPr><w:t xml:space=\"preserve\"> and a longer italic part</w:t></w:r></w:p>";
@@ -1011,8 +1011,8 @@ fn drawingml_plain_run_is_the_base_though_the_italic_run_is_longer() {
     assert_eq!(tag_displays(s), vec!["<b>", "</b>", "<i>", "</i>"]);
     assert_eq!(s.source[3], Inline::text(" with an "));
     let u = doc.find("d1").unwrap().0;
-    assert_eq!(u.codes["1"].label.as_deref(), Some("bold"));
-    assert_eq!(u.codes["2"].label.as_deref(), Some("italic"));
+    assert_eq!(u.codes()["1"].label(), Some("bold"));
+    assert_eq!(u.codes()["2"].label(), Some("italic"));
 }
 
 /// BILI-116: a run that is only white space never becomes the base, not even as the paragraph default. A `w:pPr`

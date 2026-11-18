@@ -88,9 +88,9 @@ fn walk_and_tokens() {
         .filter_map(|i| if let Inline::Tag { kind, display, .. } = i { Some((*kind, display.clone())) } else { None })
         .collect();
     assert_eq!(tags, vec![(TagKind::Standalone, "<cp IX='1'/>".to_string()), (TagKind::Standalone, "<cp IX='0'/>".to_string())]);
-    assert_eq!(u.codes["1"].label.as_deref(), Some("character properties"));
+    assert_eq!(u.codes()["1"].label(), Some("character properties"));
     let f = &doc.units[5];
-    assert_eq!(f.codes["1"].label.as_deref(), Some("field"));
+    assert_eq!(f.codes()["1"].label(), Some("field"));
     assert_eq!(f.context.location.as_deref(), Some("page 2 \"Process details\", shape 3"));
     assert_eq!(doc.units[0].context.kind.as_deref(), Some("page-name"));
 }

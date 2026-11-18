@@ -535,7 +535,7 @@ impl Tok {
 
     fn disp(&self, n: usize, open: bool) -> String {
         let c = self.codes.get(&n.to_string());
-        let s = c.and_then(|c| if open { c.open.clone().or(c.standalone.clone()) } else { c.close.clone() });
+        let s = c.and_then(|c| if open { c.open_markup().or(c.standalone_markup()) } else { c.close_markup() }).map(String::from);
         s.unwrap_or_default()
     }
 

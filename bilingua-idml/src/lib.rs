@@ -56,7 +56,7 @@ fn extract_doc(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
             let tok = story::tokenize(&tree, para);
             if tok.has_text() {
                 let mut u = Unit::new(format!("p{idx}"), tok.core_inlines());
-                u.codes = tok.codes().clone();
+                u.set_codes(tok.codes().clone());
                 u.context = UnitContext::new().with_kind("paragraph".to_string()).with_style(Some(story::style(&tree, para)).filter(|s| !s.is_empty())).with_location(format!("{member} paragraph {}", local + 1)).with_extra(BTreeMap::from([("story".to_string(), member.clone())]));
                 units.push(u);
                 guard::check_unit_count(units.len(), &l)?;

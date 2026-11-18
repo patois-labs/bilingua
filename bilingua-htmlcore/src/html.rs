@@ -1306,16 +1306,16 @@ pub fn put_image_inventory(units: &mut [bilingua_model::Unit], anchors: &[Option
     }
     for (k, n) in count {
         let Some(u) = units.get_mut(k) else { continue };
-        u.context.extra.insert(profile::A11Y_IMAGES.into(), n.to_string());
+        u.context.extra_mut().insert(profile::A11Y_IMAGES, n.to_string());
         let mine: Vec<&AltFinding> = found.iter().filter(|f| f.anchor == Some(k)).collect();
         if mine.is_empty() {
             continue;
         }
         let list: Vec<String> = mine.iter().map(|f| format!("{{\"kind\":{},\"where\":{}}}", json_str(f.kind), json_str(&f.place))).collect();
-        u.context.extra.insert(profile::A11Y_MISSING_ALT.into(), format!("[{}]", list.join(",")));
+        u.context.extra_mut().insert(profile::A11Y_MISSING_ALT, format!("[{}]", list.join(",")));
         let empty: Vec<&str> = mine.iter().filter(|f| f.kind == "empty").map(|f| f.place.as_str()).collect();
         if !empty.is_empty() {
-            u.context.extra.insert(profile::A11Y_EMPTY_ALT.into(), empty.join("\n"));
+            u.context.extra_mut().insert(profile::A11Y_EMPTY_ALT, empty.join("\n"));
         }
     }
 }

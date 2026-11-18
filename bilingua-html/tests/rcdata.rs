@@ -71,7 +71,7 @@ fn markup_inside_a_title_is_its_text() {
         let src = page(&format!("<title>{title}</title>"), "");
         let d = open(&src);
         assert_eq!(sources(&d), vec![vec![Inline::text(text)], vec![Inline::text("Para")]], "{title}");
-        assert!(d.units[0].codes.is_empty(), "{title}");
+        assert!(d.units[0].codes().is_empty(), "{title}");
         assert_eq!(Html.merge(&d).unwrap(), src.as_bytes(), "{title}");
         let out = translated(&d);
         assert!(out.contains(&format!("<title>T {text}</title>")), "{title}: {out}");
@@ -104,7 +104,7 @@ fn a_textarea_is_rcdata_too() {
     let src = page("<title>t</title>", "<textarea name=t>a<b c &lt; d</textarea>");
     let d = open(&src);
     assert_eq!(d.units[1].source(), vec![Inline::text("a<b c &lt; d")]);
-    assert!(d.units[1].codes.is_empty());
+    assert!(d.units[1].codes().is_empty());
     let out = translated(&d);
     assert!(out.contains("<textarea name=t>T a<b c &lt; d</textarea>"), "{out}");
     assert_eq!(open(&out).units[1].source(), vec![Inline::text("T a<b c &lt; d")]);

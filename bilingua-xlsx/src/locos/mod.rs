@@ -1172,8 +1172,8 @@ pub fn extract(bytes: &[u8], opts: &ExtractOptions, xo: &crate::XlsxOptions) -> 
     for (idx, (sheet, row, col, value)) in cells.into_iter().enumerate() {
         let mut u = Unit::new(idx.to_string(), vec![Inline::text(value)]);
         u.context = UnitContext::new().with_kind("cell").with_key(format!("{}{row}", col_letters(col))).with_location(pkg.sheets[sheet].clone());
-        u.context.extra.insert(profile::P_INDEX.to_string(), idx.to_string());
-        u.hidden.insert(KEY.to_string(), idx.to_string());
+        u.context.extra_mut().insert(profile::P_INDEX.to_string(), idx.to_string());
+        u.hidden_map_mut().insert(KEY.to_string(), idx.to_string());
         units.push(u);
     }
     let base = units.len();
@@ -1184,11 +1184,11 @@ pub fn extract(bytes: &[u8], opts: &ExtractOptions, xo: &crate::XlsxOptions) -> 
         let (inl, codes) = paragraph_inlines(pkg.dom(&part), p);
         let idx = base + j;
         let mut u = Unit::new(idx.to_string(), inl);
-        u.codes = codes;
+        u.set_codes(codes);
         u.context = UnitContext::new().with_kind("text box").with_location(part.clone());
-        u.context.extra.insert(profile::P_INDEX.to_string(), idx.to_string());
-        u.context.extra.insert(profile::STYLE.to_string(), TEXT_BOX.to_string());
-        u.hidden.insert(KEY.to_string(), idx.to_string());
+        u.context.extra_mut().insert(profile::P_INDEX.to_string(), idx.to_string());
+        u.context.extra_mut().insert(profile::STYLE.to_string(), TEXT_BOX.to_string());
+        u.hidden_map_mut().insert(KEY.to_string(), idx.to_string());
         units.push(u);
     }
     if xo.translate_comments {

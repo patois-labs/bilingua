@@ -137,7 +137,7 @@ fn paragraph_mode_and_ids() {
             assert_eq!(u.id, format!("u{}", i + 1), "{name}");
             assert_eq!(u.segments.len(), 1);
             assert_eq!(u.segments[0].id, u.id);
-            assert!(u.codes.keys().all(|k| k.starts_with('$')), "{name}: units carry no inline codes");
+            assert!(u.codes().keys().all(|k| k.starts_with('$')), "{name}: units carry no inline codes");
         }
     }
 }

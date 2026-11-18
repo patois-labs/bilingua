@@ -187,9 +187,9 @@ fn code_mark_chars(code: &bilingua_model::CodeData, into: &mut Vec<char>) {
             }
         }
     };
-    add(code.open.as_deref().and_then(|m| m.chars().next_back()));
-    add(code.close.as_deref().and_then(|m| m.chars().next()));
-    if let Some(raw) = code.standalone.as_deref().filter(|r| constrained_point(r)) {
+    add(code.open_markup().and_then(|m| m.chars().next_back()));
+    add(code.close_markup().and_then(|m| m.chars().next()));
+    if let Some(raw) = code.standalone_markup().filter(|r| constrained_point(r)) {
         add(raw.chars().next());
     }
 }
@@ -315,11 +315,11 @@ pub fn render(unit: &Unit, target: &[Inline], sep: Option<char>, nested: bool, a
     let mut prev_text = false;
     let markup = |i: Option<&Inline>| -> Option<&str> {
         let Some(Inline::Tag { id, kind, .. }) = i else { return None };
-        let c = unit.codes.get(id)?;
+        let c = unit.codes().get(id)?;
         match kind {
-            TagKind::Open => c.open.as_deref(),
-            TagKind::Close => c.close.as_deref(),
-            TagKind::Standalone => c.standalone.as_deref(),
+            TagKind::Open => c.open_markup(),
+            TagKind::Close => c.close_markup(),
+            TagKind::Standalone => c.standalone_markup(),
         }
     };
     // the character the source has right before (`true`) or after a code, to keep what the source already had
@@ -367,11 +367,11 @@ pub fn render(unit: &Unit, target: &[Inline], sep: Option<char>, nested: bool, a
                     out.push(String::new());
                 }
                 prev_text = false;
-                let Some(code) = unit.codes.get(id) else { continue };
+                let Some(code) = unit.codes().get(id) else { continue };
                 code_mark_chars(code, &mut code_marks);
                 let closing = *kind == TagKind::Close;
-                let item = Read::Code(*kind, code.label.clone(), code.standalone.as_deref().map(|r| fold_edges(&unref(r))));
-                if let (Some(open), Some(close)) = (&code.open, &code.close) {
+                let item = Read::Code(*kind, code.label().map(String::from), code.standalone_markup().map(|r| fold_edges(&unref(r))));
+                if let (Some(open), Some(close)) = (code.open_markup(), code.close_markup()) {
                     want.push(item);
                     if let Some(mark) = constrained_pair_mark(open, close) {
                         if !closing {
@@ -383,8 +383,8 @@ pub fn render(unit: &Unit, target: &[Inline], sep: Option<char>, nested: bool, a
                     if !closing && is_url_start(open) {
                         links.push(out.len());
                     }
-                    out.push(if closing { close.clone() } else { open.clone() });
-                } else if let (Some(raw), false) = (&code.standalone, closing) {
+                    out.push(if closing { close.to_string() } else { open.to_string() });
+                } else if let (Some(raw), false) = (code.standalone_markup(), closing) {
                     want.push(item);
                     if constrained_point(raw) {
                         marks.push((out.len(), out.len(), raw.chars().next().unwrap_or('`')));
@@ -392,7 +392,7 @@ pub fn render(unit: &Unit, target: &[Inline], sep: Option<char>, nested: bool, a
                     if is_url_start(raw) || is_attr_ref(raw) {
                         links.push(out.len());
                     }
-                    out.push(raw.clone());
+                    out.push(raw.to_string());
                 }
             }
         }
@@ -486,9 +486,9 @@ fn read_back(line: &str) -> Vec<Read> {
         Inline::Text(t) => Read::Text(t),
         Inline::Tag { id, kind, .. } => {
             let c = codes.get(&id);
-            let label = c.and_then(|c| c.label.clone());
+            let label = c.and_then(|c| c.label().map(String::from));
             // a standalone code keeps what it holds (`` `x` ``, `+p+`): its markup with the doubled edge marks folded
-            let raw = c.and_then(|c| c.standalone.as_deref()).map(|r| fold_edges(&unref(r)));
+            let raw = c.and_then(|c| c.standalone_markup()).map(|r| fold_edges(&unref(r)));
             Read::Code(kind, label, raw)
         }
     })

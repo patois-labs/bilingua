@@ -82,22 +82,22 @@ impl<'a> Renderer<'a> {
         let changed = out != u.source();
         if !changed {
             let orig = u
-                .codes
+                .codes()
                 .get(orig_key)
-                .and_then(|c| c.standalone.as_deref())
+                .and_then(|c| c.standalone_markup())
                 .ok_or_else(|| Error::Write(format!("unit {} lost its original XML", u.id)))?;
             return self.resolve(orig, depth);
         }
-        if u.codes.contains_key(C_TRACKED) && self.warned.insert(idx) {
+        if u.codes().contains_key(C_TRACKED) && self.warned.insert(idx) {
             self.warnings.push(format!(
                 "{}: tracked changes were accepted because the text was translated",
                 u.id
             ));
         }
-        if u.codes.contains_key(C_SIMPLE) {
+        if u.codes().contains_key(C_SIMPLE) {
             return Ok(escape_text(&plain_text(&out)));
         }
-        if u.codes.contains_key(C_DML) {
+        if u.codes().contains_key(C_DML) {
             let runs = match orig_key.strip_prefix("_m") {
                 Some(k) => Runs::Mirror(k),
                 None => Runs::Dml,
@@ -108,9 +108,9 @@ impl<'a> Renderer<'a> {
     }
 
     fn code_str(u: &Unit, key: &str) -> String {
-        u.codes
+        u.codes()
             .get(key)
-            .and_then(|c| c.standalone.clone())
+            .and_then(|c| c.standalone_markup().map(String::from))
             .unwrap_or_default()
     }
 
@@ -137,17 +137,17 @@ impl<'a> Renderer<'a> {
                     }
                 }
                 Inline::Tag { id, kind, .. } => {
-                    let Some(code) = u.codes.get(id) else {
+                    let Some(code) = u.codes().get(id) else {
                         continue;
                     };
-                    let wrapper = code.standalone.is_some() && *kind != TagKind::Standalone;
+                    let wrapper = code.standalone_markup().is_some() && *kind != TagKind::Standalone;
                     match kind {
                         TagKind::Open if wrapper => {
-                            s.push_str(&self.resolve(code.open.as_deref().unwrap_or(""), depth)?);
+                            s.push_str(&self.resolve(code.open_markup().unwrap_or(""), depth)?);
                             scopes.push(Scope {
-                                base: code.standalone.clone().unwrap_or_default(),
+                                base: code.standalone_markup().map(String::from).unwrap_or_default(),
                                 fmts: vec![],
-                                close: code.close.clone().unwrap_or_default(),
+                                close: code.close_markup().map(String::from).unwrap_or_default(),
                             });
                         }
                         TagKind::Open => {
@@ -155,11 +155,11 @@ impl<'a> Renderer<'a> {
                             let fmt = match runs {
                                 // the fallback copy uses its own w:rPr for this tag, or its base
                                 Runs::Mirror(k) => u
-                                    .codes
+                                    .codes()
                                     .get(&format!("_fb{k}.{id}"))
-                                    .and_then(|c| c.standalone.clone())
+                                    .and_then(|c| c.standalone_markup().map(String::from))
                                     .unwrap_or_else(|| top.base.clone()),
-                                _ => code.open.clone().unwrap_or_default(),
+                                _ => code.open_markup().map(String::from).unwrap_or_default(),
                             };
                             top.fmts.push(fmt);
                         }
@@ -177,7 +177,7 @@ impl<'a> Renderer<'a> {
                                 .pop();
                         }
                         TagKind::Standalone => {
-                            if let Some(x) = &code.standalone {
+                            if let Some(x) = code.standalone_markup() {
                                 s.push_str(&self.resolve(x, depth)?);
                             }
                         }

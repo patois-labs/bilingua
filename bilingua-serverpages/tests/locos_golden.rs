@@ -58,7 +58,7 @@ fn orphan_ids(u: &Unit) -> Vec<String> {
         .iter()
         .filter_map(|i| match i {
             Inline::Tag { id, kind: TagKind::Standalone, .. }
-                if u.codes.get(id).and_then(|c| c.standalone.as_deref()).is_some_and(|t| t.starts_with("</")) =>
+                if u.codes().get(id).and_then(|c| c.standalone_markup()).is_some_and(|t| t.starts_with("</")) =>
             {
                 Some(id.clone())
             }
@@ -116,16 +116,16 @@ fn check_units(name: &str, doc: &Document, want: &[serde_json::Value], has_bom: 
                 continue;
             }
             let entry = &map[&locos_id(&id, &orphans)];
-            let code = &u.codes[&id];
+            let code = &u.codes()[&id];
             match kind {
                 TagKind::Open => {
                     seen += 1;
-                    assert_eq!(Some(entry["open"].as_str().unwrap()), code.open.as_deref(), "{name}: unit {k} open {id}");
-                    assert_eq!(entry["close"].as_str(), code.close.as_deref(), "{name}: unit {k} close {id}");
+                    assert_eq!(Some(entry["open"].as_str().unwrap()), code.open_markup(), "{name}: unit {k} open {id}");
+                    assert_eq!(entry["close"].as_str(), code.close_markup(), "{name}: unit {k} close {id}");
                 }
                 TagKind::Standalone => {
                     seen += 1;
-                    assert_eq!(Some(entry["point"].as_str().unwrap()), code.standalone.as_deref(), "{name}: unit {k} point {id}");
+                    assert_eq!(Some(entry["point"].as_str().unwrap()), code.standalone_markup(), "{name}: unit {k} point {id}");
                 }
                 TagKind::Close => {}
             }

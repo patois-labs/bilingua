@@ -127,8 +127,8 @@ fn a_second_byte_order_mark_is_refused_under_the_locos_profile() {
         once.extend(slide(inner).into_bytes());
         let doc = Pptx.extract(&deck(once), &locos()).unwrap();
         assert_eq!(doc.units.len(), 1, "{marks} marks");
-        let code = &doc.units[0].codes["1"];
-        assert_eq!(code.open.as_deref(), Some("<a:r>"), "{marks} marks");
-        assert_eq!(code.close.as_deref(), Some("</a:r>"), "{marks} marks");
+        let code = &doc.units[0].codes()["1"];
+        assert_eq!(code.open_markup(), Some("<a:r>"), "{marks} marks");
+        assert_eq!(code.close_markup(), Some("</a:r>"), "{marks} marks");
     }
 }

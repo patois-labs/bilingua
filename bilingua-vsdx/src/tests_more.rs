@@ -412,7 +412,7 @@ fn locos_p_index_is_the_slot_index_with_gaps() {
     let data = gaps_package();
     let lo = profile::locos().extract_options().with_format_option("vsdx.translate_comments", true);
     let doc = Vsdx.extract(&data, &lo).unwrap();
-    let got: Vec<(String, String)> = doc.units.iter().map(|u| (u.context.extra[profile::P_INDEX].clone(), plain_text(&u.source()))).collect();
+    let got: Vec<(String, String)> = doc.units.iter().map(|u| (u.context.extra()[profile::P_INDEX].to_string(), plain_text(&u.source()))).collect();
     let want: Vec<(String, String)> = [
         ("0", "Overview"),
         ("1", "Process details"),
@@ -433,7 +433,7 @@ fn locos_p_index_is_the_slot_index_with_gaps() {
     assert_eq!(got.last(), want.last());
     // without the profile nothing changes: no LocOS index
     let plain = Vsdx.extract(&data, &ExtractOptions::new().with_format_option("vsdx.translate_comments", true)).unwrap();
-    assert!(plain.units.iter().all(|u| !u.context.extra.contains_key(profile::P_INDEX)));
+    assert!(plain.units.iter().all(|u| !u.context.extra().contains_key(profile::P_INDEX)));
     assert_eq!(plain.units.len(), doc.units.len());
 }
 
@@ -457,7 +457,7 @@ fn large_locos() -> ExtractOptions {
 fn fixture_slots() -> usize {
     let doc = Vsdx.extract(&big_drawing_with_comments(0), &large_locos()).unwrap();
     let body = doc.units.iter().filter(|u| u.context.kind.as_deref() != Some("comment"));
-    body.map(|u| u.context.extra[profile::P_INDEX].parse::<usize>().unwrap()).max().unwrap() + 1
+    body.map(|u| u.context.extra()[profile::P_INDEX].parse::<usize>().unwrap()).max().unwrap() + 1
 }
 
 #[test]
@@ -480,7 +480,7 @@ fn comments_just_under_a_million_slots_round_trip() {
     let data = big_drawing_with_comments(bilingua_model::guard::COMMENT_BASE - fixture_slots());
     let mut doc = Vsdx.extract(&data, &large_locos()).unwrap();
     let c = doc.units.iter().find(|u| u.id == "comment-2").unwrap();
-    assert_eq!(c.context.extra[profile::P_INDEX], "1000001");
+    assert_eq!(&c.context.extra()[profile::P_INDEX], "1000001");
     set(&mut doc, "comment-2", "Diese Form verschieben.");
     let out = Vsdx.merge_with(&doc, &profile::locos().merge_options("vsdx").with_limits(Limits::large())).unwrap();
     assert!(part_large(&out, "visio/comments.xml").contains("Diese Form verschieben."));

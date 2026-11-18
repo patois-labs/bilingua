@@ -31,7 +31,7 @@ fn untouched_merge_is_the_original_bytes_and_ids_are_stable() {
         // LocOS profile: the walker index
         let lo = f.extract(data, &profile::locos().extract_options()).unwrap();
         for (n, u) in lo.units.iter().enumerate() {
-            assert_eq!(u.context.extra[profile::P_INDEX], n.to_string(), "{id}");
+            assert_eq!(&u.context.extra()[profile::P_INDEX], n.to_string(), "{id}");
         }
         assert_eq!(f.merge_with(&lo, &profile::locos().merge_options(id)).unwrap(), data, "{id}");
     }

@@ -167,16 +167,16 @@ enum C {
 }
 
 fn map_of(u: &Unit) -> BTreeMap<String, C> {
-    u.codes
+    u.codes()
         .iter()
         .filter(|(k, _)| !k.starts_with('~'))
         .map(|(k, c)| {
-            let v = match (&c.standalone, &c.open, &c.close) {
-                (Some(s), _, _) => C::P(s.clone()),
-                (None, Some(o), Some(cl)) => C::G(o.clone(), cl.clone()),
+            let v = match (c.standalone_markup(), c.open_markup(), c.close_markup()) {
+                (Some(s), _, _) => C::P(s.to_string()),
+                (None, Some(o), Some(cl)) => C::G(o.to_string(), cl.to_string()),
                 _ => panic!(),
             };
-            (k.clone(), v)
+            (k.to_string(), v)
         })
         .collect()
 }

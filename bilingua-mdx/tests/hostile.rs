@@ -188,11 +188,11 @@ fn edited_code_spans_give_an_error() {
     let doc = extract(data).unwrap();
     for (key, field, val) in [("$t1", 0, "0,9999"), ("$t1", 1, "3,1"), ("$t2", 0, "0,19"), ("$a1", 2, "18,40"), ("$a1", 2, "2,6")] {
         let mut d = doc.clone();
-        let c = d.units[0].codes.get_mut(key).unwrap();
+        let c = d.units[0].codes_mut().get_mut(key).unwrap();
         match field {
-            0 => c.open = Some(val.into()),
-            1 => c.close = Some(val.into()),
-            _ => c.standalone = Some(val.into()),
+            0 => c.set_open(val),
+            1 => c.set_close(val),
+            _ => c.set_standalone(val),
         }
         let last = d.units.len() - 1;
         d.units[last].segments[0].target = vec![Inline::text("Y")];

@@ -144,10 +144,10 @@ pub(super) fn units(pkg: &mut Package) -> Result<Vec<Unit>, Error> {
         let key = COMMENT_BASE + j;
         let mut u = Unit::new(key.to_string(), vec![Inline::text(core)]);
         u.context = UnitContext::new().with_kind(COMMENT).with_key(slot.cell_ref.clone()).with_location(slot.sheet.clone());
-        u.context.extra.insert(profile::P_INDEX.to_string(), key.to_string());
-        u.context.extra.insert(profile::STYLE.to_string(), COMMENT.to_string());
-        u.hidden.insert(KEY.to_string(), key.to_string());
-        u.hidden.insert(SLOT.to_string(), j.to_string());
+        u.context.extra_mut().insert(profile::P_INDEX.to_string(), key.to_string());
+        u.context.extra_mut().insert(profile::STYLE.to_string(), COMMENT.to_string());
+        u.hidden_map_mut().insert(KEY.to_string(), key.to_string());
+        u.hidden_map_mut().insert(SLOT.to_string(), j.to_string());
         out.push(u);
     }
     Ok(out)

@@ -310,14 +310,14 @@ pub fn render(new: &[Inline], codes: &BTreeMap<String, CodeData>, cell: Option<&
                 segs.push(Seg::Text(std::mem::take(&mut pending)));
                 let Some(cd) = codes.get(id) else { continue };
                 let closing = *kind == TagKind::Close;
-                if cd.open.is_some() || cd.close.is_some() {
+                if cd.open_markup().is_some() || cd.close_markup().is_some() {
                     if closing {
-                        segs.push(Seg::Close(cd.close.clone().unwrap_or_default()));
+                        segs.push(Seg::Close(cd.close_markup().map(String::from).unwrap_or_default()));
                     } else {
-                        segs.push(Seg::Open(cd.open.clone().unwrap_or_default()));
+                        segs.push(Seg::Open(cd.open_markup().map(String::from).unwrap_or_default()));
                     }
                 } else if !closing {
-                    segs.push(Seg::Code(cd.standalone.clone().unwrap_or_default()));
+                    segs.push(Seg::Code(cd.standalone_markup().map(String::from).unwrap_or_default()));
                 }
             }
         }

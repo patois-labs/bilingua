@@ -144,7 +144,7 @@ fn extract_wiki(id: &'static str, dw: bool, allow: &HashSet<(String, String)>, b
             format!("k{n_lock}")
         };
         let mut u = Unit::new(uid, inl);
-        u.codes = tok.codes;
+        u.set_codes(tok.codes);
         u.set_hidden(RAW, raw);
         if let Some(c) = slot.cell {
             u.set_hidden(CELL, c);
@@ -155,7 +155,7 @@ fn extract_wiki(id: &'static str, dw: bool, allow: &HashSet<(String, String)>, b
         }
         u.context.kind = Some(slot.kind.to_string());
         if slot.kind == "heading" {
-            u.context.extra.insert("level".into(), slot.level.to_string());
+            u.context.extra_mut().insert("level", slot.level.to_string());
         } else {
             // the heading is copied into every later unit: each copy is charged first (run 2 G5-1)
             if let Some(h) = &heading {
@@ -197,7 +197,7 @@ fn merge_wiki(id: &str, dw: bool, doc: &Document, opts: &MergeOptions) -> Result
                     out.push_str(&raw);
                 } else {
                     let cell = u.hidden(CELL);
-                    out.push_str(&render::render(&new, &u.codes, cell, u.context.kind.as_deref(), dw));
+                    out.push_str(&render::render(&new, u.codes(), cell, u.context.kind.as_deref(), dw));
                 }
             }
         }

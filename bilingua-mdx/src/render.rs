@@ -43,7 +43,7 @@ pub(crate) fn build_document(w: &Walk, l: &Loaded, opts: &ExtractOptions) -> Res
             let i = new_unit(&mut units, vec![Inline::text(f.text.clone())]);
             let kind = if fm.kind == Kind::Yaml { "yaml" } else { "toml" };
             let u = &mut units[i];
-            u.codes.insert(HIDDEN.into(), hidden_code("fm", &text[s..e], &format!("{kind}:{}", f.style)));
+            u.codes_mut().insert(HIDDEN, hidden_code("fm", &text[s..e], &format!("{kind}:{}", f.style)));
             u.context.kind = Some("front-matter".into());
             u.context.location = Some(format!("line {}", line_no(s)));
             spans.push((s, e, i));
@@ -62,7 +62,7 @@ pub(crate) fn build_document(w: &Walk, l: &Loaded, opts: &ExtractOptions) -> Res
         if let Some(d) = lu.delim {
             let i = new_unit(&mut units, vec![Inline::text(lu.title.clone())]);
             let u = &mut units[i];
-            u.codes.insert(HIDDEN.into(), hidden_code("title", core, &d.to_string()));
+            u.codes_mut().insert(HIDDEN, hidden_code("title", core, &d.to_string()));
             u.context.kind = Some("title".into());
             u.context.location = Some(format!("line {}", line_no(lu.start)));
             spans.push((lu.start, lu.end, i));
@@ -91,11 +91,11 @@ pub(crate) fn build_document(w: &Walk, l: &Loaded, opts: &ExtractOptions) -> Res
                     inl.push(Inline::tag(id.clone(), kind, raw));
                     let label = if text.as_bytes()[tok.open.0] == b'{' { "expression" } else { "jsx" };
                     let e = codes.entry(id.clone()).or_default();
-                    e.label = Some(label.into());
+                    e.set_label(label);
                     match kind {
-                        TagKind::Open => e.open = Some(raw.to_string()),
-                        TagKind::Close => e.close = Some(raw.to_string()),
-                        TagKind::Standalone => e.standalone = Some(raw.to_string()),
+                        TagKind::Open => e.set_open(raw),
+                        TagKind::Close => e.set_close(raw),
+                        TagKind::Standalone => e.set_standalone(raw),
                     }
                 }
             }
@@ -103,7 +103,7 @@ pub(crate) fn build_document(w: &Walk, l: &Loaded, opts: &ExtractOptions) -> Res
         for tok in &lu.toks {
             let mut c = CodeData::new().with_open(span_str(tok.open, lu.start));
             if let Some(cl) = tok.close {
-                c.close = Some(span_str(cl, lu.start));
+                c.set_close(span_str(cl, lu.start));
             }
             codes.insert(format!("$t{}", tok.id), c);
         }
@@ -119,8 +119,8 @@ pub(crate) fn build_document(w: &Walk, l: &Loaded, opts: &ExtractOptions) -> Res
             );
         }
         let u = &mut units[i];
-        u.codes = codes;
-        u.codes.insert(HIDDEN.into(), hidden_code("line", core, &format!("{}{}", if lu.block_ok { "1" } else { "0" }, if lu.esm_ok { "e" } else { "" })));
+        u.set_codes(codes);
+        u.codes_mut().insert(HIDDEN, hidden_code("line", core, &format!("{}{}", if lu.block_ok { "1" } else { "0" }, if lu.esm_ok { "e" } else { "" })));
         u.context.kind = Some(
             if lu.prefix.contains('#') {
                 "heading"
@@ -140,7 +140,7 @@ pub(crate) fn build_document(w: &Walk, l: &Loaded, opts: &ExtractOptions) -> Res
         let val = &text[a.start..a.end];
         let i = new_unit(&mut units, vec![Inline::text(val)]);
         let u = &mut units[i];
-        u.codes.insert(HIDDEN.into(), hidden_code("attr", val, &(a.quote as char).to_string()));
+        u.codes_mut().insert(HIDDEN, hidden_code("attr", val, &(a.quote as char).to_string()));
         u.context.kind = Some("attribute".into());
         u.context.style = Some("a11y:mdx-attr".into());
         u.context.key = Some(a.name.clone());
@@ -239,15 +239,15 @@ fn image_inventory(w: &Walk, fm_len: usize, units: &mut [Unit]) {
     }
     for (i, (n, found)) in by_unit {
         let Some(u) = units.get_mut(i) else { continue };
-        u.context.extra.insert(profile::A11Y_IMAGES.into(), n.to_string());
+        u.context.extra_mut().insert(profile::A11Y_IMAGES, n.to_string());
         if found.is_empty() {
             continue;
         }
         let list: Vec<serde_json::Value> = found.iter().map(|(k, w)| serde_json::json!({"kind": k, "where": w})).collect();
-        u.context.extra.insert(profile::A11Y_MISSING_ALT.into(), serde_json::Value::Array(list).to_string());
+        u.context.extra_mut().insert(profile::A11Y_MISSING_ALT, serde_json::Value::Array(list).to_string());
         let empty: Vec<&str> = found.iter().filter(|(k, _)| *k == "empty").map(|(_, w)| w.as_str()).collect();
         if !empty.is_empty() {
-            u.context.extra.insert(profile::A11Y_EMPTY_ALT.into(), empty.join("\n"));
+            u.context.extra_mut().insert(profile::A11Y_EMPTY_ALT, empty.join("\n"));
         }
     }
 }
@@ -292,7 +292,7 @@ fn a11y_warnings(w: &Walk) -> Vec<Warning> {
 // ---- merge ---------------------------------------------------------------------------------------------------
 
 fn hidden(u: &Unit) -> Option<&CodeData> {
-    u.codes.get(HIDDEN)
+    u.codes().get(HIDDEN)
 }
 
 /// The plain text the unit now holds when a target was set, else None.
@@ -435,20 +435,20 @@ fn ph_re() -> &'static Regex {
 
 fn render_line(doc: &Document, u: &Unit) -> Result<String, Error> {
     let h = hidden(u).ok_or_else(|| Error::Write(format!("unit {} lost its source text", u.id)))?;
-    let core = h.standalone.as_deref().unwrap_or_default();
-    let line_flags = h.close.as_deref().unwrap_or_default();
+    let core = h.standalone_markup().unwrap_or_default();
+    let line_flags = h.close_markup().unwrap_or_default();
     let block_ok = line_flags.starts_with('1');
     let esm_ok = line_flags.ends_with('e');
     let mut attrs: Vec<Attr> = Vec::new();
-    for (k, c) in &u.codes {
+    for (k, c) in u.codes() {
         if !k.starts_with("$a") {
             continue;
         }
-        let (Some(idx), Some(sp)) = (c.open.as_deref().and_then(|x| x.parse::<usize>().ok()), c.standalone.as_deref().and_then(parse_span)) else { continue };
+        let (Some(idx), Some(sp)) = (c.open_markup().and_then(|x| x.parse::<usize>().ok()), c.standalone_markup().and_then(parse_span)) else { continue };
         let Some(au) = doc.units.get(idx) else { continue };
         let Some(ah) = hidden(au) else { continue };
-        let orig = ah.standalone.as_deref().unwrap_or_default();
-        let quote = ah.close.as_deref().and_then(|q| q.chars().next()).unwrap_or('"');
+        let orig = ah.standalone_markup().unwrap_or_default();
+        let quote = ah.close_markup().and_then(|q| q.chars().next()).unwrap_or('"');
         if let Some(new) = translated(au) {
             let val = if new == orig { orig.to_string() } else { escape_attr(&new, quote) };
             attrs.push(Attr { s: sp.0, e: sp.1, val });
@@ -495,10 +495,10 @@ fn render_line(doc: &Document, u: &Unit) -> Result<String, Error> {
         }
     }
     let mut toks: HashMap<String, (Span, Option<Span>)> = HashMap::new();
-    for (k, c) in &u.codes {
+    for (k, c) in u.codes() {
         if let Some(id) = k.strip_prefix("$t") {
-            if let Some(o) = c.open.as_deref().and_then(parse_span) {
-                let cl = c.close.as_deref().and_then(parse_span);
+            if let Some(o) = c.open_markup().and_then(parse_span) {
+                let cl = c.close_markup().and_then(parse_span);
                 if !in_core(o) || cl.is_some_and(|c| !in_core(c)) {
                     return Err(bad());
                 }
@@ -543,9 +543,9 @@ fn render_line(doc: &Document, u: &Unit) -> Result<String, Error> {
 
 fn render_unit(doc: &Document, u: &Unit) -> Result<String, Error> {
     let h = hidden(u).ok_or_else(|| Error::Write(format!("unit {} lost its source text", u.id)))?;
-    let orig = h.standalone.clone().unwrap_or_default();
-    let extra = h.close.clone().unwrap_or_default();
-    match h.open.as_deref() {
+    let orig = h.standalone_markup().map(String::from).unwrap_or_default();
+    let extra = h.close_markup().map(String::from).unwrap_or_default();
+    match h.open_markup() {
         Some("line") => render_line(doc, u),
         Some("fm") => {
             let Some(new) = translated(u) else { return Ok(orig) };

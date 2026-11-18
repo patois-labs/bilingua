@@ -183,7 +183,7 @@ fn sanity_walker() {
     let tx = texts(&d);
     assert_eq!(tx, ["Read ⟦g1⟧the docs⟦/g1⟧ now.⟦x2⟧", "Heading", "Run ⟦x1⟧ first"]);
     assert_eq!(d.units[2].context.kind.as_deref(), Some("list-item"));
-    assert_eq!(d.units[0].codes["1"].label.as_deref(), Some("strong link"));
+    assert_eq!(d.units[0].codes()["1"].label(), Some("strong link"));
     set(&mut d, 0, "Lisez ⟦g1⟧la doc⟦/g1⟧ maintenant.⟦x2⟧").unwrap();
     let out = json(&f.merge(&d).unwrap());
     let src = json(PORTABLE);
@@ -398,7 +398,7 @@ fn notion_walker_round_trip() {
     let f = Notion;
     let mut d = open(&f, NOTION);
     assert_eq!(texts(&d), ["Hello ", "world", " site", "More", "Nested step.", "Sample code", "Plan", "Price"]);
-    assert_eq!(d.units[1].context.extra["block_id"], "b1");
+    assert_eq!(&d.units[1].context.extra()["block_id"], "b1");
     for (i, s) in ["Hallo ", "Welt", " Seite", "Mehr", "Verschachtelt.", "Beispielcode", "Plan", "Preis"].iter().enumerate() {
         set(&mut d, i, s).unwrap();
     }

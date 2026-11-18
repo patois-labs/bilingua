@@ -83,7 +83,7 @@ fn the_plain_run_is_the_base_though_the_italic_run_is_longer() {
     let doc = extract(&bytes);
     assert_eq!(shown(&doc), vec!["<b>", "T:Bold claim", "</b>", "T: with an ", "<i>", "T:italic aside", "</i>"]);
     let u = &doc.units[0];
-    let base = u.codes["_base"].standalone.clone().unwrap_or_default();
+    let base = u.codes()["_base"].standalone_markup().map(String::from).unwrap_or_default();
     assert!(!base.contains("b=\"1\"") && !base.contains("i=\"1\""), "{base}");
     // An unchanged deck comes back with the same bytes.
     assert_same_parts(&bytes, &Pptx.merge(&doc).unwrap());
@@ -183,6 +183,6 @@ fn a_struck_run_is_not_plain() {
     let bytes = deck(&inner);
     let doc = extract(&bytes);
     assert_eq!(shown(&doc), vec!["<fmt>", "T:a long struck-through phrase", "</fmt>", "T: and plain"]);
-    assert_eq!(doc.units[0].codes["1"].label.as_deref(), Some("strike"));
+    assert_eq!(doc.units[0].codes()["1"].label(), Some("strike"));
     assert_same_parts(&bytes, &Pptx.merge(&doc).unwrap());
 }

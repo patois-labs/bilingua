@@ -378,23 +378,23 @@ fn document_unit(u: LUnit, pkg: &Pkg) -> Unit {
         }
     }
     let mut unit = Unit::new(format!("p{}", u.p), source);
-    unit.codes = codes;
+    unit.set_codes(codes);
     let mut ctx = UnitContext::new().with_kind(if u.alt { "alt-text" } else { "paragraph" });
     if !u.style.is_empty() {
         ctx = ctx.with_style(u.style.clone());
     }
-    ctx.extra.insert(profile::P_INDEX.to_string(), u.p.to_string());
-    ctx.extra.insert(PART.to_string(), pkg.parts[u.part].name.clone());
+    ctx.extra_mut().insert(profile::P_INDEX.to_string(), u.p.to_string());
+    ctx.extra_mut().insert(PART.to_string(), pkg.parts[u.part].name.clone());
     // LocOS `skeleton["a11y_images"]`, spread over the units it anchors at (W4 docx-1)
     if u.images > 0 {
-        ctx.extra.insert(profile::A11Y_IMAGES.to_string(), u.images.to_string());
+        ctx.extra_mut().insert(profile::A11Y_IMAGES.to_string(), u.images.to_string());
     }
     if !u.missing_alt.is_empty() {
         let list: Vec<serde_json::Value> = u.missing_alt.iter().map(|(k, w)| serde_json::json!({"kind": k, "where": w})).collect();
-        ctx.extra.insert(profile::A11Y_MISSING_ALT.to_string(), serde_json::Value::Array(list).to_string());
+        ctx.extra_mut().insert(profile::A11Y_MISSING_ALT.to_string(), serde_json::Value::Array(list).to_string());
         let empty: Vec<&str> = u.missing_alt.iter().filter(|(k, _)| *k == "empty").map(|(_, w)| w.as_str()).collect();
         if !empty.is_empty() {
-            ctx.extra.insert(profile::A11Y_EMPTY_ALT.to_string(), empty.join("\n"));
+            ctx.extra_mut().insert(profile::A11Y_EMPTY_ALT.to_string(), empty.join("\n"));
         }
     }
     unit.context = ctx;
@@ -439,7 +439,7 @@ fn locos_text(inl: &[Inline]) -> String {
 fn written_texts(doc: &Document) -> BTreeMap<usize, (String, bool)> {
     let mut out = BTreeMap::new();
     for u in doc.units.iter().filter(|u| u.translate) {
-        let Some(p) = u.context.extra.get(profile::P_INDEX).and_then(|p| p.parse::<usize>().ok()) else { continue };
+        let Some(p) = u.context.extra().get(profile::P_INDEX).and_then(|p| p.parse::<usize>().ok()) else { continue };
         if !u.segments.iter().any(|s| s.has_target()) {
             continue;
         }

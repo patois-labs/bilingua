@@ -67,7 +67,7 @@ fn docx_locos_many_drawings_one_paragraph_linear() {
     let bytes = package(&body);
     let doc = within(60, move || Docx.extract(&bytes, &locos()).unwrap());
     let last = doc.units.iter().find(|u| plain_text(&u.segments[0].source).trim() == format!("Line {}", paras - 1)).expect("last paragraph");
-    assert_eq!(last.context.extra.get("locos.a11y_images").map(String::as_str), Some(n.to_string().as_str()));
+    assert_eq!(last.context.extra().get("locos.a11y_images"), Some(n.to_string().as_str()));
 }
 
 /// 20,000 drawings with alt text straight under the body, each with a picture name in the same container: every

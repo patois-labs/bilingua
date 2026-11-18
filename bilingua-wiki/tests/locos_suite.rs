@@ -72,21 +72,21 @@ fn units_mediawiki() {
     let u = &doc.units;
     let pair = |n: &str, o: &str, c: &str| {
         let cd = code(&u[0], n);
-        assert_eq!((cd.open.as_deref(), cd.close.as_deref()), (Some(o), Some(c)), "code {n}");
+        assert_eq!((cd.open_markup(), cd.close_markup()), (Some(o), Some(c)), "code {n}");
     };
     pair("1", "'''", "'''");
     pair("2", "[[capital city|", "]]");
-    assert_eq!(code(&u[0], "3").standalone.as_deref(), Some("[[France]]"));
-    assert_eq!(code(&u[0], "4").standalone.as_deref(), Some("<ref name=\"a\">"));
-    assert_eq!(code(&u[0], "5").standalone.as_deref(), Some("</ref>"));
+    assert_eq!(code(&u[0], "3").standalone_markup(), Some("[[France]]"));
+    assert_eq!(code(&u[0], "4").standalone_markup(), Some("<ref name=\"a\">"));
+    assert_eq!(code(&u[0], "5").standalone_markup(), Some("</ref>"));
     pair("6", "''", "''");
     pair("7", "[https://example.com ", "]");
-    assert_eq!(code(&u[3], "1").standalone.as_deref(), Some("{{lang|fr|Bonjour}}"));
-    assert_eq!(code(&u[4], "1").open.as_deref(), Some("[[File:Tower.jpg|thumb|200px|"));
-    assert_eq!(code(&u[15], "1").standalone.as_deref(), Some("<code>foo()</code>"));
-    assert_eq!(code(&u[15], "2").standalone.as_deref(), Some("<nowiki>[[not a link]]</nowiki>"));
-    assert_eq!(code(&u[16], "1").standalone.as_deref(), Some("{{{1|Default param}}}"));
-    assert_eq!(code(&u[17], "1").standalone.as_deref(), Some("~~~~"));
+    assert_eq!(code(&u[3], "1").standalone_markup(), Some("{{lang|fr|Bonjour}}"));
+    assert_eq!(code(&u[4], "1").open_markup(), Some("[[File:Tower.jpg|thumb|200px|"));
+    assert_eq!(code(&u[15], "1").standalone_markup(), Some("<code>foo()</code>"));
+    assert_eq!(code(&u[15], "2").standalone_markup(), Some("<nowiki>[[not a link]]</nowiki>"));
+    assert_eq!(code(&u[16], "1").standalone_markup(), Some("{{{1|Default param}}}"));
+    assert_eq!(code(&u[17], "1").standalone_markup(), Some("~~~~"));
     // redirects, file links without captions, options-only captions, pipe trick
     assert!(texts(&f, b"#REDIRECT [[Target page]]\n").is_empty());
     assert_eq!(texts(&f, b"A [[File:x.png|thumb|left|200px]] b\n"), ["A \u{27e6}x1\u{27e7} b"]);
@@ -121,9 +121,9 @@ fn units_dokuwiki() {
     ];
     assert_eq!(t, want);
     let doc = extract(&f, DW.as_bytes()).unwrap();
-    assert_eq!(code(&doc.units[1], "3").open.as_deref(), Some("[[ns:page|"));
-    assert_eq!(code(&doc.units[1], "6").open.as_deref(), Some("{{img.png?200|"));
-    assert_eq!(code(&doc.units[9], "3").standalone.as_deref(), Some("https://example.com/a//b"));
+    assert_eq!(code(&doc.units[1], "3").open_markup(), Some("[[ns:page|"));
+    assert_eq!(code(&doc.units[1], "6").open_markup(), Some("{{img.png?200|"));
+    assert_eq!(code(&doc.units[9], "3").standalone_markup(), Some("https://example.com/a//b"));
     assert_eq!(texts(&f, b"{{rss>http://x.example/feed 5|Feed}} text\n"), ["\u{27e6}x1\u{27e7} text"]);
     assert_eq!(texts(&f, b"Line one\\\\ line two\n"), ["Line one\u{27e6}x1\u{27e7} line two"]);
     assert_eq!(texts(&f, b"<code>\nnever closed\n"), ["never closed"]);
@@ -138,7 +138,7 @@ fn dokuwiki_eol_linebreak_678() {
         let t = texts(&f, src.as_bytes());
         assert_eq!(t, ["First line\u{27e6}x1\u{27e7} second line\u{27e6}x2\u{27e7} and more last line\u{27e6}x3\u{27e7}"]);
         let doc = extract(&f, src.as_bytes()).unwrap();
-        assert_eq!(code(&doc.units[0], "1").standalone.as_deref(), Some("\\\\"));
+        assert_eq!(code(&doc.units[0], "1").standalone_markup(), Some("\\\\"));
         assert_eq!(f.merge(&doc).unwrap(), src.as_bytes());
         let out = build_str(&f, src.as_bytes(), &[(0, "Erste Zeile\u{27e6}x1\u{27e7} zweite\u{27e6}x2\u{27e7} und mehr letzte\u{27e6}x3\u{27e7}")]);
         assert!(!out.contains("nowiki"), "{out}");

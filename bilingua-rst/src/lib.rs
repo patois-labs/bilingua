@@ -110,7 +110,7 @@ fn write_table(doc: &Document, i: usize, head: &Unit, widen: bool) -> Result<Str
         let u = doc.units.get(i + k).ok_or_else(|| bad("table cell unit missing"))?;
         let ci: usize = get(u, CELL).and_then(|x| x.parse().ok()).ok_or_else(|| bad("cell without its index"))?;
         if let Some(new) = changed(u) {
-            cells.push((ci, inline::render(&new, &u.codes)));
+            cells.push((ci, inline::render(&new, u)));
         }
     }
     if cells.is_empty() {
@@ -196,7 +196,7 @@ fn write_unit(doc: &Document, i: usize, out: &mut String, widen: bool) -> Result
                 out.push_str(raw);
                 return Ok(());
             };
-            let mut rendered = inline::render(&new, &u.codes);
+            let mut rendered = inline::render(&new, u);
             if kind == "title" {
                 let info = get(u, TITLE).unwrap_or("");
                 out.push_str(&write_title(raw, info, &rendered)?);
@@ -298,7 +298,7 @@ impl Rst {
     ) -> usize {
         let (inl, codes) = tok.inlines(inline::label_for);
         let mut u = Unit::new(format!("u{}", units.len() + 1), inl);
-        u.codes = codes;
+        u.set_codes(codes);
         u.set_hidden(KIND, kind);
         if !raw.is_empty() {
             u.set_hidden(RAW, raw);

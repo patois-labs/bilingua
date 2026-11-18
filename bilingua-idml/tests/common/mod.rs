@@ -151,7 +151,7 @@ pub fn inline_tok(u: &Unit, src: &[Inline]) -> String {
         match i {
             Inline::Text(t) => s.push_str(t),
             Inline::Tag { id, kind, .. } => {
-                let label = u.codes.get(id).and_then(|c| c.label.clone()).unwrap_or_default();
+                let label = u.codes().get(id).and_then(|c| c.label().map(String::from)).unwrap_or_default();
                 let l = match kind {
                     TagKind::Standalone => 'x',
                     _ if label == "run" => 'r',

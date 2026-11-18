@@ -71,7 +71,7 @@ pub fn tok_text(u: &Unit, v: &[Inline]) -> String {
         match i {
             Inline::Text(t) => s.push_str(t),
             Inline::Tag { id, kind, .. } => {
-                let label = u.codes.get(id).and_then(|c| c.label.clone()).unwrap_or_default();
+                let label = u.codes().get(id).and_then(|c| c.label().map(String::from)).unwrap_or_default();
                 let letter = if label == "run" { 'r' } else { 'g' };
                 match kind {
                     TagKind::Open => s.push_str(&format!("\u{27E6}{letter}{id}\u{27E7}")),

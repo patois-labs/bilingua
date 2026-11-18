@@ -308,16 +308,16 @@ pub(crate) fn extract_doc(id: &'static str, what: &str, bytes: &[u8], opts: &Ext
     let mut context = guard::ContextBudget::new();
     for (n, p) in plans.into_iter().enumerate() {
         let mut u = Unit::new(format!("u{}", n + 1), p.src.clone());
-        u.codes = p.codes.clone();
+        u.set_codes(p.codes.clone());
         u.context.kind = Some(p.kind.clone());
         let pointer = p.pointer();
         context.charge(pointer.len(), &limits)?;
         u.context.key = Some(pointer);
         for (a, b) in &p.extra {
-            u.context.extra.insert(a.clone(), b.clone());
+            u.context.extra_mut().insert(a.clone(), b.clone());
         }
         if locos {
-            u.context.extra.insert(profile::P_INDEX.into(), n.to_string());
+            u.context.extra_mut().insert(profile::P_INDEX, n.to_string());
         }
         units.push(u);
     }

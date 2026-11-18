@@ -300,12 +300,12 @@ pub(super) fn extract(bytes: &[u8], opts: &ExtractOptions, xo: &crate::XlsxOptio
             let mut u = Unit::new(idx.to_string(), vec![Inline::text(value)]);
             u.context = UnitContext::new().with_kind("cell").with_key(format!("{}{row}", col_letters(s as i64 + 1))).with_location(path.clone());
             u.context.notes = plan::note_parts(p, &view.row(row, note_len(p)));
-            u.context.extra.insert(profile::P_INDEX.to_string(), idx.to_string());
-            u.hidden.insert(KEY.to_string(), idx.to_string());
-            u.hidden.insert(XC.to_string(), format!("{n},{row},{}", s + 1));
-            u.hidden.insert(XT.to_string(), encode_targets(p));
+            u.context.extra_mut().insert(profile::P_INDEX.to_string(), idx.to_string());
+            u.hidden_map_mut().insert(KEY.to_string(), idx.to_string());
+            u.hidden_map_mut().insert(XC.to_string(), format!("{n},{row},{}", s + 1));
+            u.hidden_map_mut().insert(XT.to_string(), encode_targets(p));
             if locos_profile {
-                u.hidden.insert(XL.to_string(), "1".to_string());
+                u.hidden_map_mut().insert(XL.to_string(), "1".to_string());
             }
             units.push(u);
         }
