@@ -673,6 +673,109 @@ pub struct UnitContext {
     /// Subtitle timing and similar extras the editor may show.
     #[serde(default)]
     pub extra: TextMap,
+    /// The unit's structural role in the document (a heading, a header, a speaker note, ...), when the format
+    /// knows it. Left out of JSON when unset. Not filled under the `locos` profile.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub role: Option<Role>,
+    /// The outline level for [`Role::Heading`] (1 for a top-level heading). Left out of JSON when unset.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub level: Option<u8>,
+}
+
+/// A unit's structural role ([`UnitContext::role`]). JSON: the lowercase name. A value this release does not know
+/// (written by a newer one) reads as [`Role::Other`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+#[non_exhaustive]
+pub enum Role {
+    /// A heading; [`UnitContext::level`] holds its level.
+    Heading,
+    /// The document title.
+    Title,
+    /// The document subtitle.
+    Subtitle,
+    /// A slide's title.
+    SlideTitle,
+    /// Page header text.
+    Header,
+    /// Page footer text.
+    Footer,
+    /// Footnote text.
+    Footnote,
+    /// Endnote text.
+    Endnote,
+    /// Speaker notes.
+    Notes,
+    /// Comment (annotation) text.
+    Comment,
+    /// A table or figure caption.
+    Caption,
+    /// A sheet's name.
+    SheetName,
+    /// A role from a newer release, or one without a name here.
+    #[serde(other)]
+    Other,
+}
+
+impl Role {
+    /// The JSON name (`"heading"`, `"slidetitle"`, ...).
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Role::Heading => "heading",
+            Role::Title => "title",
+            Role::Subtitle => "subtitle",
+            Role::SlideTitle => "slidetitle",
+            Role::Header => "header",
+            Role::Footer => "footer",
+            Role::Footnote => "footnote",
+            Role::Endnote => "endnote",
+            Role::Notes => "notes",
+            Role::Comment => "comment",
+            Role::Caption => "caption",
+            Role::SheetName => "sheetname",
+            Role::Other => "other",
+        }
+    }
+}
+
+impl std::fmt::Display for Role {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
+impl UnitContext {
+    /// Sets (or with `None` clears) the structural role.
+    pub fn with_role(mut self, role: impl Into<Option<Role>>) -> UnitContext {
+        self.role = role.into();
+        self
+    }
+    /// Sets (or clears) the heading level.
+    pub fn with_level(mut self, level: impl Into<Option<u8>>) -> UnitContext {
+        self.level = level.into();
+        self
+    }
+    /// The structural role, when known.
+    pub fn role(&self) -> Option<Role> {
+        self.role
+    }
+    /// The heading level, when known.
+    pub fn level(&self) -> Option<u8> {
+        self.level
+    }
+    /// Sets (or with `None` clears) the structural role, in place.
+    pub fn set_role(&mut self, role: impl Into<Option<Role>>) {
+        self.role = role.into();
+    }
+    /// Sets (or clears) the heading level, in place.
+    pub fn set_level(&mut self, level: impl Into<Option<u8>>) {
+        self.level = level.into();
+    }
+    /// Sets the role [`Role::Heading`] and its level in one call (a level of 0 is stored as unset).
+    pub fn set_heading_role(&mut self, level: u8) {
+        self.role = Some(Role::Heading);
+        self.level = (level > 0).then_some(level);
+    }
 }
 
 impl UnitContext {

@@ -140,6 +140,16 @@ fn kind_for(frame: &str) -> &'static str {
     }
 }
 
+/// The structure role of a block element, and the heading level for `h1`..`h6`.
+fn role_for(frame: &str) -> (Option<Role>, Option<u8>) {
+    match frame {
+        "h1" | "h2" | "h3" | "h4" | "h5" | "h6" => (Some(Role::Heading), frame[1..].parse().ok()),
+        "title" => (Some(Role::Title), None),
+        "figcaption" | "caption" => (Some(Role::Caption), None),
+        _ => (None, None),
+    }
+}
+
 fn attr_kind(style: &str) -> &'static str {
     if style.ends_with("alt") {
         "alt"
@@ -368,11 +378,18 @@ pub(crate) fn extract(bytes: &[u8], opts: &ExtractOptions, cfg: Cfg) -> Result<D
     // the heading is copied into every later unit: each copy is charged before it is made (run 2 G5-1)
     let mut context = guard::ContextBudget::new();
     let mut attr_names: HashMap<usize, HashMap<usize, String>> = HashMap::new();
+    // structure roles are not filled under the LocOS profile (its units keep today's shape)
+    let roles = !opts.is_profile(profile::LOCOS);
     for (i, u) in body.iter().enumerate() {
         let mut unit = body_unit(format!("u{}", i + 1), u);
         let p = place.get(&u.start).cloned().unwrap_or_default();
         let kind = kind_for(&p.elem);
         unit.context.kind = Some(kind.into());
+        if roles {
+            let (role, level) = role_for(&p.elem);
+            unit.context.role = role;
+            unit.context.level = level;
+        }
         unit.context.location = Some(p.path).filter(|s| !s.is_empty());
         if kind == "heading" {
             heading = Some(plain_text(&unit.source()));

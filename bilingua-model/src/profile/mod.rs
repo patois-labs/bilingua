@@ -169,6 +169,10 @@ pub fn annotate(doc: &mut Document, profile: Option<&str>) {
         for c in u.codes.values_mut() {
             c.clear_typing();
         }
+        // structure roles (unit model step 4) are not part of what LocOS reads: the format crates leave them unset
+        // under the profile, and this keeps any that slipped through out of LocOS's dicts
+        u.context.role = None;
+        u.context.level = None;
         let p = match format.as_str() {
             "icml" => u.hidden("p").map(str::to_string),
             "idml" => u.id.strip_prefix('p').filter(|n| n.parse::<usize>().is_ok()).map(str::to_string),

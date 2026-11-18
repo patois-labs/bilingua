@@ -480,6 +480,16 @@ impl Extractor {
         };
         let slide = pi.slide_no;
         let mut cx = UnitContext::new().with_kind(kind.to_string()).with_style(style);
+        // the structure role: speaker notes, else the placeholder type (a table cell has none)
+        cx.role = match (pi.kind, cell, shape.ph.as_deref()) {
+            (Kind::Notes, _, _) => Some(Role::Notes),
+            (_, Some(_), _) => None,
+            (_, None, Some("title" | "ctrTitle")) => Some(Role::SlideTitle),
+            (_, None, Some("subTitle")) => Some(Role::Subtitle),
+            (_, None, Some("hdr")) => Some(Role::Header),
+            (_, None, Some("ftr")) => Some(Role::Footer),
+            _ => None,
+        };
         let shape_part = format!("shape \"{}\"", shape.name);
         let loc = match pi.kind {
             Kind::Slide => format!("slide {slide}, {shape_part}"),
