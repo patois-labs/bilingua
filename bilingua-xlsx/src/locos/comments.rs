@@ -11,8 +11,9 @@
 
 use super::*;
 
-/// LocOS's `COMMENT_BASE`: the first number of a comment unit.
-pub const COMMENT_BASE: usize = 1_000_000;
+/// LocOS's `COMMENT_BASE`: the first number of a comment unit. A workbook whose cells and text boxes reach it is
+/// refused when comments are wanted (BILI-126).
+pub const COMMENT_BASE: usize = guard::COMMENT_BASE;
 /// LocOS's style for a comment unit.
 pub const COMMENT: &str = "comment";
 /// `Unit::hidden` key: the unit's place in the comment walk.

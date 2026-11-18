@@ -1194,6 +1194,10 @@ pub fn extract(bytes: &[u8], opts: &ExtractOptions, xo: &crate::XlsxOptions) -> 
     if xo.translate_comments {
         // #690: the comment units, appended at COMMENT_BASE + their place in the comment walk
         let found = comments::units(&mut pkg)?;
+        // BILI-126: past a million cells and text boxes a comment's number would be a body number too
+        if !found.is_empty() {
+            guard::check_comment_base(units.len())?;
+        }
         guard::check_unit_count(units.len() + found.len(), &l)?;
         units.extend(found);
     }
@@ -1282,7 +1286,9 @@ pub fn merge(doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
             }
         }
         let base = cells.len();
-        for (j, (_, part, p)) in pkg.drawing_paragraphs()?.into_iter().enumerate() {
+        let paras = pkg.drawing_paragraphs()?;
+        let body_end = base + paras.len();
+        for (j, (_, part, p)) in paras.into_iter().enumerate() {
             let Some(tr) = box_texts.get(&(base + j)) else { continue };
             let tr = xml_target_text(tr);
             pkg.load(&part)?;
@@ -1293,8 +1299,14 @@ pub fn merge(doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
             }
             pkg.dirty.insert(part);
         }
-        // comment units (keys from COMMENT_BASE up): the original's comments are patched in place
-        comments::apply(&mut pkg, &texts)?;
+        // comment units (keys from COMMENT_BASE up): the original's comments are patched in place. BILI-126: past a
+        // million cells and text boxes those keys are body keys (an extraction with comments is refused there), so
+        // they are never written into a comment, and a document that has comment units anyway is refused
+        if body_end <= comments::COMMENT_BASE {
+            comments::apply(&mut pkg, &texts)?;
+        } else if doc.units.iter().any(|u| u.hidden(comments::SLOT).is_some()) {
+            guard::check_comment_base(body_end)?;
+        }
     }
     if let Some(t) = &tag {
         pkg.stamp_language(t)?;

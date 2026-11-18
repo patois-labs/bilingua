@@ -338,3 +338,54 @@ fn a_deflated_mimetype_is_written_first_and_stored() {
     assert_eq!(member(&out, "mimetype"), MIME_TEXT.as_bytes());
     assert_eq!(units("odt", &out)[0].1, "Erste Schritte");
 }
+
+/// BILI-126: a stored odt of `empty` empty paragraphs (each one a body number, as LocOS counts them) and then a
+/// paragraph holding a comment.
+fn big_odt_with_a_comment(empty: usize) -> Vec<u8> {
+    let mut body = String::with_capacity(empty * 10 + 200);
+    body.push_str("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<office:document-content NSDECL><office:body><office:text>");
+    body.push_str(&"<text:p/>".repeat(empty));
+    body.push_str("<text:p>Before<office:annotation><dc:creator>Bo</dc:creator><text:p>Comment text</text:p></office:annotation> after</text:p>");
+    body.push_str("</office:text></office:body></office:document-content>");
+    let content = body.replace("NSDECL", NSDECL);
+    let manifest = manifest(MIME_TEXT, &["content.xml"]);
+    bilingua_zip::hostile::stored_zip(&[("mimetype", MIME_TEXT.as_bytes()), ("content.xml", content.as_bytes()), ("META-INF/manifest.xml", manifest.as_bytes())])
+}
+
+fn with_comments() -> Odt {
+    let mut o = OdfOptions::default();
+    o.translate_comments = true;
+    Odt::with_options(o)
+}
+
+fn large() -> ExtractOptions {
+    opts(Some("de")).with_limits(Limits::large())
+}
+
+#[test]
+#[ignore = "a document of a million paragraphs; run with --release -- --ignored"]
+fn comments_past_a_million_paragraphs_are_refused() {
+    let data = big_odt_with_a_comment(1_000_000);
+    match with_comments().extract(&data, &large()) {
+        Err(Error::Limit(e)) => assert!(e.msg.contains("Comments cannot be numbered above a million body units"), "{e}"),
+        other => panic!("not refused: {:?}", other.map(|d| d.units.len())),
+    }
+    // without comments the document extracts, and its one unit is numbered 1000000 (the comment's number)
+    let doc = Odt::default().extract(&data, &large()).unwrap();
+    assert_eq!(doc.units.iter().map(p_index).collect::<Vec<_>>(), vec![1_000_000]);
+}
+
+#[test]
+#[ignore = "a document of a million paragraphs; run with --release -- --ignored"]
+fn comments_just_under_a_million_paragraphs_round_trip() {
+    let data = big_odt_with_a_comment(999_998);
+    let f = with_comments();
+    let mut d = f.extract(&data, &large()).unwrap();
+    assert_eq!(d.units.iter().map(p_index).collect::<Vec<_>>(), vec![999_998, 1_000_000]);
+    set(&mut d, 1_000_000, "Kommentartext");
+    let out = f.merge_with(&d, &MergeOptions::new().with_limits(Limits::large())).unwrap();
+    assert!(member_str(&out, "content.xml").contains("<dc:creator>Bo</dc:creator><text:p>Kommentartext</text:p></office:annotation>"));
+    let back = f.extract(&out, &large()).unwrap();
+    let c = back.units.iter().find(|u| u.id == "c0").unwrap();
+    assert_eq!(ltext(c), "Kommentartext");
+}

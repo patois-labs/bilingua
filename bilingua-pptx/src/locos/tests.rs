@@ -313,11 +313,16 @@ fn public_rebuild_still_reads_plain_locos_text() {
 
 /// A one-slide deck with a classic comments part and a modern one (PowerPoint 365), both related to the slide.
 fn deck_with_comments() -> Vec<u8> {
+    deck_with_comments_body("<a:p><a:r><a:t>Body</a:t></a:r></a:p>")
+}
+
+/// [`deck_with_comments`] whose one shape holds the paragraphs `paras`.
+fn deck_with_comments_body(paras: &str) -> Vec<u8> {
     let rels = |items: &str| format!("<Relationships xmlns=\"{PKG_REL}\">{items}</Relationships>");
     let root = rels(&format!("<Relationship Id=\"rId1\" Type=\"{R}/officeDocument\" Target=\"ppt/presentation.xml\"/>"));
     let pres = format!("<p:presentation xmlns:r=\"{R}\" xmlns:p=\"{P}\"><p:sldIdLst><p:sldId id=\"256\" r:id=\"rId1\"/></p:sldIdLst></p:presentation>");
     let prels = rels(&format!("<Relationship Id=\"rId1\" Type=\"{R}/slide\" Target=\"slides/slide1.xml\"/>"));
-    let slide = format!("<p:sld xmlns:a=\"{A}\" xmlns:r=\"{R}\" xmlns:p=\"{P}\"><p:cSld><p:spTree>{}</p:spTree></p:cSld></p:sld>", sp("<a:p><a:r><a:t>Body</a:t></a:r></a:p>"));
+    let slide = format!("<p:sld xmlns:a=\"{A}\" xmlns:r=\"{R}\" xmlns:p=\"{P}\"><p:cSld><p:spTree>{}</p:spTree></p:cSld></p:sld>", sp(paras));
     let srels = rels(&format!(
         "<Relationship Id=\"rId2\" Type=\"{R}/comments\" Target=\"../comments/comment1.xml\"/><Relationship Id=\"rId3\" Type=\"http://schemas.microsoft.com/office/2018/10/relationships/comments\" Target=\"../comments/modernComment_1.xml\"/>"
     ));
@@ -421,4 +426,62 @@ fn segment_cap_counts_empty_paragraphs() {
     // native: 2 units, so a cap of 2 passes
     let native = ExtractOptions::new().with_limits(bilingua_model::Limits::new().with_max_units(2));
     assert_eq!(crate::Pptx.extract(&data, &native).unwrap().units.len(), 2);
+}
+
+/// BILI-126: a deck of `n` paragraphs (empty ones count, as LocOS numbers them) whose last one reads "Body", with the
+/// comments of [`deck_with_comments`].
+fn big_deck_with_comments(n: usize) -> Vec<u8> {
+    let mut paras = "<a:p/>".repeat(n - 1);
+    paras.push_str("<a:p><a:r><a:t>Body</a:t></a:r></a:p>");
+    deck_with_comments_body(&paras)
+}
+
+fn large(o: ExtractOptions) -> ExtractOptions {
+    o.with_limits(Limits::large())
+}
+
+#[test]
+#[ignore = "a deck of a million paragraphs; run with --release -- --ignored"]
+fn comments_past_a_million_paragraphs_are_refused() {
+    let d = big_deck_with_comments(COMMENT_BASE + 1);
+    match crate::Pptx.extract(&d, &large(comment_opts())) {
+        Err(Error::Limit(e)) => assert!(e.msg.contains("Comments cannot be numbered above a million body units"), "{e}"),
+        other => panic!("not refused: {:?}", other.map(|d| d.units.len())),
+    }
+    // without comments the deck extracts, and number 1000000 is the "Body" paragraph
+    let mut doc = crate::Pptx.extract(&d, &large(opts(Some("de-DE")))).unwrap();
+    assert_eq!(units(&doc), vec![(COMMENT_BASE.to_string(), "Body".into(), "slide 1".into())]);
+    let id = doc.units[0].segments[0].id.clone();
+    profile::locos_set_target(&mut doc, &id, vec![Inline::text("Inhalt")]).unwrap();
+    let mo = profile::locos().merge_options("pptx").with_limits(Limits::large());
+    let out = crate::Pptx.merge_with(&doc, &mo).unwrap();
+    // the body takes the text; the comments, read without comments, keep their bytes
+    assert!(part(&out, "ppt/slides/slide1.xml").contains("Inhalt"));
+    assert_eq!(part(&out, "ppt/comments/comment1.xml"), part(&d, "ppt/comments/comment1.xml"));
+    // a document with a comment unit over such a body (changed by hand) is refused at the merge
+    let mut c = Unit::new("c1", vec![Inline::text("Note")]);
+    c.context.kind = Some("comment".into());
+    doc.units.push(c);
+    assert!(matches!(crate::Pptx.merge_with(&doc, &mo), Err(Error::Limit(_))));
+}
+
+#[test]
+#[ignore = "a deck of a million paragraphs; run with --release -- --ignored"]
+fn comments_just_under_a_million_paragraphs_round_trip() {
+    let d = big_deck_with_comments(COMMENT_BASE - 1);
+    let mut doc = crate::Pptx.extract(&d, &large(comment_opts())).unwrap();
+    let got: Vec<String> = units(&doc).into_iter().map(|u| u.0).collect();
+    assert_eq!(got, ["999998", "1000000", "1000002", "1000003"]);
+    for (p, t) in [("999998", "Inhalt"), ("1000000", "Pr\u{fc}fen.")] {
+        let u = doc.units.iter().find(|u| u.context.extra[profile::P_INDEX] == p).unwrap();
+        let id = u.segments[0].id.clone();
+        profile::locos_set_target(&mut doc, &id, vec![Inline::text(t)]).unwrap();
+    }
+    let out = crate::Pptx.merge_with(&doc, &profile::locos().merge_options("pptx").with_limits(Limits::large())).unwrap();
+    assert!(part(&out, "ppt/comments/comment1.xml").contains("<p:text>  Pr\u{fc}fen.  </p:text>"));
+    let slide = part(&out, "ppt/slides/slide1.xml");
+    assert!(slide.contains("Inhalt") && !slide.contains("Pr\u{fc}fen"));
+    let back = crate::Pptx.extract(&out, &large(comment_opts())).unwrap();
+    assert_eq!(units(&back)[0].1, "Inhalt");
+    assert_eq!(units(&back)[1].1, "Pr\u{fc}fen.");
 }

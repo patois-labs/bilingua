@@ -328,8 +328,9 @@ struct Builder {
     locos: bool,
 }
 
-/// LocOS `office_comments.COMMENT_BASE`: the p_index of the first comment entry.
-const COMMENT_BASE: usize = 1_000_000;
+/// LocOS `office_comments.COMMENT_BASE`: the p_index of the first comment entry. Under the profile a drawing whose
+/// slots reach it is refused when comments are wanted (BILI-126).
+const COMMENT_BASE: usize = bilingua_model::guard::COMMENT_BASE;
 
 impl Builder {
     /// Under the LocOS profile, `locos.p_index` = the current slot's index (LocOS `_walk` numbers every page name,
@@ -567,6 +568,7 @@ fn extract_inner(bytes: &[u8], opts: &ExtractOptions, with_comments: bool) -> Re
             }
             collect(&part.parsed.nodes, &mut entries_found);
             let mut edits = HashMap::new();
+            let body_end = b.slots;
             for (j, el) in entries_found.iter().enumerate() {
                 if el.children.iter().any(|c| !matches!(c, Node::Text(_))) {
                     continue;
@@ -575,6 +577,11 @@ fn extract_inner(bytes: &[u8], opts: &ExtractOptions, with_comments: bool) -> Re
                 let txt: String = core.parts.iter().map(|p| if let CorePart::Text(t) = p { t.as_str() } else { "" }).collect();
                 if !translatable(&txt) {
                     continue;
+                }
+                // BILI-126: past a million page names, shape texts and data labels a comment's p_index would be a
+                // body slot's too. Only the profile numbers units (the merge goes by unit, not by number)
+                if b.locos {
+                    bilingua_model::guard::check_comment_base(body_end)?;
                 }
                 b.slots += 1;
                 let unit = b.units.len();
