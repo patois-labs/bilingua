@@ -560,4 +560,12 @@ fn a_header_for_the_target_keeps_its_own_plural_forms() {
     let bare = "msgid \"%d file\"\nmsgid_plural \"%d files\"\nmsgstr[0] \"\"\nmsgstr[1] \"\"\n";
     assert_eq!(ex_to(bare, "pl").units.len(), 3);
     assert!(same_lang("pl", "pl_PL") && same_lang("PT-br", "pt_BR") && !same_lang("pt_BR", "pt_PT") && !same_lang("pl", "ru"));
+    // a template header (`nplurals=INTEGER`) for the target is no Plural-Forms to keep: extract and merge both use
+    // the target's rule, so the merged file gets a real header msgfmt accepts
+    let template = po_with_forms("pl", "nplurals=INTEGER; plural=EXPRESSION;", 2);
+    let mut d = ex_to(&template, "pl");
+    assert_eq!(d.units.iter().filter(|u| u.id.starts_with("e2.")).count(), 3);
+    set(&mut d, "e2.2", "%d plików");
+    let out = merged(&d);
+    assert!(plural_forms_line(&out).contains("nplurals=3; plural=(n==1 ? 0 : n%10>=2"), "{out}");
 }

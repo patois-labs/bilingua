@@ -540,7 +540,8 @@ fn update_header(raw: &str, lang: Option<&str>, doc: &Document) -> String {
     };
     // the file's own Plural-Forms for the target stays as it is (see `header_stands`, as the extract decided)
     let header_lang = raw.lines().find_map(|l| lang_value(l.trim_end())).filter(|v| !v.is_empty());
-    let has_pf = raw.lines().any(|l| l.trim_start().starts_with("\"Plural-Forms:"));
+    // the same test the extract uses (a parseable nplurals): a template `nplurals=INTEGER` is no header to keep
+    let has_pf = raw.lines().any(|l| l.trim_start().strip_prefix("\"Plural-Forms:").is_some_and(|v| header_nplurals(v).is_some()));
     let rule = if header_stands(has_pf, header_lang.as_deref(), Some(lang), doc.source_lang.as_deref()) { None } else { plural_rule(lang) };
     let lang_changed = raw.lines().any(|l| lang_value(l.trim_end()).is_some_and(|v| !v.eq_ignore_ascii_case(&want)));
     let mut out = String::with_capacity(raw.len());
