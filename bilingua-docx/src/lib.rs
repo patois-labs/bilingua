@@ -199,9 +199,13 @@ fn split_template(t: &str, idx: &HashMap<&str, usize>) -> Result<Vec<SkelPart>, 
 }
 
 fn too_many_paragraphs(l: &Limits) -> Error {
+    too_many_paragraphs_n(l.max_paragraphs)
+}
+
+fn too_many_paragraphs_n(max: usize) -> Error {
     bilingua_model::LimitError::new(
         bilingua_model::LimitKind::Paragraphs,
-        format!("This file has more than {} paragraphs. Split it into smaller files.", l.max_paragraphs),
+        format!("This file has more than {max} paragraphs. Split it into smaller files."),
     )
     .into()
 }
@@ -217,11 +221,83 @@ fn paragraphs_counted_by_name(name: &str) -> bool {
     name.starts_with("word/") && name.ends_with(".xml")
 }
 
+/// Counts the paragraphs of `word/*.xml` while the package inflates (BILI-115), so a file over `max_paragraphs` is
+/// refused before the rest of it is unpacked, instead of after the whole package sits in memory.
+///
+/// It cannot refuse a file the full read accepts: it counts exactly what [`guard_named_parts`] counts (the same
+/// entries, with `guard::ElementCounter`, which gives `count_elements`'s number for a whole part and never more
+/// than that for part of one) and refuses with the same error once the running total passes the same limit, so
+/// whenever it refuses, the count after the read would have refused too. A file that breaks another limit as well
+/// may be refused for its paragraphs where the full read would have named the other limit first.
+struct ParagraphWatch {
+    max: usize,
+    /// Paragraphs of the entries already read.
+    done: usize,
+    /// The entry being read, when it is one whose paragraphs are counted.
+    part: Option<bilingua_model::guard::ElementCounter>,
+    /// False when an entry was not counted (a UTF-16 part): `guard_named_parts` then counts them all again.
+    exact: bool,
+}
+
+impl ParagraphWatch {
+    fn new(l: &Limits) -> ParagraphWatch {
+        ParagraphWatch { max: l.max_paragraphs, done: 0, part: None, exact: true }
+    }
+    /// The exact paragraph count of every `word/*.xml` entry, when every one was counted.
+    fn total(&self) -> Option<usize> {
+        self.exact.then_some(self.done)
+    }
+}
+
+impl bilingua_zip::Watch for ParagraphWatch {
+    fn bytes(&mut self, name: &str, chunk: &[u8]) -> Result<(), Error> {
+        if !paragraphs_counted_by_name(name) {
+            return Ok(());
+        }
+        let c = self.part.get_or_insert_with(|| bilingua_model::guard::ElementCounter::new("p"));
+        c.feed(chunk);
+        if self.done.saturating_add(c.count()) > self.max {
+            return Err(too_many_paragraphs_n(self.max));
+        }
+        Ok(())
+    }
+    fn done(&mut self, name: &str) -> Result<(), Error> {
+        if !paragraphs_counted_by_name(name) {
+            return Ok(());
+        }
+        // an empty entry sent no bytes: it holds no paragraph
+        if let Some(mut c) = self.part.take() {
+            c.finish();
+            self.exact &= c.exact();
+            self.done = self.done.saturating_add(c.count());
+        }
+        if self.done > self.max {
+            return Err(too_many_paragraphs_n(self.max));
+        }
+        Ok(())
+    }
+}
+
+/// Reads the package, counting its paragraphs as it inflates ([`ParagraphWatch`]). Returns the entries and, when
+/// every counted part could be counted while streaming, the paragraph count for [`guard_named_parts`].
+pub(crate) fn read_package(bytes: &[u8], l: &Limits) -> Result<(Vec<zipio::RawEntry>, Option<usize>), Error> {
+    let mut watch = ParagraphWatch::new(l);
+    let entries = zipio::read_zip_watched(bytes, &ZipLimits::from(l), &mut watch)?;
+    Ok((entries, watch.total()))
+}
+
 /// The guards that go by entry name, run before anything is parsed: the XML guard over every XML-named entry
-/// outside `customXml/`, and the paragraph count over `word/*.xml`. Returns the paragraphs counted so far.
-pub(crate) fn guard_named_parts(entries: &[zipio::RawEntry], l: &Limits) -> Result<usize, Error> {
+/// outside `customXml/`, and the paragraph count over `word/*.xml` (`counted`, when [`read_package`] already
+/// counted them as they inflated). Returns the paragraphs counted so far.
+pub(crate) fn guard_named_parts(entries: &[zipio::RawEntry], l: &Limits, counted: Option<usize>) -> Result<usize, Error> {
     bilingua_zip::check_xml_parts_except(entries, l, UNPARSED_PARTS)?;
     // empty paragraphs count too (LocOS DOCX_MAX_PARAGRAPHS), before any tree is built
+    if let Some(n) = counted {
+        if n > l.max_paragraphs {
+            return Err(too_many_paragraphs(l));
+        }
+        return Ok(n);
+    }
     let mut paragraphs = 0usize;
     for e in entries.iter().filter(|e| paragraphs_counted_by_name(&e.name)) {
         paragraphs += bilingua_model::guard::count_elements(&e.data, "p");
@@ -255,9 +331,9 @@ fn extract_doc(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
 }
 
 fn extract_doc_inner(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
-    let mut entries = zipio::read_zip(bytes, &ZipLimits::from(&opts.limits()))?;
     let l = opts.limits();
-    let mut paragraphs = guard_named_parts(&entries, &l)?;
+    let (mut entries, counted) = read_package(bytes, &l)?;
+    let mut paragraphs = guard_named_parts(&entries, &l, counted)?;
     let ct = entries
         .iter()
         .find(|e| e.name == "[Content_Types].xml")
@@ -369,6 +445,8 @@ fn extract_doc_inner(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Er
         let template = ex.run_part(nodes);
         // a comment copied into more units than the context budget allows: refused as soon as the part is walked
         ex.check_refused()?;
+        // the units only grow: once over the limit, `guard::finish` would refuse with this error (BILI-115)
+        bilingua_model::guard::check_unit_count(ex.unit_count(), &l)?;
         if template.contains(M_UNIT) {
             // the skeleton keeps this part as its template: its unpacked and deflated bytes are not read again
             let e = &mut entries[i];
@@ -570,4 +648,95 @@ mod depth_is_a_limit {
         assert!(matches!(crate::xml_member_err("m.xml", &bad), bilingua_model::Error::Parse { .. }));
     }
     use crate::xml;
+}
+
+/// BILI-115: the paragraphs are counted while the package inflates, with the count and the error the whole-part
+/// count gives.
+#[cfg(test)]
+mod fail_early {
+    use crate::tests::{body, doc_of, make, p, part};
+    use bilingua_model::{guard::count_elements, Error, ExtractOptions, Filter, LimitKind, Limits};
+
+    fn paragraphs(n: usize) -> String {
+        // empty paragraphs, properties and pictures that must not count, a comment that hides one
+        let mut s = String::new();
+        for i in 0..n {
+            match i % 4 {
+                0 => s.push_str(&p("Text")),
+                1 => s.push_str("<w:p/>"),
+                2 => s.push_str("<w:p><w:pPr><w:pStyle w:val=\"x\"/></w:pPr><w:r><w:pict/><w:t>Pic</w:t></w:r></w:p>"),
+                _ => s.push_str("<!-- <w:p/> --><w:p w:rsidR=\"1\"><w:r><w:t>More</w:t></w:r></w:p>"),
+            }
+        }
+        s
+    }
+
+    fn outcome(bytes: &[u8], l: Limits) -> Result<usize, String> {
+        crate::Docx.extract(bytes, &ExtractOptions::default().with_limits(l)).map(|d| d.units.len()).map_err(|e: Error| e.to_string())
+    }
+
+    #[test]
+    fn streamed_count_matches_the_whole_part_count() {
+        let bytes = make(&[
+            ("word/document.xml", &body(&paragraphs(40))),
+            ("word/footer1.xml", &part("ftr", &paragraphs(3))),
+            ("word/charts/chart1.xml", "<c:chartSpace xmlns:c=\"c\" xmlns:a=\"a\"><a:p/><a:p/></c:chartSpace>"),
+        ]);
+        let (entries, counted) = crate::read_package(&bytes, &Limits::new()).unwrap();
+        let whole: usize = entries.iter().filter(|e| super::paragraphs_counted_by_name(&e.name)).map(|e| count_elements(&e.data, "p")).sum();
+        assert_eq!(counted, Some(whole));
+        assert_eq!(whole, 45);
+        for k in 40..50 {
+            let l = Limits::new().with_max_paragraphs(k);
+            let r = crate::read_package(&bytes, &l);
+            assert_eq!(r.is_err(), whole > k, "limit {k}");
+            if let Err(Error::Limit(e)) = r {
+                assert_eq!(e.kind, LimitKind::Paragraphs);
+                assert_eq!(e.msg, format!("This file has more than {k} paragraphs. Split it into smaller files."));
+            }
+            // the extraction with the same limit: refused exactly when over it
+            assert_eq!(outcome(&bytes, l).is_err(), whole > k, "limit {k}");
+        }
+    }
+
+    /// A part larger than one inflated piece is refused before it has all been read.
+    #[test]
+    fn a_long_document_is_refused_while_it_inflates() {
+        let bytes = doc_of(&paragraphs(60_000));
+        let e = outcome(&bytes, Limits::new()).unwrap_err();
+        assert_eq!(e, "This file has more than 50000 paragraphs. Split it into smaller files.");
+        let mut watch = super::ParagraphWatch::new(&Limits::new().with_max_paragraphs(1_000));
+        let mut seen = 0usize;
+        struct Counting<'a>(&'a mut super::ParagraphWatch, &'a mut usize);
+        impl bilingua_zip::Watch for Counting<'_> {
+            fn bytes(&mut self, name: &str, chunk: &[u8]) -> Result<(), Error> {
+                *self.1 += chunk.len();
+                self.0.bytes(name, chunk)
+            }
+            fn done(&mut self, name: &str) -> Result<(), Error> {
+                self.0.done(name)
+            }
+        }
+        let r = crate::zipio::read_zip_watched(&bytes, &bilingua_zip::ZipLimits::from(&Limits::new()), &mut Counting(&mut watch, &mut seen));
+        assert!(r.is_err());
+        let full = body(&paragraphs(60_000)).len();
+        assert!(seen < full / 2, "read {seen} of {full} bytes before the refusal");
+    }
+
+    /// A UTF-16 part is counted as before, after the read.
+    #[test]
+    fn a_utf16_part_falls_back_to_the_whole_part_count() {
+        let mut v = vec![0xFF, 0xFE];
+        v.extend(part("hdr", &paragraphs(8)).encode_utf16().flat_map(|u| u.to_le_bytes()));
+        let mut w = zip::ZipWriter::new(std::io::Cursor::new(Vec::new()));
+        let o = zip::write::SimpleFileOptions::default();
+        use std::io::Write;
+        w.start_file("word/header1.xml", o).unwrap();
+        w.write_all(&v).unwrap();
+        let bytes = w.finish().unwrap().into_inner();
+        let (entries, counted) = crate::read_package(&bytes, &Limits::new()).unwrap();
+        assert_eq!(counted, None);
+        assert_eq!(crate::guard_named_parts(&entries, &Limits::new(), counted).unwrap(), 8);
+        assert!(crate::guard_named_parts(&entries, &Limits::new().with_max_paragraphs(7), counted).is_err());
+    }
 }

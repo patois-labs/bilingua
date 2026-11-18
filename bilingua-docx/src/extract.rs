@@ -286,6 +286,11 @@ impl Extractor {
         fl2
     }
 
+    /// The units made so far (what [`Extractor::finish`] returns, in another order).
+    pub fn unit_count(&self) -> usize {
+        self.pending.len()
+    }
+
     /// Units in document order (part order, then paragraph order).
     pub fn finish(mut self) -> Vec<Unit> {
         self.pending.sort_by_key(|p| (p.part, p.ord, p.sub));
