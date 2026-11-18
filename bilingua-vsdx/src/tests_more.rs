@@ -390,7 +390,11 @@ fn write_corpus() {
 /// The package of the W4 vsdx tests: an untranslatable shape (`---`) before `Start` on the first walked page, and a
 /// comments part with an entry that has no text.
 pub fn gaps_package() -> Vec<u8> {
-    let page = page2().replace("<Shape ID='7' Type='Shape'><Text>Start</Text></Shape>", "<Shape ID='6' Type='Shape'><Text>---</Text></Shape><Shape ID='7' Type='Shape'><Text>Start</Text></Shape>");
+    with_comments_part(page2().replace("<Shape ID='7' Type='Shape'><Text>Start</Text></Shape>", "<Shape ID='6' Type='Shape'><Text>---</Text></Shape><Shape ID='7' Type='Shape'><Text>Start</Text></Shape>"))
+}
+
+/// The fixture package with `page` as its second page and the comments part of [`gaps_package`].
+fn with_comments_part(page: String) -> Vec<u8> {
     let rels = "<Relationships xmlns='http://schemas.openxmlformats.org/package/2006/relationships'><Relationship Id='rId9' Type='http://schemas.microsoft.com/visio/2010/relationships/comments' Target='comments.xml'/></Relationships>";
     let comments = format!("<?xml version='1.0' encoding='utf-8' ?><Comments xmlns='{NS}'><AuthorList><AuthorEntry Name='Ann' Initials='A' ID='0'/></AuthorList><CommentList><CommentEntry AuthorID='0' PageID='0' CommentID='0'>  </CommentEntry><CommentEntry AuthorID='0' PageID='0' CommentID='1'>Move this shape.</CommentEntry></CommentList></Comments>");
     Pkg {
@@ -431,4 +435,55 @@ fn locos_p_index_is_the_slot_index_with_gaps() {
     let plain = Vsdx.extract(&data, &ExtractOptions::new().with_format_option("vsdx.translate_comments", true)).unwrap();
     assert!(plain.units.iter().all(|u| !u.context.extra.contains_key(profile::P_INDEX)));
     assert_eq!(plain.units.len(), doc.units.len());
+}
+
+/// [`part`] under the large limits: a page of a million shapes may deflate past the hosted ratio.
+fn part_large(bytes: &[u8], name: &str) -> String {
+    let e = bilingua_zip::read_zip("vsdx", bytes, &ZipLimits::from(&Limits::large())).unwrap();
+    String::from_utf8(e.into_iter().find(|e| e.name == name).unwrap_or_else(|| panic!("no part {name}")).data).unwrap()
+}
+
+/// BILI-126: the comments fixture with `extra` empty shape texts after `Start` (each one a slot, as LocOS numbers them).
+fn big_drawing_with_comments(extra: usize) -> Vec<u8> {
+    let shapes: String = (0..extra).map(|i| format!("<Shape ID='{}' Type='Shape'><Text/></Shape>", i + 100)).collect();
+    with_comments_part(page2().replace("<Text>Start</Text></Shape>", &format!("<Text>Start</Text></Shape>{shapes}")))
+}
+
+fn large_locos() -> ExtractOptions {
+    profile::locos().extract_options().with_format_option("vsdx.translate_comments", true).with_limits(Limits::large())
+}
+
+/// The body slots of [`big_drawing_with_comments`] without extra shapes: its last slot is a unit.
+fn fixture_slots() -> usize {
+    let doc = Vsdx.extract(&big_drawing_with_comments(0), &large_locos()).unwrap();
+    let body = doc.units.iter().filter(|u| u.context.kind.as_deref() != Some("comment"));
+    body.map(|u| u.context.extra[profile::P_INDEX].parse::<usize>().unwrap()).max().unwrap() + 1
+}
+
+#[test]
+#[ignore = "a drawing of a million shapes; run with --release -- --ignored"]
+fn comments_past_a_million_slots_are_refused_under_the_profile() {
+    let data = big_drawing_with_comments(bilingua_model::guard::COMMENT_BASE + 1 - fixture_slots());
+    match Vsdx.extract(&data, &large_locos()) {
+        Err(Error::Limit(e)) => assert!(e.msg.contains("more than Bilingua can number apart"), "{e}"),
+        other => panic!("not refused: {:?}", other.map(|d| d.units.len())),
+    }
+    // without the profile no unit carries a number, and the merge goes by unit: nothing to refuse
+    let plain = ExtractOptions::new().with_format_option("vsdx.translate_comments", true).with_limits(Limits::large());
+    let doc = Vsdx.extract(&data, &plain).unwrap();
+    assert!(doc.units.iter().any(|u| u.context.kind.as_deref() == Some("comment")));
+}
+
+#[test]
+#[ignore = "a drawing of a million shapes; run with --release -- --ignored"]
+fn comments_just_under_a_million_slots_round_trip() {
+    let data = big_drawing_with_comments(bilingua_model::guard::COMMENT_BASE - fixture_slots());
+    let mut doc = Vsdx.extract(&data, &large_locos()).unwrap();
+    let c = doc.units.iter().find(|u| u.id == "comment-2").unwrap();
+    assert_eq!(c.context.extra[profile::P_INDEX], "1000001");
+    set(&mut doc, "comment-2", "Diese Form verschieben.");
+    let out = Vsdx.merge_with(&doc, &profile::locos().merge_options("vsdx").with_limits(Limits::large())).unwrap();
+    assert!(part_large(&out, "visio/comments.xml").contains("Diese Form verschieben."));
+    let back = Vsdx.extract(&out, &large_locos()).unwrap();
+    assert_eq!(text_of(&back, "comment-2"), "Diese Form verschieben.");
 }

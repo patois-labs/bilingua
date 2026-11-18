@@ -433,6 +433,57 @@ pub fn check_unit_count(count: usize, l: &Limits) -> Result<(), Error> {
     Ok(())
 }
 
+/// LocOS's `office_comments.COMMENT_BASE`: the Office formats (ODF, PPTX, VSDX, XLSX) number comment units from
+/// here, above every body paragraph, cell or text box, so a file read without comments keeps its numbers.
+pub const COMMENT_BASE: usize = 1_000_000;
+
+/// BILI-126: refuses a file whose body numbers reach [`COMMENT_BASE`] while it has comment units. `body_end` is one
+/// past the highest body number, counted the way the format numbers its body (empty slots too where they count).
+/// No body gets there under the hosted limits' unit cap; under `Limits::large()` one can, and a comment would then
+/// share its number with a body unit, so a merge could write a comment's translation into the body or the reverse.
+/// Refusing keeps LocOS's one numbering for every file below the line rather than a second scheme for the few above
+/// it. Call it before the first comment unit is made; a merge calls [`check_comment_base_merge`].
+pub fn check_comment_base(body_end: usize) -> Result<(), Error> {
+    if body_end > COMMENT_BASE {
+        return Err(LimitError::new(
+            LimitKind::Units,
+            "This file has more than 1,000,000 paragraphs, cells or text boxes and also has comments to translate, \
+             which is more than Bilingua can number apart. Turn off comment translation or split the file.",
+        )
+        .into());
+    }
+    Ok(())
+}
+
+/// The merge-time refusal of BILI-126: the document's comments and body share numbers. An extraction never makes
+/// such a document, so it was changed by hand or put together from another file.
+fn comment_numbers_shared() -> Error {
+    LimitError::new(
+        LimitKind::Units,
+        "This document's comments and body text share numbers, so it cannot be merged safely. Extract the file again without comments.",
+    )
+    .into()
+}
+
+/// [`check_comment_base`] for a merge that writes comments by number: a document with comment units over a body
+/// that reaches [`COMMENT_BASE`] is refused.
+pub fn check_comment_base_merge(body_end: usize) -> Result<(), Error> {
+    if body_end > COMMENT_BASE {
+        return Err(comment_numbers_shared());
+    }
+    Ok(())
+}
+
+/// BILI-126: refuses a merge whose units carry one number twice (`numbers`: every unit's LocOS number), whatever
+/// their kind or hidden fields, so a hand edit that strips a comment's marks cannot slip a comment into the body.
+pub fn check_distinct_numbers(numbers: impl IntoIterator<Item = i64>) -> Result<(), Error> {
+    let mut seen = std::collections::HashSet::new();
+    if numbers.into_iter().any(|n| !seen.insert(n)) {
+        return Err(comment_numbers_shared());
+    }
+    Ok(())
+}
+
 /// Localization OS's pre-parse budget (#571 and its gate): a text with more than `per_unit` x `max_units` of some
 /// marker (`count`: JSON quotes, or commas and brackets; PO backslashes) is refused before the parser builds
 /// anything, since each marker costs work or memory whether or not it ends in a unit (100 MB of `{},` holds no
@@ -1485,6 +1536,34 @@ mod tests {
         let l = Limits::large();
         assert_eq!(own_cap(500_000, h.max_units, l.max_units), l.max_units);
         assert_eq!(own_cap_bytes(64 << 20, h.max_input_bytes, l.max_input_bytes) as u64, l.max_input_bytes);
+    }
+
+    #[test]
+    fn comment_base_refuses_a_body_that_reaches_it() {
+        // BILI-126: body numbers 0..=999_999 leave the comment numbers free; one more and the first comment collides
+        assert!(check_comment_base(0).is_ok());
+        assert!(check_comment_base(COMMENT_BASE).is_ok());
+        match check_comment_base(COMMENT_BASE + 1) {
+            Err(Error::Limit(e)) => {
+                assert_eq!(e.kind, LimitKind::Units);
+                assert!(e.msg.contains("more than Bilingua can number apart"), "{e}");
+                assert!(!e.msg.contains('\u{2014}'), "no em dash: {e}");
+            }
+            other => panic!("not a limit error: {other:?}"),
+        }
+        // the merge side: the same line, and one number on two units, each with the merge's own message
+        assert!(check_comment_base_merge(COMMENT_BASE).is_ok());
+        assert!(check_distinct_numbers([0, 1, 1_000_000]).is_ok());
+        for r in [check_comment_base_merge(COMMENT_BASE + 1), check_distinct_numbers([5, 1_000_000, 5])] {
+            match r {
+                Err(Error::Limit(e)) => {
+                    assert_eq!(e.kind, LimitKind::Units);
+                    assert!(e.msg.contains("comments and body text share numbers"), "{e}");
+                    assert!(!e.msg.contains('\u{2014}'), "no em dash: {e}");
+                }
+                other => panic!("not a limit error: {other:?}"),
+            }
+        }
     }
 
     #[test]

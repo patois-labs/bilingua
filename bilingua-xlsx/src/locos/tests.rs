@@ -418,3 +418,117 @@ fn values_under_a_merge_are_not_units() {
     let w = entry(&merged(&doc), "xl/sharedStrings.xml").unwrap();
     assert!(w.contains("Danach"), "{w}");
 }
+
+/// [`entry`] under the large limits: a sheet of a million cells may deflate past the hosted ratio.
+fn entry_large(zip: &[u8], name: &str) -> Option<String> {
+    let entries = crate::zipio::read_zip(zip, &bilingua_zip::ZipLimits::from(&bilingua_model::Limits::large())).unwrap();
+    entries.into_iter().find(|e| e.name == name).map(|e| String::from_utf8(e.data).unwrap())
+}
+
+/// BILI-126: a workbook of `n` text cells (five to a row, the shared string "Item") with a classic note on A1.
+fn big_book_with_a_note(n: usize) -> Vec<u8> {
+    let cols = ["A", "B", "C", "D", "E"];
+    let mut sheet = String::with_capacity(n * 40);
+    sheet.push_str("<sheetData>");
+    for r in 0..n.div_ceil(5) {
+        sheet.push_str(&format!("<row r=\"{}\">", r + 1));
+        for col in cols.iter().take(n - r * 5) {
+            sheet.push_str(&format!("<c r=\"{col}{}\" t=\"s\"><v>0</v></c>", r + 1));
+        }
+        sheet.push_str("</row>");
+    }
+    sheet.push_str("</sheetData>");
+    let note = format!("<comments {NS_DECL}><authors><author>Ann</author></authors><commentList><comment ref=\"A1\" authorId=\"0\"><text><r><t>Check this cell.</t></r></text></comment></commentList></comments>");
+    book(&sheet, "<si><t>Item</t></si>", &[], &[("xl/worksheets/_rels/sheet1.xml.rels", rel(&[("rId1", "comments", "../comments1.xml")])), ("xl/comments1.xml", note)])
+}
+
+fn large_opts() -> ExtractOptions {
+    opts(Some("de-DE")).with_limits(bilingua_model::Limits::large())
+}
+
+fn with_comments() -> crate::XlsxOptions {
+    crate::XlsxOptions { translate_comments: true, ..Default::default() }
+}
+
+fn large_merge(doc: &Document) -> Result<Vec<u8>, Error> {
+    merge(doc, &profile::locos().merge_options("xlsx").with_limits(bilingua_model::Limits::large()))
+}
+
+#[test]
+#[ignore = "a workbook of a million cells; run with --release -- --ignored"]
+fn comments_past_a_million_cells_are_refused() {
+    let data = big_book_with_a_note(comments::COMMENT_BASE + 1);
+    match super::extract(&data, &large_opts(), &with_comments()) {
+        Err(Error::Limit(e)) => assert!(e.msg.contains("more than Bilingua can number apart"), "{e}"),
+        other => panic!("not refused: {:?}", other.map(|d| d.units.len())),
+    }
+    // without comments the workbook extracts, and number 1000000 is a cell
+    let mut doc = extract(&data, &large_opts()).unwrap();
+    assert_eq!(doc.units.len(), comments::COMMENT_BASE + 1);
+    let last = doc.units.len() - 1;
+    assert_eq!(doc.units[last].context.extra[profile::P_INDEX], comments::COMMENT_BASE.to_string());
+    set(&mut doc, last, "Anders");
+    let out = large_merge(&doc).unwrap();
+    // the cell takes the text and the note keeps its own: before BILI-126 the cell's key 1000000 also overwrote the
+    // first comment of the walk
+    let written = |name: &str| entry_large(&out, name).is_some_and(|t| t.contains("Anders"));
+    assert!(written("xl/sharedStrings.xml") || written("xl/worksheets/sheet1.xml"));
+    assert_eq!(entry_large(&out, "xl/comments1.xml"), entry_large(&data, "xl/comments1.xml"));
+    // a document with a comment unit over such a body (changed by hand) is refused at the merge
+    let mut c = Unit::new("c", vec![Inline::text("Check this cell.")]);
+    c.hidden.insert(comments::SLOT.to_string(), "0".into());
+    doc.units.push(c);
+    assert!(matches!(large_merge(&doc), Err(Error::Limit(_))));
+}
+
+#[test]
+#[ignore = "a workbook of a million cells; run with --release -- --ignored"]
+fn comments_just_under_a_million_cells_round_trip() {
+    let data = big_book_with_a_note(comments::COMMENT_BASE - 1);
+    let mut doc = super::extract(&data, &large_opts(), &with_comments()).unwrap();
+    assert_eq!(doc.units.len(), comments::COMMENT_BASE);
+    let (cell, note) = (doc.units.len() - 2, doc.units.len() - 1);
+    assert_eq!(doc.units[cell].context.extra[profile::P_INDEX], "999998");
+    assert_eq!(doc.units[note].context.extra[profile::P_INDEX], "1000000");
+    set(&mut doc, cell, "Anders");
+    set(&mut doc, note, "Diese Zelle pr\u{fc}fen.");
+    let out = large_merge(&doc).unwrap();
+    let c = entry_large(&out, "xl/comments1.xml").unwrap();
+    assert!(c.contains("Diese Zelle pr\u{fc}fen.") && !c.contains("Anders"), "{c}");
+    let back = super::extract(&out, &large_opts(), &with_comments()).unwrap();
+    assert_eq!(unit_texts(&back)[cell], "Anders");
+    assert_eq!(unit_texts(&back)[note], "Diese Zelle pr\u{fc}fen.");
+}
+
+#[test]
+fn a_merge_refuses_one_key_on_two_units() {
+    // BILI-126: a hand edit that gives two units one key (a comment stripped of its slot, say) is refused
+    let sheet = "<sheetData><row r=\"1\"><c r=\"A1\" t=\"s\"><v>0</v></c><c r=\"B1\" t=\"s\"><v>0</v></c></row></sheetData>";
+    let mut doc = extract(&book(sheet, "<si><t>Item</t></si>", &[], &[]), &opts(Some("de-DE"))).unwrap();
+    assert_eq!(doc.units.len(), 2);
+    doc.units[1].hidden.insert(KEY.to_string(), "0".into());
+    set(&mut doc, 1, "Anders");
+    match merge(&doc, &profile::locos().merge_options("xlsx")) {
+        Err(Error::Limit(e)) => assert!(e.msg.contains("comments and body text share numbers"), "{e}"),
+        other => panic!("not refused: {:?}", other.map(|b| b.len())),
+    }
+}
+
+#[test]
+#[ignore = "a workbook of a million cells; run with --release -- --ignored"]
+fn comments_at_exactly_a_million_cells_still_apply() {
+    // the boundary: the highest cell key is 999999, the note's 1000000, and both are written
+    let data = big_book_with_a_note(comments::COMMENT_BASE);
+    let mut doc = super::extract(&data, &large_opts(), &with_comments()).unwrap();
+    let (cell, note) = (doc.units.len() - 2, doc.units.len() - 1);
+    assert_eq!(doc.units[cell].context.extra[profile::P_INDEX], "999999");
+    assert_eq!(doc.units[note].context.extra[profile::P_INDEX], "1000000");
+    set(&mut doc, cell, "Anders");
+    set(&mut doc, note, "Diese Zelle pr\u{fc}fen.");
+    let out = large_merge(&doc).unwrap();
+    let c = entry_large(&out, "xl/comments1.xml").unwrap();
+    assert!(c.contains("Diese Zelle pr\u{fc}fen.") && !c.contains("Anders"), "{c}");
+    let back = super::extract(&out, &large_opts(), &with_comments()).unwrap();
+    assert_eq!(unit_texts(&back)[cell], "Anders");
+    assert_eq!(unit_texts(&back)[note], "Diese Zelle pr\u{fc}fen.");
+}

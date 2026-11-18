@@ -53,8 +53,9 @@ const MC: &str = "http://schemas.openxmlformats.org/markup-compatibility/2006";
 const PKG_REL: &str = "http://schemas.openxmlformats.org/package/2006/relationships";
 const P188: &str = "http://schemas.microsoft.com/office/powerpoint/2018/8/main";
 const ALT_ATTRS: [(&str, &str); 2] = [("descr", "a11y:img-alt"), ("title", "a11y:img-title")];
-/// LocOS `office_comments.COMMENT_BASE`: the first comment unit's `p_index`.
-pub const COMMENT_BASE: usize = 1_000_000;
+/// LocOS `office_comments.COMMENT_BASE`: the first comment unit's `p_index`. A deck whose paragraphs and alt texts
+/// reach it is refused when comments are wanted (BILI-126).
+pub const COMMENT_BASE: usize = guard::COMMENT_BASE;
 /// `UnitContext::extra` key with the package part a unit comes from.
 pub const PART: &str = "pptx.part";
 
@@ -1007,6 +1008,7 @@ pub fn extract(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
         units.push(unit(base + j, vec![Inline::text(a.value.clone())], BTreeMap::new(), &a.part, a.style, "alt"));
     }
     if opts.format_flag("pptx.translate_comments") == Some(true) {
+        let body_end = base + walk.alts.len();
         for (j, c) in comment_slots(&mut pkg, &walk)?.iter().enumerate() {
             let d = pkg.dom(&c.part);
             let (source, codes) = if c.classic {
@@ -1020,6 +1022,8 @@ pub fn extract(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
             } else {
                 continue;
             };
+            // BILI-126: above a million paragraphs and alt texts a comment's number would be a body number too
+            guard::check_comment_base(body_end)?;
             units.push(unit(COMMENT_BASE + j, source, codes, &c.part, &c.style, "comment"));
         }
     }
@@ -1080,11 +1084,13 @@ fn written_texts(doc: &Document) -> Vec<(i64, String)> {
 pub fn rebuild(original: &[u8], texts: &[(i64, String)], target: Option<&str>) -> Result<Vec<u8>, Error> {
     // plain LocOS text has no escaped look-alike: doubling its own U+E000 is all the escape it needs
     let texts: Vec<(i64, String)> = texts.iter().map(|(i, t)| (*i, t.replace('\u{e000}', "\u{e000}\u{e000}"))).collect();
-    rebuild_escaped(original, &texts, target, &Limits::default())
+    rebuild_escaped(original, &texts, target, &Limits::default(), false)
 }
 
-/// [`rebuild`] for texts whose literal text is escaped (`esc_lit`).
-fn rebuild_escaped(original: &[u8], texts: &[(i64, String)], target: Option<&str>, limits: &Limits) -> Result<Vec<u8>, Error> {
+/// [`rebuild`] for texts whose literal text is escaped (`esc_lit`). `comments`: the document has comment units, so a
+/// body that reaches [`COMMENT_BASE`] is refused (BILI-126); without them a number from there up is a body number,
+/// since the body ranges are tried first.
+fn rebuild_escaped(original: &[u8], texts: &[(i64, String)], target: Option<&str>, limits: &Limits, comments: bool) -> Result<Vec<u8>, Error> {
     let werr = |e: Error| match e {
         Error::Parse { msg, .. } => Error::Write(msg),
         e => e,
@@ -1103,6 +1109,10 @@ fn rebuild_escaped(original: &[u8], texts: &[(i64, String)], target: Option<&str
     }
     let mut touched: HashSet<String> = HashSet::new();
     let base = walk.paras.len() as i64;
+    if comments {
+        // an extraction refuses this file, so a document that has both was changed by hand or comes from another file
+        guard::check_comment_base_merge(walk.paras.len() + walk.alts.len())?;
+    }
     let cslots = if texts.iter().any(|(i, _)| *i >= COMMENT_BASE as i64) { comment_slots(&mut pkg, &walk).map_err(werr)? } else { Vec::new() };
     for (i, text) in texts {
         let text = xml_target_text(text);
@@ -1185,6 +1195,9 @@ pub fn merge(doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
     let Skeleton::Binary { data, .. } = &doc.skeleton else {
         return Err(Error::Write("pptx: a LocOS-profile document needs its original file".into()));
     };
+    // BILI-126: one number on two units (a hand edit that dropped a comment's kind, say) could write one into the other
+    guard::check_distinct_numbers(doc.units.iter().filter_map(|u| u.context.extra.get(profile::P_INDEX)?.parse::<i64>().ok()))?;
     let texts = written_texts(doc);
-    rebuild_escaped(data, &texts, opts.stamp_lang(doc, true), &opts.limits())
+    let comments = doc.units.iter().any(|u| u.context.kind.as_deref() == Some("comment"));
+    rebuild_escaped(data, &texts, opts.stamp_lang(doc, true), &opts.limits(), comments)
 }

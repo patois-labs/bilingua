@@ -27,8 +27,9 @@ use xml::{Kind, Tree, NS_TABLE};
 
 /// The skeleton's only entry: the whole original archive. It holds a NUL, which no real zip entry name can.
 const ARCHIVE: &str = "\0bilingua-odf-archive";
-/// Comment units are numbered from here, as in Localization OS.
-const COMMENT_BASE: usize = 1_000_000;
+/// Comment units are numbered from here, as in Localization OS (above a million body paragraphs the file is refused,
+/// BILI-126).
+const COMMENT_BASE: usize = guard::COMMENT_BASE;
 const PARTS: [&str; 2] = ["content.xml", "styles.xml"];
 
 /// The `format_options` keys of the OpenDocument filters: one key for odt, ods, odp and odg.
@@ -237,6 +238,11 @@ fn extract_doc(bytes: &[u8], opts: &ExtractOptions, id: &'static str, o: &OdfOpt
             for p in walk::annotation_paragraphs(&part.tree) {
                 let tok = walk::tokenize(&part.tree, p, l.max_unit_chars)?;
                 if tok.has_letter() {
+                    // BILI-126: `idx` counts every body paragraph, empty ones too, so a body that reaches the comment
+                    // numbers (possible even under the hosted unit cap) would share a p_index with a comment.
+                    // Bilingua's own merge maps units by id (`p`/`c`), so this protects the `p_index` consumers
+                    // (LocOS), not that merge
+                    guard::check_comment_base(idx)?;
                     let mut u = make_unit(&part.tree, p, &tok, format!("c{j}"), "comment");
                     u.context.location = Some(format!("{} comment paragraph {j}", part.name));
                     u.context.extra.insert("p_index".into(), (COMMENT_BASE + j).to_string());
