@@ -28,11 +28,15 @@ use crate::zipio::RawEntry;
 use bilingua_model::{Error, Limits};
 use std::collections::HashMap;
 
-/// The smallest unpacked size of the sheets and shared strings at which one of the limits the scan checks can be
-/// reached by volume: a cell takes at least 4 bytes (`<c/>`), a shared-string unit at least 16
-/// (`<si><t>a</t></si>`), a character of text at least one. Below it the scan is skipped: the extraction of parts that
-/// small is cheap, and it still refuses what is over a limit. Under `Limits::large` and `unbounded` it is hundreds of
-/// megabytes or more, so ordinary workbooks are not scanned twice.
+/// The unpacked size of the sheets and shared strings below which the scan is skipped: the smallest at which the
+/// cell or unit limit can be reached (a cell takes at least 4 bytes, `<c/>`; a shared-string unit at least 16,
+/// `<si><t>a</t></si>`), or the text limit can be reached without repeats (a character takes at least one byte).
+///
+/// It is a cost threshold, not a bound: below it a workbook can still be over a limit, through the row number a
+/// row states (`<row r="999999"/>`) or a long shared string used by many cells (one 3,000-character string in 3,000
+/// cells passes 8 Mi characters in about 25 KB). Skipping is always safe: the extraction refuses those itself, and
+/// with parts this small its trees are small too, so refusing there costs little. Under `Limits::large` and
+/// `unbounded` it is hundreds of megabytes or more, so ordinary workbooks are not scanned twice.
 fn worth_scanning(l: &Limits) -> u64 {
     let cells = (l.xlsx_max_cells as u64).saturating_add(1).saturating_mul(4);
     let units = (l.max_units as u64).saturating_add(1).saturating_mul(16);
@@ -229,7 +233,11 @@ pub(crate) fn prescan(entries: &[RawEntry], sheets: &[&str], sst: &str, skip_hid
 fn run(entries: &[RawEntry], sheets: &[&str], sst: &str, skip_hidden: bool, l: &Limits) -> Result<(), Error> {
     let find = |name: &str| entries.iter().find(|e| e.name == name);
     let size: u64 = sheets.iter().chain(std::iter::once(&sst)).filter_map(|n| find(n)).map(|e| e.data.len() as u64).sum();
-    if size < worth_scanning(l) {
+    #[cfg(test)]
+    let skip = !tests::ALWAYS.with(|a| a.get()) && size < worth_scanning(l);
+    #[cfg(not(test))]
+    let skip = size < worth_scanning(l);
+    if skip {
         return Ok(());
     }
     let mut budget = SheetBudget::new(*l);
@@ -259,6 +267,8 @@ pub(crate) mod tests {
     thread_local! {
         /// Turns the pre-scan off, to compare an extraction with and without it.
         pub(crate) static OFF: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+        /// Runs the pre-scan whatever the size of the parts, so small test workbooks exercise every limit.
+        pub(crate) static ALWAYS: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
         /// How often the pre-scan refused on this thread.
         pub(crate) static REFUSED: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
     }
@@ -378,6 +388,8 @@ pub(crate) mod tests {
             books.push((format!("tricky {p:?}"), book(&sheets, &sst)));
         }
         let before = refused();
+        // the fixtures are far below the size threshold: scan them anyway, so every limit's refusal is compared
+        ALWAYS.with(|a| a.set(true));
         type Make = fn(usize) -> Limits;
         let sets: [(&str, Make); 5] = [
             ("cells", |k| Limits::new().with_xlsx_max_cells(k)),
@@ -391,15 +403,21 @@ pub(crate) mod tests {
                 let base = run(bytes, Limits::new(), skip_hidden, true);
                 assert!(base.is_ok(), "{name}: {base:?}");
                 for (what, make) in &sets {
+                    let at = refused();
                     for k in (0..40).chain((40..700).step_by(7)) {
                         let l = make(k);
                         let with = run(bytes, l, skip_hidden, false);
                         let without = run(bytes, l, skip_hidden, true);
                         assert_eq!(with, without, "{name}, {what} = {k}, skip_hidden {skip_hidden}");
                     }
+                    // each limit is refused by the pre-scan itself for some value (units only when they are counted)
+                    if !(*what == "units" && skip_hidden) {
+                        assert!(refused() > at, "{name}: the pre-scan refused nothing for {what}, skip_hidden {skip_hidden}");
+                    }
                 }
             }
         }
+        ALWAYS.with(|a| a.set(false));
         assert!(refused() > before, "the pre-scan refused none of them");
     }
 

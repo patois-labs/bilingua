@@ -253,8 +253,11 @@ impl Watch for NoWatch {
 const WATCH_CHUNK: usize = 256 * 1024;
 
 /// [`read_zip`] with a [`Watch`] over each file entry's bytes as they inflate. The directory checks (entry count,
-/// unpacked total, ratio) run first, as in `read_zip`, and every entry read before the watcher refuses has passed
-/// all of `read_zip`'s checks; an archive the watcher never refuses is read exactly as `read_zip` reads it.
+/// unpacked total, ratio) run first, as in `read_zip`. The watcher sees an entry's bytes while it inflates, before
+/// that entry's own checks (its real size against the directory and `max_entry_bytes`, its checksum) have run: the
+/// entries before it have passed all of `read_zip`'s checks, the current one may not have yet, so a watcher refusal
+/// can come where `read_zip` would have refused that entry for its size or checksum. An archive the watcher never
+/// refuses is read exactly as `read_zip` reads it.
 pub fn read_zip_watched(format: &str, bytes: &[u8], limits: &ZipLimits, watch: &mut dyn Watch) -> Result<Vec<RawEntry>, Error> {
     read_entries(bytes, limits, watch).map_err(|e| as_format(e, format))
 }
@@ -400,7 +403,8 @@ fn read_entries(bytes: &[u8], limits: &ZipLimits, watch: &mut dyn Watch) -> Resu
             let at = data.len();
             let room = data.capacity() - at;
             let n = if room == 0 {
-                // the reserved room is full: a small probe finds the end of an honest entry without growing `data`
+                // the reserved room is full: a small probe finds the end of an honest entry (it reads nothing, so
+                // `data` keeps its size); only an entry longer than its reservation grows `data` here
                 let mut probe = [0u8; 4096];
                 let n = read_some(&mut body, &mut probe).map_err(|_| invalid_sizes())?;
                 data.extend_from_slice(&probe[..n]);
