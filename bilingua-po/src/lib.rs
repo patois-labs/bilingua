@@ -53,6 +53,33 @@ fn plural_rule(lang: &str) -> Option<(usize, &'static str)> {
     }
 }
 
+/// Two language tags name the same language for plural rules: equal (ignoring case and `-` / `_`), or the same
+/// language where one of them has no region or script (`pl` and `pl_PL`; not `pt_BR` and `pt_PT`).
+fn same_lang(a: &str, b: &str) -> bool {
+    let norm = |t: &str| t.trim().replace('_', "-").to_ascii_lowercase();
+    let (a, b) = (norm(a), norm(b));
+    if a.is_empty() || b.is_empty() {
+        return false;
+    }
+    let lang = |t: &str| t.split('-').next().unwrap_or("").to_string();
+    a == b || (lang(&a) == lang(&b) && (!a.contains('-') || !b.contains('-')))
+}
+
+/// True when the file's own Plural-Forms is the target's and stands: the header has a Plural-Forms and its
+/// Language is the target's (or the target comes from that header), or it has no Language and the target is the
+/// source's language (or no target was named). Then the file's nplurals is the form count and the header is left
+/// as it is: a Welsh file with its own 4-form rule or a Transifex Polish file with 4 forms keeps them.
+fn header_stands(has_plural_forms: bool, header_lang: Option<&str>, target: Option<&str>, source: Option<&str>) -> bool {
+    if !has_plural_forms {
+        return false;
+    }
+    match (header_lang, target) {
+        (_, None) => true,
+        (Some(h), Some(t)) => same_lang(h, t),
+        (None, Some(t)) => source.is_some_and(|s| same_lang(s, t)),
+    }
+}
+
 fn header_nplurals(header: &str) -> Option<usize> {
     let p = header.find("nplurals")?;
     let rest = header[p + 8..].trim_start().strip_prefix('=')?.trim_start();
@@ -209,9 +236,13 @@ impl Filter for Po {
             .find_map(|l| l.strip_prefix("Language:"))
             .map(|l| l.trim().replace('_', "-"))
             .filter(|l| !l.is_empty());
-        let target_lang = opts.target_lang.clone().or(header_lang);
-        let table = target_lang.as_deref().and_then(plural_rule).map(|r| r.0);
         let file_np = header_nplurals(&header_text);
+        // the file's own Plural-Forms counts when it is the target's; the target's rule only when the file has none
+        // or was written for another language
+        let stands = header_stands(file_np.is_some(), header_lang.as_deref(), opts.target_lang.as_deref(), opts.source_lang.as_deref());
+        let target_lang = opts.target_lang.clone().or(header_lang);
+        let table = if stands { None } else { target_lang.as_deref().and_then(plural_rule).map(|r| r.0) };
+        let file_np = file_np.filter(|_| stands);
 
         let mut units: Vec<Unit> = Vec::new();
         // (start, end, role) replaced ranges in the file; units referenced by index.
@@ -339,8 +370,10 @@ fn entry_units(
     if !plural && (e.strs.len() != 1 || e.strs[0].0.is_some()) {
         return Err(bad("expected one msgstr"));
     }
-    // Target plural count: the target language's rule, else what the entry has, else the header's.
-    let n = if plural { table.or(Some(existing)).or(file_np).unwrap_or(2).max(1) } else { 1 };
+    // Target plural count: the file's own Plural-Forms when it stands for the target, else the target language's
+    // rule, else what the entry has.
+    // (`file_np` is set only when the file's own Plural-Forms stands: its count, never fewer than the entry has)
+    let n = if plural { table.or(file_np.map(|f| f.max(existing))).unwrap_or(existing).max(1) } else { 1 };
     // no language has more than six plural forms: an entry asking for far more is refused before its units are made
     if n > MAX_PLURAL_FORMS {
         return Err(Error::Limit(LimitError::new(
@@ -500,12 +533,15 @@ fn update_header(raw: &str, lang: Option<&str>, doc: &Document) -> String {
     if !raw.contains("msgid \"\"") {
         return raw.to_string();
     }
-    let rule = plural_rule(lang);
     let has_plural = doc.units.iter().any(|u| u.context.extra().contains_key("plural"));
     let want = lang.replace('-', "_");
     let lang_value = |l: &str| {
         l.strip_prefix("\"Language:").map(|v| v.trim_start().trim_end_matches('"').trim_end_matches("\\n").trim().replace('-', "_"))
     };
+    // the file's own Plural-Forms for the target stays as it is (see `header_stands`, as the extract decided)
+    let header_lang = raw.lines().find_map(|l| lang_value(l.trim_end())).filter(|v| !v.is_empty());
+    let has_pf = raw.lines().any(|l| l.trim_start().starts_with("\"Plural-Forms:"));
+    let rule = if header_stands(has_pf, header_lang.as_deref(), Some(lang), doc.source_lang.as_deref()) { None } else { plural_rule(lang) };
     let lang_changed = raw.lines().any(|l| lang_value(l.trim_end()).is_some_and(|v| !v.eq_ignore_ascii_case(&want)));
     let mut out = String::with_capacity(raw.len());
     for line in raw.split_inclusive('\n') {

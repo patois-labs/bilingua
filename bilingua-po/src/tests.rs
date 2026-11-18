@@ -478,9 +478,13 @@ fn languages_outside_the_old_list_take_the_shared_gettext_rule() {
     let bare = "msgid \"%d file\"\nmsgid_plural \"%d files\"\nmsgstr[0] \"\"\nmsgstr[1] \"\"\n";
     assert_eq!(ex_to(bare, "pl").units.len(), 3);
     let de = src.replace("Language: en", "Language: de");
-    assert_eq!(ex_to(&de, "pl").units.len(), 3);
-    // the header's own language counts when there is no target, as before (now also for Polish)
-    assert_eq!(ex(&src.replace("Language: en", "Language: pl")).units.len(), 3);
+    let mut d = ex_to(&de, "pl");
+    assert_eq!(d.units.len(), 3);
+    set(&mut d, "e2.2", "%d plików");
+    let out = merged(&d);
+    assert!(out.contains("\"Language: pl\\n\"") && out.contains("nplurals=3; plural=(n==1 ? 0 : n%10>=2"), "{out}");
+    // a Polish header with its own Plural-Forms stands, even when it says two forms (the file's own count)
+    assert_eq!(ex(&src.replace("Language: en", "Language: pl")).units.len(), 2);
     // the eleven old languages keep their rules; an unknown code keeps the entry's count
     assert_eq!(plural_rule("pt-BR"), Some((2, "(n != 1)")));
     // Turkish and Azerbaijani: CLDR one/other, not the shared table's single form
@@ -492,4 +496,68 @@ fn languages_outside_the_old_list_take_the_shared_gettext_rule() {
         assert_eq!(plural_rule(lang), None, "{lang}");
     }
     assert_eq!(ex_to(src, "xx").units.len(), 2);
+}
+
+/// A PO file for `lang` with the header's own Plural-Forms and one plural entry with `n` forms.
+fn po_with_forms(lang: &str, rule: &str, n: usize) -> String {
+    let mut s = format!("msgid \"\"\nmsgstr \"\"\n\"Language: {lang}\\n\"\n\"Content-Type: text/plain; charset=UTF-8\\n\"\n\"Plural-Forms: {rule}\\n\"\n\nmsgid \"%d file\"\nmsgid_plural \"%d files\"\n");
+    for i in 0..n {
+        s.push_str(&format!("msgstr[{i}] \"\"\n"));
+    }
+    s.push_str("\nmsgid \"Open\"\nmsgstr \"\"\n");
+    s
+}
+
+fn plural_forms_line(s: &str) -> String {
+    s.lines().find(|l| l.starts_with("\"Plural-Forms:")).unwrap().to_string()
+}
+
+#[test]
+fn a_header_for_the_target_keeps_its_own_plural_forms() {
+    // Welsh as Launchpad and GNOME write it (four forms, not the table's five in another order), and Polish as
+    // Transifex writes it (four forms, not gettext's usual three): the file's own rule stands
+    let welsh = po_with_forms("cy", "nplurals=4; plural=(n==1) ? 0 : (n==2) ? 1 : (n != 8 && n != 11) ? 2 : 3;", 4);
+    let polish = po_with_forms(
+        "pl",
+        "nplurals=4; plural=(n==1 ? 0 : (n%10>=2 && n%10<=4) && (n%100<12 || n%100>14) ? 1 : n!=1 && (n%10>=0 && n%10<=1) || (n%10>=5 && n%10<=9) || (n%100>=12 && n%100<=14) ? 2 : 3);",
+        4,
+    );
+    for (file, lang) in [(&welsh, "cy"), (&welsh, "cy-GB"), (&polish, "pl"), (&polish, "pl_PL")] {
+        for d in [ex_to(file, lang), ex(file)] {
+            let forms: Vec<&str> = d.units.iter().filter(|u| u.id.starts_with("e2.")).map(|u| u.id.as_str()).collect();
+            assert_eq!(forms, ["e2.0", "e2.1", "e2.2", "e2.3"], "{lang}");
+            assert_eq!(merged(&d), *file, "{lang}: untouched merge");
+            // untouched with the target always stamped: the header stays (its counts already match)
+            let stamped = String::from_utf8(Po.merge_with(&d, &MergeOptions::new().with_stamp_target_always(true)).unwrap()).unwrap();
+            assert_eq!(plural_forms_line(&stamped), plural_forms_line(file), "{lang}: stamped");
+            let mut d = d;
+            for i in 0..4 {
+                set(&mut d, &format!("e2.{i}"), &format!("%d form {i}"));
+            }
+            let out = merged(&d);
+            assert_eq!(plural_forms_line(&out), plural_forms_line(file), "{lang}: translated");
+            for i in 0..4 {
+                assert!(out.contains(&format!("msgstr[{i}] \"%d form {i}\"")), "{lang}: {out}");
+            }
+        }
+    }
+    // a Polish file with gettext's usual three forms, stamped untouched: nothing changes
+    let three = po_with_forms("pl", "nplurals=3; plural=(n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);", 3);
+    let d = ex_to(&three, "pl");
+    assert_eq!(String::from_utf8(Po.merge_with(&d, &MergeOptions::new().with_stamp_target_always(true)).unwrap()).unwrap(), three);
+    // a header for another language does not stand: the target's rule (German header, Polish target: three forms)
+    let german = po_with_forms("de", "nplurals=2; plural=(n != 1);", 2);
+    let mut d = ex_to(&german, "pl");
+    assert_eq!(d.units.iter().filter(|u| u.id.starts_with("e2.")).count(), 3);
+    set(&mut d, "e2.2", "%d plików");
+    assert!(plural_forms_line(&merged(&d)).contains("nplurals=3; plural=(n==1 ? 0 : n%10>=2"));
+    // no Language in the header: the Plural-Forms stands for a document in its source language, not for another
+    let no_lang = german.replace("\"Language: de\\n\"\n", "");
+    let same = Po.extract(no_lang.as_bytes(), &ExtractOptions::new().with_source_lang("pl").with_target_lang("pl")).unwrap();
+    assert_eq!(same.units.iter().filter(|u| u.id.starts_with("e2.")).count(), 2);
+    assert_eq!(ex_to(&no_lang, "pl").units.iter().filter(|u| u.id.starts_with("e2.")).count(), 3);
+    // no header at all: the target's rule
+    let bare = "msgid \"%d file\"\nmsgid_plural \"%d files\"\nmsgstr[0] \"\"\nmsgstr[1] \"\"\n";
+    assert_eq!(ex_to(bare, "pl").units.len(), 3);
+    assert!(same_lang("pl", "pl_PL") && same_lang("PT-br", "pt_BR") && !same_lang("pt_BR", "pt_PT") && !same_lang("pl", "ru"));
 }
