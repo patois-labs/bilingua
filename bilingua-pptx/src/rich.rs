@@ -1,7 +1,7 @@
 //! Rich text: runs with formatting become text plus paired tags. One formatting of a unit needs no tag (it is the
 //! "base", chosen as `build` says: the plain one when there is one). Other runs are wrapped in a tag pair whose
 //! code keeps the raw run properties.
-//! Similar logic lives in `bilingua-xlsx`; the two crates do not share code on purpose.
+//! The same logic lives in `bilingua-xlsx`; the two crates do not share code on purpose.
 
 use bilingua_model::*;
 use std::collections::{BTreeMap, BTreeSet, HashMap};

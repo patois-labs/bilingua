@@ -119,6 +119,11 @@ pub fn table_xml() -> String {
 }
 
 pub fn workbook_zip() -> Vec<u8> {
+    workbook_zip_with_sst(sst_xml())
+}
+
+/// The fixture workbook with `sst` as its shared strings part.
+pub fn workbook_zip_with_sst(sst: String) -> Vec<u8> {
     let rel = |items: &[(&str, &str, &str)]| {
         let body: String = items
             .iter()
@@ -142,7 +147,7 @@ pub fn workbook_zip() -> Vec<u8> {
                 ("rId4", "sharedStrings", "sharedStrings.xml"),
             ]),
         ),
-        ("xl/sharedStrings.xml", sst_xml()),
+        ("xl/sharedStrings.xml", sst),
         ("xl/worksheets/sheet1.xml", sheet1_xml()),
         ("xl/worksheets/sheet2.xml", sheet2_xml()),
         ("xl/worksheets/sheet3.xml", sheet3_xml()),

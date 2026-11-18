@@ -455,3 +455,46 @@ fn literal_line_ends_read_as_lf_and_an_unchanged_merge_keeps_the_bytes() {
     assert_eq!(src_text(&again, "ss14"), "x\ny");
     assert_eq!(src_text(&again, "ss20"), "d\r\ne");
 }
+
+/// BILI-116: the plain run is the base, so the bold and the italic run are tagged though the italic run carries
+/// the most text ("[b]Bold claim[/b] with an [i]italic aside[/i]" in a rich-text cell).
+#[test]
+fn the_plain_run_is_the_base_though_the_italic_run_is_longer() {
+    let old = "<si><r><t xml:space=\"preserve\">Total </t></r><r><rPr><b/><sz val=\"11\"/></rPr><t>amount</t></r><r><t xml:space=\"preserve\"> due</t></r></si>";
+    let new = "<si><r><rPr><b/><sz val=\"11\"/><rFont val=\"Calibri\"/></rPr><t>Bold claim</t></r><r><rPr><sz val=\"11\"/><rFont val=\"Calibri\"/></rPr><t xml:space=\"preserve\"> with an </t></r><r><rPr><i/><sz val=\"11\"/><rFont val=\"Calibri\"/></rPr><t>italic aside</t></r></si>";
+    let sst = sst_xml();
+    assert!(sst.contains(old));
+    let bytes = workbook_zip_with_sst(sst.replace(old, new));
+    let doc = extract(&bytes);
+    let shown: Vec<String> = unit(&doc, "ss13")
+        .source()
+        .iter()
+        .map(|i| match i {
+            Inline::Text(t) => format!("T:{t}"),
+            Inline::Tag { display, .. } => display.clone(),
+        })
+        .collect();
+    assert_eq!(shown, vec!["<b>", "T:Bold claim", "</b>", "T: with an ", "<i>", "T:italic aside", "</i>"]);
+    assert_same_parts(&bytes, &Xlsx::default().merge(&doc).unwrap());
+    // A translation that moves the tags keeps each run's formatting: the plain text is written plain.
+    let mut doc = doc;
+    let u = unit(&doc, "ss13").clone();
+    let tags: Vec<Inline> = u.source().into_iter().filter(|i| matches!(i, Inline::Tag { .. })).collect();
+    let target = vec![
+        Inline::text("Una "),
+        tags[2].clone(),
+        Inline::text("nota en cursiva"),
+        tags[3].clone(),
+        Inline::text(" con "),
+        tags[0].clone(),
+        Inline::text("afirmación audaz"),
+        tags[1].clone(),
+    ];
+    doc.set_target(&u.segments[0].id, target).unwrap();
+    let (out, _) = merge_with_report(&doc).unwrap();
+    assert_all_xml_valid(&out);
+    let sst = part(&out, "xl/sharedStrings.xml");
+    assert!(sst.contains("<rPr><sz val=\"11\"/><rFont val=\"Calibri\"/></rPr><t xml:space=\"preserve\">Una </t>"), "{sst}");
+    assert!(sst.contains("<rPr><i/><sz val=\"11\"/><rFont val=\"Calibri\"/></rPr><t>nota en cursiva</t>"), "{sst}");
+    assert!(sst.contains("<rPr><b/><sz val=\"11\"/><rFont val=\"Calibri\"/></rPr><t>afirmación audaz</t>"), "{sst}");
+}

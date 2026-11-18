@@ -544,7 +544,7 @@ impl Extractor<'_> {
                         return;
                     }
                     let id = self.unique_id(format!("is{}-{}", sh.idx, r));
-                    let built = build(atoms, props_of);
+                    let built = build(atoms, props_of, None);
                     let mut cx = UnitContext::new().with_kind("cell".to_string()).with_location(loc).with_max_len(max_len).with_notes(notes);
                     hidden_extra(&mut cx, hidden);
                     let orig = raw_children(is);
@@ -575,7 +575,7 @@ impl Extractor<'_> {
             let id = self.unique_id(format!("sh{}-{}", sh.idx, name));
             let kind = if name.ends_with("Header") { "header" } else { "footer" };
             let which = name.trim_end_matches("Header").trim_end_matches("Footer");
-            let built = build(atoms, props_of);
+            let built = build(atoms, props_of, None);
             let mut cx = UnitContext::new().with_kind(kind.to_string()).with_style((*name).to_string()).with_location(format!("{} {kind} ({which})", sh.name)).with_max_len(Some(255));
             hidden_extra(&mut cx, sh.hidden.then_some("sheet"));
             let orig = raw_children(h);
@@ -696,7 +696,7 @@ impl Extractor<'_> {
                             return;
                         }
                         let cx = UnitContext::new().with_kind("comment".to_string()).with_location(self.sheet_cell(sh, &cell));
-                        self.u_comments.push(make_unit(id.clone(), build(atoms, props_of), raw_children(te), "plain", &pfx, cx));
+                        self.u_comments.push(make_unit(id.clone(), build(atoms, props_of, None), raw_children(te), "plain", &pfx, cx));
                         te.children = vec![marker(&id)];
                     }
                 }
@@ -738,7 +738,7 @@ impl Extractor<'_> {
                         }
                         let id = self.unique_id(format!("comment{}-{}", sh.idx, cell));
                         let cx = UnitContext::new().with_kind("comment".to_string()).with_location(self.sheet_cell(sh, &cell));
-                        self.u_comments.push(make_unit(id.clone(), build(atoms, props_of), raw_children(te), "si", &ns.pfx, cx));
+                        self.u_comments.push(make_unit(id.clone(), build(atoms, props_of, None), raw_children(te), "si", &ns.pfx, cx));
                         te.children = vec![marker(&id)];
                     }
                 }
@@ -983,7 +983,7 @@ fn extract_doc_inner(bytes: &[u8], opts: &ExtractOptions, xo: &XlsxOptions) -> R
                 // each shared-string unit takes a copy of the notes of its cells: charged before the copy
                 ex.context.charge(u.notes.iter().map(String::len).sum(), &ex.limits)?;
                 let id = format!("ss{idx}");
-                let mut built = build(atoms, props_of);
+                let mut built = build(atoms, props_of, None);
                 if phonetic {
                     built.codes.insert("_ph".into(), CodeData::default());
                 }
