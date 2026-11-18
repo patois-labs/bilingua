@@ -199,7 +199,7 @@ impl Filter for Dxf {
             }
             let idx = units.len();
             let mut unit = Unit::new(format!("u{}", idx + 1), parsed.inlines);
-            unit.codes = parsed.codes;
+            unit.set_codes(parsed.codes);
             let first = ru.pairs[0];
             unit.set_hidden(KIND, kind_label(ru.style, ru.kind));
             if ru.style == "dxf:mtext" {
@@ -288,7 +288,7 @@ fn write_unit(unit: &Unit, occ: usize, changed: &mut bool, codec: Codec, locos: 
     if occ > 0 {
         return Ok(()); // the rest of an MTEXT's chunks: replaced by the block written at the first span
     }
-    let text = lex::render(&unit.output(), &unit.codes, kind, locos);
+    let text = lex::render(&unit.output(), unit, kind, locos);
     let value = lex::fit_codec(&text, codec);
     let enc = |s: &str| -> Result<Vec<u8>, Error> {
         // DOS 864: `%` goes back to byte 0x25 (the code page itself only writes U+066A there), see `decode_value`

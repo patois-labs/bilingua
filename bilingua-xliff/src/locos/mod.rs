@@ -724,9 +724,9 @@ fn to_unit(d: &Dom, text: &str, key: i64, pos: usize, tu: usize, toks: &[Tok], c
         let (open, close) = raw_markup(d, text, &codes[n - 1]);
         let c: &mut CodeData = cmap.entry(n.to_string()).or_default();
         match kind {
-            TagKind::Open => c.open = open.clone(),
-            TagKind::Close => c.close = close.clone(),
-            _ => c.standalone = open.clone(),
+            TagKind::Open => c.set_open(open.clone()),
+            TagKind::Close => c.set_close(close.clone()),
+            _ => c.set_standalone(open.clone()),
         }
         let display = match kind {
             TagKind::Close => close.unwrap_or_default(),
@@ -854,14 +854,14 @@ pub fn document_unit(u: LocosUnit, format: &str, location: Option<(&str, i64)>) 
         None => u.key.to_string(),
     };
     let mut unit = Unit::new(id, u.source);
-    unit.codes = u.codes;
+    unit.set_codes(u.codes);
     let mut ctx = UnitContext::new().with_kind("segment").with_key((!u.unit_id.is_empty()).then_some(u.unit_id));
     if let Some((path, _)) = location {
         ctx = ctx.with_location(path.to_string());
     }
-    ctx.extra.insert(profile::P_INDEX.to_string(), p.to_string());
-    ctx.extra.insert(KEY.to_string(), u.key.to_string());
-    ctx.extra.insert("xliff.dialect".to_string(), format.to_string());
+    ctx.extra_mut().insert(profile::P_INDEX, p.to_string());
+    ctx.extra_mut().insert(KEY, u.key.to_string());
+    ctx.extra_mut().insert("xliff.dialect", format.to_string());
     unit.context = ctx;
     unit
 }
@@ -1452,7 +1452,7 @@ pub fn written_texts_escaped<'a>(units: impl Iterator<Item = &'a Unit>) -> HashM
 fn texts_of<'a>(units: impl Iterator<Item = &'a Unit>, esc: bool) -> HashMap<i64, String> {
     let mut out = HashMap::new();
     for u in units.filter(|u| u.translate) {
-        let Some(p) = u.context.extra.get(KEY).and_then(|p| p.parse::<i64>().ok()) else { continue };
+        let Some(p) = u.context.extra().get(KEY).and_then(|p| p.parse::<i64>().ok()) else { continue };
         if let Some(s) = u.segments.first().filter(|s| s.has_target()) {
             out.insert(p, tagged_text(&s.target, esc));
         }

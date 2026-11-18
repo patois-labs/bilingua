@@ -3,8 +3,8 @@
 
 use crate::lex::is_definition;
 use crate::para::{resets_id, GROUPS, RESET_ALL};
-use bilingua_model::{CodeData, Inline, TagKind};
-use std::collections::{BTreeMap, HashMap, HashSet};
+use bilingua_model::{Inline, TagKind, Unit};
+use std::collections::{HashMap, HashSet};
 
 /// Literal text to XPress Tags text: `\ < @` escaped, a line break becomes `<\n>` (a paragraph is one line),
 /// other C0 controls dropped.
@@ -36,9 +36,10 @@ struct M<'a> {
     adj_prev: bool,
 }
 
-pub fn render(codes: &BTreeMap<String, CodeData>, hidden: &BTreeMap<String, String>, new: &[Inline]) -> String {
-    let paired: HashSet<&str> = codes.iter().filter(|(_, c)| c.open.is_some()).map(|(k, _)| k.as_str()).collect();
-    let code_str = |id: &str| hidden.get(id).map(String::as_str);
+pub fn render(u: &Unit, new: &[Inline]) -> String {
+    let (codes, hidden) = (u.codes(), u.hidden_map());
+    let paired: HashSet<&str> = codes.iter().filter(|(_, c)| c.open_markup().is_some()).map(|(k, _)| k).collect();
+    let code_str = |id: &str| hidden.get(id);
     let groups: Vec<Vec<&str>> = hidden
         .get(GROUPS)
         .map(|s| s.split(';').map(|g| g.split(',').collect()).collect())
@@ -93,7 +94,7 @@ pub fn render(codes: &BTreeMap<String, CodeData>, hidden: &BTreeMap<String, Stri
         for &t in init {
             close_as.insert(t, if intact { String::new() } else { resets(t) });
         }
-        let last_close = codes.get(last).and_then(|c| c.close.clone()).unwrap_or_default();
+        let last_close = codes.get(last).and_then(|c| c.close_markup()).map(str::to_string).unwrap_or_default();
         close_as.insert(last, if intact { last_close } else if reset_all.contains(last) { "<$>".into() } else { resets(last) });
         if group.len() == 1 {
             single.insert(last);
@@ -131,11 +132,11 @@ pub fn render(codes: &BTreeMap<String, CodeData>, hidden: &BTreeMap<String, Stri
                         emptied.insert(tid);
                         continue;
                     }
-                    out.push_str(codes.get(tid).and_then(|c| c.open.as_deref()).unwrap_or(""));
+                    out.push_str(codes.get(tid).and_then(|c| c.open_markup()).unwrap_or(""));
                     continue;
                 }
                 if !m.slash && !m.pair_kind && !used.contains(tid) {
-                    if let Some(raw) = codes.get(tid).and_then(|c| c.standalone.as_deref()) {
+                    if let Some(raw) = codes.get(tid).and_then(|c| c.standalone_markup()) {
                         used.insert(tid);
                         out.push_str(raw);
                     }
@@ -147,8 +148,8 @@ pub fn render(codes: &BTreeMap<String, CodeData>, hidden: &BTreeMap<String, Stri
     // point tags the translation dropped, in source order
     let mut left: Vec<(u64, &str, &str)> = codes
         .iter()
-        .filter(|(k, c)| !k.starts_with('~') && c.standalone.is_some() && !paired.contains(k.as_str()) && !used.contains(k.as_str()))
-        .map(|(k, c)| (k.parse::<u64>().unwrap_or(u64::MAX), k.as_str(), c.standalone.as_deref().unwrap_or("")))
+        .filter(|(k, c)| !k.starts_with('~') && c.standalone_markup().is_some() && !paired.contains(*k) && !used.contains(*k))
+        .map(|(k, c)| (k.parse::<u64>().unwrap_or(u64::MAX), k, c.standalone_markup().unwrap_or("")))
         .collect();
     left.sort();
     for (_, _, raw) in left {

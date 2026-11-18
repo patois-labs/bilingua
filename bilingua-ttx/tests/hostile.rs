@@ -269,7 +269,7 @@ fn big_and_odd_inputs_are_handled() {
 #[test]
 fn a_damaged_document_is_refused_at_merge_not_panicked_on() {
     let mut d = DEFAULT.extract(include_bytes!("data/locos_suite_sample.ttx"), &opts()).unwrap();
-    d.units[0].hidden.remove("raw");
+    d.units[0].hidden_map_mut().remove("raw");
     assert!(matches!(DEFAULT.merge(&d), Err(Error::Write(_))));
     let mut d = DEFAULT.extract(include_bytes!("data/locos_suite_sample.ttx"), &opts()).unwrap();
     d.units[0].set_hidden("meta", "n\u{1f}999\u{1f}1\u{1f}2\u{1f}Tuv\u{1f}\u{1f}\u{1f}");

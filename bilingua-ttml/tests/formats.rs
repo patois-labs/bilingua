@@ -52,7 +52,7 @@ fn pseudo_translation_reads_back_with_the_same_units_and_tags() {
         assert_eq!(encoding(&after), encoding(&before), "{name}: encoding kept");
         for (i, (a, b)) in after.units.iter().zip(&before.units).enumerate() {
             assert_eq!(show(a), format!("[{}]", show(b)), "{name} unit {i}");
-            assert_eq!(a.context.extra, b.context.extra, "{name}: timing never changes");
+            assert_eq!(a.context.extra(), b.context.extra(), "{name}: timing never changes");
         }
         // and once more through the LocOS-style export (UTF-8 out)
         let utf8 = F.merge_with(&d, &bilingua_model::profile::locos().merge_options("xml")).unwrap();

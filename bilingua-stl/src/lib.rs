@@ -149,13 +149,13 @@ impl Filter for Stl {
             let n = units.len() + 1;
             let first = read::block(bytes, g.blocks[0]);
             let mut u = Unit::new(format!("c{n}"), inl);
-            u.codes = codes;
+            u.set_codes(codes);
             u.context.kind = Some("subtitle".into());
             u.context.key = Some(u16::from_le_bytes([g.sn[0], g.sn[1]]).to_string());
             u.context.location = Some(format!("block {}", g.blocks[0] + 1));
-            u.context.extra.insert("start".into(), timecode(&first[5..9]));
-            u.context.extra.insert("end".into(), timecode(&first[9..13]));
-            u.context.extra.insert("max_cpl".into(), mnc.to_string());
+            u.context.extra_mut().insert("start", timecode(&first[5..9]));
+            u.context.extra_mut().insert("end", timecode(&first[9..13]));
+            u.context.extra_mut().insert("max_cpl", mnc.to_string());
             units.push(u);
         }
         let skeleton = Skeleton::binary(bytes.to_vec(), parser_info!());

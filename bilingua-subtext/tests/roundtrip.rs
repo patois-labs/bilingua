@@ -151,12 +151,12 @@ fn units_carry_their_timing_and_stable_ids() {
     let (_, _, _, lines) = LANGS[0];
     let doc = Sbv.extract(sbv(&lines, "\n").as_bytes(), &opts()).unwrap();
     assert_eq!(doc.units.iter().map(|u| u.id.as_str()).collect::<Vec<_>>(), ["c1", "c2"]);
-    assert_eq!(doc.units[0].context.extra["start"], "0:00:01.000");
-    assert_eq!(doc.units[1].context.extra["end"], "0:00:06.000");
+    assert_eq!(&doc.units[0].context.extra()["start"], "0:00:01.000");
+    assert_eq!(&doc.units[1].context.extra()["end"], "0:00:06.000");
     assert_eq!(doc.units[0].context.kind.as_deref(), Some("subtitle"));
     let md = filter("sub").extract(mdvd(&lines, "\n").as_bytes(), &opts()).unwrap();
-    assert_eq!(md.units[0].context.extra["start"], "25");
-    assert_eq!(md.units[0].context.extra["end"], "87");
+    assert_eq!(&md.units[0].context.extra()["start"], "25");
+    assert_eq!(&md.units[0].context.extra()["end"], "87");
 }
 
 #[test]

@@ -93,7 +93,7 @@ fn extract_epub(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> 
     for (k, el) in pkg.dc_elements().iter().enumerate() {
         let mut u = dc_unit(format!("opf-{}", k + 1), el, &pkg.opf_path, &format!("epub:{}", el.name));
         if !pkg.version.is_empty() {
-            u.context.extra.insert("epub-version".into(), pkg.version.clone());
+            u.context.extra_mut().insert("epub-version", pkg.version.clone());
         }
         units.push(u);
     }

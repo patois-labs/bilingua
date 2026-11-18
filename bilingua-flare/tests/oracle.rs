@@ -60,7 +60,7 @@ fn styles_match_locos_on_the_corpus() {
         for (i, w) in want.as_array().unwrap().iter().enumerate() {
             let style = w[1].as_str().unwrap();
             let u = &d.units[i];
-            let got = u.context.extra.get("locos-style").cloned().or_else(|| u.context.style.clone().filter(|s| s.starts_with("flare:"))).unwrap_or_default();
+            let got = u.context.extra().get("locos-style").map(str::to_string).or_else(|| u.context.style.clone().filter(|s| s.starts_with("flare:"))).unwrap_or_default();
             assert_eq!(got, style, "{name} #{i}");
         }
     }

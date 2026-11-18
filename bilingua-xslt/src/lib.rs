@@ -159,13 +159,13 @@ fn build_unit(text: &str, idx: usize, p: &PUnit) -> Built {
                 let id = open_ids.get(&key).cloned().unwrap_or_default();
                 inl.push(Inline::tag(id.clone(), TagKind::Close, &text[s..e]));
                 if let Some(c) = codes.get_mut(&id) {
-                    c.close = Some(text[s..e].to_string());
+                    c.set_close(text[s..e].to_string());
                 }
             }
         }
     }
     let mut unit = Unit::new(format!("u{}", idx + 1), merge_text(inl));
-    unit.codes = codes;
+    unit.set_codes(codes);
     for (k, v) in hidden_vals {
         unit.set_hidden(k, v);
     }
@@ -552,11 +552,11 @@ fn rebuild(doc: &Document, u: &Unit, target: &[Inline], refs: CharRefs, wrap_edg
     let mut used: Vec<String> = Vec::new();
     let tvt_of = |id: &str| code(u, &format!("{TVT}{id}")).is_some_and(|v| v == "1");
     let side = |id: &str, close: bool| -> Option<String> {
-        let c = u.codes.get(id)?;
+        let c = u.codes().get(id)?;
         if close {
-            return c.close.clone();
+            return c.close_markup().map(str::to_string);
         }
-        let raw = c.open.clone().or_else(|| c.standalone.clone())?;
+        let raw = c.open_markup().or_else(|| c.standalone_markup()).map(str::to_string)?;
         if attr {
             return Some(raw);
         }
@@ -565,8 +565,8 @@ fn rebuild(doc: &Document, u: &Unit, target: &[Inline], refs: CharRefs, wrap_edg
     };
     let kind_of = |id: &str| -> Option<bool> {
         // true for a paired token
-        let c = u.codes.get(id)?;
-        Some(c.open.is_some())
+        let c = u.codes().get(id)?;
+        Some(c.open_markup().is_some())
     };
     // Text written right against a whitespace-only node the stylesheet strips would join it, so the whitespace
     // would be kept in the output and the units would merge on the next read: such edge text goes in `xsl:text`.

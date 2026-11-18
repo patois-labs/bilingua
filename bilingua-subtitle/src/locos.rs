@@ -624,11 +624,11 @@ pub fn extract(format: &'static str, text: &str, encoding: &str, opts: &ExtractO
                 Piece::Text(t) if !t.is_empty() => inl.push(Inline::Text(t)),
                 Piece::Text(_) => {}
                 Piece::Open(n, raw) => {
-                    codes.entry(n.clone()).or_insert_with(CodeData::new).open = Some(raw.clone());
+                    codes.entry(n.clone()).or_insert_with(CodeData::new).set_open(raw.clone());
                     inl.push(Inline::tag(n, TagKind::Open, raw));
                 }
                 Piece::Close(n, raw) => {
-                    codes.entry(n.clone()).or_insert_with(CodeData::new).close = Some(raw.clone());
+                    codes.entry(n.clone()).or_insert_with(CodeData::new).set_close(raw.clone());
                     inl.push(Inline::tag(n, TagKind::Close, raw));
                 }
                 Piece::Point(n, raw) => {
@@ -638,7 +638,7 @@ pub fn extract(format: &'static str, text: &str, encoding: &str, opts: &ExtractO
             }
         }
         let mut u = Unit::new(format!("u{}", units.len() + 1), inl);
-        u.codes = codes;
+        u.set_codes(codes);
         u.context.kind = Some("subtitle".into());
         units.push(u);
     }

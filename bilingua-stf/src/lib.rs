@@ -214,7 +214,7 @@ fn render_inlines(unit: &Unit, inl: &[Inline]) -> String {
         match i {
             Inline::Text(t) => escape(t, &mut s),
             Inline::Tag { id, .. } => {
-                if let Some(raw) = unit.codes.get(id).and_then(|c| c.standalone.as_deref()) {
+                if let Some(raw) = unit.codes().get(id).and_then(|c| c.standalone_markup()) {
                     s.push_str(raw);
                 }
             }
@@ -252,8 +252,9 @@ fn decoded_escape(raw: &str) -> Option<char> {
 
 /// A TRANSLATION cell as target inlines: each placeholder that matches an unused source placeholder (same text, in
 /// order) becomes that tag; any other placeholder stays text, so the cell renders back to the same bytes and the
-/// target never holds a tag its source lacks. Empty for a blank cell.
-fn target_of(cell: &str, unit_codes: &std::collections::BTreeMap<String, CodeData>, source: &[Inline]) -> Vec<Inline> {
+/// target never holds a tag its source lacks. Empty for a blank cell. The placeholders are `unit`'s codes.
+fn target_of(cell: &str, unit: &Unit, source: &[Inline]) -> Vec<Inline> {
+    let unit_codes = unit.codes();
     if !scan::has_text(cell) && scan::token_spans(cell).is_empty() {
         return vec![];
     }
@@ -261,7 +262,7 @@ fn target_of(cell: &str, unit_codes: &std::collections::BTreeMap<String, CodeDat
     let mut free: std::collections::BTreeMap<&str, std::collections::VecDeque<&str>> = std::collections::BTreeMap::new();
     for i in source {
         if let Inline::Tag { id, .. } = i {
-            if let Some(raw) = unit_codes.get(id).and_then(|c| c.standalone.as_deref()) {
+            if let Some(raw) = unit_codes.get(id).and_then(|c| c.standalone_markup()) {
                 free.entry(raw).or_default().push_back(id.as_str());
             }
         }
@@ -294,11 +295,11 @@ fn target_of(cell: &str, unit_codes: &std::collections::BTreeMap<String, CodeDat
 
 /// The target loaded from the file for this unit, if its cell is a TRANSLATION cell.
 fn loaded_target(unit: &Unit) -> Option<Vec<Inline>> {
-    let h = unit.codes.get(HIDDEN)?;
-    if h.label.as_deref() != Some(BILINGUAL) {
+    let h = unit.codes().get(HIDDEN)?;
+    if h.label() != Some(BILINGUAL) {
         return None;
     }
-    Some(target_of(h.standalone.as_deref().unwrap_or(""), &unit.codes, &unit.source()))
+    Some(target_of(h.standalone_markup().unwrap_or(""), unit, &unit.source()))
 }
 
 /// The unit has a target that is not just the translation the file already holds.
@@ -312,8 +313,8 @@ fn has_target(u: &Unit) -> bool {
 
 /// The cell text to write for a unit.
 fn render(unit: &Unit) -> String {
-    let Some(h) = unit.codes.get(HIDDEN) else { return String::new() };
-    let raw = h.standalone.as_deref().unwrap_or("");
+    let Some(h) = unit.codes().get(HIDDEN) else { return String::new() };
+    let raw = h.standalone_markup().unwrap_or("");
     if !has_target(unit) {
         return raw.to_string();
     }
@@ -323,7 +324,7 @@ fn render(unit: &Unit) -> String {
     if out_c == canon(&unit.source()) || loaded_target(unit).is_some_and(|t| canon(&t) == out_c) {
         return raw.to_string();
     }
-    format!("{}{}", h.open.as_deref().unwrap_or(""), render_inlines(unit, &out))
+    format!("{}{}", h.open_markup().unwrap_or(""), render_inlines(unit, &out))
 }
 
 /// Translations longer than the Salesforce limit of their key (the rendered cell, escapes and placeholders counted).
@@ -394,9 +395,9 @@ impl StfFilter {
                 HIDDEN.into(),
                 CodeData::new().with_open((!pad.is_empty()).then_some(pad)).with_standalone(text[a..b].to_string()).with_label(if bilingual { BILINGUAL } else { MONOLINGUAL }.to_string()),
             );
-            unit.codes = codes;
+            unit.set_codes(codes);
             if load && bilingual {
-                let target = target_of(&text[a..b], &unit.codes, &unit.segments[0].source);
+                let target = target_of(&text[a..b], &unit, &unit.segments[0].source);
                 if !target.is_empty() {
                     let ood = r.cells.get(r.dst + 1).is_some_and(|c| py_strip(c) == "*");
                     let seg = &mut unit.segments[0];
@@ -410,9 +411,9 @@ impl StfFilter {
             unit.context.max_len = max_length_for_key(r.key);
             if r.dst != r.src {
                 if let Some(t) = r.cells.get(r.dst).filter(|t| !t.is_empty()) {
-                    unit.context.extra.insert("translation".into(), t.to_string());
+                    unit.context.extra_mut().insert("translation", t.to_string());
                     if r.cells.get(r.dst + 1).is_some_and(|c| py_strip(c) == "*") {
-                        unit.context.extra.insert("out_of_date".into(), "true".into());
+                        unit.context.extra_mut().insert("out_of_date", "true");
                     }
                 }
             }

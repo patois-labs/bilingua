@@ -124,9 +124,9 @@ fn context_and_tags() {
     let u = &d.units[1];
     assert_eq!(u.context.kind.as_deref(), Some("subtitle"));
     assert_eq!(u.context.key.as_deref(), Some("2"));
-    assert_eq!(u.context.extra["start"], "10:00:04:00");
-    assert_eq!(u.context.extra["end"], "10:00:06:00");
-    assert_eq!(u.context.extra["max_cpl"], "40");
+    assert_eq!(&u.context.extra()["start"], "10:00:04:00");
+    assert_eq!(&u.context.extra()["end"], "10:00:06:00");
+    assert_eq!(&u.context.extra()["max_cpl"], "40");
     let tags: Vec<&Inline> = u.segments[0].source.iter().filter(|i| matches!(i, Inline::Tag { .. })).collect();
     assert_eq!(tags.len(), 2);
     for t in &tags {
@@ -135,8 +135,8 @@ fn context_and_tags() {
             _ => unreachable!(),
         }
     }
-    assert_eq!(u.codes["1"].standalone.as_deref(), Some("<01>"));
-    assert_eq!(u.codes["1"].label.as_deref(), Some("colour red"));
+    assert_eq!(u.codes()["1"].standalone_markup(), Some("<01>"));
+    assert_eq!(u.codes()["1"].label(), Some("colour red"));
     // a tag the translator moved still maps to its own code byte
     let mut d = ex(&data);
     d.set_target("c2", from_locos("\u{27E6}x2\u{27E7}Zweite \u{27E6}x1\u{27E7}Zeile")).unwrap();

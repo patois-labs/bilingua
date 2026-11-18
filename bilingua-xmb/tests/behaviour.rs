@@ -267,7 +267,7 @@ fn notes_cap_and_attribute_normalisation() {
     let d = Xmb.extract(xmb.as_bytes(), &opts()).unwrap();
     assert_eq!(d.units[0].context.notes[0].chars().count(), 2000);
     assert!(d.units[1].context.notes.is_empty());
-    assert_eq!(d.units[0].context.extra["meaning"], "a b c");
+    assert_eq!(&d.units[0].context.extra()["meaning"], "a b c");
 }
 
 #[test]

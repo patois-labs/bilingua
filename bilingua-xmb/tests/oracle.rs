@@ -19,7 +19,7 @@ fn units_match_locos_on_every_corpus_file() {
         let d = ex(&file(name));
         let want: Vec<(String, String)> =
             units.as_array().unwrap().iter().map(|p| (p[0].to_string(), p[1].as_str().unwrap().to_string())).collect();
-        let got: Vec<(String, String)> = d.units.iter().map(|u| (u.context.extra["index"].clone(), locos(u))).collect();
+        let got: Vec<(String, String)> = d.units.iter().map(|u| (u.context.extra()["index"].to_string(), locos(u))).collect();
         assert_eq!(got, want, "{name}");
         total += want.len();
     }

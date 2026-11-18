@@ -31,7 +31,7 @@ pub use doc::{detect, Doc, SegView};
 pub use error::Error;
 pub use inline::{RawTag, TagDef, TagDefs};
 
-use bilingua_model::{Document, ExtractOptions, Filter, Granularity, Inline, MergeOptions, SegState, Segment, SkelPart, Skeleton, TagKind, Unit};
+use bilingua_model::{CodeData, Document, ExtractOptions, Filter, Granularity, Inline, MergeOptions, SegState, Segment, SkelPart, Skeleton, TagKind, Unit};
 use std::collections::{HashMap, HashSet};
 
 /// The unit ids and segment ids [`to_document`] gives an open file, one unit id per trans-unit (`Doc` unit
@@ -202,7 +202,7 @@ pub fn to_document_in(
                 u.segments.clear();
                 u.context.kind = Some("segment".into());
                 u.context.key = Some(v.unit_id.to_string());
-                u.context.extra.insert("xliff.dialect".into(), doc.format().name().into());
+                u.context.extra_mut().insert("xliff.dialect", doc.format().name());
                 u.notes = doc.unit_notes(v.unit_ix).to_vec();
                 units.push(u);
                 unit_of[v.unit_ix] = Some(units.len() - 1);
@@ -214,14 +214,14 @@ pub fn to_document_in(
             u.separators.push(String::new());
         }
         if let Some(n) = v.native_state {
-            u.context.extra.insert(format!("xliff.state.{sid}"), n.to_string());
+            u.context.extra_mut().insert(format!("xliff.state.{sid}"), n.to_string());
         }
         for r in v.raws {
-            let c = u.codes.entry(r.id.clone()).or_default();
+            let c = u.codes_mut().get_or_insert_with(r.id.clone(), CodeData::default);
             match r.kind {
-                TagKind::Open => c.open = Some(r.raw.clone()),
-                TagKind::Close => c.close = Some(r.raw.clone()),
-                TagKind::Standalone => c.standalone = Some(r.raw.clone()),
+                TagKind::Open => c.set_open(r.raw.clone()),
+                TagKind::Close => c.set_close(r.raw.clone()),
+                TagKind::Standalone => c.set_standalone(r.raw.clone()),
             }
         }
         if v.locked {
@@ -242,7 +242,7 @@ pub fn to_document_in(
                 let sid = u.segments[si].id.clone();
                 u.segments[si].state = SegState::Locked;
                 if let Some(r) = reason {
-                    u.context.extra.insert(format!("xliff.lock.{sid}"), r);
+                    u.context.extra_mut().insert(format!("xliff.lock.{sid}"), r);
                 }
             }
         }

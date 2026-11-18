@@ -11,7 +11,7 @@ fn member(units: &[&str]) -> Vec<u8> {
 }
 
 fn p_indexes(d: &bilingua_model::Document) -> Vec<String> {
-    d.units.iter().map(|u| u.context.extra[profile::P_INDEX].clone()).collect()
+    d.units.iter().map(|u| u.context.extra()[profile::P_INDEX].to_string()).collect()
 }
 
 #[test]

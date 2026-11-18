@@ -30,7 +30,7 @@ fn arabic_xliff12_reads_states_notes_origin_locks_and_free_codes() {
     assert_eq!((o.kind, o.match_pct), (OriginKind::Tm, Some(100)));
     assert_eq!(u1.notes[0].text, "Menu item");
     assert_eq!(u1.notes[0].author.as_deref(), Some("ana"));
-    assert!(u1.codes.contains_key("1"));
+    assert!(u1.codes().contains_key("1"));
     let (u2, s2) = d.find("u2").unwrap();
     assert_eq!(s2.state, SegState::New);
     assert!(s2.source.iter().any(|i| matches!(i, Inline::Tag { id, free: true, .. } if id == "2")));

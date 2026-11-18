@@ -254,10 +254,10 @@ fn ids_context_and_locked_comments() {
     assert_eq!(ids, ["l3", "l13", "l15", "l16", "l18"]);
     let d = &a.units[1];
     assert_eq!(d.context.kind.as_deref(), Some("subtitle"));
-    assert_eq!(d.context.extra.get("start").map(String::as_str), Some("0:00:01.00"));
-    assert_eq!(d.context.extra.get("end").map(String::as_str), Some("0:00:04.00"));
-    assert_eq!(d.context.extra.get("style").map(String::as_str), Some("Default"));
-    assert_eq!(d.context.extra.get("name").map(String::as_str), Some("Anna"));
+    assert_eq!(d.context.extra().get("start"), Some("0:00:01.00"));
+    assert_eq!(d.context.extra().get("end"), Some("0:00:04.00"));
+    assert_eq!(d.context.extra().get("style"), Some("Default"));
+    assert_eq!(d.context.extra().get("name"), Some("Anna"));
     assert_eq!(a.units[0].context.kind.as_deref(), Some("title"));
     // locked comments on request
     let o = ExtractOptions::new().with_include_locked(true);

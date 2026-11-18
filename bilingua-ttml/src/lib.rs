@@ -68,7 +68,7 @@ impl Ttml {
             guard::check_unit_count(units.len() + 1, limits)?;
             let prefix = cap.qname.rsplit_once(':').map(|(p, _)| format!("{p}:")).unwrap_or_default();
             let mut u = Unit::new(format!("p{}", idx + 1), inl);
-            u.codes = codes;
+            u.set_codes(codes);
             u.set_hidden(RAW, content);
             u.set_hidden(META, format!("{idx}|{}|{prefix}br", u8::from(cap.preserve)));
             line += text.as_bytes()[counted..cap.content_start].iter().filter(|b| **b == b'\n').count();
@@ -77,13 +77,13 @@ impl Ttml {
             u.context.style = cap.attrs.style.clone();
             if opts.is_profile(profile::LOCOS) {
                 // LocOS `_units`: p_index is the caption's position among every caption <p>, a blank one counted
-                u.context.extra.insert(profile::P_INDEX.into(), idx.to_string());
+                u.context.extra_mut().insert(profile::P_INDEX, idx.to_string());
             }
             u.context.key = cap.attrs.xml_id.clone();
             u.context.location = Some(format!("line {line}"));
             for (k, v) in [("begin", &cap.attrs.begin), ("end", &cap.attrs.end), ("dur", &cap.attrs.dur), ("region", &cap.attrs.region)] {
                 if let Some(v) = v {
-                    u.context.extra.insert(k.into(), v.clone());
+                    u.context.extra_mut().insert(k, v.clone());
                 }
             }
             if cap.content_start > pos {
@@ -180,7 +180,7 @@ impl Filter for Ttml {
             let original = &orig[*start..*end];
             let lead = &original[..original.len() - bilingua_model::py_lstrip(original).len()];
             let trail = &original[bilingua_model::py_rstrip(original).len()..];
-            let mut body = inline::render(new, &u.codes, br);
+            let mut body = inline::render(new, u, br);
             if let (Some(t), false) = (&tag, src.is_empty()) {
                 body = relang_tags(&body, &src, t);
             }

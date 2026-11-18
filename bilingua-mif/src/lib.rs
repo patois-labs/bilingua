@@ -288,7 +288,7 @@ impl Filter for Mif {
                     line += text.as_bytes()[line_pos..s].iter().filter(|&&b| b == b'\n').count();
                     line_pos = s;
                     let mut u = Unit::new(format!("u{}", units.len() + 1), su.inlines);
-                    u.codes = su.codes;
+                    u.set_codes(su.codes);
                     u.context.kind = Some(su.kind.into());
                     u.context.style = su.style.filter(|s| !s.is_empty());
                     u.context.location = Some(format!("line {line}"));
@@ -312,7 +312,7 @@ impl Filter for Mif {
                 .count();
             line_pos = s;
             let mut u = Unit::new(format!("u{}", units.len() + 1), a.inlines);
-            u.codes = a.codes;
+            u.set_codes(a.codes);
             u.context.kind = Some("paragraph".into());
             if !a.style.is_empty() {
                 u.context.style = Some(a.style);
@@ -367,9 +367,9 @@ impl Filter for Mif {
                         .units
                         .get(*i)
                         .ok_or_else(|| Error::Write(format!("no unit {i}")))?;
-                    let string = u.codes.get(strs::STR_HIDDEN).and_then(|h| h.standalone.as_deref());
+                    let string = u.codes().get(strs::STR_HIDDEN).and_then(|h| h.standalone_markup());
                     let original = string
-                        .or_else(|| u.codes.get(HIDDEN).and_then(|h| h.standalone.as_deref()))
+                        .or_else(|| u.codes().get(HIDDEN).and_then(|h| h.standalone_markup()))
                         .ok_or_else(|| Error::Write(format!("unit {} lost its paragraph", u.id)))?;
                     if u.segments.iter().any(|s| s.has_target()) {
                         translated = true;

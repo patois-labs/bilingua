@@ -53,7 +53,7 @@ fn units_tokens_notes() {
     // msg 5 (placeholder only) and msg 7 (duplicate id) are not units
     assert_eq!(d.format, "xmb");
     assert_eq!(d.units.len(), 6);
-    let idx: Vec<&str> = d.units.iter().map(|u| u.context.extra["index"].as_str()).collect();
+    let idx: Vec<&str> = d.units.iter().map(|u| &u.context.extra()["index"]).collect();
     assert_eq!(idx, ["0", "1", "2", "3", "4", "6"]);
     let t = texts(&d);
     assert_eq!(t[0], "Hello i18n!");

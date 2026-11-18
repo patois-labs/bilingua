@@ -310,7 +310,7 @@ fn raster_extract(bytes: &[u8], kind: Kind, opts: &ExtractOptions) -> Result<Doc
                 let mut u = Unit::new(format!("u{}", i + 1), vec![Inline::text(r.text.clone())]);
                 u.context.kind = Some("region".into());
                 u.context.location = Some(format!("{},{},{},{}", r.bbox[0], r.bbox[1], r.bbox[2], r.bbox[3]));
-                u.context.extra.insert("image_region".into(), region::contract_json(i, r));
+                u.context.extra_mut().insert("image_region", region::contract_json(i, r));
                 units.push(u);
             }
         }

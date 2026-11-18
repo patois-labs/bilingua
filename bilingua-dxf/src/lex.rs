@@ -361,8 +361,9 @@ fn escape(s: &str, kind: Kind, out: &mut String) {
 /// (a point, or a brace written only with its partner), with any other letter (`p`, which this format never writes)
 /// it is dropped; the text on each side of it is escaped on its own, as LocOS does. A look-alike naming no code stays
 /// text everywhere.
-pub fn render(target: &[Inline], codes: &BTreeMap<String, CodeData>, kind: Kind, locos: bool) -> String {
-    let items = pieces(target, codes, locos);
+pub fn render(target: &[Inline], unit: &Unit, kind: Kind, locos: bool) -> String {
+    let codes = unit.codes();
+    let items = pieces(target, unit, locos);
     let mut opens: HashSet<&str> = HashSet::new();
     let mut closes: HashSet<&str> = HashSet::new();
     for i in &items {
@@ -392,13 +393,13 @@ pub fn render(target: &[Inline], codes: &BTreeMap<String, CodeData>, kind: Kind,
             Piece::Text(t) => escape(t, kind, &mut piece),
             Piece::Tag(id, k) => {
                 let Some(c) = codes.get(*id) else { continue };
-                if let Some(raw) = &c.standalone {
+                if let Some(raw) = c.standalone_markup() {
                     piece.push_str(raw);
-                    code = Some(raw.as_str());
+                    code = Some(raw);
                 } else if *k == TagKind::Open && closes.contains(id) {
-                    piece.push_str(c.open.as_deref().unwrap_or("{"));
+                    piece.push_str(c.open_markup().unwrap_or("{"));
                 } else if *k == TagKind::Close && opens.contains(id) {
-                    piece.push_str(c.close.as_deref().unwrap_or("}"));
+                    piece.push_str(c.close_markup().unwrap_or("}"));
                 }
             }
         }
@@ -427,7 +428,8 @@ enum Piece<'a> {
 /// The translation as pieces. Under the LocOS profile a text run is split at each token look-alike that names a
 /// code (`⟦x1⟧`, `⟦/g2⟧`, LocOS `_PLACEHOLDER_RE` and `code_tokens`): `x` / `g` give that code (a closing mark of a
 /// point code too, as LocOS), other letters nothing.
-fn pieces<'a>(target: &'a [Inline], codes: &'a BTreeMap<String, CodeData>, locos: bool) -> Vec<Piece<'a>> {
+fn pieces<'a>(target: &'a [Inline], unit: &'a Unit, locos: bool) -> Vec<Piece<'a>> {
+    let codes = unit.codes();
     let mut out = Vec::with_capacity(target.len());
     for i in target {
         match i {
@@ -440,7 +442,7 @@ fn pieces<'a>(target: &'a [Inline], codes: &'a BTreeMap<String, CodeData>, locos
                     out.push(Piece::Text(&t[at..s]));
                     at = e;
                     if matches!(letter, Some('x') | Some('g')) {
-                        let k = if c.standalone.is_some() {
+                        let k = if c.standalone_markup().is_some() {
                             TagKind::Standalone
                         } else if closing {
                             TagKind::Close

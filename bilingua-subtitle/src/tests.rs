@@ -25,9 +25,9 @@ fn srt_round_trip_and_units() {
     assert_eq!(u.id, "c1");
     assert_eq!(u.context.kind.as_deref(), Some("subtitle"));
     assert_eq!(u.context.key.as_deref(), Some("1"));
-    assert_eq!(u.context.extra["start"], "00:00:01,000");
-    assert_eq!(u.context.extra["end"], "00:00:03,500");
-    assert_eq!(u.context.extra["max_cpl"], "42");
+    assert_eq!(&u.context.extra()["start"], "00:00:01,000");
+    assert_eq!(&u.context.extra()["end"], "00:00:03,500");
+    assert_eq!(&u.context.extra()["max_cpl"], "42");
     assert_eq!(plain_text(&u.segments[0].source), "Welcome to Larchmoor.The kettle is ready.");
     // b open/close, line break standalone, i open/close
     let shown: Vec<String> = u.segments[0]
@@ -36,10 +36,10 @@ fn srt_round_trip_and_units() {
         .filter_map(|i| if let Inline::Tag { display, .. } = i { Some(display.clone()) } else { None })
         .collect();
     assert_eq!(shown, ["<b>", "</b>", "\u{21b5}", "<i>", "</i>"]);
-    assert_eq!(u.codes["1"].label.as_deref(), Some("bold"));
-    assert_eq!(d.units[1].context.extra["settings"], "X1:100 X2:200");
+    assert_eq!(u.codes()["1"].label(), Some("bold"));
+    assert_eq!(&d.units[1].context.extra()["settings"], "X1:100 X2:200");
     assert_eq!(text_of(&d, "c2"), "Top line &amp; more", "SRT text is not entity-decoded");
-    assert_eq!(d.units[2].codes["1"].label.as_deref(), Some("font"));
+    assert_eq!(d.units[2].codes()["1"].label(), Some("font"));
     assert_eq!(d.units[3].context.key.as_deref(), Some("4"));
 }
 
@@ -95,8 +95,8 @@ fn vtt_round_trip_and_units() {
     assert_eq!(d.units.len(), 3, "NOTE, STYLE, REGION and header are skeleton");
     let u = &d.units[0];
     assert_eq!(u.context.key.as_deref(), Some("intro"));
-    assert_eq!(u.context.extra["start"], "00:00:01.000");
-    assert_eq!(u.context.extra["settings"], "align:start position:10%");
+    assert_eq!(&u.context.extra()["start"], "00:00:01.000");
+    assert_eq!(&u.context.extra()["settings"], "align:start position:10%");
     assert_eq!(plain_text(&u.segments[0].source), "Welcome to Larchmoor & friends.Second line.");
     let shown: Vec<String> = u.segments[0]
         .source
@@ -104,11 +104,11 @@ fn vtt_round_trip_and_units() {
         .filter_map(|i| if let Inline::Tag { display, .. } = i { Some(display.clone()) } else { None })
         .collect();
     assert_eq!(shown, ["<v Brent>", "<b>", "</b>", "\u{21b5}", "<i>", "</i>"]);
-    assert_eq!(u.codes["1"].label.as_deref(), Some("voice"));
+    assert_eq!(u.codes()["1"].label(), Some("voice"));
     // No identifier: the cue number is the key. Class span and timestamp.
     let second = &d.units[1];
     assert_eq!(second.context.key.as_deref(), Some("2"));
-    let labels: Vec<&str> = second.codes.values().filter_map(|c| c.label.as_deref()).collect();
+    let labels: Vec<&str> = second.codes().values().filter_map(|c| c.label()).collect();
     assert!(labels.contains(&"class") && labels.contains(&"timestamp"), "{labels:?}");
     // Unclosed voice and bold become standalone tags.
     let third = &d.units[2];
@@ -274,8 +274,8 @@ fn srt_word_timing_marks_are_codes_not_text() {
     let mut d = srt(s);
     assert_eq!(String::from_utf8(Srt.merge(&d).unwrap()).unwrap(), s);
     assert_eq!(text_of(&d, "c1"), "We are ourselves.");
-    let stamp = d.units[0].codes.values().find(|c| c.label.as_deref() == Some("timestamp")).expect("a timestamp code");
-    assert_eq!(stamp.standalone.as_deref(), Some("<00:00:04.480>"));
+    let stamp = d.units[0].codes().values().find(|c| c.label() == Some("timestamp")).expect("a timestamp code");
+    assert_eq!(stamp.standalone_markup(), Some("<00:00:04.480>"));
     // something that only looks like a stamp stays text
     assert_eq!(text_of(&d, "c2"), "Stays <1:2> text and bold");
     let mut t = d.units[0].segments[0].source.clone();

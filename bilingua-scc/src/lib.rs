@@ -216,16 +216,16 @@ impl Filter for SccFilter {
             guard::check_unit_count(n, &limits)?;
             let (inl, codes) = atoms_to_inlines(&atoms, &line);
             let mut u = Unit::new(format!("c{n}"), inl);
-            u.codes = codes;
+            u.set_codes(codes);
             u.set_hidden(RAW, content);
             u.set_hidden(STATE, before.to_text());
             u.context.kind = Some("subtitle".into());
             u.context.key = Some(cap.tc.to_string());
             u.context.location = Some(format!("line {lineno}"));
-            u.context.extra.insert("start".into(), cap.tc.to_string());
-            u.context.extra.insert("mode".into(), line.mode.word().into());
-            u.context.extra.insert("rows".into(), line.rows.len().to_string());
-            u.context.extra.insert("max_cpl".into(), ROW_CELLS.to_string());
+            u.context.extra_mut().insert("start", cap.tc.to_string());
+            u.context.extra_mut().insert("mode", line.mode.word());
+            u.context.extra_mut().insert("rows", line.rows.len().to_string());
+            u.context.extra_mut().insert("max_cpl", ROW_CELLS.to_string());
             units.push(u);
             spans.push((*s, *e));
         }

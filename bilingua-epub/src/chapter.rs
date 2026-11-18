@@ -154,7 +154,7 @@ impl Chapter {
                     None => self.path.clone(),
                 });
                 if let Some(st) = a11y_style(&u).map(str::to_string) {
-                    u.context.extra.insert("locos-style".into(), st);
+                    u.context.extra_mut().insert("locos-style", st);
                 }
                 u
             })

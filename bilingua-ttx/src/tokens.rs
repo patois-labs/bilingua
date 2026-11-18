@@ -2,7 +2,7 @@
 //! LocOS tokens (`g` pairs, `x` points), and the writer that puts a translation back using the source's own bytes.
 
 use crate::xml::{line_ends, text_value, Kid, Kind, Tree};
-use bilingua_model::{merge_text, CodeData, Inline, TagKind};
+use bilingua_model::{merge_text, CodeData, Inline, TagKind, Unit};
 use std::collections::{BTreeMap, HashMap, HashSet};
 
 pub struct Tok {
@@ -163,9 +163,9 @@ fn visit(tree: &Tree, text: &str, el: usize, t: &mut Tok, n: &mut usize) {
 /// source does not have gets a new id `tN` and its own code.
 pub fn map_target(src: &BTreeMap<String, CodeData>, tgt: Tok) -> (Vec<Inline>, BTreeMap<String, CodeData>) {
     let key = |c: &CodeData| -> (bool, String, String) {
-        match (&c.open, &c.close, &c.standalone) {
-            (Some(o), Some(cl), _) => (true, o.clone(), cl.clone()),
-            (_, _, Some(s)) => (false, s.clone(), String::new()),
+        match (c.open_markup(), c.close_markup(), c.standalone_markup()) {
+            (Some(o), Some(cl), _) => (true, o.to_string(), cl.to_string()),
+            (_, _, Some(s)) => (false, s.to_string(), String::new()),
             _ => (false, String::new(), String::new()),
         }
     };
@@ -240,8 +240,9 @@ fn sanitize(s: &str) -> String {
 
 /// The XML content for a translation, using the source's own bytes for every code. Tags the source does not have,
 /// repeated tags and stray closes are dropped and anything left open is closed, so the result is well-formed.
-/// `None` when nothing but white space is left.
-pub fn render(inl: &[Inline], codes: &BTreeMap<String, CodeData>, crlf: bool) -> Option<String> {
+/// `None` when nothing but white space is left. The codes are `unit`'s.
+pub fn render(inl: &[Inline], unit: &Unit, crlf: bool) -> Option<String> {
+    let codes = unit.codes();
     let cleaned: Vec<Inline> = inl
         .iter()
         .map(|i| match i {
@@ -274,11 +275,11 @@ pub fn render(inl: &[Inline], codes: &BTreeMap<String, CodeData>, crlf: bool) ->
                             }
                         }
                     }
-                    TagKind::Open => match c {
-                        Some(CodeData { open: Some(o), close, .. }) if !used.contains(id.as_str()) => {
+                    TagKind::Open => match c.and_then(|c| c.open_markup().map(|o| (o, c.close_markup()))) {
+                        Some((o, close)) if !used.contains(id.as_str()) => {
                             used.insert(id.as_str());
                             out.push_str(o);
-                            stack.push((id.as_str(), Some(close.as_deref().unwrap_or(""))));
+                            stack.push((id.as_str(), Some(close.unwrap_or(""))));
                         }
                         _ => stack.push((id.as_str(), None)),
                     },
@@ -286,9 +287,9 @@ pub fn render(inl: &[Inline], codes: &BTreeMap<String, CodeData>, crlf: bool) ->
                         if used.contains(id.as_str()) {
                             continue;
                         }
-                        match c {
-                            Some(CodeData { standalone: Some(s), .. }) => out.push_str(s),
-                            Some(CodeData { open: Some(o), close: Some(cl), .. }) => {
+                        match c.map(|c| (c.standalone_markup(), c.open_markup(), c.close_markup())) {
+                            Some((Some(s), _, _)) => out.push_str(s),
+                            Some((_, Some(o), Some(cl))) => {
                                 out.push_str(o);
                                 out.push_str(cl);
                             }

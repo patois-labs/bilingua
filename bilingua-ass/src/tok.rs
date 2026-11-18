@@ -366,7 +366,7 @@ pub(crate) fn tokenize(text: &str) -> Option<Tokenized> {
                 // the source block (a `{\r}` also resets colours and fonts set in between)
                 let close = if !many || o == outermost { s.to_string() } else { toggle_reset(&text[pieces[o].a..pieces[o].b]) };
                 if let Some(c) = codes.get_mut(&tid) {
-                    c.close = Some(close.clone());
+                    c.set_close(close.clone());
                 }
                 inlines.push(Inline::tag(tid, TagKind::Close, close));
             }

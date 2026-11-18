@@ -237,7 +237,7 @@ fn extract(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
                 }
                 let Some(tk) = tok::tokenize(field) else { continue };
                 let mut u = Unit::new(format!("l{}", lineno + 1), tk.inlines);
-                u.codes = tk.codes;
+                u.set_codes(tk.codes);
                 let core = &field[tk.prefix_len..field.len() - tk.suffix_len];
                 u.set_hidden(RAW, core.to_string());
                 u.set_hidden(KIND, "event");
@@ -245,7 +245,7 @@ fn extract(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Error> {
                 u.context.key = Some(event_no.to_string());
                 u.context.location = Some(format!("line {}", lineno + 1));
                 fields_context(&mut u, &rest[..field_at], &names);
-                u.context.extra.insert("max_cpl".into(), DEFAULT_MAX_CPL.into());
+                u.context.extra_mut().insert("max_cpl", DEFAULT_MAX_CPL);
                 if is_comment {
                     u.translate = false;
                     u.lock_reason = Some("Comment line".into());
@@ -314,11 +314,11 @@ fn fields_context(u: &mut Unit, before_text: &str, names: &[String]) {
         };
         let v = py_strip(value);
         if !v.is_empty() {
-            u.context.extra.insert(key.into(), v.to_string());
+            u.context.extra_mut().insert(key, v.to_string());
         }
     }
-    if let Some(style) = u.context.extra.get("style") {
-        u.context.style = Some(style.clone());
+    if let Some(style) = u.context.extra().get("style").map(str::to_string) {
+        u.context.style = Some(style);
     }
 }
 
@@ -401,7 +401,7 @@ fn render_event(u: &Unit) -> String {
     let close = |out: &mut Vec<Out>, id: &str, mark: usize| {
         if out.len() == mark {
             out.truncate(mark - 1); // nothing between: no switch around nothing
-        } else if let Some(c) = u.codes.get(id).and_then(|c| c.close.clone()) {
+        } else if let Some(c) = u.codes().get(id).and_then(|c| c.close_markup()).map(str::to_string) {
             out.push(Out { text: false, s: c });
         }
     };
@@ -413,12 +413,12 @@ fn render_event(u: &Unit) -> String {
                 }
             }
             Inline::Tag { id, kind, .. } => {
-                let Some(c) = u.codes.get(&id) else { continue };
+                let Some(c) = u.codes().get(&id) else { continue };
                 match kind {
                     TagKind::Open => {
-                        if let Some(o) = c.open.as_ref() {
+                        if let Some(o) = c.open_markup() {
                             if used.insert((id.clone(), kind)) {
-                                out.push(Out { text: false, s: o.clone() });
+                                out.push(Out { text: false, s: o.to_string() });
                                 stack.push((id, out.len()));
                             }
                         }
@@ -431,9 +431,9 @@ fn render_event(u: &Unit) -> String {
                         }
                     }
                     TagKind::Standalone => {
-                        if let Some(s) = c.standalone.as_ref() {
+                        if let Some(s) = c.standalone_markup() {
                             if used.insert((id, kind)) {
-                                out.push(Out { text: false, s: s.clone() });
+                                out.push(Out { text: false, s: s.to_string() });
                             }
                         }
                     }

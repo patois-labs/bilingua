@@ -3,7 +3,7 @@
 
 use crate::text::{esc_text, xml_target_text};
 use crate::xml::py_strip;
-use bilingua_model::{CodeData, Inline, TagKind};
+use bilingua_model::{CodeData, Inline, TagKind, Unit};
 use std::collections::{BTreeMap, HashMap, HashSet};
 
 /// What a walker found, in order.
@@ -140,8 +140,9 @@ pub fn flat(v: &[Inline]) -> String {
 /// Writes a translation as XML content: text escaped, every code taken from the source's table. A code the source
 /// does not have, or a second use of one, is dropped; a stray close is ignored; whatever is left open is closed,
 /// so the result is always well-formed. Leading and trailing white space of the translation is replaced by the
-/// source's own (`lead`, `trail`).
-pub fn render(target: &[Inline], codes: &BTreeMap<String, CodeData>, lead: &str, trail: &str) -> String {
+/// source's own (`lead`, `trail`). The codes are `unit`'s.
+pub fn render(target: &[Inline], unit: &Unit, lead: &str, trail: &str) -> String {
+    let codes = unit.codes();
     let mut items: Vec<Inline> = Vec::with_capacity(target.len());
     for i in target {
         match i {
@@ -164,8 +165,8 @@ pub fn render(target: &[Inline], codes: &BTreeMap<String, CodeData>, lead: &str,
             Inline::Tag { id, kind, .. } => {
                 let code = codes.get(id.as_str());
                 match kind {
-                    TagKind::Open => match code {
-                        Some(CodeData { open: Some(o), close: Some(c), .. }) if !used.contains(id.as_str()) => {
+                    TagKind::Open => match code.map(|c| (c.open_markup(), c.close_markup())) {
+                        Some((Some(o), Some(c))) if !used.contains(id.as_str()) => {
                             used.insert(id);
                             out.push_str(o);
                             stack.push((id, Some(c)));
@@ -183,13 +184,13 @@ pub fn render(target: &[Inline], codes: &BTreeMap<String, CodeData>, lead: &str,
                         if used.contains(id.as_str()) {
                             continue;
                         }
-                        match code {
-                            Some(CodeData { standalone: Some(s), .. }) => {
+                        match code.map(|c| (c.standalone_markup(), c.open_markup(), c.close_markup())) {
+                            Some((Some(s), _, _)) => {
                                 used.insert(id);
                                 out.push_str(s);
                             }
                             // a paired element used as a point is written empty
-                            Some(CodeData { open: Some(o), close: Some(c), .. }) => {
+                            Some((_, Some(o), Some(c))) => {
                                 used.insert(id);
                                 out.push_str(o);
                                 out.push_str(c);

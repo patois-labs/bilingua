@@ -292,7 +292,7 @@ fn extract(fmt: &'static str, bytes: &[u8], opts: &ExtractOptions) -> Result<Doc
     let mut cursor = 0;
     for (i, s) in slots.into_iter().enumerate() {
         let mut u = Unit::new(format!("c{}", i + 1), s.inl);
-        u.codes = s.codes;
+        u.set_codes(s.codes);
         u.set_hidden(RAW, &text[s.start..s.end]);
         u.set_hidden(KIND, dialect.kind());
         u.set_hidden(JOINER, &s.joiner);
@@ -305,9 +305,9 @@ fn extract(fmt: &'static str, bytes: &[u8], opts: &ExtractOptions) -> Result<Doc
         u.context.kind = Some("subtitle".into());
         u.context.key = Some((i + 1).to_string());
         u.context.location = Some(format!("line {}", s.line));
-        u.context.extra.insert("start".into(), s.t0);
-        u.context.extra.insert("end".into(), s.t1);
-        u.context.extra.insert("max_cpl".into(), DEFAULT_MAX_CPL.into());
+        u.context.extra_mut().insert("start", s.t0);
+        u.context.extra_mut().insert("end", s.t1);
+        u.context.extra_mut().insert("max_cpl", DEFAULT_MAX_CPL);
         units.push(u);
         if s.start > cursor {
             parts.push(SkelPart::Raw(text[cursor..s.start].to_string()));
@@ -387,7 +387,7 @@ fn write_unit(u: &Unit, cue: usize, out: &mut String) -> Result<bool, Error> {
     let r = match kind {
         "mdvd" => {
             let heads: HashSet<&str> = get(u, HEADS).map(|h| h.split(',').collect()).unwrap_or_default();
-            mdvd::render(&new, &u.codes, &heads, get(u, FPS).is_some())
+            mdvd::render(&new, u, &heads, get(u, FPS).is_some())
         }
         k => render_block(&new, joiner, k == "sv"),
     };

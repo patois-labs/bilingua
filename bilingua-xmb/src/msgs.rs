@@ -188,7 +188,7 @@ fn analyse(text: &str, tree: &Tree, el: &Elem) -> Msg {
                 if let Some(s) = start_of[ph_i] {
                     let id = token_of[&s].clone();
                     if let Some(c) = codes.get_mut(&id) {
-                        c.close = Some(raw);
+                        c.set_close(raw);
                     }
                     inl.push(Inline::tag(id, TagKind::Close, display));
                 } else {
@@ -329,7 +329,7 @@ pub fn extract(bytes: &[u8], opts: &ExtractOptions, limits: &Limits) -> Result<D
         let m = &parsed.msgs[mi];
         guard::check_unit_count(units.len() + 1, limits)?;
         let mut u = Unit::new(format!("u{}", units.len() + 1), m.inl.clone());
-        u.codes = m.codes.clone();
+        u.set_codes(m.codes.clone());
         u.set_hidden(RAW, &text[m.open_end..m.close_start]);
         u.set_hidden(LEAD, &m.lead);
         u.set_hidden(TRAIL, &m.trail);
@@ -339,17 +339,17 @@ pub fn extract(bytes: &[u8], opts: &ExtractOptions, limits: &Limits) -> Result<D
         if !m.note.is_empty() {
             u.context.notes.push(m.note.clone());
         }
-        u.context.extra.insert("index".into(), mi.to_string());
+        u.context.extra_mut().insert("index", mi.to_string());
         if opts.is_profile(profile::LOCOS) {
             // LocOS `_parse`: p_index is the message's position among every message of the bundle (a duplicate id
             // or a placeholder-only message is skipped but counted), so a skipped message never renumbers the rest
-            u.context.extra.insert(profile::P_INDEX.into(), mi.to_string());
+            u.context.extra_mut().insert(profile::P_INDEX, mi.to_string());
         }
         if let Some(d) = &m.desc {
-            u.context.extra.insert("description".into(), d.clone());
+            u.context.extra_mut().insert("description", d.clone());
         }
         if let Some(d) = &m.meaning {
-            u.context.extra.insert("meaning".into(), d.clone());
+            u.context.extra_mut().insert("meaning", d.clone());
         }
         parts.push(SkelPart::Raw(text[pos..m.open_end].to_string()));
         parts.push(SkelPart::Unit(units.len()));
@@ -382,7 +382,7 @@ pub fn write_xtb_unit(u: &Unit, out: &mut String) {
         return;
     }
     out.push_str(&raw_of(u, LEAD));
-    out.push_str(&render(&u.codes, &new, true));
+    out.push_str(&render(|id| u.codes().get(id), &new, true));
     out.push_str(&raw_of(u, TRAIL));
 }
 
@@ -430,8 +430,8 @@ pub fn xtb_from_xmb(original: &str, doc: &Document, limits: &Limits) -> Result<S
             continue;
         }
         let body = match unit_of.get(&i) {
-            Some(u) => render(&u.codes, &u.output(), false),
-            None => render(&m.codes, &m.inl, false),
+            Some(u) => render(|id| u.codes().get(id), &u.output(), false),
+            None => render(|id| m.codes.get(id), &m.inl, false),
         };
         out.push_str(&format!("  <translation id=\"{}\">{}{}{}</translation>\n", escape_attr(id, b'"'), m.lead, body, m.trail));
     }

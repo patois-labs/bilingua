@@ -14,7 +14,7 @@ fn with_target(f: &dyn Filter, src: &str, target: &str) -> Document {
 }
 
 fn times(doc: &Document) -> Vec<(String, String)> {
-    doc.units.iter().map(|u| (u.context.extra["start"].clone(), u.context.extra["end"].clone())).collect()
+    doc.units.iter().map(|u| (u.context.extra()["start"].to_string(), u.context.extra()["end"].to_string())).collect()
 }
 
 /// A WebVTT target with a blank line and a timing line stays inside its cue: the arrow is escaped and reads back.
@@ -86,7 +86,7 @@ fn many_unmatched_close_tags_in_one_cue_are_linear() {
     assert!(a < c * 5.0 + 3.0, "close tags {a:.2} s, control {c:.2} s");
     // tags pair as before: a close tag closes the innermost open tag of its name and drops those above it
     let doc = Srt.extract(b"1\n00:00:01,000 --> 00:00:02,000\n<b>a <i>b <u>c</b> d</u></i>\n", &ExtractOptions::new()).unwrap();
-    let pairs = doc.units[0].codes.values().filter(|c| c.close.is_some()).count();
+    let pairs = doc.units[0].codes().values().filter(|c| c.close_markup().is_some()).count();
     assert_eq!(pairs, 1);
 }
 
