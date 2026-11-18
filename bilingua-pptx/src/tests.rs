@@ -388,3 +388,49 @@ fn libreoffice_opens_the_merged_file_when_installed() {
     assert!(dir.join("merged.pdf").exists(), "{}{}", String::from_utf8_lossy(&status.stdout), String::from_utf8_lossy(&status.stderr));
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+#[test]
+fn structure_roles_from_placeholders_and_notes() {
+    // slide 3 gains a footer and a header placeholder
+    let ftr = "<p:sp><p:nvSpPr><p:cNvPr id=\"8\" name=\"Footer 7\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"ftr\" idx=\"11\"/></p:nvPr></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr lang=\"en-US\"/><a:t>Footer words</a:t></a:r></a:p></p:txBody></p:sp>\
+<p:sp><p:nvSpPr><p:cNvPr id=\"9\" name=\"Header 8\"/><p:cNvSpPr/><p:nvPr><p:ph type=\"hdr\" idx=\"10\"/></p:nvPr></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr lang=\"en-US\"/><a:t>Header words</a:t></a:r></a:p></p:txBody></p:sp></p:spTree>";
+    let files: Vec<(String, String)> = read_zip(&presentation_zip(), &ZipLimits::default())
+        .unwrap()
+        .into_iter()
+        .map(|e| {
+            let d = String::from_utf8(e.data).unwrap();
+            let d = if e.name == "ppt/slides/slide3.xml" { d.replacen("</p:spTree>", ftr, 1) } else { d };
+            (e.name, d)
+        })
+        .collect();
+    let refs: Vec<(&str, String)> = files.iter().map(|(n, d)| (n.as_str(), d.clone())).collect();
+    let bytes = zip(&refs);
+    let doc = extract(&bytes);
+    let by_text = |t: &str| {
+        let u = doc.units.iter().find(|u| plain_text(&u.source()) == t).unwrap_or_else(|| panic!("no unit {t}"));
+        (u.context.role(), u.context.level())
+    };
+    assert_eq!(by_text("Welcome to the demo"), (Some(Role::SlideTitle), None));
+    assert_eq!(by_text("Second slide, first in the deck"), (Some(Role::SlideTitle), None));
+    assert_eq!(by_text("A short subtitle"), (Some(Role::Subtitle), None));
+    assert_eq!(by_text("Remember to pause here."), (Some(Role::Notes), None));
+    assert_eq!(by_text("Footer words"), (Some(Role::Footer), None));
+    assert_eq!(by_text("Header words"), (Some(Role::Header), None));
+    assert_eq!(by_text("Inside a group"), (None, None));
+    assert_eq!(by_text("Widget"), (None, None));
+    // what the crate filled before stays: kind, the slide title as heading, the table position
+    let w = doc.units.iter().find(|u| plain_text(&u.source()) == "Widget").unwrap();
+    assert_eq!(w.context.kind(), Some("cell"));
+    assert_eq!(w.context.extra().get("row"), Some("2"));
+    assert!(w.context.extra().get("table").is_some());
+    let n = doc.units.iter().find(|u| plain_text(&u.source()) == "Remember to pause here.").unwrap();
+    assert_eq!(n.context.kind(), Some("notes"));
+    let t = doc.units.iter().find(|u| plain_text(&u.source()) == "Welcome to the demo").unwrap();
+    assert_eq!(t.context.kind(), Some("title"));
+
+    // the LocOS profile leaves roles unset
+    let opts = ExtractOptions::new().with_target_lang("es-ES").with_profile(bilingua_model::profile::LOCOS);
+    let ldoc = Pptx.extract(&bytes, &opts).unwrap();
+    assert!(!ldoc.units.is_empty());
+    assert!(ldoc.units.iter().all(|u| u.context.role().is_none() && u.context.level().is_none()));
+}

@@ -23,7 +23,7 @@ use bilingua_model::*;
 use bilingua_zip::{Body, EntryMeta, RawEntry, ZipLimits};
 use edit::Edits;
 use std::collections::BTreeMap;
-use xml::{Kind, Tree, NS_TABLE};
+use xml::{Kind, Tree, NS_STYLE, NS_TABLE, NS_TEXT};
 
 /// The skeleton's only entry: the whole original archive. It holds a NUL, which no real zip entry name can.
 const ARCHIVE: &str = "\0bilingua-odf-archive";
@@ -183,12 +183,47 @@ fn make_unit(t: &Tree, p: u32, tok: &walk::Tok, id: String, kind: &str) -> Unit 
     let mut u = Unit::new(id, inl);
     u.set_codes(codes);
     u.context.kind = Some(kind.to_string());
-    u.context.style = t.attr(p, xml::NS_TEXT, "style-name");
+    u.context.style = t.attr(p, NS_TEXT, "style-name");
     u
+}
+
+const NS_PRESENTATION_URI: &str = "urn:oasis:names:tc:opendocument:xmlns:presentation:1.0";
+
+/// The structure role of a body paragraph: a heading (with its `text:outline-level`), else the nearest container
+/// that gives one (a page header or footer, a footnote or endnote, a slide's speaker notes).
+fn role_of(t: &Tree, p: u32) -> (Option<Role>, Option<u8>) {
+    if t.local(p) == "h" {
+        let level = t.attr(p, NS_TEXT, "outline-level").and_then(|v| v.trim().parse::<u8>().ok()).filter(|v| *v > 0);
+        return (Some(Role::Heading), level);
+    }
+    for a in t.ancestors(p) {
+        let n = t.node(a);
+        if n.kind != Kind::Elem {
+            continue;
+        }
+        let local = t.local(a);
+        if n.ns == NS_STYLE {
+            match local {
+                "header" | "header-left" | "header-first" => return (Some(Role::Header), None),
+                "footer" | "footer-left" | "footer-first" => return (Some(Role::Footer), None),
+                _ => {}
+            }
+        } else if n.ns == NS_TEXT && local == "note" {
+            return match t.attr(a, NS_TEXT, "note-class").as_deref() {
+                Some("endnote") => (Some(Role::Endnote), None),
+                _ => (Some(Role::Footnote), None),
+            };
+        } else if local == "notes" && t.ns_uri(n.ns) == NS_PRESENTATION_URI {
+            return (Some(Role::Notes), None);
+        }
+    }
+    (None, None)
 }
 
 fn extract_doc(bytes: &[u8], opts: &ExtractOptions, id: &'static str, o: &OdfOptions) -> Result<Document, Error> {
     let l = opts.limits();
+    // structure roles are not filled under the LocOS profile (its units keep today's shape)
+    let roles = !opts.is_profile(bilingua_model::profile::LOCOS);
     let entries = open_package(bytes, id, &l)?;
     let mut units: Vec<Unit> = Vec::new();
     let mut warnings = Vec::new();
@@ -217,6 +252,11 @@ fn extract_doc(bytes: &[u8], opts: &ExtractOptions, id: &'static str, o: &OdfOpt
                     "paragraph"
                 };
                 let mut u = make_unit(t, p, &tok, format!("p{idx}"), kind);
+                if roles {
+                    let (role, level) = role_of(t, p);
+                    u.context.set_role(role);
+                    u.context.set_level(level);
+                }
                 u.context.location = Some(format!("{} paragraph {idx}", part.name));
                 // the heading is copied into every later paragraph: each copy is charged first (run 2 G5-1)
                 context.charge(heading.as_ref().map_or(0, |h| h.len()), &l)?;
@@ -244,6 +284,9 @@ fn extract_doc(bytes: &[u8], opts: &ExtractOptions, id: &'static str, o: &OdfOpt
                     // (LocOS), not that merge
                     guard::check_comment_base(idx)?;
                     let mut u = make_unit(&part.tree, p, &tok, format!("c{j}"), "comment");
+                    if roles {
+                        u.context.set_role(Role::Comment);
+                    }
                     u.context.location = Some(format!("{} comment paragraph {j}", part.name));
                     u.context.extra_mut().insert("p_index", (COMMENT_BASE + j).to_string());
                     u.context.extra_mut().insert("part", part.name.to_string());

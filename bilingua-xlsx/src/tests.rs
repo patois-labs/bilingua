@@ -498,3 +498,32 @@ fn the_plain_run_is_the_base_though_the_italic_run_is_longer() {
     assert!(sst.contains("<rPr><i/><sz val=\"11\"/><rFont val=\"Calibri\"/></rPr><t>nota en cursiva</t>"), "{sst}");
     assert!(sst.contains("<rPr><b/><sz val=\"11\"/><rFont val=\"Calibri\"/></rPr><t>afirmación audaz</t>"), "{sst}");
 }
+
+#[test]
+fn structure_roles_for_sheet_names_comments_headers_and_footers() {
+    let xo = XlsxOptions { translate_sheet_names: true, translate_comments: true, ..Default::default() };
+    let bytes = workbook_zip();
+    let doc = extract_with_opts(&bytes, &xo);
+    let rl = |u: &Unit| (u.context.role(), u.context.level());
+    assert_eq!(rl(unit(&doc, "sh1-oddHeader")), (Some(Role::Header), None));
+    assert_eq!(rl(unit(&doc, "sh1-oddFooter")), (Some(Role::Footer), None));
+    assert_eq!(rl(unit(&doc, "comment1-A3")), (Some(Role::Comment), None));
+    assert_eq!(rl(unit(&doc, "ss0")), (None, None));
+    let names: Vec<&Unit> = doc.units.iter().filter(|u| u.id.starts_with("sheetname-")).collect();
+    assert_eq!(names.len(), 3);
+    assert!(names.iter().all(|u| rl(u) == (Some(Role::SheetName), None)));
+    // what the crate filled before stays: kind and the hidden state of a hidden sheet's name
+    let hidden = names.iter().find(|u| plain_text(&u.source()) == "Oculta").unwrap();
+    assert_eq!(hidden.context.kind(), Some("sheet-name"));
+    assert_eq!(hidden.context.extra().get("hidden"), Some("sheet"));
+    assert_eq!(unit(&doc, "sh1-oddHeader").context.kind(), Some("header"));
+    assert_eq!(unit(&doc, "comment1-A3").context.kind(), Some("comment"));
+    // an unchanged round trip is still byte-identical
+    assert_same_parts(&bytes, &Xlsx::default().merge(&doc).unwrap());
+
+    // the LocOS profile leaves roles unset
+    let opts = ExtractOptions::new().with_target_lang("es-ES").with_profile(bilingua_model::profile::LOCOS);
+    let ldoc = extract_with(&bytes, &opts, &xo).unwrap();
+    assert!(!ldoc.units.is_empty());
+    assert!(ldoc.units.iter().all(|u| u.context.role().is_none() && u.context.level().is_none()));
+}

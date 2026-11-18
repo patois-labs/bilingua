@@ -581,6 +581,7 @@ impl Extractor<'_> {
             let which = name.trim_end_matches("Header").trim_end_matches("Footer");
             let built = build(atoms, props_of, None);
             let mut cx = UnitContext::new().with_kind(kind.to_string()).with_style((*name).to_string()).with_location(format!("{} {kind} ({which})", sh.name)).with_max_len(Some(255));
+            cx.set_role(if kind == "header" { Role::Header } else { Role::Footer });
             hidden_extra(&mut cx, sh.hidden.then_some("sheet"));
             let orig = raw_children(h);
             self.u_hf.push(make_unit(id.clone(), built, orig, "hf", &ns.pfx, cx));
@@ -699,7 +700,7 @@ impl Extractor<'_> {
                         if !self.fits(&atoms) {
                             return;
                         }
-                        let cx = UnitContext::new().with_kind("comment".to_string()).with_location(self.sheet_cell(sh, &cell));
+                        let cx = UnitContext::new().with_kind("comment".to_string()).with_location(self.sheet_cell(sh, &cell)).with_role(Role::Comment);
                         self.u_comments.push(make_unit(id.clone(), build(atoms, props_of, None), raw_children(te), "plain", &pfx, cx));
                         te.children = vec![marker(&id)];
                     }
@@ -741,7 +742,7 @@ impl Extractor<'_> {
                             return;
                         }
                         let id = self.unique_id(format!("comment{}-{}", sh.idx, cell));
-                        let cx = UnitContext::new().with_kind("comment".to_string()).with_location(self.sheet_cell(sh, &cell));
+                        let cx = UnitContext::new().with_kind("comment".to_string()).with_location(self.sheet_cell(sh, &cell)).with_role(Role::Comment);
                         self.u_comments.push(make_unit(id.clone(), build(atoms, props_of, None), raw_children(te), "si", &ns.pfx, cx));
                         te.children = vec![marker(&id)];
                     }
@@ -875,7 +876,7 @@ fn extract_doc_inner(bytes: &[u8], opts: &ExtractOptions, xo: &XlsxOptions) -> R
             let mut u = Unit::new(id.clone(), vec![Inline::text(name.clone())]);
             u.codes_mut().insert(C_BASE, CodeData::new().with_standalone(String::new()));
             u.codes_mut().insert(C_MODE, CodeData::new().with_standalone("attr".to_string()));
-            u.context = UnitContext::new().with_kind("sheet-name".to_string()).with_location(format!("workbook, sheet {idx}")).with_max_len(Some(31));
+            u.context = UnitContext::new().with_kind("sheet-name".to_string()).with_location(format!("workbook, sheet {idx}")).with_max_len(Some(31)).with_role(Role::SheetName);
             hidden_extra(&mut u.context, hidden.then_some("sheet"));
             u_names.push(u);
             ex.sheet_units.push((name.clone(), id));

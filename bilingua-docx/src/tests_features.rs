@@ -1044,3 +1044,68 @@ fn drawingml_hyperlink_run_is_not_the_base() {
     assert_eq!(s.source[1], Inline::text("Read the full report online"), "{:?}", s.source);
     assert_eq!(s.source[3], Inline::text(" today"));
 }
+
+#[test]
+fn structure_roles_from_styles_and_parts() {
+    let styles = "<w:styles xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\">\
+<w:style w:type=\"paragraph\" w:styleId=\"Heading1\"><w:name w:val=\"heading 1\"/></w:style>\
+<w:style w:type=\"paragraph\" w:styleId=\"Heading3\"><w:name w:val=\"heading 3\"/></w:style>\
+<w:style w:type=\"paragraph\" w:styleId=\"Titel\"><w:name w:val=\"Title\"/></w:style>\
+<w:style w:type=\"paragraph\" w:styleId=\"Untertitel\"><w:name w:val=\"Subtitle\"/></w:style>\
+</w:styles>";
+    let docxml = "<w:p><w:pPr><w:pStyle w:val=\"Titel\"/></w:pPr><w:r><w:t>Annual report</w:t></w:r></w:p>\
+<w:p><w:pPr><w:pStyle w:val=\"Untertitel\"/></w:pPr><w:r><w:t>Year two</w:t></w:r></w:p>\
+<w:p><w:pPr><w:pStyle w:val=\"Heading1\"/></w:pPr><w:r><w:t>Overview</w:t></w:r></w:p>\
+<w:p><w:pPr><w:pStyle w:val=\"Heading3\"/></w:pPr><w:r><w:t>Detail</w:t></w:r></w:p>\
+<w:p><w:pPr><w:outlineLvl w:val=\"1\"/></w:pPr><w:r><w:t>Outlined</w:t></w:r></w:p>\
+<w:p><w:r><w:t>Body text.</w:t></w:r></w:p>";
+    let header = part("hdr", &p("Acme Corp confidential"));
+    let footer = part("ftr", &p("Page footer"));
+    let notes = part("footnotes", "<w:footnote w:id=\"2\"><w:p><w:r><w:t>See the appendix.</w:t></w:r></w:p></w:footnote>");
+    let endnotes = part("endnotes", "<w:endnote w:id=\"2\"><w:p><w:r><w:t>An endnote.</w:t></w:r></w:p></w:endnote>");
+    let comments = part("comments", "<w:comment w:id=\"0\" w:author=\"Dana\"><w:p><w:r><w:t>A comment</w:t></w:r></w:p></w:comment>");
+    let core = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><cp:coreProperties xmlns:cp=\"http://schemas.openxmlformats.org/package/2006/metadata/core-properties\" xmlns:dc=\"http://purl.org/dc/elements/1.1/\"><dc:title>The title</dc:title><dc:subject>Planning</dc:subject></cp:coreProperties>";
+    let bytes = make(&[
+        ("word/document.xml", &body(docxml)),
+        ("word/styles.xml", styles),
+        ("word/header1.xml", &header),
+        ("word/footer1.xml", &footer),
+        ("word/footnotes.xml", &notes),
+        ("word/endnotes.xml", &endnotes),
+        ("word/comments.xml", &comments),
+        ("docProps/core.xml", core),
+    ]);
+    let doc = round_trip(&bytes);
+    let rl = |id: &str| {
+        let c = &doc.units.iter().find(|u| u.id == id).unwrap_or_else(|| panic!("no {id}")).context;
+        (c.role(), c.level())
+    };
+    assert_eq!(rl("p1"), (Some(Role::Title), None));
+    assert_eq!(rl("p2"), (Some(Role::Subtitle), None));
+    assert_eq!(rl("p3"), (Some(Role::Heading), Some(1)));
+    assert_eq!(rl("p4"), (Some(Role::Heading), Some(3)));
+    assert_eq!(rl("p5"), (Some(Role::Heading), Some(2)));
+    assert_eq!(rl("p6"), (None, None));
+    assert_eq!(rl("header1-p1"), (Some(Role::Header), None));
+    assert_eq!(rl("footer1-p1"), (Some(Role::Footer), None));
+    assert_eq!(rl("footnotes-p1"), (Some(Role::Footnote), None));
+    assert_eq!(rl("endnotes-p1"), (Some(Role::Endnote), None));
+    assert_eq!(rl("comments-p1"), (Some(Role::Comment), None));
+    assert_eq!(rl("meta-title"), (Some(Role::Title), None));
+    assert_eq!(rl("meta-subject"), (None, None));
+    // what the crate filled before stays
+    let c = &doc.units.iter().find(|u| u.id == "p6").unwrap().context;
+    assert_eq!(c.heading(), Some("Outlined"));
+    assert_eq!(doc.units.iter().find(|u| u.id == "p3").unwrap().context.kind(), Some("heading"));
+    // the JSON of a unit without a role has no role key; one with a role has it
+    let j = serde_json::to_string(&doc.units.iter().find(|u| u.id == "p6").unwrap().context).unwrap();
+    assert!(!j.contains("\"role\"") && !j.contains("\"level\""), "{j}");
+    let j = serde_json::to_string(&doc.units.iter().find(|u| u.id == "p4").unwrap().context).unwrap();
+    assert!(j.contains("\"role\":\"heading\",\"level\":3"), "{j}");
+
+    // the LocOS profile leaves roles unset
+    let opts = ExtractOptions::default().with_profile(bilingua_model::profile::LOCOS);
+    let ldoc = Docx.extract(&bytes, &opts).unwrap();
+    assert!(!ldoc.units.is_empty());
+    assert!(ldoc.units.iter().all(|u| u.context.role().is_none() && u.context.level().is_none()));
+}

@@ -370,6 +370,12 @@ impl<'a> Ex<'a> {
         unit.set_codes(b.codes);
         unit.context.kind = Some(if has_text { b.kind.clone() } else { "image".into() });
         unit.context.style = b.style.clone();
+        // the structure role: an ATX or setext heading, its level from the style (`h1`..`h6`)
+        if has_text && b.kind == "heading" {
+            if let Some(level) = b.style.as_deref().and_then(|s| s.strip_prefix('h')).and_then(|n| n.parse::<u8>().ok()) {
+                unit.context.set_heading_role(level);
+            }
+        }
         unit.context.location = Some(line.clone());
         unit.translate = has_text;
         if b.kind == "heading" {
