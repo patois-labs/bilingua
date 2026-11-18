@@ -65,8 +65,8 @@ fn tokens() {
     let doc = extract(b"Press <Kbd>Ctrl</Kbd> and {count} more <Icon name=\"x\" /> now.\n").unwrap();
     let (text, map) = to_locos_text(&doc.units[0].source());
     assert_eq!(text, "Press \u{27E6}g1\u{27E7}Ctrl\u{27E6}/g1\u{27E7} and \u{27E6}x2\u{27E7} more \u{27E6}x3\u{27E7} now.");
-    assert_eq!((map["1"].open_markup(), map["1"].close_markup()), (Some("<Kbd>"), Some("</Kbd>")));
-    assert_eq!(map["2"].open_markup(), Some("{count}"));
+    assert_eq!((map["1"].open.as_deref(), map["1"].close.as_deref()), (Some("<Kbd>"), Some("</Kbd>")));
+    assert_eq!(map["2"].open.as_deref(), Some("{count}"));
     assert_eq!(doc.units.len(), 1);
     // unpaired open and orphan close -> points; nested pairs
     assert_eq!(texts(b"a <B>b <I>c</I> d\n")[0], "a \u{27E6}x1\u{27E7}b \u{27E6}g2\u{27E7}c\u{27E6}/g2\u{27E7} d");

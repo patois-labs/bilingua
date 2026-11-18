@@ -49,9 +49,9 @@ fn matches_locos_on_random_files() {
             for (k, v) in m {
                 let code = &map[k];
                 if let Some(p) = v.get("point") {
-                    assert_eq!((code.open_markup(), code.close_markup()), (p.as_str(), None), "{name}: unit {i} token {k}");
+                    assert_eq!((code.open.as_deref(), code.close.as_deref()), (p.as_str(), None), "{name}: unit {i} token {k}");
                 } else {
-                    assert_eq!((code.open_markup(), code.close_markup()), (v["open"].as_str(), v["close"].as_str()), "{name}: unit {i} token {k}");
+                    assert_eq!((code.open.as_deref(), code.close.as_deref()), (v["open"].as_str(), v["close"].as_str()), "{name}: unit {i} token {k}");
                 }
             }
         }

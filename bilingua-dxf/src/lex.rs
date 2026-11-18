@@ -392,7 +392,7 @@ pub fn render(target: &[Inline], unit: &Unit, kind: Kind, locos: bool) -> String
         match i {
             Piece::Text(t) => escape(t, kind, &mut piece),
             Piece::Tag(id, k) => {
-                let Some(c) = codes.get(*id) else { continue };
+                let Some(c) = codes.get(id) else { continue };
                 if let Some(raw) = c.standalone_markup() {
                     piece.push_str(raw);
                     code = Some(raw);
