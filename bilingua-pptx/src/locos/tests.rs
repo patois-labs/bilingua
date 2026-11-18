@@ -428,6 +428,12 @@ fn segment_cap_counts_empty_paragraphs() {
     assert_eq!(crate::Pptx.extract(&data, &native).unwrap().units.len(), 2);
 }
 
+/// [`part`] under the large limits: a rewritten slide of a million empty paragraphs deflates past the hosted ratio.
+fn part_large(zip: &[u8], name: &str) -> String {
+    let e = bilingua_zip::read_zip("pptx", zip, &ZipLimits::from(&Limits::large())).unwrap();
+    String::from_utf8(e.into_iter().find(|e| e.name == name).unwrap().data).unwrap()
+}
+
 /// BILI-126: a deck of `n` paragraphs (empty ones count, as LocOS numbers them) whose last one reads "Body", with the
 /// comments of [`deck_with_comments`].
 fn big_deck_with_comments(n: usize) -> Vec<u8> {
@@ -456,8 +462,8 @@ fn comments_past_a_million_paragraphs_are_refused() {
     let mo = profile::locos().merge_options("pptx").with_limits(Limits::large());
     let out = crate::Pptx.merge_with(&doc, &mo).unwrap();
     // the body takes the text; the comments, read without comments, keep their bytes
-    assert!(part(&out, "ppt/slides/slide1.xml").contains("Inhalt"));
-    assert_eq!(part(&out, "ppt/comments/comment1.xml"), part(&d, "ppt/comments/comment1.xml"));
+    assert!(part_large(&out, "ppt/slides/slide1.xml").contains("Inhalt"));
+    assert_eq!(part_large(&out, "ppt/comments/comment1.xml"), part_large(&d, "ppt/comments/comment1.xml"));
     // a document with a comment unit over such a body (changed by hand) is refused at the merge
     let mut c = Unit::new("c1", vec![Inline::text("Note")]);
     c.context.kind = Some("comment".into());
@@ -478,8 +484,8 @@ fn comments_just_under_a_million_paragraphs_round_trip() {
         profile::locos_set_target(&mut doc, &id, vec![Inline::text(t)]).unwrap();
     }
     let out = crate::Pptx.merge_with(&doc, &profile::locos().merge_options("pptx").with_limits(Limits::large())).unwrap();
-    assert!(part(&out, "ppt/comments/comment1.xml").contains("<p:text>  Pr\u{fc}fen.  </p:text>"));
-    let slide = part(&out, "ppt/slides/slide1.xml");
+    assert!(part_large(&out, "ppt/comments/comment1.xml").contains("<p:text>  Pr\u{fc}fen.  </p:text>"));
+    let slide = part_large(&out, "ppt/slides/slide1.xml");
     assert!(slide.contains("Inhalt") && !slide.contains("Pr\u{fc}fen"));
     let back = crate::Pptx.extract(&out, &large(comment_opts())).unwrap();
     assert_eq!(units(&back)[0].1, "Inhalt");

@@ -437,6 +437,12 @@ fn locos_p_index_is_the_slot_index_with_gaps() {
     assert_eq!(plain.units.len(), doc.units.len());
 }
 
+/// [`part`] under the large limits: a page of a million shapes may deflate past the hosted ratio.
+fn part_large(bytes: &[u8], name: &str) -> String {
+    let e = bilingua_zip::read_zip("vsdx", bytes, &ZipLimits::from(&Limits::large())).unwrap();
+    String::from_utf8(e.into_iter().find(|e| e.name == name).unwrap_or_else(|| panic!("no part {name}")).data).unwrap()
+}
+
 /// BILI-126: the comments fixture with `extra` empty shape texts after `Start` (each one a slot, as LocOS numbers them).
 fn big_drawing_with_comments(extra: usize) -> Vec<u8> {
     let shapes: String = (0..extra).map(|i| format!("<Shape ID='{}' Type='Shape'><Text/></Shape>", i + 100)).collect();
@@ -477,7 +483,7 @@ fn comments_just_under_a_million_slots_round_trip() {
     assert_eq!(c.context.extra[profile::P_INDEX], "1000001");
     set(&mut doc, "comment-2", "Diese Form verschieben.");
     let out = Vsdx.merge_with(&doc, &profile::locos().merge_options("vsdx").with_limits(Limits::large())).unwrap();
-    assert!(part(&out, "visio/comments.xml").contains("Diese Form verschieben."));
+    assert!(part_large(&out, "visio/comments.xml").contains("Diese Form verschieben."));
     let back = Vsdx.extract(&out, &large_locos()).unwrap();
     assert_eq!(text_of(&back, "comment-2"), "Diese Form verschieben.");
 }

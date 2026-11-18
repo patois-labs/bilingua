@@ -419,6 +419,12 @@ fn values_under_a_merge_are_not_units() {
     assert!(w.contains("Danach"), "{w}");
 }
 
+/// [`entry`] under the large limits: a sheet of a million cells may deflate past the hosted ratio.
+fn entry_large(zip: &[u8], name: &str) -> Option<String> {
+    let entries = crate::zipio::read_zip(zip, &bilingua_zip::ZipLimits::from(&bilingua_model::Limits::large())).unwrap();
+    entries.into_iter().find(|e| e.name == name).map(|e| String::from_utf8(e.data).unwrap())
+}
+
 /// BILI-126: a workbook of `n` text cells (five to a row, the shared string "Item") with a classic note on A1.
 fn big_book_with_a_note(n: usize) -> Vec<u8> {
     let cols = ["A", "B", "C", "D", "E"];
@@ -465,9 +471,9 @@ fn comments_past_a_million_cells_are_refused() {
     let out = large_merge(&doc).unwrap();
     // the cell takes the text and the note keeps its own: before BILI-126 the cell's key 1000000 also overwrote the
     // first comment of the walk
-    let written = |name: &str| entry(&out, name).is_some_and(|t| t.contains("Anders"));
+    let written = |name: &str| entry_large(&out, name).is_some_and(|t| t.contains("Anders"));
     assert!(written("xl/sharedStrings.xml") || written("xl/worksheets/sheet1.xml"));
-    assert_eq!(entry(&out, "xl/comments1.xml"), entry(&data, "xl/comments1.xml"));
+    assert_eq!(entry_large(&out, "xl/comments1.xml"), entry_large(&data, "xl/comments1.xml"));
     // a document with a comment unit over such a body (changed by hand) is refused at the merge
     let mut c = Unit::new("c", vec![Inline::text("Check this cell.")]);
     c.hidden.insert(comments::SLOT.to_string(), "0".into());
@@ -487,7 +493,7 @@ fn comments_just_under_a_million_cells_round_trip() {
     set(&mut doc, cell, "Anders");
     set(&mut doc, note, "Diese Zelle pr\u{fc}fen.");
     let out = large_merge(&doc).unwrap();
-    let c = entry(&out, "xl/comments1.xml").unwrap();
+    let c = entry_large(&out, "xl/comments1.xml").unwrap();
     assert!(c.contains("Diese Zelle pr\u{fc}fen.") && !c.contains("Anders"), "{c}");
     let back = super::extract(&out, &large_opts(), &with_comments()).unwrap();
     assert_eq!(unit_texts(&back)[cell], "Anders");
