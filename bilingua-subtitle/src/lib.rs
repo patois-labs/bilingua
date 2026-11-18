@@ -183,17 +183,17 @@ fn extract(k: Kind, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Err
         n += 1;
         let (inl, codes) = cue_inlines(k, raw);
         let mut u = Unit::new(format!("c{n}"), inl);
-        u.codes = codes;
+        u.set_codes(codes);
         u.set_hidden(RAW, raw.to_string());
         u.context.kind = Some("subtitle".into());
         u.context.key = Some(ident.unwrap_or_else(|| n.to_string()));
         u.context.location = Some(format!("line {}", ti + 1));
-        u.context.extra.insert("start".into(), st.trim().to_string());
-        u.context.extra.insert("end".into(), en.trim().to_string());
+        u.context.extra_mut().insert("start", st.trim().to_string());
+        u.context.extra_mut().insert("end", en.trim().to_string());
         if !settings.is_empty() {
-            u.context.extra.insert("settings".into(), settings.to_string());
+            u.context.extra_mut().insert("settings", settings.to_string());
         }
-        u.context.extra.insert("max_cpl".into(), DEFAULT_MAX_CPL.into());
+        u.context.extra_mut().insert("max_cpl", DEFAULT_MAX_CPL);
         if plain_text(&u.segments[0].source).trim().is_empty() && !u.segments[0].source.iter().any(|i| matches!(i, Inline::Tag { .. })) {
             n -= 1;
             continue;
@@ -541,15 +541,15 @@ fn render(k: Kind, u: &Unit, eol: &str) -> String {
                 out.push_str(&t.replace("\r\n", "\n").replace('\n', eol));
             }
             Inline::Tag { id, kind, .. } => {
-                let Some(c) = u.codes.get(&id) else { continue };
+                let Some(c) = u.codes().get(&id) else { continue };
                 let s = match kind {
-                    TagKind::Open => c.open.as_deref(),
-                    TagKind::Close => c.close.as_deref(),
-                    TagKind::Standalone => c.standalone.as_deref(),
+                    TagKind::Open => c.open_markup(),
+                    TagKind::Close => c.close_markup(),
+                    TagKind::Standalone => c.standalone_markup(),
                 };
                 if let Some(s) = s {
                     // A line break keeps the file's own line ending.
-                    if c.label.as_deref() == Some("line break") {
+                    if c.label() == Some("line break") {
                         out.push_str(eol);
                     } else {
                         out.push_str(s);

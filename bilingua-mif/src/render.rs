@@ -91,7 +91,7 @@ fn drop_empty_pairs(pieces: Vec<Piece<'_>>) -> Vec<Piece<'_>> {
 /// The text of the translated paragraph's ParaLine statements (what replaces the source's first to last ParaLine).
 pub fn render(unit: &Unit, output: &[Inline]) -> Result<String, Error> {
     let bad = || Error::Write(format!("unit {} lost its MIF rebuild data", unit.id));
-    let hidden = unit.codes.get(HIDDEN).and_then(|h| h.open.as_deref()).ok_or_else(bad)?;
+    let hidden = unit.codes().get(HIDDEN).and_then(|h| h.open_markup()).ok_or_else(bad)?;
     let fields = unpack(hidden).ok_or_else(bad)?;
     let &[nl, ind, body, tail, extras] = fields.as_slice() else {
         return Err(bad());
@@ -164,14 +164,14 @@ pub fn render(unit: &Unit, output: &[Inline]) -> Result<String, Error> {
         }
     }
 
-    let code = |id: &str| unit.codes.get(id);
+    let code = |id: &str| unit.codes().get(id);
     let cind = format!("{ind} ");
     let mut lines: Vec<Vec<String>> = vec![body.iter().map(|s| s.to_string()).collect()];
     for p in drop_empty_pairs(pieces) {
         match p {
             Piece::Tok(id) => {
                 let stmts = code(id)
-                    .and_then(|c| c.open.as_deref())
+                    .and_then(|c| c.open_markup())
                     .and_then(unpack)
                     .ok_or_else(bad)?;
                 let last = lines.last_mut().expect("a line");
@@ -179,11 +179,11 @@ pub fn render(unit: &Unit, output: &[Inline]) -> Result<String, Error> {
             }
             Piece::Open(id) | Piece::Close(id) => {
                 let c = code(id).ok_or_else(bad)?;
-                let raw = if matches!(p, Piece::Open(_)) { &c.open } else { &c.close };
+                let raw = if matches!(p, Piece::Open(_)) { c.open_markup() } else { c.close_markup() };
                 lines
                     .last_mut()
                     .expect("a line")
-                    .push(raw.clone().ok_or_else(bad)?);
+                    .push(raw.map(str::to_string).ok_or_else(bad)?);
             }
             Piece::Text(t) => {
                 let t = t.replace("\r\n", "\n").replace('\r', "\n");

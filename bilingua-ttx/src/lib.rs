@@ -269,7 +269,7 @@ impl Ttx {
                 }
                 None => Unit::new(format!("u{}", key + 1), source),
             };
-            unit.codes = stok.codes.clone();
+            unit.set_codes(stok.codes.clone());
             unit.context.kind = Some("segment".into());
             unit.context.location = Some(format!("Tu {}", key + 1));
             unit.context.key = Some(key.to_string());
@@ -283,7 +283,7 @@ impl Ttx {
                     let inl = tokens::strip(inl);
                     sig = tokens::signature(&inl);
                     let (origin, state) = origin_of(tu_tag);
-                    unit.codes.extend(extra);
+                    unit.codes_mut().extend(extra);
                     let seg = &mut unit.segments[0];
                     seg.target = inl;
                     seg.state = state;
@@ -476,7 +476,7 @@ fn write_unit(u: &Unit, tgt_lang: &str, crlf: bool, out: &mut String) -> Result<
     if tu_len > rs || rs > re || re > raw.len() || !raw.is_char_boundary(tu_len) || !raw.is_char_boundary(rs) || !raw.is_char_boundary(re) {
         return Err(Error::Write(format!("unit {} has damaged splice data", u.id)));
     }
-    let Some(body) = tokens::render(&cur, &u.codes, crlf) else { return untouched(out) };
+    let Some(body) = tokens::render(&cur, u, crlf) else { return untouched(out) };
     let nl = |s: &str| if crlf { s.replace('\n', "\r\n") } else { s.to_string() };
     let inner = format!("{}{}{}", nl(f[5]), body, nl(f[6]));
     let nm = f[4];

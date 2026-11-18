@@ -350,8 +350,8 @@ pub struct Topic {
 /// Gives the codes that stand for MadCap elements their real name as label and tag text.
 fn relabel(unit: &mut Unit, m: &mask::Masked) {
     let mut shown: HashMap<String, String> = HashMap::new();
-    for (id, code) in unit.codes.iter_mut() {
-        let found = [code.open.as_deref(), code.close.as_deref(), code.standalone.as_deref()]
+    for (id, code) in unit.codes_mut().iter_mut() {
+        let found = [code.open_markup(), code.close_markup(), code.standalone_markup()]
             .into_iter()
             .flatten()
             .find_map(|p| mask::find_mask(p, &m.key));
@@ -363,8 +363,8 @@ fn relabel(unit: &mut Unit, m: &mask::Masked) {
             .chars()
             .take_while(|c| !c.is_whitespace() && *c != '/' && *c != '>')
             .collect();
-        code.label = Some(name.rsplit(':').next().unwrap_or(&name).to_ascii_lowercase());
-        shown.insert(id.clone(), name);
+        code.set_label(name.rsplit(':').next().unwrap_or(&name).to_ascii_lowercase());
+        shown.insert(id.to_string(), name);
     }
     if shown.is_empty() {
         return;
@@ -450,7 +450,7 @@ impl Topic {
                     None => self.path.clone(),
                 });
                 if let Some(st) = a11y_style(&u).map(str::to_string) {
-                    u.context.extra.insert("locos-style".into(), st);
+                    u.context.extra_mut().insert("locos-style", st);
                 }
                 u
             })

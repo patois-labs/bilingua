@@ -287,7 +287,7 @@ pub(crate) fn build_document(t: &Tree, p: &Planned, notes: &[String], alt: &std:
             }
         }
         let mut u = Unit::new(format!("u{}", i + 1), inl);
-        u.codes = codes;
+        u.set_codes(codes);
         match &pu.attr {
             Some(a) => {
                 let at = &t.attrs[a.attr as usize];
@@ -716,25 +716,25 @@ impl<'d> Merger<'d> {
                     seq.push(Work::Owned(s));
                 }
                 Inline::Tag { id, kind, .. } => {
-                    let Some((key, cd)) = u.codes.get_key_value(id) else { continue };
+                    let Some((key, cd)) = u.codes().get_key_value(id) else { continue };
                     match kind {
                         TagKind::Open => {
-                            if let (Some(open), false) = (&cd.open, used.contains(key.as_str())) {
+                            if let (Some(open), false) = (cd.open_markup(), used.contains(key)) {
                                 used.insert(key);
                                 stack.push(key);
                                 seq.push(Work::Marked(open));
                             }
                         }
                         TagKind::Close => {
-                            if stack.last() == Some(&key.as_str()) {
+                            if stack.last() == Some(&key) {
                                 stack.pop();
-                                if let Some(c) = &cd.close {
+                                if let Some(c) = cd.close_markup() {
                                     seq.push(Work::Plain(c));
                                 }
                             }
                         }
                         TagKind::Standalone => {
-                            if let (Some(s), false) = (&cd.standalone, used.contains(key.as_str())) {
+                            if let (Some(s), false) = (cd.standalone_markup(), used.contains(key)) {
                                 used.insert(key);
                                 seq.push(Work::Marked(s));
                             }
@@ -744,18 +744,18 @@ impl<'d> Merger<'d> {
             }
         }
         while let Some(id) = stack.pop() {
-            if let Some(c) = u.codes.get(id).and_then(|c| c.close.as_deref()) {
+            if let Some(c) = u.codes().get(id).and_then(|c| c.close_markup()) {
                 seq.push(Work::Plain(c));
             }
         }
-        let mut rest: Vec<(&'d String, &'d CodeData)> = u
-            .codes
+        let mut rest: Vec<(&'d str, &'d CodeData)> = u
+            .codes()
             .iter()
-            .filter(|(k, c)| k.bytes().all(|b| b.is_ascii_digit()) && c.standalone.is_some() && !used.contains(k.as_str()))
+            .filter(|(k, c)| k.bytes().all(|b| b.is_ascii_digit()) && c.standalone_markup().is_some() && !used.contains(k))
             .collect();
         rest.sort_by_key(|(k, _)| k.parse::<usize>().unwrap_or(usize::MAX));
         for (_, c) in rest {
-            if let Some(s) = &c.standalone {
+            if let Some(s) = c.standalone_markup() {
                 seq.push(Work::Marked(s));
             }
         }

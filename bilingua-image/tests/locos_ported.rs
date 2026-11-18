@@ -208,7 +208,7 @@ fn raster_regions_in_reading_order_with_the_geometry_contract() {
     assert_eq!(d.format, "image");
     // reading order: top to bottom, then left to right
     assert_eq!(texts(&d), ["Summer Sale", "New", "Shop now", "Big deals. Small prices."]);
-    let r0: serde_json::Value = serde_json::from_str(&d.units[0].context.extra["image_region"]).unwrap();
+    let r0: serde_json::Value = serde_json::from_str(&d.units[0].context.extra()["image_region"]).unwrap();
     assert_eq!(r0["bbox_axis_aligned"], serde_json::json!([30, 20, 260, 44]));
     assert_eq!(r0["polygon"][0], serde_json::json!([30, 20]));
     assert_eq!(r0["polygon"][2], serde_json::json!([290, 64]));

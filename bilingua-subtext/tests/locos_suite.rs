@@ -59,8 +59,8 @@ fn microdvd() {
     assert_eq!(units("sub", MDVD), ["\u{27E6}g1\u{27E7}Hello!\u{27E6}/g1\u{27E7}\nHow are you?", "Plain {0} text", "\u{27E6}g1\u{27E7}Red\u{27E6}/g1\u{27E7}\n\u{27E6}g2\u{27E7}Bold line\u{27E6}/g2\u{27E7}"]);
     let (_, m0) = bilingua_model::profile::tokens::to_locos_text(&doc.units[0].source());
     assert_eq!(m0["1"].open.as_deref(), Some("{y:i}"));
-    assert_eq!(doc.units[0].codes["1"].open.as_deref(), Some("{y:i}"));
-    assert_eq!(doc.units[2].codes["2"].open.as_deref(), Some("{y:b}"));
+    assert_eq!(doc.units[0].codes()["1"].open_markup(), Some("{y:i}"));
+    assert_eq!(doc.units[2].codes()["2"].open_markup(), Some("{y:b}"));
     assert_identity("sub", MDVD);
     let out = s(&build(
         "sub",

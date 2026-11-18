@@ -74,8 +74,8 @@ fn units() {
     assert!(d.warnings.iter().any(|w| w.kind == "ttx_unsegmented_text" && w.message.starts_with("1 ")), "{:?}", d.warnings);
     // the markup of the first unit's codes is the file's own
     let first = &d.units[0];
-    assert!(first.codes["1"].open.as_deref().unwrap().starts_with("<ut Type=\"start\""));
-    assert!(first.codes["1"].close.as_deref().unwrap().starts_with("<ut Type=\"end\""));
+    assert!(first.codes()["1"].open_markup().unwrap().starts_with("<ut Type=\"start\""));
+    assert!(first.codes()["1"].close_markup().unwrap().starts_with("<ut Type=\"end\""));
     // the same file as UTF-16 gives the same units
     assert_eq!(units_with(&LOCOS, &utf16(&ttx(), false, true)), want);
     assert_eq!(units_with(&LOCOS, &utf16(&ttx(), true, true)), want);

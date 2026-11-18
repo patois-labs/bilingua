@@ -292,7 +292,7 @@ pub fn build(text: &str, items: &[Item]) -> Built {
                     let Some(tid) = ids.get(o).cloned() else { continue };
                     let disp = if k + 1 == closes.len() { joined.clone() } else { resets.get(&tid).cloned().unwrap_or_default() };
                     if let Some(c) = codes.get_mut(&tid) {
-                        c.close = Some(disp.clone());
+                        c.set_close(disp.clone());
                     }
                     out.tag(&tid, TagKind::Close, disp);
                     group.push(tid);

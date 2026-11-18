@@ -108,7 +108,7 @@ fn one(text: &str, tree: &Tree, node: u32, kind: &'static str, style: Option<Str
 /// The string argument a translated string unit is written as: its text and building blocks, then every building
 /// block of the source the translation left out (so a variable keeps what it computes), quoted and escaped.
 pub fn render(unit: &Unit, output: &[Inline]) -> String {
-    let block = |id: &str| if id == STR_HIDDEN { None } else { unit.codes.get(id).and_then(|c| c.standalone.as_deref()) };
+    let block = |id: &str| if id == STR_HIDDEN { None } else { unit.codes().get(id).and_then(|c| c.standalone_markup()) };
     let mut s = String::new();
     let mut used: HashSet<String> = HashSet::new();
     for i in output {

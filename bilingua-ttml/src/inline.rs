@@ -8,7 +8,7 @@
 //! The content has already passed the scanner, so it is well-formed: the tokenizer here only finds boundaries.
 
 use crate::scan::unescape;
-use bilingua_model::{py_lstrip, py_rstrip, py_strip, CodeData, Inline, TagKind};
+use bilingua_model::{py_lstrip, py_rstrip, py_strip, CodeData, Inline, TagKind, Unit};
 use std::collections::BTreeMap;
 
 /// Markup tokens of a well-formed fragment: comment, CDATA, processing instruction, end tag, start or empty tag.
@@ -128,7 +128,7 @@ pub fn tokenize(fragment: &str, preserve: bool) -> (Vec<Inline>, BTreeMap<String
         if tok.starts_with("</") {
             if let Some(k) = spans.pop() {
                 if let Some(c) = codes.get_mut(&k.to_string()) {
-                    c.close = Some(tok.to_string());
+                    c.set_close(tok.to_string());
                 }
                 parts.push((K::Close, k.to_string()));
             }
@@ -219,7 +219,7 @@ pub fn tokenize(fragment: &str, preserve: bool) -> (Vec<Inline>, BTreeMap<String
             K::Point | K::Br => inl.push(Inline::tag(v.clone(), TagKind::Standalone, code_display(&codes, &v))),
             K::Open => inl.push(Inline::tag(v.clone(), TagKind::Open, code_display(&codes, &v))),
             K::Close => {
-                let d = codes.get(&v).and_then(|c| c.close.clone()).unwrap_or_default();
+                let d = codes.get(&v).and_then(|c| c.close_markup()).map(str::to_string).unwrap_or_default();
                 inl.push(Inline::tag(v, TagKind::Close, d));
             }
         }
@@ -241,7 +241,7 @@ pub fn tokenize(fragment: &str, preserve: bool) -> (Vec<Inline>, BTreeMap<String
 }
 
 fn code_display(codes: &BTreeMap<String, CodeData>, id: &str) -> String {
-    codes.get(id).and_then(|c| c.standalone.clone().or_else(|| c.open.clone())).unwrap_or_default()
+    codes.get(id).and_then(|c| c.standalone_markup().or_else(|| c.open_markup())).map(str::to_string).unwrap_or_default()
 }
 
 /// A unit has text when some text piece holds a non-whitespace character (codes alone do not make a caption).
@@ -262,8 +262,9 @@ fn escape(s: &str) -> String {
 }
 
 /// A translation to `<p>` content. Tolerant: an unknown or repeated code and a stray close are dropped, an unclosed
-/// span is closed at the end, a typed newline becomes a `<br/>`.
-pub fn render(out: &[Inline], codes: &BTreeMap<String, CodeData>, br_name: &str) -> String {
+/// span is closed at the end, a typed newline becomes a `<br/>`. The codes are `unit`'s.
+pub fn render(out: &[Inline], unit: &Unit, br_name: &str) -> String {
+    let codes = unit.codes();
     let mut res = String::new();
     let mut used: std::collections::HashSet<&str> = std::collections::HashSet::new();
     let mut stack: Vec<(&str, Option<&str>)> = Vec::new();
@@ -287,7 +288,7 @@ pub fn render(out: &[Inline], codes: &BTreeMap<String, CodeData>, br_name: &str)
             Inline::Tag { id, .. } if id.starts_with('~') => {}
             Inline::Tag { id, kind, .. } => {
                 let entry = codes.get(id.as_str());
-                let is_span = entry.is_some_and(|c| c.open.is_some());
+                let is_span = entry.is_some_and(|c| c.open_markup().is_some());
                 match kind {
                     TagKind::Close => {
                         if let Some((k, close)) = stack.last().copied() {
@@ -306,8 +307,8 @@ pub fn render(out: &[Inline], codes: &BTreeMap<String, CodeData>, br_name: &str)
                         }
                         used.insert(id);
                         let c = entry.expect("checked");
-                        res.push_str(c.open.as_deref().unwrap_or(""));
-                        stack.push((id, c.close.as_deref()));
+                        res.push_str(c.open_markup().unwrap_or(""));
+                        stack.push((id, c.close_markup()));
                     }
                     TagKind::Standalone => {
                         let Some(c) = entry else { continue };
@@ -315,7 +316,7 @@ pub fn render(out: &[Inline], codes: &BTreeMap<String, CodeData>, br_name: &str)
                             continue;
                         }
                         used.insert(id);
-                        res.push_str(c.standalone.as_deref().unwrap_or(""));
+                        res.push_str(c.standalone_markup().unwrap_or(""));
                     }
                 }
             }

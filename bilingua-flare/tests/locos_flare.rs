@@ -57,7 +57,7 @@ fn extraction() {
     assert!(d.units.iter().any(|u| u.id.starts_with("m1-")) && d.units.iter().any(|u| u.id.starts_with("m9-")));
     // Variables, snippets and keywords are real MadCap codes, not HTML ones.
     let v = d.units.iter().find(|u| loc_text(u).starts_with("Install")).unwrap();
-    assert_eq!(v.codes.values().next().unwrap().label.as_deref(), Some("variable"));
+    assert_eq!(v.codes().values().next().unwrap().label(), Some("variable"));
     assert!(v.source().iter().any(|i| matches!(i, Inline::Tag { display, .. } if display == "<MadCap:variable/>")));
     assert_eq!(d.format, "flprjzip");
     assert_eq!(d.source_lang.as_deref(), Some("en-us"));

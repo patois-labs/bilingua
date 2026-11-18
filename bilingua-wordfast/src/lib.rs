@@ -200,7 +200,7 @@ fn unit_of(it: Item, text: &str, locos: bool, txlf: bool) -> Unit {
     }
     seg.origin = it.origin;
     let t0 = (seg.has_target()).then(|| inline::flat(&seg.target));
-    u.codes = it.codes;
+    u.set_codes(it.codes);
     u.notes = it.notes;
     u.context.kind = Some("segment".into());
     u.context.key = it.ctx_key;
@@ -240,7 +240,7 @@ fn content_of(u: &Unit) -> Option<String> {
     if code(u, T0).is_some_and(|t0| t0 == inline::flat(&target)) {
         return None;
     }
-    Some(inline::render(&target, &u.codes, &code(u, LEAD).unwrap_or_default(), &code(u, TRAIL).unwrap_or_default()))
+    Some(inline::render(&target, u, &code(u, LEAD).unwrap_or_default(), &code(u, TRAIL).unwrap_or_default()))
 }
 
 fn merge(d: Dialect, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {

@@ -148,7 +148,7 @@ fn part_units(idx: usize, path: &str, items: &[parts::Item]) -> Vec<Unit> {
             u.context.key = it.key.clone();
             u.context.location = Some(format!("{path} item {}", j + 1));
             for (id, tok) in &it.tokens {
-                u.codes.insert(id.clone(), CodeData::standalone(tok.clone()).with_label("variable"));
+                u.codes_mut().insert(id.clone(), CodeData::standalone(tok.clone()).with_label("variable"));
             }
             u
         })

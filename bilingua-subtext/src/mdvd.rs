@@ -188,8 +188,10 @@ impl R {
     }
 }
 
-/// A translated unit as MicroDVD text (`|` for line breaks). Errors say why the translation cannot be written.
-pub fn render(target: &[Inline], codes: &BTreeMap<String, CodeData>, heads: &HashSet<&str>, fps: bool) -> Result<String, String> {
+/// A translated unit as MicroDVD text (`|` for line breaks), with the unit's inline codes. Errors say why the
+/// translation cannot be written.
+pub fn render(target: &[Inline], unit: &Unit, heads: &HashSet<&str>, fps: bool) -> Result<String, String> {
+    let codes = unit.codes();
     let mut t = merge_text(target.to_vec());
     if let Some(Inline::Text(s)) = t.first_mut() {
         *s = py_lstrip(s).to_string();
@@ -198,8 +200,8 @@ pub fn render(target: &[Inline], codes: &BTreeMap<String, CodeData>, heads: &Has
         *s = py_rstrip(s).to_string();
     }
     t.retain(|i| !matches!(i, Inline::Text(s) if s.is_empty()));
-    let point = |id: &str| if id.starts_with('~') { None } else { codes.get(id).and_then(|c| c.standalone.as_deref()) };
-    let pair = |id: &str| codes.get(id).filter(|c| !id.starts_with('~') && c.close.is_some()).and_then(|c| c.open.as_deref());
+    let point = |id: &str| if id.starts_with('~') { None } else { codes.get(id).and_then(|c| c.standalone_markup()) };
+    let pair = |id: &str| codes.get(id).filter(|c| !id.starts_with('~') && c.close_markup().is_some()).and_then(|c| c.open_markup());
     let mut opens: HashMap<&str, usize> = HashMap::new();
     let mut closes: HashMap<&str, usize> = HashMap::new();
     for (k, i) in t.iter().enumerate() {
@@ -233,9 +235,9 @@ pub fn render(target: &[Inline], codes: &BTreeMap<String, CodeData>, heads: &Has
             empty.insert(id);
         }
     }
-    let pair_code = |id: &str| -> String { codes.get(id).and_then(|c| c.open.clone()).unwrap_or_default() };
+    let pair_code = |id: &str| -> String { codes.get(id).and_then(|c| c.open_markup()).map(str::to_string).unwrap_or_default() };
     let input: usize = t.iter().map(|i| if let Inline::Text(s) = i { s.len() } else { 0 }).sum::<usize>()
-        + codes.iter().filter(|(k, _)| !k.starts_with('~')).map(|(_, c)| c.open.as_ref().or(c.standalone.as_ref()).map_or(0, |s| s.len())).sum::<usize>();
+        + codes.iter().filter(|(k, _)| !k.starts_with('~')).map(|(_, c)| c.open_markup().or(c.standalone_markup()).map_or(0, |s| s.len())).sum::<usize>();
     let cap = input.saturating_mul(16).saturating_add(64 * 1024);
     let mut r = R { out: vec![String::new()], head: 0, open_pairs: BTreeMap::new(), emitted: 0, size: 0, cap };
     for (k, i) in t.iter().enumerate() {
@@ -322,10 +324,11 @@ mod run2 {
         let reverse = target((1..=n).rev().collect());
         let in_order = target((1..=n).collect());
         let t = std::time::Instant::now();
-        let _ = render(&reverse, &codes, &heads, false);
+        let unit = Unit::new("t", vec![]).with_codes(codes);
+        let _ = render(&reverse, &unit, &heads, false);
         let c = t.elapsed().as_secs_f64();
         let t = std::time::Instant::now();
-        let _ = render(&in_order, &codes, &heads, false);
+        let _ = render(&in_order, &unit, &heads, false);
         let a = t.elapsed().as_secs_f64();
         assert!(a < c * 5.0 + 3.0, "in order {a:.2} s, reverse {c:.2} s");
     }
@@ -344,6 +347,7 @@ mod run2 {
             Inline::text(" three\nfour"),
             Inline::tag("2", TagKind::Close, ""),
         ];
-        assert_eq!(render(&t, &codes, &HashSet::new(), false).unwrap(), "{y:i}{y:b}one|{y:i}{y:b}two three|{y:b}four");
+        let unit = Unit::new("t", vec![]).with_codes(codes);
+        assert_eq!(render(&t, &unit, &HashSet::new(), false).unwrap(), "{y:i}{y:b}one|{y:i}{y:b}two three|{y:b}four");
     }
 }

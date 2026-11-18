@@ -115,7 +115,7 @@ fn txlf_codes_and_free_placeholders() {
     let u1 = &d.units[1].segments[0].source;
     assert!(u1.iter().any(|i| matches!(i, Inline::Tag { free: true, display, .. } if display == "{0}")));
     // the original markup is kept in the code table
-    assert_eq!(d.units[0].codes["1"].standalone.as_deref(), Some("<bpt id=\"1\">&lt;b&gt;</bpt>"));
+    assert_eq!(d.units[0].codes()["1"].standalone_markup(), Some("<bpt id=\"1\">&lt;b&gt;</bpt>"));
 }
 
 #[test]

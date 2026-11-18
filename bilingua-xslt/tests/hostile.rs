@@ -268,9 +268,9 @@ fn a_skeleton_from_another_crate_or_a_tampered_one_is_refused_not_panicked() {
     // damaged hidden codes never panic
     let mut d = extract(include_bytes!("data/edge.xsl"));
     for u in &mut d.units {
-        for (k, c) in u.codes.iter_mut() {
+        for (k, c) in u.codes_mut().iter_mut() {
             if k.starts_with('~') {
-                c.standalone = Some("9999-1-77;x-y-z;5-3-0;;".into());
+                c.set_standalone("9999-1-77;x-y-z;5-3-0;;");
             }
         }
         u.segments[0].target = vec![Inline::text("changed")];

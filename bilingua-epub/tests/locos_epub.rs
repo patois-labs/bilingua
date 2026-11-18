@@ -45,7 +45,7 @@ fn unit_order() {
     let styles: Vec<String> = d.units.iter().map(|u| u.context.style.clone().unwrap_or_default()).collect();
     assert_eq!(styles[0], "epub:title");
     assert_eq!(styles[1], "epub:description");
-    assert_eq!(d.units[5].context.extra.get("locos-style").map(String::as_str), Some("a11y:img-alt"));
+    assert_eq!(d.units[5].context.extra().get("locos-style"), Some("a11y:img-alt"));
     assert_eq!(styles[13], "epub:toc-label");
     // ids are unique and stable
     let ids: std::collections::HashSet<&str> = d.units.iter().map(|u| u.id.as_str()).collect();
@@ -301,7 +301,7 @@ fn xhtml_safe_targets() {
     // is plain text, so what must hold is the same outcome: well-formed XHTML and OPF whatever the target holds.
     let mut d = extract(&epub());
     assert_eq!(loc_text(&d.units[7]), "Second chapter text.");
-    assert_eq!(d.units[5].context.extra.get("locos-style").map(String::as_str), Some("a11y:img-alt"));
+    assert_eq!(d.units[5].context.extra().get("locos-style"), Some("a11y:img-alt"));
     set(&mut d, 0, "Titre\u{3} du livre");
     set(&mut d, 5, "Une couverture\u{2} &nbsp;rouge");
     set(&mut d, 7, "Deuxi\u{e8}me\u{a0}texte &bogus; A&amp;B\u{1}.");

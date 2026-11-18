@@ -144,8 +144,8 @@ impl Filter for Xtg {
                 Line::Para => {
                     let built = para::build(text, &items);
                     let mut u = Unit::new(format!("u{}", units.len() + 1), built.inlines);
-                    u.codes = built.codes;
-                    u.hidden = built.hidden;
+                    u.set_codes(built.codes);
+                    u.set_hidden_map(built.hidden);
                     u.set_hidden(para::RAW, &text[built.start..built.end]);
                     if !walker.style.is_empty() {
                         u.context.style = Some(walker.style.clone());
@@ -223,5 +223,5 @@ fn write_unit(u: &Unit, out: &mut String) {
         out.push_str(raw);
         return;
     }
-    out.push_str(&render::render(&u.codes, &u.hidden, &new));
+    out.push_str(&render::render(u, &new));
 }

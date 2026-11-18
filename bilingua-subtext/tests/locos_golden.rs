@@ -97,8 +97,8 @@ fn matches_locos_on_generated_files() {
                 }
                 let v = v.as_str().unwrap();
                 let ok = match k.strip_prefix('g') {
-                    Some(n) => u.codes.get(n).and_then(|c| c.open.as_deref()) == Some(v),
-                    None => u.codes.get(k.as_str()).and_then(|c| c.standalone.as_deref()) == Some(v),
+                    Some(n) => u.codes().get(n).and_then(|c| c.open_markup()) == Some(v),
+                    None => u.codes().get(k.as_str()).and_then(|c| c.standalone_markup()) == Some(v),
                 };
                 if !ok {
                     diffs.push(format!("{name}: code {k} should be {v:?}"));

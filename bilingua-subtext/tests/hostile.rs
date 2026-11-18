@@ -187,7 +187,7 @@ fn reopened_pairs_cannot_multiply_a_cue() {
 #[test]
 fn a_literal_half_token_is_words_as_in_locos() {
     let doc = extract("sub", "{1}{2}a|\u{27e6}x{P:1}1\u{27e7}{y:i}w\n".as_bytes()).unwrap();
-    assert!(!doc.units[0].has_hidden("heads"), "{:?}", doc.units[0].hidden);
+    assert!(!doc.units[0].has_hidden("heads"), "{:?}", doc.units[0].hidden_map());
     assert_eq!(units("sub", "{1}{2}a|\u{27e6}x{P:1}1\u{27e7}{y:i}w\n".as_bytes()), vec!["a\n\u{27e6}x\u{27e6}x1\u{27e7}1\u{27e7}\u{27e6}g2\u{27e7}w\u{27e6}/g2\u{27e7}"]);
 }
 

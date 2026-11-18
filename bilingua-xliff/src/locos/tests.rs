@@ -14,7 +14,7 @@ fn opts(lang: Option<&str>) -> ExtractOptions {
 fn texts(doc: &Document) -> Vec<(String, String)> {
     doc.units
         .iter()
-        .map(|u| (u.context.extra[profile::P_INDEX].clone(), profile::tokens::to_locos_text(&u.segments[0].source).0))
+        .map(|u| (u.context.extra()[profile::P_INDEX].to_string(), profile::tokens::to_locos_text(&u.segments[0].source).0))
         .collect()
 }
 
@@ -22,7 +22,7 @@ fn merge_with(id: &str, data: &[u8], lang: Option<&str>, set: &[(&str, &str)]) -
     let f = filter(id);
     let mut doc = f.extract(data, &opts(lang))?;
     for (p, t) in set {
-        let seg = doc.units.iter().find(|u| u.context.extra[profile::P_INDEX] == *p).unwrap().segments[0].clone();
+        let seg = doc.units.iter().find(|u| &u.context.extra()[profile::P_INDEX] == *p).unwrap().segments[0].clone();
         let (_, map) = profile::tokens::to_locos_text(&seg.source);
         profile::locos_set_target(&mut doc, &seg.id, profile::tokens::from_locos_text(t, &map))?;
     }

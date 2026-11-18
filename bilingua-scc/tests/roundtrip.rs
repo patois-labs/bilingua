@@ -239,7 +239,7 @@ fn tampered_documents_return_errors() {
     let doc = extract(&data).unwrap();
     // lost original line
     let mut d = doc.clone();
-    d.units[0].hidden.remove("raw");
+    d.units[0].hidden_map_mut().remove("raw");
     assert!(matches!(SccFilter.merge(&d), Err(Error::Write(_) | Error::Unwritable { .. })));
     // lost or broken state
     let mut d = doc.clone();
@@ -273,14 +273,14 @@ fn units_carry_context_and_codes() {
     assert_eq!(u.id, "c2");
     assert_eq!(u.context.kind.as_deref(), Some("subtitle"));
     assert_eq!(u.context.key.as_deref(), Some("00:00:04:00"));
-    assert_eq!(u.context.extra.get("mode").map(String::as_str), Some("rollup"));
-    assert_eq!(u.context.extra.get("max_cpl").map(String::as_str), Some("32"));
+    assert_eq!(u.context.extra().get("mode"), Some("rollup"));
+    assert_eq!(u.context.extra().get("max_cpl"), Some("32"));
     // one standalone, non-free tag for the italics code
     let src = u.source();
     let tags: Vec<&Inline> = src.iter().filter(|i| matches!(i, Inline::Tag { .. })).collect();
     assert_eq!(tags.len(), 1);
     assert!(matches!(tags[0], Inline::Tag { kind: TagKind::Standalone, free: false, display, .. } if display == "[italics]"));
-    assert_eq!(u.codes.get("1").and_then(|c| c.label.as_deref()), Some("mid-row code"));
+    assert_eq!(u.codes().get("1").and_then(|c| c.label()), Some("mid-row code"));
 }
 
 #[test]

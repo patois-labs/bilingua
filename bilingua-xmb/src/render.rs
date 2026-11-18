@@ -3,7 +3,7 @@
 
 use crate::scan;
 use bilingua_model::*;
-use std::collections::{BTreeMap, HashSet};
+use std::collections::HashSet;
 
 /// Keeps XML 1.0 characters, turning pasted Word breaks into newlines.
 pub fn xml_target_text(s: &str) -> String {
@@ -39,8 +39,9 @@ fn ph(name: &str, raw: Option<&str>, original_raw: bool) -> String {
 }
 
 /// `original_raw`: an XTB splice keeps the original `<ph>` markup; an XMB to XTB conversion writes each as an empty
-/// `<ph name=".."/>` (XTB carries no examples) and drops the unknown elements and comments.
-pub fn render(codes: &BTreeMap<String, CodeData>, v: &[Inline], original_raw: bool) -> String {
+/// `<ph name=".."/>` (XTB carries no examples) and drops the unknown elements and comments. `code` looks up the
+/// markup of a code by id (a unit's codes, or a parsed message's).
+pub fn render<'c>(code: impl Fn(&str) -> Option<&'c CodeData>, v: &[Inline], original_raw: bool) -> String {
     let mut out = String::new();
     let mut used: HashSet<&str> = HashSet::new();
     let mut stack: Vec<(&str, Option<String>)> = Vec::new();
@@ -48,12 +49,12 @@ pub fn render(codes: &BTreeMap<String, CodeData>, v: &[Inline], original_raw: bo
         match i {
             Inline::Text(t) => out.push_str(&escape_text(&xml_target_text(t))),
             Inline::Tag { id, kind: TagKind::Standalone, .. } => {
-                let Some(c) = codes.get(id) else { continue };
-                let Some(raw) = c.standalone.as_deref() else { continue };
-                if c.open.is_some() || !used.insert(id) {
+                let Some(c) = code(id.as_str()) else { continue };
+                let Some(raw) = c.standalone_markup() else { continue };
+                if c.open_markup().is_some() || !used.insert(id) {
                     continue;
                 }
-                match &c.label {
+                match c.label() {
                     Some(name) => out.push_str(&ph(name, Some(raw), original_raw)),
                     None => {
                         if original_raw {
@@ -62,11 +63,11 @@ pub fn render(codes: &BTreeMap<String, CodeData>, v: &[Inline], original_raw: bo
                     }
                 }
             }
-            Inline::Tag { id, kind: TagKind::Open, .. } => match codes.get(id) {
-                Some(c) if c.open.is_some() && used.insert(id) => {
-                    let name = c.label.clone().unwrap_or_default();
-                    out.push_str(&ph(&name, c.open.as_deref(), original_raw));
-                    let close = ph(&c.close.as_deref().map(name_of_raw).unwrap_or_default(), c.close.as_deref(), original_raw);
+            Inline::Tag { id, kind: TagKind::Open, .. } => match code(id.as_str()) {
+                Some(c) if c.open_markup().is_some() && used.insert(id) => {
+                    let name = c.label().unwrap_or_default().to_string();
+                    out.push_str(&ph(&name, c.open_markup(), original_raw));
+                    let close = ph(&c.close_markup().map(name_of_raw).unwrap_or_default(), c.close_markup(), original_raw);
                     stack.push((id, Some(close)));
                 }
                 _ => stack.push((id, None)),
