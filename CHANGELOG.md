@@ -48,6 +48,10 @@ is listed here).
 
 ### Fixed (wild-file backlog)
 
+- ODF (bilingua#22): ODT units get the DOCX reader's context kind: `list-item`, `header`, `footer`, `footnote`,
+  `endnote` and `textbox` instead of `paragraph`; ODP and ODG speaker notes get `notes`, as PPTX. Kinds under the
+  LocOS profile are unchanged.
+
 - Sentence segmentation: a line break kept as a tag (a .txt paragraph's line ending, an SRT or WebVTT cue's line
   break, a Markdown hard break) now ends a sentence, so a file with one sentence per line opens as one segment per
   line (bilingua#21). At the cut the break moves out of the segments into the separator, written with the file's own

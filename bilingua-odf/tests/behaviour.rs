@@ -91,7 +91,7 @@ fn point_and_paired_codes_have_display_and_labels() {
     // the footnote anchor is one point code; the footnote body is its own unit
     let u1 = &d.units[1];
     assert!(u1.codes()["2"].standalone_markup().unwrap().starts_with("<text:note "));
-    assert_eq!(d.units[2].context.kind.as_deref(), Some("paragraph"));
+    assert_eq!(d.units[2].context.kind.as_deref(), Some("footnote"));
     assert_eq!(d.units[1].context.location.as_deref(), Some("content.xml paragraph 1"));
 }
 
