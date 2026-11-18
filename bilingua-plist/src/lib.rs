@@ -37,6 +37,8 @@ const RAW: &str = "raw"; // XML: the content as written in the file
 const LEAD: &str = "lead";
 const TRAIL: &str = "trail";
 const ORD: &str = "ord"; // binary: position of the value among the file's strings
+const PLURAL_KEYS: [&str; 6] = ["zero", "one", "two", "few", "many", "other"];
+const PVAR: &str = "pvar"; // stringsdict: a unit added for a plural category, its plural variable (`plural_vars` index)
 
 /// Skeleton encoding tag of a binary plist (the skeleton keeps the original file as base64).
 const BINARY: &str = "bplist";
@@ -126,6 +128,54 @@ fn new_value(u: &Unit) -> Option<String> {
     Some(format!("{}{}{}", code(u, LEAD).unwrap_or_default(), text, code(u, TRAIL).unwrap_or_default()))
 }
 
+/// The full value of a translated unit added for a plural category (its translation even when that equals the
+/// source `other`).
+fn added_value(u: &Unit) -> String {
+    format!("{}{}{}", code(u, LEAD).unwrap_or_default(), out_text(u, &u.output()), code(u, TRAIL).unwrap_or_default())
+}
+
+/// A stringsdict's plural forms (unit model step 7): for each string node that is a category form of a plural
+/// variable, its group (`entry/variable`), category and variable name; and per variable its `other` node, the
+/// categories it has and its place in [`plural_vars`].
+struct Forms {
+    by_node: HashMap<usize, (String, String, String)>,
+    vars: Vec<(usize, Vec<String>, String)>,
+}
+
+fn plural_forms(tree: &Tree) -> Forms {
+    let mut f = Forms { by_node: HashMap::new(), vars: Vec::new() };
+    let root = &tree.nodes[tree.root];
+    let vars = plural_vars(tree);
+    if root.kind != Kind::Dict {
+        return f;
+    }
+    for entry in &root.kids {
+        for var in &tree.nodes[entry.node].kids {
+            if !vars.contains(&var.node) {
+                continue;
+            }
+            let ek = entry.key.as_deref().unwrap_or("");
+            let vk = var.key.as_deref().unwrap_or("");
+            let group = format!("{ek}/{vk}");
+            let mut have = Vec::new();
+            let mut other = usize::MAX;
+            for kid in &tree.nodes[var.node].kids {
+                let k = kid.key.as_deref().unwrap_or("");
+                if tree.nodes[kid.node].kind != Kind::Str || !PLURAL_KEYS.contains(&k) {
+                    continue;
+                }
+                if k == "other" {
+                    other = kid.node;
+                }
+                have.push(k.to_string());
+                f.by_node.insert(kid.node, (group.clone(), k.to_string(), vk.to_string()));
+            }
+            f.vars.push((other, have, group));
+        }
+    }
+    f
+}
+
 /// How the file was read.
 enum Origin {
     Xml { text: String, encoding: String, warnings: Vec<Warning> },
@@ -192,6 +242,10 @@ fn extract_impl(fmt: Fmt, bytes: &[u8], opts: &ExtractOptions, limits: &Limits) 
         parts.push(SkelPart::Raw(b64::encode(raw)));
     }
     let (mut cursor, mut line, mut counted_to, mut translatable_n) = (0usize, 1usize, 0usize, 0usize);
+    let locos = opts.is_profile(profile::LOCOS);
+    let forms = if fmt == Fmt::Stringsdict && !locos { plural_forms(&tree) } else { Forms { by_node: HashMap::new(), vars: Vec::new() } };
+    // the unit of each node
+    let mut unit_of: HashMap<usize, usize> = HashMap::new();
     for (ord0, leaf) in leaves.iter().enumerate() {
         let node = &tree.nodes[leaf.node];
         let (lead, core, trail) = split_ws(&node.text);
@@ -238,8 +292,41 @@ fn extract_impl(fmt: Fmt, bytes: &[u8], opts: &ExtractOptions, limits: &Limits) 
         } else {
             u.set_hidden(ORD, (ord0 + 1).to_string());
         }
+        if let Some((group, cat, var)) = forms.by_node.get(&leaf.node) {
+            let mut slot = icu::key_slot(group.as_str(), false, cat, false);
+            if !var.is_empty() {
+                slot = slot.with_arg(var.as_str());
+            }
+            u.set_plural(slot);
+        }
         parts.push(SkelPart::Unit(units.len()));
+        unit_of.insert(leaf.node, units.len());
         units.push(u);
+    }
+    // outside the LocOS profile, a category the target needs and a plural variable lacks gets a unit of its own (a
+    // copy of `other`, id `s<n>.<category>`): the merge's plural fill writes it, from `other` while untranslated
+    let target = opts.target_lang.as_deref().map(str::trim).filter(|t| MergeOptions::plausible_lang(t));
+    if let Some(cats) = target.and_then(cldr::categories) {
+        for (k, (other, have, _)) in forms.vars.iter().enumerate() {
+            let Some(&oi) = unit_of.get(other) else { continue };
+            if !units[oi].translate {
+                continue;
+            }
+            for c in cats.iter().copied().filter(|c| !have.iter().any(|h| h == c)) {
+                translatable_n += 1;
+                guard::check_unit_count(translatable_n, limits)?;
+                let other = &units[oi];
+                let slot = other.plural().cloned().map(|s| s.with_category(c));
+                let mut u = icu::key_added_copy(other, format!("{}.{c}", other.id), c, &cats, slot);
+                u.set_hidden(PVAR, k.to_string());
+                if let Some(key) = u.context.key.as_mut() {
+                    if let Some(stem) = key.strip_suffix("other") {
+                        *key = format!("{stem}{c}");
+                    }
+                }
+                units.push(u);
+            }
+        }
     }
     let (encoding, warnings) = match origin {
         Origin::Xml { text, encoding, warnings } => {
@@ -283,12 +370,13 @@ fn plural_vars(tree: &Tree) -> Vec<usize> {
 }
 
 /// Adds the target language's plural categories that the XML text lacks, before `other`, filled with the `other`
-/// text (LocOS `build_localized`).
-fn fill_xml(text: &str, locale: &str, limits: &Limits) -> Result<String, Error> {
+/// text (LocOS `build_localized`). `added` holds, by plural variable and category, the values of the translated units
+/// added at extract for a category the variable lacks: they stand in for the copy of `other`.
+fn fill_xml(text: &str, locale: &str, limits: &Limits, added: &HashMap<(usize, &str), String>) -> Result<String, Error> {
     let Some(cats) = cldr::categories(locale) else { return Ok(text.to_string()) };
     let tree = xml::scan(text, "stringsdict", limits).map_err(|e| Error::Write(format!("the merged file could not be read again: {e}")))?;
     let mut splices: Vec<(usize, String)> = Vec::new();
-    for var in plural_vars(&tree) {
+    for (k, var) in plural_vars(&tree).into_iter().enumerate() {
         let v = &tree.nodes[var];
         let Some(oi) = tree.find_key(var, "other") else { continue };
         let other = &tree.nodes[v.kids[oi].node];
@@ -308,6 +396,7 @@ fn fill_xml(text: &str, locale: &str, limits: &Limits) -> Result<String, Error> 
         let kv = if kv.chars().all(xml::is_space) { kv } else { "" };
         for cat in &cats {
             if tree.find_key(var, cat).is_none() {
+                let fill = added.get(&(k, *cat)).map_or_else(|| fill.clone(), |v| xml::escape(&xml::target_text(v)));
                 splices.push((okid.kstart, format!("<key>{cat}</key>{kv}<string>{fill}</string>{gap}")));
             }
         }
@@ -325,9 +414,9 @@ fn fill_xml(text: &str, locale: &str, limits: &Limits) -> Result<String, Error> 
 }
 
 /// The same fill on a binary plist's tree.
-fn fill_tree(tree: &mut Tree, locale: &str) {
+fn fill_tree(tree: &mut Tree, locale: &str, added: &HashMap<(usize, &str), String>) {
     let Some(cats) = cldr::categories(locale) else { return };
-    for var in plural_vars(tree) {
+    for (k, var) in plural_vars(tree).into_iter().enumerate() {
         let Some(oi) = tree.find_key(var, "other") else { continue };
         let other = &tree.nodes[tree.nodes[var].kids[oi].node];
         if other.kind != Kind::Str {
@@ -338,11 +427,30 @@ fn fill_tree(tree: &mut Tree, locale: &str) {
             if tree.find_key(var, cat).is_none() {
                 let at = tree.find_key(var, "other").unwrap_or(0);
                 let idx = tree.nodes.len();
-                tree.nodes.push(Node::string(fill.clone()));
+                tree.nodes.push(Node::string(added.get(&(k, *cat)).map_or_else(|| fill.clone(), |v| xml::target_text(v))));
                 tree.nodes[var].kids.insert(at, Kid { key: Some((*cat).to_string()), kstart: NO_SPAN, kend: NO_SPAN, node: idx });
             }
         }
     }
+}
+
+/// The values of the translated units added for a plural category, by plural variable and category, checked against
+/// the merge's target (`lang`, `None` when nothing is filled): a translated unit added for another target's
+/// categories is an error.
+fn added_values<'d>(doc: &'d Document, lang: Option<&str>) -> Result<HashMap<(usize, &'d str), String>, Error> {
+    let cats = lang.and_then(cldr::categories);
+    let mut out = HashMap::new();
+    for u in doc.units.iter().filter(|u| u.translate && has_target(u)) {
+        match icu::key_added(u, cats.as_deref()) {
+            icu::KeyAdded::No => {}
+            icu::KeyAdded::Foreign => return Err(icu::foreign_added_error(u)),
+            icu::KeyAdded::Fits(c) => {
+                let k = code(u, PVAR).and_then(|k| k.parse::<usize>().ok()).ok_or_else(|| icu::foreign_added_error(u))?;
+                out.insert((k, c), added_value(u));
+            }
+        }
+    }
+    Ok(out)
 }
 
 /// Plural forms are filled for the target language when something was translated, or always with
@@ -373,9 +481,11 @@ fn merge_impl(fmt: Fmt, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, 
             tree.nodes[leaf.node].text = xml::target_text(&v);
             changed = true;
         }
-        if let Some(lang) = wants_fill(fmt, doc, opts) {
+        let lang = wants_fill(fmt, doc, opts);
+        let added = added_values(doc, lang)?;
+        if let Some(lang) = lang {
             let before = tree.nodes.len();
-            fill_tree(&mut tree, lang);
+            fill_tree(&mut tree, lang, &added);
             changed |= tree.nodes.len() != before;
         }
         return Ok(if changed { bin::write(&tree) } else { original });
@@ -393,8 +503,10 @@ fn merge_impl(fmt: Fmt, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, 
             }
         }
     }
-    if let Some(lang) = wants_fill(fmt, doc, opts) {
-        out = fill_xml(&out, lang, &opts.limits())?;
+    let lang = wants_fill(fmt, doc, opts);
+    let added = added_values(doc, lang)?;
+    if let Some(lang) = lang {
+        out = fill_xml(&out, lang, &opts.limits(), &added)?;
     }
     // A UTF-16 plist stays UTF-16 with its byte order mark under the LocOS profile whatever the output encoding is
     // (LocOS writes the source's codec back). Native UTF-8 output writes UTF-8 and says so in the declaration; 8-bit

@@ -29,6 +29,7 @@ const CDATA: &str = "cdata"; // the value held a CDATA section
 const QUOTED: &str = "quoted"; // Android: the whole value was in double quotes
 const ESC_NL: &str = "escnl"; // Android: the source writes line breaks as \n escapes and has no raw one (#706)
 const MSGFMT: &str = "msgfmt"; // Java: the value has MessageFormat arguments ({0}, {1,date})
+const PGROUP: &str = "pgroup"; // Android: the `<plurals>` (its index in the scan) of a unit added for a target form
 
 /// Android: the text a translator sees for a raw text piece (`\'` `\"` `\@` `\?` unescaped; `\n`, `\t`, `\uXXXX`
 /// and `\\` kept as typed).
@@ -301,6 +302,8 @@ fn extract(d: Dialect, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, 
     let (mut n_tr, mut n_lock) = (0usize, 0usize);
     let (mut line, mut line_at) = (1usize, 0usize);
     let locos = opts.is_profile(profile::LOCOS);
+    // the `other` unit of each `<plurals>`, by group
+    let mut other_of: std::collections::HashMap<usize, usize> = std::collections::HashMap::new();
     for (slot_index, s) in p.scan.slots.iter().enumerate() {
         let Some((a, b)) = s.inner else { continue };
         // Android: a value that is a resource or theme reference (@string/x, ?attr/x) is not text
@@ -362,6 +365,9 @@ fn extract(d: Dialect, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, 
         if let Some((k, v)) = extra {
             unit.context.extra_mut().insert(k, v);
         }
+        if let (Kind::Plural(q), Some(g), false) = (&s.kind, s.group, locos) {
+            unit.set_plural(icu::key_slot(group_name(&s.name, g), false, q, false));
+        }
         if locos {
             // LocOS `XmlResourceFilter.parse`: p_index is the slot's position among every slot of the file (skipped,
             // reference and empty ones counted), so a skipped resource never renumbers the ones after it
@@ -375,13 +381,43 @@ fn extract(d: Dialect, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, 
         }
         pos = b;
         parts.push(SkelPart::Unit(units.len()));
+        if let (Kind::Plural(q), Some(g)) = (&s.kind, s.group) {
+            if q == "other" && unit.translate {
+                other_of.insert(g, units.len());
+            }
+        }
         units.push(unit);
     }
     if pos < p.text.len() {
         parts.push(SkelPart::Raw(p.text[pos..].to_string()));
     }
+    // outside the LocOS profile, a quantity the target needs and a `<plurals>` lacks gets a unit of its own (a copy
+    // of `other`, id `u<n>.<quantity>`), which the merge's plural fill writes from `other` while untranslated
+    if let (Dialect::Android, false, Some(target)) = (d, locos, opts.target_lang.as_deref().map(str::trim).filter(|t| MergeOptions::plausible_lang(t))) {
+        let cats = cldr::categories(target);
+        for (g, group) in p.scan.groups.iter().enumerate() {
+            let Some(&oi) = other_of.get(&g) else { continue };
+            if group.off {
+                continue;
+            }
+            for c in cats.iter().copied().filter(|c| !group.items.iter().any(|i| i.quantity == *c)) {
+                guard::check_unit_count(units.len() + 1, limits)?;
+                let other = &units[oi];
+                let slot = other.plural().cloned().map(|s| s.with_category(c));
+                let mut u = icu::key_added_copy(other, format!("{}.{c}", other.id), c, &cats, slot);
+                u.set_hidden(PGROUP, g.to_string());
+                u.context.extra_mut().insert("plural", c);
+                units.push(u);
+            }
+        }
+    }
     let doc = Document::new(d.id(), units, Skeleton::text(parts, p.enc, bilingua_model::parser_info!())).with_options(opts);
     guard::finish(doc, p.warnings, limits)
+}
+
+/// The plural group of a `<plurals>`: its name and its place among the file's `<plurals>`.
+fn group_name(name: &str, g: usize) -> String {
+    format!("{name}#{g}")
 }
 
 /// One resource entry as a key-based project sees it (Localization OS `ResourceRecord`): every entry of the file in
@@ -560,11 +596,14 @@ fn write_unit(d: Dialect, u: &Unit) -> Option<String> {
 /// Android plural fill on a target-language merge: every `<plurals>` (not translatable="false") gets the CLDR
 /// categories the language uses, filled with the `other` item's (translated) text, and loses the ones it never
 /// uses (`other` is always kept). Works on the merged text, so the `other` item already carries its translation.
-fn fill_plurals(text: &str, locale: &str) -> Result<String, Error> {
+///
+/// `added` holds, by group and quantity, the inner XML of the translated units added at extract for a quantity the
+/// source lacks; they stand in for the `other` copy.
+fn fill_plurals(text: &str, locale: &str, added: &std::collections::HashMap<(usize, &str), String>) -> Result<String, Error> {
     let cats = cldr::categories(locale);
     let scan = scan::scan(text, Dialect::Android)?;
     let mut edits: Vec<(usize, usize, String)> = Vec::new();
-    for g in scan.groups.iter().filter(|g| !g.off && !g.items.is_empty()) {
+    for (gi, g) in scan.groups.iter().enumerate().filter(|(_, g)| !g.off && !g.items.is_empty()) {
         let Some(other) = g.items.iter().find(|i| i.quantity == "other") else { continue };
         for it in &g.items {
             if it.quantity != "other" && !cats.contains(&it.quantity.as_str()) {
@@ -588,7 +627,13 @@ fn fill_plurals(text: &str, locale: &str) -> Result<String, Error> {
             nl = "";
         }
         let last = g.items.last().expect("items");
-        let add: String = missing.iter().map(|q| format!("{nl}{indent}<item quantity=\"{q}\">{inner}</item>")).collect();
+        let add: String = missing
+            .iter()
+            .map(|q| {
+                let inner = added.get(&(gi, *q)).map_or(inner, String::as_str);
+                format!("{nl}{indent}<item quantity=\"{q}\">{inner}</item>")
+            })
+            .collect();
         edits.push((last.end, last.end, add));
     }
     // one pass over the text (replacing ranges in place would move the tail once per edit)
@@ -628,9 +673,27 @@ fn merge(d: Dialect, doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Err
         }
     }
     if d == Dialect::Android {
-        if let Some(locale) = opts.stamp_lang(doc, changed) {
-            out = fill_plurals(&out, locale)?;
+        // units added at extract for a quantity the source lacks: written by the plural fill, the translated ones
+        // in place of the `other` copy, when the merge's target has the categories they were added for
+        let translated_added = doc.units.iter().any(|u| u.has_hidden(icu::ADDED_HIDDEN) && u.translate && icu::has_any_target(u));
+        if let Some(locale) = opts.stamp_lang(doc, changed || translated_added) {
+            let cats = cldr::categories(locale);
+            let mut added: std::collections::HashMap<(usize, &str), String> = std::collections::HashMap::new();
+            for u in doc.units.iter().filter(|u| u.translate && icu::has_any_target(u)) {
+                match icu::key_added(u, Some(cats.as_slice())) {
+                    icu::KeyAdded::No => {}
+                    icu::KeyAdded::Foreign => return Err(icu::foreign_added_error(u)),
+                    icu::KeyAdded::Fits(q) => {
+                        let Some(g) = u.hidden(PGROUP).and_then(|g| g.parse::<usize>().ok()) else { return Err(icu::foreign_added_error(u)) };
+                        let inner = write_unit(d, u).unwrap_or_else(|| u.hidden(RAW).unwrap_or("").to_string());
+                        added.insert((g, q), inner);
+                    }
+                }
+            }
+            out = fill_plurals(&out, locale, &added)?;
             changed = true;
+        } else if let Some(u) = doc.units.iter().find(|u| u.has_hidden(icu::ADDED_HIDDEN) && u.translate && icu::has_any_target(u)) {
+            return Err(icu::foreign_added_error(u));
         }
     }
     finish_bytes(out, encoding, changed, opts)

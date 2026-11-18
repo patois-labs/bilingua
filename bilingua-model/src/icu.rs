@@ -473,6 +473,104 @@ pub fn added_matches(unit: &crate::Unit, added_path: Option<&str>) -> bool {
     unit.hidden(ADDED_HIDDEN) == added_path
 }
 
+// ---------------------------------------------------------------------------------------------------------
+// Added forms of key-style plurals (unit model step 7)
+
+/// The [`ADDED_HIDDEN`] value of a unit added for a key-style plural form (Android `<item quantity>`, stringsdict
+/// keys, i18next `_few` keys, Rails YAML keys, Fluent variants): the category and every category of the target it
+/// was added for, `few of one few many other`. A merge uses the unit only when its own target categories are the
+/// same list ([`key_added`]), so a document extracted for Polish and merged for Slovenian never writes Polish
+/// `few` as Slovenian `few`.
+pub fn key_added_mark(category: &str, cats: &[&str]) -> String {
+    format!("{category} of {}", cats.join(" "))
+}
+
+/// How a merge whose target has the categories `cats` treats one unit ([`key_added`]).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum KeyAdded<'u> {
+    /// Not an added key-style form.
+    No,
+    /// Added for this category of the same target categories: the merge may write it.
+    Fits(&'u str),
+    /// Added for another target's categories (or the merge has no target): the merge must not write it.
+    Foreign,
+}
+
+/// Reads a unit's [`key_added_mark`] against the merge's target categories (`None`: the merge has no target).
+pub fn key_added<'u>(unit: &'u crate::Unit, cats: Option<&[&str]>) -> KeyAdded<'u> {
+    let Some((cat, list)) = unit.hidden(ADDED_HIDDEN).and_then(|m| m.split_once(" of ")) else { return KeyAdded::No };
+    match cats {
+        Some(cats) if list.split(' ').eq(cats.iter().copied()) && cats.contains(&cat) => KeyAdded::Fits(cat),
+        _ => KeyAdded::Foreign,
+    }
+}
+
+/// True when a unit has a target in some segment (a translator wrote it).
+pub fn has_any_target(unit: &crate::Unit) -> bool {
+    unit.segments.iter().any(|s| s.has_target())
+}
+
+/// The error a merge gives for a translated unit that was added for another target's plural categories: writing
+/// it would put one language's form under another's category.
+pub fn foreign_added_error(unit: &crate::Unit) -> crate::Error {
+    crate::Error::Write(format!(
+        "unit {} is a plural form added for another target language's categories; extract the file again for this target",
+        unit.id
+    ))
+}
+
+/// A copy of `other` (a fresh extract's unit) as the added form `category` of a target with the categories `cats`:
+/// id `id` (its segment too), the [`key_added_mark`], and `slot` (marked added).
+pub fn key_added_copy(other: &crate::Unit, id: impl Into<String>, category: &str, cats: &[&str], slot: Option<crate::PluralSlot>) -> crate::Unit {
+    let mut u = other.clone();
+    let id = id.into();
+    let old = std::mem::take(&mut u.id);
+    for s in u.segments.iter_mut().filter(|s| s.id == old) {
+        s.id = id.clone();
+    }
+    u.id = id;
+    u.set_hidden(ADDED_HIDDEN, key_added_mark(category, cats));
+    u.set_plural(slot.map(|s| s.with_added(true)));
+    u
+}
+
+/// Plural slots for suffix-style plural keys (ARB `itemCountOne`, `itemCountOther`): the units whose key (`key`
+/// gives it, `None` for a unit that is not a whole top-level message) is a stem and a category word, grouped by
+/// stem, where a stem has `Other` and one more word (the groups the merge's suffix fill reads). Group `{stem}`,
+/// category the word in lower case; a unit that has a slot keeps it.
+pub fn suffix_plural_slots(units: &mut [crate::Unit], key: &dyn Fn(&crate::Unit) -> Option<String>) {
+    const WORDS: [&str; 6] = ["Zero", "One", "Two", "Few", "Many", "Other"];
+    let mut groups: std::collections::HashMap<String, Vec<(usize, &'static str)>> = std::collections::HashMap::new();
+    for (i, u) in units.iter().enumerate() {
+        let Some(k) = key(u) else { continue };
+        if !k.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'_') {
+            continue;
+        }
+        if let Some((stem, w)) = WORDS.iter().find_map(|w| k.strip_suffix(w).filter(|s| !s.is_empty()).map(|s| (s.to_string(), *w))) {
+            groups.entry(stem).or_default().push((i, w));
+        }
+    }
+    for (stem, forms) in groups {
+        let mut words: Vec<&str> = forms.iter().map(|f| f.1).collect();
+        words.sort_unstable();
+        words.dedup();
+        if words.len() < 2 || !words.contains(&"Other") {
+            continue;
+        }
+        for (i, w) in forms {
+            if units[i].plural.is_none() {
+                units[i].set_plural(key_slot(stem.as_str(), false, &w.to_ascii_lowercase(), false));
+            }
+        }
+    }
+}
+
+/// The plural slot of a key-style form: group, cardinal or ordinal, category, the `added` mark.
+pub fn key_slot(group: impl Into<Box<str>>, ordinal: bool, category: &str, added: bool) -> crate::PluralSlot {
+    let kind = if ordinal { crate::PluralKind::Ordinal } else { crate::PluralKind::Cardinal };
+    crate::PluralSlot::new(group, kind).with_category(category).with_added(added)
+}
+
 /// A complex argument rebuilt from its rendered branches. Plural and selectordinal follow the target's
 /// categories `cats`: unused ones go, missing ones take the text of `added` for that category (an added unit's
 /// rendering) or else copy the `other` text, `=N` branches stay.

@@ -28,6 +28,7 @@ const LEAD: &str = "lead"; // white space of the value before the unit text
 const TRAIL: &str = "trail"; // and after it
 const STY: &str = "sty"; // style: p ' " | >
 const FLOW: &str = "flow"; // "1" inside a flow collection
+const PMAP: &str = "pmap"; // a unit added for a plural category: its plural map (index in the walk)
 
 fn style_char(s: Style) -> &'static str {
     match s {
@@ -200,6 +201,7 @@ impl Yaml {
         let context_limits = limits.context_limits();
         let mut context = w.context;
         let mut noted: Option<(usize, String)> = None;
+        let locos = opts.is_profile(profile::LOCOS);
         for (i, wu) in w.units.iter().enumerate() {
             let (lead, core, trail) = split_ws(&wu.value);
             let (inl, codes) = inline::tag_placeholders(core);
@@ -231,6 +233,9 @@ impl Yaml {
             }
             if let Some(p) = &wu.plural {
                 u.context.extra_mut().insert("plural", p.clone());
+                if let (Some(m), false) = (wu.map, locos) {
+                    u.set_plural(icu::key_slot(group_name(&w.plural_maps[m].path, m), false, p, false));
+                }
             }
             if wu.start > pos {
                 parts.push(SkelPart::Raw(text[pos..wu.start].to_string()));
@@ -245,6 +250,35 @@ impl Yaml {
         if let Some(r) = &w.rails_root {
             if let Some(u) = units.first_mut() {
                 u.context.extra_mut().insert("rails_locale", r.key.clone());
+            }
+        }
+        // outside the LocOS profile, a Rails plural map gets a unit for each category the target needs and the map
+        // lacks (a copy of `other`, id `u<n>.<category>`): the merge writes it where the plural fill puts that key,
+        // from `other` while untranslated
+        let target = opts.target_lang.as_deref().map(str::trim).filter(|t| MergeOptions::plausible_lang(t));
+        if let (Some(target), Some(_), false) = (target, &w.rails_root, locos) {
+            let cats = locale::target_categories(target).unwrap_or_default();
+            for (m, pm) in w.plural_maps.iter().enumerate() {
+                let Some(ou) = pm.other_unit else { continue };
+                if fill_line(&text, &starts, &w.units[ou]).is_none() {
+                    continue;
+                }
+                for c in locale::missing_categories(&pm.cats, target) {
+                    if units.len() + 1 > limits.max_units {
+                        return Err(LimitError::new(LimitKind::Units, format!("this file has more than {} segments", limits.max_units)).into());
+                    }
+                    let other = &units[ou];
+                    let slot = other.plural().cloned().map(|s| s.with_category(c));
+                    let mut u = icu::key_added_copy(other, format!("{}.{c}", other.id), c, &cats, slot);
+                    u.set_hidden(PMAP, m.to_string());
+                    u.context.extra_mut().insert("plural", c);
+                    if let Some(k) = u.context.key.as_mut() {
+                        if let Some(stem) = k.strip_suffix("other") {
+                            *k = format!("{stem}{c}");
+                        }
+                    }
+                    units.push(u);
+                }
             }
         }
         // a code page whose bytes do not come back from the text (double-mapped sequences) keeps the file's own bytes
@@ -278,41 +312,80 @@ fn target_root_key(source_key: &str, target: &str) -> String {
     }
 }
 
-/// Edits for a localized Rails file: the root key and the plural categories the target needs.
-fn rails_edits(text: &str, w: &Walk, doc: &Document, target: &str, edits: &mut Vec<(usize, usize, String)>) {
+/// The plural group of a map: its key path and its place among the file's plural maps.
+fn group_name(path: &str, m: usize) -> String {
+    format!("{path}#{m}")
+}
+
+/// Where the plural fill puts the keys a map lacks: the start of the `other:` key line of its `other` value, with
+/// that line; `None` for a flow value or another layout (nothing is filled then).
+fn fill_line<'t>(text: &'t str, starts: &[usize], wu: &walk::WUnit) -> Option<(usize, &'t str)> {
+    let kl = wu.key_line?;
+    if wu.flow || kl >= starts.len() {
+        return None;
+    }
+    let bol = starts[kl];
+    let eol_at = text[bol..].find('\n').map_or(text.len(), |i| bol + i);
+    let line = &text[bol..eol_at];
+    let after = line.trim_start_matches(' ');
+    let is_other = ["other", "'other'", "\"other\""].iter().any(|k| after.strip_prefix(k).is_some_and(|r| r.trim_start().starts_with(':')));
+    is_other.then_some((bol, line))
+}
+
+/// Edits for a localized Rails file: the root key and the plural categories the target needs. `added` holds the
+/// translated units added at extract for a category a map lacks, by map and category: they stand in for the copy
+/// of `other`.
+fn rails_edits(text: &str, w: &Walk, doc: &Document, target: &str, added: &std::collections::HashMap<(usize, &str), String>, edits: &mut Vec<(usize, usize, String)>) {
     let Some(root) = &w.rails_root else { return };
     let new_key = target_root_key(&root.key, target);
     if !new_key.is_empty() && new_key != root.key {
         edits.push((root.start, root.end, render::render_key(&new_key, root.style)));
     }
     let starts = line_starts(text);
-    for pm in &w.plural_maps {
+    for (m, pm) in w.plural_maps.iter().enumerate() {
         let Some(ou) = pm.other_unit else { continue };
-        let Some(value) = doc.units.get(ou).and_then(new_value) else { continue };
-        let wu = &w.units[ou];
-        let Some(kl) = wu.key_line else { continue };
-        if wu.flow || kl >= starts.len() {
-            continue;
-        }
+        // the fill follows a translated `other`; a map whose added forms are translated is filled too, its other
+        // missing forms then taking the source `other`
+        let value = match doc.units.get(ou).and_then(new_value) {
+            Some(v) => v,
+            None if added.keys().any(|k| k.0 == m) => w.units[ou].value.clone(),
+            None => continue,
+        };
+        let Some((bol, line)) = fill_line(text, &starts, &w.units[ou]) else { continue };
         let missing = locale::missing_categories(&pm.cats, target);
         if missing.is_empty() {
             continue;
         }
-        let bol = starts[kl];
-        let eol_at = text[bol..].find('\n').map_or(text.len(), |i| bol + i);
-        let line = &text[bol..eol_at];
-        let indent_len = line.len() - line.trim_start_matches(' ').len();
-        let after = &line[indent_len..];
-        let is_other = ["other", "'other'", "\"other\""].iter().any(|k| after.strip_prefix(k).is_some_and(|r| r.trim_start().starts_with(':')));
-        if !is_other {
-            continue;
-        }
-        let rendered = if render::plain_ok(&value, false) { value.clone() } else { render::dq(&value) };
+        let render_value = |v: &str| if render::plain_ok(v, false) { v.to_string() } else { render::dq(v) };
         let eol = if line.ends_with('\r') { "\r\n" } else { "\n" };
-        let indent = &line[..indent_len];
-        let ins: String = missing.iter().map(|c| format!("{indent}{c}: {rendered}{eol}")).collect();
+        let indent = &line[..line.len() - line.trim_start_matches(' ').len()];
+        let ins: String = missing
+            .iter()
+            .map(|c| {
+                let v = render_value(added.get(&(m, *c)).map_or(value.as_str(), String::as_str));
+                format!("{indent}{c}: {v}{eol}")
+            })
+            .collect();
         edits.push((bol, bol, ins));
     }
+}
+
+/// The translated units added for a plural category, by plural map and category (their new values), checked
+/// against the merge's target categories: a translated unit added for another target is an error.
+fn added_values<'d>(doc: &'d Document, target: Option<&str>) -> Result<std::collections::HashMap<(usize, &'d str), String>, Error> {
+    let cats = target.and_then(locale::target_categories);
+    let mut out = std::collections::HashMap::new();
+    for u in doc.units.iter().filter(|u| has_target(u)) {
+        match icu::key_added(u, cats.as_deref()) {
+            icu::KeyAdded::No => {}
+            icu::KeyAdded::Foreign => return Err(icu::foreign_added_error(u)),
+            icu::KeyAdded::Fits(c) => {
+                let m = u.hidden(PMAP).and_then(|m| m.parse::<usize>().ok()).ok_or_else(|| icu::foreign_added_error(u))?;
+                out.insert((m, c), new_value(u).unwrap_or_default());
+            }
+        }
+    }
+    Ok(out)
 }
 
 impl Filter for Yaml {
@@ -367,6 +440,7 @@ impl Filter for Yaml {
         // document comes back byte for byte, like PO).
         match opts.stamp_lang(doc, doc.units.iter().any(has_target)) {
             None => {
+                added_values(doc, None)?;
                 let mut out = String::new();
                 for p in parts {
                     match p {
@@ -385,7 +459,9 @@ impl Filter for Yaml {
                 let text = reconstruct(parts, &doc.units)?;
                 let events = scan::scan(&text, 200).map_err(|e| parse_err(&text, &e))?;
                 let w = walk(&events, &text, &Limits::unlimited()).map_err(|e| parse_err(&text, &e))?;
-                if w.units.len() != doc.units.len() {
+                let added = added_values(doc, Some(target))?;
+                // the units added for a plural category have no place in the skeleton (they follow the others)
+                if w.units.len() != doc.units.iter().filter(|u| !u.has_hidden(icu::ADDED_HIDDEN)).count() {
                     return Err(Error::Write("the document no longer matches its skeleton".into()));
                 }
                 let mut edits: Vec<(usize, usize, String)> = Vec::new();
@@ -395,7 +471,7 @@ impl Filter for Yaml {
                         edits.push((wu.start, wu.end, r));
                     }
                 }
-                rails_edits(&text, &w, doc, target, &mut edits);
+                rails_edits(&text, &w, doc, target, &added, &mut edits);
                 changed = !edits.is_empty();
                 edits.sort_by_key(|e| (e.0, e.1));
                 let mut out = String::with_capacity(text.len());

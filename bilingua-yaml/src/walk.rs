@@ -15,11 +15,15 @@ pub struct WUnit {
     pub key_line: Option<usize>,
     pub path: String,
     pub plural: Option<String>,
+    /// The plural map the value is a form of (an index into `Walk::plural_maps`).
+    pub map: Option<usize>,
 }
 
 pub struct PluralMap {
     pub cats: Vec<String>,
     pub other_unit: Option<usize>,
+    /// The key path of the map.
+    pub path: String,
 }
 
 pub struct RootKey {
@@ -207,7 +211,7 @@ pub fn walk(events: &[Ev], text: &str, limits: &Limits) -> Result<Walk, ScanErro
                     }
                     let key_line = stack.last().filter(|t| t.map).and_then(|t| t.key_line);
                     unit = Some(units.len());
-                    units.push(WUnit { start: sc.start, end: sc.end, value: sc.value.clone(), style: sc.style, flow, key_line, path, plural: None });
+                    units.push(WUnit { start: sc.start, end: sc.end, value: sc.value.clone(), style: sc.style, flow, key_line, path, plural: None, map: None });
                 }
                 finish(&mut stack, docs, &mut root_keys, None, Some("scalar"), Val::Scalar(unit));
             }
@@ -246,12 +250,13 @@ pub fn walk(events: &[Ev], text: &str, limits: &Limits) -> Result<Walk, ScanErro
                         for (k, v) in &frame.keys {
                             if let Val::Scalar(Some(u)) = v {
                                 units[*u].plural = Some(k.clone());
+                                units[*u].map = Some(plural_maps.len());
                                 if k == "other" {
                                     other_unit = Some(*u);
                                 }
                             }
                         }
-                        plural_maps.push(PluralMap { cats: frame.keys.iter().map(|k| k.0.clone()).collect(), other_unit });
+                        plural_maps.push(PluralMap { cats: frame.keys.iter().map(|k| k.0.clone()).collect(), other_unit, path: frame.prefix.clone() });
                     }
                 }
                 if frame.is_key {

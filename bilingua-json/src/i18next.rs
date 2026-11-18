@@ -14,6 +14,120 @@ use std::collections::HashMap;
 const SUFFIXES: [&str; 6] = ["zero", "one", "two", "few", "many", "other"];
 const MAX_DEPTH: usize = 200;
 
+/// The plural groups of one object's members (key, value is a string) in order: the key stem with `_ordinal`, the
+/// kind and the categories, for each group with `_other` and at least one other category key.
+fn groups_of<'m>(members: &[(&'m str, bool)]) -> Vec<(String, bool, Vec<&'m str>)> {
+    let mut order: Vec<(String, bool)> = Vec::new();
+    let mut groups: HashMap<(String, bool), Vec<&str>> = HashMap::new();
+    for (key, is_str) in members {
+        if !is_str || !key.contains('_') {
+            continue;
+        }
+        let (stem, cat) = key.rsplit_once('_').expect("contains an underscore");
+        if !SUFFIXES.contains(&cat) || stem.is_empty() {
+            continue;
+        }
+        let (stem, ordinal) = match stem.strip_suffix("_ordinal") {
+            Some(s) => (s, true),
+            None => (stem, false),
+        };
+        let k = (stem.to_string(), ordinal);
+        if !groups.contains_key(&k) {
+            order.push(k.clone());
+        }
+        let g = groups.entry(k).or_default();
+        if !g.contains(&cat) {
+            g.push(cat);
+        }
+    }
+    order
+        .into_iter()
+        .filter_map(|k| {
+            let cats = groups.remove(&k)?;
+            (cats.len() >= 2 && cats.contains(&"other")).then(|| (format!("{}{}", k.0, if k.1 { "_ordinal" } else { "" }), k.1, cats))
+        })
+        .collect()
+}
+
+/// One i18next plural group of a file (unit model step 7): the object's JSON pointer, the key stem (with
+/// `_ordinal`), the kind, the categories it has and, for a target, the categories the plural fill adds.
+pub struct PluralGroup {
+    pub obj: String,
+    pub stem: String,
+    pub ordinal: bool,
+    pub cats: Vec<String>,
+    pub adds: Vec<&'static str>,
+}
+
+/// A JSON pointer segment.
+pub fn esc(k: &str) -> String {
+    k.replace('~', "~0").replace('/', "~1")
+}
+
+/// Every i18next plural group of the file, in document order, with what a fill for `target` would add.
+pub fn plural_groups(root: &Node, target: Option<&str>) -> Vec<PluralGroup> {
+    fn walk(n: &Node, path: &mut String, target: Option<&str>, depth: usize, out: &mut Vec<PluralGroup>) {
+        if depth > MAX_DEPTH {
+            return;
+        }
+        let at = path.len();
+        match n {
+            Node::Arr { items, .. } => {
+                for (i, v) in items.iter().enumerate() {
+                    path.push_str(&format!("/{i}"));
+                    walk(v, path, target, depth + 1, out);
+                    path.truncate(at);
+                }
+            }
+            Node::Obj(o) => {
+                let seen = dict_view(o).0;
+                let added = target.map(|t| adds(&seen, t)).unwrap_or_default();
+                for (stem, ordinal, cats) in groups_of(&seen) {
+                    let other_key = format!("{stem}_other");
+                    let adds: Vec<&'static str> = added
+                        .iter()
+                        .filter(|(k, _)| *k == other_key)
+                        .flat_map(|(_, v)| v.iter())
+                        .filter_map(|k| k.strip_prefix(stem.as_str()).and_then(|r| r.strip_prefix('_')))
+                        .filter_map(|c| SUFFIXES.iter().copied().find(|s| *s == c))
+                        .collect();
+                    out.push(PluralGroup { obj: path.clone(), stem, ordinal, cats: cats.into_iter().map(str::to_string).collect(), adds });
+                }
+                for p in &o.pairs {
+                    path.push('/');
+                    path.push_str(&esc(&p.key));
+                    walk(&p.value, path, target, depth + 1, out);
+                    path.truncate(at);
+                }
+            }
+            _ => {}
+        }
+    }
+    let mut out = Vec::new();
+    walk(root, &mut String::new(), target, 0, &mut out);
+    out
+}
+
+/// The dict view of an object: distinct keys at their first place with "the last value is a string", and per key
+/// its first and last member index and its place in that list.
+fn dict_view(o: &Obj) -> (Vec<(&str, bool)>, HashMap<&str, (usize, usize, usize)>) {
+    let mut seen: Vec<(&str, bool)> = Vec::new();
+    let mut at: HashMap<&str, (usize, usize, usize)> = HashMap::new();
+    for (i, p) in o.pairs.iter().enumerate() {
+        match at.get_mut(p.key.as_str()) {
+            Some(e) => {
+                e.1 = i;
+                seen[e.2].1 = p.value.is_str();
+            }
+            None => {
+                at.insert(&p.key, (i, i, seen.len()));
+                seen.push((&p.key, p.value.is_str()));
+            }
+        }
+    }
+    (seen, at)
+}
+
 /// For one object's members (key, value is a string) in order: for each `..._other` key the new keys to put
 /// before it.
 fn adds(members: &[(&str, bool)], target: &str) -> Vec<(String, Vec<String>)> {
@@ -69,15 +183,18 @@ fn adds(members: &[(&str, bool)], target: &str) -> Vec<(String, Vec<String>)> {
 }
 
 /// The text with the missing plural keys added, `None` when there is nothing to add (or the file is not an object).
-pub fn fill(text: &str, target: &str, locos: bool, original: &str) -> Option<String> {
+/// `added` holds the text of translated units added at extract for a missing key, by the key's JSON pointer: they
+/// stand in for the copy of `_other`; with `only_added` just those keys are added.
+pub fn fill(text: &str, target: &str, locos: bool, original: &str, added: &HashMap<String, String>, only_added: bool) -> Option<String> {
     let root = crate::tree::scan(text).ok()?;
     if !matches!(root, Node::Obj(_)) {
         return None;
     }
+    let ctx = Fill { target, added, only_added };
     if locos {
         let mut changed = false;
         let v = to_value(&root, text, 0);
-        let filled = fill_value(v, target, 0, &mut changed);
+        let filled = fill_value(v, &ctx, &mut String::new(), 0, &mut changed);
         if !changed {
             return None;
         }
@@ -91,7 +208,7 @@ pub fn fill(text: &str, target: &str, locos: bool, original: &str) -> Option<Str
         return Some(out.replace('\n', nl));
     }
     let mut edits: Vec<(usize, String)> = Vec::new();
-    splice_fill(&root, text, target, 0, &mut edits);
+    splice_fill(&root, text, &ctx, &mut String::new(), 0, &mut edits);
     if edits.is_empty() {
         return None;
     }
@@ -107,29 +224,45 @@ pub fn fill(text: &str, target: &str, locos: bool, original: &str) -> Option<Str
     Some(out)
 }
 
-fn splice_fill(n: &Node, text: &str, target: &str, depth: usize, edits: &mut Vec<(usize, String)>) {
+/// What a fill writes: the target, the translated added keys by pointer, and whether only those are written.
+struct Fill<'a> {
+    target: &'a str,
+    added: &'a HashMap<String, String>,
+    only_added: bool,
+}
+
+impl Fill<'_> {
+    /// The new keys of one group to write, each with the added unit's text when there is one.
+    fn keys<'k>(&self, obj: &str, new_keys: &'k [String]) -> Vec<(&'k str, Option<&String>)> {
+        new_keys
+            .iter()
+            .map(|k| (k.as_str(), self.added.get(&format!("{obj}/{}", esc(k)))))
+            .filter(|(_, a)| a.is_some() || !self.only_added)
+            .collect()
+    }
+}
+
+fn splice_fill(n: &Node, text: &str, ctx: &Fill<'_>, path: &mut String, depth: usize, edits: &mut Vec<(usize, String)>) {
     if depth > MAX_DEPTH {
         return;
     }
+    let here = path.len();
     match n {
-        Node::Arr { items, .. } => items.iter().for_each(|v| splice_fill(v, text, target, depth + 1, edits)),
+        Node::Arr { items, .. } => {
+            for (i, v) in items.iter().enumerate() {
+                path.push_str(&format!("/{i}"));
+                splice_fill(v, text, ctx, path, depth + 1, edits);
+                path.truncate(here);
+            }
+        }
         Node::Obj(o) => {
             // dict view: distinct keys at their first place, the last value (first and last member index per key)
-            let mut seen: Vec<(&str, bool)> = Vec::new();
-            let mut at: HashMap<&str, (usize, usize, usize)> = HashMap::new();
-            for (i, p) in o.pairs.iter().enumerate() {
-                match at.get_mut(p.key.as_str()) {
-                    Some(e) => {
-                        e.1 = i;
-                        seen[e.2].1 = p.value.is_str();
-                    }
-                    None => {
-                        at.insert(&p.key, (i, i, seen.len()));
-                        seen.push((&p.key, p.value.is_str()));
-                    }
+            let (seen, at) = dict_view(o);
+            for (other_key, new_keys) in adds(&seen, ctx.target) {
+                let new_keys = ctx.keys(path, &new_keys);
+                if new_keys.is_empty() {
+                    continue;
                 }
-            }
-            for (other_key, new_keys) in adds(&seen, target) {
                 let Some(&(fi, li, _)) = at.get(other_key.as_str()) else { continue };
                 let (first, last) = (&o.pairs[fi], &o.pairs[li]);
                 let value = &text[last.value.start()..last.value.end()];
@@ -146,11 +279,20 @@ fn splice_fill(n: &Node, text: &str, target: &str, depth: usize, edits: &mut Vec
                     }
                     None => " ".to_string(),
                 };
-                let ins: String = new_keys.iter().map(|k| format!("{}: {value},{sep}", scan::quote(k))).collect();
+                let ins: String = new_keys
+                    .iter()
+                    .map(|(k, a)| match a {
+                        Some(a) => format!("{}: {},{sep}", scan::quote(k), scan::quote(a)),
+                        None => format!("{}: {value},{sep}", scan::quote(k)),
+                    })
+                    .collect();
                 edits.push((first.key_start, ins));
             }
             for p in &o.pairs {
-                splice_fill(&p.value, text, target, depth + 1, edits);
+                path.push('/');
+                path.push_str(&esc(&p.key));
+                splice_fill(&p.value, text, ctx, path, depth + 1, edits);
+                path.truncate(here);
             }
         }
         _ => {}
@@ -195,26 +337,42 @@ fn dedupe(o: &Obj, text: &str, depth: usize) -> Vec<(String, Value)> {
     out
 }
 
-fn fill_value(v: Value, target: &str, depth: usize, changed: &mut bool) -> Value {
+fn fill_value(v: Value, ctx: &Fill<'_>, path: &mut String, depth: usize, changed: &mut bool) -> Value {
     if depth > MAX_DEPTH {
         return v;
     }
+    let here = path.len();
     match v {
-        Value::Arr(items) => Value::Arr(items.into_iter().map(|x| fill_value(x, target, depth + 1, changed)).collect()),
+        Value::Arr(items) => Value::Arr(
+            items
+                .into_iter()
+                .enumerate()
+                .map(|(i, x)| {
+                    path.push_str(&format!("/{i}"));
+                    let x = fill_value(x, ctx, path, depth + 1, changed);
+                    path.truncate(here);
+                    x
+                })
+                .collect(),
+        ),
         Value::Obj(members) => {
             let flags: Vec<(&str, bool)> = members.iter().map(|(k, v)| (k.as_str(), matches!(v, Value::Str(_)))).collect();
-            let mut add: HashMap<String, Vec<String>> = adds(&flags, target).into_iter().collect();
+            let mut add: HashMap<String, Vec<String>> = adds(&flags, ctx.target).into_iter().collect();
             let mut out: Vec<(String, Value)> = Vec::with_capacity(members.len());
             for (k, val) in members {
                 if let Some(new_keys) = add.remove(&k) {
                     if let Value::Str(s) = &val {
-                        for nk in new_keys {
+                        for (nk, a) in ctx.keys(path, &new_keys) {
                             *changed = true;
-                            out.push((nk, Value::Str(s.clone())));
+                            out.push((nk.to_string(), Value::Str(a.cloned().unwrap_or_else(|| s.clone()))));
                         }
                     }
                 }
-                out.push((k, fill_value(val, target, depth + 1, changed)));
+                path.push('/');
+                path.push_str(&esc(&k));
+                let val = fill_value(val, ctx, path, depth + 1, changed);
+                path.truncate(here);
+                out.push((k, val));
             }
             Value::Obj(out)
         }

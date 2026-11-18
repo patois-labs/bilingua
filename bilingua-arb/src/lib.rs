@@ -136,6 +136,11 @@ impl Arb {
         if pos < text.len() {
             parts.push(SkelPart::Raw(text[pos..].to_string()));
         }
+        if !locos {
+            // suffix-style plurals (`itemCountOne`, `itemCountOther`): the forms share a group (no units are added
+            // for them: the merge plans every message's units and checks them one to one)
+            icu::suffix_plural_slots(&mut units, &|u| u.context.key.clone().filter(|_| u.context.extra().get("icu").is_none()));
+        }
         Ok(Document::new(ID, units, Skeleton::text(parts, encoding, bilingua_model::parser_info!())).with_options(opts))
     }
 }

@@ -237,6 +237,11 @@ impl QtTs {
         unit.context.extra_mut().insert("p_index", slot.to_string());
         if numerus {
             unit.context.extra_mut().insert("plural", "numerus");
+            // unit model step 7: one source text stands for every numerus form (Qt numbers the forms by its own
+            // per-language rules, with no category names), so the slot names the group and no category
+            if !opts.is_profile(bilingua_model::profile::LOCOS) {
+                unit.set_plural(bilingua_model::PluralSlot::new(unit.id.clone(), bilingua_model::PluralKind::Cardinal));
+            }
         }
         let span = tr.map(|t| (sc.els[t].start, sc.els[t].end));
         Ok(Some(Found { span, unit }))

@@ -287,6 +287,26 @@ fn new_literal(u: &Unit) -> Option<String> {
     Some(escape(&out, quote, h.close_markup() == Some("1")))
 }
 
+/// The plural slot of a FormatJS (ICU MessageFormat) string, read with the shared parser (unit model step 7): the
+/// string stays one unit, with its structure protected as placeholders, so the slot names the message's first
+/// plural, selectordinal or select argument (kind and argument name) and no category. `None` for other strings.
+fn icu_slot(id: &str, value: &str) -> Option<PluralSlot> {
+    if !(value.contains("plural") || value.contains("select")) {
+        return None;
+    }
+    let parts = bilingua_model::icu::parse(value).ok()?;
+    let cx = parts.iter().find_map(|p| match p {
+        bilingua_model::icu::Part::Complex(cx) => Some(cx),
+        _ => None,
+    })?;
+    let mut slot = PluralSlot::new(id, cx.kind.plural_kind());
+    let arg = cx.arg();
+    if !arg.is_empty() {
+        slot = slot.with_arg(arg);
+    }
+    Some(slot)
+}
+
 impl JsModule {
     /// `extract` with explicit size limits.
     pub fn extract_with(
@@ -302,6 +322,7 @@ impl JsModule {
         let mut units: Vec<Unit> = Vec::new();
         let mut pos = 0usize;
         let (mut line_pos, mut line) = (0usize, 1usize);
+        let locos = opts.is_profile(bilingua_model::profile::LOCOS);
         for ru in &parsed.units {
             let (inl, codes) = ph::unit_inlines(&ru.value);
             let translatable = ph::translatable(&inl);
@@ -340,6 +361,9 @@ impl JsModule {
             u.context.key = Some(key_of(&ru.path, &ru.root, parsed.default_ref.as_deref()));
             u.context.location = Some(format!("line {line}"));
             u.translate = translatable;
+            if !locos {
+                u.set_plural(icu_slot(&u.id, &ru.value));
+            }
             parts.push(SkelPart::Unit(units.len()));
             units.push(u);
         }

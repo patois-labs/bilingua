@@ -35,6 +35,10 @@ const BOM: &[u8] = &[0xEF, 0xBB, 0xBF];
 const RAW_KEY: &str = "$raw";
 /// `UnitContext::extra` key naming the dialect a unit's file was read as (units of a dialect file only).
 const DIALECT_KEY: &str = "json.dialect";
+/// Hidden values of a unit added for an i18next plural key the target needs (unit model step 7): the new key's JSON
+/// pointer, and `1` for an ordinal group.
+const I18N_KEY: &str = "i18n_key";
+const I18N_ORD: &str = "i18n_ord";
 
 /// The `format_options` keys of the JSON filter.
 pub const FORMAT_OPTIONS: &[bilingua_model::FormatOptionKey] = &[
@@ -176,6 +180,9 @@ impl Filter for JsonFilter {
         if locos {
             // LocOS lists its units in walk order: a key repeated later stands at its first place
             in_walk_order(&mut units, &mut parts);
+        } else if let Ok(root) = tree::scan(text) {
+            let target = opts.target_lang.as_deref().map(str::trim).filter(|t| MergeOptions::plausible_lang(t));
+            i18next_units(&root, target, &mut units, &limits)?;
         }
 
         bilingua_model::guard::finish(Document::new(ID, units, Skeleton::text(parts, encoding, bilingua_model::parser_info!())).with_options(opts), std::mem::take(&mut dec.warnings), &opts.limits())
@@ -224,8 +231,11 @@ impl Filter for JsonFilter {
             "false" | "0" | "no" | "off" => Some(false),
             _ => None,
         });
-        if let (true, Some(t)) = (fill.unwrap_or(locos), target) {
-            if let Some(filled) = i18next::fill(&out, t, locos, &orig) {
+        // units added at extract for an i18next plural key: the translated ones are written even with the fill off
+        let added = i18next_added(doc, target)?;
+        let on = fill.unwrap_or(locos);
+        if let (true, Some(t)) = (on || !added.is_empty(), target) {
+            if let Some(filled) = i18next::fill(&out, t, locos, &orig, &added, !on) {
                 out = filled;
             }
         }
@@ -295,7 +305,104 @@ fn extract_dialect(text: &str, encoding: &str, root: &tree::Node, d: Dialect, op
     if pos < text.len() {
         parts.push(SkelPart::Raw(text[pos..].to_string()));
     }
+    if !locos {
+        // suffix-style ARB plurals and go-i18n plural objects: the forms of one message share a group (no units are
+        // added for them: their merge plans every message's units and checks them one to one)
+        let whole = |u: &Unit| u.context.extra().get("icu").is_none();
+        match d {
+            Dialect::Arb => icu::suffix_plural_slots(&mut units, &|u| u.context.key.as_deref().filter(|_| whole(u)).and_then(|k| k.strip_prefix('/')).map(str::to_string)),
+            Dialect::Go => go_slots(&mut units),
+            _ => {}
+        }
+    }
     Ok(Document::new(ID, units, Skeleton::text(parts, encoding, bilingua_model::parser_info!())).with_options(opts))
+}
+
+/// go-i18n plural objects: the units whose pointer ends in a CLDR category key, grouped by the object, where an
+/// object has two or more of them, get a slot (group the object's pointer, category the key in lower case).
+fn go_slots(units: &mut [Unit]) {
+    let mut groups: std::collections::HashMap<String, Vec<(usize, String)>> = std::collections::HashMap::new();
+    for (i, u) in units.iter().enumerate() {
+        if u.plural().is_some() || u.context.extra().get("icu").is_some() {
+            continue;
+        }
+        let Some((obj, last)) = u.context.key.as_deref().and_then(|k| k.rsplit_once('/')) else { continue };
+        let cat = last.to_lowercase();
+        if dialect::CLDR.contains(&cat.as_str()) {
+            groups.entry(obj.to_string()).or_default().push((i, cat));
+        }
+    }
+    for (obj, forms) in groups {
+        if forms.len() < 2 {
+            continue;
+        }
+        for (i, cat) in forms {
+            units[i].set_plural(icu::key_slot(obj.as_str(), false, &cat, false));
+        }
+    }
+}
+
+/// i18next plural keys of generic JSON (unit model step 7): the units of one group's keys share a slot; with a
+/// target, each key the plural fill adds gets a unit of its own (a copy of `_other`, id `u<n>.<category>`), which
+/// the merge writes only when it is translated or the fill is on (`json.i18next_plurals`), in place of the copy.
+fn i18next_units(root: &tree::Node, target: Option<&str>, units: &mut Vec<Unit>, limits: &Limits) -> Result<(), Error> {
+    let groups = i18next::plural_groups(root, target);
+    if groups.is_empty() {
+        return Ok(());
+    }
+    let mut by_ptr: std::collections::HashMap<String, Vec<usize>> = std::collections::HashMap::new();
+    for (i, u) in units.iter().enumerate() {
+        if let Some(k) = &u.context.key {
+            by_ptr.entry(k.clone()).or_default().push(i);
+        }
+    }
+    let key_ptr = |obj: &str, key: String| format!("{obj}/{}", i18next::esc(&key));
+    let mut added: Vec<Unit> = Vec::new();
+    for g in &groups {
+        let group = key_ptr(&g.obj, g.stem.clone());
+        for c in &g.cats {
+            for &i in by_ptr.get(&key_ptr(&g.obj, format!("{}_{c}", g.stem))).into_iter().flatten() {
+                units[i].set_plural(icu::key_slot(group.as_str(), g.ordinal, c, false));
+            }
+        }
+        let Some(cats) = target.and_then(|t| cldr::categories(t, g.ordinal)) else { continue };
+        let Some(&oi) = by_ptr.get(&key_ptr(&g.obj, format!("{}_other", g.stem))).and_then(|v| v.last()) else { continue };
+        if !units[oi].translate {
+            continue;
+        }
+        for c in &g.adds {
+            let other = &units[oi];
+            let mut u = icu::key_added_copy(other, format!("{}.{c}", other.id), c, &cats, other.plural().cloned().map(|s| s.with_category(*c)));
+            let ptr = key_ptr(&g.obj, format!("{}_{c}", g.stem));
+            u.set_hidden(I18N_KEY, ptr.clone());
+            if g.ordinal {
+                u.set_hidden(I18N_ORD, "1");
+            }
+            u.context.key = Some(ptr);
+            added.push(u);
+        }
+    }
+    bilingua_model::guard::check_unit_count(units.len() + added.len(), limits)?;
+    units.extend(added);
+    Ok(())
+}
+
+/// The text of the translated units added for an i18next plural key, by the key's pointer, checked against the
+/// merge's target (`None`: no target): a translated unit added for another target's categories is an error.
+fn i18next_added(doc: &Document, target: Option<&str>) -> Result<std::collections::HashMap<String, String>, Error> {
+    let mut out = std::collections::HashMap::new();
+    for u in doc.units.iter().filter(|u| u.translate && icu::has_any_target(u)) {
+        let cats = target.and_then(|t| cldr::categories(t, u.has_hidden(I18N_ORD)));
+        match icu::key_added(u, cats.as_deref()) {
+            icu::KeyAdded::No => {}
+            icu::KeyAdded::Foreign => return Err(icu::foreign_added_error(u)),
+            icu::KeyAdded::Fits(_) => {
+                let ptr = u.hidden(I18N_KEY).ok_or_else(|| icu::foreign_added_error(u))?;
+                out.insert(ptr.to_string(), plain_inlines(u, u.output()));
+            }
+        }
+    }
+    Ok(out)
 }
 
 /// Sorts the units by their `locos.p_index` (stable), renumbers their ids and points the skeleton at the new
@@ -341,6 +448,11 @@ fn render_token(unit: &Unit, locos: bool) -> String {
 
 /// The JSON string token of `inl`, the unit's tags written back as their codes.
 fn render_inlines(unit: &Unit, inl: Vec<Inline>) -> String {
+    scan::quote(&plain_inlines(unit, inl))
+}
+
+/// The text of `inl`, the unit's tags written back as their codes.
+fn plain_inlines(unit: &Unit, inl: Vec<Inline>) -> String {
     let mut text = String::new();
     for i in inl {
         match i {
@@ -358,7 +470,7 @@ fn render_inlines(unit: &Unit, inl: Vec<Inline>) -> String {
             }
         }
     }
-    scan::quote(&text)
+    text
 }
 
 /// The resource dialect a UTF-8 JSON file has by its shape (`chrome`, `formatjs`, `structured`, `go`, `arb`), the

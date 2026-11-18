@@ -70,6 +70,8 @@ pub struct Slot {
     pub comment: String,
     /// Byte offset of the start tag (for `line N`).
     pub start: usize,
+    /// The `<plurals>` group of a plural item (an index into `Scan::groups`).
+    pub group: Option<usize>,
 }
 
 /// An `<item>` of a `<plurals>`: element span, quantity, inner span.
@@ -276,6 +278,7 @@ pub fn scan(text: &str, d: Dialect) -> Result<Scan, Error> {
                         cdata: false,
                         comment,
                         start: before,
+                        group: None,
                     };
                     let mut new_cap = None;
                     if depth == 1 {
@@ -315,7 +318,8 @@ pub fn scan(text: &str, d: Dialect) -> Result<Scan, Error> {
                             new_cap = Some((start_slot(p.name.clone(), kind, p.off, p.comment.clone()), p.group));
                         }
                     }
-                    if let Some((slot, group)) = new_cap {
+                    if let Some((mut slot, group)) = new_cap {
+                        slot.group = group;
                         if empty {
                             if let (Some(g), Kind::Plural(q)) = (group, &slot.kind) {
                                 groups[g].items.push(Item { start: before, end: after, quantity: q.clone(), inner: None });

@@ -36,6 +36,13 @@ const BOM: &[u8] = &[0xEF, 0xBB, 0xBF];
 const UTF8: &str = "utf-8";
 const UTF8_BOM: &str = "utf-8-bom";
 const MAX_NESTING: usize = 40;
+// Hidden values of a unit added for a plural category the select lacks (unit model step 7): the select (its place
+// in `select_list` order), `1` for an ordinal select, and the source text of the `other` variant before and after
+// the run the unit copies.
+const FSEL: &str = "fsel";
+const FORD: &str = "ford";
+const FPRE: &str = "fpre";
+const FPOST: &str = "fpost";
 
 /// Size limits and the one option. The numbers are `bilingua_model::Limits` (Localization OS's configuration):
 /// `Filter::extract` takes them from `ExtractOptions::limits`, and over-limit files fail with `Error::Limit`.
@@ -167,6 +174,47 @@ struct Run {
     pieces: Vec<Piece>,
     label: String,
     indent: String,
+    /// The innermost select variant the run is in.
+    slot: Option<FSlot>,
+}
+
+/// A variant of a select a run is in: the select (its place in [`select_list`] order), the variant key, the kind,
+/// the enclosing select.
+#[derive(Clone)]
+struct FSlot {
+    sel: usize,
+    key: String,
+    ident: bool,
+    kind: PluralKind,
+    parent: Option<usize>,
+}
+
+/// A select is a plural when it has two or more named variants, all CLDR categories (the plural fill's test).
+fn sel_kind(sel: &parser::Select) -> PluralKind {
+    let named: Vec<&parser::Variant> = sel.variants.iter().filter(|v| v.ident).collect();
+    if named.len() >= 2 && named.iter().all(|v| PLURAL_ORDER.contains(&v.key.as_str())) {
+        if sel.ordinal {
+            PluralKind::Ordinal
+        } else {
+            PluralKind::Cardinal
+        }
+    } else {
+        PluralKind::Select
+    }
+}
+
+/// Every select of the file in [`select_list`] order (the order the plural fill reads them), terms included.
+fn all_selects(items: &[Item]) -> Vec<&parser::Select> {
+    let mut selects: Vec<&parser::Select> = Vec::new();
+    for it in items {
+        if let Some(v) = &it.value {
+            select_list(v, &mut selects);
+        }
+        for a in &it.attrs {
+            select_list(&a.value, &mut selects);
+        }
+    }
+    selects
 }
 
 fn push_text(pieces: &mut Vec<Piece>, s: &str) {
@@ -209,9 +257,9 @@ fn indent_of(src: &str, start: usize, end: usize) -> String {
     format!("{}    ", &line[..lead])
 }
 
-fn walk(els: &[El], label: &str, src: &str, out: &mut Vec<Run>) {
+fn walk(els: &[El], label: &str, src: &str, out: &mut Vec<Run>, ctx: Option<&FSlot>, index: &std::collections::HashMap<usize, usize>) {
     let mut run: Vec<&El> = Vec::new();
-    fn flush(run: &mut Vec<&El>, label: &str, src: &str, out: &mut Vec<Run>) {
+    fn flush(run: &mut Vec<&El>, label: &str, src: &str, out: &mut Vec<Run>, ctx: Option<&FSlot>) {
         if run.is_empty() {
             return;
         }
@@ -227,37 +275,42 @@ fn walk(els: &[El], label: &str, src: &str, out: &mut Vec<Run>) {
                 El::Place { start, end, .. } => pieces.push(Piece::Ph(src[*start..*end].to_string())),
             }
         }
-        out.push(Run { start, end, pieces, label: label.to_string(), indent: indent_of(src, start, end) });
+        out.push(Run { start, end, pieces, label: label.to_string(), indent: indent_of(src, start, end), slot: ctx.cloned() });
         run.clear();
     }
     for el in els {
         if let El::Place { kind: PKind::Select(sel), .. } = el {
-            flush(&mut run, label, src, out);
+            flush(&mut run, label, src, out, ctx);
+            let k = sel.variants.first().and_then(|v| index.get(&v.start)).copied();
+            let kind = sel_kind(sel);
             for v in &sel.variants {
-                walk(&v.value, &format!("{label}[{}]", v.key), src, out);
+                let slot = k.map(|sel| FSlot { sel, key: v.key.clone(), ident: v.ident, kind, parent: ctx.map(|c| c.sel) });
+                walk(&v.value, &format!("{label}[{}]", v.key), src, out, slot.as_ref(), index);
             }
             continue;
         }
         run.push(el);
     }
-    flush(&mut run, label, src, out);
+    flush(&mut run, label, src, out, ctx);
 }
 
 fn runs(src: &str, items: &[Item], terms: bool) -> Vec<(Run, Option<String>)> {
     let mut out: Vec<Run> = Vec::new();
     let mut comments: Vec<Option<String>> = Vec::new();
+    // each select by the start of its first variant, to its place in `select_list` order
+    let index: std::collections::HashMap<usize, usize> = all_selects(items).iter().enumerate().filter_map(|(k, s)| s.variants.first().map(|v| (v.start, k))).collect();
     for it in items {
         let before = out.len();
         if !it.is_term {
             if let Some(v) = &it.value {
-                walk(v, &it.id, src, &mut out);
+                walk(v, &it.id, src, &mut out, None, &index);
             }
             for a in &it.attrs {
-                walk(&a.value, &format!("{}.{}", it.id, a.name), src, &mut out);
+                walk(&a.value, &format!("{}.{}", it.id, a.name), src, &mut out, None, &index);
             }
         } else if terms {
             if let Some(v) = &it.value {
-                walk(v, &format!("-{}", it.id), src, &mut out);
+                walk(v, &format!("-{}", it.id), src, &mut out, None, &index);
             }
         }
         for _ in before..out.len() {
@@ -324,6 +377,9 @@ impl FtlFilter {
         let mut parts: Vec<SkelPart> = Vec::new();
         let mut units: Vec<Unit> = Vec::new();
         let mut pos = 0usize;
+        let locos = opts.is_profile(profile::LOCOS);
+        // the span of each unit's run
+        let mut spans: Vec<(usize, usize)> = Vec::new();
         for (run, comment) in runs(text, &items, limits.translate_terms) {
             if !translatable(&run.pieces) {
                 continue;
@@ -382,6 +438,9 @@ impl FtlFilter {
                         run.indent
                     )),
             );
+            if let (Some(fs), false) = (&run.slot, locos) {
+                unit.set_plural(variant_slot(&run.label, fs));
+            }
             unit.context.kind = Some("key".into());
             unit.context.style = Some(format!("ftl:{}", run.label));
             unit.context.key = Some(run.label);
@@ -389,10 +448,46 @@ impl FtlFilter {
                 unit.context.notes.push(c);
             }
             parts.push(SkelPart::Unit(units.len()));
+            spans.push((run.start, run.end));
             units.push(unit);
         }
         if pos < text.len() {
             parts.push(SkelPart::Raw(text[pos..].to_string()));
+        }
+        // outside the LocOS profile, a plural select gets a unit for each category the target needs and it lacks (a
+        // copy of the `[other]` variant's unit, id `u<n>.<category>`), where the `[other]` variant is one unit of
+        // text: `merge_localized` writes it in place of the `[other]` copy it adds, and plain `merge` (which adds no
+        // variants) writes only the translated ones
+        let target = opts.target_lang.as_deref().map(str::trim).filter(|t| MergeOptions::plausible_lang(t));
+        if let (Some(target), false) = (target, locos) {
+            for (k, sel) in all_selects(&items).into_iter().enumerate() {
+                let Some(at) = fill_at(text, sel, target) else { continue };
+                if at.other.value.iter().any(|e| matches!(e, El::Place { kind: PKind::Select(_), .. })) {
+                    continue;
+                }
+                let inside: Vec<usize> = (0..spans.len()).filter(|&i| spans[i].0 > at.close && spans[i].1 <= at.other.end).collect();
+                let &[oi] = inside.as_slice() else { continue };
+                let (rs, re) = spans[oi];
+                for c in at.missing.iter().copied() {
+                    bilingua_model::guard::check_unit_count(units.len() + 1, &limits.model())?;
+                    let other = &units[oi];
+                    let slot = other.plural().cloned().map(|s| s.with_category(c));
+                    let mut u = icu::key_added_copy(other, format!("{}.{c}", other.id), c, &at.cats, slot);
+                    u.set_hidden(FSEL, k.to_string());
+                    if sel.ordinal {
+                        u.set_hidden(FORD, "1");
+                    }
+                    u.set_hidden(FPRE, &text[at.close + 1..rs]);
+                    u.set_hidden(FPOST, &text[re..at.other.end]);
+                    if let Some(key) = u.context.key.as_mut() {
+                        if let Some(stem) = key.strip_suffix("[other]") {
+                            *key = format!("{stem}[{c}]");
+                        }
+                        u.context.style = Some(format!("ftl:{key}"));
+                    }
+                    units.push(u);
+                }
+            }
         }
         Ok(Document::new(ID, units, Skeleton::text(parts, if bom { UTF8_BOM } else { UTF8 }, bilingua_model::parser_info!())).with_options(opts))
     }
@@ -503,9 +598,16 @@ impl FtlFilter {
             }
         }
         let translated = doc.units.iter().any(|u| u.segments.iter().any(|s| s.has_target()));
-        if let (Some(loc), true) = (fill, translated || even_untranslated) {
+        let filling = fill.filter(|_| translated || even_untranslated);
+        // the translated units added at extract for a category a select lacks: checked against the categories of
+        // the fill's locale (plain merge: the document's target), then written in place of the `[other]` copy
+        let added = added_bodies(doc, filling.or(doc.target_lang.as_deref()))?;
+        if let Some(loc) = filling {
             check_budget(&out, limits).map_err(|e| Error::Write(e.to_string()))?;
-            out = fill_plurals(&out, loc);
+            out = fill_plurals(&out, loc, &added, false);
+        } else if let (false, Some(loc)) = (added.is_empty(), doc.target_lang.as_deref()) {
+            check_budget(&out, limits).map_err(|e| Error::Write(e.to_string()))?;
+            out = fill_plurals(&out, loc, &added, true);
         }
         let mut bytes = Vec::with_capacity(out.len() + 3);
         if encoding == UTF8_BOM {
@@ -704,53 +806,95 @@ fn line_start(text: &str, pos: usize) -> usize {
     text.as_bytes()[..pos].iter().rposition(|&c| c == b'\n' || c == b'\r').map_or(0, |p| p + 1)
 }
 
-/// Adds the target language's missing plural variants (see the crate docs). Returns `text` as is when there is
-/// nothing to add.
-fn fill_plurals(text: &str, locale: &str) -> String {
-    let items = parser::parse(text);
-    let mut selects: Vec<&parser::Select> = Vec::new();
-    for it in &items {
-        if let Some(v) = &it.value {
-            select_list(v, &mut selects);
-        }
-        for a in &it.attrs {
-            select_list(&a.value, &mut selects);
+/// The plural group of a variant: the message (or attribute) and the select's place in the file.
+fn variant_slot(label: &str, fs: &FSlot) -> PluralSlot {
+    let base = label.split('[').next().unwrap_or(label);
+    let category = if fs.ident { fs.key.clone() } else { format!("={}", fs.key) };
+    let mut slot = PluralSlot::new(format!("{base}#{}", fs.sel), fs.kind).with_category(category);
+    if let Some(p) = fs.parent {
+        slot = slot.with_parent(format!("{base}#{p}"));
+    }
+    slot
+}
+
+/// Where the plural fill adds variants to a select: the start of the default variant's line, the `]` of the
+/// `[other]` key, that variant, the lead of a new variant line, the target's categories and the ones the select
+/// lacks. `None` when the fill leaves the select alone.
+struct FillAt<'s> {
+    bol: usize,
+    close: usize,
+    other: &'s parser::Variant,
+    lead: String,
+    cats: Vec<&'static str>,
+    missing: Vec<&'static str>,
+}
+
+fn fill_at<'s>(text: &str, sel: &'s parser::Select, locale: &str) -> Option<FillAt<'s>> {
+    let named: Vec<&parser::Variant> = sel.variants.iter().filter(|v| v.ident).collect();
+    if named.len() < 2 || named.iter().any(|v| !PLURAL_ORDER.contains(&v.key.as_str())) {
+        return None;
+    }
+    let other = *named.iter().rev().find(|v| v.key == "other")?;
+    let default = sel.variants.iter().find(|v| v.default)?;
+    let cats = target_categories(locale, sel.ordinal)?;
+    let missing: Vec<&'static str> = cats.iter().copied().filter(|c| !named.iter().any(|v| v.key == *c)).collect();
+    if missing.is_empty() {
+        return None;
+    }
+    let close = other.key_end + text[other.key_end..].find(']')?;
+    if close >= other.end {
+        return None;
+    }
+    let bol = line_start(text, default.start);
+    let indent = &text[bol..default.start];
+    if !py_strip(indent).is_empty() {
+        return None;
+    }
+    let first = &sel.variants[0];
+    let lead0 = &text[line_start(text, first.start)..first.start];
+    let lead = if !first.default && py_strip(lead0).is_empty() { lead0.to_string() } else { format!("{indent} ") };
+    Some(FillAt { bol, close, other, lead, cats, missing })
+}
+
+/// The variant bodies of the translated units added for a plural category, by select and category, checked against
+/// the categories of `locale` (`None`: no target): a translated unit added for another target is an error.
+fn added_bodies<'d>(doc: &'d Document, locale: Option<&str>) -> Result<std::collections::HashMap<(usize, &'d str), String>, Error> {
+    let mut out = std::collections::HashMap::new();
+    for u in doc.units.iter().filter(|u| u.translate && u.segments.iter().any(|s| s.has_target())) {
+        let cats = locale.and_then(|l| target_categories(l, u.has_hidden(FORD)));
+        match icu::key_added(u, cats.as_deref()) {
+            icu::KeyAdded::No => {}
+            icu::KeyAdded::Foreign => return Err(icu::foreign_added_error(u)),
+            icu::KeyAdded::Fits(c) => {
+                let k = u.hidden(FSEL).and_then(|k| k.parse::<usize>().ok()).ok_or_else(|| icu::foreign_added_error(u))?;
+                out.insert((k, c), format!("{}{}{}", u.hidden(FPRE).unwrap_or(""), render(u), u.hidden(FPOST).unwrap_or("")));
+            }
         }
     }
+    Ok(out)
+}
+
+/// Adds the target language's missing plural variants (see the crate docs). `added` holds the bodies of translated
+/// units added for a category, by select and category: they stand in for the copy of `[other]`; with `only_added`
+/// just those are written. Returns `text` as is when there is nothing to add.
+fn fill_plurals(text: &str, locale: &str, added: &std::collections::HashMap<(usize, &str), String>, only_added: bool) -> String {
+    let items = parser::parse(text);
     let newline = if text.contains("\r\n") { "\r\n" } else { "\n" };
     let mut inserts: Vec<(usize, String)> = Vec::new();
-    for sel in selects {
-        let named: Vec<&parser::Variant> = sel.variants.iter().filter(|v| v.ident).collect();
-        if named.len() < 2 || named.iter().any(|v| !PLURAL_ORDER.contains(&v.key.as_str())) {
-            continue;
-        }
-        let other = named.iter().rev().find(|v| v.key == "other");
-        let default = sel.variants.iter().find(|v| v.default);
-        let (Some(other), Some(default)) = (other, default) else { continue };
-        let Some(cats) = target_categories(locale, sel.ordinal) else { continue };
-        let missing: Vec<&str> = cats.into_iter().filter(|c| !named.iter().any(|v| v.key == *c)).collect();
-        if missing.is_empty() {
-            continue;
-        }
-        let Some(rel) = text[other.key_end..].find(']') else { continue };
-        let close = other.key_end + rel;
-        if close >= other.end {
-            continue;
-        }
-        let body = &text[close + 1..other.end];
-        let bol = line_start(text, default.start);
-        let indent = &text[bol..default.start];
-        if !py_strip(indent).is_empty() {
-            continue;
-        }
-        let first = &sel.variants[0];
-        let lead0 = &text[line_start(text, first.start)..first.start];
-        let lead = if !first.default && py_strip(lead0).is_empty() { lead0.to_string() } else { format!("{indent} ") };
+    for (k, sel) in all_selects(&items).into_iter().enumerate() {
+        let Some(at) = fill_at(text, sel, locale) else { continue };
+        let body = &text[at.close + 1..at.other.end];
         let mut s = String::new();
-        for c in missing {
-            s.push_str(&format!("{lead}[{c}]{body}{newline}"));
+        for c in at.missing {
+            match added.get(&(k, c)) {
+                Some(b) => s.push_str(&format!("{}[{c}]{b}{newline}", at.lead)),
+                None if !only_added => s.push_str(&format!("{}[{c}]{body}{newline}", at.lead)),
+                None => {}
+            }
         }
-        inserts.push((bol, s));
+        if !s.is_empty() {
+            inserts.push((at.bol, s));
+        }
     }
     if inserts.is_empty() {
         return text.to_string();
