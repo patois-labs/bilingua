@@ -9,6 +9,7 @@
 pub const SKELETON_SCHEMA: u32 = 1;
 
 mod enc;
+mod icu_units;
 mod lex;
 mod parse;
 mod ph;
@@ -19,6 +20,10 @@ const ID: &str = "js";
 /// The one hidden code of a unit: `standalone` = the original literal (quotes included, a concatenation whole),
 /// `open` = the quote character, `close` = "1" when the literal is a multi-line template.
 const HIDDEN: &str = "$js";
+/// bilingua#23: hidden values of the first unit of an ICU string split into one unit per branch: how many units the
+/// string has (they follow each other) and the string's value (the merge plans it again).
+const ICU_N: &str = "icu_units";
+const ICU_V: &str = "icu_value";
 
 /// Size limits (the Localization OS defaults). `Filter::extract` takes them from `ExtractOptions::limits`
 /// ([`Limits::from_model`]); `extract_with` takes them as given.
@@ -287,6 +292,37 @@ fn new_literal(u: &Unit) -> Option<String> {
     Some(escape(&out, quote, h.close_markup() == Some("1")))
 }
 
+/// The literal to write for an ICU string split into the `n` units from `at` (bilingua#23): `None` when nobody
+/// translated it or it comes out the same (the original literal stays). The units are planned again as the extract
+/// planned them (with the document's target's added categories, else without); a unit added for categories the
+/// plan does not add means the target changed after extract.
+fn icu_literal(doc: &Document, at: usize, n: usize, opts: &MergeOptions) -> Result<Option<String>, Error> {
+    let units: Vec<&Unit> = doc.units.get(at..at + n).ok_or_else(|| Error::Write("the units no longer match the skeleton".into()))?.iter().collect();
+    if units.iter().all(|u| u.segments.iter().all(|s| !s.has_target())) {
+        return Ok(None);
+    }
+    let first = units[0];
+    let value = first.hidden(ICU_V).ok_or_else(|| Error::Write(format!("unit {} lost its message", first.id)))?;
+    let target = opts.stamp_lang(doc, true);
+    let added = [doc.target_lang.as_deref().map(str::trim).filter(|t| MergeOptions::plausible_lang(t)), None]
+        .into_iter()
+        .find(|a| icu_units::aligned(value, &units, *a));
+    let Some(added) = added else {
+        // units added for categories neither plan adds: the document was extracted for another target
+        let is_added = |u: &&&Unit| u.has_hidden(bilingua_model::icu::ADDED_HIDDEN);
+        if let Some(u) = units.iter().filter(is_added).find(|u| bilingua_model::icu::has_any_target(u)).or_else(|| units.iter().find(is_added)) {
+            return Err(bilingua_model::icu::foreign_added_error(u));
+        }
+        return Err(Error::Write("the units no longer match the skeleton".into()));
+    };
+    let new = icu_units::rebuild(value, &units, target, added).ok_or_else(|| Error::Write(format!("unit {} lost its message", first.id)))?;
+    if new == value {
+        return Ok(None);
+    }
+    let quote = hidden(first).and_then(|h| h.open.as_deref()).and_then(|q| q.chars().next()).unwrap_or('\'');
+    Ok(Some(escape(&new, quote, false)))
+}
+
 /// The plural slot of a FormatJS (ICU MessageFormat) string, read with the shared parser (unit model step 7): the
 /// string stays one unit, with its structure protected as placeholders, so the slot names the message's first
 /// plural, selectordinal or select argument (kind and argument name) and no category. `None` for other strings.
@@ -323,6 +359,11 @@ impl JsModule {
         let mut pos = 0usize;
         let (mut line_pos, mut line) = (0usize, 1usize);
         let locos = opts.is_profile(bilingua_model::profile::LOCOS);
+        // bilingua#23: outside the LocOS profile, the plural categories the target needs and a message lacks get
+        // units of their own
+        let added = if locos { None } else { opts.target_lang.as_deref().map(str::trim).filter(|t| MergeOptions::plausible_lang(t)) };
+        // key text the branch units of split ICU strings copy, on top of what the parser charged
+        let mut context = 0u64;
         for ru in &parsed.units {
             let (inl, codes) = ph::unit_inlines(&ru.value);
             let translatable = ph::translatable(&inl);
@@ -350,6 +391,46 @@ impl JsModule {
                 .filter(|&&b| b == b'\n')
                 .count();
             line_pos = ru.start;
+            let key = key_of(&ru.path, &ru.root, parsed.default_ref.as_deref());
+            // bilingua#23: an ICU plural or select string in one plain literal is a unit per branch; a template
+            // literal or a concatenation stays one unit (it cannot be written back in its own shape)
+            let split = if locos || !translatable || ru.concat || ru.quote == b'`' || ru.value.contains("${") { None } else { icu_units::plan(&ru.value, added) };
+            if let Some(plan) = split {
+                if units.len() + plan.len() > limits.max_units {
+                    return Err(ModuleError::Limit(format!("This file has more than {} segments (MAX_DOCUMENT_SEGMENTS). Split it into smaller files.", limits.max_units)).into());
+                }
+                context = context.saturating_add(((plan.len() - 1) * key.len()) as u64);
+                if context > limits.max_context_bytes {
+                    return Err(ModuleError::Context(format!("This file carries more key text than the limit of {} bytes allows. Split it into smaller files.", limits.max_context_bytes)).into());
+                }
+                parts.push(SkelPart::Unit(units.len()));
+                let first = format!("u{}", units.len() + 1);
+                let n = plan.len();
+                for (k, up) in plan.into_iter().enumerate() {
+                    let mut u = Unit::new(format!("u{}", units.len() + 1), up.inlines);
+                    u.set_codes(up.codes);
+                    if k == 0 {
+                        u.codes_mut().insert(HIDDEN, CodeData::new().with_open((ru.quote as char).to_string()).with_close("0".to_string()).with_standalone(text[ru.start..ru.end].to_string()));
+                        u.set_hidden(ICU_N, n.to_string());
+                        u.set_hidden(ICU_V, ru.value.as_str());
+                    }
+                    u.context.kind = Some("string".into());
+                    u.context.style = Some("js".into());
+                    u.context.key = Some(key.clone());
+                    u.context.location = Some(format!("line {line}"));
+                    if let Some(slot) = &up.slot {
+                        u.set_plural(bilingua_model::icu::plural_slot(&first, slot));
+                        if slot.added {
+                            u.set_hidden(bilingua_model::icu::ADDED_HIDDEN, up.path.as_str());
+                        }
+                    }
+                    if !up.path.is_empty() {
+                        u.context.extra_mut().insert("icu", up.path);
+                    }
+                    units.push(u);
+                }
+                continue;
+            }
             let mut u = Unit::new(format!("u{}", units.len() + 1), inl);
             u.set_codes(codes);
             u.codes_mut().insert(
@@ -358,7 +439,7 @@ impl JsModule {
             );
             u.context.kind = Some("string".into());
             u.context.style = Some("js".into());
-            u.context.key = Some(key_of(&ru.path, &ru.root, parsed.default_ref.as_deref()));
+            u.context.key = Some(key);
             u.context.location = Some(format!("line {line}"));
             u.translate = translatable;
             if !locos {
@@ -419,7 +500,11 @@ impl Filter for JsModule {
                         .units
                         .get(*i)
                         .ok_or_else(|| Error::Write(format!("no unit {i}")))?;
-                    match new_literal(u) {
+                    let lit = match u.hidden(ICU_N).and_then(|n| n.parse::<usize>().ok()) {
+                        Some(n) => icu_literal(doc, *i, n, opts)?,
+                        None => new_literal(u),
+                    };
+                    match lit {
                         Some(lit) => {
                             changed = true;
                             out.push_str(&lit);

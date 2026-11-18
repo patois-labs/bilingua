@@ -336,6 +336,25 @@ pub fn unit_inlines(value: &str) -> (Vec<Inline>, BTreeMap<String, CodeData>) {
     (bilingua_model::merge_text(inl), codes)
 }
 
+/// The placeholders of a piece of message text (an ICU branch's text, bilingua#23), as `(placeholder, free, text)`
+/// runs in order: the same patterns [`unit_inlines`] protects in a whole string.
+pub fn text_runs(chunk: &str) -> Vec<(bool, bool, &str)> {
+    let mut out = Vec::new();
+    let mut pos = 0;
+    for m in ph_re().find_iter(chunk) {
+        if m.start() > pos {
+            out.push((false, false, &chunk[pos..m.start()]));
+        }
+        bilingua_model::work::tick(1 + m.len() as u64);
+        out.push((true, is_free(m.as_str()), m.as_str()));
+        pos = m.end();
+    }
+    if pos < chunk.len() {
+        out.push((false, false, &chunk[pos..]));
+    }
+    out
+}
+
 /// True when some text outside the placeholders has a letter or digit.
 pub fn translatable(inl: &[Inline]) -> bool {
     inl.iter()

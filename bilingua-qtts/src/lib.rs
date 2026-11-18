@@ -6,6 +6,7 @@ pub const SKELETON_SCHEMA: u32 = 1;
 
 mod cldr;
 mod lang;
+mod numerus;
 mod textenc;
 mod xml;
 
@@ -25,6 +26,11 @@ const RAW: &str = "raw"; // the `<translation>` element as written
 const LEAD: &str = "lead"; // white space before the text in the source
 const TRAIL: &str = "trail"; // white space after it
 const NUM: &str = "num"; // present for a numerus message
+// bilingua#23, outside the LocOS profile with a target: the numerusform position of a unit added for a form of a
+// numerus message (the first form is the message's own unit), and the text a form held in the file when it was
+// read into the unit's target (an unchanged target keeps the file's own form)
+const FORM: &str = "numerus_form";
+const READ: &str = "numerus_read";
 
 fn code(u: &Unit, key: &str) -> Option<String> {
     u.hidden(key).map(str::to_string)
@@ -83,6 +89,27 @@ struct Found {
     /// Span of the `<translation>` element, when the message has one.
     span: Option<(usize, usize)>,
     unit: Unit,
+    /// Units added for the target's other numerus forms, in Qt's form order (outside the skeleton).
+    added: Vec<Unit>,
+}
+
+/// The text of each `<numerusform>` of a translation element, trimmed, where it is plain text (no child element,
+/// comment or instruction) and not empty.
+fn read_forms(sc: &Scan, text: &str, tr: usize) -> Vec<Option<String>> {
+    sc.children(tr)
+        .filter(|c| sc.local(text, *c) == "numerusform")
+        .map(|f| {
+            let mut s = String::new();
+            for n in content(sc, text, f) {
+                match n {
+                    Node::Text(t) => s.push_str(&t),
+                    Node::Raw(..) => return None,
+                }
+            }
+            let t = s.trim();
+            (!t.is_empty()).then(|| t.to_string())
+        })
+        .collect()
 }
 
 impl QtTs {
@@ -128,7 +155,7 @@ impl QtTs {
                 let this = slot;
                 slot += 1;
                 let Some(found) = self.message(&sc, text, msg, src, this, &cname, opts, &mut budget, limits)? else { continue };
-                guard::check_unit_count(units.len() + 1, limits)?;
+                guard::check_unit_count(units.len() + 1 + found.added.len(), limits)?;
                 let chars: usize = found.unit.source().iter().map(|i| match i {
                     Inline::Text(t) => t.chars().count(),
                     Inline::Tag { .. } => 1,
@@ -140,6 +167,8 @@ impl QtTs {
                     spans.push((s, e, units.len()));
                 }
                 units.push(found.unit);
+                // the target's other numerus forms right after the message's own unit (cat-os#89)
+                units.extend(found.added);
             }
         }
         spans.sort_unstable();
@@ -235,16 +264,50 @@ impl QtTs {
         budget.charge(cname.len(), limits)?;
         unit.context.extra_mut().insert("context", cname.to_string());
         unit.context.extra_mut().insert("p_index", slot.to_string());
+        let mut added = Vec::new();
         if numerus {
             unit.context.extra_mut().insert("plural", "numerus");
-            // unit model step 7: one source text stands for every numerus form (Qt numbers the forms by its own
-            // per-language rules, with no category names), so the slot names the group and no category
+            // unit model step 7: one source text stands for every numerus form, so the slot names the group.
+            // bilingua#23: with a target, each numerus form Qt has for it is a unit of its own (the message's own
+            // unit is the first form), in Qt's order, with the CLDR category as a hint where it is clear
             if !opts.is_profile(bilingua_model::profile::LOCOS) {
-                unit.set_plural(bilingua_model::PluralSlot::new(unit.id.clone(), bilingua_model::PluralKind::Cardinal));
+                let target = opts.target_lang.as_deref().map(str::trim).filter(|t| MergeOptions::plausible_lang(t));
+                match target.and_then(numerus::forms).filter(|_| !lock) {
+                    None => unit.set_plural(bilingua_model::PluralSlot::new(unit.id.clone(), bilingua_model::PluralKind::Cardinal)),
+                    Some(f) => {
+                        let group = unit.id.clone();
+                        let slot = |k: usize| {
+                            let s = bilingua_model::PluralSlot::new(group.as_str(), bilingua_model::PluralKind::Cardinal).with_index(k as u8);
+                            match f.hints[k] {
+                                Some(h) => s.with_category(h),
+                                None => s,
+                            }
+                        };
+                        unit.set_plural(slot(0));
+                        let tokens = f.tokens();
+                        let tokens: Vec<&str> = tokens.iter().map(String::as_str).collect();
+                        for k in 1..f.len() {
+                            budget.charge(cname.len(), limits)?;
+                            let mut u = bilingua_model::icu::key_added_copy(&unit, format!("{}.{k}", unit.id), &f.token(k), &tokens, Some(slot(k)));
+                            u.set_hidden(FORM, k.to_string());
+                            added.push(u);
+                        }
+                        // a bilingual file's own forms are the units' targets
+                        let read = tr.map(|t| read_forms(sc, text, t)).unwrap_or_default();
+                        for (k, t) in read.into_iter().enumerate().take(f.len()) {
+                            let Some(t) = t else { continue };
+                            let u = if k == 0 { &mut unit } else { &mut added[k - 1] };
+                            if let Some(seg) = u.segments.first_mut() {
+                                seg.target = vec![Inline::text(t.clone())];
+                            }
+                            u.set_hidden(READ, t);
+                        }
+                    }
+                }
             }
         }
         let span = tr.map(|t| (sc.els[t].start, sc.els[t].end));
-        Ok(Some(Found { span, unit }))
+        Ok(Some(Found { span, unit, added }))
     }
 }
 
@@ -364,7 +427,22 @@ impl Filter for QtTs {
             }
         }
         let crlf = lf > 0 && lf == crlf_n;
-        let touched = doc.units.iter().any(|u| u.translate && u.segments.iter().any(|s| s.has_target()));
+        let touched = doc.units.iter().any(changed);
+        // bilingua#23: the units added for a numerus message's other forms, by message; a changed one must have been
+        // added for the forms of the merge's target
+        let merge_forms = doc.target_lang.as_deref().map(str::trim).filter(|t| MergeOptions::plausible_lang(t)).and_then(numerus::forms);
+        let tokens = merge_forms.as_ref().map(numerus::Forms::tokens);
+        let tokens: Option<Vec<&str>> = tokens.as_ref().map(|t| t.iter().map(String::as_str).collect());
+        let mut forms_of: std::collections::HashMap<&str, Vec<(usize, &Unit)>> = std::collections::HashMap::new();
+        for u in &doc.units {
+            let Some(k) = u.hidden(FORM).and_then(|k| k.parse::<usize>().ok()) else { continue };
+            if changed(u) && !matches!(bilingua_model::icu::key_added(u, tokens.as_deref()), bilingua_model::icu::KeyAdded::Fits(_)) {
+                return Err(bilingua_model::icu::foreign_added_error(u));
+            }
+            if let Some(p) = u.plural() {
+                forms_of.entry(p.group()).or_default().push((k, u));
+            }
+        }
         let target = opts.stamp_lang(doc, touched).map(str::trim);
         let first_raw = parts.iter().position(|p| matches!(p, SkelPart::Raw(_)));
         let file_lang = first_raw.and_then(|i| match &parts[i] {
@@ -397,7 +475,8 @@ impl Filter for QtTs {
                 }
                 SkelPart::Unit(i) => {
                     let u = doc.units.get(*i).ok_or_else(|| wr(format!("skeleton points at missing unit {i}")))?;
-                    write_unit(u, crlf, fill, &plural_lang, refs, &mut out)?;
+                    let forms = u.plural().and_then(|p| forms_of.get(p.group())).map_or(&[][..], Vec::as_slice);
+                    write_unit(u, forms, crlf, fill, &plural_lang, refs, &mut out)?;
                 }
             }
         }
@@ -571,9 +650,28 @@ fn body_of(u: &Unit, crlf: bool) -> String {
     }
 }
 
-fn write_unit(u: &Unit, crlf: bool, fill: bool, plural_lang: &str, refs: CharRefs, out: &mut String) -> Result<(), Error> {
-    let raw = code(u, RAW).ok_or_else(|| Error::Write("a unit lost its translation element".into()))?;
+/// True when a unit's target is to be written: translated, and not just the form a bilingual file held when it was
+/// read (bilingua#23), which stays as the file has it.
+fn changed(u: &Unit) -> bool {
     if !u.translate || u.segments.iter().all(|s| !s.has_target()) {
+        return false;
+    }
+    let Some(read) = u.hidden(READ) else { return true };
+    let mut t = String::new();
+    for i in u.output() {
+        match i {
+            Inline::Text(x) => t.push_str(&x),
+            Inline::Tag { .. } => return true,
+        }
+    }
+    t != read
+}
+
+/// Writes one message's `<translation>`. `forms_of`: the units added for the other numerus forms of a numerus
+/// message, with their numerusform positions (bilingua#23).
+fn write_unit(u: &Unit, forms_of: &[(usize, &Unit)], crlf: bool, fill: bool, plural_lang: &str, refs: CharRefs, out: &mut String) -> Result<(), Error> {
+    let raw = code(u, RAW).ok_or_else(|| Error::Write("a unit lost its translation element".into()))?;
+    if !u.translate || !(changed(u) || forms_of.iter().any(|(_, a)| changed(a))) {
         out.push_str(&raw);
         return Ok(());
     }
@@ -593,27 +691,56 @@ fn write_unit(u: &Unit, crlf: bool, fill: bool, plural_lang: &str, refs: CharRef
     let inner = if numerus {
         let forms: Vec<usize> = sc.children(0).filter(|c| sc.local(&raw, *c) == "numerusform").collect();
         let want = cldr::forms(plural_lang).max(1);
+        let base = if forms.is_empty() {
+            want
+        } else if fill {
+            forms.len().max(want)
+        } else {
+            forms.len()
+        };
+        // a translated form past the count the merge writes (Qt has more forms for the language than CLDR) is
+        // written too
+        let count = base.max(forms_of.iter().filter(|(_, a)| changed(a)).map(|(k, _)| k + 1).max().unwrap_or(0));
+        let own = changed(u);
+        // the text of form `k`: a changed unit's translation; `None` keeps the file's own form (one read into an
+        // unchanged target, or any form while the message's own unit is unchanged); else the message's own
+        // translation, which every form held before (an untranslated added form)
+        let text_of = |k: usize| -> Option<String> {
+            let unit = if k == 0 { Some(u) } else { forms_of.iter().find(|(j, _)| *j == k).map(|(_, a)| *a) };
+            if let Some(a) = unit.filter(|a| changed(a)) {
+                return Some(if k == 0 { body.clone() } else { with_char_refs(body_of(a, crlf), refs) });
+            }
+            if k < forms.len() && (unit.is_some_and(|a| a.has_hidden(READ)) || !own) {
+                return None;
+            }
+            Some(body.clone())
+        };
         if forms.is_empty() {
-            (0..want).map(|_| format!("<numerusform>{body}</numerusform>")).collect::<String>()
+            (0..count).map(|k| format!("<numerusform>{}</numerusform>", text_of(k).unwrap_or_default())).collect::<String>()
         } else {
             let mut inner = String::new();
             let mut cur = el.stag_end;
-            for f in &forms {
+            for (k, f) in forms.iter().enumerate() {
                 let fe = sc.els[*f];
+                let Some(t) = text_of(k) else {
+                    inner.push_str(&raw[cur..fe.end]);
+                    cur = fe.end;
+                    continue;
+                };
                 if fe.empty {
                     inner.push_str(&raw[cur..fe.start]);
                     inner.push_str(&close_empty(&raw[fe.start..fe.stag_end]));
-                    inner.push_str(&body);
+                    inner.push_str(&t);
                     inner.push_str(&format!("</{}>", sc.qname(&raw, *f)));
                     cur = fe.end;
                 } else {
                     inner.push_str(&raw[cur..fe.stag_end]);
-                    inner.push_str(&body);
+                    inner.push_str(&t);
                     cur = fe.etag_start;
                 }
             }
             inner.push_str(&raw[cur..el.etag_start]);
-            if fill && want > forms.len() {
+            if count > forms.len() {
                 // the target language has more plural forms than the file: one more per missing form, laid out
                 // like the first, each with the translation
                 let last = sc.els[*forms.last().expect("not empty")];
@@ -622,7 +749,7 @@ fn write_unit(u: &Unit, crlf: bool, fill: bool, plural_lang: &str, refs: CharRef
                 let sep = &raw[el.stag_end..first.start];
                 let sep = if sep.trim().is_empty() { sep } else { "" };
                 let q = sc.qname(&raw, *forms.last().expect("not empty"));
-                let extra: String = (0..want - forms.len()).map(|_| format!("{sep}<{q}>{body}</{q}>")).collect();
+                let extra: String = (forms.len()..count).map(|k| format!("{sep}<{q}>{}</{q}>", text_of(k).unwrap_or_default())).collect();
                 let cut = inner.len() - tail_len;
                 inner.insert_str(cut, &extra);
             }

@@ -36,6 +36,13 @@ pub fn forms(locale: &str) -> usize {
     mask(locale).map(|m| m.count_ones() as usize).unwrap_or(2)
 }
 
+/// The categories whole numbers reach for `locale`, in CLDR order (as many as [`forms`] counts); `None` for an
+/// unknown or empty locale.
+pub fn categories(locale: &str) -> Option<Vec<&'static str>> {
+    let m = mask(locale)?;
+    Some(bilingua_model::cldr::ORDER.iter().enumerate().filter(|(n, _)| m & (1 << n) != 0).map(|(_, c)| *c).collect())
+}
+
 fn mask(locale: &str) -> Option<u8> {
     let lang = bilingua_model::cldr::language(locale);
     let bits = bilingua_model::cldr::bits_babel(&lang, false)?;

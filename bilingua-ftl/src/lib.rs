@@ -488,6 +488,8 @@ impl FtlFilter {
                     units.push(u);
                 }
             }
+            // each added variant right after its own select's variants (cat-os#89); the merge finds them by their mark
+            icu::place_added(&mut units, &mut parts);
         }
         Ok(Document::new(ID, units, Skeleton::text(parts, if bom { UTF8_BOM } else { UTF8 }, bilingua_model::parser_info!())).with_options(opts))
     }

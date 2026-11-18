@@ -48,6 +48,8 @@ pub struct RawUnit {
     pub end: usize,
     pub quote: u8,
     pub multiline: bool,
+    /// The value is a `'a' + 'b'` concatenation of several literals.
+    pub concat: bool,
     pub value: String,
     /// Key path joined with dots (the root name included for a `const`).
     pub path: String,
@@ -595,6 +597,7 @@ impl<'a> P<'a, '_> {
             end: self.toks[last].end,
             quote: f.quote,
             multiline,
+            concat: last != first,
             value,
             path: self.path.join("."),
             root: root.to_string(),

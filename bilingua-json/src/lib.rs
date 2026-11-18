@@ -183,6 +183,8 @@ impl Filter for JsonFilter {
         } else if let Ok(root) = tree::scan(text) {
             let target = opts.target_lang.as_deref().map(str::trim).filter(|t| MergeOptions::plausible_lang(t));
             i18next_units(&root, target, &mut units, &limits)?;
+            // each added key right after its own group's keys (cat-os#89); the merge finds them by their mark
+            icu::place_added(&mut units, &mut parts);
         }
 
         bilingua_model::guard::finish(Document::new(ID, units, Skeleton::text(parts, encoding, bilingua_model::parser_info!())).with_options(opts), std::mem::take(&mut dec.warnings), &opts.limits())

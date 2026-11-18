@@ -411,6 +411,8 @@ fn extract(d: Dialect, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, 
                 units.push(u);
             }
         }
+        // each added form right after its own `<plurals>` (cat-os#89); the merge finds them by their mark
+        icu::place_added(&mut units, &mut parts);
     }
     let doc = Document::new(d.id(), units, Skeleton::text(parts, p.enc, bilingua_model::parser_info!())).with_options(opts);
     guard::finish(doc, p.warnings, limits)

@@ -320,6 +320,10 @@ fn extract_impl(fmt: Fmt, bytes: &[u8], opts: &ExtractOptions, limits: &Limits) 
                         *key = format!("{stem}{c}");
                     }
                 }
+                // the style names the nearest key, which for this form is its own category (bilingua#23)
+                if u.context.style.is_some() {
+                    u.context.style = Some(c.to_string());
+                }
                 units.push(u);
             }
         }
@@ -333,6 +337,8 @@ fn extract_impl(fmt: Fmt, bytes: &[u8], opts: &ExtractOptions, limits: &Limits) 
         }
         Origin::Binary { .. } => (BINARY.to_string(), Vec::new()),
     };
+    // each added form right after its own variable's forms (cat-os#89); the merge finds them by their mark
+    icu::place_added(&mut units, &mut parts);
     let doc = Document::new(fmt.id(), units, Skeleton::text(parts, encoding, bilingua_model::parser_info!())).with_options(opts);
     guard::finish(doc, warnings, limits)
 }

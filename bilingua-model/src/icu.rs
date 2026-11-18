@@ -539,6 +539,68 @@ pub fn key_added_copy(other: &crate::Unit, id: impl Into<String>, category: &str
     u
 }
 
+/// Puts every unit added for a key-style plural form (an added plural slot: Android items, stringsdict keys,
+/// i18next and Rails keys, Fluent variants, xcstrings forms) right after the last unit of its own group that is not
+/// added (cat-os#89), so a translator meets the forms of one message together; a unit whose slot names the group as
+/// its parent (a select inside a variant) counts as one of the group's units. The added units keep their order
+/// (extracts make them in CLDR category order), every other unit keeps its place and every id stays as it is.
+/// `parts` (the skeleton's) is pointed at the new places. An added unit whose group has no other unit stays where
+/// it is. A merge must therefore find added units by their mark or id, never by position: documents from 0.10.0
+/// have them at the end. ICU messages ([`levels`]) already come in this order and must not go through here: the
+/// units inside an added branch belong to groups of their own.
+pub fn place_added(units: &mut Vec<crate::Unit>, parts: &mut [crate::SkelPart]) {
+    use std::collections::HashMap;
+    let is_added = |u: &crate::Unit| u.plural().is_some_and(|p| p.is_added());
+    if !units.iter().any(is_added) {
+        return;
+    }
+    // the last unit of each group that is not added (a child group's units count for the parent)
+    let mut last: HashMap<&str, usize> = HashMap::new();
+    for (i, u) in units.iter().enumerate() {
+        let Some(p) = u.plural().filter(|_| !is_added(u)) else { continue };
+        last.insert(p.group(), i);
+        if let Some(parent) = p.parent() {
+            last.insert(parent, i);
+        }
+    }
+    let mut after: HashMap<usize, Vec<usize>> = HashMap::new();
+    let mut moved = vec![false; units.len()];
+    for (i, u) in units.iter().enumerate() {
+        if !is_added(u) {
+            continue;
+        }
+        if let Some(&at) = u.plural().and_then(|p| last.get(p.group())) {
+            after.entry(at).or_default().push(i);
+            moved[i] = true;
+        }
+    }
+    let mut order: Vec<usize> = Vec::with_capacity(units.len());
+    for i in 0..units.len() {
+        if !moved[i] {
+            order.push(i);
+        }
+        if let Some(list) = after.get(&i) {
+            order.extend(list.iter().copied());
+        }
+    }
+    if order.iter().enumerate().all(|(k, &i)| k == i) {
+        return;
+    }
+    let mut new_at = vec![0usize; units.len()];
+    for (k, &i) in order.iter().enumerate() {
+        new_at[i] = k;
+    }
+    for p in parts.iter_mut() {
+        if let crate::SkelPart::Unit(i) = p {
+            if let Some(&n) = new_at.get(*i) {
+                *i = n;
+            }
+        }
+    }
+    let mut old: Vec<Option<crate::Unit>> = std::mem::take(units).into_iter().map(Some).collect();
+    units.extend(order.iter().map(|&i| old[i].take().expect("each unit once")));
+}
+
 /// Plural slots for suffix-style plural keys (ARB `itemCountOne`, `itemCountOther`): the units whose key (`key`
 /// gives it, `None` for a unit that is not a whole top-level message) is a stem and a category word, grouped by
 /// stem, where a stem has `Other` and one more word (the groups the merge's suffix fill reads). Group `{stem}`,

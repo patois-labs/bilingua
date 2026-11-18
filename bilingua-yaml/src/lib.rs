@@ -280,6 +280,8 @@ impl Yaml {
                     units.push(u);
                 }
             }
+            // each added form right after its own map (cat-os#89); the merge finds them by their mark
+            icu::place_added(&mut units, &mut parts);
         }
         // a code page whose bytes do not come back from the text (double-mapped sequences) keeps the file's own bytes
         let tag = match enc {
@@ -335,7 +337,7 @@ fn fill_line<'t>(text: &'t str, starts: &[usize], wu: &walk::WUnit) -> Option<(u
 /// Edits for a localized Rails file: the root key and the plural categories the target needs. `added` holds the
 /// translated units added at extract for a category a map lacks, by map and category: they stand in for the copy
 /// of `other`. This fill matches the other crates' (xmlres, stringsdict, ftl, json i18next).
-fn rails_edits(text: &str, w: &Walk, doc: &Document, target: &str, added: &std::collections::HashMap<(usize, &str), String>, edits: &mut Vec<(usize, usize, String)>) {
+fn rails_edits(text: &str, w: &Walk, base: &[&Unit], target: &str, added: &std::collections::HashMap<(usize, &str), String>, edits: &mut Vec<(usize, usize, String)>) {
     let Some(root) = &w.rails_root else { return };
     let new_key = target_root_key(&root.key, target);
     if !new_key.is_empty() && new_key != root.key {
@@ -346,7 +348,7 @@ fn rails_edits(text: &str, w: &Walk, doc: &Document, target: &str, added: &std::
         let Some(ou) = pm.other_unit else { continue };
         // the fill follows a translated `other`; a map whose added forms are translated is filled too, its other
         // missing forms then taking the source `other`
-        let value = match doc.units.get(ou).and_then(new_value) {
+        let value = match base.get(ou).copied().and_then(new_value) {
             Some(v) => v,
             None if added.keys().any(|k| k.0 == m) => w.units[ou].value.clone(),
             None => continue,
@@ -460,18 +462,20 @@ impl Filter for Yaml {
                 let events = scan::scan(&text, 200).map_err(|e| parse_err(&text, &e))?;
                 let w = walk(&events, &text, &Limits::unlimited()).map_err(|e| parse_err(&text, &e))?;
                 let added = added_values(doc, Some(target))?;
-                // the units added for a plural category have no place in the skeleton (they follow the others)
-                if w.units.len() != doc.units.iter().filter(|u| !u.has_hidden(icu::ADDED_HIDDEN)).count() {
+                // the units added for a plural category have no place in the skeleton: the others, in order, are the
+                // walk's units (added units sit after their own map since cat-os#89, at the end in 0.10.0 documents)
+                let base: Vec<&Unit> = doc.units.iter().filter(|u| !u.has_hidden(icu::ADDED_HIDDEN)).collect();
+                if w.units.len() != base.len() {
                     return Err(Error::Write("the document no longer matches its skeleton".into()));
                 }
                 let mut edits: Vec<(usize, usize, String)> = Vec::new();
-                for (wu, u) in w.units.iter().zip(&doc.units) {
+                for (wu, u) in w.units.iter().zip(base.iter().copied()) {
                     let r = replacement(u);
                     if r != code(u, RAW) {
                         edits.push((wu.start, wu.end, r));
                     }
                 }
-                rails_edits(&text, &w, doc, target, &added, &mut edits);
+                rails_edits(&text, &w, &base, target, &added, &mut edits);
                 changed = !edits.is_empty();
                 edits.sort_by_key(|e| (e.0, e.1));
                 let mut out = String::with_capacity(text.len());

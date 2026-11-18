@@ -383,6 +383,8 @@ impl Filter for Xcstrings {
                 }
             }
         }
+        // each added form right after the last form of its own plural map (cat-os#89); the merge finds them by id
+        bilingua_model::icu::place_added(&mut units, &mut []);
         let doc = Document::new(FORMAT, units, Skeleton::text(
                 vec![SkelPart::Raw(cat.text.clone())],
                 if cat.bom { "utf-8-bom" } else { "utf-8" },
