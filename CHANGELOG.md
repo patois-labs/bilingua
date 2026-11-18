@@ -7,6 +7,40 @@ is listed here).
 
 ## [Unreleased]
 
+### Added
+
+- **Qt TS numerus forms as units (bilingua#23).** Extracted with a target language and outside the `locos`
+  profile, a numerus message has a unit for each numerus form Qt has for the target, in Qt's order (qttools'
+  rules: Polish, Russian and Czech 3, Arabic 6, English 2, Japanese 1; CLDR's whole-number count for a language
+  Qt has no rule for). The message's own unit is the first form, the others (`u<n>.1`, `u<n>.2`, ...) follow it,
+  with the form's position as the plural slot's `index` and its CLDR category as a hint where it is clear. The
+  merge writes each form's own translation instead of one translation in every form; an untranslated added form
+  writes what 0.10.0 wrote. A bilingual file's existing forms are read into the units as targets and stay as they
+  are while unchanged.
+- **FormatJS ICU strings in JS and TS modules, one unit per branch (bilingua#23).** Outside the `locos` profile,
+  an ICU plural, selectordinal or select string in one quoted literal is cut like the json ICU dialects and ARB
+  cut it, with a unit for each plural category the target needs and the message lacks; the merge rebuilds the
+  string with the target's categories in the literal's own quote style. Template literals and concatenations stay
+  one unit.
+
+### Changed
+
+- **Added plural forms sit with their group (cat-os#89).** In xmlres, Rails YAML, stringsdict, Fluent, i18next
+  JSON, xcstrings and Qt TS, a unit added for a plural form now comes right after the last form of its own group,
+  in CLDR order, instead of at the end of the document (json ICU dialects, ARB and the new jsmodule units already
+  came after the message's own branches). Ids do not change. Merges find added units by their mark or id, so
+  documents extracted by 0.10.0 merge as before. New helper `icu::place_added`.
+
+### Fixed
+
+- **stringsdict:** a unit added for `few` or `many` had the `other` key's `context.style`; it now names its own
+  category (bilingua#23).
+
+Documents that hold the new Qt TS or JS module units, or added units in the new order, must not be merged by
+0.10.0: it writes the first Qt form's text (a bilingual file's form read as its target) into every form, writes one
+branch's translation as a whole JS string, and can fill a Rails map from another unit. Roll back only together
+with a re-extract (as for 0.10.0's added units).
+
 ## [0.10.0] - 2026-11-18
 
 Big files and the unit model. Bilingua opens files of several gigabytes on a person's own machine, refuses

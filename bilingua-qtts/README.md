@@ -16,7 +16,8 @@ let out = QtTs.merge(&doc)?;
 
 - Format id `ts`, extension `ts`. Every `<message>` of a top-level `<context>` whose `<source>` has a letter or a digit
   and whose `<translation>` is not `vanished` or `obsolete` is a unit. The unit is the **source** text; existing
-  translations are not read (the filter is monolingual, as in LocOS: a merge replaces the translation).
+  translations are not read (the filter is monolingual, as in LocOS: a merge replaces the translation), except the
+  numerus forms of a message split per form (below).
 - A message with no `<translation>` element is skipped (LocOS; Okapi lists it). A `<context>` inside a `<context>`
   is not read (LocOS; Okapi reads it). Both are listed under `include_locked` as locked units (`k<n>` ids) when
   they have a source with text.
@@ -35,6 +36,18 @@ let out = QtTs.merge(&doc)?;
   one form per plural form of the target language (CLDR categories that whole numbers reach, from Babel 2.18, as
   LocOS: Polish 3, Russian 3, Arabic 6, Japanese 1, unknown language 2). With a target language that has more forms
   than the file, the missing ones are added after the last form, each holding the translation.
+- **One unit per numerus form** (bilingua#23): extracted with a target language and outside the `locos` profile, a
+  numerus message has a unit for each numerus form Qt has for the target, in Qt's order (qttools `numerus.cpp`:
+  Polish, Russian and Czech 3, Arabic 6, English and French 2, Japanese, Chinese and Turkish 1; a language Qt has no
+  rule for takes the CLDR count above). The message's own unit is the first form; the others are added right after
+  it (ids `u<n>.1`, `u<n>.2`, ..., a copy of the source), each with a plural slot (`index` the form's position,
+  `category` the CLDR category where the form matches exactly one, `added` true) and the `icu::ADDED_HIDDEN` mark
+  of the target's forms. The merge writes each form's own translation; an untranslated added form writes what it
+  did before (the first form's translation), so an untouched or partly translated merge is unchanged. A form past
+  the count above is written once it is translated. A translated added unit merged for a target whose forms differ
+  is refused with `Error::TargetChanged`. In a bilingual file, the text of each existing `<numerusform>` (plain
+  text) is read into its form's unit as the target, and a form whose target is unchanged keeps the file's own form.
+  Without a target or under the `locos` profile a numerus message stays one unit, as before.
 - **Target language** (`doc.target_lang`, from `ExtractOptions::target_lang`): `<TS language="..">` is set to the
   target as Qt spells it (`de-DE` becomes `de_DE`), keeping the quote style, or added when missing. An unusable tag
   (`*`, `a b`) leaves the attribute alone. As in the ARB crate, a merge with **nothing translated** changes nothing,

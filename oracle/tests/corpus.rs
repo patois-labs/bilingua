@@ -123,9 +123,21 @@ fn every_corpus_file_round_trips() {
                 // (Android `<plurals>`, as LocOS: es-ES has no "two"): those are not counted on the source side.
                 let labels: BTreeSet<(Option<String>, String)> = doc.units.iter().filter_map(plural_label).collect();
                 let kept: BTreeSet<(Option<String>, String)> = again.units.iter().filter_map(plural_label).collect();
-                let dropped = |u: &&bilingua::Unit| doc.format == "android" && plural_label(u).is_some_and(|l| !kept.contains(&l));
+                // An ICU message rebuilt for the target (json dialects, arb, js modules since bilingua#23) follows
+                // its categories too: a branch the target never uses goes (es-ES ordinals have only `other`), one
+                // it needs comes in. Branch units are matched by key and ICU path.
+                let icu_label = |u: &bilingua::Unit| u.context.extra().get("icu").map(|p| (u.context.key.clone(), p.to_string()));
+                let icu_had: BTreeSet<(Option<String>, String)> = doc.units.iter().filter_map(|u| icu_label(u)).collect();
+                let icu_kept: BTreeSet<(Option<String>, String)> = again.units.iter().filter_map(|u| icu_label(u)).collect();
+                let dropped = |u: &&bilingua::Unit| {
+                    (doc.format == "android" && plural_label(u).is_some_and(|l| !kept.contains(&l))) || icu_label(u).is_some_and(|l| !icu_kept.contains(&l))
+                };
                 let a = doc.units.iter().filter(|u| u.translate).filter(|u| !dropped(u)).count();
-                let b = again.units.iter().filter(|u| u.translate && plural_label(u).is_none_or(|l| labels.contains(&l))).count();
+                let b = again
+                    .units
+                    .iter()
+                    .filter(|u| u.translate && plural_label(u).is_none_or(|l| labels.contains(&l)) && icu_label(u).is_none_or(|l| icu_had.contains(&l)))
+                    .count();
                 if a != b {
                     failures.push(format!("{name}: reopened with {b} units, had {a}"));
                 }

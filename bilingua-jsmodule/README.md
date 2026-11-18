@@ -26,13 +26,26 @@ let out = JsModule.merge(&doc)?;
   statement) refuses the whole file with `Error::Parse` naming the problem and its line. Oversized files give
   `Error::Unsupported`. Nothing is ever half translated.
 - Units: every string value with a letter or digit outside its placeholders, in source order. Keys never. A
-  concatenation is one unit. `context.key` is the dotted path (the default export's own name is dropped),
+  concatenation is one unit; an ICU plural or select string is a unit per branch outside the `locos` profile
+  (below). `context.key` is the dotted path (the default export's own name is dropped),
   `context.location` the line. Unit ids are `u1`, `u2`, ... over the units found.
 - Placeholders become standalone tags with the LocOS split: i18next `{{x}}` and `$t(key)`, vue-i18n and ICU `{x}`,
   `{'@'}` literals, `@:key` links, `${x}`, printf (`%s`, `%1$s`, `%(name)s`), HTML and Trans tags (`<1>`, `<b>`; one
   standalone tag each, as in LocOS), and ICU plural / select / selectordinal structure (`{n, plural, one {`, `} other {`,
   `#`, `}}` are tags; the variant messages are text). Tags that name their argument (`{{x}}`, `{x}`, `%1$s`, `@:k`,
   `$t()`, `${x}`) are `free` (LocOS `p` tokens, may move); the rest keep their order (`x` tokens).
+- **ICU plural and select strings, one unit per branch** (bilingua#23): outside the `locos` profile, a FormatJS
+  string with a plural, selectordinal or select argument, in one `'...'` or `"..."` literal, is cut the way the
+  json ICU dialects and ARB cut it (`bilingua_model::icu::levels`): a unit for the text around the argument (when
+  it has words) and one per branch, `context.extra["icu"]` the branch's path (`count: plural one`), a plural slot
+  per branch (group `<first unit id>#<n>`). With a target language, each plural category the target needs and a
+  message lacks gets a unit too, a copy of `other` right after the message's own branches, marked
+  `icu::ADDED_HIDDEN`. Inside a branch `#` and nested arguments are standalone tags and the placeholders above are
+  tags. The merge rebuilds the string with the target's categories (missing ones take the added unit's
+  translation, else `other`'s; unused ones go) and writes it in the literal's own quote style; a string nobody
+  translated keeps its literal byte for byte. A translated document merged for a target whose categories do not
+  fit its added units is refused with `Error::TargetChanged`. A template literal, a concatenation and a string that
+  is not valid ICU stay one unit with the structure protected, as under the `locos` profile, where nothing changes.
 - Merge replaces only the literals that changed, each in its own quote style, escaped for that quote
   (`\n`, `\t`, ` `, `\xNN`, `\$` in a template). A translated concatenation becomes one literal in the first
   piece's quote. A multi-line template stays multi-line. Everything else (comments, code, types, numbers, other

@@ -3,6 +3,20 @@
 What changed in the public API before 1.0, for format-crate builders and for the Localization OS adapter. Every
 item below breaks code written against 0.1; after 1.0 these types grow without breaking callers.
 
+## 0.10.0 to the next release (plural forms, bilingua#23 and cat-os#89)
+
+- **More added units.** Qt TS (a unit per numerus form Qt has for the target: ids `u<n>.1`, `u<n>.2`, ...) and JS
+  and TS modules (a unit per ICU branch, `extra["icu"]` the path, plus added categories) now make units 0.10.0 did
+  not, with a target language and outside the `locos` profile. Recognise added ones as before:
+  `unit.plural().is_some_and(PluralSlot::is_added)` and the `icu::ADDED_HIDDEN` mark.
+- **Order.** Added key-style forms (xmlres, Rails YAML, stringsdict, Fluent, i18next JSON, xcstrings, Qt TS) now
+  follow the last form of their own group, no longer the end of the document. Code that took "the units after the
+  last skeleton unit" as the added ones must use the mark. A merge accepts both orders. `icu::place_added` puts
+  units in this order and points a text skeleton at the new places.
+- **Rolling back to 0.10.0** with such documents: Qt TS writes the first form's text into every form (a bilingual
+  file's forms are now read as targets), a JS string split per branch is written as one branch's translation, and a
+  Rails map can be filled from the wrong unit. Roll back only together with a re-extract.
+
 ## 0.9 to 0.10 (the unit model, for Rust API users)
 
 0.10 changes how a unit stores its maps and adds three optional pieces of structure. JSON documents, CLI skeletons,
