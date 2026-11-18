@@ -30,10 +30,13 @@ fn merged(d: &Document, opts: &MergeOptions) -> String {
     String::from_utf8(JsonFilter.merge_with(d, opts).unwrap()).unwrap()
 }
 
+/// (ICU path, group, parent, category, argument, kind)
+type Slot = (String, String, Option<String>, String, Option<String>, PluralKind);
+
 #[test]
 fn branches_are_one_group_per_argument() {
     let d = extract(None, false);
-    let slots: Vec<(String, String, Option<String>, String, Option<String>, PluralKind)> = d
+    let slots: Vec<Slot> = d
         .units
         .iter()
         .filter_map(|u| {
