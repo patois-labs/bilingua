@@ -279,3 +279,28 @@ fn a_slash_in_a_skipped_type_refuses_the_file() {
         vec!["Hi".to_string()]
     );
 }
+
+/// bilingua#23: an unpaired surrogate escape inside an ICU literal that is split per branch never panics; an
+/// untouched merge gives the bytes back and a translated one writes a file.
+#[test]
+fn an_unpaired_surrogate_in_a_split_icu_literal_is_safe() {
+    for src in [
+        "export default {\n  a: '{n, plural, one {\\uD83D # file} other {# files \\uDE00}}',\n  b: \"{g, select, x {\\uD83D} other {y}}\",\n};\n",
+        "export default { a: '{n, plural, one {#\\uD83D} other {#}}' };\n",
+    ] {
+        for target in [None, Some("pl")] {
+            let mut o = ExtractOptions::new();
+            if let Some(t) = target {
+                o = o.with_target_lang(t);
+            }
+            let Ok(mut d) = JsModule.extract(src.as_bytes(), &o) else { continue };
+            assert_eq!(JsModule.merge(&d).unwrap(), src.as_bytes(), "{src:?} {target:?}");
+            for u in d.units.iter_mut().filter(|u| u.translate) {
+                let t: Vec<Inline> = u.segments[0].source.iter().map(|i| if let Inline::Text(s) = i { Inline::text(format!("[{s}]")) } else { i.clone() }).collect();
+                u.segments[0].target = t;
+            }
+            let out = JsModule.merge(&d).unwrap();
+            assert!(JsModule.extract(&out, &o).is_ok(), "{}", String::from_utf8_lossy(&out));
+        }
+    }
+}

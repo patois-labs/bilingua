@@ -152,3 +152,22 @@ fn the_locos_profile_is_unchanged() {
     let out = merged(&l).unwrap();
     assert_eq!(out.matches("<numerusform>%n plików</numerusform>").count(), 3, "{out}");
 }
+
+/// The merge writes Qt's own number of forms for the target (Welsh 5, Irish 3, Maltese 4, Hungarian and Turkish 1,
+/// French 2), as many as the units; the LocOS profile keeps the CLDR count LocOS writes.
+#[test]
+fn a_merge_writes_qt_s_count_of_forms_and_locos_cldr_s() {
+    for (t, qt, cldr) in [("cy", 5, 6), ("ga", 3, 5), ("mt", 4, 0), ("hu", 1, 2), ("tr", 1, 2), ("fr", 2, 2), ("pl", 3, 3)] {
+        let mut d = extract(TS, Some(t), false);
+        assert_eq!(d.units.iter().filter(|u| u.plural().is_some()).count(), qt, "{t} units");
+        set(&mut d, "u1", "N");
+        assert_eq!(merged(&d).unwrap().matches("<numerusform>").count(), qt, "{t}");
+        if cldr == 0 {
+            continue; // Maltese: CLDR's count depends on the Babel data
+        }
+        let mut l = extract(TS, Some(t), true);
+        set(&mut l, "u1", "N");
+        let out = String::from_utf8(QtTs.merge_with(&l, &MergeOptions::new().with_profile(profile::LOCOS)).unwrap()).unwrap();
+        assert_eq!(out.matches("<numerusform>").count(), cldr, "{t} under the LocOS profile");
+    }
+}

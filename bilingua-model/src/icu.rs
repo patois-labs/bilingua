@@ -575,8 +575,8 @@ pub fn place_added(units: &mut Vec<crate::Unit>, parts: &mut [crate::SkelPart]) 
         }
     }
     let mut order: Vec<usize> = Vec::with_capacity(units.len());
-    for i in 0..units.len() {
-        if !moved[i] {
+    for (i, &m) in moved.iter().enumerate() {
+        if !m {
             order.push(i);
         }
         if let Some(list) = after.get(&i) {

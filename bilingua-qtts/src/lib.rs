@@ -453,6 +453,14 @@ impl Filter for QtTs {
         // (`stamp_target_always`: even when nothing is translated)
         let tag = target.and_then(lang::qt_language);
         let plural_lang = tag.clone().or(file_lang.clone()).unwrap_or_default();
+        // how many forms a numerus message gets: Qt's own count for the language (bilingua#23, CLDR's where Qt has no
+        // rule); the CLDR count LocOS writes under the LocOS profile
+        let want = if opts.is_profile(bilingua_model::profile::LOCOS) {
+            cldr::forms(&plural_lang)
+        } else {
+            numerus::forms(&plural_lang).map_or_else(|| cldr::forms(&plural_lang), |f| f.len())
+        }
+        .max(1);
         let fill = target.is_some();
         // LocOS writes the Qt spelling whenever the target is usable, so `PL-pl` becomes `pl_PL`; an equal value is left
     // as written (same bytes either way)
@@ -476,7 +484,7 @@ impl Filter for QtTs {
                 SkelPart::Unit(i) => {
                     let u = doc.units.get(*i).ok_or_else(|| wr(format!("skeleton points at missing unit {i}")))?;
                     let forms = u.plural().and_then(|p| forms_of.get(p.group())).map_or(&[][..], Vec::as_slice);
-                    write_unit(u, forms, crlf, fill, &plural_lang, refs, &mut out)?;
+                    write_unit(u, forms, crlf, fill, want, refs, &mut out)?;
                 }
             }
         }
@@ -668,8 +676,8 @@ fn changed(u: &Unit) -> bool {
 }
 
 /// Writes one message's `<translation>`. `forms_of`: the units added for the other numerus forms of a numerus
-/// message, with their numerusform positions (bilingua#23).
-fn write_unit(u: &Unit, forms_of: &[(usize, &Unit)], crlf: bool, fill: bool, plural_lang: &str, refs: CharRefs, out: &mut String) -> Result<(), Error> {
+/// message, with their numerusform positions (bilingua#23). `want`: the target's number of numerus forms.
+fn write_unit(u: &Unit, forms_of: &[(usize, &Unit)], crlf: bool, fill: bool, want: usize, refs: CharRefs, out: &mut String) -> Result<(), Error> {
     let raw = code(u, RAW).ok_or_else(|| Error::Write("a unit lost its translation element".into()))?;
     if !u.translate || !(changed(u) || forms_of.iter().any(|(_, a)| changed(a))) {
         out.push_str(&raw);
@@ -690,7 +698,6 @@ fn write_unit(u: &Unit, forms_of: &[(usize, &Unit)], crlf: bool, fill: bool, plu
     }
     let inner = if numerus {
         let forms: Vec<usize> = sc.children(0).filter(|c| sc.local(&raw, *c) == "numerusform").collect();
-        let want = cldr::forms(plural_lang).max(1);
         let base = if forms.is_empty() {
             want
         } else if fill {

@@ -206,7 +206,22 @@ fn numerus_forms_created_for_each_of_the_eleven_languages() {
         ("cy", 6),
         ("xx-unknown", 2),
     ];
+    // the CLDR counts LocOS writes, under the LocOS profile
+    let locos = MergeOptions::new().with_profile(profile::LOCOS);
     for (loc, n) in want {
+        let mut d = ex_to(bare.as_bytes(), loc);
+        set(&mut d, 0, "F %n");
+        let out = s(&QtTs.merge_with(&d, &locos).unwrap());
+        assert_eq!(out.matches("<numerusform>F %n</numerusform>").count(), n, "{loc}: {out}");
+    }
+    // bilingua#23: Qt's own counts otherwise (Turkish 1, Hebrew 2, Welsh 5; CLDR's for a language Qt has no rule for)
+    for (loc, n) in want {
+        let n = match loc {
+            "tr-TR" => 1,
+            "he" => 2,
+            "cy" => 5,
+            _ => n,
+        };
         let mut d = ex_to(bare.as_bytes(), loc);
         set(&mut d, 0, "F %n");
         let out = s(&merged(&d));

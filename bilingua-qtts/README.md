@@ -33,8 +33,9 @@ let out = QtTs.merge(&doc)?;
   `<location>`, `<oldsource>`, `<userdata>`, unknown elements) is the original bytes. New text uses CRLF when the
   whole file does.
 - **Numerus** messages: every existing `<numerusform>` gets the translation, with its layout kept; with no forms,
-  one form per plural form of the target language (CLDR categories that whole numbers reach, from Babel 2.18, as
-  LocOS: Polish 3, Russian 3, Arabic 6, Japanese 1, unknown language 2). With a target language that has more forms
+  one form per numerus form of the target language: Qt's own count (below; bilingua#23), and under the `locos`
+  profile the CLDR categories that whole numbers reach, from Babel 2.18, as LocOS (Polish 3, Russian 3, Arabic 6,
+  Japanese 1, Welsh 6, Hungarian 2, unknown language 2). With a target language that has more forms
   than the file, the missing ones are added after the last form, each holding the translation.
 - **One unit per numerus form** (bilingua#23): extracted with a target language and outside the `locos` profile, a
   numerus message has a unit for each numerus form Qt has for the target, in Qt's order (qttools `numerus.cpp`:

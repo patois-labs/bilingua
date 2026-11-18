@@ -124,20 +124,40 @@ fn every_corpus_file_round_trips() {
                 let labels: BTreeSet<(Option<String>, String)> = doc.units.iter().filter_map(plural_label).collect();
                 let kept: BTreeSet<(Option<String>, String)> = again.units.iter().filter_map(plural_label).collect();
                 // An ICU message rebuilt for the target (json dialects, arb, js modules since bilingua#23) follows
-                // its categories too: a branch the target never uses goes (es-ES ordinals have only `other`), one
-                // it needs comes in. Branch units are matched by key and ICU path.
-                let icu_label = |u: &bilingua::Unit| u.context.extra().get("icu").map(|p| (u.context.key.clone(), p.to_string()));
-                let icu_had: BTreeSet<(Option<String>, String)> = doc.units.iter().filter_map(|u| icu_label(u)).collect();
-                let icu_kept: BTreeSet<(Option<String>, String)> = again.units.iter().filter_map(|u| icu_label(u)).collect();
-                let dropped = |u: &&bilingua::Unit| {
-                    (doc.format == "android" && plural_label(u).is_some_and(|l| !kept.contains(&l))) || icu_label(u).is_some_and(|l| !icu_kept.contains(&l))
+                // its categories too: a plural or selectordinal branch whose category the target does not use goes
+                // (es-ES ordinals have only `other`), and one the target uses and the source lacks comes in. Only
+                // those are excused; `=N` and select branches must match by key and ICU path.
+                let cats = |ordinal: bool| doc.plural_categories(if ordinal { bilingua::PluralKind::Ordinal } else { bilingua::PluralKind::Cardinal }).unwrap_or_default();
+                let (card, ord) = (cats(false), cats(true));
+                // the plural categories named along an ICU path (`n: plural one / g: select x`), with their kind
+                let path_cats = |p: &str| -> Vec<(bool, String)> {
+                    p.split(" / ")
+                        .filter_map(|seg| {
+                            let (_, rest) = seg.split_once(": ")?;
+                            let (kind, sel) = rest.split_once(' ')?;
+                            match kind {
+                                "plural" if !sel.starts_with('=') => Some((false, sel.to_string())),
+                                "selectordinal" if !sel.starts_with('=') => Some((true, sel.to_string())),
+                                _ => None,
+                            }
+                        })
+                        .collect()
                 };
+                let in_target = |ordinal: bool, c: &str| if ordinal { ord.contains(&c) } else { card.contains(&c) };
+                let icu_label = |u: &bilingua::Unit| u.context.extra().get("icu").map(|p| (u.context.key.clone(), p.to_string()));
+                let icu_had: BTreeSet<(Option<String>, String)> = doc.units.iter().filter_map(icu_label).collect();
+                let icu_kept: BTreeSet<(Option<String>, String)> = again.units.iter().filter_map(icu_label).collect();
+                // a source branch the target does not use, gone after the merge
+                let icu_dropped = |u: &bilingua::Unit| {
+                    icu_label(u).is_some_and(|l| !icu_kept.contains(&l) && path_cats(&l.1).iter().any(|(o, c)| !in_target(*o, c)))
+                };
+                // a branch the target uses and the source lacks, there after the merge
+                let icu_new = |u: &bilingua::Unit| {
+                    icu_label(u).is_some_and(|l| !icu_had.contains(&l) && path_cats(&l.1).iter().any(|(o, c)| in_target(*o, c)))
+                };
+                let dropped = |u: &&bilingua::Unit| (doc.format == "android" && plural_label(u).is_some_and(|l| !kept.contains(&l))) || icu_dropped(u);
                 let a = doc.units.iter().filter(|u| u.translate).filter(|u| !dropped(u)).count();
-                let b = again
-                    .units
-                    .iter()
-                    .filter(|u| u.translate && plural_label(u).is_none_or(|l| labels.contains(&l)) && icu_label(u).is_none_or(|l| icu_had.contains(&l)))
-                    .count();
+                let b = again.units.iter().filter(|u| u.translate && plural_label(u).is_none_or(|l| labels.contains(&l)) && !icu_new(u)).count();
                 if a != b {
                     failures.push(format!("{name}: reopened with {b} units, had {a}"));
                 }

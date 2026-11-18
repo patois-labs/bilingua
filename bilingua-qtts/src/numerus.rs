@@ -5,7 +5,7 @@
 //! falls back to the CLDR categories whole numbers reach (`cldr::forms`, the count LocOS writes).
 //!
 //! Each form has a CLDR category as a hint where the form covers the whole numbers of exactly one category; a form
-//! that mixes categories (Latvian "Plural", Welsh 2 to 5, Macedonian, Tagalog) has none.
+//! that mixes categories (Latvian "Plural", Welsh 2 to 5, Macedonian) has none.
 
 /// The numerus forms of one language: the rule set's name (two languages with the same name number their forms
 /// alike) and a category hint per form, in Qt's order.
@@ -62,14 +62,13 @@ const MALTESE: (&str, &[Option<&str>]) = ("maltese", &[c("one"), O, c("many"), c
 // Nullar, Singular, Dual (2 to 5), Sexal (6), Plural: CLDR splits Qt's Dual into two and few
 const WELSH: (&str, &[Option<&str>]) = ("welsh", &[c("zero"), c("one"), O, c("many"), c("other")]);
 const ARABIC: (&str, &[Option<&str>]) = ("arabic", &[c("zero"), c("one"), c("two"), c("few"), c("many"), c("other")]);
-// n <= 1, n % 10 in 4, 6, 9, else: CLDR puts 0 to 3 and the third form under `one`
-const TAGALOG: (&str, &[Option<&str>]) = ("tagalog", &[O, O, O]);
-// Singular, 11 (and its thousands), Plural
-const CATALAN: (&str, &[Option<&str>]) = ("catalan", &[c("one"), O, c("other")]);
 
 type Rule = (&'static str, &'static [Option<&'static str>]);
 
-/// The languages of `numerus.cpp`, by code (Qt's `QLocale` languages), sorted.
+/// The languages of `numerus.cpp` (qttools dev, checked 2026-11-18), by code (Qt's `QLocale` languages), sorted.
+/// Filipino (`fil`, and `tl`, which `QLocale` reads as Filipino) is in both the French-style list and the Tagalog
+/// rule; Qt takes the first table entry that matches, the French style. Catalan, Lingala and Occitan are English
+/// style.
 const LANGS: &[(&str, Rule)] = &[
     ("aa", ENGLISH),
     ("ab", ENGLISH),
@@ -82,13 +81,12 @@ const LANGS: &[(&str, Rule)] = &[
     ("ba", ENGLISH),
     ("be", RUSSIAN),
     ("bg", ENGLISH),
-    ("bh", ENGLISH),
     ("bi", JAPANESE),
     ("bn", ENGLISH),
     ("bo", JAPANESE),
     ("br", FRENCH),
     ("bs", RUSSIAN_NO_MANY),
-    ("ca", CATALAN),
+    ("ca", ENGLISH),
     ("co", ENGLISH),
     ("cs", SLOVAK),
     ("cy", WELSH),
@@ -143,6 +141,7 @@ const LANGS: &[(&str, Rule)] = &[
     ("ky", ENGLISH),
     ("la", ENGLISH),
     ("lb", ENGLISH),
+    ("lg", ENGLISH),
     ("ln", ENGLISH),
     ("lo", ENGLISH),
     ("lt", LITHUANIAN),
@@ -152,7 +151,6 @@ const LANGS: &[(&str, Rule)] = &[
     ("mk", MACEDONIAN),
     ("ml", ENGLISH),
     ("mn", ENGLISH),
-    ("mo", ROMANIAN),
     ("mr", ENGLISH),
     ("ms", JAPANESE),
     ("mt", MALTESE),
@@ -200,7 +198,7 @@ const LANGS: &[(&str, Rule)] = &[
     ("th", JAPANESE),
     ("ti", FRENCH),
     ("tk", ENGLISH),
-    ("tl", TAGALOG),
+    ("tl", FRENCH),
     ("tn", ENGLISH),
     ("to", ENGLISH),
     ("tr", JAPANESE),
