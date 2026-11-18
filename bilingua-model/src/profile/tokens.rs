@@ -22,7 +22,7 @@
 //! Damage is never silent and never loses text: a token that is malformed, or whose number is not in the map,
 //! stays in the text as it is and is reported by [`parse_locos_text`].
 
-use crate::{merge_text, CodeData, Inline, TagKind};
+use crate::{merge_text, Codes, Inline, TagKind};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
@@ -125,7 +125,7 @@ const LOCOS_RUN_PAIRS: &[&str] = &["idml", "icml"];
 /// [`to_locos_text_for`] gives, except for IDML and ICML, where a pair whose code is labelled `run` (a
 /// CharacterStyleRange) is an `r` pair (`⟦r1⟧bold⟦/r1⟧`) and every other pair a `g` pair, as LocOS writes them.
 /// [`crate::profile::locos_units`] numbers every segment this way.
-pub fn to_locos_text_coded(format: &str, inl: &[Inline], codes: &BTreeMap<String, CodeData>) -> (String, LocosMap) {
+pub fn to_locos_text_coded(format: &str, inl: &[Inline], codes: &Codes) -> (String, LocosMap) {
     if !LOCOS_RUN_PAIRS.contains(&format) {
         return to_locos_text_for(format, inl);
     }
@@ -843,6 +843,7 @@ const LIT_MARK: char = '\u{e000}';
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::CodeData;
 
     #[test]
     fn literal_escape_round_trips_every_short_string() {
@@ -913,10 +914,10 @@ mod tests {
             Inline::tag("3", TagKind::Standalone, "<Br/>"),
             Inline::tag("1", TagKind::Close, "</CharacterStyleRange>"),
         ];
-        let mut codes = BTreeMap::new();
-        codes.insert("1".to_string(), CodeData::paired("<CharacterStyleRange>", "</CharacterStyleRange>").with_label("run"));
-        codes.insert("2".to_string(), CodeData::paired("<HyperlinkTextSource>", "</HyperlinkTextSource>").with_label("link"));
-        codes.insert("3".to_string(), CodeData::standalone("<Br/>").with_label("br"));
+        let mut codes = Codes::new();
+        codes.insert("1", CodeData::paired("<CharacterStyleRange>", "</CharacterStyleRange>").with_label("run"));
+        codes.insert("2", CodeData::paired("<HyperlinkTextSource>", "</HyperlinkTextSource>").with_label("link"));
+        codes.insert("3", CodeData::standalone("<Br/>").with_label("br"));
         let want = "\u{27e6}r1\u{27e7}bold \u{27e6}g2\u{27e7}link\u{27e6}/g2\u{27e7}\u{27e6}x3\u{27e7}\u{27e6}/r1\u{27e7}";
         for f in ["idml", "icml"] {
             let (t, map) = to_locos_text_coded(f, &inl, &codes);
@@ -929,7 +930,7 @@ mod tests {
         }
         // other formats ignore the labels; without codes every pair is `g`, as before
         assert_eq!(to_locos_text_coded("odt", &inl, &codes), to_locos_text_for("odt", &inl));
-        assert_eq!(to_locos_text_coded("idml", &inl, &BTreeMap::new()).0.matches("\u{27e6}g").count(), 2);
+        assert_eq!(to_locos_text_coded("idml", &inl, &Codes::new()).0.matches("\u{27e6}g").count(), 2);
     }
 
     fn sample() -> Vec<Inline> {

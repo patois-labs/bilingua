@@ -618,7 +618,7 @@ fn to_locos_text(py: Python<'_>, format: &str, inlines: &Bound<'_, PyAny>, codes
         None => engine::profile::tokens::to_locos_text_for(format, &inl),
         Some(c) => {
             let v = from_py(c, 0).map_err(|f| to_py_err(py, f))?;
-            let codes: std::collections::BTreeMap<String, engine::CodeData> =
+            let codes: engine::Codes =
                 serde_json::from_value(v).map_err(|e| to_py_err(py, Fail::new("invalid_argument", format!("codes: {e}"))))?;
             engine::profile::tokens::to_locos_text_coded(format, &inl, &codes)
         }
