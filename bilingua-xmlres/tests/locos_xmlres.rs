@@ -101,7 +101,8 @@ fn android_units_and_skips() {
     assert!(texts.contains(&"Signed in as ⟦x1⟧.".to_string()));
     assert_eq!(AndroidStrings.merge(&d).unwrap(), STRINGS);
     // keys, plural forms, array positions and the comment before a resource
-    let songs: Vec<&Unit> = d.units.iter().filter(|u| u.context.key.as_deref() == Some("songs")).collect();
+    // (LocOS's units: French adds `many`, a unit outside the LocOS profile, unit model step 7)
+    let songs: Vec<&Unit> = d.units.iter().filter(|u| u.context.key.as_deref() == Some("songs") && !u.has_hidden(icu::ADDED_HIDDEN)).collect();
     assert_eq!(songs.iter().map(|u| &u.context.extra()["plural"]).collect::<Vec<_>>(), ["one", "other"]);
     let venus = d.units.iter().find(|u| plain_text(&u.source()) == "Venus").unwrap();
     assert_eq!((venus.context.key.as_deref(), venus.context.extra().get("index")), (Some("planets"), Some("1")));
