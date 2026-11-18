@@ -87,8 +87,7 @@ fn untranslated_added_forms_write_what_main_wrote() {
         set(&mut d, "u1", "%n plików");
         let out = merged(&d).unwrap();
         // a document without the added units (what 0.10.0 extracted) writes the same file
-        let mut old = d.clone();
-        old.units.retain(|u| !u.has_hidden(icu::ADDED_HIDDEN));
+        let old = icu::reorder_added(&d, false);
         assert_eq!(out, merged(&old).unwrap(), "{t}");
     }
     let mut d = extract(TS, Some("pl"), false);

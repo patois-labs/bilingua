@@ -52,8 +52,11 @@ pub fn translate(b: &[u8], target: Option<&str>, f: impl Fn(usize, &str) -> Opti
         Some(t) => extract_to(b, t),
         None => extract(b),
     };
-    for i in 0..d.units.len() {
-        if let Some(new) = f(i, &text_of(&d.units[i])) {
+    // `f` numbers the file's own units; the units added for a plural category (they sit after their map since
+    // cat-os#89) are left untranslated, so they write the fill from the translated `other`
+    let own: Vec<usize> = (0..d.units.len()).filter(|&i| !d.units[i].has_hidden(icu::ADDED_HIDDEN)).collect();
+    for (n, i) in own.into_iter().enumerate() {
+        if let Some(new) = f(n, &text_of(&d.units[i])) {
             let id = d.units[i].segments[0].id.clone();
             d.set_target(&id, vec![Inline::text(new)]).unwrap();
         }
