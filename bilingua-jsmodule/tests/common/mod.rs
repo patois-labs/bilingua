@@ -2,8 +2,14 @@
 use bilingua_jsmodule::JsModule;
 use bilingua_model::*;
 
+/// The extract options of the test binary: the LocOS profile where it compares with the LocOS filter (`LOCOS` in
+/// the binary's root; outside the profile an ICU plural or select string is a unit per branch, bilingua#23).
 pub fn opts() -> ExtractOptions {
-    ExtractOptions::default()
+    if crate::LOCOS {
+        ExtractOptions::default().with_profile(profile::LOCOS)
+    } else {
+        ExtractOptions::default()
+    }
 }
 
 pub fn extract(data: &[u8]) -> Result<Document, Error> {

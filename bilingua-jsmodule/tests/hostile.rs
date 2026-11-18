@@ -1,5 +1,7 @@
 //! Hostile input: random bytes, JavaScript-shaped noise, mutated and truncated fixtures, deep and huge files.
 //! Nothing panics; a file that opens merges back to its exact bytes and survives translation.
+/// The default profile.
+const LOCOS: bool = false;
 mod common;
 use bilingua_jsmodule::{records, JsModule, Limits};
 use bilingua_model::*;

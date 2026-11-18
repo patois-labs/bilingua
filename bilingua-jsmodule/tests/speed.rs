@@ -2,6 +2,8 @@
 //! Run in release for the real number:
 //!   cargo test -p bilingua-jsmodule --release --test speed -- --nocapture
 //! Set BILINGUA_JS_SPEED_OUT to a path to keep the generated file (tests/tools/speed_locos.py reads it).
+/// The default profile.
+const LOCOS: bool = false;
 mod common;
 use bilingua_jsmodule::{JsModule, Limits};
 use bilingua_model::*;

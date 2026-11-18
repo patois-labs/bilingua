@@ -51,8 +51,8 @@ fn untranslated_added_forms_write_the_fill_and_translated_ones_their_text() {
     let mut d = extract(RAILS, Some("pl"), false);
     translate(&mut d, "u3", |s| s.replace("files", "plików"));
     let out = merged(&d).unwrap();
-    let mut old = d.clone();
-    old.units.retain(|u| !u.has_hidden(icu::ADDED_HIDDEN));
+    // added units sit after their group, so leaving them out moves the skeleton's unit numbers
+    let old = icu::reorder_added(&d, false);
     assert_eq!(out, merged(&old).unwrap(), "what a document without the added units writes");
     assert!(line(&out, "few").contains("plików") && line(&out, "many").contains("plików"), "{out}");
     translate(&mut d, "u3.few", |s| s.replace("files", "pliki"));
@@ -83,4 +83,22 @@ fn nothing_is_filled_or_added_under_the_locos_profile() {
     let d = extract(RAILS, Some("pl"), true);
     assert_eq!(d.units.len(), 3);
     assert!(d.units.iter().all(|u| u.plural().is_none() && !u.has_hidden(icu::ADDED_HIDDEN)));
+}
+
+/// cat-os#89: the added forms follow their own map, before the next key; a document from 0.10.0 (added units at
+/// the end) merges to the same file.
+#[test]
+fn added_forms_follow_their_own_map_and_0_10_0_documents_still_merge() {
+    let src = "en:\n  files:\n    one: \"%{count} file\"\n    other: \"%{count} files\"\n  bye: Bye\n";
+    let mut d = extract(src, Some("pl"), false);
+    let ids: Vec<&str> = d.units.iter().map(|u| u.id.as_str()).collect();
+    assert_eq!(ids, ["u1", "u2", "u2.few", "u2.many", "u3"]);
+    assert_eq!(merged(&d).unwrap(), src);
+    translate(&mut d, "u2.few", |s| s.replace("files", "pliki"));
+    translate(&mut d, "u3", |_| "Pa".to_string());
+    let old = icu::reorder_added(&d, true);
+    assert_eq!(old.units.iter().map(|u| u.id.as_str()).collect::<Vec<_>>(), ["u1", "u2", "u3", "u2.few", "u2.many"]);
+    let out = merged(&d).unwrap();
+    assert_eq!(out, merged(&old).unwrap());
+    assert!(line(&out, "few").contains("pliki") && line(&out, "bye").contains("Pa"), "{out}");
 }

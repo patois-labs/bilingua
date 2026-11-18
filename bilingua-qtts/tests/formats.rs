@@ -249,7 +249,14 @@ fn tight_forms_are_topped_up_without_invented_white_space() {
     let k = d.units.iter().position(|u| token_text(u) == "%n tight").unwrap();
     set(&mut d, k, "T");
     let out = s(&merged(&d));
-    assert!(out.contains("<translation><numerusform>T</numerusform><numerusform>T</numerusform><numerusform>T</numerusform></translation>"), "{out}");
+    // bilingua#23: the file's second form ("b") was read into its own unit and stays; the third, which the file
+    // lacks, takes the first form's translation
+    assert!(out.contains("<translation><numerusform>T</numerusform><numerusform>b</numerusform><numerusform>T</numerusform></translation>"), "{out}");
+    // under the LocOS profile every form takes the translation, as before
+    let mut l = QtTs.extract(&data("edge.ts"), &ExtractOptions::new().with_target_lang("ru").with_profile(profile::LOCOS)).unwrap();
+    let k = l.units.iter().position(|u| token_text(u) == "%n tight").unwrap();
+    set(&mut l, k, "T");
+    assert!(s(&merged(&l)).contains("<translation><numerusform>T</numerusform><numerusform>T</numerusform><numerusform>T</numerusform></translation>"));
 }
 
 // -- LocOS golden file ----------------------------------------------------------------------------------------------

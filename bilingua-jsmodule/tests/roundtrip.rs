@@ -1,4 +1,6 @@
 //! Round trips, languages, encodings, tags, ids and the other contract points of the filter.
+/// The default profile.
+const LOCOS: bool = false;
 mod common;
 use bilingua_jsmodule::JsModule;
 use bilingua_model::*;

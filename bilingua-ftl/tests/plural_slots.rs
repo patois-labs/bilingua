@@ -58,8 +58,8 @@ fn polish_adds_few_and_many_and_untouched_merges_are_todays() {
     // what a document without the added units (main) writes, translated or not
     let mut t = d.clone();
     translate(&mut t, "emails[other]", |s| s.replace("emails", "e-maili"));
-    let mut old = t.clone();
-    old.units.retain(|u| !u.has_hidden(icu::ADDED_HIDDEN));
+    // added units sit after their group, so leaving them out moves the skeleton's unit numbers
+    let old = icu::reorder_added(&t, false);
     assert_eq!(plain(&t).unwrap(), plain(&old).unwrap());
     assert_eq!(localized(&t).unwrap(), localized(&old).unwrap());
     assert!(localized(&t).unwrap().contains("        [few] You have { $count } e-maili.\n"), "{}", localized(&t).unwrap());
@@ -95,4 +95,19 @@ fn nothing_is_filled_or_added_under_the_locos_profile() {
     let d = extract(Some("pl"), true);
     assert_eq!(d.units.len(), 6);
     assert!(d.units.iter().all(|u| u.plural().is_none() && !u.has_hidden(icu::ADDED_HIDDEN)));
+}
+
+/// cat-os#89: the added variants follow their own select's variants, before the next message; a document from
+/// 0.10.0 (added units at the end) merges to the same file, plain and localized.
+#[test]
+fn added_forms_follow_their_own_select_and_0_10_0_documents_still_merge() {
+    let mut d = extract(Some("pl"), false);
+    let keys: Vec<&str> = d.units.iter().filter_map(|u| u.context.key.as_deref()).collect();
+    assert_eq!(&keys[..5], ["hi", "emails[one]", "emails[other]", "emails[few]", "emails[many]"]);
+    translate(&mut d, "emails[few]", |s| s.replace("emails", "e-maile"));
+    translate(&mut d, "who[other]", |s| s.replace("their", "ich"));
+    let old = icu::reorder_added(&d, true);
+    assert!(old.units.last().unwrap().plural().unwrap().is_added());
+    assert_eq!(plain(&d).unwrap(), plain(&old).unwrap());
+    assert_eq!(localized(&d).unwrap(), localized(&old).unwrap());
 }

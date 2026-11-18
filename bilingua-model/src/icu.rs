@@ -586,19 +586,45 @@ pub fn place_added(units: &mut Vec<crate::Unit>, parts: &mut [crate::SkelPart]) 
     if order.iter().enumerate().all(|(k, &i)| k == i) {
         return;
     }
-    let mut new_at = vec![0usize; units.len()];
+    apply_order(units, parts, &order);
+}
+
+/// Keeps the units `order` names, in that order, and points the skeleton's unit parts at their new places (a part
+/// of a unit left out keeps its number).
+fn apply_order(units: &mut Vec<crate::Unit>, parts: &mut [crate::SkelPart], order: &[usize]) {
+    let mut new_at = vec![usize::MAX; units.len()];
     for (k, &i) in order.iter().enumerate() {
         new_at[i] = k;
     }
     for p in parts.iter_mut() {
         if let crate::SkelPart::Unit(i) = p {
-            if let Some(&n) = new_at.get(*i) {
+            if let Some(&n) = new_at.get(*i).filter(|n| **n != usize::MAX) {
                 *i = n;
             }
         }
     }
     let mut old: Vec<Option<crate::Unit>> = std::mem::take(units).into_iter().map(Some).collect();
     units.extend(order.iter().map(|&i| old[i].take().expect("each unit once")));
+}
+
+/// For tests of format crates: `doc` with its added plural forms ([`place_added`]) moved to the end, the layout
+/// 0.10.0 extracted (`keep`), or left out (`!keep`, a document from before the forms were added), the skeleton
+/// pointed at the new places.
+#[doc(hidden)]
+pub fn reorder_added(doc: &crate::Document, keep: bool) -> crate::Document {
+    let mut d = doc.clone();
+    let added = |u: &crate::Unit| u.plural().is_some_and(|p| p.is_added());
+    let mut order: Vec<usize> = (0..d.units.len()).filter(|&i| !added(&d.units[i])).collect();
+    if keep {
+        order.extend((0..d.units.len()).filter(|&i| added(&d.units[i])));
+    }
+    let mut none: Vec<crate::SkelPart> = Vec::new();
+    let parts = match &mut d.skeleton {
+        crate::Skeleton::Text { parts, .. } => parts,
+        _ => &mut none,
+    };
+    apply_order(&mut d.units, parts, &order);
+    d
 }
 
 /// Plural slots for suffix-style plural keys (ARB `itemCountOne`, `itemCountOther`): the units whose key (`key`
@@ -864,6 +890,33 @@ mod tests {
         icu.set_hidden(ADDED_HIDDEN, "count: plural few");
         assert_eq!(key_added(&icu, Some(&["one", "few", "many", "other"])), KeyAdded::No);
         assert!(!has_any_target(&u));
+    }
+
+    #[test]
+    fn added_forms_move_after_their_group_and_the_skeleton_follows() {
+        let unit = |id: &str, group: Option<&str>, added: bool| {
+            let mut u = crate::Unit::new(id, vec![crate::Inline::text(id)]);
+            if let Some(g) = group {
+                u.set_plural(key_slot(g, false, "other", added));
+            }
+            u
+        };
+        // the 0.10.0 layout: added units at the end
+        let mut units = vec![unit("a", Some("g1"), false), unit("b", Some("g1"), false), unit("c", None, false), unit("d", Some("g2"), false), unit("b.few", Some("g1"), true), unit("b.many", Some("g1"), true), unit("d.few", Some("g2"), true), unit("x.few", Some("gone"), true)];
+        let mut parts: Vec<crate::SkelPart> = (0..4).map(crate::SkelPart::Unit).collect();
+        place_added(&mut units, &mut parts);
+        let ids: Vec<&str> = units.iter().map(|u| u.id.as_str()).collect();
+        assert_eq!(ids, ["a", "b", "b.few", "b.many", "c", "d", "d.few", "x.few"]);
+        let at: Vec<usize> = parts.iter().map(|p| if let crate::SkelPart::Unit(i) = p { *i } else { usize::MAX }).collect();
+        assert_eq!(at, [0, 1, 4, 5]);
+        // and back: the test helper puts them at the end again, or leaves them out
+        let doc = crate::Document::new("x", units, crate::Skeleton::text(parts, "utf-8", crate::ParserInfo::new("x", "0", 1)));
+        let back = reorder_added(&doc, true);
+        assert_eq!(back.units.iter().map(|u| u.id.as_str()).collect::<Vec<_>>(), ["a", "b", "c", "d", "b.few", "b.many", "d.few", "x.few"]);
+        let none = reorder_added(&doc, false);
+        assert_eq!(none.units.len(), 4);
+        let crate::Skeleton::Text { parts, .. } = &none.skeleton else { panic!() };
+        assert!(parts.iter().enumerate().all(|(k, p)| matches!(p, crate::SkelPart::Unit(i) if *i == k)));
     }
 
     #[test]

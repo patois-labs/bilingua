@@ -61,8 +61,8 @@ fn untranslated_added_forms_write_the_fill_and_translated_ones_their_text() {
     let mut d = extract(SD.as_bytes(), "ru", false);
     translate(&mut d, "files/items/other", |s| s.replace("files", "файлов"));
     let out = text(merged(&d).unwrap());
-    let mut old = d.clone();
-    old.units.retain(|u| !u.has_hidden(icu::ADDED_HIDDEN));
+    // added units sit after their group, so leaving them out moves the skeleton's unit numbers
+    let old = icu::reorder_added(&d, false);
     assert_eq!(out, text(merged(&old).unwrap()), "what a document without the added units writes");
     assert_eq!(out.matches("%lld файлов").count(), 3, "{out}");
     translate(&mut d, "files/items/few", |s| s.replace("files", "файла"));
@@ -116,4 +116,29 @@ fn nothing_is_filled_or_added_under_the_locos_profile() {
     let d = extract(SD.as_bytes(), "ru", true);
     assert_eq!(d.units.len(), 2);
     assert!(d.units.iter().all(|u| u.plural().is_none() && !u.has_hidden(icu::ADDED_HIDDEN)));
+}
+
+/// cat-os#89 and bilingua#23: the added forms follow their own variable's forms, before the next entry, with their
+/// own category as the style; a document from 0.10.0 (added units at the end) merges to the same file.
+#[test]
+fn added_forms_follow_their_own_variable_and_0_10_0_documents_still_merge() {
+    // a second entry, `dirs`, after `files`
+    let start = SD.find("\t<key>files</key>").unwrap();
+    let end = SD.rfind("</dict>\n</plist>").unwrap();
+    let files = &SD[start..end];
+    let src = format!("{}{files}{}{}", &SD[..start], files.replace("files", "dirs"), &SD[end..]);
+    let mut d = extract(src.as_bytes(), "pl", false);
+    let keys: Vec<&str> = d.units.iter().filter_map(|u| u.context.key.as_deref()).filter(|k| k.contains("/items/")).collect();
+    assert_eq!(keys, ["files/items/one", "files/items/other", "files/items/few", "files/items/many", "dirs/items/one", "dirs/items/other", "dirs/items/few", "dirs/items/many"]);
+    assert_eq!(by_key(&d, "files/items/few").context.style.as_deref(), Some("few"));
+    assert_eq!(by_key(&d, "files/items/many").context.style.as_deref(), Some("many"));
+    assert_eq!(by_key(&d, "files/items/other").context.style.as_deref(), Some("other"));
+    assert_eq!(text(merged(&d).unwrap()), src);
+    translate(&mut d, "files/items/few", |s| s.replace("files", "pliki"));
+    translate(&mut d, "dirs/items/one", |s| s.replace("file", "katalog"));
+    let old = icu::reorder_added(&d, true);
+    assert_eq!(old.units.last().and_then(|u| u.context.key.as_deref()), Some("dirs/items/many"));
+    let out = text(merged(&d).unwrap());
+    assert_eq!(out, text(merged(&old).unwrap()));
+    assert!(out.contains("<string>%lld pliki</string>") && out.contains("<string>%lld katalog</string>"), "{out}");
 }

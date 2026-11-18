@@ -8,6 +8,11 @@ use bilingua_qtts::QtTs;
 use common::*;
 use proptest::prelude::*;
 
+/// The units of a document that are messages, not forms added for a target's numerus forms (bilingua#23).
+fn own_units(d: &Document) -> usize {
+    d.units.iter().filter(|u| !u.has_hidden(icu::ADDED_HIDDEN)).count()
+}
+
 fn is_typed(e: &Error) -> bool {
     matches!(e, Error::Parse { .. } | Error::Limit(_) | Error::Encoding(_) | Error::Unsupported(_))
 }
@@ -22,7 +27,8 @@ fn check(bytes: &[u8]) {
             pseudo(&mut d);
             let out = QtTs.merge(&d).unwrap_or_else(|e| panic!("merge failed: {e}"));
             let back = QtTs.extract(&out, &opts(None)).unwrap_or_else(|e| panic!("merged file does not read back: {e}\n{}", String::from_utf8_lossy(&out)));
-            assert_eq!(back.units.len(), d.units.len());
+            // the units added for a numerus message's other forms (bilingua#23) are the message's again
+            assert_eq!(back.units.len(), own_units(&d));
         }
     }
 }
@@ -246,8 +252,8 @@ proptest! {
         pseudo(&mut d);
         let out = QtTs.merge(&d).unwrap();
         let back = QtTs.extract(&out, &opts(None)).unwrap();
-        prop_assert_eq!(back.units.len(), d.units.len());
-        let a: Vec<_> = d.units.iter().map(|u| u.source()).collect();
+        prop_assert_eq!(back.units.len(), own_units(&d));
+        let a: Vec<_> = d.units.iter().filter(|u| !u.has_hidden(icu::ADDED_HIDDEN)).map(|u| u.source()).collect();
         let b: Vec<_> = back.units.iter().map(|u| u.source()).collect();
         prop_assert_eq!(a, b);
     }

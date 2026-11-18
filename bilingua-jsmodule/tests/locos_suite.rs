@@ -1,5 +1,7 @@
 //! The LocOS suite `tests/verify_js_module_filter.py`, ported case by case (14 test functions, 14 tests here).
 //! The fixtures (ESM, CJS, TS) are the ones the Python suite builds.
+/// Compared with the LocOS filter: extract under the LocOS profile (bilingua#23 splits ICU strings outside it).
+const LOCOS: bool = true;
 mod common;
 use bilingua_jsmodule::{records, JsModule};
 use bilingua_model::*;

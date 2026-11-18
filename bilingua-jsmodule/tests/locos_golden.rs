@@ -1,6 +1,8 @@
 //! Differential test against the LocOS js filter: 450 random modules plus the oracle corpus, with the units, the
 //! placeholders, the records and the bytes LocOS builds recorded in `data/locos_golden.json`
 //! (made by `tools/gen_golden.py`).
+/// Compared with the LocOS filter: extract under the LocOS profile (bilingua#23 splits ICU strings outside it).
+const LOCOS: bool = true;
 mod common;
 use bilingua_jsmodule::records;
 use common::*;

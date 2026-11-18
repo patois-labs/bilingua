@@ -181,3 +181,20 @@ fn the_locos_profile_adds_nothing_and_fills_no_slot() {
     // no target, or the source language: nothing added either
     assert_eq!(extract(Some("en-US"), false).units.len(), extract(None, false).units.len());
 }
+
+/// cat-os#89: a document from 0.10.0 with the added units at the end merges to the same file (the merge finds them
+/// by id); a source whose `other` is not its last form gets them after its last form.
+#[test]
+fn added_units_merge_in_either_order_and_follow_the_last_form() {
+    let mut d = extract(Some("pl"), false);
+    translate(&mut d, "u2.few", |s| s.replace("files", "pliki"));
+    translate(&mut d, "u4", |s| s.replace("item", "rzecz"));
+    let old = icu::reorder_added(&d, true);
+    assert!(old.units.last().unwrap().plural().unwrap().is_added());
+    assert_eq!(merged(&d), merged(&old));
+    let zero = CAT.replacen("\"other\" : {\n                \"stringUnit\" : {\n                  \"state\" : \"translated\",\n                  \"value\" : \"%lld files\"\n                }\n              }", "\"other\" : {\n                \"stringUnit\" : {\n                  \"state\" : \"translated\",\n                  \"value\" : \"%lld files\"\n                }\n              },\n              \"zero\" : {\n                \"stringUnit\" : {\n                  \"state\" : \"translated\",\n                  \"value\" : \"no files\"\n                }\n              }", 1);
+    assert_ne!(zero, CAT);
+    let d = Xcstrings.extract(zero.as_bytes(), &ExtractOptions::new().with_source_lang("en").with_target_lang("pl")).unwrap();
+    let ids: Vec<&str> = d.units.iter().map(|u| u.id.as_str()).take(5).collect();
+    assert_eq!(ids, ["u1", "u2", "u3", "u2.few", "u2.many"]);
+}

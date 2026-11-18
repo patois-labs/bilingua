@@ -42,10 +42,11 @@ fn i18next_keys_share_a_group_and_polish_adds_few_and_many() {
         [
             ("/files_one", "/files", PluralKind::Cardinal, "one", false),
             ("/files_other", "/files", PluralKind::Cardinal, "other", false),
-            ("/place_ordinal_one", "/place_ordinal", PluralKind::Ordinal, "one", false),
-            ("/place_ordinal_other", "/place_ordinal", PluralKind::Ordinal, "other", false),
+            // the added keys right after their own group's (cat-os#89)
             ("/files_few", "/files", PluralKind::Cardinal, "few", true),
             ("/files_many", "/files", PluralKind::Cardinal, "many", true),
+            ("/place_ordinal_one", "/place_ordinal", PluralKind::Ordinal, "one", false),
+            ("/place_ordinal_other", "/place_ordinal", PluralKind::Ordinal, "other", false),
         ]
     );
     // Polish ordinals have only `other`: nothing is added for them
@@ -57,8 +58,8 @@ fn i18next_keys_share_a_group_and_polish_adds_few_and_many() {
 fn untranslated_added_keys_write_todays_merge_and_translated_ones_their_text() {
     let mut d = extract(I18N, "plain", Some("pl"), false);
     translate(&mut d, "/files_other", |s| s.replace("files", "plików"));
-    let mut old = d.clone();
-    old.units.retain(|u| !u.has_hidden(icu::ADDED_HIDDEN));
+    // added units sit after their group, so leaving them out moves the skeleton's unit numbers
+    let old = icu::reorder_added(&d, false);
     for fill in [false, true] {
         assert_eq!(merged(&d, fill).unwrap(), merged(&old, fill).unwrap(), "fill {fill}: what a document without the added units writes");
     }
@@ -98,4 +99,18 @@ fn nothing_is_filled_or_added_under_the_locos_profile() {
     let d = extract(I18N, "plain", Some("pl"), true);
     assert_eq!(d.units.len(), 5);
     assert!(d.units.iter().all(|u| u.plural().is_none() && !u.has_hidden(icu::ADDED_HIDDEN)));
+}
+
+/// cat-os#89: a document from 0.10.0 (added units at the end) merges to the same file as one with the added keys
+/// after their own group.
+#[test]
+fn documents_with_added_keys_at_the_end_still_merge() {
+    let mut d = extract(I18N, "plain", Some("pl"), false);
+    translate(&mut d, "/files_few", |s| s.replace("files", "pliki"));
+    translate(&mut d, "/place_ordinal_other", |s| s.replace("th", "."));
+    let old = icu::reorder_added(&d, true);
+    assert!(old.units.last().unwrap().plural().unwrap().is_added());
+    for fill in [false, true] {
+        assert_eq!(merged(&d, fill).unwrap(), merged(&old, fill).unwrap(), "fill {fill}");
+    }
 }
