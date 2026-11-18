@@ -37,12 +37,15 @@ pub mod plural_table;
 pub mod profile;
 mod pytables;
 pub mod pytext;
+pub mod shim;
+pub mod smallmap;
 /// A scanning-step counter for tests that show a parser is linear without timing it (not part of the semver API).
 #[doc(hidden)]
 pub mod work;
 
 pub use encoding_rs;
 pub use guard::{LimitError, LimitKind, Limits};
+pub use smallmap::{SmallMap, TextMap};
 pub use pytext::{py_is_word_char, py_is_word_start_char, py_isdecimal_char, py_isalnum_char, py_isalpha_char, py_isspace_char, py_has_alnum, py_has_alpha, py_isalnum, py_isalpha, py_isspace, py_lstrip, py_rstrip, py_strip};
 
 /// What a builder takes for an optional text field: `"de-DE"`, a `String`, or an `Option` of either (`None`
@@ -218,7 +221,29 @@ impl CodeData {
         self.label = label.into_option_string();
         self
     }
+    /// Sets (or with `None` clears) the opening markup in place. Read the fields with `as_deref()`
+    /// (`code.open.as_deref()`), which works whatever string type the field holds.
+    pub fn set_open(&mut self, open: impl IntoOptionString) {
+        self.open = open.into_option_string();
+    }
+    /// Sets (or clears) the closing markup in place.
+    pub fn set_close(&mut self, close: impl IntoOptionString) {
+        self.close = close.into_option_string();
+    }
+    /// Sets (or clears) the standalone markup in place.
+    pub fn set_standalone(&mut self, standalone: impl IntoOptionString) {
+        self.standalone = standalone.into_option_string();
+    }
+    /// Sets (or clears) the chip label in place.
+    pub fn set_label(&mut self, label: impl IntoOptionString) {
+        self.label = label.into_option_string();
+    }
 }
+
+/// The original markup of a unit's inline codes, by code id: a compact sorted map (see [`SmallMap`]).
+/// What [`Unit::set_codes`] and [`Unit::with_codes`] take, and what [`Unit::codes`] will return once the field
+/// holds it (see [`shim`]).
+pub type Codes = SmallMap<CodeData>;
 
 /// Where a segment is in its life, from untouched to signed off. Monolingual files only use `New`, `Draft`,
 /// `Translated` and `Confirmed`; bilingual files and review workflows use the rest.
@@ -512,10 +537,66 @@ impl UnitContext {
         self.notes = notes;
         self
     }
-    /// Replaces the extras.
-    pub fn with_extra(mut self, extra: BTreeMap<String, String>) -> UnitContext {
-        self.extra = extra;
+    /// Replaces the extras (a [`TextMap`], or a `BTreeMap<String, String>`).
+    pub fn with_extra(mut self, extra: impl Into<TextMap>) -> UnitContext {
+        self.set_extra(extra);
         self
+    }
+
+    /// What the unit is ("heading", "cell", ...).
+    pub fn kind(&self) -> Option<&str> {
+        self.kind.as_deref()
+    }
+    /// The style or element name.
+    pub fn style(&self) -> Option<&str> {
+        self.style.as_deref()
+    }
+    /// The resource key or path.
+    pub fn key(&self) -> Option<&str> {
+        self.key.as_deref()
+    }
+    /// The nearest heading.
+    pub fn heading(&self) -> Option<&str> {
+        self.heading.as_deref()
+    }
+    /// The readable location.
+    pub fn location(&self) -> Option<&str> {
+        self.location.as_deref()
+    }
+    /// Sets (or with `None` clears) what the unit is, in place.
+    pub fn set_kind(&mut self, kind: impl IntoOptionString) {
+        self.kind = kind.into_option_string();
+    }
+    /// Sets (or clears) the style or element name, in place.
+    pub fn set_style(&mut self, style: impl IntoOptionString) {
+        self.style = style.into_option_string();
+    }
+    /// Sets (or clears) the resource key or path, in place.
+    pub fn set_key(&mut self, key: impl IntoOptionString) {
+        self.key = key.into_option_string();
+    }
+    /// Sets (or clears) the nearest heading, in place.
+    pub fn set_heading(&mut self, heading: impl IntoOptionString) {
+        self.heading = heading.into_option_string();
+    }
+    /// Sets (or clears) the readable location, in place.
+    pub fn set_location(&mut self, location: impl IntoOptionString) {
+        self.location = location.into_option_string();
+    }
+
+    /// The extras, read-only. Today a view of the `extra` field with the API of [`TextMap`]; once the field is a
+    /// `TextMap`, `&TextMap` itself. Code written against this accessor compiles either way (see [`shim`]).
+    pub fn extra(&self) -> &shim::TextShim {
+        shim::TextShim::wrap(&self.extra)
+    }
+    /// The extras, to change in place (see [`UnitContext::extra`]).
+    pub fn extra_mut(&mut self) -> &mut shim::TextShim {
+        shim::TextShim::wrap_mut(&mut self.extra)
+    }
+    /// Replaces the extras (a [`TextMap`], or a `BTreeMap<String, String>`).
+    pub fn set_extra(&mut self, extra: impl Into<TextMap>) {
+        let extra: TextMap = extra.into();
+        self.extra = extra.into();
     }
 }
 
@@ -650,14 +731,48 @@ impl Unit {
         self.set_hidden(key, value);
         self
     }
+    /// Every hidden value, read-only, with the API of [`TextMap`] (see [`Unit::codes`] for why the type is a view
+    /// today).
+    pub fn hidden_map(&self) -> &shim::TextShim {
+        shim::TextShim::wrap(&self.hidden)
+    }
+    /// Every hidden value, to change in place (see [`Unit::hidden_map`]).
+    pub fn hidden_map_mut(&mut self) -> &mut shim::TextShim {
+        shim::TextShim::wrap_mut(&mut self.hidden)
+    }
+    /// Replaces the hidden values (a [`TextMap`], or a `BTreeMap<String, String>`).
+    pub fn set_hidden_map(&mut self, hidden: impl Into<TextMap>) {
+        let hidden: TextMap = hidden.into();
+        self.hidden = hidden.into();
+    }
+
+    /// The original markup of the inline codes, read-only.
+    ///
+    /// The return type is chosen so callers never change again: today it is a view of the `codes` field
+    /// ([`shim::MapShim`]) with exactly the API of [`Codes`] (same methods, `&str` keys, `(&str, &CodeData)`
+    /// items, `codes["1"]`); once the field is `Codes`, this returns `&Codes`. Code that only calls methods on what
+    /// this returns, builds owned maps as `Codes`, and copies with `Codes::from(unit.codes())` compiles either
+    /// way. Prefer it to the field.
+    pub fn codes(&self) -> &shim::MapShim<CodeData> {
+        shim::MapShim::wrap(&self.codes)
+    }
+    /// The original markup of the inline codes, to change in place (see [`Unit::codes`]).
+    pub fn codes_mut(&mut self) -> &mut shim::MapShim<CodeData> {
+        shim::MapShim::wrap_mut(&mut self.codes)
+    }
+    /// Replaces the original markup of the inline codes (a [`Codes`], or a `BTreeMap<String, CodeData>`).
+    pub fn set_codes(&mut self, codes: impl Into<Codes>) {
+        let codes: Codes = codes.into();
+        self.codes = codes.into();
+    }
     /// Replaces the separators (one per gap between segments).
     pub fn with_separators(mut self, separators: Vec<String>) -> Unit {
         self.separators = separators;
         self
     }
-    /// Replaces the original markup of the inline codes.
-    pub fn with_codes(mut self, codes: BTreeMap<String, CodeData>) -> Unit {
-        self.codes = codes;
+    /// Replaces the original markup of the inline codes (a [`Codes`], or a `BTreeMap<String, CodeData>`).
+    pub fn with_codes(mut self, codes: impl Into<Codes>) -> Unit {
+        self.set_codes(codes);
         self
     }
     /// Adds (or replaces) the original markup of one inline code.
