@@ -48,6 +48,12 @@ is listed here).
 
 ### Fixed (wild-file backlog)
 
+- Sentence segmentation: a line break kept as a tag (a .txt paragraph's line ending, an SRT or WebVTT cue's line
+  break, a Markdown hard break) now ends a sentence, so a file with one sentence per line opens as one segment per
+  line (bilingua#21). At the cut the break moves out of the segments into the separator, written with the file's own
+  line ending, so a translation without tags keeps every line. A break inside a sentence stays a tag; Paragraph
+  granularity and the `locos` profile are unchanged. Joining the segments (or going back to Paragraph) gives the
+  break back as its tag.
 - XML guard: an apostrophe or quote in a comment of a DOCTYPE's internal subset (`<!-- don't edit -->`) no longer
   refuses the file (BILI-60). Every reader skips such a comment whole. A bracket or angle bracket in it, a quote in
   a processing instruction of the subset, and every entity declaration are refused as before; when a subset

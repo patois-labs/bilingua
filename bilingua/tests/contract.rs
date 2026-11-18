@@ -52,9 +52,14 @@ fn paragraph_mode_is_one_segment_per_unit_on_every_format() {
             assert_eq!(u.segments[0].id, u.id, "{name}: segment id must equal unit id in paragraph mode");
             assert!(u.separators.is_empty(), "{name}: unit {} has separators", u.id);
         }
-        // The one segment holds the whole unit text, so it equals the sentence-mode unit source.
-        for (a, b) in sent.units.iter().zip(&para.units) {
+        // The one segment holds the whole unit text, so it equals the sentence-mode unit source. A line break tag at
+        // a sentence end is in a separator under Sentence (bilingua#21), so the sentence document is first put back
+        // to Paragraph, which turns it back into its tag; its text is the same either way.
+        let mut back = sent.clone();
+        resegment(&mut back, "en", Granularity::Paragraph);
+        for ((a, b), s) in back.units.iter().zip(&para.units).zip(&sent.units) {
             assert_eq!(a.source(), b.source(), "{name}: unit {} text differs between modes", a.id);
+            assert_eq!(markup_text(s, &s.source()), markup_text(b, &b.source()), "{name}: unit {} text differs between modes", a.id);
         }
         // An untouched paragraph document still merges to the original bytes (zip containers may re-compress).
         if !is_zip(&name) {
@@ -499,4 +504,15 @@ fn a_blank_target_language_never_stamps() {
         // so "always" changes nothing for it (po used to stamp a blank language)
         assert_eq!(merge_with(&doc, &always).unwrap(), merge(&doc).unwrap(), "{name}");
     }
+}
+
+/// A unit's text with each standalone code written as its markup (how a line break tag and a separator compare).
+fn markup_text(u: &Unit, v: &[Inline]) -> String {
+    v.iter()
+        .map(|i| match i {
+            Inline::Text(t) => t.clone(),
+            Inline::Tag { id, kind: TagKind::Standalone, .. } => u.codes().get(id).and_then(|c| c.standalone_markup()).unwrap_or("").to_string(),
+            Inline::Tag { .. } => String::new(),
+        })
+        .collect()
 }

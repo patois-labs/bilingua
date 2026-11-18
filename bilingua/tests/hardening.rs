@@ -320,8 +320,18 @@ fn bom_utf16_and_newline_style_are_kept() {
         let d = extract(name, &body, &ExtractOptions::default()).unwrap_or_else(|e| panic!("{name}: {e}"));
         assert_eq!(merge(&d).unwrap(), body, "{name}");
     }
-    // new text with bare \n goes out with the file's CRLF
+    // new text with bare \n goes out with the file's CRLF. Each line is a sentence, and the CRLF between them is the
+    // separator (bilingua#21), so it is written once, as CRLF, between the two translations.
     let mut doc = extract("a.txt", b"One line.\r\nTwo lines.\r\n", &ExtractOptions::default()).unwrap();
+    assert_eq!(doc.units[0].segments.len(), 2);
+    assert_eq!(doc.units[0].separators, vec!["\r\n".to_string()]);
+    let ids: Vec<String> = doc.units[0].segments.iter().map(|s| s.id.clone()).collect();
+    doc.set_target(&ids[0], vec![Inline::text("Uno.")]).unwrap();
+    doc.set_target(&ids[1], vec![Inline::text("Dos.\nTres.")]).unwrap();
+    assert_eq!(merge(&doc).unwrap(), b"Uno.\r\nDos.\r\nTres.\r\n");
+    // at Paragraph granularity the unit is one segment, as before
+    let para = ExtractOptions::default().with_granularity(Granularity::Paragraph);
+    let mut doc = extract("a.txt", b"One line.\r\nTwo lines.\r\n", &para).unwrap();
     let id = doc.units[0].segments[0].id.clone();
     doc.set_target(&id, vec![Inline::text("Uno.\nDos.")]).unwrap();
     assert_eq!(merge(&doc).unwrap(), b"Uno.\r\nDos.\r\n");

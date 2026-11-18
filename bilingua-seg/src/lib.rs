@@ -17,7 +17,7 @@ mod rules;
 pub use rules::{Rules, SrxError};
 
 use bilingua_model::*;
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 
 /// One character or one inline tag, so positions can be reasoned about without touching tag contents.
 #[derive(Debug, Clone)]
@@ -128,6 +128,122 @@ fn settle_cut(a: &[Atom], prev_char: usize) -> usize {
     p
 }
 
+/// The markup of a line break kept as a tag: a standalone code whose original markup is only white space (the txt
+/// filter's line ending inside a paragraph, a subtitle cue's line break, a Markdown hard break). `None` for
+/// anything else.
+fn break_markup<'u>(unit: &'u Unit, tag: &Inline) -> Option<&'u str> {
+    let Inline::Tag { id, kind: TagKind::Standalone, .. } = tag else { return None };
+    unit.codes().get(id.as_str()).and_then(|c| c.standalone_markup()).filter(|m| is_break_markup(m))
+}
+
+fn is_break_markup(m: &str) -> bool {
+    !m.is_empty() && m.chars().all(char::is_whitespace)
+}
+
+/// For each atom, the markup when it is a line break tag ([`break_markup`]).
+fn break_markups(unit: &Unit, a: &[Atom]) -> Vec<Option<String>> {
+    a.iter()
+        .map(|x| match x {
+            Atom::Tag(t) => break_markup(unit, t).map(str::to_string),
+            Atom::Ch(_) => None,
+        })
+        .collect()
+}
+
+/// The atoms `[left, right)` around a cut at `p` that go to the separator: the white space on both sides and any
+/// line break tag among it, so a break at a sentence end is written between the two segments and cannot be lost
+/// with a segment's tags (bilingua#21). `start` is where the current segment starts.
+fn gap(a: &[Atom], brk: &[Option<String>], start: usize, p: usize) -> (usize, usize) {
+    let soft = |i: usize| is_ws(&a[i]) || brk[i].is_some();
+    let mut left = p;
+    while left > start && soft(left - 1) {
+        left -= 1;
+    }
+    let mut right = p;
+    while right < a.len() && soft(right) {
+        right += 1;
+    }
+    (left, right)
+}
+
+/// The separator text of `a[range]`: its characters, with a line break tag written as its markup.
+fn sep_text(a: &[Atom], brk: &[Option<String>], range: std::ops::Range<usize>) -> String {
+    let mut s = String::new();
+    for i in range {
+        match (&a[i], &brk[i]) {
+            (Atom::Ch(c), _) => s.push(*c),
+            (Atom::Tag(_), Some(m)) => s.push_str(m),
+            (Atom::Tag(_), None) => {}
+        }
+    }
+    s
+}
+
+/// The line break codes no segment source holds (a split moved them into the separators), each with its markup, in
+/// id order (numeric ids by number), the order the parsers number them in.
+fn moved_breaks(unit: &Unit) -> Vec<(String, String)> {
+    let mut used: std::collections::HashSet<&str> = std::collections::HashSet::new();
+    for s in &unit.segments {
+        for i in &s.source {
+            if let Inline::Tag { id, .. } = i {
+                used.insert(id.as_str());
+            }
+        }
+    }
+    let mut out: Vec<(String, String)> = unit
+        .codes()
+        .iter()
+        .filter(|(id, c)| !used.contains(id) && c.open_markup().is_none() && c.close_markup().is_none())
+        .filter_map(|(id, c)| c.standalone_markup().filter(|m| is_break_markup(m)).map(|m| (id.to_string(), m.to_string())))
+        .collect();
+    out.sort_by(|(a, _), (b, _)| match (a.parse::<u64>(), b.parse::<u64>()) {
+        (Ok(x), Ok(y)) => x.cmp(&y),
+        _ => a.cmp(b),
+    });
+    out
+}
+
+/// What an editor shows for a line break tag a join gives back.
+const LINE_BREAK_DISPLAY: &str = "\u{21b5}";
+
+/// A separator as inlines, with the line breaks a split moved into it turned back into their tags (taken from the
+/// front of `breaks` while the separator still holds the next one's markup).
+fn sep_inlines(sep: &str, breaks: &mut VecDeque<(String, String)>) -> Vec<Inline> {
+    let mut out = Vec::new();
+    let mut rest = sep;
+    while let Some((id, m)) = breaks.front() {
+        let Some(at) = rest.find(m.as_str()) else { break };
+        if at > 0 {
+            out.push(Inline::Text(rest[..at].to_string()));
+        }
+        out.push(Inline::tag(id.clone(), TagKind::Standalone, LINE_BREAK_DISPLAY));
+        rest = &rest[at + m.len()..];
+        breaks.pop_front();
+    }
+    if !rest.is_empty() {
+        out.push(Inline::Text(rest.to_string()));
+    }
+    out
+}
+
+/// The unit's segments joined into one source and one output (each segment's target, or its source when it has
+/// none), with the line breaks a split moved into the separators back as tags.
+fn joined(unit: &Unit) -> (Vec<Inline>, Vec<Inline>) {
+    let breaks = moved_breaks(unit);
+    let pick = |target: bool| {
+        let mut q: VecDeque<(String, String)> = breaks.iter().cloned().collect();
+        let mut v: Vec<Inline> = Vec::new();
+        for (i, s) in unit.segments.iter().enumerate() {
+            if i > 0 {
+                v.extend(sep_inlines(unit.separators.get(i - 1).map(String::as_str).unwrap_or(""), &mut q));
+            }
+            v.extend((if target && s.has_target() { &s.target } else { &s.source }).iter().cloned());
+        }
+        merge_text(v)
+    };
+    (pick(false), pick(true))
+}
+
 fn renumber(unit: &mut Unit) {
     if unit.segments.len() == 1 {
         unit.segments[0].id = unit.id.clone();
@@ -144,8 +260,8 @@ fn collapse(unit: &mut Unit) {
         return;
     }
     let all_translated = unit.segments.iter().all(|s| s.has_target());
-    let source = unit.source();
-    let target = if all_translated { unit.output() } else { vec![] };
+    let (source, output) = joined(unit);
+    let target = if all_translated { output } else { vec![] };
     let state = unit.segments.iter().map(|s| s.state.rank()).min().map(SegState::from_rank).unwrap_or(SegState::New);
     // The origin survives only when every part has the same one.
     let origin = match unit.segments.first().map(|s| &s.origin) {
@@ -158,7 +274,7 @@ fn collapse(unit: &mut Unit) {
 
 /// Splits a unit's single segment at the given atom cuts. Each cut is an index into the atoms: the new segment
 /// starts there (after whitespace is moved to the separator).
-fn split_at_cuts(unit: &mut Unit, a: &[Atom], cuts: &[usize]) {
+fn split_at_cuts(unit: &mut Unit, a: &[Atom], brk: &[Option<String>], cuts: &[usize]) {
     let pr = pair_depth(a.len(), &pairs(a));
     let mut segs: Vec<Vec<Atom>> = Vec::new();
     let mut seps: Vec<String> = Vec::new();
@@ -167,14 +283,7 @@ fn split_at_cuts(unit: &mut Unit, a: &[Atom], cuts: &[usize]) {
         if p <= start || p >= a.len() {
             continue;
         }
-        let mut left = p;
-        while left > start && is_ws(&a[left - 1]) {
-            left -= 1;
-        }
-        let mut right = p;
-        while right < a.len() && is_ws(&a[right]) {
-            right += 1;
-        }
+        let (left, right) = gap(a, brk, start, p);
         if left <= start || right >= a.len() {
             continue; // an empty segment on either side: not a real boundary
         }
@@ -182,7 +291,7 @@ fn split_at_cuts(unit: &mut Unit, a: &[Atom], cuts: &[usize]) {
             continue;
         }
         segs.push(a[start..left].to_vec());
-        seps.push(text_of(&a[left..right]));
+        seps.push(sep_text(a, brk, left..right));
         start = right;
     }
     if segs.is_empty() {
@@ -213,13 +322,23 @@ pub fn segment(doc: &mut Document, lang: &str, mode: Granularity, rules: &Rules)
             continue;
         }
         let a = atoms(&unit.segments[0].source);
+        let brk = break_markups(unit, &a);
         let mut s = String::new();
         // byte offset in `s` -> atom index of the character at that offset
         let mut at: Vec<(usize, usize)> = Vec::new();
         for (i, x) in a.iter().enumerate() {
-            if let Atom::Ch(c) = x {
-                at.push((s.len(), i));
-                s.push(*c);
+            match x {
+                Atom::Ch(c) => {
+                    at.push((s.len(), i));
+                    s.push(*c);
+                }
+                // a line break kept as a tag reads as one to the rules, so "One.<br>Two." splits like "One.\nTwo."
+                // (bilingua#21); at a cut the tag goes to the separator
+                Atom::Tag(_) if brk[i].is_some() => {
+                    at.push((s.len(), i));
+                    s.push('\n');
+                }
+                Atom::Tag(_) => {}
             }
         }
         let mut cuts = Vec::new();
@@ -233,7 +352,7 @@ pub fn segment(doc: &mut Document, lang: &str, mode: Granularity, rules: &Rules)
         }
         cuts.sort_unstable();
         cuts.dedup();
-        split_at_cuts(unit, &a, &cuts);
+        split_at_cuts(unit, &a, &brk, &cuts);
     }
 }
 
@@ -261,6 +380,12 @@ pub fn join(doc: &mut Document, seg_a: &str, seg_b: &str) -> Result<String, Erro
         return Err(Error::Locked(seg_b.to_string()));
     }
     let sep = unit.separators.get(i).cloned().unwrap_or_default();
+    // a line break a split moved into this separator goes back as its tag
+    let mut q: VecDeque<(String, String)> = moved_breaks(unit).into_iter().collect();
+    for s in unit.separators.iter().take(i) {
+        sep_inlines(s, &mut q);
+    }
+    let sep_inl = sep_inlines(&sep, &mut q);
     let b = unit.segments.remove(i + 1);
     unit.separators.remove(i);
     let a = &mut unit.segments[i];
@@ -268,9 +393,7 @@ pub fn join(doc: &mut Document, seg_a: &str, seg_b: &str) -> Result<String, Erro
     let state = if both { SegState::from_rank(a.state.rank().min(b.state.rank())) } else { SegState::New };
     let join_with_sep = |x: &[Inline], y: &[Inline]| -> Vec<Inline> {
         let mut v = x.to_vec();
-        if !sep.is_empty() {
-            v.push(Inline::Text(sep.clone()));
-        }
+        v.extend(sep_inl.iter().cloned());
         v.extend(y.iter().cloned());
         merge_text(v)
     };
@@ -313,14 +436,8 @@ pub fn split(doc: &mut Document, seg_id: &str, at_char: usize) -> Result<(String
     };
     let p = settle_cut(&a, prev);
     let pr = pair_depth(a.len(), &pairs(&a));
-    let mut left = p;
-    while left > 0 && is_ws(&a[left - 1]) {
-        left -= 1;
-    }
-    let mut right = p;
-    while right < a.len() && is_ws(&a[right]) {
-        right += 1;
-    }
+    let brk = break_markups(unit, &a);
+    let (left, right) = gap(&a, &brk, 0, p);
     if left == 0 || right >= a.len() || text_of(&a[..left]).trim().is_empty() || text_of(&a[right..]).trim().is_empty() {
         return Err(Error::Unsupported("a segment cannot be empty".into()));
     }
@@ -330,7 +447,7 @@ pub fn split(doc: &mut Document, seg_id: &str, at_char: usize) -> Result<(String
     let first = Segment::new(String::new(), inlines(&a[..left]));
     let second = Segment::new(String::new(), inlines(&a[right..]));
     unit.segments.splice(i..=i, [first, second]);
-    unit.separators.insert(i, text_of(&a[left..right]));
+    unit.separators.insert(i, sep_text(&a, &brk, left..right));
     renumber(unit);
     Ok((unit.segments[i].id.clone(), unit.segments[i + 1].id.clone()))
 }
@@ -391,6 +508,121 @@ mod tests {
         // round trip: the unit's output is exactly the original text
         assert_eq!(plain_text(&d.units[0].output()), text, "round trip for {text:?}");
         d.units[0].segments.iter().map(|s| plain_text(&s.source)).collect()
+    }
+
+    /// A line break tag as the txt filter makes it (bilingua#21).
+    fn br(id: &str) -> Inline {
+        Inline::tag(id, TagKind::Standalone, "\u{21b5}")
+    }
+
+    /// One unit of text pieces and line break tags; `markups` gives each tag's code in order.
+    fn doc_with_breaks(parts: Vec<Inline>, markups: &[&str]) -> Document {
+        let mut d = doc_of(vec![parts]);
+        for (n, m) in markups.iter().enumerate() {
+            d.units[0].codes_mut().insert((n + 1).to_string(), CodeData::standalone(*m).with_label("line break"));
+        }
+        d
+    }
+
+    fn has_tag(v: &[Inline]) -> bool {
+        v.iter().any(|i| matches!(i, Inline::Tag { .. }))
+    }
+
+    fn three_lines() -> Document {
+        doc_with_breaks(vec![Inline::text("Hello world."), br("1"), Inline::text("This is a test."), br("2"), Inline::text("Bye now.")], &["\n", "\r\n"])
+    }
+
+    #[test]
+    fn a_line_break_tag_at_a_sentence_end_goes_to_the_separator() {
+        let mut d = three_lines();
+        let before = d.units[0].clone();
+        segment(&mut d, "en", Granularity::Sentence, Rules::bundled());
+        let u = &d.units[0];
+        let got: Vec<String> = u.segments.iter().map(|s| plain_text(&s.source)).collect();
+        assert_eq!(got, vec!["Hello world.", "This is a test.", "Bye now."]);
+        // the breaks are in no segment, so a translation without tags cannot lose them
+        assert!(u.segments.iter().all(|s| !has_tag(&s.source)), "{:?}", u.segments);
+        assert_eq!(u.separators, vec!["\n".to_string(), "\r\n".to_string()]);
+        assert_eq!(plain_text(&u.output()), "Hello world.\nThis is a test.\r\nBye now.");
+        // the codes stay, unreferenced
+        assert_eq!(u.codes().get("2").and_then(|c| c.standalone_markup()), Some("\r\n"));
+        // back to one segment: the unit as the parser made it, tags and all
+        segment(&mut d, "en", Granularity::Paragraph, Rules::bundled());
+        assert_eq!(d.units[0], before);
+        // and again, idempotent
+        segment(&mut d, "en", Granularity::Sentence, Rules::bundled());
+        segment(&mut d, "en", Granularity::Sentence, Rules::bundled());
+        assert_eq!(d.units[0].segments.len(), 3);
+        assert_eq!(d.units[0].separators, vec!["\n".to_string(), "\r\n".to_string()]);
+    }
+
+    #[test]
+    fn translated_sentences_joined_back_keep_their_breaks() {
+        let mut d = three_lines();
+        segment(&mut d, "en", Granularity::Sentence, Rules::bundled());
+        for (id, t) in [("u1#1", "Hola mundo."), ("u1#2", "Esto es una prueba."), ("u1#3", "Adios.")] {
+            d.set_target(id, vec![Inline::text(t)]).unwrap();
+        }
+        assert_eq!(plain_text(&d.units[0].output()), "Hola mundo.\nEsto es una prueba.\r\nAdios.");
+        segment(&mut d, "en", Granularity::Paragraph, Rules::bundled());
+        let t = &d.units[0].segments[0].target;
+        assert_eq!(t, &vec![Inline::text("Hola mundo."), br("1"), Inline::text("Esto es una prueba."), br("2"), Inline::text("Adios.")]);
+    }
+
+    #[test]
+    fn join_and_split_move_a_break_between_tag_and_separator() {
+        let mut d = three_lines();
+        segment(&mut d, "en", Granularity::Sentence, Rules::bundled());
+        let m = join(&mut d, "u1#2", "u1#3").unwrap();
+        assert_eq!(m, "u1#2");
+        assert_eq!(d.units[0].segments[1].source, vec![Inline::text("This is a test."), br("2"), Inline::text("Bye now.")]);
+        assert_eq!(d.units[0].separators, vec!["\n".to_string()]);
+        join(&mut d, "u1#1", "u1#2").unwrap();
+        let whole = three_lines();
+        assert_eq!(d.units[0].segments[0].source, whole.units[0].segments[0].source);
+        // a split by hand right after a sentence end takes the break out too
+        let (a, b) = split(&mut d, "u1", "Hello world.".chars().count()).unwrap();
+        assert_eq!((a.as_str(), b.as_str()), ("u1#1", "u1#2"));
+        assert_eq!(d.units[0].segments[0].source, vec![Inline::text("Hello world.")]);
+        assert_eq!(d.units[0].separators, vec!["\n".to_string()]);
+        // the other break is inside the second segment, as a tag
+        assert_eq!(d.units[0].segments[1].source, vec![Inline::text("This is a test."), br("2"), Inline::text("Bye now.")]);
+    }
+
+    #[test]
+    fn breaks_that_end_no_sentence_stay_inline() {
+        let one = |parts: Vec<Inline>, markups: &[&str]| {
+            let mut d = doc_with_breaks(parts, markups);
+            let before = d.units[0].clone();
+            segment(&mut d, "en", Granularity::Sentence, Rules::bundled());
+            assert_eq!(d.units[0], before, "{:?}", d.units[0].segments);
+        };
+        // a line wrapped in the middle of a sentence
+        one(vec![Inline::text("This sentence wraps"), br("1"), Inline::text("in the middle.")], &["\n"]);
+        // an abbreviation at the end of a line
+        one(vec![Inline::text("We met Dr."), br("1"), Inline::text("Smith there.")], &["\n"]);
+        // a standalone code that is markup, not white space, is not a break
+        one(vec![Inline::text("Hello world."), br("1"), Inline::text("Next.")], &["<img/>"]);
+        // Paragraph granularity leaves every break where it is
+        let mut d = three_lines();
+        let before = d.units[0].clone();
+        segment(&mut d, "en", Granularity::Paragraph, Rules::bundled());
+        assert_eq!(d.units[0], before);
+    }
+
+    #[test]
+    fn white_space_around_a_break_goes_with_it() {
+        let mut d = doc_with_breaks(vec![Inline::text("One. "), br("1"), Inline::text("  Two.")], &["\n"]);
+        segment(&mut d, "en", Granularity::Sentence, Rules::bundled());
+        let u = &d.units[0];
+        assert_eq!(u.segments.iter().map(|s| s.source.clone()).collect::<Vec<_>>(), vec![vec![Inline::text("One.")], vec![Inline::text("Two.")]]);
+        assert_eq!(u.separators, vec![" \n  ".to_string()]);
+        // a markdown hard break: two spaces and the line ending, all in the code
+        let mut d = doc_with_breaks(vec![Inline::text("One."), br("1"), Inline::text("Two.")], &["  \n"]);
+        segment(&mut d, "en", Granularity::Sentence, Rules::bundled());
+        assert_eq!(d.units[0].separators, vec!["  \n".to_string()]);
+        segment(&mut d, "en", Granularity::Paragraph, Rules::bundled());
+        assert_eq!(d.units[0].segments[0].source, vec![Inline::text("One."), br("1"), Inline::text("Two.")]);
     }
 
     #[test]

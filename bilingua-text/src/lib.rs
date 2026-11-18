@@ -4,6 +4,8 @@
 //! lines, the indentation of a paragraph's first line, the spaces and line ending after its last line) is
 //! skeleton and comes back byte for byte. A line break inside a paragraph is a standalone tag whose code is the
 //! original line ending (`\n` or `\r\n`), so mixed endings survive and translators cannot damage them.
+//! Under Sentence granularity a line break that ends a sentence moves into the separator between the two
+//! segments (`bilingua-seg`), and the writer puts its line ending back between their targets.
 //! A UTF-8 byte order mark is kept.
 
 /// Skeleton schema number: bump only when this crate's skeleton layout changes (see `bilingua_model::check_parser`).
