@@ -368,9 +368,9 @@ impl FtlFilter {
             }
             pos = run.end;
             let mut unit = Unit::new(format!("u{}", units.len() + 1), inl);
-            unit.codes = codes;
-            unit.codes.insert(
-                HIDDEN.into(),
+            unit.set_codes(codes);
+            unit.codes_mut().insert(
+                HIDDEN,
                 CodeData::new().with_open((!lead.is_empty()).then_some(lead)).with_close((!trail.is_empty()).then_some(trail)).with_standalone(text[run.start..run.end].to_string()).with_label(format!(
                         "{}{}{}",
                         if crlf { 'c' } else { 'l' },
@@ -522,7 +522,7 @@ fn flat(unit: &Unit, v: &[Inline]) -> String {
     for i in v {
         match i {
             Inline::Text(t) => s.push_str(t),
-            Inline::Tag { id, display, .. } => s.push_str(unit.codes.get(id).and_then(|c| c.standalone.as_deref()).unwrap_or(display)),
+            Inline::Tag { id, display, .. } => s.push_str(unit.codes().get(id).and_then(|c| c.standalone_markup()).unwrap_or(display)),
         }
     }
     s
@@ -534,10 +534,10 @@ fn flat(unit: &Unit, v: &[Inline]) -> String {
 /// `out` unchanged for a unit whose source still has its placeable tags.
 fn retag_flattened(unit: &Unit, out: Vec<Inline>) -> Vec<Inline> {
     let mut ph: Vec<(usize, &str, &str)> = unit
-        .codes
+        .codes()
         .iter()
-        .filter(|(_, c)| c.label.as_deref() == Some("placeholder"))
-        .filter_map(|(id, c)| Some((id.parse::<usize>().ok()?, id.as_str(), c.standalone.as_deref()?)))
+        .filter(|(_, c)| c.label() == Some("placeholder"))
+        .filter_map(|(id, c)| Some((id.parse::<usize>().ok()?, id, c.standalone_markup()?)))
         .filter(|(_, _, m)| !m.is_empty())
         .collect();
     let used = |id: &str| unit.segments.iter().any(|s| s.source.iter().any(|i| matches!(i, Inline::Tag { id: t, .. } if t == id)));
@@ -582,8 +582,8 @@ fn retag_flattened(unit: &Unit, out: Vec<Inline>) -> Vec<Inline> {
 
 /// The source text to write for a unit: the original when nothing changed, else the encoded translation.
 fn render(unit: &Unit) -> String {
-    let Some(h) = unit.codes.get(HIDDEN) else { return String::new() };
-    let raw = h.standalone.as_deref().unwrap_or("");
+    let Some(h) = unit.codes().get(HIDDEN) else { return String::new() };
+    let raw = h.standalone_markup().unwrap_or("");
     if !unit.translate || unit.segments.iter().all(|s| !s.has_target()) {
         return raw.to_string();
     }
@@ -591,15 +591,15 @@ fn render(unit: &Unit) -> String {
     if flat(unit, &out) == flat(unit, &unit.source()) {
         return raw.to_string();
     }
-    let layout = h.label.as_deref().unwrap_or("li    ");
+    let layout = h.label().unwrap_or("li    ");
     let (newline, rest) = if let Some(rest) = layout.strip_prefix('c') { ("\r\n", rest) } else { ("\n", layout.strip_prefix('l').unwrap_or(layout)) };
     let block_start = rest.starts_with(['b', 'z']);
     let col0 = rest.starts_with('z');
     let indent = rest.get(1..).unwrap_or("    ");
     let mut seq: Vec<Inline> = Vec::with_capacity(out.len() + 2);
-    seq.push(Inline::text(h.open.clone().unwrap_or_default()));
+    seq.push(Inline::text(h.open_markup().map(str::to_string).unwrap_or_default()));
     seq.extend(out);
-    seq.push(Inline::text(h.close.clone().unwrap_or_default()));
+    seq.push(Inline::text(h.close_markup().map(str::to_string).unwrap_or_default()));
     let seq = merge_text(seq);
     // Continuation lines get the unit's indent, blank lines none. Only line breaks in the translator's text count:
     // a placeable is written as it was, even when it spans lines.
@@ -636,7 +636,7 @@ fn render(unit: &Unit) -> String {
                 after_nl = t.ends_with('\n');
             }
             Inline::Tag { id, display, .. } => {
-                line.push_str(unit.codes.get(id).and_then(|c| c.standalone.as_deref()).unwrap_or(display));
+                line.push_str(unit.codes().get(id).and_then(|c| c.standalone_markup()).unwrap_or(display));
                 nonblank = true;
                 after_nl = false;
             }
@@ -776,8 +776,8 @@ mod locos_tests {
         // two placeables in the source, a translation with 200 000 of the first and none of the second: each
         // placeable is searched once per pass over the text, not once per hit
         let mut u = Unit::new("1", vec![Inline::text("x { $a } y { $b }")]);
-        u.codes.insert("1".into(), CodeData::standalone("{ $a }").with_label("placeholder"));
-        u.codes.insert("2".into(), CodeData::standalone("{ $b }").with_label("placeholder"));
+        u.codes_mut().insert("1", CodeData::standalone("{ $a }").with_label("placeholder"));
+        u.codes_mut().insert("2", CodeData::standalone("{ $b }").with_label("placeholder"));
         let t = "{ $a }".repeat(200_000);
         let out = retag_flattened(&u, vec![Inline::text(&t)]);
         assert_eq!(out.len(), 200_000);

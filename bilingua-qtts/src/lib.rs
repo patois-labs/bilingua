@@ -192,7 +192,7 @@ impl QtTs {
         }
         let lock = skip;
         let mut unit = Unit::new(if lock { format!("k{}", slot + 1) } else { format!("u{}", slot + 1) }, inl);
-        unit.codes = codes;
+        unit.set_codes(codes);
         if lock {
             unit.translate = false;
             unit.lock_reason = Some(if tr.is_none() { "no translation element".to_string() } else { format!("{ttype} message") });
@@ -233,10 +233,10 @@ impl QtTs {
             }
         }
         budget.charge(cname.len(), limits)?;
-        unit.context.extra.insert("context".into(), cname.to_string());
-        unit.context.extra.insert("p_index".into(), slot.to_string());
+        unit.context.extra_mut().insert("context", cname.to_string());
+        unit.context.extra_mut().insert("p_index", slot.to_string());
         if numerus {
-            unit.context.extra.insert("plural".into(), "numerus".into());
+            unit.context.extra_mut().insert("plural", "numerus");
         }
         let span = tr.map(|t| (sc.els[t].start, sc.els[t].end));
         Ok(Some(Found { span, unit }))
@@ -548,7 +548,7 @@ fn body_of(u: &Unit, crlf: bool) -> String {
         match i {
             Inline::Text(t) => s.push_str(&escape_text(&xml_target_text(&t))),
             Inline::Tag { id, .. } => {
-                if let Some(raw) = u.codes.get(&id).and_then(|c| c.standalone.clone()) {
+                if let Some(raw) = u.codes().get(&id).and_then(|c| c.standalone_markup().map(str::to_string)) {
                     if used.insert(id) {
                         s.push_str(&raw);
                     }

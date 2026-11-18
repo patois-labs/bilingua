@@ -110,17 +110,17 @@ impl Arb {
                 // the key and the notes are copied into each plural or select unit: every copy is charged
                 context.charge(m.key.len() + meta.as_ref().map_or(0, |mt| mt.notes.iter().map(String::len).sum()), &caller)?;
                 let mut unit = Unit::new(format!("u{}", units.len() + 1), up.inlines);
-                unit.codes = up.codes;
+                unit.set_codes(up.codes);
                 if let Some(meta) = &meta {
                     unit.context.notes = meta.notes.clone();
                 }
                 if k == 0 {
-                    unit.codes.insert(RAW_KEY.into(), CodeData::new().with_standalone(text[m.start..m.end].to_string()));
+                    unit.codes_mut().insert(RAW_KEY, CodeData::new().with_standalone(text[m.start..m.end].to_string()));
                 }
                 unit.context.kind = Some("message".into());
                 unit.context.key = Some(m.key.clone());
                 if !up.path.is_empty() {
-                    unit.context.extra.insert("icu".into(), up.path);
+                    unit.context.extra_mut().insert("icu", up.path);
                 }
                 units.push(unit);
             }
@@ -191,7 +191,7 @@ impl Filter for Arb {
                 SkelPart::Raw(s) => orig.push_str(s),
                 SkelPart::Unit(i) => {
                     let u = doc.units.get(*i).ok_or_else(|| Error::Write(format!("no unit {i}")))?;
-                    let raw = u.codes.get(RAW_KEY).and_then(|c| c.standalone.as_deref());
+                    let raw = u.codes().get(RAW_KEY).and_then(|c| c.standalone_markup());
                     orig.push_str(raw.ok_or_else(|| Error::Write(format!("unit {} lost the original message", u.id)))?);
                 }
             }
@@ -484,7 +484,7 @@ fn splice(orig: &str, doc: &Document, locos: bool, limits: &Limits) -> Result<St
     for m in &msgs {
         let k = m.plan.units.len();
         let units = doc.units.get(head..head + k).ok_or_else(|| Error::Write("the units no longer match the skeleton".into()))?;
-        if units.first().is_some_and(|u| u.codes.get(RAW_KEY).and_then(|c| c.standalone.as_deref()) != Some(&orig[m.start..m.end])) {
+        if units.first().is_some_and(|u| u.codes().get(RAW_KEY).and_then(|c| c.standalone_markup()) != Some(&orig[m.start..m.end])) {
             return Err(Error::Write("the units no longer match the skeleton".into()));
         }
         head += k;
@@ -528,7 +528,7 @@ fn aligned(orig: &str, msgs: &[Msg], doc: &Document) -> bool {
     for m in msgs {
         let k = m.plan.units.len();
         let Some(units) = doc.units.get(head..head + k) else { return false };
-        if units.first().is_some_and(|u| u.codes.get(RAW_KEY).and_then(|c| c.standalone.as_deref()) != Some(&orig[m.start..m.end])) {
+        if units.first().is_some_and(|u| u.codes().get(RAW_KEY).and_then(|c| c.standalone_markup()) != Some(&orig[m.start..m.end])) {
             return false;
         }
         head += k;

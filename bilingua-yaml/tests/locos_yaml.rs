@@ -159,7 +159,7 @@ fn rails_plural_fill_729() {
 fn rails() {
     let src = fixture("rails.en.yml");
     let d = extract(&src);
-    assert_eq!(d.units[0].context.extra.get("rails_locale").map(String::as_str), Some("en"));
+    assert_eq!(d.units[0].context.extra().get("rails_locale"), Some("en"));
     let t = texts(&src);
     assert!(t.contains(&"is too long (maximum is %{count} character)".to_string()) && t.contains(&"%{count} messages".to_string()));
     assert!(t.contains(&"%Y-%m-%d".to_string()));
@@ -201,7 +201,7 @@ pt-BR:
 ");
     for not_rails in ["en:\n  a: A\nde:\n  a: B\n", "app:\n  a: A\n", "en: Hello\n", "en:\n  a: A\n---\nen:\n  a: B\n"] {
         let d = extract_to(not_rails.as_bytes(), "de");
-        assert!(!d.units[0].context.extra.contains_key("rails_locale"), "{not_rails:?}");
+        assert!(!d.units[0].context.extra().contains_key("rails_locale"), "{not_rails:?}");
         assert_eq!(merge(&d), not_rails.as_bytes(), "{not_rails:?}");
     }
 }
@@ -214,7 +214,7 @@ fn records_equivalent_keys_notes_plurals() {
     assert_eq!(text_of(blank), "can't be blank");
     assert_eq!(blank.context.notes, ["Shown under a required field"]);
     for (k, form) in [("inbox.messages.zero", "zero"), ("inbox.messages.one", "one"), ("inbox.messages.other", "other")] {
-        assert_eq!(by_key(k).context.extra.get("plural").map(String::as_str), Some(form), "{k}");
+        assert_eq!(by_key(k).context.extra().get("plural"), Some(form), "{k}");
     }
     assert_eq!(text_of(by_key("inbox.messages.other")), "%{count} messages");
     assert_eq!(text_of(by_key("date.abbr_day_names[1]")), "Mon");
@@ -237,7 +237,7 @@ fn symfony() {
     assert_eq!(t[0], "Symfony is great");
     assert!(t.contains(&"{0} No users|{1} One user|]1,Inf[ %count% users".to_string()));
     assert!(t.contains(&"{apples, plural, one {# apple} other {# apples}}".to_string()));
-    assert!(!extract(&src).units[0].context.extra.contains_key("rails_locale"));
+    assert!(!extract(&src).units[0].context.extra().contains_key("rails_locale"));
     let out = all(&src, Some("fr"), |t| format!("[fr] {t}"));
     let kv = kv(&out);
     assert_eq!(kv["symfony.great"], "[fr] Symfony is great");
@@ -329,12 +329,12 @@ fn gate_fixes() {
     let u = &d.units[0];
     for i in u.source() {
         if let Inline::Tag { id, kind, display, .. } = i {
-            let c = &u.codes[&id];
-            assert_eq!(c.label.as_deref(), Some("placeholder"), "{display}");
+            let c = &u.codes()[&id];
+            assert_eq!(c.label(), Some("placeholder"), "{display}");
             let raw = match kind {
-                TagKind::Open => c.open.as_deref(),
-                TagKind::Close => c.close.as_deref(),
-                TagKind::Standalone => c.standalone.as_deref(),
+                TagKind::Open => c.open_markup(),
+                TagKind::Close => c.close_markup(),
+                TagKind::Standalone => c.standalone_markup(),
             };
             assert_eq!(raw, Some(display.as_str()));
         }
@@ -347,11 +347,11 @@ fn gate_fixes() {
     assert_eq!(merge(&d), b"nav:\n  home: Startseite\n  about: About us\n");
     for key in ["en", "pt-BR", "zh_CN", "fil", "fil-PH", "ast"] {
         let t = format!("{key}:\n  a: Hi\n");
-        assert!(extract(t.as_bytes()).units[0].context.extra.contains_key("rails_locale"), "{key}");
+        assert!(extract(t.as_bytes()).units[0].context.extra().contains_key("rails_locale"), "{key}");
     }
     for key in ["nav", "spa", "app", "dev"] {
         let t = format!("{key}:\n  a: Hi\n");
-        assert!(!extract(t.as_bytes()).units[0].context.extra.contains_key("rails_locale"), "{key}");
+        assert!(!extract(t.as_bytes()).units[0].context.extra().contains_key("rails_locale"), "{key}");
     }
 }
 

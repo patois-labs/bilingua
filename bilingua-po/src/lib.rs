@@ -100,7 +100,7 @@ fn out_text(u: &Unit, v: &[Inline]) -> String {
         match i {
             Inline::Text(t) => s.push_str(t),
             Inline::Tag { id, .. } => {
-                if let Some(c) = u.codes.get(id).and_then(|c| c.standalone.as_deref()) {
+                if let Some(c) = u.codes().get(id).and_then(|c| c.standalone_markup()) {
                     s.push_str(c);
                 }
             }
@@ -355,7 +355,7 @@ fn entry_units(
         let field = by_index.get(&k).copied();
         let tgt_text = field.map(|f| f.value.as_str()).unwrap_or("");
         let mut u = Unit::new(uid, src);
-        u.codes = codes;
+        u.set_codes(codes);
         u.segments[0].target = target_inlines(tgt_text, &tags);
         u.segments[0].state = if u.segments[0].target.is_empty() {
             SegState::New
@@ -372,17 +372,17 @@ fn entry_units(
         context.charge(key.len() + notes.iter().map(String::len).sum::<usize>(), limits)?;
         u.context.notes = notes.clone();
         if let Some(c) = &e.ctxt {
-            u.context.extra.insert("msgctxt".into(), c.value.clone());
+            u.context.extra_mut().insert("msgctxt", c.value.clone());
         }
         if plural {
-            u.context.extra.insert("plural".into(), k.to_string());
+            u.context.extra_mut().insert("plural", k.to_string());
             u.set_hidden(PN, n.to_string());
         }
         if fuzzy {
-            u.context.extra.insert("fuzzy".into(), "true".into());
+            u.context.extra_mut().insert("fuzzy", "true");
         }
         if !other_flags.is_empty() {
-            u.context.extra.insert("flags".into(), other_flags.join(", "));
+            u.context.extra_mut().insert("flags", other_flags.join(", "));
         }
         u.set_hidden(ENTRY, entry_id.clone());
         u.set_hidden(OV, tgt_text.to_string());
@@ -450,7 +450,7 @@ fn po_string(kw: &str, text: &str, multiline: bool, eol: &str) -> String {
 
 /// The text for one unit's place in the file. Untouched entries come back exactly as they were.
 fn render_msgstr(u: &Unit, entry_changed: bool, eol: &str) -> String {
-    let plural = u.context.extra.get("plural").and_then(|p| p.parse::<usize>().ok());
+    let plural = u.context.extra().get("plural").and_then(|p| p.parse::<usize>().ok());
     if !entry_changed {
         return match plural {
             None | Some(0) => code(u, RAW).unwrap_or_else(|| po_string(if plural.is_some() { "msgstr[0]" } else { "msgstr" }, "", false, eol)),
@@ -482,7 +482,7 @@ fn update_header(raw: &str, lang: Option<&str>, doc: &Document) -> String {
         return raw.to_string();
     }
     let rule = plural_rule(lang);
-    let has_plural = doc.units.iter().any(|u| u.context.extra.contains_key("plural"));
+    let has_plural = doc.units.iter().any(|u| u.context.extra().contains_key("plural"));
     let want = lang.replace('-', "_");
     let lang_value = |l: &str| {
         l.strip_prefix("\"Language:").map(|v| v.trim_start().trim_end_matches('"').trim_end_matches("\\n").trim().replace('-', "_"))

@@ -67,10 +67,10 @@ fn references_are_recognised_as_before() {
     let too_long = format!("[{}]", "P".repeat(129));
     let doc = ex(&file(&[format!("Install [ProductName] to [#file.txt] [~] {longest} {too_long} [not a ref] [a[b]")]));
     let mut got: Vec<String> = doc.units[0]
-        .codes
+        .codes()
         .values()
-        .filter(|c| c.label.as_deref() == Some("placeholder"))
-        .filter_map(|c| c.standalone.clone())
+        .filter(|c| c.label() == Some("placeholder"))
+        .filter_map(|c| c.standalone_markup().map(str::to_string))
         .collect();
     let mut want = vec!["[ProductName]".to_string(), "[#file.txt]".into(), "[~]".into(), longest, "[b]".into()];
     got.sort();

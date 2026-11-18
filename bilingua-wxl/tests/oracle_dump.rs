@@ -12,7 +12,7 @@ fn dump_units_for_the_oracle() {
     for (name, bytes) in fixtures() {
         let mut d = ex(bytes);
         m.insert(name.into(), serde_json::json!(texts(&d)));
-        idx.insert(name.into(), d.units.iter().map(|u| u.context.extra["p_index"].clone()).collect());
+        idx.insert(name.into(), d.units.iter().map(|u| u.context.extra()["p_index"].to_string()).collect());
         pseudo(&mut d);
         std::fs::write(format!("{dir}/merged_{name}.bin"), merged(&d)).unwrap();
     }

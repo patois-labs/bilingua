@@ -42,7 +42,7 @@ fn items_of(v: &[Inline]) -> Vec<Item> {
 }
 
 fn raw_of(u: &Unit, id: &str) -> Option<String> {
-    u.codes.get(id).and_then(|c| c.standalone.clone())
+    u.codes().get(id).and_then(|c| c.standalone_markup().map(str::to_string))
 }
 
 fn render(u: &Unit, items: &[Item], wide: bool) -> String {
@@ -65,7 +65,7 @@ fn render(u: &Unit, items: &[Item], wide: bool) -> String {
             }
             // an unknown code is dropped (same tolerance as the other formats)
             Item::Code(id) => {
-                if let Some(raw) = u.codes.get(id).and_then(|c| c.standalone.as_deref()) {
+                if let Some(raw) = u.codes().get(id).and_then(|c| c.standalone_markup()) {
                     s.push_str(raw);
                     last = Some(raw);
                 }
@@ -221,7 +221,7 @@ impl Filter for Rc {
             };
             for (id, raw) in codes {
                 let label = if lit::is_format(&raw) { "format" } else { "escape" };
-                u.codes.insert(id, CodeData::new().with_standalone(raw).with_label(label.to_string()));
+                u.codes_mut().insert(id, CodeData::new().with_standalone(raw).with_label(label.to_string()));
             }
             u.set_hidden(RAW, d.text[f.start..f.end].to_string());
             if matches!(f.style, "rc:menu" | "rc:control") && !f.locked {

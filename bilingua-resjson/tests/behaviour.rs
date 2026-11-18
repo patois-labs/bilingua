@@ -103,7 +103,7 @@ fn notes_metadata_and_whitespace() {
     let d = ex(VS_TEMPLATE);
     let title = unit_by_key(&d, "/home_title");
     assert_eq!(title.context.notes, vec!["Product name. Do not translate the brand."]);
-    assert_eq!(title.context.extra.get("source").map(String::as_str), Some("Home.resx"));
+    assert_eq!(title.context.extra().get("source"), Some("Home.resx"));
     let welcome = unit_by_key(&d, "/home_welcome");
     assert_eq!(welcome.context.max_len, Some(60));
     assert_eq!(welcome.context.notes, vec!["{0} is the reader's first name."]);
@@ -111,7 +111,7 @@ fn notes_metadata_and_whitespace() {
     let settings_title = unit_by_key(&d, "/settings/title");
     assert_eq!(settings_title.context.notes, vec!["Page title."]);
     assert_eq!(settings_title.context.max_len, Some(24));
-    assert_eq!(settings_title.context.extra.get("path").map(String::as_str), Some("settings"));
+    assert_eq!(settings_title.context.extra().get("path"), Some("settings"));
     // White space around the text stays outside the unit and is written back.
     assert_eq!(plain_text(&welcome.source()), "Welcome back, {0}!");
     let mut d2 = d.clone();
@@ -122,13 +122,13 @@ fn notes_metadata_and_whitespace() {
     for p in ["/settings/theme/dark", "/settings/theme/auto", "/tips/0", "/tips/1", "/tips/3/0"] {
         unit_by_key(&d, p);
     }
-    assert_eq!(unit_by_key(&d, "/tips/3/0").context.extra.get("path").map(String::as_str), Some("tips"));
-    assert_eq!(unit_by_key(&d, "/tips/0").context.extra.get("name").map(String::as_str), Some(""));
+    assert_eq!(unit_by_key(&d, "/tips/3/0").context.extra().get("path"), Some("tips"));
+    assert_eq!(unit_by_key(&d, "/tips/0").context.extra().get("name"), Some(""));
     // The second of two equal keys is marked.
     let dups: Vec<&Unit> = d.units.iter().filter(|u| u.context.key.as_deref() == Some("/dup")).collect();
     assert_eq!(dups.len(), 2);
-    assert!(!dups[0].context.extra.contains_key("duplicate"));
-    assert_eq!(dups[1].context.extra.get("duplicate").map(String::as_str), Some("true"));
+    assert!(!dups[0].context.extra().contains_key("duplicate"));
+    assert_eq!(dups[1].context.extra().get("duplicate"), Some("true"));
 }
 
 #[test]
@@ -273,7 +273,7 @@ fn metadata_cannot_overwrite_the_locos_context() {
     // `_id.path` and `_id.name` are metadata like any other; they must not replace the LocOS context and key.
     let d = ex(br#"{"m": {"t": "Title text", "_t.path": "spoof", "_t.name": "x", "_t.source": "A.resx"}}"#);
     let u = &d.units[0];
-    assert_eq!(u.context.extra.get("path").map(String::as_str), Some("m"));
-    assert_eq!(u.context.extra.get("name").map(String::as_str), Some("t"));
-    assert_eq!(u.context.extra.get("source").map(String::as_str), Some("A.resx"));
+    assert_eq!(u.context.extra().get("path"), Some("m"));
+    assert_eq!(u.context.extra().get("name"), Some("t"));
+    assert_eq!(u.context.extra().get("source"), Some("A.resx"));
 }

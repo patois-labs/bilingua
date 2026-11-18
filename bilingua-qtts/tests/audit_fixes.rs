@@ -93,5 +93,5 @@ fn a_long_context_name_over_many_messages_is_refused() {
     // an ordinary file is untouched: every unit still carries the name
     let doc = QtTs.extract(&long_name(40, 50), &opts()).expect("an ordinary file");
     assert_eq!(doc.units.len(), 50);
-    assert!(doc.units.iter().all(|u| u.context.extra.get("context").is_some_and(|c| c.len() == 40)));
+    assert!(doc.units.iter().all(|u| u.context.extra().get("context").is_some_and(|c| c.len() == 40)));
 }

@@ -10,12 +10,12 @@ fn disp(u: &Unit, v: &[Inline]) -> String {
         match i {
             Inline::Text(t) => s.push_str(t),
             Inline::Tag { id, kind, .. } => {
-                let c = &u.codes[id];
+                let c = &u.codes()[id];
                 s.push_str(
                     match kind {
-                        TagKind::Open => c.open.as_deref(),
-                        TagKind::Close => c.close.as_deref(),
-                        TagKind::Standalone => c.standalone.as_deref(),
+                        TagKind::Open => c.open_markup(),
+                        TagKind::Close => c.close_markup(),
+                        TagKind::Standalone => c.standalone_markup(),
                     }
                     .unwrap_or(""),
                 );

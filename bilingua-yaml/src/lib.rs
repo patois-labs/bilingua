@@ -89,11 +89,11 @@ fn out_text(u: &Unit, v: &[Inline]) -> String {
         match i {
             Inline::Text(t) => s.push_str(t),
             Inline::Tag { id, kind, .. } => {
-                if let Some(c) = u.codes.get(id) {
+                if let Some(c) = u.codes().get(id) {
                     let piece = match kind {
-                        TagKind::Open => c.open.as_deref(),
-                        TagKind::Close => c.close.as_deref(),
-                        TagKind::Standalone => c.standalone.as_deref(),
+                        TagKind::Open => c.open_markup(),
+                        TagKind::Close => c.close_markup(),
+                        TagKind::Standalone => c.standalone_markup(),
                     };
                     s.push_str(piece.unwrap_or(""));
                 }
@@ -204,7 +204,7 @@ impl Yaml {
             let (lead, core, trail) = split_ws(&wu.value);
             let (inl, codes) = inline::tag_placeholders(core);
             let mut u = Unit::new(format!("u{}", i + 1), inl);
-            u.codes = codes;
+            u.set_codes(codes);
             u.set_hidden(RAW, &text[wu.start..wu.end]);
             u.set_hidden(LEAD, lead);
             u.set_hidden(TRAIL, trail);
@@ -230,7 +230,7 @@ impl Yaml {
                 }
             }
             if let Some(p) = &wu.plural {
-                u.context.extra.insert("plural".into(), p.clone());
+                u.context.extra_mut().insert("plural", p.clone());
             }
             if wu.start > pos {
                 parts.push(SkelPart::Raw(text[pos..wu.start].to_string()));
@@ -244,7 +244,7 @@ impl Yaml {
         }
         if let Some(r) = &w.rails_root {
             if let Some(u) = units.first_mut() {
-                u.context.extra.insert("rails_locale".into(), r.key.clone());
+                u.context.extra_mut().insert("rails_locale", r.key.clone());
             }
         }
         // a code page whose bytes do not come back from the text (double-mapped sequences) keeps the file's own bytes

@@ -101,9 +101,9 @@ fn android_units_and_skips() {
     assert_eq!(AndroidStrings.merge(&d).unwrap(), STRINGS);
     // keys, plural forms, array positions and the comment before a resource
     let songs: Vec<&Unit> = d.units.iter().filter(|u| u.context.key.as_deref() == Some("songs")).collect();
-    assert_eq!(songs.iter().map(|u| u.context.extra["plural"].as_str()).collect::<Vec<_>>(), ["one", "other"]);
+    assert_eq!(songs.iter().map(|u| &u.context.extra()["plural"]).collect::<Vec<_>>(), ["one", "other"]);
     let venus = d.units.iter().find(|u| plain_text(&u.source()) == "Venus").unwrap();
-    assert_eq!((venus.context.key.as_deref(), venus.context.extra.get("index").map(String::as_str)), (Some("planets"), Some("1")));
+    assert_eq!((venus.context.key.as_deref(), venus.context.extra().get("index")), (Some("planets"), Some("1")));
 }
 
 #[test]

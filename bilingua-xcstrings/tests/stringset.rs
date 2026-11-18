@@ -66,7 +66,7 @@ fn each_value_is_a_unit() {
     assert_eq!(u.context.key.as_deref(), Some("Start workout"));
     assert_eq!(u.context.kind.as_deref(), Some("stringSet"));
     assert_eq!(u.context.location.as_deref(), Some("localizations.en.stringSet[1]"));
-    assert_eq!(u.context.extra.get("string_set_index").map(String::as_str), Some("1"));
+    assert_eq!(u.context.extra().get("string_set_index"), Some("1"));
 }
 
 #[test]
@@ -181,10 +181,10 @@ fn app_intents_parameters_are_free_codes() {
     // a phrase that is only the parameter has no text to translate
     assert_eq!(d.units.len(), 2);
     let u = &d.units[0];
-    assert_eq!(u.codes.len(), 1);
+    assert_eq!(u.codes().len(), 1);
     assert!(u.source().iter().any(|i| i.is_free()));
     assert!(!u.source().iter().any(|i| matches!(i, Inline::Text(t) if t.contains("applicationName"))));
-    assert_eq!(d.units[1].codes.len(), 2);
+    assert_eq!(d.units[1].codes().len(), 2);
     // a translation may move the parameters; the parameter-only phrase is copied
     let mut d = d;
     for u in &mut d.units {

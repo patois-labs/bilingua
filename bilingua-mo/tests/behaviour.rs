@@ -51,10 +51,10 @@ fn units_codes_and_ids() {
     // plural pair: forms, style, key
     assert_eq!(d.units[0].context.style.as_deref(), Some("msgstr[0]"));
     assert_eq!(d.units[1].context.style.as_deref(), Some("msgstr[1]"));
-    assert_eq!(d.units[1].context.extra.get("plural").map(String::as_str), Some("1"));
+    assert_eq!(d.units[1].context.extra().get("plural"), Some("1"));
     // context
     assert_eq!(d.units[3].context.key.as_deref(), Some("menu :: Open"));
-    assert_eq!(d.units[3].context.extra.get("msgctxt").map(String::as_str), Some("menu"));
+    assert_eq!(d.units[3].context.extra().get("msgctxt"), Some("menu"));
     assert_eq!(d.units[4].context.key.as_deref(), Some("state :: Open"));
     // existing translations are the targets
     assert_eq!(flat_target(&d.units[0]), "%d fichier");
@@ -64,9 +64,9 @@ fn units_codes_and_ids() {
     assert_eq!(tags(&d.units[0]), [("%d".to_string(), false)]);
     assert_eq!(tags(&d.units[2]), [("%(name)s".to_string(), true), ("{0}".to_string(), true)]);
     for u in &d.units {
-        for c in u.codes.values() {
-            assert_eq!(c.label.as_deref(), Some("placeholder"));
-            assert!(c.standalone.is_some());
+        for c in u.codes().values() {
+            assert_eq!(c.label(), Some("placeholder"));
+            assert!(c.standalone_markup().is_some());
         }
     }
     // the target's tags are the source's tags

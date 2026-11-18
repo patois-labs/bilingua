@@ -216,7 +216,7 @@ fn tokens_are_labelled_placeholder_so_the_locos_adapter_flattens_them() {
                 match i {
                     Inline::Text(t) => flat.push_str(&t),
                     Inline::Tag { id, display, .. } => {
-                        assert_eq!(u.codes[&id].label.as_deref(), Some("placeholder"), "{display}");
+                        assert_eq!(u.codes()[&id].label(), Some("placeholder"), "{display}");
                         flat.push_str(&display);
                     }
                 }

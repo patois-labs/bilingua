@@ -178,12 +178,12 @@ impl Filter for Xcloc {
             let d = bilingua_xliff::locos::extract(&e.data, "xliff", opts).map_err(|er| member_err(&e.name, er))?;
             let prefix = format!("x{}/", k + 1);
             for mut u in d.units {
-                let key: i64 = u.context.extra.get(bilingua_xliff::locos::KEY).and_then(|v| v.parse().ok()).unwrap_or(0);
+                let key: i64 = u.context.extra().get(bilingua_xliff::locos::KEY).and_then(|v| v.parse().ok()).unwrap_or(0);
                 u.id = format!("{prefix}{}", u.id);
                 for s in &mut u.segments {
                     s.id = format!("{prefix}{}", s.id);
                 }
-                u.context.extra.insert(bilingua_model::profile::P_INDEX.to_string(), (offset + key).to_string());
+                u.context.extra_mut().insert(bilingua_model::profile::P_INDEX.to_string(), (offset + key).to_string());
                 u.context.location = Some(format!("{} {}", e.name, u.context.key.as_deref().unwrap_or("")).trim().to_string());
                 units.push(u);
                 guard::check_unit_count(units.len(), &limits)?;

@@ -31,8 +31,8 @@ fn units_tags_and_notes() {
     assert_eq!(u.context.key.as_deref(), Some("  padded  "));
     let tags: Vec<bool> = d.units.iter().find(|u| text_of(u).starts_with("Zeta")).unwrap().source().iter().filter(|i| matches!(i, Inline::Tag { .. })).map(Inline::is_free).collect();
     assert_eq!(tags, [true, true]);
-    let v: Vec<&String> = d.units.iter().filter_map(|u| u.context.extra.get("variation")).collect();
-    assert!(v.iter().any(|s| s.as_str() == "device:iphone plural:one"), "{v:?}");
+    let v: Vec<&str> = d.units.iter().filter_map(|u| u.context.extra().get("variation")).collect();
+    assert!(v.contains(&"device:iphone plural:one"), "{v:?}");
 }
 
 fn text_of(u: &Unit) -> String {

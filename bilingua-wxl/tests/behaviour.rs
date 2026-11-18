@@ -34,7 +34,7 @@ fn edge_units_match_locos() {
     ];
     assert_eq!(texts(&d), want);
     // LocOS p_index of each (slot position among all String and UI children of the root).
-    let p: Vec<&str> = d.units.iter().map(|u| u.context.extra["p_index"].as_str()).collect();
+    let p: Vec<&str> = d.units.iter().map(|u| &u.context.extra()["p_index"]).collect();
     assert_eq!(p, ["0", "1", "2", "3", "4", "10", "13", "15", "16", "17", "18", "19"]);
     let ids: Vec<&str> = d.units.iter().map(|u| u.id.as_str()).collect();
     assert_eq!(ids, ["u1", "u2", "u3", "u4", "u5", "u11", "u14", "u16", "u17", "u18", "u19", "u20"]);
@@ -47,7 +47,7 @@ fn a_ui_without_text_is_not_a_locos_slot() {
     // p_index of the entries after it does not move.
     let src = b"<WixLocalization Culture=\"en-us\">\n  <UI Dialog=\"D\" Control=\"C\" />\n  <UI Dialog=\"D2\" Control=\"C2\">Inner text</UI>\n  <String Id=\"A\" Value=\"First\" />\n  <UI Dialog=\"D3\" Control=\"C3\" Text=\"Shown\" />\n  <String Id=\"B\">Second</String>\n</WixLocalization>\n";
     let d = ex(src);
-    let p: Vec<&str> = d.units.iter().map(|u| u.context.extra["p_index"].as_str()).collect();
+    let p: Vec<&str> = d.units.iter().map(|u| &u.context.extra()["p_index"]).collect();
     assert_eq!(texts(&d), ["First", "Shown", "Second"]);
     assert_eq!(p, ["0", "1", "2"]);
     assert_eq!(merged(&d), src);
@@ -80,9 +80,9 @@ fn references_are_free_placeholder_tags() {
     assert!(tags.iter().all(|t| t.is_free()));
     // Every tag has its code with the label and the exact text, as the LocOS adapter needs.
     for (n, sh) in shown.iter().enumerate() {
-        let c = &u.codes[&(n + 1).to_string()];
-        assert_eq!(c.label.as_deref(), Some("placeholder"));
-        assert_eq!(c.standalone.as_deref(), Some(*sh));
+        let c = &u.codes()[&(n + 1).to_string()];
+        assert_eq!(c.label(), Some("placeholder"));
+        assert_eq!(c.standalone_markup(), Some(*sh));
     }
     // One LocOS token per tag, and back.
     let (text, map) = to_locos_text(&u.segments[0].source);
@@ -274,7 +274,7 @@ fn a_prefixed_v3_file_reads_and_writes() {
     let data = b"<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<w:WixLocalization xmlns:w=\"http://schemas.microsoft.com/wix/2006/localization\" Culture=\"en-US\">\n  <w:String Id=\"A\" Overridable=\"yes\">Install</w:String>\n</w:WixLocalization>\n";
     let mut d = ex(data);
     assert_eq!(texts(&d), ["Install"]);
-    assert_eq!(unit_by_key(&d, "A").context.extra.get("overridable").map(String::as_str), Some("yes"));
+    assert_eq!(unit_by_key(&d, "A").context.extra().get("overridable"), Some("yes"));
     assert_eq!(merged(&d), data);
     translate_all(&mut d, |_| "Installieren".into());
     assert!(s(&merged(&d)).contains("<w:String Id=\"A\" Overridable=\"yes\">Installieren</w:String>"));
@@ -317,7 +317,7 @@ fn okapi_wix_config_reads_a_subset_of_what_locos_and_bilingua_read() {
         texts(&d),
         ["Overridable text with [ProductName].", "Locked by Overridable.", "No attribute at all.", "Fish & chips <here>", "1234"]
     );
-    assert_eq!(unit_by_key(&d, "No").context.extra["overridable"], "no");
+    assert_eq!(&unit_by_key(&d, "No").context.extra()["overridable"], "no");
     assert_eq!(merged(&d), V3_OVERRIDABLE);
 }
 

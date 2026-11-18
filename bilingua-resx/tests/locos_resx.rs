@@ -173,8 +173,8 @@ fn placeholders_are_tags_that_flatten_to_the_locos_text() {
     let u = &d.units[0];
     let n = u.source().iter().filter(|i| matches!(i, Inline::Tag { .. })).count();
     assert_eq!(n, 2);
-    for (id, c) in u.codes.iter().filter(|(k, _)| !k.starts_with('~')) {
-        assert_eq!(c.label.as_deref(), Some("placeholder"), "{id}");
+    for (id, c) in u.codes().iter().filter(|(k, _)| !k.starts_with('~')) {
+        assert_eq!(c.label(), Some("placeholder"), "{id}");
     }
     assert_eq!(show(&u.source()), "Hello, {0}! You have {1} new messages.");
     assert!(d.units[1].source().iter().all(|i| matches!(i, Inline::Text(_))));

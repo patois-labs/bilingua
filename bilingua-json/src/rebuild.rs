@@ -22,7 +22,7 @@ pub fn splice(orig: &str, doc: &Document, d: Dialect, target: Option<&str>, loco
         let plan = plan::plan_message(m.value, m.syntax);
         let k = plan.units.len();
         let units = doc.units.get(head..head + k).ok_or_else(|| Error::Write("the units no longer match the skeleton".into()))?;
-        if units.first().is_some_and(|u| u.codes.get(RAW_KEY).and_then(|c| c.standalone.as_deref()) != Some(&orig[m.start..m.end])) {
+        if units.first().is_some_and(|u| u.codes().get(RAW_KEY).and_then(|c| c.standalone_markup()) != Some(&orig[m.start..m.end])) {
             return Err(Error::Write("the units no longer match the skeleton".into()));
         }
         head += k;

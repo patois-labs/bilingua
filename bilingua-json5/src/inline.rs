@@ -93,7 +93,7 @@ pub fn tag_placeholders(s: &str) -> (Vec<Inline>, BTreeMap<String, CodeData>) {
             (TagKind::Close, Some(o)) => {
                 let id = ids[o].clone().expect("open comes first");
                 if let Some(c) = codes.get_mut(&id) {
-                    c.close = Some(markup.to_string());
+                    c.set_close(markup.to_string());
                 }
                 (TagKind::Close, id)
             }

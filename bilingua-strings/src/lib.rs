@@ -114,7 +114,7 @@ fn out_text(u: &Unit, v: &[Inline]) -> String {
         match i {
             Inline::Text(t) => s.push_str(t),
             Inline::Tag { id, .. } => {
-                if let Some(c) = u.codes.get(id).and_then(|c| c.standalone.as_deref()) {
+                if let Some(c) = u.codes().get(id).and_then(|c| c.standalone_markup()) {
                     s.push_str(c);
                 }
             }
@@ -190,7 +190,7 @@ impl Strings {
             }
             let (src, codes, _) = source_inlines(core);
             let mut u = Unit::new(format!("s{}", n + 1), src);
-            u.codes = codes;
+            u.set_codes(codes);
             u.context.kind = Some("string".into());
             u.context.key = Some(e.key.clone());
             u.context.location = Some(format!("line {}", e.line));

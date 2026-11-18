@@ -77,7 +77,7 @@ fn units_and_identity() {
     // the placeables are free inline tags that show their source
     let u = &doc.units[2];
     assert_eq!(u.segments[0].source.iter().filter(|i| i.is_free()).count(), 2);
-    assert_eq!(u.codes["1"].label.as_deref(), Some("placeholder"));
+    assert_eq!(u.codes()["1"].label(), Some("placeholder"));
     // the attached comment is the unit's note
     assert_eq!(doc.units[0].context.notes, vec!["Simple message with a variable.".to_string()]);
 }

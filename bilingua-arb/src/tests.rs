@@ -78,9 +78,9 @@ fn placeholder_tags_flatten_to_the_source_text() {
     for u in &d.units {
         for i in u.source() {
             if let Inline::Tag { id, display, free: true, .. } = i {
-                let c = &u.codes[&id];
-                assert_eq!(c.label.as_deref(), Some("placeholder"), "{display}");
-                assert_eq!(c.standalone.as_deref(), Some(display.as_str()));
+                let c = &u.codes()[&id];
+                assert_eq!(c.label(), Some("placeholder"), "{display}");
+                assert_eq!(c.standalone_markup(), Some(display.as_str()));
                 assert!(display.starts_with('{') && display.ends_with('}'));
             }
         }

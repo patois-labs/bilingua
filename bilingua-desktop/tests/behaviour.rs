@@ -123,15 +123,15 @@ fn unit_ids_are_stable_and_context_is_filled() {
     assert_eq!(a.units[0].context.key.as_deref(), Some("Desktop Entry/Name"));
     assert_eq!(a.units[0].context.notes, ["Shown in menus"]);
     assert_eq!(a.units[4].context.key.as_deref(), Some("Desktop Entry/Keywords[1]"));
-    assert_eq!(a.units[6].context.extra["group"], "Desktop Action new-window");
+    assert_eq!(&a.units[6].context.extra()["group"], "Desktop Action new-window");
     assert!(a.units.iter().all(|u| u.segments.len() == 1 && u.translate));
     assert_eq!(a.format, "desktop");
     let c = catkeys(LOCOS_CATKEYS).unwrap();
     let ids: Vec<&str> = c.units.iter().map(|u| u.id.as_str()).collect();
     assert_eq!(ids, ["u1", "u2", "u3", "u4"]);
     assert_eq!(c.units[1].context.notes, ["file name"]);
-    assert_eq!(c.units[1].context.extra["context"], "MainWindow");
-    assert_eq!(c.units[3].context.extra["translation"], "Beenden");
+    assert_eq!(&c.units[1].context.extra()["context"], "MainWindow");
+    assert_eq!(&c.units[3].context.extra()["translation"], "Beenden");
     assert!(c.units.iter().all(|u| u.segments[0].target.is_empty()));
 }
 
@@ -243,7 +243,7 @@ fn duplicate_keys_and_odd_layouts() {
     let data = b"[Desktop Entry]\nName=A\nName=B\n";
     let d = desktop(data).unwrap();
     assert_eq!(d.units.len(), 2);
-    assert_eq!(d.units[1].context.extra.get("duplicate").map(String::as_str), Some("true"));
+    assert_eq!(d.units[1].context.extra().get("duplicate"), Some("true"));
     // empty values and whitespace-only values are not units
     let d = desktop(b"[Desktop Entry]\nName=\nComment=\\s\nKeywords=;;a\n").unwrap();
     assert_eq!(texts(&d), ["a"]);

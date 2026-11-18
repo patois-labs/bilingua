@@ -166,7 +166,7 @@ fn inlines_of(core: &str, unit: &mut Unit) -> Vec<Inline> {
                 let shown = &core[at..at + len];
                 let id = n.to_string();
                 out.push(Inline::free_tag(id.clone(), shown));
-                unit.codes.insert(id, CodeData::new().with_standalone(shown.to_string()).with_label("placeholder".to_string()));
+                unit.codes_mut().insert(id, CodeData::new().with_standalone(shown.to_string()).with_label("placeholder".to_string()));
                 last = at + len;
                 i = last;
             }
@@ -364,16 +364,16 @@ impl Filter for Wxl {
             let source = inlines_of(core, &mut unit);
             unit.segments[0].source = source;
             if !lead.is_empty() {
-                unit.codes.insert(LEAD_KEY.into(), code(lead));
+                unit.codes_mut().insert(LEAD_KEY, code(lead));
             }
             if !trail.is_empty() {
-                unit.codes.insert(TRAIL_KEY.into(), code(trail));
+                unit.codes_mut().insert(TRAIL_KEY, code(trail));
             }
-            unit.codes.insert(FORM_KEY.into(), code(form));
+            unit.codes_mut().insert(FORM_KEY, code(form));
             let raw = &text[start..end];
             // (a value with a line break keeps its spelling: a merge writes the file's line break into changed values only)
             if raw.contains(['\r', '\n']) || encode_value(form, &e.text, form == "c", "", false) != raw {
-                unit.codes.insert(RAW_KEY.into(), code(raw));
+                unit.codes_mut().insert(RAW_KEY, code(raw));
             }
             fill_context(&mut unit, e, idx, form);
             unit.translate = translatable;
@@ -425,13 +425,13 @@ impl Filter for Wxl {
 
 fn fill_context(unit: &mut Unit, e: &Entry, idx: usize, form: &str) {
     let ctx = &mut unit.context;
-    ctx.extra.insert("p_index".into(), idx.to_string());
+    ctx.extra_mut().insert("p_index", idx.to_string());
     match e.kind {
         Kind::String => {
             ctx.kind = Some("string".into());
             ctx.style = Some("String".into());
             ctx.key = Some(e.id.clone().unwrap_or_default());
-            ctx.extra.insert("form".into(), if form.starts_with('a') { "value" } else { "text" }.into());
+            ctx.extra_mut().insert("form", if form.starts_with('a') { "value" } else { "text" });
         }
         Kind::Ui => {
             ctx.kind = Some("ui".into());
@@ -439,23 +439,23 @@ fn fill_context(unit: &mut Unit, e: &Entry, idx: usize, form: &str) {
             let joined = [e.dialog.as_deref(), e.control.as_deref()].into_iter().flatten().filter(|s| !s.is_empty()).collect::<Vec<_>>().join(".");
             ctx.key = Some(if joined.is_empty() { e.id.clone().unwrap_or_default() } else { joined });
             if let Some(d) = &e.dialog {
-                ctx.extra.insert("dialog".into(), d.clone());
+                ctx.extra_mut().insert("dialog", d.clone());
             }
             if let Some(c) = &e.control {
-                ctx.extra.insert("control".into(), c.clone());
+                ctx.extra_mut().insert("control", c.clone());
             }
         }
     }
     if let Some(v) = &e.overridable {
-        ctx.extra.insert("overridable".into(), v.clone());
+        ctx.extra_mut().insert("overridable", v.clone());
     }
     if let Some(v) = &e.localizable {
-        ctx.extra.insert("localizable".into(), v.clone());
+        ctx.extra_mut().insert("localizable", v.clone());
     }
 }
 
 fn hidden<'a>(u: &'a Unit, key: &str) -> &'a str {
-    u.codes.get(key).and_then(|c| c.standalone.as_deref()).unwrap_or("")
+    u.codes().get(key).and_then(|c| c.standalone_markup()).unwrap_or("")
 }
 
 /// What goes between the quotes (or between the tags) for a unit.
@@ -465,7 +465,7 @@ fn render(unit: &Unit, nl: &str, keep_cr: bool) -> String {
     let out = flatten(&unit.output());
     let form = hidden(unit, FORM_KEY);
     if out == flatten(&unit.source()) {
-        if let Some(raw) = unit.codes.get(RAW_KEY).and_then(|c| c.standalone.as_deref()) {
+        if let Some(raw) = unit.codes().get(RAW_KEY).and_then(|c| c.standalone_markup()) {
             return raw.to_string();
         }
     }
