@@ -456,3 +456,40 @@ fn plural_forms_are_one_group_with_their_msgstr_index() {
     let l = Po.extract(po.as_bytes(), &ExtractOptions::new().with_target_lang("ar").with_profile(profile::LOCOS)).unwrap();
     assert!(!l.units.is_empty() && l.units.iter().all(|u| u.plural().is_none()));
 }
+
+#[test]
+fn languages_outside_the_old_list_take_the_shared_gettext_rule() {
+    // A Polish target used to keep the English file's two forms; Polish has three (gettext), as in the mo crate
+    // and under the LocOS profile.
+    let src = "msgid \"\"\nmsgstr \"\"\n\"Language: en\n\"\n\"Plural-Forms: nplurals=2; plural=(n != 1);\n\"\n\nmsgid \"%d file\"\nmsgid_plural \"%d files\"\nmsgstr[0] \"\"\nmsgstr[1] \"\"\n";
+    for (lang, n) in [("pl", 3), ("pl-PL", 3), ("ru", 3), ("uk", 3), ("cs", 3), ("tr", 2), ("az", 2), ("sv", 2), ("he", 2), ("id", 1), ("vi", 1), ("sl", 4), ("cy", 5), ("hu", 2), ("fa", 2), ("hy", 2), ("ka", 2), ("br", 2)] {
+        let d = ex_to(src, lang);
+        assert_eq!(d.units.len(), n, "{lang}");
+        assert_eq!(merged(&d), src, "{lang}: untouched merge");
+    }
+    let mut d = ex_to(src, "pl");
+    for (i, t) in ["%d plik", "%d pliki", "%d plików"].iter().enumerate() {
+        set(&mut d, &format!("e2.{i}"), t);
+    }
+    let out = merged(&d);
+    assert!(out.contains("msgstr[2] \"%d plików\""), "{out}");
+    assert!(out.contains("\"Plural-Forms: nplurals=3; plural=(n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n\""), "{out}");
+    // a file without a Plural-Forms header or with another language's header: the target's rule still counts
+    let bare = "msgid \"%d file\"\nmsgid_plural \"%d files\"\nmsgstr[0] \"\"\nmsgstr[1] \"\"\n";
+    assert_eq!(ex_to(bare, "pl").units.len(), 3);
+    let de = src.replace("Language: en", "Language: de");
+    assert_eq!(ex_to(&de, "pl").units.len(), 3);
+    // the header's own language counts when there is no target, as before (now also for Polish)
+    assert_eq!(ex(&src.replace("Language: en", "Language: pl")).units.len(), 3);
+    // the eleven old languages keep their rules; an unknown code keeps the entry's count
+    assert_eq!(plural_rule("pt-BR"), Some((2, "(n != 1)")));
+    // Turkish and Azerbaijani: CLDR one/other, not the shared table's single form
+    assert_eq!(plural_rule("tr"), Some((2, "(n != 1)")));
+    assert_eq!(plural_rule("az-Latn"), Some((2, "(n != 1)")));
+    // the shared table and CLDR disagree (one form against one/other, Breton six against five): no rule, the
+    // entry keeps its own count and the header its Plural-Forms
+    for lang in ["hu", "fa", "hy", "ka", "br"] {
+        assert_eq!(plural_rule(lang), None, "{lang}");
+    }
+    assert_eq!(ex_to(src, "xx").units.len(), 2);
+}

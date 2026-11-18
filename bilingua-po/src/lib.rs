@@ -24,15 +24,32 @@ const OV: &str = "ov"; // original msgstr value of this form (unescaped)
 const FMULTI: &str = "fmulti"; // "1" when the original field used the multi-line layout
 const PN: &str = "pn"; // number of plural forms of the entry
 
-/// Plural-Forms for the languages Bilingua knows. (nplurals, expression)
+/// Plural-Forms for a target language. (nplurals, expression) The eleven languages this crate always knew, and
+/// Turkish and Azerbaijani, keep their own rules; any other language takes the gettext rule of the shared
+/// Localization OS table (`bilingua_model::plural_table`, the one the mo crate and this crate's LocOS profile use;
+/// the full locale first, `pt_BR`, then its language) when CLDR agrees with its form count. Before, a Polish or
+/// Russian target fell back to the entry's own form count.
 fn plural_rule(lang: &str) -> Option<(usize, &'static str)> {
     let p = lang.split(['-', '_']).next().unwrap_or("").to_ascii_lowercase();
     match p.as_str() {
         "en" | "es" | "de" | "it" | "nl" | "pt" => Some((2, "(n != 1)")),
+        // CLDR one/other and the usual gettext rule; the shared table (babel) gives them one form, which only
+        // the LocOS profile follows
+        "tr" | "az" => Some((2, "(n != 1)")),
         "fr" => Some((2, "(n > 1)")),
         "ja" | "zh" | "ko" => Some((1, "0")),
         "ar" => Some((6, "n==0 ? 0 : n==1 ? 1 : n==2 ? 2 : n%100>=3 && n%100<=10 ? 3 : n%100>=11 ? 4 : 5")),
-        _ => None,
+        _ => {
+            use bilingua_model::plural_table::RULES;
+            let find = |k: &str| RULES.binary_search_by(|r| r.0.cmp(k)).ok().map(|i| (usize::from(RULES[i].1), RULES[i].2));
+            let rule = find(&lang.trim().replace('-', "_")).or_else(|| find(&p))?;
+            // only a rule CLDR agrees with: as many forms as CLDR's cardinal categories, or, for a language with
+            // plurals, fewer (gettext folds CLDR's decimal-only categories, such as Polish and Russian `many`,
+            // into the others). Where the table gives one form and CLDR more (hu, fa, hy, ka) or the other way
+            // round, or CLDR does not know the language, the entry keeps its own count as before.
+            let cldr = bilingua_model::cldr::bits_babel(&p, false).map(|b| bilingua_model::cldr::names(b).len())?;
+            (rule.0 == cldr || (rule.0 > 1 && cldr > 1 && rule.0 < cldr)).then_some(rule)
+        }
     }
 }
 
