@@ -978,3 +978,39 @@ fn drawingml_canvas_with_a_vml_fallback_is_translated_in_both_copies() {
     let x = xml_of(&Docx.merge(&doc).unwrap(), "word/document.xml");
     assert!(x.contains("Guardar") && x.contains("<w:t>Something else</w:t>"), "{x}");
 }
+/// BILI-116: the plain run is the base, so the bold and the italic run are tagged though the italic run carries
+/// the most text ("[b]Bold claim[/b] with an [i]italic aside[/i]").
+#[test]
+fn the_plain_run_is_the_base_though_the_italic_run_is_longer() {
+    let inner = "<w:p><w:pPr><w:rPr><w:i/></w:rPr></w:pPr><w:r><w:rPr><w:b/></w:rPr><w:t>Bold claim</w:t></w:r>\
+<w:r><w:t xml:space=\"preserve\"> with an </w:t></w:r><w:r><w:rPr><w:i/></w:rPr><w:t>italic aside</w:t></w:r></w:p>";
+    let doc = round_trip(&doc_of(inner));
+    let s = seg_of(&doc, "p1");
+    assert_eq!(tag_displays(s), vec!["<b>", "</b>", "<i>", "</i>"]);
+    assert_eq!(s.source[3], Inline::text(" with an "));
+    // a plain space at the end of a bold paragraph does not make the bold a tag
+    let heading = "<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>All of this is bold</w:t></w:r><w:r><w:t xml:space=\"preserve\"> </w:t></w:r></w:p>";
+    let h = round_trip(&doc_of(heading));
+    assert_eq!(tag_displays(seg_of(&h, "p1")), vec!["<fmt>", "</fmt>"]);
+    assert_eq!(h.find("p1").unwrap().0.codes["1"].label.as_deref(), Some("no formatting"));
+    // no plain run: the paragraph mark's formatting is the base, before the most text
+    let marked = "<w:p><w:pPr><w:rPr><w:b/></w:rPr></w:pPr><w:r><w:rPr><w:b/></w:rPr><w:t>Short</w:t></w:r>\
+<w:r><w:rPr><w:i/></w:rPr><w:t xml:space=\"preserve\"> and a longer italic part</w:t></w:r></w:p>";
+    let m = round_trip(&doc_of(marked));
+    assert_eq!(tag_displays(seg_of(&m, "p1")), vec!["<i>", "</i>"]);
+}
+
+/// BILI-116 for DrawingML text in a Word drawing: the same rule as for Word runs.
+#[test]
+fn drawingml_plain_run_is_the_base_though_the_italic_run_is_longer() {
+    let inner = "<w:p><w:r><w:drawing><a:p><a:r><a:rPr lang=\"en-US\" b=\"1\" dirty=\"0\"/><a:t>Bold claim</a:t></a:r>\
+<a:r><a:rPr lang=\"en-US\" dirty=\"0\"/><a:t> with an </a:t></a:r><a:r><a:rPr lang=\"en-US\" i=\"1\" dirty=\"0\"/><a:t>italic aside</a:t></a:r>\
+<a:endParaRPr lang=\"en-US\" i=\"1\" dirty=\"0\"/></a:p></w:drawing></w:r></w:p>";
+    let doc = round_trip(&doc_of(inner));
+    let s = seg_of(&doc, "d1");
+    assert_eq!(tag_displays(s), vec!["<b>", "</b>", "<i>", "</i>"]);
+    assert_eq!(s.source[3], Inline::text(" with an "));
+    let u = doc.find("d1").unwrap().0;
+    assert_eq!(u.codes["1"].label.as_deref(), Some("bold"));
+    assert_eq!(u.codes["2"].label.as_deref(), Some("italic"));
+}

@@ -1,6 +1,7 @@
-//! Rich text: runs with formatting become text plus paired tags. The most common formatting of a unit needs no
-//! tag (it is the "base"). Other runs are wrapped in a tag pair whose code keeps the raw run properties.
-//! Identical logic lives in `bilingua-xlsx`; the two crates do not share code on purpose.
+//! Rich text: runs with formatting become text plus paired tags. One formatting of a unit needs no tag (it is the
+//! "base", chosen as `build` says: the plain one when there is one). Other runs are wrapped in a tag pair whose
+//! code keeps the raw run properties.
+//! Similar logic lives in `bilingua-xlsx`; the two crates do not share code on purpose.
 
 use bilingua_model::*;
 use std::collections::{BTreeMap, BTreeSet, HashMap};
@@ -49,7 +50,8 @@ pub fn check_size(atoms: &[Atom], l: &Limits) -> Result<(), Error> {
     guard::check_unit_chars(chars, l)
 }
 
-pub fn build(atoms: Vec<Atom>, props: Props) -> Built {
+/// `default_key` is the formatting key of the paragraph's own default (`a:endParaRPr`), when it has one.
+pub fn build(atoms: Vec<Atom>, props: Props, default_key: Option<&str>) -> Built {
     // Whitespace-only runs take the formatting of their neighbour, so they do not open a tag of their own.
     // One pass: the nearest text run before is carried along (`prev`), and the look ahead for the next run with
     // text happens only while there is no run before, which is true for at most one run. A paragraph of many
@@ -91,7 +93,16 @@ pub fn build(atoms: Vec<Atom>, props: Props) -> Built {
             (_, Atom::Code { .. }) => merged.push(M::Code(i)),
         }
     }
-    // Base = formatting with the most text.
+    // Base (BILI-116): the formatting a translator reads as "no formatting", so that the tags mark only the runs
+    // that stand out. In order:
+    // 1. When the paragraph has a plain formatting, only plain ones are candidates. Plain = no run properties, or
+    //    properties that switch on none of b / i / u / sup / sub / link (`props` is empty); a size, colour or font
+    //    of its own does not count. Without a plain formatting every formatting is a candidate.
+    // 2. Of the candidates, the one equal to the paragraph default (`default_key`, from `a:endParaRPr`).
+    // 3. Otherwise the candidate with the most text; a tie goes to the formatting seen first.
+    // Never just the first or the last run, nor the most text when a plain run is there: in
+    // "<b>Bold claim</b> with an <i>italic aside</i>" the base is the plain " with an ", though the italic run
+    // carries more text.
     // The tally is kept in first-seen order (a tie goes to the formatting seen first) and found through a map, so
     // many different formattings do not cost a search each. A run whose formatting was already looked up is found
     // by its index, so the key is not hashed again.
@@ -118,12 +129,17 @@ pub fn build(atoms: Vec<Atom>, props: Props) -> Built {
             weight[w].1 += text.chars().count();
         }
     }
-    let mut base: Option<usize> = None;
-    let mut best = 0;
-    for (s, w) in &weight {
-        if *w > best {
-            best = *w;
-            base = Some(*s);
+    let plain: Vec<bool> = weight.iter().map(|(s, w)| *w > 0 && props(fmt_of(*s)).is_empty()).collect();
+    let any_plain = plain.contains(&true);
+    let candidate = |i: usize| weight[i].1 > 0 && (!any_plain || plain[i]);
+    let mut base: Option<usize> = default_key.and_then(|d| (0..weight.len()).find(|&i| candidate(i) && key_of(weight[i].0) == d).map(|i| weight[i].0));
+    if base.is_none() {
+        let mut best = 0;
+        for (i, (s, w)) in weight.iter().enumerate() {
+            if candidate(i) && *w > best {
+                best = *w;
+                base = Some(*s);
+            }
         }
     }
     let base_fmt = base.map_or("", fmt_of);

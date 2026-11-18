@@ -185,6 +185,19 @@ fn is_true(v: Option<String>) -> bool {
     matches!(v.as_deref(), Some("1") | Some("true"))
 }
 
+/// The formatting key of a paragraph's `a:endParaRPr`, written as if it were an `a:rPr` so it compares with the
+/// keys of the runs (`fmt_key`).
+fn end_para_key(e: &El) -> String {
+    let k = fmt_key(e);
+    let rpr = e.name.replacen("endParaRPr", "rPr", 1);
+    let Some(rest) = k.strip_prefix(&format!("<{}", e.name)) else { return k };
+    let k = format!("<{rpr}{rest}");
+    match k.strip_suffix(&format!("</{}>", e.name)) {
+        Some(head) => format!("{head}</{rpr}>"),
+        None => k,
+    }
+}
+
 /// Formatting key: the run properties without spell-check and language marks.
 fn fmt_key(rpr: &El) -> String {
     let start = remove_attrs(&rpr.start, &["lang", "altLang", "dirty", "err", "smtClean", "noProof", "bmk"]);
@@ -347,9 +360,11 @@ impl Extractor {
         let mut lead = String::new();
         let mut tail: Vec<Node> = vec![];
         let mut orig_nodes: Vec<Node> = vec![];
+        let mut default_key: Option<String> = None;
         for c in p.children.drain(..) {
             match &c {
                 Node::El(e) if ns.a.is(&e.name, "endParaRPr") => {
+                    default_key = Some(end_para_key(e));
                     tail.push(c);
                     continue;
                 }
@@ -403,7 +418,7 @@ impl Extractor {
             return;
         }
         let id = format!("{}-p{n}", pi.stem);
-        let built = build(atoms, props_of);
+        let built = build(atoms, props_of, default_key.as_deref());
 
         let (kind, style) = match (pi.kind, cell, shape.ph.as_deref()) {
             (Kind::Notes, _, _) => ("notes", None),

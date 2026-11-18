@@ -354,6 +354,7 @@ impl Extractor {
         let mut start = 0;
         let mut stop = e.children.len();
         let mut seen_run = false;
+        let mut default_key: Option<String> = None;
         for (i, n) in e.children.iter().enumerate() {
             match n {
                 Node::Text(t) => {
@@ -364,7 +365,10 @@ impl Extractor {
                 Node::Raw(_) => return None,
                 Node::El(c) => match c.name.as_str() {
                     "a:pPr" if !seen_run && start == 0 => start = i + 1,
-                    "a:endParaRPr" if e.children[i + 1..].iter().all(blank) => stop = i,
+                    "a:endParaRPr" if e.children[i + 1..].iter().all(blank) => {
+                        stop = i;
+                        default_key = Some(canon_dml_rpr(c));
+                    }
                     "a:r" if stop == e.children.len() => {
                         let mut text: Option<String> = None;
                         let mut rpr: Option<&El> = None;
@@ -402,23 +406,24 @@ impl Extractor {
         for n in &e.children[stop..] {
             n.write_raw(&mut tail);
         }
-        // The base formatting is the most common one (by characters); every other formatting is a paired tag
-        // that keeps its run's a:rPr, as for Word runs.
-        let mut tally: Vec<(&str, usize, Option<&El>)> = Vec::new();
+        // The base formatting is chosen as for Word runs (`pick_base`, BILI-116): a plain one first, then the
+        // paragraph default (`a:endParaRPr`), then the most text. Every other formatting is a paired tag that
+        // keeps its run's a:rPr.
+        let mut tally: Vec<(&str, usize, Option<&El>, bool)> = Vec::new();
         for (rpr, key, text) in &runs {
             let n = text.chars().count();
+            let vis = !text.trim().is_empty();
             match tally.iter_mut().find(|x| x.0 == key.as_str()) {
-                Some(x) => x.1 += n,
-                None => tally.push((key.as_str(), n, *rpr)),
+                Some(x) => {
+                    x.1 += n;
+                    x.3 |= vis;
+                }
+                None => tally.push((key.as_str(), n, *rpr, vis)),
             }
         }
-        let mut best = 0;
-        for (i, x) in tally.iter().enumerate() {
-            if x.1 > tally[best].1 {
-                best = i;
-            }
-        }
-        let (base_key, _, base_rpr) = tally[best];
+        let scored: Vec<(&str, usize, bool)> = tally.iter().map(|x| (x.0, x.1, x.3 && is_plain(&dml_features(x.2)))).collect();
+        let best = pick_base(&scored, default_key.as_deref()).unwrap_or(0);
+        let (base_key, _, base_rpr, _) = tally[best];
         let base_key = base_key.to_string();
         let mut codes: BTreeMap<String, CodeData> = BTreeMap::new();
         let mut inl: Vec<Inline> = Vec::new();
@@ -1215,9 +1220,17 @@ impl Extractor {
         }
         let vis = merged;
 
-        // The base formatting of each scope (the paragraph, then each link or content control): the most
-        // common one, which needs no tag.
-        let mut tallies: Vec<Vec<(String, String, usize)>> = vec![vec![]];
+        // The base formatting of each scope (the paragraph, then each link or content control), which needs no
+        // tag: chosen by `pick_base` (BILI-116), with the paragraph mark's `w:rPr` as the paragraph default.
+        let default_key: Option<String> = ppr.map(|pp| {
+            pp.elements()
+                .find(|c| self.ns.is_w(&c.name, "rPr"))
+                .filter(|r| r.elements().next().is_some())
+                .map(canon_rpr)
+                .unwrap_or_default()
+        });
+        // (key, w:rPr, characters, has text that is not white space) per formatting
+        let mut tallies: Vec<Vec<(String, String, usize, bool)>> = vec![vec![]];
         let mut stack = vec![0usize];
         for a in &vis {
             match a {
@@ -1233,9 +1246,13 @@ impl Extractor {
                 Atom::Text { rpr, key, text } => {
                     let t = &mut tallies[*stack.last().unwrap_or(&0)];
                     let n = text.chars().count();
+                    let vis = !text.trim().is_empty();
                     match t.iter_mut().find(|x| x.0 == *key) {
-                        Some(x) => x.2 += n,
-                        None => t.push((key.clone(), rpr.clone(), n)),
+                        Some(x) => {
+                            x.2 += n;
+                            x.3 |= vis;
+                        }
+                        None => t.push((key.clone(), rpr.clone(), n, vis)),
                     }
                 }
                 _ => {}
@@ -1244,13 +1261,8 @@ impl Extractor {
         let bases: Vec<(String, String)> = tallies
             .iter()
             .map(|t| {
-                let mut best: Option<&(String, String, usize)> = None;
-                for x in t {
-                    if best.is_none_or(|b| x.2 > b.2) {
-                        best = Some(x);
-                    }
-                }
-                best.map(|b| (b.0.clone(), b.1.clone())).unwrap_or_default()
+                let scored: Vec<(&str, usize, bool)> = t.iter().map(|x| (x.0.as_str(), x.2, x.3 && is_plain(&fmt_features(&x.1)))).collect();
+                pick_base(&scored, default_key.as_deref()).map(|i| (t[i].0.clone(), t[i].1.clone())).unwrap_or_default()
             })
             .collect();
 
@@ -1519,6 +1531,11 @@ pub fn canon_rpr(r: &El) -> String {
 
 /// (open display, close display, label) for a formatting tag made from a run's `w:rPr`.
 fn fmt_names(rpr: &str) -> (String, String, String) {
+    names_of(&fmt_features(rpr), rpr.is_empty())
+}
+
+/// What a run's `w:rPr` switches on, as `names_of` names it.
+fn fmt_features(rpr: &str) -> Vec<String> {
     let mut features: Vec<String> = Vec::new();
     if let Ok(nodes) = parse(rpr) {
         for n in &nodes {
@@ -1552,12 +1569,17 @@ fn fmt_names(rpr: &str) -> (String, String, String) {
             }
         }
     }
-    names_of(&features, rpr.is_empty())
+    features
 }
 
 /// (open display, close display, label) for a formatting tag made from a DrawingML run's `a:rPr`: formatting
 /// is mostly attributes there (`b="1"`, `sz="2000"`), colours and fonts are children.
 fn dml_fmt_names(r: Option<&El>) -> (String, String, String) {
+    names_of(&dml_features(r), r.is_none())
+}
+
+/// What a DrawingML run's `a:rPr` switches on, as `names_of` names it.
+fn dml_features(r: Option<&El>) -> Vec<String> {
     let mut features: Vec<String> = Vec::new();
     if let Some(r) = r {
         for (k, v) in r.attrs() {
@@ -1586,7 +1608,41 @@ fn dml_fmt_names(r: Option<&El>) -> (String, String, String) {
             }
         }
     }
-    names_of(&features, r.is_none())
+    features
+}
+
+/// Plain formatting, as a translator reads it: nothing that makes the text stand out (bold, italic, underline,
+/// strike, super- or subscript, caps, highlight, a character style). A colour, size or font of its own does not
+/// count.
+fn is_plain(features: &[String]) -> bool {
+    features.iter().all(|f| matches!(f.as_str(), "color" | "size" | "font"))
+}
+
+/// The base formatting of a paragraph (BILI-116): the one that needs no tag. `tally` holds (key, characters,
+/// plain) per formatting in first-seen order. In order:
+/// 1. When a formatting is plain (`is_plain`, with some text that is not white space: a plain space between two
+///    bold words does not count), only plain ones are candidates; otherwise every one is.
+/// 2. Of the candidates, the one whose key is the paragraph default (`default_key`).
+/// 3. Otherwise the candidate with the most text; a tie goes to the one seen first.
+///
+/// Never just the first or the last run, nor the most text when a plain run is there: in
+/// "<b>Bold claim</b> with an <i>italic aside</i>" the base is the plain " with an ", though the italic run
+/// carries more text.
+fn pick_base(tally: &[(&str, usize, bool)], default_key: Option<&str>) -> Option<usize> {
+    let any_plain = tally.iter().any(|x| x.1 > 0 && x.2);
+    let candidate = |i: usize| tally[i].1 > 0 && (!any_plain || tally[i].2);
+    if let Some(d) = default_key {
+        if let Some(i) = (0..tally.len()).find(|&i| candidate(i) && tally[i].0 == d) {
+            return Some(i);
+        }
+    }
+    let mut best: Option<usize> = None;
+    for i in 0..tally.len() {
+        if candidate(i) && best.is_none_or(|b| tally[i].1 > tally[b].1) {
+            best = Some(i);
+        }
+    }
+    best.or(if tally.is_empty() { None } else { Some(0) })
 }
 
 /// Formatting key for comparing DrawingML runs: language, spell-check and smart-tag marks do not count.
