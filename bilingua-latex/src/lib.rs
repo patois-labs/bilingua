@@ -133,7 +133,7 @@ impl Filter for Latex {
                 u.lock_reason = Some("no translatable text".into());
                 u
             };
-            u.set_codes(codes);
+            u.set_codes(codes.into_iter().collect::<Codes>());
             u.set_hidden(RAW, raw.to_string());
             line += text.as_bytes()[line_pos..s.a].iter().filter(|&&b| b == b'\n').count();
             line_pos = s.a;

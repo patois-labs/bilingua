@@ -9,8 +9,7 @@
 //! a separator inside our own `<nowiki>` is left as it is (it is already inert there).
 
 use crate::lex::*;
-use bilingua_model::{CodeData, Inline, TagKind};
-use std::collections::BTreeMap;
+use bilingua_model::{Inline, TagKind, Unit};
 
 const LINE_START_MW: &str = "*#:;=-{ |!}+";
 const LINE_START_DW: &str = "*->^|= ";
@@ -291,7 +290,8 @@ enum Seg {
 }
 
 /// Renders a translated unit (its output inlines) to wiki markup. `kind` is the unit's `context.kind`.
-pub fn render(new: &[Inline], codes: &BTreeMap<String, CodeData>, cell: Option<&str>, kind: Option<&str>, dw: bool) -> String {
+pub fn render(new: &[Inline], unit: &Unit, cell: Option<&str>, kind: Option<&str>, dw: bool) -> String {
+    let codes = unit.codes();
     let mut items: Vec<Inline> = new.to_vec();
     // strip the white space at both ends of the whole translation
     if let Some(Inline::Text(t)) = items.first_mut() {

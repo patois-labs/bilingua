@@ -197,7 +197,7 @@ fn merge_wiki(id: &str, dw: bool, doc: &Document, opts: &MergeOptions) -> Result
                     out.push_str(&raw);
                 } else {
                     let cell = u.hidden(CELL);
-                    out.push_str(&render::render(&new, u.codes(), cell, u.context.kind.as_deref(), dw));
+                    out.push_str(&render::render(&new, u, cell, u.context.kind.as_deref(), dw));
                 }
             }
         }
