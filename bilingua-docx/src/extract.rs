@@ -474,6 +474,7 @@ impl Extractor {
         self.dml_ids.insert(key, id.clone());
         self.dml_runs.insert(id.clone(), run_codes);
         u.context.kind = Some("textbox".into());
+        u.context.role = part_role(self.part_kind);
         u.context.location = Some(format!("{} drawing text {}", self.part_name, self.dml_n));
         self.index.insert(id.clone(), self.pending.len());
         self.pending.push(Pending { part: self.part_seq, ord: self.cur_ord, sub: self.dml_n, unit: u });
@@ -496,6 +497,9 @@ impl Extractor {
             c.write_raw(&mut inner);
         }
         let mut u = Unit::new(id.clone(), vec![Inline::text(text)]);
+        if local == "title" {
+            u.context.role = Some(Role::Title);
+        }
         u.context.kind = Some(local);
         u.context.location = Some(format!("{} {}", self.part_name, e.name));
         u.codes_mut().insert(
@@ -1426,6 +1430,18 @@ impl Extractor {
         let mut unit = Unit::new(id, source);
         unit.set_codes(codes);
         unit.context.kind = Some(kind.into());
+        // the structure role: the part's own (header, footnote, ...), else the paragraph style's
+        match part_role(self.part_kind) {
+            Some(r) => unit.context.role = Some(r),
+            None => match title_role(style.as_deref(), style_name.as_deref()) {
+                Some(r) => unit.context.role = Some(r),
+                None => {
+                    if let Some(l) = heading_level {
+                        unit.context.set_heading_role(l);
+                    }
+                }
+            },
+        }
         unit.context.style = style;
         // the last heading is copied into every later paragraph: each copy is charged first (run 2 G5-1)
         if let Some(h) = &self.last_heading {
@@ -1488,6 +1504,30 @@ fn para_info(ppr: Option<&El>, ns: &Ns) -> (Option<String>, bool, Option<u8>) {
         }
     }
     (style, num, outline)
+}
+
+/// The structure role every paragraph of a part has (`None` for the main part).
+fn part_role(kind: PartKind) -> Option<Role> {
+    match kind {
+        PartKind::Header => Some(Role::Header),
+        PartKind::Footer => Some(Role::Footer),
+        PartKind::Footnotes => Some(Role::Footnote),
+        PartKind::Endnotes => Some(Role::Endnote),
+        PartKind::Comments => Some(Role::Comment),
+        PartKind::Main | PartKind::Core => None,
+    }
+}
+
+/// `Title` or `Subtitle` for Word's built-in Title and Subtitle styles (by name, else by id).
+fn title_role(style_id: Option<&str>, style_name: Option<&str>) -> Option<Role> {
+    fn from(s: &str) -> Option<Role> {
+        match s.to_lowercase().replace(' ', "").as_str() {
+            "title" => Some(Role::Title),
+            "subtitle" => Some(Role::Subtitle),
+            _ => None,
+        }
+    }
+    style_name.and_then(from).or_else(|| style_id.and_then(from))
 }
 
 fn heading_level(

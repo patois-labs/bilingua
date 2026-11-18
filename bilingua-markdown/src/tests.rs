@@ -552,3 +552,31 @@ fn emphasis_that_would_not_flank_in_the_translation_is_repaired() {
     d.set_target("u2", vec![Inline::text("\u{898b}"), src[1].clone(), Inline::text("\u{3053}\u{308c}"), src[3].clone(), Inline::text("\u{3092}")]).unwrap();
     assert_eq!(merged(&d), "Intro text\n\n\u{898b}*\u{3053}\u{308c}*\u{3092}\n");
 }
+
+#[test]
+fn atx_and_setext_headings_have_the_heading_role() {
+    let src = "# Top *one*\n\nBody text.\n\n### Third ###\n\nSetext two\n----------\n\nSetext one\n==========\n\n- item\n";
+    let d = extract(src);
+    assert_eq!(merged(&d), src);
+    let rl = |t: &str| {
+        let u = d.units.iter().find(|u| plain_text(&u.source()) == t).unwrap_or_else(|| panic!("no unit {t}"));
+        (u.context.role(), u.context.level())
+    };
+    assert_eq!(rl("Top one"), (Some(Role::Heading), Some(1)));
+    assert_eq!(rl("Third"), (Some(Role::Heading), Some(3)));
+    assert_eq!(rl("Setext two"), (Some(Role::Heading), Some(2)));
+    assert_eq!(rl("Setext one"), (Some(Role::Heading), Some(1)));
+    assert_eq!(rl("Body text."), (None, None));
+    assert_eq!(rl("item"), (None, None));
+    // what the crate filled before stays: kind, style and the nearest heading
+    let h = d.units.iter().find(|u| plain_text(&u.source()) == "Third").unwrap();
+    assert_eq!((h.context.kind(), h.context.style()), (Some("heading"), Some("h3")));
+    let b = d.units.iter().find(|u| plain_text(&u.source()) == "Body text.").unwrap();
+    assert_eq!(b.context.heading(), Some("Top one"));
+
+    // the LocOS profile leaves roles unset
+    let opts = ExtractOptions::default().with_profile(profile::LOCOS);
+    let l = MarkdownFilter.extract(src.as_bytes(), &opts).unwrap();
+    assert!(!l.units.is_empty());
+    assert!(l.units.iter().all(|u| u.context.role().is_none() && u.context.level().is_none()));
+}
