@@ -88,8 +88,8 @@ impl Filter for Json5Filter {
             }
             pos = v.end;
             let mut unit = Unit::new(format!("u{}", units.len() + 1), inl);
-            unit.codes = codes;
-            unit.codes.insert(RAW_KEY.into(), CodeData::new().with_standalone(text[v.start..v.end].to_string()));
+            unit.set_codes(codes);
+            unit.codes_mut().insert(RAW_KEY, CodeData::new().with_standalone(text[v.start..v.end].to_string()));
             unit.context.kind = Some("string".into());
             if !v.key.is_empty() {
                 unit.context.key = Some(v.key);
@@ -135,10 +135,10 @@ fn expand(unit: &Unit, inl: &[Inline]) -> String {
         match i {
             Inline::Text(t) => text.push_str(t),
             Inline::Tag { id, kind, .. } => {
-                let piece = unit.codes.get(id).and_then(|c| match kind {
-                    TagKind::Open => c.open.as_deref(),
-                    TagKind::Close => c.close.as_deref(),
-                    TagKind::Standalone => c.standalone.as_deref(),
+                let piece = unit.codes().get(id).and_then(|c| match kind {
+                    TagKind::Open => c.open_markup(),
+                    TagKind::Close => c.close_markup(),
+                    TagKind::Standalone => c.standalone_markup(),
                 });
                 if let Some(p) = piece {
                     text.push_str(p);
@@ -153,9 +153,9 @@ fn expand(unit: &Unit, inl: &[Inline]) -> String {
 /// the original quote style.
 fn render_token(unit: &Unit) -> Result<String, Error> {
     let raw = unit
-        .codes
+        .codes()
         .get(RAW_KEY)
-        .and_then(|c| c.standalone.as_deref())
+        .and_then(|c| c.standalone_markup())
         .ok_or_else(|| Error::Write(format!("unit {} lost its original string", unit.id)))?;
     if unit.segments.iter().all(|s| !s.has_target()) {
         return Ok(raw.to_string());

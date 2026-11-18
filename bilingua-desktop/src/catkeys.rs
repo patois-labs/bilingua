@@ -196,7 +196,7 @@ impl CatkeysFilter {
             parts.push(SkelPart::Raw(text[last..e.tr_start].to_string()));
             last = e.tr_end;
             let mut unit = Unit::new(format!("u{}", units.len() + 1), vec![Inline::text(e.source.clone())]);
-            unit.codes.insert(HIDDEN.into(), CodeData::new().with_standalone(e.raw_translation.to_string()));
+            unit.codes_mut().insert(HIDDEN, CodeData::new().with_standalone(e.raw_translation.to_string()));
             unit.translate = translatable;
             if !translatable {
                 unit.lock_reason = Some("no letter in the source".into());
@@ -207,11 +207,11 @@ impl CatkeysFilter {
                 unit.context.notes = vec![e.comment.clone()];
             }
             if !e.context.is_empty() {
-                unit.context.extra.insert("context".into(), e.context.to_string());
+                unit.context.extra_mut().insert("context", e.context.to_string());
             }
             let cur = unescape(e.raw_translation);
             if !cur.is_empty() {
-                unit.context.extra.insert("translation".into(), cur);
+                unit.context.extra_mut().insert("translation", cur);
             }
             parts.push(SkelPart::Unit(units.len()));
             units.push(unit);
@@ -272,7 +272,7 @@ impl Filter for CatkeysFilter {
                 SkelPart::Raw(s) => out.push_str(s),
                 SkelPart::Unit(i) => {
                     let u = doc.units.get(*i).ok_or_else(|| Error::Write(format!("no unit {i}")))?;
-                    let raw = u.codes.get(HIDDEN).and_then(|c| c.standalone.as_deref()).unwrap_or("");
+                    let raw = u.codes().get(HIDDEN).and_then(|c| c.standalone_markup()).unwrap_or("");
                     if translated(u) {
                         let new = plain_text(&u.output());
                         if new != unescape(raw) {

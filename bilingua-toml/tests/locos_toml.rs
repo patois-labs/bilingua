@@ -49,7 +49,7 @@ fn units_and_identity() {
     let ids: Vec<&str> = d.units.iter().map(|u| u.id.as_str()).collect();
     assert_eq!(ids, (1..=12).map(|i| format!("u{i}")).collect::<Vec<_>>());
     // inline codes: the template actions, one standalone tag each
-    let code = |u: usize, id: &str| d.units[u].codes[id].standalone.clone().unwrap();
+    let code = |u: usize, id: &str| d.units[u].codes()[id].standalone_markup().map(str::to_string).unwrap();
     assert_eq!(code(2, "1"), "{{ .Count }}");
     assert_eq!(code(5, "1"), "<<.Name>>");
     assert!(matches!(&d.units[2].source()[0], Inline::Tag { kind: TagKind::Standalone, .. }));
@@ -259,7 +259,7 @@ fn hostile_inputs() {
     let t0 = std::time::Instant::now();
     let d = extract(big.as_bytes());
     assert_eq!(d.units.len(), 1);
-    assert!(d.units[0].codes.keys().all(|k| k.starts_with('$')), "no tags expected");
+    assert!(d.units[0].codes().keys().all(|k| k.starts_with('$')), "no tags expected");
     assert!(t0.elapsed().as_secs() < 5);
 }
 

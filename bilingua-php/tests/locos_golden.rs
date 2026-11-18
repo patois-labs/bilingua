@@ -88,15 +88,15 @@ fn matches_locos_on_random_files_and_corpus() {
         let doc = extract(&data).unwrap();
         let want_points = c["points"].as_array().unwrap();
         for (u, w) in doc.units.iter().filter(|u| u.translate).zip(want_points) {
-            let mut ids: Vec<&String> = u
-                .codes
+            let mut ids: Vec<&str> = u
+                .codes()
                 .keys()
                 .filter(|k| k.as_bytes()[0].is_ascii_digit())
                 .collect();
             ids.sort_by_key(|k| k.parse::<usize>().unwrap());
             let got: Vec<&str> = ids
                 .iter()
-                .map(|k| u.codes[*k].standalone.as_deref().unwrap())
+                .map(|k| u.codes()[*k].standalone_markup().unwrap())
                 .collect();
             let w: Vec<&str> = w
                 .as_array()

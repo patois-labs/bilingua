@@ -179,7 +179,7 @@ fn records_view() {
     let d = extract(ASCII);
     assert_eq!(d.units[0].context.key.as_deref(), Some("app.title"));
     assert_eq!(d.units[0].context.notes, ["Greeting shown on the home page", "second comment style"]);
-    assert_eq!(d.units[6].context.extra.get("duplicate").map(String::as_str), Some("true"));
+    assert_eq!(d.units[6].context.extra().get("duplicate"), Some("true"));
 }
 
 #[test]

@@ -261,7 +261,7 @@ fn units_and_merges_equal_the_localization_os_filter() {
     for (key, ent) in gold.as_object().unwrap() {
         let bytes = data(key);
         let d = QtTs.extract(&bytes, &opts(None)).unwrap_or_else(|e| panic!("{key}: {e}"));
-        let got: Vec<(usize, String)> = d.units.iter().map(|u| (u.context.extra["p_index"].parse().unwrap(), token_text(u))).collect();
+        let got: Vec<(usize, String)> = d.units.iter().map(|u| (u.context.extra()["p_index"].parse().unwrap(), token_text(u))).collect();
         let want: Vec<(usize, String)> =
             ent["units"].as_array().unwrap().iter().map(|p| (p[0].as_u64().unwrap() as usize, p[1].as_str().unwrap().to_string())).collect();
         assert_eq!(got, want, "{key}: units");
@@ -422,7 +422,7 @@ fn notes_keys_locations_and_languages() {
     let multi = d.units.iter().find(|u| token_text(u).starts_with("Multi")).unwrap();
     assert_eq!(multi.context.notes, vec!["spaced comment".to_string(), "extra".to_string()]);
     assert_eq!(multi.context.location.as_deref(), Some("../src/a.cpp:7"));
-    assert_eq!(multi.context.extra["context"], "Edge & Co");
+    assert_eq!(&multi.context.extra()["context"], "Edge & Co");
     let ent = &d.units[0];
     assert_eq!(ent.context.key.as_deref(), Some("entities"), "the id attribute is the key");
     assert_eq!(d.source_lang.as_deref(), Some("en"));

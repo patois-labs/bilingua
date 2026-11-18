@@ -137,21 +137,21 @@ fn extracts_units_with_context() {
     assert_eq!(plain_text(&u.source()), "Add  item to ");
     assert_eq!(u.context.key.as_deref(), Some("Add %d item to %s"));
     assert_eq!(u.context.notes, ["Shown on the cart button", "ref: src/cart.c:42 src/cart.c:77"]);
-    assert_eq!(u.context.extra.get("flags").map(String::as_str), Some("c-format"));
+    assert_eq!(u.context.extra().get("flags"), Some("c-format"));
     let tags: Vec<_> = u.segments[0].source.iter().filter_map(|i| if let Inline::Tag { display, kind, .. } = i { Some((display.as_str(), *kind)) } else { None }).collect();
     assert_eq!(tags, [("%d", TagKind::Standalone), ("%s", TagKind::Standalone)]);
-    assert_eq!(u.codes["1"].label.as_deref(), Some("placeholder"));
+    assert_eq!(u.codes()["1"].label(), Some("placeholder"));
     // msgctxt + msgid is the key.
     assert_eq!(d.units[1].context.key.as_deref(), Some("menu :: File"));
-    assert_eq!(d.units[1].context.extra.get("msgctxt").map(String::as_str), Some("menu"));
+    assert_eq!(d.units[1].context.extra().get("msgctxt"), Some("menu"));
     assert_eq!(d.units[2].context.key.as_deref(), Some("verb :: File"));
     assert_ne!(d.units[1].context.key, d.units[2].context.key);
     // Python placeholders.
     let py: Vec<_> = d.units[3].segments[0].source.iter().filter(|i| matches!(i, Inline::Tag { .. })).count().eq(&2).then_some(1).into_iter().collect();
     assert_eq!(py.len(), 1);
     // Plural forms.
-    assert_eq!(d.units[4].context.extra["plural"], "0");
-    assert_eq!(d.units[5].context.extra["plural"], "1");
+    assert_eq!(&d.units[4].context.extra()["plural"], "0");
+    assert_eq!(&d.units[5].context.extra()["plural"], "1");
     assert_eq!(plain_text(&d.units[4].source()), " kettle");
     assert_eq!(plain_text(&d.units[5].source()), " kettles");
     // Multi-line msgid is unescaped and joined; escapes are decoded.
@@ -171,7 +171,7 @@ fn existing_translations_become_targets() {
     assert_eq!(plain_text(&u.segments[0].target), "Añadir  artículo a ");
     assert!(u.segments[0].target.iter().any(|i| matches!(i, Inline::Tag { id, .. } if id == "1")));
     let fz = &d.units[1];
-    assert_eq!(fz.context.extra["fuzzy"], "true");
+    assert_eq!(&fz.context.extra()["fuzzy"], "true");
     assert_eq!(fz.segments[0].state, SegState::Draft);
     assert_eq!(d.units.last().unwrap().segments[0].state, SegState::New);
 }

@@ -277,7 +277,7 @@ fn to_inline(mut pieces: Vec<Piece>) -> (Vec<Inline>, BTreeMap<String, CodeData>
             Piece::Close(raw) => {
                 let id = open.pop().unwrap_or_default();
                 if let Some(c) = codes.get_mut(&id) {
-                    c.close = Some(raw.clone());
+                    c.set_close(raw.clone());
                 }
                 inl.push(Inline::tag(id, TagKind::Close, if raw.is_empty() { "</>".to_string() } else { raw }));
             }
@@ -360,12 +360,12 @@ fn extract(d: Dialect, bytes: &[u8], opts: &ExtractOptions) -> Result<Document, 
         unit.context.key = Some(s.name.clone());
         unit.context.location = Some(format!("line {line}"));
         if let Some((k, v)) = extra {
-            unit.context.extra.insert(k.into(), v);
+            unit.context.extra_mut().insert(k, v);
         }
         if locos {
             // LocOS `XmlResourceFilter.parse`: p_index is the slot's position among every slot of the file (skipped,
             // reference and empty ones counted), so a skipped resource never renumbers the ones after it
-            unit.context.extra.insert(profile::P_INDEX.into(), slot_index.to_string());
+            unit.context.extra_mut().insert(profile::P_INDEX, slot_index.to_string());
         }
         if !s.comment.is_empty() {
             unit.context.notes = vec![s.comment.clone()];
@@ -481,23 +481,23 @@ fn write_unit(d: Dialect, u: &Unit) -> Option<String> {
                 _ => ps.push(P::T(t.clone())),
             },
             Inline::Tag { id, kind, .. } => {
-                let Some((key, c)) = u.codes.get_key_value(id) else { continue };
+                let Some((key, c)) = u.codes().get_key_value(id) else { continue };
                 match kind {
                     TagKind::Open => {
-                        if let Some(open) = c.open.as_ref().filter(|_| used.insert(key.as_str())) {
-                            stack.push(key.as_str());
-                            ps.push(P::M(open.clone()));
+                        if let Some(open) = c.open_markup().filter(|_| used.insert(key)) {
+                            stack.push(key);
+                            ps.push(P::M(open.to_string()));
                         }
                     }
                     TagKind::Close => {
-                        if stack.last() == Some(&key.as_str()) {
+                        if stack.last() == Some(&key) {
                             stack.pop();
-                            ps.push(P::M(c.close.clone().unwrap_or_default()));
+                            ps.push(P::M(c.close_markup().map(str::to_string).unwrap_or_default()));
                         }
                     }
                     TagKind::Standalone => {
-                        if let Some(s) = c.standalone.as_ref().filter(|_| used.insert(key.as_str())) {
-                            ps.push(P::M(s.clone()));
+                        if let Some(s) = c.standalone_markup().filter(|_| used.insert(key)) {
+                            ps.push(P::M(s.to_string()));
                         }
                     }
                 }
@@ -505,7 +505,7 @@ fn write_unit(d: Dialect, u: &Unit) -> Option<String> {
         }
     }
     while let Some(key) = stack.pop() {
-        ps.push(P::M(u.codes.get(key).and_then(|c| c.close.clone()).unwrap_or_default()));
+        ps.push(P::M(u.codes().get(key).and_then(|c| c.close_markup().map(str::to_string)).unwrap_or_default()));
     }
     if u.has_hidden(ESC_NL) {
         for p in ps.iter_mut() {

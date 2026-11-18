@@ -185,11 +185,11 @@ fn flat(u: &Unit, v: &[Inline]) -> String {
         match i {
             Inline::Text(t) => s.push_str(t),
             Inline::Tag { id, kind, display, .. } => {
-                let c = u.codes.get(id);
+                let c = u.codes().get(id);
                 let raw = match kind {
-                    TagKind::Open => c.and_then(|c| c.open.as_deref()),
-                    TagKind::Close => c.and_then(|c| c.close.as_deref()),
-                    _ => c.and_then(|c| c.standalone.as_deref()),
+                    TagKind::Open => c.and_then(|c| c.open_markup()),
+                    TagKind::Close => c.and_then(|c| c.close_markup()),
+                    _ => c.and_then(|c| c.standalone_markup()),
                 };
                 s.push_str(raw.unwrap_or(display));
             }
@@ -227,7 +227,7 @@ impl DtdFilter {
                 HIDDEN.into(),
                 CodeData::new().with_open(owned(lead)).with_close(owned(trail)).with_standalone(raw.to_string()).with_label(e.quote.to_string()),
             );
-            unit.codes = codes;
+            unit.set_codes(codes);
             unit.translate = translatable;
             unit.context.kind = Some("key".into());
             unit.context.key = Some(e.name);
@@ -321,8 +321,8 @@ impl Filter for DtdFilter {
 
 /// The raw value to write for a unit: the original spelling when nothing changed, else the translation escaped.
 fn render(unit: &Unit) -> String {
-    let Some(h) = unit.codes.get(HIDDEN) else { return String::new() };
-    let raw = h.standalone.as_deref().unwrap_or("");
+    let Some(h) = unit.codes().get(HIDDEN) else { return String::new() };
+    let raw = h.standalone_markup().unwrap_or("");
     if !unit.translate || unit.segments.iter().all(|s| !s.has_target()) {
         return raw.to_string();
     }
@@ -330,6 +330,6 @@ fn render(unit: &Unit) -> String {
     if new == flat(unit, &unit.source()) {
         return raw.to_string();
     }
-    let quote = h.label.as_deref().and_then(|q| q.chars().next()).unwrap_or('"');
-    encode_value(&format!("{}{}{}", h.open.as_deref().unwrap_or(""), new, h.close.as_deref().unwrap_or("")), quote)
+    let quote = h.label().and_then(|q| q.chars().next()).unwrap_or('"');
+    encode_value(&format!("{}{}{}", h.open_markup().unwrap_or(""), new, h.close_markup().unwrap_or("")), quote)
 }

@@ -101,7 +101,7 @@ fn out_text(u: &Unit, v: &[Inline]) -> String {
     for i in v {
         match i {
             Inline::Text(t) => s.push_str(t),
-            Inline::Tag { id, display, .. } => match u.codes.get(id).and_then(|c| c.standalone.as_deref()) {
+            Inline::Tag { id, display, .. } => match u.codes().get(id).and_then(|c| c.standalone_markup()) {
                 Some(c) => s.push_str(c),
                 None => s.push_str(display),
             },
@@ -209,7 +209,7 @@ fn extract_impl(fmt: Fmt, bytes: &[u8], opts: &ExtractOptions, limits: &Limits) 
             guard::check_unit_chars(chars, limits)?;
         }
         let mut u = Unit::new(format!("s{}", ord0 + 1), inl);
-        u.codes = codes;
+        u.set_codes(codes);
         u.context.kind = Some("string".into());
         u.context.key = Some(leaf.path.clone());
         if !leaf.near.is_empty() {

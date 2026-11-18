@@ -153,18 +153,18 @@ fn edited_record_codes_are_refused_not_dropped() {
     assert!(c.merge(&fresh()).is_ok());
     // the record text gone: an error, never a file with the row missing
     let mut d = fresh();
-    d.units[0].codes.get_mut("$csv").unwrap().standalone = None;
+    d.units[0].codes_mut().get_mut("$csv").unwrap().set_standalone(None::<String>);
     assert!(c.merge(&d).is_err());
     // the whole code gone
     let mut d = fresh();
-    d.units[1].codes.clear();
+    d.units[1].codes_mut().clear();
     assert!(c.merge(&d).is_err());
     // a delimiter that is not one of the four (a multi-byte one would split a character)
     let mut d = fresh();
-    d.units[0].codes.get_mut("$csv").unwrap().open = Some("\u{e9}".into());
+    d.units[0].codes_mut().get_mut("$csv").unwrap().set_open("\u{e9}");
     assert!(c.merge(&d).is_err());
     // a write column far past the limit would pad the row without bound
     let mut d = fresh();
-    d.units[0].codes.get_mut("$csv").unwrap().label = Some("0:999999999999:0".into());
+    d.units[0].codes_mut().get_mut("$csv").unwrap().set_label("0:999999999999:0");
     assert!(c.merge(&d).is_err());
 }

@@ -151,17 +151,17 @@ impl IniFilter {
             pos = e.end;
             let mut unit = Unit::new(format!("u{}", units.len() + 1), vec![Inline::text(core)]);
             let hidden = CodeData::new().with_open(owned(lead)).with_close(owned(trail)).with_standalone(text[e.start..e.end].to_string()).with_label(owned(e.quote.code()));
-            unit.codes.insert(HIDDEN.into(), hidden);
+            unit.codes_mut().insert(HIDDEN, hidden);
             unit.translate = translatable;
             context.charge(e.key.len() + e.comments.iter().map(|c| c.len()).sum::<usize>() + e.section.len(), &context_limits)?;
             unit.context.kind = Some("key".into());
             unit.context.key = Some(e.key);
             unit.context.notes = e.comments;
             if !e.section.is_empty() {
-                unit.context.extra.insert("section".into(), e.section.to_string());
+                unit.context.extra_mut().insert("section", e.section.to_string());
             }
             if duplicate {
-                unit.context.extra.insert("duplicate".into(), "true".into());
+                unit.context.extra_mut().insert("duplicate", "true");
             }
             parts.push(SkelPart::Unit(units.len()));
             units.push(unit);
@@ -245,8 +245,8 @@ impl Filter for IniFilter {
 /// The raw value to write for a unit: the original spelling when nothing changed, else the translation in the
 /// source's quote dialect.
 fn render(unit: &Unit) -> String {
-    let Some(h) = unit.codes.get(HIDDEN) else { return String::new() };
-    let raw = h.standalone.as_deref().unwrap_or("");
+    let Some(h) = unit.codes().get(HIDDEN) else { return String::new() };
+    let raw = h.standalone_markup().unwrap_or("");
     if !unit.translate || unit.segments.iter().all(|s| !s.has_target()) {
         return raw.to_string();
     }
@@ -254,6 +254,6 @@ fn render(unit: &Unit) -> String {
     if text == plain_text(&unit.source()) {
         return raw.to_string();
     }
-    let quote = Quote::from_code(h.label.as_deref().unwrap_or(""));
-    scan::encode_value(&format!("{}{}{}", h.open.as_deref().unwrap_or(""), text, h.close.as_deref().unwrap_or("")), quote)
+    let quote = Quote::from_code(h.label().unwrap_or(""));
+    scan::encode_value(&format!("{}{}{}", h.open_markup().unwrap_or(""), text, h.close_markup().unwrap_or("")), quote)
 }

@@ -125,17 +125,17 @@ fn key_view_context_comment_and_plural() {
     let d = ex_locked(&app());
     assert_eq!(d.units.len(), 5);
     let u0 = &d.units[0];
-    assert_eq!(u0.context.extra.get("context").map(String::as_str), Some("MainWindow"));
+    assert_eq!(u0.context.extra().get("context"), Some("MainWindow"));
     assert_eq!(u0.context.notes, vec!["menu entry".to_string()]);
     assert_eq!(u0.context.key.as_deref(), Some("&Open file..."));
     assert_eq!(u0.context.location.as_deref(), Some("../src/mainwindow.cpp:42"));
-    assert_eq!(d.units[2].context.extra.get("plural").map(String::as_str), Some("numerus"));
+    assert_eq!(d.units[2].context.extra().get("plural"), Some("numerus"));
     assert!(d.units[2].translate);
     assert!(!d.units[3].translate, "the vanished message is listed but locked");
     assert_eq!(d.units[3].lock_reason.as_deref(), Some("vanished message"));
     assert!(d.units[4].translate);
     // slot numbers are LocOS's p_index
-    let idx: Vec<&str> = d.units.iter().map(|u| u.context.extra["p_index"].as_str()).collect();
+    let idx: Vec<&str> = d.units.iter().map(|u| &u.context.extra()["p_index"]).collect();
     assert_eq!(idx, ["0", "1", "2", "3", "4"]);
 }
 

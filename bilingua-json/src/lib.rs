@@ -160,13 +160,13 @@ impl Filter for JsonFilter {
             }
             pos = v.end;
             let mut unit = Unit::new(format!("u{}", units.len() + 1), inl);
-            unit.codes = codes;
-            unit.codes.insert(RAW_KEY.into(), CodeData::new().with_standalone(token.to_string()));
+            unit.set_codes(codes);
+            unit.codes_mut().insert(RAW_KEY, CodeData::new().with_standalone(token.to_string()));
             unit.context.kind = Some("string".into());
             unit.context.key = Some(v.pointer);
             unit.translate = !skip;
             if locos {
-                unit.context.extra.insert(profile::P_INDEX.into(), walk_at[k].to_string());
+                unit.context.extra_mut().insert(profile::P_INDEX, walk_at[k].to_string());
             }
             parts.push(SkelPart::Unit(units.len()));
             units.push(unit);
@@ -200,7 +200,7 @@ impl Filter for JsonFilter {
                 SkelPart::Unit(i) => {
                     let unit = doc.units.get(*i).ok_or_else(|| Error::Write(format!("no unit {i}")))?;
                     // a unit without its original token (built by hand) stands for its source, as before
-                    match unit.codes.get(RAW_KEY).and_then(|c| c.standalone.as_deref()) {
+                    match unit.codes().get(RAW_KEY).and_then(|c| c.standalone_markup()) {
                         Some(raw) => orig.push_str(raw),
                         None => orig.push_str(&render_inlines(unit, unit.source())),
                     }
@@ -237,7 +237,7 @@ impl Filter for JsonFilter {
 /// The dialect a document was read as: the one its units name; a document without units under the LocOS profile
 /// is read again by shape.
 fn doc_dialect(doc: &Document, orig: &str, locos: bool) -> Option<Dialect> {
-    if let Some(n) = doc.units.iter().find_map(|u| u.context.extra.get(DIALECT_KEY)) {
+    if let Some(n) = doc.units.iter().find_map(|u| u.context.extra().get(DIALECT_KEY)) {
         return Dialect::parse(n);
     }
     if doc.units.is_empty() && locos {
@@ -266,20 +266,20 @@ fn extract_dialect(text: &str, encoding: &str, root: &tree::Node, d: Dialect, op
         parts.push(SkelPart::Unit(units.len()));
         for (k, up) in plan.units.into_iter().enumerate() {
             let mut unit = Unit::new(format!("u{}", units.len() + 1), up.inlines);
-            unit.codes = up.codes;
+            unit.set_codes(up.codes);
             if k == 0 {
-                unit.codes.insert(RAW_KEY.into(), CodeData::new().with_standalone(text[m.start..m.end].to_string()));
+                unit.codes_mut().insert(RAW_KEY, CodeData::new().with_standalone(text[m.start..m.end].to_string()));
             }
             unit.context.kind = Some("message".into());
             context.charge(m.pointer.len() + m.notes.iter().map(|n| n.len()).sum::<usize>(), &limits)?;
             unit.context.key = Some(m.pointer.clone());
             unit.context.notes = m.notes.to_vec();
             if !up.path.is_empty() {
-                unit.context.extra.insert("icu".into(), up.path);
+                unit.context.extra_mut().insert("icu", up.path);
             }
-            unit.context.extra.insert(DIALECT_KEY.into(), d.name().into());
+            unit.context.extra_mut().insert(DIALECT_KEY, d.name());
             if locos {
-                unit.context.extra.insert(profile::P_INDEX.into(), units.len().to_string());
+                unit.context.extra_mut().insert(profile::P_INDEX, units.len().to_string());
             }
             units.push(unit);
         }
@@ -293,7 +293,7 @@ fn extract_dialect(text: &str, encoding: &str, root: &tree::Node, d: Dialect, op
 /// Sorts the units by their `locos.p_index` (stable), renumbers their ids and points the skeleton at the new
 /// places.
 fn in_walk_order(units: &mut Vec<Unit>, parts: &mut [SkelPart]) {
-    let walk = |u: &Unit| u.context.extra.get(profile::P_INDEX).and_then(|p| p.parse::<usize>().ok()).unwrap_or(usize::MAX);
+    let walk = |u: &Unit| u.context.extra().get(profile::P_INDEX).and_then(|p| p.parse::<usize>().ok()).unwrap_or(usize::MAX);
     let mut order: Vec<usize> = (0..units.len()).collect();
     order.sort_by_key(|&i| walk(&units[i]));
     if order.iter().enumerate().all(|(k, &i)| k == i) {
@@ -324,7 +324,7 @@ fn in_walk_order(units: &mut Vec<Unit>, parts: &mut [SkelPart]) {
 fn render_token(unit: &Unit, locos: bool) -> String {
     let untouched = unit.segments.iter().all(|s| !s.has_target()) || (locos && unit.output() == unit.source());
     if untouched {
-        if let Some(raw) = unit.codes.get(RAW_KEY).and_then(|c| c.standalone.as_deref()) {
+        if let Some(raw) = unit.codes().get(RAW_KEY).and_then(|c| c.standalone_markup()) {
             return raw.to_string();
         }
     }
@@ -338,11 +338,11 @@ fn render_inlines(unit: &Unit, inl: Vec<Inline>) -> String {
         match i {
             Inline::Text(t) => text.push_str(&t),
             Inline::Tag { id, kind, .. } => {
-                let code: Option<&CodeData> = unit.codes.get(&id);
+                let code: Option<&CodeData> = unit.codes().get(&id);
                 let piece = code.and_then(|c| match kind {
-                    TagKind::Open => c.open.as_deref(),
-                    TagKind::Close => c.close.as_deref(),
-                    TagKind::Standalone => c.standalone.as_deref(),
+                    TagKind::Open => c.open_markup(),
+                    TagKind::Close => c.close_markup(),
+                    TagKind::Standalone => c.standalone_markup(),
                 });
                 if let Some(p) = piece {
                     text.push_str(p);

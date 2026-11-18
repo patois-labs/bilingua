@@ -47,7 +47,7 @@ fn render(u: &Unit, v: &[Inline]) -> String {
     for i in v {
         match i {
             Inline::Text(t) => s.push_str(t),
-            Inline::Tag { id, display, .. } => match u.codes.get(id).and_then(|c| c.standalone.as_deref()) {
+            Inline::Tag { id, display, .. } => match u.codes().get(id).and_then(|c| c.standalone_markup()) {
                 Some(c) => s.push_str(c),
                 None => s.push_str(display),
             },
@@ -141,7 +141,7 @@ impl Xaml {
                 n_tr += 1;
                 let (inl, codes) = tags_of(&it.value);
                 let mut u = Unit::new(format!("u{n_tr}"), inl);
-                u.codes = codes;
+                u.set_codes(codes);
                 u
             } else {
                 n_lock += 1;

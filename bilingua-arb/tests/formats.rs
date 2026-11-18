@@ -117,14 +117,14 @@ fn metadata_becomes_notes_and_placeholders_stay_flattenable() {
     assert_eq!(u.context.key.as_deref(), Some("welcome"));
     assert_eq!(u.context.notes, ["Home page greeting", "{name}: String, e.g. Ana"]);
     // the tag keeps the label `placeholder` (the LocOS adapter flattens it to its display, the source text)
-    let tag = u.codes.get("1").unwrap();
-    assert_eq!(tag.label.as_deref(), Some("placeholder"));
+    let tag = u.codes().get("1").unwrap();
+    assert_eq!(tag.label(), Some("placeholder"));
     assert!(matches!(&u.source()[1], Inline::Tag { free: true, display, .. } if display == "{name}"));
     // plural branch units carry the argument and selector
     let loaves: Vec<&Unit> = d.units.iter().filter(|u| u.context.key.as_deref() == Some("loaves")).collect();
     assert_eq!(loaves.len(), 4); // text around the argument, =0, one, other
-    assert_eq!(loaves[0].context.extra.get("icu"), None);
-    assert_eq!(loaves[2].context.extra.get("icu").map(String::as_str), Some("count: plural one"));
+    assert_eq!(loaves[0].context.extra().get("icu"), None);
+    assert_eq!(loaves[2].context.extra().get("icu"), Some("count: plural one"));
     // # is a standalone tag that does not move freely
     assert!(matches!(&loaves[2].source()[0], Inline::Tag { kind: TagKind::Standalone, free: false, display, .. } if display == "#"));
 }

@@ -265,13 +265,13 @@ impl DesktopFilter {
                 match unit_at.get(&(e_idx, i)) {
                     Some(&n) => {
                         let mut unit = Unit::new(format!("u{}", n + 1), vec![Inline::text(unescape(raw))]);
-                        unit.codes.insert(HIDDEN.into(), CodeData::new().with_standalone((*raw).to_string()).with_label(e.in_list().then(|| "list".to_string())));
+                        unit.codes_mut().insert(HIDDEN, CodeData::new().with_standalone((*raw).to_string()).with_label(e.in_list().then(|| "list".to_string())));
                         unit.context.kind = Some("key".into());
                         let k = unit_key(e, i);
                         unit.context.notes = e.comments.iter().filter(|c| !c.is_empty()).map(|c| c.to_string()).collect();
-                        unit.context.extra.insert("group".into(), e.group.to_string());
+                        unit.context.extra_mut().insert("group", e.group.to_string());
                         if !seen.insert(k.clone()) {
-                            unit.context.extra.insert("duplicate".into(), "true".into());
+                            unit.context.extra_mut().insert("duplicate", "true");
                         }
                         unit.context.key = Some(k);
                         parts.push(SkelPart::Unit(units.len()));
@@ -345,8 +345,8 @@ impl Filter for DesktopFilter {
             .map(posix_locale)
             .filter(|l| !l.is_empty() && l.bytes().all(|b| b.is_ascii_alphanumeric() || matches!(b, b'_' | b'@' | b'.' | b'-')));
         let get = |i: usize| doc.units.get(i).ok_or_else(|| Error::Write(format!("no unit {i}")));
-        let raw_of = |u: &Unit| u.codes.get(HIDDEN).and_then(|c| c.standalone.clone()).unwrap_or_default();
-        let in_list = |u: &Unit| u.codes.get(HIDDEN).and_then(|c| c.label.as_deref()) == Some("list");
+        let raw_of = |u: &Unit| u.codes().get(HIDDEN).and_then(|c| c.standalone_markup().map(str::to_string)).unwrap_or_default();
+        let in_list = |u: &Unit| u.codes().get(HIDDEN).and_then(|c| c.label()) == Some("list");
 
         // The original text, and the text with changed values spliced in.
         let mut orig = String::new();

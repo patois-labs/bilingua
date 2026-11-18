@@ -111,7 +111,7 @@ fn locos_units(d: &Document) -> Vec<U> {
     for (i, u) in d.units.iter().enumerate() {
         for s in &u.segments {
             let (text, map) = tokens::to_locos_text_for("json", &s.source);
-            let p = u.context.extra.get(profile::P_INDEX).and_then(|p| p.parse().ok()).unwrap_or(i);
+            let p = u.context.extra().get(profile::P_INDEX).and_then(|p| p.parse().ok()).unwrap_or(i);
             v.push(U { p, seg: s.id.clone(), text, map });
         }
     }
@@ -147,9 +147,9 @@ fn detection_is_strict() {
     // a partial shape stays the generic walk: every string is a unit, descriptions included
     let generic = |s: &str| {
         let d = extract(s);
-        d.units.iter().all(|u| !u.context.extra.contains_key("json.dialect"))
+        d.units.iter().all(|u| !u.context.extra().contains_key("json.dialect"))
     };
-    let dialect = |s: &str| -> Option<String> { extract(s).units.first().and_then(|u| u.context.extra.get("json.dialect").cloned()) };
+    let dialect = |s: &str| -> Option<String> { extract(s).units.first().and_then(|u| u.context.extra().get("json.dialect").map(str::to_string)) };
     assert_eq!(dialect(CHROME).as_deref(), Some("chrome"));
     assert_eq!(dialect(FORMATJS).as_deref(), Some("formatjs"));
     assert_eq!(dialect(STRUCTURED).as_deref(), Some("structured"));
@@ -560,7 +560,7 @@ fn gate_non_token_brackets_are_words_and_hand_built_units_merge() {
     // a plain document whose units lost their original token still merges (as before the dialects)
     let mut d = JsonFilter.extract(b"{\"t\": \"Hello there\"}", &ExtractOptions::new()).unwrap();
     for u in &mut d.units {
-        u.codes.clear();
+        u.codes_mut().clear();
     }
     let out = bilingua_model::Filter::merge_with(&JsonFilter, &d, &MergeOptions::default()).unwrap();
     assert_eq!(out, b"{\"t\": \"Hello there\"}");

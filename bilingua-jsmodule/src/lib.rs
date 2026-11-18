@@ -225,7 +225,7 @@ fn out_text(u: &Unit, v: &[Inline]) -> String {
         match i {
             Inline::Text(t) => s.push_str(t),
             Inline::Tag { id, .. } => {
-                if let Some(c) = u.codes.get(id).and_then(|c| c.standalone.as_deref()) {
+                if let Some(c) = u.codes().get(id).and_then(|c| c.standalone_markup()) {
                     s.push_str(c);
                 }
             }
@@ -266,7 +266,7 @@ fn escape(s: &str, quote: char, multiline: bool) -> String {
 }
 
 fn hidden(u: &Unit) -> Option<&CodeData> {
-    u.codes.get(HIDDEN)
+    u.codes().get(HIDDEN)
 }
 
 /// The literal to write for a unit: `None` when it is unchanged (the original literal stays).
@@ -284,7 +284,7 @@ fn new_literal(u: &Unit) -> Option<String> {
         .as_deref()
         .and_then(|q| q.chars().next())
         .unwrap_or('\'');
-    Some(escape(&out, quote, h.close.as_deref() == Some("1")))
+    Some(escape(&out, quote, h.close_markup() == Some("1")))
 }
 
 impl JsModule {
@@ -330,9 +330,9 @@ impl JsModule {
                 .count();
             line_pos = ru.start;
             let mut u = Unit::new(format!("u{}", units.len() + 1), inl);
-            u.codes = codes;
-            u.codes.insert(
-                HIDDEN.into(),
+            u.set_codes(codes);
+            u.codes_mut().insert(
+                HIDDEN,
                 CodeData::new().with_open((ru.quote as char).to_string()).with_close(if ru.multiline { "1" } else { "0" }.to_string()).with_standalone(text[ru.start..ru.end].to_string()),
             );
             u.context.kind = Some("string".into());
@@ -402,7 +402,7 @@ impl Filter for JsModule {
                         }
                         None => {
                             out.push_str(
-                                hidden(u).and_then(|h| h.standalone.as_deref()).ok_or_else(
+                                hidden(u).and_then(|h| h.standalone_markup()).ok_or_else(
                                     || Error::Write(format!("unit {} lost its literal", u.id)),
                                 )?,
                             )

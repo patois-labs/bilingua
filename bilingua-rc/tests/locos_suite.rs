@@ -53,7 +53,7 @@ fn parse_units() {
     assert_eq!(ids, want_ids.iter().map(String::as_str).collect::<Vec<_>>());
     // the tab is a standalone code that keeps its written form; the numbered placeholders may move
     let u = &doc.units[1];
-    assert_eq!(u.codes["1"].standalone.as_deref(), Some("\\t"));
+    assert_eq!(u.codes()["1"].standalone_markup(), Some("\\t"));
     let kinds: Vec<bool> = doc.units[11].source().iter().filter(|i| matches!(i, Inline::Tag { .. })).map(Inline::is_free).collect();
     assert_eq!(kinds, vec![true, true]);
     let kinds: Vec<bool> = doc.units[9].source().iter().filter(|i| matches!(i, Inline::Tag { .. })).map(Inline::is_free).collect();

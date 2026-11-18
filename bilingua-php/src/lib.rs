@@ -116,7 +116,7 @@ fn out_text(u: &Unit, v: &[Inline]) -> String {
         match i {
             Inline::Text(t) => s.push_str(t),
             Inline::Tag { id, .. } => {
-                if let Some(c) = u.codes.get(id).and_then(|c| c.standalone.as_deref()) {
+                if let Some(c) = u.codes().get(id).and_then(|c| c.standalone_markup()) {
                     s.push_str(c);
                 }
             }
@@ -160,7 +160,7 @@ fn escape(s: &str, double: bool) -> String {
 }
 
 fn hidden(u: &Unit) -> Option<&CodeData> {
-    u.codes.get(HIDDEN)
+    u.codes().get(HIDDEN)
 }
 
 /// The literal to write for a unit: `None` when it is unchanged (the original literal stays).
@@ -172,7 +172,7 @@ fn new_literal(u: &Unit) -> Option<String> {
     if out == out_text(u, &u.source()) {
         return None;
     }
-    let double = hidden(u)?.open.as_deref() == Some("\"");
+    let double = hidden(u)?.open_markup() == Some("\"");
     Some(escape(&out, double))
 }
 
@@ -210,9 +210,9 @@ impl Php {
             line_pos = ru.start;
             let (inl, codes) = ph::unit_inlines(&ru.value);
             let mut u = Unit::new(format!("u{}", units.len() + 1), inl);
-            u.codes = codes;
-            u.codes.insert(
-                HIDDEN.into(),
+            u.set_codes(codes);
+            u.codes_mut().insert(
+                HIDDEN,
                 CodeData::new().with_open(ru.quote.as_char().to_string()).with_standalone(text[ru.start..ru.end].to_string()),
             );
             u.context.kind = Some("string".into());
@@ -292,7 +292,7 @@ impl Filter for Php {
                             out.push_str(&lit)
                         }
                         None => out.push_str(
-                            hidden(u).and_then(|h| h.standalone.as_deref()).ok_or_else(
+                            hidden(u).and_then(|h| h.standalone_markup()).ok_or_else(
                                 || Error::Write(format!("unit {} lost its literal", u.id)),
                             )?,
                         ),

@@ -213,7 +213,7 @@ fn unit_for(id: String, e: &Entry<'_>, leaf: &Leaf, source: &str, limits: &Limit
     let mut codes = std::collections::BTreeMap::new();
     let inl = ph::inlines(core, &mut codes);
     let mut u = Unit::new(id, inl);
-    u.codes = codes;
+    u.set_codes(codes);
     u.context.kind = Some("string".into());
     u.context.key = Some(e.key.to_string());
     let p = &leaf.path;
@@ -230,7 +230,7 @@ fn unit_for(id: String, e: &Entry<'_>, leaf: &Leaf, source: &str, limits: &Limit
             loc.push('[');
             loc.push_str(&p[p.len() - 1]);
             loc.push(']');
-            u.context.extra.insert("string_set_index".into(), p[p.len() - 1].clone());
+            u.context.extra_mut().insert("string_set_index", p[p.len() - 1].clone());
             u.context.kind = Some("stringSet".into());
         }
     } else {
@@ -242,15 +242,15 @@ fn unit_for(id: String, e: &Entry<'_>, leaf: &Leaf, source: &str, limits: &Limit
         match p[i].as_str() {
             "variations" if i + 2 < p.len() => {
                 let v = format!("{}:{}", p[i + 1], p[i + 2]);
-                let slot = u.context.extra.entry("variation".into()).or_default();
-                if !slot.is_empty() {
-                    slot.push(' ');
-                }
-                slot.push_str(&v);
+                let slot = match u.context.extra().get("variation") {
+                    Some(prev) if !prev.is_empty() => format!("{prev} {v}"),
+                    _ => v,
+                };
+                u.context.extra_mut().insert("variation", slot);
                 i += 3;
             }
             "substitutions" if i + 1 < p.len() => {
-                u.context.extra.insert("substitution".into(), p[i + 1].clone());
+                u.context.extra_mut().insert("substitution", p[i + 1].clone());
                 i += 2;
             }
             _ => i += 1,

@@ -265,7 +265,7 @@ fn merge_rejects_a_broken_document() {
     assert!(matches!(Plist.merge(&d), Err(Error::Write(_))));
     // a unit whose hidden codes were stripped writes nothing for an untouched value but does not panic
     let mut d = ex(F::Plist, src);
-    d.units[0].codes.clear();
+    d.units[0].codes_mut().clear();
     let _ = Plist.merge(&d);
 }
 

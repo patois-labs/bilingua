@@ -104,7 +104,7 @@ struct Meta {
 }
 
 fn meta(u: &Unit) -> Option<Meta> {
-    let label = u.codes.get(HIDDEN)?.label.as_deref()?;
+    let label = u.codes().get(HIDDEN)?.label()?;
     let mut it = label.split(':').map(|p| p.parse::<usize>().ok());
     Some(Meta { first: it.next()??, write: it.next()??, source: it.next()?? })
 }
@@ -199,10 +199,10 @@ fn extract_impl(kind: Kind, bytes: &[u8], opts: &ExtractOptions, copts: &CsvOpti
             let write = if plan.inplace { c } else { tcol.unwrap_or(c) };
             let mut code = CodeData::new().with_label(format!("{first_idx}:{write}:{c}"));
             if units.len() == first_idx {
-                code.standalone = Some(text[r.start..r.end].to_string());
-                code.open = Some((delim as char).to_string());
+                code.set_standalone(text[r.start..r.end].to_string());
+                code.set_open((delim as char).to_string());
             }
-            unit.codes.insert(HIDDEN.into(), code);
+            unit.codes_mut().insert(HIDDEN, code);
             unit.context.kind = Some("cell".into());
             unit.context.location = Some(format!("row {}", n + 1));
             unit.context.notes = notes.clone();
@@ -216,7 +216,7 @@ fn extract_impl(kind: Kind, bytes: &[u8], opts: &ExtractOptions, copts: &CsvOpti
             }
             if plan.header {
                 if let Some(h) = first.get(c).filter(|h| !blank(h)) {
-                    unit.context.extra.insert("column".into(), h.trim().to_string());
+                    unit.context.extra_mut().insert("column", h.trim().to_string());
                 }
             }
             parts.push(SkelPart::Unit(units.len()));
@@ -292,12 +292,12 @@ fn merge_impl(doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
 }
 
 fn render_record(doc: &Document, first: usize, group: &[usize]) -> Result<String, Error> {
-    let code = doc.units[first].codes.get(HIDDEN);
+    let code = doc.units[first].codes().get(HIDDEN);
     let raw = code
-        .and_then(|c| c.standalone.as_deref())
+        .and_then(|c| c.standalone_markup())
         .ok_or_else(|| Error::Write(format!("unit {first} has lost its record text")))?;
     // only the four delimiters this filter reads (a multi-byte one would split a character)
-    let delim = match code.and_then(|c| c.open.as_deref()) {
+    let delim = match code.and_then(|c| c.open_markup()) {
         Some(",") => b',',
         Some(";") => b';',
         Some("\t") => b'\t',

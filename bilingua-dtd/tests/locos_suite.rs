@@ -60,7 +60,7 @@ fn units_and_identity() {
             ("&gt;".to_string(), TagKind::Standalone)
         ]
     );
-    assert!(doc.units[0].codes.values().all(|c| c.label.as_deref() == Some("placeholder") || c.label.as_deref() == Some("\"")));
+    assert!(doc.units[0].codes().values().all(|c| c.label() == Some("placeholder") || c.label() == Some("\"")));
     // the LOCALIZATION NOTE comment is the note of window.title; the licence comment is detached by the blank line
     assert_eq!(doc.units[0].context.notes.len(), 1);
     assert!(doc.units[0].context.notes[0].starts_with("LOCALIZATION NOTE (window.title)"));

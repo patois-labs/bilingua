@@ -58,13 +58,13 @@ fn parse_laravel() {
 
     let doc = extract_str(LARAVEL).unwrap();
     let plural = &doc.units[4];
-    let ph = |id: &str| plural.codes[id].standalone.clone().unwrap();
+    let ph = |id: &str| plural.codes()[id].standalone_markup().map(str::to_string).unwrap();
     assert_eq!((ph("1"), ph("3"), ph("2")), ("{0}".into(), "[1,19]".into(), "|".into()));
     // tag kinds: all standalone; :name and positional printf are free
     let welcome = &doc.units[3];
     let frees: Vec<bool> = welcome.source().iter().filter(|i| matches!(i, Inline::Tag { .. })).map(Inline::is_free).collect();
     assert_eq!(frees, [true, false, true, false]);
-    assert!(doc.units.iter().all(|u| u.codes.values().filter(|c| c.label.as_deref() == Some("placeholder")).count() == u.source().iter().filter(|i| matches!(i, Inline::Tag { .. })).count()));
+    assert!(doc.units.iter().all(|u| u.codes().values().filter(|c| c.label() == Some("placeholder")).count() == u.source().iter().filter(|i| matches!(i, Inline::Tag { .. })).count()));
     // context
     assert_eq!(doc.units[0].context.key.as_deref(), Some("failed"));
     assert_eq!(doc.units[0].context.location.as_deref(), Some("line 10"));

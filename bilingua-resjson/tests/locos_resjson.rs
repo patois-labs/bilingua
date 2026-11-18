@@ -96,7 +96,7 @@ fn records_and_placeholders() {
         d.units
             .iter()
             .enumerate()
-            .find(|(_, u)| u.context.extra.get("path").map(String::as_str) == Some(ctx) && u.context.extra.get("name").map(String::as_str) == Some(key))
+            .find(|(_, u)| u.context.extra().get("path") == Some(ctx) && u.context.extra().get("name") == Some(key))
             .unwrap_or_else(|| panic!("no entry {ctx}/{key}"))
     };
     // Comments are joined from `_key.comment`.
@@ -113,7 +113,7 @@ fn records_and_placeholders() {
     let default = ex(LOCOS_SUITE);
     assert_eq!(default.units[4].context.key.as_deref(), Some("/menu/open"));
     // Non-string members (`true`, `40`) are not entries at all.
-    assert!(!d.units.iter().any(|u| u.context.extra.get("name").map(String::as_str) == Some("flag")));
+    assert!(!d.units.iter().any(|u| u.context.extra().get("name") == Some("flag")));
     // `_count.maxLength: 40` belongs to `count`.
     assert_eq!(by("", "count").1.context.max_len, Some(40));
     // A placeholder stays plain text inside the unit (the LocOS filter does not tokenise it).

@@ -324,15 +324,15 @@ impl Filter for TomlFilter {
             }
             pos = s.end;
             let mut u = Unit::new(format!("u{}", units.len() + 1), inl);
-            u.codes = codes;
-            u.codes.insert(RAW.into(), CodeData::new().with_standalone(text[s.start..s.end].to_string()));
-            u.codes.insert(OV.into(), CodeData::new().with_standalone(v.to_string()));
+            u.set_codes(codes);
+            u.codes_mut().insert(RAW, CodeData::new().with_standalone(text[s.start..s.end].to_string()));
+            u.codes_mut().insert(OV, CodeData::new().with_standalone(v.to_string()));
             let lead = match s.lead {
                 "\r\n" => 'r',
                 "\n" => 'n',
                 _ => '-',
             };
-            u.codes.insert(META.into(), CodeData::new().with_standalone(format!("{}{}{}", kind_char(s.kind), lead, nl)));
+            u.codes_mut().insert(META, CodeData::new().with_standalone(format!("{}{}{}", kind_char(s.kind), lead, nl)));
             u.context.kind = Some("string".into());
             u.context.style = Some(cls.style);
             context.charge(s.key.len(), &limits)?;
@@ -388,7 +388,7 @@ impl Filter for TomlFilter {
 }
 
 fn code(u: &Unit, key: &str) -> Option<String> {
-    u.codes.get(key).and_then(|c| c.standalone.clone())
+    u.codes().get(key).and_then(|c| c.standalone_markup().map(str::to_string))
 }
 
 /// The token to write for a unit, and whether it differs from the original.
@@ -402,7 +402,7 @@ fn render_unit(u: &Unit) -> (String, bool) {
         match i {
             Inline::Text(t) => value.push_str(&t),
             Inline::Tag { id, .. } => {
-                if let Some(c) = u.codes.get(&id).and_then(|c| c.standalone.as_deref()) {
+                if let Some(c) = u.codes().get(&id).and_then(|c| c.standalone_markup()) {
                     value.push_str(c);
                 }
             }
@@ -447,7 +447,7 @@ fn verify(out: &str, placed: &[(usize, usize)], doc: &Document, limits: &Limits)
                 match i {
                     Inline::Text(t) => v.push_str(&t),
                     Inline::Tag { id, .. } => {
-                        if let Some(c) = u.codes.get(&id).and_then(|c| c.standalone.as_deref()) {
+                        if let Some(c) = u.codes().get(&id).and_then(|c| c.standalone_markup()) {
                             v.push_str(c);
                         }
                     }

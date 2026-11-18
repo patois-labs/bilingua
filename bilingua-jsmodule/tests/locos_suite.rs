@@ -108,7 +108,7 @@ fn parse_shapes() {
     assert_eq!(ts[4], "\u{27E6}x1\u{27E7}She replied\u{27E6}x2\u{27E7}He replied\u{27E6}x3\u{27E7}They replied\u{27E6}x4\u{27E7}");
     assert_eq!(ts[5], "Part one, part two");
     let doc = extract_str(TS).unwrap();
-    let shown = |u: &Unit, id: &str| u.codes[id].standalone.clone().unwrap();
+    let shown = |u: &Unit, id: &str| u.codes()[id].standalone_markup().map(str::to_string).unwrap();
     assert_eq!(shown(&doc.units[3], "1"), "{count, plural, =0 {");
     assert_eq!(shown(&doc.units[3], "3"), "#");
     assert_eq!(shown(&doc.units[3], "6"), "}}");

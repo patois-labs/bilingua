@@ -31,7 +31,7 @@ fn pseudo(doc: &mut Document) {
 /// True when every unit is written where it was read (no target column).
 fn in_place(doc: &Document) -> bool {
     doc.units.iter().all(|u| {
-        let l = u.codes["$csv"].label.clone().unwrap();
+        let l = u.codes()["$csv"].label().map(str::to_string).unwrap();
         let p: Vec<&str> = l.split(':').collect();
         p[1] == p[2]
     })
@@ -230,7 +230,7 @@ fn locked_units_context_and_ids() {
     assert_eq!(doc.units[0].context.key.as_deref(), Some("btn"));
     assert_eq!(doc.units[0].context.notes, ["Key: btn", "notes: the button", "Max length: 12"]);
     assert_eq!(doc.units[0].context.max_len, Some(12));
-    assert_eq!(doc.units[0].context.extra.get("column").map(String::as_str), Some("source"));
+    assert_eq!(doc.units[0].context.extra().get("column"), Some("source"));
     assert_eq!(doc.units[2].lock_reason.as_deref(), Some("formula"));
     let mut doc = doc;
     let id = doc.units[1].segments[0].id.clone();

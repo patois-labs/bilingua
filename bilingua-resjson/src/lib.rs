@@ -19,7 +19,7 @@
 //!   other encodings are refused with a typed error.
 //!
 //! The note of a unit (`_id.comment`) is in `context.notes`; `_id.maxLength` sets `context.max_len`; other
-//! `_id.attr` members go to `context.extra[attr]`. `context.key` is the JSON pointer; the LocOS context and key
+//! `_id.attr` members go to `context.extra()[attr]`. `context.key` is the JSON pointer; the LocOS context and key
 //! are in `extra["path"]` and `extra["name"]`.
 
 /// Skeleton schema number: bump only when this crate's skeleton layout changes (see `bilingua_model::check_parser`).
@@ -285,21 +285,21 @@ impl Resjson {
             pos = e.end;
             let mut unit = Unit::new(format!("u{}", units.len() + 1), vec![Inline::text(core)]);
             if !lead.is_empty() {
-                unit.codes.insert(LEAD_KEY.into(), code(lead));
+                unit.codes_mut().insert(LEAD_KEY, code(lead));
             }
             if !trail.is_empty() {
-                unit.codes.insert(TRAIL_KEY.into(), code(trail));
+                unit.codes_mut().insert(TRAIL_KEY, code(trail));
             }
             // Keep the original spelling only where re-quoting would change it.
             if quote_inner(value) != raw {
-                unit.codes.insert(RAW_KEY.into(), code(raw));
+                unit.codes_mut().insert(RAW_KEY, code(raw));
             }
             unit.context.kind = Some(if meta { "metadata" } else { "string" }.into());
             unit.context.key = Some(e.pointer.clone());
-            unit.context.extra.insert("path".into(), e.context.clone());
-            unit.context.extra.insert("name".into(), e.key.clone());
+            unit.context.extra_mut().insert("path", e.context.clone());
+            unit.context.extra_mut().insert("name", e.key.clone());
             if duplicate {
-                unit.context.extra.insert("duplicate".into(), "true".into());
+                unit.context.extra_mut().insert("duplicate", "true");
             }
             if !meta {
                 if let Some(n) = notes.get(&(e.context.as_str(), e.key.as_str())) {
@@ -310,7 +310,7 @@ impl Resjson {
                         ("maxLength", Ok(n)) => unit.context.max_len = Some(n),
                         // `path`, `name` and `duplicate` are ours: an `_id.path` member must not overwrite them.
                         _ => {
-                            unit.context.extra.entry((*attr).to_string()).or_insert_with(|| (*v).to_string());
+                            unit.context.extra_mut().get_or_insert_with(*attr, || *v);
                         }
                     }
                 }
@@ -342,11 +342,11 @@ fn text_of(v: &[Inline]) -> String {
 
 /// What goes between the quotes for a unit.
 fn render(unit: &Unit) -> String {
-    let lead = unit.codes.get(LEAD_KEY).and_then(|c| c.standalone.as_deref()).unwrap_or("");
-    let trail = unit.codes.get(TRAIL_KEY).and_then(|c| c.standalone.as_deref()).unwrap_or("");
+    let lead = unit.codes().get(LEAD_KEY).and_then(|c| c.standalone_markup()).unwrap_or("");
+    let trail = unit.codes().get(TRAIL_KEY).and_then(|c| c.standalone_markup()).unwrap_or("");
     let out = text_of(&unit.output());
     if out == text_of(&unit.source()) {
-        if let Some(raw) = unit.codes.get(RAW_KEY).and_then(|c| c.standalone.as_deref()) {
+        if let Some(raw) = unit.codes().get(RAW_KEY).and_then(|c| c.standalone_markup()) {
             return raw.to_string();
         }
     }

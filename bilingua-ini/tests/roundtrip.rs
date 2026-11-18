@@ -46,7 +46,7 @@ fn corpus_pseudo_translation_reads_back() {
         assert_eq!(back.units.len(), before.len(), "{name}: unit count");
         for (b, src) in back.units.iter().zip(&before) {
             assert_eq!(plain_text(&b.source()), format!("[[{src}]]"), "{name}");
-            assert!(b.codes.keys().all(|k| k.starts_with('$')), "{name}: no inline tags in INI");
+            assert!(b.codes().keys().all(|k| k.starts_with('$')), "{name}: no inline tags in INI");
             assert!(b.segments[0].source.iter().all(|i| matches!(i, Inline::Text(_))));
         }
         // keys, comments and sections are untouched: same record keys
@@ -144,8 +144,8 @@ fn locked_units_and_context() {
     );
     assert_eq!(IniFilter.merge(&doc).unwrap(), data);
     assert_eq!(doc.units[0].context.notes, vec!["the note".to_string()]);
-    assert_eq!(doc.units[0].context.extra.get("section").map(String::as_str), Some("S"));
-    assert_eq!(doc.units[3].context.extra.get("duplicate").map(String::as_str), Some("true"));
+    assert_eq!(doc.units[0].context.extra().get("section"), Some("S"));
+    assert_eq!(doc.units[3].context.extra().get("duplicate"), Some("true"));
     assert_eq!(doc.units[2].context.key.as_deref(), Some("C"));
     // a locked unit refuses a target
     let mut doc = doc;

@@ -118,7 +118,7 @@ trait HasTarget {
 impl HasTarget for Document {
     fn skeleton_has_target_column(&self) -> bool {
         self.units.iter().any(|u| {
-            let l = u.codes.get("$csv").and_then(|c| c.label.clone()).unwrap_or_default();
+            let l = u.codes().get("$csv").and_then(|c| c.label().map(str::to_string)).unwrap_or_default();
             let p: Vec<&str> = l.split(':').collect();
             p.len() == 3 && p[1] != p[2]
         })
@@ -162,7 +162,7 @@ fn formula_injection_guarded() {
     let data = b"Name,Count\nWidget,5\n";
     let c = Call::csv().langs("en", &[], None);
     let doc = c.extract(data).unwrap();
-    assert!(doc.units.iter().all(|u| !u.codes["$csv"].label.as_deref().unwrap().is_empty()));
+    assert!(doc.units.iter().all(|u| !u.codes()["$csv"].label().unwrap().is_empty()));
     let out = c.build(data, &[(0, "=HYPERLINK(1)")]);
     assert!(contains(&out, b"'=HYPERLINK(1)"), "{out:?}");
 }
@@ -246,7 +246,7 @@ fn tsv_and_sniffing() {
     assert_eq!(c.build(data, &[(0, "Hallo, Welt")]), b"source\ttarget\nHello, world\tHallo, Welt\n");
     // CSV sniffs the delimiter
     let doc = call(Some("de")).extract(b"source;target\nA, b;\n").unwrap();
-    assert_eq!(doc.units[0].codes["$csv"].open.as_deref(), Some(";"));
+    assert_eq!(doc.units[0].codes()["$csv"].open_markup(), Some(";"));
     // a build with no mapping stamp must still read a TSV as TAB, not sniff the commas inside its cells
     let data = b"Red, green, blue\tone, two, three\nCats, dogs, birds\tfour, five, six\n";
     let bare = Call::tsv();
@@ -328,7 +328,7 @@ fn column_mapping_messages_are_plain() {
     let data = b"ID,English,German\n1,Save,\n";
     let a = Call::csv().cols("source=English,target.de=German").langs("en-US", &["de-DE"], Some("de-DE")).extract(data).unwrap();
     let b = Call::csv().cols("source=2,target.de=3").langs("en-US", &["de-DE"], Some("de-DE")).extract(data).unwrap();
-    assert_eq!(a.units[0].codes, b.units[0].codes);
+    assert_eq!(a.units[0].codes(), b.units[0].codes());
 }
 
 /// W-D D5 (csv-3): the read side of a CSV with no mapping. The plan follows the source language it is given, as the

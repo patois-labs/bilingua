@@ -224,7 +224,7 @@ fn build_unit(lines: &[&str], n: usize) -> (String, Unit, String) {
         inl.push(Inline::Text(text));
     }
     let mut unit = Unit::new(format!("p{n}"), inl);
-    unit.codes = codes;
+    unit.set_codes(codes);
     unit.context.kind = Some("paragraph".into());
     (prefix, unit, suffix)
 }
@@ -235,7 +235,7 @@ fn render(unit: &Unit) -> String {
         match i {
             Inline::Text(t) => s.push_str(&t),
             Inline::Tag { id, .. } => {
-                if let Some(c) = unit.codes.get(&id).and_then(|c| c.standalone.as_deref()) {
+                if let Some(c) = unit.codes().get(&id).and_then(|c| c.standalone_markup()) {
                     s.push_str(c);
                 }
             }
@@ -348,7 +348,7 @@ mod tests {
         }
         let d = extract(b"A one\r\nA two\r\n");
         let Inline::Tag { id, .. } = &d.units[0].source()[1] else { panic!("expected a line break tag") };
-        assert_eq!(d.units[0].codes[id].standalone.as_deref(), Some("\r\n"));
+        assert_eq!(d.units[0].codes()[id].standalone_markup(), Some("\r\n"));
     }
 
     #[test]

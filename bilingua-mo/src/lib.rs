@@ -80,7 +80,7 @@ fn unit_text(u: &Unit) -> String {
     for i in u.output() {
         match i {
             Inline::Text(t) => s.push_str(&t),
-            Inline::Tag { id, display, .. } => s.push_str(u.codes.get(&id).and_then(|c| c.standalone.as_deref()).unwrap_or(&display)),
+            Inline::Tag { id, display, .. } => s.push_str(u.codes().get(&id).and_then(|c| c.standalone_markup()).unwrap_or(&display)),
         }
     }
     s
@@ -105,7 +105,7 @@ fn unit_id(e: &Entry, form: usize) -> String {
 fn make_unit(e: &Entry, form: usize, src: &str, tgt: &str) -> Unit {
     let (inl, codes, tags) = source_inlines(src);
     let mut u = Unit::new(unit_id(e, form), inl);
-    u.codes = codes;
+    u.set_codes(codes);
     u.segments[0].target = target_inlines(tgt, &tags);
     u.segments[0].state = if u.segments[0].target.is_empty() { SegState::New } else { SegState::Translated };
     u.context.kind = Some("string".into());
@@ -116,10 +116,10 @@ fn make_unit(e: &Entry, form: usize, src: &str, tgt: &str) -> Unit {
     u.context.style = Some(if plural_unit(e) { format!("msgstr[{form}]") } else { "msgstr".into() });
     u.context.location = Some(format!("entry {}", e.index));
     if let Some(c) = &e.ctxt {
-        u.context.extra.insert("msgctxt".into(), c.clone());
+        u.context.extra_mut().insert("msgctxt", c.clone());
     }
     if plural_unit(e) {
-        u.context.extra.insert("plural".into(), form.to_string());
+        u.context.extra_mut().insert("plural", form.to_string());
     }
     u
 }
