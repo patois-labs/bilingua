@@ -91,11 +91,26 @@ impl Block {
         self.cursor = to;
     }
 
-    fn standalone(&mut self, display: &str, code: String, label: &str) {
+    /// Returns the new code's id.
+    fn standalone(&mut self, display: &str, code: String, label: &str) -> String {
         self.flush_text();
         let id = self.new_id();
-        self.codes.insert(id.clone(), CodeData::new().with_standalone(code).with_label(label.to_string()));
-        self.inl.push(Inline::tag(id, TagKind::Standalone, display));
+        self.codes.insert(id.clone(), CodeData::new().with_standalone(code).with_label(label.to_string()).with_code_type(Some(label_type(label))));
+        self.inl.push(Inline::tag(id.clone(), TagKind::Standalone, display));
+        id
+    }
+
+    /// Adds the link or image attributes of `ev` (BILI-118) to code `id`.
+    fn dest_attrs(&mut self, id: &str, ev: &Event) {
+        let Some(c) = self.codes.get_mut(id) else { return };
+        match ev {
+            Event::Start(Tag::Link { dest_url, title, .. }) => {
+                c.set_attr("href", dest_url.to_string());
+                c.set_attr("title", title.to_string());
+            }
+            Event::Start(Tag::Image { dest_url, .. }) => c.set_attr("src", dest_url.to_string()),
+            _ => {}
+        }
     }
 }
 
@@ -275,7 +290,9 @@ impl<'a> Ex<'a> {
                         // text between the break and the next piece is a line prefix such as "> " or indentation
                         b.text_to(src, r.start);
                         match src.get(r.start..next) {
-                            Some(code) => b.standalone("\u{21b5}", code.to_string(), "line break"),
+                            Some(code) => {
+                                b.standalone("\u{21b5}", code.to_string(), "line break");
+                            }
                             None => b.bad = true,
                         }
                         b.cursor = next;
@@ -283,7 +300,9 @@ impl<'a> Ex<'a> {
                     } else if hard {
                         b.text_to(src, r.start);
                         match src.get(r.start..r.end) {
-                            Some(code) => b.standalone("<br>", code.to_string(), "line break"),
+                            Some(code) => {
+                                b.standalone("<br>", code.to_string(), "line break");
+                            }
                             None => b.bad = true,
                         }
                         b.cursor = r.end;
@@ -316,7 +335,9 @@ impl<'a> Ex<'a> {
                 use pulldown_cmark::LinkType;
                 if matches!(link_type, LinkType::Autolink | LinkType::Email) {
                     let end = matching_end(evs, i);
-                    leaf_tag(b, src, r, src.get(r.clone()).unwrap_or("<link>"), "link");
+                    if let Some(id) = leaf_tag(b, src, r, src.get(r.clone()).unwrap_or("<link>"), "link") {
+                        b.dest_attrs(&id, ev);
+                    }
                     return end + 1;
                 }
                 open_container(b, src, evs, i, "<a>", "link")
@@ -398,15 +419,35 @@ fn ensure<'b>(cur: &'b mut Option<Block>, ctx: &[Ctx], start: usize) -> &'b mut 
     })
 }
 
-/// A construct that is one tag: code span, inline HTML, footnote reference, autolink.
-fn leaf_tag(b: &mut Block, src: &str, r: &Range<usize>, display: &str, label: &str) {
-    b.text_to(src, r.start);
-    match src.get(r.clone()) {
-        Some(code) => b.standalone(display, code.to_string(), label),
-        None => b.bad = true,
+/// The code type of a label (BILI-118): every label the extractor gives an inline code, in one table, so the
+/// label and the type cannot disagree.
+pub(crate) fn label_type(label: &str) -> CodeType {
+    match label {
+        "bold" => CodeType::Bold,
+        "italic" => CodeType::Italic,
+        "strikethrough" => CodeType::Strike,
+        "code" => CodeType::Code,
+        "link" => CodeType::Link,
+        "image" => CodeType::Image,
+        "line break" => CodeType::Linebreak,
+        "footnote" => CodeType::Footnoteref,
+        _ => CodeType::Other,
     }
+}
+
+/// A construct that is one tag: code span, inline HTML, footnote reference, autolink. Returns the code's id.
+fn leaf_tag(b: &mut Block, src: &str, r: &Range<usize>, display: &str, label: &str) -> Option<String> {
+    b.text_to(src, r.start);
+    let id = match src.get(r.clone()) {
+        Some(code) => Some(b.standalone(display, code.to_string(), label)),
+        None => {
+            b.bad = true;
+            None
+        }
+    };
     b.cursor = r.end;
     b.end = b.end.max(r.end);
+    id
 }
 
 /// Index of the End event that closes the Start at `i` (same kind, nesting counted).
@@ -449,7 +490,8 @@ fn open_container(b: &mut Block, src: &str, evs: &[(Event, Range<usize>)], i: us
     }
     b.flush_text();
     let id = b.new_id();
-    b.codes.insert(id.clone(), CodeData::new().with_open(open.to_string()).with_label(label.to_string()));
+    b.codes.insert(id.clone(), CodeData::new().with_open(open.to_string()).with_label(label.to_string()).with_code_type(Some(label_type(label))));
+    b.dest_attrs(&id, &evs[i].0);
     b.inl.push(Inline::tag(id.clone(), TagKind::Open, display));
     b.stack.push(Frame { id });
     b.cursor = first;
@@ -505,9 +547,11 @@ fn image(b: &mut Block, src: &str, evs: &[(Event, Range<usize>)], i: usize, end:
     };
     let children: Vec<&Range<usize>> = evs[i + 1..end].iter().map(|e| &e.1).filter(|x| !x.is_empty()).collect();
     let mut code = whole.to_string();
+    let mut alt_text = String::new();
     if let (Some(first), Some(last)) = (children.first(), children.iter().map(|c| c.end).max()) {
         if first.start >= r.start && last <= r.end && first.start < last {
             let alt = src[first.start..last].to_string();
+            alt_text = alt.clone();
             if !alt.trim().is_empty() {
                 let j = b.pending.len();
                 let (a, z) = (first.start - r.start, last - r.start);
@@ -516,7 +560,11 @@ fn image(b: &mut Block, src: &str, evs: &[(Event, Range<usize>)], i: usize, end:
             }
         }
     }
-    b.standalone("<img>", code, "image");
+    let id = b.standalone("<img>", code, "image");
+    b.dest_attrs(&id, &evs[i].0);
+    if let Some(c) = b.codes.get_mut(&id) {
+        c.set_attr("alt", alt_text.trim());
+    }
     b.cursor = r.end;
     b.end = b.end.max(r.end);
 }
@@ -642,4 +690,29 @@ fn render_check(inl: &[Inline], codes: &BTreeMap<String, CodeData>, pending: &[P
         }
     }
     out
+}
+
+#[cfg(test)]
+mod code_type_pairs {
+    use super::label_type;
+    use bilingua_model::CodeType;
+
+    /// Every label the markdown extractor gives an inline code, with its type (BILI-118).
+    #[test]
+    fn label_type_pairs() {
+        let cases = [
+            ("bold", CodeType::Bold),
+            ("italic", CodeType::Italic),
+            ("strikethrough", CodeType::Strike),
+            ("code", CodeType::Code),
+            ("link", CodeType::Link),
+            ("image", CodeType::Image),
+            ("line break", CodeType::Linebreak),
+            ("footnote", CodeType::Footnoteref),
+            ("html", CodeType::Other),
+        ];
+        for (label, ty) in cases {
+            assert_eq!(label_type(label), ty, "{label}");
+        }
+    }
 }

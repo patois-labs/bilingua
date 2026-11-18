@@ -183,6 +183,8 @@ mod fixtures;
 mod tests;
 #[cfg(test)]
 mod tests_oracle;
+#[cfg(test)]
+mod tests_typing;
 
 /// B-SIDE 16: a member nested past the cap is a limit (`LimitKind::Depth`), not a parse error; other XML damage
 /// stays a parse error.

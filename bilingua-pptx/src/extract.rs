@@ -93,6 +93,44 @@ fn read_rels(entries: &[RawEntry], part: &str) -> Vec<Rel> {
     out
 }
 
+/// Every relationship of `part` (id to target as written, external ones too), for link targets (BILI-118).
+fn all_rels(entries: &[RawEntry], part: &str) -> HashMap<String, String> {
+    let file = part.rsplit('/').next().unwrap_or(part);
+    let path = format!("{}_rels/{file}.rels", dir_of(part));
+    let mut out = HashMap::new();
+    let Some(nodes) = find_entry(entries, &path).and_then(|(_, e)| parse_part(e)) else { return out };
+    fn walk(nodes: &[Node], out: &mut HashMap<String, String>) {
+        for n in nodes {
+            if let Node::El(e) = n {
+                if local_name(&e.name) == "Relationship" {
+                    if let (Some(id), Some(target)) = (e.attr("Id"), e.attr("Target")) {
+                        out.entry(id).or_insert(target);
+                    }
+                }
+                walk(&e.children, out);
+            }
+        }
+    }
+    walk(&nodes, &mut out);
+    out
+}
+
+/// The `href` (and `title`, from the tooltip) of every link code: the `a:hlinkClick` in its run properties,
+/// its `r:id` looked up in the part's relationships.
+pub(crate) fn link_targets(codes: &mut std::collections::BTreeMap<String, CodeData>, rels: &HashMap<String, String>) {
+    for c in codes.values_mut().filter(|c| c.code_type() == Some(CodeType::Link)) {
+        let Some(open) = c.open_markup() else { continue };
+        let Some(at) = open.find("hlinkClick") else { continue };
+        let Some(start) = open[..at].rfind('<') else { continue };
+        let end = open[at..].find('>').map_or(open.len(), |q| at + q + 1);
+        let a = parse_attrs(&open[start..end]);
+        let href = a.iter().find(|(k, _)| local_name(k) == "id" && k.contains(':')).and_then(|(_, v)| rels.get(v)).cloned();
+        let title = a.iter().find(|(k, _)| k == "tooltip").map(|(_, v)| v.clone());
+        c.set_attr("href", href.unwrap_or_default());
+        c.set_attr("title", title.unwrap_or_default());
+    }
+}
+
 fn presentation_part(content_types: &[u8]) -> Option<String> {
     let nodes = parse(std::str::from_utf8(content_types).ok()?).ok()?;
     fn walk(nodes: &[Node]) -> Option<String> {
@@ -266,6 +304,8 @@ struct Extractor {
     /// Plain text of data paragraphs by (slide, text) for SmartArt drawing mirrors.
     smart: HashMap<(u32, String), String>,
     limits: Limits,
+    /// The current part's relationships (id to target as written), for link targets (BILI-118).
+    rels: HashMap<String, String>,
     /// Set when a paragraph is already longer than a unit may be; the walk makes no more units and the extraction
     /// returns it.
     refused: Option<Error>,
@@ -396,15 +436,16 @@ impl Extractor {
                     atoms.push(Atom::Text { fmt, key, text });
                 }
                 Node::El(e) if ns.a.is(&e.name, "br") => {
-                    atoms.push(Atom::Code { xml: e.raw(), display: "<br/>".into(), label: "line break".into() });
+                    atoms.push(Atom::Code { xml: e.raw(), display: "<br/>".into(), label: "line break".into(), ty: CodeType::Linebreak, attrs: TextMap::new() });
                 }
                 Node::El(e) if ns.a.is(&e.name, "fld") => {
                     let ty = e.attr("type").unwrap_or_else(|| "field".into());
-                    atoms.push(Atom::Code { xml: e.raw(), display: format!("{{{ty}}}"), label: format!("field {ty}") });
+                    let attrs = TextMap::from([("field", ty.as_str())]);
+                    atoms.push(Atom::Code { xml: e.raw(), display: format!("{{{ty}}}"), label: format!("field {ty}"), ty: CodeType::Field, attrs });
                 }
                 Node::El(e) => {
                     let l = local_name(&e.name).to_string();
-                    atoms.push(Atom::Code { xml: e.raw(), display: format!("{{{l}}}"), label: format!("{l} element") });
+                    atoms.push(Atom::Code { xml: e.raw(), display: format!("{{{l}}}"), label: format!("{l} element"), ty: CodeType::Other, attrs: TextMap::new() });
                 }
                 _ => {}
             }
@@ -486,6 +527,7 @@ impl Extractor {
         let orig = raw_of(&orig_nodes);
         let mut u = Unit::new(id.clone(), built.inlines);
         let mut codes = built.codes;
+        link_targets(&mut codes, &self.rels);
         codes.insert(C_ORIG.into(), CodeData::new().with_standalone(orig));
         codes.insert(C_LEAD.into(), CodeData::new().with_standalone(lead));
         codes.insert(C_PFX.into(), CodeData::new().with_standalone(ns.a.pfx.clone()));
@@ -677,6 +719,7 @@ fn extract_doc_inner(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Er
         lang: None,
         smart: HashMap::new(),
         limits: opts.limits(),
+        rels: HashMap::new(),
         refused: None,
     };
     // Every part we change, written back as its template (markers for the units) as soon as its tree is done
@@ -715,6 +758,7 @@ fn extract_doc_inner(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Er
             }
         }
         ex.para_no = 0;
+        ex.rels = all_rels(&entries, &entries[pi.idx].name);
         if pi.kind == Kind::Drawing {
             ex.drawing_paragraphs(pi, &ns, &mut nodes);
         } else {
