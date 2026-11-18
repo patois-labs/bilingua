@@ -45,6 +45,8 @@ pub struct SmallMap<V> {
 #[derive(Clone)]
 enum Repr<V> {
     Small(Box<[(Box<str>, V)]>),
+    // boxed on purpose: a bare BTreeMap (24 bytes) would make every map 32 bytes inline instead of 16
+    #[allow(clippy::box_collection)]
     Large(Box<BTreeMap<Box<str>, V>>),
 }
 
