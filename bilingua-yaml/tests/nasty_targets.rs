@@ -20,10 +20,12 @@ proptest! {
         let mut d = Yaml.extract(src, &opts(tgt)).unwrap();
         let mut want: Vec<String> = Vec::new();
         // units added for a plural category the target needs (unit model step 7) come after the others in the
-        // document and before `other` in the file: they are checked without their order
+        // document and before `other` in the file: they are checked without their order, so each gets a text no
+        // other unit can have (the seed alphabet has no capitals or digits)
         let mut added: Vec<String> = Vec::new();
         for (i, u) in d.units.iter_mut().enumerate() {
-            let t: String = seed[i % seed.len()].clone();
+            let s: &str = &seed[i % seed.len()];
+            let t: String = if u.has_hidden(icu::ADDED_HIDDEN) { format!("Added{i} {s}") } else { s.to_string() };
             u.segments[0].target = vec![Inline::text(t.clone())];
             let tr: String = t.trim().to_string();
             if tr.chars().any(|c: char| c.is_alphanumeric()) {
@@ -37,6 +39,6 @@ proptest! {
         let got: Vec<String> = back.unwrap().units.iter().map(text_of).collect();
         let mut it = got.iter();
         for e in &want { prop_assert!(it.any(|g: &String| g == e), "missing {:?} in {}", e, s); }
-        for e in &added { prop_assert!(got.contains(e), "missing added {:?} in {}", e, s); }
+        for e in &added { prop_assert!(got.iter().filter(|g| *g == e).count() == 1, "missing added {:?} in {}", e, s); }
     }
 }

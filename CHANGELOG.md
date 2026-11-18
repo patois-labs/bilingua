@@ -7,75 +7,92 @@ is listed here).
 
 ## [Unreleased]
 
-### Security
+## [0.10.0] - 2026-11-18
 
-- Office and package formats (security review run 2): ODF comment paragraphs are listed once however comments
-  nest, and right-to-left sheet styles are named in linear time; DOCX and PPTX LocOS image, alt-text and SmartArt
-  lookups, the EPUB package reader's namespace and attribute checks, IDML bare-break wrapping, the xcstrings
-  variation mirror, xcloc member lookups and xlsx sheet relationships are hashed or done in one pass. ODF, DOCX,
-  PPTX, XLSX, IDML, ARB and xcloc merges read the stored file under the caller's merge limits. The native DOCX and
-  PPTX writers stamp only a valid language tag, escaped for either quote. XLSX gives a repeated cell reference its
-  own unit id. A PO plural entry may ask for at most 32 forms, and PO and ARB plural copies of a key and notes count
-  against `max_context_bytes`. The MIME walker stops collecting parts past the part cap. A TTX Document with
-  damaged splice data is refused instead of panicking. Batches skip a member whose document name repeats another's.
-  The facade sniffs a file with no extension only up to `SNIFF_MAX_BYTES` (4 MiB); a larger one needs its
-  extension. The publish script checks the owner also when crates.io answers "already exists".
-- ICML: bare `Content` and `Br` children of a range are wrapped in one pass and marking a change stops at an already changed node, so tens of thousands of bare runs read in seconds instead of minutes.
-- IDML: a merge puts the rebuilt ranges of all paragraphs in place together, one pass per parent, instead of one lookup and insert per paragraph.
-- WXL: writing `Culture` skips comments and processing instructions in a DOCTYPE internal subset, so a quote in a subset comment no longer hides the root tag.
-- XLSX: a workbook whose prefixed root is outside the SpreadsheetML namespace (an Office 2007 beta file) is
-  refused with a clear message instead of opening with no units; an unprefixed one is read as before (BILI-50).
-- Email: a re-wrapped plain-text paragraph keeps each line's own indent, so a tab only the first line had is not
-  added to the others (BILI-52).
-- Dependencies: quick-xml 0.41 (RUSTSEC-2026-0194, -0195) and pulldown-cmark 0.13.6 (RUSTSEC-2026-0433); attribute
-  values come out as before.
-- Python: PyO3 0.29 and pythonize 0.29 (RUSTSEC-2026-0176, -0177). The Python API is unchanged. The
-  `generate-import-lib` feature is kept but does nothing now: PyO3 links Windows wheels without an import library.
-- HTML preview: `sanitize_html` (and so the HTML preview) is an allowlist now: text formatting, headings, lists,
-  tables, links, images, simple form controls and style sheets, a short list of attributes per element, and URLs
-  only to http, https, mailto and tel (images also to raster `data:image/`), checked after the value is decoded.
-  SVG and MathML (with their content), scripts, frames, objects, embeds, templates, forms, `base`, `link`, a `meta`
-  with `http-equiv`, event handlers, `srcdoc` and script-like CSS are left out. Tags are rebuilt with their kept
-  attributes in double quotes (`<br/>` becomes `<br>`); the segment markers of the preview are kept.
-- Resource limits (security review run 2): a long heading or ITS note copied into every later unit is charged to
-  `max_context_bytes` before each copy (HTML, Markdown, AsciiDoc, wiki, ODF, DOCX, XML), and an ITS rule's note
-  text is kept once. Linear now: comment scans in the HTML, HTML Help and preview readers, end tags in SVG and
-  MathML in the export check, tag-library script elements in server pages, image anchoring in LocOS-profile
-  Markdown, the autolink repair in Markdown and MDX, close tags in SRT and WebVTT cues, style switches in ASS
-  lines, style pairs in MicroDVD lines, and many accelerators in an rc target.
-- Markdown (native): a plain front-matter value that holds NEL, LS, PS, a tab or another control character, or a
-  colon before a tab, is written in double quotes, so a YAML 1.1 reader takes it as one value.
+Big files and the unit model. Bilingua opens files of several gigabytes on a person's own machine, refuses
+oversized uploads early under the hosted limits, and uses about 15 to 35 % less memory on large Office,
+HTML and Markdown files. Units now say what they are: a structure role, typed inline codes, and plural groups with
+a unit for each plural form the target language needs. JSON documents and Python dicts are byte-identical when the
+new fields are unset, and under the `locos` profile none of them is filled. Rust API users: see MIGRATION.md,
+"0.9 to 0.10".
 
-### Fixed (wild-file backlog)
+### Added
 
-- ODF (bilingua#22): ODT units get the DOCX reader's context kind: `list-item`, `header`, `footer`, `footnote`,
-  `endnote` and `textbox` instead of `paragraph`; ODP and ODG speaker notes get `notes`, as PPTX. Kinds under the
-  LocOS profile are unchanged.
-
-- Sentence segmentation: a line break kept as a tag (a .txt paragraph's line ending, an SRT or WebVTT cue's line
-  break, a Markdown hard break) now ends a sentence, so a file with one sentence per line opens as one segment per
-  line (bilingua#21). At the cut the break moves out of the segments into the separator, written with the file's own
-  line ending, so a translation without tags keeps every line. A break inside a sentence stays a tag; Paragraph
-  granularity and the `locos` profile are unchanged. Joining the segments (or going back to Paragraph) gives the
-  break back as its tag.
-- XML guard: an apostrophe or quote in a comment of a DOCTYPE's internal subset (`<!-- don't edit -->`) no longer
-  refuses the file (BILI-60). Every reader skips such a comment whole. A bracket or angle bracket in it, a quote in
-  a processing instruction of the subset, and every entity declaration are refused as before; when a subset
-  comment holds a quote, `<!ENTITY` anywhere after the DOCTYPE (attribute, comment, CDATA) is refused too, so a
-  scanner that paired that quote could not find a declaration there.
-- DXF: a drawing that declares `ANSI_950` (cp950) but holds Hong Kong (HKSCS) characters at byte pairs cp950
-  leaves undefined is read (BILI-57). It gets the skeleton code page `cp950-hkscs` (cp950 plus those pairs, as
-  WHATWG Big5 reads them); untouched text stays byte for byte, a translation may use those characters, and a
-  cp950-only drawing keeps `cp950` exactly as LocOS reads it.
-- MIF: new option `mif.extract_variables` (off by default, LocOS lists neither) makes user variable definitions
-  (`VariableDef`, building blocks such as `<$chapnum>` as point tags) and paragraph number strings (`PgfNumString`)
-  units, as Okapi does (BILI-54). A string needs a letter to be a unit; a dropped building block is kept.
-- SCC: a one-row pop-on or paint-on caption with no PAC that the translation wraps onto more rows now places each
-  row with a PAC (the caption ending on row 15) instead of a carriage return, which is a roll-up code (BILI-53).
-  Roll-up captions, captions whose rows already break with carriage returns and the `locos` profile are unchanged.
+- **Large files (BILI-112).** Three limit profiles: `Limits::new()` (hosted, unchanged: 100 MB, 50,000 units,
+  500,000 cells, for uploads from strangers), `Limits::large()` (a 4 GB input, 20 million units or paragraphs,
+  every row Excel allows, a zip of up to 4 GB with 2 GB per part, a 1000:1 ratio check) and `Limits::unbounded()`
+  (no size limits, trusted files only); `Limits::profile(name)` reads `hosted`, `large` or `unbounded`. The CLI
+  takes `--limits large|hosted|unbounded` (large is its default) and `--max-units N`, `--max-input-mb N` and
+  `--max-cells N` on top of the profile; Python takes a profile name or a mapping as `limits=` in `extract`,
+  `merge` and `detect`. Every format takes the caller's limits on extract and merge, and a crate's own caps follow
+  a raised limit (hosted numbers are unchanged). New CLI command `bilingua formats` lists the formats and their
+  extensions. Bench results against Okapi and neokapi are in `oracle/LARGE-FILES-2026-11-17.md`.
+- **Structure roles (BILI-120).** `UnitContext::role` (`heading`, `title`, `subtitle`, `slidetitle`, `header`,
+  `footer`, `footnote`, `endnote`, `notes`, `comment`, `caption`, `sheetname`, `other`) and `UnitContext::level`
+  (a heading's outline level), JSON keys `role` and `level`, left out when unset. Filled by DOCX (part kind,
+  Title and Subtitle styles, heading levels, the core title), PPTX (notes; title, subtitle, header and footer
+  placeholders), XLSX (sheet names, comments, headers, footers), ODF (outline headings, headers, footers, notes,
+  comments, presentation notes), HTML (`h1` to `h6`, `title`, `caption`, `figcaption`) and Markdown (ATX and setext
+  headings).
+- **Typed inline codes (BILI-118).** `CodeData::ty` (JSON `type`: `bold`, `italic`, `underline`, `strike`,
+  `superscript`, `subscript`, `code`, `style`, `link`, `image`, `linebreak`, `tab`, `field`, `footnoteref`,
+  `placeholder`, `other`) and `CodeData::attrs` (JSON `attrs`: `href` and `title` for a link, `field` for a field,
+  `src` and `alt` for an image, `style` for a style, `name` for a placeholder), both left out when unset. Filled
+  by DOCX, PPTX, HTML, Markdown and ODF from the same facts as their labels (one table per crate, pinned by a test).
+  `label` stays.
+- **Plural groups and added forms (BILI-119).** `Unit::plural`, a `PluralSlot` (JSON `plural`: `group`, `kind`
+  of `cardinal`, `ordinal` or `select`, and when known `category`, `index`, `arg`, `parent`, `added`), left out when
+  unset; `Document::plural_categories(kind)` gives the target language's CLDR categories. The ICU parser of the
+  JSON and ARB crates moved into `bilingua_model::icu` (one copy, output unchanged). Filled by PO and MO (group and
+  msgstr index), JSON (ICU dialects, i18next keys, go-i18n), ARB, xcstrings, Android `<plurals>`, Qt numerus, Rails
+  YAML, stringsdict, Fluent selects and JS modules (slot only). With a target language and outside the `locos`
+  profile, JSON (ICU dialects and i18next keys), ARB, xcstrings, Android, Rails YAML, stringsdict and Fluent add a
+  unit for each category the target needs and the source lacks (Polish `few` and `many`), marked
+  `plural.added`, so a translator can fill it. Untranslated, an added unit writes exactly what the merge wrote
+  before (a copy of `other`, or nothing where no fill runs); translated, it is written in place of the copy. A
+  document extracted for one target's categories and merged for another's is refused rather than writing a form
+  under the wrong category. Writers keep reading `extra["plural"]`, `extra["icu"]` and their skeletons.
 
 ### Changed
 
+- **Memory (BILI-114).** Lower peak memory on large files, output unchanged. The DOCX, XLSX and PPTX trees intern
+  their tag strings, size their children exactly and are freed as soon as they are written (DOCX frees a part's
+  tree during the walk); the CLI writes and reads the skeleton straight from the Document and streams the XLIFF;
+  an HTML merge borrows the one-part page skeleton. Then the unit model change: `Unit.codes`, `Unit.hidden` and
+  `UnitContext.extra` are compact sorted maps (`Codes`, `TextMap`) instead of a `BTreeMap`, whose first insert
+  allocated room for 11 entries. Measured on the M5 for the compact maps (release CLI, peak RSS, extract and
+  merge, before and after): DOCX 12 MB mixed 629 to 489 MB and 824 to 684 MB; DOCX 62,000 paragraphs 252 to 186
+  and 324 to 258 MB; XLSX 300,000 cells 1,078 to 701 and 1,096 to 723 MB; PPTX 1,500 slides 57 to 45 and 62 to
+  49 MB; HTML 29 MB 859 to 732 and 935 to 805 MB; flat HTML 55 MB 1,163 to 928 and 1,287 to 1,050 MB; Markdown
+  19 MB 427 to 344 and 462 to 378 MB. Every step is 3 to 20 % faster, and every XLIFF, skeleton, merged and
+  pseudo file is byte-identical.
+- **Fail early under the hosted limits (BILI-115).** DOCX counts the paragraphs of its parts while the package
+  inflates and refuses the file as soon as the count passes `max_paragraphs`; XLSX pre-scans rows, cells and
+  shared strings against the same budget before it builds the first sheet tree; DOCX and PPTX refuse once the
+  unit count passes `max_units` after each part. Same errors as before, much sooner: on the M5 under
+  `--limits hosted`, the 300,000-cell XLSX is refused with 57 MB and 0.21 s instead of 589 MB and 1.06 s, the
+  12 MB DOCX with 54 MB and 0.04 s instead of 90 MB and 0.14 s. Under `--limits large` the output is
+  byte-identical at the same cost.
+- **Comment numbering (BILI-126).** ODF, PPTX, VSDX and XLSX number comment units from 1,000,000, as Localization
+  OS does. Under `Limits::large()` a body can reach that number, so a file with comment units and a body that
+  long is now refused with a limit error (`guard::check_comment_base`) instead of giving a comment and a body unit
+  the same number; every file below the line keeps its numbering byte for byte. The XLSX merge no longer writes a
+  body key from 1,000,000 up into a comment, and the PPTX and XLSX LocOS merges refuse a document whose units
+  carry one number twice.
+- **ODF kinds (bilingua#22).** ODT units get the DOCX reader's context kind: `list-item`, `header`, `footer`,
+  `footnote`, `endnote` and `textbox` instead of `paragraph`; ODP and ODG speaker notes get `notes`, as PPTX.
+  Kinds under the `locos` profile are unchanged.
+- **PO plural forms.** A target language outside the eleven PO knew by name (Polish, Russian, Czech, Ukrainian,
+  ...) now takes the shared gettext rule when CLDR agrees with its form count, so an English file translated to
+  Polish gets three forms and a Polish `Plural-Forms` instead of two forms and the English header. Turkish and
+  Azerbaijani get `nplurals=2; plural=(n != 1)`. A header whose `Plural-Forms` was written for the target (a
+  four-form Welsh or Polish file) keeps its forms and header; a template's `Plural-Forms` counts as no header, at
+  extract and at merge. Where CLDR and gettext disagree (hu, fa, hy, ka, br), an entry keeps its own count.
+- **Rust API (see MIGRATION.md).** `Unit.codes` is `Codes`, `Unit.hidden` and `UnitContext.extra` are `TextMap`;
+  read and write them through `codes()`, `codes_mut()`, `hidden_map()`, `extra()` and their setters. `CodeData`
+  has getters and setters (`open_markup()`, `set_open`, ...). `with_codes` and `with_extra` take `impl Into<..>`, so
+  a `BTreeMap` still works; `to_locos_text_coded` takes `&Codes`. No `SKELETON_SCHEMA` changed: stored documents
+  and CLI skeletons from 0.9 load and merge as before.
 - PPTX, DOCX and XLSX (native): the base formatting of a paragraph or rich-text cell, the one that needs no tag,
   is a plain one when there is one, then the paragraph default (`a:endParaRPr`, or the paragraph mark's `w:rPr`; an
   XLSX shared string has none), then the most text (BILI-116). Before, it was the most text, so in
@@ -153,6 +170,70 @@ is listed here).
   set back to draft writes `translation_status="in_progress"` (BILI-39).
 - Docs: the safety model says a stored Document (and the CLI sidecar) is host data, kept where uploaders,
   translators and other tenants cannot write it.
+
+### Fixed
+
+- Sentence segmentation: a line break kept as a tag (a .txt paragraph's line ending, an SRT or WebVTT cue's line
+  break, a Markdown hard break) now ends a sentence, so a file with one sentence per line opens as one segment per
+  line (bilingua#21). At the cut the break moves out of the segments into the separator, written with the file's own
+  line ending, so a translation without tags keeps every line. A break inside a sentence stays a tag; Paragraph
+  granularity and the `locos` profile are unchanged. Joining the segments (or going back to Paragraph) gives the
+  break back as its tag.
+- XML guard: an apostrophe or quote in a comment of a DOCTYPE's internal subset (`<!-- don't edit -->`) no longer
+  refuses the file (BILI-60). Every reader skips such a comment whole. A bracket or angle bracket in it, a quote in
+  a processing instruction of the subset, and every entity declaration are refused as before; when a subset
+  comment holds a quote, `<!ENTITY` anywhere after the DOCTYPE (attribute, comment, CDATA) is refused too, so a
+  scanner that paired that quote could not find a declaration there.
+- DXF: a drawing that declares `ANSI_950` (cp950) but holds Hong Kong (HKSCS) characters at byte pairs cp950
+  leaves undefined is read (BILI-57). It gets the skeleton code page `cp950-hkscs` (cp950 plus those pairs, as
+  WHATWG Big5 reads them); untouched text stays byte for byte, a translation may use those characters, and a
+  cp950-only drawing keeps `cp950` exactly as LocOS reads it.
+- MIF: new option `mif.extract_variables` (off by default, LocOS lists neither) makes user variable definitions
+  (`VariableDef`, building blocks such as `<$chapnum>` as point tags) and paragraph number strings (`PgfNumString`)
+  units, as Okapi does (BILI-54). A string needs a letter to be a unit; a dropped building block is kept.
+- SCC: a one-row pop-on or paint-on caption with no PAC that the translation wraps onto more rows now places each
+  row with a PAC (the caption ending on row 15) instead of a carriage return, which is a roll-up code (BILI-53).
+  Roll-up captions, captions whose rows already break with carriage returns and the `locos` profile are unchanged.
+- Release builds: build scripts and proc macros are never stripped, only the shipped binaries (BILI-117).
+
+### Security
+
+- Office and package formats (security review run 2): ODF comment paragraphs are listed once however comments
+  nest, and right-to-left sheet styles are named in linear time; DOCX and PPTX LocOS image, alt-text and SmartArt
+  lookups, the EPUB package reader's namespace and attribute checks, IDML bare-break wrapping, the xcstrings
+  variation mirror, xcloc member lookups and xlsx sheet relationships are hashed or done in one pass. ODF, DOCX,
+  PPTX, XLSX, IDML, ARB and xcloc merges read the stored file under the caller's merge limits. The native DOCX and
+  PPTX writers stamp only a valid language tag, escaped for either quote. XLSX gives a repeated cell reference its
+  own unit id. A PO plural entry may ask for at most 32 forms, and PO and ARB plural copies of a key and notes count
+  against `max_context_bytes`. The MIME walker stops collecting parts past the part cap. A TTX Document with
+  damaged splice data is refused instead of panicking. Batches skip a member whose document name repeats another's.
+  The facade sniffs a file with no extension only up to `SNIFF_MAX_BYTES` (4 MiB); a larger one needs its
+  extension. The publish script checks the owner also when crates.io answers "already exists".
+- ICML: bare `Content` and `Br` children of a range are wrapped in one pass and marking a change stops at an already changed node, so tens of thousands of bare runs read in seconds instead of minutes.
+- IDML: a merge puts the rebuilt ranges of all paragraphs in place together, one pass per parent, instead of one lookup and insert per paragraph.
+- WXL: writing `Culture` skips comments and processing instructions in a DOCTYPE internal subset, so a quote in a subset comment no longer hides the root tag.
+- XLSX: a workbook whose prefixed root is outside the SpreadsheetML namespace (an Office 2007 beta file) is
+  refused with a clear message instead of opening with no units; an unprefixed one is read as before (BILI-50).
+- Email: a re-wrapped plain-text paragraph keeps each line's own indent, so a tab only the first line had is not
+  added to the others (BILI-52).
+- Dependencies: quick-xml 0.41 (RUSTSEC-2026-0194, -0195) and pulldown-cmark 0.13.6 (RUSTSEC-2026-0433); attribute
+  values come out as before.
+- Python: PyO3 0.29 and pythonize 0.29 (RUSTSEC-2026-0176, -0177). The Python API is unchanged. The
+  `generate-import-lib` feature is kept but does nothing now: PyO3 links Windows wheels without an import library.
+- HTML preview: `sanitize_html` (and so the HTML preview) is an allowlist now: text formatting, headings, lists,
+  tables, links, images, simple form controls and style sheets, a short list of attributes per element, and URLs
+  only to http, https, mailto and tel (images also to raster `data:image/`), checked after the value is decoded.
+  SVG and MathML (with their content), scripts, frames, objects, embeds, templates, forms, `base`, `link`, a `meta`
+  with `http-equiv`, event handlers, `srcdoc` and script-like CSS are left out. Tags are rebuilt with their kept
+  attributes in double quotes (`<br/>` becomes `<br>`); the segment markers of the preview are kept.
+- Resource limits (security review run 2): a long heading or ITS note copied into every later unit is charged to
+  `max_context_bytes` before each copy (HTML, Markdown, AsciiDoc, wiki, ODF, DOCX, XML), and an ITS rule's note
+  text is kept once. Linear now: comment scans in the HTML, HTML Help and preview readers, end tags in SVG and
+  MathML in the export check, tag-library script elements in server pages, image anchoring in LocOS-profile
+  Markdown, the autolink repair in Markdown and MDX, close tags in SRT and WebVTT cues, style switches in ASS
+  lines, style pairs in MicroDVD lines, and many accelerators in an rc target.
+- Markdown (native): a plain front-matter value that holds NEL, LS, PS, a tab or another control character, or a
+  colon before a tab, is written in double quotes, so a YAML 1.1 reader takes it as one value.
 
 ## [0.9.1] - 2026-11-09
 
@@ -381,6 +462,7 @@ is listed here).
   drawings) now match and their lists are gone.
 
 ### Fixed
+
 
 - bilingua-xcstrings: the merge re-read of the stored catalog used the default nesting limit, so a catalog extracted
   with a higher limit could be refused at merge. It now reads up to 1024 levels (a depth the recursive reader takes
@@ -645,5 +727,6 @@ table, with extensions, is in the README.
 
 - Rust 1.88 or later. Python 3.11 or later for the wheel.
 
+[0.10.0]: https://github.com/patois-labs/bilingua/releases/tag/v0.10.0
 [0.9.1]: https://github.com/patois-labs/bilingua/releases/tag/v0.9.1
 [0.9.0]: https://github.com/patois-labs/bilingua/releases/tag/v0.9.0

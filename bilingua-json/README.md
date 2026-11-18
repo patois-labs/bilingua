@@ -36,8 +36,22 @@ let doc = bilingua_json::JsonFilter.extract(bytes, &ExtractOptions::default())?;
 let out = bilingua_json::JsonFilter.merge(&doc)?;   // byte-identical when nothing is translated
 ```
 
+## Plurals
+
+- Resource dialects (`json.dialect`: chrome, formatjs, structured, go, arb, or auto) parse ICU MessageFormat: each
+  plural or select branch is its own unit, and a merge for a target language writes the target's CLDR categories.
+- i18next keys (`item_one`, `item_other`, `item_ordinal_one`) in generic JSON are one unit per key. At merge,
+  `json.i18next_plurals` (off by default, on under the LocOS profile) adds the keys the target needs, holding the
+  `_other` value.
+- Units carry `Unit::plural` (group, kind, category) outside the LocOS profile (Bilingua 0.10).
+- Extracted with a target language and outside the LocOS profile, a group that lacks a category the target needs
+  (Polish `few`, `many`) gets a unit for it, a copy of `other` marked as added (`plural.added`), so a translator can
+  fill it. For i18next keys, **a translated added key is written even with `json.i18next_plurals` off**, beside
+  the group's other keys; an untranslated one is then left out, so the file is what it was before. With the option
+  on, every missing key is written and the translated added ones replace the copy of `_other`.
+
 ## Not done
 
-ICU MessageFormat plurals (`{n, plural, one {..} other {..}}`) are not parsed; such a value is one unit with its
-braces as text. No JSON5, JSONC or JSON Lines. No key filters (translate only some paths); a caller can lock units
+In generic JSON (the default `json.dialect=plain`), ICU MessageFormat plurals (`{n, plural, one {..} other {..}}`)
+are not parsed; such a value is one unit with its braces as text. No JSON5, JSONC or JSON Lines. No key filters (translate only some paths); a caller can lock units
 by pointer. Right-to-left marks are not added.

@@ -334,7 +334,7 @@ fn fill_line<'t>(text: &'t str, starts: &[usize], wu: &walk::WUnit) -> Option<(u
 
 /// Edits for a localized Rails file: the root key and the plural categories the target needs. `added` holds the
 /// translated units added at extract for a category a map lacks, by map and category: they stand in for the copy
-/// of `other`.
+/// of `other`. This fill matches the other crates' (xmlres, stringsdict, ftl, json i18next).
 fn rails_edits(text: &str, w: &Walk, doc: &Document, target: &str, added: &std::collections::HashMap<(usize, &str), String>, edits: &mut Vec<(usize, usize, String)>) {
     let Some(root) = &w.rails_root else { return };
     let new_key = target_root_key(&root.key, target);

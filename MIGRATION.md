@@ -3,6 +3,90 @@
 What changed in the public API before 1.0, for format-crate builders and for the Localization OS adapter. Every
 item below breaks code written against 0.1; after 1.0 these types grow without breaking callers.
 
+## 0.9 to 0.10 (the unit model, for Rust API users)
+
+0.10 changes how a unit stores its maps and adds three optional pieces of structure. JSON documents, CLI skeletons,
+`state.json` files and Python dicts from 0.9 load unchanged, and a 0.10 document with none of the new fields set
+serializes to the same bytes as 0.9 (golden tests in `bilingua-model/tests/golden_json.rs` pin this). No
+`SKELETON_SCHEMA` changed, so nothing has to be re-extracted. Python and Localization OS callers need nothing.
+Rust code that names the map types needs the changes below.
+
+**The maps.** `Unit.codes` is `Codes` (`SmallMap<CodeData>`), and `Unit.hidden` and `UnitContext.extra` are
+`TextMap`, instead of `BTreeMap<String, ..>`. Both keep the keys sorted in `str` order, so iteration, JSON order
+and equality are as before; up to 32 entries they are an exact-size sorted slice, above that a tree. Reach them
+through the accessors, which is also what keeps code working if the storage changes again:
+
+| 0.9 | 0.10 |
+|---|---|
+| `unit.codes.get(id)`, `unit.codes.insert(..)` | `unit.codes().get(id)`, `unit.codes_mut().insert(id, code)` |
+| `unit.codes = map` | `unit.set_codes(map)` (any `impl Into<Codes>`: a `BTreeMap<String, CodeData>`, an array of pairs, an iterator) |
+| `unit.hidden.get("raw")` | `unit.hidden("raw")` or `unit.hidden_map().get("raw")` (gives `Option<&str>`) |
+| `unit.hidden = map` | `unit.set_hidden_map(map)`; `set_hidden`, `has_hidden` and `with_hidden` are unchanged |
+| `ctx.extra.get("plural")` | `ctx.extra().get("plural")` (gives `Option<&str>`) |
+| `ctx.extra.insert(k, v)` | `ctx.extra_mut().insert(k, v)`; `ctx.set_extra(map)` |
+| `unit.codes.entry(id).or_default()` | `unit.codes_mut().get_or_insert_with(id, CodeData::default)` (gives `&mut CodeData`) |
+| `for (k, v) in &unit.codes` (`&String`) | `for (k, v) in unit.codes()` (`&str`) |
+| `unit.codes.clone()` | `Codes::from(unit.codes())`, `TextMap::from(ctx.extra())` |
+
+`TextMap` reads and writes `&str`: `get` gives `Option<&str>`, iteration `(&str, &str)`, `insert` and `remove`
+return `Option<Box<str>>`. `Codes` and `TextMap` have the usual map methods (`get`, `get_mut` on `Codes`,
+`contains_key`, `remove`, `retain`, `iter`, `keys`, `values`, `len`, `is_empty`, `Extend`, `FromIterator`,
+`Index`, so `codes["1"]` and `codes[&id]` still work).
+
+**`CodeData` getters and setters.** Read the markup with `open_markup()`, `close_markup()`, `standalone_markup()`
+and `label()` (each `Option<&str>`; `standalone()` is the constructor), and change it with `set_open`,
+`set_close`, `set_standalone` and `set_label` (each takes `&str`, `String` or an `Option` of them). The fields stay
+public, but code that uses the accessors will not break if they become boxed strings (a possible later step).
+`UnitContext` has the same pairs for `kind`, `style`, `key`, `heading` and `location`.
+
+**Signatures that changed.** `profile::tokens::to_locos_text_coded(format, inlines, codes)` takes `&Codes`
+(pass `unit.codes()`). The internal tag check `check_target_tags` takes `&Codes` too (it is crate-private).
+`Unit::with_codes` and `UnitContext::with_extra` take `impl Into<Codes>` and `impl Into<TextMap>`, so a caller
+that passes a `BTreeMap` still compiles; a value built with `.into()` must name its type first.
+
+**New fields** (each left out of the JSON when unset, each `None` or empty under `profile=locos`; no writer reads
+them, they are for editors and QA):
+
+- `UnitContext::role` (`Option<Role>`) and `UnitContext::level` (`Option<u8>`, a heading's level): `role()`,
+  `level()`, `set_role`, `set_level`, `set_heading_role(level)`, `with_role`, `with_level`. JSON `role`, `level`.
+- `CodeData::ty` (`Option<CodeType>`, JSON `type`) and `CodeData::attrs` (`TextMap`, JSON `attrs`):
+  `code_type()`, `set_code_type`, `with_code_type`, `attr(key)`, `attrs()`, `set_attr`, `with_attr`
+  (`CodeType::attr_keys` lists the keys per type).
+- `Unit::plural` (`Option<Box<PluralSlot>>`, JSON `plural`): `plural()`, `set_plural`, `with_plural`;
+  `PluralSlot::new(group, kind)` with `with_category`, `with_index`, `with_arg`, `with_parent`, `with_added`, and
+  the getters `group()`, `kind()`, `category()`, `index()`, `arg()`, `parent()`, `is_added()`.
+  `Document::plural_categories(kind)` gives the target language's CLDR categories.
+- `bilingua_model::icu` holds the one ICU MessageFormat parser (it was in bilingua-json and bilingua-arb).
+
+`Role`, `CodeType` and `PluralKind` are `#[non_exhaustive]` and read an unknown JSON value as `Other`, so match
+them with a wildcard arm.
+
+**Added plural units.** Extracted with a target language and outside the `locos` profile, JSON (ICU dialects and
+i18next keys), ARB, xcstrings, Android `<plurals>`, Rails YAML, stringsdict and Fluent add a unit for each plural
+category the target needs and the source lacks (Polish `few` and `many` for an English source). So a document can
+have more units than in 0.9 for the same file and target. Recognise them by `unit.plural().is_some_and(PluralSlot::is_added)`
+(JSON: `"plural": {.., "added": true}`); their source is a copy of the `other` form. Their ids follow the format:
+an ICU path like `count: plural few` in `extra["icu"]` (JSON dialects, ARB), `u<n>.<category>` (xcstrings) or
+`<other id>.<category>` (the key-style formats), and the json, arb and key-style ones carry the hidden value
+`icu::ADDED_HIDDEN`. Untranslated, an added unit writes what 0.9's merge wrote; translated, its text replaces the
+copy of `other`. A merge for a target with other categories than the one extracted for refuses a translated added
+unit. Code that pairs units with a source file one to one, or counts units, should skip added units or extract
+without a target.
+
+**Rolling back to 0.9.** Documents that hold added plural units must not go back to an older build:
+
+- a 0.9 build that re-saves a document drops the new fields (roles, code types, plural slots); they come back on
+  the next extract, and no text is lost;
+- json (ICU dialects) and arb refuse such a document ("the units no longer match the skeleton");
+- xcstrings ignores the `u<n>.<category>` units and their translations without a word (the forms are filled from
+  `other`, as 0.9 did); CAT OS's `upgrade.rs` then re-extracts on that build, and what translators wrote in the
+  added units is gone;
+- xmlres, stringsdict, ftl and i18next JSON keep merging but ignore the added units (translations of added forms
+  are lost, the forms are filled from `other` where a fill runs);
+- yaml (Rails) refuses a translated merge ("the document no longer matches its skeleton").
+
+So roll back only together with a re-extract, and expect translations of added forms to be lost.
+
 ## Everyone
 
 - **Build options and model values with constructors, not struct literals.** `ExtractOptions`, `MergeOptions`,

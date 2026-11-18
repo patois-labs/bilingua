@@ -48,7 +48,7 @@ pub const FORMAT_OPTIONS: &[bilingua_model::FormatOptionKey] = &[
     ),
     bilingua_model::FormatOptionKey::bool(
         "json.i18next_plurals",
-        "At merge for a target language: add the CLDR plural keys the target needs to i18next-style groups (item_one, item_other) of generic JSON, holding the _other value. Default off; on under the LocOS profile, which also writes the file the way LocOS does (re-indented, two spaces).",
+        "At merge for a target language: add the CLDR plural keys the target needs to i18next-style groups (item_one, item_other) of generic JSON, holding the _other value. Default off; on under the LocOS profile, which also writes the file the way LocOS does (re-indented, two spaces). Off, a key added at extract for a category the group lacks (outside the LocOS profile, with a target) is still written once it is translated.",
     ),
 ];
 

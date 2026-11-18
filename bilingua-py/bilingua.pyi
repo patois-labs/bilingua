@@ -5,7 +5,7 @@ below name the keys a caller reads and writes; any key may be missing in an olde
 added in a 1.x release (`total=False`).
 """
 
-from typing import Any, Literal, Mapping, TypedDict, final, overload
+from typing import Any, Literal, Mapping, NotRequired, TypedDict, final, overload
 
 __version__: str
 
@@ -13,6 +13,16 @@ Granularity = Literal["sentence", "paragraph", "document"]
 OutputEncoding = Literal["keep", "utf-8", "utf8"]
 SegState = Literal["new", "draft", "translated", "confirmed", "reviewed", "signed-off", "rejected", "locked"]
 FormatOptionValue = str | bool | int
+# 0.10: an unknown value written by a newer release reads as "other"
+CodeType = Literal[
+    "bold", "italic", "underline", "strike", "superscript", "subscript", "code", "style", "link", "image",
+    "linebreak", "tab", "field", "footnoteref", "placeholder", "other",
+]
+Role = Literal[
+    "heading", "title", "subtitle", "slidetitle", "header", "footer", "footnote", "endnote", "notes", "comment",
+    "caption", "sheetname", "other",
+]
+PluralKind = Literal["cardinal", "ordinal", "select", "other"]
 
 class TextInline(TypedDict):
     text: str
@@ -50,6 +60,40 @@ class UnitContext(TypedDict, total=False):
     max_len: int | None
     notes: list[str]
     extra: dict[str, str]
+    role: NotRequired[Role]
+    """0.10: the unit's structural role, when the format knows it. Missing when unset and under `profile="locos"`."""
+    level: NotRequired[int]
+    """0.10: the outline level of a `heading` (1 for a top-level heading). Missing when unset."""
+
+class CodeData(TypedDict, total=False):
+    """One entry of `Unit.codes`: the markup of an inline code. `open`, `close`, `standalone` and `label` are always
+    written (None when empty); `type` and `attrs` are missing when unset and under `profile="locos"`."""
+    open: str | None
+    close: str | None
+    standalone: str | None
+    label: str | None
+    type: NotRequired[CodeType]
+    """0.10: what the code is (bold, link, field...)."""
+    attrs: NotRequired[dict[str, str]]
+    """0.10: facts per type: `href` and `title` for a link, `field` for a field, `src` and `alt` for an image,
+    `style` for a style, `name` for a placeholder."""
+
+class PluralSlot(TypedDict, total=False):
+    """0.10: the plural group a unit is one form of (`Unit.plural`). No writer reads it."""
+    group: str
+    """Shared by every form of one message, unique in the document."""
+    kind: PluralKind
+    category: NotRequired[str]
+    """The CLDR category ("one", "few"), an exact value ("=0") or a select key ("female"); missing for gettext."""
+    index: NotRequired[int]
+    """The gettext msgstr[N] index."""
+    arg: NotRequired[str]
+    """The ICU argument name ("count"), when known."""
+    parent: NotRequired[str]
+    """The enclosing group, for a plural inside a select."""
+    added: NotRequired[bool]
+    """True for a target category the source lacks, added at extract (missing when false). Untranslated, it writes
+    what the source `other` form gives."""
 
 class Note(TypedDict, total=False):
     author: str
@@ -60,12 +104,14 @@ class Unit(TypedDict, total=False):
     id: str
     segments: list[Segment]
     separators: list[str]
-    codes: dict[str, dict[str, Any]]
+    codes: dict[str, CodeData]
     context: UnitContext
     translate: bool
     notes: list[Note]
     lock_reason: str
     hidden: dict[str, str]
+    plural: NotRequired[PluralSlot]
+    """0.10: missing for most units and under `profile="locos"`."""
 
 class Warning(TypedDict, total=False):
     kind: str
