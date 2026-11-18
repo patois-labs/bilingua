@@ -13,7 +13,8 @@ pub const C_BASE: &str = "_base";
 #[derive(Clone)]
 pub enum Atom {
     Text { fmt: String, key: String, text: String },
-    Code { xml: String, display: String, label: String },
+    /// `ty` and `attrs` are the code's type and attributes (BILI-118), set with its label.
+    Code { xml: String, display: String, label: String, ty: CodeType, attrs: TextMap },
 }
 
 pub struct Built {
@@ -36,6 +37,25 @@ fn label_of(p: &str) -> &'static str {
         "caps" => "caps",
         "highlight" => "highlight",
         _ => "formatting",
+    }
+}
+
+/// The type of a formatting code (BILI-118), from the same properties `label_of` names: a link wins (its target
+/// is the fact a chip shows); otherwise the one property that marks the text, caps and highlight not counted.
+/// None or several is `other`.
+pub fn fmt_type(added: &[&str]) -> CodeType {
+    if added.contains(&"link") {
+        return CodeType::Link;
+    }
+    let marks: Vec<&str> = added.iter().copied().filter(|p| !matches!(*p, "caps" | "highlight")).collect();
+    match marks.as_slice() {
+        ["b"] => CodeType::Bold,
+        ["i"] => CodeType::Italic,
+        ["u"] => CodeType::Underline,
+        ["sup"] => CodeType::Superscript,
+        ["sub"] => CodeType::Subscript,
+        ["strike"] => CodeType::Strike,
+        _ => CodeType::Other,
     }
 }
 
@@ -196,7 +216,7 @@ pub fn build(atoms: Vec<Atom>, props: Props, default_key: Option<&str>) -> Built
                     let name = name.to_string();
                     codes.insert(
                         id.clone(),
-                        CodeData::new().with_open(fmt.to_string()).with_label(label),
+                        CodeData::new().with_open(fmt.to_string()).with_label(label).with_code_type(Some(fmt_type(&added))),
                     );
                     inlines.push(Inline::tag(id.clone(), TagKind::Open, format!("<{name}>")));
                     close_display = format!("</{name}>");
@@ -205,7 +225,7 @@ pub fn build(atoms: Vec<Atom>, props: Props, default_key: Option<&str>) -> Built
                 inlines.push(Inline::Text(text));
             }
             M::Code(i) => {
-                let Atom::Code { xml, display, label } = &atoms[i] else { continue };
+                let Atom::Code { xml, display, label, ty, attrs } = &atoms[i] else { continue };
                 // The tag pair stays open across the code only when the next text has the same formatting.
                 if open.as_ref().map(|(k, _)| next_text[ai].is_none_or(|nx| !same_key(*k, nx))).unwrap_or(false) {
                     close_open(&mut inlines, &mut open, &close_display);
@@ -214,7 +234,11 @@ pub fn build(atoms: Vec<Atom>, props: Props, default_key: Option<&str>) -> Built
                 let id = counter.to_string();
                 codes.insert(
                     id.clone(),
-                    CodeData::new().with_standalone(xml.clone()).with_label(label.clone()),
+                    {
+                        let mut c = CodeData::new().with_standalone(xml.clone()).with_label(label.clone()).with_code_type(Some(*ty));
+                        *c.attrs_mut() = TextMap::from(attrs);
+                        c
+                    },
                 );
                 inlines.push(Inline::tag(id, TagKind::Standalone, display.clone()));
             }

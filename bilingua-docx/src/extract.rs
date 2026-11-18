@@ -159,6 +159,8 @@ pub struct Extractor {
     dml_n: usize,
     cur_ord: usize,
     limits: bilingua_model::Limits,
+    /// The current part's relationships (id to target), for link and image attributes (BILI-118).
+    rels: HashMap<String, String>,
     /// What the comment copies on the units have cost so far (`Limits::max_context_bytes`).
     context: bilingua_model::guard::ContextBudget,
     /// Set when a comment copy went over the context budget; no copy is made after that, and the caller turns it
@@ -200,6 +202,7 @@ impl Extractor {
             dml_n: 0,
             cur_ord: 0,
             limits: bilingua_model::Limits::default(),
+            rels: HashMap::new(),
             context: bilingua_model::guard::ContextBudget::new(),
             refused: None,
         }
@@ -217,6 +220,11 @@ impl Extractor {
             Some(e) => Err(e),
             None => Ok(()),
         }
+    }
+
+    /// The relationships of the part about to be walked (BILI-118: link targets and image files).
+    pub fn set_rels(&mut self, rels: HashMap<String, String>) {
+        self.rels = rels;
     }
 
     pub fn begin_part(&mut self, kind: PartKind, name: &str, prefix: String, ns: Ns) {
@@ -448,10 +456,10 @@ impl Extractor {
                     }
                     n += 1;
                     let cid = n.to_string();
-                    let (d, cd, label) = dml_fmt_names(*rpr);
+                    let (d, cd, label, (ty, style)) = dml_fmt_names(*rpr);
                     codes.insert(
                         cid.clone(),
-                        CodeData::new().with_open(rpr.map(|r| r.raw()).unwrap_or_default()).with_close(String::new()).with_label(label),
+                        CodeData::new().with_open(rpr.map(|r| r.raw()).unwrap_or_default()).with_close(String::new()).with_label(label).with_code_type(Some(ty)).with_attr("style", style.unwrap_or_default()),
                     );
                     inl.push(Inline::tag(cid.clone(), TagKind::Open, d));
                     cur = Some((key.clone(), cid, cd));
@@ -1299,10 +1307,10 @@ impl Extractor {
                         close_cur!();
                         n += 1;
                         let id = n.to_string();
-                        let (d, cd, label) = fmt_names(rpr);
+                        let (d, cd, label, (ty, style)) = fmt_names(rpr);
                         codes.insert(
                             id.clone(),
-                            CodeData::new().with_open(rpr.clone()).with_close(String::new()).with_label(label),
+                            CodeData::new().with_open(rpr.clone()).with_close(String::new()).with_label(label).with_code_type(Some(ty)).with_attr("style", style.unwrap_or_default()),
                         );
                         inl.push(Inline::tag(id.clone(), TagKind::Open, d));
                         cur = Some((key.clone(), id, cd));
@@ -1332,10 +1340,9 @@ impl Extractor {
                     }
                     n += 1;
                     let id = n.to_string();
-                    codes.insert(
-                        id.clone(),
-                        CodeData::new().with_open(open.clone()).with_standalone(xml.clone()).with_label((*label).to_string()),
-                    );
+                    let mut code = CodeData::new().with_open(open.clone()).with_standalone(xml.clone()).with_label((*label).to_string());
+                    crate::typing::type_code(&mut code, label, display, &self.rels);
+                    codes.insert(id.clone(), code);
                     inl.push(Inline::tag(id, TagKind::Standalone, display.clone()));
                 }
                 Atom::Open {
@@ -1352,10 +1359,9 @@ impl Extractor {
                         .get(next_scope)
                         .map(|b| b.1.clone())
                         .unwrap_or_default();
-                    codes.insert(
-                        id.clone(),
-                        CodeData::new().with_open(open.clone()).with_close(close.clone()).with_standalone(base).with_label((*label).to_string()),
-                    );
+                    let mut code = CodeData::new().with_open(open.clone()).with_close(close.clone()).with_standalone(base).with_label((*label).to_string());
+                    crate::typing::type_code(&mut code, label, display, &self.rels);
+                    codes.insert(id.clone(), code);
                     scope.push(next_scope);
                     next_scope += 1;
                     inl.push(Inline::tag(id.clone(), TagKind::Open, display.clone()));
@@ -1574,8 +1580,8 @@ pub fn canon_rpr(r: &El) -> String {
     parts.join("|")
 }
 
-/// (open display, close display, label) for a formatting tag made from a run's `w:rPr`.
-fn fmt_names(rpr: &str) -> (String, String, String) {
+/// (open display, close display, label, type and style) for a formatting tag made from a run's `w:rPr`.
+fn fmt_names(rpr: &str) -> (String, String, String, Typed) {
     names_of(&fmt_features(rpr), rpr.is_empty())
 }
 
@@ -1619,7 +1625,7 @@ fn fmt_features(rpr: &str) -> Vec<String> {
 
 /// (open display, close display, label) for a formatting tag made from a DrawingML run's `a:rPr`: formatting
 /// is mostly attributes there (`b="1"`, `sz="2000"`), colours and fonts are children.
-fn dml_fmt_names(r: Option<&El>) -> (String, String, String) {
+fn dml_fmt_names(r: Option<&El>) -> (String, String, String, Typed) {
     // a hyperlink counts against plain (BILI-116) but does not change the tag's display or label
     let features: Vec<String> = dml_features(r).into_iter().filter(|f| f != "link").collect();
     names_of(&features, r.is_none())
@@ -1713,7 +1719,10 @@ fn canon_dml_rpr(r: &El) -> String {
     format!("[{}]{}", attrs.join(","), inner.trim())
 }
 
-fn names_of(features: &[String], empty: bool) -> (String, String, String) {
+/// A formatting code's type and character style (BILI-118), from the same features as its label.
+type Typed = (CodeType, Option<String>);
+
+fn names_of(features: &[String], empty: bool) -> (String, String, String, Typed) {
     let label = if empty {
         "no formatting".to_string()
     } else if features.is_empty() {
@@ -1730,5 +1739,6 @@ fn names_of(features: &[String], empty: bool) -> (String, String, String) {
         _ => None,
     };
     let t = single.unwrap_or("fmt");
-    (format!("<{t}>"), format!("</{t}>"), label)
+    let (ty, style) = crate::typing::fmt_type(features);
+    (format!("<{t}>"), format!("</{t}>"), label, (ty, style.map(str::to_string)))
 }

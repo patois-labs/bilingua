@@ -93,22 +93,35 @@ fn check_depth(toks: &[Tok], l: &Limits) -> Result<(), Error> {
 }
 
 fn label_for(name: &str) -> String {
+    code_info(name).0.to_string()
+}
+
+/// The chip label and the code type (BILI-118) of an inline element, from its name: one table, so the two
+/// cannot disagree.
+pub(crate) fn code_info(name: &str) -> (&str, CodeType) {
     match name {
-        "b" | "strong" => "bold",
-        "i" | "em" | "cite" => "italic",
-        "a" => "link",
-        "u" | "ins" => "underline",
-        "s" | "strike" | "del" => "strikethrough",
-        "code" | "kbd" | "samp" | "tt" => "code",
-        "br" | "wbr" => "line break",
-        "img" => "image",
-        "sup" => "superscript",
-        "sub" => "subscript",
-        "abbr" => "abbreviation",
-        "mark" => "highlight",
-        other => other,
+        "b" | "strong" => ("bold", CodeType::Bold),
+        "i" | "em" | "cite" => ("italic", CodeType::Italic),
+        "a" => ("link", CodeType::Link),
+        "u" | "ins" => ("underline", CodeType::Underline),
+        "s" | "strike" | "del" => ("strikethrough", CodeType::Strike),
+        "code" | "kbd" | "samp" | "tt" => ("code", CodeType::Code),
+        "br" | "wbr" => ("line break", CodeType::Linebreak),
+        "img" => ("image", CodeType::Image),
+        "sup" => ("superscript", CodeType::Superscript),
+        "sub" => ("subscript", CodeType::Subscript),
+        "abbr" => ("abbreviation", CodeType::Other),
+        "mark" => ("highlight", CodeType::Other),
+        other => (other, CodeType::Other),
     }
-    .to_string()
+}
+
+/// A body code with its type and attributes (BILI-118); `tag` is its start tag (the open markup, or the point).
+fn typed(code: CodeData, name: &str, tag: &str) -> CodeData {
+    let ty = code_info(name).1;
+    let mut code = code.with_code_type(Some(ty));
+    *code.attrs_mut() = html::code_attrs(ty, tag);
+    code
 }
 
 fn kind_for(frame: &str) -> &'static str {
@@ -268,7 +281,8 @@ fn body_unit(id: String, u: &html::BodyUnit) -> Unit {
                 match p {
                     Piece::Open(_) => {
                         inl.push(Inline::tag(key.clone(), TagKind::Open, format!("<{}>", e.name)));
-                        codes.insert(key, CodeData::new().with_open(e.open.clone()).with_close(e.close.clone()).with_label(label_for(&e.name)));
+                        let code = CodeData::new().with_open(e.open.clone()).with_close(e.close.clone()).with_label(label_for(&e.name));
+                        codes.insert(key, typed(code, &e.name, e.open.as_deref().unwrap_or_default()));
                     }
                     Piece::Close(_) => inl.push(Inline::tag(key, TagKind::Close, format!("</{}>", e.name))),
                     _ => {
@@ -283,7 +297,8 @@ fn body_unit(id: String, u: &html::BodyUnit) -> Unit {
                             (format!("<{}>", e.name), label_for(&e.name))
                         };
                         inl.push(Inline::tag(key.clone(), TagKind::Standalone, display));
-                        codes.insert(key, CodeData::new().with_standalone(raw).with_label(label));
+                        let code = CodeData::new().with_standalone(raw.clone()).with_label(label);
+                        codes.insert(key, if e.name.is_empty() { code.with_code_type(Some(CodeType::Other)) } else { typed(code, &e.name, &raw) });
                     }
                 }
             }
@@ -694,4 +709,43 @@ pub(crate) fn protected_for(cfg: Cfg, u: &html::BodyUnit) -> Vec<String> {
     let mut p = protected_of(cfg.template, &core);
     p.extend(bilingua_htmlcore::pyx::legacy_refs(&core));
     p
+}
+
+#[cfg(test)]
+mod code_type_pairs {
+    use super::code_info;
+    use bilingua_model::CodeType;
+
+    /// Every label the html crate sets, with its type (BILI-118).
+    #[test]
+    fn label_type_pairs() {
+        let cases = [
+            ("b", "bold", CodeType::Bold),
+            ("strong", "bold", CodeType::Bold),
+            ("i", "italic", CodeType::Italic),
+            ("em", "italic", CodeType::Italic),
+            ("cite", "italic", CodeType::Italic),
+            ("a", "link", CodeType::Link),
+            ("u", "underline", CodeType::Underline),
+            ("ins", "underline", CodeType::Underline),
+            ("s", "strikethrough", CodeType::Strike),
+            ("strike", "strikethrough", CodeType::Strike),
+            ("del", "strikethrough", CodeType::Strike),
+            ("code", "code", CodeType::Code),
+            ("kbd", "code", CodeType::Code),
+            ("samp", "code", CodeType::Code),
+            ("tt", "code", CodeType::Code),
+            ("br", "line break", CodeType::Linebreak),
+            ("wbr", "line break", CodeType::Linebreak),
+            ("img", "image", CodeType::Image),
+            ("sup", "superscript", CodeType::Superscript),
+            ("sub", "subscript", CodeType::Subscript),
+            ("abbr", "abbreviation", CodeType::Other),
+            ("mark", "highlight", CodeType::Other),
+            ("span", "span", CodeType::Other),
+        ];
+        for (name, label, ty) in cases {
+            assert_eq!(code_info(name), (label, ty), "{name}");
+        }
+    }
 }

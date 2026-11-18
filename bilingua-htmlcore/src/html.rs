@@ -525,6 +525,23 @@ pub fn tag_attr_values(tok: &str) -> Vec<(String, String)> {
     out
 }
 
+/// BILI-118 (unit model step 5): the attributes an inline code of type `ty` carries, read from its start tag:
+/// `href` and `title` for a link, `src` and `alt` for an image (values unescaped, empty ones left out).
+pub fn code_attrs(ty: bilingua_model::CodeType, tag: &str) -> bilingua_model::TextMap {
+    let mut out = bilingua_model::TextMap::new();
+    // only these two read HTML attributes of the same name (a `style` attribute is CSS, not a character style)
+    if !matches!(ty, bilingua_model::CodeType::Link | bilingua_model::CodeType::Image) {
+        return out;
+    }
+    let keys = ty.attr_keys();
+    for (k, v) in tag_attr_values(tag) {
+        if keys.contains(&k.as_str()) && !v.is_empty() {
+            out.insert(k, v);
+        }
+    }
+    out
+}
+
 /// One quoted attribute of a start tag: (lower-case name, value start, value end, raw value), LocOS `_tag_attrs`.
 pub fn tag_attrs(tok: &str) -> Vec<(String, usize, usize, String)> {
     let b = tok.as_bytes();

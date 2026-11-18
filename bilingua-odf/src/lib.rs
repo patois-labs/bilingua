@@ -15,6 +15,7 @@ pub const SKELETON_SCHEMA: u32 = 1;
 mod edit;
 mod lang;
 mod stamp;
+mod typing;
 mod walk;
 mod xml;
 mod zipdir;
@@ -116,15 +117,7 @@ fn load_part(entries: &[RawEntry], name: &'static str, l: &Limits, budget: bool)
 // ------------------------------------------------------------------------------------------ extract
 
 fn label_of(local: &str) -> &str {
-    match local {
-        "a" => "link",
-        "tab" => "tab",
-        "line-break" => "line break",
-        "soft-page-break" => "page break",
-        "annotation" => "comment",
-        "bookmark" | "bookmark-start" | "bookmark-end" => "bookmark",
-        l => l,
-    }
+    typing::code_info(local).0
 }
 
 fn clip(s: &str, max: usize) -> String {
@@ -145,7 +138,7 @@ fn code_for(t: &Tree, node: u32, part: &walk::Part) -> (String, CodeData) {
             let close = if t.self_closing(node) { format!("</{}>", t.qname(node)) } else { t.end_tag(node).to_string() };
             let label = label_of(t.local(node)).to_string();
             let disp = if matches!(part, walk::Part::Open(_)) { open.clone() } else { close.clone() };
-            (disp, CodeData::new().with_open(open).with_close(close).with_label(label))
+            (disp, typing::typed(CodeData::new().with_open(open).with_close(close).with_label(label), t, node))
         }
         _ => {
             let (disp, label) = if n.kind == Kind::Elem {
@@ -155,7 +148,8 @@ fn code_for(t: &Tree, node: u32, part: &walk::Part) -> (String, CodeData) {
             } else {
                 (clip(t.raw(node), 200), if n.kind == Kind::Comment { "xml comment".to_string() } else { "instruction".to_string() })
             };
-            (disp.clone(), CodeData::new().with_standalone(disp).with_label(label))
+            let code = CodeData::new().with_standalone(disp.clone()).with_label(label);
+            (disp, if n.kind == Kind::Elem { typing::typed(code, t, node) } else { code.with_code_type(Some(CodeType::Other)) })
         }
     }
 }
