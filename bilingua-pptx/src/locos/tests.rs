@@ -451,7 +451,7 @@ fn large(o: ExtractOptions) -> ExtractOptions {
 fn comments_past_a_million_paragraphs_are_refused() {
     let d = big_deck_with_comments(COMMENT_BASE + 1);
     match crate::Pptx.extract(&d, &large(comment_opts())) {
-        Err(Error::Limit(e)) => assert!(e.msg.contains("Comments cannot be numbered above a million body units"), "{e}"),
+        Err(Error::Limit(e)) => assert!(e.msg.contains("more than Bilingua can number apart"), "{e}"),
         other => panic!("not refused: {:?}", other.map(|d| d.units.len())),
     }
     // without comments the deck extracts, and number 1000000 is the "Body" paragraph
@@ -490,4 +490,18 @@ fn comments_just_under_a_million_paragraphs_round_trip() {
     let back = crate::Pptx.extract(&out, &large(comment_opts())).unwrap();
     assert_eq!(units(&back)[0].1, "Inhalt");
     assert_eq!(units(&back)[1].1, "Pr\u{fc}fen.");
+}
+
+#[test]
+fn a_merge_refuses_one_number_on_two_units() {
+    // BILI-126: a hand edit that turns a comment into a body paragraph of the same number is refused, kind or not
+    let d = deck_with_comments();
+    let mut doc = crate::Pptx.extract(&d, &comment_opts()).unwrap();
+    let c = doc.units.iter_mut().find(|u| u.context.kind.as_deref() == Some("comment")).unwrap();
+    c.context.kind = Some("paragraph".into());
+    c.context.extra.insert(profile::P_INDEX.to_string(), "0".into());
+    match crate::Pptx.merge_with(&doc, &profile::locos().merge_options("pptx")) {
+        Err(Error::Limit(e)) => assert!(e.msg.contains("comments and body text share numbers"), "{e}"),
+        other => panic!("not refused: {:?}", other.map(|b| b.len())),
+    }
 }

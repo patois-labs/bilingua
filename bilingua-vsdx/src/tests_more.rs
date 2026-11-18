@@ -465,7 +465,7 @@ fn fixture_slots() -> usize {
 fn comments_past_a_million_slots_are_refused_under_the_profile() {
     let data = big_drawing_with_comments(bilingua_model::guard::COMMENT_BASE + 1 - fixture_slots());
     match Vsdx.extract(&data, &large_locos()) {
-        Err(Error::Limit(e)) => assert!(e.msg.contains("Comments cannot be numbered above a million body units"), "{e}"),
+        Err(Error::Limit(e)) => assert!(e.msg.contains("more than Bilingua can number apart"), "{e}"),
         other => panic!("not refused: {:?}", other.map(|d| d.units.len())),
     }
     // without the profile no unit carries a number, and the merge goes by unit: nothing to refuse

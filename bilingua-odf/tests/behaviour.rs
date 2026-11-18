@@ -367,7 +367,7 @@ fn large() -> ExtractOptions {
 fn comments_past_a_million_paragraphs_are_refused() {
     let data = big_odt_with_a_comment(1_000_000);
     match with_comments().extract(&data, &large()) {
-        Err(Error::Limit(e)) => assert!(e.msg.contains("Comments cannot be numbered above a million body units"), "{e}"),
+        Err(Error::Limit(e)) => assert!(e.msg.contains("more than Bilingua can number apart"), "{e}"),
         other => panic!("not refused: {:?}", other.map(|d| d.units.len())),
     }
     // without comments the document extracts, and its one unit is numbered 1000000 (the comment's number)

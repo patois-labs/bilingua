@@ -1111,7 +1111,7 @@ fn rebuild_escaped(original: &[u8], texts: &[(i64, String)], target: Option<&str
     let base = walk.paras.len() as i64;
     if comments {
         // an extraction refuses this file, so a document that has both was changed by hand or comes from another file
-        guard::check_comment_base(walk.paras.len() + walk.alts.len())?;
+        guard::check_comment_base_merge(walk.paras.len() + walk.alts.len())?;
     }
     let cslots = if texts.iter().any(|(i, _)| *i >= COMMENT_BASE as i64) { comment_slots(&mut pkg, &walk).map_err(werr)? } else { Vec::new() };
     for (i, text) in texts {
@@ -1195,6 +1195,8 @@ pub fn merge(doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
     let Skeleton::Binary { data, .. } = &doc.skeleton else {
         return Err(Error::Write("pptx: a LocOS-profile document needs its original file".into()));
     };
+    // BILI-126: one number on two units (a hand edit that dropped a comment's kind, say) could write one into the other
+    guard::check_distinct_numbers(doc.units.iter().filter_map(|u| u.context.extra.get(profile::P_INDEX)?.parse::<i64>().ok()))?;
     let texts = written_texts(doc);
     let comments = doc.units.iter().any(|u| u.context.kind.as_deref() == Some("comment"));
     rebuild_escaped(data, &texts, opts.stamp_lang(doc, true), &opts.limits(), comments)

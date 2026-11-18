@@ -239,7 +239,9 @@ fn extract_doc(bytes: &[u8], opts: &ExtractOptions, id: &'static str, o: &OdfOpt
                 let tok = walk::tokenize(&part.tree, p, l.max_unit_chars)?;
                 if tok.has_letter() {
                     // BILI-126: `idx` counts every body paragraph, empty ones too, so a body that reaches the comment
-                    // numbers (possible even under the hosted unit cap) would share a p_index with a comment
+                    // numbers (possible even under the hosted unit cap) would share a p_index with a comment.
+                    // Bilingua's own merge maps units by id (`p`/`c`), so this protects the `p_index` consumers
+                    // (LocOS), not that merge
                     guard::check_comment_base(idx)?;
                     let mut u = make_unit(&part.tree, p, &tok, format!("c{j}"), "comment");
                     u.context.location = Some(format!("{} comment paragraph {j}", part.name));

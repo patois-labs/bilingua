@@ -459,7 +459,7 @@ fn large_merge(doc: &Document) -> Result<Vec<u8>, Error> {
 fn comments_past_a_million_cells_are_refused() {
     let data = big_book_with_a_note(comments::COMMENT_BASE + 1);
     match super::extract(&data, &large_opts(), &with_comments()) {
-        Err(Error::Limit(e)) => assert!(e.msg.contains("Comments cannot be numbered above a million body units"), "{e}"),
+        Err(Error::Limit(e)) => assert!(e.msg.contains("more than Bilingua can number apart"), "{e}"),
         other => panic!("not refused: {:?}", other.map(|d| d.units.len())),
     }
     // without comments the workbook extracts, and number 1000000 is a cell
@@ -489,6 +489,39 @@ fn comments_just_under_a_million_cells_round_trip() {
     assert_eq!(doc.units.len(), comments::COMMENT_BASE);
     let (cell, note) = (doc.units.len() - 2, doc.units.len() - 1);
     assert_eq!(doc.units[cell].context.extra[profile::P_INDEX], "999998");
+    assert_eq!(doc.units[note].context.extra[profile::P_INDEX], "1000000");
+    set(&mut doc, cell, "Anders");
+    set(&mut doc, note, "Diese Zelle pr\u{fc}fen.");
+    let out = large_merge(&doc).unwrap();
+    let c = entry_large(&out, "xl/comments1.xml").unwrap();
+    assert!(c.contains("Diese Zelle pr\u{fc}fen.") && !c.contains("Anders"), "{c}");
+    let back = super::extract(&out, &large_opts(), &with_comments()).unwrap();
+    assert_eq!(unit_texts(&back)[cell], "Anders");
+    assert_eq!(unit_texts(&back)[note], "Diese Zelle pr\u{fc}fen.");
+}
+
+#[test]
+fn a_merge_refuses_one_key_on_two_units() {
+    // BILI-126: a hand edit that gives two units one key (a comment stripped of its slot, say) is refused
+    let sheet = "<sheetData><row r=\"1\"><c r=\"A1\" t=\"s\"><v>0</v></c><c r=\"B1\" t=\"s\"><v>0</v></c></row></sheetData>";
+    let mut doc = extract(&book(sheet, "<si><t>Item</t></si>", &[], &[]), &opts(Some("de-DE"))).unwrap();
+    assert_eq!(doc.units.len(), 2);
+    doc.units[1].hidden.insert(KEY.to_string(), "0".into());
+    set(&mut doc, 1, "Anders");
+    match merge(&doc, &profile::locos().merge_options("xlsx")) {
+        Err(Error::Limit(e)) => assert!(e.msg.contains("comments and body text share numbers"), "{e}"),
+        other => panic!("not refused: {:?}", other.map(|b| b.len())),
+    }
+}
+
+#[test]
+#[ignore = "a workbook of a million cells; run with --release -- --ignored"]
+fn comments_at_exactly_a_million_cells_still_apply() {
+    // the boundary: the highest cell key is 999999, the note's 1000000, and both are written
+    let data = big_book_with_a_note(comments::COMMENT_BASE);
+    let mut doc = super::extract(&data, &large_opts(), &with_comments()).unwrap();
+    let (cell, note) = (doc.units.len() - 2, doc.units.len() - 1);
+    assert_eq!(doc.units[cell].context.extra[profile::P_INDEX], "999999");
     assert_eq!(doc.units[note].context.extra[profile::P_INDEX], "1000000");
     set(&mut doc, cell, "Anders");
     set(&mut doc, note, "Diese Zelle pr\u{fc}fen.");

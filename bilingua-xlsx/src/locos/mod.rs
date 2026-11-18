@@ -1262,6 +1262,8 @@ pub fn merge(doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
     let Skeleton::Binary { data, .. } = &doc.skeleton else {
         return Err(Error::Write("xlsx: a LocOS-profile document needs its original file".into()));
     };
+    // BILI-126: one key on two units (a hand edit that dropped a comment's slot, say) could write one into the other
+    guard::check_distinct_numbers(doc.units.iter().filter_map(|u| u.hidden(KEY)?.parse::<i64>().ok()))?;
     let texts = written_texts(doc, false);
     let box_texts = written_texts(doc, true);
     let table = table::is_table(doc);
@@ -1305,7 +1307,7 @@ pub fn merge(doc: &Document, opts: &MergeOptions) -> Result<Vec<u8>, Error> {
         if body_end <= comments::COMMENT_BASE {
             comments::apply(&mut pkg, &texts)?;
         } else if doc.units.iter().any(|u| u.hidden(comments::SLOT).is_some()) {
-            guard::check_comment_base(body_end)?;
+            guard::check_comment_base_merge(body_end)?;
         }
     }
     if let Some(t) = &tag {
