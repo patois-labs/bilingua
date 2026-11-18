@@ -134,7 +134,7 @@ impl DocumentHandle {
         for u in &self.doc.units {
             let extra = PyDict::new(py);
             for (k, v) in u.context.extra() {
-                if names.as_ref().is_none_or(|n| n.contains(k)) {
+                if names.as_ref().is_none_or(|n| n.iter().any(|x| x == k)) {
                     extra.set_item(k, v)?;
                 }
             }
