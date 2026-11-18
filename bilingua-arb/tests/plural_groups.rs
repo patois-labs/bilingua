@@ -146,12 +146,11 @@ fn a_document_extracted_for_one_language_never_writes_its_added_forms_into_anoth
     translate(&mut d, "", "hi", |_| "Zdravo".into());
     d.target_lang = Some("sl".into());
     assert!(matches!(merge(&d), Err(Error::TargetChanged { .. })));
-    // the same target merges; a plain skeleton mismatch (the first message's stored token changed) stays a write
-    // error
+    // the same target merges; a plain skeleton mismatch (the last message's unit gone) stays a write error
     let mut d = extract(Some("pl"), false);
-    translate(&mut d, "", "hi", |_| "Cześć".into());
+    translate(&mut d, "count: plural one", "files", |_| "# plik".into());
     assert!(merge(&d).is_ok());
-    d.units[0].codes_mut().get_mut("$raw").expect("the first unit keeps its token").set_standalone("\"changed\"");
+    assert_eq!(d.units.pop().and_then(|u| u.context.key), Some("hi".to_string()));
     assert!(matches!(merge(&d), Err(Error::Write(_))), "{:?}", merge(&d));
     // the added units carry their ICU path as a hidden value
     let d = extract(Some("pl"), false);
