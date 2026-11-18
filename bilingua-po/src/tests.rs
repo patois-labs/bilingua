@@ -443,7 +443,7 @@ fn a_python_charset_name_is_read_and_kept_like_locos() {
 fn plural_forms_are_one_group_with_their_msgstr_index() {
     // unit model step 6: every form of a plural entry shares the entry's group; gettext order is not CLDR order,
     // so the slot has the msgstr index and no category
-    let po = "msgid \"\"\nmsgstr \"\"\n\"Language: en\n\"\n\nmsgid \"%d file\"\nmsgid_plural \"%d files\"\nmsgstr[0] \"\"\nmsgstr[1] \"\"\n\nmsgid \"Open\"\nmsgstr \"\"\n";
+    let po = "msgid \"\"\nmsgstr \"\"\n\"Language: en\\n\"\n\nmsgid \"%d file\"\nmsgid_plural \"%d files\"\nmsgstr[0] \"\"\nmsgstr[1] \"\"\n\nmsgid \"Open\"\nmsgstr \"\"\n";
     // Arabic: six forms
     let d = ex_to(po, "ar");
     let forms: Vec<_> = d.units.iter().filter_map(|u| u.plural().map(|p| (u.id.clone(), p.group(), p.index(), p.category(), p.kind(), p.is_added()))).collect();
@@ -461,7 +461,7 @@ fn plural_forms_are_one_group_with_their_msgstr_index() {
 fn languages_outside_the_old_list_take_the_shared_gettext_rule() {
     // A Polish target used to keep the English file's two forms; Polish has three (gettext), as in the mo crate
     // and under the LocOS profile.
-    let src = "msgid \"\"\nmsgstr \"\"\n\"Language: en\n\"\n\"Plural-Forms: nplurals=2; plural=(n != 1);\n\"\n\nmsgid \"%d file\"\nmsgid_plural \"%d files\"\nmsgstr[0] \"\"\nmsgstr[1] \"\"\n";
+    let src = "msgid \"\"\nmsgstr \"\"\n\"Language: en\\n\"\n\"Plural-Forms: nplurals=2; plural=(n != 1);\\n\"\n\nmsgid \"%d file\"\nmsgid_plural \"%d files\"\nmsgstr[0] \"\"\nmsgstr[1] \"\"\n";
     for (lang, n) in [("pl", 3), ("pl-PL", 3), ("ru", 3), ("uk", 3), ("cs", 3), ("tr", 2), ("az", 2), ("sv", 2), ("he", 2), ("id", 1), ("vi", 1), ("sl", 4), ("cy", 5), ("hu", 2), ("fa", 2), ("hy", 2), ("ka", 2), ("br", 2)] {
         let d = ex_to(src, lang);
         assert_eq!(d.units.len(), n, "{lang}");
@@ -473,7 +473,7 @@ fn languages_outside_the_old_list_take_the_shared_gettext_rule() {
     }
     let out = merged(&d);
     assert!(out.contains("msgstr[2] \"%d plików\""), "{out}");
-    assert!(out.contains("\"Plural-Forms: nplurals=3; plural=(n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n\""), "{out}");
+    assert!(out.contains("\"Plural-Forms: nplurals=3; plural=(n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\\n\""), "{out}");
     // a file without a Plural-Forms header or with another language's header: the target's rule still counts
     let bare = "msgid \"%d file\"\nmsgid_plural \"%d files\"\nmsgstr[0] \"\"\nmsgstr[1] \"\"\n";
     assert_eq!(ex_to(bare, "pl").units.len(), 3);

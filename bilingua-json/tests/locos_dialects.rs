@@ -461,7 +461,10 @@ fn non_profile_dialect_merge_stamps_only_when_translated() {
     let mut d = JsonFilter.extract(FORMATJS.as_bytes(), &opts).unwrap();
     // nothing translated: the original bytes
     assert_eq!(Filter::merge(&JsonFilter, &d).unwrap(), FORMATJS.as_bytes());
-    d.set_target("u4", vec![Inline::text("Hi")]).unwrap();
+    // outside the profile a Russian target adds `few` and `many` units to the plural (unit model step 6), so the
+    // welcome message is found by its key, not by its old position
+    let welcome = d.units.iter().find(|u| u.context.key.as_deref() == Some("/app.welcome/defaultMessage")).unwrap().id.clone();
+    d.set_target(&welcome, vec![Inline::text("Hi")]).unwrap();
     let out = String::from_utf8(Filter::merge(&JsonFilter, &d).unwrap()).unwrap();
     assert!(out.contains("few{# items}"), "{out}");
 }

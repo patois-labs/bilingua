@@ -18,8 +18,15 @@ pub fn locos_text(u: &Unit) -> String {
     profile::tokens::to_locos_text(&u.source()).0
 }
 
+/// The units LocOS has: translatable ones, without the units added for the plural categories the source lacks
+/// (unit model step 6, outside the LocOS profile with a target).
 pub fn texts(d: &Document) -> Vec<String> {
-    d.units.iter().filter(|u| u.translate).map(locos_text).collect()
+    d.units.iter().filter(|u| u.translate && !is_added(u)).map(locos_text).collect()
+}
+
+/// A unit added at extract for a plural category the source lacks.
+pub fn is_added(u: &Unit) -> bool {
+    u.plural().is_some_and(PluralSlot::is_added)
 }
 
 /// LocOS's `build_localized(data, {index: text}, locale)`: sets the targets (text with LocOS tokens) by unit

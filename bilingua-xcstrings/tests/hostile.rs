@@ -269,7 +269,9 @@ proptest! {
         let out = Xcstrings.merge(&d).unwrap();
         let back = Xcstrings.extract(&out, &ExtractOptions::default()).unwrap();
         let src = |d: &Document| d.units.iter().map(|u| profile::tokens::to_locos_text(&u.source()).0).collect::<Vec<_>>();
-        prop_assert_eq!(src(&back), src(&d0));
+        // the units added for the target's plural categories are not in the source (unit model step 6)
+        let src0 = d0.units.iter().filter(|u| !u.plural().is_some_and(PluralSlot::is_added)).map(|u| profile::tokens::to_locos_text(&u.source()).0).collect::<Vec<_>>();
+        prop_assert_eq!(src(&back), src0);
         let v: serde_json::Value = serde_json::from_slice(&out).unwrap();
         prop_assert!(v["strings"].is_object());
     }

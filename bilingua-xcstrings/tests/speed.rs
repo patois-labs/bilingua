@@ -59,8 +59,10 @@ fn large_catalog_round_trips_and_is_timed() {
     let t = Instant::now();
     let mut d = Xcstrings.extract(&bytes, &o).unwrap();
     let t_extract = t.elapsed();
-    // 4000 plural entries x 2 forms + 8000 sentences
-    assert_eq!(d.units.len(), 4_000 * 2 + 8_000);
+    // 4000 plural entries x 2 forms + 8000 sentences, and for Russian a `few` and a `many` unit added to each
+    // plural (unit model step 6)
+    let added = d.units.iter().filter(|u| u.plural().is_some_and(PluralSlot::is_added)).count();
+    assert_eq!((d.units.len() - added, added), (4_000 * 2 + 8_000, 4_000 * 2));
     let t = Instant::now();
     let same = Xcstrings.merge(&d).unwrap();
     let t_same = t.elapsed();
@@ -73,7 +75,7 @@ fn large_catalog_round_trips_and_is_timed() {
     let out = Xcstrings.merge(&d).unwrap();
     let t_ru = t.elapsed();
     let back = Xcstrings.extract(&out, &ExtractOptions::default()).unwrap();
-    assert_eq!(back.units.len(), d.units.len());
+    assert_eq!(back.units.len(), d.units.len() - added);
     println!("xcstrings speed: {} bytes, {} units; extract {t_extract:?}, untouched merge {t_same:?}, ru merge {t_ru:?}; extract+merge {:?}", bytes.len(), d.units.len(), t_extract + t_ru);
 }
 

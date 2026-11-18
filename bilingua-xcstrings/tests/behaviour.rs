@@ -92,7 +92,7 @@ fn eleven_languages_round_trip_with_the_same_units() {
             // re-reading in the SOURCE language gives the same units
             let back = ex(&out, None);
             assert_eq!(texts(&back), texts(&d0), "{lang}");
-            assert_eq!(back.units.len(), d0.units.len());
+            assert_eq!(back.units.len(), d0.units.iter().filter(|u| !is_added(u)).count());
             // reading the target as if it were the source: units of the new language have our marks
             let tl = lang.replace('_', "-");
             let found = v["strings"].as_object().unwrap().values().any(|e| e["localizations"].get(&tl).is_some());
