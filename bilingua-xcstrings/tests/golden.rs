@@ -61,7 +61,9 @@ fn run_with(name: &str, data: &[u8], exact: bool, lf: bool) {
     for (loc, prefix) in cases {
         for mode in ["full", "half"] {
             let mut d = ex(data, loc);
-            for (n, u) in d.units.iter_mut().filter(|u| u.translate).enumerate() {
+            // LocOS has no units for the plural categories the source lacks (unit model step 6, added outside its
+            // profile): translate the units LocOS has, so the half pattern picks the same ones
+            for (n, u) in d.units.iter_mut().filter(|u| u.translate && !u.plural().is_some_and(PluralSlot::is_added)).enumerate() {
                 if mode == "full" || n.is_multiple_of(2) {
                     let (text, map) = profile::tokens::to_locos_text(&u.source());
                     u.segments[0].target = profile::tokens::from_locos_text(&format!("{prefix}{text}"), &map);

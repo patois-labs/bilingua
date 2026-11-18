@@ -438,3 +438,21 @@ fn a_python_charset_name_is_read_and_kept_like_locos() {
         assert!(back.contains("msgstr \"\u{4e16}\u{754c}\""), "{lang}: {back}");
     }
 }
+
+#[test]
+fn plural_forms_are_one_group_with_their_msgstr_index() {
+    // unit model step 6: every form of a plural entry shares the entry's group; gettext order is not CLDR order,
+    // so the slot has the msgstr index and no category
+    let po = "msgid \"\"\nmsgstr \"\"\n\"Language: en\n\"\n\nmsgid \"%d file\"\nmsgid_plural \"%d files\"\nmsgstr[0] \"\"\nmsgstr[1] \"\"\n\nmsgid \"Open\"\nmsgstr \"\"\n";
+    // Arabic: six forms
+    let d = ex_to(po, "ar");
+    let forms: Vec<_> = d.units.iter().filter_map(|u| u.plural().map(|p| (u.id.clone(), p.group(), p.index(), p.category(), p.kind(), p.is_added()))).collect();
+    let want: Vec<_> = (0..6u8).map(|k| (format!("e2.{k}"), "e2", Some(k), None, PluralKind::Cardinal, false)).collect();
+    assert_eq!(forms, want);
+    assert!(d.units.iter().find(|u| u.id == "e3").unwrap().plural().is_none());
+    // the writer still reads extra["plural"], which stays
+    assert_eq!(d.units[2].context.extra().get("plural"), Some("2"));
+    // under the LocOS profile no slot is filled
+    let l = Po.extract(po.as_bytes(), &ExtractOptions::new().with_target_lang("ar").with_profile(profile::LOCOS)).unwrap();
+    assert!(!l.units.is_empty() && l.units.iter().all(|u| u.plural().is_none()));
+}
