@@ -174,3 +174,15 @@ fn a_plain_space_does_not_become_the_base() {
     assert_eq!(shown(&doc), vec!["T:All of this is bold "]);
     assert_same_parts(&bytes, &Pptx.merge(&doc).unwrap());
 }
+
+/// Strike counts against plain, as in DOCX: the plain run is the base though the struck run is longer. The tag
+/// keeps its `<fmt>` display and is labelled "strike".
+#[test]
+fn a_struck_run_is_not_plain() {
+    let inner = format!("{}{}", run(" strike=\"sngStrike\"", "a long struck-through phrase"), run("", " and plain"));
+    let bytes = deck(&inner);
+    let doc = extract(&bytes);
+    assert_eq!(shown(&doc), vec!["<fmt>", "T:a long struck-through phrase", "</fmt>", "T: and plain"]);
+    assert_eq!(doc.units[0].codes["1"].label.as_deref(), Some("strike"));
+    assert_same_parts(&bytes, &Pptx.merge(&doc).unwrap());
+}

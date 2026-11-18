@@ -165,6 +165,15 @@ pub fn props_of(fmt: &str) -> BTreeSet<&'static str> {
         if e.attr("u").is_some_and(|u| u != "none") {
             s.insert("u");
         }
+        if e.attr("strike").is_some_and(|v| v != "noStrike") {
+            s.insert("strike");
+        }
+        if e.attr("cap").is_some_and(|v| v != "none") {
+            s.insert("caps");
+        }
+        if e.elements().any(|c| local_name(&c.name) == "highlight") {
+            s.insert("highlight");
+        }
         match e.attr("baseline").and_then(|b| b.parse::<i32>().ok()) {
             Some(b) if b > 0 => {
                 s.insert("sup");

@@ -199,6 +199,9 @@ pub fn props_of(fmt: &str) -> BTreeSet<&'static str> {
                     "u" if e.attr("val").as_deref() != Some("none") => {
                         s.insert("u");
                     }
+                    "strike" if !off => {
+                        s.insert("strike");
+                    }
                     "vertAlign" => match e.attr("val").as_deref() {
                         Some("superscript") => {
                             s.insert("sup");

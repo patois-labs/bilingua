@@ -68,9 +68,13 @@ is listed here).
 
 - PPTX, DOCX and XLSX (native): the base formatting of a paragraph or rich-text cell, the one that needs no tag,
   is a plain one when there is one, then the paragraph default (`a:endParaRPr`, or the paragraph mark's `w:rPr`; an
-  XLSX shared string has none), then the most text (BILI-116). Before, it was the most text, so in "[b]Bold claim[/b] with an [i]italic aside[/i]" the plain
-  text sat in a tag and the italic run had none; now the bold and the italic run are tagged, as Okapi and neokapi
-  tag them. Merges are unchanged; the LocOS profile tags every run as before.
+  XLSX shared string has none), then the most text (BILI-116). Before, it was the most text, so in
+  "[b]Bold claim[/b] with an [i]italic aside[/i]" the plain text sat in a tag and the italic run had none; now the
+  bold and the italic run are tagged, as Okapi and neokapi tag them. Strike, caps and highlight (PPTX), strike (XLSX) and a DrawingML hyperlink (DOCX) now count against
+  plain too, and a run of white space alone is never the base. Merges are unchanged; the LocOS profile tags every
+  run as before. Documents extracted before this change keep their stored base, but a re-extraction (CAT OS does
+  one at a skeleton schema bump) can pick another base, and since `catos-server`'s `upgrade.rs` `remap_target` maps
+  tags by order, formatting on an old target can move.
 - Merge bounds what a stored Document can make it do (BILI-105). The `bilingua` facade's `merge` and `merge_with`
   (and so the CLI and Python) check the Document under the caller's merge limits (`MergeOptions::limits`, the
   defaults when unset) before writing: units and segments within `max_units`, zip entries within `max_zip_entries`,

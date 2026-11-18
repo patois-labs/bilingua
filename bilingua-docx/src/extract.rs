@@ -421,7 +421,7 @@ impl Extractor {
                 None => tally.push((key.as_str(), n, *rpr, vis)),
             }
         }
-        let scored: Vec<(&str, usize, bool)> = tally.iter().map(|x| (x.0, x.1, x.3 && is_plain(&dml_features(x.2)))).collect();
+        let scored: Vec<(&str, usize, bool, bool)> = tally.iter().map(|x| (x.0, x.1, is_plain(&dml_features(x.2)), x.3)).collect();
         let best = pick_base(&scored, default_key.as_deref()).unwrap_or(0);
         let (base_key, _, base_rpr, _) = tally[best];
         let base_key = base_key.to_string();
@@ -1261,7 +1261,7 @@ impl Extractor {
         let bases: Vec<(String, String)> = tallies
             .iter()
             .map(|t| {
-                let scored: Vec<(&str, usize, bool)> = t.iter().map(|x| (x.0.as_str(), x.2, x.3 && is_plain(&fmt_features(&x.1)))).collect();
+                let scored: Vec<(&str, usize, bool, bool)> = t.iter().map(|x| (x.0.as_str(), x.2, is_plain(&fmt_features(&x.1)), x.3)).collect();
                 pick_base(&scored, default_key.as_deref()).map(|i| (t[i].0.clone(), t[i].1.clone())).unwrap_or_default()
             })
             .collect();
@@ -1575,7 +1575,9 @@ fn fmt_features(rpr: &str) -> Vec<String> {
 /// (open display, close display, label) for a formatting tag made from a DrawingML run's `a:rPr`: formatting
 /// is mostly attributes there (`b="1"`, `sz="2000"`), colours and fonts are children.
 fn dml_fmt_names(r: Option<&El>) -> (String, String, String) {
-    names_of(&dml_features(r), r.is_none())
+    // a hyperlink counts against plain (BILI-116) but does not change the tag's display or label
+    let features: Vec<String> = dml_features(r).into_iter().filter(|f| f != "link").collect();
+    names_of(&features, r.is_none())
 }
 
 /// What a DrawingML run's `a:rPr` switches on, as `names_of` names it.
@@ -1603,6 +1605,7 @@ fn dml_features(r: Option<&El>) -> Vec<String> {
             match local_name(&c.name) {
                 "solidFill" | "gradFill" => features.push("color".into()),
                 "highlight" => features.push("highlight".into()),
+                "hlinkClick" => features.push("link".into()),
                 "latin" | "ea" | "cs" | "sym" if !features.iter().any(|f| f == "font") => features.push("font".into()),
                 _ => {}
             }
@@ -1612,25 +1615,29 @@ fn dml_features(r: Option<&El>) -> Vec<String> {
 }
 
 /// Plain formatting, as a translator reads it: nothing that makes the text stand out (bold, italic, underline,
-/// strike, super- or subscript, caps, highlight, a character style). A colour, size or font of its own does not
+/// strike, super- or subscript, caps, highlight, a character style, a DrawingML hyperlink). A colour, size or font of its own does not
 /// count.
 fn is_plain(features: &[String]) -> bool {
     features.iter().all(|f| matches!(f.as_str(), "color" | "size" | "font"))
 }
 
 /// The base formatting of a paragraph (BILI-116): the one that needs no tag. `tally` holds (key, characters,
-/// plain) per formatting in first-seen order. In order:
-/// 1. When a formatting is plain (`is_plain`, with some text that is not white space: a plain space between two
-///    bold words does not count), only plain ones are candidates; otherwise every one is.
+/// plain, visible) per formatting in first-seen order; visible = some of its text is not white space. In order:
+/// 0. Only visible formattings are candidates: a plain space after a bold sentence never becomes the base, not even
+///    as the paragraph default (a `w:pPr` without a mark `w:rPr` has the default key of a run without `w:rPr`).
+///    Only when nothing is visible is every formatting a candidate.
+/// 1. When a visible formatting is plain (`is_plain`), only plain ones are candidates.
 /// 2. Of the candidates, the one whose key is the paragraph default (`default_key`).
 /// 3. Otherwise the candidate with the most text; a tie goes to the one seen first.
 ///
 /// Never just the first or the last run, nor the most text when a plain run is there: in
 /// "<b>Bold claim</b> with an <i>italic aside</i>" the base is the plain " with an ", though the italic run
 /// carries more text.
-fn pick_base(tally: &[(&str, usize, bool)], default_key: Option<&str>) -> Option<usize> {
-    let any_plain = tally.iter().any(|x| x.1 > 0 && x.2);
-    let candidate = |i: usize| tally[i].1 > 0 && (!any_plain || tally[i].2);
+fn pick_base(tally: &[(&str, usize, bool, bool)], default_key: Option<&str>) -> Option<usize> {
+    let any_visible = tally.iter().any(|x| x.1 > 0 && x.3);
+    let shown = |i: usize| tally[i].1 > 0 && (!any_visible || tally[i].3);
+    let any_plain = (0..tally.len()).any(|i| shown(i) && tally[i].2);
+    let candidate = |i: usize| shown(i) && (!any_plain || tally[i].2);
     if let Some(d) = default_key {
         if let Some(i) = (0..tally.len()).find(|&i| candidate(i) && tally[i].0 == d) {
             return Some(i);

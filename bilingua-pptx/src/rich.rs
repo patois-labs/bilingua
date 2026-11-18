@@ -32,6 +32,9 @@ fn label_of(p: &str) -> &'static str {
         "sup" => "superscript",
         "sub" => "subscript",
         "link" => "link",
+        "strike" => "strike",
+        "caps" => "caps",
+        "highlight" => "highlight",
         _ => "formatting",
     }
 }
@@ -96,7 +99,7 @@ pub fn build(atoms: Vec<Atom>, props: Props, default_key: Option<&str>) -> Built
     // Base (BILI-116): the formatting a translator reads as "no formatting", so that the tags mark only the runs
     // that stand out. In order:
     // 1. When the paragraph has a plain formatting, only plain ones are candidates. Plain = no run properties, or
-    //    properties that switch on none of b / i / u / sup / sub / link (`props` is empty); a size, colour or font
+    //    properties that switch on none of b / i / u / sup / sub / link / strike / caps / highlight (`props` is empty); a size, colour or font
     //    of its own does not count. Without a plain formatting every formatting is a candidate.
     // 2. Of the candidates, the one equal to the paragraph default (`default_key`, from `a:endParaRPr`).
     // 3. Otherwise the candidate with the most text; a tie goes to the formatting seen first.
@@ -181,13 +184,16 @@ pub fn build(atoms: Vec<Atom>, props: Props, default_key: Option<&str>) -> Built
                     let id = counter.to_string();
                     let fmt = fmt_of(s);
                     let added: Vec<&str> = props(fmt).difference(&base_props).copied().collect();
-                    let (name, label) = if added.len() == 1 {
-                        (added[0].to_string(), label_of(added[0]).to_string())
-                    } else if added.len() > 1 {
-                        ("fmt".to_string(), added.iter().map(|p| label_of(p)).collect::<Vec<_>>().join(" "))
+                    // Strike, caps and highlight count for the base (BILI-116) and name the label, but they give
+                    // no tag name of their own: the display is what it was before they were counted.
+                    let named: Vec<&str> = added.iter().copied().filter(|p| !matches!(*p, "strike" | "caps" | "highlight")).collect();
+                    let name = if named.len() == 1 { named[0] } else { "fmt" };
+                    let label = if added.is_empty() {
+                        "formatting".to_string()
                     } else {
-                        ("fmt".to_string(), "formatting".to_string())
+                        added.iter().map(|p| label_of(p)).collect::<Vec<_>>().join(" ")
                     };
+                    let name = name.to_string();
                     codes.insert(
                         id.clone(),
                         CodeData::new().with_open(fmt.to_string()).with_label(label),

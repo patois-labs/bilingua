@@ -1014,3 +1014,33 @@ fn drawingml_plain_run_is_the_base_though_the_italic_run_is_longer() {
     assert_eq!(u.codes["1"].label.as_deref(), Some("bold"));
     assert_eq!(u.codes["2"].label.as_deref(), Some("italic"));
 }
+
+/// BILI-116: a run that is only white space never becomes the base, not even as the paragraph default. A `w:pPr`
+/// without a mark `w:rPr` has the default key of a run without `w:rPr`, which the trailing space has.
+#[test]
+fn a_plain_space_is_not_the_base_even_as_the_paragraph_default() {
+    let word = "<w:p><w:pPr><w:pStyle w:val=\"Body\"/></w:pPr><w:r><w:rPr><w:b/></w:rPr><w:t>All of this is bold</w:t></w:r>\
+<w:r><w:t xml:space=\"preserve\"> </w:t></w:r></w:p>";
+    let w = round_trip(&doc_of(word));
+    let s = seg_of(&w, "p1");
+    assert_eq!(s.source[0], Inline::text("All of this is bold"), "{:?}", s.source);
+    assert_eq!(tag_displays(s), vec!["<fmt>", "</fmt>"]);
+    let dml = "<w:p><w:r><w:drawing><a:p><a:r><a:rPr lang=\"en-US\" b=\"1\"/><a:t>Bold title</a:t></a:r>\
+<a:r><a:rPr lang=\"en-US\"/><a:t xml:space=\"preserve\"> </a:t></a:r><a:endParaRPr lang=\"en-US\"/></a:p></w:drawing></w:r></w:p>";
+    let d = round_trip(&doc_of(dml));
+    let s = seg_of(&d, "d1");
+    assert_eq!(s.source[0], Inline::text("Bold title"), "{:?}", s.source);
+    assert_eq!(tag_displays(s), vec!["<fmt>", "</fmt>"]);
+}
+
+/// BILI-116: a DrawingML hyperlink run is not plain, so the plain run is the base though the link has more text.
+#[test]
+fn drawingml_hyperlink_run_is_not_the_base() {
+    let inner = "<w:p><w:r><w:drawing><a:p><a:r><a:rPr lang=\"en-US\"><a:hlinkClick r:id=\"rId5\"/></a:rPr><a:t>Read the full report online</a:t></a:r>\
+<a:r><a:rPr lang=\"en-US\"/><a:t xml:space=\"preserve\"> today</a:t></a:r></a:p></w:drawing></w:r></w:p>";
+    let doc = round_trip(&doc_of(inner));
+    let s = seg_of(&doc, "d1");
+    assert_eq!(tag_displays(s), vec!["<fmt>", "</fmt>"]);
+    assert_eq!(s.source[1], Inline::text("Read the full report online"), "{:?}", s.source);
+    assert_eq!(s.source[3], Inline::text(" today"));
+}
