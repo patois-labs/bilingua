@@ -32,7 +32,7 @@ fn units_tags_and_notes() {
     let tags: Vec<bool> = d.units.iter().find(|u| text_of(u).starts_with("Zeta")).unwrap().source().iter().filter(|i| matches!(i, Inline::Tag { .. })).map(Inline::is_free).collect();
     assert_eq!(tags, [true, true]);
     let v: Vec<&str> = d.units.iter().filter_map(|u| u.context.extra().get("variation")).collect();
-    assert!(v.iter().any(|s| *s == "device:iphone plural:one"), "{v:?}");
+    assert!(v.contains(&"device:iphone plural:one"), "{v:?}");
 }
 
 fn text_of(u: &Unit) -> String {
