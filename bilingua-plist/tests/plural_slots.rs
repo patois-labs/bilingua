@@ -102,7 +102,8 @@ fn a_form_added_for_another_target_is_refused() {
     translate(&mut d, "files/items/few", |s| s.replace("files", "файла"));
     // Arabic has zero, one, two, few, many, other: Russian `few` must not become Arabic `few`
     d.target_lang = Some("ar".into());
-    assert!(matches!(merged(&d), Err(Error::Write(_))));
+    // its own error, so a host can offer to extract again for the new target
+    assert!(matches!(merged(&d), Err(Error::TargetChanged { .. })));
     let mut d = extract(SD.as_bytes(), "ru", false);
     translate(&mut d, "files/items/other", |s| s.replace("files", "ملفات"));
     d.target_lang = Some("ar".into());

@@ -513,10 +513,15 @@ pub fn has_any_target(unit: &crate::Unit) -> bool {
 /// The error a merge gives for a translated unit that was added for another target's plural categories: writing
 /// it would put one language's form under another's category.
 pub fn foreign_added_error(unit: &crate::Unit) -> crate::Error {
-    crate::Error::Write(format!(
-        "unit {} is a plural form added for another target language's categories; extract the file again for this target",
-        unit.id
-    ))
+    crate::Error::TargetChanged { unit: unit.id.clone() }
+}
+
+/// The first unit of `units` added for a plural category ([`ADDED_HIDDEN`]) whose mark is not one the merge's own
+/// plan adds (`fits`: the ICU paths of its added levels). A json or arb merge whose plans do not line up calls it:
+/// such a unit means the document was extracted for another target's categories ([`foreign_added_error`]); with
+/// none, the mismatch is a plain skeleton one.
+pub fn first_foreign_added<'u>(units: &'u [crate::Unit], fits: &std::collections::HashSet<&str>) -> Option<&'u crate::Unit> {
+    units.iter().find(|u| u.hidden(ADDED_HIDDEN).is_some_and(|m| !fits.contains(m)))
 }
 
 /// A copy of `other` (a fresh extract's unit) as the added form `category` of a target with the categories `cats`:

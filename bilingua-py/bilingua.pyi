@@ -148,7 +148,8 @@ class FormatInfo(TypedDict):
 class BilinguaError(Exception):
     """Every Bilingua failure. `code` is stable: "parse", "unsupported", "unknown_segment", "locked",
     "invented_tag", "duplicated_tag", "parser_version", "write" (a broken or foreign skeleton), "unwritable" (the
-    translation cannot be written in this format: the translator has to change it), "limit", "encoding", "io",
+    translation cannot be written in this format: the translator has to change it), "target_changed" (0.10: the
+    document was extracted for another target language's plural forms; extract the file again), "limit", "encoding", "io",
     "invalid_argument" (also an unknown format option or profile), "invalid_document", "internal"; "error" for a
     failure a later release gives its own code. `detail` is the parser's own sentence: the message without the
     `not a <format> file:` prefix of a "parse" error, the message itself for every other code. Size and budget

@@ -71,7 +71,8 @@ fn a_form_added_for_another_target_is_refused() {
     translate(&mut d, "u3.few", |s| s.replace("files", "pliki"));
     // Slovenian has one, two, few, other: Polish `few` must not become Slovenian `few`
     d.target_lang = Some("sl".into());
-    assert!(matches!(merged(&d), Err(Error::Write(_))));
+    // its own error, so a host can offer to extract again for the new target
+    assert!(matches!(merged(&d), Err(Error::TargetChanged { unit }) if unit == "u3.few"), "{:?}", merged(&d));
     // untranslated, the added units are left out and the fill runs for the new target
     let mut d = extract("pl", false);
     translate(&mut d, "u3", |s| s.replace("files", "datotek"));

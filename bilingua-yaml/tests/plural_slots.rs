@@ -69,7 +69,8 @@ fn a_form_added_for_another_target_is_refused() {
     let mut d = extract(RAILS, Some("pl"), false);
     translate(&mut d, "u3.few", |s| s.replace("files", "pliki"));
     d.target_lang = Some("sl".into());
-    assert!(matches!(merged(&d), Err(Error::Write(_))));
+    // its own error, so a host can offer to extract again for the new target
+    assert!(matches!(merged(&d), Err(Error::TargetChanged { unit }) if unit == "u3.few"), "{:?}", merged(&d));
     let mut d = extract(RAILS, Some("pl"), false);
     translate(&mut d, "u3", |s| s.replace("files", "datotek"));
     d.target_lang = Some("sl".into());

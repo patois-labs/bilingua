@@ -49,9 +49,15 @@ new fields are unset, and under the `locos` profile none of them is filled. Rust
   profile, JSON (ICU dialects and i18next keys), ARB, xcstrings, Android, Rails YAML, stringsdict and Fluent add a
   unit for each category the target needs and the source lacks (Polish `few` and `many`), marked
   `plural.added`, so a translator can fill it. Untranslated, an added unit writes exactly what the merge wrote
-  before (a copy of `other`, or nothing where no fill runs); translated, it is written in place of the copy. A
-  document extracted for one target's categories and merged for another's is refused rather than writing a form
-  under the wrong category. Writers keep reading `extra["plural"]`, `extra["icu"]` and their skeletons.
+  before (a copy of `other`, or nothing where no fill runs); translated, it is written in place of the copy.
+  Writers keep reading `extra["plural"]`, `extra["icu"]` and their skeletons.
+- **`Error::TargetChanged { unit }`.** A document extracted for one target's plural categories and merged for
+  another's (the target language changed after extract) is refused with its own error, "unit {unit} is a plural
+  form added for another target language; extract the file again for this target", so a host can offer to
+  extract again. Android, Rails YAML, stringsdict, Fluent and i18next JSON give it for a translated added unit
+  (untranslated ones are left out); JSON ICU dialects and ARB give it whenever an added unit does not fit the new
+  target's plan. A plain skeleton mismatch stays `Error::Write`. Python: `BilinguaError` with code
+  `"target_changed"`. xcstrings writes added forms by category name, only where the target has that category.
 
 ### Changed
 

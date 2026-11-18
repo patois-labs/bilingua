@@ -77,8 +77,9 @@ fn a_key_added_for_another_target_is_refused() {
     let mut d = extract(I18N, "plain", Some("pl"), false);
     translate(&mut d, "/files_few", |s| s.replace("files", "pliki"));
     d.target_lang = Some("sl".into());
-    assert!(matches!(merged(&d, false), Err(Error::Write(_))));
-    assert!(matches!(merged(&d, true), Err(Error::Write(_))));
+    // its own error, so a host can offer to extract again for the new target
+    assert!(matches!(merged(&d, false), Err(Error::TargetChanged { .. })));
+    assert!(matches!(merged(&d, true), Err(Error::TargetChanged { .. })));
 }
 
 #[test]

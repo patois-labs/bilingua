@@ -69,8 +69,11 @@ have more units than in 0.9 for the same file and target. Recognise them by `uni
 an ICU path like `count: plural few` in `extra["icu"]` (JSON dialects, ARB), `u<n>.<category>` (xcstrings) or
 `<other id>.<category>` (the key-style formats), and the json, arb and key-style ones carry the hidden value
 `icu::ADDED_HIDDEN`. Untranslated, an added unit writes what 0.9's merge wrote; translated, its text replaces the
-copy of `other`. A merge for a target with other categories than the one extracted for refuses a translated added
-unit. Code that pairs units with a source file one to one, or counts units, should skip added units or extract
+copy of `other`. A merge for a target with other categories than the one extracted for refuses with the new
+`Error::TargetChanged { unit }` ("unit {unit} is a plural form added for another target language; extract the
+file again for this target"; Python code `"target_changed"`): the key-style formats for a translated added unit,
+JSON ICU dialects and ARB for any added unit that does not fit the new target. It used to be `Error::Write`;
+`Error` is `#[non_exhaustive]`, so a wildcard arm already catches it. Offer a re-extract for the new target. Code that pairs units with a source file one to one, or counts units, should skip added units or extract
 without a target.
 
 **Rolling back to 0.9.** Documents that hold added plural units must not go back to an older build:

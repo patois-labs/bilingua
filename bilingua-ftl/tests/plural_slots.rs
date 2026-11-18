@@ -82,9 +82,12 @@ fn translated_added_forms_are_written_by_both_merges() {
 fn a_form_added_for_another_target_is_refused() {
     let mut d = extract(Some("pl"), false);
     translate(&mut d, "emails[few]", |s| s.replace("emails", "e-maile"));
-    assert!(matches!(FtlFilter.merge_localized(&d, Some("sl")), Err(Error::Write(_))));
+    // its own error, so a host can offer to extract again for the new target
+    assert!(matches!(FtlFilter.merge_localized(&d, Some("sl")), Err(Error::TargetChanged { .. })));
     d.target_lang = Some("sl".into());
-    assert!(matches!(FtlFilter.merge(&d), Err(Error::Write(_))));
+    let e = FtlFilter.merge(&d).unwrap_err();
+    assert!(matches!(e, Error::TargetChanged { .. }), "{e:?}");
+    assert!(e.to_string().ends_with("is a plural form added for another target language; extract the file again for this target"), "{e}");
 }
 
 #[test]

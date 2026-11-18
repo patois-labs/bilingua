@@ -2108,6 +2108,14 @@ pub enum Error {
         /// Why, safe to show the translator.
         reason: String,
     },
+    /// The target language changed after extract: `unit` was added at extract for a plural category of another
+    /// target language (Polish `many` in a document now merged for Slovenian), so writing it would put one
+    /// language's form under another's category. Extract the file again for this target (0.10).
+    #[error("unit {unit} is a plural form added for another target language; extract the file again for this target")]
+    TargetChanged {
+        /// The first such unit.
+        unit: String,
+    },
     /// The file is over a safety limit or holds something unsafe (a zip bomb, an XML entity bomb, too many
     /// units). The message is short, names the limit and is safe to show the person who uploaded the file.
     #[error("{0}")]

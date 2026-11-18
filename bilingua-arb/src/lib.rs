@@ -494,9 +494,15 @@ fn splice(orig: &str, doc: &Document, locos: bool, limits: &Limits) -> Result<St
             msgs = other;
         }
     }
-    // nothing lines up: the plan without added units under this merge's profile, as before step 6, so the error
+    // nothing lines up: a unit added for a category the target's plan does not add means the target changed after
+    // extract; otherwise the plan without added units under this merge's profile, as before step 6, so the error
     // (or the old behaviour) is the one it always was
     if !aligned(orig, &msgs, doc) {
+        let planned = messages(orig, &root, false, target);
+        let fits: std::collections::HashSet<&str> = planned.iter().flat_map(|m| &m.plan.units).filter(|u| u.slot.as_ref().is_some_and(|s| s.added)).map(|u| u.path.as_str()).collect();
+        if let Some(u) = icu::first_foreign_added(&doc.units, &fits) {
+            return Err(icu::foreign_added_error(u));
+        }
         msgs = messages(orig, &root, locos, None);
     }
 

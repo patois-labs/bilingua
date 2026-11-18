@@ -133,15 +133,24 @@ fn the_locos_profile_adds_nothing_and_fills_no_slot() {
 #[test]
 fn a_document_extracted_for_one_language_never_writes_its_added_forms_into_another() {
     // extracted for Polish (few, many added), merged for Slovenian (one, two, few, other): the counts match, the
-    // categories do not; the merge refuses or falls back, it never writes `few`'s text as `two`
+    // categories do not; the merge refuses with its own error (Slovenian adds no `many`), never writing `few`'s
+    // text as `two`
     let mut d = extract(Some("pl"), false);
     translate(&mut d, "count: plural few", "/files", |_| " pliki".into());
     d.target_lang = Some("sl".into());
     let merge = |d: &Document| JsonFilter.merge_with(d, &MergeOptions::new()).map(|b| String::from_utf8(b).unwrap());
-    match merge(&d) {
-        Err(_) => {}
-        Ok(out) => assert!(!out.contains("two{# pliki}") && !out.contains("few{# pliki}"), "{out}"),
-    }
+    let many = d.units.iter().find(|u| path(u) == "count: plural many").unwrap().id.clone();
+    assert!(matches!(merge(&d), Err(Error::TargetChanged { unit }) if unit == many), "{:?}", merge(&d));
+    // untranslated too: the units no longer fit the target's plan
+    let mut d = extract(Some("pl"), false);
+    d.target_lang = Some("sl".into());
+    assert!(matches!(merge(&d), Err(Error::TargetChanged { .. })));
+    // the same target merges; a plain skeleton mismatch (the first message's stored token changed) stays a write
+    // error
+    let mut d = extract(Some("pl"), false);
+    assert!(merge(&d).is_ok());
+    d.units[0].codes_mut().get_mut("$raw").expect("the first unit keeps its token").set_standalone("\"changed\"");
+    assert!(matches!(merge(&d), Err(Error::Write(_))), "{:?}", merge(&d));
     // the added units carry their ICU path as a hidden value
     let d = extract(Some("pl"), false);
     let few = d.units.iter().find(|u| path(u) == "count: plural few").unwrap();

@@ -52,6 +52,7 @@ impl From<engine::Error> for Fail {
             E::ParserVersion { .. } => "parser_version",
             E::Write(_) => "write",
             E::Unwritable { .. } => "unwritable",
+            E::TargetChanged { .. } => "target_changed",
             E::Limit(_) => "limit",
             E::Encoding(_) => "encoding",
             E::Io(_) => "io",

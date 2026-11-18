@@ -76,3 +76,18 @@ def test_locos_profile_dicts_have_none_of_the_new_keys():
     # the same files outside the profile do have them
     assert new_keys(bilingua.extract("features.docx", FEATURES))
     assert new_keys(bilingua.extract("app_en.arb", ARB, source_lang="en", target_lang="pl"))
+
+
+def test_a_changed_target_has_its_own_error():
+    doc = bilingua.extract("app_en.arb", ARB, source_lang="en", target_lang="pl")
+    many = next(u for u in doc["units"] if u.get("plural", {}).get("category") == "many")
+    doc["target_lang"] = "sl"
+    try:
+        bilingua.merge(doc)
+    except bilingua.BilinguaError as e:
+        assert e.code == "target_changed"
+        assert str(e) == (
+            f"unit {many['id']} is a plural form added for another target language; extract the file again for this target"
+        )
+    else:
+        raise AssertionError("merged for another target")

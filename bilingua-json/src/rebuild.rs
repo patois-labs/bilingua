@@ -20,9 +20,16 @@ pub fn splice(orig: &str, doc: &Document, d: Dialect, target: Option<&str>, loco
     // under the LocOS profile (or had no target): plan the messages as the extract did
     let mut added = doc.target_lang.as_deref();
     let mut plans: Vec<plan::Plan> = msgs.iter().map(|m| plan::plan_message(m.value, m.syntax, added)).collect();
-    if !aligned(orig, &msgs, &plans, doc) && added.is_some() {
-        added = None;
-        plans = msgs.iter().map(|m| plan::plan_message(m.value, m.syntax, None)).collect();
+    if !aligned(orig, &msgs, &plans, doc) {
+        // a unit added for a category this target's plan does not add: the target changed after extract
+        let fits: HashSet<&str> = plans.iter().flat_map(|p| &p.units).filter(|u| u.slot.as_ref().is_some_and(|s| s.added)).map(|u| u.path.as_str()).collect();
+        if let Some(u) = bilingua_model::icu::first_foreign_added(&doc.units, &fits) {
+            return Err(bilingua_model::icu::foreign_added_error(u));
+        }
+        if added.is_some() {
+            added = None;
+            plans = msgs.iter().map(|m| plan::plan_message(m.value, m.syntax, None)).collect();
+        }
     }
     let mut edits: Vec<Edit> = Vec::new();
     let mut head = 0usize;
