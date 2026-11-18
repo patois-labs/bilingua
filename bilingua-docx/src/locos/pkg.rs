@@ -7,7 +7,7 @@
 //! LocOS's `ooxml_strict` namespace swap both ways.
 
 use super::tree;
-use crate::zipio::{self, EntryMeta, RawEntry, ZipLimits};
+use crate::zipio::{EntryMeta, RawEntry};
 use bilingua_model::{Error, Limits};
 use bilingua_xmltree::Dom;
 use std::collections::HashMap;
@@ -347,8 +347,9 @@ impl Pkg {
 
     /// Opens a package the way python-docx does.
     pub fn load(bytes: &[u8], limits: &Limits) -> Result<Pkg, Error> {
-        let entries: Vec<RawEntry> = zipio::read_zip(bytes, &ZipLimits::from(limits))?.into_iter().filter(|e| !e.meta.dir).collect();
-        let paragraphs = crate::guard_named_parts(&entries, limits)?;
+        let (entries, counted) = crate::read_package(bytes, limits)?;
+        let entries: Vec<RawEntry> = entries.into_iter().filter(|e| !e.meta.dir).collect();
+        let paragraphs = crate::guard_named_parts(&entries, limits, counted)?;
         let strict = entries.iter().any(|e| e.name == "_rels/.rels" && contains(&e.data, format!("{STRICT_RELS}/officeDocument").as_bytes()));
         let normalized = entries.iter().map(|e| if strict && xml_member(&e.name) { part_to_transitional(&e.data) } else { Ok(e.data.clone()) }).collect::<Result<Vec<_>, _>>()?;
         let mut position: HashMap<String, usize> = HashMap::new();

@@ -1245,6 +1245,196 @@ pub fn count_elements(bytes: &[u8], local: &str) -> usize {
     n
 }
 
+/// [`count_elements`] fed in pieces, as a part inflates out of a zip (BILI-115): after the last piece and
+/// [`ElementCounter::finish`], [`ElementCounter::count`] is exactly what `count_elements` gives for the whole part,
+/// and after any piece it is at most that (a start tag is counted only once its name has ended, a region is skipped
+/// only once its opening is known), so a running total over several parts can refuse a file before the rest of it
+/// is read without refusing one the whole-part count accepts. Memory is a few bytes whatever the input.
+///
+/// A part that starts as UTF-16 (`count_elements` transcodes those) is not counted: [`ElementCounter::exact`] is
+/// then false, `count` stays 0 (below the real count, so still safe for an early refusal) and the caller counts
+/// the whole part with `count_elements` instead.
+#[derive(Debug, Clone)]
+pub struct ElementCounter {
+    local: Vec<u8>,
+    state: CountState,
+    count: usize,
+    /// The first byte, held until the second shows whether the part is UTF-16.
+    first: Option<u8>,
+    started: bool,
+    utf16: bool,
+}
+
+#[derive(Debug, Clone, Copy)]
+enum CountState {
+    /// Character data: looking for the next `<`.
+    Text,
+    /// Just after a `<`.
+    Open,
+    /// After `<!`: `n` bytes (from the `!`) that are still a prefix of `!--` (`comment`) or of `![CDATA[` (`cdata`).
+    Bang { n: usize, comment: bool, cdata: bool },
+    /// In a tag name: `pos` bytes since its last `:`, `ok` while those equal the start of the local name; `never`
+    /// for a name that starts with `!` (not an element).
+    Name { pos: usize, ok: bool, never: bool },
+    /// In a comment, CDATA section or processing instruction: `k` bytes of its terminator matched.
+    Skip { end: &'static [u8], k: usize },
+}
+
+const CDATA_OPEN: &[u8] = b"![CDATA[";
+
+/// The bytes of `end` matched after one more byte `c`, when `k` were matched before (the longest prefix of `end`
+/// that ends the text read so far; the terminators are at most three bytes long).
+fn skip_step(end: &[u8], k: usize, c: u8) -> usize {
+    let mut j = (k + 1).min(end.len());
+    while j > 0 {
+        if end[j - 1] == c && end[..j - 1] == end[k + 1 - j..k] {
+            return j;
+        }
+        j -= 1;
+    }
+    0
+}
+
+/// A byte that ends a tag name for `count_elements`.
+fn ends_name(c: u8) -> bool {
+    c.is_ascii_whitespace() || c == b'>' || c == b'/'
+}
+
+impl ElementCounter {
+    /// A counter of the start tags whose local name is `local`.
+    pub fn new(local: &str) -> ElementCounter {
+        ElementCounter { local: local.as_bytes().to_vec(), state: CountState::Text, count: 0, first: None, started: false, utf16: false }
+    }
+
+    /// The elements counted so far.
+    pub fn count(&self) -> usize {
+        self.count
+    }
+
+    /// False when the part is UTF-16, which this counter leaves to [`count_elements`].
+    pub fn exact(&self) -> bool {
+        !self.utf16
+    }
+
+    /// The next bytes of the part.
+    pub fn feed(&mut self, bytes: &[u8]) {
+        if bytes.is_empty() || self.utf16 {
+            return;
+        }
+        if !self.started {
+            // `markup_bytes` decides on the first two bytes
+            let held = self.first;
+            let Some(f) = held.or(bytes.first().copied()) else { return };
+            let second = if held.is_some() { bytes.first() } else { bytes.get(1) };
+            let Some(&s) = second else {
+                self.first = Some(f);
+                return;
+            };
+            self.started = true;
+            if matches!((f, s), (0xFF, 0xFE) | (b'<', 0) | (0xFE, 0xFF) | (0, b'<')) {
+                self.utf16 = true;
+                self.first = None;
+                return;
+            }
+            if let Some(f) = self.first.take() {
+                self.run(&[f]);
+            }
+        }
+        self.run(bytes);
+    }
+
+    /// The end of the part: a tag name still open at the end is counted as `count_elements` counts it.
+    pub fn finish(&mut self) {
+        if let Some(f) = self.first.take() {
+            self.started = true;
+            self.run(&[f]);
+        }
+        if let CountState::Name { pos, ok, never } = self.state {
+            if !never && ok && pos == self.local.len() {
+                self.count += 1;
+            }
+        }
+        self.state = CountState::Text;
+    }
+
+    fn run(&mut self, b: &[u8]) {
+        let mut i = 0;
+        while i < b.len() {
+            match self.state {
+                CountState::Text => match b[i..].iter().position(|c| *c == b'<') {
+                    Some(p) => {
+                        i += p + 1;
+                        self.state = CountState::Open;
+                    }
+                    None => return,
+                },
+                CountState::Open => match b[i] {
+                    b'!' => {
+                        self.state = CountState::Bang { n: 1, comment: true, cdata: true };
+                        i += 1;
+                    }
+                    b'?' => {
+                        self.state = CountState::Skip { end: b"?>", k: 0 };
+                        i += 1;
+                    }
+                    // the byte is the name's first (or ends an empty name): the name state reads it
+                    _ => self.state = CountState::Name { pos: 0, ok: true, never: false },
+                },
+                CountState::Bang { n, comment, cdata } => {
+                    let c = b[i];
+                    let n = n + 1;
+                    // the whole prefix must still match: `<![-` is no comment
+                    let comment = comment && n <= 3 && b"!--"[n - 1] == c;
+                    let cdata = cdata && n <= CDATA_OPEN.len() && CDATA_OPEN[n - 1] == c;
+                    i += 1;
+                    self.state = if comment && n == 3 {
+                        CountState::Skip { end: b"-->", k: 0 }
+                    } else if cdata && n == CDATA_OPEN.len() {
+                        CountState::Skip { end: b"]]>", k: 0 }
+                    } else if comment || cdata {
+                        CountState::Bang { n, comment, cdata }
+                    } else if ends_name(c) {
+                        // a name such as `!x` ended here: never an element (the byte is not a `<`, so the text
+                        // scan loses nothing by not seeing it)
+                        CountState::Text
+                    } else {
+                        CountState::Name { pos: 0, ok: false, never: true }
+                    };
+                }
+                CountState::Name { mut pos, mut ok, never } => {
+                    while i < b.len() && !ends_name(b[i]) {
+                        let c = b[i];
+                        if c == b':' {
+                            pos = 0;
+                            ok = true;
+                        } else {
+                            ok = ok && self.local.get(pos) == Some(&c);
+                            pos += 1;
+                        }
+                        i += 1;
+                    }
+                    if i == b.len() {
+                        self.state = CountState::Name { pos, ok, never };
+                        return;
+                    }
+                    // the byte that ends the name is left to the text scan, where `count_elements` resumes
+                    if !never && ok && pos == self.local.len() {
+                        self.count += 1;
+                    }
+                    self.state = CountState::Text;
+                }
+                CountState::Skip { end, mut k } => {
+                    while i < b.len() && k < end.len() {
+                        k = skip_step(end, k, b[i]);
+                        i += 1;
+                    }
+                    self.state = if k == end.len() { CountState::Text } else { CountState::Skip { end, k } };
+                }
+            }
+        }
+    }
+}
+
 /// The guard for markup that is not strict XML (HTML): no entity declarations, and the element count cap. Depth
 /// of HTML is the parser's own business (unclosed tags make it unknowable from the text).
 pub fn check_markup(text: &str, l: &Limits) -> Result<(), Error> {
@@ -1521,6 +1711,65 @@ mod tests {
     fn counts_elements_by_local_name() {
         let x = b"<w:body><w:p/><w:p w:x='1'>a</w:p><!-- <w:p/> --><w:pPr/><p>x</p></w:body>";
         assert_eq!(count_elements(x, "p"), 3);
+    }
+
+    /// BILI-115: the streaming counter gives `count_elements`'s number for the whole part whatever the pieces it is
+    /// fed in, and never more than that number after any piece.
+    #[test]
+    fn element_counter_agrees_with_count_elements() {
+        let mut seed: u64 = 0x5eed_0115;
+        let mut next = move |n: usize| {
+            seed = seed.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+            ((seed >> 33) as usize) % n
+        };
+        let pieces: &[&[u8]] = &[
+            b"<", b">", b"/", b"!", b"-", b"--", b"[", b"]", b"]]", b"?", b":", b" ", b"\n", b"p", b"w:p", b"<w:p>", b"<w:p/>",
+            b"<w:pPr>", b"</w:p>", b"<!--", b"-->", b"<![CDATA[", b"]]>", b"<?", b"?>", b"<!", b"<!-", b"<![CD", b"<![-", b"<!-[", b"a:p", b"pp",
+            b"<p", b":p", b"x", b"<!DOCTYPE x>", b"\"", b"'",
+        ];
+        for round in 0..3000 {
+            let mut doc = Vec::new();
+            for _ in 0..next(60) {
+                doc.extend_from_slice(pieces[next(pieces.len())]);
+            }
+            for local in ["p", "pPr"] {
+                let want = count_elements(&doc, local);
+                // whole, one byte at a time, and random pieces
+                for mode in 0..3 {
+                    let mut c = ElementCounter::new(local);
+                    let mut at = 0;
+                    while at < doc.len() {
+                        let len = match mode {
+                            0 => doc.len(),
+                            1 => 1,
+                            _ => 1 + next(7),
+                        };
+                        let end = (at + len).min(doc.len());
+                        c.feed(&doc[at..end]);
+                        at = end;
+                        assert!(c.count() <= want, "round {round}: {} over {want} after a piece of {:?}", c.count(), String::from_utf8_lossy(&doc));
+                    }
+                    c.finish();
+                    assert!(c.exact());
+                    assert_eq!(c.count(), want, "round {round} mode {mode}: {:?}", String::from_utf8_lossy(&doc));
+                }
+            }
+        }
+        let x = b"<w:body><w:p/><w:p w:x='1'>a</w:p><!-- <w:p/> --><w:pPr/><p>x</p><![CDATA[<w:p>]]><?pi <w:p>?></w:body>";
+        let mut c = ElementCounter::new("p");
+        c.feed(x);
+        c.finish();
+        assert_eq!((c.count(), count_elements(x, "p")), (3, 3));
+        // a UTF-16 part is left to `count_elements`
+        let mut v = vec![0xFF, 0xFE];
+        v.extend("<w:p/>".encode_utf16().flat_map(|u| u.to_le_bytes()));
+        let mut c = ElementCounter::new("p");
+        c.feed(&v[..1]);
+        c.feed(&v[1..]);
+        c.finish();
+        assert!(!c.exact());
+        assert_eq!(c.count(), 0);
+        assert_eq!(count_elements(&v, "p"), 1);
     }
 
     #[test]

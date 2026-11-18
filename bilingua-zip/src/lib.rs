@@ -224,10 +224,45 @@ pub fn refuse_duplicate_names<R: Read + std::io::Seek>(zip: &zip::ZipArchive<R>)
 
 /// Reads every entry of a zip file within `limits`. Errors name `format` ("docx", "xlsx", ...).
 pub fn read_zip(format: &str, bytes: &[u8], limits: &ZipLimits) -> Result<Vec<RawEntry>, Error> {
-    read_entries(bytes, limits).map_err(|e| as_format(e, format))
+    read_entries(bytes, limits, &mut NoWatch).map_err(|e| as_format(e, format))
 }
 
-fn read_entries(bytes: &[u8], limits: &ZipLimits) -> Result<Vec<RawEntry>, Error> {
+/// Sees the bytes of each entry as [`read_zip_watched`] inflates them, so a format can count what its limits
+/// measure while the package is read and refuse an oversized file before the rest is unpacked and before any tree
+/// is built (BILI-115).
+pub trait Watch {
+    /// The next inflated bytes of the file entry `name` (never a directory). An error stops the read and is
+    /// returned as it is.
+    fn bytes(&mut self, name: &str, chunk: &[u8]) -> Result<(), Error>;
+    /// The entry `name` is fully inflated and its size proven.
+    fn done(&mut self, name: &str) -> Result<(), Error>;
+}
+
+struct NoWatch;
+
+impl Watch for NoWatch {
+    fn bytes(&mut self, _: &str, _: &[u8]) -> Result<(), Error> {
+        Ok(())
+    }
+    fn done(&mut self, _: &str) -> Result<(), Error> {
+        Ok(())
+    }
+}
+
+/// How many inflated bytes a watcher sees at a time.
+const WATCH_CHUNK: usize = 256 * 1024;
+
+/// [`read_zip`] with a [`Watch`] over each file entry's bytes as they inflate. The directory checks (entry count,
+/// unpacked total, ratio) run first, as in `read_zip`. The watcher sees an entry's bytes while it inflates, before
+/// that entry's own checks (its real size against the directory and `max_entry_bytes`, its checksum) have run: the
+/// entries before it have passed all of `read_zip`'s checks, the current one may not have yet, so a watcher refusal
+/// can come where `read_zip` would have refused that entry for its size or checksum. An archive the watcher never
+/// refuses is read exactly as `read_zip` reads it.
+pub fn read_zip_watched(format: &str, bytes: &[u8], limits: &ZipLimits, watch: &mut dyn Watch) -> Result<Vec<RawEntry>, Error> {
+    read_entries(bytes, limits, watch).map_err(|e| as_format(e, format))
+}
+
+fn read_entries(bytes: &[u8], limits: &ZipLimits, watch: &mut dyn Watch) -> Result<Vec<RawEntry>, Error> {
     if bytes.len() < 22 || !(bytes.starts_with(b"PK\x03\x04") || bytes.starts_with(b"PK\x05\x06")) {
         return Err(bad("not a zip file (no PK signature)"));
     }
@@ -362,12 +397,30 @@ fn read_entries(bytes: &[u8], limits: &ZipLimits) -> Result<Vec<RawEntry>, Error
             .map_err(|e| bad(format!("cannot read entry {name:?}: {e}")))?;
         let mut data = Vec::with_capacity(claimed.min(64 * 1024 * 1024) as usize);
         // never inflate past the claimed size (+1 to see a forged one): a forged entry costs no more memory than an
-        // honest one, as LocOS's bounded verify
-        let got = (&mut f)
-            .take(claimed.min(limits.max_entry_bytes) + 1)
-            .read_to_end(&mut data)
-            .map_err(|_| invalid_sizes())?
-            as u64;
+        // honest one, as LocOS's bounded verify. Read in pieces, each shown to the watcher as it arrives.
+        let mut body = (&mut f).take(claimed.min(limits.max_entry_bytes) + 1);
+        loop {
+            let at = data.len();
+            let room = data.capacity() - at;
+            let n = if room == 0 {
+                // the reserved room is full: a small probe finds the end of an honest entry (it reads nothing, so
+                // `data` keeps its size); only an entry longer than its reservation grows `data` here
+                let mut probe = [0u8; 4096];
+                let n = read_some(&mut body, &mut probe).map_err(|_| invalid_sizes())?;
+                data.extend_from_slice(&probe[..n]);
+                n
+            } else {
+                data.resize(at + room.min(WATCH_CHUNK), 0);
+                let n = read_some(&mut body, &mut data[at..]).map_err(|_| invalid_sizes())?;
+                data.truncate(at + n);
+                n
+            };
+            if n == 0 {
+                break;
+            }
+            watch.bytes(&name, &data[at..])?;
+        }
+        let got = data.len() as u64;
         if got > limits.max_entry_bytes {
             return Err(limit(
                 LimitKind::ZipBytes,
@@ -388,6 +441,7 @@ fn read_entries(bytes: &[u8], limits: &ZipLimits) -> Result<Vec<RawEntry>, Error
         if let Some((p, _)) = pk.as_mut() {
             p.size = got;
         }
+        watch.done(&name)?;
         out.push(RawEntry {
             name,
             data,
@@ -396,6 +450,21 @@ fn read_entries(bytes: &[u8], limits: &ZipLimits) -> Result<Vec<RawEntry>, Error
         });
     }
     Ok(out)
+}
+
+/// Fills `buf` as far as the reader goes (a deflate reader hands out less than asked for), retrying an
+/// interrupted read as `read_to_end` does. Returns how many bytes were read; fewer than `buf.len()` only at the end.
+fn read_some(r: &mut impl Read, buf: &mut [u8]) -> std::io::Result<usize> {
+    let mut n = 0;
+    while n < buf.len() {
+        match r.read(&mut buf[n..]) {
+            Ok(0) => break,
+            Ok(k) => n += k,
+            Err(e) if e.kind() == std::io::ErrorKind::Interrupted => {}
+            Err(e) => return Err(e),
+        }
+    }
+    Ok(n)
 }
 
 /// A one-entry zip holding already deflated bytes, so the zip writer can copy them as they are.
@@ -621,5 +690,58 @@ mod tests {
             let e = write_zip_parts(&[(meta(a), Body::Plain(b"x")), (meta(b), Body::Plain(b"y"))]).unwrap_err();
             assert!(e.to_string().contains("twice"), "{e}");
         }
+    }
+
+    /// BILI-115: the watcher sees every byte of every file entry, in order, and its refusal stops the read.
+    #[test]
+    fn the_watcher_sees_each_entry_as_it_inflates() {
+        struct Seen(Vec<(String, Vec<u8>)>, Option<usize>);
+        impl Watch for Seen {
+            fn bytes(&mut self, name: &str, chunk: &[u8]) -> Result<(), Error> {
+                match self.0.last_mut() {
+                    Some((n, d)) if n == name => d.extend_from_slice(chunk),
+                    _ => self.0.push((name.to_string(), chunk.to_vec())),
+                }
+                match self.1 {
+                    Some(max) if self.0.iter().map(|(_, d)| d.len()).sum::<usize>() > max => {
+                        Err(limit(LimitKind::Paragraphs, "stop".into()))
+                    }
+                    _ => Ok(()),
+                }
+            }
+            fn done(&mut self, _: &str) -> Result<(), Error> {
+                Ok(())
+            }
+        }
+        let meta = |name: &str, stored: bool| EntryMeta { name: name.into(), stored, dir: false, modified: None };
+        // random bytes: a repeating pattern would deflate past the ratio limit
+        let mut seed = 0x115u64;
+        let big: Vec<u8> = (0..3_000_000)
+            .map(|_| {
+                seed = seed.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+                (seed >> 56) as u8
+            })
+            .collect();
+        let zip = write_zip(&[
+            (meta("a.xml", false), b"<a/>".to_vec()),
+            (meta("empty.xml", false), Vec::new()),
+            (meta("big.bin", false), big.clone()),
+            (meta("stored.bin", true), big[..70_000].to_vec()),
+        ])
+        .unwrap();
+        let mut seen = Seen(Vec::new(), None);
+        let entries = read_zip_watched("x", &zip, &ZipLimits::default(), &mut seen).unwrap();
+        assert_eq!(entries.len(), 4);
+        let plain = read_zip("x", &zip, &ZipLimits::default()).unwrap();
+        for (a, b) in entries.iter().zip(&plain) {
+            assert_eq!((&a.name, &a.data), (&b.name, &b.data));
+        }
+        let with_bytes: Vec<(String, Vec<u8>)> = plain.iter().filter(|e| !e.data.is_empty()).map(|e| (e.name.clone(), e.data.clone())).collect();
+        assert_eq!(seen.0, with_bytes);
+        let mut stop = Seen(Vec::new(), Some(1_000_000));
+        let e = read_zip_watched("x", &zip, &ZipLimits::default(), &mut stop).unwrap_err();
+        assert!(matches!(e, Error::Limit(LimitError { kind: LimitKind::Paragraphs, .. })), "{e:?}");
+        // it stopped inside the big entry, a piece or so past the limit
+        assert!(stop.0.iter().map(|(_, d)| d.len()).sum::<usize>() <= 1_000_000 + WATCH_CHUNK);
     }
 }

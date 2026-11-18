@@ -722,6 +722,8 @@ fn extract_doc_inner(bytes: &[u8], opts: &ExtractOptions) -> Result<Document, Er
         if let Some(e) = ex.refused.take() {
             return Err(e);
         }
+        // the units only grow: once over the limit, `guard::finish` would refuse with this error (BILI-115)
+        bilingua_model::guard::check_unit_count(ex.units.len(), &ex.limits)?;
         trees.insert(pi.idx, raw_of(&nodes));
     }
 

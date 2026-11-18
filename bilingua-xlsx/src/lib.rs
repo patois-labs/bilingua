@@ -13,6 +13,7 @@ pub const SKELETON_SCHEMA: u32 = 2;
 mod budget;
 mod extract;
 mod locos;
+mod prescan;
 mod refs;
 mod render;
 mod rich;

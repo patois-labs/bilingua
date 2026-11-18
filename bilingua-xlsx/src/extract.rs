@@ -9,7 +9,7 @@ use crate::zipio::{self, RawEntry, ZipLimits};
 use crate::*;
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 
-const SS_URIS: &[&str] = &[
+pub(crate) const SS_URIS: &[&str] = &[
     "http://schemas.openxmlformats.org/spreadsheetml/2006/main",
     "http://purl.oclc.org/ooxml/spreadsheetml/main",
 ];
@@ -928,6 +928,17 @@ fn extract_doc_inner(bytes: &[u8], opts: &ExtractOptions, xo: &XlsxOptions) -> R
         }
     }
 
+    let sst_name = rels
+        .iter()
+        .find(|r| r.typ.ends_with("/sharedStrings"))
+        .map(|r| r.target.clone())
+        .unwrap_or_else(|| "xl/sharedStrings.xml".into());
+    // BILI-115: a workbook over the row, cell, cell-text or unit limit is refused here, before any sheet tree.
+    {
+        let files: Vec<&str> = sheet_list.iter().map(|(_, _, f, _)| f.as_str()).collect();
+        crate::prescan::prescan(&entries, &files, &sst_name, xo.skip_hidden, &ex.limits)?;
+    }
+
     // Sheets.
     for (idx, name, file, hidden) in &sheet_list {
         let sh = SheetInfo { idx: *idx, name: name.clone(), file: file.clone(), hidden: *hidden };
@@ -945,11 +956,6 @@ fn extract_doc_inner(bytes: &[u8], opts: &ExtractOptions, xo: &XlsxOptions) -> R
     }
 
     // Shared strings.
-    let sst_name = rels
-        .iter()
-        .find(|r| r.typ.ends_with("/sharedStrings"))
-        .map(|r| r.target.clone())
-        .unwrap_or_else(|| "xl/sharedStrings.xml".into());
     let mut u_sst: Vec<Unit> = vec![];
     let mut final_ids: HashSet<String> = HashSet::new();
     if let Some((i, e)) = find_entry(&entries, &sst_name) {

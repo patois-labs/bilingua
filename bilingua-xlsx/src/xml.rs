@@ -208,23 +208,105 @@ impl Ns {
     }
     /// Finds the prefix bound to one of `uris` on the root element; `fallback` (with colon) otherwise.
     pub fn detect(nodes: &[Node], uris: &[&str], fallback: &str) -> Ns {
-        let mut pfx = fallback.to_string();
         for n in nodes {
             if let Node::El(root) = n {
-                for (k, v) in root.attrs() {
-                    if uris.contains(&v.as_str()) {
-                        if k == "xmlns" {
-                            pfx = String::new();
-                        } else if let Some(p) = k.strip_prefix("xmlns:") {
-                            pfx = format!("{p}:");
-                        }
-                    }
+                return Ns::from_start(&root.start, uris, fallback);
+            }
+        }
+        Ns { pfx: fallback.to_string() }
+    }
+    /// [`Ns::detect`] from the root's start tag as written (for [`scan`], which builds no tree).
+    pub fn from_start(start: &str, uris: &[&str], fallback: &str) -> Ns {
+        let mut pfx = fallback.to_string();
+        for (k, v) in parse_attrs(start) {
+            if uris.contains(&v.as_str()) {
+                if k == "xmlns" {
+                    pfx = String::new();
+                } else if let Some(p) = k.strip_prefix("xmlns:") {
+                    pfx = format!("{p}:");
                 }
-                break;
             }
         }
         Ns { pfx }
     }
+}
+
+/// One step of [`scan`].
+pub enum Ev<'a> {
+    /// A start tag: the element name and the tag as written. A self-closing element is followed by its `End`.
+    Start(&'a str, &'a str),
+    /// The end of the innermost open element.
+    End,
+    /// A text node as [`parse`] makes it (character data with entities still escaped, or a whole CDATA section):
+    /// [`unescape`] it as `El::text` does.
+    Text(&'a str),
+}
+
+/// Why [`scan`] stopped early.
+pub enum ScanStop<E> {
+    /// The text is not XML `parse` reads (`parse` would fail on it too).
+    Bad,
+    /// The callback stopped it.
+    Stop(E),
+}
+
+/// Walks the XML as [`parse`] reads it, node by node, building no tree (BILI-115: the limit pre-scan). It splits
+/// the text exactly where `parse` does, with the same rules for comments, CDATA, processing instructions and tags,
+/// so on any text `parse` accepts, the events are the tree `parse` builds, in document order. It does not check
+/// what only makes `parse` fail (end tags that do not match, depth), so on text `parse` refuses its events may
+/// differ.
+pub fn scan<'a, E>(s: &'a str, f: &mut impl FnMut(Ev<'a>) -> Result<(), E>) -> Result<(), ScanStop<E>> {
+    let b = s.as_bytes();
+    let n = b.len();
+    let mut i = 0;
+    let mut depth = 0usize;
+    while i < n {
+        if b[i] != b'<' {
+            let j = s[i..].find('<').map(|k| i + k).unwrap_or(n);
+            f(Ev::Text(&s[i..j])).map_err(ScanStop::Stop)?;
+            i = j;
+            continue;
+        }
+        let rest = &s[i..];
+        if rest.starts_with("<!--") {
+            i += rest.find("-->").ok_or(ScanStop::Bad)? + 3;
+        } else if rest.starts_with("<![CDATA[") {
+            let e = rest.find("]]>").ok_or(ScanStop::Bad)? + 3;
+            f(Ev::Text(&rest[..e])).map_err(ScanStop::Stop)?;
+            i += e;
+        } else if rest.starts_with("<?") {
+            i += rest.find("?>").ok_or(ScanStop::Bad)? + 2;
+        } else if rest.starts_with("<!") {
+            return Err(ScanStop::Bad);
+        } else if rest.starts_with("</") {
+            let e = rest.find('>').ok_or(ScanStop::Bad)?;
+            depth = depth.checked_sub(1).ok_or(ScanStop::Bad)?;
+            f(Ev::End).map_err(ScanStop::Stop)?;
+            i += e + 1;
+        } else {
+            let e = tag_end(rest).map_err(|_| ScanStop::Bad)?;
+            let raw = &rest[..=e];
+            let name_end = raw[1..]
+                .char_indices()
+                .find(|&(_, c)| c.is_whitespace() || c == '/' || c == '>')
+                .map_or(raw.len(), |(k, _)| k + 1);
+            let name = &raw[1..name_end];
+            if name.is_empty() {
+                return Err(ScanStop::Bad);
+            }
+            f(Ev::Start(name, raw)).map_err(ScanStop::Stop)?;
+            if raw.ends_with("/>") {
+                f(Ev::End).map_err(ScanStop::Stop)?;
+            } else {
+                depth += 1;
+            }
+            i += e + 1;
+        }
+    }
+    if depth != 0 {
+        return Err(ScanStop::Bad);
+    }
+    Ok(())
 }
 
 pub fn parse(s: &str) -> Result<Vec<Node>, String> {
