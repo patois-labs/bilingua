@@ -110,7 +110,11 @@ pub fn plural_groups(root: &Node, target: Option<&str>) -> Vec<PluralGroup> {
 
 /// The dict view of an object: distinct keys at their first place with "the last value is a string", and per key
 /// its first and last member index and its place in that list.
-fn dict_view(o: &Obj) -> (Vec<(&str, bool)>, HashMap<&str, (usize, usize, usize)>) {
+/// The dict view of an object: (key, last value is a string) in first-place order, and per key (first member
+/// index, last member index, place in that list).
+type DictView<'o> = (Vec<(&'o str, bool)>, HashMap<&'o str, (usize, usize, usize)>);
+
+fn dict_view(o: &Obj) -> DictView<'_> {
     let mut seen: Vec<(&str, bool)> = Vec::new();
     let mut at: HashMap<&str, (usize, usize, usize)> = HashMap::new();
     for (i, p) in o.pairs.iter().enumerate() {

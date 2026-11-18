@@ -36,7 +36,7 @@ fn items_share_a_group_and_polish_adds_few_and_many() {
         .collect();
     assert_eq!(slots, [("u2", "files#0", "one", false), ("u3", "files#0", "other", false), ("u3.few", "files#0", "few", true), ("u3.many", "files#0", "many", true)]);
     assert!(d.units[0].plural().is_none());
-    assert!(d.units.iter().all(|u| u.plural().map_or(true, |p| p.kind() == PluralKind::Cardinal)));
+    assert!(d.units.iter().all(|u| u.plural().is_none_or(|p| p.kind() == PluralKind::Cardinal)));
     let few = d.units.iter().find(|u| u.id == "u3.few").unwrap();
     assert_eq!((few.context.key.as_deref(), few.context.extra().get("plural")), (Some("files"), Some("few")));
     // an untouched merge is the original bytes
