@@ -132,7 +132,7 @@ behind one API, and that is the crate to use.
 
 ```toml
 [dependencies]
-bilingua = "0.9"
+bilingua = "0.10"
 ```
 
 ```rust
